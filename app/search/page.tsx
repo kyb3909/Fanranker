@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Header } from '@/components/header'
 import { PostCard } from '@/components/post-card'
@@ -61,7 +61,7 @@ interface Post {
   createdAt: Date
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -77,10 +77,13 @@ export default function SearchPage() {
   // URL에서 검색어가 있으면 자동 검색
   useEffect(() => {
     const q = searchParams.get('q')
+    const type = (searchParams.get('type') as SearchType) || 'title_content'
     if (q && q.trim().length > 0) {
       setSearchQuery(q)
-      handleSearch(q, (searchParams.get('type') as SearchType) || 'title_content')
+      setSearchType(type)
+      handleSearch(q, type)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
   const handleSearch = async (query?: string, type?: SearchType) => {
@@ -292,5 +295,23 @@ export default function SearchPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">로딩 중...</p>
+          </div>
+        </main>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   )
 }

@@ -23,21 +23,29 @@ import { NextRequest, NextResponse } from 'next/server'
 const isAdminRoute = createRouteMatcher(['/admin(.*)'])
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  // Protect admin routes - require authentication
-  if (isAdminRoute(req)) {
-    const { userId } = await auth.protect()
-    
-    if (!userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url))
+  try {
+    // Protect admin routes - require authentication
+    if (isAdminRoute(req)) {
+      const { userId } = await auth()
+      
+      if (!userId) {
+        const signInUrl = new URL('/sign-in', req.url)
+        signInUrl.searchParams.set('redirect_url', req.url)
+        return NextResponse.redirect(signInUrl)
+      }
+
+      // Admin check will be done in the page/API route itself
+      // Middleware only checks authentication, not authorization
     }
 
-    // Admin check will be done in the page/API route itself
-    // Middleware only checks authentication, not authorization
+    // Note: Supabase Third-Party Auth with Clerk doesn't require
+    // Supabase session management in middleware. Authentication is handled
+    // via Clerk tokens passed to Supabase client in client/server code.
+  } catch (error) {
+    console.error('Middleware error:', error)
+    // Return a proper response instead of throwing
+    return NextResponse.next()
   }
-
-  // Note: Supabase Third-Party Auth with Clerk doesn't require
-  // Supabase session management in middleware. Authentication is handled
-  // via Clerk tokens passed to Supabase client in client/server code.
 })
 
 export const config = {

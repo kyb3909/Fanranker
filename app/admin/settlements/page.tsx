@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { SettlementManagementTable } from './settlement-table'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminSettlementsPage() {
   try {
     await requireAdmin()

@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Shield, Trophy, Coins, Target, TrendingUp, Users } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboardPage() {
   try {
     await requireAdmin()

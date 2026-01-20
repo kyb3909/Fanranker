@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { ExpertApprovalTable } from './expert-approval-table'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminExpertsPage() {
   try {
     await requireAdmin()

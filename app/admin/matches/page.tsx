@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { MatchManagementTable } from './match-table'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminMatchesPage() {
   try {
     await requireAdmin()

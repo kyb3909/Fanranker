@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { BackButton } from "@/components/back-button"
@@ -24,7 +24,7 @@ const COMMUNITIES = [
   { slug: "tips", name: "정보게시판" },
 ]
 
-export default function WritePage() {
+function WriteContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const communitySlug = searchParams.get("community") || ""
@@ -331,3 +331,20 @@ export default function WritePage() {
   )
 }
 
+export default function WritePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">로딩 중...</p>
+          </div>
+        </main>
+      </div>
+    }>
+      <WriteContent />
+    </Suspense>
+  )
+}
