@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * GET /api/comments?post_id=<uuid>
@@ -72,19 +72,24 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    // currentUser()를 사용하여 인증 확인 (API 라우트에서 더 안정적)
+    const user = await currentUser()
 
-    if (!userId) {
-      console.error('Comment API: No userId from auth()')
+    if (!user) {
+      console.error('Comment API: No user from currentUser()')
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
 
+    const userId = user.id
+
     console.log('Comment API: userId =', userId)
 
-    const supabase = await createClient()
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
     const body = await request.json()
     const { post_id, parent_id, content } = body
 
@@ -200,34 +205,8 @@ export async function POST(request: NextRequest) {
         console.error('Failed to create notification:', err)
       })
 
-    // posts.comment_count 원자적으로 증가 (SQL의 increment 사용)
-    // RPC 함수를 사용하여 race condition 방지
-    supabase
-      .rpc('increment_post_comment_count', { post_id_param: post_id })
-      .then(() => {
-        console.log(`Comment count incremented for post ${post_id}`)
-      })
-      .catch((err) => {
-        // RPC 함수가 없으면 fallback으로 수동 증가
-        console.warn('RPC function not found, using fallback:', err)
-        supabase
-          .from('posts')
-          .select('comment_count')
-          .eq('id', post_id)
-          .single()
-          .then(({ data: postData }) => {
-            if (postData) {
-              const currentCount = postData.comment_count || 0
-              return supabase
-                .from('posts')
-                .update({ comment_count: currentCount + 1 })
-                .eq('id', post_id)
-            }
-          })
-          .catch((fallbackErr) => {
-            console.error('Failed to increment comment count:', fallbackErr)
-          })
-      })
+    // Note: comment_count is now automatically incremented by database trigger
+    // No manual increment needed - trigger handles it atomically
 
     // 댓글 작성 성공 후 쿨다운 업데이트
     supabase

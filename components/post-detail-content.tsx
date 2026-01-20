@@ -364,22 +364,6 @@ export function PostDetailContent({ post }: { post: Post }) {
     }
   }
 
-  // 조회수 증가 (페이지 로드 시 한 번만)
-  useEffect(() => {
-    async function incrementViewCount() {
-      try {
-        await fetch(`/api/posts/${post.id}/view`, {
-          method: 'POST',
-        })
-      } catch (error) {
-        console.error('Failed to increment view count:', error)
-        // 조회수 증가 실패는 무시 (사용자 경험에 영향 없음)
-      }
-    }
-
-    incrementViewCount()
-  }, [post.id])
-
   // 댓글 로드
   useEffect(() => {
     async function loadComments() {
@@ -475,18 +459,21 @@ export function PostDetailContent({ post }: { post: Post }) {
         throw new Error(error.error || '투표 처리에 실패했습니다.')
       }
 
-      const { action, voteType } = await response.json()
+      const { action, voteType, voteCount } = await response.json()
 
-      // 로컬 상태 업데이트
-      if (action === 'deleted') {
-        setUpvotes(Math.max(0, upvotes - 1))
-        setIsUpvoted(false)
+      // 로컬 상태 업데이트 (서버에서 받은 정확한 vote_count 사용)
+      if (voteCount !== undefined) {
+        setUpvotes(voteCount)
       } else {
-        setUpvotes(isUpvoted ? upvotes : upvotes + 1)
-        setIsUpvoted(true)
+        // fallback: 로컬 계산
+        if (action === 'deleted') {
+          setUpvotes(Math.max(0, upvotes - 1))
+        } else {
+          setUpvotes(isUpvoted ? upvotes : upvotes + 1)
+        }
       }
-
-      // 실제 vote_count는 DB에서 가져와야 정확하지만, 즉시 UI 반영을 위해 로컬 상태 사용
+      
+      setIsUpvoted(action !== 'deleted' && voteType === 'up')
     } catch (error) {
       console.error('Failed to vote:', error)
       alert(error instanceof Error ? error.message : '투표 처리에 실패했습니다.')
@@ -690,7 +677,7 @@ export function PostDetailContent({ post }: { post: Post }) {
               className="gap-2 rounded-full bg-secondary text-foreground hover:bg-secondary/80"
             >
               <MessageCircle className="h-5 w-5" />
-              <span className="text-sm font-medium">{post.comments}</span>
+              <span className="text-sm font-medium">{countAllComments(comments)}</span>
             </Button>
 
             {/* Bookmark */}

@@ -61,7 +61,8 @@ export function ActivitySidebar() {
     async function fetchRecentPosts() {
       setIsLoadingPosts(true)
       try {
-        const response = await fetch('/api/posts?sort=comments&limit=4')
+        // 최근 댓글이 달린 게시물 조회 (recent_comments 정렬 사용)
+        const response = await fetch('/api/posts?sort=recent_comments&limit=4')
         if (response.ok) {
           const { posts } = await response.json()
           setRecentPosts(posts.map((p: any) => ({
@@ -69,7 +70,8 @@ export function ActivitySidebar() {
             title: p.title,
             community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
             comments: p.comment_count || 0,
-            timestamp: formatRelativeTime(new Date(p.created_at)),
+            // 최근 댓글 시간 사용 (있으면), 없으면 게시물 생성 시간 사용
+            timestamp: formatRelativeTime(new Date(p.latest_comment_at || p.created_at)),
           })))
         }
       } catch (error) {

@@ -24,8 +24,8 @@ const isAdminRoute = createRouteMatcher(['/admin(.*)'])
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   try {
-    // Protect admin routes - require authentication
-    if (isAdminRoute(req)) {
+    // Protect admin routes - require authentication (페이지 라우트만)
+    if (isAdminRoute(req) && !req.nextUrl.pathname.startsWith('/api')) {
       const { userId } = await auth()
       
       if (!userId) {
@@ -33,12 +33,11 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         signInUrl.searchParams.set('redirect_url', req.url)
         return NextResponse.redirect(signInUrl)
       }
-
-      // Admin check will be done in the page/API route itself
-      // Middleware only checks authentication, not authorization
     }
 
-    // Note: Supabase Third-Party Auth with Clerk doesn't require
+    // Note: API routes should use currentUser() instead of auth()
+    // This middleware only handles page route protection
+    // Supabase Third-Party Auth with Clerk doesn't require
     // Supabase session management in middleware. Authentication is handled
     // via Clerk tokens passed to Supabase client in client/server code.
   } catch (error) {

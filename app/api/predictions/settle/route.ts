@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * Helper function to update user stats after prediction settlement
@@ -97,16 +97,20 @@ export async function POST(request: NextRequest) {
   try {
     // Optional: Check if user is admin (for manual settlement)
     // For now, allow authenticated users (or make it admin-only later)
-    const { userId } = await auth()
+    const user = await currentUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
 
-    const supabase = await createClient()
+    const userId = user.id
+
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
     const body = await request.json()
     const { match_id, force } = body
 
@@ -321,7 +325,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const matchId = searchParams.get('match_id')
     const unsettledOnly = searchParams.get('unsettled_only') === 'true'

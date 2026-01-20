@@ -120,12 +120,11 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
             </div>
 
             {/* 테이블 헤더: 컴팩트한 패딩 */}
-            <div className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+            <div className="grid grid-cols-11 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-5">제목</div>
               <div className="col-span-2 text-center">글쓴이</div>
               <div className="col-span-1 text-center">날짜</div>
-              <div className="col-span-1 text-center">조회</div>
               <div className="col-span-1 text-center">추천</div>
               <div className="col-span-1 text-center">별점</div>
             </div>
@@ -136,7 +135,7 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                 <Link
                   key={post.id}
                   href={`/post/${post.id}`}
-                  className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
+                  className="grid grid-cols-11 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
                 >
                   <div className="col-span-1 text-center text-muted-foreground">
                     {post.isNotice ? <span className="text-rose-500 font-semibold">공지</span> : posts.length - index}
@@ -149,9 +148,6 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                   </div>
                   <div className="col-span-2 text-center text-muted-foreground truncate">{post.author}</div>
                   <div className="col-span-1 text-center text-muted-foreground">{post.timestamp}</div>
-                  <div className="col-span-1 text-center text-muted-foreground tabular-nums">
-                    {(post.views || Math.floor(Math.random() * 10000)).toLocaleString()}
-                  </div>
                   <div className="col-span-1 text-center text-muted-foreground tabular-nums">{post.upvotes}</div>
                   <div className="col-span-1 text-center">
                     <div className="flex items-center justify-center gap-px">

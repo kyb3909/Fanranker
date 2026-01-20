@@ -23,7 +23,6 @@ export async function GET(
         title,
         content,
         image,
-        view_count,
         vote_count,
         comment_count,
         temperature,
@@ -50,7 +49,6 @@ export async function GET(
     }
 
     // 2. 작성자 프로필 조회
-    // Note: 조회수 증가는 클라이언트에서 /api/posts/[id]/view 엔드포인트를 호출하여 처리
     const { data: profile } = await supabase
       .from('profiles')
       .select('user_id, nickname, avatar_url')

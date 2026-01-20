@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * POST /api/community/[slug]/follow
@@ -12,17 +12,21 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { userId } = await auth()
+    const user = await currentUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
 
+    const userId = user.id
     const { slug } = await params
-    const supabase = await createClient()
+
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
 
     // Check if already following
     const { data: existing } = await supabase
@@ -72,17 +76,21 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { userId } = await auth()
+    const user = await currentUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
 
+    const userId = user.id
     const { slug } = await params
-    const supabase = await createClient()
+
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
 
     const { error } = await supabase
       .from('community_follows')
@@ -118,14 +126,19 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { userId } = await auth()
+    const user = await currentUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ following: false })
     }
 
+    const userId = user.id
+
     const { slug } = await params
-    const supabase = await createClient()
+
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
 
     const { data } = await supabase
       .from('community_follows')

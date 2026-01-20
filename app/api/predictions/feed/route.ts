@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * GET /api/predictions/feed
@@ -15,8 +15,12 @@ import { auth } from '@clerk/nextjs/server'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    const supabase = await createClient()
+    const user = await currentUser()
+    const userId = user?.id || null
+
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
 
     const sportFilter = searchParams.get('sport') || 'all'

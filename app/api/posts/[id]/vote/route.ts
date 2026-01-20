@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * POST /api/posts/[id]/vote
@@ -14,14 +14,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth()
-
-    if (!userId) {
+    // currentUser()를 사용하여 인증 확인 (API 라우트에서 더 안정적)
+    const user = await currentUser()
+    
+    if (!user) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
+
+    const userId = user.id
 
     const { id: postId } = await params
     const body = await request.json()
@@ -34,7 +37,11 @@ export async function POST(
       )
     }
 
-    const supabase = await createClient()
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    // currentUser()로 이미 user_id를 검증했으므로 안전합니다.
+    // ⚠️ 중요: Service Role은 RLS를 우회하므로, 반드시 코드에서 user_id를 검증해야 합니다!
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
 
     // 1. 기존 투표 확인
     const { data: existingVote, error: checkError } = await supabase
@@ -107,31 +114,37 @@ export async function POST(
       }
     }
 
-    // 3. posts.vote_count 업데이트 (비동기로 처리, 실패해도 무시)
+    // 3. posts.vote_count 업데이트 (동기적으로 처리하여 정확한 값 반환)
     // upvote 개수 계산 후 업데이트
-    supabase
+    const { count: upCount, error: countError } = await supabase
       .from('post_votes')
       .select('id', { count: 'exact', head: true })
       .eq('post_id', postId)
       .eq('vote_type', 'up')
-      .then(({ count: upCount }) => {
-        // downvote는 현재 구현에서 사용하지 않지만, 나중을 위해 남겨둠
-        return supabase
-          .from('posts')
-          .update({ vote_count: upCount || 0 })
-          .eq('id', postId)
-      })
-      .then(() => {
-        console.log(`Vote count updated for post ${postId}`)
-      })
-      .catch((err) => {
-        console.error('Failed to update vote count:', err)
-      })
+
+    if (countError) {
+      console.error('Failed to count votes:', countError)
+      // 카운트 실패해도 투표는 성공했으므로 계속 진행
+    }
+
+    const newVoteCount = upCount || 0
+
+    // vote_count 업데이트
+    const { error: updateError } = await supabase
+      .from('posts')
+      .update({ vote_count: newVoteCount })
+      .eq('id', postId)
+
+    if (updateError) {
+      console.error('Failed to update vote count:', updateError)
+      // 업데이트 실패해도 투표는 성공했으므로 계속 진행
+    }
 
     return NextResponse.json({
       success: true,
       action: voteAction,
       voteType: newVoteType,
+      voteCount: newVoteCount, // 업데이트된 vote_count 반환
       message: voteAction === 'deleted' ? '투표가 취소되었습니다.' : '투표가 저장되었습니다.',
     })
   } catch (error) {
@@ -152,11 +165,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth()
-
-    if (!userId) {
+    // currentUser()를 사용하여 인증 확인
+    const user = await currentUser()
+    
+    if (!user) {
       return NextResponse.json({ voted: false, voteType: null })
     }
+
+    const userId = user.id
 
     const { id: postId } = await params
     const { createAnonClient } = await import('@/lib/supabase/server')

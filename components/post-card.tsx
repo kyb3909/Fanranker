@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Eye, Bookmark, Search, Ban } from "lucide-react"
+import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Bookmark, Search, Ban } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -96,16 +96,21 @@ export function PostCard({ post }: PostCardProps) {
         throw new Error(error.error || '투표 처리에 실패했습니다.')
       }
 
-      const { action } = await response.json()
+      const { action, voteCount } = await response.json()
 
-      // 로컬 상태 업데이트
-      if (action === 'deleted') {
-        setUpvotes(Math.max(0, upvotes - 1))
-        setIsUpvoted(false)
+      // 로컬 상태 업데이트 (서버에서 받은 정확한 vote_count 사용)
+      if (voteCount !== undefined) {
+        setUpvotes(voteCount)
       } else {
-        setUpvotes(isUpvoted ? upvotes : upvotes + 1)
-        setIsUpvoted(true)
+        // fallback: 로컬 계산
+        if (action === 'deleted') {
+          setUpvotes(Math.max(0, upvotes - 1))
+        } else {
+          setUpvotes(isUpvoted ? upvotes : upvotes + 1)
+        }
       }
+      
+      setIsUpvoted(action !== 'deleted')
     } catch (error) {
       console.error('Failed to vote:', error)
       // 에러가 발생해도 사용자에게 알리지 않음 (피드에서는 조용히 실패)
@@ -161,9 +166,6 @@ export function PostCard({ post }: PostCardProps) {
   }
 
   const communityLink = post.communitySlug || post.community
-  
-  // 조회수 (없으면 추천수 기반으로 생성)
-  const views = post.views || Math.floor(upvotes * 3.5 + post.comments * 2)
   
   // TipTap JSON에서 첫 번째 임베드 추출 (피드 미리보기용)
   const firstEmbed = typeof post.content === 'object' 
@@ -271,12 +273,6 @@ export function PostCard({ post }: PostCardProps) {
             
             {/* 구분선 */}
             <span className="text-border">|</span>
-            
-            {/* 메타 정보: 조회수 */}
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Eye className="h-3.5 w-3.5" />
-              <span className="text-[12px] tabular-nums">{views.toLocaleString()}</span>
-            </div>
             
             {/* 온도 */}
             <div className={`flex items-center gap-0.5 ${getTemperatureColor(temperature)}`}>

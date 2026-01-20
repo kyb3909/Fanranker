@@ -14,7 +14,7 @@
  */
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 
 /**
  * Creates an anonymous Supabase server client (no authentication)
@@ -28,16 +28,59 @@ export function createAnonClient() {
 }
 
 /**
- * Creates an authenticated Supabase server client with Clerk session token
- *
- * @returns Supabase client configured with Clerk authentication
- *
+ * Creates a Service Role Supabase client (bypasses RLS)
+ * 
+ * ⚠️ WARNING: This client bypasses all RLS policies!
+ * Only use in API routes where you manually verify user_id.
+ * 
+ * @returns Supabase client with service role (RLS bypassed)
+ * 
  * @example
  * ```tsx
- * // In a Server Component or Server Action:
- * const supabase = await createAuthClient()
- * const { data } = await supabase.from('posts').select('*')
+ * // In an API route:
+ * const user = await currentUser()
+ * if (!user) return unauthorized()
+ * 
+ * const supabase = createServiceRoleClient()
+ * // Now you can insert/update, but MUST verify user_id in your code!
+ * await supabase.from('post_votes').insert({
+ *   post_id: postId,
+ *   user_id: user.id, // ← Always verify this matches currentUser().id
+ *   vote_type: 'up'
+ * })
  * ```
+ */
+export function createServiceRoleClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is not set')
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
+  }
+
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  )
+}
+
+/**
+ * Creates an authenticated Supabase server client with Clerk session token
+ * 
+ * ⚠️ NOTE: This function no longer uses auth() to avoid middleware errors.
+ * For API routes, use createServiceRoleClient() instead.
+ * For Server Components, use createAnonClient() and verify user_id with currentUser().
+ *
+ * @returns Supabase client (currently returns anonymous client to avoid auth() errors)
+ *
+ * @deprecated For API routes, use createServiceRoleClient() instead.
+ *             For Server Components, use createAnonClient() with currentUser() verification.
  */
 export async function createAuthClient() {
   // Validate environment variables
@@ -48,30 +91,11 @@ export async function createAuthClient() {
     throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable is not set')
   }
 
-  try {
-    const { getToken } = await auth()
-    const token = await getToken()
-
-    // Create Supabase client with Clerk JWT token in Authorization header
-    // Supabase Third-Party Auth expects the token in the Authorization header
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-      {
-        global: {
-          headers: token ? {
-            Authorization: `Bearer ${token}`,
-          } : {},
-        },
-      }
-    )
-
-    return supabase
-  } catch (error) {
-    console.error('Failed to create authenticated Supabase client:', error)
-    // Fallback to anonymous client if auth fails
-    return createAnonClient()
-  }
+  // ⚠️ auth() 호출을 제거하여 middleware 오류 방지
+  // API 라우트에서는 createServiceRoleClient()를 사용하세요
+  // Server Components에서는 createAnonClient()를 사용하고 currentUser()로 user_id를 검증하세요
+  console.warn('createAuthClient() is deprecated. Use createServiceRoleClient() for API routes or createAnonClient() for Server Components.')
+  return createAnonClient()
 }
 
 /**

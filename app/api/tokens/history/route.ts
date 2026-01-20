@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * GET /api/tokens/history
@@ -9,16 +9,20 @@ import { auth } from '@clerk/nextjs/server'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const user = await currentUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
 
-    const supabase = await createClient()
+    const userId = user.id
+
+    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const supabase = createServiceRoleClient()
 
     // Fetch token transactions
     const { data: transactions, error: txError } = await supabase
