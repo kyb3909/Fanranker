@@ -75,11 +75,14 @@ export async function POST(request: NextRequest) {
     const { userId } = await auth()
 
     if (!userId) {
+      console.error('Comment API: No userId from auth()')
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
       )
     }
+
+    console.log('Comment API: userId =', userId)
 
     const supabase = await createClient()
     const body = await request.json()
@@ -92,6 +95,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    console.log('Comment API: Attempting to insert comment', { post_id, user_id: userId, has_content: !!content })
 
     // 댓글 저장
     const { data: comment, error: insertError } = await supabase
@@ -107,9 +112,22 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Failed to create comment:', insertError)
+      console.error('Failed to create comment:', {
+        error: insertError,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code,
+        userId,
+        post_id
+      })
       return NextResponse.json(
-        { error: '댓글 저장 중 오류가 발생했습니다.', details: insertError.message },
+        { 
+          error: '댓글 저장 중 오류가 발생했습니다.', 
+          details: insertError.message,
+          code: insertError.code,
+          hint: insertError.hint
+        },
         { status: 500 }
       )
     }

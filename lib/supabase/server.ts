@@ -48,23 +48,30 @@ export async function createAuthClient() {
     throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable is not set')
   }
 
-  const { getToken } = await auth()
+  try {
+    const { getToken } = await auth()
+    const token = await getToken()
 
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    {
-      accessToken: async () => {
-        try {
-          const token = await getToken()
-          return token ?? null
-        } catch (error) {
-          console.error('Failed to get Clerk token:', error)
-          return null
-        }
-      },
-    }
-  )
+    // Create Supabase client with Clerk JWT token in Authorization header
+    // Supabase Third-Party Auth expects the token in the Authorization header
+    const supabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      {
+        global: {
+          headers: token ? {
+            Authorization: `Bearer ${token}`,
+          } : {},
+        },
+      }
+    )
+
+    return supabase
+  } catch (error) {
+    console.error('Failed to create authenticated Supabase client:', error)
+    // Fallback to anonymous client if auth fails
+    return createAnonClient()
+  }
 }
 
 /**
