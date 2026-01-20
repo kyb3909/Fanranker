@@ -49,21 +49,8 @@ export async function GET(
       )
     }
 
-    // 2. 조회수 증가 (비동기로 처리, 실패해도 상관없음)
-    supabase
-      .from('posts')
-      .update({ view_count: (post.view_count || 0) + 1 })
-      .eq('id', id)
-      .then(() => {
-        // 조회수 증가 성공 (로그만)
-        console.log(`View count increased for post ${id}`)
-      })
-      .catch((err) => {
-        // 조회수 증가 실패해도 무시 (에러 로그만)
-        console.error('Failed to increment view count:', err)
-      })
-
-    // 3. 작성자 프로필 조회
+    // 2. 작성자 프로필 조회
+    // Note: 조회수 증가는 클라이언트에서 /api/posts/[id]/view 엔드포인트를 호출하여 처리
     const { data: profile } = await supabase
       .from('profiles')
       .select('user_id, nickname, avatar_url')

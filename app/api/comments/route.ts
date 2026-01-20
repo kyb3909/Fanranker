@@ -98,6 +98,24 @@ export async function POST(request: NextRequest) {
 
     console.log('Comment API: Attempting to insert comment', { post_id, user_id: userId, has_content: !!content })
 
+    // 쿨다운 체크 (10초 간격)
+    const { data: canPost, error: cooldownError } = await supabase.rpc('can_post_comment', {
+      user_id_param: userId,
+    })
+
+    if (cooldownError) {
+      console.error('Failed to check comment cooldown:', cooldownError)
+      // 쿨다운 체크 실패는 무시하고 계속 진행 (에러 처리 개선)
+    } else if (canPost === false) {
+      return NextResponse.json(
+        { 
+          error: '댓글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요.',
+          code: 'COOLDOWN_ACTIVE'
+        },
+        { status: 429 } // Too Many Requests
+      )
+    }
+
     // 댓글 저장
     const { data: comment, error: insertError } = await supabase
       .from('comments')
@@ -182,28 +200,44 @@ export async function POST(request: NextRequest) {
         console.error('Failed to create notification:', err)
       })
 
-    // posts.comment_count 증가 (비동기로 처리, 실패해도 무시)
-    // Note: Supabase JS client doesn't support raw SQL in update
-    // We'll increment manually by fetching current count
+    // posts.comment_count 원자적으로 증가 (SQL의 increment 사용)
+    // RPC 함수를 사용하여 race condition 방지
     supabase
-      .from('posts')
-      .select('comment_count')
-      .eq('id', post_id)
-      .single()
-      .then(({ data: postData }) => {
-        if (postData) {
-          const currentCount = postData.comment_count || 0
-          return supabase
-            .from('posts')
-            .update({ comment_count: currentCount + 1 })
-            .eq('id', post_id)
-        }
-      })
+      .rpc('increment_post_comment_count', { post_id_param: post_id })
       .then(() => {
         console.log(`Comment count incremented for post ${post_id}`)
       })
       .catch((err) => {
-        console.error('Failed to increment comment count:', err)
+        // RPC 함수가 없으면 fallback으로 수동 증가
+        console.warn('RPC function not found, using fallback:', err)
+        supabase
+          .from('posts')
+          .select('comment_count')
+          .eq('id', post_id)
+          .single()
+          .then(({ data: postData }) => {
+            if (postData) {
+              const currentCount = postData.comment_count || 0
+              return supabase
+                .from('posts')
+                .update({ comment_count: currentCount + 1 })
+                .eq('id', post_id)
+            }
+          })
+          .catch((fallbackErr) => {
+            console.error('Failed to increment comment count:', fallbackErr)
+          })
+      })
+
+    // 댓글 작성 성공 후 쿨다운 업데이트
+    supabase
+      .rpc('update_comment_cooldown', { user_id_param: userId })
+      .then(() => {
+        console.log(`Comment cooldown updated for user ${userId}`)
+      })
+      .catch((err) => {
+        console.error('Failed to update comment cooldown:', err)
+        // 쿨다운 업데이트 실패는 무시 (댓글 작성은 성공)
       })
 
     return NextResponse.json(comment, { status: 201 })

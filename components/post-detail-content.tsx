@@ -142,6 +142,7 @@ interface CommentItemProps {
   onSetReplyingTo: (id: string | number | null) => void
   onReplySubmit: (commentId: string | number) => void
   depth: number
+  isSubmittingReply?: string | number | null
 }
 
 /**
@@ -156,6 +157,7 @@ function CommentItem({
   onSetReplyingTo,
   onReplySubmit,
   depth,
+  isSubmittingReply = null,
 }: CommentItemProps) {
   const isReplying = replyingTo === comment.id
   const hasReplies = comment.replies && comment.replies.length > 0
@@ -228,9 +230,9 @@ function CommentItem({
                 <Button
                   size="sm"
                   onClick={() => onReplySubmit(comment.id)}
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || isSubmittingReply === comment.id}
                 >
-                  답글 작성
+                  {isSubmittingReply === comment.id ? '작성 중...' : '답글 작성'}
                 </Button>
               </div>
             </div>
@@ -251,6 +253,7 @@ function CommentItem({
               onSetReplyingTo={onSetReplyingTo}
               onReplySubmit={onReplySubmit}
               depth={depth + 1}
+              isSubmittingReply={isSubmittingReply}
             />
           ))}
         </div>
@@ -346,6 +349,8 @@ export function PostDetailContent({ post }: { post: Post }) {
   const [commentText, setCommentText] = useState("")
   const [replyingTo, setReplyingTo] = useState<string | number | null>(null)
   const [replyText, setReplyText] = useState("")
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [isSubmittingReply, setIsSubmittingReply] = useState<string | number | null>(null)
 
   const handleSearchByAuthor = () => {
     router.push(`/search?q=${encodeURIComponent(post.author)}&type=nickname`)
@@ -358,6 +363,22 @@ export function PostDetailContent({ post }: { post: Post }) {
       // 차단 로직 구현 예정
     }
   }
+
+  // 조회수 증가 (페이지 로드 시 한 번만)
+  useEffect(() => {
+    async function incrementViewCount() {
+      try {
+        await fetch(`/api/posts/${post.id}/view`, {
+          method: 'POST',
+        })
+      } catch (error) {
+        console.error('Failed to increment view count:', error)
+        // 조회수 증가 실패는 무시 (사용자 경험에 영향 없음)
+      }
+    }
+
+    incrementViewCount()
+  }, [post.id])
 
   // 댓글 로드
   useEffect(() => {
@@ -473,9 +494,13 @@ export function PostDetailContent({ post }: { post: Post }) {
   }
 
   const handleCommentSubmit = async () => {
-    if (!commentText.trim()) {
+    if (!commentText.trim() || isSubmittingComment) {
       return
     }
+
+    setIsSubmittingComment(true)
+    const textToSubmit = commentText.trim()
+    setCommentText("") // 즉시 입력 필드 비우기 (중복 제출 방지)
 
     try {
       const response = await fetch('/api/comments', {
@@ -485,12 +510,16 @@ export function PostDetailContent({ post }: { post: Post }) {
         },
         body: JSON.stringify({
           post_id: post.id,
-          content: commentText.trim(),
+          content: textToSubmit,
         }),
       })
 
       if (!response.ok) {
         const error = await response.json()
+        // 쿨다운 에러인 경우 특별 처리
+        if (response.status === 429 && error.code === 'COOLDOWN_ACTIVE') {
+          throw new Error(error.error || '댓글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요.')
+        }
         throw new Error(error.error || '댓글 작성에 실패했습니다.')
       }
 
@@ -501,18 +530,23 @@ export function PostDetailContent({ post }: { post: Post }) {
         const transformedComments = transformComments(fetchedComments || [], profiles || [])
         setComments(transformedComments)
       }
-
-      setCommentText("")
     } catch (error) {
       console.error('Failed to submit comment:', error)
       alert(error instanceof Error ? error.message : '댓글 작성에 실패했습니다.')
+      setCommentText(textToSubmit) // 실패 시 텍스트 복원
+    } finally {
+      setIsSubmittingComment(false)
     }
   }
 
   const handleReplySubmit = async (commentId: string | number) => {
-    if (!replyText.trim()) {
+    if (!replyText.trim() || isSubmittingReply === commentId) {
       return
     }
+
+    setIsSubmittingReply(commentId)
+    const textToSubmit = replyText.trim()
+    setReplyText("") // 즉시 입력 필드 비우기 (중복 제출 방지)
 
     try {
       const response = await fetch('/api/comments', {
@@ -523,12 +557,16 @@ export function PostDetailContent({ post }: { post: Post }) {
         body: JSON.stringify({
           post_id: post.id,
           parent_id: commentId,
-          content: replyText.trim(),
+          content: textToSubmit,
         }),
       })
 
       if (!response.ok) {
         const error = await response.json()
+        // 쿨다운 에러인 경우 특별 처리
+        if (response.status === 429 && error.code === 'COOLDOWN_ACTIVE') {
+          throw new Error(error.error || '답글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요.')
+        }
         throw new Error(error.error || '답글 작성에 실패했습니다.')
       }
 
@@ -540,11 +578,13 @@ export function PostDetailContent({ post }: { post: Post }) {
         setComments(transformedComments)
       }
 
-      setReplyText("")
       setReplyingTo(null)
     } catch (error) {
       console.error('Failed to submit reply:', error)
       alert(error instanceof Error ? error.message : '답글 작성에 실패했습니다.')
+      setReplyText(textToSubmit) // 실패 시 텍스트 복원
+    } finally {
+      setIsSubmittingReply(null)
     }
   }
 
@@ -692,9 +732,9 @@ export function PostDetailContent({ post }: { post: Post }) {
             <div className="flex justify-end">
               <Button
                 onClick={handleCommentSubmit}
-                disabled={!commentText.trim()}
+                disabled={!commentText.trim() || isSubmittingComment}
               >
-                댓글 작성
+                {isSubmittingComment ? '작성 중...' : '댓글 작성'}
               </Button>
             </div>
           </div>
@@ -722,6 +762,7 @@ export function PostDetailContent({ post }: { post: Post }) {
                   onSetReplyingTo={setReplyingTo}
                   onReplySubmit={handleReplySubmit}
                   depth={0}
+                  isSubmittingReply={isSubmittingReply}
                 />
               ))
             )}
