@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/supabase/admin'
+
+/**
+ * GET /api/admin/tokens/balances
+ *
+ * Get token balances for all users (admin only)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    await requireAdmin()
+
+    const supabase = await createClient()
+
+    const { data: tokens, error } = await supabase
+      .from('user_tokens')
+      .select(`
+        user_id,
+        token_balance,
+        last_reset_at,
+        total_tokens_earned,
+        profiles (
+          nickname,
+          avatar_url
+        )
+      `)
+      .order('token_balance', { ascending: false })
+
+    if (error) {
+      console.error('Failed to fetch token balances:', error)
+      return NextResponse.json(
+        { error: '토큰 목록을 가져오는 중 오류가 발생했습니다.', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ tokens: tokens || [] })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}

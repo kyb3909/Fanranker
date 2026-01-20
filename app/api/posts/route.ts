@@ -1,0 +1,200 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient, createAnonClient } from '@/lib/supabase/server'
+import { auth } from '@clerk/nextjs/server'
+
+/**
+ * GET /api/posts
+ * 글 목록 조회 (홈 피드용)
+ *
+ * Query Parameters:
+ * - community_slug?: 특정 커뮤니티만 필터링
+ * - sort?: "hot" | "new" | "comments" (정렬 방식)
+ * - limit?: 페이지당 개수 (기본 20)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createAnonClient()
+    const searchParams = request.nextUrl.searchParams
+    
+    const communitySlug = searchParams.get('community_slug')
+    const sort = searchParams.get('sort') || 'new' // 'hot', 'new', 'comments'
+    const limit = parseInt(searchParams.get('limit') || '20', 10)
+
+    // 1. 게시글 조회
+    let query = supabase
+      .from('posts')
+      .select(`
+        id,
+        user_id,
+        community_slug,
+        title,
+        content,
+        image,
+        view_count,
+        vote_count,
+        comment_count,
+        temperature,
+        created_at
+      `)
+      .is('deleted_at', null)
+      .limit(limit)
+
+    // 커뮤니티 필터링
+    if (communitySlug) {
+      query = query.eq('community_slug', communitySlug)
+    }
+
+    // 정렬
+    switch (sort) {
+      case 'hot':
+        query = query.order('temperature', { ascending: false })
+        break
+      case 'comments':
+        query = query.order('comment_count', { ascending: false })
+        break
+      case 'new':
+      default:
+        query = query.order('created_at', { ascending: false })
+        break
+    }
+
+    const { data: posts, error } = await query
+
+    if (error) {
+      console.error('Failed to fetch posts:', error)
+      return NextResponse.json(
+        { error: '글 목록을 가져오는 중 오류가 발생했습니다.', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    if (!posts || posts.length === 0) {
+      return NextResponse.json({ posts: [], profiles: [] })
+    }
+
+    // 2. 작성자 프로필 조회
+    const userIds = [...new Set(posts.map((p) => p.user_id))]
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, nickname, avatar_url')
+      .in('user_id', userIds)
+
+    return NextResponse.json({ posts, profiles })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * POST /api/posts
+ * 새 글 작성
+ *
+ * Route Handler에서 Supabase 서버 클라이언트를 사용합니다.
+ * Clerk 인증된 사용자만 글을 작성할 수 있습니다.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // Clerk 인증 확인
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = await createClient()
+    const body = await request.json()
+    const { community_slug, title, content, image } = body
+
+    // 유효성 검사
+    if (!community_slug || !title || !content) {
+      return NextResponse.json(
+        { error: '필수 필드가 누락되었습니다.' },
+        { status: 400 }
+      )
+    }
+
+    // 이미지 URL 유효성 검사 (base64는 거부)
+    let imageUrl = null
+    if (image) {
+      if (image.startsWith('data:image/')) {
+        // base64 데이터 URL은 거부
+        return NextResponse.json(
+          { error: '이미지는 Supabase Storage URL만 사용할 수 있습니다. 이미지를 다시 업로드해주세요.' },
+          { status: 400 }
+        )
+      } else if (image.startsWith('http://') || image.startsWith('https://')) {
+        imageUrl = image
+      } else {
+        // 잘못된 형식
+        return NextResponse.json(
+          { error: '잘못된 이미지 URL 형식입니다.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Supabase에 글 저장
+    // community_slug → category_id 변환은 DB 트리거가 자동 처리
+    const { data, error } = await supabase
+      .from('posts')
+      .insert({
+        user_id: userId, // Clerk user ID
+        community_slug,
+        title,
+        content, // TipTap JSON
+        image: imageUrl,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { error: '글 저장 중 오류가 발생했습니다.', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
+    supabase
+      .from('user_follows')
+      .select('follower_id')
+      .eq('followed_user_id', userId)
+      .then(({ data: followers }) => {
+        if (!followers || followers.length === 0) return
+
+        // 각 팔로워에게 알림 생성
+        const notifications = followers.map((follow) => ({
+          user_id: follow.follower_id,
+          type: 'new_post_by_followed',
+          actor_id: userId,
+          related_post_id: data.id,
+          related_comment_id: null,
+          is_read: false,
+        }))
+
+        return supabase.from('notifications').insert(notifications)
+      })
+      .then(() => {
+        console.log(`Notifications created for followers of user ${userId}`)
+      })
+      .catch((err) => {
+        console.error('Failed to create notifications for followers:', err)
+      })
+
+    return NextResponse.json(data, { status: 201 })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.' },
+      { status: 500 }
+    )
+  }
+}

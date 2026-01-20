@@ -1,0 +1,910 @@
+{
+    "success": 1,
+    "pager": {
+        "page": 1,
+        "per_page": 50,
+        "total": 2695
+    },
+    "results": [
+        {
+            "id": "63615848",
+            "time": "1490799600",
+            "time_status": "0",
+            "league": {
+                "id": "678",
+                "name": "Nigeria Premier League"
+            },
+            "home": {
+                "id": "50019",
+                "name": "Sunshine Stars FC"
+            },
+            "away": {
+                "id": "74754",
+                "name": "Katsina Utd"
+            },
+            "ss": null
+        },
+        {
+            "id": "63613497",
+            "time": "1490801400",
+            "time_status": "0",
+            "league": {
+                "id": "1025",
+                "name": "Romania Cup"
+            },
+            "home": {
+                "id": "5623",
+                "name": "CS Mioveni"
+            },
+            "away": {
+                "id": "1159",
+                "name": "FC Voluntari"
+            },
+            "ss": null
+        },
+        {
+            "id": "63630076",
+            "time": "1490801400",
+            "time_status": "0",
+            "league": {
+                "id": "808",
+                "name": "Ivory Coast Premier Division"
+            },
+            "home": {
+                "id": "67495",
+                "name": "Sewe Sp San Pedro"
+            },
+            "away": {
+                "id": "65460",
+                "name": "SC Gagnoa"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612824",
+            "time": "1490801400",
+            "time_status": "0",
+            "league": {
+                "id": "514",
+                "name": "Germany Oberliga Bayern South"
+            },
+            "home": {
+                "id": "7096",
+                "name": "Rain am Lech"
+            },
+            "away": {
+                "id": "5823",
+                "name": "TSV Schwabm\u00fcnchen"
+            },
+            "ss": null
+        },
+        {
+            "id": "63261668",
+            "time": "1490801400",
+            "time_status": "0",
+            "league": {
+                "id": "73",
+                "name": "Germany Regionalliga North East"
+            },
+            "home": {
+                "id": "269",
+                "name": "Viktoria 89 Berlin"
+            },
+            "away": {
+                "id": "6845",
+                "name": "Cottbus"
+            },
+            "ss": null
+        },
+        {
+            "id": "63261619",
+            "time": "1490802300",
+            "time_status": "0",
+            "league": {
+                "id": "88",
+                "name": "Germany Regionalliga North"
+            },
+            "home": {
+                "id": "403",
+                "name": "VfV Borussia 06 Hildesheim"
+            },
+            "away": {
+                "id": "6876",
+                "name": "SV Drochtersen-Assel"
+            },
+            "ss": null
+        },
+        {
+            "id": "63261621",
+            "time": "1490802300",
+            "time_status": "0",
+            "league": {
+                "id": "88",
+                "name": "Germany Regionalliga North"
+            },
+            "home": {
+                "id": "404",
+                "name": "Luneburger SK Hansa"
+            },
+            "away": {
+                "id": "317",
+                "name": "ETSV Weiche Flensburg"
+            },
+            "ss": null
+        },
+        {
+            "id": "63619259",
+            "time": "1490803200",
+            "time_status": "0",
+            "league": {
+                "id": "1288",
+                "name": "Norway Cup"
+            },
+            "home": {
+                "id": "46835",
+                "name": "Heimdal"
+            },
+            "away": {
+                "id": "47826",
+                "name": "KIL\/Hemne"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612707",
+            "time": "1490803200",
+            "time_status": "0",
+            "league": {
+                "id": "2770",
+                "name": "Belgium Youth League"
+            },
+            "home": {
+                "id": "161143",
+                "name": "Charleroi U19"
+            },
+            "away": {
+                "id": "161144",
+                "name": "Zulte-Waregem U19"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612808",
+            "time": "1490803200",
+            "time_status": "0",
+            "league": {
+                "id": "206",
+                "name": "Estonia Esiliiga B"
+            },
+            "home": {
+                "id": "9021",
+                "name": "Raasiku FC Joker"
+            },
+            "away": {
+                "id": "966",
+                "name": "Viimsi JK"
+            },
+            "ss": null
+        },
+        {
+            "id": "63613545",
+            "time": "1490803200",
+            "time_status": "0",
+            "league": {
+                "id": "773",
+                "name": "Sudan League"
+            },
+            "home": {
+                "id": "50648",
+                "name": "Al Hilal Omdurman"
+            },
+            "away": {
+                "id": "47470",
+                "name": "Alamal Atbara"
+            },
+            "ss": null
+        },
+        {
+            "id": "63613550",
+            "time": "1490803200",
+            "time_status": "0",
+            "league": {
+                "id": "311",
+                "name": "Sweden Folksam U21"
+            },
+            "home": {
+                "id": "2606",
+                "name": "Elfsborg U21"
+            },
+            "away": {
+                "id": "2683",
+                "name": "Jonkopings Sodra U21"
+            },
+            "ss": null
+        },
+        {
+            "id": "63244180",
+            "time": "1490803200",
+            "time_status": "0",
+            "league": {
+                "id": "174",
+                "name": "Slovenia Prva Liga"
+            },
+            "home": {
+                "id": "9941",
+                "name": "NK Domzale"
+            },
+            "away": {
+                "id": "718",
+                "name": "Aluminij Kidricevo"
+            },
+            "ss": null
+        },
+        {
+            "id": "63617846",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "43",
+                "name": "Germany Oberliga Hamburg"
+            },
+            "home": {
+                "id": "47113",
+                "name": "FC T\u00fcrkiye Wilhelmsburg"
+            },
+            "away": {
+                "id": "46150",
+                "name": "TSV Buchholz 08"
+            },
+            "ss": null
+        },
+        {
+            "id": "63261649",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "73",
+                "name": "Germany Regionalliga North East"
+            },
+            "home": {
+                "id": "9860",
+                "name": "Wacker Nordhausen"
+            },
+            "away": {
+                "id": "43809",
+                "name": "Babelsberg 03"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612848",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "1741",
+                "name": "Germany Landespokal"
+            },
+            "home": {
+                "id": "8453",
+                "name": "Wacker Burghausen"
+            },
+            "away": {
+                "id": "5783",
+                "name": "Unterhaching"
+            },
+            "ss": null
+        },
+        {
+            "id": "63424934",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "102",
+                "name": "Germany Oberliga Rheinland-Pfalz\/Saar"
+            },
+            "home": {
+                "id": "3778",
+                "name": "FSV J\u00e4gersburg"
+            },
+            "away": {
+                "id": "46630",
+                "name": "FC Karbach"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612826",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47140",
+                "name": "Schwarz Weiss Essen"
+            },
+            "away": {
+                "id": "47133",
+                "name": "TuRU D\u00fcsseldorf"
+            },
+            "ss": null
+        },
+        {
+            "id": "63619478",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "73",
+                "name": "Germany Regionalliga North East"
+            },
+            "home": {
+                "id": "265",
+                "name": "VfB Auerbach"
+            },
+            "away": {
+                "id": "262",
+                "name": "TSG Neustrelitz"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612814",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "363",
+                "name": "Europe Friendlies"
+            },
+            "home": {
+                "id": "161130",
+                "name": "V\u00e5rg\u00e5rda IK"
+            },
+            "away": {
+                "id": "5777",
+                "name": "Dalstorps IF"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612858",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "1050",
+                "name": "Hungary Cup"
+            },
+            "home": {
+                "id": "28784",
+                "name": "Ferencvarosi TC"
+            },
+            "away": {
+                "id": "4686",
+                "name": "Diosgyori VTK"
+            },
+            "ss": null
+        },
+        {
+            "id": "63606285",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "17",
+                "name": "UEFA Champions League Women"
+            },
+            "home": {
+                "id": "6828",
+                "name": "Barcelona Women"
+            },
+            "away": {
+                "id": "431",
+                "name": "FC Rosengard Women"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612705",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "369",
+                "name": "Austria Amateur Cup"
+            },
+            "home": {
+                "id": "73014",
+                "name": "WAF Brigittenau"
+            },
+            "away": {
+                "id": "47186",
+                "name": "FC Karabakh Wien"
+            },
+            "ss": null
+        },
+        {
+            "id": "63261670",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "73",
+                "name": "Germany Regionalliga North East"
+            },
+            "home": {
+                "id": "6229",
+                "name": "BFC Dynamo"
+            },
+            "away": {
+                "id": "11045",
+                "name": "Hertha Berlin II"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612850",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "1741",
+                "name": "Germany Landespokal"
+            },
+            "home": {
+                "id": "3808",
+                "name": "Steinbach"
+            },
+            "away": {
+                "id": "9855",
+                "name": "Wehen SV"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612822",
+            "time": "1490806800",
+            "time_status": "0",
+            "league": {
+                "id": "1555",
+                "name": "Germany Oberliga NOFV Sud"
+            },
+            "home": {
+                "id": "52179",
+                "name": "SSV Markranstadt"
+            },
+            "away": {
+                "id": "52174",
+                "name": "BSG Chemie Leipzig"
+            },
+            "ss": null
+        },
+        {
+            "id": "63613537",
+            "time": "1490807700",
+            "time_status": "0",
+            "league": {
+                "id": "429",
+                "name": "Spain Copa Federacion"
+            },
+            "home": {
+                "id": "153",
+                "name": "Fuenlabrada"
+            },
+            "away": {
+                "id": "3850",
+                "name": "Atletico Saguntino"
+            },
+            "ss": null
+        },
+        {
+            "id": "63613428",
+            "time": "1490807700",
+            "time_status": "0",
+            "league": {
+                "id": "623",
+                "name": "Mexico U20 League"
+            },
+            "home": {
+                "id": "52254",
+                "name": "Tigres U20"
+            },
+            "away": {
+                "id": "43963",
+                "name": "Unam Pumas U20"
+            },
+            "ss": null
+        },
+        {
+            "id": "63244175",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "174",
+                "name": "Slovenia Prva Liga"
+            },
+            "home": {
+                "id": "1213",
+                "name": "NK Maribor"
+            },
+            "away": {
+                "id": "27877",
+                "name": "NK Radomlje"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612841",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47136",
+                "name": "SC D\u00fcsseldorf West"
+            },
+            "away": {
+                "id": "6973",
+                "name": "FC Kray"
+            },
+            "ss": null
+        },
+        {
+            "id": "63617839",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "670",
+                "name": "Germany Oberliga Westfalen"
+            },
+            "home": {
+                "id": "50225",
+                "name": "Westfalia Rhynern"
+            },
+            "away": {
+                "id": "50216",
+                "name": "SC Roland Beckum"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612830",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47138",
+                "name": "VfB Hilden"
+            },
+            "away": {
+                "id": "50206",
+                "name": "SV Honnepel Nierdermormter"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612846",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "670",
+                "name": "Germany Oberliga Westfalen"
+            },
+            "home": {
+                "id": "50212",
+                "name": "SuS Stadtlohn"
+            },
+            "away": {
+                "id": "50221",
+                "name": "Arminia Bielefeld II"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612837",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47137",
+                "name": "TV Jahn Hiesfeld"
+            },
+            "away": {
+                "id": "48552",
+                "name": "Bocholt"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612844",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47135",
+                "name": "TSV Meerbusch"
+            },
+            "away": {
+                "id": "47139",
+                "name": "Sportfreunde Baumberg"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612832",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47130",
+                "name": "SpVg Schonnebeck"
+            },
+            "away": {
+                "id": "47129",
+                "name": "KFC Uerdingen 05"
+            },
+            "ss": null
+        },
+        {
+            "id": "63618025",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "6974",
+                "name": "VfR Krefeld-Fischeln"
+            },
+            "away": {
+                "id": "47131",
+                "name": "VfB Homberg"
+            },
+            "ss": null
+        },
+        {
+            "id": "63617841",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "50207",
+                "name": "SC Kapellen-Erft"
+            },
+            "away": {
+                "id": "47134",
+                "name": "Ratingen SV Germania 04\/19 EV"
+            },
+            "ss": null
+        },
+        {
+            "id": "63261693",
+            "time": "1490808600",
+            "time_status": "0",
+            "league": {
+                "id": "385",
+                "name": "Germany Regionalliga South West"
+            },
+            "home": {
+                "id": "2877",
+                "name": "Kaiserslautern II"
+            },
+            "away": {
+                "id": "2916",
+                "name": "Kickers Offenbach"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612860",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "1050",
+                "name": "Hungary Cup"
+            },
+            "home": {
+                "id": "5611",
+                "name": "Ujpest"
+            },
+            "away": {
+                "id": "55526",
+                "name": "SC Vasas Budapest"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612772",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "3567",
+                "name": "Brazil Campeonato Paulista A3"
+            },
+            "home": {
+                "id": "43910",
+                "name": "Desportivo Brasil"
+            },
+            "away": {
+                "id": "43898",
+                "name": "Olimpia SP"
+            },
+            "ss": null
+        },
+        {
+            "id": "63630079",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "808",
+                "name": "Ivory Coast Premier Division"
+            },
+            "home": {
+                "id": "67226",
+                "name": "AS Tanda"
+            },
+            "away": {
+                "id": "65617",
+                "name": "Africa Sports"
+            },
+            "ss": null
+        },
+        {
+            "id": "63263215",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "928",
+                "name": "Guatemala Liga Nacional"
+            },
+            "home": {
+                "id": "44145",
+                "name": "Malacateco"
+            },
+            "away": {
+                "id": "47084",
+                "name": "Deportivo Carcha"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612835",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "671",
+                "name": "Germany Oberliga Niederrhein"
+            },
+            "home": {
+                "id": "47132",
+                "name": "Cronenberger SC"
+            },
+            "away": {
+                "id": "47128",
+                "name": "SSVg Velbert"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612775",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "3567",
+                "name": "Brazil Campeonato Paulista A3"
+            },
+            "home": {
+                "id": "1319",
+                "name": "Nacional SP"
+            },
+            "away": {
+                "id": "394",
+                "name": "Matonense"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612711",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "4153",
+                "name": "Brazil Campeonato Brasileiro Women"
+            },
+            "home": {
+                "id": "3876",
+                "name": "Vitoria das Tabocas Women"
+            },
+            "away": {
+                "id": "160115",
+                "name": "Kindermann SC Women"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612738",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "3568",
+                "name": "Brazil Campeonato Paulista A2"
+            },
+            "home": {
+                "id": "79790",
+                "name": "Juventus SP"
+            },
+            "away": {
+                "id": "79795",
+                "name": "EC Barretos"
+            },
+            "ss": null
+        },
+        {
+            "id": "63606288",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "17",
+                "name": "UEFA Champions League Women"
+            },
+            "home": {
+                "id": "3684",
+                "name": "PSG Women"
+            },
+            "away": {
+                "id": "5942",
+                "name": "Bayern Munich Women"
+            },
+            "ss": null
+        },
+        {
+            "id": "63612820",
+            "time": "1490810400",
+            "time_status": "0",
+            "league": {
+                "id": "524",
+                "name": "France CFA"
+            },
+            "home": {
+                "id": "56528",
+                "name": "Jeanne d'Arc Drancy"
+            },
+            "away": {
+                "id": "6184",
+                "name": "AC Boulogne-Billancourt"
+            },
+            "ss": null
+        },
+        {
+            "id": "63244183",
+            "time": "1490811300",
+            "time_status": "0",
+            "league": {
+                "id": "174",
+                "name": "Slovenia Prva Liga"
+            },
+            "home": {
+                "id": "5847",
+                "name": "Olimpija Ljubljana"
+            },
+            "away": {
+                "id": "44003",
+                "name": "ND Gorica"
+            },
+            "ss": null
+        }
+    ]
+}

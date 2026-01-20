@@ -1,0 +1,182 @@
+"use client"
+
+import { useState } from "react"
+import { Header } from "@/components/header"
+import { Users, Star, Pencil } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+
+type SortType = "hot" | "new" | "comments"
+
+interface Post {
+  id: number
+  community: string
+  author: string
+  avatar: string
+  timestamp: string
+  title: string
+  content: string
+  image?: string
+  upvotes: number
+  comments: number
+  views?: number
+  rating?: number
+  isUpvoted: boolean
+  createdAt: Date
+  isNotice?: boolean
+}
+
+interface Community {
+  name: string
+  description: string
+  members: string
+  banner: string
+}
+
+interface CommunityContentProps {
+  community: Community
+  posts: Post[]
+  isMainContent?: boolean
+  communitySlug?: string
+}
+
+export function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
+  const [sortBy, setSortBy] = useState<SortType>("hot")
+  const [isFollowing, setIsFollowing] = useState(false)
+
+  const sortedPosts = [...posts].sort((a, b) => {
+    switch (sortBy) {
+      case "hot":
+        return b.upvotes - a.upvotes
+      case "new":
+        return b.createdAt.getTime() - a.createdAt.getTime()
+      case "comments":
+        return b.comments - a.comments
+      default:
+        return 0
+    }
+  })
+
+  if (!isMainContent) {
+    return (
+      <>
+        <Header />
+        {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
+        <div className="py-4">
+          {/* 커뮤니티 헤더: 간격 축소 */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-foreground">{community.name}</h1>
+              <p className="text-sm text-muted-foreground">{community.description}</p>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                <div className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  <span>{community.members}</span>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant={isFollowing ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs px-3"
+              onClick={() => setIsFollowing(!isFollowing)}
+            >
+              {isFollowing ? "팔로잉" : "팔로우"}
+            </Button>
+          </div>
+
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            {/* 테이블 상단: 컴팩트한 패딩 */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/50">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-foreground">전체 {posts.length.toLocaleString()}건</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {communitySlug && (
+                  <Link href={`/write?community=${communitySlug}`}>
+                    <Button size="sm" className="h-7 text-xs px-3 gap-1.5">
+                      <Pencil className="h-3.5 w-3.5" />
+                      글쓰기
+                    </Button>
+                  </Link>
+                )}
+                <div className="flex gap-1">
+                <Button variant={sortBy === "hot" ? "default" : "ghost"} size="sm" className="h-7 text-xs px-2" onClick={() => setSortBy("hot")}>
+                  온도순
+                </Button>
+                <Button variant={sortBy === "new" ? "default" : "ghost"} size="sm" className="h-7 text-xs px-2" onClick={() => setSortBy("new")}>
+                  최신순
+                </Button>
+                <Button
+                  variant={sortBy === "comments" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs px-2"
+                  onClick={() => setSortBy("comments")}
+                >
+                  댓글순
+                </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* 테이블 헤더: 컴팩트한 패딩 */}
+            <div className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+              <div className="col-span-1 text-center">번호</div>
+              <div className="col-span-5">제목</div>
+              <div className="col-span-2 text-center">글쓴이</div>
+              <div className="col-span-1 text-center">날짜</div>
+              <div className="col-span-1 text-center">조회</div>
+              <div className="col-span-1 text-center">추천</div>
+              <div className="col-span-1 text-center">별점</div>
+            </div>
+
+            {/* 테이블 바디: 조밀한 행 간격 */}
+            {sortedPosts.length > 0 ? (
+              sortedPosts.map((post, index) => (
+                <Link
+                  key={post.id}
+                  href={`/post/${post.id}`}
+                  className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
+                >
+                  <div className="col-span-1 text-center text-muted-foreground">
+                    {post.isNotice ? <span className="text-rose-500 font-semibold">공지</span> : posts.length - index}
+                  </div>
+                  <div className="col-span-5 flex items-center gap-1.5">
+                    <span className="font-medium text-foreground truncate">{post.title}</span>
+                    {post.comments > 0 && (
+                      <span className="text-orange-500 font-medium flex-shrink-0">[{post.comments}]</span>
+                    )}
+                  </div>
+                  <div className="col-span-2 text-center text-muted-foreground truncate">{post.author}</div>
+                  <div className="col-span-1 text-center text-muted-foreground">{post.timestamp}</div>
+                  <div className="col-span-1 text-center text-muted-foreground tabular-nums">
+                    {(post.views || Math.floor(Math.random() * 10000)).toLocaleString()}
+                  </div>
+                  <div className="col-span-1 text-center text-muted-foreground tabular-nums">{post.upvotes}</div>
+                  <div className="col-span-1 text-center">
+                    <div className="flex items-center justify-center gap-px">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-2.5 h-2.5 ${
+                            i < (post.rating || 3) ? "fill-rose-500 text-rose-500" : "fill-gray-300 text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="p-6 text-center">
+                <p className="text-sm text-muted-foreground">아직 게시물이 없습니다.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  return null
+}

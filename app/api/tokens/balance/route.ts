@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { auth } from '@clerk/nextjs/server'
+
+/**
+ * GET /api/tokens/balance
+ * 
+ * Get current user's token balance
+ * Automatically resets tokens if last_reset_at < today (missed reset handling)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = await createClient()
+
+    // Use the PostgreSQL function to ensure daily reset is applied
+    const { data: balance, error: rpcError } = await supabase.rpc('ensure_daily_token_reset', {
+      target_user_id: userId,
+    })
+
+    if (rpcError) {
+      console.error('Failed to ensure token reset:', rpcError)
+      // Fallback: try direct query
+      const { data: tokenData, error: fetchError } = await supabase
+        .from('user_tokens')
+        .select('token_balance, last_reset_at, total_tokens_earned')
+        .eq('user_id', userId)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 = no rows found - create initial record
+        const { data: newToken, error: insertError } = await supabase
+          .from('user_tokens')
+          .insert({
+            user_id: userId,
+            token_balance: 10,
+            last_reset_at: new Date().toISOString(),
+            total_tokens_earned: 10,
+          })
+          .select('token_balance, last_reset_at, total_tokens_earned')
+          .single()
+
+        if (insertError) {
+          console.error('Failed to create token record:', insertError)
+          return NextResponse.json(
+            { error: '토큰 정보를 가져오는 중 오류가 발생했습니다.', details: insertError.message },
+            { status: 500 }
+          )
+        }
+
+        return NextResponse.json({
+          balance: newToken.token_balance,
+          lastResetAt: newToken.last_reset_at,
+          totalEarned: newToken.total_tokens_earned,
+        })
+      }
+
+      if (!tokenData) {
+        return NextResponse.json(
+          { error: '토큰 정보를 찾을 수 없습니다.' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({
+        balance: tokenData.token_balance,
+        lastResetAt: tokenData.last_reset_at,
+        totalEarned: tokenData.total_tokens_earned,
+      })
+    }
+
+    // If RPC succeeded, get full token data
+    const { data: tokenData, error: fetchError } = await supabase
+      .from('user_tokens')
+      .select('token_balance, last_reset_at, total_tokens_earned')
+      .eq('user_id', userId)
+      .single()
+
+    if (fetchError) {
+      console.error('Failed to fetch token data:', fetchError)
+      return NextResponse.json(
+        { error: '토큰 정보를 가져오는 중 오류가 발생했습니다.', details: fetchError.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      balance: tokenData.token_balance,
+      lastResetAt: tokenData.last_reset_at,
+      totalEarned: tokenData.total_tokens_earned,
+    })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.' },
+      { status: 500 }
+    )
+  }
+}

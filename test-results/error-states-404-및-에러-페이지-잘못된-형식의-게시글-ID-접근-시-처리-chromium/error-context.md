@@ -1,0 +1,81 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [active]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - navigation [ref=e6]:
+            - button "previous" [disabled] [ref=e7]:
+              - img "previous" [ref=e8]
+            - generic [ref=e10]:
+              - generic [ref=e11]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e12]:
+              - img "next" [ref=e13]
+          - img
+        - generic [ref=e15]:
+          - link "Next.js 16.0.3 (stale) Turbopack" [ref=e16] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e17]
+            - generic "There is a newer version (16.1.3) available, upgrade recommended!" [ref=e19]: Next.js 16.0.3 (stale)
+            - generic [ref=e20]: Turbopack
+          - img
+      - dialog "Build Error" [ref=e22]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e29]: Build Error
+              - generic [ref=e30]:
+                - button "Copy Error Info" [ref=e31] [cursor=pointer]:
+                  - img [ref=e32]
+                - link "Go to related documentation" [ref=e34] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+                  - img [ref=e35]
+                - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e37] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+                  - img [ref=e38]
+            - generic [ref=e47]: "Module not found: Can't resolve '@tiptap/core'"
+          - generic [ref=e49]:
+            - generic [ref=e51]:
+              - img [ref=e53]
+              - generic [ref=e57]: ./community/lib/tiptap/extensions/embed-paste.ts (1:1)
+              - button "Open in editor" [ref=e58] [cursor=pointer]:
+                - img [ref=e60]
+            - generic [ref=e63]:
+              - generic [ref=e64]: "Module not found: Can't resolve '@tiptap/core'"
+              - text: ">"
+              - generic [ref=e65]: 1 |
+              - text: import
+              - generic [ref=e66]: "{"
+              - text: Extension
+              - generic [ref=e67]: "}"
+              - text: from '@tiptap/core'
+              - generic [ref=e68]: "|"
+              - text: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              - generic [ref=e69]: 2 |
+              - text: import
+              - generic [ref=e70]: "{"
+              - text: Plugin, PluginKey
+              - generic [ref=e71]: "}"
+              - text: from '@tiptap/pm/state'
+              - generic [ref=e72]: 3 |
+              - generic [ref=e73]: 4 |
+              - text: /**
+              - generic [ref=e74]:
+                - text: "Import traces: Client Component Browser: ./community/lib/tiptap/extensions/embed-paste.ts [Client Component Browser] ./community/components/tiptap-editor.tsx [Client Component Browser] ./community/app/write/page.tsx [Client Component Browser] ./community/app/write/page.tsx [Server Component] Client Component SSR: ./community/lib/tiptap/extensions/embed-paste.ts [Client Component SSR] ./community/components/tiptap-editor.tsx [Client Component SSR] ./community/app/write/page.tsx [Client Component SSR] ./community/app/write/page.tsx [Server Component]"
+                - link "https://nextjs.org/docs/messages/module-not-found" [ref=e75] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+        - generic [ref=e76]: "1"
+        - generic [ref=e77]: "2"
+    - generic [ref=e82] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e83]:
+        - img [ref=e84]
+      - button "Open issues overlay" [ref=e88]:
+        - generic [ref=e89]:
+          - generic [ref=e90]: "0"
+          - generic [ref=e91]: "1"
+        - generic [ref=e92]: Issue
+  - alert [ref=e93]
+```

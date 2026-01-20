@@ -1,0 +1,129 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "홈" [ref=e7] [cursor=pointer]:
+            - /url: /
+            - heading "홈" [level=1] [ref=e8]
+          - navigation [ref=e9]:
+            - link "피드" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - button "피드" [ref=e11]:
+                - img
+                - text: 피드
+            - link "탐색" [ref=e12] [cursor=pointer]:
+              - /url: /explore
+              - button "탐색" [ref=e13]:
+                - img
+                - text: 탐색
+        - generic [ref=e15]:
+          - img [ref=e16]
+          - textbox "검색..." [active] [ref=e19] [cursor=pointer]: <script>alert("xss")</script>
+        - generic [ref=e20]:
+          - button [ref=e21]:
+            - img
+          - button [ref=e22]:
+            - img
+    - main [ref=e23]:
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - heading "검색" [level=1] [ref=e27]
+          - generic [ref=e29]:
+            - combobox [ref=e30]:
+              - generic:
+                - generic:
+                  - img
+                  - generic: 제목 + 내용
+              - img
+            - combobox [ref=e31]
+            - generic [ref=e32]:
+              - img [ref=e33]
+              - textbox "제목 또는 내용을 입력하세요..." [ref=e36]
+            - button "검색" [disabled]:
+              - img
+              - text: 검색
+        - generic [ref=e38]:
+          - img [ref=e39]
+          - paragraph [ref=e42]: 검색어를 입력하고 검색 버튼을 누르세요.
+          - paragraph [ref=e43]: 검색 타입을 선택하여 원하는 방식으로 검색할 수 있습니다.
+  - generic:
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - navigation [ref=e49]:
+            - button "previous" [disabled] [ref=e50]:
+              - img "previous" [ref=e51]
+            - generic [ref=e53]:
+              - generic [ref=e54]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e55]:
+              - img "next" [ref=e56]
+          - img
+        - generic [ref=e58]:
+          - link "Next.js 16.0.3 (stale) Turbopack" [ref=e59] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e60]
+            - generic "There is a newer version (16.1.3) available, upgrade recommended!" [ref=e62]: Next.js 16.0.3 (stale)
+            - generic [ref=e63]: Turbopack
+          - img
+      - dialog "Build Error" [ref=e65]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e72]: Build Error
+              - generic [ref=e73]:
+                - button "Copy Error Info" [ref=e74] [cursor=pointer]:
+                  - img [ref=e75]
+                - link "Go to related documentation" [ref=e77] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+                  - img [ref=e78]
+                - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e80] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+                  - img [ref=e81]
+            - generic [ref=e90]: "Module not found: Can't resolve '@tiptap/core'"
+          - generic [ref=e92]:
+            - generic [ref=e94]:
+              - img [ref=e96]
+              - generic [ref=e100]: ./community/lib/tiptap/extensions/embed-paste.ts (1:1)
+              - button "Open in editor" [ref=e101] [cursor=pointer]:
+                - img [ref=e103]
+            - generic [ref=e106]:
+              - generic [ref=e107]: "Module not found: Can't resolve '@tiptap/core'"
+              - text: ">"
+              - generic [ref=e108]: 1 |
+              - text: import
+              - generic [ref=e109]: "{"
+              - text: Extension
+              - generic [ref=e110]: "}"
+              - text: from '@tiptap/core'
+              - generic [ref=e111]: "|"
+              - text: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              - generic [ref=e112]: 2 |
+              - text: import
+              - generic [ref=e113]: "{"
+              - text: Plugin, PluginKey
+              - generic [ref=e114]: "}"
+              - text: from '@tiptap/pm/state'
+              - generic [ref=e115]: 3 |
+              - generic [ref=e116]: 4 |
+              - text: /**
+              - generic [ref=e117]:
+                - text: "Import traces: Client Component Browser: ./community/lib/tiptap/extensions/embed-paste.ts [Client Component Browser] ./community/components/tiptap-editor.tsx [Client Component Browser] ./community/app/write/page.tsx [Client Component Browser] ./community/app/write/page.tsx [Server Component] Client Component SSR: ./community/lib/tiptap/extensions/embed-paste.ts [Client Component SSR] ./community/components/tiptap-editor.tsx [Client Component SSR] ./community/app/write/page.tsx [Client Component SSR] ./community/app/write/page.tsx [Server Component]"
+                - link "https://nextjs.org/docs/messages/module-not-found" [ref=e118] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+        - generic [ref=e119]: "1"
+        - generic [ref=e120]: "2"
+    - generic [ref=e125] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e126]:
+        - img [ref=e127]
+      - button "Open issues overlay" [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]: "0"
+          - generic [ref=e134]: "1"
+        - generic [ref=e135]: Issue
+  - alert [ref=e136]
+```

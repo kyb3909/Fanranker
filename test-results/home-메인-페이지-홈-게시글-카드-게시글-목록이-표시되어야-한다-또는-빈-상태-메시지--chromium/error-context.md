@@ -1,0 +1,337 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "홈" [ref=e7] [cursor=pointer]:
+            - /url: /
+            - heading "홈" [level=1] [ref=e8]
+          - navigation [ref=e9]:
+            - link "피드" [ref=e10] [cursor=pointer]:
+              - /url: /
+              - button "피드" [ref=e11]:
+                - img
+                - text: 피드
+            - link "탐색" [ref=e12] [cursor=pointer]:
+              - /url: /explore
+              - button "탐색" [ref=e13]:
+                - img
+                - text: 탐색
+        - generic [ref=e15]:
+          - img [ref=e16]
+          - textbox "검색..." [ref=e19] [cursor=pointer]
+        - generic [ref=e20]:
+          - button [ref=e21]:
+            - img
+          - button [ref=e22]:
+            - img
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - complementary [ref=e25]:
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - img [ref=e30]
+                - heading "커뮤니티" [level=3] [ref=e32]
+              - button "검색" [ref=e33]:
+                - img [ref=e34]
+            - generic [ref=e37]:
+              - generic [ref=e38]:
+                - link "⚽ 해외축구" [ref=e39] [cursor=pointer]:
+                  - /url: /community/overseas-football
+                  - generic [ref=e40]: ⚽
+                  - generic [ref=e41]: 해외축구
+                - button "팔로우" [ref=e42]:
+                  - img [ref=e43]
+              - generic [ref=e45]:
+                - link "🏟️ 국내축구" [ref=e46] [cursor=pointer]:
+                  - /url: /community/domestic-football
+                  - generic [ref=e47]: 🏟️
+                  - generic [ref=e48]: 국내축구
+                - button "팔로우" [ref=e49]:
+                  - img [ref=e50]
+              - generic [ref=e52]:
+                - link "⚾ 야구" [ref=e53] [cursor=pointer]:
+                  - /url: /community/baseball
+                  - generic [ref=e54]: ⚾
+                  - generic [ref=e55]: 야구
+                - button "팔로우" [ref=e56]:
+                  - img [ref=e57]
+              - generic [ref=e59]:
+                - link "🏀 농구" [ref=e60] [cursor=pointer]:
+                  - /url: /community/basketball
+                  - generic [ref=e61]: 🏀
+                  - generic [ref=e62]: 농구
+                - button "팔로우" [ref=e63]:
+                  - img [ref=e64]
+              - generic [ref=e66]:
+                - link "🏐 배구" [ref=e67] [cursor=pointer]:
+                  - /url: /community/volleyball
+                  - generic [ref=e68]: 🏐
+                  - generic [ref=e69]: 배구
+                - button "팔로우" [ref=e70]:
+                  - img [ref=e71]
+              - generic [ref=e73]:
+                - link "🎮 e스포츠" [ref=e74] [cursor=pointer]:
+                  - /url: /community/esports
+                  - generic [ref=e75]: 🎮
+                  - generic [ref=e76]: e스포츠
+                - button "팔로우" [ref=e77]:
+                  - img [ref=e78]
+              - generic [ref=e80]:
+                - link "💬 자유게시판" [ref=e81] [cursor=pointer]:
+                  - /url: /community/free-board
+                  - generic [ref=e82]: 💬
+                  - generic [ref=e83]: 자유게시판
+                - button "팔로우" [ref=e84]:
+                  - img [ref=e85]
+              - generic [ref=e87]:
+                - link "📊 정보게시판" [ref=e88] [cursor=pointer]:
+                  - /url: /community/tips
+                  - generic [ref=e89]: 📊
+                  - generic [ref=e90]: 정보게시판
+                - button "팔로우" [ref=e91]:
+                  - img [ref=e92]
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - button "커뮤니티 1" [ref=e97]:
+                - img [ref=e98]
+                - text: 커뮤니티
+                - generic [ref=e100]: "1"
+              - button "승부 예측 12" [ref=e101]:
+                - img [ref=e102]
+                - text: 승부 예측
+                - generic [ref=e108]: "12"
+            - generic [ref=e110]:
+              - button "온도순" [ref=e111]:
+                - img [ref=e112]
+                - text: 온도순
+              - button "최신순" [ref=e114]:
+                - img [ref=e115]
+                - text: 최신순
+              - button "댓글순" [ref=e118]:
+                - img [ref=e119]
+                - text: 댓글순
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - link "해외축구" [ref=e126] [cursor=pointer]:
+                - /url: /community/overseas-football
+              - generic [ref=e127]:
+                - generic [ref=e128]: 2일 전
+                - button [ref=e129]:
+                  - img
+            - generic [ref=e130]:
+              - link "테스트입니다" [ref=e131] [cursor=pointer]:
+                - /url: /post/9875333c-4b83-46f4-b31b-9fc508d0ca0c
+                - heading "테스트입니다" [level=2] [ref=e132]
+              - paragraph [ref=e133]: 테스트에요
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - img "kyb3909" [ref=e137]
+                - button "kyb3909" [ref=e138] [cursor=pointer]
+                - generic [ref=e139]: "|"
+                - generic [ref=e140]:
+                  - img [ref=e141]
+                  - generic [ref=e144]: "0"
+                - generic [ref=e145]:
+                  - img [ref=e146]
+                  - generic [ref=e148]: 0°
+              - generic [ref=e149]:
+                - button "0" [ref=e150]:
+                  - img
+                  - generic [ref=e151]: "0"
+                - link "0" [ref=e152] [cursor=pointer]:
+                  - /url: /post/9875333c-4b83-46f4-b31b-9fc508d0ca0c
+                  - button "0" [ref=e153]:
+                    - img
+                    - generic [ref=e154]: "0"
+                - button [ref=e155]:
+                  - img
+                - button "공유" [ref=e156]:
+                  - img
+                  - generic [ref=e157]: 공유
+        - complementary [ref=e158]:
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - generic [ref=e161]:
+                - img [ref=e162]
+                - heading "최근 댓글" [level=3] [ref=e164]
+              - generic [ref=e165]:
+                - link "손흥민 어시스트 장면 봤어요? 해외축구 89 방금 전" [ref=e166] [cursor=pointer]:
+                  - /url: /post/1
+                  - paragraph [ref=e167]: 손흥민 어시스트 장면 봤어요?
+                  - generic [ref=e168]:
+                    - generic [ref=e169]: 해외축구
+                    - generic [ref=e170]:
+                      - generic [ref=e171]:
+                        - img [ref=e172]
+                        - text: "89"
+                      - generic [ref=e174]: 방금 전
+                - link "두산 선발진 어떻게 생각하세요 야구 234 2분 전" [ref=e175] [cursor=pointer]:
+                  - /url: /post/2
+                  - paragraph [ref=e176]: 두산 선발진 어떻게 생각하세요
+                  - generic [ref=e177]:
+                    - generic [ref=e178]: 야구
+                    - generic [ref=e179]:
+                      - generic [ref=e180]:
+                        - img [ref=e181]
+                        - text: "234"
+                      - generic [ref=e183]: 2분 전
+                - link "오늘 경기 예측 공유합니다 농구 156 5분 전" [ref=e184] [cursor=pointer]:
+                  - /url: /post/3
+                  - paragraph [ref=e185]: 오늘 경기 예측 공유합니다
+                  - generic [ref=e186]:
+                    - generic [ref=e187]: 농구
+                    - generic [ref=e188]:
+                      - generic [ref=e189]:
+                        - img [ref=e190]
+                        - text: "156"
+                      - generic [ref=e192]: 5분 전
+                - link "배팅 노하우 질문이요 자유게시판 67 12분 전" [ref=e193] [cursor=pointer]:
+                  - /url: /post/4
+                  - paragraph [ref=e194]: 배팅 노하우 질문이요
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: 자유게시판
+                    - generic [ref=e197]:
+                      - generic [ref=e198]:
+                        - img [ref=e199]
+                        - text: "67"
+                      - generic [ref=e201]: 12분 전
+            - generic [ref=e205]:
+              - generic [ref=e207]: 📢
+              - generic [ref=e208]:
+                - heading "광고 영역" [level=3] [ref=e209]
+                - paragraph [ref=e210]: 광고를 표시할 수 있는 공간입니다
+              - button "자세히 보기" [ref=e211]
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - img [ref=e215]
+                  - heading "오늘의 경기" [level=3] [ref=e217]
+                - generic [ref=e218]: 4경기
+              - generic [ref=e219]:
+                - generic [ref=e220] [cursor=pointer]:
+                  - generic [ref=e221]:
+                    - generic [ref=e222]:
+                      - generic [ref=e223]: EPL
+                      - generic [ref=e224]: 경기 예정
+                    - generic [ref=e225]: 21:00
+                  - generic [ref=e226]:
+                    - generic [ref=e228]: 맨체스터 시티
+                    - generic [ref=e230]: 리버풀
+                - generic [ref=e231] [cursor=pointer]:
+                  - generic [ref=e232]:
+                    - generic [ref=e233]:
+                      - generic [ref=e234]: La Liga
+                      - generic [ref=e235]: 경기 예정
+                    - generic [ref=e236]: 23:30
+                  - generic [ref=e237]:
+                    - generic [ref=e239]: 바르셀로나
+                    - generic [ref=e241]: 레알 마드리드
+                - generic [ref=e242] [cursor=pointer]:
+                  - generic [ref=e243]:
+                    - generic [ref=e244]:
+                      - generic [ref=e245]: NBA
+                      - generic [ref=e246]: 진행 중
+                    - generic [ref=e247]: 11:00
+                  - generic [ref=e248]:
+                    - generic [ref=e249]:
+                      - generic [ref=e250]: Lakers
+                      - generic [ref=e251]: "45"
+                    - generic [ref=e252]:
+                      - generic [ref=e253]: Warriors
+                      - generic [ref=e254]: "42"
+                - generic [ref=e255] [cursor=pointer]:
+                  - generic [ref=e256]:
+                    - generic [ref=e257]:
+                      - generic [ref=e258]: KBO
+                      - generic [ref=e259]: 경기 종료
+                    - generic [ref=e260]: 18:30
+                  - generic [ref=e261]:
+                    - generic [ref=e262]:
+                      - generic [ref=e263]: 두산 베어스
+                      - generic [ref=e264]: "4"
+                    - generic [ref=e265]:
+                      - generic [ref=e266]: LG 트윈스
+                      - generic [ref=e267]: "2"
+  - generic [active]:
+    - generic [ref=e270]:
+      - generic [ref=e271]:
+        - generic [ref=e272]:
+          - navigation [ref=e273]:
+            - button "previous" [disabled] [ref=e274]:
+              - img "previous" [ref=e275]
+            - generic [ref=e277]:
+              - generic [ref=e278]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e279]:
+              - img "next" [ref=e280]
+          - img
+        - generic [ref=e282]:
+          - link "Next.js 16.0.3 (stale) Turbopack" [ref=e283] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e284]
+            - generic "There is a newer version (16.1.3) available, upgrade recommended!" [ref=e286]: Next.js 16.0.3 (stale)
+            - generic [ref=e287]: Turbopack
+          - img
+      - dialog "Build Error" [ref=e289]:
+        - generic [ref=e292]:
+          - generic [ref=e293]:
+            - generic [ref=e294]:
+              - generic [ref=e296]: Build Error
+              - generic [ref=e297]:
+                - button "Copy Error Info" [ref=e298] [cursor=pointer]:
+                  - img [ref=e299]
+                - link "Go to related documentation" [ref=e301] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+                  - img [ref=e302]
+                - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e304] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+                  - img [ref=e305]
+            - generic [ref=e314]: "Module not found: Can't resolve '@tiptap/core'"
+          - generic [ref=e316]:
+            - generic [ref=e318]:
+              - img [ref=e320]
+              - generic [ref=e324]: ./community/lib/tiptap/extensions/embed-paste.ts (1:1)
+              - button "Open in editor" [ref=e325] [cursor=pointer]:
+                - img [ref=e327]
+            - generic [ref=e330]:
+              - generic [ref=e331]: "Module not found: Can't resolve '@tiptap/core'"
+              - text: ">"
+              - generic [ref=e332]: 1 |
+              - text: import
+              - generic [ref=e333]: "{"
+              - text: Extension
+              - generic [ref=e334]: "}"
+              - text: from '@tiptap/core'
+              - generic [ref=e335]: "|"
+              - text: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              - generic [ref=e336]: 2 |
+              - text: import
+              - generic [ref=e337]: "{"
+              - text: Plugin, PluginKey
+              - generic [ref=e338]: "}"
+              - text: from '@tiptap/pm/state'
+              - generic [ref=e339]: 3 |
+              - generic [ref=e340]: 4 |
+              - text: /**
+              - generic [ref=e341]:
+                - text: "Import traces: Client Component Browser: ./community/lib/tiptap/extensions/embed-paste.ts [Client Component Browser] ./community/components/tiptap-editor.tsx [Client Component Browser] ./community/app/write/page.tsx [Client Component Browser] ./community/app/write/page.tsx [Server Component] Client Component SSR: ./community/lib/tiptap/extensions/embed-paste.ts [Client Component SSR] ./community/components/tiptap-editor.tsx [Client Component SSR] ./community/app/write/page.tsx [Client Component SSR] ./community/app/write/page.tsx [Server Component]"
+                - link "https://nextjs.org/docs/messages/module-not-found" [ref=e342] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+        - generic [ref=e343]: "1"
+        - generic [ref=e344]: "2"
+    - generic [ref=e349] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e350]:
+        - img [ref=e351]
+      - button "Open issues overlay" [ref=e355]:
+        - generic [ref=e356]:
+          - generic [ref=e357]: "0"
+          - generic [ref=e358]: "1"
+        - generic [ref=e359]: Issue
+  - alert [ref=e360]
+```

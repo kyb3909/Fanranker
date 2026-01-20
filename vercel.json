@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-token-reset",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

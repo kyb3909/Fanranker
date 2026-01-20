@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { auth } from '@clerk/nextjs/server'
+
+/**
+ * POST /api/posts/[id]/bookmark
+ * 
+ * Toggle bookmark for a post (add if not bookmarked, remove if bookmarked)
+ * 
+ * Body:
+ * - action?: "add" | "remove" (default: toggle)
+ */
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      )
+    }
+
+    const { id: postId } = await params
+    const supabase = await createClient()
+    const body = await request.json()
+    const { action } = body // 'add' | 'remove' or undefined (toggle)
+
+    // Check if post exists
+    const { data: post, error: postError } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('id', postId)
+      .single()
+
+    if (postError || !post) {
+      return NextResponse.json(
+        { error: '글을 찾을 수 없습니다.' },
+        { status: 404 }
+      )
+    }
+
+    // Check if bookmark exists
+    const { data: existingBookmark, error: checkError } = await supabase
+      .from('bookmarks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('post_id', postId)
+      .single()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Failed to check bookmark status:', checkError)
+      return NextResponse.json(
+        { error: '북마크 상태 확인 중 오류가 발생했습니다.', details: checkError.message },
+        { status: 500 }
+      )
+    }
+
+    const isBookmarked = !!existingBookmark
+
+    // Determine action
+    let shouldBookmark: boolean
+    if (action === 'remove') {
+      shouldBookmark = false
+    } else if (action === 'add') {
+      shouldBookmark = true
+    } else {
+      // Toggle: bookmark if not bookmarked, remove if bookmarked
+      shouldBookmark = !isBookmarked
+    }
+
+    if (shouldBookmark && !isBookmarked) {
+      // Add bookmark
+      const { error: insertError } = await supabase
+        .from('bookmarks')
+        .insert({
+          user_id: userId,
+          post_id: postId,
+        })
+
+      if (insertError) {
+        console.error('Failed to add bookmark:', insertError)
+        return NextResponse.json(
+          { error: '북마크 추가 중 오류가 발생했습니다.', details: insertError.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ success: true, bookmarked: true })
+    } else if (!shouldBookmark && isBookmarked) {
+      // Remove bookmark
+      const { error: deleteError } = await supabase
+        .from('bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('post_id', postId)
+
+      if (deleteError) {
+        console.error('Failed to remove bookmark:', deleteError)
+        return NextResponse.json(
+          { error: '북마크 제거 중 오류가 발생했습니다.', details: deleteError.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ success: true, bookmarked: false })
+    } else {
+      // Already in desired state
+      return NextResponse.json({ success: true, bookmarked: shouldBookmark })
+    }
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * GET /api/posts/[id]/bookmark
+ * 
+ * Check if current user has bookmarked the post
+ */
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json({ bookmarked: false })
+    }
+
+    const { id: postId } = await params
+    const supabase = await createClient()
+
+    const { data: bookmark, error } = await supabase
+      .from('bookmarks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('post_id', postId)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Failed to check bookmark status:', error)
+      return NextResponse.json({ bookmarked: false })
+    }
+
+    return NextResponse.json({ bookmarked: !!bookmark })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json({ bookmarked: false })
+  }
+}
