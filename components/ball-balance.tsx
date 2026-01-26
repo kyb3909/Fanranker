@@ -49,9 +49,13 @@ export function BallBalance() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors cursor-default">
-            <Circle className="h-4 w-4 fill-primary text-primary" />
-            <span className="text-sm font-semibold text-primary">{balance}</span>
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/15 hover:bg-primary/25 transition-colors cursor-default"
+            role="status"
+            aria-label={`보유 볼: ${balance}개`}
+          >
+            <Circle className="h-4 w-4 fill-primary text-primary" aria-hidden="true" />
+            <span className="text-sm font-semibold text-foreground">{balance}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-center">

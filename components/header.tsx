@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, User, Search } from "lucide-react"
+import { Home, Compass, Bell, Search } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, KeyboardEvent } from "react"
@@ -77,7 +77,7 @@ export function Header() {
               <NotificationDropdown />
             </SignedIn>
             <SignedOut>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" aria-label="알림">
                 <Bell className="h-[18px] w-[18px]" />
               </Button>
             </SignedOut>

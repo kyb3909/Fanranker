@@ -79,9 +79,22 @@ export function NotificationDropdown() {
         setNotifications(fetchedNotifications || [])
         setProfiles(fetchedProfiles || [])
         setPosts(fetchedPosts || [])
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status !== 401) {
+          console.error('Failed to load notifications:', response.status, errorData)
+        }
+        // 에러 발생 시 빈 배열로 설정
+        setNotifications([])
+        setProfiles([])
+        setPosts([])
       }
     } catch (error) {
       console.error('Failed to load notifications:', error)
+      // 네트워크 에러 등은 빈 배열로 설정
+      setNotifications([])
+      setProfiles([])
+      setPosts([])
     } finally {
       setIsLoading(false)
     }
@@ -93,9 +106,19 @@ export function NotificationDropdown() {
       if (response.ok) {
         const { notifications: fetchedNotifications } = await response.json()
         setUnreadCount(fetchedNotifications?.length || 0)
+      } else {
+        // 응답이 실패했지만 에러를 조용히 처리 (로그인하지 않은 경우 등)
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status !== 401) {
+          // 401 (Unauthorized)는 정상적인 경우이므로 로그하지 않음
+          console.error('Failed to check unread count:', response.status, errorData)
+        }
+        setUnreadCount(0)
       }
     } catch (error) {
+      // 네트워크 에러 등은 조용히 처리 (서버가 다운되었거나 네트워크 문제)
       console.error('Failed to check unread count:', error)
+      setUnreadCount(0)
     }
   }
 
@@ -155,10 +178,18 @@ export function NotificationDropdown() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full relative">
-          <Bell className="h-[18px] w-[18px]" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full relative"
+          aria-label={unreadCount > 0 ? `알림 ${unreadCount}개` : "알림"}
+        >
+          <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
           {unreadCount > 0 && (
-            <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            <span
+              className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
+              aria-hidden="true"
+            >
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}

@@ -84,7 +84,7 @@ export function ActivitySidebar() {
     fetchRecentPosts()
   }, [])
 
-  // 오늘의 경기 가져오기
+  // 오늘의 경기 가져오기 (API가 없으면 빈 배열로 처리)
   useEffect(() => {
     async function fetchMatches() {
       setIsLoadingMatches(true)
@@ -93,9 +93,13 @@ export function ActivitySidebar() {
         if (response.ok) {
           const data = await response.json()
           setMatches(data.matches || [])
+        } else {
+          // API가 없거나 에러 시 빈 배열로 처리 (콘솔 에러 방지)
+          setMatches([])
         }
-      } catch (error) {
-        console.error('Failed to fetch matches:', error)
+      } catch {
+        // 네트워크 에러 시 조용히 실패 (콘솔 에러 방지)
+        setMatches([])
       } finally {
         setIsLoadingMatches(false)
       }

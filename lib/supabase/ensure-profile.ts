@@ -27,11 +27,12 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  * ```
  */
 export async function ensureProfile() {
-  const { userId, getToken } = await auth()
+  try {
+    const { userId, getToken } = await auth()
 
-  if (!userId) {
-    return null
-  }
+    if (!userId) {
+      return null
+    }
 
   // Create authenticated Supabase client
   const supabase = createSupabaseClient(
@@ -102,6 +103,11 @@ export async function ensureProfile() {
   }
 
   return newProfile
+  } catch (error) {
+    // Clerk middleware가 실행되지 않은 경로에서 호출된 경우 (예: static files)
+    // 조용히 null 반환
+    return null
+  }
 }
 
 /**

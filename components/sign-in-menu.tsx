@@ -13,8 +13,8 @@ export function SignInMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-          <User className="h-[18px] w-[18px]" />
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" aria-label="로그인 메뉴">
+          <User className="h-[18px] w-[18px]" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
 

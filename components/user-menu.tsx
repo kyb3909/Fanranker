@@ -47,6 +47,7 @@ export function UserMenu() {
           variant="ghost"
           size="icon"
           className="h-9 w-9 rounded-full hover:bg-muted/50 transition-colors"
+          aria-label="사용자 메뉴"
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={user.imageUrl} alt={user.fullName || '사용자'} />
