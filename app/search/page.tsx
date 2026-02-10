@@ -2,8 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Header } from '@/components/header'
-import { PostCard } from '@/components/post-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -171,7 +171,7 @@ function SearchContent() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
+      <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
           <div className="col-span-12 lg:col-span-9 space-y-4">
             {/* 검색 헤더 */}
@@ -275,9 +275,32 @@ function SearchContent() {
                   <div className="text-sm text-muted-foreground mb-2">
                     검색 결과: <span className="font-semibold text-foreground">{posts.length}개</span>
                   </div>
-                  {posts.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
+                  <div className="bg-card border border-border rounded-lg overflow-hidden">
+                    {/* 게시판 목록 헤더 */}
+                    <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-muted/40 border-b border-border text-[12px] font-semibold text-muted-foreground">
+                      <div className="col-span-6 sm:col-span-7">제목</div>
+                      <div className="col-span-3 sm:col-span-2">게시판</div>
+                      <div className="col-span-3 sm:col-span-3 text-right">작성일</div>
+                    </div>
+                    {/* 목록 행 */}
+                    {posts.map((post) => (
+                      <Link
+                        key={post.id}
+                        href={`/post/${post.id}`}
+                        className="grid grid-cols-12 gap-2 px-4 py-2.5 border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors items-center"
+                      >
+                        <div className="col-span-6 sm:col-span-7 text-[14px] font-medium text-foreground truncate pr-2">
+                          {post.title}
+                        </div>
+                        <div className="col-span-3 sm:col-span-2 text-[13px] text-muted-foreground truncate">
+                          {post.community}
+                        </div>
+                        <div className="col-span-3 sm:col-span-3 text-[12px] text-muted-foreground text-right shrink-0">
+                          {post.timestamp}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </>
               ) : (
                 <div className="bg-card border border-border rounded-lg p-8 text-center">
@@ -303,7 +326,7 @@ export default function SearchPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
+        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
           <div className="bg-card border border-border rounded-lg p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">로딩 중...</p>

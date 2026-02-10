@@ -4,6 +4,7 @@ import { ActivitySidebar } from "@/components/activity-sidebar"
 import { PostDetailContent } from "@/components/post-detail-content"
 import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
+import { computeTemperature } from "@/lib/temperature"
 
 // 커뮤니티 이름 매핑
 const COMMUNITY_NAMES: Record<string, string> = {
@@ -85,7 +86,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  // 데이터 변환
+  // 데이터 변환 (반감기 적용 온도 포함)
   const post = {
     id: postData.id,
     community: COMMUNITY_NAMES[postData.community_slug] || postData.community_slug,
@@ -99,6 +100,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     image: postData.image,
     upvotes: postData.vote_count || 0,
     comments: postData.comment_count || 0,
+    temperature: computeTemperature({
+      vote_count: postData.vote_count || 0,
+      comment_count: postData.comment_count || 0,
+      created_at: postData.created_at,
+    }),
     isUpvoted: false,
     createdAt: new Date(postData.created_at),
   }
@@ -107,7 +113,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container mx-auto px-4 py-6 max-w-[1280px]">
+      <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-6">
           {/* Main Content - 9 columns */}
           <div className="col-span-12 lg:col-span-9 space-y-4">

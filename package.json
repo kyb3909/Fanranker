@@ -6,7 +6,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "reddit-seed": "tsx scripts/reddit-seed-bot.ts",
+    "betman-fetch": "tsx scripts/betman-fetch-games.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
@@ -71,7 +73,10 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.0",
     "@playwright/test": "^1.57.0",
+    "playwright": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",

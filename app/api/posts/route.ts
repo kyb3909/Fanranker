@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAnonClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { computeTemperature } from '@/lib/temperature'
 
 /**
  * GET /api/posts
@@ -10,6 +11,7 @@ import { currentUser } from '@clerk/nextjs/server'
  * - community_slug?: 특정 커뮤니티만 필터링
  * - sort?: "hot" | "new" | "comments" (정렬 방식)
  * - limit?: 페이지당 개수 (기본 20)
+ * - offset?: 페이지네이션 오프셋 (기본 0)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +20,8 @@ export async function GET(request: NextRequest) {
     
     const communitySlug = searchParams.get('community_slug')
     const sort = searchParams.get('sort') || 'new' // 'hot', 'new', 'comments', 'recent_comments'
-    const limit = parseInt(searchParams.get('limit') || '20', 10)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50)
+    const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
 
     // 최근 댓글이 달린 게시물 조회
     if (sort === 'recent_comments') {
@@ -122,11 +125,11 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      const postsWithAccurateCounts = sortedPosts.map((post) => ({
-        ...post,
-        comment_count: commentCountMap.get(post.id) || 0,
-        latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at,
-      }))
+      const postsWithAccurateCounts = sortedPosts.map((post) => {
+        const cc = commentCountMap.get(post.id) || 0
+        const row = { ...post, comment_count: cc, latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at }
+        return { ...row, temperature: computeTemperature(row) }
+      })
 
       // 7. 작성자 프로필 조회
       const userIds = [...new Set(sortedPosts.map((p) => p.user_id))]
@@ -138,8 +141,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ posts: postsWithAccurateCounts, profiles: profiles || [] })
     }
 
-    // 기존 정렬 로직 (hot, new, comments)
-    // 1. 게시글 조회
+    // 기존 정렬 로직 (hot, new, comments) — 메인 피드는 최근 24시간만
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     let query = supabase
       .from('posts')
       .select(`
@@ -155,17 +158,18 @@ export async function GET(request: NextRequest) {
         created_at
       `)
       .is('deleted_at', null)
-      .limit(limit)
+      .gte('created_at', since24h)
+      .range(offset, offset + limit - 1)
 
     // 커뮤니티 필터링
     if (communitySlug) {
       query = query.eq('community_slug', communitySlug)
     }
 
-    // 정렬
+    // 정렬 (hot은 나중에 계산된 temperature로 메모리 정렬)
     switch (sort) {
       case 'hot':
-        query = query.order('temperature', { ascending: false })
+        query = query.order('created_at', { ascending: false })
         break
       case 'comments':
         query = query.order('comment_count', { ascending: false })
@@ -207,11 +211,18 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 각 게시물에 실제 댓글 수 추가 (comment_count와 비교하여 정확한 값 사용)
-    const postsWithAccurateCounts = posts.map((post) => ({
-      ...post,
-      comment_count: commentCountMap.get(post.id) || 0, // 실제 댓글 수로 덮어쓰기
-    }))
+    // 각 게시물에 실제 댓글 수 + 반감기 적용 온도 추가
+    let postsWithAccurateCounts = posts.map((post) => {
+      const cc = commentCountMap.get(post.id) || 0
+      const row = { ...post, comment_count: cc }
+      return { ...row, temperature: computeTemperature(row) }
+    })
+
+    if (sort === 'hot') {
+      postsWithAccurateCounts = postsWithAccurateCounts.sort(
+        (a, b) => (b.temperature ?? 0) - (a.temperature ?? 0)
+      )
+    }
 
     // 3. 작성자 프로필 조회
     const userIds = [...new Set(posts.map((p) => p.user_id))]

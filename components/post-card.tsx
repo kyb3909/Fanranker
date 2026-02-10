@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Bookmark, Search, Ban } from "lucide-react"
+import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Bookmark, Search, Ban, Pencil, Trash2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useUser } from "@clerk/nextjs"
 import { ShareMenu } from "@/components/share-menu"
 import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { EmbedPreviewCard } from "@/components/embed-preview-card"
@@ -68,7 +69,29 @@ const BADGE_COLOR = { bg: "bg-primary/15", text: "text-foreground", border: "bor
 
 export function PostCard({ post, priority = false }: PostCardProps) {
   const router = useRouter()
+  const { user } = useUser()
+  const isAuthor = post.userId === user?.id
   const [upvotes, setUpvotes] = useState(post.upvotes)
+
+  const handleEditPost = () => {
+    router.push(`/write?edit=${post.id}`)
+  }
+
+  const handleDeletePost = async () => {
+    if (!confirm('이 글을 삭제하시겠습니까?')) return
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.error || '삭제에 실패했습니다.')
+        return
+      }
+      router.push('/')
+      router.refresh()
+    } catch {
+      alert('삭제 중 오류가 발생했습니다.')
+    }
+  }
   const [isUpvoted, setIsUpvoted] = useState(post.isUpvoted)
   const [isBookmarked, setIsBookmarked] = useState(false)
 
@@ -198,9 +221,38 @@ export function PostCard({ post, priority = false }: PostCardProps) {
           {/* 우측: 시간 + 더보기 */}
           <div className="flex items-center gap-1">
             <span className="text-[13px] text-muted-foreground">{post.timestamp}</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 min-w-[32px]" aria-label="더보기 메뉴">
-              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 min-w-[32px]" aria-label="더보기 메뉴">
+                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isAuthor ? (
+                  <>
+                    <DropdownMenuItem onClick={handleEditPost} className="cursor-pointer">
+                      <Pencil className="mr-2 h-4 w-4" />
+                      수정
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDeletePost} className="cursor-pointer text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      삭제
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
+                      <Search className="mr-2 h-4 w-4" />
+                      해당 아이디로 검색
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
+                      <Ban className="mr-2 h-4 w-4" />
+                      차단하기
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

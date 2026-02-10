@@ -19,6 +19,7 @@ interface Post {
   image?: string
   upvotes: number
   comments: number
+  temperature?: number
   views?: number
   rating?: number
   isUpvoted: boolean
@@ -47,7 +48,7 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
   const sortedPosts = [...posts].sort((a, b) => {
     switch (sortBy) {
       case "hot":
-        return b.upvotes - a.upvotes
+        return (b.temperature ?? 0) - (a.temperature ?? 0)
       case "new":
         return b.createdAt.getTime() - a.createdAt.getTime()
       case "comments":

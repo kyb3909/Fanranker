@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 
 /**
@@ -25,6 +24,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
+    const type = request.nextUrl.searchParams.get('type') // 'avatar' | null (게시글 이미지)
 
     if (!file) {
       return NextResponse.json(
@@ -54,19 +54,19 @@ export async function POST(request: NextRequest) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
 
-    // 파일명 생성: userId/timestamp-randomUUID.확장자
+    // 파일명 생성: avatar → avatars/userId/... , 게시글 → userId/...
     const fileExt = file.name.split('.').pop() || 'jpg'
     const timestamp = Date.now()
     const randomUUID = crypto.randomUUID().substring(0, 8)
-    const fileName = `${userId}/${timestamp}-${randomUUID}.${fileExt}`
+    const baseName = `${timestamp}-${randomUUID}.${fileExt}`
+    const fileName = type === 'avatar' ? `avatars/${userId}/${baseName}` : `${userId}/${baseName}`
 
     // Supabase Storage에 업로드
-    // 버킷 이름: 'posts' (또는 'images')
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('posts')
       .upload(fileName, file, {
         contentType: file.type,
-        upsert: false, // 기존 파일 덮어쓰기 방지
+        upsert: false,
       })
 
     if (uploadError) {

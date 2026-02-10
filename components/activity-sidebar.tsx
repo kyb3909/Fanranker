@@ -50,29 +50,43 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
 }
 
+// 최근 댓글 API 응답 캐시 (60초) — 새로고침/탭 전환 시 API·DB 부하 감소
+const RECENT_COMMENTS_CACHE_MS = 60 * 1000
+let recentCommentsCache: { data: RecentPost[]; fetchedAt: number } | null = null
+
+function mapApiPostsToRecentPosts(posts: any[]): RecentPost[] {
+  return posts.map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
+    comments: p.comment_count || 0,
+    timestamp: formatRelativeTime(new Date(p.latest_comment_at || p.created_at)),
+  }))
+}
+
 export function ActivitySidebar() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
   const [isLoadingMatches, setIsLoadingMatches] = useState(true)
 
-  // 최근 댓글이 달린 글 가져오기
+  // 최근 댓글이 달린 글 가져오기 (60초 캐시 사용)
   useEffect(() => {
     async function fetchRecentPosts() {
+      const now = Date.now()
+      if (recentCommentsCache && now - recentCommentsCache.fetchedAt < RECENT_COMMENTS_CACHE_MS) {
+        setRecentPosts(recentCommentsCache.data)
+        setIsLoadingPosts(false)
+        return
+      }
       setIsLoadingPosts(true)
       try {
-        // 최근 댓글이 달린 게시물 조회 (recent_comments 정렬 사용)
         const response = await fetch('/api/posts?sort=recent_comments&limit=4')
         if (response.ok) {
           const { posts } = await response.json()
-          setRecentPosts(posts.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
-            comments: p.comment_count || 0,
-            // 최근 댓글 시간 사용 (있으면), 없으면 게시물 생성 시간 사용
-            timestamp: formatRelativeTime(new Date(p.latest_comment_at || p.created_at)),
-          })))
+          const mapped = mapApiPostsToRecentPosts(posts || [])
+          setRecentPosts(mapped)
+          recentCommentsCache = { data: mapped, fetchedAt: Date.now() }
         }
       } catch (error) {
         console.error('Failed to fetch recent posts:', error)

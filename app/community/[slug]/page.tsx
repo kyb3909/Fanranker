@@ -2,6 +2,7 @@ import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
 import { createServerAnonClient } from "@/lib/supabase"
+import { computeTemperature } from "@/lib/temperature"
 
 // 멤버 수 포맷팅 함수: 1만명 이상이면 "XX.X만명", 미만이면 "X,XXX명"
 function formatMemberCount(count: number): string {
@@ -151,27 +152,36 @@ async function fetchPosts(communitySlug: string) {
   })
 }
 
-// DB 데이터를 컴포넌트 형식으로 변환
+// DB 데이터를 컴포넌트 형식으로 변환 (반감기 적용 온도 포함)
 function transformPosts(posts: any[]) {
-  return posts.map((post) => ({
-    id: post.id,
-    community: post.community_slug,
-    communitySlug: post.community_slug,
-    author: post.profile?.nickname || "익명",
-    avatar: post.profile?.avatar_url || "/placeholder-user.jpg",
-    userId: post.user_id, // Clerk user_id 추가
-    timestamp: formatRelativeTime(new Date(post.created_at)),
-    title: post.title,
-    content: post.content,
-    image: post.image,
-    upvotes: post.vote_count || 0,
-    comments: post.comment_count || 0,
-    views: post.view_count || 0,
-    rating: Math.min(5, Math.max(1, Math.floor((post.temperature || 0) / 20) + 1)),
-    isNotice: post.is_notice || false,
-    isUpvoted: false,
-    createdAt: new Date(post.created_at),
-  }))
+  return posts.map((post) => {
+    const row = {
+      vote_count: post.vote_count || 0,
+      comment_count: post.comment_count || 0,
+      created_at: post.created_at,
+    }
+    const temperature = computeTemperature(row)
+    return {
+      id: post.id,
+      community: post.community_slug,
+      communitySlug: post.community_slug,
+      author: post.profile?.nickname || "익명",
+      avatar: post.profile?.avatar_url || "/placeholder-user.jpg",
+      userId: post.user_id, // Clerk user_id 추가
+      timestamp: formatRelativeTime(new Date(post.created_at)),
+      title: post.title,
+      content: post.content,
+      image: post.image,
+      upvotes: post.vote_count || 0,
+      comments: post.comment_count || 0,
+      views: post.view_count || 0,
+      temperature,
+      rating: Math.min(5, Math.max(1, Math.floor(temperature / 20) + 1)),
+      isNotice: post.is_notice || false,
+      isUpvoted: false,
+      createdAt: new Date(post.created_at),
+    }
+  })
 }
 
 export default async function CommunityPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -199,7 +209,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
   return (
     <div className="min-h-screen bg-background">
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
-      <main className="mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5 max-w-[1280px]">
+      <main id="main-content" className="mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5 max-w-[1280px]" tabIndex={-1}>
         {/* 12컬럼 그리드: 조밀한 간격 */}
         <div className="grid grid-cols-12 gap-4 lg:gap-5">
           <div className="col-span-12 lg:col-span-9">

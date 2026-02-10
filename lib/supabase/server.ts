@@ -52,10 +52,16 @@ export function createAnonClient() {
  */
 export function createServiceRoleClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is not set')
+    const error = new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is not set')
+    console.error('[Supabase] Missing environment variable:', error.message)
+    throw error
   }
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
+    const error = new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
+    console.error('[Supabase] Missing environment variable:', error.message)
+    console.error('[Supabase] Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file')
+    console.error('[Supabase] You can find it in Supabase Dashboard > Settings > API > service_role key')
+    throw error
   }
 
   return createSupabaseClient(

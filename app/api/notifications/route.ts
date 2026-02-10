@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 
 /**
@@ -25,7 +24,20 @@ export async function GET(request: NextRequest) {
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
-    const supabase = createServiceRoleClient()
+    let supabase
+    try {
+      supabase = createServiceRoleClient()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
+      console.error('Failed to create Supabase client:', errorMessage)
+      return NextResponse.json(
+        {
+          error: '서버 설정 오류가 발생했습니다.',
+          details: errorMessage,
+        },
+        { status: 500 }
+      )
+    }
     const searchParams = request.nextUrl.searchParams
     
     const limit = parseInt(searchParams.get('limit') || '20', 10)
@@ -113,7 +125,20 @@ export async function PATCH(request: NextRequest) {
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
-    const supabase = createServiceRoleClient()
+    let supabase
+    try {
+      supabase = createServiceRoleClient()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
+      console.error('Failed to create Supabase client:', errorMessage)
+      return NextResponse.json(
+        {
+          error: '서버 설정 오류가 발생했습니다.',
+          details: errorMessage,
+        },
+        { status: 500 }
+      )
+    }
     const body = await request.json()
     const { notification_id } = body
 

@@ -1,13 +1,53 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from '@clerk/nextjs'
 import { ProfileSync } from '@/components/profile-sync'
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const koLocalization = {
+  signIn: {
+    start: {
+      title: '로그인',
+      subtitle: '계속하려면 로그인하세요',
+      actionText: '계정이 없으신가요?',
+      actionLink: '가입하기',
+    },
+  },
+  signUp: {
+    start: {
+      title: '회원가입',
+      subtitle: '계속하려면 가입하세요',
+      actionText: '이미 계정이 있으신가요?',
+      actionLink: '로그인',
+    },
+  },
+  formFieldLabel__emailAddress: '이메일 주소',
+  formFieldLabel__emailAddress_username: '이메일 주소 또는 사용자 이름',
+  formFieldLabel__password: '비밀번호',
+  formFieldLabel__username: '사용자 이름',
+  formButtonPrimary: '계속',
+  userButton: {
+    action__manageAccount: '계정 관리',
+    action__signOut: '로그아웃',
+  },
+}
+
+// 폰트 최적화: display: swap으로 FOUT 방지, preload 활성화
+const geistSans = Geist({ 
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist-sans",
+  preload: true,
+})
+
+const geistMono = Geist_Mono({ 
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist-mono",
+  preload: true,
+})
 
 export const metadata: Metadata = {
   title: "홈 - 커뮤니티 토론 플랫폼",
@@ -32,15 +72,46 @@ export const metadata: Metadata = {
   },
 }
 
+// Viewport 설정 (별도 export)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="ko">
+    <ClerkProvider localization={koLocalization}>
+      <html lang="ko" className={`${geistSans.variable} ${geistMono.variable}`}>
+        <head>
+          {/* DNS Prefetch & Preconnect: 외부 리소스 로딩 최적화 */}
+          <link rel="dns-prefetch" href="https://i.ytimg.com" />
+          <link rel="dns-prefetch" href="https://img.clerk.com" />
+          <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="anonymous" />
+          <link rel="preconnect" href="https://img.clerk.com" crossOrigin="anonymous" />
+          {/* Supabase 연결 최적화 */}
+          {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+            <>
+              <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+              <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
+            </>
+          )}
+        </head>
         <body className={`font-sans antialiased`}>
+          {/* 스킵 링크: 키보드·스크린리더 사용자 본문 바로가기 (Lighthouse 접근성) */}
+          <a
+            href="#main-content"
+            className="fixed left-4 top-4 z-[100] -translate-y-[200%] rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-md transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            본문으로 건너뛰기
+          </a>
           <ProfileSync />
           {children}
           <Analytics />

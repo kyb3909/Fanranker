@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useParams, useRouter } from "next/navigation"
 import { Header } from "@/components/header"
@@ -17,7 +17,6 @@ import {
   Camera,
   Hash,
   Lock,
-  ExternalLink,
   Check,
   Save,
   Trash2,
@@ -74,6 +73,13 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("")
   const [followedCommunities, setFollowedCommunities] = useState<FollowedCommunity[]>([])
 
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
   // 현재 사용자 확인 및 데이터 로드
   useEffect(() => {
     if (!isLoaded) return
@@ -127,8 +133,20 @@ export default function ProfilePage() {
   }
 
   const handleSaveProfile = async () => {
-    if (!nickname.trim()) {
+    const trimmedNickname = nickname.trim()
+    
+    if (!trimmedNickname) {
       alert("닉네임을 입력해주세요.")
+      return
+    }
+
+    if (trimmedNickname.length < 2) {
+      alert("닉네임은 2자 이상이어야 합니다.")
+      return
+    }
+
+    if (trimmedNickname.length > 20) {
+      alert("닉네임은 20자 이하여야 합니다.")
       return
     }
 
@@ -139,7 +157,7 @@ export default function ProfilePage() {
       const response = await fetch("/api/profile/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: nickname.trim() }),
+        body: JSON.stringify({ nickname: trimmedNickname }),
       })
 
       if (response.ok) {
@@ -148,12 +166,17 @@ export default function ProfilePage() {
         setSaveSuccess(true)
         setTimeout(() => setSaveSuccess(false), 3000)
       } else {
-        const error = await response.json()
-        alert(error.error || "저장에 실패했습니다.")
+        const errorData = await response.json().catch(() => ({ error: "저장에 실패했습니다." }))
+        const errorMessage = errorData.details 
+          ? `${errorData.error}\n\n상세: ${errorData.details}`
+          : errorData.error || "저장에 실패했습니다."
+        alert(errorMessage)
+        console.error("Profile update error:", errorData)
       }
     } catch (error) {
       console.error("Failed to save profile:", error)
-      alert("저장 중 오류가 발생했습니다.")
+      const errorMessage = error instanceof Error ? error.message : "저장 중 오류가 발생했습니다."
+      alert(errorMessage)
     } finally {
       setIsSaving(false)
     }
@@ -175,10 +198,83 @@ export default function ProfilePage() {
     }
   }
 
-  const handleChangePassword = () => {
-    // Clerk의 비밀번호 변경 페이지로 이동
-    if (user) {
-      window.open("https://accounts.clerk.dev/user/security", "_blank")
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      alert("이미지 파일만 업로드할 수 있습니다.")
+      return
+    }
+    setAvatarUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload/image?type=avatar", {
+        method: "POST",
+        body: formData,
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "업로드 실패")
+      }
+      const { url } = await res.json()
+      const patchRes = await fetch("/api/profile/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: url }),
+      })
+      if (!patchRes.ok) {
+        const data = await patchRes.json().catch(() => ({}))
+        throw new Error(data.error || "프로필 저장 실패")
+      }
+      const updated = await patchRes.json()
+      setProfile(updated)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "프로필 사진 변경에 실패했습니다.")
+    } finally {
+      setAvatarUploading(false)
+      e.target.value = ""
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (!user) return
+    setPasswordMessage(null)
+    if (!currentPassword.trim()) {
+      setPasswordMessage({ type: "error", text: "현재 비밀번호를 입력해주세요." })
+      return
+    }
+    if (!newPassword.trim()) {
+      setPasswordMessage({ type: "error", text: "새 비밀번호를 입력해주세요." })
+      return
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: "error", text: "새 비밀번호는 8자 이상이어야 합니다." })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: "error", text: "새 비밀번호와 확인이 일치하지 않습니다." })
+      return
+    }
+    setPasswordSaving(true)
+    try {
+      await user.updatePassword({ currentPassword, newPassword })
+      setPasswordMessage({ type: "success", text: "비밀번호가 변경되었습니다." })
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "errors" in err
+          ? (err as { errors: Array<{ message?: string }> }).errors?.[0]?.message
+          : err instanceof Error
+            ? err.message
+            : "비밀번호 변경에 실패했습니다."
+      setPasswordMessage({ type: "error", text: String(msg) })
+    } finally {
+      setPasswordSaving(false)
     }
   }
 
@@ -219,7 +315,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto px-4 py-6 max-w-[600px]">
+      <main id="main-content" className="mx-auto px-4 py-6 max-w-[600px]" tabIndex={-1}>
         {/* 헤더 */}
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
@@ -256,16 +352,28 @@ export default function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                   <p className="text-sm text-muted-foreground mb-2">
-                    프로필 사진은 Clerk 계정에서 변경할 수 있습니다.
+                    이미지 파일(JPG, PNG 등)을 선택하면 프로필 사진이 변경됩니다.
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open("https://accounts.clerk.dev/user", "_blank")}
+                    disabled={avatarUploading}
+                    onClick={() => avatarInputRef.current?.click()}
                   >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Clerk에서 변경
+                    {avatarUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 mr-2" />
+                    )}
+                    {avatarUploading ? "업로드 중..." : "사진 변경"}
                   </Button>
                 </div>
               </div>
@@ -350,13 +458,68 @@ export default function ProfilePage() {
               </div>
 
               <p className="text-sm text-muted-foreground mb-4">
-                비밀번호는 Clerk 계정에서 변경할 수 있습니다.
+                현재 비밀번호를 입력한 뒤 새 비밀번호로 변경할 수 있습니다. (8자 이상)
               </p>
 
-              <Button variant="outline" onClick={handleChangePassword}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                비밀번호 변경
-              </Button>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">현재 비밀번호</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="현재 비밀번호"
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">새 비밀번호</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="새 비밀번호 (8자 이상)"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="새 비밀번호 다시 입력"
+                    autoComplete="new-password"
+                  />
+                </div>
+                {passwordMessage && (
+                  <p
+                    className={`text-sm ${
+                      passwordMessage.type === "success" ? "text-green-600" : "text-destructive"
+                    }`}
+                  >
+                    {passwordMessage.text}
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleChangePassword}
+                  disabled={passwordSaving}
+                >
+                  {passwordSaving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4 mr-2" />
+                  )}
+                  {passwordSaving ? "변경 중..." : "비밀번호 변경"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                소셜 로그인(Google 등)만 사용 중인 경우 비밀번호가 없을 수 있습니다.
+              </p>
             </Card>
 
             {/* 저장 버튼 */}

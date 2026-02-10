@@ -1,0 +1,68 @@
+name: Betman Data Fetch
+
+on:
+  schedule:
+    # 매시 정각에 실행 (UTC 기준, KST는 +9시간)
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      gmTs:
+        description: 'Betman 회차 번호 (예: 260018)'
+        required: false
+        default: ''
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium
+
+      - name: Get latest gmTs from API
+        id: get-gmts
+        run: |
+          if [ -n "${{ github.event.inputs.gmTs }}" ]; then
+            echo "gmTs=${{ github.event.inputs.gmTs }}" >> $GITHUB_OUTPUT
+          else
+            # 최신 회차 조회 (API가 있다면)
+            # 없으면 기본값 사용
+            echo "gmTs=260018" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch Betman data
+        env:
+          NEXT_PUBLIC_APP_URL: ${{ secrets.APP_URL }}
+          BETMAN_GM_TS: ${{ steps.get-gmts.outputs.gmTs }}
+        run: pnpm exec tsx scripts/betman-fetch-games.ts ${{ steps.get-gmts.outputs.gmTs }}
+
+      - name: Save JSON artifact
+        env:
+          BETMAN_GM_TS: ${{ steps.get-gmts.outputs.gmTs }}
+        run: |
+          pnpm exec tsx scripts/betman-save-json.ts ${{ steps.get-gmts.outputs.gmTs }}
+          mkdir -p data
+          mv ${{ steps.get-gmts.outputs.gmTs }}.json data/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: betman-data-${{ steps.get-gmts.outputs.gmTs }}
+          path: data/
+          retention-days: 7

@@ -113,7 +113,7 @@ export default function ExplorePage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container mx-auto px-4 py-6 max-w-[1280px]">
+      <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-6">
           {/* Left Sidebar */}
           <aside className="col-span-3 hidden xl:block">

@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
 
       case 'title_content':
       default:
-        // 제목 + 내용으로 검색
-        postsQuery = postsQuery.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
+        // 제목으로 검색 (content는 TipTap JSONB라 ilike 시 500 방지)
+        postsQuery = postsQuery.ilike('title', `%${searchQuery}%`)
         break
     }
 

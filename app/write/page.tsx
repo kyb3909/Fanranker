@@ -28,20 +28,42 @@ function WriteContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const communitySlug = searchParams.get("community") || ""
+  const editId = searchParams.get("edit") || ""
   
   const [selectedCommunity, setSelectedCommunity] = useState(communitySlug)
   const [title, setTitle] = useState("")
-  const [content, setContent] = useState<any>(null) // TipTap JSON content
+  const [content, setContent] = useState<any>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null) // 원본 파일
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId)
+  const [editLoadError, setEditLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (communitySlug) {
       setSelectedCommunity(communitySlug)
     }
   }, [communitySlug])
+
+  useEffect(() => {
+    if (!editId) return
+    setIsLoadingEdit(true)
+    setEditLoadError(null)
+    fetch(`/api/posts/${editId}`)
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('글을 불러올 수 없습니다.')))
+      .then((data) => {
+        const p = data.post
+        setSelectedCommunity(p.community_slug || '')
+        setTitle(p.title || '')
+        setContent(p.content || null)
+        setImagePreview(p.image || null)
+      })
+      .catch((err) => {
+        setEditLoadError(err.message || '글을 불러오는 데 실패했습니다.')
+      })
+      .finally(() => setIsLoadingEdit(false))
+  }, [editId])
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -151,29 +173,29 @@ function WriteContent() {
         }
       }
 
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const url = editId ? `/api/posts/${editId}` : '/api/posts'
+      const method = editId ? 'PATCH' : 'POST'
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           community_slug: selectedCommunity,
           title,
-          content, // TipTap JSON
-          image: imageUrl, // 이미지 URL
+          content,
+          image: imageUrl,
         }),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '글 작성에 실패했습니다.')
+        throw new Error(error.error || (editId ? '글 수정에 실패했습니다.' : '글 작성에 실패했습니다.'))
       }
 
-      const data = await response.json()
-      console.log('글 작성 성공:', data)
-
-      // 목록 페이지로 리다이렉트
-      router.push(`/community/${selectedCommunity}`)
+      if (editId) {
+        router.push(`/post/${editId}`)
+      } else {
+        router.push(`/community/${selectedCommunity}`)
+      }
     } catch (error) {
       console.error('글 작성 오류:', error)
       alert(error instanceof Error ? error.message : '글 작성 중 오류가 발생했습니다.')
@@ -182,17 +204,45 @@ function WriteContent() {
     }
   }
 
+  if (isLoadingEdit) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">글을 불러오는 중...</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (editLoadError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <p className="text-sm text-destructive mb-2">{editLoadError}</p>
+            <Button variant="outline" onClick={() => router.push('/')}>홈으로</Button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
+      <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
           <div className="col-span-12 lg:col-span-9 space-y-4">
             <BackButton />
 
             <Card className="border border-border bg-card p-6">
-              <h1 className="text-2xl font-bold text-foreground mb-6">글쓰기</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-6">{editId ? '글 수정' : '글쓰기'}</h1>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* 게시판 선택 */}
@@ -317,6 +367,8 @@ function WriteContent() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         작성 중...
                       </>
+                    ) : editId ? (
+                      '수정하기'
                     ) : (
                       '작성하기'
                     )}
@@ -336,7 +388,7 @@ export default function WritePage() {
     <Suspense fallback={
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
+        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
           <div className="bg-card border border-border rounded-lg p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">로딩 중...</p>

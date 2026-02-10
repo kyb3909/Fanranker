@@ -39,15 +39,19 @@ export function SignInMenu() {
               formFieldLabel: 'text-foreground',
               dividerLine: 'bg-border',
               dividerText: 'text-muted-foreground',
-              footer: 'hidden', // Clerk 브랜딩 숨김
-              footerPages: 'hidden', // Clerk 브랜딩 숨김
+              footerAction: 'justify-center text-sm text-muted-foreground [&_a]:text-primary [&_a]:font-medium',
+              footerPages: '!hidden',
+              internal: '!hidden',
+              badge: '!hidden',
+              poweredBy: '!hidden',
             },
             layout: {
               showOptionalFields: false,
+              unsafe_disableDevelopmentModeWarnings: true,
             }
           }}
           routing="hash"
-          signUpUrl="#"
+          signUpUrl="/sign-up"
         />
       </DropdownMenuContent>
     </DropdownMenu>

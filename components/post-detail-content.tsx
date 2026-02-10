@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Search, Ban, Bookmark } from "lucide-react"
+import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Search, Ban, Bookmark, Pencil, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useUser } from "@clerk/nextjs"
 import { ShareMenu } from "@/components/share-menu"
 import { TipTapContent } from "@/components/tiptap-content"
 
@@ -110,6 +111,7 @@ interface Post {
   image?: string
   upvotes: number
   comments: number
+  temperature?: number
   isUpvoted: boolean
   userId?: string // Clerk user_id (optional, for user actions)
 }
@@ -357,10 +359,31 @@ export function PostDetailContent({ post }: { post: Post }) {
   }
 
   const handleBlockUser = () => {
-    // TODO: 차단 기능 구현 (blocked_users 테이블 필요)
     if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
       console.log('Block user:', post.userId || post.author)
-      // 차단 로직 구현 예정
+    }
+  }
+
+  const { user } = useUser()
+  const isAuthor = post.userId === user?.id
+
+  const handleEditPost = () => {
+    router.push(`/write?edit=${post.id}`)
+  }
+
+  const handleDeletePost = async () => {
+    if (!confirm('이 글을 삭제하시겠습니까?')) return
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.error || '삭제에 실패했습니다.')
+        return
+      }
+      router.push('/')
+      router.refresh()
+    } catch {
+      alert('삭제 중 오류가 발생했습니다.')
     }
   }
 
@@ -575,7 +598,7 @@ export function PostDetailContent({ post }: { post: Post }) {
     }
   }
 
-  const temperature = Math.min(100, Math.floor((upvotes * 2 + post.comments * 3) / 10))
+  const temperature = post.temperature ?? Math.min(100, Math.floor((upvotes * 2 + post.comments * 3) / 10))
   const getTemperatureColor = (temp: number) => {
     if (temp >= 80) return "text-red-500"
     if (temp >= 60) return "text-orange-500"
@@ -626,9 +649,38 @@ export function PostDetailContent({ post }: { post: Post }) {
               <Button variant="outline" size="sm" className="h-7 rounded-full text-xs font-medium px-3 bg-transparent">
                 {post.community}
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {isAuthor ? (
+                    <>
+                      <DropdownMenuItem onClick={handleEditPost} className="cursor-pointer">
+                        <Pencil className="mr-2 h-4 w-4" />
+                        수정
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDeletePost} className="cursor-pointer text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        삭제
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
+                        <Search className="mr-2 h-4 w-4" />
+                        해당 아이디로 검색
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
+                        <Ban className="mr-2 h-4 w-4" />
+                        차단하기
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

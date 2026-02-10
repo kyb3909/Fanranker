@@ -54,3 +54,8 @@ Thumbs.db
 nul
 nul.*
 *.nul
+
+# Temporary files
+_tmp_*
+localhost_*.json
+.playwright-mcp/

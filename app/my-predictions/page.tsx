@@ -118,7 +118,7 @@ export default function MyPredictionsPage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto px-4 py-6 max-w-[800px]">
+      <main id="main-content" className="mx-auto px-4 py-6 max-w-[800px]" tabIndex={-1}>
         {/* 헤더 */}
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
