@@ -5,11 +5,9 @@ import { Header } from "@/components/header"
 import { PostCard } from "@/components/post-card"
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
-import BettingPage from "@/components/betting-page"
-import { Flame, Clock, MessageSquare, Trophy, Loader2 } from "lucide-react"
+import { Dices, Flame, Clock, Loader2 } from "lucide-react"
 
-type SortType = "hot" | "new" | "comments"
-type TabType = "community" | "betting"
+type SortType = "random" | "hot" | "new"
 
 interface Post {
   id: string
@@ -55,7 +53,6 @@ const COMMUNITY_NAMES: Record<string, string> = {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<TabType>("community")
   const [sortBy, setSortBy] = useState<SortType>("hot")
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -68,7 +65,7 @@ export default function Home() {
     async function fetchPosts() {
       setIsLoading(true)
       try {
-        const sortParam = sortBy === "hot" ? "hot" : sortBy === "comments" ? "comments" : "new"
+        const sortParam = sortBy === "hot" ? "hot" : sortBy === "random" ? "new" : "new"
         const response = await fetch(`/api/posts?sort=${sortParam}&limit=50`)
         
         if (!response.ok) {
@@ -113,21 +110,20 @@ export default function Home() {
       }
     }
 
-    if (activeTab === "community") {
-      fetchPosts()
-    }
-  }, [sortBy, activeTab, followedCommunities])
+    fetchPosts()
+  }, [sortBy, followedCommunities])
 
   // 정렬 (API에서 이미 정렬되어 오지만, 클라이언트에서도 재정렬 가능)
   const sortedPosts = [...posts].sort((a, b) => {
     switch (sortBy) {
+      case "random":
+        // 랜덤 정렬 (매번 다른 순서)
+        return Math.random() - 0.5
       case "hot":
         // 온도순 (upvotes 기반, API에서는 temperature 사용)
         return b.upvotes - a.upvotes
       case "new":
         return b.createdAt.getTime() - a.createdAt.getTime()
-      case "comments":
-        return b.comments - a.comments
       default:
         return 0
     }
@@ -148,114 +144,70 @@ export default function Home() {
 
           {/* Main Content - 6 columns */}
           <div className="col-span-12 lg:col-span-6 space-y-4">
-            
-            {/* ===== 탭 네비게이션 (포털 스타일) ===== */}
+
+            {/* ===== 정렬 네비게이션 ===== */}
             <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="flex border-b border-border">
-                <button
-                  onClick={() => setActiveTab("community")}
-                  className={`flex items-center justify-center gap-2 flex-1 px-4 py-3 text-[14px] font-semibold transition-all border-b-2 -mb-[1px] ${
-                    activeTab === "community"
-                      ? "border-primary text-primary bg-primary/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  커뮤니티
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                    activeTab === "community" ? "bg-primary/20" : "bg-muted"
-                  }`}>
-                    {posts.length}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("betting")}
-                  className={`flex items-center justify-center gap-2 flex-1 px-4 py-3 text-[14px] font-semibold transition-all border-b-2 -mb-[1px] ${
-                    activeTab === "betting"
-                      ? "border-primary text-primary bg-primary/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <Trophy className="w-4 h-4" />
-                  승부 예측
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                    activeTab === "betting" ? "bg-primary/20" : "bg-muted"
-                  }`}>
-                    12
-                  </span>
-                </button>
+              <div className="flex items-center justify-center px-4 py-3 bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSortBy("random")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
+                      sortBy === "random"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Dices className="w-5 h-5" />
+                    랜덤
+                  </button>
+                  <button
+                    onClick={() => setSortBy("hot")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
+                      sortBy === "hot"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Flame className="w-5 h-5" />
+                    온도순
+                  </button>
+                  <button
+                    onClick={() => setSortBy("new")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
+                      sortBy === "new"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Clock className="w-5 h-5" />
+                    최신순
+                  </button>
+                </div>
               </div>
-              
-              {/* 서브 네비게이션: 정렬 옵션 */}
-              {activeTab === "community" && (
-                <div className="flex items-center justify-center px-4 py-3 bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setSortBy("hot")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
-                        sortBy === "hot"
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <Flame className="w-5 h-5" />
-                      온도순
-                    </button>
-                    <button
-                      onClick={() => setSortBy("new")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
-                        sortBy === "new"
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <Clock className="w-5 h-5" />
-                      최신순
-                    </button>
-                    <button
-                      onClick={() => setSortBy("comments")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
-                        sortBy === "comments"
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <MessageSquare className="w-5 h-5" />
-                      댓글순
-                    </button>
-                  </div>
+            </div>
+
+            {/* 포스트 리스트 */}
+            <div className="space-y-3">
+              {isLoading ? (
+                <div className="bg-card border border-border rounded-lg p-8 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">글 목록을 불러오는 중...</p>
+                </div>
+              ) : sortedPosts.length > 0 ? (
+                sortedPosts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))
+              ) : (
+                <div className="bg-card border border-border rounded-lg p-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    팔로우한 게시판의 게시물이 없습니다.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    게시판을 팔로우하면 여기에 게시물이 표시됩니다.
+                  </p>
                 </div>
               )}
             </div>
-
-            {activeTab === "community" && (
-              <>
-                {/* 포스트 리스트 */}
-                <div className="space-y-3">
-                  {isLoading ? (
-                    <div className="bg-card border border-border rounded-lg p-8 text-center">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">글 목록을 불러오는 중...</p>
-                    </div>
-                  ) : sortedPosts.length > 0 ? (
-                    sortedPosts.map((post) => (
-                      <PostCard key={post.id} post={post} />
-                    ))
-                  ) : (
-                    <div className="bg-card border border-border rounded-lg p-8 text-center">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        팔로우한 게시판의 게시물이 없습니다.
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        게시판을 팔로우하면 여기에 게시물이 표시됩니다.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {activeTab === "betting" && <BettingPage />}
           </div>
 
           {/* Right Sidebar - 3 columns */}
