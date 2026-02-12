@@ -207,6 +207,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      playwright:
+        specifier: ^1.57.0
+        version: 1.57.0
       postcss:
         specifier: ^8.5
         version: 8.5.6
