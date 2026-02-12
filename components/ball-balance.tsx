@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { Circle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -16,28 +16,40 @@ export function BallBalance() {
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchBalance = useCallback(async () => {
+    if (!isSignedIn) return
+    try {
+      const response = await fetch('/api/tokens/balance')
+      if (response.ok) {
+        const data = await response.json()
+        setTokenData(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch ball balance:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [isSignedIn])
+
   useEffect(() => {
     if (!isSignedIn) {
       setLoading(false)
       return
     }
+    fetchBalance()
+  }, [isSignedIn, fetchBalance])
 
-    const fetchBalance = async () => {
-      try {
-        const response = await fetch('/api/tokens/balance')
-        if (response.ok) {
-          const data = await response.json()
-          setTokenData(data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch ball balance:', error)
-      } finally {
-        setLoading(false)
-      }
+  // Listen for ball balance update events (dispatched after predictions)
+  useEffect(() => {
+    const handleBalanceUpdate = () => {
+      fetchBalance()
     }
 
-    fetchBalance()
-  }, [isSignedIn])
+    window.addEventListener('ballBalanceUpdate', handleBalanceUpdate)
+    return () => {
+      window.removeEventListener('ballBalanceUpdate', handleBalanceUpdate)
+    }
+  }, [fetchBalance])
 
   if (!isSignedIn || loading) {
     return null

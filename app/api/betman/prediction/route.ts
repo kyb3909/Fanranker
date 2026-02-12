@@ -169,12 +169,84 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Delete existing predictions for this user and round
-    await supabase
+    // ===== 볼(토큰) 잔액 확인 및 차감 =====
+    const ballCost = predictions.length // 예측 1개당 1볼
+
+    // 사용자의 현재 볼 잔액 조회
+    const { data: userTokens, error: tokensError } = await supabase
+      .from('user_tokens')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (tokensError && tokensError.code !== 'PGRST116') {
+      console.error('Failed to fetch user tokens:', tokensError)
+      return NextResponse.json(
+        { error: '볼 잔액 조회 중 오류가 발생했습니다.' },
+        { status: 500 }
+      )
+    }
+
+    // 토큰 레코드가 없으면 생성 (기본 10볼)
+    let currentBalance = 10
+    if (!userTokens) {
+      const { error: createError } = await supabase
+        .from('user_tokens')
+        .insert({
+          user_id: user.id,
+          token_balance: 10,
+          last_reset_at: new Date().toISOString()
+        })
+      if (createError) {
+        console.error('Failed to create user tokens:', createError)
+        return NextResponse.json(
+          { error: '볼 계정 생성 중 오류가 발생했습니다.' },
+          { status: 500 }
+        )
+      }
+    } else {
+      currentBalance = userTokens.token_balance
+    }
+
+    // 잔액 부족 체크
+    if (currentBalance < ballCost) {
+      return NextResponse.json(
+        { error: `볼이 부족합니다. 현재 잔액: ${currentBalance}볼, 필요: ${ballCost}볼` },
+        { status: 400 }
+      )
+    }
+
+    // Check for existing predictions (to avoid double charging)
+    const { data: existingPredictions } = await supabase
       .from('betman_predictions')
-      .delete()
+      .select('id')
       .eq('user_id', user.id)
       .eq('round_id', roundIds[0])
+
+    const isModifying = existingPredictions && existingPredictions.length > 0
+
+    // If modifying, calculate the difference in balls needed
+    const previousCount = existingPredictions?.length || 0
+    const actualBallCost = isModifying
+      ? Math.max(0, ballCost - previousCount) // Only charge for additional predictions
+      : ballCost
+
+    // Re-check balance if we need to charge more
+    if (actualBallCost > 0 && currentBalance < actualBallCost) {
+      return NextResponse.json(
+        { error: `볼이 부족합니다. 현재 잔액: ${currentBalance}볼, 추가 필요: ${actualBallCost}볼` },
+        { status: 400 }
+      )
+    }
+
+    // Delete existing predictions for this user and round
+    if (isModifying) {
+      await supabase
+        .from('betman_predictions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('round_id', roundIds[0])
+    }
 
     // Insert new predictions
     const predictionRecords = predictions.map(pred => ({
@@ -198,10 +270,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ===== 볼 차감 (추가 비용이 있을 때만) =====
+    let newBalance = currentBalance
+    if (actualBallCost > 0) {
+      newBalance = currentBalance - actualBallCost
+      const { error: updateError } = await supabase
+        .from('user_tokens')
+        .update({
+          token_balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+
+      if (updateError) {
+        console.error('Failed to deduct balls:', updateError)
+        // 예측은 저장됐지만 볼 차감 실패 - 로그만 남기고 진행
+      }
+
+      // 트랜잭션 기록
+      await supabase
+        .from('token_transactions')
+        .insert({
+          user_id: user.id,
+          transaction_type: 'prediction_spent',
+          amount: -actualBallCost,
+          balance_after: newBalance,
+          description: `베트맨 예측 ${predictions.length}경기 (${round.year}년 ${round.round}회차)${isModifying ? ' - 수정' : ''}`
+        })
+    }
+
     return NextResponse.json({
       success: true,
       predictions: insertedPredictions,
-      message: `${predictions.length}개의 예측이 저장되었습니다.`
+      ballsUsed: actualBallCost,
+      remainingBalls: newBalance,
+      message: actualBallCost > 0
+        ? `${predictions.length}개의 예측이 저장되었습니다. (${actualBallCost}볼 사용, 잔액: ${newBalance}볼)`
+        : `${predictions.length}개의 예측이 수정되었습니다. (추가 볼 사용 없음)`
     })
   } catch (error) {
     console.error('API error:', error)
