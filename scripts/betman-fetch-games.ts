@@ -51,6 +51,16 @@ function parseGames(datas: unknown[][]): Array<Record<string, unknown>> {
     const handi = d[19] as number;
     const gameType = handiMap[handi] ?? '일반';
     const gameDate = d[3] as number | undefined;
+
+    // 핸디캡/기준선 값 추출 (d[20]에 저장됨)
+    // 핸디캡: 음수면 홈팀이 핸디 부여, 양수면 홈팀이 핸디 받음
+    // 언더오버: 기준선 (예: 218.5)
+    const rawHandicapValue = d[20] as number | null;
+
+    // 게임 타입에 따라 다른 컬럼에 저장
+    const handicapSpread = gameType === '핸디캡' ? rawHandicapValue : null;
+    const overUnderLine = gameType === '언더오버' ? rawHandicapValue : null;
+
     let home_win_odds: number | null = null;
     let away_win_odds: number | null = null;
     let draw_odds: number | null = null;
@@ -83,6 +93,10 @@ function parseGames(datas: unknown[][]): Array<Record<string, unknown>> {
       league_code: (d[7] as string) || null,
       venue: (d[10] as string) || null,
       status: 'scheduled',
+      // 핸디캡 스프레드 (핸디캡 게임용)
+      handicap: handicapSpread,
+      // 언오버 기준선 (언오버 게임용)
+      over_under_line: overUnderLine,
       home_win_odds,
       away_win_odds,
       draw_odds,

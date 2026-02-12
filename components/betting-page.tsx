@@ -52,7 +52,8 @@ interface BetmanGame {
   game_type: string
   home_team_name: string
   away_team_name: string
-  handicap: number | null
+  handicap: number | null  // 핸디캡 스프레드 (핸디캡 게임용)
+  over_under_line: number | null  // 언오버 기준선 (언오버 게임용)
   venue: string
   status: string
   // 배당률 (API에서 제공 시)
@@ -159,7 +160,7 @@ export default function BettingPage() {
   const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "mypage">("betting")
   const [sportFilter, setSportFilter] = useState<"all" | "축구" | "야구" | "농구" | "배구">("all")
   const [selectedBets, setSelectedBets] = useState<
-    { gameId: string; matchKey: string; selection: string; sport: string; gameType: string; handicap: number | null; odds?: number }[]
+    { gameId: string; matchKey: string; selection: string; sport: string; gameType: string; handicap: number | null; overUnderLine: number | null; odds?: number }[]
   >([])
   const [isSlipExpanded, setIsSlipExpanded] = useState(false)
   const [betAmount, setBetAmount] = useState<number>(1) // 기본 베팅 금액 (1볼)
@@ -409,6 +410,9 @@ export default function BettingPage() {
       setBetAmount(1) // 기본값으로 리셋
       loadMatches() // Refresh to show saved predictions
       loadUserBalls() // 볼 잔액 새로고침
+
+      // 헤더의 BallBalance 컴포넌트 업데이트를 위한 이벤트 발생
+      window.dispatchEvent(new CustomEvent('ballBalanceUpdate'))
     } catch (error: any) {
       showAlert('error', '예측 실패', error.message || '예측 저장 중 오류가 발생했습니다.')
     } finally {
@@ -417,7 +421,7 @@ export default function BettingPage() {
   }
 
   // 베트맨 게임 선택 핸들러
-  const handleBetSelection = (gameId: string, matchKey: string, selection: string, sport: string, gameType: string, handicap: number | null, odds?: number) => {
+  const handleBetSelection = (gameId: string, matchKey: string, selection: string, sport: string, gameType: string, handicap: number | null, overUnderLine: number | null, odds?: number) => {
     // 같은 물리적 경기에서 이미 선택된 게임이 있는지 확인
     const existingMatchBet = selectedBets.find((b) => b.matchKey === matchKey)
     const existingGameBet = selectedBets.find((b) => b.gameId === gameId)
@@ -441,21 +445,21 @@ export default function BettingPage() {
     } else if (existingMatchBet) {
       // 같은 물리적 경기의 다른 게임 타입 선택 - 교체
       const newBets = selectedBets.filter((b) => b.matchKey !== matchKey)
-      newBets.push({ gameId, matchKey, selection, sport, gameType, handicap, odds })
+      newBets.push({ gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds })
       setSelectedBets(newBets)
     } else {
       // 새로운 경기 추가
       if (selectedBets.length === 0) {
         // 첫 경기 선택 - 종목 락인
         setSelectedSport(sport)
-        setSelectedBets([{ gameId, matchKey, selection, sport, gameType, handicap, odds }])
+        setSelectedBets([{ gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds }])
       } else {
         // 추가 경기 선택 - 종목 검증
         if (sport !== selectedSport) {
           showAlert('warning', '종목 조합 불가', `다른 종목은 조합할 수 없습니다.\n이미 "${selectedSport}" 종목이 선택되었습니다.`)
           return
         }
-        setSelectedBets([...selectedBets, { gameId, matchKey, selection, sport, gameType, handicap, odds }])
+        setSelectedBets([...selectedBets, { gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds }])
       }
     }
   }
@@ -743,15 +747,36 @@ export default function BettingPage() {
 
                         return (
                           <div key={game.id} className="border rounded-lg p-1.5 bg-gray-50/50">
-                            <div className="flex items-center justify-between mb-1">
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                {gameTypeLabel}
-                                {game.handicap !== null && game.handicap !== 0 && (
-                                  <span className="ml-0.5 text-blue-600">
-                                    ({game.handicap > 0 ? '+' : ''}{game.handicap})
-                                  </span>
+                            <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                              <div className="flex items-center gap-1">
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {gameTypeLabel}
+                                </Badge>
+                                {/* 핸디캡: 어느 팀에게 핸디인지 표시 */}
+                                {game.game_type.includes('핸디캡') && (
+                                  game.handicap !== null && game.handicap !== 0 ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-600 border-blue-200">
+                                      {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? '+' : ''}{game.handicap}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-400 border-gray-200">
+                                      핸디캡 정보 없음
+                                    </Badge>
+                                  )
                                 )}
-                              </Badge>
+                                {/* 언더오버: 기준선 표시 */}
+                                {game.game_type.includes('언더오버') && (
+                                  game.over_under_line !== null && game.over_under_line !== undefined ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-600 border-purple-200">
+                                      기준 {game.over_under_line}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-400 border-gray-200">
+                                      기준선 정보 없음
+                                    </Badge>
+                                  )
+                                )}
+                              </div>
                               {sportMismatch && (
                                 <span className="text-[10px] text-orange-500">다른 종목</span>
                               )}
@@ -772,6 +797,7 @@ export default function BettingPage() {
                                     game.sport,
                                     game.game_type,
                                     game.handicap,
+                                    game.over_under_line,
                                     opt.odds
                                   )}
                                   disabled={isDisabled}
@@ -1137,12 +1163,24 @@ export default function BettingPage() {
                           <X className="w-4 h-4" />
                         </button>
                         {/* 리그 & 시간 */}
-                        <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-muted-foreground mb-0.5">
+                        <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-muted-foreground mb-0.5 flex-wrap">
                           <span>{groupedMatch.leagueCode}</span>
                           <span className="text-gray-300 dark:text-gray-600">|</span>
                           <span>{formatMatchTime(groupedMatch.matchTime)}</span>
                           <span className="text-gray-300 dark:text-gray-600">|</span>
                           <span className="text-primary">{gameTypeLabels[bet.gameType] || bet.gameType}</span>
+                          {/* 핸디캡 정보 */}
+                          {bet.gameType.includes('핸디캡') && bet.handicap !== null && (
+                            <span className="text-blue-600 font-medium">
+                              ({groupedMatch.homeTeam.slice(0, 4)} {bet.handicap > 0 ? '+' : ''}{bet.handicap})
+                            </span>
+                          )}
+                          {/* 언더오버 기준선 */}
+                          {bet.gameType.includes('언더오버') && bet.overUnderLine != null && (
+                            <span className="text-purple-600 font-medium">
+                              (기준 {bet.overUnderLine})
+                            </span>
+                          )}
                         </div>
                         {/* 팀 */}
                         <div className="text-sm text-gray-800 dark:text-foreground mb-1 pr-6">

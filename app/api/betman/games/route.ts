@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
     }
 
     const gamesWithOdds = (games || []).map((game: Record<string, unknown>) => {
-      const gameType = (game.game_type as string)?.replace(/^S/, '') || ''
+      const rawGameType = (game.game_type as string) || ''
+      // 'S일반', 'S핸디캡' 등에서 앞의 S를 제거하되, 'SUM'은 그대로 유지
+      const gameType = rawGameType === 'SUM' ? 'SUM' : rawGameType.replace(/^S/, '')
       let home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds
       if (gameType === '일반' || gameType === '핸디캡') {
         home_odds = game.home_win_odds != null ? parseFloat(String(game.home_win_odds)) : undefined
@@ -171,6 +173,10 @@ export async function POST(request: NextRequest) {
         league_code: g.league_code != null ? String(g.league_code) : null,
         venue: g.venue != null ? String(g.venue) : null,
         status: g.status != null ? String(g.status) : 'scheduled',
+        // 핸디캡 스프레드 (핸디캡 게임용)
+        handicap: g.handicap != null ? Number(g.handicap) : null,
+        // 언오버 기준선 (언오버 게임용)
+        over_under_line: g.over_under_line != null ? Number(g.over_under_line) : null,
         home_win_odds: g.home_win_odds != null ? Number(g.home_win_odds) : null,
         away_win_odds: g.away_win_odds != null ? Number(g.away_win_odds) : null,
         draw_odds: g.draw_odds != null ? Number(g.draw_odds) : null,
