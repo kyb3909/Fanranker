@@ -211,6 +211,21 @@ async function main() {
 
     const resBody = await res.json();
     console.log('저장 완료:', resBody);
+
+    // === 자동 정산 트리거 ===
+    console.log('\n--- 정산 시작 ---');
+    const settleRes = await fetch(`${apiBase}/api/betman/settle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gm_ts: gmTs }),
+    });
+
+    if (!settleRes.ok) {
+      console.error('정산 API 실패:', settleRes.status, await settleRes.text());
+    } else {
+      const settleBody = await settleRes.json();
+      console.log('정산 완료:', settleBody);
+    }
   } finally {
     await browser.close();
   }
