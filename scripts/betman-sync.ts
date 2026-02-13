@@ -274,13 +274,42 @@ async function main() {
     }
 
     if (!gmTs) {
-      const result: SyncResult = {
-        action: 'error',
-        gmTs: '',
-        error: 'gmTs를 찾을 수 없음',
-      };
-      console.log(JSON.stringify(result));
-      return;
+      // Fallback: 순차 증가 방식 (DB의 최신 gmTs + 1 시도)
+      if (state.latestGmTs) {
+        const nextGmTs = String(Number(state.latestGmTs) + 1);
+        console.error(`페이지에서 gmTs 감지 실패, 순차 증가 시도: ${nextGmTs}`);
+        try {
+          await page.goto(`${SLIP_URL}?gmId=${GM_ID}&gmTs=${nextGmTs}`, {
+            waitUntil: 'networkidle',
+            timeout: 15000,
+          });
+          // 페이지가 정상 로드되면 (데이터가 있으면) 이 gmTs 사용
+          const hasData = await page.evaluate(() => {
+            return document.querySelector('.game-list, .tbl_data, table') !== null;
+          });
+          if (hasData) {
+            gmTs = nextGmTs;
+          }
+        } catch {
+          // 다음 회차가 없으면 현재 회차 유지
+        }
+      }
+
+      if (!gmTs) {
+        // 마지막 fallback: 기존 상태의 latestGmTs 사용
+        if (state.latestGmTs) {
+          gmTs = state.latestGmTs;
+          console.error(`Fallback: 기존 latestGmTs 사용: ${gmTs}`);
+        } else {
+          const result: SyncResult = {
+            action: 'error',
+            gmTs: '',
+            error: 'gmTs를 찾을 수 없음',
+          };
+          console.log(JSON.stringify(result));
+          return;
+        }
+      }
     }
 
     const isNew = !state.activeRounds.includes(gmTs);
