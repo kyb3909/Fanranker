@@ -34,6 +34,7 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
+  BarChart3,
 } from "lucide-react"
 
 // Betman Types
@@ -165,9 +166,10 @@ export default function BettingPage() {
   const [isSlipExpanded, setIsSlipExpanded] = useState(false)
   const [betAmount, setBetAmount] = useState<number>(1) // 기본 베팅 금액 (1볼)
   const [userBalls, setUserBalls] = useState<number>(10) // 사용자 보유 볼 (하루 10볼)
-  const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set())
+  const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set())
+  const [followLoading, setFollowLoading] = useState<Set<string>>(new Set())
   const [rankingFilter, setRankingFilter] = useState<"profit" | "winRate" | "roi">("profit")
-  const [myPageTab, setMyPageTab] = useState<"predictions" | "gold" | "profile">("predictions")
+  const [myPageTab, setMyPageTab] = useState<"predictions" | "stats" | "gold" | "profile">("predictions")
 
   // Betman API 데이터 상태
   const [todayInfo, setTodayInfo] = useState<TodayInfo | null>(null)
@@ -182,6 +184,12 @@ export default function BettingPage() {
   // Rankings 상태
   const [rankings, setRankings] = useState<any[]>([])
   const [isLoadingRankings, setIsLoadingRankings] = useState(false)
+  const [rankingSportFilter, setRankingSportFilter] = useState<string>("전체")
+  const [myRank, setMyRank] = useState<any>(null)
+
+  // My stats 상태
+  const [myStats, setMyStats] = useState<{ summary: any; sports: any[] } | null>(null)
+  const [isLoadingMyStats, setIsLoadingMyStats] = useState(false)
 
   // Prediction history 상태
   const [predictionHistory, setPredictionHistory] = useState<any[]>([])
@@ -240,11 +248,41 @@ export default function BettingPage() {
     }
   }, [])
 
+  // 팔로우 목록 로드
+  const loadFollows = useCallback(async () => {
+    try {
+      const res = await fetch('/api/follow')
+      if (res.ok) {
+        const data = await res.json()
+        setFollowedUsers(new Set(data.following || []))
+      }
+    } catch (err) {
+      console.error('Failed to load follows:', err)
+    }
+  }, [])
+
+  // 내 통계 로드
+  const loadMyStats = useCallback(async () => {
+    setIsLoadingMyStats(true)
+    try {
+      const res = await fetch('/api/betman/my-stats')
+      if (res.ok) {
+        const data = await res.json()
+        setMyStats(data)
+      }
+    } catch (err) {
+      console.error('Failed to load my stats:', err)
+    } finally {
+      setIsLoadingMyStats(false)
+    }
+  }, [])
+
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
     loadMatches()
     loadUserBalls()
-  }, [loadMatches, loadUserBalls])
+    loadFollows()
+  }, [loadMatches, loadUserBalls, loadFollows])
 
   // 자동 새로고침 (5분마다)
   useEffect(() => {
@@ -260,26 +298,30 @@ export default function BettingPage() {
     setIsLoadingRankings(true)
     try {
       const sortMap: Record<string, string> = {
-        profit: 'profit',
+        profit: 'net_profit',
         winRate: 'accuracy',
-        roi: 'roi',
+        roi: 'profit_rate',
       }
-      const response = await fetch(`/api/rankings?sort=${sortMap[rankingFilter] || 'profit'}&limit=20`)
+      const sortParam = sortMap[rankingFilter] || 'profit_rate'
+      const response = await fetch(
+        `/api/betman/rankings?sport=${encodeURIComponent(rankingSportFilter)}&sort=${sortParam}&limit=50`
+      )
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('Rankings API error:', errorData)
         setRankings([])
+        setMyRank(null)
         return
       }
       const data = await response.json()
       setRankings(data?.rankings || [])
+      setMyRank(data?.my_rank || null)
     } catch (err) {
       console.error('Failed to load rankings:', err)
       setRankings([])
+      setMyRank(null)
     } finally {
       setIsLoadingRankings(false)
     }
-  }, [rankingFilter])
+  }, [rankingFilter, rankingSportFilter])
 
   // Load prediction history
   const loadPredictionHistory = useCallback(async () => {
@@ -343,12 +385,12 @@ export default function BettingPage() {
     }
   }, [])
 
-  // Load rankings when ranking tab is active or rankingFilter changes
+  // Load rankings when ranking tab is active or filters change
   useEffect(() => {
     if (activeTab === 'ranking') {
       loadRankings()
     }
-  }, [activeTab, rankingFilter, loadRankings])
+  }, [activeTab, rankingFilter, rankingSportFilter, loadRankings])
 
   // Load prediction history when mypage tab is active
   useEffect(() => {
@@ -356,6 +398,13 @@ export default function BettingPage() {
       loadPredictionHistory()
     }
   }, [activeTab, myPageTab, loadPredictionHistory])
+
+  // Load my stats when mypage stats tab is active
+  useEffect(() => {
+    if (activeTab === 'mypage' && myPageTab === 'stats') {
+      loadMyStats()
+    }
+  }, [activeTab, myPageTab, loadMyStats])
 
   // 알림 모달 표시 헬퍼 함수
   const showAlert = (type: 'error' | 'warning' | 'success', title: string, message: string) => {
@@ -487,16 +536,36 @@ export default function BettingPage() {
     setSelectedSport(null)
   }
 
-  const handleFollow = (userId: number) => {
-    setFollowedUsers((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(userId)) {
-        newSet.delete(userId)
-      } else {
-        newSet.add(userId)
+  // 팔로우/언팔로우 토글
+  const handleFollow = async (userId: string) => {
+    setFollowLoading(prev => new Set(prev).add(userId))
+    try {
+      const res = await fetch('/api/follow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setFollowedUsers(prev => {
+          const newSet = new Set(prev)
+          if (data.action === 'followed') {
+            newSet.add(userId)
+          } else {
+            newSet.delete(userId)
+          }
+          return newSet
+        })
       }
-      return newSet
-    })
+    } catch (err) {
+      console.error('Follow error:', err)
+    } finally {
+      setFollowLoading(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(userId)
+        return newSet
+      })
+    }
   }
 
   // 필터링된 경기 목록 (이미 시작된 경기는 제외)
@@ -572,38 +641,65 @@ export default function BettingPage() {
         )}
 
         {activeTab === "ranking" && (
-          <div className="flex border-b border-border">
-            {[
-              { id: "profit", label: "수익금", icon: Coins },
-              { id: "winRate", label: "적중률", icon: Target },
-              { id: "roi", label: "수익률", icon: TrendingUp },
-            ].map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => setRankingFilter(filter.id as "profit" | "winRate" | "roi")}
-                className={`flex items-center justify-center gap-2 flex-1 px-4 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
-                  rankingFilter === filter.id
-                    ? "border-primary text-primary bg-primary/5"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <filter.icon className="w-4 h-4" />
-                {filter.label}
-              </button>
-            ))}
-          </div>
+          <>
+            {/* 종목 필터 */}
+            <div className="flex border-b border-border">
+              {[
+                { id: "전체", label: "전체", icon: "🎯" },
+                { id: "축구", label: "축구", icon: "⚽" },
+                { id: "농구", label: "농구", icon: "🏀" },
+                { id: "야구", label: "야구", icon: "⚾" },
+                { id: "배구", label: "배구", icon: "🏐" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setRankingSportFilter(tab.id)}
+                  className={`flex items-center justify-center gap-1 flex-1 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
+                    rankingSportFilter === tab.id
+                      ? "border-primary text-primary bg-primary/5"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <span className="text-sm">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+            {/* 정렬 필터 */}
+            <div className="flex border-b border-border">
+              {[
+                { id: "roi", label: "수익률", icon: TrendingUp },
+                { id: "winRate", label: "적중률", icon: Target },
+                { id: "profit", label: "수익금", icon: Coins },
+              ].map((filter) => (
+                <button
+                  key={filter.id}
+                  onClick={() => setRankingFilter(filter.id as "profit" | "winRate" | "roi")}
+                  className={`flex items-center justify-center gap-2 flex-1 px-4 py-2 text-[12px] font-semibold transition-all border-b-2 -mb-[1px] ${
+                    rankingFilter === filter.id
+                      ? "border-primary text-primary bg-primary/5"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <filter.icon className="w-3.5 h-3.5" />
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         {activeTab === "mypage" && (
           <div className="flex border-b border-border">
             {[
               { id: "predictions", label: "예측 내역" },
+              { id: "stats", label: "내 통계" },
               { id: "gold", label: "골드 내역" },
               { id: "profile", label: "개인정보" },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setMyPageTab(tab.id as "predictions" | "gold" | "profile")}
+                onClick={() => setMyPageTab(tab.id as "predictions" | "stats" | "gold" | "profile")}
                 className={`flex items-center justify-center flex-1 px-4 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
                   myPageTab === tab.id
                     ? "border-primary text-primary bg-primary/5"
@@ -832,18 +928,78 @@ export default function BettingPage() {
         {/* Ranking Tab */}
         {activeTab === "ranking" && (
           <div className="space-y-2">
+            {/* 내 순위 카드 */}
+            {myRank && (
+              <Card className="overflow-hidden border-primary/30 bg-primary/5">
+                <div className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-semibold text-primary">내 순위</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                      {myRank.rank ?? '-'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">{myRank.nickname || '나'}</div>
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
+                        <span>
+                          수익률 <span className={`font-medium ${(myRank.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {(myRank.profit_rate || 0) >= 0 ? '+' : ''}{(myRank.profit_rate || 0).toFixed(1)}%
+                          </span>
+                        </span>
+                        <span>
+                          적중률 <span className="font-medium text-blue-600">{(myRank.accuracy || 0).toFixed(1)}%</span>
+                        </span>
+                        <span>
+                          {myRank.correct_predictions || 0}/{myRank.total_predictions || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-sm font-bold ${(myRank.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {(myRank.net_profit || 0) >= 0 ? '+' : ''}{(myRank.net_profit || 0).toFixed(2)}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">순수익</div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* 랭킹 테이블 헤더 */}
+            {rankings.length > 0 && (
+              <div className="flex items-center px-3 py-1.5 text-[10px] text-muted-foreground font-medium">
+                <span className="w-8 text-center">#</span>
+                <span className="flex-1 ml-2">유저</span>
+                <span className="w-14 text-right">수익률</span>
+                <span className="w-14 text-right">적중률</span>
+                <span className="w-16 text-right">순수익</span>
+              </div>
+            )}
+
             {isLoadingRankings ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : rankings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">랭킹 데이터가 없습니다.</p>
+              <div className="text-center py-8">
+                <Trophy className="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
+                <p className="text-muted-foreground text-sm">아직 랭킹 데이터가 없습니다.</p>
+                <p className="text-muted-foreground/60 text-xs mt-1">예측에 참여하고 랭킹에 도전해보세요!</p>
+              </div>
             ) : (
-              rankings.map((user, index) => {
-                const isFollowed = followedUsers.has(Number(user.user_id) || 0)
-                const rank = index + 1
+              rankings.map((user) => {
+                const rank = user.rank
                 const isTop3 = rank <= 3
                 const medalColors = ["text-yellow-500", "text-gray-400", "text-amber-600"]
+                const isFollowed = followedUsers.has(user.user_id)
+                const isFollowLoading = followLoading.has(user.user_id)
+                const streakText = user.current_streak > 0
+                  ? `${user.current_streak}연승`
+                  : user.current_streak < 0
+                    ? `${Math.abs(user.current_streak)}연패`
+                    : ''
 
                 return (
                   <Card
@@ -853,43 +1009,77 @@ export default function BettingPage() {
                       isTop3 ? { borderLeftColor: rank === 1 ? "#EAB308" : rank === 2 ? "#9CA3AF" : "#D97706" } : {}
                     }
                   >
-                    <div className="p-3 flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm ${isTop3 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"}`}
-                      >
-                        {isTop3 ? <Trophy className={`w-4 h-4 ${medalColors[rank - 1]}`} /> : rank}
+                    <div className="p-2.5 space-y-2">
+                      {/* 1행: 순위 + 닉네임 + 팔로우 */}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 flex items-center justify-center rounded-full font-bold text-xs shrink-0 ${
+                            isTop3 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {isTop3 ? <Trophy className={`w-3.5 h-3.5 ${medalColors[rank - 1]}`} /> : rank}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-sm truncate">{user.nickname}</span>
+                            {streakText && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+                                user.current_streak > 0
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                🔥{streakText}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {user.correct_predictions}/{user.total_predictions}적중
+                            {user.best_win_streak > 1 && (
+                              <span className="ml-1.5 text-amber-600">최고 {user.best_win_streak}연승</span>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={isFollowed ? "outline" : "default"}
+                          onClick={() => handleFollow(user.user_id)}
+                          disabled={isFollowLoading}
+                          className={`h-7 px-3 text-xs rounded-full shrink-0 ${
+                            isFollowed
+                              ? "text-muted-foreground hover:text-red-500 hover:border-red-300"
+                              : "bg-gray-900 text-white hover:bg-gray-800"
+                          }`}
+                        >
+                          {isFollowLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : isFollowed ? '팔로잉' : '팔로우'}
+                        </Button>
                       </div>
-                      <img
-                        src={user.avatar_url || "/placeholder.svg"}
-                        alt={user.nickname}
-                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
-                      />
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm">{user.nickname}</div>
-                        <div className="flex gap-3 text-xs text-gray-500 mt-0.5">
-                          <span>
-                            수익금{" "}
-                            <span className="font-medium text-gray-900">{((user.profit || 0) / 10000).toFixed(0)}만</span>
-                          </span>
-                          <span>
-                            적중률 <span className="font-medium text-emerald-600">{Math.round(user.accuracy || 0)}%</span>
-                          </span>
-                          <span>
-                            수익률 <span className="font-medium text-orange-600">{Math.round(user.roi || 0)}%</span>
-                          </span>
+                      {/* 2행: 수익률 / 적중률 / 순수익 */}
+                      <div className="flex items-center gap-1 ml-9">
+                        <div className="flex-1 text-center px-2 py-1 bg-muted/50 rounded">
+                          <div className={`text-xs font-bold ${
+                            (user.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                          }`}>
+                            {(user.profit_rate || 0) >= 0 ? '+' : ''}{(user.profit_rate || 0).toFixed(1)}%
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">수익률</div>
+                        </div>
+                        <div className="flex-1 text-center px-2 py-1 bg-muted/50 rounded">
+                          <div className="text-xs font-bold text-blue-600">
+                            {(user.accuracy || 0).toFixed(1)}%
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">적중률</div>
+                        </div>
+                        <div className="flex-1 text-center px-2 py-1 bg-muted/50 rounded">
+                          <div className={`text-xs font-bold ${
+                            (user.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                          }`}>
+                            {(user.net_profit || 0) >= 0 ? '+' : ''}{(user.net_profit || 0).toFixed(2)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">순수익</div>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleFollow(Number(user.user_id) || 0)}
-                        className={`h-7 px-3 text-xs rounded-full ${
-                          isFollowed
-                            ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            : "bg-gray-900 text-white hover:bg-gray-800"
-                        }`}
-                      >
-                        {isFollowed ? "팔로잉" : "팔로우"}
-                      </Button>
                     </div>
                   </Card>
                 )
@@ -1042,6 +1232,156 @@ export default function BettingPage() {
                   </Card>
                   )
                   })
+                )}
+              </div>
+            )}
+            {myPageTab === "stats" && (
+              <div className="space-y-3">
+                {isLoadingMyStats ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : !myStats?.summary ? (
+                  <div className="text-center py-8">
+                    <BarChart3 className="w-10 h-10 mx-auto text-muted-foreground/30 mb-2" />
+                    <p className="text-muted-foreground text-sm">아직 통계 데이터가 없습니다.</p>
+                    <p className="text-muted-foreground/60 text-xs mt-1">예측에 참여하면 통계가 생성됩니다.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 전체 통계 요약 */}
+                    <Card className="overflow-hidden">
+                      <div className="p-3 border-b bg-muted/30">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-semibold">전체 통계</span>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        {/* 주요 지표 3열 */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="text-center p-2 bg-muted/40 rounded-lg">
+                            <div className={`text-lg font-bold ${
+                              (myStats.summary.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                              {(myStats.summary.profit_rate || 0) >= 0 ? '+' : ''}{(myStats.summary.profit_rate || 0).toFixed(1)}%
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">수익률</div>
+                          </div>
+                          <div className="text-center p-2 bg-muted/40 rounded-lg">
+                            <div className="text-lg font-bold text-blue-600">
+                              {(myStats.summary.accuracy || 0).toFixed(1)}%
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">적중률</div>
+                          </div>
+                          <div className="text-center p-2 bg-muted/40 rounded-lg">
+                            <div className={`text-lg font-bold ${
+                              (myStats.summary.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                              {(myStats.summary.net_profit || 0) >= 0 ? '+' : ''}{(myStats.summary.net_profit || 0).toFixed(2)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">순수익</div>
+                          </div>
+                        </div>
+                        {/* 세부 정보 */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">총 예측</span>
+                            <span className="font-medium">{myStats.summary.total_predictions}건</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">적중/미적중</span>
+                            <span className="font-medium">
+                              <span className="text-emerald-600">{myStats.summary.correct_predictions}</span>
+                              /
+                              <span className="text-red-500">{myStats.summary.wrong_predictions}</span>
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">현재</span>
+                            <span className={`font-medium ${
+                              (myStats.summary.current_streak || 0) > 0 ? 'text-emerald-600' : (myStats.summary.current_streak || 0) < 0 ? 'text-red-500' : ''
+                            }`}>
+                              {myStats.summary.current_streak > 0
+                                ? `${myStats.summary.current_streak}연승 🔥`
+                                : myStats.summary.current_streak < 0
+                                  ? `${Math.abs(myStats.summary.current_streak)}연패`
+                                  : '-'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">최고 연승</span>
+                            <span className="font-medium text-amber-600">
+                              {myStats.summary.best_win_streak > 0 ? `${myStats.summary.best_win_streak}연승` : '-'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* 종목별 통계 */}
+                    {myStats.sports.length > 0 && (
+                      <Card className="overflow-hidden">
+                        <div className="p-3 border-b bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-semibold">종목별 통계</span>
+                          </div>
+                        </div>
+                        <div className="divide-y">
+                          {myStats.sports.map((sport: any) => {
+                            const icon = SPORT_ICONS[sport.sport] || '🎯'
+                            return (
+                              <div key={sport.sport} className="p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm">{icon}</span>
+                                    <span className="text-sm font-semibold">{sport.sport}</span>
+                                    <span className="text-[10px] text-muted-foreground ml-1">
+                                      {sport.correct_predictions}/{sport.total_predictions}적중
+                                    </span>
+                                  </div>
+                                  {sport.current_streak !== 0 && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                      sport.current_streak > 0
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : 'bg-red-100 text-red-700'
+                                    }`}>
+                                      {sport.current_streak > 0 ? `${sport.current_streak}연승` : `${Math.abs(sport.current_streak)}연패`}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  <div className="text-center px-2 py-1.5 bg-muted/40 rounded">
+                                    <div className={`text-xs font-bold ${
+                                      (sport.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                                    }`}>
+                                      {(sport.profit_rate || 0) >= 0 ? '+' : ''}{(sport.profit_rate || 0).toFixed(1)}%
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">수익률</div>
+                                  </div>
+                                  <div className="text-center px-2 py-1.5 bg-muted/40 rounded">
+                                    <div className="text-xs font-bold text-blue-600">
+                                      {(sport.accuracy || 0).toFixed(1)}%
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">적중률</div>
+                                  </div>
+                                  <div className="text-center px-2 py-1.5 bg-muted/40 rounded">
+                                    <div className={`text-xs font-bold ${
+                                      (sport.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                                    }`}>
+                                      {(sport.net_profit || 0) >= 0 ? '+' : ''}{(sport.net_profit || 0).toFixed(2)}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">순수익</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </Card>
+                    )}
+                  </>
                 )}
               </div>
             )}
