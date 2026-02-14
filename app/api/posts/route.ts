@@ -109,25 +109,9 @@ export async function GET(request: NextRequest) {
         .map((id) => postMap.get(id))
         .filter((p): p is typeof posts[0] => p !== undefined)
 
-      // 6. 각 게시물의 실제 댓글 수 계산
-      const postIds = sortedPosts.map((p) => p.id)
-      const { data: commentCounts } = await supabase
-        .from('comments')
-        .select('post_id')
-        .in('post_id', postIds)
-        .is('deleted_at', null)
-
-      const commentCountMap = new Map<string, number>()
-      if (commentCounts) {
-        commentCounts.forEach((c) => {
-          const count = commentCountMap.get(c.post_id) || 0
-          commentCountMap.set(c.post_id, count + 1)
-        })
-      }
-
+      // 6. 온도 계산 (comment_count는 DB 트리거가 관리하므로 그대로 사용)
       const postsWithAccurateCounts = sortedPosts.map((post) => {
-        const cc = commentCountMap.get(post.id) || 0
-        const row = { ...post, comment_count: cc, latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at }
+        const row = { ...post, latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at }
         return { ...row, temperature: computeTemperature(row) }
       })
 
@@ -194,28 +178,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ posts: [], profiles: [] })
     }
 
-    // 2. 각 게시물의 실제 댓글 수 계산 (comment_count와 일치하도록 보장)
-    const postIds = posts.map((p) => p.id)
-    const { data: commentCounts } = await supabase
-      .from('comments')
-      .select('post_id')
-      .in('post_id', postIds)
-      .is('deleted_at', null)
-
-    // 댓글 수를 맵으로 변환
-    const commentCountMap = new Map<string, number>()
-    if (commentCounts) {
-      commentCounts.forEach((c) => {
-        const count = commentCountMap.get(c.post_id) || 0
-        commentCountMap.set(c.post_id, count + 1)
-      })
-    }
-
-    // 각 게시물에 실제 댓글 수 + 반감기 적용 온도 추가
+    // 2. 반감기 적용 온도 계산 (comment_count는 DB 트리거가 관리하므로 그대로 사용)
     let postsWithAccurateCounts = posts.map((post) => {
-      const cc = commentCountMap.get(post.id) || 0
-      const row = { ...post, comment_count: cc }
-      return { ...row, temperature: computeTemperature(row) }
+      return { ...post, temperature: computeTemperature(post) }
     })
 
     if (sort === 'hot') {
