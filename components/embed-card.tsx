@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
@@ -47,10 +48,12 @@ export function EmbedCard({
           >
             {thumbnail_url && (
               <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted">
-                <img
+                <Image
                   src={thumbnail_url}
                   alt={title || 'Embed preview'}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 600px"
+                  className="object-cover"
                 />
               </div>
             )}
