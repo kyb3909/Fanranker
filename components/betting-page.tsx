@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useRef, useState, useEffect, useCallback } from "react"
+import { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import type React from "react"
 import { Input } from "@/components/ui/input"
@@ -113,6 +113,15 @@ const sportColorFill: Record<string, { bg: string; text: string; border: string 
   volleyball: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
 }
 const SPORT_ICONS: Record<string, string> = { "축구": "⚽", "야구": "⚾", "농구": "🏀", "배구": "🏐" }
+
+// 베트맨 종목 탭 (축구 야구 농구 배구 순서)
+const SPORT_TABS = [
+  { id: "all", label: "전체", icon: "🎯" },
+  { id: "축구", label: "축구", icon: "⚽" },
+  { id: "야구", label: "야구", icon: "⚾" },
+  { id: "농구", label: "농구", icon: "🏀" },
+  { id: "배구", label: "배구", icon: "🏐" },
+] as const
 
 // Format match time
 function formatMatchTime(dateStr: string): string {
@@ -559,23 +568,15 @@ export default function BettingPage() {
   }
 
   // 필터링된 경기 목록 (이미 시작된 경기는 제외)
-  const now = new Date()
-  const filteredMatches = groupedMatches
-    .filter((m) => {
-      // 아직 시작되지 않은 경기만 표시
-      const matchTime = new Date(m.matchTime)
-      return matchTime > now
-    })
-    .filter((m) => sportFilter === "all" || m.sport === sportFilter)
-
-  // 베트맨 종목 탭 (축구 야구 농구 배구 순서)
-  const sportTabs = [
-    { id: "all", label: "전체", icon: "🎯" },
-    { id: "축구", label: "축구", icon: "⚽" },
-    { id: "야구", label: "야구", icon: "⚾" },
-    { id: "농구", label: "농구", icon: "🏀" },
-    { id: "배구", label: "배구", icon: "🏐" },
-  ]
+  const filteredMatches = useMemo(() => {
+    const now = new Date()
+    return groupedMatches
+      .filter((m) => {
+        const matchTime = new Date(m.matchTime)
+        return matchTime > now
+      })
+      .filter((m) => sportFilter === "all" || m.sport === sportFilter)
+  }, [groupedMatches, sportFilter])
 
   return (
     <div className="w-full">
@@ -606,7 +607,7 @@ export default function BettingPage() {
         {activeTab === "betting" && (
           <>
             <div className="flex border-b border-border">
-              {sportTabs.map((tab) => (
+              {SPORT_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
