@@ -241,11 +241,18 @@ export async function POST(request: NextRequest) {
 
     // Delete existing predictions for this user and round
     if (isModifying) {
-      await supabase
+      const { error: deleteError } = await supabase
         .from('betman_predictions')
         .delete()
         .eq('user_id', user.id)
         .eq('round_id', roundIds[0])
+      if (deleteError) {
+        console.error('Failed to delete existing predictions:', deleteError)
+        return NextResponse.json(
+          { error: '기존 예측 삭제 중 오류가 발생했습니다.' },
+          { status: 500 }
+        )
+      }
     }
 
     // Insert new predictions
@@ -288,7 +295,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 트랜잭션 기록
-      await supabase
+      const { error: txError } = await supabase
         .from('token_transactions')
         .insert({
           user_id: user.id,
@@ -297,6 +304,9 @@ export async function POST(request: NextRequest) {
           balance_after: newBalance,
           description: `베트맨 예측 ${predictions.length}경기 (${round.year}년 ${round.round}회차)${isModifying ? ' - 수정' : ''}`
         })
+      if (txError) {
+        console.error('Failed to log prediction transaction:', txError)
+      }
     }
 
     return NextResponse.json({

@@ -57,10 +57,17 @@ export async function POST(request: NextRequest) {
 
     if (existingByYearRound) {
       // 기존 행에 gm_ts만 채우기
-      await supabase
+      const { error: updateError } = await supabase
         .from('betman_rounds')
         .update({ gm_ts: gmTs })
         .eq('id', existingByYearRound.id)
+      if (updateError) {
+        console.error('Failed to update gm_ts:', updateError)
+        return NextResponse.json(
+          { error: '회차 정보 업데이트 중 오류가 발생했습니다.' },
+          { status: 500 }
+        )
+      }
       return NextResponse.json({
         created: false,
         roundId: existingByYearRound.id,

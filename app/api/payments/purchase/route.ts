@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log transaction
-    await supabase
+    const { error: txError } = await supabase
       .from('token_transactions')
       .insert({
         user_id: userId,
@@ -165,6 +165,9 @@ export async function POST(request: NextRequest) {
         description: `Premium prediction purchase: ${prediction_id}`,
         related_prediction_id: prediction_id,
       })
+    if (txError) {
+      console.error('Failed to log purchase transaction:', txError)
+    }
 
     // Record purchase
     const { data: purchase, error: purchaseError } = await supabase
@@ -179,9 +182,16 @@ export async function POST(request: NextRequest) {
 
     if (purchaseError) {
       console.error('Failed to record purchase:', purchaseError)
-      // TODO: Refund tokens if purchase record fails
+      // Refund: 구매 기록 실패 시 토큰 환불
+      await supabase
+        .from('user_tokens')
+        .update({
+          token_balance: currentBalance,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
       return NextResponse.json(
-        { error: '구매 기록 생성 중 오류가 발생했습니다.', details: purchaseError.message },
+        { error: '구매 기록 생성 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

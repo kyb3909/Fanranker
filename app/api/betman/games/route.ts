@@ -40,8 +40,20 @@ export async function GET(request: NextRequest) {
       .order('match_time', { ascending: true })
       .order('game_no', { ascending: true })
 
-    if (sportFilter !== 'all') query = query.eq('sport', sportFilter)
-    if (gameTypeFilter !== 'all') query = query.or(`game_type.eq.${gameTypeFilter},game_type.eq.S${gameTypeFilter}`)
+    const allowedSports = ['축구', '야구', '농구', '배구']
+    const allowedGameTypes = ['일반', '핸디캡', '언더오버', 'SUM']
+    if (sportFilter !== 'all') {
+      if (!allowedSports.includes(sportFilter)) {
+        return NextResponse.json({ error: '유효하지 않은 종목입니다.' }, { status: 400 })
+      }
+      query = query.eq('sport', sportFilter)
+    }
+    if (gameTypeFilter !== 'all') {
+      if (!allowedGameTypes.includes(gameTypeFilter)) {
+        return NextResponse.json({ error: '유효하지 않은 경기 타입입니다.' }, { status: 400 })
+      }
+      query = query.or(`game_type.eq.${gameTypeFilter},game_type.eq.S${gameTypeFilter}`)
+    }
 
     const { data: games, error: gamesError } = await query
 
