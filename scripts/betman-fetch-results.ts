@@ -198,9 +198,14 @@ async function main() {
     console.log(`매핑 완료: completed=${completed}, cancelled=${cancelled}, SUM(result빈값)=${skippedSUM}`);
 
     // API 호출하여 DB 업데이트
+    const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (process.env.CRON_SECRET) {
+      authHeaders['Authorization'] = `Bearer ${process.env.CRON_SECRET}`;
+    }
+
     const res = await fetch(`${apiBase}/api/betman/results`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({ gmTs, results }),
     });
 
@@ -216,7 +221,7 @@ async function main() {
     console.log('\n--- 정산 시작 ---');
     const settleRes = await fetch(`${apiBase}/api/betman/settle`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({ gm_ts: gmTs }),
     });
 

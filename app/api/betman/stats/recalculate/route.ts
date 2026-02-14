@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { updateUserSportStats } from '@/lib/betman/stats'
 
@@ -13,8 +13,15 @@ import { updateUserSportStats } from '@/lib/betman/stats'
  *   2. 각 유저에 대해 updateUserSportStats 실행
  *   3. 결과 반환
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // 인증: CRON_SECRET으로 내부 호출만 허용
+    const authHeader = request.headers.get('authorization')
+    const cronSecret = process.env.CRON_SECRET
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = createServiceRoleClient()
 
     // 정산된 예측이 있는 모든 유저 조회

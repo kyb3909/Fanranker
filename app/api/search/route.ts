@@ -102,11 +102,7 @@ export async function GET(request: NextRequest) {
         code: error.code
       })
       return NextResponse.json(
-        { 
-          error: '검색 중 오류가 발생했습니다.', 
-          details: error.message,
-          code: error.code
-        },
+        { error: '검색 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -136,12 +132,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ posts: posts || [], profiles })
   } catch (error) {
     console.error('API error:', error)
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
     return NextResponse.json(
-      { 
-        error: '서버 오류가 발생했습니다.',
-        details: errorMessage
-      },
+      { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
     )
   }

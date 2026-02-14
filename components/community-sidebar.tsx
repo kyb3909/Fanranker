@@ -72,7 +72,7 @@ export function CommunitySidebar() {
       })
       .then((data) => {
         if (cancelled) return
-        const slugs = new Set((data.communities || []).map((c: { community_slug: string }) => c.community_slug))
+        const slugs = new Set<string>((data.communities || []).map((c: { community_slug: string }) => c.community_slug))
         setFollowedCommunities(slugs)
       })
       .catch(() => {

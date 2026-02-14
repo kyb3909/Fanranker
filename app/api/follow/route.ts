@@ -83,10 +83,17 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // 언팔로우
-      await supabase
+      const { error: deleteError } = await supabase
         .from('user_follows')
         .delete()
         .eq('id', existing.id)
+
+      if (deleteError) {
+        return NextResponse.json(
+          { error: '언팔로우 처리에 실패했습니다.' },
+          { status: 500 }
+        )
+      }
 
       return NextResponse.json({ action: 'unfollowed' })
     } else {

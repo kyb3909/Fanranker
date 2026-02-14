@@ -37,67 +37,42 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    const mapPosts = (posts: any[]) => (posts || []).map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
+      communitySlug: p.community_slug,
+      comments: p.comment_count || 0,
+      views: p.view_count || 0,
+      upvotes: p.vote_count || 0,
+    }))
+
     async function fetchPosts() {
       setIsLoading(true)
       try {
-        // 실시간 인기글 (온도순)
-        const popularRes = await fetch('/api/posts?sort=hot&limit=10')
+        // 병렬 fetch로 성능 개선
+        const [popularRes, recommendedRes, commentedRes, viewedRes] = await Promise.all([
+          fetch('/api/posts?sort=hot&limit=10'),
+          fetch('/api/posts?sort=hot&limit=3'),
+          fetch('/api/posts?sort=comments&limit=3'),
+          fetch('/api/posts?sort=new&limit=3'),
+        ])
+
         if (popularRes.ok) {
           const { posts } = await popularRes.json()
-          setPopularPosts(posts.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
-            communitySlug: p.community_slug,
-            comments: p.comment_count || 0,
-            views: p.view_count || 0,
-            upvotes: p.vote_count || 0,
-          })))
+          setPopularPosts(mapPosts(posts))
         }
-
-        // 최다 추천글
-        const recommendedRes = await fetch('/api/posts?sort=hot&limit=3')
         if (recommendedRes.ok) {
           const { posts } = await recommendedRes.json()
-          setTopRecommended(posts.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
-            communitySlug: p.community_slug,
-            comments: p.comment_count || 0,
-            views: p.view_count || 0,
-            upvotes: p.vote_count || 0,
-          })))
+          setTopRecommended(mapPosts(posts))
         }
-
-        // 최다 댓글
-        const commentedRes = await fetch('/api/posts?sort=comments&limit=3')
         if (commentedRes.ok) {
           const { posts } = await commentedRes.json()
-          setTopCommented(posts.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
-            communitySlug: p.community_slug,
-            comments: p.comment_count || 0,
-            views: p.view_count || 0,
-            upvotes: p.vote_count || 0,
-          })))
+          setTopCommented(mapPosts(posts))
         }
-
-        // 최다 조회수 (현재 API에서 지원하지 않으면 hot으로 대체)
-        const viewedRes = await fetch('/api/posts?sort=new&limit=3')
         if (viewedRes.ok) {
           const { posts } = await viewedRes.json()
-          setTopViewed(posts.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
-            communitySlug: p.community_slug,
-            comments: p.comment_count || 0,
-            views: p.view_count || 0,
-            upvotes: p.vote_count || 0,
-          })))
+          setTopViewed(mapPosts(posts))
         }
       } catch (error) {
         console.error('Failed to fetch posts:', error)

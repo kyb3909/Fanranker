@@ -60,6 +60,7 @@ jobs:
         if: steps.gmts.outputs.value != ''
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           echo "회차: ${{ steps.gmts.outputs.value }}"
           pnpm exec tsx scripts/betman-fetch-results.ts ${{ steps.gmts.outputs.value }}

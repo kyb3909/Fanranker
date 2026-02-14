@@ -315,7 +315,7 @@ export function PostCard({ post, priority = false }: PostCardProps) {
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
-              <AvatarFallback className="text-[10px]">{post.author[0]}</AvatarFallback>
+              <AvatarFallback className="text-[10px]">{post.author?.[0] ?? "?"}</AvatarFallback>
             </Avatar>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

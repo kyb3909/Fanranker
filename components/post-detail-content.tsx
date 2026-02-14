@@ -616,7 +616,7 @@ export function PostDetailContent({ post }: { post: Post }) {
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
-                <AvatarFallback>{post.author[0].toUpperCase()}</AvatarFallback>
+                <AvatarFallback>{post.author?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
