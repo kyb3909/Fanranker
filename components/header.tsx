@@ -160,6 +160,17 @@ export function Header() {
             )}
           </div>
 
+          {/* 모바일 검색 아이콘 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="sm:hidden h-9 w-9 rounded-full"
+            aria-label="검색"
+            onClick={() => router.push('/search')}
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </Button>
+
           {/* Actions: 여유있는 간격 */}
           <div className="flex items-center gap-1">
             <SignedIn>
@@ -185,28 +196,28 @@ export function Header() {
       </div>
 
       {/* 메뉴바: 좌우 폭 끝까지 (피드, 탐색, 승부 예측) */}
-      <nav className="flex items-center justify-center gap-1 border-t border-primary/20 bg-primary px-1 pt-2 pb-1.5 w-full" aria-label="주요 메뉴">
+      <nav className="flex items-center justify-center gap-1 border-t border-primary/20 bg-primary px-1 pt-2 pb-1.5 w-full overflow-x-auto scrollbar-none" aria-label="주요 메뉴">
         <Link href="/">
-          <Button variant="ghost" size="sm" className="gap-2 h-9 px-4 text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white">
-            <Home className="h-4 w-4 text-white" />
+          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+            <Home className="h-4 w-4 text-white shrink-0" />
             피드
           </Button>
         </Link>
         <Link href="/explore">
-          <Button variant="ghost" size="sm" className="gap-2 h-9 px-4 text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white">
-            <Compass className="h-4 w-4 text-white" />
+          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+            <Compass className="h-4 w-4 text-white shrink-0" />
             탐색
           </Button>
         </Link>
         <Link href="/prediction">
-          <Button variant="ghost" size="sm" className="gap-2 h-9 px-4 text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white">
-            <Trophy className="h-4 w-4 text-white" />
+          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+            <Trophy className="h-4 w-4 text-white shrink-0" />
             승부 예측
           </Button>
         </Link>
         <Link href="/draft-game">
-          <Button variant="ghost" size="sm" className="gap-2 h-9 px-4 text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white">
-            <Gamepad2 className="h-4 w-4 text-white" />
+          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+            <Gamepad2 className="h-4 w-4 text-white shrink-0" />
             드래프트 게임
           </Button>
         </Link>

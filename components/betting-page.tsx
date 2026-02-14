@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useRef, useState, useEffect, useCallback } from "react"
+import { useAuth } from "@clerk/nextjs"
 import type React from "react"
 import { Input } from "@/components/ui/input"
 import {
@@ -142,6 +143,7 @@ function formatDeadline(dateStr: string): string {
 
 // Main BettingPage Component
 export default function BettingPage() {
+  const { isSignedIn } = useAuth()
   const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "mypage">("betting")
   const [sportFilter, setSportFilter] = useState<"all" | "축구" | "야구" | "농구" | "배구">("all")
   const [selectedBets, setSelectedBets] = useState<
@@ -221,6 +223,7 @@ export default function BettingPage() {
 
   // 사용자 볼 잔액 로드
   const loadUserBalls = useCallback(async () => {
+    if (!isSignedIn) return
     try {
       const res = await fetch('/api/tokens/balance')
       if (res.ok) {
@@ -230,10 +233,11 @@ export default function BettingPage() {
     } catch (err) {
       console.error('Failed to fetch user balls:', err)
     }
-  }, [])
+  }, [isSignedIn])
 
   // 팔로우 목록 로드
   const loadFollows = useCallback(async () => {
+    if (!isSignedIn) return
     try {
       const res = await fetch('/api/follow')
       if (res.ok) {
@@ -243,10 +247,11 @@ export default function BettingPage() {
     } catch (err) {
       console.error('Failed to load follows:', err)
     }
-  }, [])
+  }, [isSignedIn])
 
   // 내 통계 로드
   const loadMyStats = useCallback(async () => {
+    if (!isSignedIn) return
     setIsLoadingMyStats(true)
     try {
       const res = await fetch('/api/betman/my-stats')
@@ -259,7 +264,7 @@ export default function BettingPage() {
     } finally {
       setIsLoadingMyStats(false)
     }
-  }, [])
+  }, [isSignedIn])
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -309,6 +314,7 @@ export default function BettingPage() {
 
   // Load prediction history
   const loadPredictionHistory = useCallback(async () => {
+    if (!isSignedIn) return
     setIsLoadingHistory(true)
     try {
       const response = await fetch('/api/prediction?status=all')
@@ -367,7 +373,7 @@ export default function BettingPage() {
     } finally {
       setIsLoadingHistory(false)
     }
-  }, [])
+  }, [isSignedIn])
 
   // Load rankings when ranking tab is active or filters change
   useEffect(() => {
@@ -605,7 +611,7 @@ export default function BettingPage() {
                   key={tab.id}
                   onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
                   disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
-                  className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
+                  className={`flex items-center justify-center gap-1 flex-1 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
                     sportFilter === tab.id
                       ? "border-primary text-primary bg-primary/5"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -638,7 +644,7 @@ export default function BettingPage() {
                 <button
                   key={tab.id}
                   onClick={() => setRankingSportFilter(tab.id)}
-                  className={`flex items-center justify-center gap-1 flex-1 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
+                  className={`flex items-center justify-center gap-1 flex-1 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
                     rankingSportFilter === tab.id
                       ? "border-primary text-primary bg-primary/5"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -659,13 +665,13 @@ export default function BettingPage() {
                 <button
                   key={filter.id}
                   onClick={() => setRankingFilter(filter.id as "profit" | "winRate" | "roi")}
-                  className={`flex items-center justify-center gap-2 flex-1 px-4 py-2 text-[12px] font-semibold transition-all border-b-2 -mb-[1px] ${
+                  className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-2 text-[12px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
                     rankingFilter === filter.id
                       ? "border-primary text-primary bg-primary/5"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   }`}
                 >
-                  <filter.icon className="w-3.5 h-3.5" />
+                  <filter.icon className="w-3.5 h-3.5 shrink-0" />
                   {filter.label}
                 </button>
               ))}
@@ -1074,7 +1080,15 @@ export default function BettingPage() {
 
 
         {/* My Page Tab */}
-        {activeTab === "mypage" && (
+        {activeTab === "mypage" && !isSignedIn && (
+          <div className="p-8 text-center">
+            <p className="text-sm text-muted-foreground mb-3">로그인이 필요한 기능입니다.</p>
+            <Button variant="default" size="sm" onClick={() => window.location.href = '/sign-up'}>
+              로그인하기
+            </Button>
+          </div>
+        )}
+        {activeTab === "mypage" && isSignedIn && (
           <div className="space-y-4">
             {myPageTab === "predictions" && (
               <div className="space-y-2">

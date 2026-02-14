@@ -45,7 +45,7 @@
 
 ### 1.1 결과 크롤링 스크립트
 
-- [ ] **`scripts/betman-fetch-results.ts` 작성**
+- [x] **`scripts/betman-fetch-results.ts` 작성**
   - 기존 `betman-fetch-games.ts`와 동일한 Playwright 패턴 사용
   - `winrstDetl.do?gmId=G101&gmTs={gmTs}` 페이지를 열고, 페이지 컨텍스트에서 결과 API 호출
   - 파싱 대상:
@@ -59,14 +59,14 @@
     - 경기 `status` → `completed` / `cancelled` / `postponed`
   - 실행: `pnpm exec tsx scripts/betman-fetch-results.ts [gmTs]`
 
-- [ ] **winrstDetl.do 페이지 구조 분석**
+- [x] **winrstDetl.do 페이지 구조 분석**
   - Playwright로 페이지를 열어 실제 DOM/API 응답 구조 확인
   - 어떤 API를 내부적으로 호출하는지 파악 (네트워크 탭 관찰)
   - 결과 데이터 매핑 규칙 확정
 
 ### 1.2 결과 저장 API
 
-- [ ] **`POST /api/betman/results` 엔드포인트 생성**
+- [x] **`POST /api/betman/results` 엔드포인트 생성**
   - 입력: `{ gmTs, results: [{ game_no, home_score, away_score, result, status }] }`
   - 처리:
     1. `gmTs`로 `betman_rounds` 조회 → `round_id` 확보
@@ -77,7 +77,7 @@
 
 ### 1.3 JSON 파일 통합 저장
 
-- [ ] **결과 수집 시 `{gmTs}.json` 파일 업데이트**
+- [x] **결과 수집 시 `{gmTs}.json` 파일 업데이트**
   - 기존 구조 (경기 일정 + 배당률)에 결과 필드 추가:
     ```json
     {
@@ -107,7 +107,7 @@
 
 ### 1.4 GitHub Actions 워크플로우
 
-- [ ] **`.github/workflows/betman-fetch-results.yml` 생성**
+- [x] **`.github/workflows/betman-results.yml` 생성**
   - 스케줄: 회차 마감 이후 일정 시간마다 실행 (결과가 나올 때까지 반복)
   - 수동 트리거: `workflow_dispatch`로 `gmTs` 입력 가능
   - 순서: 결과 크롤링 → API 호출 → JSON 아티팩트 저장 → 정산 트리거
@@ -120,7 +120,7 @@
 
 ### 2.1 정산 API
 
-- [ ] **`POST /api/betman/settle` 엔드포인트 생성**
+- [x] **`POST /api/betman/settle` 엔드포인트 생성**
   - 입력: `{ round_id }` 또는 `{ gm_ts }`
   - 처리 흐름:
     1. 해당 라운드의 `betman_games` 중 `status='completed'`인 경기 조회
@@ -158,7 +158,7 @@
 
 ### 2.2 자동 정산 트리거
 
-- [ ] **결과 수집 완료 후 자동 정산 호출**
+- [x] **결과 수집 완료 후 자동 정산 호출**
   - `betman-fetch-results.ts` 스크립트 마지막에 `/api/betman/settle` 호출
   - 또는 GitHub Actions에서 결과 수집 → 정산 순차 실행
 
@@ -182,7 +182,7 @@
 
 ### 3.1 새 테이블: `betman_user_sport_stats`
 
-- [ ] **마이그레이션 작성 및 적용**
+- [x] **마이그레이션 작성 및 적용**
 
   ```sql
   CREATE TABLE betman_user_sport_stats (
@@ -236,7 +236,7 @@
 
 ### 3.2 통계 갱신 로직
 
-- [ ] **정산 시 자동 통계 업데이트**
+- [x] **정산 시 자동 통계 업데이트**
   - 정산 API (`/api/betman/settle`)에서 정산 완료 후 호출
   - 처리 흐름:
     1. 정산된 예측들을 `user_id + sport` 별로 그룹핑
@@ -252,14 +252,14 @@
     3. `betman_user_sport_stats`에 UPSERT (user_id, sport)
     4. `sport='전체'` 행도 별도로 집계하여 UPSERT
 
-- [ ] **통계 재계산 API (관리자용)**
+- [x] **통계 재계산 API (관리자용)**
   - `POST /api/betman/stats/recalculate`
   - 전체 유저의 통계를 처음부터 다시 계산 (데이터 정합성 보정용)
   - 모든 settled 예측을 기반으로 재집계
 
 ### 3.3 기존 `user_prediction_stats` 테이블 처리
 
-- [ ] **기존 테이블은 그대로 두고, 새 테이블과 병행 운영**
+- [x] **기존 테이블은 그대로 두고, 새 테이블과 병행 운영**
   - `user_prediction_stats`: 기존 코드에서 참조하는 곳이 있을 수 있으므로 유지
   - `betman_user_sport_stats`: 종목별 통계 전용 (랭킹, 마이페이지 등에서 사용)
   - 향후 기존 테이블의 참조가 모두 새 테이블로 전환되면 제거 가능
@@ -272,7 +272,7 @@
 
 ### 4.1 랭킹 조회 API
 
-- [ ] **`GET /api/betman/rankings` 엔드포인트 생성**
+- [x] **`GET /api/betman/rankings` 엔드포인트 생성**
   - 쿼리 파라미터:
     - `sport`: `전체` / `축구` / `농구` / `배구` / `야구` (기본: `전체`)
     - `sort`: `profit_rate` / `accuracy` / `net_profit` (기본: `profit_rate`)
@@ -309,7 +309,7 @@
 
 ### 4.2 랭킹 UI 업데이트
 
-- [ ] **기존 랭킹 탭 개선** (`components/betman-prediction-content.tsx`)
+- [x] **기존 랭킹 탭 개선** (`components/betman-prediction-content.tsx`)
   - 종목 필터 탭 추가: 전체 / 축구 / 농구
   - 정렬 기준 선택: 수익률 / 적중률 / 수익금
   - 컬럼 표시: 순위, 닉네임, 적중률, 수익률, 수익금, 연승
@@ -317,7 +317,7 @@
 
 ### 4.3 마이페이지 통계 개선
 
-- [ ] **내 통계 카드 업데이트**
+- [x] **내 통계 카드 업데이트**
   - 현재: 레벨, 포인트, 적중률, 연승 (user_stats 기반)
   - 변경: `betman_user_sport_stats`에서 데이터 가져오기
   - 표시 항목:
@@ -333,15 +333,15 @@
 
 ### 5.1 최신 gmTs 감지
 
-- [ ] **방법 A: betman.co.kr 메인 페이지에서 추출**
+- [x] **방법 A: betman.co.kr 메인 페이지에서 추출**
   - Playwright로 betman.co.kr 접속 → 현재 판매 중인 회차 번호 파싱
   - 또는 gameSlip.do를 gmTs 없이 호출 시 리다이렉트되는 URL에서 추출
 
-- [ ] **방법 B: 순차 증가 방식**
+- [x] **방법 B: 순차 증가 방식**
   - DB에서 가장 최근 `gm_ts` 조회 (현재 260019)
   - 다음 회차 = 260020으로 시도 → 데이터가 있으면 성공, 없으면 현재 회차 유지
 
-- [ ] **자동 감지 스크립트 작성**
+- [x] **자동 감지 스크립트 작성**
   - `scripts/betman-detect-round.ts`
   - GitHub Actions에서 주기적으로 실행 → 새 회차 감지 시 자동 수집 트리거
 

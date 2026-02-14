@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
+import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
@@ -49,6 +50,7 @@ const RECENT_COMMUNITIES: Community[] = [
 
 export function CommunitySidebar() {
   const router = useRouter()
+  const { isSignedIn } = useAuth()
   const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -57,6 +59,10 @@ export function CommunitySidebar() {
 
   // 서버에서 팔로우한 커뮤니티 목록 로드
   useEffect(() => {
+    if (!isSignedIn) {
+      setLoadingFollows(false)
+      return
+    }
     let cancelled = false
     setLoadingFollows(true)
     fetch("/api/community/follows")
@@ -76,7 +82,7 @@ export function CommunitySidebar() {
         if (!cancelled) setLoadingFollows(false)
       })
     return () => { cancelled = true }
-  }, [])
+  }, [isSignedIn])
 
   const toggleFollow = async (communitySlug: string) => {
     const isFollowed = followedCommunities.has(communitySlug)

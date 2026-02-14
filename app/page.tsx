@@ -5,7 +5,8 @@ import { Header } from "@/components/header"
 import { PostCard } from "@/components/post-card"
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
-import { Dices, Flame, Clock, Loader2 } from "lucide-react"
+import { Dices, Flame, Clock, Loader2, Compass } from "lucide-react"
+import Link from "next/link"
 
 type SortType = "random" | "hot" | "new"
 
@@ -148,38 +149,38 @@ export default function Home() {
             {/* ===== 정렬 네비게이션 ===== */}
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <div className="flex items-center justify-center px-4 py-3 bg-muted/30">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <button
                     onClick={() => setSortBy("random")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[13px] sm:text-[15px] font-semibold transition-all whitespace-nowrap ${
                       sortBy === "random"
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
-                    <Dices className="w-5 h-5" />
+                    <Dices className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     랜덤
                   </button>
                   <button
                     onClick={() => setSortBy("hot")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[13px] sm:text-[15px] font-semibold transition-all whitespace-nowrap ${
                       sortBy === "hot"
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
-                    <Flame className="w-5 h-5" />
+                    <Flame className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     온도순
                   </button>
                   <button
                     onClick={() => setSortBy("new")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[15px] font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-[13px] sm:text-[15px] font-semibold transition-all whitespace-nowrap ${
                       sortBy === "new"
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                   >
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     최신순
                   </button>
                 </div>
@@ -202,9 +203,16 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground mb-2">
                     팔로우한 게시판의 게시물이 없습니다.
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mb-4">
                     게시판을 팔로우하면 여기에 게시물이 표시됩니다.
                   </p>
+                  <Link
+                    href="/explore"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    <Compass className="w-4 h-4" />
+                    게시판 탐색하기
+                  </Link>
                 </div>
               )}
             </div>

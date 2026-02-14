@@ -59,3 +59,11 @@ nul.*
 _tmp_*
 localhost_*.json
 .playwright-mcp/
+
+# Test/dev data files (root level)
+/2026_*.json
+/260*.json
+/future_games.json
+/bet365_*.json
+/current.png
+/image.png
