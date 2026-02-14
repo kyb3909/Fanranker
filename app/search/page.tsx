@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Header } from '@/components/header'
+import { CommunitySidebar } from '@/components/community-sidebar'
+import { ActivitySidebar } from '@/components/activity-sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -173,7 +175,10 @@ function SearchContent() {
 
       <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
-          <div className="col-span-12 lg:col-span-9 space-y-4">
+          <aside className="hidden lg:block col-span-3">
+            <CommunitySidebar />
+          </aside>
+          <div className="col-span-12 lg:col-span-6 space-y-4">
             {/* 검색 헤더 */}
             <div className="space-y-4">
               <h1 className="text-2xl font-bold text-foreground">검색</h1>
@@ -315,6 +320,9 @@ function SearchContent() {
               )}
             </div>
           </div>
+          <aside className="hidden lg:block col-span-3">
+            <ActivitySidebar />
+          </aside>
         </div>
       </main>
     </div>

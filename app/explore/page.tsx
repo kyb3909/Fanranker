@@ -122,6 +122,35 @@ export default function ExplorePage() {
 
           {/* Main Content */}
           <div className="col-span-12 xl:col-span-6 space-y-6">
+            {/* 게시판 둘러보기 */}
+            <div className="bg-card border border-border rounded-lg">
+              <div className="p-4 border-b border-border">
+                <h2 className="font-bold text-lg text-primary">게시판 둘러보기</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
+                {[
+                  { slug: "overseas-football", name: "해외축구", emoji: "⚽", members: "124.5만" },
+                  { slug: "domestic-football", name: "국내축구", emoji: "🏟️", members: "45.3만" },
+                  { slug: "baseball", name: "야구", emoji: "⚾", members: "98.2만" },
+                  { slug: "basketball", name: "농구", emoji: "🏀", members: "38.7만" },
+                  { slug: "volleyball", name: "배구", emoji: "🏐", members: "22.1만" },
+                  { slug: "esports", name: "e스포츠", emoji: "🎮", members: "67.1만" },
+                  { slug: "free-board", name: "자유게시판", emoji: "💬", members: "89.4만" },
+                  { slug: "tips", name: "정보게시판", emoji: "📊", members: "34.2만" },
+                ].map((board) => (
+                  <Link
+                    key={board.slug}
+                    href={`/community/${board.slug}`}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:bg-muted/50 hover:border-primary/30 transition-colors text-center"
+                  >
+                    <span className="text-2xl">{board.emoji}</span>
+                    <span className="text-xs font-semibold text-foreground">{board.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{board.members}명</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             {/* 실시간 인기글 게시판 */}
             <div className="bg-card border border-border rounded-lg">
               <div className="flex items-center justify-between p-4 border-b border-border">

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Header } from "@/components/header"
-import { Users, Star, Pencil } from "lucide-react"
+import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -121,13 +121,12 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
             </div>
 
             {/* 테이블 헤더: 컴팩트한 패딩 */}
-            <div className="hidden sm:grid grid-cols-11 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+            <div className="hidden sm:grid grid-cols-10 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-5">제목</div>
               <div className="col-span-2 text-center">글쓴이</div>
               <div className="col-span-1 text-center">날짜</div>
               <div className="col-span-1 text-center">추천</div>
-              <div className="col-span-1 text-center">별점</div>
             </div>
             {/* 모바일 헤더 */}
             <div className="grid sm:hidden grid-cols-12 gap-1 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
@@ -141,7 +140,7 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                 <Link
                   key={post.id}
                   href={`/post/${post.id}`}
-                  className="block sm:grid sm:grid-cols-11 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
+                  className="block sm:grid sm:grid-cols-10 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
                 >
                   {/* 데스크탑 레이아웃 */}
                   <div className="hidden sm:block col-span-1 text-center text-muted-foreground">
@@ -156,18 +155,6 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                   <div className="hidden sm:block col-span-2 text-center text-muted-foreground truncate">{post.author}</div>
                   <div className="hidden sm:block col-span-1 text-center text-muted-foreground">{post.timestamp}</div>
                   <div className="hidden sm:block col-span-1 text-center text-muted-foreground tabular-nums">{post.upvotes}</div>
-                  <div className="hidden sm:block col-span-1 text-center">
-                    <div className="flex items-center justify-center gap-px">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-2.5 h-2.5 ${
-                            i < (post.rating || 3) ? "fill-rose-500 text-rose-500" : "fill-gray-300 text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
                   {/* 모바일 레이아웃 */}
                   <div className="sm:hidden grid grid-cols-12 gap-1 items-center">
                     <div className="col-span-8 flex items-center gap-1.5 min-w-0">

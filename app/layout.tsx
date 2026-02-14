@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from '@clerk/nextjs'
 import { ProfileSync } from '@/components/profile-sync'
+import { MobileTabBar } from '@/components/mobile-tab-bar'
+import { FloatingWriteButton } from '@/components/floating-write-button'
 import "./globals.css"
 
 const koLocalization = {
@@ -107,7 +109,7 @@ export default function RootLayout({
             </>
           )}
         </head>
-        <body className={`font-sans antialiased`}>
+        <body className={`font-sans antialiased pb-14 sm:pb-0`}>
           {/* 스킵 링크: 키보드·스크린리더 사용자 본문 바로가기 (Lighthouse 접근성) */}
           <a
             href="#main-content"
@@ -117,6 +119,8 @@ export default function RootLayout({
           </a>
           <ProfileSync />
           {children}
+          <FloatingWriteButton />
+          <MobileTabBar />
           <Analytics />
         </body>
       </html>
