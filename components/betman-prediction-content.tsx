@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -452,7 +452,7 @@ export function BetmanPredictionContent({
   const [lastUpdate, setLastUpdate] = useState(new Date())
 
   // Fetch Betman games
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     setIsLoading(true)
     try {
       const sportParam = activeSport !== 'all' ? `&sport=${activeSport}` : ''
@@ -494,11 +494,11 @@ export function BetmanPredictionContent({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [activeSport])
 
   useEffect(() => {
     fetchGames()
-  }, [activeSport])
+  }, [fetchGames])
 
   // Handle prediction selection
   const handleSelectPrediction = (gameId: string, prediction: string, sport: string, matchKey: string) => {

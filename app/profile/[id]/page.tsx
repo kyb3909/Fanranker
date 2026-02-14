@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useParams, useRouter } from "next/navigation"
 import { Header } from "@/components/header"
@@ -80,6 +80,34 @@ export default function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
+  const loadProfile = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/profile/me")
+      if (response.ok) {
+        const data = await response.json()
+        setProfile(data)
+        setNickname(data.nickname || user?.username || "")
+      }
+    } catch (error) {
+      console.error("Failed to load profile:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user?.username])
+
+  const loadFollowedCommunities = useCallback(async () => {
+    try {
+      const response = await fetch("/api/community/follows")
+      if (response.ok) {
+        const data = await response.json()
+        setFollowedCommunities(data.communities || [])
+      }
+    } catch (error) {
+      console.error("Failed to load followed communities:", error)
+    }
+  }, [])
+
   // 현재 사용자 확인 및 데이터 로드
   useEffect(() => {
     if (!isLoaded) return
@@ -102,35 +130,7 @@ export default function ProfilePage() {
 
     loadProfile()
     loadFollowedCommunities()
-  }, [isLoaded, isSignedIn, user, userId, router])
-
-  const loadProfile = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch("/api/profile/me")
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data)
-        setNickname(data.nickname || user?.username || "")
-      }
-    } catch (error) {
-      console.error("Failed to load profile:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const loadFollowedCommunities = async () => {
-    try {
-      const response = await fetch("/api/community/follows")
-      if (response.ok) {
-        const data = await response.json()
-        setFollowedCommunities(data.communities || [])
-      }
-    } catch (error) {
-      console.error("Failed to load followed communities:", error)
-    }
-  }
+  }, [isLoaded, isSignedIn, user, userId, router, loadProfile, loadFollowedCommunities])
 
   const handleSaveProfile = async () => {
     const trimmedNickname = nickname.trim()

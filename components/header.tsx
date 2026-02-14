@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Home, Compass, Bell, Search, Trophy, Gamepad2, Loader2 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react"
@@ -92,12 +93,13 @@ export function Header() {
           {/* Logo */}
           <div className="flex items-center shrink-0">
             <Link href="/" className="flex items-center" aria-label="홈">
-              <img
+              <Image
                 src="/logo.png"
                 alt="FanRanker"
                 width={120}
                 height={32}
                 className="h-8 w-auto object-contain"
+                priority
               />
             </Link>
           </div>

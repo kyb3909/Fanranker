@@ -73,16 +73,18 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "dotenv": "^16.4.5",
-    "tsx": "^4.19.0",
     "@playwright/test": "^1.57.0",
-    "playwright": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.5",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
+    "playwright": "^1.57.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
+    "tsx": "^4.19.0",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
   },
