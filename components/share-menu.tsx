@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Share2 } from "lucide-react"
 
 interface ShareMenuProps {
-  postId: number
+  postId: number | string
   postTitle: string
 }
 

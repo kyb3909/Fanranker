@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 
 /**
  * Helper function to update user stats after prediction settlement
  */
 async function updateUserStats(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   userId: string,
   isCorrect: boolean,
   pointsEarned: number,
@@ -108,8 +108,6 @@ export async function POST(request: NextRequest) {
 
     const userId = user.id
 
-    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const body = await request.json()
     const { match_id, force } = body
@@ -325,8 +323,6 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const matchId = searchParams.get('match_id')

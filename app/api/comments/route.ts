@@ -156,11 +156,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 알림 생성 (비동기로 처리, 실패해도 무시)
-    supabase
+    Promise.resolve(supabase
       .from('posts')
       .select('user_id')
       .eq('id', post_id)
-      .single()
+      .single())
       .then(({ data: postData }) => {
         if (!postData) return
 
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       .then(() => {
         console.log(`Notification created for comment on post ${post_id}`)
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('Failed to create notification:', err)
       })
 
@@ -209,12 +209,12 @@ export async function POST(request: NextRequest) {
     // No manual increment needed - trigger handles it atomically
 
     // 댓글 작성 성공 후 쿨다운 업데이트
-    supabase
-      .rpc('update_comment_cooldown', { user_id_param: userId })
+    Promise.resolve(supabase
+      .rpc('update_comment_cooldown', { user_id_param: userId }))
       .then(() => {
         console.log(`Comment cooldown updated for user ${userId}`)
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('Failed to update comment cooldown:', err)
         // 쿨다운 업데이트 실패는 무시 (댓글 작성은 성공)
       })

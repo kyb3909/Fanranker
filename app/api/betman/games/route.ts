@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     })
 
     const groupedGames: Record<string, { matchKey: string; sport: string; leagueCode: string; homeTeam: string; awayTeam: string; matchTime: string; venue: string; games: typeof gamesWithOdds }> = {}
-    gamesWithOdds.forEach((game: Record<string, unknown>) => {
+    gamesWithOdds.forEach((game: any) => {
       const matchKey = `${game.home_team_name}_${game.away_team_name}_${game.match_time}`
       if (!groupedGames[matchKey]) {
         groupedGames[matchKey] = {

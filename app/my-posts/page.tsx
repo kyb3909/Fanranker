@@ -76,7 +76,7 @@ export default function MyPostsPage() {
         if (response.ok) {
           const { posts: fetchedPosts, profiles } = await response.json()
 
-          const profileMap = new Map(profiles?.map((p: any) => [p.user_id, p]) || [])
+          const profileMap = new Map<string, any>(profiles?.map((p: any) => [p.user_id, p]) || [])
 
           const transformedPosts: Post[] = fetchedPosts.map((post: any) => {
             const profile = profileMap.get(post.user_id)

@@ -16,7 +16,7 @@ export async function POST(
     // IP 주소 가져오기
     const forwarded = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
-    const ipAddress = forwarded?.split(',')[0]?.trim() || realIp || request.ip || 'unknown'
+    const ipAddress = forwarded?.split(',')[0]?.trim() || realIp || 'unknown'
 
     // RPC 함수를 사용하여 IP 기반 제한과 함께 조회수 증가
     const { data, error } = await supabase.rpc('increment_post_view_count', {

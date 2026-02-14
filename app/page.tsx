@@ -76,7 +76,7 @@ export default function Home() {
         const { posts: fetchedPosts, profiles } = await response.json()
 
         // 프로필 매핑
-        const profileMap = new Map(profiles?.map((p: any) => [p.user_id, p]) || [])
+        const profileMap = new Map<string, any>(profiles?.map((p: any) => [p.user_id, p]) || [])
 
         // 데이터 변환
         const transformedPosts: Post[] = fetchedPosts

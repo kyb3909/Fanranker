@@ -182,10 +182,10 @@ export async function POST(request: NextRequest) {
 
     // If expert, create notifications for followers (비동기로 처리, 실패해도 무시)
     if (isExpert && prediction) {
-      supabase
+      Promise.resolve(supabase
         .from('user_follows')
         .select('follower_id')
-        .eq('followed_user_id', userId)
+        .eq('followed_user_id', userId))
         .then(({ data: followers }) => {
           if (!followers || followers.length === 0) return
 
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
         .then(() => {
           console.log(`Expert prediction notifications created for followers of user ${userId}`)
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error('Failed to create expert prediction notifications:', err)
         })
     }
