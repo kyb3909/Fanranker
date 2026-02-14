@@ -1,7 +1,9 @@
+import type { Metadata } from "next"
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { SettlementManagementTable } from './settlement-table'
 
+export const metadata: Metadata = { title: "정산 관리" }
 export const dynamic = 'force-dynamic'
 
 export default async function AdminSettlementsPage() {

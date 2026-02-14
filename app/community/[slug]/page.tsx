@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
@@ -182,6 +183,13 @@ function transformPosts(posts: any[]) {
       createdAt: new Date(post.created_at),
     }
   })
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const communityData = COMMUNITY_DATA[slug]
+  const name = communityData?.name || slug
+  return { title: name }
 }
 
 export default async function CommunityPage({ params }: { params: Promise<{ slug: string }> }) {

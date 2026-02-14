@@ -1,5 +1,10 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Header } from "@/components/header"
+
+export const metadata: Metadata = {
+  title: "드래프트 게임",
+}
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { Gamepad2 } from "lucide-react"

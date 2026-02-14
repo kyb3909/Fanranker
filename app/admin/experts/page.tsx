@@ -1,8 +1,10 @@
+import type { Metadata } from "next"
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { ExpertApprovalTable } from './expert-approval-table'
 
+export const metadata: Metadata = { title: "전문가 관리" }
 export const dynamic = 'force-dynamic'
 
 export default async function AdminExpertsPage() {

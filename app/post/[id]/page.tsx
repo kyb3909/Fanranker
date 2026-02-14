@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Header } from "@/components/header"
 import { ActivitySidebar } from "@/components/activity-sidebar"
@@ -74,6 +75,12 @@ async function fetchPost(id: string) {
     ...post,
     profile: profile || null,
   }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const post = await fetchPost(id)
+  return { title: post?.title || "게시글" }
 }
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {

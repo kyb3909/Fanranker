@@ -50,8 +50,11 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "홈 - 커뮤니티 토론 플랫폼",
-  description: "Thread 디자인을 참고한 Reddit 스타일 커뮤니티",
+  title: {
+    template: "%s | FanRanker",
+    default: "FanRanker - 스포츠 예측 커뮤니티",
+  },
+  description: "스포츠 승부예측과 커뮤니티를 한곳에서. FanRanker",
   generator: "v0.app",
   icons: {
     icon: [

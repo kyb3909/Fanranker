@@ -121,13 +121,18 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
             </div>
 
             {/* 테이블 헤더: 컴팩트한 패딩 */}
-            <div className="grid grid-cols-11 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+            <div className="hidden sm:grid grid-cols-11 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-5">제목</div>
               <div className="col-span-2 text-center">글쓴이</div>
               <div className="col-span-1 text-center">날짜</div>
               <div className="col-span-1 text-center">추천</div>
               <div className="col-span-1 text-center">별점</div>
+            </div>
+            {/* 모바일 헤더 */}
+            <div className="grid sm:hidden grid-cols-12 gap-1 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+              <div className="col-span-8">제목</div>
+              <div className="col-span-4 text-right">글쓴이</div>
             </div>
 
             {/* 테이블 바디: 조밀한 행 간격 */}
@@ -136,21 +141,22 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                 <Link
                   key={post.id}
                   href={`/post/${post.id}`}
-                  className="grid grid-cols-11 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
+                  className="block sm:grid sm:grid-cols-11 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
                 >
-                  <div className="col-span-1 text-center text-muted-foreground">
+                  {/* 데스크탑 레이아웃 */}
+                  <div className="hidden sm:block col-span-1 text-center text-muted-foreground">
                     {post.isNotice ? <span className="text-rose-500 font-semibold">공지</span> : posts.length - index}
                   </div>
-                  <div className="col-span-5 flex items-center gap-1.5">
+                  <div className="hidden sm:flex col-span-5 items-center gap-1.5">
                     <span className="font-medium text-foreground truncate">{post.title}</span>
                     {post.comments > 0 && (
                       <span className="text-orange-500 font-medium flex-shrink-0">[{post.comments}]</span>
                     )}
                   </div>
-                  <div className="col-span-2 text-center text-muted-foreground truncate">{post.author}</div>
-                  <div className="col-span-1 text-center text-muted-foreground">{post.timestamp}</div>
-                  <div className="col-span-1 text-center text-muted-foreground tabular-nums">{post.upvotes}</div>
-                  <div className="col-span-1 text-center">
+                  <div className="hidden sm:block col-span-2 text-center text-muted-foreground truncate">{post.author}</div>
+                  <div className="hidden sm:block col-span-1 text-center text-muted-foreground">{post.timestamp}</div>
+                  <div className="hidden sm:block col-span-1 text-center text-muted-foreground tabular-nums">{post.upvotes}</div>
+                  <div className="hidden sm:block col-span-1 text-center">
                     <div className="flex items-center justify-center gap-px">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star
@@ -161,6 +167,17 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                         />
                       ))}
                     </div>
+                  </div>
+                  {/* 모바일 레이아웃 */}
+                  <div className="sm:hidden grid grid-cols-12 gap-1 items-center">
+                    <div className="col-span-8 flex items-center gap-1.5 min-w-0">
+                      {post.isNotice && <span className="text-rose-500 font-semibold shrink-0">[공지]</span>}
+                      <span className="font-medium text-foreground truncate">{post.title}</span>
+                      {post.comments > 0 && (
+                        <span className="text-orange-500 font-medium shrink-0">[{post.comments}]</span>
+                      )}
+                    </div>
+                    <div className="col-span-4 text-right text-muted-foreground truncate">{post.author}</div>
                   </div>
                 </Link>
               ))

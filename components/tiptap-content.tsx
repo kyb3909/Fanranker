@@ -3,8 +3,6 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Embed } from '@/lib/tiptap/extensions/embed'
-import { EmbedRenderer } from '@/lib/tiptap/extensions/embed-renderer'
-import { ReactNodeViewRenderer } from '@tiptap/react'
 import { cn } from '@/lib/utils'
 
 export interface TipTapContentProps {
@@ -25,10 +23,6 @@ export function TipTapContent({ content, className }: TipTapContentProps) {
       Embed.configure({
         HTMLAttributes: {
           class: 'embed-node',
-        },
-      }).extend({
-        addNodeView() {
-          return ReactNodeViewRenderer(EmbedRenderer)
         },
       }),
     ],

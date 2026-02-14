@@ -1,7 +1,9 @@
+import type { Metadata } from "next"
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { MatchManagementTable } from './match-table'
 
+export const metadata: Metadata = { title: "경기 관리" }
 export const dynamic = 'force-dynamic'
 
 export default async function AdminMatchesPage() {

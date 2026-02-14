@@ -1,5 +1,10 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Header } from "@/components/header"
+
+export const metadata: Metadata = {
+  title: "페이지를 찾을 수 없습니다",
+}
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 

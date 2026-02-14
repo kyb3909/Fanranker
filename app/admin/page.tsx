@@ -1,5 +1,10 @@
+import type { Metadata } from "next"
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/supabase/admin'
+
+export const metadata: Metadata = {
+  title: "관리자",
+}
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

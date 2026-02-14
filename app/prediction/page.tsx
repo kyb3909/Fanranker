@@ -1,5 +1,10 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Header } from "@/components/header"
+
+export const metadata: Metadata = {
+  title: "승부예측",
+}
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { PredictionPageClient } from "@/components/prediction-page-client"
