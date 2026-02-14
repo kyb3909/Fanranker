@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Header } from "@/components/header"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -45,7 +45,7 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
   const [sortBy, setSortBy] = useState<SortType>("hot")
   const [isFollowing, setIsFollowing] = useState(false)
 
-  const sortedPosts = [...posts].sort((a, b) => {
+  const sortedPosts = useMemo(() => [...posts].sort((a, b) => {
     switch (sortBy) {
       case "hot":
         return (b.temperature ?? 0) - (a.temperature ?? 0)
@@ -56,7 +56,7 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
       default:
         return 0
     }
-  })
+  }), [posts, sortBy])
 
   if (!isMainContent) {
     return (

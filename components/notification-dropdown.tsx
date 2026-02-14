@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -140,8 +140,8 @@ export function NotificationDropdown() {
     }
   }
 
-  const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
-  const postMap = new Map(posts.map((p) => [p.id, p]))
+  const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p])), [profiles])
+  const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts])
 
   const getNotificationText = (notification: Notification) => {
     const actor = profileMap.get(notification.actor_id)

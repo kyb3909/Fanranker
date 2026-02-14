@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -126,8 +126,11 @@ export function CommunitySidebar() {
   }
 
   // 검색어로 커뮤니티 필터링
-  const filteredCommunities = ALL_COMMUNITIES.filter((community) =>
-    community.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCommunities = useMemo(
+    () => ALL_COMMUNITIES.filter((community) =>
+      community.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [searchQuery]
   )
 
   return (
