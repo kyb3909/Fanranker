@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       if (purchaseError) {
         console.error('Failed to record subscription-based purchase:', purchaseError)
         return NextResponse.json(
-          { error: '구매 기록 생성 중 오류가 발생했습니다.', details: purchaseError.message },
+          { error: '구매 기록 생성 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('Failed to spend tokens:', updateError)
       return NextResponse.json(
-        { error: '토큰 차감 중 오류가 발생했습니다.', details: updateError.message },
+        { error: '토큰 차감 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
     )
   }

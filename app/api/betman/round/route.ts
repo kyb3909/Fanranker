@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('betman_rounds insert error:', error)
       return NextResponse.json(
-        { error: '회차 생성 중 오류가 발생했습니다.', details: error.message },
+        { error: '회차 생성 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

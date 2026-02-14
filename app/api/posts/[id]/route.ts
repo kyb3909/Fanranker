@@ -37,7 +37,7 @@ export async function GET(
     if (postError) {
       console.error('Failed to fetch post:', postError)
       return NextResponse.json(
-        { error: '글을 찾을 수 없습니다.', details: postError.message },
+        { error: '글을 찾을 수 없습니다.' },
         { status: 404 }
       )
     }

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (gamesError) {
       return NextResponse.json(
-        { error: '경기 조회 실패', details: gamesError.message },
+        { error: '경기 조회 실패' },
         { status: 500 }
       )
     }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     if (predError) {
       return NextResponse.json(
-        { error: '예측 조회 실패', details: predError.message },
+        { error: '예측 조회 실패' },
         { status: 500 }
       )
     }

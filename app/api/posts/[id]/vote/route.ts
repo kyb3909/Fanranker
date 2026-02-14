@@ -71,7 +71,7 @@ export async function POST(
         if (deleteError) {
           console.error('Failed to delete vote:', deleteError)
           return NextResponse.json(
-            { error: '투표 취소 중 오류가 발생했습니다.', details: deleteError.message },
+            { error: '투표 취소 중 오류가 발생했습니다.' },
             { status: 500 }
           )
         }
@@ -88,7 +88,7 @@ export async function POST(
         if (updateError) {
           console.error('Failed to update vote:', updateError)
           return NextResponse.json(
-            { error: '투표 변경 중 오류가 발생했습니다.', details: updateError.message },
+            { error: '투표 변경 중 오류가 발생했습니다.' },
             { status: 500 }
           )
         }
@@ -108,7 +108,7 @@ export async function POST(
       if (insertError) {
         console.error('Failed to create vote:', insertError)
         return NextResponse.json(
-          { error: '투표 저장 중 오류가 발생했습니다.', details: insertError.message },
+          { error: '투표 저장 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       }
       console.error('Failed to fetch transactions:', txError)
       return NextResponse.json(
-        { error: '거래 내역을 가져오는 중 오류가 발생했습니다.', details: txError.message },
+        { error: '거래 내역을 가져오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

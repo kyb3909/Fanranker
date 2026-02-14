@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     if (postsError) {
       console.error('Failed to fetch posts:', postsError)
       return NextResponse.json(
-        { error: '글 목록을 가져오는 중 오류가 발생했습니다.', details: postsError.message },
+        { error: '글 목록을 가져오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

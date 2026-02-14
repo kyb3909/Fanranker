@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     if (userError) {
       return NextResponse.json(
-        { error: '유저 조회 실패', details: userError.message },
+        { error: '유저 조회 실패' },
         { status: 500 }
       )
     }

@@ -28,7 +28,7 @@ export async function GET() {
 
     if (error) {
       return NextResponse.json(
-        { error: '통계 조회 실패', details: error.message },
+        { error: '통계 조회 실패' },
         { status: 500 }
       )
     }

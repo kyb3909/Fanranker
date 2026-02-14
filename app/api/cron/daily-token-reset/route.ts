@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (fetchError) {
       console.error('Failed to fetch users for token reset:', fetchError)
       return NextResponse.json(
-        { error: 'Failed to fetch users', details: fetchError.message },
+        { error: 'Failed to fetch users' },
         { status: 500 }
       )
     }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Token reset cron job error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

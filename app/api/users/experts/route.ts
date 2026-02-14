@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Failed to fetch experts:', error)
       return NextResponse.json(
-        { error: '전문가 목록 조회 중 오류가 발생했습니다.', details: error.message },
+        { error: '전문가 목록 조회 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

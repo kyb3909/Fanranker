@@ -23,7 +23,7 @@ export async function GET() {
 
     if (error) {
       return NextResponse.json(
-        { error: '팔로우 목록 조회 실패', details: error.message },
+        { error: '팔로우 목록 조회 실패' },
         { status: 500 }
       )
     }
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json(
-          { error: '팔로우 실패', details: error.message },
+          { error: '팔로우 실패' },
           { status: 500 }
         )
       }

@@ -28,10 +28,7 @@ export async function GET(request: NextRequest) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
       console.error('Failed to create Supabase client:', errorMessage)
       return NextResponse.json(
-        {
-          error: '서버 설정 오류가 발생했습니다.',
-          details: errorMessage,
-        },
+        { error: '서버 설정 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -107,10 +104,7 @@ export async function PATCH(request: NextRequest) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
       console.error('Failed to create Supabase client:', errorMessage)
       return NextResponse.json(
-        {
-          error: '서버 설정 오류가 발생했습니다.',
-          details: errorMessage,
-        },
+        { error: '서버 설정 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -158,11 +152,7 @@ export async function PATCH(request: NextRequest) {
           userId,
         })
         return NextResponse.json(
-          {
-            error: '프로필 생성 중 오류가 발생했습니다.',
-            details: error.message,
-            code: error.code,
-          },
+          { error: '프로필 생성 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -175,11 +165,7 @@ export async function PATCH(request: NextRequest) {
         userId,
       })
       return NextResponse.json(
-        {
-          error: '프로필 확인 중 오류가 발생했습니다.',
-          details: fetchError.message,
-          code: fetchError.code,
-        },
+        { error: '프로필 확인 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     } else {
@@ -205,11 +191,7 @@ export async function PATCH(request: NextRequest) {
           updateData,
         })
         return NextResponse.json(
-          {
-            error: '프로필 업데이트 중 오류가 발생했습니다.',
-            details: error.message,
-            code: error.code,
-          },
+          { error: '프로필 업데이트 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -220,10 +202,7 @@ export async function PATCH(request: NextRequest) {
     console.error('API error (PATCH /api/profile/me):', error)
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
     return NextResponse.json(
-      {
-        error: '서버 오류가 발생했습니다.',
-        details: errorMessage,
-      },
+      { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
     )
   }
@@ -256,10 +235,7 @@ export async function DELETE(request: NextRequest) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
       console.error('Failed to create Supabase client:', errorMessage)
       return NextResponse.json(
-        {
-          error: '서버 설정 오류가 발생했습니다.',
-          details: errorMessage,
-        },
+        { error: '서버 설정 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     if (statsError) {
       return NextResponse.json(
-        { error: '랭킹 조회 실패', details: statsError.message },
+        { error: '랭킹 조회 실패' },
         { status: 500 }
       )
     }

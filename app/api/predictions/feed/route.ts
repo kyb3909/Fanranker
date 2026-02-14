@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Failed to fetch predictions feed:', error)
       return NextResponse.json(
-        { error: '예측 피드를 가져오는 중 오류가 발생했습니다.', details: error.message },
+        { error: '예측 피드를 가져오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
     )
   }

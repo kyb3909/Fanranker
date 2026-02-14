@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
     if (predictionError) {
       console.error('Prediction creation error:', predictionError)
       return NextResponse.json(
-        { error: '예측 저장 중 오류가 발생했습니다.', details: predictionError.message },
+        { error: '예측 저장 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

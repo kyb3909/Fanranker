@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Failed to fetch comments:', error)
       return NextResponse.json(
-        { error: '댓글을 불러오는 중 오류가 발생했습니다.', details: error.message },
+        { error: '댓글을 불러오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -145,12 +145,7 @@ export async function POST(request: NextRequest) {
         post_id
       })
       return NextResponse.json(
-        { 
-          error: '댓글 저장 중 오류가 발생했습니다.', 
-          details: insertError.message,
-          code: insertError.code,
-          hint: insertError.hint
-        },
+        { error: '댓글 저장 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

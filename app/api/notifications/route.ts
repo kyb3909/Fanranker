@@ -31,10 +31,7 @@ export async function GET(request: NextRequest) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
       console.error('Failed to create Supabase client:', errorMessage)
       return NextResponse.json(
-        {
-          error: '서버 설정 오류가 발생했습니다.',
-          details: errorMessage,
-        },
+        { error: '서버 설정 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -68,7 +65,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Failed to fetch notifications:', error)
       return NextResponse.json(
-        { error: '알림을 불러오는 중 오류가 발생했습니다.', details: error.message },
+        { error: '알림을 불러오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -132,10 +129,7 @@ export async function PATCH(request: NextRequest) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
       console.error('Failed to create Supabase client:', errorMessage)
       return NextResponse.json(
-        {
-          error: '서버 설정 오류가 발생했습니다.',
-          details: errorMessage,
-        },
+        { error: '서버 설정 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -156,7 +150,7 @@ export async function PATCH(request: NextRequest) {
     if (error) {
       console.error('Failed to update notifications:', error)
       return NextResponse.json(
-        { error: '알림 읽음 처리 중 오류가 발생했습니다.', details: error.message },
+        { error: '알림 읽음 처리 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

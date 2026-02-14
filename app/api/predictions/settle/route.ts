@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     if (predictionsError) {
       console.error('Failed to fetch predictions:', predictionsError)
       return NextResponse.json(
-        { error: '예측 조회 중 오류가 발생했습니다.', details: predictionsError.message },
+        { error: '예측 조회 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Settlement API error:', error)
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
     )
   }
@@ -377,7 +377,7 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         return NextResponse.json(
-          { error: '경기 조회 중 오류가 발생했습니다.', details: error.message },
+          { error: '경기 조회 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }

@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         if (insertError) {
           console.error('Failed to create token record:', insertError)
           return NextResponse.json(
-            { error: '토큰 정보를 가져오는 중 오류가 발생했습니다.', details: insertError.message },
+            { error: '토큰 정보를 가져오는 중 오류가 발생했습니다.' },
             { status: 500 }
           )
         }
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     if (fetchError) {
       console.error('Failed to fetch token data:', fetchError)
       return NextResponse.json(
-        { error: '토큰 정보를 가져오는 중 오류가 발생했습니다.', details: fetchError.message },
+        { error: '토큰 정보를 가져오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

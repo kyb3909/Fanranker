@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error('Supabase storage upload error:', uploadError)
       return NextResponse.json(
-        { error: '이미지 업로드에 실패했습니다.', details: uploadError.message },
+        { error: '이미지 업로드에 실패했습니다.' },
         { status: 500 }
       )
     }

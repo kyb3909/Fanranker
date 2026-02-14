@@ -55,7 +55,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (checkError && checkError.code !== 'PGRST116') {
       console.error('Failed to check bookmark status:', checkError)
       return NextResponse.json(
-        { error: '북마크 상태 확인 중 오류가 발생했습니다.', details: checkError.message },
+        { error: '북마크 상태 확인 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (insertError) {
         console.error('Failed to add bookmark:', insertError)
         return NextResponse.json(
-          { error: '북마크 추가 중 오류가 발생했습니다.', details: insertError.message },
+          { error: '북마크 추가 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (deleteError) {
         console.error('Failed to remove bookmark:', deleteError)
         return NextResponse.json(
-          { error: '북마크 제거 중 오류가 발생했습니다.', details: deleteError.message },
+          { error: '북마크 제거 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
     )
   }

@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('betman_games upsert error:', error)
       return NextResponse.json(
-        { error: '경기 목록 저장 중 오류가 발생했습니다.', details: error.message },
+        { error: '경기 목록 저장 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

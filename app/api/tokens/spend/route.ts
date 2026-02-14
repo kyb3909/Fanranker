@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('Failed to update token balance:', updateError)
       return NextResponse.json(
-        { error: '토큰 차감 중 오류가 발생했습니다.', details: updateError.message },
+        { error: '토큰 차감 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }

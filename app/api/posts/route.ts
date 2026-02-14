@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       if (commentsError) {
         console.error('Failed to fetch recent comments:', commentsError)
         return NextResponse.json(
-          { error: '댓글을 가져오는 중 오류가 발생했습니다.', details: commentsError.message },
+          { error: '댓글을 가져오는 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       if (postsError) {
         console.error('Failed to fetch posts:', postsError)
         return NextResponse.json(
-          { error: '글 목록을 가져오는 중 오류가 발생했습니다.', details: postsError.message },
+          { error: '글 목록을 가져오는 중 오류가 발생했습니다.' },
           { status: 500 }
         )
       }
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Failed to fetch posts:', error)
       return NextResponse.json(
-        { error: '글 목록을 가져오는 중 오류가 발생했습니다.', details: error.message },
+        { error: '글 목록을 가져오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: '글 저장 중 오류가 발생했습니다.', details: error.message },
+        { error: '글 저장 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
