@@ -138,22 +138,6 @@ function formatDeadline(dateStr: string): string {
 
 // matches 데이터는 이제 API에서 가져옵니다 (betting-api.ts 참조)
 
-// Mock goldTransactions data combining purchase and charge history with cumulative balance
-// TODO: Replace with actual token_transactions API
-const goldTransactions = [
-  { id: 1, type: "charge", amount: 10000, description: "골드 충전", date: "2024-01-15 14:30", balance: 10000 },
-  { id: 2, type: "purchase", amount: -500, description: "분석가A 예측 구매", date: "2024-01-15 15:20", balance: 9500 },
-  { id: 3, type: "purchase", amount: -500, description: "분석가B 예측 구매", date: "2024-01-15 16:45", balance: 9000 },
-  { id: 4, type: "charge", amount: 5000, description: "골드 충전", date: "2024-01-16 10:00", balance: 14000 },
-  {
-    id: 5,
-    type: "purchase",
-    amount: -1000,
-    description: "분석가C 예측 구매",
-    date: "2024-01-16 11:30",
-    balance: 13000,
-  },
-]
 
 
 // Main BettingPage Component
@@ -647,8 +631,8 @@ export default function BettingPage() {
               {[
                 { id: "전체", label: "전체", icon: "🎯" },
                 { id: "축구", label: "축구", icon: "⚽" },
-                { id: "농구", label: "농구", icon: "🏀" },
                 { id: "야구", label: "야구", icon: "⚾" },
+                { id: "농구", label: "농구", icon: "🏀" },
                 { id: "배구", label: "배구", icon: "🏐" },
               ].map((tab) => (
                 <button
@@ -1386,37 +1370,8 @@ export default function BettingPage() {
               </div>
             )}
             {myPageTab === "gold" && (
-              <div className="space-y-2">
-                {goldTransactions.map((transaction) => (
-                  <Card key={transaction.id} className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-sm font-medium ${transaction.type === "charge" ? "text-blue-600" : "text-gray-900"}`}
-                          >
-                            {transaction.description}
-                          </span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${transaction.type === "charge" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-600"}`}
-                          >
-                            {transaction.type === "charge" ? "충전" : "구매"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">{transaction.date}</div>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={`text-sm font-semibold ${transaction.amount > 0 ? "text-blue-600" : "text-gray-900"}`}
-                        >
-                          {transaction.amount > 0 ? "+" : ""}
-                          {transaction.amount.toLocaleString()}G
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">잔액 {transaction.balance.toLocaleString()}G</div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+              <div className="p-6 text-center">
+                <p className="text-sm text-muted-foreground">골드 내역 기능 준비중입니다.</p>
               </div>
             )}
             {myPageTab === "profile" && (

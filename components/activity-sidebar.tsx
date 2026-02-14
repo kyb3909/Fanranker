@@ -169,28 +169,6 @@ export function ActivitySidebar() {
         </div>
       </Card>
 
-      {/* ===== 광고 섹션 ===== */}
-      <Card className="bg-card border-border rounded-xl overflow-hidden">
-        <div className="p-4">
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-6 text-center border border-primary/20">
-            <div className="space-y-3">
-              <div className="w-16 h-16 mx-auto bg-primary/20 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📢</span>
-              </div>
-              <div>
-                <h3 className="text-[15px] font-bold text-foreground mb-1">광고 영역</h3>
-                <p className="text-[12px] text-muted-foreground">
-                  광고를 표시할 수 있는 공간입니다
-                </p>
-              </div>
-              <button className="w-full bg-primary text-primary-foreground text-[13px] font-semibold py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">
-                자세히 보기
-              </button>
-            </div>
-          </div>
-        </div>
-      </Card>
-
       {/* ===== 오늘의 경기 섹션 ===== */}
       <Card className="bg-card border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border">

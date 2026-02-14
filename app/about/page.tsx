@@ -1,6 +1,11 @@
 import { Header } from "@/components/header"
 import { BackButton } from "@/components/back-button"
 import { Card } from "@/components/ui/card"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "회사 소개",
+}
 
 export default function AboutPage() {
   return (

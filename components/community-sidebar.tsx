@@ -196,14 +196,6 @@ export function CommunitySidebar() {
         </div>
       </Card>
 
-      {/* ===== 광고 영역 ===== */}
-      <Card className="bg-muted/30 border border-dashed border-border rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center">
-        <div className="w-full p-4 text-center">
-          <p className="text-[12px] text-muted-foreground">광고 영역</p>
-          <p className="text-[11px] text-muted-foreground/70 mt-1">120 x 120</p>
-        </div>
-      </Card>
-
       {/* 3. 리소스 (사이트맵 하단) */}
       <nav className="mt-auto shrink-0">
         <Card className="bg-card border border-border rounded-xl overflow-hidden">
@@ -222,6 +214,9 @@ export function CommunitySidebar() {
             </Link>
             <Link href="/content-policy" className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted/40 transition-colors group text-[13px] font-medium text-foreground group-hover:text-primary">
               게시물 운영정책
+            </Link>
+            <Link href="/privacy" className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted/40 transition-colors group text-[13px] font-medium text-foreground group-hover:text-primary">
+              개인정보처리방침
             </Link>
           </div>
         </Card>

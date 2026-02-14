@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
-import { Eye, MessageSquare, ArrowRight, Loader2, ThumbsUp } from "lucide-react"
+import { Eye, MessageSquare, Loader2, ThumbsUp } from "lucide-react"
 import Link from "next/link"
 
 interface Post {
@@ -126,13 +126,6 @@ export default function ExplorePage() {
             <div className="bg-card border border-border rounded-lg">
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <h2 className="font-bold text-lg text-primary">실시간 인기글</h2>
-                <Link
-                  href="/explore"
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  전체보기
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
               </div>
 
               <div className="divide-y divide-border">

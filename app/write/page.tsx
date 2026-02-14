@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import { useAuth } from "@clerk/nextjs"
 import { Header } from "@/components/header"
 import { BackButton } from "@/components/back-button"
 import { Card } from "@/components/ui/card"
@@ -27,9 +28,16 @@ const COMMUNITIES = [
 function WriteContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { isSignedIn, isLoaded } = useAuth()
   const communitySlug = searchParams.get("community") || ""
   const editId = searchParams.get("edit") || ""
-  
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push("/")
+    }
+  }, [isLoaded, isSignedIn, router])
+
   const [selectedCommunity, setSelectedCommunity] = useState(communitySlug)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState<any>(null)
@@ -202,6 +210,20 @@ function WriteContent() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">로딩 중...</p>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   if (isLoadingEdit) {
