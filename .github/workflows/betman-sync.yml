@@ -45,6 +45,9 @@ jobs:
         id: sync
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           ARGS=""
           if [ -n "${{ github.event.inputs.gmTs }}" ]; then

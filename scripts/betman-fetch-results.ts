@@ -74,12 +74,99 @@ interface ResultItem {
   PR_ST_VAL: string;
 }
 
-async function main() {
-  const gmTs = process.env.BETMAN_GM_TS ?? process.argv[2] ?? '260018';
-  const apiBase =
-    process.env.NEXT_PUBLIC_APP_URL ??
+function getApiBase(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ??
     'http://localhost:3000';
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (process.env.CRON_SECRET) {
+    headers['Authorization'] = `Bearer ${process.env.CRON_SECRET}`;
+  }
+  return headers;
+}
+
+async function querySupabaseDirect(): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return null;
+
+  const headers = {
+    'apikey': serviceKey,
+    'Authorization': `Bearer ${serviceKey}`,
+  };
+
+  // 1차: betman_sync_state
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/betman_sync_state?select=latest_gm_ts&order=updated_at.desc&limit=1`,
+      { headers },
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows?.[0]?.latest_gm_ts) {
+        return rows[0].latest_gm_ts;
+      }
+    }
+  } catch { /* fallback */ }
+
+  // 2차: betman_rounds 직접 조회
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/betman_rounds?select=gm_ts&gm_ts=not.is.null&status=in.(open,closed)&order=gm_ts.desc&limit=1`,
+      { headers },
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows?.[0]?.gm_ts) {
+        return rows[0].gm_ts;
+      }
+    }
+  } catch { /* ignore */ }
+
+  return null;
+}
+
+async function resolveGmTs(): Promise<string> {
+  // 우선순위: argv[2] > env.BETMAN_GM_TS > Supabase DB 직접 조회 > sync-state API
+  const fromArg = process.argv[2];
+  if (fromArg) return fromArg;
+
+  const fromEnv = process.env.BETMAN_GM_TS;
+  if (fromEnv) return fromEnv;
+
+  // Supabase DB 직접 조회 (Next.js 배포와 무관)
+  const fromDb = await querySupabaseDirect();
+  if (fromDb) {
+    console.log(`Supabase DB에서 gmTs 조회: ${fromDb}`);
+    return fromDb;
+  }
+
+  // fallback: sync-state API
+  const apiBase = getApiBase();
+  try {
+    const res = await fetch(`${apiBase}/api/betman/sync-state`, {
+      headers: getAuthHeaders(),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.latestGmTs) {
+        console.log(`sync-state API에서 gmTs 조회: ${data.latestGmTs}`);
+        return data.latestGmTs;
+      }
+    }
+  } catch (e) {
+    console.error('sync-state API 조회 실패:', e);
+  }
+
+  throw new Error('gmTs를 결정할 수 없습니다. argv[2], BETMAN_GM_TS 환경변수, 또는 Supabase DB에서 값을 확인하세요.');
+}
+
+async function main() {
+  const gmTs = await resolveGmTs();
+  const apiBase = getApiBase();
 
   console.log(`gmTs: ${gmTs} | API: ${apiBase}`);
 
@@ -198,10 +285,7 @@ async function main() {
     console.log(`매핑 완료: completed=${completed}, cancelled=${cancelled}, SUM(result빈값)=${skippedSUM}`);
 
     // API 호출하여 DB 업데이트
-    const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (process.env.CRON_SECRET) {
-      authHeaders['Authorization'] = `Bearer ${process.env.CRON_SECRET}`;
-    }
+    const authHeaders = getAuthHeaders();
 
     const res = await fetch(`${apiBase}/api/betman/results`, {
       method: 'POST',

@@ -1,0 +1,103 @@
+name: Betman 회차 감지
+
+on:
+  schedule:
+    # 매시간 실행 (매시 10분)
+    - cron: '10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Fetch latest gmTs from Betman
+        id: betman
+        run: |
+          # 1. betman 세션 쿠키 획득
+          COOKIES=$(mktemp)
+          curl -sf -c "$COOKIES" \
+            "https://www.betman.co.kr/main/mainPage/gamebuy/buyableGameList.do" > /dev/null
+
+          # 2. 구매 가능 게임 목록 API 호출
+          RESP=$(curl -sf -b "$COOKIES" -X POST \
+            "https://www.betman.co.kr/buyPsblGame/inqBuyAbleGameInfoList.do" \
+            -H "Content-Type: application/json;charset=UTF-8" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            -H "Referer: https://www.betman.co.kr/main/mainPage/gamebuy/buyableGameList.do" \
+            -d '{"_sbmInfo":{"_sbmInfo":{"debugMode":"false"}}}')
+
+          rm -f "$COOKIES"
+
+          # 3. protoGames에서 gmId=G101 (승부식)의 gmTs 추출
+          BETMAN_GMTS=$(echo "$RESP" | grep -o '"gmId":"G101"[^}]*"gmTs":[0-9]*' | grep -o '"gmTs":[0-9]*' | grep -o '[0-9]*' | head -1)
+
+          if [ -z "$BETMAN_GMTS" ]; then
+            echo "::warning::betman에서 gmTs를 가져올 수 없습니다."
+            echo "found=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "betman 최신 gmTs: $BETMAN_GMTS"
+          echo "found=$BETMAN_GMTS" >> $GITHUB_OUTPUT
+
+      - name: Get current gmTs from DB
+        id: db
+        if: steps.betman.outputs.found != ''
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          DB_GMTS=$(curl -sf \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            "${SUPABASE_URL}/rest/v1/betman_sync_state?select=latest_gm_ts&order=updated_at.desc&limit=1" \
+            | grep -o '"latest_gm_ts":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+          echo "DB gmTs: ${DB_GMTS:-없음}"
+          echo "current=${DB_GMTS}" >> $GITHUB_OUTPUT
+
+      - name: Update DB if new round detected
+        if: steps.betman.outputs.found != '' && steps.betman.outputs.found != steps.db.outputs.current
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          NEW_GMTS="${{ steps.betman.outputs.found }}"
+          OLD_GMTS="${{ steps.db.outputs.current }}"
+          echo "새 회차 감지: ${OLD_GMTS} → ${NEW_GMTS}"
+
+          # RPC 함수로 betman_sync_state 업데이트 (active_rounds 배열 관리 포함)
+          curl -sf -X POST \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            "${SUPABASE_URL}/rest/v1/rpc/betman_update_sync_state" \
+            -d "{\"new_gm_ts\": \"${NEW_GMTS}\"}"
+
+      - name: Trigger full sync if new round
+        if: steps.betman.outputs.found != '' && steps.betman.outputs.found != steps.db.outputs.current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_GMTS="${{ steps.betman.outputs.found }}"
+          echo "betman-sync 워크플로우 트리거: gmTs=${NEW_GMTS}"
+
+          gh workflow run betman-sync.yml \
+            -f "gmTs=${NEW_GMTS}" \
+            --repo "${{ github.repository }}"
+
+      - name: Summary
+        run: |
+          BETMAN="${{ steps.betman.outputs.found }}"
+          DB="${{ steps.db.outputs.current }}"
+          echo "## Betman 회차 감지" >> $GITHUB_STEP_SUMMARY
+          echo "- betman 최신: ${BETMAN:-감지 실패}" >> $GITHUB_STEP_SUMMARY
+          echo "- DB 현재: ${DB:-없음}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$BETMAN" ] && [ "$BETMAN" != "$DB" ]; then
+            echo "- **새 회차 감지 → betman-sync 트리거됨**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 변경 없음" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- 시간: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY

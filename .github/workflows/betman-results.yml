@@ -31,36 +31,55 @@ jobs:
         with:
           version: 8
 
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Install Playwright
-        run: pnpm exec playwright install chromium
-
       - name: Determine gmTs
         id: gmts
         env:
-          NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_URL }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ -n "${{ github.event.inputs.gmTs }}" ]; then
             echo "value=${{ github.event.inputs.gmTs }}" >> $GITHUB_OUTPUT
           else
-            # 스케줄 실행 시 자동 감지
-            RESULT=$(pnpm exec tsx scripts/betman-sync.ts --check-only 2>/dev/null || echo '{}')
-            GMTS=$(echo "$RESULT" | grep -o '"gmTs":"[^"]*"' | head -1 | cut -d'"' -f4)
+            # Supabase DB에서 직접 최신 gmTs 조회 (Next.js 배포와 무관)
+            GMTS=$(curl -sf \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              "${SUPABASE_URL}/rest/v1/betman_sync_state?select=latest_gm_ts&order=updated_at.desc&limit=1" \
+              | grep -o '"latest_gm_ts":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+            # fallback: betman_rounds에서 직접 조회
+            if [ -z "$GMTS" ]; then
+              GMTS=$(curl -sf \
+                -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                "${SUPABASE_URL}/rest/v1/betman_rounds?select=gm_ts&gm_ts=not.is.null&status=in.(open,closed)&order=gm_ts.desc&limit=1" \
+                | grep -o '"gm_ts":"[^"]*"' | head -1 | cut -d'"' -f4)
+            fi
+
             if [ -z "$GMTS" ]; then
               echo "::warning::gmTs를 감지할 수 없습니다. 스킵합니다."
               echo "value=" >> $GITHUB_OUTPUT
             else
+              echo "감지된 gmTs: $GMTS"
               echo "value=$GMTS" >> $GITHUB_OUTPUT
             fi
           fi
+
+      - name: Install dependencies
+        if: steps.gmts.outputs.value != ''
+        run: pnpm install
+
+      - name: Install Playwright
+        if: steps.gmts.outputs.value != ''
+        run: pnpm exec playwright install chromium
 
       - name: Fetch results & settle
         if: steps.gmts.outputs.value != ''
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.PRODUCTION_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "회차: ${{ steps.gmts.outputs.value }}"
           pnpm exec tsx scripts/betman-fetch-results.ts ${{ steps.gmts.outputs.value }}

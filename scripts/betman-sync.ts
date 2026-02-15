@@ -1,17 +1,18 @@
 /**
- * Betman 데이터 동기화 스크립트 (n8n용)
+ * Betman 데이터 동기화 스크립트
  *
  * 기능:
- *   1. 최신 gmTs 확인
+ *   1. 최신 gmTs 확인 (DB 기반 상태 관리)
  *   2. 새 라운드 → JSON 생성 + DB 저장
  *   3. 기존 라운드 → JSON 갱신 + DB 업데이트
  *
  * 사용법:
- *   pnpm exec tsx scripts/betman-sync.ts [--check-only] [--gmts=260018]
+ *   pnpm exec tsx scripts/betman-sync.ts [--check-only] [--gmts=260018] [--skip-api]
  *
  * 옵션:
  *   --check-only: 최신 gmTs 확인만 (데이터 수집 안함)
  *   --gmts=XXXXX: 특정 gmTs 지정
+ *   --skip-api: 로컬 개발용 — 파일 기반 상태 + API 호출 스킵
  *
  * 출력 (JSON):
  *   {
@@ -49,10 +50,10 @@ interface Game {
   game_no: number;
   match_time: string;
   sport: string;
-  league: string;
+  league_code: string;
   game_type: string;
-  home_team: string;
-  away_team: string;
+  home_team_name: string;
+  away_team_name: string;
   home_win_odds: number | null;
   draw_odds: number | null;
   away_win_odds: number | null;
@@ -72,13 +73,112 @@ interface SyncResult {
   error?: string;
 }
 
-// KST ISO 문자열 변환
-function toKSTISO(ms: number): string {
-  const d = new Date(ms);
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}T${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}:${pad(kst.getUTCSeconds())}+09:00`;
+// ─── API Base URL ───
+
+function getApiBase(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ??
+    'http://localhost:3000';
 }
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (process.env.CRON_SECRET) {
+    headers['Authorization'] = `Bearer ${process.env.CRON_SECRET}`;
+  }
+  return headers;
+}
+
+// ─── State Management (API-based) ───
+
+function getSupabaseHeaders(): Record<string, string> | null {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return null;
+  return {
+    'apikey': serviceKey,
+    'Authorization': `Bearer ${serviceKey}`,
+  };
+}
+
+async function loadStateFromSupabase(): Promise<BetmanState | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const headers = getSupabaseHeaders();
+  if (!supabaseUrl || !headers) return null;
+
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/betman_sync_state?select=latest_gm_ts,active_rounds,last_checked_at&order=updated_at.desc&limit=1`,
+      { headers },
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows?.[0]) return null;
+    const row = rows[0];
+    return {
+      lastChecked: row.last_checked_at ?? '',
+      activeRounds: Array.isArray(row.active_rounds) ? row.active_rounds : [],
+      latestGmTs: row.latest_gm_ts ?? '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function loadStateFromApi(): Promise<BetmanState> {
+  // 1차: Supabase DB 직접 조회 (Next.js 배포와 무관)
+  const fromDb = await loadStateFromSupabase();
+  if (fromDb) return fromDb;
+
+  // 2차: sync-state API (Next.js 서버가 있을 때)
+  const apiBase = getApiBase();
+  try {
+    const res = await fetch(`${apiBase}/api/betman/sync-state`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      console.error('sync-state API GET 실패:', res.status);
+      return { lastChecked: '', activeRounds: [], latestGmTs: '' };
+    }
+    const data = await res.json();
+    return {
+      lastChecked: data.lastCheckedAt ?? '',
+      activeRounds: Array.isArray(data.activeRounds) ? data.activeRounds : [],
+      latestGmTs: data.latestGmTs ?? '',
+    };
+  } catch (e) {
+    console.error('sync-state API 조회 오류:', e);
+    return { lastChecked: '', activeRounds: [], latestGmTs: '' };
+  }
+}
+
+async function saveStateToApi(
+  state: BetmanState,
+  action: string,
+  gamesCount: number,
+  lastError?: string,
+): Promise<void> {
+  const apiBase = getApiBase();
+  try {
+    const res = await fetch(`${apiBase}/api/betman/sync-state`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        latestGmTs: state.latestGmTs,
+        activeRounds: state.activeRounds,
+        lastSyncAction: action,
+        lastSyncGamesCount: gamesCount,
+        lastError: lastError ?? null,
+      }),
+    });
+    if (!res.ok) {
+      console.error('sync-state API POST 실패:', res.status);
+    }
+  } catch (e) {
+    console.error('sync-state API 저장 오류:', e);
+  }
+}
+
+// ─── State Management (File-based, for --skip-api) ───
 
 function ensureDataDir() {
   if (!existsSync(DATA_DIR)) {
@@ -86,7 +186,7 @@ function ensureDataDir() {
   }
 }
 
-function loadState(): BetmanState {
+function loadStateFromFile(): BetmanState {
   ensureDataDir();
   if (existsSync(STATE_FILE)) {
     return JSON.parse(readFileSync(STATE_FILE, 'utf-8'));
@@ -94,10 +194,21 @@ function loadState(): BetmanState {
   return { lastChecked: '', activeRounds: [], latestGmTs: '' };
 }
 
-function saveState(state: BetmanState) {
+function saveStateToFile(state: BetmanState) {
   ensureDataDir();
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
 }
+
+// ─── KST ISO 변환 ───
+
+function toKSTISO(ms: number): string {
+  const d = new Date(ms);
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}T${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}:${pad(kst.getUTCSeconds())}+09:00`;
+}
+
+// ─── Game Parsing ───
 
 function parseGames(datas: unknown[][]): Game[] {
   const games: Game[] = [];
@@ -135,10 +246,10 @@ function parseGames(datas: unknown[][]): Game[] {
       game_no: d[11] as number,
       match_time: gameDate ? toKSTISO(gameDate) : toKSTISO(Date.now()),
       sport: sportMap[(d[0] as string) ?? ''] ?? (d[0] as string),
-      league: (d[7] as string) || '',
+      league_code: (d[7] as string) || '',
       game_type: gameType,
-      home_team: (d[14] as string) ?? '',
-      away_team: (d[15] as string) ?? '',
+      home_team_name: (d[14] as string) ?? '',
+      away_team_name: (d[15] as string) ?? '',
       home_win_odds,
       draw_odds,
       away_win_odds,
@@ -150,6 +261,62 @@ function parseGames(datas: unknown[][]): Game[] {
   }
   return games;
 }
+
+// ─── Betman gmTs Detection (HTTP, no Playwright needed) ───
+
+const BUYABLE_LIST_URL = 'https://www.betman.co.kr/buyPsblGame/inqBuyAbleGameInfoList.do';
+const BUYABLE_PAGE_URL = 'https://www.betman.co.kr/main/mainPage/gamebuy/buyableGameList.do';
+
+/**
+ * buyableGameList API에서 프로토 승부식(G101)의 최신 gmTs를 가져온다.
+ * 순수 HTTP 호출 — Playwright 불필요.
+ *
+ * 흐름:
+ *   1. buyableGameList.do 페이지 GET → 세션 쿠키 획득
+ *   2. inqBuyAbleGameInfoList.do POST → protoGames에서 gmId=G101 추출
+ */
+async function fetchLatestGmTsFromBuyableList(): Promise<string | null> {
+  try {
+    // 1단계: 세션 쿠키 획득
+    const pageRes = await fetch(BUYABLE_PAGE_URL, { redirect: 'follow' });
+    const cookies = pageRes.headers.getSetCookie?.() ?? [];
+    const cookieHeader = cookies.map(c => c.split(';')[0]).join('; ');
+
+    // 2단계: 구매 가능 게임 목록 API 호출
+    const apiRes = await fetch(BUYABLE_LIST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json;charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': BUYABLE_PAGE_URL,
+        ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
+      },
+      body: JSON.stringify({ _sbmInfo: { _sbmInfo: { debugMode: 'false' } } }),
+    });
+
+    if (!apiRes.ok) {
+      console.error('buyableGameList API 실패:', apiRes.status);
+      return null;
+    }
+
+    const data = await apiRes.json() as {
+      protoGames?: Array<{ gmId: string; gmTs: number }>;
+    };
+
+    const protoG101 = data.protoGames?.find(g => g.gmId === GM_ID);
+    if (protoG101) {
+      return String(protoG101.gmTs);
+    }
+
+    console.error('프로토 승부식(G101) 게임을 찾을 수 없음');
+    return null;
+  } catch (e) {
+    console.error('buyableGameList 조회 오류:', e);
+    return null;
+  }
+}
+
+// ─── Betman Data Fetching ───
 
 async function fetchGames(page: Page, gmTs: string): Promise<Game[]> {
   await page.goto(`${SLIP_URL}?gmId=${GM_ID}&gmTs=${gmTs}`, {
@@ -185,6 +352,51 @@ async function fetchGames(page: Page, gmTs: string): Promise<Game[]> {
   return parseGames(datas);
 }
 
+/**
+ * Probe betman API to check if a gmTs has data.
+ * Uses page context to call gameInfoInq.do directly.
+ */
+async function probeGmTs(page: Page, gmTs: string): Promise<boolean> {
+  try {
+    await page.goto(`${SLIP_URL}?gmId=${GM_ID}&gmTs=${gmTs}`, {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
+
+    const hasData = await page.evaluate(
+      async (params: { gmId: string; gmTs: string; path: string }) => {
+        try {
+          const resp = await fetch(params.path, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=UTF-8',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+              gmId: params.gmId,
+              gmTs: Number(params.gmTs),
+              gameYear: '',
+              _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
+            }),
+          });
+          const json = await resp.json();
+          const datas = json?.compSchedules?.datas;
+          return Array.isArray(datas) && datas.length > 0;
+        } catch {
+          return false;
+        }
+      },
+      { gmId: GM_ID, gmTs, path: API_INQ_PATH }
+    );
+
+    return hasData;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Save to JSON file ───
+
 async function saveToJson(gmTs: string, games: Game[]): Promise<string> {
   ensureDataDir();
   const filePath = join(DATA_DIR, `${gmTs}.json`);
@@ -201,16 +413,17 @@ async function saveToJson(gmTs: string, games: Game[]): Promise<string> {
   return filePath;
 }
 
+// ─── Save to API (round + games) ───
+
 async function saveToApi(gmTs: string, games: Game[]): Promise<string | null> {
-  const apiBase = process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ??
-    'http://localhost:3000';
+  const apiBase = getApiBase();
+  const headers = getAuthHeaders();
 
   try {
     // Round 생성/조회
     const roundRes = await fetch(`${apiBase}/api/betman/round`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ gmTs }),
     });
 
@@ -226,7 +439,7 @@ async function saveToApi(gmTs: string, games: Game[]): Promise<string | null> {
     // Games 저장
     const gamesRes = await fetch(`${apiBase}/api/betman/games`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ roundId, games }),
     });
 
@@ -242,73 +455,61 @@ async function saveToApi(gmTs: string, games: Game[]): Promise<string | null> {
   }
 }
 
+// ─── Main ───
+
 async function main() {
   const args = process.argv.slice(2);
   const checkOnly = args.includes('--check-only');
   const gmTsArg = args.find(a => a.startsWith('--gmts='))?.split('=')[1];
   const skipApi = args.includes('--skip-api');
 
-  const state = loadState();
+  // Load state: API-based (default) or file-based (--skip-api)
+  const state = skipApi ? loadStateFromFile() : await loadStateFromApi();
   const browser = await chromium.launch({ headless: true });
 
   try {
     const page = await browser.newPage();
 
-    // gmTs 결정
+    // ─── gmTs 결정 (우선순위) ───
+    // (1순위) --gmts=XXXXX 인자
     let gmTs = gmTsArg;
 
+    // (2순위) buyableGameList API에서 프로토 승부식(G101) 조회 (Playwright 불필요)
     if (!gmTs) {
-      // 페이지에서 최신 gmTs 확인
-      await page.goto(SLIP_URL, { waitUntil: 'networkidle', timeout: 30000 });
-
-      const currentUrl = page.url();
-      const urlMatch = currentUrl.match(/gmTs=(\d+)/);
-      gmTs = urlMatch?.[1] ?? '';
-
-      if (!gmTs) {
-        gmTs = await page.evaluate(() => {
-          const params = new URLSearchParams(window.location.search);
-          return params.get('gmTs') || '';
-        });
+      console.error('buyableGameList API로 최신 gmTs 조회 중...');
+      gmTs = await fetchLatestGmTsFromBuyableList() ?? '';
+      if (gmTs) {
+        console.error(`buyableGameList에서 gmTs 감지: ${gmTs}`);
       }
     }
 
-    if (!gmTs) {
-      // Fallback: 순차 증가 방식 (DB의 최신 gmTs + 1 시도)
-      if (state.latestGmTs) {
-        const nextGmTs = String(Number(state.latestGmTs) + 1);
-        console.error(`페이지에서 gmTs 감지 실패, 순차 증가 시도: ${nextGmTs}`);
-        try {
-          await page.goto(`${SLIP_URL}?gmId=${GM_ID}&gmTs=${nextGmTs}`, {
-            waitUntil: 'networkidle',
-            timeout: 15000,
-          });
-          // 페이지가 정상 로드되면 (데이터가 있으면) 이 gmTs 사용
-          const hasData = await page.evaluate(() => {
-            return document.querySelector('.game-list, .tbl_data, table') !== null;
-          });
-          if (hasData) {
-            gmTs = nextGmTs;
-          }
-        } catch {
-          // 다음 회차가 없으면 현재 회차 유지
-        }
+    // (3순위) latestGmTs + 1 을 betman API로 probe
+    if (!gmTs && state.latestGmTs) {
+      const nextGmTs = String(Number(state.latestGmTs) + 1);
+      console.error(`다음 회차 probe 시도: ${nextGmTs}`);
+      const hasNext = await probeGmTs(page, nextGmTs);
+      if (hasNext) {
+        gmTs = nextGmTs;
+        console.error(`새 회차 발견: ${gmTs}`);
       }
+    }
 
-      if (!gmTs) {
-        // 마지막 fallback: 기존 상태의 latestGmTs 사용
-        if (state.latestGmTs) {
-          gmTs = state.latestGmTs;
-          console.error(`Fallback: 기존 latestGmTs 사용: ${gmTs}`);
-        } else {
-          const result: SyncResult = {
-            action: 'error',
-            gmTs: '',
-            error: 'gmTs를 찾을 수 없음',
-          };
-          console.log(JSON.stringify(result));
-          return;
+    // (4순위) 기존 latestGmTs로 재동기화 (idempotent)
+    if (!gmTs) {
+      if (state.latestGmTs) {
+        gmTs = state.latestGmTs;
+        console.error(`Fallback: 기존 latestGmTs 사용: ${gmTs}`);
+      } else {
+        const result: SyncResult = {
+          action: 'error',
+          gmTs: '',
+          error: 'gmTs를 찾을 수 없음',
+        };
+        console.log(JSON.stringify(result));
+        if (!skipApi) {
+          await saveStateToApi(state, 'error', 0, 'gmTs를 찾을 수 없음');
         }
+        return;
       }
     }
 
@@ -323,9 +524,15 @@ async function main() {
     }
     state.latestGmTs = gmTs;
     state.lastChecked = new Date().toISOString();
-    saveState(state);
 
     if (checkOnly) {
+      // Save state and exit
+      if (skipApi) {
+        saveStateToFile(state);
+      } else {
+        await saveStateToApi(state, 'checked', 0);
+      }
+
       const result: SyncResult = {
         action: 'checked',
         gmTs,
@@ -343,6 +550,9 @@ async function main() {
     // API 저장 (옵션)
     if (!skipApi) {
       await saveToApi(gmTs, games);
+      await saveStateToApi(state, isNew ? 'created' : 'updated', games.length);
+    } else {
+      saveStateToFile(state);
     }
 
     const result: SyncResult = {
