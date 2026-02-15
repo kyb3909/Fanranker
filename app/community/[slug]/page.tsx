@@ -1,9 +1,11 @@
 import type { Metadata } from "next"
+import { Header } from "@/components/header"
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
 import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
+import { jsonLd } from "@/lib/seo"
 
 // 멤버 수 포맷팅 함수: 1만명 이상이면 "XX.X만명", 미만이면 "X,XXX명"
 function formatMemberCount(count: number): string {
@@ -189,7 +191,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const communityData = COMMUNITY_DATA[slug]
   const name = communityData?.name || slug
-  return { title: name }
+  return {
+    title: name,
+    description: communityData?.description,
+    openGraph: {
+      title: `${name} - FanRanker`,
+      description: communityData?.description,
+    },
+    alternates: { canonical: `/community/${slug}` },
+  }
 }
 
 export default async function CommunityPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -214,10 +224,22 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
   const rawPosts = await fetchPosts(slug)
   const communityPosts = transformPosts(rawPosts)
 
+  const currentCommunityData = COMMUNITY_DATA[slug]
+
   return (
     <div className="min-h-screen bg-background">
+      <Header />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd({
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: currentCommunityData?.name || slug,
+          description: currentCommunityData?.description,
+        })}}
+      />
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
-      <main id="main-content" className="mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5 max-w-[1280px]" tabIndex={-1}>
+      <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
         {/* 12컬럼 그리드: 조밀한 간격 */}
         <div className="grid grid-cols-12 gap-4 lg:gap-5">
           <div className="col-span-12 lg:col-span-9">

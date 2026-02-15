@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Header } from "@/components/header"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -61,7 +60,6 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
   if (!isMainContent) {
     return (
       <>
-        <Header />
         {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
         <div className="py-4">
           {/* 커뮤니티 헤더: 간격 축소 */}
