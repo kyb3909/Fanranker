@@ -19,11 +19,12 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://platform.twitter.com https://www.instagram.com https://*.clerk.accounts.dev",
+              "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               "frame-src https://www.youtube.com https://platform.twitter.com https://www.instagram.com https://*.clerk.accounts.dev",
-              "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev",
+              "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com",
             ].join('; '),
           },
         ],
