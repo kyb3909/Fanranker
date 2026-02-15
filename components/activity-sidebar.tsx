@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MessageSquare, Calendar, Loader2 } from "lucide-react"
+import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 
@@ -11,16 +11,6 @@ interface RecentPost {
   community: string
   comments: number
   timestamp: string
-}
-
-interface Match {
-  id: string
-  league: string
-  homeTeam: string
-  awayTeam: string
-  time: string
-  status: string
-  score?: string
 }
 
 // 커뮤니티 이름 매핑
@@ -66,9 +56,7 @@ function mapApiPostsToRecentPosts(posts: any[]): RecentPost[] {
 
 export function ActivitySidebar() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
-  const [matches, setMatches] = useState<Match[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
-  const [isLoadingMatches, setIsLoadingMatches] = useState(true)
 
   // 최근 댓글이 달린 글 가져오기 (60초 캐시 사용)
   useEffect(() => {
@@ -96,30 +84,6 @@ export function ActivitySidebar() {
     }
 
     fetchRecentPosts()
-  }, [])
-
-  // 오늘의 경기 가져오기 (API가 없으면 빈 배열로 처리)
-  useEffect(() => {
-    async function fetchMatches() {
-      setIsLoadingMatches(true)
-      try {
-        const response = await fetch('/api/matches?status=upcoming&limit=4')
-        if (response.ok) {
-          const data = await response.json()
-          setMatches(data.matches || [])
-        } else {
-          // API가 없거나 에러 시 빈 배열로 처리 (콘솔 에러 방지)
-          setMatches([])
-        }
-      } catch {
-        // 네트워크 에러 시 조용히 실패 (콘솔 에러 방지)
-        setMatches([])
-      } finally {
-        setIsLoadingMatches(false)
-      }
-    }
-
-    fetchMatches()
   }, [])
 
   return (
@@ -169,73 +133,6 @@ export function ActivitySidebar() {
         </div>
       </Card>
 
-      {/* ===== 오늘의 경기 섹션 ===== */}
-      <Card className="bg-card border-border rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-primary" />
-            <h3 className="text-[14px] font-bold text-foreground">오늘의 경기</h3>
-          </div>
-          <span className="text-[11px] text-muted-foreground">{matches.length}경기</span>
-        </div>
-
-        <div className="divide-y divide-border/50">
-          {isLoadingMatches ? (
-            <div className="p-4 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-            </div>
-          ) : matches.length > 0 ? (
-            matches.map((match) => (
-              <div key={match.id} className="px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer">
-                {/* 리그 + 상태 + 시간 */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-primary px-1.5 py-0.5 bg-primary/10 rounded">
-                      {match.league}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                        match.status === "진행 중" || match.status === "live"
-                          ? "bg-primary text-primary-foreground"
-                          : match.status === "경기 종료" || match.status === "finished"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-primary/20 text-primary"
-                      }`}
-                    >
-                      {match.status === "live" ? "진행 중" : match.status === "finished" ? "경기 종료" : match.status === "upcoming" ? "경기 예정" : match.status}
-                    </span>
-                  </div>
-                  <span className="text-[12px] font-medium text-muted-foreground tabular-nums">{match.time}</span>
-                </div>
-
-                {/* 팀 vs 팀 */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-foreground">{match.homeTeam}</span>
-                    {match.score && (
-                      <span className="text-[14px] font-bold text-foreground tabular-nums">
-                        {match.score.split("-")[0]}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-foreground">{match.awayTeam}</span>
-                    {match.score && (
-                      <span className="text-[14px] font-bold text-foreground tabular-nums">
-                        {match.score.split("-")[1]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-4 text-center">
-              <p className="text-xs text-muted-foreground">오늘 예정된 경기가 없습니다.</p>
-            </div>
-          )}
-        </div>
-      </Card>
     </div>
   )
 }

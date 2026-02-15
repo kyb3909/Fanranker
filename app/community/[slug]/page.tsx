@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { Header } from "@/components/header"
-import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
 import { createServerAnonClient } from "@/lib/supabase"
@@ -247,11 +246,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
           </div>
 
           <aside className="hidden lg:block lg:col-span-3">
-            {/* 사이드바 컨테이너: 헤더 아래 고정 */}
-            <div className="space-y-3 sticky top-16">
-              <ActivitySidebar />
-              <CommunitySidebar />
-            </div>
+            <ActivitySidebar />
           </aside>
         </div>
       </main>
