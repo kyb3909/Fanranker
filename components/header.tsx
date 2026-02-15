@@ -11,6 +11,7 @@ import { UserMenu } from './user-menu'
 import { SignInMenu } from './sign-in-menu'
 import { NotificationDropdown } from './notification-dropdown'
 import { BallBalance } from './ball-balance'
+import { NewsTicker } from './news-ticker'
 
 const COMMUNITY_NAMES: Record<string, string> = {
   "overseas-football": "해외축구",
@@ -224,6 +225,9 @@ export function Header() {
           </Button>
         </Link>
       </nav>
+
+      {/* 뉴스 틱커: 전광판 스타일 */}
+      <NewsTicker />
     </header>
   )
 }
