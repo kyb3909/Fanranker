@@ -5,6 +5,31 @@ const nextConfig = {
   },
   // Lighthouse Best Practices: 대용량 JS 소스맵 (디버깅·분석용)
   productionBrowserSourceMaps: true,
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://platform.twitter.com https://www.instagram.com https://*.clerk.accounts.dev",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data:",
+              "frame-src https://www.youtube.com https://platform.twitter.com https://www.instagram.com https://*.clerk.accounts.dev",
+              "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev",
+            ].join('; '),
+          },
+        ],
+      },
+    ]
+  },
   images: {
     // 이미지 최적화 활성화 (unoptimized: true 제거)
     remotePatterns: [
