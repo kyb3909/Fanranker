@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Trophy, Gamepad2, Loader2 } from "lucide-react"
+import { Home, Compass, Bell, Search, Gamepad2, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -11,7 +11,6 @@ import { UserMenu } from './user-menu'
 import { SignInMenu } from './sign-in-menu'
 import { NotificationDropdown } from './notification-dropdown'
 import { BallBalance } from './ball-balance'
-import { NewsTicker } from './news-ticker'
 
 const COMMUNITY_NAMES: Record<string, string> = {
   "overseas-football": "해외축구",
@@ -212,22 +211,13 @@ export function Header() {
             탐색
           </Button>
         </Link>
-        <Link href="/prediction">
-          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-            <Trophy className="h-4 w-4 text-white shrink-0" />
-            승부 예측
-          </Button>
-        </Link>
-        <Link href="/draft-game">
+        <Link href="/games">
           <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
             <Gamepad2 className="h-4 w-4 text-white shrink-0" />
-            드래프트 게임
+            게임
           </Button>
         </Link>
       </nav>
-
-      {/* 뉴스 틱커: 전광판 스타일 */}
-      <NewsTicker />
     </header>
   )
 }

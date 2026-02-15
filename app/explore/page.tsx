@@ -2,10 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
-import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { Eye, MessageSquare, Loader2, ThumbsUp } from "lucide-react"
 import Link from "next/link"
+
+interface Category {
+  id: string
+  slug: string
+  name: string
+  icon: string | null
+  sort_order: number
+  description: string | null
+}
 
 interface Post {
   id: string
@@ -30,6 +38,7 @@ const COMMUNITY_NAMES: Record<string, string> = {
 }
 
 export default function ExplorePage() {
+  const [categories, setCategories] = useState<Category[]>([])
   const [popularPosts, setPopularPosts] = useState<Post[]>([])
   const [topRecommended, setTopRecommended] = useState<Post[]>([])
   const [topCommented, setTopCommented] = useState<Post[]>([])
@@ -51,13 +60,18 @@ export default function ExplorePage() {
       setIsLoading(true)
       try {
         // 병렬 fetch로 성능 개선
-        const [popularRes, recommendedRes, commentedRes, viewedRes] = await Promise.all([
+        const [categoriesRes, popularRes, recommendedRes, commentedRes, viewedRes] = await Promise.all([
+          fetch('/api/categories'),
           fetch('/api/posts?sort=hot&limit=10'),
           fetch('/api/posts?sort=hot&limit=3'),
           fetch('/api/posts?sort=comments&limit=3'),
           fetch('/api/posts?sort=new&limit=3'),
         ])
 
+        if (categoriesRes.ok) {
+          const { categories: cats } = await categoriesRes.json()
+          setCategories(cats || [])
+        }
         if (popularRes.ok) {
           const { posts } = await popularRes.json()
           setPopularPosts(mapPosts(posts))
@@ -90,41 +104,28 @@ export default function ExplorePage() {
 
       <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-6">
-          {/* Left Sidebar */}
-          <aside className="col-span-3 hidden xl:block">
-            <CommunitySidebar />
-          </aside>
-
           {/* Main Content */}
-          <div className="col-span-12 xl:col-span-6 space-y-6">
+          <div className="col-span-12 xl:col-span-9 space-y-6">
             {/* 게시판 둘러보기 */}
-            <div className="bg-card border border-border rounded-lg">
-              <div className="p-4 border-b border-border">
-                <h2 className="font-bold text-lg text-primary">게시판 둘러보기</h2>
+            {categories.length > 0 && (
+              <div className="bg-card border border-border rounded-lg">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-bold text-lg text-primary">게시판 둘러보기</h2>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
+                  {categories.map((cat) => (
+                    <Link
+                      key={cat.slug}
+                      href={`/community/${cat.slug}`}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:bg-muted/50 hover:border-primary/30 transition-colors text-center"
+                    >
+                      <span className="text-2xl">{cat.icon || '📋'}</span>
+                      <span className="text-xs font-semibold text-foreground">{cat.name}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
-                {[
-                  { slug: "overseas-football", name: "해외축구", emoji: "⚽", members: "124.5만" },
-                  { slug: "domestic-football", name: "국내축구", emoji: "🏟️", members: "45.3만" },
-                  { slug: "baseball", name: "야구", emoji: "⚾", members: "98.2만" },
-                  { slug: "basketball", name: "농구", emoji: "🏀", members: "38.7만" },
-                  { slug: "volleyball", name: "배구", emoji: "🏐", members: "22.1만" },
-                  { slug: "esports", name: "e스포츠", emoji: "🎮", members: "67.1만" },
-                  { slug: "free-board", name: "자유게시판", emoji: "💬", members: "89.4만" },
-                  { slug: "tips", name: "정보게시판", emoji: "📊", members: "34.2만" },
-                ].map((board) => (
-                  <Link
-                    key={board.slug}
-                    href={`/community/${board.slug}`}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:bg-muted/50 hover:border-primary/30 transition-colors text-center"
-                  >
-                    <span className="text-2xl">{board.emoji}</span>
-                    <span className="text-xs font-semibold text-foreground">{board.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{board.members}명</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* 실시간 인기글 게시판 */}
             <div className="bg-card border border-border rounded-lg">

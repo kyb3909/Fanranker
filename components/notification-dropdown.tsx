@@ -169,7 +169,7 @@ export function NotificationDropdown() {
         return notification.related_post_id ? `/post/${notification.related_post_id}` : '/'
       case 'expert_prediction':
         // 전문가 예측 알림은 예측 페이지로 이동
-        return '/prediction'
+        return '/games/prediction'
       default:
         return '/'
     }
