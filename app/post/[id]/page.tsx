@@ -6,6 +6,7 @@ import { PostDetailContent } from "@/components/post-detail-content"
 import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
+import { jsonLd } from "@/lib/seo"
 
 // 커뮤니티 이름 매핑
 const COMMUNITY_NAMES: Record<string, string> = {
@@ -77,10 +78,42 @@ async function fetchPost(id: string) {
   }
 }
 
+function extractDescription(content: unknown): string {
+  if (!content) return ''
+  // Supabase jsonb columns return parsed objects, not strings
+  const parsed = typeof content === 'string' ? (() => { try { return JSON.parse(content) } catch { return null } })() : content
+  if (parsed && typeof parsed === 'object') {
+    const texts: string[] = []
+    function walk(node: any) {
+      if (node.text) texts.push(node.text)
+      if (node.content) node.content.forEach(walk)
+    }
+    walk(parsed)
+    const plain = texts.join(' ').replace(/\s+/g, ' ').trim()
+    return plain.length > 160 ? plain.slice(0, 157) + '...' : plain
+  }
+  if (typeof content === 'string') {
+    const plain = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+    return plain.length > 160 ? plain.slice(0, 157) + '...' : plain
+  }
+  return ''
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const post = await fetchPost(id)
-  return { title: post?.title || "게시글" }
+  const description = extractDescription(post?.content)
+  return {
+    title: post?.title || "게시글",
+    description,
+    openGraph: {
+      type: 'article',
+      title: post?.title,
+      description,
+      images: post?.image ? [post.image] : undefined,
+    },
+    alternates: { canonical: `/post/${id}` },
+  }
 }
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -119,6 +152,18 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd({
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: postData.title,
+          datePublished: postData.created_at,
+          dateModified: postData.updated_at,
+          author: { '@type': 'Person', name: postData.profile?.nickname || '익명' },
+          ...(postData.image ? { image: postData.image } : {}),
+        })}}
+      />
 
       <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-6">
