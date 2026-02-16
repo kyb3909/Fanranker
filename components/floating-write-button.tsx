@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { Pencil } from "lucide-react"
 import { SignedIn } from "@clerk/nextjs"
 
-const HIDDEN_PATHS = ["/write", "/admin", "/sign-up", "/settings", "/games"]
+const HIDDEN_PATHS = ["/write", "/admin", "/sign-up", "/settings", "/games", "/art"]
 
 export function FloatingWriteButton() {
   const pathname = usePathname()

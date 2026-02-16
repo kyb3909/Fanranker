@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Compass, Gamepad2, User } from "lucide-react"
+import { Home, Compass, Palette, Gamepad2, User } from "lucide-react"
 
 const tabs = [
   { href: "/", icon: Home, label: "피드", match: (p: string) => p === "/" },
   { href: "/explore", icon: Compass, label: "탐색", match: (p: string) => p.startsWith("/explore") || p.startsWith("/community") },
+  { href: "/art", icon: Palette, label: "아트", match: (p: string) => p.startsWith("/art") },
   { href: "/games", icon: Gamepad2, label: "게임", match: (p: string) => p.startsWith("/games") },
   { href: "/settings", icon: User, label: "마이", match: (p: string) => p.startsWith("/settings") || p.startsWith("/profile") || p.startsWith("/my-") },
 ]

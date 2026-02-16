@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Gamepad2, Loader2 } from "lucide-react"
+import { Home, Compass, Bell, Search, Gamepad2, Palette, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -209,6 +209,12 @@ export function Header() {
           <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
             <Compass className="h-4 w-4 text-white shrink-0" />
             탐색
+          </Button>
+        </Link>
+        <Link href="/art">
+          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+            <Palette className="h-4 w-4 text-white shrink-0" />
+            아트
           </Button>
         </Link>
         <Link href="/games">
