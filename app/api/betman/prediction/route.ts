@@ -172,50 +172,6 @@ export async function POST(request: NextRequest) {
     // ===== 볼(토큰) 잔액 확인 및 차감 =====
     const ballCost = predictions.length // 예측 1개당 1볼
 
-    // 사용자의 현재 볼 잔액 조회
-    const { data: userTokens, error: tokensError } = await supabase
-      .from('user_tokens')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (tokensError && tokensError.code !== 'PGRST116') {
-      console.error('Failed to fetch user tokens:', tokensError)
-      return NextResponse.json(
-        { error: '볼 잔액 조회 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
-    }
-
-    // 토큰 레코드가 없으면 생성 (기본 10볼)
-    let currentBalance = 10
-    if (!userTokens) {
-      const { error: createError } = await supabase
-        .from('user_tokens')
-        .insert({
-          user_id: user.id,
-          token_balance: 10,
-          last_reset_at: new Date().toISOString()
-        })
-      if (createError) {
-        console.error('Failed to create user tokens:', createError)
-        return NextResponse.json(
-          { error: '볼 계정 생성 중 오류가 발생했습니다.' },
-          { status: 500 }
-        )
-      }
-    } else {
-      currentBalance = userTokens.token_balance
-    }
-
-    // 잔액 부족 체크
-    if (currentBalance < ballCost) {
-      return NextResponse.json(
-        { error: `볼이 부족합니다. 현재 잔액: ${currentBalance}볼, 필요: ${ballCost}볼` },
-        { status: 400 }
-      )
-    }
-
     // Check for existing predictions (to avoid double charging)
     const { data: existingPredictions } = await supabase
       .from('betman_predictions')
@@ -231,12 +187,33 @@ export async function POST(request: NextRequest) {
       ? Math.max(0, ballCost - previousCount) // Only charge for additional predictions
       : ballCost
 
-    // Re-check balance if we need to charge more
-    if (actualBallCost > 0 && currentBalance < actualBallCost) {
-      return NextResponse.json(
-        { error: `볼이 부족합니다. 현재 잔액: ${currentBalance}볼, 추가 필요: ${actualBallCost}볼` },
-        { status: 400 }
-      )
+    // Atomic token deduction via RPC (prevents race conditions)
+    let newBalance: number | undefined
+    if (actualBallCost > 0) {
+      const { data: spendResult, error: rpcError } = await supabase
+        .rpc('spend_tokens', {
+          p_user_id: user.id,
+          p_amount: actualBallCost,
+          p_description: `베트맨 예측 ${predictions.length}경기 (${round.year}년 ${round.round}회차)${isModifying ? ' - 수정' : ''}`,
+        })
+        .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
+
+      if (rpcError || !spendResult) {
+        console.error('Failed to deduct balls:', rpcError)
+        return NextResponse.json(
+          { error: '볼 차감 중 오류가 발생했습니다.' },
+          { status: 500 }
+        )
+      }
+
+      if (!spendResult.success) {
+        return NextResponse.json(
+          { error: '볼이 부족합니다.' },
+          { status: 400 }
+        )
+      }
+
+      newBalance = spendResult.new_balance
     }
 
     // Delete existing predictions for this user and round
@@ -248,6 +225,14 @@ export async function POST(request: NextRequest) {
         .eq('round_id', roundIds[0])
       if (deleteError) {
         console.error('Failed to delete existing predictions:', deleteError)
+        // Refund if we charged (원자적 RPC)
+        if (actualBallCost > 0) {
+          await supabase.rpc('refund_tokens', {
+            p_user_id: user.id,
+            p_amount: actualBallCost,
+            p_description: '예측 삭제 실패 환불',
+          })
+        }
         return NextResponse.json(
           { error: '기존 예측 삭제 중 오류가 발생했습니다.' },
           { status: 500 }
@@ -271,42 +256,59 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Failed to insert predictions:', insertError)
+      // Refund if we charged (원자적 RPC)
+      if (actualBallCost > 0) {
+        await supabase.rpc('refund_tokens', {
+          p_user_id: user.id,
+          p_amount: actualBallCost,
+          p_description: '예측 저장 실패 환불',
+        })
+      }
       return NextResponse.json(
         { error: '예측 저장 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
 
-    // ===== 볼 차감 (추가 비용이 있을 때만) =====
-    let newBalance = currentBalance
-    if (actualBallCost > 0) {
-      newBalance = currentBalance - actualBallCost
-      const { error: updateError } = await supabase
+    // If no cost, get current balance for response
+    if (newBalance === undefined) {
+      const { data: tokenData } = await supabase
         .from('user_tokens')
-        .update({
-          token_balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
+        .select('token_balance')
         .eq('user_id', user.id)
+        .single()
+      newBalance = tokenData?.token_balance ?? 0
+    }
 
-      if (updateError) {
-        console.error('Failed to deduct balls:', updateError)
-        // 예측은 저장됐지만 볼 차감 실패 - 로그만 남기고 진행
-      }
+    // ===== 예측 활동 피드 생성 (upsert) =====
+    try {
+      await supabase.from('prediction_activities').upsert({
+        user_id: user.id,
+        round_id: roundIds[0],
+        sport: sports[0],
+        prediction_count: predictions.length,
+      }, { onConflict: 'user_id,round_id,sport' })
+    } catch (e) {
+      console.error('Failed to upsert prediction activity:', e)
+    }
 
-      // 트랜잭션 기록
-      const { error: txError } = await supabase
-        .from('token_transactions')
-        .insert({
-          user_id: user.id,
-          transaction_type: 'prediction_spent',
-          amount: -actualBallCost,
-          balance_after: newBalance,
-          description: `베트맨 예측 ${predictions.length}경기 (${round.year}년 ${round.round}회차)${isModifying ? ' - 수정' : ''}`
-        })
-      if (txError) {
-        console.error('Failed to log prediction transaction:', txError)
+    // ===== 팔로워에게 알림 전송 =====
+    try {
+      const { data: followers } = await supabase
+        .from('user_follows')
+        .select('follower_id')
+        .eq('followed_user_id', user.id)
+
+      if (followers && followers.length > 0 && !isModifying) {
+        const notifications = followers.map(f => ({
+          user_id: f.follower_id,
+          type: 'expert_prediction',
+          actor_id: user.id,
+        }))
+        await supabase.from('notifications').insert(notifications)
       }
+    } catch (e) {
+      console.error('Failed to send follower notifications:', e)
     }
 
     return NextResponse.json({

@@ -11,6 +11,7 @@ import { UserMenu } from './user-menu'
 import { SignInMenu } from './sign-in-menu'
 import { NotificationDropdown } from './notification-dropdown'
 import { BallBalance } from './ball-balance'
+import { GoldBalance } from './gold-balance'
 
 const COMMUNITY_NAMES: Record<string, string> = {
   "overseas-football": "해외축구",
@@ -176,6 +177,7 @@ export function Header() {
           {/* Actions: 여유있는 간격 */}
           <div className="flex items-center gap-1">
             <SignedIn>
+              <GoldBalance />
               <BallBalance />
               <NotificationDropdown />
             </SignedIn>
