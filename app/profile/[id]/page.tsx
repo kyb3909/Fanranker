@@ -278,10 +278,16 @@ export default function ProfilePage() {
     }
   }
 
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+
   const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "계정삭제") return
+
     try {
       const response = await fetch("/api/profile/me", {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "계정삭제" }),
       })
 
       if (response.ok) {
@@ -566,11 +572,25 @@ export default function ProfilePage() {
                       삭제됩니다.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
+                  <div className="py-2">
+                    <Label htmlFor="delete-confirm" className="text-sm text-muted-foreground">
+                      확인을 위해 <span className="font-semibold text-destructive">계정삭제</span>를 입력해주세요
+                    </Label>
+                    <Input
+                      id="delete-confirm"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="계정삭제"
+                      className="mt-2"
+                      autoComplete="off"
+                    />
+                  </div>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>취소</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteAccount}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={deleteConfirmText !== "계정삭제"}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
                     >
                       삭제
                     </AlertDialogAction>

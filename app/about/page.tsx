@@ -5,6 +5,8 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "회사 소개",
+  description: "FanRanker 소개 - 스포츠 예측 커뮤니티 플랫폼",
+  alternates: { canonical: '/about' },
 }
 
 export default function AboutPage() {

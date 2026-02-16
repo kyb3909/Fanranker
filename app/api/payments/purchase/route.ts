@@ -116,57 +116,29 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check token balance and deduct using tokens/spend API pattern
-    // Ensure daily reset is applied first
-    await supabase.rpc('ensure_daily_token_reset', { target_user_id: userId })
-
-    // Get current balance
-    const { data: currentToken } = await supabase
-      .from('user_tokens')
-      .select('token_balance')
-      .eq('user_id', userId)
-      .single()
-
-    const currentBalance = currentToken?.token_balance || 0
-
-    if (currentBalance < prediction.price) {
-      return NextResponse.json(
-        { error: `토큰이 부족합니다. (보유: ${currentBalance}, 필요: ${prediction.price})` },
-        { status: 400 }
-      )
-    }
-
-    // Deduct tokens
-    const newBalance = currentBalance - prediction.price
-    const { error: updateError } = await supabase
-      .from('user_tokens')
-      .update({
-        token_balance: newBalance,
-        updated_at: new Date().toISOString(),
+    // Atomic token deduction via RPC (prevents race conditions)
+    const { data: spendResult, error: rpcError } = await supabase
+      .rpc('spend_tokens', {
+        p_user_id: userId,
+        p_amount: prediction.price,
+        p_description: `Premium prediction purchase: ${prediction_id}`,
+        p_related_prediction_id: prediction_id,
       })
-      .eq('user_id', userId)
+      .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
 
-    if (updateError) {
-      console.error('Failed to spend tokens:', updateError)
+    if (rpcError || !spendResult) {
+      console.error('Failed to spend tokens:', rpcError)
       return NextResponse.json(
         { error: '토큰 차감 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
 
-    // Log transaction
-    const { error: txError } = await supabase
-      .from('token_transactions')
-      .insert({
-        user_id: userId,
-        transaction_type: 'prediction_spent',
-        amount: -prediction.price,
-        balance_after: newBalance,
-        description: `Premium prediction purchase: ${prediction_id}`,
-        related_prediction_id: prediction_id,
-      })
-    if (txError) {
-      console.error('Failed to log purchase transaction:', txError)
+    if (!spendResult.success) {
+      return NextResponse.json(
+        { error: spendResult.error_message },
+        { status: 400 }
+      )
     }
 
     // Record purchase
@@ -182,14 +154,12 @@ export async function POST(request: NextRequest) {
 
     if (purchaseError) {
       console.error('Failed to record purchase:', purchaseError)
-      // Refund: 구매 기록 실패 시 토큰 환불
-      await supabase
-        .from('user_tokens')
-        .update({
-          token_balance: currentBalance,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId)
+      // Refund: 구매 기록 실패 시 토큰 환불 (원자적 RPC)
+      await supabase.rpc('refund_tokens', {
+        p_user_id: userId,
+        p_amount: prediction.price,
+        p_description: '구매 기록 실패 환불',
+      })
       return NextResponse.json(
         { error: '구매 기록 생성 중 오류가 발생했습니다.' },
         { status: 500 }
@@ -200,7 +170,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: '구매가 완료되었습니다.',
       purchase,
-      new_balance: newBalance,
+      new_balance: spendResult.new_balance,
     })
   } catch (error) {
     console.error('API error:', error)

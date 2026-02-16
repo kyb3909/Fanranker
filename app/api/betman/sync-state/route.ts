@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { verifyCronSecret } from '@/lib/cron-auth'
 
 /**
  * GET /api/betman/sync-state
@@ -11,11 +12,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authError = verifyCronSecret(request)
+    if (authError) return authError
 
     const supabase = createServiceRoleClient()
 
@@ -68,11 +66,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authError = verifyCronSecret(request)
+    if (authError) return authError
 
     const body = await request.json().catch(() => ({}))
 

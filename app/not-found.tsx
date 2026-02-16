@@ -4,6 +4,7 @@ import { Header } from "@/components/header"
 
 export const metadata: Metadata = {
   title: "페이지를 찾을 수 없습니다",
+  robots: { index: false, follow: false },
 }
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

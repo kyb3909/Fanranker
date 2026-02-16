@@ -40,78 +40,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ensure daily reset is applied first
-    await supabase.rpc('ensure_daily_token_reset', {
-      target_user_id: userId,
-    })
-
-    // Get current balance with row-level locking (FOR UPDATE)
-    // Note: Supabase doesn't directly support FOR UPDATE, so we'll use a transaction via RPC
-    const { data: currentToken, error: fetchError } = await supabase
-      .from('user_tokens')
-      .select('token_balance')
-      .eq('user_id', userId)
-      .single()
-
-    if (fetchError || !currentToken) {
-      return NextResponse.json(
-        { error: '토큰 정보를 찾을 수 없습니다.' },
-        { status: 404 }
-      )
-    }
-
-    const currentBalance = currentToken.token_balance
-
-    // Check if user has enough tokens
-    if (currentBalance < amount) {
-      return NextResponse.json(
-        { error: '토큰이 부족합니다.', balance: currentBalance, required: amount },
-        { status: 400 }
-      )
-    }
-
-    // Calculate new balance
-    const newBalance = currentBalance - amount
-
-    // Update token balance
-    const { data: updatedToken, error: updateError } = await supabase
-      .from('user_tokens')
-      .update({
-        token_balance: newBalance,
-        updated_at: new Date().toISOString(),
+    // Atomic token deduction via RPC (prevents race conditions)
+    const { data: result, error: rpcError } = await supabase
+      .rpc('spend_tokens', {
+        p_user_id: userId,
+        p_amount: amount,
+        p_description: description || null,
+        p_related_prediction_id: related_prediction_id || null,
       })
-      .eq('user_id', userId)
-      .select('token_balance')
-      .single()
+      .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
 
-    if (updateError) {
-      console.error('Failed to update token balance:', updateError)
+    if (rpcError || !result) {
+      console.error('Failed to spend tokens:', rpcError)
       return NextResponse.json(
         { error: '토큰 차감 중 오류가 발생했습니다.' },
         { status: 500 }
       )
     }
 
-    // Log transaction
-    const { error: transactionError } = await supabase
-      .from('token_transactions')
-      .insert({
-        user_id: userId,
-        transaction_type: 'prediction_spent',
-        amount: -amount, // Negative for spending
-        balance_after: newBalance,
-        description: description || `토큰 ${amount}개 사용`,
-        related_prediction_id: related_prediction_id || null,
-      })
-
-    if (transactionError) {
-      console.error('Failed to log transaction:', transactionError)
-      // Don't fail the request if transaction logging fails, but log it
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error_message, balance: result.new_balance, required: amount },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json({
       success: true,
-      balance: updatedToken.token_balance,
+      balance: result.new_balance,
       spent: amount,
     })
   } catch (error) {

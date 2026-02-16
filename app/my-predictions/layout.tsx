@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "내 예측",
+  robots: { index: false, follow: false },
 }
 
 export default function MyPredictionsLayout({ children }: { children: React.ReactNode }) {

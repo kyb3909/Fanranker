@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/daily-token-reset",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/betman-sync",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/commission-auto-release",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

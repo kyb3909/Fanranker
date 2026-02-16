@@ -1,0 +1,79 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { currentUser } from '@clerk/nextjs/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await currentUser()
+    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+
+    const { id } = await params
+    const supabase = createServiceRoleClient()
+
+    const { data: order } = await supabase
+      .from('commission_orders')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (!order) return NextResponse.json({ error: '주문을 찾을 수 없습니다.' }, { status: 404 })
+    if (order.artist_id !== user.id) return NextResponse.json({ error: '작가만 거절할 수 있습니다.' }, { status: 403 })
+    if (order.status !== 'pending') return NextResponse.json({ error: '대기 중인 주문만 거절할 수 있습니다.' }, { status: 400 })
+
+    const body = await request.json().catch(() => ({}))
+
+    // 100% refund
+    const { data: refundResult } = await supabase
+      .rpc('escrow_refund_gold', { p_order_id: id, p_refund_percent: 100 })
+      .single()
+
+    if (!refundResult?.success) {
+      return NextResponse.json({ error: '환불 처리 실패' }, { status: 500 })
+    }
+
+    // Update order
+    await supabase
+      .from('commission_orders')
+      .update({
+        cancelled_by: user.id,
+        cancel_reason: body.reason || '작가 거절',
+      })
+      .eq('id', id)
+
+    // Decrement used_slots
+    const { data: pkg } = await supabase
+      .from('commission_packages')
+      .select('used_slots')
+      .eq('id', order.package_id)
+      .single()
+
+    if (pkg && pkg.used_slots > 0) {
+      await supabase
+        .from('commission_packages')
+        .update({ used_slots: pkg.used_slots - 1 })
+        .eq('id', order.package_id)
+    }
+
+    // Notify client
+    await supabase.from('notifications').insert({
+      user_id: order.client_id,
+      type: 'commission_rejected',
+      actor_id: user.id,
+    })
+
+    await supabase.from('commission_messages').insert({
+      order_id: id,
+      sender_id: 'system',
+      message_type: 'system',
+      content: `작가가 주문을 거절했습니다. 전액 환불됩니다.${body.reason ? ` (사유: ${body.reason})` : ''}`,
+    })
+
+    return NextResponse.json({ success: true, refunded: refundResult.refunded })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+  }
+}

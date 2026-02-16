@@ -276,7 +276,9 @@ export default function ArtworkDetailPage({ params }: { params: Promise<{ id: st
             </div>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1 h-8 text-xs">팔로우</Button>
-              <Button size="sm" variant="outline" className="flex-1 h-8 text-xs">커미션 문의</Button>
+              <Link href={`/art/commissions?artist_id=${artwork.artist}`}>
+                <Button size="sm" variant="outline" className="flex-1 h-8 text-xs w-full">커미션 문의</Button>
+              </Link>
             </div>
           </div>
 

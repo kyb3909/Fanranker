@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Header } from "@/components/header"
+import { NewsTicker } from "@/components/news-ticker"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
 import { createServerAnonClient } from "@/lib/supabase"
@@ -228,6 +229,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <NewsTicker communitySlug={slug} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd({

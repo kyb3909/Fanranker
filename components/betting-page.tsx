@@ -594,8 +594,8 @@ export default function BettingPage() {
               onClick={() => setActiveTab(tab.id as "betting" | "ranking" | "mypage")}
               className={`flex items-center justify-center gap-2 flex-1 px-4 py-3 text-[14px] font-semibold transition-all border-b-2 -mb-[1px] ${
                 activeTab === tab.id
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
             >
               {tab.label}
@@ -606,16 +606,16 @@ export default function BettingPage() {
         {/* 2행: 종목/필터 탭 */}
         {activeTab === "betting" && (
           <>
-            <div className="flex border-b border-border">
+            <div className="flex overflow-x-auto scrollbar-none border-b border-border">
               {SPORT_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
                   disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
-                  className={`flex items-center justify-center gap-1 flex-1 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
+                  className={`flex items-center justify-center gap-1 flex-1 min-w-0 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
                     sportFilter === tab.id
-                      ? "border-primary text-primary bg-primary/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   } ${selectedSport && tab.id !== "all" && tab.id !== selectedSport ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <span className="text-sm">{tab.icon}</span>
@@ -634,7 +634,7 @@ export default function BettingPage() {
         {activeTab === "ranking" && (
           <>
             {/* 종목 필터 */}
-            <div className="flex border-b border-border">
+            <div className="flex overflow-x-auto scrollbar-none border-b border-border">
               {[
                 { id: "전체", label: "전체", icon: "🎯" },
                 { id: "축구", label: "축구", icon: "⚽" },
@@ -645,10 +645,10 @@ export default function BettingPage() {
                 <button
                   key={tab.id}
                   onClick={() => setRankingSportFilter(tab.id)}
-                  className={`flex items-center justify-center gap-1 flex-1 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
+                  className={`flex items-center justify-center gap-1 flex-1 min-w-0 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
                     rankingSportFilter === tab.id
-                      ? "border-primary text-primary bg-primary/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   }`}
                 >
                   <span className="text-sm">{tab.icon}</span>
@@ -668,8 +668,8 @@ export default function BettingPage() {
                   onClick={() => setRankingFilter(filter.id as "profit" | "winRate" | "roi")}
                   className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-2 text-[12px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
                     rankingFilter === filter.id
-                      ? "border-primary text-primary bg-primary/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   }`}
                 >
                   <filter.icon className="w-3.5 h-3.5 shrink-0" />
@@ -693,8 +693,8 @@ export default function BettingPage() {
                 onClick={() => setMyPageTab(tab.id as "predictions" | "stats" | "gold" | "profile")}
                 className={`flex items-center justify-center flex-1 px-4 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
                   myPageTab === tab.id
-                    ? "border-primary text-primary bg-primary/5"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
               >
                 {tab.label}

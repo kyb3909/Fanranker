@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { updateUserSportStats } from '@/lib/betman/stats'
+import { verifyCronSecret } from '@/lib/cron-auth'
 
 /**
  * POST /api/betman/stats/recalculate
@@ -15,12 +16,8 @@ import { updateUserSportStats } from '@/lib/betman/stats'
  */
 export async function POST(request: NextRequest) {
   try {
-    // 인증: CRON_SECRET으로 내부 호출만 허용
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const authError = verifyCronSecret(request)
+    if (authError) return authError
 
     const supabase = createServiceRoleClient()
 

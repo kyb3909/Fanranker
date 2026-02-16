@@ -35,6 +35,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    if (query.length > 100) {
+      return NextResponse.json(
+        { error: '검색어는 100자 이하여야 합니다.' },
+        { status: 400 }
+      )
+    }
+
     const searchQuery = query.trim()
 
     let postsQuery = supabase
@@ -74,8 +81,12 @@ export async function GET(request: NextRequest) {
         break
 
       case 'id':
-        // ID로 검색: posts 테이블에서 id로 검색 (UUID 형식)
-        postsQuery = postsQuery.ilike('id', `%${searchQuery}%`)
+        // ID로 검색: UUID 형식 정확 매치
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(searchQuery)) {
+          return NextResponse.json({ posts: [], profiles: [] })
+        }
+        postsQuery = postsQuery.eq('id', searchQuery)
         break
 
       case 'title':

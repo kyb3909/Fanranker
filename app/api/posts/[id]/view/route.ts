@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { createAnonClient } from '@/lib/supabase/server'
 
 /**
@@ -13,15 +14,16 @@ export async function POST(
     const { id } = await params
     const supabase = createAnonClient()
 
-    // IP 주소 가져오기
+    // IP 주소를 SHA-256 해시하여 개인정보 보호 (PIPA 준수)
     const forwarded = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
-    const ipAddress = forwarded?.split(',')[0]?.trim() || realIp || 'unknown'
+    const rawIp = forwarded?.split(',')[0]?.trim() || realIp || 'unknown'
+    const ipHash = createHash('sha256').update(rawIp).digest('hex')
 
-    // RPC 함수를 사용하여 IP 기반 제한과 함께 조회수 증가
+    // RPC 함수를 사용하여 IP 해시 기반 제한과 함께 조회수 증가
     const { data, error } = await supabase.rpc('increment_post_view_count', {
       post_id_param: id,
-      ip_address_param: ipAddress,
+      ip_address_param: ipHash,
     })
 
     if (error) {

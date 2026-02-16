@@ -18,31 +18,68 @@
 
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
 // Define protected routes
 const isAdminRoute = createRouteMatcher(['/admin(.*)'])
 
+// Sensitive endpoints that need strict rate limiting
+const STRICT_PATHS = [
+  '/api/tokens/spend',
+  '/api/payments/purchase',
+  '/api/predictions/settle',
+  '/api/commissions/orders',
+]
+
+function isStrictPath(pathname: string): boolean {
+  return STRICT_PATHS.some(p => pathname.startsWith(p))
+}
+
+function isDeleteProfile(req: NextRequest): boolean {
+  return req.nextUrl.pathname === '/api/profile/me' && req.method === 'DELETE'
+}
+
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   try {
+    // Rate limiting for API routes
+    if (req.nextUrl.pathname.startsWith('/api/')) {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || req.headers.get('x-real-ip')
+        || 'unknown'
+
+      const isStrict = isStrictPath(req.nextUrl.pathname) || isDeleteProfile(req)
+      const preset = isStrict ? RATE_LIMITS.STRICT : RATE_LIMITS.STANDARD
+      const key = `${ip}:${req.nextUrl.pathname}`
+
+      const result = rateLimit(key, preset.limit, preset.windowMs)
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': '60',
+              'X-RateLimit-Limit': String(preset.limit),
+              'X-RateLimit-Remaining': '0',
+            },
+          }
+        )
+      }
+    }
+
     // Protect admin routes - require authentication (페이지 라우트만)
     if (isAdminRoute(req) && !req.nextUrl.pathname.startsWith('/api')) {
       const { userId } = await auth()
-      
+
       if (!userId) {
         const signInUrl = new URL('/sign-up', req.url)
         signInUrl.searchParams.set('redirect_url', req.url)
         return NextResponse.redirect(signInUrl)
       }
     }
-
-    // Note: API routes should use currentUser() instead of auth()
-    // This middleware only handles page route protection
-    // Supabase Third-Party Auth with Clerk doesn't require
-    // Supabase session management in middleware. Authentication is handled
-    // via Clerk tokens passed to Supabase client in client/server code.
   } catch (error) {
     console.error('Middleware error:', error)
-    // Return a proper response instead of throwing
     return NextResponse.next()
   }
 })

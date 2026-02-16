@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { isAdmin } from '@/lib/supabase/admin'
 
 /**
  * Helper function to update user stats after prediction settlement
@@ -95,10 +96,7 @@ async function updateUserStats(
  */
 export async function POST(request: NextRequest) {
   try {
-    // Optional: Check if user is admin (for manual settlement)
-    // For now, allow authenticated users (or make it admin-only later)
     const user = await currentUser()
-
     if (!user) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
@@ -106,7 +104,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = user.id
+    // Admin-only: settlement affects all users' points and stats
+    const admin = await isAdmin()
+    if (!admin) {
+      return NextResponse.json(
+        { error: '관리자 권한이 필요합니다.' },
+        { status: 403 }
+      )
+    }
 
     const supabase = createServiceRoleClient()
     const body = await request.json()
@@ -323,6 +328,14 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const admin = await isAdmin()
+    if (!admin) {
+      return NextResponse.json(
+        { error: '관리자 권한이 필요합니다.' },
+        { status: 403 }
+      )
+    }
+
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const matchId = searchParams.get('match_id')

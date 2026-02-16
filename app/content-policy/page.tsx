@@ -5,6 +5,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "게시물 운영정책",
+  alternates: { canonical: '/content-policy' },
 }
 
 export default function ContentPolicyPage() {

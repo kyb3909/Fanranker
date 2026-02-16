@@ -31,7 +31,7 @@ export default function GamesLayout({ children }: { children: React.ReactNode })
       <GamesTabNav />
       <main className="mx-auto max-w-[1280px] px-4 sm:px-6 py-5 sm:py-6">
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
-          <div className="col-span-12 lg:col-span-9">
+          <div className="col-span-12 lg:col-span-9 min-w-0 overflow-hidden">
             {children}
           </div>
           <aside className="hidden lg:block col-span-3">

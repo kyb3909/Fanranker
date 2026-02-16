@@ -108,19 +108,19 @@ export default function ExplorePage() {
           <div className="col-span-12 xl:col-span-9 space-y-6">
             {/* 게시판 둘러보기 */}
             {categories.length > 0 && (
-              <div className="bg-card border border-border rounded-lg">
-                <div className="p-4 border-b border-border">
-                  <h2 className="font-bold text-lg text-primary">게시판 둘러보기</h2>
+              <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 rounded-xl overflow-hidden shadow-lg">
+                <div className="px-4 py-3">
+                  <h2 className="font-bold text-lg text-white">게시판 둘러보기</h2>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 pb-4">
                   {categories.map((cat) => (
                     <Link
                       key={cat.slug}
                       href={`/community/${cat.slug}`}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:bg-muted/50 hover:border-primary/30 transition-colors text-center"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
                     >
-                      <span className="text-2xl">{cat.icon || '📋'}</span>
-                      <span className="text-xs font-semibold text-foreground">{cat.name}</span>
+                      <span className="text-3xl drop-shadow-sm">{cat.icon || '📋'}</span>
+                      <span className="text-xs font-bold text-gray-800">{cat.name}</span>
                     </Link>
                   ))}
                 </div>

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, user_id, nickname, avatar_url, temperature, role, notification_settings, created_at, updated_at')
       .eq('user_id', userId)
       .single()
 
@@ -109,6 +109,17 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
+    // avatar_url 도메인 검증
+    if (avatar_url !== undefined && avatar_url !== null) {
+      const { isAllowedImageUrl } = await import('@/lib/validate-image-url')
+      if (!isAllowedImageUrl(avatar_url)) {
+        return NextResponse.json(
+          { error: '허용되지 않은 이미지 URL입니다.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Build update object
     const updateData: any = {}
     if (nickname !== undefined) updateData.nickname = nickname.trim()
@@ -136,7 +147,7 @@ export async function PATCH(request: NextRequest) {
           avatar_url: updateData.avatar_url || user.imageUrl || null,
           ...(notification_settings !== undefined ? { notification_settings: notification_settings } : {}),
         })
-        .select()
+        .select('id, user_id, nickname, avatar_url, temperature, role, notification_settings, created_at, updated_at')
         .single()
 
       profile = newProfile
@@ -174,7 +185,7 @@ export async function PATCH(request: NextRequest) {
         .from('profiles')
         .update(updateData)
         .eq('user_id', userId)
-        .select()
+        .select('id, user_id, nickname, avatar_url, temperature, role, notification_settings, created_at, updated_at')
         .single()
 
       profile = updatedProfile
@@ -221,6 +232,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
         { status: 401 }
+      )
+    }
+
+    // Require explicit confirmation to prevent CSRF and accidental deletion
+    const body = await request.json().catch(() => ({}))
+    if (body.confirm !== '계정삭제') {
+      return NextResponse.json(
+        { error: '계정 삭제를 확인하려면 "계정삭제"를 입력해주세요.' },
+        { status: 400 }
       )
     }
 

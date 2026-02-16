@@ -199,9 +199,9 @@ export default function ArtPage() {
           <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 border border-red-700/30 rounded-xl p-4">
             <h3 className="font-bold text-sm text-white mb-1.5">커미션 의뢰하기</h3>
             <p className="text-xs text-red-200 mb-3">마음에 드는 작가에게 직접 작품을 의뢰해보세요.</p>
-            <button className="w-full py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-colors">
+            <Link href="/art/commissions" className="block w-full py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-colors text-center">
               커미션 마켓 둘러보기
-            </button>
+            </Link>
           </div>
 
           {/* Popular Tags */}

@@ -241,24 +241,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 이미지 URL 유효성 검사 (base64는 거부)
+    // 이미지 URL 유효성 검사 (허용된 도메인만)
     let imageUrl = null
     if (image) {
-      if (image.startsWith('data:image/')) {
-        // base64 데이터 URL은 거부
+      const { isAllowedImageUrl } = await import('@/lib/validate-image-url')
+      if (!isAllowedImageUrl(image)) {
         return NextResponse.json(
-          { error: '이미지는 Supabase Storage URL만 사용할 수 있습니다. 이미지를 다시 업로드해주세요.' },
-          { status: 400 }
-        )
-      } else if (image.startsWith('http://') || image.startsWith('https://')) {
-        imageUrl = image
-      } else {
-        // 잘못된 형식
-        return NextResponse.json(
-          { error: '잘못된 이미지 URL 형식입니다.' },
+          { error: '허용되지 않은 이미지 URL입니다. 이미지를 다시 업로드해주세요.' },
           { status: 400 }
         )
       }
+      imageUrl = image
     }
 
     // Supabase에 글 저장

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sanitizeEmbedHtml } from '@/lib/sanitize-embed'
 
 /**
  * Normalized oEmbed response structure
@@ -186,9 +187,25 @@ export async function GET(request: NextRequest) {
     const url = searchParams.get('url')
     const includeHtml = searchParams.get('includeHtml') === 'true' // html 포함 여부
 
-    if (!url) {
+    if (!url || url.length > 2048) {
       return NextResponse.json(
-        { error: 'URL parameter is required' },
+        { error: 'URL parameter is required (max 2048 chars)' },
+        { status: 400 }
+      )
+    }
+
+    // Validate URL format
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        return NextResponse.json(
+          { error: 'Invalid URL protocol' },
+          { status: 400 }
+        )
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid URL format' },
         { status: 400 }
       )
     }
@@ -225,11 +242,14 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.error(`oEmbed fetch error for ${provider}:`, error)
       return NextResponse.json(
-        { 
-          error: `Failed to fetch oEmbed data: ${error instanceof Error ? error.message : 'Unknown error'}` 
-        },
+        { error: '임베드 데이터를 가져오는 중 오류가 발생했습니다.' },
         { status: 500 }
       )
+    }
+
+    // Sanitize HTML to prevent XSS
+    if (oembedData.html) {
+      oembedData.html = sanitizeEmbedHtml(oembedData.html, provider)
     }
 
     return NextResponse.json(oembedData)

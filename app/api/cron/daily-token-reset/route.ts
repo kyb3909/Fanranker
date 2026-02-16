@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
+import { verifyCronSecret } from '@/lib/cron-auth'
 
 /**
  * POST /api/cron/daily-token-reset
@@ -12,16 +13,8 @@ import { createAnonClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    // Optional: Verify cron secret (from Vercel Cron or external scheduler)
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const authError = verifyCronSecret(request)
+    if (authError) return authError
 
     const supabase = createAnonClient()
 
