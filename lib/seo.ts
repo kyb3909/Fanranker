@@ -1,12 +1,13 @@
+import { SITE_MODE, SITE_META } from './site-config'
+
+const meta = SITE_META[SITE_MODE]
+
 export const SITE_CONFIG = {
-  name: 'FanRanker',
+  name: meta.name,
   url: process.env.NEXT_PUBLIC_SITE_URL || 'https://community-app-brown.vercel.app',
-  description: '스포츠 승부예측과 커뮤니티를 한곳에서. FanRanker',
+  description: meta.description,
   locale: 'ko_KR',
-  keywords: [
-    '스포츠 예측', '승부예측', '프로토', '축구', '야구',
-    '농구', '배구', 'e스포츠', '커뮤니티',
-  ],
+  keywords: [...meta.keywords],
 }
 
 /** JSON-LD 직렬화 (XSS 방지용 < 이스케이프) */

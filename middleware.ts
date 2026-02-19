@@ -19,6 +19,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+import { isRouteAllowed } from '@/lib/site-config'
 
 // Define protected routes
 const isAdminRoute = createRouteMatcher(['/admin(.*)'])
@@ -29,6 +30,10 @@ const STRICT_PATHS = [
   '/api/payments/purchase',
   '/api/predictions/settle',
   '/api/commissions/orders',
+  '/api/upload/image',
+  '/api/posts',
+  '/api/votes',
+  '/api/follow',
 ]
 
 function isStrictPath(pathname: string): boolean {
@@ -41,6 +46,17 @@ function isDeleteProfile(req: NextRequest): boolean {
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   try {
+    // 사이트 모드 라우트 차단
+    if (!isRouteAllowed(req.nextUrl.pathname)) {
+      if (req.nextUrl.pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: '이 사이트에서는 사용할 수 없는 기능입니다.' },
+          { status: 404 }
+        )
+      }
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+
     // Rate limiting for API routes
     if (req.nextUrl.pathname.startsWith('/api/')) {
       const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()

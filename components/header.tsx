@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Gamepad2, Palette, Loader2 } from "lucide-react"
+import { Home, Compass, Bell, Search, Gamepad2, Palette, Loader2, Trophy } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -12,6 +12,9 @@ import { SignInMenu } from './sign-in-menu'
 import { NotificationDropdown } from './notification-dropdown'
 import { BallBalance } from './ball-balance'
 import { GoldBalance } from './gold-balance'
+import { IdentitySwitcher } from './identity-switcher'
+import { useIdentity } from './identity-provider'
+import { IS_SPORTS, IS_CULTURE } from '@/lib/site-config'
 
 const COMMUNITY_NAMES: Record<string, string> = {
   "overseas-football": "해외축구",
@@ -34,6 +37,8 @@ interface SearchResultPost {
 
 export function Header() {
   const router = useRouter()
+  const { identity } = useIdentity()
+  const showPrediction = identity === 'sports' || identity === 'hybrid'
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResultPost[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -106,12 +111,13 @@ export function Header() {
           </div>
 
           {/* Search: 좁은 폭, 헤더에서 바로 검색 */}
-          <div className="hidden sm:block relative shrink-0 w-full max-w-[400px] min-w-[280px] mx-4" ref={containerRef}>
+          <div className="hidden sm:block relative shrink-0 w-full max-w-[400px] min-w-0 mx-4" ref={containerRef}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
                 placeholder="검색..."
+                aria-label="게시글 검색"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
@@ -126,8 +132,11 @@ export function Header() {
               )}
             </div>
             {/* 검색 결과 드롭다운 */}
+            <div className="sr-only" aria-live="polite" aria-atomic="true">
+              {searchLoading ? '검색 중...' : searchedOnce && !searchLoading ? `${searchResults.length}개의 검색 결과` : ''}
+            </div>
             {dropdownOpen && (searchLoading || searchResults.length > 0 || searchedOnce) && (
-              <div className="absolute top-full left-0 right-0 mt-1 py-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-[320px] overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 py-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-[320px] overflow-y-auto" role="listbox" aria-label="검색 결과">
                 {searchLoading ? (
                   <div className="flex items-center justify-center py-6 text-muted-foreground text-sm">
                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -200,31 +209,47 @@ export function Header() {
       </div>
 
       {/* 메뉴바: 좌우 폭 끝까지 (피드, 탐색, 승부 예측) */}
-      <nav className="flex items-center justify-center gap-1 border-t border-primary/20 bg-primary px-1 pt-2 pb-1.5 w-full overflow-x-auto scrollbar-none" aria-label="주요 메뉴">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-            <Home className="h-4 w-4 text-white shrink-0" />
-            피드
-          </Button>
-        </Link>
-        <Link href="/explore">
-          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-            <Compass className="h-4 w-4 text-white shrink-0" />
-            탐색
-          </Button>
-        </Link>
-        <Link href="/art">
-          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-            <Palette className="h-4 w-4 text-white shrink-0" />
-            아트
-          </Button>
-        </Link>
-        <Link href="/games">
-          <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-            <Gamepad2 className="h-4 w-4 text-white shrink-0" />
-            게임
-          </Button>
-        </Link>
+      <nav className="grid grid-cols-[1fr_auto_1fr] items-center border-t border-primary/20 bg-primary px-2 pt-2 pb-1.5 w-full" aria-label="주요 메뉴">
+        <div />
+        <div className="flex items-center justify-center gap-1">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+              <Home className="h-4 w-4 text-white shrink-0" />
+              피드
+            </Button>
+          </Link>
+          <Link href="/explore">
+            <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+              <Compass className="h-4 w-4 text-white shrink-0" />
+              탐색
+            </Button>
+          </Link>
+          {IS_CULTURE && (
+            <Link href="/art">
+              <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+                <Palette className="h-4 w-4 text-white shrink-0" />
+                아트
+              </Button>
+            </Link>
+          )}
+          <Link href="/games">
+            <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+              <Gamepad2 className="h-4 w-4 text-white shrink-0" />
+              게임
+            </Button>
+          </Link>
+          {IS_SPORTS && showPrediction && (
+            <Link href="/?view=prediction">
+              <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
+                <Trophy className="h-4 w-4 text-white shrink-0" />
+                승부 예측
+              </Button>
+            </Link>
+          )}
+        </div>
+        <div className="flex justify-end pr-1">
+          <IdentitySwitcher />
+        </div>
       </nav>
     </header>
   )

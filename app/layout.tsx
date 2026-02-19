@@ -7,6 +7,7 @@ import { ClerkErrorBoundary } from '@/components/clerk-error-boundary'
 import { ProfileSync } from '@/components/profile-sync'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { FloatingWriteButton } from '@/components/floating-write-button'
+import { IdentityProvider } from '@/components/identity-provider'
 import { SITE_CONFIG, jsonLd } from '@/lib/seo'
 import "./globals.css"
 
@@ -56,23 +57,23 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    template: "%s | FanRanker",
-    default: "FanRanker - 스포츠 예측 커뮤니티",
+    template: `%s | ${SITE_CONFIG.name}`,
+    default: SITE_CONFIG.description,
   },
   description: SITE_CONFIG.description,
   keywords: SITE_CONFIG.keywords,
   openGraph: {
     type: 'website',
-    siteName: 'FanRanker',
+    siteName: SITE_CONFIG.name,
     locale: 'ko_KR',
-    title: 'FanRanker - 스포츠 예측 커뮤니티',
+    title: SITE_CONFIG.description,
     description: SITE_CONFIG.description,
     url: '/',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'FanRanker' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: SITE_CONFIG.name }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FanRanker - 스포츠 예측 커뮤니티',
+    title: SITE_CONFIG.description,
     description: SITE_CONFIG.description,
     images: ['/og-image.png'],
   },
@@ -125,7 +126,7 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
     <ClerkProvider localization={koLocalization}>
-      <html lang="ko" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <html lang="ko" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
         <head>
           {/* DNS Prefetch & Preconnect: 외부 리소스 로딩 최적화 */}
           <link rel="dns-prefetch" href="https://i.ytimg.com" />
@@ -143,12 +144,16 @@ export default function RootLayout({
           )}
         </head>
         <body className={`font-sans antialiased pb-14 sm:pb-0`}>
+          {/* FOIC prevention: apply identity attribute before paint */}
+          <script
+            dangerouslySetInnerHTML={{ __html: `(function(){try{var i=localStorage.getItem('fanranker-identity');if(i==='culture'||i==='hybrid')document.documentElement.setAttribute('data-identity',i)}catch(e){}})()` }}
+          />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: jsonLd({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
-              name: 'FanRanker',
+              name: SITE_CONFIG.name,
               url: SITE_CONFIG.url,
               description: SITE_CONFIG.description,
               inLanguage: 'ko',
@@ -170,7 +175,9 @@ export default function RootLayout({
             본문으로 건너뛰기
           </a>
           <ProfileSync />
-          {children}
+          <IdentityProvider>
+            {children}
+          </IdentityProvider>
           <FloatingWriteButton />
           <MobileTabBar />
           <Analytics />
