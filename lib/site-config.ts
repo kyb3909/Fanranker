@@ -1,4 +1,4 @@
-// lib/site-config.ts
+// lib/site-config.ts - 사이트 모드 분기 설정
 
 export type SiteMode = "sports" | "culture"
 
