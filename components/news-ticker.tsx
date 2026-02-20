@@ -1,18 +1,32 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Zap, Trophy, Radio } from 'lucide-react'
+import { Zap, Trophy } from 'lucide-react'
 import { NewsTalkBoard } from './news-talk-board'
 
 export type TickerTag = 'live' | 'breaking' | 'result'
+
+export interface TickerItemDetail {
+  summary: string[]
+  source: string
+  sourceUrl: string
+  redditUrl?: string
+  participants: number
+  score?: number
+  category?: string
+  importance?: number
+  postedAt?: string
+  originalTitle?: string
+}
 
 export interface TickerItem {
   id: string
   tag: TickerTag
   text: string
+  detail?: TickerItemDetail
 }
 
-// 게시판별 틱커 데이터 (목업)
+// 게시판별 틱커 데이터 (폴백 목업)
 const COMMUNITY_TICKER_ITEMS: Record<string, TickerItem[]> = {
   'overseas-football': [
     { id: 'of-1', tag: 'live', text: '손흥민 10호골 달성! EPL 득점 랭킹 5위 등극' },
@@ -100,8 +114,38 @@ interface NewsTickerProps {
 export function NewsTicker({ communitySlug }: NewsTickerProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [selectedItem, setSelectedItem] = useState<TickerItem | null>(null)
+  const [tickerItems, setTickerItems] = useState<TickerItem[]>([])
 
-  const tickerItems = COMMUNITY_TICKER_ITEMS[communitySlug] || []
+  // Fetch real data from API, fallback to mock
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchTicker() {
+      try {
+        const res = await fetch(`/api/community/${communitySlug}/ticker`)
+        if (!res.ok) throw new Error('API error')
+        const data = await res.json()
+        if (!cancelled && data.items && data.items.length > 0) {
+          setTickerItems(data.items)
+          return
+        }
+      } catch {
+        // silently fallback
+      }
+      // Fallback to mock data
+      if (!cancelled) {
+        setTickerItems(COMMUNITY_TICKER_ITEMS[communitySlug] || [])
+      }
+    }
+
+    fetchTicker()
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchTicker, 5 * 60 * 1000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [communitySlug])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -135,7 +179,7 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
       container?.removeEventListener('mouseenter', pause)
       container?.removeEventListener('mouseleave', resume)
     }
-  }, [tickerItems.length])
+  }, [tickerItems])
 
   if (tickerItems.length === 0) return null
 

@@ -6,10 +6,24 @@ import { Button } from '@/components/ui/button'
 
 type TickerTag = 'live' | 'breaking' | 'result'
 
+interface ItemDetail {
+  summary: string[]
+  source: string
+  sourceUrl: string
+  redditUrl?: string
+  participants: number
+  score?: number
+  category?: string
+  importance?: number
+  postedAt?: string
+  originalTitle?: string
+}
+
 interface TalkBoardItem {
   id: string
   tag: TickerTag
   text: string
+  detail?: ItemDetail
 }
 
 interface Comment {
@@ -395,7 +409,7 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
   if (!isOpen) return null
 
   const tag = TAG_CONFIG[item.tag]
-  const details = NEWS_DETAILS[item.id]
+  const details = item.detail || NEWS_DETAILS[item.id]
 
   return (
     <div
@@ -442,10 +456,15 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 pt-3 border-t border-border">
-                <a href={details.sourceUrl} className="text-[13px] text-primary hover:text-primary/80 transition-colors font-semibold">
+              <div className="mt-4 pt-3 border-t border-border flex items-center gap-4">
+                <a href={details.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-primary hover:text-primary/80 transition-colors font-semibold">
                   원문 보기 &rarr;
                 </a>
+                {details.redditUrl && details.redditUrl !== details.sourceUrl && (
+                  <a href={details.redditUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+                    Reddit 댓글 &rarr;
+                  </a>
+                )}
               </div>
             </div>
           )}
