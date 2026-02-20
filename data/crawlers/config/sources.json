@@ -1,0 +1,26 @@
+[
+  {
+    "id": "reddit-soccer",
+    "type": "reddit",
+    "subreddit": "soccer",
+    "community_slug": "overseas-football",
+    "interval_hours": 2,
+    "prompt_category": "해외축구",
+    "min_score": 50,
+    "max_articles": 10,
+    "max_daily_runs": 12,
+    "enabled": true
+  },
+  {
+    "id": "reddit-movies",
+    "type": "reddit",
+    "subreddit": "movies",
+    "community_slug": "movies",
+    "interval_hours": 2,
+    "prompt_category": "영화",
+    "min_score": 50,
+    "max_articles": 10,
+    "max_daily_runs": 12,
+    "enabled": true
+  }
+]

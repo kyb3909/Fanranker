@@ -28,6 +28,7 @@ const COMMUNITIES = [
   { slug: "domestic-football", name: "국내축구" },
   { slug: "volleyball", name: "배구" },
   { slug: "tips", name: "정보게시판" },
+  { slug: "movies", name: "영화" },
 ]
 
 function WriteContent() {

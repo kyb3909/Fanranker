@@ -75,6 +75,11 @@ const COMMUNITY_TICKER_ITEMS: Record<string, TickerItem[]> = {
     { id: 'tp-2', tag: 'live', text: '오늘의 분석: KBO 시범경기 주목 포인트' },
     { id: 'tp-3', tag: 'result', text: '지난주 적중률 TOP 분석가 발표' },
   ],
+  'movies': [
+    { id: 'mv-1', tag: 'breaking', text: '아카데미 시상식 후보작 발표, 올해의 영화는?' },
+    { id: 'mv-2', tag: 'live', text: '마블 신작 예고편 공개, 팬들 반응 폭발' },
+    { id: 'mv-3', tag: 'result', text: '이번 주 북미 박스오피스 1위 영화 확정' },
+  ],
 }
 
 const TAG_CONFIG: Record<TickerTag, { label: string; className: string; iconClassName: string }> = {

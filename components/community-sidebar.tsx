@@ -38,6 +38,7 @@ const ALL_COMMUNITIES: Community[] = [
   { slug: "esports", name: "e스포츠", memberCount: 671000, icon: "", emoji: "🎮" },
   { slug: "free-board", name: "자유게시판", memberCount: 894000, icon: "", emoji: "💬" },
   { slug: "tips", name: "정보게시판", memberCount: 342000, icon: "", emoji: "📊" },
+  { slug: "movies", name: "영화", memberCount: 567000, icon: "", emoji: "🎬" },
 ]
 
 // 최근 방문 커뮤니티

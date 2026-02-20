@@ -75,6 +75,7 @@ const COMMUNITY_NAMES: Record<string, string> = {
   "esports": "e스포츠",
   "free-board": "자유게시판",
   "tips": "정보게시판",
+  "movies": "영화",
 }
 
 // --- 문화 피드용 Mock 아트워크 ---

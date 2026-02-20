@@ -35,6 +35,7 @@ const COMMUNITY_NAMES: Record<string, string> = {
   "esports": "e스포츠",
   "free-board": "자유게시판",
   "tips": "정보게시판",
+  "movies": "영화",
 }
 
 export default function ExplorePage() {

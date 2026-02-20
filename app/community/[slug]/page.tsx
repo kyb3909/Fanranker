@@ -98,6 +98,13 @@ const COMMUNITY_DATA: Record<
     banner: "/placeholder.jpg",
     emoji: "📊",
   },
+  movies: {
+    name: "영화",
+    description: "영화 리뷰, 추천, 박스오피스, 신작 소식과 토론",
+    memberCount: 567000,
+    banner: "/placeholder.jpg",
+    emoji: "🎬",
+  },
 }
 
 // Supabase에서 게시글 가져오기
