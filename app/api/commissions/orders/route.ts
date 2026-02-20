@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import type { EscrowHoldResult } from '@/lib/supabase/types'
 
 const MILESTONE_PRESETS: Record<string, string[]> = {
   'illustration': ['스케치', '선화', '채색', '최종'],
@@ -76,7 +77,13 @@ export async function POST(request: NextRequest) {
 
     if (!pkg) return NextResponse.json({ error: '패키지를 찾을 수 없습니다.' }, { status: 404 })
     if (!pkg.is_active) return NextResponse.json({ error: '비활성 패키지입니다.' }, { status: 400 })
-    if (pkg.used_slots >= pkg.max_slots) return NextResponse.json({ error: '슬롯이 가득 찼습니다.' }, { status: 400 })
+    // Atomic slot check: count active orders at DB level to prevent race condition
+    const { count: activeOrders } = await supabase
+      .from('commission_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('package_id', package_id)
+      .not('status', 'in', '("cancelled","rejected","completed")')
+    if ((activeOrders || 0) >= pkg.max_slots) return NextResponse.json({ error: '슬롯이 가득 찼습니다.' }, { status: 400 })
     if (pkg.artist_id === user.id) return NextResponse.json({ error: '자신에게 주문할 수 없습니다.' }, { status: 400 })
 
     // Check gold balance
@@ -137,7 +144,7 @@ export async function POST(request: NextRequest) {
         p_order_id: order.id,
         p_amount: pkg.price_gold,
       })
-      .single()
+      .single() as { data: EscrowHoldResult | null }
 
     if (!escrowResult?.success) {
       // Rollback order
@@ -146,11 +153,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: escrowResult?.error_message || '에스크로 처리 실패' }, { status: 400 })
     }
 
-    // Increment used_slots
-    await supabase
-      .from('commission_packages')
-      .update({ used_slots: pkg.used_slots + 1 })
-      .eq('id', package_id)
+    // used_slots is now managed by DB trigger (trg_sync_commission_used_slots)
 
     // Send notification to artist
     await supabase.from('notifications').insert({

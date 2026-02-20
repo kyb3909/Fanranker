@@ -30,11 +30,11 @@ export async function POST(request: NextRequest) {
     const supabaseCheck = createServiceRoleClient()
     const { data: adminProfile } = await supabaseCheck
       .from('profiles')
-      .select('is_admin')
+      .select('role')
       .eq('user_id', userId)
       .single()
 
-    if (!adminProfile?.is_admin) {
+    if (adminProfile?.role !== 'admin') {
       return NextResponse.json(
         { error: '관리자 권한이 필요합니다.' },
         { status: 403 }
@@ -98,6 +98,18 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Audit log
+    const { createServiceRoleClient: createSR } = await import('@/lib/supabase/server')
+    const supabaseAudit = createSR()
+    await supabaseAudit.from('admin_audit_logs').insert({
+      admin_user_id: userId,
+      action: revoke ? 'revoke_expert' : 'certify_expert',
+      target_type: 'user',
+      target_id: user_id,
+      details: { revoke: !!revoke },
+      ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+    })
 
     return NextResponse.json({
       success: true,

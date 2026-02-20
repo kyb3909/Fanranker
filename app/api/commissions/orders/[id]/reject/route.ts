@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import type { EscrowRefundResult } from '@/lib/supabase/types'
 
 export async function PATCH(
   request: NextRequest,
@@ -28,7 +29,7 @@ export async function PATCH(
     // 100% refund
     const { data: refundResult } = await supabase
       .rpc('escrow_refund_gold', { p_order_id: id, p_refund_percent: 100 })
-      .single()
+      .single() as { data: EscrowRefundResult | null }
 
     if (!refundResult?.success) {
       return NextResponse.json({ error: '환불 처리 실패' }, { status: 500 })
@@ -43,19 +44,7 @@ export async function PATCH(
       })
       .eq('id', id)
 
-    // Decrement used_slots
-    const { data: pkg } = await supabase
-      .from('commission_packages')
-      .select('used_slots')
-      .eq('id', order.package_id)
-      .single()
-
-    if (pkg && pkg.used_slots > 0) {
-      await supabase
-        .from('commission_packages')
-        .update({ used_slots: pkg.used_slots - 1 })
-        .eq('id', order.package_id)
-    }
+    // used_slots is now managed by DB trigger (trg_sync_commission_used_slots)
 
     // Notify client
     await supabase.from('notifications').insert({
