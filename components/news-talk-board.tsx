@@ -409,7 +409,7 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
   if (!isOpen) return null
 
   const tag = TAG_CONFIG[item.tag]
-  const details = item.detail || NEWS_DETAILS[item.id]
+  const details: ItemDetail | undefined = item.detail || NEWS_DETAILS[item.id]
 
   return (
     <div
