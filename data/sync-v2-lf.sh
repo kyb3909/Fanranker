@@ -1,7 +1,8 @@
 #!/bin/bash
 # Betman Sync v3 - 고가용성 + 에러 리포팅 + 자동 복구
 # cron: 매 2시간마다 실행
-set -euo pipefail
+set -uo pipefail
+# 주의: set -e 사용하지 않음 (프로빙 실패 등 예상된 실패를 허용하기 위해)
 
 source /opt/betman/.env
 LOG="/opt/betman/sync.log"
@@ -11,22 +12,24 @@ UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Ge
 
 log() { echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
 
-# ERR trap: 에러 발생 시 sync_state에 기록 후 종료
-on_error() {
-  local line=$1 code=$2
-  log "ERROR: 비정상 종료 (line $line, exit $code)"
-  # sync_state에 에러 기록 시도
-  if [ -n "${SYNC_STATE_ID:-}" ]; then
-    curl -sf -X PATCH \
-      -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-      -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-      -H "Content-Type: application/json" \
-      "${SUPABASE_URL}/rest/v1/betman_sync_state?id=eq.${SYNC_STATE_ID}" \
-      -d "{\"last_checked_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"last_sync_action\":\"vps_error\",\"last_error\":\"line $line exit $code\"}" \
-      > /dev/null 2>&1 || true
+# EXIT trap: 스크립트 종료 시 비정상이면 sync_state에 기록
+on_exit() {
+  local code=$?
+  rm -f "$LOCK" 2>/dev/null || true
+  if [ $code -ne 0 ]; then
+    log "ERROR: 비정상 종료 (exit $code)"
+    if [ -n "${SYNC_STATE_ID:-}" ]; then
+      curl -sf -X PATCH \
+        -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+        -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+        -H "Content-Type: application/json" \
+        "${SUPABASE_URL}/rest/v1/betman_sync_state?id=eq.${SYNC_STATE_ID}" \
+        -d "{\"last_checked_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"last_sync_action\":\"vps_error\",\"last_error\":\"script_crash_exit_$code\"}" \
+        > /dev/null 2>&1 || true
+    fi
   fi
 }
-trap 'on_error $LINENO $?' ERR
+trap on_exit EXIT
 
 # 중복 실행 방지
 if [ -f "$LOCK" ]; then
@@ -39,7 +42,6 @@ if [ -f "$LOCK" ]; then
     exit 0
   fi
 fi
-trap "rm -f $LOCK" EXIT
 touch "$LOCK"
 
 log "=== 동기화 v3 시작 ==="
@@ -72,13 +74,11 @@ betman_curl() {
   local attempt=0 max_retries=3 delay=3
   local exit_code resp
   while [ $attempt -lt $max_retries ]; do
-    set +e
     resp=$(curl -s --connect-timeout 15 --max-time 45 \
       -H "User-Agent: ${UA}" \
       -H "Accept-Language: ko-KR,ko;q=0.9" \
-      "$@" "$url" 2>/dev/null)
+      "$@" "$url" 2>/dev/null) || true
     exit_code=$?
-    set -e
 
     if [ $exit_code -eq 0 ] && [ -n "$resp" ]; then
       echo "$resp"
@@ -99,11 +99,9 @@ betman_curl() {
 # ── Helper: betman 접속 가능 확인 ──
 check_betman() {
   local http_code
-  set +e
   http_code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 \
-    -H "User-Agent: ${UA}" "${BETMAN_BASE}/" 2>/dev/null)
+    -H "User-Agent: ${UA}" "${BETMAN_BASE}/" 2>/dev/null) || true
   local exit_code=$?
-  set -e
 
   if [ $exit_code -ne 0 ]; then
     log "betman 접속 불가 (curl exit $exit_code)"
@@ -125,17 +123,16 @@ check_betman() {
 fetch_game_data() {
   local gmts="$1"
   local attempt=0 max_retries=2 delay=3
+  local result=1
 
   while [ $attempt -lt $max_retries ]; do
     local cookies=$(mktemp)
 
     # 쿠키 초기화 (gameSlip 페이지)
-    set +e
     curl -s -c "$cookies" --connect-timeout 15 --max-time 30 \
       -H "User-Agent: ${UA}" \
       "${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=G101&gmTs=${gmts}" > /dev/null 2>&1
     local cookie_exit=$?
-    set -e
 
     if [ $cookie_exit -ne 0 ]; then
       rm -f "$cookies"
@@ -146,7 +143,6 @@ fetch_game_data() {
 
     # 게임 데이터 요청
     local resp
-    set +e
     resp=$(curl -s -b "$cookies" -X POST --connect-timeout 15 --max-time 45 \
       "${BETMAN_BASE}/buyPsblGame/gameInfoInq.do" \
       -H "Content-Type: application/json;charset=UTF-8" \
@@ -156,27 +152,26 @@ fetch_game_data() {
       -H "Accept-Language: ko-KR,ko;q=0.9" \
       -H "Origin: ${BETMAN_BASE}" \
       -H "Referer: ${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=G101&gmTs=${gmts}" \
-      -d "{\"gmId\":\"G101\",\"gmTs\":${gmts},\"gameYear\":\"\",\"_sbmInfo\":{\"_sbmInfo\":{\"debugMode\":\"false\"}}}" 2>/dev/null)
+      -d "{\"gmId\":\"G101\",\"gmTs\":${gmts},\"gameYear\":\"\",\"_sbmInfo\":{\"_sbmInfo\":{\"debugMode\":\"false\"}}}" 2>/dev/null) || true
     local data_exit=$?
-    set -e
 
     rm -f "$cookies"
 
-    if [ $data_exit -eq 0 ] && [ -n "$resp" ]; then
+    if [ -n "$resp" ]; then
       # JSON 유효성 검증
       if echo "$resp" | jq -e '.compSchedules' > /dev/null 2>&1; then
         echo "$resp"
-        return 0
-      else
-        log "  gmTs $gmts: 응답은 받았으나 JSON 구조 불일치"
+        result=0
+        break
       fi
+      # 구조 불일치는 프로빙에서 정상 (해당 회차가 없는 경우)
     fi
 
     attempt=$((attempt + 1))
     [ $attempt -lt $max_retries ] && sleep $delay
   done
 
-  return 1
+  return $result
 }
 
 # ── Helper: 하나의 gmTs를 동기화 ──
@@ -357,7 +352,6 @@ ALL_GMTS=""
 if [ "$BETMAN_REACHABLE" = "true" ]; then
   # 구매 가능 게임 목록 조회
   BUYABLE_RESP=""
-  set +e
   BUYABLE_RESP=$(betman_curl "${BETMAN_BASE}/buyPsblGame/inqBuyAbleGameInfoList.do" \
     -X POST \
     -H "Content-Type: application/json;charset=UTF-8" \
@@ -365,8 +359,7 @@ if [ "$BETMAN_REACHABLE" = "true" ]; then
     -H "Accept: application/json, text/javascript, */*; q=0.01" \
     -H "Origin: ${BETMAN_BASE}" \
     -H "Referer: ${BETMAN_BASE}/main/mainPage/gamebuy/buyableGameList.do" \
-    -d '{"_sbmInfo":{"_sbmInfo":{"debugMode":"false"}}}')
-  set -e
+    -d '{"_sbmInfo":{"_sbmInfo":{"debugMode":"false"}}}') || true
 
   ALL_GMTS=$(echo "$BUYABLE_RESP" | jq -r '.protoGames[]? | select(.gmId=="G101") | .gmTs' 2>/dev/null | sort -n) || ALL_GMTS=""
 
@@ -403,10 +396,8 @@ if [ -n "$MAX_GMTS" ] && [ "$BETMAN_REACHABLE" = "true" ]; then
       continue
     fi
 
-    set +e
-    PROBE_RESP=$(fetch_game_data "$CANDIDATE")
+    PROBE_RESP=$(fetch_game_data "$CANDIDATE") || true
     PROBE_OK=$?
-    set -e
 
     if [ $PROBE_OK -eq 0 ]; then
       PROBE_COUNT=$(echo "$PROBE_RESP" | jq '.compSchedules.datas | length' 2>/dev/null || echo 0)
@@ -425,10 +416,8 @@ if [ "$RESYNC_NEEDED" = "true" ] && [ -n "$PROBE_START" ] && [ "$BETMAN_REACHABL
     if echo "$ALL_GMTS $PROBE_GMTS" | grep -q "\b${i}\b" 2>/dev/null; then
       continue
     fi
-    set +e
-    PROBE_RESP=$(fetch_game_data "$i")
+    PROBE_RESP=$(fetch_game_data "$i") || true
     PROBE_OK=$?
-    set -e
     if [ $PROBE_OK -eq 0 ]; then
       PROBE_COUNT=$(echo "$PROBE_RESP" | jq '.compSchedules.datas | length' 2>/dev/null || echo 0)
       if [ -n "$PROBE_COUNT" ] && [ "$PROBE_COUNT" != "null" ] && [ "$PROBE_COUNT" -gt 0 ] 2>/dev/null; then
