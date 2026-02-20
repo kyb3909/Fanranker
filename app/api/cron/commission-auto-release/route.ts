@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import type { EscrowReleaseResult } from '@/lib/supabase/types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     for (const order of orders) {
       const { data: result } = await supabase
         .rpc('escrow_release_gold', { p_order_id: order.id })
-        .single()
+        .single() as { data: EscrowReleaseResult | null }
 
       if (result?.success) {
         released++

@@ -48,45 +48,21 @@ export default function DraftGamePage() {
     setPhase("drafting")
   }
 
-  // Timer
-  useEffect(() => {
-    if (phase !== "drafting" || isGameOver) return
+  // Callbacks ordered by dependency chain: finishGame → advancePick → draftPlayer → autoPickRandom
+  const finishGame = useCallback(() => {
+    if (!selectedMode) return
 
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) return 0
-        return prev - 1
+    const allDrafted: { playerId: string; pickPosition: number }[] = []
+    teams.forEach((team) => {
+      team.players.forEach((player, idx) => {
+        allDrafted.push({ playerId: player.id, pickPosition: idx })
       })
-    }, 1000)
+    })
+    saveDraftResult(selectedMode.id, allDrafted)
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [phase, currentPick, isGameOver])
-
-  // Auto-pick on timeout
-  const autoPickRandom = useCallback(() => {
-    if (!selectedMode || isGameOver) return
-
-    const team = teams[currentTeamIdx]
-    const available = selectedMode.players.filter(
-      (p) => !draftedIds.has(p.id) && p.salary <= team.budget
-    )
-
-    if (available.length === 0) {
-      advancePick()
-      return
-    }
-
-    const randomPlayer = available[Math.floor(Math.random() * available.length)]
-    draftPlayer(randomPlayer)
-  }, [selectedMode, teams, currentTeamIdx, draftedIds, isGameOver, currentPick])
-
-  useEffect(() => {
-    if (timeLeft === 0 && phase === "drafting" && !isGameOver) {
-      autoPickRandom()
-    }
-  }, [timeLeft, phase, isGameOver, autoPickRandom])
+    setPhase("results")
+    if (timerRef.current) clearInterval(timerRef.current)
+  }, [selectedMode, teams])
 
   const advancePick = useCallback(() => {
     if (!selectedMode) return
@@ -98,7 +74,7 @@ export default function DraftGamePage() {
       setCurrentPick(nextPick)
       setTimeLeft(selectedMode.timerSeconds)
     }
-  }, [currentPick, selectedMode])
+  }, [currentPick, selectedMode, finishGame])
 
   const draftPlayer = useCallback((player: Player) => {
     if (!selectedMode || isGameOver) return
@@ -121,21 +97,45 @@ export default function DraftGamePage() {
     advancePick()
   }, [selectedMode, isGameOver, currentTeamIdx, teams, draftedIds, advancePick])
 
-  const finishGame = useCallback(() => {
-    if (!selectedMode) return
+  const autoPickRandom = useCallback(() => {
+    if (!selectedMode || isGameOver) return
 
-    // Save draft history
-    const allDrafted: { playerId: string; pickPosition: number }[] = []
-    teams.forEach((team) => {
-      team.players.forEach((player, idx) => {
-        allDrafted.push({ playerId: player.id, pickPosition: idx })
+    const team = teams[currentTeamIdx]
+    const available = selectedMode.players.filter(
+      (p) => !draftedIds.has(p.id) && p.salary <= team.budget
+    )
+
+    if (available.length === 0) {
+      advancePick()
+      return
+    }
+
+    const randomPlayer = available[Math.floor(Math.random() * available.length)]
+    draftPlayer(randomPlayer)
+  }, [selectedMode, teams, currentTeamIdx, draftedIds, isGameOver, advancePick, draftPlayer])
+
+  // Timer
+  useEffect(() => {
+    if (phase !== "drafting" || isGameOver) return
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) return 0
+        return prev - 1
       })
-    })
-    saveDraftResult(selectedMode.id, allDrafted)
+    }, 1000)
 
-    setPhase("results")
-    if (timerRef.current) clearInterval(timerRef.current)
-  }, [selectedMode, teams])
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [phase, currentPick, isGameOver])
+
+  // Auto-pick on timeout
+  useEffect(() => {
+    if (timeLeft === 0 && phase === "drafting" && !isGameOver) {
+      autoPickRandom()
+    }
+  }, [timeLeft, phase, isGameOver, autoPickRandom])
 
   // Check game over after each pick
   useEffect(() => {

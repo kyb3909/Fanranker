@@ -34,16 +34,6 @@ export {
   useClerkUserId,
 } from './hooks'
 
-// Types
-export type {
-  ClerkUserOwned,
-  ClerkOrgOwned,
-  ClerkJwtClaims,
-  TypedSupabaseClient,
-  WithAutoUserId,
-  WithAutoOrgId,
-} from './types'
-
 // Database Types (auto-generated from Supabase schema)
 export type {
   Database,
@@ -51,4 +41,4 @@ export type {
   TablesInsert,
   TablesUpdate,
   Json,
-} from './database.types'
+} from './types'

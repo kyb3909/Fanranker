@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
 import { CommissionPackageForm } from "@/components/commission/package-form"
 import { CommissionPackageCard } from "@/components/commission/package-card"
@@ -15,7 +15,7 @@ export default function ManagePackagesPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async () => {
     if (!user) return
     try {
       const res = await fetch(`/api/commissions/packages?artist_id=${user.id}`)
@@ -26,11 +26,11 @@ export default function ManagePackagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     fetchPackages()
-  }, [user])
+  }, [fetchPackages])
 
   const handleCreate = async (formData: any) => {
     const res = await fetch('/api/commissions/packages', {

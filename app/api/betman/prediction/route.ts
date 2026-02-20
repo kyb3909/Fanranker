@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { isBettingWindowOpen, getBettingWindowStatus, getTodayDailyId, getGameBetDeadline, getDailyWindow } from '@/lib/betman/daily-round'
 
 /**
  * POST /api/betman/prediction
  *
- * Create predictions for Betman games
+ * Create predictions for Betman games.
+ * Validates daily round window (08:00-23:00 KST) and per-game deadlines.
  *
  * Body:
  * - predictions: Array of { game_id: uuid, prediction: "home" | "draw" | "away" | "over" | "under" }
@@ -48,6 +50,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // --- Check betting window (08:00-23:00 KST) ---
+    const windowStatus = getBettingWindowStatus()
+    if (!windowStatus.isOpen) {
+      return NextResponse.json(
+        { error: windowStatus.message },
+        { status: 400 }
+      )
+    }
+
     // Get all game details for validation
     const gameIds = predictions.map(p => p.game_id)
     const { data: games, error: gamesError } = await supabase
@@ -70,40 +81,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check all games are from the same round
-    const roundIds = [...new Set(games.map(g => g.round_id))]
-    if (roundIds.length > 1) {
+    // Check all games are from the same daily round
+    const dailyRoundIds = [...new Set(games.map(g => g.daily_round_id).filter(Boolean))]
+    if (dailyRoundIds.length === 0) {
       return NextResponse.json(
-        { error: '모든 경기는 같은 회차여야 합니다.' },
+        { error: '경기에 일일 라운드가 배정되지 않았습니다.' },
+        { status: 400 }
+      )
+    }
+    if (dailyRoundIds.length > 1) {
+      return NextResponse.json(
+        { error: '모든 경기는 같은 일일 라운드여야 합니다.' },
         { status: 400 }
       )
     }
 
-    // Check round is still open
-    const { data: round, error: roundError } = await supabase
-      .from('betman_rounds')
+    const dailyRoundId = dailyRoundIds[0]
+
+    // Check daily round is still open
+    const { data: dailyRound, error: drError } = await supabase
+      .from('betman_daily_rounds')
       .select('*')
-      .eq('id', roundIds[0])
+      .eq('id', dailyRoundId)
       .single()
 
-    if (roundError || !round) {
+    if (drError || !dailyRound) {
       return NextResponse.json(
-        { error: '회차 정보를 찾을 수 없습니다.' },
+        { error: '일일 라운드 정보를 찾을 수 없습니다.' },
         { status: 404 }
       )
     }
 
-    if (round.status !== 'open') {
+    if (dailyRound.status !== 'open') {
       return NextResponse.json(
-        { error: '이 회차는 마감되었습니다.' },
-        { status: 400 }
-      )
-    }
-
-    // Check deadline
-    if (new Date(round.deadline) < new Date()) {
-      return NextResponse.json(
-        { error: '예측 마감 시간이 지났습니다.' },
+        { error: '이 일일 라운드는 마감되었습니다.' },
         { status: 400 }
       )
     }
@@ -118,7 +129,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate no duplicate physical matches
-    // Physical match = same home_team + away_team + match_time
     const matchKeys = games.map(g => `${g.home_team_name}_${g.away_team_name}_${g.match_time}`)
     const uniqueMatchKeys = [...new Set(matchKeys)]
     if (uniqueMatchKeys.length !== matchKeys.length) {
@@ -128,12 +138,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for games that have already started
+    // Check per-game bet deadlines: MIN(kickoff, same_day 23:00 KST)
     const now = new Date()
-    const startedGames = games.filter(g => new Date(g.match_time) <= now)
-    if (startedGames.length > 0) {
+    const closedGames = games.filter(g => {
+      const betDeadline = getGameBetDeadline(g.match_time)
+      return now >= betDeadline
+    })
+    if (closedGames.length > 0) {
+      const names = closedGames.map(g => `${g.home_team_name} vs ${g.away_team_name}`).join(', ')
       return NextResponse.json(
-        { error: '이미 시작된 경기가 포함되어 있습니다.' },
+        { error: `베팅 마감된 경기가 포함되어 있습니다: ${names}` },
+        { status: 400 }
+      )
+    }
+
+    // Check all games are within the daily window [08:00 KST today, 08:00 KST tomorrow)
+    const { end: windowEnd } = getDailyWindow()
+    const outOfWindow = games.filter(g => new Date(g.match_time) >= windowEnd)
+    if (outOfWindow.length > 0) {
+      return NextResponse.json(
+        { error: '오늘의 베팅 윈도우 밖의 경기가 포함되어 있습니다.' },
         { status: 400 }
       )
     }
@@ -160,7 +184,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Draw is not valid for 농구 (basketball)
       if (game.sport === '농구' && pred.prediction === 'draw' && !isOverUnder) {
         return NextResponse.json(
           { error: '농구 경기에서는 무승부를 선택할 수 없습니다.' },
@@ -170,31 +193,30 @@ export async function POST(request: NextRequest) {
     }
 
     // ===== 볼(토큰) 잔액 확인 및 차감 =====
-    const ballCost = predictions.length // 예측 1개당 1볼
+    const ballCost = predictions.length
 
-    // Check for existing predictions (to avoid double charging)
+    // Check for existing predictions (to avoid double charging) - by daily_round_id
     const { data: existingPredictions } = await supabase
       .from('betman_predictions')
       .select('id')
       .eq('user_id', user.id)
-      .eq('round_id', roundIds[0])
+      .eq('daily_round_id', dailyRoundId)
 
     const isModifying = existingPredictions && existingPredictions.length > 0
 
-    // If modifying, calculate the difference in balls needed
     const previousCount = existingPredictions?.length || 0
     const actualBallCost = isModifying
-      ? Math.max(0, ballCost - previousCount) // Only charge for additional predictions
+      ? Math.max(0, ballCost - previousCount)
       : ballCost
 
-    // Atomic token deduction via RPC (prevents race conditions)
+    // Atomic token deduction via RPC
     let newBalance: number | undefined
     if (actualBallCost > 0) {
       const { data: spendResult, error: rpcError } = await supabase
         .rpc('spend_tokens', {
           p_user_id: user.id,
           p_amount: actualBallCost,
-          p_description: `베트맨 예측 ${predictions.length}경기 (${round.year}년 ${round.round}회차)${isModifying ? ' - 수정' : ''}`,
+          p_description: `베트맨 예측 ${predictions.length}경기 (${dailyRound.daily_id})${isModifying ? ' - 수정' : ''}`,
         })
         .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
 
@@ -216,16 +238,15 @@ export async function POST(request: NextRequest) {
       newBalance = spendResult.new_balance
     }
 
-    // Delete existing predictions for this user and round
+    // Delete existing predictions for this user and daily round
     if (isModifying) {
       const { error: deleteError } = await supabase
         .from('betman_predictions')
         .delete()
         .eq('user_id', user.id)
-        .eq('round_id', roundIds[0])
+        .eq('daily_round_id', dailyRoundId)
       if (deleteError) {
         console.error('Failed to delete existing predictions:', deleteError)
-        // Refund if we charged (원자적 RPC)
         if (actualBallCost > 0) {
           await supabase.rpc('refund_tokens', {
             p_user_id: user.id,
@@ -240,10 +261,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert new predictions
+    // Insert new predictions with daily_round_id
     const predictionRecords = predictions.map(pred => ({
       user_id: user.id,
-      round_id: roundIds[0],
+      round_id: games[0].round_id, // keep round_id for backward compatibility
+      daily_round_id: dailyRoundId,
       game_id: pred.game_id,
       prediction: pred.prediction,
       created_at: new Date().toISOString()
@@ -256,7 +278,6 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Failed to insert predictions:', insertError)
-      // Refund if we charged (원자적 RPC)
       if (actualBallCost > 0) {
         await supabase.rpc('refund_tokens', {
           p_user_id: user.id,
@@ -284,7 +305,8 @@ export async function POST(request: NextRequest) {
     try {
       await supabase.from('prediction_activities').upsert({
         user_id: user.id,
-        round_id: roundIds[0],
+        round_id: games[0].round_id,
+        daily_round_id: dailyRoundId,
         sport: sports[0],
         prediction_count: predictions.length,
       }, { onConflict: 'user_id,round_id,sport' })
@@ -332,10 +354,12 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/betman/prediction
  *
- * Get user's predictions for a round
+ * Get user's predictions for a daily round.
  *
  * Query Parameters:
- * - round_id?: uuid (specific round, defaults to current open round)
+ * - daily_round_id?: uuid
+ * - daily_id?: YYYY-MM-DD
+ * (defaults to today's daily round)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -350,27 +374,26 @@ export async function GET(request: NextRequest) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
-    const roundId = searchParams.get('round_id')
+    const dailyRoundId = searchParams.get('daily_round_id')
+    const dailyId = searchParams.get('daily_id')
 
-    // Get target round
-    let targetRoundId = roundId
-    if (!targetRoundId) {
-      const { data: openRound } = await supabase
-        .from('betman_rounds')
+    // Determine target daily round
+    let targetDailyRoundId = dailyRoundId
+    if (!targetDailyRoundId) {
+      const targetDate = dailyId || getTodayDailyId()
+      const { data: dailyRound } = await supabase
+        .from('betman_daily_rounds')
         .select('id')
-        .eq('status', 'open')
-        .order('year', { ascending: false })
-        .order('round', { ascending: false })
-        .limit(1)
+        .eq('daily_id', targetDate)
         .single()
 
-      if (!openRound) {
+      if (!dailyRound) {
         return NextResponse.json({
           predictions: [],
-          message: '현재 진행중인 회차가 없습니다.'
+          message: '해당 일자의 라운드가 없습니다.'
         })
       }
-      targetRoundId = openRound.id
+      targetDailyRoundId = dailyRound.id
     }
 
     // Get user's predictions with game details
@@ -381,7 +404,7 @@ export async function GET(request: NextRequest) {
         game:betman_games(*)
       `)
       .eq('user_id', user.id)
-      .eq('round_id', targetRoundId)
+      .eq('daily_round_id', targetDailyRoundId)
 
     if (predError) {
       console.error('Failed to fetch predictions:', predError)
@@ -393,7 +416,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       predictions: predictions || [],
-      round_id: targetRoundId
+      daily_round_id: targetDailyRoundId,
     })
   } catch (error) {
     console.error('API error:', error)

@@ -9,6 +9,7 @@ import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Search,
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
 import { ShareMenu } from "@/components/share-menu"
-import { TipTapContent } from "@/components/tiptap-content"
+
+const TipTapContent = dynamic(
+  () => import("@/components/tiptap-content").then(mod => ({ default: mod.TipTapContent })),
+  { ssr: false, loading: () => <div className="h-32 bg-muted animate-pulse rounded" /> }
+)
 
 const MOCK_COMMENTS = [
   {

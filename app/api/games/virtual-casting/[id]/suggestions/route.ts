@@ -54,17 +54,19 @@ export async function POST(
     }
 
     // Increment suggestion count
-    await supabase.rpc("increment_field", {
+    const { error: rpcError } = await supabase.rpc("increment_field", {
       table_name: "virtual_castings",
       field_name: "suggestion_count",
       row_id: castingId,
-    }).catch(() => {
+    })
+
+    if (rpcError) {
       // Fallback: manual increment
-      supabase
+      await supabase
         .from("virtual_castings")
         .update({ suggestion_count: (casting as unknown as { suggestion_count: number }).suggestion_count + 1 })
         .eq("id", castingId)
-    })
+    }
 
     return NextResponse.json({ suggestion }, { status: 201 })
   } catch {

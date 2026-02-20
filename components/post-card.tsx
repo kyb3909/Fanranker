@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -67,7 +67,7 @@ interface PostCardProps {
 // 단일 액센트 색상 시스템 (Teal) - 접근성 대비 개선
 const BADGE_COLOR = { bg: "bg-primary/15", text: "text-foreground", border: "border-primary/30" }
 
-export function PostCard({ post, priority = false }: PostCardProps) {
+export const PostCard = memo(function PostCard({ post, priority = false }: PostCardProps) {
   const router = useRouter()
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
@@ -203,6 +203,7 @@ export function PostCard({ post, priority = false }: PostCardProps) {
   const displayImage = post.image || firstEmbed?.attrs.thumbnail_url || null
 
   return (
+    <article>
     <Card className="overflow-hidden border border-border bg-card hover:border-muted-foreground/30 transition-colors">
       <div className="p-4 sm:p-5">
         
@@ -393,5 +394,6 @@ export function PostCard({ post, priority = false }: PostCardProps) {
         </div>
       </div>
     </Card>
+    </article>
   )
-}
+})

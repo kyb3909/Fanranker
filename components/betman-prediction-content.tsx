@@ -30,6 +30,21 @@ interface BetmanRound {
   created_at: string
 }
 
+interface DailyRoundInfo {
+  id: string
+  daily_id: string
+  status: string
+  bet_open_at: string
+  bet_close_at: string
+  game_count: number
+}
+
+interface BettingWindowInfo {
+  isOpen: boolean
+  message: string
+  nextOpenAt?: string
+}
+
 interface BetmanGame {
   id: string
   round_id: string
@@ -195,7 +210,7 @@ function GameTypeOption({
         <Badge variant="secondary" className="text-xs">
           {gameTypeLabel}
           {game.handicap !== null && game.handicap !== 0 && (
-            <span className="ml-1 text-blue-600">
+            <span className="ml-1 text-primary">
               ({game.handicap > 0 ? '+' : ''}{game.handicap})
             </span>
           )}
@@ -439,6 +454,9 @@ export function BetmanPredictionContent({
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [round, setRound] = useState<BetmanRound | null>(null)
+  const [dailyRound, setDailyRound] = useState<DailyRoundInfo | null>(null)
+  const [bettingWindow, setBettingWindow] = useState<BettingWindowInfo | null>(null)
+  const [todayLabel, setTodayLabel] = useState<string>('')
   const [groupedMatches, setGroupedMatches] = useState<GroupedMatch[]>([])
   const [existingPredictions, setExistingPredictions] = useState<BetmanPrediction[]>([])
 
@@ -461,6 +479,15 @@ export function BetmanPredictionContent({
 
       if (data.round) {
         setRound(data.round)
+      }
+      if (data.dailyRound) {
+        setDailyRound(data.dailyRound)
+      }
+      if (data.bettingWindow) {
+        setBettingWindow(data.bettingWindow)
+      }
+      if (data.today?.label) {
+        setTodayLabel(data.today.label)
       }
       if (data.groupedGames) {
         setGroupedMatches(data.groupedGames)
@@ -649,8 +676,40 @@ export function BetmanPredictionContent({
           </TabsList>
 
           <TabsContent value="betman" className="mt-4">
-            {/* Round Info */}
-            {round && (
+            {/* Daily Round Info */}
+            {dailyRound ? (
+              <Card className="mb-4 bg-gradient-to-r from-emerald-50 to-teal-50">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-100 rounded-full">
+                        <Calendar className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-emerald-800">
+                          {todayLabel || dailyRound.daily_id} 경기
+                        </h3>
+                        <p className="text-sm text-emerald-600">
+                          {bettingWindow?.isOpen
+                            ? `마감: 오늘 23:00 KST`
+                            : bettingWindow?.message || '베팅 마감'}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={dailyRound.status === 'open' ? 'default' : 'secondary'}
+                      className={cn(
+                        dailyRound.status === 'open' && "bg-emerald-500"
+                      )}
+                    >
+                      {dailyRound.status === 'open'
+                        ? bettingWindow?.isOpen ? '베팅 가능' : '대기'
+                        : dailyRound.status === 'closed' ? '마감' : '정산완료'}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : round && (
               <Card className="mb-4 bg-gradient-to-r from-emerald-50 to-teal-50">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
@@ -675,6 +734,20 @@ export function BetmanPredictionContent({
                     >
                       {round.status === 'open' ? '진행중' : round.status === 'closed' ? '마감' : '정산완료'}
                     </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Dead zone alert */}
+            {bettingWindow && !bettingWindow.isOpen && (
+              <Card className="mb-4 border-amber-200 bg-amber-50">
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-700">
+                      {bettingWindow.message}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -773,7 +846,7 @@ export function BetmanPredictionContent({
               <Card>
                 <CardContent className="py-10 text-center">
                   <p className="text-muted-foreground">
-                    {round ? '현재 예측 가능한 경기가 없습니다.' : '진행중인 회차가 없습니다.'}
+                    {dailyRound || round ? '현재 예측 가능한 경기가 없습니다.' : '오늘 경기가 없습니다.'}
                   </p>
                 </CardContent>
               </Card>
@@ -889,7 +962,7 @@ export function BetmanPredictionContent({
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-blue-500" />
+                <AlertCircle className="h-4 w-4 text-primary" />
                 예측 규칙
               </CardTitle>
             </CardHeader>

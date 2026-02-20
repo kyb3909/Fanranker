@@ -110,6 +110,52 @@
   --sidebar-ring: oklch(0.55 0.16 15);
 }
 
+/* ===== Culture Identity: Blue #1A70DC ===== */
+[data-identity="culture"] {
+  --primary: oklch(0.50 0.18 255);
+  --destructive: oklch(0.50 0.18 255);
+  --ring: oklch(0.50 0.18 255);
+  --chart-1: oklch(0.50 0.18 255);
+  --chart-2: oklch(0.55 0.16 255);
+  --sidebar-primary: oklch(0.50 0.18 255);
+  --sidebar-ring: oklch(0.50 0.18 255);
+}
+
+[data-identity="culture"].dark,
+[data-identity="culture"] .dark {
+  --primary: oklch(0.60 0.16 255);
+  --destructive: oklch(0.45 0.14 255);
+  --destructive-foreground: oklch(0.60 0.16 255);
+  --ring: oklch(0.60 0.16 255);
+  --chart-1: oklch(0.60 0.16 255);
+  --chart-2: oklch(0.50 0.18 255);
+  --sidebar-primary: oklch(0.60 0.16 255);
+  --sidebar-ring: oklch(0.60 0.16 255);
+}
+
+/* ===== Hybrid Identity: Purple (Red+Blue blend) ===== */
+[data-identity="hybrid"] {
+  --primary: oklch(0.45 0.18 300);
+  --destructive: oklch(0.45 0.18 300);
+  --ring: oklch(0.45 0.18 300);
+  --chart-1: oklch(0.45 0.18 300);
+  --chart-2: oklch(0.50 0.16 300);
+  --sidebar-primary: oklch(0.45 0.18 300);
+  --sidebar-ring: oklch(0.45 0.18 300);
+}
+
+[data-identity="hybrid"].dark,
+[data-identity="hybrid"] .dark {
+  --primary: oklch(0.58 0.16 300);
+  --destructive: oklch(0.43 0.14 300);
+  --destructive-foreground: oklch(0.58 0.16 300);
+  --ring: oklch(0.58 0.16 300);
+  --chart-1: oklch(0.58 0.16 300);
+  --chart-2: oklch(0.45 0.18 300);
+  --sidebar-primary: oklch(0.58 0.16 300);
+  --sidebar-ring: oklch(0.58 0.16 300);
+}
+
 @theme inline {
   --font-sans: "Geist", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";

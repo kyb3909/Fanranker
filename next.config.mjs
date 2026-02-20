@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  // Lighthouse Best Practices: 대용량 JS 소스맵 (디버깅·분석용)
-  productionBrowserSourceMaps: true,
+  // Lighthouse Best Practices: 소스맵은 개발환경에서만 사용
   async headers() {
     return [
       {
@@ -27,6 +23,20 @@ const nextConfig = {
               "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com",
             ].join('; '),
           },
+        ],
+      },
+      {
+        // Cache read-only API responses (posts, profiles, communities)
+        source: '/api/(posts|communities|profiles|games|art)/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=30, stale-while-revalidate=120' },
+        ],
+      },
+      {
+        // No cache for mutation/auth APIs
+        source: '/api/(upload|payments|tokens|commissions|admin|cron|auth)/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
         ],
       },
     ]
@@ -68,7 +78,15 @@ const nextConfig = {
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-dialog',
       '@radix-ui/react-avatar',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
       'recharts',
+      'date-fns',
+      '@tiptap/core',
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@dnd-kit/core',
     ],
   },
 }

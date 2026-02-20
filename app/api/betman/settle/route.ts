@@ -13,7 +13,7 @@ import { verifyCronSecret } from '@/lib/cron-auth'
  * - 취소 경기 예측 → status='cancelled', is_correct=null
  * - 정산 후 유저별 종목 통계 자동 갱신
  *
- * Body: { round_id?: string, gm_ts?: string }
+ * Body: { round_id?: string, gm_ts?: string, daily_round_id?: string, daily_id?: string }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -23,31 +23,54 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const supabase = createServiceRoleClient()
 
-    // round_id 확보
-    let roundId: string | null = body.round_id ?? null
+    // --- Determine which games to settle ---
+    let gameFilter: { column: string; value: string } | null = null
 
-    if (!roundId && body.gm_ts) {
+    if (body.daily_round_id) {
+      gameFilter = { column: 'daily_round_id', value: body.daily_round_id }
+    } else if (body.daily_id) {
+      // Look up daily_round_id from daily_id
+      const { data: dr } = await supabase
+        .from('betman_daily_rounds')
+        .select('id')
+        .eq('daily_id', body.daily_id)
+        .single()
+      if (dr) {
+        gameFilter = { column: 'daily_round_id', value: dr.id }
+      }
+    } else if (body.round_id) {
+      gameFilter = { column: 'round_id', value: body.round_id }
+    } else if (body.gm_ts) {
       const { data: round } = await supabase
         .from('betman_rounds')
         .select('id')
         .eq('gm_ts', String(body.gm_ts))
         .single()
-
-      if (round) roundId = round.id
+      if (round) {
+        gameFilter = { column: 'round_id', value: round.id }
+      }
     }
 
-    if (!roundId) {
+    if (!gameFilter) {
       return NextResponse.json(
-        { error: 'round_id 또는 gm_ts가 필요합니다.' },
+        { error: 'daily_round_id, daily_id, round_id, 또는 gm_ts가 필요합니다.' },
         { status: 400 }
       )
     }
 
-    // 1. 해당 라운드의 완료/취소된 경기 조회
+    // 0. 해당 필터의 지난 scheduled 게임 자동 만료 (결과 없이 시간 지난 게임)
+    await supabase
+      .from('betman_games')
+      .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+      .eq(gameFilter.column, gameFilter.value)
+      .eq('status', 'scheduled')
+      .lt('match_time', new Date().toISOString())
+
+    // 1. 해당 필터의 완료/취소된 경기 조회
     const { data: games, error: gamesError } = await supabase
       .from('betman_games')
-      .select('id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds')
-      .eq('round_id', roundId)
+      .select('id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, daily_round_id')
+      .eq(gameFilter.column, gameFilter.value)
       .in('status', ['completed', 'cancelled'])
 
     if (gamesError) {
@@ -64,7 +87,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // game_id → game 정보 맵
     const gameMap = new Map(games.map(g => [g.id, g]))
 
     // 2. 해당 경기들에 대한 pending 예측 조회
@@ -100,7 +122,6 @@ export async function POST(request: NextRequest) {
       const game = gameMap.get(pred.game_id)
       if (!game) continue
 
-      // 취소된 경기 → 예측도 취소
       if (game.status === 'cancelled') {
         const { error } = await supabase
           .from('betman_predictions')
@@ -120,10 +141,8 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // 완료된 경기 → 적중 판정
       const isCorrect = pred.prediction === game.result
 
-      // 적중 시 배당률 계산
       let pointsEarned = 0
       if (isCorrect) {
         const oddsMap: Record<string, number> = {
@@ -155,24 +174,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. 라운드 상태 업데이트
-    // 모든 경기가 completed/cancelled면 → settled
-    // 아직 scheduled/in_progress 경기가 있으면 → closed (부분 정산)
-    const { data: remainingGames } = await supabase
-      .from('betman_games')
-      .select('id')
-      .eq('round_id', roundId)
-      .in('status', ['scheduled', 'in_progress'])
-      .limit(1)
+    // 4. Update daily round status if settling by daily_round_id
+    const dailyRoundIds = [...new Set(games.map(g => g.daily_round_id).filter(Boolean))]
+    for (const drId of dailyRoundIds) {
+      const { data: remainingGames } = await supabase
+        .from('betman_games')
+        .select('id')
+        .eq('daily_round_id', drId)
+        .in('status', ['scheduled', 'in_progress'])
+        .limit(1)
 
-    const allDone = !remainingGames || remainingGames.length === 0
-    await supabase
-      .from('betman_rounds')
-      .update({
-        status: allDone ? 'settled' : 'closed',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', roundId)
+      const allDone = !remainingGames || remainingGames.length === 0
+      if (allDone) {
+        await supabase
+          .from('betman_daily_rounds')
+          .update({ status: 'settled', updated_at: new Date().toISOString() })
+          .eq('id', drId)
+      } else {
+        await supabase
+          .from('betman_daily_rounds')
+          .update({ status: 'closed', updated_at: new Date().toISOString() })
+          .eq('id', drId)
+      }
+    }
+
+    // 4b. Also update proto round status (backward compat)
+    if (gameFilter.column === 'round_id') {
+      const { data: remainingGames } = await supabase
+        .from('betman_games')
+        .select('id')
+        .eq('round_id', gameFilter.value)
+        .in('status', ['scheduled', 'in_progress'])
+        .limit(1)
+
+      const allDone = !remainingGames || remainingGames.length === 0
+      await supabase
+        .from('betman_rounds')
+        .update({
+          status: allDone ? 'settled' : 'closed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', gameFilter.value)
+    }
 
     // 5. 유저별 종목 통계 갱신
     const affectedUserIds = [...new Set(predictions.map(p => p.user_id))]
@@ -187,8 +230,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      roundId,
-      roundStatus: allDone ? 'settled' : 'closed',
+      filter: gameFilter,
+      dailyRoundsUpdated: dailyRoundIds.length,
       settled,
       correct,
       wrong,

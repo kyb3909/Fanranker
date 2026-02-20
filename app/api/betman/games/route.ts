@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { computeDailyId, getTodayDailyId, formatDailyIdLabel, getBetOpenAt, getBetCloseAt, getBettingWindowStatus, getDailyWindow, getGameBetDeadline } from '@/lib/betman/daily-round'
 
 /**
  * GET /api/betman/games
  *
- * Get Betman games for prediction.
+ * Get Betman games for prediction using a fixed daily window.
  *
- * 게임 조회 우선순위:
- * 1. open 라운드의 scheduled 게임 (새 회차 포함)
- * 2. open 라운드가 없으면 → 가장 최근 라운드의 scheduled 게임
- * 3. scheduled 게임이 전혀 없으면 → 빈 배열
+ * Query: sport?, game_type?
  *
- * Query: sport?, game_type?, round_id?
+ * Window: [today 08:00 KST, tomorrow 08:00 KST) based on match kickoff time.
+ * Balls reset at 08:00 KST. Per-game bet_close_at = MIN(kickoff, same_day 23:00 KST).
+ * Betting blackout: 23:00~08:00 KST.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,60 +23,33 @@ export async function GET(request: NextRequest) {
 
     const sportFilter = searchParams.get('sport') || 'all'
     const gameTypeFilter = searchParams.get('game_type') || 'all'
-    const roundIdFilter = searchParams.get('round_id') || null
 
-    // --- 대상 라운드 결정 ---
-    let targetRoundIds: string[] = []
+    // --- Fixed daily window: [today 08:00 KST, tomorrow 08:00 KST) ---
+    const { start: windowStart, end: windowEnd, dailyId } = getDailyWindow()
 
-    if (roundIdFilter) {
-      // 특정 라운드 지정
-      targetRoundIds = [roundIdFilter]
-    } else {
-      // 1차: open 라운드
-      const { data: openRounds } = await supabase
-        .from('betman_rounds')
-        .select('id')
-        .eq('status', 'open')
-        .order('round', { ascending: false })
-
-      if (openRounds && openRounds.length > 0) {
-        targetRoundIds = openRounds.map(r => r.id)
-      } else {
-        // 2차: 가장 최근 closed 라운드에서 scheduled 게임 확인
-        const { data: recentRounds } = await supabase
-          .from('betman_rounds')
-          .select('id')
-          .in('status', ['closed', 'open'])
-          .order('round', { ascending: false })
-          .limit(3)
-
-        if (recentRounds && recentRounds.length > 0) {
-          targetRoundIds = recentRounds.map(r => r.id)
-        }
-      }
-    }
-
-    // --- 과거 게임 자동 정리: scheduled인데 경기 시간이 지난 게임 → in_progress ---
+    // --- Auto-expire past games: scheduled → in_progress ---
     await supabase
       .from('betman_games')
-      .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+      .update({ status: 'in_progress', updated_at: windowStart.toISOString() })
       .eq('status', 'scheduled')
-      .lt('match_time', new Date().toISOString())
+      .lt('match_time', windowStart.toISOString())
 
-    // --- 게임 조회: 미래 경기만 (scheduled + match_time이 현재 이후) ---
+    // --- Auto-close past daily rounds ---
+    await supabase
+      .from('betman_daily_rounds')
+      .update({ status: 'closed', updated_at: windowStart.toISOString() })
+      .eq('status', 'open')
+      .lt('bet_close_at', windowStart.toISOString())
+
+    // --- Fetch games in daily window (kickoff-time based) ---
     let query = supabase
       .from('betman_games')
       .select('*')
       .eq('status', 'scheduled')
-      .gte('match_time', new Date().toISOString())
+      .gte('match_time', windowStart.toISOString())
+      .lt('match_time', windowEnd.toISOString())
       .order('match_time', { ascending: true })
       .order('game_no', { ascending: true })
-
-    if (targetRoundIds.length > 0) {
-      query = query.in('round_id', targetRoundIds)
-    } else {
-      query = query.limit(200)
-    }
 
     const allowedSports = ['축구', '야구', '농구', '배구']
     const allowedGameTypes = ['일반', '핸디캡', '언더오버', 'SUM']
@@ -103,6 +76,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Betting window status
+    const windowStatus = getBettingWindowStatus()
+
     const gamesWithOdds = (games || []).map((game: Record<string, unknown>) => {
       const rawGameType = (game.game_type as string) || ''
       const gameType = rawGameType === 'SUM' ? 'SUM' : rawGameType.replace(/^S/, '')
@@ -118,7 +94,11 @@ export async function GET(request: NextRequest) {
         odd_odds = game.odd_odds != null ? parseFloat(String(game.odd_odds)) : undefined
         even_odds = game.even_odds != null ? parseFloat(String(game.even_odds)) : undefined
       }
-      return { ...game, home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds }
+      // Per-game bet deadline: MIN(kickoff, same_day 23:00 KST)
+      const betCloseAt = getGameBetDeadline(game.match_time as string)
+      const now = new Date()
+      const isBettable = now < betCloseAt && windowStatus.isOpen
+      return { ...game, home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds, bet_close_at: betCloseAt.toISOString(), is_bettable: isBettable }
     })
 
     const groupedGames: Record<string, { matchKey: string; sport: string; leagueCode: string; homeTeam: string; awayTeam: string; matchTime: string; venue: string; games: typeof gamesWithOdds }> = {}
@@ -151,27 +131,6 @@ export async function GET(request: NextRequest) {
       userPredictions = predictions || []
     }
 
-    // 날짜 라벨: 게임이 있으면 가장 이른 경기 날짜, 없으면 오늘
-    const now = new Date()
-    const koreaOffset = 9 * 60 * 60 * 1000
-    const koreaTime = new Date(now.getTime() + koreaOffset)
-
-    let dateLabel: string
-    if (gamesWithOdds.length > 0) {
-      const firstMatchTime = new Date(gamesWithOdds[0].match_time as string)
-      const firstMatchKST = new Date(firstMatchTime.getTime() + koreaOffset)
-      dateLabel = firstMatchKST.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
-    } else {
-      dateLabel = koreaTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
-    }
-
-    // 라운드 정보도 함께 반환
-    const { data: roundsInfo } = await supabase
-      .from('betman_rounds')
-      .select('id, gm_ts, round, status, deadline')
-      .in('id', targetRoundIds.length > 0 ? targetRoundIds : ['__none__'])
-      .order('round', { ascending: false })
-
     // 동기화 상태 (프론트엔드에서 "동기화 필요" 표시용)
     const { data: syncState } = await supabase
       .from('betman_sync_state')
@@ -182,18 +141,35 @@ export async function GET(request: NextRequest) {
 
     let syncStatus = 'ok'
     if (syncState?.last_checked_at) {
-      const hoursSince = (now.getTime() - new Date(syncState.last_checked_at).getTime()) / (1000 * 60 * 60)
+      const hoursSince = (windowStart.getTime() - new Date(syncState.last_checked_at).getTime()) / (1000 * 60 * 60)
       if (hoursSince > 6) syncStatus = 'urgent'
       else if (hoursSince > 3) syncStatus = 'stale'
     }
 
+    // Find the earliest bet_close_at among bettable games (for countdown)
+    const bettableGames = gamesWithOdds.filter((g: Record<string, unknown>) => g.is_bettable)
+    const earliestBetClose = bettableGames.length > 0
+      ? bettableGames.reduce((earliest: string, g: Record<string, unknown>) =>
+          (g.bet_close_at as string) < earliest ? (g.bet_close_at as string) : earliest,
+          bettableGames[0].bet_close_at as string
+        )
+      : null
+
     return NextResponse.json({
-      today: { date: now.toISOString(), label: dateLabel },
+      // Daily window info: [08:00 KST today, 08:00 KST tomorrow)
+      window: {
+        start: windowStart.toISOString(),
+        end: windowEnd.toISOString(),
+        dailyId,
+      },
+      today: { date: windowStart.toISOString(), label: formatDailyIdLabel(dailyId) },
+      dailyRound: null, // No longer used for display — kept for API compat
+      bettingWindow: windowStatus,
+      earliestBetClose,
       games: gamesWithOdds,
       groupedGames: Object.values(groupedGames),
       userPredictions,
       total: gamesWithOdds.length,
-      rounds: roundsInfo || [],
       syncInfo: {
         status: syncStatus,
         latestGmTs: syncState?.latest_gm_ts,
@@ -210,7 +186,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/betman/games
  *
- * VPS 또는 n8n에서 게임 데이터를 전송.
+ * VPS에서 게임 데이터를 전송. 자동으로 daily round에 배정.
  *
  * Body: {
  *   roundId: string (uuid),
@@ -280,10 +256,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // --- Auto-assign daily round IDs ---
+    const dailyGroups = new Map<string, number>()
+    for (const row of rows) {
+      if (!row.match_time) continue
+      const dailyId = computeDailyId(row.match_time)
+      dailyGroups.set(dailyId, (dailyGroups.get(dailyId) || 0) + 1)
+    }
+
+    let dailyRoundsCreated = 0
+    for (const [dailyId] of dailyGroups) {
+      const betOpen = getBetOpenAt(dailyId)
+      const betClose = getBetCloseAt(dailyId)
+
+      const { data: dr } = await supabase
+        .from('betman_daily_rounds')
+        .upsert(
+          { daily_id: dailyId, bet_open_at: betOpen, bet_close_at: betClose },
+          { onConflict: 'daily_id' }
+        )
+        .select('id')
+        .single()
+
+      if (dr) {
+        await supabase.rpc('assign_daily_round', {
+          p_daily_id: dailyId,
+          p_daily_round_id: dr.id,
+        })
+        dailyRoundsCreated++
+      }
+    }
+
     return NextResponse.json({
       roundId,
       count: rows.length,
-      message: `${rows.length}개 경기가 저장되었습니다.`,
+      dailyRoundsProcessed: dailyRoundsCreated,
+      message: `${rows.length}개 경기가 저장되었습니다. (${dailyRoundsCreated}개 일일 라운드 처리)`,
     })
   } catch (e) {
     console.error('API error:', e)

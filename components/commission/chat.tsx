@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Send, Loader2, MessageSquare } from "lucide-react"
 
@@ -27,7 +27,7 @@ export function CommissionChat({ orderId, currentUserId, profiles }: Props) {
   const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch(`/api/commissions/orders/${orderId}/messages`)
       const data = await res.json()
@@ -37,13 +37,13 @@ export function CommissionChat({ orderId, currentUserId, profiles }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [orderId])
 
   useEffect(() => {
     fetchMessages()
     const interval = setInterval(fetchMessages, 10000) // Poll every 10s
     return () => clearInterval(interval)
-  }, [orderId])
+  }, [fetchMessages])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })

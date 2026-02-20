@@ -44,9 +44,25 @@ interface TodayInfo {
   label: string
 }
 
+interface DailyRoundInfo {
+  id: string
+  daily_id: string
+  status: string
+  bet_open_at: string
+  bet_close_at: string
+  game_count: number
+}
+
+interface BettingWindowInfo {
+  isOpen: boolean
+  message: string
+  nextOpenAt?: string
+}
+
 interface BetmanGame {
   id: string
   round_id: string
+  daily_round_id?: string
   game_no: number
   match_time: string
   sport: '축구' | '농구'
@@ -58,6 +74,9 @@ interface BetmanGame {
   over_under_line: number | null  // 언오버 기준선 (언오버 게임용)
   venue: string
   status: string
+  // Per-game bet deadline: MIN(kickoff, same_day 23:00 KST)
+  bet_close_at?: string
+  is_bettable?: boolean
   // 배당률 (API에서 제공 시)
   home_odds?: number
   draw_odds?: number
@@ -77,6 +96,11 @@ interface GroupedMatch {
   matchTime: string
   venue: string
   games: BetmanGame[]
+}
+
+interface WindowInfo {
+  start: string
+  end: string
 }
 
 // Game type labels
@@ -168,10 +192,15 @@ export default function BettingPage() {
 
   // Betman API 데이터 상태
   const [todayInfo, setTodayInfo] = useState<TodayInfo | null>(null)
+  const [dailyRound, setDailyRound] = useState<DailyRoundInfo | null>(null)
+  const [bettingWindow, setBettingWindow] = useState<BettingWindowInfo | null>(null)
   const [groupedMatches, setGroupedMatches] = useState<GroupedMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [deadlineCountdown, setDeadlineCountdown] = useState<string | null>(null)
+  const [earliestBetClose, setEarliestBetClose] = useState<string | null>(null)
+  const [windowInfo, setWindowInfo] = useState<WindowInfo | null>(null)
 
   // Track selected sport for single-sport restriction
   const [selectedSport, setSelectedSport] = useState<string | null>(null)
@@ -218,9 +247,19 @@ export default function BettingPage() {
       if (data.today) {
         setTodayInfo(data.today)
       }
+      if (data.dailyRound) {
+        setDailyRound(data.dailyRound)
+      }
+      if (data.bettingWindow) {
+        setBettingWindow(data.bettingWindow)
+      }
       if (data.groupedGames) {
         setGroupedMatches(data.groupedGames)
       }
+      if (data.window) {
+        setWindowInfo(data.window)
+      }
+      setEarliestBetClose(data.earliestBetClose || null)
       setLastUpdated(new Date())
     } catch (err) {
       setError("경기 데이터를 불러오는데 실패했습니다.")
@@ -291,6 +330,41 @@ export default function BettingPage() {
     return () => clearInterval(interval)
   }, [loadMatches])
 
+  // 마감 카운트다운 타이머 (가장 빠른 bet_close_at 기준)
+  useEffect(() => {
+    if (!earliestBetClose) {
+      setDeadlineCountdown(null)
+      return
+    }
+
+    const updateCountdown = () => {
+      const now = new Date()
+      const close = new Date(earliestBetClose)
+      const diff = close.getTime() - now.getTime()
+
+      if (diff <= 0) {
+        setDeadlineCountdown('마감됨')
+        return
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+      if (hours > 0) {
+        setDeadlineCountdown(`${hours}시간 ${minutes}분`)
+      } else if (minutes > 0) {
+        setDeadlineCountdown(`${minutes}분 ${seconds}초`)
+      } else {
+        setDeadlineCountdown(`${seconds}초`)
+      }
+    }
+
+    updateCountdown()
+    const timer = setInterval(updateCountdown, 1000)
+    return () => clearInterval(timer)
+  }, [earliestBetClose])
+
   // Load rankings
   const loadRankings = useCallback(async () => {
     setIsLoadingRankings(true)
@@ -326,7 +400,7 @@ export default function BettingPage() {
     if (!isSignedIn) return
     setIsLoadingHistory(true)
     try {
-      const response = await fetch('/api/prediction?status=all')
+      const response = await fetch('/api/betman/prediction?status=all')
       if (!response.ok) throw new Error('Failed to load prediction history')
       const predictions = await response.json()
       
@@ -414,6 +488,12 @@ export default function BettingPage() {
   const handleSubmitPrediction = async () => {
     if (selectedBets.length === 0) {
       showAlert('warning', '경기를 선택해주세요', '예측할 경기를 먼저 선택해주세요.')
+      return
+    }
+
+    // 베팅 윈도우 확인
+    if (bettingWindow && !bettingWindow.isOpen) {
+      showAlert('warning', '베팅 시간 아님', bettingWindow.message)
       return
     }
 
@@ -709,15 +789,41 @@ export default function BettingPage() {
         {/* Betting Tab */}
         {activeTab === "betting" && (
           <div className="space-y-2">
-            {/* 오늘 날짜 표시 (블루 계열) - 콤팩트 */}
-            {todayInfo && (
-              <Card className="bg-accent/5 border border-accent/30 py-1.5 px-3">
+            {/* 오늘의 경기 헤더 + 마감 카운트다운 */}
+            <Card className="bg-accent/5 border border-accent/30 py-1.5 px-3">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1 rounded-full bg-accent/10 shrink-0">
                     <Calendar className="h-3.5 w-3.5 text-accent" />
                   </div>
                   <span className="font-semibold text-[13px] text-accent">
-                    {todayInfo.label}
+                    오늘의 경기
+                  </span>
+                  {todayInfo && (
+                    <span className="text-[11px] text-muted-foreground">
+                      ({todayInfo.label})
+                    </span>
+                  )}
+                </div>
+                {bettingWindow?.isOpen && deadlineCountdown && deadlineCountdown !== '마감됨' && (
+                  <div className="flex items-center gap-1 text-[11px] text-orange-600 font-medium">
+                    <Clock className="h-3 w-3" />
+                    <span>다음 마감 {deadlineCountdown}</span>
+                  </div>
+                )}
+                {deadlineCountdown === '마감됨' && (
+                  <span className="text-[11px] text-red-500 font-medium">베팅 마감</span>
+                )}
+              </div>
+            </Card>
+
+            {/* 데드존 알림 (23:00~08:00 KST) */}
+            {bettingWindow && !bettingWindow.isOpen && (
+              <Card className="bg-amber-50 border border-amber-200 py-2 px-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span className="text-[13px] text-amber-700 font-medium">
+                    {bettingWindow.message}
                   </span>
                 </div>
               </Card>
@@ -763,7 +869,10 @@ export default function BettingPage() {
             {/* 경기 목록 */}
             {!isLoading && !error && filteredMatches.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <p>{todayInfo ? '오늘 예정된 경기가 없습니다.' : '경기 정보를 불러올 수 없습니다.'}</p>
+                <p>오늘 베팅 가능한 경기가 없습니다.</p>
+                {bettingWindow && !bettingWindow.isOpen && (
+                  <p className="text-sm mt-1 text-amber-600">{bettingWindow.message}</p>
+                )}
               </div>
             )}
 
@@ -805,7 +914,9 @@ export default function BettingPage() {
                         const gameTypeLabel = gameTypeLabels[game.game_type] || game.game_type
                         const selectedBet = selectedBets.find(b => b.gameId === game.id)
                         const sportMismatch = selectedSport !== null && selectedSport !== game.sport
-                        const isDisabled = sportMismatch || (hasSelectionFromThisMatch && !selectedBet)
+                        const bettingClosed = bettingWindow ? !bettingWindow.isOpen : false
+                        const gameBetClosed = game.is_bettable === false
+                        const isDisabled = sportMismatch || (hasSelectionFromThisMatch && !selectedBet) || bettingClosed || gameBetClosed
 
                         // 배당률 옵션 생성 - 게임 타입별로 분기
                         let options: Array<{ value: string; label: string; odds?: number }>
@@ -842,7 +953,7 @@ export default function BettingPage() {
                                 {/* 핸디캡: 어느 팀에게 핸디인지 표시 */}
                                 {game.game_type.includes('핸디캡') && (
                                   game.handicap !== null && game.handicap !== 0 ? (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-600 border-blue-200">
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
                                       {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? '+' : ''}{game.handicap}
                                     </Badge>
                                   ) : (
@@ -864,7 +975,10 @@ export default function BettingPage() {
                                   )
                                 )}
                               </div>
-                              {sportMismatch && (
+                              {gameBetClosed && (
+                                <span className="text-[10px] text-red-500 font-medium">마감</span>
+                              )}
+                              {sportMismatch && !gameBetClosed && (
                                 <span className="text-[10px] text-orange-500">다른 종목</span>
                               )}
                             </div>
@@ -940,7 +1054,7 @@ export default function BettingPage() {
                           </span>
                         </span>
                         <span>
-                          적중률 <span className="font-medium text-blue-600">{(myRank.accuracy || 0).toFixed(1)}%</span>
+                          적중률 <span className="font-medium text-primary">{(myRank.accuracy || 0).toFixed(1)}%</span>
                         </span>
                         <span>
                           {myRank.correct_predictions || 0}/{myRank.total_predictions || 0}
@@ -1057,7 +1171,7 @@ export default function BettingPage() {
                           <div className="text-[10px] text-muted-foreground">수익률</div>
                         </div>
                         <div className="flex-1 text-center px-2 py-1 bg-muted/50 rounded">
-                          <div className="text-xs font-bold text-blue-600">
+                          <div className="text-xs font-bold text-primary">
                             {(user.accuracy || 0).toFixed(1)}%
                           </div>
                           <div className="text-[10px] text-muted-foreground">적중률</div>
@@ -1268,7 +1382,7 @@ export default function BettingPage() {
                             <div className="text-[10px] text-muted-foreground mt-0.5">수익률</div>
                           </div>
                           <div className="text-center p-2 bg-muted/40 rounded-lg">
-                            <div className="text-lg font-bold text-blue-600">
+                            <div className="text-lg font-bold text-primary">
                               {(myStats.summary.accuracy || 0).toFixed(1)}%
                             </div>
                             <div className="text-[10px] text-muted-foreground mt-0.5">적중률</div>
@@ -1360,7 +1474,7 @@ export default function BettingPage() {
                                     <div className="text-[10px] text-muted-foreground">수익률</div>
                                   </div>
                                   <div className="text-center px-2 py-1.5 bg-muted/40 rounded">
-                                    <div className="text-xs font-bold text-blue-600">
+                                    <div className="text-xs font-bold text-primary">
                                       {(sport.accuracy || 0).toFixed(1)}%
                                     </div>
                                     <div className="text-[10px] text-muted-foreground">적중률</div>
@@ -1481,7 +1595,7 @@ export default function BettingPage() {
                           <span className="text-primary">{gameTypeLabels[bet.gameType] || bet.gameType}</span>
                           {/* 핸디캡 정보 */}
                           {bet.gameType.includes('핸디캡') && bet.handicap !== null && (
-                            <span className="text-blue-600 font-medium">
+                            <span className="text-primary font-medium">
                               ({groupedMatch.homeTeam.slice(0, 4)} {bet.handicap > 0 ? '+' : ''}{bet.handicap})
                             </span>
                           )}
@@ -1592,7 +1706,7 @@ export default function BettingPage() {
                   <Button
                     className="w-full bg-gray-900 hover:bg-gray-800 dark:bg-primary dark:hover:bg-primary/90 h-11"
                     onClick={handleSubmitPrediction}
-                    disabled={isSubmittingPrediction || selectedBets.length === 0 || betAmount <= 0}
+                    disabled={isSubmittingPrediction || selectedBets.length === 0 || betAmount <= 0 || (bettingWindow ? !bettingWindow.isOpen : false)}
                   >
                     {isSubmittingPrediction ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

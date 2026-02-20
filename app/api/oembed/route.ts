@@ -26,6 +26,22 @@ const OEMBED_ENDPOINTS = {
 }
 
 /**
+ * Allowed hostnames for SSRF prevention (defense-in-depth)
+ */
+const ALLOWED_HOSTS = new Set([
+  'www.youtube.com',
+  'youtube.com',
+  'youtu.be',
+  'm.youtube.com',
+  'www.instagram.com',
+  'instagram.com',
+  'twitter.com',
+  'www.twitter.com',
+  'x.com',
+  'www.x.com',
+])
+
+/**
  * URL patterns for provider detection
  */
 const URL_PATTERNS = {
@@ -194,12 +210,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Validate URL format
+    // Validate URL format and hostname whitelist (SSRF prevention)
     try {
       const parsed = new URL(url)
       if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
         return NextResponse.json(
           { error: 'Invalid URL protocol' },
+          { status: 400 }
+        )
+      }
+      if (!ALLOWED_HOSTS.has(parsed.hostname)) {
+        return NextResponse.json(
+          { error: 'Unsupported domain' },
           { status: 400 }
         )
       }

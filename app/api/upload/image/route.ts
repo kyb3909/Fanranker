@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 
+/** Validate file content via magic bytes to prevent MIME spoofing */
+function validateImageMagicBytes(buffer: ArrayBuffer): boolean {
+  const bytes = new Uint8Array(buffer)
+  if (bytes.length < 4) return false
+
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return true
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return true
+  // GIF: 47 49 46 38 (GIF8)
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) return true
+  // WebP: RIFF....WEBP
+  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return true
+  // AVIF/HEIF: ....ftyp
+  if (bytes.length >= 12 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return true
+  // BMP: 42 4D
+  if (bytes[0] === 0x42 && bytes[1] === 0x4D) return true
+
+  return false
+}
+
 /**
  * POST /api/upload/image
  * 이미지를 Supabase Storage에 업로드
- * 
+ *
  * Body: FormData with 'file' field
- * 
+ *
  * Returns: { url: string }
  */
 export async function POST(request: NextRequest) {
@@ -33,10 +55,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 파일 타입 검증
+    // 파일 타입 검증 (client-declared MIME)
     if (!file.type.startsWith('image/')) {
       return NextResponse.json(
         { error: '이미지 파일만 업로드할 수 있습니다.' },
+        { status: 400 }
+      )
+    }
+
+    // 매직 바이트 검증 (MIME spoofing 방지)
+    const fileBuffer = await file.arrayBuffer()
+    if (!validateImageMagicBytes(fileBuffer)) {
+      return NextResponse.json(
+        { error: '유효하지 않은 이미지 파일입니다.' },
         { status: 400 }
       )
     }
@@ -61,10 +92,10 @@ export async function POST(request: NextRequest) {
     const baseName = `${timestamp}-${randomUUID}.${fileExt}`
     const fileName = type === 'avatar' ? `avatars/${userId}/${baseName}` : `${userId}/${baseName}`
 
-    // Supabase Storage에 업로드
+    // Supabase Storage에 업로드 (이미 읽은 buffer 사용)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('posts')
-      .upload(fileName, file, {
+      .upload(fileName, fileBuffer, {
         contentType: file.type,
         upsert: false,
       })

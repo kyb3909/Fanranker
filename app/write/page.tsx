@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useAuth } from "@clerk/nextjs"
+import dynamic from "next/dynamic"
 import { Header } from "@/components/header"
 import { BackButton } from "@/components/back-button"
 import { Card } from "@/components/ui/card"
@@ -12,7 +13,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Image as ImageIcon, X, Loader2 } from "lucide-react"
 import Image from "next/image"
-import { TipTapEditor } from "@/components/tiptap-editor"
+
+const TipTapEditor = dynamic(
+  () => import("@/components/tiptap-editor").then(mod => ({ default: mod.TipTapEditor })),
+  { ssr: false, loading: () => <div className="h-64 bg-muted animate-pulse rounded-lg" /> }
+)
 
 const COMMUNITIES = [
   { slug: "overseas-football", name: "해외축구" },

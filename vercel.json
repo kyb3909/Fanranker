@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/betman-sync",
-      "schedule": "0 */2 * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/commission-auto-release",
