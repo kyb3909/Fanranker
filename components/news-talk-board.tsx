@@ -11,6 +11,8 @@ interface ItemDetail {
   source: string
   sourceUrl: string
   redditUrl?: string
+  thumbnailUrl?: string | null
+  mediaType?: 'youtube' | 'image' | 'article' | null
   participants: number
   score?: number
   category?: string
@@ -448,6 +450,35 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-[12px] font-semibold text-muted-foreground">{details.source}</span>
               </div>
+
+              {/* 미디어: YouTube 임베드 */}
+              {details.mediaType === 'youtube' && details.sourceUrl && (() => {
+                const ytMatch = details.sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/)
+                return ytMatch ? (
+                  <div className="mb-4 rounded-lg overflow-hidden aspect-video">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : null
+              })()}
+
+              {/* 미디어: 이미지 (YouTube가 아닐 때만) */}
+              {details.mediaType !== 'youtube' && details.thumbnailUrl && (
+                <div className="mb-4 rounded-lg overflow-hidden">
+                  <img
+                    src={details.thumbnailUrl}
+                    alt=""
+                    className="w-full max-h-[300px] object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                </div>
+              )}
+
               <ul className="space-y-3">
                 {details.summary.map((line, i) => (
                   <li key={i} className="flex gap-3 text-[14px] text-foreground leading-relaxed">

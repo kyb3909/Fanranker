@@ -11,6 +11,8 @@ export interface TickerItemDetail {
   source: string
   sourceUrl: string
   redditUrl?: string
+  thumbnailUrl?: string | null
+  mediaType?: 'youtube' | 'image' | 'article' | null
   participants: number
   score?: number
   category?: string

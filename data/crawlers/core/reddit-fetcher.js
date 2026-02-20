@@ -1,0 +1,242 @@
+const USER_AGENT = 'community-news-bot/1.0 (community-board-ticker)'
+const REDDIT_BASE = 'https://www.reddit.com'
+
+/**
+ * Fetch hot posts from a subreddit.
+ * Uses RSS feed (Atom XML) since Reddit blocks JSON API from datacenter IPs.
+ * Falls back to JSON API if RSS fails.
+ *
+ * @param {object} source - Source config from sources.json
+ * @returns {Promise<object[]>} Filtered posts ready for GPT summarization
+ */
+export async function fetchRedditPosts(source) {
+  // Try RSS first (works from datacenter IPs)
+  try {
+    return await fetchViaRSS(source)
+  } catch (rssErr) {
+    console.log(`  RSS failed (${rssErr.message}), trying JSON API...`)
+  }
+
+  // Fallback to JSON API
+  return await fetchViaJSON(source)
+}
+
+/**
+ * Fetch via RSS/Atom feed (reliable from datacenter IPs).
+ * RSS doesn't provide score/num_comments, so we skip min_score filtering.
+ */
+async function fetchViaRSS(source) {
+  const limit = Math.min((source.max_articles || 10) * 3, 50) // fetch more to filter
+  const url = `${REDDIT_BASE}/r/${source.subreddit}/hot.rss?limit=${limit}`
+
+  const res = await fetch(url, {
+    headers: { 'User-Agent': USER_AGENT },
+  })
+
+  if (!res.ok) {
+    throw new Error(`RSS ${res.status}: ${res.statusText}`)
+  }
+
+  const xml = await res.text()
+  const entries = parseAtomFeed(xml)
+
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000
+  const maxArticles = source.max_articles || 10
+
+  // Filter out stickied-like posts (AutoModerator, daily threads, match threads)
+  const skipAuthors = new Set(['AutoModerator', '2soccer2bot', 'MatchThreadder'])
+  const skipPatterns = [
+    /^daily discussion$/i,
+    /^free talk/i,
+    /^match thread/i,
+    /^post.?match thread/i,
+    /^monday moan/i,
+    /^change my view/i,
+    /^\[match thread\]/i,
+  ]
+
+  const posts = entries
+    .filter(entry => {
+      if (skipAuthors.has(entry.author)) return false
+      if (skipPatterns.some(p => p.test(entry.title))) return false
+      if (entry.published && new Date(entry.published).getTime() < cutoff) return false
+      return true
+    })
+    .slice(0, maxArticles)
+
+  return posts.map(entry => ({
+    external_id: entry.id.replace('t3_', ''),
+    external_url: entry.link,
+    original_title: entry.title,
+    link_url: entry.contentLink || null,
+    thumbnail_url: entry.thumbnail || null,
+    media_type: entry.mediaType || null,
+    score: 0, // Not available in RSS
+    num_comments: 0, // Not available in RSS
+    flair: null,
+    author: entry.author,
+    posted_at: entry.published || new Date().toISOString(),
+  }))
+}
+
+/**
+ * Parse Atom XML feed into entries array.
+ * Simple regex-based parser (no XML library needed).
+ */
+function parseAtomFeed(xml) {
+  const entries = []
+  const entryRegex = /<entry>([\s\S]*?)<\/entry>/g
+  let match
+
+  while ((match = entryRegex.exec(xml)) !== null) {
+    const block = match[1]
+
+    const id = extractTag(block, 'id') || ''
+    const title = decodeHTML(extractTag(block, 'title') || '')
+    const link = extractAttr(block, 'link', 'href') || ''
+    const published = extractTag(block, 'published') || ''
+    const updated = extractTag(block, 'updated') || ''
+    const author = extractNestedTag(block, 'author', 'name') || ''
+
+    // Extract media:thumbnail URL
+    const thumbMatch = block.match(/<media:thumbnail[^>]*url="([^"]+)"/)
+    const thumbnail = thumbMatch ? decodeHTML(thumbMatch[1]) : null
+
+    // Decode HTML entities in content FIRST, then search for [link]
+    const rawContent = extractTag(block, 'content') || ''
+    const content = decodeHTML(rawContent)
+    let contentLink = null
+    const linkMatch = content.match(/\[link\]<\/a>/)
+    if (linkMatch) {
+      const hrefMatch = content.slice(0, linkMatch.index).match(/href="([^"]+)"[^>]*>\s*$/)
+      if (hrefMatch && !hrefMatch[1].includes('reddit.com/r/')) {
+        contentLink = hrefMatch[1]
+      }
+    }
+
+    // Determine media type from external link
+    let mediaType = null
+    const checkUrl = contentLink || ''
+    if (/youtu\.?be(\.com)?/i.test(checkUrl)) {
+      mediaType = 'youtube'
+    } else if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(checkUrl) || /i\.redd\.it|imgur\.com|i\.imgur\.com/i.test(checkUrl)) {
+      mediaType = 'image'
+    } else if (contentLink) {
+      mediaType = 'article'
+    }
+
+    entries.push({
+      id,
+      title,
+      link,
+      published: published || updated,
+      author,
+      contentLink,
+      thumbnail,
+      mediaType,
+    })
+  }
+
+  return entries
+}
+
+function extractTag(xml, tag) {
+  const m = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`))
+  return m ? m[1].trim() : null
+}
+
+function extractAttr(xml, tag, attr) {
+  const m = xml.match(new RegExp(`<${tag}[^>]*${attr}="([^"]*)"[^>]*/?>`))
+  return m ? m[1] : null
+}
+
+function extractNestedTag(xml, parent, child) {
+  const parentM = xml.match(new RegExp(`<${parent}>[\\s\\S]*?<\\/${parent}>`))
+  if (!parentM) return null
+  return extractTag(parentM[0], child)
+}
+
+function decodeHTML(str) {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#32;/g, ' ')
+}
+
+/**
+ * Fallback: Fetch via JSON API (may be blocked from datacenter IPs).
+ */
+async function fetchViaJSON(source) {
+  const url = `${REDDIT_BASE}/r/${source.subreddit}/hot.json?limit=50`
+
+  let data
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+    })
+
+    if (res.status === 429) {
+      const wait = attempt * 5
+      console.log(`  Rate limited, waiting ${wait}s (attempt ${attempt}/3)`)
+      await sleep(wait * 1000)
+      continue
+    }
+
+    if (!res.ok) {
+      throw new Error(`JSON API ${res.status}: ${res.statusText}`)
+    }
+
+    data = await res.json()
+    break
+  }
+
+  if (!data) {
+    throw new Error('Reddit API failed after 3 retries')
+  }
+
+  const minScore = source.min_score || 50
+  const maxArticles = source.max_articles || 10
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000
+
+  const posts = data.data.children
+    .map(c => c.data)
+    .filter(post => {
+      if (post.stickied) return false
+      if (post.score < minScore) return false
+      if (post.created_utc * 1000 < cutoff) return false
+      return true
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxArticles)
+
+  return posts.map(post => {
+    const linkUrl = post.is_self ? null : post.url
+    let mediaType = null
+    if (linkUrl) {
+      if (/youtu\.?be(\.com)?/i.test(linkUrl)) mediaType = 'youtube'
+      else if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(linkUrl) || /i\.redd\.it|imgur\.com/i.test(linkUrl)) mediaType = 'image'
+      else mediaType = 'article'
+    }
+    return {
+      external_id: post.id,
+      external_url: `https://reddit.com${post.permalink}`,
+      original_title: post.title,
+      link_url: linkUrl,
+      thumbnail_url: post.thumbnail?.startsWith('http') ? post.thumbnail : null,
+      media_type: mediaType,
+      score: post.score,
+      num_comments: post.num_comments,
+      flair: post.link_flair_text || null,
+      author: post.author,
+      posted_at: new Date(post.created_utc * 1000).toISOString(),
+    }
+  })
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}

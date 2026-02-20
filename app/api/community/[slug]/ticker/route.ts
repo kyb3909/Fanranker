@@ -24,7 +24,7 @@ export async function GET(
     const { data: rows, error } = await supabase
       .from('news_ticker_items')
       .select(
-        'id, headline_kr, summary_kr, category, importance, ticker_tag, external_url, link_url, score, num_comments, posted_at, source_id, author, original_title'
+        'id, headline_kr, summary_kr, category, importance, ticker_tag, external_url, link_url, thumbnail_url, media_type, score, num_comments, posted_at, source_id, author, original_title'
       )
       .eq('community_slug', slug)
       .gte('posted_at', cutoff)
@@ -37,6 +37,12 @@ export async function GET(
       return NextResponse.json({ items: [] })
     }
 
+    // Source ID → display name
+    const SOURCE_NAMES: Record<string, string> = {
+      'reddit-soccer': 'r/soccer',
+      'reddit-movies': 'r/movies',
+    }
+
     // Map DB rows → frontend TickerItem format
     const items = (rows || []).map(row => ({
       id: `ticker-${row.id}`,
@@ -44,9 +50,11 @@ export async function GET(
       text: row.headline_kr,
       detail: {
         summary: row.summary_kr ? row.summary_kr.split('\n') : [],
-        source: row.source_id === 'reddit-soccer' ? 'r/soccer' : row.source_id,
+        source: SOURCE_NAMES[row.source_id] || row.source_id,
         sourceUrl: row.link_url || row.external_url,
         redditUrl: row.external_url,
+        thumbnailUrl: row.thumbnail_url || null,
+        mediaType: row.media_type || null,
         participants: row.num_comments || 0,
         score: row.score || 0,
         category: row.category,
