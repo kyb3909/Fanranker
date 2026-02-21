@@ -64,7 +64,7 @@ async function fetchViaRSS(source) {
     })
     .slice(0, maxArticles)
 
-  return posts.map(entry => ({
+  const results = posts.map(entry => ({
     external_id: entry.id.replace('t3_', ''),
     external_url: entry.link,
     original_title: entry.title,
@@ -77,6 +77,10 @@ async function fetchViaRSS(source) {
     author: entry.author,
     posted_at: entry.published || new Date().toISOString(),
   }))
+
+  // Enrich: fetch og:image for articles missing thumbnails
+  await enrichWithOgImages(results)
+  return results
 }
 
 /**
@@ -235,6 +239,48 @@ async function fetchViaJSON(source) {
       posted_at: new Date(post.created_utc * 1000).toISOString(),
     }
   })
+}
+
+/**
+ * For posts with link_url but no thumbnail, fetch the og:image from the article.
+ * Runs in parallel with a 5s timeout per request.
+ */
+async function enrichWithOgImages(posts) {
+  const targets = posts.filter(p => p.link_url && !p.thumbnail_url && p.media_type === 'article')
+  if (targets.length === 0) return
+
+  await Promise.allSettled(targets.map(async (post) => {
+    try {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 5000)
+      const res = await fetch(post.link_url, {
+        headers: { 'User-Agent': USER_AGENT },
+        signal: ctrl.signal,
+        redirect: 'follow',
+      })
+      clearTimeout(timer)
+
+      if (!res.ok) return
+
+      // Read only first 50KB to find og:image quickly
+      const reader = res.body.getReader()
+      let html = ''
+      while (html.length < 50000) {
+        const { done, value } = await reader.read()
+        if (done) break
+        html += new TextDecoder().decode(value)
+      }
+      reader.cancel()
+
+      const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i)
+      if (ogMatch) {
+        post.thumbnail_url = ogMatch[1]
+      }
+    } catch {
+      // Timeout or network error — skip silently
+    }
+  }))
 }
 
 function sleep(ms) {
