@@ -1,15 +1,19 @@
 /**
  * Daily Round & Fixed Window Utilities
  *
- * Daily window: [today 08:00 KST, tomorrow 08:00 KST)
- * Betting blackout: 23:00~08:00 KST (no betting allowed)
- * Per-game bet_close_at = MIN(kickoff, same_KST_calendar_day 23:00 KST)
- * Daily round resets at 23:00 KST (balls → 10, pending data invalidated, new round starts)
- * 23:00 KST = system day boundary (시스템 기준 하루 시작 시점)
- * gmTs is metadata only — never used for display/eligibility filtering.
+ * 국내 토토 시뮬레이션 규정:
+ * - 23:00 KST: 데일리 회차 리셋 (볼 10개 리셋, 새 경기 리스트 표시)
+ * - 회차 범위: 당일 08:00 KST ~ 익일 08:00 KST 경기
+ * - 베팅 제한 없음 (경기 시작 전까지 자유롭게 베팅 가능)
+ * - 하나의 데일리 회차에 betman gmTs 여러 개가 포함될 수 있음
+ * - gmTs는 메타데이터 전용 — 표시/필터링에 사용 안 함
  */
 
-/** Compute KST daily_id from a match_time (ISO string or Date) */
+/**
+ * Compute KST daily_id from a match_time (ISO string or Date).
+ * Used to assign games to daily rounds based on kickoff time.
+ * 08:00 KST cutoff: games before 08:00 belong to previous day's round.
+ */
 export function computeDailyId(matchTime: string | Date): string {
   const d = new Date(matchTime)
   // Convert to KST (UTC+9)
@@ -19,17 +23,27 @@ export function computeDailyId(matchTime: string | Date): string {
   return adjusted.toISOString().split('T')[0] // YYYY-MM-DD
 }
 
-/** Get today's daily_id in KST */
+/**
+ * Get the daily_id for the CURRENT viewing round.
+ * 23:00 KST cutoff: at 23:00, flips to next day's round.
+ *
+ * Examples (KST):
+ *   22:59 Feb 22 → "2026-02-22" (showing Feb 22 08:00 ~ Feb 23 08:00)
+ *   23:00 Feb 22 → "2026-02-23" (showing Feb 23 08:00 ~ Feb 24 08:00)
+ *   07:59 Feb 23 → "2026-02-23" (same round, games haven't started yet)
+ *   08:00 Feb 23 → "2026-02-23" (same round, games begin)
+ */
 export function getTodayDailyId(): string {
   const now = new Date()
-  return computeDailyId(now)
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000
+  // Add 1 hour: at 23:00 KST → 00:00 next day → daily_id flips
+  const adjusted = new Date(kstMs + 1 * 60 * 60 * 1000)
+  return adjusted.toISOString().split('T')[0]
 }
 
 /**
- * Get fixed daily window boundaries: [today 08:00 KST, tomorrow 08:00 KST)
- *
- * Before 08:00 KST → previous day's window (yesterday 08:00 ~ today 08:00)
- * After  08:00 KST → today's window (today 08:00 ~ tomorrow 08:00)
+ * Get fixed daily window boundaries: [dailyId 08:00 KST, dailyId+1 08:00 KST)
+ * Flips at 23:00 KST to next day's window (via getTodayDailyId).
  */
 export function getDailyWindow(): { start: Date; end: Date; dailyId: string } {
   const dailyId = getTodayDailyId()
@@ -46,11 +60,9 @@ export function getRolling24hWindow(): { start: Date; end: Date } {
   return { start, end }
 }
 
-/** Check if current time is in betting window (08:00-23:00 KST) */
+/** Check if current time is in betting window (always open — no time restriction) */
 export function isBettingWindowOpen(): boolean {
-  const now = new Date()
-  const kstHour = (now.getUTCHours() + 9) % 24
-  return kstHour >= 8 && kstHour < 23
+  return true
 }
 
 /** Get KST hour (0-23) */
@@ -60,29 +72,17 @@ export function getKSTHour(): number {
 }
 
 /**
- * Per-game bet deadline: MIN(kickoff, same_KST_calendar_day 23:00)
- *
- * - For daytime matches (08:00-22:59 KST): closes at kickoff
- * - For matches at/after 23:00 KST: closes at 23:00 KST same day
- * - For post-midnight matches (00:00-07:59 KST): closes at kickoff,
- *   but blackout enforcement (isBettingWindowOpen) prevents betting
- *   after 23:00, so effective deadline is previous evening 23:00.
+ * Per-game bet deadline = kickoff time.
+ * Users can bet anytime until the match starts.
+ * Game visibility is controlled by the daily round window (08:00~08:00).
  */
 export function getGameBetDeadline(matchTime: string | Date): Date {
-  const kickoff = new Date(matchTime)
-  // Get the KST calendar date of the kickoff
-  const kstMs = kickoff.getTime() + 9 * 60 * 60 * 1000
-  const kstDateStr = new Date(kstMs).toISOString().split('T')[0]
-  // Same calendar day 23:00 KST = 14:00 UTC of that date
-  const sameDay2300KST = new Date(`${kstDateStr}T14:00:00.000Z`)
-  return kickoff < sameDay2300KST ? kickoff : sameDay2300KST
+  return new Date(matchTime)
 }
 
-/** Check if a game is still bettable (before deadline AND within betting hours) */
+/** Check if a game is still bettable (before kickoff) */
 export function isGameBettable(matchTime: string | Date): boolean {
-  const now = new Date()
-  const deadline = getGameBetDeadline(matchTime)
-  return now < deadline && isBettingWindowOpen()
+  return new Date() < new Date(matchTime)
 }
 
 /** Format daily_id as Korean date label: "N월 D일 (요일)" */
@@ -125,36 +125,11 @@ export function getMsUntilReset(): number {
   return Math.max(0, getNextResetTime().getTime() - Date.now())
 }
 
-/** Get betting window status message */
+/** Get betting window status message (always open) */
 export function getBettingWindowStatus(): {
   isOpen: boolean
   message: string
   nextOpenAt?: string
 } {
-  const kstHour = getKSTHour()
-
-  if (kstHour >= 8 && kstHour < 23) {
-    return { isOpen: true, message: '베팅 가능' }
-  }
-
-  // Dead zone: 23:00~08:00
-  const todayId = getTodayDailyId()
-  if (kstHour >= 23) {
-    // After 23:00, next open is tomorrow 08:00
-    const tomorrow = new Date(`${todayId}T00:00:00+09:00`)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const nextDailyId = tomorrow.toISOString().split('T')[0]
-    return {
-      isOpen: false,
-      message: '내일 08:00부터 베팅 가능',
-      nextOpenAt: getBetOpenAt(nextDailyId),
-    }
-  }
-
-  // Before 08:00
-  return {
-    isOpen: false,
-    message: '08:00부터 베팅 가능',
-    nextOpenAt: getBetOpenAt(todayId),
-  }
+  return { isOpen: true, message: '베팅 가능' }
 }

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { isBettingWindowOpen, getBettingWindowStatus, getTodayDailyId, getGameBetDeadline, getDailyWindow } from '@/lib/betman/daily-round'
+import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from '@/lib/betman/daily-round'
 
 /**
  * POST /api/betman/prediction
  *
  * Create predictions for Betman games.
- * Validates daily round window (08:00-23:00 KST) and per-game deadlines.
+ * Validates per-game deadlines (must bet before kickoff).
  *
  * Body:
  * - predictions: Array of { game_id: uuid, prediction: "home" | "draw" | "away" | "over" | "under" }
@@ -48,15 +48,6 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-    }
-
-    // --- Check betting window (08:00-23:00 KST) ---
-    const windowStatus = getBettingWindowStatus()
-    if (!windowStatus.isOpen) {
-      return NextResponse.json(
-        { error: windowStatus.message },
-        { status: 400 }
-      )
     }
 
     // Get all game details for validation
@@ -138,7 +129,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check per-game bet deadlines: MIN(kickoff, same_day 23:00 KST)
+    // Check per-game bet deadlines (must bet before kickoff)
     const now = new Date()
     const closedGames = games.filter(g => {
       const betDeadline = getGameBetDeadline(g.match_time)

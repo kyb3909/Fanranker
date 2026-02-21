@@ -76,7 +76,7 @@ interface BetmanGame {
   over_under_line: number | null  // 언오버 기준선 (언오버 게임용)
   venue: string
   status: string
-  // Per-game bet deadline: MIN(kickoff, same_day 23:00 KST)
+  // Per-game bet deadline = kickoff time
   bet_close_at?: string
   is_bettable?: boolean
   // 배당률 (API에서 제공 시)
@@ -539,12 +539,6 @@ export default function BettingPage() {
       return
     }
 
-    // 베팅 윈도우 확인
-    if (bettingWindow && !bettingWindow.isOpen) {
-      showAlert('warning', '베팅 시간 아님', bettingWindow.message)
-      return
-    }
-
     if (betAmount <= 0) {
       showAlert('warning', '베팅 금액 확인', '베팅할 볼 수를 입력해주세요.')
       return
@@ -869,7 +863,7 @@ export default function BettingPage() {
                     </span>
                   )}
                 </div>
-                {bettingWindow?.isOpen && deadlineCountdown && deadlineCountdown !== '마감됨' && (
+                {deadlineCountdown && deadlineCountdown !== '마감됨' && (
                   <div className="flex items-center gap-1 text-[11px] text-orange-600 font-medium">
                     <Clock className="h-3 w-3" />
                     <span>다음 마감 {deadlineCountdown}</span>
@@ -880,18 +874,6 @@ export default function BettingPage() {
                 )}
               </div>
             </Card>
-
-            {/* 데드존 알림 (23:00~08:00 KST) */}
-            {bettingWindow && !bettingWindow.isOpen && (
-              <Card className="bg-amber-50 border border-amber-200 py-2 px-3">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                  <span className="text-[13px] text-amber-700 font-medium">
-                    {bettingWindow.message}
-                  </span>
-                </div>
-              </Card>
-            )}
 
             {/* 로딩/에러/새로고침 상태 표시 */}
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
@@ -933,10 +915,7 @@ export default function BettingPage() {
             {/* 경기 목록 */}
             {!isLoading && !error && filteredMatches.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <p>오늘 베팅 가능한 경기가 없습니다.</p>
-                {bettingWindow && !bettingWindow.isOpen && (
-                  <p className="text-sm mt-1 text-amber-600">{bettingWindow.message}</p>
-                )}
+                <p>베팅 가능한 경기가 없습니다.</p>
               </div>
             )}
 
@@ -978,9 +957,8 @@ export default function BettingPage() {
                         const gameTypeLabel = gameTypeLabels[game.game_type] || game.game_type
                         const selectedBet = selectedBets.find(b => b.gameId === game.id)
                         const sportMismatch = selectedSport !== null && selectedSport !== game.sport
-                        const bettingClosed = bettingWindow ? !bettingWindow.isOpen : false
                         const gameBetClosed = game.is_bettable === false
-                        const isDisabled = sportMismatch || (hasSelectionFromThisMatch && !selectedBet) || bettingClosed || gameBetClosed
+                        const isDisabled = sportMismatch || (hasSelectionFromThisMatch && !selectedBet) || gameBetClosed
 
                         // 배당률 옵션 생성 - 게임 타입별로 분기
                         let options: Array<{ value: string; label: string; odds?: number }>
@@ -1770,7 +1748,7 @@ export default function BettingPage() {
                   <Button
                     className="w-full bg-gray-900 hover:bg-gray-800 dark:bg-primary dark:hover:bg-primary/90 h-11"
                     onClick={handleSubmitPrediction}
-                    disabled={isSubmittingPrediction || selectedBets.length === 0 || betAmount <= 0 || (bettingWindow ? !bettingWindow.isOpen : false)}
+                    disabled={isSubmittingPrediction || selectedBets.length === 0 || betAmount <= 0}
                   >
                     {isSubmittingPrediction ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

@@ -11,9 +11,9 @@ import { computeDailyId, getTodayDailyId, formatDailyIdLabel, getBetOpenAt, getB
  *
  * Query: sport?, game_type?
  *
- * Window: [today 08:00 KST, tomorrow 08:00 KST) based on match kickoff time.
- * Balls reset at 08:00 KST. Per-game bet_close_at = MIN(kickoff, same_day 23:00 KST).
- * Betting blackout: 23:00~08:00 KST.
+ * Daily round: resets at 23:00 KST. Shows games from 08:00 KST ~ next 08:00 KST.
+ * Bet deadline = kickoff time. No time-of-day betting restriction.
+ * One daily round may contain games from multiple betman gmTs rounds.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -26,20 +26,22 @@ export async function GET(request: NextRequest) {
 
     // --- Fixed daily window: [today 08:00 KST, tomorrow 08:00 KST) ---
     const { start: windowStart, end: windowEnd, dailyId } = getDailyWindow()
+    const now = new Date()
 
     // --- Auto-expire past games: scheduled → in_progress ---
+    // 현재 시간 기준으로 이미 시작된 경기 상태 업데이트
     await supabase
       .from('betman_games')
-      .update({ status: 'in_progress', updated_at: windowStart.toISOString() })
+      .update({ status: 'in_progress', updated_at: now.toISOString() })
       .eq('status', 'scheduled')
-      .lt('match_time', windowStart.toISOString())
+      .lt('match_time', now.toISOString())
 
     // --- Auto-close past daily rounds ---
     await supabase
       .from('betman_daily_rounds')
-      .update({ status: 'closed', updated_at: windowStart.toISOString() })
+      .update({ status: 'closed', updated_at: now.toISOString() })
       .eq('status', 'open')
-      .lt('bet_close_at', windowStart.toISOString())
+      .lt('bet_close_at', now.toISOString())
 
     // --- Fetch games in daily window (kickoff-time based) ---
     let query = supabase
@@ -94,10 +96,10 @@ export async function GET(request: NextRequest) {
         odd_odds = game.odd_odds != null ? parseFloat(String(game.odd_odds)) : undefined
         even_odds = game.even_odds != null ? parseFloat(String(game.even_odds)) : undefined
       }
-      // Per-game bet deadline: MIN(kickoff, same_day 23:00 KST)
+      // Per-game bet deadline = kickoff time
       const betCloseAt = getGameBetDeadline(game.match_time as string)
       const now = new Date()
-      const isBettable = now < betCloseAt && windowStatus.isOpen
+      const isBettable = now < betCloseAt
       return { ...game, home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds, bet_close_at: betCloseAt.toISOString(), is_bettable: isBettable }
     })
 
