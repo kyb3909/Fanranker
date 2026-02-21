@@ -4,7 +4,7 @@
  */
 
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 /**
  * Check if current user is an admin
@@ -15,15 +15,15 @@ export async function isAdmin(): Promise<boolean> {
     const { userId } = await auth()
     if (!userId) return false
 
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('role')
       .eq('user_id', userId)
       .single()
 
     if (error || !profile) return false
-    return profile.is_admin === true
+    return profile.role === 'admin'
   } catch (error) {
     console.error('Failed to check admin status:', error)
     return false

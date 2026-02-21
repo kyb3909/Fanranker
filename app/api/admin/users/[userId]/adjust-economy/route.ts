@@ -1,0 +1,88 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
+import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const auth = await requireAdminApi()
+    if (isErrorResponse(auth)) return auth
+    const { userId: adminId, supabase } = auth
+    const { userId } = await params
+
+    const body = await request.json()
+    const { type, amount, reason } = body
+
+    if (!type || amount === undefined || !reason) {
+      return NextResponse.json({ error: 'type, amount, reason이 필요합니다.' }, { status: 400 })
+    }
+
+    if (type === 'token') {
+      const { data: current } = await supabase
+        .from('user_tokens')
+        .select('token_balance')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (current) {
+        await supabase
+          .from('user_tokens')
+          .update({ token_balance: current.token_balance + amount, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
+      } else {
+        await supabase
+          .from('user_tokens')
+          .insert({ user_id: userId, token_balance: Math.max(0, amount), total_tokens_earned: Math.max(0, amount) })
+      }
+
+      await supabase.from('token_transactions').insert({
+        user_id: userId,
+        amount,
+        type: amount > 0 ? 'admin_grant' : 'admin_deduct',
+        description: reason,
+      })
+    } else if (type === 'gold') {
+      const { data: current } = await supabase
+        .from('user_gold')
+        .select('gold_balance')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (current) {
+        await supabase
+          .from('user_gold')
+          .update({ gold_balance: current.gold_balance + amount, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
+      } else {
+        await supabase
+          .from('user_gold')
+          .insert({ user_id: userId, gold_balance: Math.max(0, amount) })
+      }
+
+      await supabase.from('gold_transactions').insert({
+        user_id: userId,
+        amount,
+        type: amount > 0 ? 'admin_grant' : 'admin_deduct',
+        description: reason,
+      })
+    } else {
+      return NextResponse.json({ error: '잘못된 type입니다. token 또는 gold만 가능합니다.' }, { status: 400 })
+    }
+
+    await writeAuditLog({
+      adminUserId: adminId,
+      action: `adjust_${type}`,
+      targetType: 'user',
+      targetId: userId,
+      details: { type, amount, reason },
+      ipAddress: getIpFromRequest(request),
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Adjust economy error:', error)
+    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+  }
+}
