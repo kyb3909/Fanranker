@@ -46,8 +46,10 @@ export function BallBalance() {
     }
 
     window.addEventListener('ballBalanceUpdate', handleBalanceUpdate)
+    window.addEventListener('dailyRoundReset', handleBalanceUpdate)
     return () => {
       window.removeEventListener('ballBalanceUpdate', handleBalanceUpdate)
+      window.removeEventListener('dailyRoundReset', handleBalanceUpdate)
     }
   }, [fetchBalance])
 
@@ -72,7 +74,7 @@ export function BallBalance() {
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-center">
           <p className="font-medium">오늘 사용 가능한 볼</p>
-          <p className="text-xs text-muted-foreground">매일 자정 10볼 충전</p>
+          <p className="text-xs text-muted-foreground">매일 23:00 10볼 충전</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

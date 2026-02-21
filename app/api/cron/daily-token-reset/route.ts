@@ -4,11 +4,10 @@ import { verifyCronSecret } from '@/lib/cron-auth'
 
 /**
  * POST /api/cron/daily-token-reset
- * 
- * Daily token reset cron job endpoint
- * Should be called daily at 12:00 KST (or scheduled via Vercel Cron / external scheduler)
- * 
- * Security: Should be protected by API key or Vercel Cron secret
+ *
+ * Daily token reset cron job — runs at 23:00 KST (14:00 UTC)
+ * Calls ensure_daily_token_reset RPC for each user; the DB function
+ * (get_token_reset_date) handles the 23:00 KST boundary logic.
  */
 
 export async function POST(request: NextRequest) {
@@ -18,17 +17,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAnonClient()
 
-    // Find all users whose tokens need reset (last_reset_at < today 00:00 KST)
-    // Using KST timezone: UTC+9
-    const todayKST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
-    todayKST.setHours(0, 0, 0, 0)
-    const todayKSTISO = todayKST.toISOString()
-
-    // Get all users who haven't had a reset today
-    const { data: usersToReset, error: fetchError } = await supabase
+    // Get all user_ids that have token records
+    const { data: users, error: fetchError } = await supabase
       .from('user_tokens')
       .select('user_id')
-      .or(`last_reset_at.is.null,last_reset_at.lt.${todayKSTISO}`)
 
     if (fetchError) {
       console.error('Failed to fetch users for token reset:', fetchError)
@@ -38,20 +30,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!usersToReset || usersToReset.length === 0) {
+    if (!users || users.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No users need token reset',
+        message: 'No users found',
         resetCount: 0,
       })
     }
 
-    // Reset tokens for each user using the PostgreSQL function
+    // Call ensure_daily_token_reset for each user — the DB function
+    // checks get_token_reset_date internally and only resets if needed
     let resetCount = 0
     let errorCount = 0
 
-    for (const user of usersToReset) {
-      const { error: resetError } = await supabase.rpc('reset_user_daily_tokens', {
+    for (const user of users) {
+      const { error: resetError } = await supabase.rpc('ensure_daily_token_reset', {
         target_user_id: user.user_id,
       })
 
@@ -68,7 +61,7 @@ export async function POST(request: NextRequest) {
       message: `Token reset completed`,
       resetCount,
       errorCount,
-      totalUsers: usersToReset.length,
+      totalUsers: users.length,
     })
   } catch (error) {
     console.error('Token reset cron job error:', error)
@@ -81,12 +74,9 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/cron/daily-token-reset
- * 
- * Manual trigger for testing purposes (development only)
- * Remove or protect this in production
+ * Manual trigger for testing (development only)
  */
 export async function GET(request: NextRequest) {
-  // Only allow in development
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       { error: 'Not available in production' },
@@ -94,6 +84,5 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // Reuse POST logic
   return POST(request)
 }

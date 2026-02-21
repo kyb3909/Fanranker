@@ -4,7 +4,8 @@
  * Daily window: [today 08:00 KST, tomorrow 08:00 KST)
  * Betting blackout: 23:00~08:00 KST (no betting allowed)
  * Per-game bet_close_at = MIN(kickoff, same_KST_calendar_day 23:00 KST)
- * Balls reset at 08:00 KST daily (10 balls)
+ * Daily round resets at 23:00 KST (balls → 10, pending data invalidated, new round starts)
+ * 23:00 KST = system day boundary (시스템 기준 하루 시작 시점)
  * gmTs is metadata only — never used for display/eligibility filtering.
  */
 
@@ -32,10 +33,10 @@ export function getTodayDailyId(): string {
  */
 export function getDailyWindow(): { start: Date; end: Date; dailyId: string } {
   const dailyId = getTodayDailyId()
-  // daily_id 08:00 KST = daily_id T23:00:00.000Z (previous day UTC)
-  // because 08:00 KST = 08:00 - 9 = 23:00 UTC previous day
-  const start = new Date(`${dailyId}T23:00:00.000Z`) // 08:00 KST of daily_id
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000) // next day 08:00 KST
+  // 08:00 KST = 23:00 UTC of the PREVIOUS calendar day
+  // e.g. dailyId '2026-02-21' → start = 2026-02-20T23:00:00Z (= 2/21 08:00 KST)
+  const start = new Date(new Date(`${dailyId}T23:00:00.000Z`).getTime() - 24 * 60 * 60 * 1000)
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000) // 다음날 08:00 KST
   return { start, end, dailyId }
 }
 
@@ -100,6 +101,28 @@ export function getBetOpenAt(dailyId: string): string {
 /** Get bet_close_at for a daily_id (23:00 KST as ISO string) */
 export function getBetCloseAt(dailyId: string): string {
   return `${dailyId}T23:00:00+09:00`
+}
+
+/** Get the next 23:00 KST reset time as a Date */
+export function getNextResetTime(): Date {
+  const now = new Date()
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000
+  const kstDate = new Date(kstMs)
+  const kstDateStr = kstDate.toISOString().split('T')[0]
+
+  // Today 23:00 KST = today 14:00 UTC
+  const today2300 = new Date(`${kstDateStr}T14:00:00.000Z`)
+
+  if (now < today2300) {
+    return today2300
+  }
+  // Already past 23:00 KST → next day 23:00 KST
+  return new Date(today2300.getTime() + 24 * 60 * 60 * 1000)
+}
+
+/** Get milliseconds until the next 23:00 KST reset */
+export function getMsUntilReset(): number {
+  return Math.max(0, getNextResetTime().getTime() - Date.now())
 }
 
 /** Get betting window status message */

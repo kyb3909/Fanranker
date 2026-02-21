@@ -38,6 +38,8 @@ import {
   BarChart3,
 } from "lucide-react"
 
+import { getMsUntilReset } from '@/lib/betman/daily-round'
+
 // Betman Types
 interface TodayInfo {
   date: string
@@ -222,6 +224,9 @@ export default function BettingPage() {
   // 예측 제출 상태
   const [isSubmittingPrediction, setIsSubmittingPrediction] = useState(false)
 
+  // 현재 시간 (30초마다 갱신 → 시작된 경기 자동 필터링)
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+
   // 알림 모달 상태
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean
@@ -330,6 +335,14 @@ export default function BettingPage() {
     return () => clearInterval(interval)
   }, [loadMatches])
 
+  // 30초마다 currentTime 갱신 (시작된 경기 자동 제거)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 30000)
+    return () => clearInterval(timer)
+  }, [])
+
   // 마감 카운트다운 타이머 (가장 빠른 bet_close_at 기준)
   useEffect(() => {
     if (!earliestBetClose) {
@@ -364,6 +377,41 @@ export default function BettingPage() {
     const timer = setInterval(updateCountdown, 1000)
     return () => clearInterval(timer)
   }, [earliestBetClose])
+
+  // 23:00 KST 자동 리셋 타이머
+  useEffect(() => {
+    const scheduleReset = () => {
+      const ms = getMsUntilReset()
+      return setTimeout(() => {
+        // 선택 초기화
+        setSelectedBets([])
+        setSelectedSport(null)
+        // 데이터 갱신
+        loadMatches()
+        loadUserBalls()
+        // 다른 컴포넌트에 알림
+        window.dispatchEvent(new CustomEvent('dailyRoundReset'))
+        // 알림 모달 표시
+        showAlert('success', '일일 리셋', '23:00 새로운 라운드가 시작되었습니다.\n볼이 충전되었습니다.')
+      }, ms)
+    }
+
+    const timerId = scheduleReset()
+    return () => clearTimeout(timerId)
+  }, [loadMatches, loadUserBalls]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 절전/탭 복귀 시 데이터 갱신
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadMatches()
+        loadUserBalls()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [loadMatches, loadUserBalls])
 
   // Load rankings
   const loadRankings = useCallback(async () => {
@@ -550,6 +598,23 @@ export default function BettingPage() {
 
   // 베트맨 게임 선택 핸들러
   const handleBetSelection = (gameId: string, matchKey: string, selection: string, sport: string, gameType: string, handicap: number | null, overUnderLine: number | null, odds?: number) => {
+    // 이미 시작된 경기 체크
+    const match = groupedMatches.find(m => m.matchKey === matchKey)
+    if (match) {
+      const matchTime = new Date(match.matchTime)
+      const now = new Date()
+      if (matchTime <= now) {
+        showAlert('warning', '이미 시작된 경기입니다', '이미 시작된 경기에는 예측할 수 없습니다.')
+        return
+      }
+      // per-game bet_close_at 체크
+      const game = match.games.find(g => g.id === gameId)
+      if (game?.bet_close_at && new Date(game.bet_close_at) <= now) {
+        showAlert('warning', '이미 시작된 경기입니다', '베팅 마감 시간이 지났습니다.')
+        return
+      }
+    }
+
     // 같은 물리적 경기에서 이미 선택된 게임이 있는지 확인
     const existingMatchBet = selectedBets.find((b) => b.matchKey === matchKey)
     const existingGameBet = selectedBets.find((b) => b.gameId === gameId)
@@ -649,14 +714,13 @@ export default function BettingPage() {
 
   // 필터링된 경기 목록 (이미 시작된 경기는 제외)
   const filteredMatches = useMemo(() => {
-    const now = new Date()
     return groupedMatches
       .filter((m) => {
         const matchTime = new Date(m.matchTime)
-        return matchTime > now
+        return matchTime > currentTime
       })
       .filter((m) => sportFilter === "all" || m.sport === sportFilter)
-  }, [groupedMatches, sportFilter])
+  }, [groupedMatches, sportFilter, currentTime])
 
   return (
     <div className="w-full">
