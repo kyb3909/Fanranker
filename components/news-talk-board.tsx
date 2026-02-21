@@ -448,7 +448,12 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
           {details && (
             <div className="mx-4 mt-4 mb-3 p-5 bg-card rounded-xl border border-border">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-[12px] font-semibold text-muted-foreground">{details.source}</span>
+                <span className="text-[12px] font-semibold text-primary">{details.source}</span>
+                {details.originalTitle && (
+                  <span className="text-[11px] text-muted-foreground truncate max-w-[300px]" title={details.originalTitle}>
+                    · {details.originalTitle}
+                  </span>
+                )}
               </div>
 
               {/* 미디어: YouTube 임베드 */}
@@ -489,11 +494,11 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
               </ul>
               <div className="mt-4 pt-3 border-t border-border flex items-center gap-4">
                 <a href={details.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-primary hover:text-primary/80 transition-colors font-semibold">
-                  원문 보기 &rarr;
+                  {details.source} 원문 &rarr;
                 </a>
-                {details.redditUrl && details.redditUrl !== details.sourceUrl && (
+                {details.redditUrl && (
                   <a href={details.redditUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
-                    Reddit 댓글 &rarr;
+                    Reddit 토론 &rarr;
                   </a>
                 )}
               </div>

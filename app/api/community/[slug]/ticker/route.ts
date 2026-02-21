@@ -37,8 +37,49 @@ export async function GET(
       return NextResponse.json({ items: [] })
     }
 
-    // Source ID → display name
-    const SOURCE_NAMES: Record<string, string> = {
+    // Extract display-friendly source name from URL domain
+    function extractSourceName(url: string | null): string | null {
+      if (!url) return null
+      try {
+        const host = new URL(url).hostname.replace(/^www\./, '')
+        // Known domain → friendly name
+        const DOMAIN_NAMES: Record<string, string> = {
+          'variety.com': 'Variety',
+          'hollywoodreporter.com': 'Hollywood Reporter',
+          'deadline.com': 'Deadline',
+          'indiewire.com': 'IndieWire',
+          'inverse.com': 'Inverse',
+          'nytimes.com': 'NY Times',
+          'bbc.com': 'BBC',
+          'bbc.co.uk': 'BBC',
+          'theguardian.com': 'The Guardian',
+          'espn.com': 'ESPN',
+          'marca.com': 'Marca',
+          'goal.com': 'Goal',
+          'skysports.com': 'Sky Sports',
+          'theathletic.com': 'The Athletic',
+          'chelseafc.com': 'Chelsea FC',
+          'reuters.com': 'Reuters',
+          'apnews.com': 'AP News',
+          'ign.com': 'IGN',
+          'imdb.com': 'IMDb',
+          'rottentomatoes.com': 'Rotten Tomatoes',
+          'youtube.com': 'YouTube',
+          'youtu.be': 'YouTube',
+        }
+        if (DOMAIN_NAMES[host]) return DOMAIN_NAMES[host]
+        // i.redd.it, preview.redd.it → skip (not a real source)
+        if (host.endsWith('redd.it') || host.endsWith('imgur.com')) return null
+        // Fallback: capitalize domain without TLD
+        const name = host.split('.')[0]
+        return name.charAt(0).toUpperCase() + name.slice(1)
+      } catch {
+        return null
+      }
+    }
+
+    // Subreddit display names (fallback)
+    const SUBREDDIT_NAMES: Record<string, string> = {
       'reddit-soccer': 'r/soccer',
       'reddit-movies': 'r/movies',
     }
@@ -50,7 +91,7 @@ export async function GET(
       text: row.headline_kr,
       detail: {
         summary: row.summary_kr ? row.summary_kr.split('\n') : [],
-        source: SOURCE_NAMES[row.source_id] || row.source_id,
+        source: extractSourceName(row.link_url) || SUBREDDIT_NAMES[row.source_id] || row.source_id,
         sourceUrl: row.link_url || row.external_url,
         redditUrl: row.external_url,
         thumbnailUrl: row.thumbnail_url || null,
