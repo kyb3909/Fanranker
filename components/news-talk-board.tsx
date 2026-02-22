@@ -465,7 +465,7 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
               {details.mediaType === 'image' && (details.sourceUrl || details.thumbnailUrl) && (
                 <div className="mb-4 rounded-lg overflow-hidden bg-black/5 relative" style={{ minHeight: 200 }}>
                   <Image
-                    src={details.sourceUrl || details.thumbnailUrl!}
+                    src={(details.sourceUrl || details.thumbnailUrl!).replace(/^http:\/\//, 'https://')}
                     alt={item.text || '뉴스 이미지'}
                     fill
                     className="object-contain"
@@ -479,7 +479,7 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
               {details.mediaType !== 'youtube' && details.mediaType !== 'image' && details.thumbnailUrl && (
                 <div className="mb-4 rounded-lg overflow-hidden relative" style={{ minHeight: 180 }}>
                   <Image
-                    src={details.thumbnailUrl}
+                    src={details.thumbnailUrl.replace(/^http:\/\//, 'https://')}
                     alt={item.text || '기사 썸네일'}
                     fill
                     className="object-cover"
@@ -491,7 +491,7 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
 
               <ul className="space-y-3">
                 {details.summary.map((line, i) => (
-                  <li key={i} className="flex gap-3 text-[14px] text-foreground leading-relaxed">
+                  <li key={`summary-${item.id}-${i}`} className="flex gap-3 text-[14px] text-foreground leading-relaxed">
                     <span className="text-primary/60 shrink-0 font-bold text-[13px] mt-0.5">{i + 1}.</span>
                     <span>{line}</span>
                   </li>
