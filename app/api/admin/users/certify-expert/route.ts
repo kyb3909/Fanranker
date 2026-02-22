@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 
 /**
@@ -25,8 +25,6 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     // Check admin permission
-    // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabaseCheck = createServiceRoleClient()
     const { data: adminProfile } = await supabaseCheck
       .from('profiles')
@@ -41,7 +39,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
     const body = await request.json()
     const { user_id, revoke } = body
 
@@ -100,8 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Audit log
-    const { createServiceRoleClient: createSR } = await import('@/lib/supabase/server')
-    const supabaseAudit = createSR()
+    const supabaseAudit = createServiceRoleClient()
     await supabaseAudit.from('admin_audit_logs').insert({
       admin_user_id: userId,
       action: revoke ? 'revoke_expert' : 'certify_expert',
