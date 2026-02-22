@@ -1,13 +1,14 @@
 "use client"
 
+import { Suspense } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Home, Compass, Palette, Trophy, User } from "lucide-react"
 import { IS_CULTURE } from '@/lib/site-config'
 
 function getTabs() {
   const baseTabs = [
-    { href: "/", icon: Home, label: "피드", match: (p: string) => p === "/" },
+    { href: "/", icon: Home, label: "피드", match: (p: string, view?: string | null) => p === "/" && view !== "prediction" },
     { href: "/explore", icon: Compass, label: "탐색", match: (p: string) => p.startsWith("/explore") || p.startsWith("/community") },
   ]
 
@@ -15,7 +16,7 @@ function getTabs() {
     baseTabs.push({ href: "/art", icon: Palette, label: "아트", match: (p: string) => p.startsWith("/art") })
   }
 
-  baseTabs.push({ href: "/?view=prediction", icon: Trophy, label: "승부 예측", match: (p: string) => p === "/?view=prediction" })
+  baseTabs.push({ href: "/?view=prediction", icon: Trophy, label: "승부 예측", match: (p: string, view?: string | null) => p === "/" && view === "prediction" })
   baseTabs.push({ href: "/settings", icon: User, label: "마이", match: (p: string) => p.startsWith("/settings") || p.startsWith("/profile") || p.startsWith("/my-") })
 
   return baseTabs
@@ -23,14 +24,16 @@ function getTabs() {
 
 const tabs = getTabs()
 
-export function MobileTabBar() {
+function MobileTabBarContent() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const view = searchParams.get("view")
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-card border-t border-border" aria-label="모바일 메뉴">
       <div className="flex items-center justify-around h-14 px-2">
         {tabs.map((tab) => {
-          const isActive = tab.match(pathname)
+          const isActive = tab.match(pathname, view)
           return (
             <Link
               key={tab.href}
@@ -48,5 +51,13 @@ export function MobileTabBar() {
         })}
       </div>
     </nav>
+  )
+}
+
+export function MobileTabBar() {
+  return (
+    <Suspense fallback={null}>
+      <MobileTabBarContent />
+    </Suspense>
   )
 }
