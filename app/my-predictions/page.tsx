@@ -529,7 +529,6 @@ export default function MyPredictionsPage() {
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      router.push("/")
       return
     }
 
@@ -590,7 +589,22 @@ export default function MyPredictionsPage() {
   }
 
   if (!isSignedIn) {
-    return null
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-20 px-4">
+          <div className="bg-card border border-border rounded-xl p-8 text-center max-w-sm">
+            <Trophy className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+            <h2 className="text-lg font-bold mb-2">로그인이 필요합니다</h2>
+            <p className="text-sm text-muted-foreground mb-4">내 예측 내역을 확인하려면 먼저 로그인해주세요.</p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => router.push("/")}>홈으로</Button>
+              <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

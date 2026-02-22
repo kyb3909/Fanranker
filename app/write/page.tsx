@@ -38,12 +38,6 @@ function WriteContent() {
   const communitySlug = searchParams.get("community") || ""
   const editId = searchParams.get("edit") || ""
 
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/")
-    }
-  }, [isLoaded, isSignedIn, router])
-
   const [selectedCommunity, setSelectedCommunity] = useState(communitySlug)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState<any>(null)
@@ -228,6 +222,24 @@ function WriteContent() {
             <p className="text-sm text-muted-foreground">로딩 중...</p>
           </div>
         </main>
+      </div>
+    )
+  }
+
+  if (isLoaded && !isSignedIn) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-20 px-4">
+          <div className="bg-card border border-border rounded-xl p-8 text-center max-w-sm">
+            <h2 className="text-lg font-bold mb-2">로그인이 필요합니다</h2>
+            <p className="text-sm text-muted-foreground mb-4">글을 작성하려면 먼저 로그인해주세요.</p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => router.push("/")}>홈으로</Button>
+              <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

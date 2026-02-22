@@ -179,9 +179,26 @@ function HomeContent() {
   const [sortBy, setSortBy] = useState<SortType>("hot")
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [followedCommunities] = useState<Set<string>>(
-    new Set(["overseas-football", "baseball", "free-board"]) // 기본 팔로우 커뮤니티 (예시)
-  )
+  const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
+  const [followsLoaded, setFollowsLoaded] = useState(false)
+
+  // 로그인 유저의 팔로우 커뮤니티 로드
+  useEffect(() => {
+    if (!isSignedIn) {
+      setFollowsLoaded(true)
+      return
+    }
+    fetch("/api/community/follows")
+      .then((res) => res.ok ? res.json() : { communities: [] })
+      .then((data) => {
+        const slugs = new Set<string>(
+          (data.communities || []).map((c: { community_slug: string }) => c.community_slug)
+        )
+        setFollowedCommunities(slugs)
+      })
+      .catch(() => setFollowedCommunities(new Set()))
+      .finally(() => setFollowsLoaded(true))
+  }, [isSignedIn])
 
   // 콘텐츠 탭 상태
   const [activities, setActivities] = useState<any[]>([])
@@ -210,9 +227,10 @@ function HomeContent() {
         // 프로필 매핑
         const profileMap = new Map<string, any>(profiles?.map((p: any) => [p.user_id, p]) || [])
 
-        // 데이터 변환
+        // 데이터 변환: 팔로우한 커뮤니티가 있으면 필터링, 없으면 전체 표시
+        const hasFollows = followedCommunities.size > 0
         const transformedPosts: Post[] = fetchedPosts
-          .filter((post: any) => followedCommunities.has(post.community_slug)) // 팔로우한 커뮤니티만
+          .filter((post: any) => !hasFollows || followedCommunities.has(post.community_slug))
           .map((post: any) => {
             const profile = profileMap.get(post.user_id)
             return {
@@ -242,8 +260,8 @@ function HomeContent() {
       }
     }
 
-    fetchPosts()
-  }, [sortBy, followedCommunities])
+    if (followsLoaded) fetchPosts()
+  }, [sortBy, followedCommunities, followsLoaded])
 
   // 콘텐츠 탭 데이터 로드
   const fetchActivities = useCallback(async () => {
@@ -417,11 +435,16 @@ function HomeContent() {
                   ))
                 ) : (
                   <div className="bg-card border border-border rounded-lg p-8 text-center">
+                    <Compass className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground mb-2">
-                      팔로우한 게시판의 게시물이 없습니다.
+                      {followedCommunities.size > 0
+                        ? "팔로우한 게시판에 게시물이 없습니다."
+                        : "아직 게시물이 없습니다."}
                     </p>
                     <p className="text-xs text-muted-foreground mb-4">
-                      게시판을 팔로우하면 여기에 게시물이 표시됩니다.
+                      {followedCommunities.size > 0
+                        ? "다른 게시판도 팔로우해보세요!"
+                        : "게시판에서 첫 번째 글을 작성해보세요."}
                     </p>
                     <Link
                       href="/explore"
