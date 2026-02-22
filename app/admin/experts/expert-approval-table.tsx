@@ -48,7 +48,6 @@ export function ExpertApprovalTable({ initialProfiles }: ExpertApprovalTableProp
         prev.map((p) => (p.user_id === userId ? { ...p, ...profile } : p))
       )
     } catch (error) {
-      console.error('Failed to toggle expert status:', error)
       alert(error instanceof Error ? error.message : '오류가 발생했습니다.')
     } finally {
       setLoading(null)

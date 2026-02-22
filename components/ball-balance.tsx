@@ -24,8 +24,8 @@ export function BallBalance() {
         const data = await response.json()
         setTokenData(data)
       }
-    } catch (error) {
-      console.error('Failed to fetch ball balance:', error)
+    } catch {
+      // Silent fail - balance display is non-critical
     } finally {
       setLoading(false)
     }

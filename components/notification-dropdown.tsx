@@ -80,17 +80,12 @@ export function NotificationDropdown() {
         setProfiles(fetchedProfiles || [])
         setPosts(fetchedPosts || [])
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        if (response.status !== 401) {
-          console.error('Failed to load notifications:', response.status, errorData)
-        }
         // 에러 발생 시 빈 배열로 설정
         setNotifications([])
         setProfiles([])
         setPosts([])
       }
-    } catch (error) {
-      console.error('Failed to load notifications:', error)
+    } catch {
       // 네트워크 에러 등은 빈 배열로 설정
       setNotifications([])
       setProfiles([])
@@ -108,16 +103,10 @@ export function NotificationDropdown() {
         setUnreadCount(fetchedNotifications?.length || 0)
       } else {
         // 응답이 실패했지만 에러를 조용히 처리 (로그인하지 않은 경우 등)
-        const errorData = await response.json().catch(() => ({}))
-        if (response.status !== 401) {
-          // 401 (Unauthorized)는 정상적인 경우이므로 로그하지 않음
-          console.error('Failed to check unread count:', response.status, errorData)
-        }
         setUnreadCount(0)
       }
-    } catch (error) {
+    } catch {
       // 네트워크 에러 등은 조용히 처리 (서버가 다운되었거나 네트워크 문제)
-      console.error('Failed to check unread count:', error)
       setUnreadCount(0)
     }
   }
@@ -135,8 +124,8 @@ export function NotificationDropdown() {
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
       )
       setUnreadCount((prev) => Math.max(0, prev - 1))
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error)
+    } catch {
+      // Silent fail - marking as read is non-critical
     }
   }
 

@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     for (const gmTs of gmTsList) {
-      console.log(`[manual-sync] gmTs ${gmTs} 동기화 시작...`)
       const result = await syncSingleGmTs(supabase, gmTs)
 
       if ('error' in result) {
@@ -77,7 +76,6 @@ export async function POST(request: NextRequest) {
       }
 
       results.push({ gmTs, ...result })
-      console.log(`[manual-sync] gmTs ${gmTs}: ${result.action}, ${result.games}건`)
     }
 
     // sync_state 업데이트

@@ -110,7 +110,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   const handleBlockUser = () => {
     // TODO: 차단 기능 구현 (blocked_users 테이블 필요)
     if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
-      console.log('Block user:', post.userId || post.author)
       // 차단 로직 구현 예정
     }
   }
@@ -145,8 +144,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
       }
       
       setIsUpvoted(action !== 'deleted')
-    } catch (error) {
-      console.error('Failed to vote:', error)
+    } catch {
       // 에러가 발생해도 사용자에게 알리지 않음 (피드에서는 조용히 실패)
     }
   }
@@ -163,8 +161,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
         setIsBookmarked(bookmarked)
       }
       setBookmarkChecked(true)
-    } catch (error) {
-      console.error('Failed to check bookmark status:', error)
+    } catch {
+      // Silent fail - bookmark status check is non-critical
     }
   }
 
@@ -186,7 +184,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
       const { bookmarked } = await response.json()
       setIsBookmarked(bookmarked)
     } catch (error) {
-      console.error('Failed to toggle bookmark:', error)
       alert(error instanceof Error ? error.message : '북마크 처리에 실패했습니다.')
     }
   }

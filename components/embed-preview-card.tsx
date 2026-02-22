@@ -115,8 +115,7 @@ export function EmbedPreviewCard({
         // 수정된 HTML 반환
         return tempDiv.innerHTML
       }
-    } catch (error) {
-      console.error('Error sanitizing embed HTML:', error)
+    } catch {
       // 파싱 실패 시 원본 HTML 반환
     }
 
@@ -153,11 +152,9 @@ export function EmbedPreviewCard({
         const sanitizedHtml = data.html ? sanitizeEmbedHtml(data.html, provider) : null
         setEmbedHtml(sanitizedHtml)
       } else {
-        console.error('Failed to fetch oembed HTML')
         setEmbedHtml(null)
       }
-    } catch (error) {
-      console.error('Error fetching oembed:', error)
+    } catch {
       setEmbedHtml(null)
     } finally {
       setIsLoadingEmbed(false)

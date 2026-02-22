@@ -89,8 +89,8 @@ export default function ProfilePage() {
         setProfile(data)
         setNickname(data.nickname || user?.username || "")
       }
-    } catch (error) {
-      console.error("Failed to load profile:", error)
+    } catch {
+      // Silent fail - profile will show default values
     } finally {
       setIsLoading(false)
     }
@@ -103,8 +103,8 @@ export default function ProfilePage() {
         const data = await response.json()
         setFollowedCommunities(data.communities || [])
       }
-    } catch (error) {
-      console.error("Failed to load followed communities:", error)
+    } catch {
+      // Silent fail - followed communities will show empty
     }
   }, [])
 
@@ -171,12 +171,9 @@ export default function ProfilePage() {
           ? `${errorData.error}\n\n상세: ${errorData.details}`
           : errorData.error || "저장에 실패했습니다."
         alert(errorMessage)
-        console.error("Profile update error:", errorData)
       }
     } catch (error) {
-      console.error("Failed to save profile:", error)
-      const errorMessage = error instanceof Error ? error.message : "저장 중 오류가 발생했습니다."
-      alert(errorMessage)
+      alert(error instanceof Error ? error.message : "저장 중 오류가 발생했습니다.")
     } finally {
       setIsSaving(false)
     }
@@ -193,8 +190,8 @@ export default function ProfilePage() {
           prev.filter((c) => c.community_slug !== communitySlug)
         )
       }
-    } catch (error) {
-      console.error("Failed to unfollow community:", error)
+    } catch {
+      // Silent fail - unfollow action
     }
   }
 
@@ -296,8 +293,7 @@ export default function ProfilePage() {
       } else {
         alert("계정 삭제에 실패했습니다.")
       }
-    } catch (error) {
-      console.error("Failed to delete account:", error)
+    } catch {
       alert("계정 삭제 중 오류가 발생했습니다.")
     }
   }

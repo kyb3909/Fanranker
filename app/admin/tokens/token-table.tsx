@@ -51,7 +51,6 @@ export function TokenMonitoringTable() {
       setTokens(data.tokens || [])
       setFilteredTokens(data.tokens || [])
     } catch (err) {
-      console.error('Failed to fetch token balances:', err)
       setError(err instanceof Error ? err.message : '토큰 목록을 불러오는데 실패했습니다.')
     } finally {
       setIsLoading(false)

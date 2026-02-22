@@ -342,7 +342,6 @@ export default function BettingPage() {
       setLastUpdated(new Date())
     } catch (err) {
       setError("경기 데이터를 불러오는데 실패했습니다.")
-      console.error("Failed to fetch betman games:", err)
     } finally {
       setIsLoading(false)
     }
@@ -357,8 +356,8 @@ export default function BettingPage() {
         const data = await res.json()
         setUserBalls(data.balance || 10)
       }
-    } catch (err) {
-      console.error('Failed to fetch user balls:', err)
+    } catch {
+      // Silent fail - ball balance is loaded separately in header
     }
   }, [isSignedIn])
 
@@ -371,8 +370,8 @@ export default function BettingPage() {
         const data = await res.json()
         setFollowedUsers(new Set(data.following || []))
       }
-    } catch (err) {
-      console.error('Failed to load follows:', err)
+    } catch {
+      // Silent fail - follow data is non-critical
     }
   }, [isSignedIn])
 
@@ -386,8 +385,8 @@ export default function BettingPage() {
         const data = await res.json()
         setMyStats(data)
       }
-    } catch (err) {
-      console.error('Failed to load my stats:', err)
+    } catch {
+      // Silent fail - stats display is non-critical
     } finally {
       setIsLoadingMyStats(false)
     }
@@ -508,8 +507,7 @@ export default function BettingPage() {
       const data = await response.json()
       setRankings(data?.rankings || [])
       setMyRank(data?.my_rank || null)
-    } catch (err) {
-      console.error('Failed to load rankings:', err)
+    } catch {
       setRankings([])
       setMyRank(null)
     } finally {
@@ -587,8 +585,8 @@ export default function BettingPage() {
       })
       
       setPredictionHistory(transformed)
-    } catch (err) {
-      console.error('Failed to load prediction history:', err)
+    } catch {
+      // Silent fail - prediction history load failure
     } finally {
       setIsLoadingHistory(false)
     }
@@ -783,8 +781,8 @@ export default function BettingPage() {
           return newSet
         })
       }
-    } catch (err) {
-      console.error('Follow error:', err)
+    } catch {
+      // Silent fail - follow toggle
     } finally {
       setFollowLoading(prev => {
         const newSet = new Set(prev)

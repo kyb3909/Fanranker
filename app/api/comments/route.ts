@@ -85,8 +85,6 @@ export async function POST(request: NextRequest) {
 
     const userId = user.id
 
-    console.log('Comment API: userId =', userId)
-
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
@@ -100,8 +98,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    console.log('Comment API: Attempting to insert comment', { post_id, user_id: userId, has_content: !!content })
 
     // 쿨다운 체크 (10초 간격)
     const { data: canPost, error: cooldownError } = await supabase.rpc('can_post_comment', {
@@ -193,9 +189,6 @@ export async function POST(request: NextRequest) {
           is_read: false,
         })
       })
-      .then(() => {
-        console.log(`Notification created for comment on post ${post_id}`)
-      })
       .catch((err: unknown) => {
         console.error('Failed to create notification:', err)
       })
@@ -206,9 +199,6 @@ export async function POST(request: NextRequest) {
     // 댓글 작성 성공 후 쿨다운 업데이트
     Promise.resolve(supabase
       .rpc('update_comment_cooldown', { user_id_param: userId }))
-      .then(() => {
-        console.log(`Comment cooldown updated for user ${userId}`)
-      })
       .catch((err: unknown) => {
         console.error('Failed to update comment cooldown:', err)
         // 쿨다운 업데이트 실패는 무시 (댓글 작성은 성공)

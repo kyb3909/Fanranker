@@ -265,8 +265,7 @@ function HomeContent() {
           })
 
         setPosts(transformedPosts)
-      } catch (error) {
-        console.error('Failed to fetch posts:', error)
+      } catch {
         setPosts([])
       } finally {
         setIsLoading(false)
@@ -286,8 +285,7 @@ function HomeContent() {
         const data = await response.json()
         setActivities(data.activities || [])
       }
-    } catch (error) {
-      console.error('Failed to fetch prediction activities:', error)
+    } catch {
       setActivities([])
     } finally {
       setIsContentLoading(false)

@@ -18,8 +18,8 @@ export function GoldBalance() {
         const data = await response.json()
         setBalance(data.balance)
       }
-    } catch (error) {
-      console.error('Failed to fetch gold balance:', error)
+    } catch {
+      // Silent fail - balance display is non-critical
     } finally {
       setLoading(false)
     }

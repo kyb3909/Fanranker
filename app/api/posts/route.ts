@@ -300,9 +300,6 @@ export async function POST(request: NextRequest) {
 
         return supabase.from('notifications').insert(notifications)
       })
-      .then(() => {
-        console.log(`Notifications created for followers of user ${userId}`)
-      })
       .catch((err: unknown) => {
         console.error('Failed to create notifications for followers:', err)
       })

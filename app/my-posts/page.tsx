@@ -102,8 +102,8 @@ export default function MyPostsPage() {
 
           setPosts(transformedPosts)
         }
-      } catch (error) {
-        console.error('Failed to fetch my posts:', error)
+      } catch {
+        // Silent fail - posts list will show empty
       } finally {
         setIsLoading(false)
       }

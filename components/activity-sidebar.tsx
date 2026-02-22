@@ -76,8 +76,8 @@ export function ActivitySidebar() {
           setRecentPosts(mapped)
           recentCommentsCache = { data: mapped, fetchedAt: Date.now() }
         }
-      } catch (error) {
-        console.error('Failed to fetch recent posts:', error)
+      } catch {
+        // Silent fail - sidebar content is non-critical
       } finally {
         setIsLoadingPosts(false)
       }

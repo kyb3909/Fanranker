@@ -56,7 +56,6 @@ export function UserProfileHeader({
       const { following } = await response.json()
       setIsFollowing(following)
     } catch (error) {
-      console.error('Failed to toggle follow:', error)
       alert(error instanceof Error ? error.message : '팔로우 처리에 실패했습니다.')
     } finally {
       setIsLoading(false)

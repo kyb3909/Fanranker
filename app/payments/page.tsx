@@ -62,8 +62,8 @@ export default function PaymentsPage() {
           const historyData = await historyRes.json()
           setTransactions(historyData.transactions || [])
         }
-      } catch (error) {
-        console.error('Failed to fetch transactions:', error)
+      } catch {
+        // Silent fail - transaction list will show empty
       } finally {
         setIsLoading(false)
       }

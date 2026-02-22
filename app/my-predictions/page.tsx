@@ -543,8 +543,8 @@ export default function MyPredictionsPage() {
           setPredictions(data.predictions || [])
           setStats(data.stats || null)
         }
-      } catch (error) {
-        console.error('Failed to fetch predictions:', error)
+      } catch {
+        // Silent fail - predictions list will show empty
       } finally {
         setIsLoading(false)
       }

@@ -118,7 +118,6 @@ function WriteContent() {
       const { url } = await response.json()
       setImagePreview(url) // URL로 교체 (업로드된 이미지 URL)
     } catch (error) {
-      console.error('Image upload error:', error)
       alert(error instanceof Error ? error.message : '이미지 업로드 중 오류가 발생했습니다.')
       setImagePreview(null)
       setImageFile(null)
@@ -176,7 +175,7 @@ function WriteContent() {
           imageUrl = url
         } else {
           // base64 데이터 URL (구버전 호환성)
-          console.warn('Base64 이미지가 감지되었습니다. 파일을 다시 선택해주세요.')
+          // Base64 이미지가 감지됨 - 파일 재선택 필요
           imageUrl = null
         }
       }
@@ -205,7 +204,6 @@ function WriteContent() {
         router.push(`/community/${selectedCommunity}`)
       }
     } catch (error) {
-      console.error('글 작성 오류:', error)
       alert(error instanceof Error ? error.message : '글 작성 중 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)

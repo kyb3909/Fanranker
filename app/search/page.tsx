@@ -113,11 +113,6 @@ function SearchContent() {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: '알 수 없는 오류가 발생했습니다.' }))
-        console.error('Search API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        })
         throw new Error(errorData.error || `검색에 실패했습니다. (${response.status})`)
       }
 
@@ -149,12 +144,10 @@ function SearchContent() {
 
       setPosts(transformedPosts)
     } catch (error) {
-      console.error('Search error:', error)
       setPosts([])
       // 사용자에게 에러 메시지 표시
       if (error instanceof Error) {
         setErrorMessage(error.message || '검색 중 오류가 발생했습니다.')
-        console.error('Error message:', error.message)
       } else {
         setErrorMessage('검색 중 오류가 발생했습니다.')
       }

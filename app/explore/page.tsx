@@ -89,8 +89,8 @@ export default function ExplorePage() {
           const { posts } = await viewedRes.json()
           setTopViewed(mapPosts(posts))
         }
-      } catch (error) {
-        console.error('Failed to fetch posts:', error)
+      } catch {
+        // Silent fail - explore page will show empty
       } finally {
         setIsLoading(false)
       }

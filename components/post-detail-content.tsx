@@ -365,7 +365,7 @@ export function PostDetailContent({ post }: { post: Post }) {
 
   const handleBlockUser = () => {
     if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
-      console.log('Block user:', post.userId || post.author)
+      // TODO: 차단 로직 구현 예정
     }
   }
 
@@ -405,8 +405,7 @@ export function PostDetailContent({ post }: { post: Post }) {
         const { comments: fetchedComments, profiles } = await response.json()
         const transformedComments = transformComments(fetchedComments || [], profiles || [])
         setComments(transformedComments)
-      } catch (error) {
-        console.error('Failed to load comments:', error)
+      } catch {
         setComments([])
       } finally {
         setIsLoadingComments(false)
@@ -425,8 +424,8 @@ export function PostDetailContent({ post }: { post: Post }) {
           const { voted, voteType } = await response.json()
           setIsUpvoted(voted && voteType === 'up')
         }
-      } catch (error) {
-        console.error('Failed to check vote status:', error)
+      } catch {
+        // Silent fail - vote status check is non-critical
       }
     }
 
@@ -442,8 +441,8 @@ export function PostDetailContent({ post }: { post: Post }) {
           const { bookmarked } = await response.json()
           setIsBookmarked(bookmarked)
         }
-      } catch (error) {
-        console.error('Failed to check bookmark status:', error)
+      } catch {
+        // Silent fail - bookmark status check is non-critical
       }
     }
 
@@ -467,7 +466,6 @@ export function PostDetailContent({ post }: { post: Post }) {
       const { bookmarked } = await response.json()
       setIsBookmarked(bookmarked)
     } catch (error) {
-      console.error('Failed to toggle bookmark:', error)
       alert(error instanceof Error ? error.message : '북마크 처리에 실패했습니다.')
     }
   }
@@ -503,7 +501,6 @@ export function PostDetailContent({ post }: { post: Post }) {
       
       setIsUpvoted(action !== 'deleted' && voteType === 'up')
     } catch (error) {
-      console.error('Failed to vote:', error)
       alert(error instanceof Error ? error.message : '투표 처리에 실패했습니다.')
     }
   }
@@ -546,7 +543,6 @@ export function PostDetailContent({ post }: { post: Post }) {
         setComments(transformedComments)
       }
     } catch (error) {
-      console.error('Failed to submit comment:', error)
       alert(error instanceof Error ? error.message : '댓글 작성에 실패했습니다.')
       setCommentText(textToSubmit) // 실패 시 텍스트 복원
     } finally {
@@ -595,7 +591,6 @@ export function PostDetailContent({ post }: { post: Post }) {
 
       setReplyingTo(null)
     } catch (error) {
-      console.error('Failed to submit reply:', error)
       alert(error instanceof Error ? error.message : '답글 작성에 실패했습니다.')
       setReplyText(textToSubmit) // 실패 시 텍스트 복원
     } finally {
