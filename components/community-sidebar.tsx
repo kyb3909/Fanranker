@@ -166,7 +166,7 @@ export function CommunitySidebar() {
             </div>
           </div>
         )}
-        <div className="py-1 overflow-y-auto scrollbar-hide flex-1 min-h-0 max-h-[320px]">
+        <div className="py-1 overflow-y-auto scrollbar-hide flex-1 min-h-0 max-h-[400px]">
           {filteredCommunities.length > 0 ? (
             filteredCommunities.map((community) => {
               const isFollowed = followedCommunities.has(community.slug)
