@@ -147,6 +147,8 @@ export function BettingMatchCard({
                       opt.odds
                     )}
                     disabled={isDisabled}
+                    aria-label={`${opt.label} 선택, 배당 ${opt.odds ? opt.odds.toFixed(2) : '없음'}`}
+                    aria-pressed={selectedBet?.selection === opt.value}
                   >
                     <div className="text-[10px] text-gray-500 truncate">{opt.label}</div>
                     <div className={`text-xs font-bold ${selectedBet?.selection === opt.value ? '' : 'text-gray-900'}`}>

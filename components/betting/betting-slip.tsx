@@ -53,6 +53,11 @@ export function BettingSlip({
         <div
           className="flex items-center justify-between p-2 sm:p-3 cursor-pointer"
           onClick={() => setIsSlipExpanded(!isSlipExpanded)}
+          role="button"
+          aria-expanded={isSlipExpanded}
+          aria-label={`베팅 슬립 ${isSlipExpanded ? '접기' : '펼치기'}, ${selectedBets.length}경기 선택됨`}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsSlipExpanded(!isSlipExpanded) } }}
         >
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span className="font-medium text-xs sm:text-sm">{selectedBets.length}경기 선택</span>
@@ -75,6 +80,7 @@ export function BettingSlip({
               <button
                 onClick={onClearAllBets}
                 className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium"
+                aria-label="선택한 경기 전체 삭제"
               >
                 전체 삭제
               </button>
@@ -95,7 +101,7 @@ export function BettingSlip({
                         onRemoveBet(bet.gameId)
                       }}
                       className="absolute top-2 right-0 w-5 h-5 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 flex items-center justify-center transition-colors"
-                      title="삭제"
+                      aria-label={`${groupedMatch.homeTeam} vs ${groupedMatch.awayTeam} 선택 삭제`}
                     >
                       <X className="w-4 h-4" />
                     </button>
