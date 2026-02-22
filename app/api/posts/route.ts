@@ -125,8 +125,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ posts: postsWithAccurateCounts, profiles: profiles || [] })
     }
 
-    // 기존 정렬 로직 (hot, new, comments) — 메인 피드는 최근 24시간만
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // 기존 정렬 로직 (hot, new, comments)
+    // 홈 피드: 최근 30일 (트래픽이 적은 초기 단계에 맞춤), 커뮤니티 필터 있으면 제한 없음
+    const sinceDays = communitySlug ? null : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     let query = supabase
       .from('posts')
       .select(`
@@ -142,8 +143,11 @@ export async function GET(request: NextRequest) {
         created_at
       `)
       .is('deleted_at', null)
-      .gte('created_at', since24h)
       .range(offset, offset + limit - 1)
+
+    if (sinceDays) {
+      query = query.gte('created_at', sinceDays)
+    }
 
     // 커뮤니티 필터링
     if (communitySlug) {

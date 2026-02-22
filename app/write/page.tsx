@@ -212,7 +212,7 @@ function WriteContent() {
     }
   }
 
-  if (!isLoaded || !isSignedIn) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -226,7 +226,7 @@ function WriteContent() {
     )
   }
 
-  if (isLoaded && !isSignedIn) {
+  if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
