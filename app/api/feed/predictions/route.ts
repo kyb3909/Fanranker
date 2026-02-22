@@ -95,26 +95,30 @@ export async function GET(request: NextRequest) {
 
     const roundMap = new Map(rounds?.map(r => [r.id, r]) || [])
 
-    // 7. 구매한 활동에 대해 예측 데이터 조회
-    const purchasedActivities = activities.filter(a => purchasedSet.has(a.id))
-    let predictionsMap = new Map<string, any[]>()
+    // 7. 모든 활동의 예측 데이터 일괄 조회 (경기 종료 여부 판단용)
+    const allRoundIds = [...new Set(activities.map(a => a.round_id))]
+    const { data: allPreds } = await supabase
+      .from('betman_predictions')
+      .select(`
+        id, user_id, round_id, game_id, prediction, status,
+        game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result)
+      `)
+      .in('user_id', userIds)
+      .in('round_id', allRoundIds)
 
-    if (purchasedActivities.length > 0) {
-      // 구매한 활동의 (user_id, round_id) 조합으로 예측 조회
-      for (const act of purchasedActivities) {
-        const { data: preds } = await supabase
-          .from('betman_predictions')
-          .select(`
-            id, game_id, prediction, status,
-            game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result)
-          `)
-          .eq('user_id', act.user_id)
-          .eq('round_id', act.round_id)
+    // 활동별로 예측 그룹핑
+    const predictionsMap = new Map<string, typeof allPreds>()
+    for (const act of activities) {
+      const preds = allPreds?.filter(p => p.user_id === act.user_id && p.round_id === act.round_id) || []
+      predictionsMap.set(act.id, preds)
+    }
 
-        if (preds) {
-          predictionsMap.set(act.id, preds)
-        }
-      }
+    // 경기 시간이 모두 지났는지 확인하는 함수
+    const now = new Date()
+    const isAllGamesExpired = (preds: NonNullable<typeof allPreds>) => {
+      return preds.length > 0 && preds.every(p =>
+        p.game && new Date((p.game as any).match_time) < now
+      )
     }
 
     // 8. 응답 조합
@@ -123,6 +127,9 @@ export async function GET(request: NextRequest) {
       const stat = statsMap.get(act.user_id)
       const round = roundMap.get(act.round_id)
       const isPurchased = purchasedSet.has(act.id)
+      const preds = predictionsMap.get(act.id) || []
+      const isFree = isAllGamesExpired(preds)
+      const showPredictions = isPurchased || isFree
 
       return {
         id: act.id,
@@ -146,7 +153,8 @@ export async function GET(request: NextRequest) {
           status: round.status,
         } : null,
         is_purchased: isPurchased,
-        predictions: isPurchased ? (predictionsMap.get(act.id) || null) : null,
+        is_free: isFree,
+        predictions: showPredictions ? preds : null,
       }
     })
 

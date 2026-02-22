@@ -304,8 +304,10 @@ function HomeContent() {
         alert(data.error || '구매에 실패했습니다.')
         return null
       }
-      // 골드 잔액 업데이트 이벤트
-      window.dispatchEvent(new Event('goldBalanceUpdate'))
+      // 무료 열람이 아닌 경우에만 골드 잔액 업데이트
+      if (!data.is_free) {
+        window.dispatchEvent(new Event('goldBalanceUpdate'))
+      }
       return data.predictions || null
     } catch {
       alert('구매 중 오류가 발생했습니다.')

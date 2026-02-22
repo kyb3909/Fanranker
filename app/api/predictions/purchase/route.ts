@@ -53,7 +53,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. 중복 구매 체크
+    // 2. 예측 데이터 조회 (중복구매 체크 및 경기 종료 확인용)
+    const { data: predictions } = await supabase
+      .from('betman_predictions')
+      .select(`
+        id, game_id, prediction, status,
+        game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result)
+      `)
+      .eq('user_id', activity.user_id)
+      .eq('round_id', activity.round_id)
+
+    // 경기 시간이 모두 지났으면 무료 열람
+    const now = new Date()
+    const allGamesExpired = predictions && predictions.length > 0 &&
+      predictions.every(p => p.game && new Date((p.game as any).match_time) < now)
+
+    if (allGamesExpired) {
+      return NextResponse.json({
+        success: true,
+        is_free: true,
+        predictions: predictions || [],
+      })
+    }
+
+    // 3. 중복 구매 체크
     const { data: existing } = await supabase
       .from('prediction_purchases')
       .select('id')
@@ -62,16 +85,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existing) {
-      // 이미 구매한 경우 예측 데이터 바로 반환
-      const { data: predictions } = await supabase
-        .from('betman_predictions')
-        .select(`
-          id, game_id, prediction, status,
-          game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result)
-        `)
-        .eq('user_id', activity.user_id)
-        .eq('round_id', activity.round_id)
-
       return NextResponse.json({
         success: true,
         already_purchased: true,
@@ -79,7 +92,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 3. spend_gold RPC (원자적 500골드 차감)
+    // 4. spend_gold RPC (원자적 500골드 차감)
     const { data: spendResult, error: rpcError } = await supabase
       .rpc('spend_gold', {
         p_user_id: user.id,
@@ -103,7 +116,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 4. prediction_purchases INSERT
+    // 5. prediction_purchases INSERT
     const { error: purchaseError } = await supabase
       .from('prediction_purchases')
       .insert({
@@ -115,19 +128,9 @@ export async function POST(request: NextRequest) {
 
     if (purchaseError) {
       console.error('Failed to record purchase:', purchaseError)
-      // 구매 기록 실패 시에도 골드는 이미 차감됨 - 로그 남기고 계속 진행
     }
 
-    // 5. 예측 데이터 조회 및 반환
-    const { data: predictions } = await supabase
-      .from('betman_predictions')
-      .select(`
-        id, game_id, prediction, status,
-        game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result)
-      `)
-      .eq('user_id', activity.user_id)
-      .eq('round_id', activity.round_id)
-
+    // 6. 예측 데이터 반환 (이미 위에서 조회함)
     return NextResponse.json({
       success: true,
       already_purchased: false,

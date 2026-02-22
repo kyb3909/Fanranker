@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Lock, Unlock, TrendingUp, Target, Flame, Loader2 } from 'lucide-react'
+import { Lock, Unlock, TrendingUp, Target, Flame, Loader2, Clock } from 'lucide-react'
 
 interface PredictionGame {
   home_team_name: string
@@ -45,6 +45,7 @@ interface ActivityData {
     status: string
   } | null
   is_purchased: boolean
+  is_free?: boolean
   predictions: Prediction[] | null
 }
 
@@ -84,13 +85,14 @@ export function PredictionActivityCard({ activity, onPurchase }: {
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [localPredictions, setLocalPredictions] = useState<Prediction[] | null>(activity.predictions)
   const [isPurchased, setIsPurchased] = useState(activity.is_purchased)
+  const [isFree, setIsFree] = useState(activity.is_free || false)
 
   const handlePurchase = async () => {
     setIsPurchasing(true)
     try {
-      const preds = await onPurchase(activity.id)
-      if (preds) {
-        setLocalPredictions(preds)
+      const result = await onPurchase(activity.id)
+      if (result) {
+        setLocalPredictions(result)
         setIsPurchased(true)
       }
     } finally {
@@ -149,11 +151,20 @@ export function PredictionActivityCard({ activity, onPurchase }: {
       </div>
 
       {/* 하단: 잠금/열람 */}
-      {isPurchased && localPredictions ? (
+      {(isPurchased || isFree) && localPredictions ? (
         <div className="border-t border-border px-4 py-3">
           <div className="flex items-center gap-1.5 mb-2">
-            <Unlock className="h-3.5 w-3.5 text-emerald-500" />
-            <span className="text-[12px] font-medium text-emerald-600">열람 완료</span>
+            {isFree && !isPurchased ? (
+              <>
+                <Clock className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-[12px] font-medium text-blue-600">경기 종료 - 무료 공개</span>
+              </>
+            ) : (
+              <>
+                <Unlock className="h-3.5 w-3.5 text-emerald-500" />
+                <span className="text-[12px] font-medium text-emerald-600">열람 완료</span>
+              </>
+            )}
           </div>
           <div className="space-y-1.5">
             {localPredictions.map((pred) => (
