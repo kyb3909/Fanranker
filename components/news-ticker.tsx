@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Zap, Trophy } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { NewsTalkBoard } from './news-talk-board'
 
 export type TickerTag = 'live' | 'breaking' | 'result'
@@ -82,36 +82,6 @@ const COMMUNITY_TICKER_ITEMS: Record<string, TickerItem[]> = {
     { id: 'mv-2', tag: 'live', text: '마블 신작 예고편 공개, 팬들 반응 폭발' },
     { id: 'mv-3', tag: 'result', text: '이번 주 북미 박스오피스 1위 영화 확정' },
   ],
-}
-
-const TAG_CONFIG: Record<TickerTag, { label: string; className: string; iconClassName: string }> = {
-  live: {
-    label: 'LIVE',
-    className: 'bg-red-600 text-white',
-    iconClassName: 'text-red-400',
-  },
-  breaking: {
-    label: '속보',
-    className: 'bg-amber-500 text-neutral-900 font-bold',
-    iconClassName: 'text-amber-400',
-  },
-  result: {
-    label: '결과',
-    className: 'bg-rose-900 text-rose-200',
-    iconClassName: 'text-rose-400',
-  },
-}
-
-function TagIcon({ tag }: { tag: TickerTag }) {
-  const cls = `w-3.5 h-3.5 ${TAG_CONFIG[tag].iconClassName}`
-  switch (tag) {
-    case 'live':
-      return <Zap className={cls} />
-    case 'breaking':
-      return <Zap className={cls} />
-    case 'result':
-      return <Trophy className={cls} />
-  }
 }
 
 interface NewsTickerProps {
@@ -209,24 +179,18 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
           {/* 스크롤 영역 */}
           <div className="overflow-hidden flex-1 py-2.5">
             <div ref={scrollRef} className="flex items-center gap-10 whitespace-nowrap will-change-transform">
-              {items.map((item, i) => {
-                const tag = TAG_CONFIG[item.tag]
-                return (
+              {items.map((item, i) => (
                   <button
                     key={`${item.id}-${i}`}
                     onClick={() => setSelectedItem(item)}
                     className="inline-flex items-center shrink-0 gap-2 cursor-pointer bg-transparent border-none p-0 group"
                   >
-                    <TagIcon tag={item.tag} />
-                    <span className={`text-[11px] px-2 py-0.5 rounded-md ${tag.className}`}>
-                      {tag.label}
-                    </span>
+                    <span className="w-1 h-1 rounded-full bg-neutral-500 shrink-0" />
                     <span className="text-[14px] text-neutral-300 group-hover:text-white font-medium transition-colors">
                       {item.text}
                     </span>
                   </button>
-                )
-              })}
+                ))}
             </div>
           </div>
         </div>

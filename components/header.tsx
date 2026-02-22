@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Gamepad2, Palette, Loader2, Trophy } from "lucide-react"
+import { Home, Compass, Bell, Search, Palette, Loader2, Trophy } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -13,8 +13,7 @@ import { NotificationDropdown } from './notification-dropdown'
 import { BallBalance } from './ball-balance'
 import { GoldBalance } from './gold-balance'
 import { IdentitySwitcher } from './identity-switcher'
-import { useIdentity } from './identity-provider'
-import { IS_SPORTS, IS_CULTURE } from '@/lib/site-config'
+import { IS_CULTURE } from '@/lib/site-config'
 
 const COMMUNITY_NAMES: Record<string, string> = {
   "overseas-football": "해외축구",
@@ -25,6 +24,7 @@ const COMMUNITY_NAMES: Record<string, string> = {
   "esports": "e스포츠",
   "free-board": "자유게시판",
   "tips": "정보게시판",
+  "movies": "영화",
 }
 
 interface SearchResultPost {
@@ -37,8 +37,7 @@ interface SearchResultPost {
 
 export function Header() {
   const router = useRouter()
-  const { identity } = useIdentity()
-  const showPrediction = identity === 'sports' || identity === 'hybrid'
+
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResultPost[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -232,20 +231,12 @@ export function Header() {
               </Button>
             </Link>
           )}
-          <Link href="/games">
+          <Link href="/?view=prediction">
             <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-              <Gamepad2 className="h-4 w-4 text-white shrink-0" />
-              게임
+              <Trophy className="h-4 w-4 text-white shrink-0" />
+              승부 예측
             </Button>
           </Link>
-          {IS_SPORTS && showPrediction && (
-            <Link href="/?view=prediction">
-              <Button variant="ghost" size="sm" className="gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-4 text-[13px] sm:text-[14px] font-medium rounded-md text-white hover:bg-primary-foreground/15 hover:text-white whitespace-nowrap">
-                <Trophy className="h-4 w-4 text-white shrink-0" />
-                승부 예측
-              </Button>
-            </Link>
-          )}
         </div>
         <div className="flex justify-end pr-1">
           <IdentitySwitcher />

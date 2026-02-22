@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Compass, Palette, Gamepad2, User } from "lucide-react"
+import { Home, Compass, Palette, Trophy, User } from "lucide-react"
 import { IS_CULTURE } from '@/lib/site-config'
 
 function getTabs() {
@@ -15,7 +15,7 @@ function getTabs() {
     baseTabs.push({ href: "/art", icon: Palette, label: "아트", match: (p: string) => p.startsWith("/art") })
   }
 
-  baseTabs.push({ href: "/games", icon: Gamepad2, label: "게임", match: (p: string) => p.startsWith("/games") })
+  baseTabs.push({ href: "/?view=prediction", icon: Trophy, label: "승부 예측", match: (p: string) => p === "/?view=prediction" })
   baseTabs.push({ href: "/settings", icon: User, label: "마이", match: (p: string) => p.startsWith("/settings") || p.startsWith("/profile") || p.startsWith("/my-") })
 
   return baseTabs

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Trophy, Gamepad2, Film, Users } from "lucide-react"
+import { Trophy } from "lucide-react"
 
 const games = [
   {
@@ -14,36 +14,6 @@ const games = [
     bgLight: "bg-amber-50 dark:bg-amber-950/30",
     borderActive: "ring-amber-500/50",
     iconBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-  {
-    href: "/games/draft-game",
-    icon: Gamepad2,
-    label: "드래프트 게임",
-    description: "나만의 드림팀을 구성하세요",
-    color: "from-violet-500 to-purple-500",
-    bgLight: "bg-violet-50 dark:bg-violet-950/30",
-    borderActive: "ring-violet-500/50",
-    iconBg: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  },
-  {
-    href: "/games/movie-quiz",
-    icon: Film,
-    label: "영화 퀴즈",
-    description: "영화 지식을 테스트해보세요",
-    color: "from-rose-500 to-pink-500",
-    bgLight: "bg-rose-50 dark:bg-rose-950/30",
-    borderActive: "ring-rose-500/50",
-    iconBg: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-  },
-  {
-    href: "/games/virtual-casting",
-    icon: Users,
-    label: "가상 캐스팅",
-    description: "영화 속 배역을 새롭게 캐스팅하세요",
-    color: "from-cyan-500 to-teal-500",
-    bgLight: "bg-cyan-50 dark:bg-cyan-950/30",
-    borderActive: "ring-cyan-500/50",
-    iconBg: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
   },
 ]
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, ThumbsUp, MessageSquare, Share2, Users, Send, ChevronUp, Zap, Trophy } from 'lucide-react'
+import { X, ThumbsUp, MessageSquare, Share2, Users, Send, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type TickerTag = 'live' | 'breaking' | 'result'
@@ -26,21 +26,6 @@ interface TalkBoardItem {
   tag: TickerTag
   text: string
   detail?: ItemDetail
-}
-
-interface Comment {
-  id: string
-  author: string
-  content: string
-  timestamp: string
-  likes: number
-  isLiked: boolean
-}
-
-const TAG_CONFIG: Record<TickerTag, { label: string; className: string }> = {
-  live: { label: 'LIVE', className: 'bg-red-500/15 text-red-600 border border-red-500/25' },
-  breaking: { label: '속보', className: 'bg-primary/15 text-primary border border-primary/25' },
-  result: { label: '결과', className: 'bg-amber-500/15 text-amber-700 border border-amber-500/25' },
 }
 
 // 뉴스별 상세 데이터 (목업) - 게시판별 ID 매핑
@@ -308,6 +293,16 @@ const NEWS_DETAILS: Record<string, {
   },
 }
 
+
+interface Comment {
+  id: string
+  author: string
+  content: string
+  timestamp: string
+  likes: number
+  isLiked: boolean
+}
+
 function getDefaultComments(itemId: string): Comment[] {
   const commentsByPrefix: Record<string, Comment[]> = {
     'of': [
@@ -410,7 +405,6 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
 
   if (!isOpen) return null
 
-  const tag = TAG_CONFIG[item.tag]
   const details: ItemDetail | undefined = item.detail || NEWS_DETAILS[item.id]
 
   return (
@@ -423,14 +417,9 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
         {/* 헤더 */}
         <div className="px-5 py-4 border-b border-border bg-primary/5 shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${tag.className}`}>
-                {tag.label}
-              </span>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Users className="w-4 h-4" />
-                <span className="text-[13px] font-medium">{details?.participants || 0}명 참여</span>
-              </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span className="text-[13px] font-medium">{details?.participants || 0}명 참여</span>
             </div>
             <button
               onClick={onClose}
@@ -456,7 +445,7 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
                 )}
               </div>
 
-              {/* 미디어: YouTube 임베드 */}
+              {/* 미디어: YouTube 예고편 임베드 */}
               {details.mediaType === 'youtube' && details.sourceUrl && (() => {
                 const ytMatch = details.sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/)
                 return ytMatch ? (
@@ -471,8 +460,21 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
                 ) : null
               })()}
 
-              {/* 미디어: 이미지 (YouTube가 아닐 때만) */}
-              {details.mediaType !== 'youtube' && details.thumbnailUrl && (
+              {/* 미디어: 포스터/이미지 (원본 해상도) */}
+              {details.mediaType === 'image' && (details.sourceUrl || details.thumbnailUrl) && (
+                <div className="mb-4 rounded-lg overflow-hidden bg-black/5">
+                  <img
+                    src={details.sourceUrl || details.thumbnailUrl!}
+                    alt=""
+                    className="w-full max-h-[500px] object-contain mx-auto"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                </div>
+              )}
+
+              {/* 기사 썸네일 */}
+              {details.mediaType !== 'youtube' && details.mediaType !== 'image' && details.thumbnailUrl && (
                 <div className="mb-4 rounded-lg overflow-hidden">
                   <img
                     src={details.thumbnailUrl}
@@ -492,15 +494,10 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 pt-3 border-t border-border flex items-center gap-4">
+              <div className="mt-4 pt-3 border-t border-border">
                 <a href={details.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-primary hover:text-primary/80 transition-colors font-semibold">
                   {details.source} 원문 &rarr;
                 </a>
-                {details.redditUrl && (
-                  <a href={details.redditUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
-                    Reddit 토론 &rarr;
-                  </a>
-                )}
               </div>
             </div>
           )}

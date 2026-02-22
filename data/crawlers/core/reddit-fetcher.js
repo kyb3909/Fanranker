@@ -78,6 +78,13 @@ async function fetchViaRSS(source) {
     posted_at: entry.published || new Date().toISOString(),
   }))
 
+  // For image posts without thumbnail, use link_url as thumbnail
+  for (const post of results) {
+    if (post.media_type === 'image' && !post.thumbnail_url && post.link_url) {
+      post.thumbnail_url = post.link_url
+    }
+  }
+
   // Enrich: fetch og:image for articles missing thumbnails
   await enrichWithOgImages(results)
   return results
