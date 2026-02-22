@@ -35,18 +35,18 @@ export async function PATCH(
 
     // used_slots is now managed by DB trigger (trg_sync_commission_used_slots)
 
-    await supabase.from('notifications').insert({
+    supabase.from('notifications').insert({
       user_id: order.artist_id,
       type: 'commission_completed',
       actor_id: user.id,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Notification insert failed:', e) })
 
-    await supabase.from('commission_messages').insert({
+    supabase.from('commission_messages').insert({
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
       content: `주문이 완료되었습니다. 작가에게 ${result.artist_received}G가 지급됩니다. (수수료 ${result.fee}G)`,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Message insert failed:', e) })
 
     return NextResponse.json({
       success: true,

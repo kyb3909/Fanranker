@@ -8,9 +8,36 @@ import { Loader2, Plus, Palette, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
+interface CommissionPackage {
+  id: string
+  artist_id: string
+  name: string
+  type: string
+  description: string
+  features: string[]
+  price_gold: number
+  delivery_days: number
+  max_revisions: number
+  max_slots: number
+  used_slots: number
+  is_active: boolean
+}
+
+interface PackageFormData {
+  name: string
+  type: string
+  description: string
+  features: string[]
+  price_gold: number
+  delivery_days: number
+  max_revisions: number
+  max_slots: number
+  is_active: boolean
+}
+
 export default function ManagePackagesPage() {
   const { user } = useUser()
-  const [packages, setPackages] = useState<any[]>([])
+  const [packages, setPackages] = useState<CommissionPackage[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -32,7 +59,7 @@ export default function ManagePackagesPage() {
     fetchPackages()
   }, [fetchPackages])
 
-  const handleCreate = async (formData: any) => {
+  const handleCreate = async (formData: PackageFormData) => {
     const res = await fetch('/api/commissions/packages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -44,7 +71,7 @@ export default function ManagePackagesPage() {
     fetchPackages()
   }
 
-  const handleUpdate = async (formData: any) => {
+  const handleUpdate = async (formData: PackageFormData) => {
     if (!editingId) return
     const res = await fetch(`/api/commissions/packages/${editingId}`, {
       method: 'PATCH',

@@ -75,7 +75,7 @@ export function BettingSlip({
         {isSlipExpanded && (
           <div className="border-t px-3 py-2">
             {/* Clear all button */}
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-border">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
               <span className="text-xs text-muted-foreground">선택한 경기 {selectedBets.length}개</span>
               <button
                 onClick={onClearAllBets}
@@ -87,7 +87,7 @@ export function BettingSlip({
             </div>
 
             {/* Selected bets list */}
-            <div className="divide-y divide-gray-100 dark:divide-border">
+            <div className="divide-y divide-border">
               {selectedBets.map((bet) => {
                 const groupedMatch = groupedMatches.find((m) => m.matchKey === bet.matchKey)
                 const game = groupedMatch?.games.find((g) => g.id === bet.gameId)
@@ -100,17 +100,17 @@ export function BettingSlip({
                         e.stopPropagation()
                         onRemoveBet(bet.gameId)
                       }}
-                      className="absolute top-2 right-0 w-5 h-5 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 flex items-center justify-center transition-colors"
+                      className="absolute top-2 right-0 w-5 h-5 text-muted-foreground hover:text-red-500 dark:hover:text-red-400 flex items-center justify-center transition-colors"
                       aria-label={`${groupedMatch.homeTeam} vs ${groupedMatch.awayTeam} 선택 삭제`}
                     >
                       <X className="w-4 h-4" />
                     </button>
                     {/* League & time */}
-                    <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-muted-foreground mb-0.5 flex-wrap">
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-0.5 flex-wrap">
                       <span>{groupedMatch.leagueCode}</span>
-                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <span className="text-border">|</span>
                       <span>{formatMatchTime(groupedMatch.matchTime)}</span>
-                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <span className="text-border">|</span>
                       <span className="text-primary">{gameTypeLabels[bet.gameType] || bet.gameType}</span>
                       {/* Handicap info */}
                       {bet.gameType.includes('핸디캡') && bet.handicap !== null && (
@@ -126,7 +126,7 @@ export function BettingSlip({
                       )}
                     </div>
                     {/* Teams */}
-                    <div className="text-sm text-gray-800 dark:text-foreground mb-1 pr-6">
+                    <div className="text-sm text-foreground mb-1 pr-6">
                       {groupedMatch.homeTeam} vs {groupedMatch.awayTeam}
                     </div>
                     {/* Selection & odds */}
@@ -161,7 +161,7 @@ export function BettingSlip({
             </div>
 
             {/* Bet amount input */}
-            <div className="pt-3 mt-2 border-t border-gray-100 dark:border-border space-y-3">
+            <div className="pt-3 mt-2 border-t border-border space-y-3">
               {/* Ball balance */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">보유 볼</span>
@@ -223,7 +223,7 @@ export function BettingSlip({
 
               {/* Submit button */}
               <Button
-                className="w-full bg-gray-900 hover:bg-gray-800 dark:bg-primary dark:hover:bg-primary/90 h-11"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11"
                 onClick={onSubmit}
                 disabled={isSubmitting || selectedBets.length === 0 || betAmount <= 0}
               >

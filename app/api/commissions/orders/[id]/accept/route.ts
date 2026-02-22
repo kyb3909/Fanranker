@@ -40,18 +40,18 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: '수락 처리 실패' }, { status: 500 })
 
     // Notify client
-    await supabase.from('notifications').insert({
+    supabase.from('notifications').insert({
       user_id: order.client_id,
       type: 'commission_accepted',
       actor_id: user.id,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Notification insert failed:', e) })
 
-    await supabase.from('commission_messages').insert({
+    supabase.from('commission_messages').insert({
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
       content: '작가가 주문을 수락했습니다. 작업이 시작됩니다.',
-    })
+    }).then(({ error: e }) => { if (e) console.error('Message insert failed:', e) })
 
     return NextResponse.json({ order: data })
   } catch (error) {

@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         p_description: `Premium prediction purchase: ${prediction_id}`,
         p_related_prediction_id: prediction_id,
       })
-      .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
+      .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: unknown }
 
     if (rpcError || !spendResult) {
       console.error('Failed to spend tokens:', rpcError)
@@ -155,11 +155,12 @@ export async function POST(request: NextRequest) {
     if (purchaseError) {
       console.error('Failed to record purchase:', purchaseError)
       // Refund: 구매 기록 실패 시 토큰 환불 (원자적 RPC)
-      await supabase.rpc('refund_tokens', {
+      const { error: refundError } = await supabase.rpc('refund_tokens', {
         p_user_id: userId,
         p_amount: prediction.price,
         p_description: '구매 기록 실패 환불',
       })
+      if (refundError) console.error('Critical: refund failed after purchase record failure:', refundError)
       return NextResponse.json(
         { error: '구매 기록 생성 중 오류가 발생했습니다.' },
         { status: 500 }

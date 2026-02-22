@@ -7,12 +7,27 @@ import { CommissionOrderForm } from "@/components/commission/order-form"
 import { Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
+interface CommissionPackage {
+  id: string
+  artist_id: string
+  name: string
+  type: string
+  description: string
+  features: string[]
+  price_gold: number
+  delivery_days: number
+  max_revisions: number
+  max_slots: number
+  used_slots: number
+  is_active: boolean
+}
+
 export default function OrderPage({ params }: { params: Promise<{ packageId: string }> }) {
   const { packageId } = use(params)
   const { user } = useUser()
   const router = useRouter()
 
-  const [pkg, setPkg] = useState<any>(null)
+  const [pkg, setPkg] = useState<CommissionPackage | null>(null)
   const [balance, setBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -23,7 +38,7 @@ export default function OrderPage({ params }: { params: Promise<{ packageId: str
         // Fetch package - we get all packages and find ours
         const pkgRes = await fetch(`/api/commissions/packages`)
         const pkgData = await pkgRes.json()
-        const found = pkgData.packages?.find((p: any) => p.id === packageId)
+        const found = pkgData.packages?.find((p: CommissionPackage) => p.id === packageId)
         if (!found) { setError('패키지를 찾을 수 없습니다.'); return }
         setPkg(found)
 

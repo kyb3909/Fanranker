@@ -33,24 +33,24 @@ export function BettingPredictionHistory({
           <div
             className={`p-2 text-xs flex items-center justify-between ${
               pred.sport === "축구"
-                ? "bg-rose-50"
+                ? "bg-rose-50 dark:bg-rose-950/30"
                 : pred.sport === "야구"
-                  ? "bg-blue-50"
+                  ? "bg-blue-50 dark:bg-blue-950/30"
                   : pred.sport === "농구"
-                    ? "bg-orange-50"
-                    : "bg-purple-50"
+                    ? "bg-orange-50 dark:bg-orange-950/30"
+                    : "bg-purple-50 dark:bg-purple-950/30"
             }`}
           >
             <div className="flex items-center gap-2">
               <span
                 className={`font-semibold ${
                   pred.sport === "축구"
-                    ? "text-rose-700"
+                    ? "text-rose-700 dark:text-rose-400"
                     : pred.sport === "야구"
-                      ? "text-blue-700"
+                      ? "text-blue-700 dark:text-blue-400"
                       : pred.sport === "농구"
-                        ? "text-orange-700"
-                        : "text-purple-700"
+                        ? "text-orange-700 dark:text-orange-400"
+                        : "text-purple-700 dark:text-purple-400"
                 }`}
               >
                 {pred.sport === "축구"
@@ -62,15 +62,15 @@ export function BettingPredictionHistory({
                       : "🏐"}{" "}
                 {pred.sport}
               </span>
-              <span className="text-gray-500">{pred.date}</span>
+              <span className="text-muted-foreground">{pred.date}</span>
             </div>
             <div
               className={`text-xs font-semibold px-2 py-0.5 rounded ${
                 pred.status === "win"
-                  ? "bg-green-100 text-green-700"
+                  ? "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400"
                   : pred.status === "lose"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-gray-100 text-gray-700"
+                    ? "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {pred.status === "win" ? "적중" : pred.status === "lose" ? "미적중" : "대기중"}
@@ -83,8 +83,8 @@ export function BettingPredictionHistory({
               const hasDrawOdds = pred.sport === "축구"
 
               return (
-                <div key={idx} className="bg-white rounded-lg border overflow-hidden">
-                  <div className="px-3 py-1.5 bg-gray-100 flex justify-between text-xs text-gray-600">
+                <div key={idx} className="bg-card rounded-lg border overflow-hidden">
+                  <div className="px-3 py-1.5 bg-muted flex justify-between text-xs text-muted-foreground">
                     <span>{match.league}</span>
                   </div>
                   <div className={`p-2 grid ${hasDrawOdds ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
@@ -92,13 +92,13 @@ export function BettingPredictionHistory({
                       className={`rounded-lg p-2 text-center ${
                         match.selection === "홈팀"
                           ? `${fillColor.bg} ${fillColor.border} border`
-                          : "bg-gray-50"
+                          : "bg-muted/50"
                       }`}
                     >
-                      <div className={`text-xs truncate ${match.selection === "홈팀" ? fillColor.text : "text-gray-600"}`}>
+                      <div className={`text-xs truncate ${match.selection === "홈팀" ? fillColor.text : "text-muted-foreground"}`}>
                         {match.home}
                       </div>
-                      <div className={`font-bold text-sm ${match.selection === "홈팀" ? fillColor.text : "text-gray-900"}`}>
+                      <div className={`font-bold text-sm ${match.selection === "홈팀" ? fillColor.text : "text-foreground"}`}>
                         {match.odds}
                       </div>
                     </div>
@@ -107,13 +107,13 @@ export function BettingPredictionHistory({
                         className={`rounded-lg p-2 text-center ${
                           match.selection === "무"
                             ? `${fillColor.bg} ${fillColor.border} border`
-                            : "bg-gray-50"
+                            : "bg-muted/50"
                         }`}
                       >
-                        <div className={`text-xs ${match.selection === "무" ? fillColor.text : "text-gray-600"}`}>
+                        <div className={`text-xs ${match.selection === "무" ? fillColor.text : "text-muted-foreground"}`}>
                           무
                         </div>
-                        <div className={`font-bold text-sm ${match.selection === "무" ? fillColor.text : "text-gray-900"}`}>
+                        <div className={`font-bold text-sm ${match.selection === "무" ? fillColor.text : "text-foreground"}`}>
                           {match.odds}
                         </div>
                       </div>
@@ -122,13 +122,13 @@ export function BettingPredictionHistory({
                       className={`rounded-lg p-2 text-center ${
                         match.selection === "원정팀"
                           ? `${fillColor.bg} ${fillColor.border} border`
-                          : "bg-gray-50"
+                          : "bg-muted/50"
                       }`}
                     >
-                      <div className={`text-xs truncate ${match.selection === "원정팀" ? fillColor.text : "text-gray-600"}`}>
+                      <div className={`text-xs truncate ${match.selection === "원정팀" ? fillColor.text : "text-muted-foreground"}`}>
                         {match.away}
                       </div>
-                      <div className={`font-bold text-sm ${match.selection === "원정팀" ? fillColor.text : "text-gray-900"}`}>
+                      <div className={`font-bold text-sm ${match.selection === "원정팀" ? fillColor.text : "text-foreground"}`}>
                         {match.odds}
                       </div>
                     </div>
@@ -137,7 +137,7 @@ export function BettingPredictionHistory({
               )
             })}
             <div className="mt-3 pt-3 border-t flex justify-between items-center">
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-muted-foreground">
                 배팅금: {pred.stake.toLocaleString()}G | 총배당: {pred.totalOdds}배
               </div>
               <div
@@ -146,7 +146,7 @@ export function BettingPredictionHistory({
                     ? "text-green-600"
                     : pred.status === "lose"
                       ? "text-red-600"
-                      : "text-gray-600"
+                      : "text-muted-foreground"
                 }`}
               >
                 {pred.status === "pending"

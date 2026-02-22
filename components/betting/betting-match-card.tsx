@@ -49,7 +49,7 @@ export function BettingMatchCard({
       <div className="px-2 pb-1">
         <div className="flex items-center justify-center gap-2 py-1">
           <span className="font-bold text-sm">{groupedMatch.homeTeam}</span>
-          <span className="text-gray-400 text-xs">vs</span>
+          <span className="text-muted-foreground text-xs">vs</span>
           <span className="font-bold text-sm">{groupedMatch.awayTeam}</span>
         </div>
       </div>
@@ -89,7 +89,7 @@ export function BettingMatchCard({
           const isTwoColumn = isSUM || isOverUnder || isBasketball
 
           return (
-            <div key={game.id} className="border rounded-lg p-1.5 bg-gray-50/50">
+            <div key={game.id} className="border rounded-lg p-1.5 bg-muted/50">
               <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
                 <div className="flex items-center gap-1">
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -102,7 +102,7 @@ export function BettingMatchCard({
                         {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? '+' : ''}{game.handicap}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-400 border-gray-200">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
                         핸디캡 정보 없음
                       </Badge>
                     )
@@ -110,11 +110,11 @@ export function BettingMatchCard({
                   {/* Over/Under line badge */}
                   {game.game_type.includes('언더오버') && (
                     game.over_under_line !== null && game.over_under_line !== undefined ? (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-600 border-purple-200">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800">
                         기준 {game.over_under_line}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-400 border-gray-200">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
                         기준선 정보 없음
                       </Badge>
                     )
@@ -134,7 +134,7 @@ export function BettingMatchCard({
                     className={`py-1 px-1.5 rounded-md text-center transition-all ${
                       selectedBet?.selection === opt.value
                         ? `${fillColor.bg} ${fillColor.text} border ${fillColor.border}`
-                        : "bg-white border hover:bg-gray-100"
+                        : "bg-card border hover:bg-accent"
                     } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => !isDisabled && onBetSelection(
                       game.id,
@@ -150,8 +150,8 @@ export function BettingMatchCard({
                     aria-label={`${opt.label} 선택, 배당 ${opt.odds ? opt.odds.toFixed(2) : '없음'}`}
                     aria-pressed={selectedBet?.selection === opt.value}
                   >
-                    <div className="text-[10px] text-gray-500 truncate">{opt.label}</div>
-                    <div className={`text-xs font-bold ${selectedBet?.selection === opt.value ? '' : 'text-gray-900'}`}>
+                    <div className="text-[10px] text-muted-foreground truncate">{opt.label}</div>
+                    <div className={`text-xs font-bold ${selectedBet?.selection === opt.value ? '' : 'text-foreground'}`}>
                       {opt.odds ? opt.odds.toFixed(2) : '-'}
                     </div>
                   </button>
@@ -165,7 +165,7 @@ export function BettingMatchCard({
       {/* Selection Status */}
       {hasSelectionFromThisMatch && (
         <div className="px-2 pb-1.5">
-          <div className="flex items-center justify-center gap-1.5 py-1 bg-emerald-50 rounded text-emerald-600">
+          <div className="flex items-center justify-center gap-1.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 rounded text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-3 w-3" />
             <span className="text-[10px] font-medium">선택됨</span>
           </div>

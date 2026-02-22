@@ -27,22 +27,25 @@ export async function POST(
         .maybeSingle()
 
       if (current) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from('user_tokens')
           .update({ token_balance: current.token_balance + amount, updated_at: new Date().toISOString() })
           .eq('user_id', userId)
+        if (updateErr) return NextResponse.json({ error: '토큰 잔액 업데이트 실패' }, { status: 500 })
       } else {
-        await supabase
+        const { error: insertErr } = await supabase
           .from('user_tokens')
           .insert({ user_id: userId, token_balance: Math.max(0, amount), total_tokens_earned: Math.max(0, amount) })
+        if (insertErr) return NextResponse.json({ error: '토큰 레코드 생성 실패' }, { status: 500 })
       }
 
-      await supabase.from('token_transactions').insert({
+      const { error: txErr } = await supabase.from('token_transactions').insert({
         user_id: userId,
         amount,
         type: amount > 0 ? 'admin_grant' : 'admin_deduct',
         description: reason,
       })
+      if (txErr) return NextResponse.json({ error: '토큰 거래 기록 실패' }, { status: 500 })
     } else if (type === 'gold') {
       const { data: current } = await supabase
         .from('user_gold')
@@ -51,22 +54,25 @@ export async function POST(
         .maybeSingle()
 
       if (current) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from('user_gold')
           .update({ gold_balance: current.gold_balance + amount, updated_at: new Date().toISOString() })
           .eq('user_id', userId)
+        if (updateErr) return NextResponse.json({ error: '골드 잔액 업데이트 실패' }, { status: 500 })
       } else {
-        await supabase
+        const { error: insertErr } = await supabase
           .from('user_gold')
           .insert({ user_id: userId, gold_balance: Math.max(0, amount) })
+        if (insertErr) return NextResponse.json({ error: '골드 레코드 생성 실패' }, { status: 500 })
       }
 
-      await supabase.from('gold_transactions').insert({
+      const { error: txErr } = await supabase.from('gold_transactions').insert({
         user_id: userId,
         amount,
         type: amount > 0 ? 'admin_grant' : 'admin_deduct',
         description: reason,
       })
+      if (txErr) return NextResponse.json({ error: '골드 거래 기록 실패' }, { status: 500 })
     } else {
       return NextResponse.json({ error: '잘못된 type입니다. token 또는 gold만 가능합니다.' }, { status: 400 })
     }

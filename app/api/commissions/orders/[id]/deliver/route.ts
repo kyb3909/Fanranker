@@ -28,7 +28,7 @@ export async function PATCH(
     const autoRelease = new Date()
     autoRelease.setDate(autoRelease.getDate() + 3)
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('commission_orders')
       .update({
         status: 'review',
@@ -37,18 +37,22 @@ export async function PATCH(
       })
       .eq('id', id)
 
-    await supabase.from('notifications').insert({
+    if (updateError) {
+      return NextResponse.json({ error: '상태 업데이트 실패' }, { status: 500 })
+    }
+
+    supabase.from('notifications').insert({
       user_id: order.client_id,
       type: 'commission_milestone_submitted',
       actor_id: user.id,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Notification insert failed:', e) })
 
-    await supabase.from('commission_messages').insert({
+    supabase.from('commission_messages').insert({
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
       content: '작가가 최종 결과물을 제출했습니다. 확인 후 완료 처리해주세요. (3일 후 자동 정산)',
-    })
+    }).then(({ error: e }) => { if (e) console.error('Message insert failed:', e) })
 
     return NextResponse.json({ success: true, auto_release_at: autoRelease.toISOString() })
   } catch (error) {

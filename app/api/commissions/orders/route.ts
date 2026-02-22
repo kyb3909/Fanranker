@@ -102,7 +102,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate order number
-    const { data: orderNumber } = await supabase.rpc('generate_order_number')
+    const { data: orderNumber, error: orderNumError } = await supabase.rpc('generate_order_number')
+    if (orderNumError || !orderNumber) {
+      console.error('Failed to generate order number:', orderNumError)
+      return NextResponse.json({ error: '주문번호 생성 실패' }, { status: 500 })
+    }
 
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -135,7 +139,12 @@ export async function POST(request: NextRequest) {
       title: name,
     }))
 
-    await supabase.from('commission_milestones').insert(milestones)
+    const { error: milestoneError } = await supabase.from('commission_milestones').insert(milestones)
+    if (milestoneError) {
+      console.error('Failed to create milestones:', milestoneError)
+      await supabase.from('commission_orders').delete().eq('id', order.id)
+      return NextResponse.json({ error: '마일스톤 생성 실패' }, { status: 500 })
+    }
 
     // Escrow hold gold
     const { data: escrowResult } = await supabase
@@ -155,20 +164,20 @@ export async function POST(request: NextRequest) {
 
     // used_slots is now managed by DB trigger (trg_sync_commission_used_slots)
 
-    // Send notification to artist
-    await supabase.from('notifications').insert({
+    // Send notification to artist (non-blocking)
+    supabase.from('notifications').insert({
       user_id: pkg.artist_id,
       type: 'commission_new_order',
       actor_id: user.id,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Notification insert failed:', e) })
 
-    // System message
-    await supabase.from('commission_messages').insert({
+    // System message (non-blocking)
+    supabase.from('commission_messages').insert({
       order_id: order.id,
       sender_id: 'system',
       message_type: 'system',
       content: `주문이 접수되었습니다. (${orderNumber})`,
-    })
+    }).then(({ error: e }) => { if (e) console.error('System message insert failed:', e) })
 
     return NextResponse.json({ order, balance: escrowResult.new_balance }, { status: 201 })
   } catch (error) {

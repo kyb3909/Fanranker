@@ -36,7 +36,7 @@ export async function PATCH(
     }
 
     // Update order
-    await supabase
+    const { error: updateError } = await supabase
       .from('commission_orders')
       .update({
         cancelled_by: user.id,
@@ -44,21 +44,23 @@ export async function PATCH(
       })
       .eq('id', id)
 
+    if (updateError) console.error('Order update failed:', updateError)
+
     // used_slots is now managed by DB trigger (trg_sync_commission_used_slots)
 
     // Notify client
-    await supabase.from('notifications').insert({
+    supabase.from('notifications').insert({
       user_id: order.client_id,
       type: 'commission_rejected',
       actor_id: user.id,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Notification insert failed:', e) })
 
-    await supabase.from('commission_messages').insert({
+    supabase.from('commission_messages').insert({
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
       content: `작가가 주문을 거절했습니다. 전액 환불됩니다.${body?.reason ? ` (사유: ${body.reason})` : ''}`,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Message insert failed:', e) })
 
     return NextResponse.json({ success: true, refunded: refundResult.refunded })
   } catch (error) {

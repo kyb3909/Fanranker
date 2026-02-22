@@ -51,7 +51,7 @@ export async function PATCH(
       return NextResponse.json({ error: '환불 처리 실패' }, { status: 500 })
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('commission_orders')
       .update({
         cancelled_by: user.id,
@@ -59,22 +59,24 @@ export async function PATCH(
       })
       .eq('id', id)
 
+    if (updateError) console.error('Order update failed:', updateError)
+
     // used_slots is now managed by DB trigger (trg_sync_commission_used_slots)
 
     // Notify other party
     const notifyUserId = isClient ? order.artist_id : order.client_id
-    await supabase.from('notifications').insert({
+    supabase.from('notifications').insert({
       user_id: notifyUserId,
       type: 'commission_cancelled',
       actor_id: user.id,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Notification insert failed:', e) })
 
-    await supabase.from('commission_messages').insert({
+    supabase.from('commission_messages').insert({
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
       content: `주문이 취소되었습니다. (환불 ${refundPercent}%)${body?.reason ? ` 사유: ${body.reason}` : ''}`,
-    })
+    }).then(({ error: e }) => { if (e) console.error('Message insert failed:', e) })
 
     return NextResponse.json({
       success: true,

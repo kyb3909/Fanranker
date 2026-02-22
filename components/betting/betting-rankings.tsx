@@ -110,7 +110,7 @@ export function BettingRankings({
                 <div className="flex items-center gap-2">
                   <div
                     className={`w-7 h-7 flex items-center justify-center rounded-full font-bold text-xs shrink-0 ${
-                      isTop3 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"
+                      isTop3 ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {isTop3 ? <Trophy className={`w-3.5 h-3.5 ${medalColors[rank - 1]}`} /> : rank}
@@ -121,8 +121,8 @@ export function BettingRankings({
                       {streakText && (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
                           user.current_streak > 0
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-red-100 text-red-700'
+                            ? 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400'
                         }`}>
                           🔥{streakText}
                         </span>
@@ -143,7 +143,7 @@ export function BettingRankings({
                     className={`h-7 px-3 text-xs rounded-full shrink-0 ${
                       isFollowed
                         ? "text-muted-foreground hover:text-red-500 hover:border-red-300"
-                        : "bg-gray-900 text-white hover:bg-gray-800"
+                        : "bg-foreground text-background hover:bg-foreground/90"
                     }`}
                   >
                     {isFollowLoading ? (

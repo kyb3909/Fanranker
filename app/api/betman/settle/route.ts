@@ -64,12 +64,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 0. 해당 필터의 지난 scheduled 게임 자동 만료 (결과 없이 시간 지난 게임)
-    await supabase
+    const { error: expireError } = await supabase
       .from('betman_games')
       .update({ status: 'in_progress', updated_at: new Date().toISOString() })
       .eq(gameFilter.column, gameFilter.value)
       .eq('status', 'scheduled')
       .lt('match_time', new Date().toISOString())
+    if (expireError) console.error('Failed to expire scheduled games:', expireError)
 
     // 1. 해당 필터의 완료/취소된 경기 조회
     const { data: games, error: gamesError } = await supabase
