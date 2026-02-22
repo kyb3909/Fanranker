@@ -109,7 +109,7 @@ export default function ExplorePage() {
                       className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
                     >
                       <span className="text-3xl drop-shadow-sm">{cat.icon || '📋'}</span>
-                      <span className="text-xs font-bold text-gray-800">{cat.name}</span>
+                      <span className="text-xs font-bold text-foreground">{cat.name}</span>
                     </Link>
                   ))}
                 </div>

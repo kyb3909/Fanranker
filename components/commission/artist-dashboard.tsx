@@ -74,7 +74,7 @@ export function ArtistDashboard({ stats, packages }: { stats: Stats; packages: P
             {packages.map((pkg) => (
               <div key={pkg.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${pkg.is_active ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className={`w-2 h-2 rounded-full ${pkg.is_active ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
                   <span className="text-sm text-foreground">{pkg.name}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">

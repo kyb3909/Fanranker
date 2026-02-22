@@ -88,7 +88,7 @@ export function BettingRankings({
         rankings.map((user) => {
           const rank = user.rank
           const isTop3 = rank <= 3
-          const medalColors = ["text-yellow-500", "text-gray-400", "text-amber-600"]
+          const medalColors = ["text-yellow-500", "text-muted-foreground", "text-amber-600"]
           const isFollowed = followedUsers.has(user.user_id)
           const isFollowLoading = followLoading.has(user.user_id)
           const streakText = user.current_streak > 0

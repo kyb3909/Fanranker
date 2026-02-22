@@ -594,20 +594,20 @@ export default function BettingPage() {
               <div className="space-y-4">
                 <Card className="p-4">
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="w-10 h-10 text-gray-400" />
+                    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-10 h-10 text-muted-foreground" />
                     </div>
                     <div className="w-full space-y-3">
                       <div>
-                        <label className="text-xs text-gray-500">닉네임</label>
+                        <label className="text-xs text-muted-foreground">닉네임</label>
                         <Input placeholder="닉네임을 입력하세요" className="mt-1" />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500">이메일</label>
+                        <label className="text-xs text-muted-foreground">이메일</label>
                         <Input type="email" placeholder="이메일을 입력하세요" className="mt-1" />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500">소개</label>
+                        <label className="text-xs text-muted-foreground">소개</label>
                         <Input placeholder="자기소개를 입력하세요" className="mt-1" />
                       </div>
                       <Button className="w-full">저장하기</Button>
