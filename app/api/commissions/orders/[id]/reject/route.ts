@@ -24,7 +24,7 @@ export async function PATCH(
     if (order.artist_id !== user.id) return NextResponse.json({ error: '작가만 거절할 수 있습니다.' }, { status: 403 })
     if (order.status !== 'pending') return NextResponse.json({ error: '대기 중인 주문만 거절할 수 있습니다.' }, { status: 400 })
 
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null
 
     // 100% refund
     const { data: refundResult } = await supabase
@@ -40,7 +40,7 @@ export async function PATCH(
       .from('commission_orders')
       .update({
         cancelled_by: user.id,
-        cancel_reason: body.reason || '작가 거절',
+        cancel_reason: body?.reason || '작가 거절',
       })
       .eq('id', id)
 
@@ -57,7 +57,7 @@ export async function PATCH(
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
-      content: `작가가 주문을 거절했습니다. 전액 환불됩니다.${body.reason ? ` (사유: ${body.reason})` : ''}`,
+      content: `작가가 주문을 거절했습니다. 전액 환불됩니다.${body?.reason ? ` (사유: ${body.reason})` : ''}`,
     })
 
     return NextResponse.json({ success: true, refunded: refundResult.refunded })

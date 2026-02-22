@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const authError = verifyCronSecret(request)
     if (authError) return authError
 
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null
 
     const supabase = createServiceRoleClient()
 
@@ -86,19 +86,19 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     }
 
-    if (body.latestGmTs != null) {
+    if (body?.latestGmTs != null) {
       updateData.latest_gm_ts = String(body.latestGmTs)
     }
-    if (Array.isArray(body.activeRounds)) {
+    if (Array.isArray(body?.activeRounds)) {
       updateData.active_rounds = body.activeRounds
     }
-    if (body.lastSyncAction != null) {
+    if (body?.lastSyncAction != null) {
       updateData.last_sync_action = String(body.lastSyncAction)
     }
-    if (body.lastSyncGamesCount != null) {
+    if (body?.lastSyncGamesCount != null) {
       updateData.last_sync_games_count = Number(body.lastSyncGamesCount)
     }
-    if (body.lastError !== undefined) {
+    if (body?.lastError !== undefined) {
       updateData.last_error = body.lastError ? String(body.lastError) : null
     }
 

@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = user.id
+    const { searchParams } = new URL(request.url)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+    const offset = parseInt(searchParams.get('offset') || '0')
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -50,6 +53,7 @@ export async function GET(request: NextRequest) {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (regularError) {
       console.error('Failed to fetch regular predictions:', regularError)
@@ -97,6 +101,7 @@ export async function GET(request: NextRequest) {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (betmanError) {
       console.error('Failed to fetch betman predictions:', betmanError)
@@ -315,6 +320,11 @@ export async function GET(request: NextRequest) {
         accuracy,
         totalPointsEarned,
         totalPointsUsed,
+      },
+      pagination: {
+        limit,
+        offset,
+        hasMore: allItems.length >= limit,
       },
     })
   } catch (error) {

@@ -19,7 +19,12 @@ export async function POST(request: NextRequest) {
     const authError = verifyCronSecret(request)
     if (authError) return authError
 
-    const body = await request.json().catch(() => ({}))
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
     const gmTs = body.gmTs != null ? String(body.gmTs).trim() : null
 
     if (!gmTs) {

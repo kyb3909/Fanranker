@@ -236,7 +236,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Require explicit confirmation to prevent CSRF and accidental deletion
-    const body = await request.json().catch(() => ({}))
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
     if (body.confirm !== '계정삭제') {
       return NextResponse.json(
         { error: '계정 삭제를 확인하려면 "계정삭제"를 입력해주세요.' },

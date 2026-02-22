@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     const authError = verifyCronSecret(request)
     if (authError) return authError
 
-    const body = await request.json().catch(() => ({}))
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
 
     // gmTs를 단일 또는 배열로 받기
     let gmTsList: string[] = []

@@ -41,7 +41,7 @@ export async function PATCH(
       }
     }
 
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null
 
     const { data: refundResult } = await supabase
       .rpc('escrow_refund_gold', { p_order_id: id, p_refund_percent: refundPercent })
@@ -55,7 +55,7 @@ export async function PATCH(
       .from('commission_orders')
       .update({
         cancelled_by: user.id,
-        cancel_reason: body.reason || '',
+        cancel_reason: body?.reason || '',
       })
       .eq('id', id)
 
@@ -73,7 +73,7 @@ export async function PATCH(
       order_id: id,
       sender_id: 'system',
       message_type: 'system',
-      content: `주문이 취소되었습니다. (환불 ${refundPercent}%)${body.reason ? ` 사유: ${body.reason}` : ''}`,
+      content: `주문이 취소되었습니다. (환불 ${refundPercent}%)${body?.reason ? ` 사유: ${body.reason}` : ''}`,
     })
 
     return NextResponse.json({

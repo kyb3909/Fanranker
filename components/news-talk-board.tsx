@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, ThumbsUp, MessageSquare, Share2, Users, Send, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Image from 'next/image'
 
 type TickerTag = 'live' | 'breaking' | 'result'
 
@@ -462,12 +463,13 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
 
               {/* 미디어: 포스터/이미지 (원본 해상도) */}
               {details.mediaType === 'image' && (details.sourceUrl || details.thumbnailUrl) && (
-                <div className="mb-4 rounded-lg overflow-hidden bg-black/5">
-                  <img
+                <div className="mb-4 rounded-lg overflow-hidden bg-black/5 relative" style={{ minHeight: 200 }}>
+                  <Image
                     src={details.sourceUrl || details.thumbnailUrl!}
-                    alt=""
-                    className="w-full max-h-[500px] object-contain mx-auto"
-                    loading="lazy"
+                    alt={item.text || '뉴스 이미지'}
+                    fill
+                    className="object-contain"
+                    unoptimized
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 </div>
@@ -475,12 +477,13 @@ export function NewsTalkBoard({ item, isOpen, onClose }: NewsTalkBoardProps) {
 
               {/* 기사 썸네일 */}
               {details.mediaType !== 'youtube' && details.mediaType !== 'image' && details.thumbnailUrl && (
-                <div className="mb-4 rounded-lg overflow-hidden">
-                  <img
+                <div className="mb-4 rounded-lg overflow-hidden relative" style={{ minHeight: 180 }}>
+                  <Image
                     src={details.thumbnailUrl}
-                    alt=""
-                    className="w-full max-h-[300px] object-cover"
-                    loading="lazy"
+                    alt={item.text || '기사 썸네일'}
+                    fill
+                    className="object-cover"
+                    unoptimized
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 </div>

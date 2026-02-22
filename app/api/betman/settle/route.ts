@@ -20,26 +20,31 @@ export async function POST(request: NextRequest) {
     const authError = verifyCronSecret(request)
     if (authError) return authError
 
-    const body = await request.json().catch(() => ({}))
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
     const supabase = createServiceRoleClient()
 
     // --- Determine which games to settle ---
     let gameFilter: { column: string; value: string } | null = null
 
     if (body.daily_round_id) {
-      gameFilter = { column: 'daily_round_id', value: body.daily_round_id }
+      gameFilter = { column: 'daily_round_id', value: String(body.daily_round_id) }
     } else if (body.daily_id) {
       // Look up daily_round_id from daily_id
       const { data: dr } = await supabase
         .from('betman_daily_rounds')
         .select('id')
-        .eq('daily_id', body.daily_id)
+        .eq('daily_id', String(body.daily_id))
         .single()
       if (dr) {
         gameFilter = { column: 'daily_round_id', value: dr.id }
       }
     } else if (body.round_id) {
-      gameFilter = { column: 'round_id', value: body.round_id }
+      gameFilter = { column: 'round_id', value: String(body.round_id) }
     } else if (body.gm_ts) {
       const { data: round } = await supabase
         .from('betman_rounds')

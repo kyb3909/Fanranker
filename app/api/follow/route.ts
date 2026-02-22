@@ -54,8 +54,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json().catch(() => ({}))
-    const targetUserId: string | undefined = body.user_id
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+    const targetUserId = typeof body.user_id === 'string' ? body.user_id : undefined
 
     if (!targetUserId) {
       return NextResponse.json(

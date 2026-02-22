@@ -32,14 +32,14 @@ export async function PATCH(
     if (!milestone) return NextResponse.json({ error: '마일스톤을 찾을 수 없습니다.' }, { status: 404 })
     if (milestone.status !== 'submitted') return NextResponse.json({ error: '제출된 마일스톤만 승인할 수 있습니다.' }, { status: 400 })
 
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null
 
     // Approve milestone
     await supabase
       .from('commission_milestones')
       .update({
         status: 'approved',
-        feedback: body.feedback || '',
+        feedback: body?.feedback || '',
         approved_at: new Date().toISOString(),
       })
       .eq('id', mid)
