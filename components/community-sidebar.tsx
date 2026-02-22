@@ -18,16 +18,6 @@ interface Community {
   todayPosts?: number
 }
 
-// 멤버 수 포맷팅 함수
-function formatMemberCount(count: number): string {
-  if (count >= 10000) {
-    const wan = count / 10000
-    const formatted = wan % 1 === 0 ? wan.toFixed(0) : wan.toFixed(1)
-    return `${formatted}만`
-  }
-  return count.toLocaleString()
-}
-
 // 전체 커뮤니티 메뉴
 const ALL_COMMUNITIES: Community[] = [
   { slug: "overseas-football", name: "해외축구", memberCount: 1245000, icon: "", emoji: "⚽" },

@@ -15,6 +15,7 @@ import { useAuth } from "@clerk/nextjs"
 import { IS_SPORTS, IS_CULTURE } from "@/lib/site-config"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
+import { formatCount } from "@/lib/utils/format"
 
 const BettingPage = dynamic(
   () => import("@/components/betting-page"),
@@ -86,11 +87,6 @@ const MOCK_FOLLOWED_ARTWORKS: FeedArtwork[] = [
   { id: "17", title: "사무라이 혼", artist: "BushidoArt", artistAvatar: "B", likes: 534, views: 2900, comments: 48, gradient: GRADIENTS[3], aspectRatio: 1.0 },
   { id: "15", title: "전투 메카", artist: "MechaPilot", artistAvatar: "M", likes: 412, views: 2300, comments: 35, gradient: GRADIENTS[5], aspectRatio: 1.15 },
 ]
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
 
 function FeedArtworkCard({ artwork }: { artwork: FeedArtwork }) {
   return (

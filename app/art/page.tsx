@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Heart, Eye, MessageSquare, Flame, TrendingUp, Clock, ChevronDown, Palette } from "lucide-react"
 import Link from "next/link"
+import { formatCount } from "@/lib/utils/format"
 
 // --- Mock Data ---
 
@@ -78,11 +79,6 @@ const FEATURED_ARTISTS = [
   { name: "FloralArt", avatar: "F", works: 76, followers: 1800, specialty: "자연/풍경" },
   { name: "MagicPen", avatar: "M", works: 115, followers: 2700, specialty: "만화/웹툰" },
 ]
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
 
 export default function ArtPage() {
   const [activeCategory, setActiveCategory] = useState("all")

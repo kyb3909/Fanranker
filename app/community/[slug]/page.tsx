@@ -7,16 +7,7 @@ import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
-
-// 멤버 수 포맷팅 함수: 1만명 이상이면 "XX.X만명", 미만이면 "X,XXX명"
-function formatMemberCount(count: number): string {
-  if (count >= 10000) {
-    const wan = count / 10000
-    const formatted = wan % 1 === 0 ? wan.toFixed(0) : wan.toFixed(1)
-    return `${formatted}만명`
-  }
-  return `${count.toLocaleString()}명`
-}
+import { formatMemberCount } from "@/lib/utils/format"
 
 const COMMUNITY_DATA: Record<
   string,

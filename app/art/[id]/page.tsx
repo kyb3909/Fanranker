@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Heart, Eye, MessageSquare, Share2, Flag, Download, Palette, ArrowLeft, Send } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { formatCount } from "@/lib/utils/format"
 
 // --- Mock Data (동일한 데이터 재사용) ---
 
@@ -92,11 +93,6 @@ const MOCK_COMMENTS = [
   { id: "c2", user: "DrawLover", avatar: "D", text: "디테일이 살아있어요. 특히 빛 표현이 좋습니다.", time: "5시간 전", likes: 8 },
   { id: "c3", user: "PixelHeart", avatar: "P", text: "이 스타일로 커미션 받으시나요?", time: "1일 전", likes: 3 },
 ]
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
 
 export default function ArtworkDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
