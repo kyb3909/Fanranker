@@ -251,9 +251,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Calculate points earned (only if correct)
-      // TODO: Use actual token amount spent (from token_transactions or prediction record)
-      // For now, assume base token amount of 100 per prediction
-      const tokensSpent = 100 // Default token amount per prediction
+      // 기본 베팅 금액 100 (향후 token_transactions에서 실제 금액 조회 가능)
+      const tokensSpent = 100
       if (isCorrect && prediction.odds_at_prediction) {
         pointsEarned = Math.floor(tokensSpent * prediction.odds_at_prediction)
       }

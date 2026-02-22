@@ -365,7 +365,7 @@ export function PostDetailContent({ post }: { post: Post }) {
 
   const handleBlockUser = () => {
     if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
-      // TODO: 차단 로직 구현 예정
+      alert('차단 기능은 준비 중입니다.')
     }
   }
 

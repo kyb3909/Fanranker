@@ -578,7 +578,7 @@ export default function BettingPage() {
             result: status,
           }],
           totalOdds: pred.odds_at_prediction || 0,
-          stake: 100, // Default stake (TODO: get from token_transactions)
+          stake: 100, // 기본 베팅 금액
           status,
           profit: pred.points_earned || (status === 'pending' ? 0 : status === 'win' ? 100 * (pred.odds_at_prediction || 1) : -100),
         }

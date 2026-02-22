@@ -108,9 +108,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   }
 
   const handleBlockUser = () => {
-    // TODO: 차단 기능 구현 (blocked_users 테이블 필요)
     if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
-      // 차단 로직 구현 예정
+      alert('차단 기능은 준비 중입니다.')
     }
   }
 
