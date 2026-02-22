@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Search as SearchIcon, User, Hash, FileText, FileTextIcon } from 'lucide-react'
+import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 type SearchType = 'nickname' | 'id' | 'title' | 'title_content'
 
@@ -19,19 +20,6 @@ const SEARCH_TYPE_OPTIONS = [
   { value: 'nickname', label: '닉네임', icon: User },
   { value: 'id', label: 'ID', icon: Hash },
 ] as const
-
-// 커뮤니티 이름 매핑
-const COMMUNITY_NAMES: Record<string, string> = {
-  "overseas-football": "해외축구",
-  "domestic-football": "국내축구",
-  "baseball": "야구",
-  "basketball": "농구",
-  "volleyball": "배구",
-  "esports": "e스포츠",
-  "free-board": "자유게시판",
-  "tips": "정보게시판",
-  "movies": "영화",
-}
 
 // 상대적 시간 포맷팅
 function formatRelativeTime(date: Date): string {

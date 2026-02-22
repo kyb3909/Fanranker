@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, FileText, ArrowLeft, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 interface Post {
   id: string
@@ -26,19 +27,6 @@ interface Post {
   isUpvoted: boolean
   views: number
   createdAt: Date
-}
-
-// 커뮤니티 이름 매핑
-const COMMUNITY_NAMES: Record<string, string> = {
-  "overseas-football": "해외축구",
-  "domestic-football": "국내축구",
-  "baseball": "야구",
-  "basketball": "농구",
-  "volleyball": "배구",
-  "esports": "e스포츠",
-  "free-board": "자유게시판",
-  "tips": "정보게시판",
-  "movies": "영화",
 }
 
 // 상대적 시간 포맷팅
@@ -61,6 +49,7 @@ export default function MyPostsPage() {
   const router = useRouter()
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -103,7 +92,7 @@ export default function MyPostsPage() {
           setPosts(transformedPosts)
         }
       } catch {
-        // Silent fail - posts list will show empty
+        setErrorMessage('글 목록을 불러오는데 실패했습니다.')
       } finally {
         setIsLoading(false)
       }
@@ -149,7 +138,12 @@ export default function MyPostsPage() {
         </div>
 
         {/* 글 목록 */}
-        {isLoading ? (
+        {errorMessage ? (
+          <Card className="p-8 text-center">
+            <p className="text-sm text-red-500 mb-3">{errorMessage}</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>다시 시도</Button>
+          </Card>
+        ) : isLoading ? (
           <Card className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">글 목록을 불러오는 중...</p>

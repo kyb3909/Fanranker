@@ -31,6 +31,7 @@ export default function PaymentsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
   const [activeTab, setActiveTab] = useState<"all" | "earn" | "spend">("all")
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function PaymentsPage() {
           setTransactions(historyData.transactions || [])
         }
       } catch {
-        // Silent fail - transaction list will show empty
+        setErrorMessage('내역을 불러오는데 실패했습니다.')
       } finally {
         setIsLoading(false)
       }
@@ -112,6 +113,14 @@ export default function PaymentsPage() {
             <h1 className="text-xl font-bold">볼 내역</h1>
           </div>
         </div>
+
+        {/* 에러 상태 */}
+        {errorMessage && (
+          <Card className="p-8 text-center mb-6">
+            <p className="text-sm text-red-500 mb-3">{errorMessage}</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>다시 시도</Button>
+          </Card>
+        )}
 
         {/* 현재 잔액 카드 */}
         {tokenInfo && (
@@ -185,8 +194,8 @@ export default function PaymentsPage() {
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           tx.type === "earn" || tx.type === "reset"
-                            ? "bg-emerald-100 text-emerald-600"
-                            : "bg-red-100 text-red-600"
+                            ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
+                            : "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400"
                         }`}>
                           {tx.type === "earn" || tx.type === "reset" ? (
                             <ArrowDownLeft className="h-4 w-4" />

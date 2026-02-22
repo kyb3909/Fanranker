@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
+import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 interface RecentPost {
   id: string
@@ -11,18 +12,6 @@ interface RecentPost {
   community: string
   comments: number
   timestamp: string
-}
-
-// 커뮤니티 이름 매핑
-const COMMUNITY_NAMES: Record<string, string> = {
-  "overseas-football": "해외축구",
-  "domestic-football": "국내축구",
-  "baseball": "야구",
-  "basketball": "농구",
-  "volleyball": "배구",
-  "esports": "e스포츠",
-  "free-board": "자유게시판",
-  "tips": "정보게시판",
 }
 
 // 상대적 시간 포맷팅

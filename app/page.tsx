@@ -13,6 +13,7 @@ import { Dices, Flame, Clock, Loader2, Compass, Newspaper, Trophy, Palette, Hear
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
 import { IS_SPORTS, IS_CULTURE } from "@/lib/site-config"
+import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 const BettingPage = dynamic(
   () => import("@/components/betting-page"),
@@ -63,19 +64,6 @@ function formatRelativeTime(date: Date): string {
   if (diffHours < 24) return `${diffHours}시간 전`
   if (diffDays < 7) return `${diffDays}일 전`
   return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
-}
-
-// 커뮤니티 이름 매핑
-const COMMUNITY_NAMES: Record<string, string> = {
-  "overseas-football": "해외축구",
-  "domestic-football": "국내축구",
-  "baseball": "야구",
-  "basketball": "농구",
-  "volleyball": "배구",
-  "esports": "e스포츠",
-  "free-board": "자유게시판",
-  "tips": "정보게시판",
-  "movies": "영화",
 }
 
 // --- 문화 피드용 Mock 아트워크 ---

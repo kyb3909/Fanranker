@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 interface Profile {
   user_id: string
@@ -43,18 +44,6 @@ interface Profile {
 interface FollowedCommunity {
   community_slug: string
   created_at: string
-}
-
-// 커뮤니티 이름 매핑
-const communityNames: Record<string, string> = {
-  free: "자유게시판",
-  humor: "유머게시판",
-  soccer: "축구게시판",
-  baseball: "야구게시판",
-  basketball: "농구게시판",
-  esports: "e스포츠게시판",
-  stock: "주식게시판",
-  crypto: "코인게시판",
 }
 
 export default function ProfilePage() {
@@ -436,7 +425,7 @@ export default function ProfilePage() {
                       className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
                     >
                       <span className="font-medium">
-                        {communityNames[community.community_slug] || community.community_slug}
+                        {COMMUNITY_NAMES[community.community_slug] || community.community_slug}
                       </span>
                       <Button
                         variant="ghost"
