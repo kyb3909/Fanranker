@@ -29,15 +29,7 @@ function StatusBadge({ status }: { status: 'ok' | 'stale' | 'error' }) {
   return <Badge className={v.className}>{v.label}</Badge>
 }
 
-function formatTime(iso: string | null) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+import { formatKoreanTime } from "@/lib/utils/date"
 
 export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
   return (
@@ -52,7 +44,7 @@ export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Database className="h-3.5 w-3.5" />
-            <span>마지막 동기화: {formatTime(data.betmanSync.lastSync)}</span>
+            <span>마지막 동기화: {formatKoreanTime(data.betmanSync.lastSync)}</span>
           </div>
         </CardContent>
       </Card>
@@ -67,7 +59,7 @@ export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Rss className="h-3.5 w-3.5" />
-            <span>마지막 실행: {formatTime(data.crawler.lastRun)}</span>
+            <span>마지막 실행: {formatKoreanTime(data.crawler.lastRun)}</span>
           </div>
         </CardContent>
       </Card>
@@ -82,7 +74,7 @@ export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
-            <span>리셋 시각: {formatTime(data.dailyRound.resetAt)}</span>
+            <span>리셋 시각: {formatKoreanTime(data.dailyRound.resetAt)}</span>
           </div>
         </CardContent>
       </Card>

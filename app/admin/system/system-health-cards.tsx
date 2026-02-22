@@ -35,12 +35,7 @@ interface SystemHealthData {
   tickerCount: number
 }
 
-function formatTime(iso: string | null) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
-}
+import { formatKoreanTime } from "@/lib/utils/date"
 
 function SyncStatusBadge({ lastChecked, error }: { lastChecked: string | null; error: string | null }) {
   if (error) return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">오류</Badge>
@@ -85,7 +80,7 @@ export function SystemHealthCards({ data }: { data: SystemHealthData }) {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">마지막 체크</span>
-              <span>{formatTime(data.betmanSync.lastCheckedAt)}</span>
+              <span>{formatKoreanTime(data.betmanSync.lastCheckedAt)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">마지막 액션</span>
@@ -158,11 +153,11 @@ export function SystemHealthCards({ data }: { data: SystemHealthData }) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">배팅 오픈</span>
-              <span>{formatTime(data.dailyRound.betOpenAt)}</span>
+              <span>{formatKoreanTime(data.dailyRound.betOpenAt)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">배팅 마감</span>
-              <span>{formatTime(data.dailyRound.betCloseAt)}</span>
+              <span>{formatKoreanTime(data.dailyRound.betCloseAt)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">경기 수</span>

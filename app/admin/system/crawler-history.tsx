@@ -21,12 +21,7 @@ interface CrawlerRun {
   error_message: string | null
 }
 
-function formatTime(iso: string | null) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
-}
+import { formatKoreanTime } from "@/lib/utils/date"
 
 function durationMs(start: string, end: string | null) {
   if (!end) return '-'
@@ -61,7 +56,7 @@ export function CrawlerHistory({ runs }: { runs: CrawlerRun[] }) {
               runs.map((run) => (
                 <TableRow key={run.id}>
                   <TableCell className="font-mono text-xs">{run.source_id}</TableCell>
-                  <TableCell className="text-xs">{formatTime(run.started_at)}</TableCell>
+                  <TableCell className="text-xs">{formatKoreanTime(run.started_at, true)}</TableCell>
                   <TableCell className="text-xs">{durationMs(run.started_at, run.finished_at)}</TableCell>
                   <TableCell>
                     <Badge
