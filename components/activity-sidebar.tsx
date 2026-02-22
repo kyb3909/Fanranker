@@ -5,6 +5,7 @@ import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
+import { formatRelativeTime } from "@/lib/utils/date"
 
 interface RecentPost {
   id: string
@@ -12,21 +13,6 @@ interface RecentPost {
   community: string
   comments: number
   timestamp: string
-}
-
-// 상대적 시간 포맷팅
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "방금 전"
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
 }
 
 // 최근 댓글 API 응답 캐시 (60초) — 새로고침/탭 전환 시 API·DB 부하 감소

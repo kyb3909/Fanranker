@@ -6,6 +6,7 @@ import { CommunityContent } from "@/components/community-content"
 import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
+import { formatRelativeTime } from "@/lib/utils/date"
 
 // 멤버 수 포맷팅 함수: 1만명 이상이면 "XX.X만명", 미만이면 "X,XXX명"
 function formatMemberCount(count: number): string {
@@ -15,21 +16,6 @@ function formatMemberCount(count: number): string {
     return `${formatted}만명`
   }
   return `${count.toLocaleString()}명`
-}
-
-// 상대적 시간 포맷팅
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "방금 전"
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
 }
 
 const COMMUNITY_DATA: Record<

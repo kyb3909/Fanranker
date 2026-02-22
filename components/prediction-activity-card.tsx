@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Lock, Unlock, TrendingUp, Target, Flame, Loader2, Clock } from 'lucide-react'
+import { formatRelativeTime } from "@/lib/utils/date"
 
 interface PredictionGame {
   home_team_name: string
@@ -47,20 +48,6 @@ interface ActivityData {
   is_purchased: boolean
   is_free?: boolean
   predictions: Prediction[] | null
-}
-
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "방금 전"
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
 }
 
 const SPORT_LABELS: Record<string, string> = {

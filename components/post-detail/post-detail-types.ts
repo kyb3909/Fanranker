@@ -34,20 +34,8 @@ export function countAllComments(comments: Comment[]): number {
   }, 0)
 }
 
-// 상대적 시간 포맷팅
-export function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "방금 전"
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
-}
+import { formatRelativeTime } from "@/lib/utils/date"
+export { formatRelativeTime }
 
 // DB 댓글 데이터를 컴포넌트 형식으로 변환 (계층 구조로)
 export function transformComments(comments: { id: string; user_id: string; parent_id: string | null; content: string; vote_count: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null }[]): Comment[] {

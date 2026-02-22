@@ -8,21 +8,7 @@ import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
-
-// 상대적 시간 포맷팅
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffMins < 1) return "방금 전"
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
-}
+import { formatRelativeTime } from "@/lib/utils/date"
 
 // Supabase에서 글 상세 정보 가져오기
 async function fetchPost(id: string) {
