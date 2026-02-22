@@ -41,9 +41,9 @@ export function SettlementManagementTable() {
       }
       const data = await response.json()
       setMatches(data.matches || [])
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to fetch unsettled matches:', err)
-      setError(err.message || '정산 대기 목록을 불러오는데 실패했습니다.')
+      setError(err instanceof Error ? err.message : '정산 대기 목록을 불러오는데 실패했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -72,9 +72,9 @@ export function SettlementManagementTable() {
       alert(`정산 완료: ${data.settled_count}개 예측이 처리되었습니다.`)
       // Refresh list
       await fetchUnsettledMatches()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to settle match:', err)
-      alert(err.message || '정산 처리 중 오류가 발생했습니다.')
+      alert(err instanceof Error ? err.message : '정산 처리 중 오류가 발생했습니다.')
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev)

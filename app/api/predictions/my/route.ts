@@ -103,31 +103,92 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform regular predictions (individual items)
-    const transformedRegular = (regularPredictions || []).map((pred: any) => ({
-      id: pred.id,
-      matchId: pred.match_id,
-      predictionType: pred.prediction_type,
-      predictedValue: pred.prediction_value,
-      oddsAtPrediction: pred.odds_at_prediction || 1,
-      amount: pred.points_wagered || 1,
-      isCorrect: pred.is_correct,
-      pointsEarned: pred.points_won,
-      createdAt: pred.created_at,
-      source: 'regular',
-      match: {
-        homeTeam: pred.matches?.home_team?.name_ko || pred.matches?.home_team?.name || '홈팀',
-        awayTeam: pred.matches?.away_team?.name_ko || pred.matches?.away_team?.name || '원정팀',
-        league: pred.matches?.league?.name_ko || pred.matches?.league?.name || '리그',
-        matchTime: pred.matches?.match_time,
-        status: pred.matches?.time_status === 3 ? 'finished' : 'scheduled',
-        homeScore: pred.matches?.home_score,
-        awayScore: pred.matches?.away_score,
-      },
-    }))
+    // Supabase types FK joins as arrays; cast to single object at runtime
+    interface MatchJoin {
+      id: string
+      match_time: string
+      time_status: number
+      home_score: number | null
+      away_score: number | null
+      home_team: { name_ko: string | null; name: string } | null
+      away_team: { name_ko: string | null; name: string } | null
+      league: { name_ko: string | null; name: string } | null
+    }
+    const transformedRegular = (regularPredictions || []).map((pred) => {
+      const match = pred.matches as unknown as MatchJoin | null
+      return {
+        id: pred.id,
+        matchId: pred.match_id,
+        predictionType: pred.prediction_type,
+        predictedValue: pred.prediction_value,
+        oddsAtPrediction: pred.odds_at_prediction || 1,
+        amount: pred.points_wagered || 1,
+        isCorrect: pred.is_correct,
+        pointsEarned: pred.points_won,
+        createdAt: pred.created_at,
+        source: 'regular' as const,
+        match: {
+          homeTeam: match?.home_team?.name_ko || match?.home_team?.name || '홈팀',
+          awayTeam: match?.away_team?.name_ko || match?.away_team?.name || '원정팀',
+          league: match?.league?.name_ko || match?.league?.name || '리그',
+          matchTime: match?.match_time,
+          status: match?.time_status === 3 ? 'finished' : 'scheduled',
+          homeScore: match?.home_score,
+          awayScore: match?.away_score,
+        },
+      }
+    })
+
+    // Supabase types FK joins as arrays; define runtime shapes for betman joins
+    interface BetmanGameJoin {
+      id: string
+      game_no: number
+      match_time: string
+      sport: string
+      league_code: string | null
+      game_type: string
+      home_team_name: string
+      away_team_name: string
+      home_score: number | null
+      away_score: number | null
+      status: string
+      handicap: number | null
+      over_under_line: number | null
+      home_win_odds: number | null
+      away_win_odds: number | null
+      draw_odds: number | null
+      over_odds: number | null
+      under_odds: number | null
+    }
+    interface BetmanRoundJoin {
+      id: string
+      year: number
+      round: number
+      deadline: string | null
+      status: string
+    }
+    interface BetmanPred {
+      id: string
+      game_id: string
+      prediction: string
+      is_correct: boolean | null
+      points_earned: number | null
+      status: string | null
+      created_at: string
+      round_id: string | null
+      round: BetmanRoundJoin | null
+      game: BetmanGameJoin | null
+    }
 
     // Group betman predictions by round_id for betting slip display
-    const betmanByRound = new Map<string, any[]>()
-    for (const pred of (betmanPredictions || [])) {
+    // Cast Supabase array-typed joins to single objects at runtime
+    const betmanPreds = (betmanPredictions || []).map((p) => ({
+      ...p,
+      round: p.round as unknown as BetmanRoundJoin | null,
+      game: p.game as unknown as BetmanGameJoin | null,
+    })) as BetmanPred[]
+    const betmanByRound = new Map<string, BetmanPred[]>()
+    for (const pred of betmanPreds) {
       const roundId = pred.round_id || 'unknown'
       if (!betmanByRound.has(roundId)) {
         betmanByRound.set(roundId, [])
@@ -142,21 +203,21 @@ export async function GET(request: NextRequest) {
       const sport = firstPred?.game?.sport || '스포츠'
 
       // Calculate combined odds
-      const totalOdds = preds.reduce((acc: number, pred: any) => {
+      const totalOdds = preds.reduce((acc: number, pred: BetmanPred) => {
         const game = pred.game
         let odds = 1
-        if (pred.prediction === 'home') odds = parseFloat(game?.home_win_odds) || 1
-        else if (pred.prediction === 'away') odds = parseFloat(game?.away_win_odds) || 1
-        else if (pred.prediction === 'draw') odds = parseFloat(game?.draw_odds) || 1
-        else if (pred.prediction === 'over') odds = parseFloat(game?.over_odds) || 1
-        else if (pred.prediction === 'under') odds = parseFloat(game?.under_odds) || 1
+        if (pred.prediction === 'home') odds = parseFloat(String(game?.home_win_odds)) || 1
+        else if (pred.prediction === 'away') odds = parseFloat(String(game?.away_win_odds)) || 1
+        else if (pred.prediction === 'draw') odds = parseFloat(String(game?.draw_odds)) || 1
+        else if (pred.prediction === 'over') odds = parseFloat(String(game?.over_odds)) || 1
+        else if (pred.prediction === 'under') odds = parseFloat(String(game?.under_odds)) || 1
         return acc * odds
       }, 1)
 
       // Calculate overall result
-      const allSettled = preds.every((p: any) => p.is_correct !== null)
-      const allCorrect = preds.every((p: any) => p.is_correct === true)
-      const anyIncorrect = preds.some((p: any) => p.is_correct === false)
+      const allSettled = preds.every((p: BetmanPred) => p.is_correct !== null)
+      const allCorrect = preds.every((p: BetmanPred) => p.is_correct === true)
+      const anyIncorrect = preds.some((p: BetmanPred) => p.is_correct === false)
 
       let overallResult: boolean | null = null
       if (allSettled) {
@@ -167,18 +228,18 @@ export async function GET(request: NextRequest) {
 
       // Calculate total points earned (only if all correct)
       const totalPointsEarned = allCorrect
-        ? preds.reduce((sum: number, p: any) => sum + (p.points_earned || 0), 0)
+        ? preds.reduce((sum: number, p: BetmanPred) => sum + (p.points_earned || 0), 0)
         : anyIncorrect ? 0 : null
 
       // Transform individual games within the slip
-      const games = preds.map((pred: any) => {
+      const games = preds.map((pred: BetmanPred) => {
         const game = pred.game
         let odds = 1
-        if (pred.prediction === 'home') odds = parseFloat(game?.home_win_odds) || 1
-        else if (pred.prediction === 'away') odds = parseFloat(game?.away_win_odds) || 1
-        else if (pred.prediction === 'draw') odds = parseFloat(game?.draw_odds) || 1
-        else if (pred.prediction === 'over') odds = parseFloat(game?.over_odds) || 1
-        else if (pred.prediction === 'under') odds = parseFloat(game?.under_odds) || 1
+        if (pred.prediction === 'home') odds = parseFloat(String(game?.home_win_odds)) || 1
+        else if (pred.prediction === 'away') odds = parseFloat(String(game?.away_win_odds)) || 1
+        else if (pred.prediction === 'draw') odds = parseFloat(String(game?.draw_odds)) || 1
+        else if (pred.prediction === 'over') odds = parseFloat(String(game?.over_odds)) || 1
+        else if (pred.prediction === 'under') odds = parseFloat(String(game?.under_odds)) || 1
 
         return {
           id: pred.id,
@@ -203,8 +264,8 @@ export async function GET(request: NextRequest) {
 
       return {
         id: roundId,
-        type: 'betman_slip',
-        source: 'betman',
+        type: 'betman_slip' as const,
+        source: 'betman' as const,
         sport: sport,
         roundInfo: round ? {
           year: round.year,
@@ -223,15 +284,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Also keep individual betman predictions for stats calculation
-    const flatBetmanPredictions = (betmanPredictions || []).map((pred: any) => {
-      const game = pred.game
-      let odds = 1
-      if (pred.prediction === 'home') odds = parseFloat(game?.home_win_odds) || 1
-      else if (pred.prediction === 'away') odds = parseFloat(game?.away_win_odds) || 1
-      else if (pred.prediction === 'draw') odds = parseFloat(game?.draw_odds) || 1
-      else if (pred.prediction === 'over') odds = parseFloat(game?.over_odds) || 1
-      else if (pred.prediction === 'under') odds = parseFloat(game?.under_odds) || 1
-
+    const flatBetmanPredictions = betmanPreds.map((pred: BetmanPred) => {
       return {
         id: pred.id,
         isCorrect: pred.is_correct,
@@ -247,11 +300,12 @@ export async function GET(request: NextRequest) {
     // Calculate stats from all individual predictions
     const allIndividualPredictions = [...transformedRegular, ...flatBetmanPredictions]
     const totalPredictions = allIndividualPredictions.length
-    const settledPredictions = allIndividualPredictions.filter((p: any) => p.isCorrect !== null)
-    const correctPredictions = allIndividualPredictions.filter((p: any) => p.isCorrect === true).length
+    interface IndividualPrediction { isCorrect: boolean | null; pointsEarned: number | null; amount: number }
+    const settledPredictions = allIndividualPredictions.filter((p: IndividualPrediction) => p.isCorrect !== null)
+    const correctPredictions = allIndividualPredictions.filter((p: IndividualPrediction) => p.isCorrect === true).length
     const accuracy = settledPredictions.length > 0 ? (correctPredictions / settledPredictions.length) * 100 : 0
-    const totalPointsEarned = allIndividualPredictions.reduce((sum: number, p: any) => sum + (p.pointsEarned || 0), 0)
-    const totalPointsUsed = allIndividualPredictions.reduce((sum: number, p: any) => sum + (p.amount || 0), 0)
+    const totalPointsEarned = allIndividualPredictions.reduce((sum: number, p: IndividualPrediction) => sum + (p.pointsEarned || 0), 0)
+    const totalPointsUsed = allIndividualPredictions.reduce((sum: number, p: IndividualPrediction) => sum + (p.amount || 0), 0)
 
     return NextResponse.json({
       predictions: allItems,

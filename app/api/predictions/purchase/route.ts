@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
     // 경기 시간이 모두 지났으면 무료 열람
     const now = new Date()
     const allGamesExpired = predictions && predictions.length > 0 &&
-      predictions.every(p => p.game && new Date((p.game as any).match_time) < now)
+      // Supabase join type for betman_games is complex; cast to access match_time
+      predictions.every(p => p.game && new Date((p.game as unknown as { match_time: string }).match_time) < now)
 
     if (allGamesExpired) {
       return NextResponse.json({
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
         p_amount: GOLD_COST,
         p_description: `예측 열람 구매 (${activity.sport})`,
       })
-      .single() as { data: { success: boolean; new_balance?: number; error_message?: string } | null; error: any }
+      .single() as { data: { success: boolean; new_balance?: number; current_balance?: number; error_message?: string } | null; error: unknown }
 
     if (rpcError || !spendResult) {
       console.error('Failed to spend gold:', rpcError)
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (!spendResult.success) {
       return NextResponse.json(
-        { error: spendResult.error_message || '골드가 부족합니다.', gold_balance: (spendResult as any).current_balance },
+        { error: spendResult.error_message || '골드가 부족합니다.', gold_balance: spendResult.current_balance },
         { status: 400 }
       )
     }

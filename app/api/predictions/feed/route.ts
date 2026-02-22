@@ -93,7 +93,9 @@ export async function GET(request: NextRequest) {
 
     // Check purchase/subscription status for premium content
     const transformedPredictions = await Promise.all(
-      (predictions || []).map(async (pred: any) => {
+      (predictions || []).map(async (pred) => {
+        // Supabase types inner-join as array but it's a single object at runtime
+        const profile = pred.profiles as unknown as { user_id: string; nickname: string; avatar_url: string | null; is_expert: boolean } | null
         let hasAccess = false
         if (pred.is_premium && userId) {
           // Check if user has purchased or subscribed
@@ -119,8 +121,8 @@ export async function GET(request: NextRequest) {
         return {
           id: pred.id,
           user: {
-            name: pred.profiles?.nickname || '익명',
-            avatar: pred.profiles?.avatar_url || '/placeholder-user.jpg',
+            name: profile?.nickname || '익명',
+            avatar: profile?.avatar_url || '/placeholder-user.jpg',
             roi: 0, // TODO: Get from user stats
             winRate: 0, // TODO: Get from user stats
           },

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         p_description: description || null,
         p_related_prediction_id: related_prediction_id || null,
       })
-      .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
+      .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: unknown }
 
     if (rpcError || !result) {
       console.error('Failed to spend tokens:', rpcError)

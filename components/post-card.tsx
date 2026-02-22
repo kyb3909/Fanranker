@@ -19,10 +19,18 @@ import { ShareMenu } from "@/components/share-menu"
 import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { EmbedPreviewCard } from "@/components/embed-preview-card"
 
+export interface TipTapNode {
+  type?: string
+  content?: TipTapNode[]
+  text?: string
+  attrs?: Record<string, unknown>
+  marks?: { type: string; attrs?: Record<string, unknown> }[]
+}
+
 /**
  * TipTap JSON에서 텍스트만 추출 (피드 미리보기용)
  */
-function extractTextFromTipTapJSON(content: any): string {
+function extractTextFromTipTapJSON(content: TipTapNode): string {
   if (!content || typeof content !== 'object') {
     return ''
   }
@@ -33,7 +41,7 @@ function extractTextFromTipTapJSON(content: any): string {
 
   if (Array.isArray(content.content)) {
     return content.content
-      .map((node: any) => extractTextFromTipTapJSON(node))
+      .map((node) => extractTextFromTipTapJSON(node))
       .join(' ')
   }
 
@@ -48,7 +56,7 @@ interface Post {
   avatar: string
   timestamp: string
   title: string
-  content: string | any // string 또는 TipTap JSON
+  content: string | TipTapNode // string 또는 TipTap JSON
   image?: string
   upvotes: number
   comments: number

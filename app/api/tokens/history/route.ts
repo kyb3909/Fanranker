@@ -47,7 +47,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform transactions
-    const transformedTransactions = (transactions || []).map((tx: any) => ({
+    interface TokenTransaction {
+      id: string
+      type: string
+      amount: number
+      description: string | null
+      created_at: string
+      balance_after: number | null
+    }
+    const transformedTransactions = (transactions || []).map((tx: TokenTransaction) => ({
       id: tx.id,
       type: tx.type || (tx.amount > 0 ? 'earn' : 'spend'),
       amount: Math.abs(tx.amount),

@@ -285,7 +285,7 @@ function formatRelativeTime(date: Date): string {
 }
 
 // DB 댓글 데이터를 컴포넌트 형식으로 변환 (계층 구조로)
-function transformComments(comments: any[], profiles: any[]): Comment[] {
+function transformComments(comments: { id: string; user_id: string; parent_id: string | null; content: string; vote_count: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null }[]): Comment[] {
   const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
   
   // 댓글 맵 생성

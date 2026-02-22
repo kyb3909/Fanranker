@@ -44,8 +44,8 @@ function formatRelativeTime(date: Date): string {
 const RECENT_COMMENTS_CACHE_MS = 60 * 1000
 let recentCommentsCache: { data: RecentPost[]; fetchedAt: number } | null = null
 
-function mapApiPostsToRecentPosts(posts: any[]): RecentPost[] {
-  return posts.map((p: any) => ({
+function mapApiPostsToRecentPosts(posts: { id: string; title: string; community_slug: string; comment_count?: number; latest_comment_at?: string; created_at: string }[]): RecentPost[] {
+  return posts.map((p) => ({
     id: p.id,
     title: p.title,
     community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,

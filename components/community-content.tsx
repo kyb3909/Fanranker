@@ -8,13 +8,14 @@ import Link from "next/link"
 type SortType = "hot" | "new" | "comments"
 
 interface Post {
-  id: number
+  id: number | string
   community: string
+  communitySlug?: string
   author: string
   avatar: string
   timestamp: string
   title: string
-  content: string
+  content: unknown // TipTap JSON or string
   image?: string
   upvotes: number
   comments: number
@@ -22,6 +23,7 @@ interface Post {
   views?: number
   rating?: number
   isUpvoted: boolean
+  userId?: string
   createdAt: Date
   isNotice?: boolean
 }

@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
           p_amount: actualBallCost,
           p_description: `베트맨 예측 ${predictions.length}경기 (${dailyRound.daily_id})${isModifying ? ' - 수정' : ''}`,
         })
-        .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: any }
+        .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: unknown }
 
       if (rpcError || !spendResult) {
         console.error('Failed to deduct balls:', rpcError)

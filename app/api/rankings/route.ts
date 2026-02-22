@@ -54,10 +54,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user IDs to fetch profiles
-    const userIds = (stats || []).map((s: any) => s.user_id)
+    const userIds = (stats || []).map((s: { user_id: string }) => s.user_id)
 
     // Fetch profiles separately
-    let profiles: any[] = []
+    interface ProfileRow {
+      user_id: string
+      nickname: string
+      avatar_url: string | null
+    }
+    let profiles: ProfileRow[] = []
     if (userIds.length > 0) {
       const { data: profilesData } = await supabase
         .from('profiles')
@@ -68,10 +73,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Create a map for quick lookup
-    const profileMap = new Map(profiles.map((p: any) => [p.user_id, p]))
+    const profileMap = new Map(profiles.map((p: ProfileRow) => [p.user_id, p]))
 
     // Transform data to include profile info
-    const transformedRankings = (stats || []).map((item: any, index: number) => {
+    interface StatRow {
+      user_id: string
+      total_predictions: number | null
+      correct_predictions: number | null
+      win_rate: number | null
+      total_points: number | null
+      points_won: number | null
+      current_streak: number | null
+      best_win_streak: number | null
+    }
+    const transformedRankings = (stats || []).map((item: StatRow, index: number) => {
       const profile = profileMap.get(item.user_id)
       return {
         rank: offset + index + 1,

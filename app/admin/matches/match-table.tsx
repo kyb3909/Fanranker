@@ -40,9 +40,9 @@ export function MatchManagementTable() {
       }
       const data = await response.json()
       setMatches(data.matches || [])
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to fetch matches:', err)
-      setError(err.message || '경기 목록을 불러오는데 실패했습니다.')
+      setError(err instanceof Error ? err.message : '경기 목록을 불러오는데 실패했습니다.')
     } finally {
       setIsLoading(false)
     }

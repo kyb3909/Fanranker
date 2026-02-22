@@ -56,7 +56,7 @@ interface Post {
   avatar: string
   timestamp: string
   title: string
-  content: string | any
+  content: string | Record<string, unknown> // TipTap JSON or string
   image?: string
   upvotes: number
   comments: number
@@ -125,10 +125,10 @@ function SearchContent() {
       const { posts: fetchedPosts, profiles } = data || { posts: [], profiles: [] }
 
       // 프로필 매핑
-      const profileMap = new Map<string, any>(profiles?.map((p: any) => [p.user_id, p]) || [])
+      const profileMap = new Map<string, { user_id: string; nickname: string; avatar_url: string | null }>(profiles?.map((p: { user_id: string; nickname: string; avatar_url: string | null }) => [p.user_id, p]) || [])
 
       // 데이터 변환
-      const transformedPosts: Post[] = (fetchedPosts || []).map((post: any) => {
+      const transformedPosts: Post[] = (fetchedPosts || []).map((post: { id: string; user_id: string; community_slug: string; title: string; content: string | Record<string, unknown>; image?: string; vote_count?: number; comment_count?: number; created_at: string }) => {
         const profile = profileMap.get(post.user_id)
         return {
           id: post.id,

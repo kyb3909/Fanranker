@@ -121,7 +121,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update object
-    const updateData: any = {}
+    const updateData: { nickname?: string; avatar_url?: string | null; notification_settings?: Record<string, unknown> } = {}
     if (nickname !== undefined) updateData.nickname = nickname.trim()
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url
     if (notification_settings !== undefined) updateData.notification_settings = notification_settings

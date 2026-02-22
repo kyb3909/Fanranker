@@ -85,7 +85,8 @@ function extractDescription(content: unknown): string {
   const parsed = typeof content === 'string' ? (() => { try { return JSON.parse(content) } catch { return null } })() : content
   if (parsed && typeof parsed === 'object') {
     const texts: string[] = []
-    function walk(node: any) {
+    interface TipTapNode { text?: string; content?: TipTapNode[] }
+    function walk(node: TipTapNode) {
       if (node.text) texts.push(node.text)
       if (node.content) node.content.forEach(walk)
     }

@@ -59,8 +59,14 @@ export async function GET(request: NextRequest) {
 
     // Transform and sort data
     const transformedExperts = (experts || [])
-      .map((expert: any) => {
-        const stats = expert.user_prediction_stats?.[0] || {}
+      .map((expert) => {
+        // Supabase types inner-join as array; access first element at runtime
+        const statsArr = expert.user_prediction_stats as unknown as Array<{
+          total_predictions: number; correct_predictions: number; accuracy: number;
+          total_points: number; profit: number; roi: number;
+          current_streak: number; longest_streak: number;
+        }>
+        const stats = statsArr?.[0] || {} as Record<string, number>
         return {
           user_id: expert.user_id,
           nickname: expert.nickname || '익명',

@@ -208,17 +208,91 @@ export default function BettingPage() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null)
 
   // Rankings 상태
-  const [rankings, setRankings] = useState<any[]>([])
+  const [rankings, setRankings] = useState<{
+    rank: number
+    user_id: string
+    nickname: string
+    avatar_url: string | null
+    sport: string
+    total_predictions: number
+    correct_predictions: number
+    wrong_predictions?: number
+    accuracy: number
+    total_wagered: number
+    total_returns?: number
+    net_profit: number
+    profit_rate: number
+    current_streak: number
+    best_win_streak: number
+  }[]>([])
   const [isLoadingRankings, setIsLoadingRankings] = useState(false)
   const [rankingSportFilter, setRankingSportFilter] = useState<string>("전체")
-  const [myRank, setMyRank] = useState<any>(null)
+  const [myRank, setMyRank] = useState<{
+    rank: number
+    user_id: string
+    nickname: string
+    avatar_url: string | null
+    sport: string
+    total_predictions: number
+    correct_predictions: number
+    accuracy: number
+    total_wagered: number
+    net_profit: number
+    profit_rate: number
+    current_streak: number
+    best_win_streak: number
+  } | null>(null)
 
   // My stats 상태
-  const [myStats, setMyStats] = useState<{ summary: any; sports: any[] } | null>(null)
+  const [myStats, setMyStats] = useState<{
+    summary: {
+      total_predictions: number
+      correct_predictions: number
+      wrong_predictions: number
+      cancelled_predictions: number
+      accuracy: number
+      total_wagered: number
+      total_returns: number
+      net_profit: number
+      profit_rate: number
+      current_streak: number
+      best_win_streak: number
+      worst_lose_streak: number
+    } | null
+    sports: {
+      sport: string
+      total_predictions: number
+      correct_predictions: number
+      wrong_predictions: number
+      accuracy: number
+      total_wagered: number
+      total_returns: number
+      net_profit: number
+      profit_rate: number
+      current_streak: number
+      best_win_streak: number
+    }[]
+  } | null>(null)
   const [isLoadingMyStats, setIsLoadingMyStats] = useState(false)
 
   // Prediction history 상태
-  const [predictionHistory, setPredictionHistory] = useState<any[]>([])
+  const [predictionHistory, setPredictionHistory] = useState<{
+    id: string
+    date: string
+    sport: string
+    matches: {
+      league: string
+      home: string
+      away: string
+      selection: string
+      odds: number
+      result: string
+    }[]
+    totalOdds: number
+    stake: number
+    status: string
+    profit: number
+  }[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   // 예측 제출 상태
@@ -453,8 +527,22 @@ export default function BettingPage() {
       const predictions = await response.json()
       
       // Transform predictions to match the expected format
-      const transformed = predictions.map((pred: any) => {
-        const match = pred.matches?.[0] || pred.matches
+      interface PredictionMatch {
+        match_time?: string
+        sport_type?: string
+        league?: { name_ko?: string; name?: string }
+        home_team?: { name_ko?: string; name?: string }
+        away_team?: { name_ko?: string; name?: string }
+      }
+      const transformed = predictions.map((pred: {
+        id: string
+        matches?: PredictionMatch | PredictionMatch[]
+        is_correct: boolean | null
+        predicted_value: string
+        odds_at_prediction: number | null
+        points_earned: number | null
+      }) => {
+        const match = Array.isArray(pred.matches) ? pred.matches[0] : pred.matches
         const matchTime = match?.match_time ? new Date(match.match_time) : new Date()
         const dateStr = `${String(matchTime.getMonth() + 1).padStart(2, '0')}/${String(matchTime.getDate()).padStart(2, '0')} ${String(matchTime.getHours()).padStart(2, '0')}:${String(matchTime.getMinutes()).padStart(2, '0')}`
         
@@ -583,8 +671,8 @@ export default function BettingPage() {
 
       // 헤더의 BallBalance 컴포넌트 업데이트를 위한 이벤트 발생
       window.dispatchEvent(new CustomEvent('ballBalanceUpdate'))
-    } catch (error: any) {
-      showAlert('error', '예측 실패', error.message || '예측 저장 중 오류가 발생했습니다.')
+    } catch (error) {
+      showAlert('error', '예측 실패', error instanceof Error ? error.message : '예측 저장 중 오류가 발생했습니다.')
     } finally {
       setIsSubmittingPrediction(false)
     }
@@ -1484,7 +1572,7 @@ export default function BettingPage() {
                           </div>
                         </div>
                         <div className="divide-y">
-                          {myStats.sports.map((sport: any) => {
+                          {myStats.sports.map((sport) => {
                             const icon = SPORT_ICONS[sport.sport] || '🎯'
                             return (
                               <div key={sport.sport} className="p-3">

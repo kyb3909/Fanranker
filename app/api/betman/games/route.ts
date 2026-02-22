@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     // Betting window status
     const windowStatus = getBettingWindowStatus()
 
-    const gamesWithOdds = (games || []).map((game: Record<string, unknown>) => {
+    const gamesWithOdds = (games || []).map((game) => {
       const rawGameType = (game.game_type as string) || ''
       const gameType = rawGameType === 'SUM' ? 'SUM' : rawGameType.replace(/^S/, '')
       let home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     })
 
     const groupedGames: Record<string, { matchKey: string; sport: string; leagueCode: string; homeTeam: string; awayTeam: string; matchTime: string; venue: string; games: typeof gamesWithOdds }> = {}
-    gamesWithOdds.forEach((game: any) => {
+    gamesWithOdds.forEach((game) => {
       const matchKey = `${game.home_team_name}_${game.away_team_name}_${game.match_time}`
       if (!groupedGames[matchKey]) {
         groupedGames[matchKey] = {
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     const user = await currentUser()
     let userPredictions: unknown[] = []
     if (user && gamesWithOdds.length > 0) {
-      const gameIds = gamesWithOdds.map((g: Record<string, unknown>) => g.id).filter(Boolean)
+      const gameIds = gamesWithOdds.map((g) => g.id).filter(Boolean)
       const { data: predictions } = await supabase
         .from('betman_predictions')
         .select('*')
@@ -149,11 +149,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Find the earliest bet_close_at among bettable games (for countdown)
-    const bettableGames = gamesWithOdds.filter((g: Record<string, unknown>) => g.is_bettable)
+    const bettableGames = gamesWithOdds.filter((g) => g.is_bettable)
     const earliestBetClose = bettableGames.length > 0
-      ? bettableGames.reduce((earliest: string, g: Record<string, unknown>) =>
-          (g.bet_close_at as string) < earliest ? (g.bet_close_at as string) : earliest,
-          bettableGames[0].bet_close_at as string
+      ? bettableGames.reduce((earliest: string, g) =>
+          g.bet_close_at < earliest ? g.bet_close_at : earliest,
+          bettableGames[0].bet_close_at
         )
       : null
 

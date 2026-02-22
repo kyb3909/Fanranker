@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Header } from "@/components/header"
-import { PostCard } from "@/components/post-card"
+import { PostCard, type TipTapNode } from "@/components/post-card"
 import { CommunitySidebar } from "@/components/community-sidebar"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { PredictionActivityCard } from "@/components/prediction-activity-card"
@@ -42,7 +42,7 @@ interface Post {
   avatar: string
   timestamp: string
   title: string
-  content: string | any
+  content: string | TipTapNode // TipTap JSON or string
   image?: string
   upvotes: number
   comments: number
@@ -201,7 +201,20 @@ function HomeContent() {
   }, [isSignedIn])
 
   // 콘텐츠 탭 상태
-  const [activities, setActivities] = useState<any[]>([])
+  const [activities, setActivities] = useState<{
+    id: string
+    user_id: string
+    round_id: string
+    sport: string
+    prediction_count: number
+    created_at: string
+    profile: { nickname: string; avatar_url: string | null }
+    stats: { accuracy: number; net_profit: number; current_streak: number } | null
+    round: { year: number; round: number; status: string } | null
+    is_purchased: boolean
+    is_free?: boolean
+    predictions: { id: string; game_id: string; prediction: string; status: string; game: { home_team_name: string; away_team_name: string; match_time: string; game_type: string; sport: string; result: string | null } }[] | null
+  }[]>([])
   const [isContentLoading, setIsContentLoading] = useState(false)
   const [contentLoaded, setContentLoaded] = useState(false)
 
@@ -225,13 +238,13 @@ function HomeContent() {
         const { posts: fetchedPosts, profiles } = await response.json()
 
         // 프로필 매핑
-        const profileMap = new Map<string, any>(profiles?.map((p: any) => [p.user_id, p]) || [])
+        const profileMap = new Map<string, { user_id: string; nickname: string; avatar_url: string | null }>(profiles?.map((p: { user_id: string; nickname: string; avatar_url: string | null }) => [p.user_id, p]) || [])
 
         // 데이터 변환: 팔로우한 커뮤니티가 있으면 필터링, 없으면 전체 표시
         const hasFollows = followedCommunities.size > 0
         const transformedPosts: Post[] = fetchedPosts
-          .filter((post: any) => !hasFollows || followedCommunities.has(post.community_slug))
-          .map((post: any) => {
+          .filter((post: { community_slug: string }) => !hasFollows || followedCommunities.has(post.community_slug))
+          .map((post: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; created_at: string }) => {
             const profile = profileMap.get(post.user_id)
             return {
               id: post.id,
@@ -479,7 +492,7 @@ function HomeContent() {
                         <p className="text-sm text-muted-foreground">예측 콘텐츠를 불러오는 중...</p>
                       </div>
                     ) : activities.length > 0 ? (
-                      activities.map((activity: any) => (
+                      activities.map((activity) => (
                         <PredictionActivityCard
                           key={activity.id}
                           activity={activity}

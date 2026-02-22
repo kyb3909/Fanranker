@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { Header } from "@/components/header"
-import { PostCard } from "@/components/post-card"
+import { PostCard, type TipTapNode } from "@/components/post-card"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2, FileText, ArrowLeft, Trash2 } from "lucide-react"
@@ -19,7 +19,7 @@ interface Post {
   userId: string
   timestamp: string
   title: string
-  content: any
+  content: string | TipTapNode // TipTap JSON
   image?: string
   upvotes: number
   comments: number
@@ -77,9 +77,9 @@ export default function MyPostsPage() {
         if (response.ok) {
           const { posts: fetchedPosts, profiles } = await response.json()
 
-          const profileMap = new Map<string, any>(profiles?.map((p: any) => [p.user_id, p]) || [])
+          const profileMap = new Map<string, { user_id: string; nickname: string; avatar_url: string | null }>(profiles?.map((p: { user_id: string; nickname: string; avatar_url: string | null }) => [p.user_id, p]) || [])
 
-          const transformedPosts: Post[] = fetchedPosts.map((post: any) => {
+          const transformedPosts: Post[] = fetchedPosts.map((post: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; view_count?: number; created_at: string }) => {
             const profile = profileMap.get(post.user_id)
             return {
               id: post.id,

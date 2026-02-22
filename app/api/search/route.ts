@@ -125,7 +125,12 @@ export async function GET(request: NextRequest) {
     // 작성자 프로필 조회
     const userIds = [...new Set(posts.map((p) => p.user_id).filter(Boolean))]
     
-    let profiles: any[] = []
+    interface ProfileRow {
+      user_id: string
+      nickname: string
+      avatar_url: string | null
+    }
+    let profiles: ProfileRow[] = []
     if (userIds.length > 0) {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')

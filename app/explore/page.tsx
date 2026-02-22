@@ -47,7 +47,7 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const mapPosts = (posts: any[]) => (posts || []).map((p: any) => ({
+    const mapPosts = (posts: { id: string; title: string; community_slug: string; comment_count?: number; view_count?: number; vote_count?: number }[]) => (posts || []).map((p) => ({
       id: p.id,
       title: p.title,
       community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,

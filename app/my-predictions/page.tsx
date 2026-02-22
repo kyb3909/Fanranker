@@ -650,7 +650,7 @@ export default function MyPredictionsPage() {
         )}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="all">전체</TabsTrigger>
             <TabsTrigger value="pending">대기중</TabsTrigger>

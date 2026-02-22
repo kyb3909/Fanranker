@@ -163,7 +163,21 @@ async function fetchPosts(communitySlug: string) {
 }
 
 // DB 데이터를 컴포넌트 형식으로 변환 (반감기 적용 온도 포함)
-function transformPosts(posts: any[]) {
+function transformPosts(posts: {
+  id: string
+  user_id: string
+  community_slug: string
+  title: string
+  content: unknown
+  image?: string
+  view_count?: number
+  vote_count?: number
+  comment_count?: number
+  temperature?: number
+  is_notice?: boolean
+  created_at: string
+  profile?: { nickname?: string; avatar_url?: string | null } | null
+}[]) {
   return posts.map((post) => {
     const row = {
       vote_count: post.vote_count || 0,
