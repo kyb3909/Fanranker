@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { isAdmin } from '@/lib/supabase/admin'
+import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * Helper function to update user stats after prediction settlement
@@ -98,10 +99,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     // Admin-only: settlement affects all users' points and stats
@@ -118,10 +116,7 @@ export async function POST(request: NextRequest) {
     const { match_id, force } = body
 
     if (!match_id) {
-      return NextResponse.json(
-        { error: '경기 ID가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('경기 ID가 필요합니다.')
     }
 
     // Get match data
@@ -140,10 +135,7 @@ export async function POST(request: NextRequest) {
 
     // Check if match is finished (time_status = 3)
     if (match.time_status !== 3) {
-      return NextResponse.json(
-        { error: '경기가 아직 종료되지 않았습니다. (time_status: ' + match.time_status + ')' },
-        { status: 400 }
-      )
+      return apiBadRequest('경기가 아직 종료되지 않았습니다. (time_status: ' + match.time_status + ')')
     }
 
     // Check if already settled
@@ -156,10 +148,7 @@ export async function POST(request: NextRequest) {
 
     // Check if scores are available
     if (match.score_home === null || match.score_away === null) {
-      return NextResponse.json(
-        { error: '경기 결과(스코어)가 없습니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('경기 결과(스코어)가 없습니다.')
     }
 
     // Get all predictions for this match
@@ -170,11 +159,7 @@ export async function POST(request: NextRequest) {
       .is('is_correct', null) // Only unsettled predictions
 
     if (predictionsError) {
-      console.error('Failed to fetch predictions:', predictionsError)
-      return NextResponse.json(
-        { error: '예측 조회 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('예측 조회 중 오류가 발생했습니다.', 500, predictionsError)
     }
 
     if (!predictions || predictions.length === 0) {
@@ -308,11 +293,7 @@ export async function POST(request: NextRequest) {
       actual_result: actualResult,
     })
   } catch (error) {
-    console.error('Settlement API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -397,15 +378,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ matches: matches || [] })
     }
 
-    return NextResponse.json(
-      { error: 'match_id 또는 unsettled_only 파라미터가 필요합니다.' },
-      { status: 400 }
-    )
+    return apiBadRequest('match_id 또는 unsettled_only 파라미터가 필요합니다.')
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

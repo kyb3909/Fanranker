@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
 import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 export async function GET() {
   try {
@@ -13,11 +14,10 @@ export async function GET() {
       .select('*')
       .order('sort_order', { ascending: true })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
     return NextResponse.json({ boards: data ?? [] })
   } catch (error) {
-    console.error('Boards API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
     const { boardId, name, description, icon, sort_order, is_active } = body
 
     if (!boardId) {
-      return NextResponse.json({ error: 'boardId가 필요합니다.' }, { status: 400 })
+      return apiBadRequest('boardId가 필요합니다.')
     }
 
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
     if (is_active !== undefined) updateData.is_active = is_active
 
     const { error } = await supabase.from('categories').update(updateData).eq('id', boardId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
       adminUserId: userId,
@@ -55,7 +55,6 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Boards PATCH error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

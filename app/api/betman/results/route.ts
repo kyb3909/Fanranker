@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { updateUserSportStats } from '@/lib/betman/stats'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 /**
  * POST /api/betman/results
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return apiBadRequest('Invalid request body')
     }
     const gmTs = body.gmTs
     const results: Array<{
@@ -41,17 +42,11 @@ export async function POST(request: NextRequest) {
     }> = Array.isArray(body.results) ? body.results : []
 
     if (!gmTs) {
-      return NextResponse.json(
-        { error: 'gmTs가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('gmTs가 필요합니다.')
     }
 
     if (results.length === 0) {
-      return NextResponse.json(
-        { error: 'results 배열이 비어 있습니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('results 배열이 비어 있습니다.')
     }
 
     const supabase = createServiceRoleClient()
@@ -247,10 +242,6 @@ export async function POST(request: NextRequest) {
       message: `${updated}건 업데이트, ${cancelled}건 취소, ${autoSettled}건 자동 정산`,
     })
   } catch (e) {
-    console.error('API error:', e)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, e)
   }
 }

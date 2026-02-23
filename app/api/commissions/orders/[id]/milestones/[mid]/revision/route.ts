@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError, apiUnauthorized, apiBadRequest } from '@/lib/api-error'
 
 export async function PATCH(
   request: NextRequest,
@@ -8,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     const user = await currentUser()
-    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    if (!user) return apiUnauthorized()
 
     const { id, mid } = await params
     const supabase = createServiceRoleClient()
@@ -23,9 +24,7 @@ export async function PATCH(
     if (order.client_id !== user.id) return NextResponse.json({ error: '의뢰인만 수정을 요청할 수 있습니다.' }, { status: 403 })
 
     if (order.revisions_used >= order.max_revisions) {
-      return NextResponse.json({
-        error: `최대 수정 횟수(${order.max_revisions}회)를 초과했습니다.`,
-      }, { status: 400 })
+      return apiBadRequest(`최대 수정 횟수(${order.max_revisions}회)를 초과했습니다.`)
     }
 
     const { data: milestone } = await supabase
@@ -36,10 +35,10 @@ export async function PATCH(
       .single()
 
     if (!milestone) return NextResponse.json({ error: '마일스톤을 찾을 수 없습니다.' }, { status: 404 })
-    if (milestone.status !== 'submitted') return NextResponse.json({ error: '제출된 마일스톤만 수정 요청할 수 있습니다.' }, { status: 400 })
+    if (milestone.status !== 'submitted') return apiBadRequest('제출된 마일스톤만 수정 요청할 수 있습니다.')
 
     const body = await request.json()
-    if (!body.feedback) return NextResponse.json({ error: '수정 요청 내용을 입력해주세요.' }, { status: 400 })
+    if (!body.feedback) return apiBadRequest('수정 요청 내용을 입력해주세요.')
 
     await supabase
       .from('commission_milestones')
@@ -76,7 +75,6 @@ export async function PATCH(
       max_revisions: order.max_revisions,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * POST /api/payments/purchase
@@ -17,10 +18,7 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -101,11 +99,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (purchaseError) {
-        console.error('Failed to record subscription-based purchase:', purchaseError)
-        return NextResponse.json(
-          { error: '구매 기록 생성 중 오류가 발생했습니다.' },
-          { status: 500 }
-        )
+        return apiError('구매 기록 생성 중 오류가 발생했습니다.', 500, purchaseError)
       }
 
       return NextResponse.json({
@@ -127,11 +121,7 @@ export async function POST(request: NextRequest) {
       .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: unknown }
 
     if (rpcError || !spendResult) {
-      console.error('Failed to spend tokens:', rpcError)
-      return NextResponse.json(
-        { error: '토큰 차감 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('토큰 차감 중 오류가 발생했습니다.', 500, rpcError)
     }
 
     if (!spendResult.success) {
@@ -153,7 +143,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (purchaseError) {
-      console.error('Failed to record purchase:', purchaseError)
       // Refund: 구매 기록 실패 시 토큰 환불 (원자적 RPC)
       const { error: refundError } = await supabase.rpc('refund_tokens', {
         p_user_id: userId,
@@ -161,10 +150,7 @@ export async function POST(request: NextRequest) {
         p_description: '구매 기록 실패 환불',
       })
       if (refundError) console.error('Critical: refund failed after purchase record failure:', refundError)
-      return NextResponse.json(
-        { error: '구매 기록 생성 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('구매 기록 생성 중 오류가 발생했습니다.', 500, purchaseError)
     }
 
     return NextResponse.json({
@@ -174,11 +160,7 @@ export async function POST(request: NextRequest) {
       new_balance: spendResult.new_balance,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 

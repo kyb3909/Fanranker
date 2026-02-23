@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/supabase/admin'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/admin/tokens/balances
@@ -28,19 +29,11 @@ export async function GET(request: NextRequest) {
       .order('token_balance', { ascending: false })
 
     if (error) {
-      console.error('Failed to fetch token balances:', error)
-      return NextResponse.json(
-        { error: '토큰 목록을 가져오는 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('토큰 목록을 가져오는 중 오류가 발생했습니다.', 500, error)
     }
 
     return NextResponse.json({ tokens: tokens || [] })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

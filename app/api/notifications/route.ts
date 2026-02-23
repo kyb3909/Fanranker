@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/notifications
@@ -14,10 +15,7 @@ export async function GET(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -28,12 +26,7 @@ export async function GET(request: NextRequest) {
     try {
       supabase = createServiceRoleClient()
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-      console.error('Failed to create Supabase client:', errorMessage)
-      return NextResponse.json(
-        { error: '서버 설정 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('서버 설정 오류가 발생했습니다.', 500, error)
     }
     const searchParams = request.nextUrl.searchParams
     
@@ -63,11 +56,7 @@ export async function GET(request: NextRequest) {
     const { data: notifications, error } = await query
 
     if (error) {
-      console.error('Failed to fetch notifications:', error)
-      return NextResponse.json(
-        { error: '알림을 불러오는 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('알림을 불러오는 중 오류가 발생했습니다.', 500, error)
     }
 
     if (!notifications || notifications.length === 0) {
@@ -92,11 +81,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notifications, profiles: profiles || [], posts: posts || [] })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -112,10 +97,7 @@ export async function PATCH(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -126,12 +108,7 @@ export async function PATCH(request: NextRequest) {
     try {
       supabase = createServiceRoleClient()
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-      console.error('Failed to create Supabase client:', errorMessage)
-      return NextResponse.json(
-        { error: '서버 설정 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('서버 설정 오류가 발생했습니다.', 500, error)
     }
     const body = await request.json()
     const { notification_id } = body
@@ -148,19 +125,11 @@ export async function PATCH(request: NextRequest) {
     const { error } = await query
 
     if (error) {
-      console.error('Failed to update notifications:', error)
-      return NextResponse.json(
-        { error: '알림 읽음 처리 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('알림 읽음 처리 중 오류가 발생했습니다.', 500, error)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

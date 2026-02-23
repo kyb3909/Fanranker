@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/comments?post_id=<uuid>
@@ -38,11 +39,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Failed to fetch comments:', error)
-      return NextResponse.json(
-        { error: '댓글을 불러오는 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('댓글을 불러오는 중 오류가 발생했습니다.', 500, error)
     }
 
     if (!comments || comments.length === 0) {
@@ -58,11 +55,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ comments, profiles })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -76,11 +69,7 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      console.error('Comment API: No user from currentUser()')
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -140,19 +129,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Failed to create comment:', {
-        error: insertError,
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint,
-        code: insertError.code,
-        userId,
-        post_id
-      })
-      return NextResponse.json(
-        { error: '댓글 저장 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('댓글 저장 중 오류가 발생했습니다.', 500, insertError)
     }
 
     // 알림 생성 (비동기로 처리, 실패해도 무시)
@@ -215,10 +192,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(comment, { status: 201 })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

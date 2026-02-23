@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/feed/predictions
@@ -11,10 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -47,11 +45,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (actError) {
-      console.error('Failed to fetch prediction activities:', actError)
-      return NextResponse.json(
-        { error: '피드를 불러오는 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('피드를 불러오는 중 오류가 발생했습니다.', 500, actError)
     }
 
     if (!activities || activities.length === 0) {
@@ -160,10 +154,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ activities: result })
   } catch (error) {
-    console.error('Feed predictions API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
 import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,12 +29,11 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
 
     return NextResponse.json({ posts: data ?? [], total: count ?? 0, page, limit })
   } catch (error) {
-    console.error('Posts API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
     const { postId, action } = body
 
     if (!postId || !action) {
-      return NextResponse.json({ error: 'postId와 action이 필요합니다.' }, { status: 400 })
+      return apiBadRequest('postId와 action이 필요합니다.')
     }
 
     let updateData: Record<string, unknown> = {}
@@ -68,11 +68,11 @@ export async function PATCH(request: NextRequest) {
         auditAction = post?.is_notice ? 'unpin_post' : 'pin_post'
         break
       default:
-        return NextResponse.json({ error: '잘못된 action입니다.' }, { status: 400 })
+        return apiBadRequest('잘못된 action입니다.')
     }
 
     const { error } = await supabase.from('posts').update(updateData).eq('id', postId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
       adminUserId: userId,
@@ -85,7 +85,6 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Posts PATCH error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

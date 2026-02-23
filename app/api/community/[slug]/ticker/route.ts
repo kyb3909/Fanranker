@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/community/[slug]/ticker
@@ -33,7 +34,8 @@ export async function GET(
       .limit(20)
 
     if (error) {
-      console.error('Ticker query error:', error)
+      // Graceful degradation: capture to Sentry but return empty items
+      apiError('Ticker query error', 500, error)
       return NextResponse.json({ items: [] })
     }
 
@@ -114,7 +116,9 @@ export async function GET(
       }
     )
   } catch (error) {
-    console.error('Ticker API error:', error)
+    // Graceful degradation: return empty items instead of error response
+    // but still capture to Sentry via apiError side-effect
+    apiError('Ticker API error', 500, error)
     return NextResponse.json({ items: [] })
   }
 }

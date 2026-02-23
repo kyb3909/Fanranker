@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/posts/[id]
@@ -35,11 +36,7 @@ export async function GET(
       .single()
 
     if (postError) {
-      console.error('Failed to fetch post:', postError)
-      return NextResponse.json(
-        { error: '글을 찾을 수 없습니다.' },
-        { status: 404 }
-      )
+      return apiError('글을 찾을 수 없습니다.', 404, postError)
     }
 
     if (!post) {
@@ -63,11 +60,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -83,7 +76,7 @@ export async function PATCH(
     const { id } = await params
     const user = await currentUser()
     if (!user?.id) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+      return apiUnauthorized()
     }
 
     const body = await request.json()
@@ -118,8 +111,7 @@ export async function PATCH(
     }
     return NextResponse.json(data)
   } catch (error) {
-    console.error('PATCH error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -135,7 +127,7 @@ export async function DELETE(
     const { id } = await params
     const user = await currentUser()
     if (!user?.id) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+      return apiUnauthorized()
     }
 
     const supabase = createServiceRoleClient()
@@ -159,7 +151,6 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('DELETE error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

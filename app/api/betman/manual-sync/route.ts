@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyCronSecret } from '@/lib/cron-auth'
 import { syncSingleGmTs } from '@/app/api/cron/betman-sync/route'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 /**
  * POST /api/betman/manual-sync
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return apiBadRequest('Invalid request body')
     }
 
     // gmTs를 단일 또는 배열로 받기
@@ -44,19 +45,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (gmTsList.length === 0) {
-      return NextResponse.json(
-        { error: 'gmTs가 필요합니다. 예: {"gmTs":"260021"} 또는 {"gmTs":["260021","260022"]}' },
-        { status: 400 },
-      )
+      return apiBadRequest('gmTs가 필요합니다. 예: {"gmTs":"260021"} 또는 {"gmTs":["260021","260022"]}')
     }
 
     // 유효성 검사: gmTs는 숫자 문자열이어야 함
     for (const gmTs of gmTsList) {
       if (!/^\d+$/.test(gmTs)) {
-        return NextResponse.json(
-          { error: `유효하지 않은 gmTs: "${gmTs}" (숫자만 가능)` },
-          { status: 400 },
-        )
+        return apiBadRequest(`유효하지 않은 gmTs: "${gmTs}" (숫자만 가능)`)
       }
     }
 
@@ -120,7 +115,6 @@ export async function POST(request: NextRequest) {
       duration: `${duration}ms`,
     })
   } catch (error) {
-    console.error('[manual-sync] Unexpected error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

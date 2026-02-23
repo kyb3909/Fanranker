@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { createAnonClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * POST /api/posts/[id]/view
@@ -47,10 +48,6 @@ export async function POST(
       incremented: true 
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

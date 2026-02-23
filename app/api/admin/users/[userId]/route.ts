@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
+import { apiError } from '@/lib/api-error'
 
 export async function GET(
   request: NextRequest,
@@ -51,7 +52,6 @@ export async function GET(
       recentPosts: recentPosts ?? [],
     })
   } catch (error) {
-    console.error('User detail API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

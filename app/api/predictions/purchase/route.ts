@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
 
 const GOLD_COST = 500
 
@@ -13,10 +14,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -25,10 +23,7 @@ export async function POST(request: NextRequest) {
     const { activity_id } = body
 
     if (!activity_id) {
-      return NextResponse.json(
-        { error: 'activity_id가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('activity_id가 필요합니다.')
     }
 
     // 1. activity 존재 확인
@@ -47,10 +42,7 @@ export async function POST(request: NextRequest) {
 
     // 자기 자신의 예측은 무료
     if (activity.user_id === user.id) {
-      return NextResponse.json(
-        { error: '자신의 예측은 구매할 필요가 없습니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('자신의 예측은 구매할 필요가 없습니다.')
     }
 
     // 2. 예측 데이터 조회 (중복구매 체크 및 경기 종료 확인용)
@@ -103,11 +95,7 @@ export async function POST(request: NextRequest) {
       .single() as { data: { success: boolean; new_balance?: number; current_balance?: number; error_message?: string } | null; error: unknown }
 
     if (rpcError || !spendResult) {
-      console.error('Failed to spend gold:', rpcError)
-      return NextResponse.json(
-        { error: '골드 차감 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('골드 차감 중 오류가 발생했습니다.', 500, rpcError)
     }
 
     if (!spendResult.success) {
@@ -140,10 +128,6 @@ export async function POST(request: NextRequest) {
       predictions: predictions || [],
     })
   } catch (error) {
-    console.error('Purchase API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

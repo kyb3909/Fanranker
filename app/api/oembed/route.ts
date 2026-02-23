@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanitizeEmbedHtml } from '@/lib/sanitize-embed'
+import { apiError } from '@/lib/api-error'
 
 /**
  * Normalized oEmbed response structure
@@ -311,11 +312,7 @@ export async function GET(request: NextRequest) {
           )
       }
     } catch (error) {
-      console.error(`oEmbed fetch error for ${provider}:`, error)
-      return NextResponse.json(
-        { error: '임베드 데이터를 가져오는 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('임베드 데이터를 가져오는 중 오류가 발생했습니다.', 500, error)
     }
 
     // Sanitize HTML to prevent XSS
@@ -325,11 +322,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(oembedData)
   } catch (error) {
-    console.error('oEmbed API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return apiError('Internal server error', 500, error)
   }
 }
 

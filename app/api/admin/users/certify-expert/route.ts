@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * POST /api/admin/users/certify-expert
@@ -16,10 +17,7 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -44,10 +42,7 @@ export async function POST(request: NextRequest) {
     const { user_id, revoke } = body
 
     if (!user_id) {
-      return NextResponse.json(
-        { error: 'user_id가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('user_id가 필요합니다.')
     }
 
     // Check if user exists
@@ -90,11 +85,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Failed to update expert status:', updateError)
-      return NextResponse.json(
-        { error: '전문가 인증 상태 업데이트 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('전문가 인증 상태 업데이트 중 오류가 발생했습니다.', 500, updateError)
     }
 
     // Audit log
@@ -114,10 +105,6 @@ export async function POST(request: NextRequest) {
       profile: updatedProfile,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

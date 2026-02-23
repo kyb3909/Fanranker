@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 import type { EscrowHoldResult } from '@/lib/supabase/types'
 
 const MILESTONE_PRESETS: Record<string, string[]> = {
@@ -18,7 +19,7 @@ const MILESTONE_PRESETS: Record<string, string[]> = {
 export async function GET(request: NextRequest) {
   try {
     const user = await currentUser()
-    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    if (!user) return apiUnauthorized()
 
     const { searchParams } = new URL(request.url)
     const role = searchParams.get('role') // 'client' | 'artist' | null (both)
@@ -43,14 +44,12 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      console.error('Failed to fetch orders:', error)
-      return NextResponse.json({ error: '주문 조회 실패' }, { status: 500 })
+      return apiError('주문 조회 실패', 500, error)
     }
 
     return NextResponse.json({ orders: data })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -58,7 +57,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
-    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    if (!user) return apiUnauthorized()
 
     const supabase = createServiceRoleClient()
     const body = await request.json()
@@ -104,8 +103,7 @@ export async function POST(request: NextRequest) {
     // Generate order number
     const { data: orderNumber, error: orderNumError } = await supabase.rpc('generate_order_number')
     if (orderNumError || !orderNumber) {
-      console.error('Failed to generate order number:', orderNumError)
-      return NextResponse.json({ error: '주문번호 생성 실패' }, { status: 500 })
+      return apiError('주문번호 생성 실패', 500, orderNumError)
     }
 
     // Create order
@@ -127,8 +125,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orderError || !order) {
-      console.error('Failed to create order:', orderError)
-      return NextResponse.json({ error: '주문 생성 실패' }, { status: 500 })
+      return apiError('주문 생성 실패', 500, orderError)
     }
 
     // Create milestones based on package type
@@ -141,9 +138,8 @@ export async function POST(request: NextRequest) {
 
     const { error: milestoneError } = await supabase.from('commission_milestones').insert(milestones)
     if (milestoneError) {
-      console.error('Failed to create milestones:', milestoneError)
       await supabase.from('commission_orders').delete().eq('id', order.id)
-      return NextResponse.json({ error: '마일스톤 생성 실패' }, { status: 500 })
+      return apiError('마일스톤 생성 실패', 500, milestoneError)
     }
 
     // Escrow hold gold
@@ -181,7 +177,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ order, balance: escrowResult.new_balance }, { status: 201 })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

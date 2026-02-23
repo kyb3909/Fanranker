@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/users/experts
@@ -50,11 +51,7 @@ export async function GET(request: NextRequest) {
     const { data: experts, error } = await query
 
     if (error) {
-      console.error('Failed to fetch experts:', error)
-      return NextResponse.json(
-        { error: '전문가 목록 조회 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('전문가 목록 조회 중 오류가 발생했습니다.', 500, error)
     }
 
     // Transform and sort data
@@ -103,10 +100,6 @@ export async function GET(request: NextRequest) {
       total: transformedExperts.length,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * PATCH /api/comments/[id]
@@ -12,7 +13,7 @@ export async function PATCH(
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+      return apiUnauthorized()
     }
 
     const { id: commentId } = await params
@@ -50,14 +51,12 @@ export async function PATCH(
       .single()
 
     if (updateError) {
-      console.error('Failed to update comment:', updateError)
-      return NextResponse.json({ error: '댓글 수정 중 오류가 발생했습니다.' }, { status: 500 })
+      return apiError('댓글 수정 중 오류가 발생했습니다.', 500, updateError)
     }
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -72,7 +71,7 @@ export async function DELETE(
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+      return apiUnauthorized()
     }
 
     const { id: commentId } = await params
@@ -103,8 +102,7 @@ export async function DELETE(
       .eq('id', commentId)
 
     if (deleteError) {
-      console.error('Failed to delete comment:', deleteError)
-      return NextResponse.json({ error: '댓글 삭제 중 오류가 발생했습니다.' }, { status: 500 })
+      return apiError('댓글 삭제 중 오류가 발생했습니다.', 500, deleteError)
     }
 
     // comment_count 감소
@@ -116,7 +114,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: '댓글이 삭제되었습니다.' })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

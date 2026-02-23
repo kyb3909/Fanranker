@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 // GET /api/commissions/orders/[id]
 export async function GET(
@@ -9,7 +10,7 @@ export async function GET(
 ) {
   try {
     const user = await currentUser()
-    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    if (!user) return apiUnauthorized()
 
     const { id } = await params
     const supabase = createServiceRoleClient()
@@ -48,7 +49,6 @@ export async function GET(
       profiles: profiles || [],
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

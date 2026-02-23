@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 const VALID_REASONS = ['discrimination', 'advertising', 'profanity', 'abuse', 'political'] as const
 
@@ -8,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+      return apiUnauthorized()
     }
 
     const body = await request.json()
@@ -53,13 +54,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('Report insert error:', error)
-      return NextResponse.json({ error: '신고 접수에 실패했습니다.' }, { status: 500 })
+      return apiError('신고 접수에 실패했습니다.', 500, error)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Reports API error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

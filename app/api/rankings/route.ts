@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/rankings
@@ -46,11 +47,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (statsError) {
-      console.error('Failed to fetch stats:', statsError)
-      return NextResponse.json(
-        { error: '랭킹 조회 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('랭킹 조회 중 오류가 발생했습니다.', 500, statsError)
     }
 
     // Get user IDs to fetch profiles
@@ -112,10 +109,6 @@ export async function GET(request: NextRequest) {
       offset,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

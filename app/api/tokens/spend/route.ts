@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * POST /api/tokens/spend
@@ -18,10 +19,7 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -34,10 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json(
-        { error: '유효하지 않은 토큰 양입니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('유효하지 않은 토큰 양입니다.')
     }
 
     // Atomic token deduction via RPC (prevents race conditions)
@@ -51,11 +46,7 @@ export async function POST(request: NextRequest) {
       .single() as { data: { success: boolean; new_balance: number; error_message: string | null } | null; error: unknown }
 
     if (rpcError || !result) {
-      console.error('Failed to spend tokens:', rpcError)
-      return NextResponse.json(
-        { error: '토큰 차감 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('토큰 차감 중 오류가 발생했습니다.', 500, rpcError)
     }
 
     if (!result.success) {
@@ -71,10 +62,6 @@ export async function POST(request: NextRequest) {
       spent: amount,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

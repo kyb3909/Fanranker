@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { updateUserSportStats } from '@/lib/betman/stats'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { apiError } from '@/lib/api-error'
 
 /**
  * POST /api/betman/stats/recalculate
@@ -63,10 +64,6 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (e) {
-    console.error('Stats recalculate error:', e)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, e)
   }
 }

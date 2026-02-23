@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
 import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+import { apiError } from '@/lib/api-error'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const RED_REASONS = ['discrimination', 'advertising'] as const
@@ -119,8 +120,7 @@ export async function GET(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ reports: data ?? [], total: count ?? 0, page, limit })
   } catch (error) {
-    console.error('Reports API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -187,7 +187,6 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, cardIssued, userSuspended })
   } catch (error) {
-    console.error('Reports PATCH error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

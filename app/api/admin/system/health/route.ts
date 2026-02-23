@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
+import { apiError } from '@/lib/api-error'
 
 export async function GET() {
   try {
@@ -40,7 +41,6 @@ export async function GET() {
       tickerCount: tickerCount ?? 0,
     })
   } catch (error) {
-    console.error('System health API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

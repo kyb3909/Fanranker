@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient, createAnonClient } from '@/lib/supabase/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 // GET /api/commissions/packages?artist_id=X&type=Y
 export async function GET(request: NextRequest) {
@@ -22,14 +23,12 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      console.error('Failed to fetch packages:', error)
-      return NextResponse.json({ error: '패키지 조회 실패' }, { status: 500 })
+      return apiError('패키지 조회 실패', 500, error)
     }
 
     return NextResponse.json({ packages: data })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -37,7 +36,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
-    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    if (!user) return apiUnauthorized()
 
     const supabase = createServiceRoleClient()
 
@@ -81,13 +80,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Failed to create package:', error)
-      return NextResponse.json({ error: '패키지 생성 실패' }, { status: 500 })
+      return apiError('패키지 생성 실패', 500, error)
     }
 
     return NextResponse.json({ package: data }, { status: 201 })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

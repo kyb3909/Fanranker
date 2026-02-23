@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
 import { auth } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/betman/my-stats
@@ -12,10 +13,7 @@ export async function GET() {
   try {
     const { userId } = await auth()
     if (!userId) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const supabase = createAnonClient()
@@ -67,10 +65,6 @@ export async function GET() {
       })),
     })
   } catch (e) {
-    console.error('My stats API error:', e)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, e)
   }
 }

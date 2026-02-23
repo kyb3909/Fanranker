@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * POST /api/comments/[id]/vote
@@ -12,7 +13,7 @@ export async function POST(
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+      return apiUnauthorized()
     }
 
     const { id: commentId } = await params
@@ -59,8 +60,7 @@ export async function POST(
         .insert({ comment_id: commentId, user_id: user.id, vote_type: voteType })
 
       if (insertError) {
-        console.error('Failed to insert comment vote:', insertError)
-        return NextResponse.json({ error: '투표 저장 중 오류가 발생했습니다.' }, { status: 500 })
+        return apiError('투표 저장 중 오류가 발생했습니다.', 500, insertError)
       }
     }
 
@@ -99,7 +99,6 @@ export async function POST(
       voteCount: newVoteCount,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

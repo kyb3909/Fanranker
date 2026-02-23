@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
 import { auth } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/betman/rankings
@@ -156,10 +157,6 @@ export async function GET(request: NextRequest) {
       my_rank: myRank,
     })
   } catch (e) {
-    console.error('Rankings API error:', e)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, e)
   }
 }

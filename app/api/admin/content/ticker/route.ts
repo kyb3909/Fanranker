@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
 import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,11 +25,10 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
     return NextResponse.json({ items: data ?? [], total: count ?? 0, page, limit })
   } catch (error) {
-    console.error('Ticker API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
     const { itemId, importance } = body
 
     if (!itemId || importance === undefined) {
-      return NextResponse.json({ error: 'itemId와 importance가 필요합니다.' }, { status: 400 })
+      return apiBadRequest('itemId와 importance가 필요합니다.')
     }
 
     const { error } = await supabase
@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest) {
       .update({ importance: parseInt(importance) })
       .eq('id', itemId)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
       adminUserId: userId,
@@ -63,8 +63,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Ticker PATCH error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
 
@@ -78,11 +77,11 @@ export async function DELETE(request: NextRequest) {
     const itemId = searchParams.get('id')
 
     if (!itemId) {
-      return NextResponse.json({ error: 'id가 필요합니다.' }, { status: 400 })
+      return apiBadRequest('id가 필요합니다.')
     }
 
     const { error } = await supabase.from('news_ticker_items').delete().eq('id', itemId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
       adminUserId: userId,
@@ -94,7 +93,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Ticker DELETE error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

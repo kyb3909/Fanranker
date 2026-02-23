@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 /**
  * GET /api/search
@@ -14,11 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     // 환경 변수 확인
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-      console.error('Supabase environment variables are not set')
-      return NextResponse.json(
-        { error: '서버 설정 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('서버 설정 오류가 발생했습니다.', 500, new Error('Supabase environment variables are not set'))
     }
 
     const supabase = createAnonClient()
@@ -29,17 +26,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20', 10)
 
     if (!query || query.trim().length === 0) {
-      return NextResponse.json(
-        { error: '검색어를 입력해주세요.' },
-        { status: 400 }
-      )
+      return apiBadRequest('검색어를 입력해주세요.')
     }
 
     if (query.length > 100) {
-      return NextResponse.json(
-        { error: '검색어는 100자 이하여야 합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('검색어는 100자 이하여야 합니다.')
     }
 
     const searchQuery = query.trim()
@@ -105,17 +96,7 @@ export async function GET(request: NextRequest) {
     const { data: posts, error } = await postsQuery.order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Failed to search posts:', {
-        error,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      })
-      return NextResponse.json(
-        { error: '검색 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('검색 중 오류가 발생했습니다.', 500, error)
     }
 
     if (!posts || posts.length === 0) {
@@ -147,10 +128,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ posts: posts || [], profiles })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

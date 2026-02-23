@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
+import { apiError } from '@/lib/api-error'
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,10 +26,9 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
     return NextResponse.json({ users: data ?? [], total: count ?? 0, page, limit })
   } catch (error) {
-    console.error('Users API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

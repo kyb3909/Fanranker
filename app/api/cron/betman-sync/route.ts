@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/cron/betman-sync
@@ -481,8 +482,7 @@ export async function GET(request: NextRequest) {
       duration: `${duration}ms`,
     })
   } catch (error) {
-    console.error('[betman-watchdog] Unexpected error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 

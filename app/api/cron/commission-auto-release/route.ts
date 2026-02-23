@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import type { EscrowReleaseResult } from '@/lib/supabase/types'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,8 +22,7 @@ export async function POST(request: NextRequest) {
       .lte('auto_release_at', new Date().toISOString())
 
     if (error) {
-      console.error('Failed to query auto-release orders:', error)
-      return NextResponse.json({ error: 'Query failed' }, { status: 500 })
+      return apiError('Query failed', 500, error)
     }
 
     if (!orders || orders.length === 0) {
@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ released, total: orders.length, errors })
   } catch (error) {
-    console.error('Cron error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

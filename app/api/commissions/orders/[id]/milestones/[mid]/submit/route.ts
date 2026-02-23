@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError, apiUnauthorized, apiBadRequest } from '@/lib/api-error'
 
 export async function PATCH(
   request: NextRequest,
@@ -8,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     const user = await currentUser()
-    if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+    if (!user) return apiUnauthorized()
 
     const { id, mid } = await params
     const supabase = createServiceRoleClient()
@@ -23,7 +24,7 @@ export async function PATCH(
     if (!order) return NextResponse.json({ error: '주문을 찾을 수 없습니다.' }, { status: 404 })
     if (order.artist_id !== user.id) return NextResponse.json({ error: '작가만 결과물을 제출할 수 있습니다.' }, { status: 403 })
     if (!['accepted', 'in_progress', 'revision'].includes(order.status)) {
-      return NextResponse.json({ error: '현재 상태에서는 제출할 수 없습니다.' }, { status: 400 })
+      return apiBadRequest('현재 상태에서는 제출할 수 없습니다.')
     }
 
     const { data: milestone } = await supabase
@@ -35,7 +36,7 @@ export async function PATCH(
 
     if (!milestone) return NextResponse.json({ error: '마일스톤을 찾을 수 없습니다.' }, { status: 404 })
     if (!['pending', 'in_progress', 'revision_requested'].includes(milestone.status)) {
-      return NextResponse.json({ error: '이 마일스톤은 제출할 수 없는 상태입니다.' }, { status: 400 })
+      return apiBadRequest('이 마일스톤은 제출할 수 없는 상태입니다.')
     }
 
     const body = await request.json()
@@ -73,7 +74,6 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }

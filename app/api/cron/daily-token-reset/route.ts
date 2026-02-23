@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { apiError } from '@/lib/api-error'
 
 /**
  * POST /api/cron/daily-token-reset
@@ -23,11 +24,7 @@ export async function POST(request: NextRequest) {
       .select('user_id')
 
     if (fetchError) {
-      console.error('Failed to fetch users for token reset:', fetchError)
-      return NextResponse.json(
-        { error: 'Failed to fetch users' },
-        { status: 500 }
-      )
+      return apiError('Failed to fetch users', 500, fetchError)
     }
 
     if (!users || users.length === 0) {
@@ -64,11 +61,7 @@ export async function POST(request: NextRequest) {
       totalUsers: users.length,
     })
   } catch (error) {
-    console.error('Token reset cron job error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return apiError('Internal server error', 500, error)
   }
 }
 

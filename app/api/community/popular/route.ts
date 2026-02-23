@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/community/popular
@@ -20,8 +21,7 @@ export async function GET() {
         .select('community_slug')
 
       if (fallbackError) {
-        console.error('Failed to fetch popular communities:', fallbackError)
-        return NextResponse.json({ communities: [] })
+        return apiError('인기 게시판 조회 실패', 500, fallbackError)
       }
 
       // 수동으로 집계
@@ -39,7 +39,6 @@ export async function GET() {
 
     return NextResponse.json({ communities: data || [] })
   } catch (error) {
-    console.error('Popular communities API error:', error)
-    return NextResponse.json({ communities: [] })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

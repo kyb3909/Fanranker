@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * POST /api/community/[slug]/follow
@@ -15,10 +16,7 @@ export async function POST(
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -49,20 +47,12 @@ export async function POST(
       })
 
     if (error) {
-      console.error('Failed to follow community:', error)
-      return NextResponse.json(
-        { error: '팔로우 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('팔로우 중 오류가 발생했습니다.', 500, error)
     }
 
     return NextResponse.json({ success: true, following: true })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -79,10 +69,7 @@ export async function DELETE(
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -99,20 +86,12 @@ export async function DELETE(
       .eq('community_slug', slug)
 
     if (error) {
-      console.error('Failed to unfollow community:', error)
-      return NextResponse.json(
-        { error: '팔로우 취소 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('팔로우 취소 중 오류가 발생했습니다.', 500, error)
     }
 
     return NextResponse.json({ success: true, following: false })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 

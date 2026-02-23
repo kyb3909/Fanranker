@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/follow
@@ -32,8 +33,7 @@ export async function GET() {
       following: (data || []).map(d => d.followed_user_id),
     })
   } catch (e) {
-    console.error('Follow GET error:', e)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, e)
   }
 }
 
@@ -48,32 +48,23 @@ export async function POST(request: NextRequest) {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     let body: Record<string, unknown>
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return apiBadRequest('Invalid request body')
     }
     const targetUserId = typeof body.user_id === 'string' ? body.user_id : undefined
 
     if (!targetUserId) {
-      return NextResponse.json(
-        { error: 'user_id가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('user_id가 필요합니다.')
     }
 
     if (targetUserId === user.id) {
-      return NextResponse.json(
-        { error: '자기 자신을 팔로우할 수 없습니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('자기 자신을 팔로우할 수 없습니다.')
     }
 
     const supabase = createServiceRoleClient()
@@ -120,7 +111,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ action: 'followed' })
     }
   } catch (e) {
-    console.error('Follow POST error:', e)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, e)
   }
 }

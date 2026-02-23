@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 /**
  * POST /api/betman/round
@@ -23,15 +24,12 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return apiBadRequest('Invalid request body')
     }
     const gmTs = body.gmTs != null ? String(body.gmTs).trim() : null
 
     if (!gmTs) {
-      return NextResponse.json(
-        { error: 'gmTs가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest('gmTs가 필요합니다.')
     }
 
     const supabase = createServiceRoleClient()
@@ -71,11 +69,7 @@ export async function POST(request: NextRequest) {
         .update({ gm_ts: gmTs })
         .eq('id', existingByYearRound.id)
       if (updateError) {
-        console.error('Failed to update gm_ts:', updateError)
-        return NextResponse.json(
-          { error: '회차 정보 업데이트 중 오류가 발생했습니다.' },
-          { status: 500 }
-        )
+        return apiError('회차 정보 업데이트 중 오류가 발생했습니다.', 500, updateError)
       }
       return NextResponse.json({
         created: false,
@@ -104,11 +98,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('betman_rounds insert error:', error)
-      return NextResponse.json(
-        { error: '회차 생성 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('회차 생성 중 오류가 발생했습니다.', 500, error)
     }
 
     return NextResponse.json({
@@ -119,10 +109,6 @@ export async function POST(request: NextRequest) {
       gmTs,
     })
   } catch (e) {
-    console.error('API error:', e)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, e)
   }
 }

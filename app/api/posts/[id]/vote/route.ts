@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * POST /api/posts/[id]/vote
@@ -18,10 +19,7 @@ export async function POST(
     const user = await currentUser()
     
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const userId = user.id
@@ -69,11 +67,7 @@ export async function POST(
           .eq('id', existingVote.id)
 
         if (deleteError) {
-          console.error('Failed to delete vote:', deleteError)
-          return NextResponse.json(
-            { error: '투표 취소 중 오류가 발생했습니다.' },
-            { status: 500 }
-          )
+          return apiError('투표 취소 중 오류가 발생했습니다.', 500, deleteError)
         }
 
         voteAction = 'deleted'
@@ -86,11 +80,7 @@ export async function POST(
           .eq('id', existingVote.id)
 
         if (updateError) {
-          console.error('Failed to update vote:', updateError)
-          return NextResponse.json(
-            { error: '투표 변경 중 오류가 발생했습니다.' },
-            { status: 500 }
-          )
+          return apiError('투표 변경 중 오류가 발생했습니다.', 500, updateError)
         }
 
         voteAction = 'updated'
@@ -106,11 +96,7 @@ export async function POST(
         })
 
       if (insertError) {
-        console.error('Failed to create vote:', insertError)
-        return NextResponse.json(
-          { error: '투표 저장 중 오류가 발생했습니다.' },
-          { status: 500 }
-        )
+        return apiError('투표 저장 중 오류가 발생했습니다.', 500, insertError)
       }
     }
 
@@ -156,11 +142,7 @@ export async function POST(
       message: voteAction === 'deleted' ? '투표가 취소되었습니다.' : '투표가 저장되었습니다.',
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 

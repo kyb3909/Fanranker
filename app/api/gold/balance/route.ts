@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError, apiUnauthorized } from '@/lib/api-error'
 
 /**
  * GET /api/gold/balance
@@ -11,10 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await currentUser()
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return apiUnauthorized()
     }
 
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -35,11 +33,7 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (insertError) {
-        console.error('Failed to create gold record:', insertError)
-        return NextResponse.json(
-          { error: '골드 정보를 생성하는 중 오류가 발생했습니다.' },
-          { status: 500 }
-        )
+        return apiError('골드 정보를 생성하는 중 오류가 발생했습니다.', 500, insertError)
       }
 
       return NextResponse.json({
@@ -49,11 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (error) {
-      console.error('Failed to fetch gold balance:', error)
-      return NextResponse.json(
-        { error: '골드 정보를 가져오는 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      return apiError('골드 정보를 가져오는 중 오류가 발생했습니다.', 500, error)
     }
 
     return NextResponse.json({
@@ -61,10 +51,6 @@ export async function GET(request: NextRequest) {
       updated_at: goldData.updated_at,
     })
   } catch (error) {
-    console.error('Gold balance API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

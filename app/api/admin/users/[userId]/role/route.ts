@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
 import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+import { apiError, apiBadRequest } from '@/lib/api-error'
 
 export async function PATCH(
   request: NextRequest,
@@ -17,7 +18,7 @@ export async function PATCH(
 
     const validRoles = ['user', 'moderator', 'admin']
     if (!role || !validRoles.includes(role)) {
-      return NextResponse.json({ error: '유효한 role이 필요합니다: user, moderator, admin' }, { status: 400 })
+      return apiBadRequest('유효한 role이 필요합니다: user, moderator, admin')
     }
 
     const { error } = await supabase
@@ -25,7 +26,7 @@ export async function PATCH(
       .update({ role, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
       adminUserId: adminId,
@@ -38,7 +39,6 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Role change error:', error)
-    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
+    return apiError('서버 오류', 500, error)
   }
 }
