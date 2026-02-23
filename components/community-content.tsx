@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useAuth } from "@clerk/nextjs"
 
 type SortType = "hot" | "new" | "comments"
 
@@ -43,8 +44,40 @@ interface CommunityContentProps {
 }
 
 export function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
+  const { isSignedIn } = useAuth()
   const [sortBy, setSortBy] = useState<SortType>("hot")
   const [isFollowing, setIsFollowing] = useState(false)
+  const [isFollowLoading, setIsFollowLoading] = useState(false)
+
+  // 팔로우 상태 확인
+  useEffect(() => {
+    if (!isSignedIn || !communitySlug) return
+    fetch(`/api/community/${communitySlug}/follow`)
+      .then(res => res.ok ? res.json() : { following: false })
+      .then(data => setIsFollowing(data.following))
+      .catch(() => {})
+  }, [isSignedIn, communitySlug])
+
+  const handleFollow = async () => {
+    if (!isSignedIn) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+    if (!communitySlug || isFollowLoading) return
+    setIsFollowLoading(true)
+    try {
+      const method = isFollowing ? 'DELETE' : 'POST'
+      const res = await fetch(`/api/community/${communitySlug}/follow`, { method })
+      if (res.ok) {
+        const data = await res.json()
+        setIsFollowing(data.following)
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setIsFollowLoading(false)
+    }
+  }
 
   const sortedPosts = useMemo(() => [...posts].sort((a, b) => {
     switch (sortBy) {
@@ -79,8 +112,9 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
             <Button
               variant={isFollowing ? "default" : "outline"}
               size="sm"
-              className="h-7 text-xs px-3"
-              onClick={() => setIsFollowing(!isFollowing)}
+              className="h-8 text-sm px-4 font-medium"
+              onClick={handleFollow}
+              disabled={isFollowLoading}
             >
               {isFollowing ? "팔로잉" : "팔로우"}
             </Button>
