@@ -3,7 +3,7 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { ExternalLink } from "lucide-react"
 
 export interface EmbedCardProps {
@@ -202,39 +202,7 @@ function InstagramEmbed({
   )
 }
 
-/** widgets.js 로드 유틸리티 (전역 1회만 로드) */
-type TwttrWindow = Window & typeof globalThis & {
-  twttr?: { widgets: { load: (el?: HTMLElement) => void } }
-  __twttrLoading?: boolean
-}
-
-function loadTwitterWidgetsJs(callback: () => void) {
-  const win = window as TwttrWindow
-  if (win.twttr) {
-    callback()
-    return
-  }
-  if (win.__twttrLoading) {
-    const interval = setInterval(() => {
-      if (win.twttr) {
-        clearInterval(interval)
-        callback()
-      }
-    }, 100)
-    return
-  }
-  win.__twttrLoading = true
-  const script = document.createElement('script')
-  script.src = 'https://platform.twitter.com/widgets.js'
-  script.async = true
-  script.onload = () => {
-    win.__twttrLoading = false
-    callback()
-  }
-  document.body.appendChild(script)
-}
-
-/** widgets.js 렌더링 실패 시 표시할 폴백 카드 */
+/** X(Twitter) 폴백 카드 — widgets.js/syndication API가 불안정하여 바로 링크 카드 표시 */
 function XFallbackCard({ url, author_name, className }: { url: string; author_name?: string; className?: string }) {
   return (
     <Card className={cn("border border-border bg-card overflow-hidden", className)}>
@@ -268,13 +236,13 @@ function XFallbackCard({ url, author_name, className }: { url: string; author_na
 
 /**
  * X(Twitter) 임베드 전용 컴포넌트
- * blockquote를 삽입 후 widgets.js를 로드하여 인터랙티브 렌더링
- * 4초 내 렌더링 실패 시 폴백 카드 표시
+ *
+ * widgets.js + cdn.syndication.twimg.com 모두 불안정(404)하여
+ * blockquote→iframe 변환이 작동하지 않음.
+ * 바로 폴백 링크 카드를 표시.
  */
 function XEmbed({
-  html,
   url,
-  title,
   author_name,
   className,
 }: {
@@ -284,65 +252,6 @@ function XEmbed({
   author_name?: string
   className?: string
 }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [widgetFailed, setWidgetFailed] = useState(false)
-
-  useEffect(() => {
-    let failTimer: ReturnType<typeof setTimeout>
-
-    const checkRendered = () => {
-      // widgets.js가 blockquote를 iframe으로 변환했는지 확인
-      if (containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
-        clearTimeout(failTimer)
-      }
-    }
-
-    const timer = setTimeout(() => {
-      loadTwitterWidgetsJs(() => {
-        const win = window as TwttrWindow
-        if (containerRef.current) {
-          win.twttr?.widgets.load(containerRef.current)
-        }
-        // 4초 후 iframe이 없으면 폴백 표시
-        failTimer = setTimeout(() => {
-          if (!containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
-            setWidgetFailed(true)
-          }
-        }, 4000)
-      })
-
-      // widgets.js 로딩 자체가 실패할 경우 (5초 타임아웃)
-      failTimer = setTimeout(() => {
-        if (!containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
-          setWidgetFailed(true)
-        }
-      }, 5000)
-    }, 0)
-
-    // 주기적으로 렌더링 완료 체크
-    const pollTimer = setInterval(checkRendered, 500)
-
-    return () => {
-      clearTimeout(timer)
-      clearTimeout(failTimer)
-      clearInterval(pollTimer)
-    }
-  }, [html])
-
-  if (widgetFailed) {
-    return <XFallbackCard url={url} author_name={author_name} className={className} />
-  }
-
-  return (
-    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
-      <CardContent className="p-4">
-        <div
-          ref={containerRef}
-          className="max-w-[550px] mx-auto [&_.twitter-tweet]:!mx-auto"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      </CardContent>
-    </Card>
-  )
+  return <XFallbackCard url={url} author_name={author_name} className={className} />
 }
 
