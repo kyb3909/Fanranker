@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
 
 /**
  * POST /api/users/[id]/follow
@@ -13,6 +13,9 @@ import { apiError, apiUnauthorized } from '@/lib/api-error'
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     const user = await currentUser()
 
     if (!user) {

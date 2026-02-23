@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
+import { z } from 'zod'
+
+const PurchaseSchema = z.object({
+  prediction_id: z.string().min(1, '예측 ID가 필요합니다.'),
+})
 
 /**
  * POST /api/payments/purchase
@@ -15,6 +20,9 @@ import { apiError, apiUnauthorized } from '@/lib/api-error'
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const user = await currentUser()
 
     if (!user) {
@@ -27,14 +35,11 @@ export async function POST(request: NextRequest) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const body = await request.json()
-    const { prediction_id } = body
-
-    if (!prediction_id) {
-      return NextResponse.json(
-        { error: '예측 ID가 필요합니다.' },
-        { status: 400 }
-      )
+    const result = PurchaseSchema.safeParse(body)
+    if (!result.success) {
+      return apiBadRequest(result.error.issues[0]?.message || '잘못된 입력입니다.')
     }
+    const { prediction_id } = result.data
 
     // Check if prediction exists and is premium
     const { data: prediction, error: predError } = await supabase

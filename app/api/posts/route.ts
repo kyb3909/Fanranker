@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { computeTemperature } from '@/lib/temperature'
-import { apiError } from '@/lib/api-error'
+import { apiError, apiBadRequest, checkRateLimit } from '@/lib/api-error'
+import { z } from 'zod'
+
+const PostCreateSchema = z.object({
+  community_slug: z.string().min(1, '게시판을 선택해주세요.'),
+  title: z.string().min(1, '제목을 입력해주세요.'),
+  content: z.any().refine((v) => v !== undefined && v !== null && v !== '', {
+    message: '내용을 입력해주세요.',
+  }),
+  image: z.string().optional(),
+})
 
 /**
  * GET /api/posts
@@ -216,6 +226,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     // Clerk 인증 확인
     const user = await currentUser()
 
@@ -241,15 +254,11 @@ export async function POST(request: NextRequest) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const body = await request.json()
-    const { community_slug, title, content, image } = body
-
-    // 유효성 검사
-    if (!community_slug || !title || !content) {
-      return NextResponse.json(
-        { error: '필수 필드가 누락되었습니다.' },
-        { status: 400 }
-      )
+    const result = PostCreateSchema.safeParse(body)
+    if (!result.success) {
+      return apiBadRequest(result.error.issues[0]?.message || '잘못된 입력입니다.')
     }
+    const { community_slug, title, content, image } = result.data
 
     // 이미지 URL 유효성 검사 (허용된 도메인만)
     let imageUrl = null

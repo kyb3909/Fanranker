@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
 
 /**
  * POST /api/posts/[id]/vote
@@ -15,6 +15,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     // currentUser()를 사용하여 인증 확인 (API 라우트에서 더 안정적)
     const user = await currentUser()
     

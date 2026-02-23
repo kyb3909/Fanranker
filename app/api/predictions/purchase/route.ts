@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
 
 const GOLD_COST = 500
 
@@ -12,6 +12,9 @@ const GOLD_COST = 500
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const user = await currentUser()
     if (!user) {
       return apiUnauthorized()

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
 
 /**
  * GET /api/notifications
@@ -94,6 +94,9 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     const user = await currentUser()
 
     if (!user) {

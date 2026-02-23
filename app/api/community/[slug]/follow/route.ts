@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
 
 /**
  * POST /api/community/[slug]/follow
@@ -13,6 +13,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     const user = await currentUser()
 
     if (!user) {
@@ -66,6 +69,9 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     const user = await currentUser()
 
     if (!user) {

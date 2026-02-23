@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { isAdmin } from '@/lib/supabase/admin'
-import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
 
 /**
  * Helper function to update user stats after prediction settlement
@@ -97,6 +97,9 @@ async function updateUserStats(
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const user = await currentUser()
     if (!user) {
       return apiUnauthorized()

@@ -1,32 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
+import { z } from 'zod'
 
 const VALID_REASONS = ['discrimination', 'advertising', 'profanity', 'abuse', 'political'] as const
 
+const ReportCreateSchema = z.object({
+  targetType: z.enum(['post', 'comment'], { message: '잘못된 targetType입니다.' }),
+  targetId: z.string().min(1, '대상 ID가 필요합니다.'),
+  reason: z.enum(VALID_REASONS, { message: '잘못된 신고 사유입니다.' }),
+  description: z.string().optional(),
+})
+
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     const user = await currentUser()
     if (!user) {
       return apiUnauthorized()
     }
 
     const body = await request.json()
-    const { targetType, targetId, reason, description } = body
-
-    // 유효성 검증
-    if (!targetType || !targetId || !reason) {
-      return NextResponse.json({ error: 'targetType, targetId, reason은 필수입니다.' }, { status: 400 })
+    const result = ReportCreateSchema.safeParse(body)
+    if (!result.success) {
+      return apiBadRequest(result.error.issues[0]?.message || '잘못된 입력입니다.')
     }
-
-    if (!['post', 'comment'].includes(targetType)) {
-      return NextResponse.json({ error: '잘못된 targetType입니다.' }, { status: 400 })
-    }
-
-    if (!VALID_REASONS.includes(reason)) {
-      return NextResponse.json({ error: '잘못된 신고 사유입니다.' }, { status: 400 })
-    }
+    const { targetType, targetId, reason, description } = result.data
 
     const supabase = createServiceRoleClient()
 

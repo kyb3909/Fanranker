@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
+import { z } from 'zod'
+
+const CommentCreateSchema = z.object({
+  post_id: z.string().min(1, '게시글 ID가 필요합니다.'),
+  content: z.string().min(1, '댓글 내용을 입력해주세요.'),
+  parent_id: z.string().optional(),
+})
 
 /**
  * GET /api/comments?post_id=<uuid>
@@ -65,6 +72,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STANDARD")
+    if (limited) return limited
+
     // currentUser()를 사용하여 인증 확인 (API 라우트에서 더 안정적)
     const user = await currentUser()
 
@@ -87,15 +97,11 @@ export async function POST(request: NextRequest) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const body = await request.json()
-    const { post_id, parent_id, content } = body
-
-    // 유효성 검사
-    if (!post_id || !content || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: '필수 필드가 누락되었습니다.' },
-        { status: 400 }
-      )
+    const result = CommentCreateSchema.safeParse(body)
+    if (!result.success) {
+      return apiBadRequest(result.error.issues[0]?.message || '잘못된 입력입니다.')
     }
+    const { post_id, parent_id, content } = result.data
 
     // 쿨다운 체크 (10초 간격)
     const { data: canPost, error: cooldownError } = await supabase.rpc('can_post_comment', {

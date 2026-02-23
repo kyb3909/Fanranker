@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
+import { z } from 'zod'
+
+const TokenSpendSchema = z.object({
+  amount: z.number().int('토큰 양은 정수여야 합니다.').positive('토큰 양은 0보다 커야 합니다.'),
+  description: z.string().optional(),
+  related_prediction_id: z.string().optional(),
+})
 
 /**
  * POST /api/tokens/spend
@@ -16,6 +23,9 @@ import { apiError, apiBadRequest, apiUnauthorized } from '@/lib/api-error'
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const user = await currentUser()
 
     if (!user) {
@@ -28,12 +38,11 @@ export async function POST(request: NextRequest) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const body = await request.json()
-    const { amount, description, related_prediction_id } = body
-
-    // Validation
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return apiBadRequest('유효하지 않은 토큰 양입니다.')
+    const parsed = TokenSpendSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiBadRequest(parsed.error.issues[0]?.message || '유효하지 않은 토큰 양입니다.')
     }
+    const { amount, description, related_prediction_id } = parsed.data
 
     // Atomic token deduction via RPC (prevents race conditions)
     const { data: result, error: rpcError } = await supabase
