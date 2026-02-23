@@ -21,7 +21,6 @@ interface OEmbedResponse {
  */
 const OEMBED_ENDPOINTS = {
   youtube: 'https://www.youtube.com/oembed',
-  x: 'https://publish.twitter.com/oembed',
 }
 
 /**
@@ -88,17 +87,6 @@ function normalizeInstagramUrl(url: string): string {
   return url
 }
 
-/**
- * Normalize X/Twitter URL
- */
-function normalizeXUrl(url: string): string {
-  // Convert x.com to twitter.com for oEmbed API
-  const normalized = url.replace(/x\.com/, 'twitter.com')
-  if (!normalized.startsWith('http')) {
-    return `https://${normalized}`
-  }
-  return normalized
-}
 
 /**
  * Fetch oEmbed data from YouTube
@@ -159,25 +147,30 @@ async function fetchInstagramOEmbed(url: string, includeHtml: boolean = true): P
 
 /**
  * Fetch oEmbed data from X (Twitter)
+ *
+ * publish.twitter.com/oembed API가 불안정하므로
+ * Instagram과 동일하게 blockquote HTML을 직접 생성.
+ * widgets.js가 클라이언트에서 blockquote를 인터랙티브 임베드로 변환.
  */
 async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
-  const normalizedUrl = normalizeXUrl(url)
-  const oembedUrl = `${OEMBED_ENDPOINTS.x}?url=${encodeURIComponent(normalizedUrl)}&omit_script=true`
-
-  const response = await fetch(oembedUrl)
-  if (!response.ok) {
-    throw new Error(`X oEmbed failed: ${response.statusText}`)
+  const match = url.match(URL_PATTERNS.x)
+  if (!match) {
+    throw new Error('Invalid X URL')
   }
 
-  const data = await response.json()
+  const username = match[1]
+  const statusId = match[2]
+  const permalink = `https://twitter.com/${username}/status/${statusId}`
+
+  const blockquoteHtml = includeHtml
+    ? `<blockquote class="twitter-tweet"><a href="${permalink}"></a></blockquote>`
+    : undefined
 
   return {
     provider: 'x',
-    url: normalizedUrl,
-    html: includeHtml ? (data.html || '') : undefined,
-    title: data.title,
-    thumbnail_url: data.thumbnail_url,
-    author_name: data.author_name || data.author_url,
+    url: url.startsWith('http') ? url : `https://${url}`,
+    html: blockquoteHtml,
+    author_name: `@${username}`,
   }
 }
 
