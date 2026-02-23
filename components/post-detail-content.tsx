@@ -8,6 +8,8 @@ import Image from "next/image"
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
+import { extractEmbedsFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
+import { EmbedPreviewCard } from "@/components/embed-preview-card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -158,6 +160,27 @@ export function PostDetailContent({ post }: { post: Post }) {
                 <TipTapContent content={post.content} />
               )}
             </div>
+            {/* 텍스트 URL로만 저장된 임베드 fallback 렌더링 */}
+            {typeof post.content === 'object' && (() => {
+              const embeds = extractEmbedsFromTipTapJSON(post.content)
+              // embed 노드가 아닌 텍스트에서 추출된 임베드만 표시
+              const hasRealEmbedNode = post.content?.content?.some?.((n: any) => n.type === 'embed')
+              if (hasRealEmbedNode || embeds.length === 0) return null
+              return (
+                <div className="space-y-3 mt-2">
+                  {embeds.map((embed, i) => (
+                    <EmbedPreviewCard
+                      key={i}
+                      provider={embed.attrs.provider}
+                      url={embed.attrs.url}
+                      title={embed.attrs.title}
+                      thumbnail_url={embed.attrs.thumbnail_url}
+                      author_name={embed.attrs.author_name}
+                    />
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* Image */}
             {post.image && (

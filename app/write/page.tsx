@@ -45,6 +45,7 @@ function WriteContent() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [isEmbedLoading, setIsEmbedLoading] = useState(false)
   const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId)
   const [editLoadError, setEditLoadError] = useState<string | null>(null)
 
@@ -201,7 +202,7 @@ function WriteContent() {
       if (editId) {
         router.push(`/post/${editId}`)
       } else {
-        router.push(`/community/${selectedCommunity}`)
+        router.push(`/community/${selectedCommunity}?sort=new`)
       }
     } catch (error) {
       alert(error instanceof Error ? error.message : '글 작성 중 오류가 발생했습니다.')
@@ -326,6 +327,7 @@ function WriteContent() {
                   <TipTapEditor
                     content={content}
                     onChange={(json) => setContent(json)}
+                    onEmbedLoading={setIsEmbedLoading}
                     placeholder="내용을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드됩니다."
                   />
                 </div>
@@ -390,17 +392,23 @@ function WriteContent() {
                   <Button type="button" variant="outline" onClick={() => window.history.back()}>
                     취소
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={
-                      isSubmitting || 
-                      !selectedCommunity || 
-                      !title || 
-                      !content || 
+                      isSubmitting ||
+                      isEmbedLoading ||
+                      !selectedCommunity ||
+                      !title ||
+                      !content ||
                       (typeof content === 'object' && (!content.content || content.content.length === 0))
                     }
                   >
-                    {isSubmitting ? (
+                    {isEmbedLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        임베드 로딩 중...
+                      </>
+                    ) : isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         작성 중...

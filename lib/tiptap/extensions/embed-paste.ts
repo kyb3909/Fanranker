@@ -39,7 +39,7 @@ function normalizeUrl(url: string): string {
 
 /**
  * TipTap Extension that automatically converts pasted URLs into embed nodes
- * 
+ *
  * When a user pastes a URL that matches a supported provider:
  * 1. Detects the provider
  * 2. Shows loading placeholder
@@ -49,7 +49,21 @@ function normalizeUrl(url: string): string {
 export const EmbedPaste = Extension.create({
   name: 'embedPaste',
 
+  addOptions() {
+    return {
+      onEmbedLoading: undefined as ((loading: boolean) => void) | undefined,
+    }
+  },
+
   addProseMirrorPlugins() {
+    const onEmbedLoading = this.options.onEmbedLoading
+    // Track concurrent embed loading count
+    let loadingCount = 0
+    const updateLoading = (delta: number) => {
+      loadingCount += delta
+      onEmbedLoading?.(loadingCount > 0)
+    }
+
     return [
       new Plugin({
         key: new PluginKey('embedPaste'),
@@ -83,6 +97,7 @@ export const EmbedPaste = Extension.create({
             view.dispatch(tr)
 
             // oEmbed 데이터 가져오기
+            updateLoading(1)
             fetch(`/api/oembed?url=${encodeURIComponent(normalizedUrl)}&includeHtml=true`)
               .then(async (res) => {
                 if (!res.ok) {
@@ -150,6 +165,7 @@ export const EmbedPaste = Extension.create({
 
                 const replaceTr = currentState.tr.replaceWith(startPos, endPos, embedNode)
                 view.dispatch(replaceTr)
+                updateLoading(-1)
               })
               .catch((error) => {
                 console.warn('Failed to fetch oEmbed:', error)
@@ -181,6 +197,7 @@ export const EmbedPaste = Extension.create({
                   )
                   view.dispatch(replaceTr)
                 }
+                updateLoading(-1)
               })
 
             return true

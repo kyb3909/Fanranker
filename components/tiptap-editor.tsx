@@ -34,6 +34,7 @@ import {
 export interface TipTapEditorProps {
   content?: string | any // string 또는 TipTap JSON
   onChange?: (json: any) => void
+  onEmbedLoading?: (loading: boolean) => void
   placeholder?: string
   className?: string
   editable?: boolean
@@ -51,6 +52,7 @@ export interface TipTapEditorProps {
 export function TipTapEditor({
   content,
   onChange,
+  onEmbedLoading,
   placeholder = "내용을 입력하세요...",
   className,
   editable = true,
@@ -71,7 +73,9 @@ export function TipTapEditor({
           class: 'embed-node',
         },
       }),
-      EmbedPaste,
+      EmbedPaste.configure({
+        onEmbedLoading,
+      }),
     ],
     content: content || '',
     editable,

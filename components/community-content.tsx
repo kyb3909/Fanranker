@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -45,7 +46,11 @@ interface CommunityContentProps {
 
 export function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
-  const [sortBy, setSortBy] = useState<SortType>("hot")
+  const searchParams = useSearchParams()
+  const initialSort = (searchParams.get("sort") as SortType) || "hot"
+  const [sortBy, setSortBy] = useState<SortType>(
+    ["hot", "new", "comments"].includes(initialSort) ? initialSort : "hot"
+  )
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
 
