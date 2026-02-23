@@ -255,12 +255,13 @@ export function EmbedPreviewCard({
               // oembed HTML 렌더링
               provider === 'instagram' ? (
                 <InstagramPreviewEmbed html={embedHtml} />
+              ) : provider === 'x' ? (
+                <XPreviewEmbed html={embedHtml} />
               ) : (
                 <div
                   className={cn(
                     "relative w-full rounded-lg overflow-hidden",
                     provider === 'youtube' && "aspect-video",
-                    provider === 'x' && "min-h-[400px]"
                   )}
                 >
                   <div
@@ -368,6 +369,54 @@ function InstagramPreviewEmbed({ html }: { html: string }) {
     <div
       ref={containerRef}
       className="max-w-[540px] mx-auto p-4 [&_.instagram-media]:!mx-auto"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
+
+/** X(Twitter) blockquote + widgets.js 렌더링 (preview card 확장 시) */
+function XPreviewEmbed({ html }: { html: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    type TwttrWindow = Window & typeof globalThis & {
+      twttr?: { widgets: { load: (el?: HTMLElement) => void } }
+      __twttrLoading?: boolean
+    }
+    const win = window as TwttrWindow
+
+    const load = () => {
+      if (containerRef.current) {
+        win.twttr?.widgets.load(containerRef.current)
+      }
+    }
+
+    const timer = setTimeout(() => {
+      if (win.twttr) {
+        load()
+        return
+      }
+      if (win.__twttrLoading) {
+        const interval = setInterval(() => {
+          if (win.twttr) { clearInterval(interval); load() }
+        }, 100)
+        return
+      }
+      win.__twttrLoading = true
+      const script = document.createElement('script')
+      script.src = 'https://platform.twitter.com/widgets.js'
+      script.async = true
+      script.onload = () => { win.__twttrLoading = false; load() }
+      document.body.appendChild(script)
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [html])
+
+  return (
+    <div
+      ref={containerRef}
+      className="max-w-[550px] mx-auto p-4 [&_.twitter-tweet]:!mx-auto"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

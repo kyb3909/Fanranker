@@ -84,17 +84,16 @@ export function EmbedCard({
     return <InstagramEmbed html={html} url={url} className={className} />
   }
 
-  // Render embed HTML with responsive wrapper (YouTube, X)
+  // X: blockquote + widgets.js 렌더링
+  if (provider === 'x') {
+    return <XEmbed html={html} url={url} title={title} author_name={author_name} className={className} />
+  }
+
+  // Render embed HTML with responsive wrapper (YouTube)
   return (
     <Card className={cn("border border-border bg-card overflow-hidden", className)}>
       <CardContent className="p-0">
-        <div
-          className={cn(
-            "relative w-full",
-            provider === 'youtube' && "aspect-video",
-            provider === 'x' && "min-h-[400px]"
-          )}
-        >
+        <div className="relative w-full aspect-video">
           <div
             className="w-full h-full [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:border-0"
             dangerouslySetInnerHTML={{ __html: html }}
@@ -197,6 +196,96 @@ function InstagramEmbed({
         >
           {url}
         </a>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** widgets.js 로드 유틸리티 (전역 1회만 로드) */
+type TwttrWindow = Window & typeof globalThis & {
+  twttr?: { widgets: { load: (el?: HTMLElement) => void } }
+  __twttrLoading?: boolean
+}
+
+function loadTwitterWidgetsJs(callback: () => void) {
+  const win = window as TwttrWindow
+  if (win.twttr) {
+    callback()
+    return
+  }
+  if (win.__twttrLoading) {
+    const interval = setInterval(() => {
+      if (win.twttr) {
+        clearInterval(interval)
+        callback()
+      }
+    }, 100)
+    return
+  }
+  win.__twttrLoading = true
+  const script = document.createElement('script')
+  script.src = 'https://platform.twitter.com/widgets.js'
+  script.async = true
+  script.onload = () => {
+    win.__twttrLoading = false
+    callback()
+  }
+  document.body.appendChild(script)
+}
+
+/**
+ * X(Twitter) 임베드 전용 컴포넌트
+ * blockquote를 삽입 후 widgets.js를 로드하여 인터랙티브 렌더링
+ */
+function XEmbed({
+  html,
+  url,
+  title,
+  author_name,
+  className,
+}: {
+  html: string
+  url: string
+  title?: string
+  author_name?: string
+  className?: string
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadTwitterWidgetsJs(() => {
+        const win = window as TwttrWindow
+        if (containerRef.current) {
+          win.twttr?.widgets.load(containerRef.current)
+        }
+      })
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [html])
+
+  return (
+    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+      <CardContent className="p-4">
+        <div
+          ref={containerRef}
+          className="max-w-[550px] mx-auto [&_.twitter-tweet]:!mx-auto"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+        {(title || author_name) && (
+          <div className="mt-2 border-t border-border pt-2">
+            {title && (
+              <h3 className="font-semibold text-sm text-foreground line-clamp-2">
+                {title}
+              </h3>
+            )}
+            {author_name && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {author_name}
+              </p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
