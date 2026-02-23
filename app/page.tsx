@@ -50,6 +50,7 @@ interface Post {
   image?: string
   upvotes: number
   comments: number
+  temperature: number
   isUpvoted: boolean
   createdAt: Date
 }
@@ -200,7 +201,7 @@ function HomeContent() {
   }, [identity])
 
   // 게시글 변환 함수
-  const transformPosts = useCallback((fetchedPosts: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null; temperature?: number }[]) => {
+  const transformPosts = useCallback((fetchedPosts: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; temperature?: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null; temperature?: number }[]) => {
     const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
     return fetchedPosts.map((post) => {
         const profile = profileMap.get(post.user_id)
@@ -218,6 +219,7 @@ function HomeContent() {
           image: post.image,
           upvotes: post.vote_count || 0,
           comments: post.comment_count || 0,
+          temperature: post.temperature ?? 0,
           isUpvoted: false,
           createdAt: new Date(post.created_at),
         }
@@ -339,7 +341,7 @@ function HomeContent() {
       case "random":
         return Math.random() - 0.5
       case "hot":
-        return b.upvotes - a.upvotes
+        return b.temperature - a.temperature
       case "new":
         return b.createdAt.getTime() - a.createdAt.getTime()
       default:
