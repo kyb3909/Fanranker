@@ -154,10 +154,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('community_slug', communitySlug)
     }
 
-    // 정렬 (hot은 나중에 계산된 temperature로 메모리 정렬)
+    // 정렬: hot은 DB의 temperature 컬럼 사용
     switch (sort) {
       case 'hot':
-        query = query.order('created_at', { ascending: false })
+        query = query.order('temperature', { ascending: false, nullsFirst: false })
         break
       case 'comments':
         query = query.order('comment_count', { ascending: false })
@@ -182,16 +182,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ posts: [], profiles: [] })
     }
 
-    // 2. 반감기 적용 온도 계산 (comment_count는 DB 트리거가 관리하므로 그대로 사용)
-    let postsWithAccurateCounts = posts.map((post) => {
-      return { ...post, temperature: computeTemperature(post) }
-    })
-
-    if (sort === 'hot') {
-      postsWithAccurateCounts = postsWithAccurateCounts.sort(
-        (a, b) => (b.temperature ?? 0) - (a.temperature ?? 0)
-      )
-    }
+    // DB temperature 값 그대로 사용 (pg_cron이 매분 큐 처리)
+    const postsWithAccurateCounts = posts
 
     // 3. 작성자 프로필 조회
     const userIds = [...new Set(posts.map((p) => p.user_id))]

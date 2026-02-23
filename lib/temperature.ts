@@ -37,10 +37,10 @@ export function getTemperatureColor(temp: number): string {
 // ── 온도 계산 (클라이언트 fallback) ──
 
 export const HALF_LIFE_HOURS = 48
-const W_UP = 10
-const W_COMMENT = 7
-const W_VIEW = 0.5
-const NEW_BOOST_MAX = 5
+const W_UP = 15
+const W_COMMENT = 12
+const W_VIEW = 1
+const NEW_BOOST_MAX = 8
 
 export interface TemperatureInput {
   vote_count: number
@@ -69,8 +69,8 @@ export function computeTemperature(
 
   // New post boost
   let boost = 0
-  if (ageHours <= 0.5) boost = NEW_BOOST_MAX
-  else if (ageHours <= 2.0) boost = NEW_BOOST_MAX * (2.0 - ageHours) / 1.5
+  if (ageHours <= 1.0) boost = NEW_BOOST_MAX
+  else if (ageHours <= 4.0) boost = NEW_BOOST_MAX * (4.0 - ageHours) / 3.0
 
   const score = e * d + boost
   return Math.min(100, Math.max(0, Math.round(score * 10) / 10))

@@ -328,8 +328,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
                 <button className="flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary transition-colors cursor-pointer">
                   {post.author}
                   {post.authorTemperature != null && post.authorTemperature > 0 && (
-                    <span className="text-[10px] font-semibold tabular-nums" style={getTemperatureStyle(post.authorTemperature)}>
-                      {post.authorTemperature.toFixed(0)}°
+                    <span className="text-[12px] font-semibold tabular-nums" style={getTemperatureStyle(post.authorTemperature)}>
+                      {post.authorTemperature.toFixed(1)}°
                     </span>
                   )}
                 </button>

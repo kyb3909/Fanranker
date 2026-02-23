@@ -4,7 +4,6 @@ import { NewsTicker } from "@/components/news-ticker"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
 import { createServerAnonClient } from "@/lib/supabase"
-import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatMemberCount } from "@/lib/utils/format"
@@ -157,12 +156,7 @@ function transformPosts(posts: {
   profile?: { nickname?: string; avatar_url?: string | null } | null
 }[]) {
   return posts.map((post) => {
-    const row = {
-      vote_count: post.vote_count || 0,
-      comment_count: post.comment_count || 0,
-      created_at: post.created_at,
-    }
-    const temperature = computeTemperature(row)
+    const temperature = post.temperature ?? 0
     return {
       id: post.id,
       community: post.community_slug,
