@@ -17,9 +17,9 @@ const ALLOWED_IFRAME_HOSTS = [
  * Returns safe HTML containing only the iframe, or empty string.
  */
 export function sanitizeEmbedHtml(html: string, provider: string): string {
-  // For X/Twitter, the response is a blockquote (not iframe) - allow it with safe attributes
-  if (provider === 'x') {
-    return sanitizeTwitterHtml(html)
+  // X/Twitter and Instagram use blockquote (not iframe) - sanitize similarly
+  if (provider === 'x' || provider === 'instagram') {
+    return sanitizeBlockquoteHtml(html)
   }
 
   // Extract iframe src using regex (no DOM parser needed on Edge)
@@ -49,10 +49,10 @@ export function sanitizeEmbedHtml(html: string, provider: string): string {
 }
 
 /**
- * Twitter embeds use blockquote + script, not iframes.
+ * Blockquote-based embeds (Twitter/X, Instagram).
  * Strip all script tags and only keep the blockquote with safe text content.
  */
-function sanitizeTwitterHtml(html: string): string {
+function sanitizeBlockquoteHtml(html: string): string {
   // Remove all script tags
   let safe = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
 

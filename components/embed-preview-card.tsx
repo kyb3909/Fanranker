@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -252,20 +252,23 @@ export function EmbedPreviewCard({
                 </div>
               </div>
             ) : embedHtml ? (
-              // oembed HTML 렌더링 (iframe)
-              <div
-                className={cn(
-                  "relative w-full rounded-lg overflow-hidden",
-                  provider === 'youtube' && "aspect-video",
-                  provider === 'instagram' && "aspect-square max-w-md mx-auto",
-                  provider === 'x' && "min-h-[400px]"
-                )}
-              >
+              // oembed HTML 렌더링
+              provider === 'instagram' ? (
+                <InstagramPreviewEmbed html={embedHtml} />
+              ) : (
                 <div
-                  className="w-full h-full [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:border-0"
-                  dangerouslySetInnerHTML={{ __html: embedHtml }}
-                />
-              </div>
+                  className={cn(
+                    "relative w-full rounded-lg overflow-hidden",
+                    provider === 'youtube' && "aspect-video",
+                    provider === 'x' && "min-h-[400px]"
+                  )}
+                >
+                  <div
+                    className="w-full h-full [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:border-0"
+                    dangerouslySetInnerHTML={{ __html: embedHtml }}
+                  />
+                </div>
+              )
             ) : (
               // Fallback: 썸네일 이미지 확대 보기
               <div className="w-full">
@@ -323,6 +326,50 @@ export function EmbedPreviewCard({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/** Instagram blockquote + embed.js 렌더링 (preview card 확장 시) */
+function InstagramPreviewEmbed({ html }: { html: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    type InstgrmWindow = Window & typeof globalThis & {
+      instgrm?: { Embeds: { process: () => void } }
+      __igEmbedLoading?: boolean
+    }
+    const win = window as InstgrmWindow
+
+    const process = () => win.instgrm?.Embeds.process()
+
+    const timer = setTimeout(() => {
+      if (win.instgrm) {
+        process()
+        return
+      }
+      if (win.__igEmbedLoading) {
+        const interval = setInterval(() => {
+          if (win.instgrm) { clearInterval(interval); process() }
+        }, 100)
+        return
+      }
+      win.__igEmbedLoading = true
+      const script = document.createElement('script')
+      script.src = 'https://www.instagram.com/embed.js'
+      script.async = true
+      script.onload = () => { win.__igEmbedLoading = false; process() }
+      document.body.appendChild(script)
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [html])
+
+  return (
+    <div
+      ref={containerRef}
+      className="max-w-[540px] mx-auto p-4 [&_.instagram-media]:!mx-auto"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
 

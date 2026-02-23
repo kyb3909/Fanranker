@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { useEffect, useRef } from "react"
 
 export interface EmbedCardProps {
   provider: 'youtube' | 'instagram' | 'x'
@@ -78,27 +79,28 @@ export function EmbedCard({
     )
   }
 
-  // Render embed HTML with responsive wrapper
+  // Instagram: blockquote + embed.js 렌더링
+  if (provider === 'instagram') {
+    return <InstagramEmbed html={html} url={url} className={className} />
+  }
+
+  // Render embed HTML with responsive wrapper (YouTube, X)
   return (
     <Card className={cn("border border-border bg-card overflow-hidden", className)}>
       <CardContent className="p-0">
         <div
           className={cn(
             "relative w-full",
-            // Responsive aspect ratio for video embeds
             provider === 'youtube' && "aspect-video",
-            provider === 'instagram' && "aspect-square max-w-md mx-auto",
             provider === 'x' && "min-h-[400px]"
           )}
         >
-          {/* Embed HTML container */}
           <div
             className="w-full h-full [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:border-0"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
-        
-        {/* Optional metadata footer */}
+
         {(title || author_name) && (
           <div className="p-4 border-t border-border bg-muted/30">
             {title && (
@@ -113,6 +115,88 @@ export function EmbedCard({
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** embed.js 로드 유틸리티 (전역 1회만 로드) */
+type InstgrmWindow = Window & typeof globalThis & {
+  instgrm?: { Embeds: { process: () => void } }
+  __igEmbedLoading?: boolean
+}
+
+function loadInstagramEmbedJs(callback: () => void) {
+  const win = window as InstgrmWindow
+  // 이미 로드 완료된 경우
+  if (win.instgrm) {
+    callback()
+    return
+  }
+  // 이미 로드 중인 경우 — 로드 완료까지 polling
+  if (win.__igEmbedLoading) {
+    const interval = setInterval(() => {
+      if (win.instgrm) {
+        clearInterval(interval)
+        callback()
+      }
+    }, 100)
+    return
+  }
+  // 최초 로드
+  win.__igEmbedLoading = true
+  const script = document.createElement('script')
+  script.src = 'https://www.instagram.com/embed.js'
+  script.async = true
+  script.onload = () => {
+    win.__igEmbedLoading = false
+    callback()
+  }
+  document.body.appendChild(script)
+}
+
+/**
+ * Instagram 임베드 전용 컴포넌트
+ * blockquote를 삽입 후 embed.js를 로드하여 인터랙티브 렌더링
+ */
+function InstagramEmbed({
+  html,
+  url,
+  className,
+}: {
+  html: string
+  url: string
+  className?: string
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // DOM에 blockquote가 삽입된 후 embed.js 로드 + process()
+    const timer = setTimeout(() => {
+      loadInstagramEmbedJs(() => {
+        const win = window as InstgrmWindow
+        win.instgrm?.Embeds.process()
+      })
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [html])
+
+  return (
+    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+      <CardContent className="p-4">
+        <div
+          ref={containerRef}
+          className="max-w-[540px] mx-auto [&_.instagram-media]:!mx-auto"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-xs text-muted-foreground mt-2 hover:underline break-all"
+        >
+          {url}
+        </a>
       </CardContent>
     </Card>
   )

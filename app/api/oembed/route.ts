@@ -21,7 +21,6 @@ interface OEmbedResponse {
  */
 const OEMBED_ENDPOINTS = {
   youtube: 'https://www.youtube.com/oembed',
-  instagram: 'https://graph.facebook.com/v17.0/instagram_oembed',
   x: 'https://publish.twitter.com/oembed',
 }
 
@@ -127,39 +126,34 @@ async function fetchYouTubeOEmbed(url: string, includeHtml: boolean = true): Pro
 
 /**
  * Fetch oEmbed data from Instagram
- * 
- * Note: Instagram oEmbed requires a Facebook App ID and App Secret for production.
- * For development, you may need to use a proxy or alternative method.
- * This implementation assumes you have proper Facebook Graph API credentials.
+ *
+ * blockquote + embed.js 방식: Facebook Access Token 불필요
+ * embed.js가 클라이언트에서 blockquote를 인터랙티브 임베드로 변환
  */
 async function fetchInstagramOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
   const normalizedUrl = normalizeInstagramUrl(url)
-  
-  // Instagram oEmbed requires access_token
-  // You should store this in environment variables
-  const accessToken = process.env.FACEBOOK_ACCESS_TOKEN
-  
-  if (!accessToken) {
-    throw new Error('Facebook access token not configured')
+
+  // URL에서 shortcode 추출
+  const match = normalizedUrl.match(URL_PATTERNS.instagram)
+  if (!match) {
+    throw new Error('Invalid Instagram URL')
   }
 
-  const oembedUrl = `${OEMBED_ENDPOINTS.instagram}?url=${encodeURIComponent(normalizedUrl)}&access_token=${accessToken}`
+  // 검증된 shortcode로 안전한 permalink 생성 (XSS 방지)
+  const shortcode = match[1]
+  const isReel = normalizedUrl.includes('/reel/')
+  const permalink = `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${shortcode}/`
 
-  const response = await fetch(oembedUrl)
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Instagram oEmbed failed: ${response.statusText} - ${errorText}`)
-  }
-
-  const data = await response.json()
+  // blockquote HTML 생성 (embed.js가 클라이언트에서 렌더링)
+  const blockquoteHtml = includeHtml
+    ? `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
+    : undefined
 
   return {
     provider: 'instagram',
     url: normalizedUrl,
-    html: includeHtml ? (data.html || '') : undefined,
-    title: data.title,
-    thumbnail_url: data.thumbnail_url,
-    author_name: data.author_name,
+    html: blockquoteHtml,
+    author_name: undefined,
   }
 }
 
