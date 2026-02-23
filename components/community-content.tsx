@@ -1,12 +1,10 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
-
-type SortType = "new" | "comments"
 
 interface Post {
   id: number | string
@@ -45,7 +43,6 @@ interface CommunityContentProps {
 
 export function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
-  const [sortBy, setSortBy] = useState<SortType>("new")
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
 
@@ -79,16 +76,8 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
     }
   }
 
-  const sortedPosts = useMemo(() => [...posts].sort((a, b) => {
-    switch (sortBy) {
-      case "new":
-        return b.createdAt.getTime() - a.createdAt.getTime()
-      case "comments":
-        return b.comments - a.comments
-      default:
-        return 0
-    }
-  }), [posts, sortBy])
+  // 항상 최신순 정렬 (공지는 서버에서 이미 상단 배치)
+  const sortedPosts = [...posts].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
   if (!isMainContent) {
     return (
@@ -119,34 +108,16 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
           </div>
 
           <div className="bg-card rounded-lg border border-border overflow-hidden">
-            {/* 테이블 상단: 컴팩트한 패딩 */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/50">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-foreground">전체 {posts.length.toLocaleString()}건</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {communitySlug && (
-                  <Link href={`/write?community=${communitySlug}`}>
-                    <Button size="sm" className="h-7 text-xs px-3 gap-1.5">
-                      <Pencil className="h-3.5 w-3.5" />
-                      글쓰기
-                    </Button>
-                  </Link>
-                )}
-                <div className="flex gap-1">
-                <Button variant={sortBy === "new" ? "default" : "ghost"} size="sm" className="h-7 text-xs px-2" onClick={() => setSortBy("new")}>
-                  최신순
-                </Button>
-                <Button
-                  variant={sortBy === "comments" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 text-xs px-2"
-                  onClick={() => setSortBy("comments")}
-                >
-                  댓글순
-                </Button>
-                </div>
-              </div>
+            {/* 테이블 상단 */}
+            <div className="flex items-center justify-end px-3 py-2 border-b border-border bg-muted/50">
+              {communitySlug && (
+                <Link href={`/write?community=${communitySlug}`}>
+                  <Button size="sm" className="h-7 text-xs px-3 gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" />
+                    글쓰기
+                  </Button>
+                </Link>
+              )}
             </div>
 
             {/* 테이블 헤더: 컴팩트한 패딩 */}
