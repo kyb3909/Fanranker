@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
 
-type SortType = "hot" | "new" | "comments"
+type SortType = "new" | "comments"
 
 interface Post {
   id: number | string
@@ -46,11 +45,7 @@ interface CommunityContentProps {
 
 export function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
-  const searchParams = useSearchParams()
-  const initialSort = (searchParams.get("sort") as SortType) || "hot"
-  const [sortBy, setSortBy] = useState<SortType>(
-    ["hot", "new", "comments"].includes(initialSort) ? initialSort : "hot"
-  )
+  const [sortBy, setSortBy] = useState<SortType>("new")
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
 
@@ -86,8 +81,6 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
 
   const sortedPosts = useMemo(() => [...posts].sort((a, b) => {
     switch (sortBy) {
-      case "hot":
-        return (b.temperature ?? 0) - (a.temperature ?? 0)
       case "new":
         return b.createdAt.getTime() - a.createdAt.getTime()
       case "comments":
@@ -141,9 +134,6 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
                   </Link>
                 )}
                 <div className="flex gap-1">
-                <Button variant={sortBy === "hot" ? "default" : "ghost"} size="sm" className="h-7 text-xs px-2" onClick={() => setSortBy("hot")}>
-                  온도순
-                </Button>
                 <Button variant={sortBy === "new" ? "default" : "ghost"} size="sm" className="h-7 text-xs px-2" onClick={() => setSortBy("new")}>
                   최신순
                 </Button>

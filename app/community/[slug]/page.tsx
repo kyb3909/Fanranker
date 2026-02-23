@@ -1,4 +1,3 @@
-import { Suspense } from "react"
 import type { Metadata } from "next"
 import { Header } from "@/components/header"
 import { NewsTicker } from "@/components/news-ticker"
@@ -238,9 +237,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
         {/* 12컬럼 그리드: 조밀한 간격 */}
         <div className="grid grid-cols-12 gap-4 lg:gap-5">
           <div className="col-span-12 lg:col-span-9">
-            <Suspense>
-              <CommunityContent community={community} posts={communityPosts} communitySlug={slug} />
-            </Suspense>
+            <CommunityContent community={community} posts={communityPosts} communitySlug={slug} />
           </div>
 
           <aside className="hidden lg:block lg:col-span-3">

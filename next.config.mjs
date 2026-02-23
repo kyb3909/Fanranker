@@ -50,6 +50,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'img.youtube.com', // YouTube 썸네일 (hqdefault)
+      },
+      {
+        protocol: 'https',
         hostname: '*.cdninstagram.com', // Instagram
       },
       {

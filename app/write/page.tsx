@@ -202,7 +202,7 @@ function WriteContent() {
       if (editId) {
         router.push(`/post/${editId}`)
       } else {
-        router.push(`/community/${selectedCommunity}?sort=new`)
+        router.push(`/community/${selectedCommunity}`)
       }
     } catch (error) {
       alert(error instanceof Error ? error.message : '글 작성 중 오류가 발생했습니다.')
