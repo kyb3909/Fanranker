@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, Loader2, ArrowUpDown } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface TickerItem {
   id: number
@@ -45,7 +46,7 @@ export function TickerManagement({ initialItems, total: initialTotal }: { initia
       if (!res.ok) throw new Error((await res.json()).error)
       setItems(prev => prev.map(i => i.id === itemId ? { ...i, importance } : i))
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }
@@ -59,7 +60,7 @@ export function TickerManagement({ initialItems, total: initialTotal }: { initia
       if (!res.ok) throw new Error((await res.json()).error)
       await fetchItems()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }

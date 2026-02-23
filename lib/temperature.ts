@@ -1,36 +1,77 @@
 /**
- * 게시물 "온도" 계산 (인기 점수)
+ * 게시물 "온도" 계산 및 색상 유틸
  *
- * - 기본 점수: (추천×2 + 댓글×3) / 10
- * - 시간 경과에 따른 반감기 decay: base × 0.5^(경과시간/반감기)
- * - 반감기 기본값: 24시간 (HALF_LIFE_HOURS)
+ * DB에서는 scoring_config 기반으로 계산됨 (update_temperature_score 함수)
+ * 클라이언트에서는 DB의 temperature 값을 그대로 사용
  *
- * @see TEMPERATURE_FORMULA.md
+ * 색상: 0° = 파란색(220°) → 100° = 빨간색(0°) HSL 그라데이션
  */
 
-export const HALF_LIFE_HOURS = 24
+// ── 온도 색상 (HSL 기반 연속 그라데이션) ──
+
+/**
+ * 온도에 따른 inline style 색상 반환
+ * 0° → 파란색(hsl 220), 50° → 노란색/주황(hsl 40), 100° → 빨간색(hsl 0)
+ */
+export function getTemperatureStyle(temp: number): React.CSSProperties {
+  const t = Math.max(0, Math.min(100, temp))
+  // hue: 220 (blue) → 0 (red), saturation: 70-85%, lightness: 45-50%
+  const hue = 220 - (t / 100) * 220
+  const saturation = 70 + (t / 100) * 15
+  const lightness = 50 - (t / 100) * 5
+  return { color: `hsl(${hue}, ${saturation}%, ${lightness}%)` }
+}
+
+/**
+ * 온도에 따른 Tailwind 색상 클래스 (fallback용)
+ */
+export function getTemperatureColor(temp: number): string {
+  if (temp >= 80) return "text-red-600"
+  if (temp >= 60) return "text-orange-500"
+  if (temp >= 40) return "text-amber-500"
+  if (temp >= 20) return "text-yellow-500"
+  if (temp >= 10) return "text-cyan-500"
+  return "text-blue-500"
+}
+
+// ── 온도 계산 (클라이언트 fallback) ──
+
+export const HALF_LIFE_HOURS = 48
+const W_UP = 10
+const W_COMMENT = 7
+const W_VIEW = 0.5
+const NEW_BOOST_MAX = 5
 
 export interface TemperatureInput {
   vote_count: number
   comment_count: number
+  view_count_unique?: number
   created_at: string
 }
 
 /**
- * 반감기를 적용한 온도 계산
- *
- * @param post - vote_count, comment_count, created_at
- * @param now - 기준 시각 (기본: 현재)
- * @returns 0~100 범위의 온도 (소수 첫째자리)
+ * 클라이언트 fallback 온도 계산 (DB 값이 없을 때만 사용)
+ * DB의 update_temperature_score()와 동일한 로직
  */
 export function computeTemperature(
   post: TemperatureInput,
   now: Date = new Date()
 ): number {
-  const base = (post.vote_count * 2 + post.comment_count * 3) / 10
-  const created = new Date(post.created_at).getTime()
-  const ageHours = (now.getTime() - created) / (1000 * 60 * 60)
-  const decay = Math.pow(0.5, ageHours / HALF_LIFE_HOURS)
-  const value = base * decay
-  return Math.min(100, Math.max(0, Math.round(value * 10) / 10))
+  const ageHours = (now.getTime() - new Date(post.created_at).getTime()) / (1000 * 60 * 60)
+
+  // Engagement score (ln 기반)
+  const e = W_UP * Math.log(1 + Math.max(post.vote_count, 0))
+    + W_COMMENT * Math.log(1 + Math.max(post.comment_count, 0))
+    + W_VIEW * Math.log(1 + Math.max(post.view_count_unique ?? 0, 0))
+
+  // Time decay
+  const d = Math.pow(2, -(ageHours / HALF_LIFE_HOURS))
+
+  // New post boost
+  let boost = 0
+  if (ageHours <= 0.5) boost = NEW_BOOST_MAX
+  else if (ageHours <= 2.0) boost = NEW_BOOST_MAX * (2.0 - ageHours) / 1.5
+
+  const score = e * d + boost
+  return Math.min(100, Math.max(0, Math.round(score * 10) / 10))
 }

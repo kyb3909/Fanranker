@@ -7,36 +7,9 @@ import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
-
-// 커뮤니티 타입 정의
-interface Community {
-  slug: string
-  name: string
-  memberCount: number
-  icon: string
-  emoji?: string
-  todayPosts?: number
-}
-
-// 전체 커뮤니티 메뉴
-const ALL_COMMUNITIES: Community[] = [
-  { slug: "overseas-football", name: "해외축구", memberCount: 1245000, icon: "", emoji: "⚽" },
-  { slug: "domestic-football", name: "국내축구", memberCount: 453000, icon: "", emoji: "🏟️" },
-  { slug: "baseball", name: "야구", memberCount: 982000, icon: "", emoji: "⚾" },
-  { slug: "basketball", name: "농구", memberCount: 387000, icon: "", emoji: "🏀" },
-  { slug: "volleyball", name: "배구", memberCount: 221000, icon: "", emoji: "🏐" },
-  { slug: "esports", name: "e스포츠", memberCount: 671000, icon: "", emoji: "🎮" },
-  { slug: "free-board", name: "자유게시판", memberCount: 894000, icon: "", emoji: "💬" },
-  { slug: "tips", name: "정보게시판", memberCount: 342000, icon: "", emoji: "📊" },
-  { slug: "movies", name: "영화", memberCount: 567000, icon: "", emoji: "🎬" },
-]
-
-// 최근 방문 커뮤니티
-const RECENT_COMMUNITIES: Community[] = [
-  { slug: "overseas-football", name: "해외축구", memberCount: 1245000, icon: "", emoji: "⚽" },
-  { slug: "free-board", name: "자유게시판", memberCount: 894000, icon: "", emoji: "💬" },
-  { slug: "baseball", name: "야구", memberCount: 982000, icon: "", emoji: "⚾" },
-]
+import { ALL_COMMUNITIES } from "@/lib/constants/communities"
+import { toast } from "@/hooks/use-toast"
+import { AdPlaceholder } from "@/components/ad-placeholder"
 
 
 export function CommunitySidebar() {
@@ -86,9 +59,9 @@ export function CommunitySidebar() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         if (res.status === 401) {
-          alert("로그인 후 즐겨찾기를 사용할 수 있습니다.")
+          toast({ variant: "destructive", title: "로그인 필요", description: "로그인 후 즐겨찾기를 사용할 수 있습니다." })
         } else {
-          alert(data.error || "처리에 실패했습니다.")
+          toast({ variant: "destructive", title: "오류", description: data.error || "처리에 실패했습니다." })
         }
         return
       }
@@ -103,7 +76,7 @@ export function CommunitySidebar() {
       })
       router.refresh()
     } catch {
-      alert("처리 중 오류가 발생했습니다.")
+      toast({ variant: "destructive", title: "오류", description: "처리 중 오류가 발생했습니다." })
     } finally {
       setTogglingSlug(null)
     }
@@ -195,6 +168,9 @@ export function CommunitySidebar() {
           )}
         </div>
       </Card>
+
+      {/* 광고 플레이스홀더 */}
+      <AdPlaceholder variant="sidebar" />
 
       {/* 3. 리소스 (사이트맵 하단) */}
       <nav className="mt-auto shrink-0">

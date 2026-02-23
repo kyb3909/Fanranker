@@ -45,8 +45,8 @@ export function getTodayDailyId(): string {
  * Get fixed daily window boundaries: [dailyId 08:00 KST, dailyId+1 08:00 KST)
  * Flips at 23:00 KST to next day's window (via getTodayDailyId).
  */
-export function getDailyWindow(): { start: Date; end: Date; dailyId: string } {
-  const dailyId = getTodayDailyId()
+export function getDailyWindow(overrideDailyId?: string): { start: Date; end: Date; dailyId: string } {
+  const dailyId = overrideDailyId || getTodayDailyId()
   // 08:00 KST = 23:00 UTC of the PREVIOUS calendar day
   // e.g. dailyId '2026-02-21' → start = 2026-02-20T23:00:00Z (= 2/21 08:00 KST)
   const start = new Date(new Date(`${dailyId}T23:00:00.000Z`).getTime() - 24 * 60 * 60 * 1000)

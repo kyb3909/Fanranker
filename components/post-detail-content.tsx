@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
+import { getTemperatureStyle } from "@/lib/temperature"
 import { PostActions } from "./post-detail/post-actions"
 import { CommentSection } from "./post-detail/comment-section"
 import type { Post } from "./post-detail/post-detail-types"
@@ -67,18 +68,12 @@ export function PostDetailContent({ post }: { post: Post }) {
   }
 
   const temperature = post.temperature ?? Math.min(100, Math.floor((post.upvotes * 2 + post.comments * 3) / 10))
-  const getTemperatureColor = (temp: number) => {
-    if (temp >= 80) return "text-red-500"
-    if (temp >= 60) return "text-orange-500"
-    if (temp >= 40) return "text-yellow-500"
-    return "text-blue-500"
-  }
 
   return (
     <div className="space-y-4">
       {/* Post Detail Card */}
       <Card className="overflow-hidden border border-border bg-card">
-        <div className="p-4">
+        <div className="p-5 sm:p-6">
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-start gap-3">
@@ -106,7 +101,7 @@ export function PostDetailContent({ post }: { post: Post }) {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <span className="text-sm text-muted-foreground">{post.timestamp}</span>
-                  <div className={`flex items-center gap-1 ${getTemperatureColor(temperature)}`}>
+                  <div className="flex items-center gap-1" style={getTemperatureStyle(temperature)}>
                     <Thermometer className="h-4 w-4" />
                     <span className="text-sm font-semibold">{temperature}°</span>
                   </div>
@@ -155,7 +150,7 @@ export function PostDetailContent({ post }: { post: Post }) {
           {/* Content */}
           <div className="space-y-3">
             <h2 className="text-xl font-semibold text-foreground leading-snug text-pretty">{post.title}</h2>
-            <div className="pt-3">
+            <div className="pt-3 px-1">
               {typeof post.content === 'string' ? (
                 <p className="text-foreground leading-relaxed">{post.content}</p>
               ) : (

@@ -8,6 +8,7 @@ import { ProfileSync } from '@/components/profile-sync'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { FloatingWriteButton } from '@/components/floating-write-button'
 import { IdentityProvider } from '@/components/identity-provider'
+import { ThemeProvider } from '@/components/theme-provider'
 import { SITE_CONFIG, jsonLd } from '@/lib/seo'
 import "./globals.css"
 
@@ -172,12 +173,14 @@ export default function RootLayout({
           >
             본문으로 건너뛰기
           </a>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <ProfileSync />
           <IdentityProvider>
             {children}
           </IdentityProvider>
           <FloatingWriteButton />
           <MobileTabBar />
+          </ThemeProvider>
           <Analytics />
         </body>
       </html>

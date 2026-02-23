@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { UserProfileBadge } from "@/components/user-profile-badge"
 import { UserPlus, UserMinus } from "lucide-react"
 import { useState, useEffect } from "react"
+import { getTemperatureStyle } from "@/lib/temperature"
 
 interface UserProfileHeaderProps {
   userId: string
@@ -62,12 +63,6 @@ export function UserProfileHeader({
     }
   }
 
-  const getTemperatureColor = (temp: number) => {
-    if (temp >= 80) return "text-red-500"
-    if (temp >= 60) return "text-orange-500"
-    if (temp >= 40) return "text-yellow-500"
-    return "text-blue-500"
-  }
 
   return (
     <div className="flex items-start justify-between p-4 sm:p-6 bg-card border-b border-border">
@@ -83,7 +78,7 @@ export function UserProfileHeader({
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">{nickname}</h1>
             {isExpert && <UserProfileBadge isExpert={isExpert} size="md" />}
           </div>
-          <div className={`flex items-center gap-1 text-sm ${getTemperatureColor(temperature)}`}>
+          <div className="flex items-center gap-1 text-sm" style={getTemperatureStyle(temperature)}>
             <span className="font-semibold">온도</span>
             <span className="font-bold">{temperature.toFixed(1)}°</span>
           </div>

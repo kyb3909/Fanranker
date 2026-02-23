@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Header } from "@/components/header"
@@ -12,6 +12,7 @@ import { useIdentity } from "@/components/identity-provider"
 import { Dices, Flame, Clock, Loader2, Compass, Newspaper, Trophy, Palette, Heart, Eye, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
+import { AdPlaceholder } from "@/components/ad-placeholder"
 import { IS_SPORTS, IS_CULTURE } from "@/lib/site-config"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
@@ -149,6 +150,11 @@ function HomeContent() {
   const [sortBy, setSortBy] = useState<SortType>("hot")
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [offset, setOffset] = useState(0)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const PAGE_SIZE = 20
   const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
   const [followsLoaded, setFollowsLoaded] = useState(false)
 
@@ -193,48 +199,48 @@ function HomeContent() {
     setContentLoaded(false)
   }, [identity])
 
-  // Supabase에서 글 목록 가져오기
+  // 게시글 변환 함수
+  const transformPosts = useCallback((fetchedPosts: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null; temperature?: number }[]) => {
+    const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+    const hasFollows = followedCommunities.size > 0
+    return fetchedPosts
+      .filter((post) => !hasFollows || followedCommunities.has(post.community_slug))
+      .map((post) => {
+        const profile = profileMap.get(post.user_id)
+        return {
+          id: post.id,
+          community: COMMUNITY_NAMES[post.community_slug] || post.community_slug,
+          communitySlug: post.community_slug,
+          author: profile?.nickname || "익명",
+          avatar: profile?.avatar_url || "/placeholder-user.jpg",
+          authorTemperature: profile?.temperature ?? 0,
+          userId: post.user_id,
+          timestamp: formatRelativeTime(new Date(post.created_at)),
+          title: post.title,
+          content: post.content,
+          image: post.image,
+          upvotes: post.vote_count || 0,
+          comments: post.comment_count || 0,
+          isUpvoted: false,
+          createdAt: new Date(post.created_at),
+        }
+      })
+  }, [followedCommunities])
+
+  // Supabase에서 글 목록 가져오기 (첫 페이지)
   useEffect(() => {
     async function fetchPosts() {
       setIsLoading(true)
+      setOffset(0)
+      setHasMore(true)
       try {
-        const sortParam = sortBy === "hot" ? "hot" : sortBy === "random" ? "new" : "new"
-        const response = await fetch(`/api/posts?sort=${sortParam}&limit=50`)
-
-        if (!response.ok) {
-          throw new Error('글 목록을 가져오는데 실패했습니다.')
-        }
-
-        const { posts: fetchedPosts, profiles } = await response.json()
-
-        // 프로필 매핑
-        const profileMap = new Map<string, { user_id: string; nickname: string; avatar_url: string | null }>(profiles?.map((p: { user_id: string; nickname: string; avatar_url: string | null }) => [p.user_id, p]) || [])
-
-        // 데이터 변환: 팔로우한 커뮤니티가 있으면 필터링, 없으면 전체 표시
-        const hasFollows = followedCommunities.size > 0
-        const transformedPosts: Post[] = fetchedPosts
-          .filter((post: { community_slug: string }) => !hasFollows || followedCommunities.has(post.community_slug))
-          .map((post: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; created_at: string }) => {
-            const profile = profileMap.get(post.user_id)
-            return {
-              id: post.id,
-              community: COMMUNITY_NAMES[post.community_slug] || post.community_slug,
-              communitySlug: post.community_slug,
-              author: profile?.nickname || "익명",
-              avatar: profile?.avatar_url || "/placeholder-user.jpg",
-              userId: post.user_id, // Clerk user_id 추가
-              timestamp: formatRelativeTime(new Date(post.created_at)),
-              title: post.title,
-              content: post.content, // TipTap JSON
-              image: post.image,
-              upvotes: post.vote_count || 0,
-              comments: post.comment_count || 0,
-              isUpvoted: false,
-              createdAt: new Date(post.created_at),
-            }
-          })
-
-        setPosts(transformedPosts)
+        const sortParam = sortBy === "hot" ? "hot" : "new"
+        const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=0`)
+        if (!response.ok) throw new Error('글 목록을 가져오는데 실패했습니다.')
+        const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
+        setPosts(transformPosts(fetchedPosts, profiles))
+        setHasMore(more ?? fetchedPosts.length === PAGE_SIZE)
+        setOffset(PAGE_SIZE)
       } catch {
         setPosts([])
       } finally {
@@ -243,7 +249,39 @@ function HomeContent() {
     }
 
     if (followsLoaded) fetchPosts()
-  }, [sortBy, followedCommunities, followsLoaded])
+  }, [sortBy, followedCommunities, followsLoaded, transformPosts])
+
+  // 추가 페이지 로드
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return
+    setIsLoadingMore(true)
+    try {
+      const sortParam = sortBy === "hot" ? "hot" : "new"
+      const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}`)
+      if (!response.ok) throw new Error()
+      const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
+      const newPosts = transformPosts(fetchedPosts, profiles)
+      setPosts(prev => [...prev, ...newPosts])
+      setHasMore(more ?? fetchedPosts.length === PAGE_SIZE)
+      setOffset(prev => prev + PAGE_SIZE)
+    } catch {
+      // 에러 시 무시
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [isLoadingMore, hasMore, sortBy, offset, transformPosts])
+
+  // Intersection Observer로 무한 스크롤
+  useEffect(() => {
+    const el = loadMoreRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore() },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   // 콘텐츠 탭 데이터 로드
   const fetchActivities = useCallback(async () => {
@@ -413,9 +451,20 @@ function HomeContent() {
                     <p className="text-sm text-muted-foreground">글 목록을 불러오는 중...</p>
                   </div>
                 ) : sortedPosts.length > 0 ? (
-                  sortedPosts.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                  ))
+                  <>
+                    {sortedPosts.map((post, index) => (
+                      <React.Fragment key={post.id}>
+                        <PostCard post={post} />
+                        {(index + 1) % 5 === 0 && <AdPlaceholder variant="banner" />}
+                      </React.Fragment>
+                    ))}
+                    {/* 무한 스크롤 센티널 */}
+                    <div ref={loadMoreRef} className="py-4 text-center">
+                      {isLoadingMore && (
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <div className="bg-card border border-border rounded-lg p-8 text-center">
                     <Compass className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />

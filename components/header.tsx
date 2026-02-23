@@ -1,7 +1,8 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Palette, Loader2, Trophy } from "lucide-react"
+import { Home, Compass, Bell, Search, Palette, Loader2, Trophy, Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -26,6 +27,7 @@ interface SearchResultPost {
 
 export function Header() {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResultPost[]>([])
@@ -173,6 +175,16 @@ export function Header() {
 
           {/* Actions: 여유있는 간격 */}
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              aria-label="테마 전환"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              <Sun className="h-[18px] w-[18px] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-[18px] w-[18px] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
             <SignedIn>
               <GoldBalance />
               <BallBalance />

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, RotateCcw, Pin, Search, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface Post {
   id: string
@@ -66,7 +67,7 @@ export function PostManagementTable({ initialPosts, total: initialTotal }: { ini
       }
       await fetchPosts(search, showDeleted)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }

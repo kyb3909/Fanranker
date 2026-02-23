@@ -121,7 +121,7 @@ async function fetchPosts(communitySlug: string) {
   const userIds = [...new Set(posts.map((p) => p.user_id))]
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("user_id, nickname, avatar_url")
+    .select("user_id, nickname, avatar_url, temperature")
     .in("user_id", userIds)
 
   // 3. 프로필 매핑
@@ -134,7 +134,8 @@ async function fetchPosts(communitySlug: string) {
       profile: profile || null,
       author: profile?.nickname || "익명",
       avatar: profile?.avatar_url || "/placeholder-user.jpg",
-      userId: post.user_id, // 추가
+      authorTemperature: profile?.temperature ?? 0,
+      userId: post.user_id,
     }
   })
 }

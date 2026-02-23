@@ -1,6 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
 import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+const RED_REASONS = ['discrimination', 'advertising'] as const
+const YELLOW_REASONS = ['profanity', 'abuse', 'political'] as const
+
+function getCardType(reason: string): 'red' | 'yellow' {
+  if ((RED_REASONS as readonly string[]).includes(reason)) return 'red'
+  return 'yellow'
+}
+
+/**
+ * 신고 처리 시 카드 발급 + 옐로 2장 누적 시 자동 정지
+ * 1. 신고 대상 콘텐츠의 작성자를 조회
+ * 2. 카드 발급 (옐로카드는 1년 후 만료)
+ * 3. 유효한 옐로카드 2장 이상 → 자동 정지
+ */
+async function issueCardAndCheckSuspension(
+  supabase: SupabaseClient,
+  reportId: string
+): Promise<{ cardIssued: boolean; suspended: boolean }> {
+  // 1. 신고 정보 조회
+  const { data: report } = await supabase
+    .from('content_reports')
+    .select('target_type, target_id, reason')
+    .eq('id', reportId)
+    .single()
+
+  if (!report) return { cardIssued: false, suspended: false }
+
+  // 2. 콘텐츠 작성자 조회
+  const table = report.target_type === 'post' ? 'posts' : 'comments'
+  const { data: content } = await supabase
+    .from(table)
+    .select('user_id')
+    .eq('id', report.target_id)
+    .single()
+
+  if (!content?.user_id) return { cardIssued: false, suspended: false }
+
+  const targetUserId = content.user_id
+  const cardType = getCardType(report.reason)
+  const now = new Date()
+  const expiresAt = cardType === 'yellow'
+    ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString()
+    : null // 레드카드는 만료 없음
+
+  // 3. 카드 발급
+  const { error: cardError } = await supabase.from('user_cards').insert({
+    user_id: targetUserId,
+    card_type: cardType,
+    reason: report.reason,
+    report_id: reportId,
+    issued_at: now.toISOString(),
+    expires_at: expiresAt,
+  })
+
+  if (cardError) {
+    console.error('Card issue error:', cardError)
+    return { cardIssued: false, suspended: false }
+  }
+
+  // 4. 유효한 옐로카드 수 체크 (만료되지 않은 것만)
+  const { count } = await supabase
+    .from('user_cards')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', targetUserId)
+    .eq('card_type', 'yellow')
+    .gt('expires_at', now.toISOString())
+
+  const activeYellowCount = count ?? 0
+
+  // 5. 옐로카드 2장 이상이면 자동 정지
+  if (activeYellowCount >= 2) {
+    // 이미 활성 정지가 있는지 체크
+    const { data: existingSuspension } = await supabase
+      .from('user_suspensions')
+      .select('id')
+      .eq('user_id', targetUserId)
+      .or('suspended_until.is.null,suspended_until.gt.' + now.toISOString())
+      .maybeSingle()
+
+    if (!existingSuspension) {
+      await supabase.from('user_suspensions').insert({
+        user_id: targetUserId,
+        reason: `옐로카드 ${activeYellowCount}장 누적 (자동 정지)`,
+      })
+      return { cardIssued: true, suspended: true }
+    }
+  }
+
+  return { cardIssued: true, suspended: false }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,16 +167,25 @@ export async function PATCH(request: NextRequest) {
     const { error } = await supabase.from('content_reports').update(updateData).eq('id', reportId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    // 신고 처리(resolve) 시 카드 발급 + 자동 정지 체크
+    let cardIssued = false
+    let userSuspended = false
+    if (action === 'resolve') {
+      const result = await issueCardAndCheckSuspension(supabase, reportId)
+      cardIssued = result.cardIssued
+      userSuspended = result.suspended
+    }
+
     await writeAuditLog({
       adminUserId: userId,
       action: auditAction,
       targetType: 'report',
       targetId: reportId,
-      details: { action, resolution },
+      details: { action, resolution, cardIssued, userSuspended },
       ipAddress: getIpFromRequest(request),
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, cardIssued, userSuspended })
   } catch (error) {
     console.error('Reports PATCH error:', error)
     return NextResponse.json({ error: '서버 오류' }, { status: 500 })

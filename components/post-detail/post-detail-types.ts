@@ -16,6 +16,7 @@ export interface Post {
 
 export interface Comment {
   id: string | number
+  userId?: string
   author: string
   avatar: string
   timestamp: string
@@ -50,6 +51,7 @@ export function transformComments(comments: { id: string; user_id: string; paren
     const profile = profileMap.get(comment.user_id)
     const transformed: Comment = {
       id: comment.id,
+      userId: comment.user_id,
       author: profile?.nickname || "익명",
       avatar: profile?.avatar_url || "/placeholder-user.jpg",
       timestamp: formatRelativeTime(new Date(comment.created_at)),

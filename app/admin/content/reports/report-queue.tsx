@@ -7,6 +7,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, XCircle, Eye, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface Report {
   id: string
@@ -22,12 +23,12 @@ interface Report {
   created_at: string
 }
 
-const reasonLabels: Record<string, string> = {
-  spam: '스팸',
-  hate: '혐오',
-  misinformation: '허위정보',
-  inappropriate: '부적절',
-  other: '기타',
+const REPORT_REASONS: Record<string, { label: string; card: 'red' | 'yellow' }> = {
+  discrimination: { label: '차별적 표현', card: 'red' },
+  advertising:    { label: '광고/스팸',   card: 'red' },
+  profanity:      { label: '욕설/비하',   card: 'yellow' },
+  abuse:          { label: '어뷰징',      card: 'yellow' },
+  political:      { label: '정치글',      card: 'yellow' },
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -65,7 +66,7 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
       if (!res.ok) throw new Error((await res.json()).error)
       await fetchReports(statusFilter)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }
@@ -119,17 +120,23 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
                 </TableCell>
               </TableRow>
             ) : (
-              reports.map((report) => (
-                <TableRow key={report.id}>
+              reports.map((report) => {
+                const reasonInfo = REPORT_REASONS[report.reason]
+                const isRed = reasonInfo?.card === 'red'
+                return (
+                <TableRow key={report.id} className={isRed ? 'border-l-4 border-l-red-500' : ''}>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {report.target_type}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="text-xs">
-                      {reasonLabels[report.reason] ?? report.reason}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-block w-2 h-2 rounded-full ${isRed ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                      <Badge variant="secondary" className="text-xs">
+                        {reasonInfo?.label ?? report.reason}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-sm">
                     {report.description || '-'}
@@ -203,7 +210,8 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
                     )}
                   </TableCell>
                 </TableRow>
-              ))
+                )
+              })
             )}
           </TableBody>
         </Table>

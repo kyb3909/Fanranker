@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Shield, ShieldCheck, ShieldOff } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { toast } from '@/hooks/use-toast'
 
 interface Profile {
   user_id: string
@@ -48,7 +49,7 @@ export function ExpertApprovalTable({ initialProfiles }: ExpertApprovalTableProp
         prev.map((p) => (p.user_id === userId ? { ...p, ...profile } : p))
       )
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류가 발생했습니다.')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류가 발생했습니다.' })
     } finally {
       setLoading(null)
     }

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Save, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface Board {
   id: string
@@ -54,7 +55,7 @@ export function BoardConfigTable({ initialBoards }: { initialBoards: Board[] }) 
         return next
       })
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }
@@ -73,7 +74,7 @@ export function BoardConfigTable({ initialBoards }: { initialBoards: Board[] }) 
         b.id === board.id ? { ...b, is_active: !b.is_active } : b
       ))
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }

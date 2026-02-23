@@ -4,7 +4,7 @@ import { useState, memo } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Bookmark, Search, Ban, Pencil, Trash2 } from "lucide-react"
+import { ArrowUp, ArrowDown, MessageCircle, MoreHorizontal, Thermometer, Bookmark, Search, Ban, Pencil, Trash2, Flag } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -16,8 +16,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
 import { ShareMenu } from "@/components/share-menu"
+import { ReportDialog } from "@/components/report-dialog"
 import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { EmbedPreviewCard } from "@/components/embed-preview-card"
+import { getTemperatureStyle } from "@/lib/temperature"
 
 export interface TipTapNode {
   type?: string
@@ -61,6 +63,7 @@ interface Post {
   upvotes: number
   comments: number
   temperature?: number
+  authorTemperature?: number
   isUpvoted: boolean
   views?: number
   userId?: string // Clerk user_id (optional, for user actions)
@@ -102,6 +105,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   }
   const [isUpvoted, setIsUpvoted] = useState(post.isUpvoted)
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const handleSearchByAuthor = () => {
     router.push(`/search?q=${encodeURIComponent(post.author)}&type=nickname`)
@@ -188,13 +192,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   }
 
   const temperature = post.temperature ?? Math.min(100, Math.floor((upvotes * 2 + post.comments * 3) / 10))
-  // 접근성 대비 개선: 더 진한 색상 사용 (WCAG AA 4.5:1 충족)
-  const getTemperatureColor = (temp: number) => {
-    if (temp >= 80) return "text-red-600"
-    if (temp >= 60) return "text-orange-600"
-    if (temp >= 40) return "text-amber-600"
-    return "text-blue-700"
-  }
 
   const communityLink = post.communitySlug || post.community
   
@@ -253,6 +250,10 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
                     <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
                       <Ban className="mr-2 h-4 w-4" />
                       차단하기
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setReportOpen(true)} className="cursor-pointer text-destructive">
+                      <Flag className="mr-2 h-4 w-4" />
+                      신고하기
                     </DropdownMenuItem>
                   </>
                 )}
@@ -324,8 +325,13 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             </Avatar>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="text-[13px] font-medium text-foreground hover:text-primary transition-colors cursor-pointer">
+                <button className="flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary transition-colors cursor-pointer">
                   {post.author}
+                  {post.authorTemperature != null && post.authorTemperature > 0 && (
+                    <span className="text-[10px] font-semibold tabular-nums" style={getTemperatureStyle(post.authorTemperature)}>
+                      {post.authorTemperature.toFixed(0)}°
+                    </span>
+                  )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
@@ -344,7 +350,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             <span className="text-border">|</span>
             
             {/* 온도 */}
-            <div className={`flex items-center gap-0.5 ${getTemperatureColor(temperature)}`}>
+            <div className="flex items-center gap-0.5" style={getTemperatureStyle(temperature)}>
               <Thermometer className="h-3.5 w-3.5" />
               <span className="text-[12px] font-semibold tabular-nums">{temperature}°</span>
             </div>
@@ -398,6 +404,12 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
         </div>
       </div>
     </Card>
+    <ReportDialog
+      targetType="post"
+      targetId={String(post.id)}
+      open={reportOpen}
+      onOpenChange={setReportOpen}
+    />
     </article>
   )
 })

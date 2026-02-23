@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/hooks/use-toast"
 import { CommentItem } from "./comment-item"
 import { countAllComments, transformComments } from "./post-detail-types"
 import type { Comment } from "./post-detail-types"
@@ -15,6 +17,7 @@ interface CommentSectionProps {
 }
 
 export function CommentSection({ postId, onCommentCountChange }: CommentSectionProps) {
+  const { user } = useUser()
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoadingComments, setIsLoadingComments] = useState(true)
 
@@ -29,27 +32,22 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
   const [isSubmittingReply, setIsSubmittingReply] = useState<string | number | null>(null)
 
   // 댓글 로드
-  useEffect(() => {
-    async function loadComments() {
-      setIsLoadingComments(true)
-      try {
-        const response = await fetch(`/api/comments?post_id=${postId}`)
-        if (!response.ok) {
-          throw new Error('댓글을 불러오는데 실패했습니다.')
-        }
-
-        const { comments: fetchedComments, profiles } = await response.json()
-        const transformedComments = transformComments(fetchedComments || [], profiles || [])
-        updateComments(transformedComments)
-      } catch {
-        updateComments([])
-      } finally {
-        setIsLoadingComments(false)
-      }
+  const reloadComments = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/comments?post_id=${postId}`)
+      if (!response.ok) throw new Error('댓글을 불러오는데 실패했습니다.')
+      const { comments: fetchedComments, profiles } = await response.json()
+      const transformedComments = transformComments(fetchedComments || [], profiles || [])
+      updateComments(transformedComments)
+    } catch {
+      updateComments([])
     }
-
-    loadComments()
   }, [postId, updateComments])
+
+  useEffect(() => {
+    setIsLoadingComments(true)
+    reloadComments().finally(() => setIsLoadingComments(false))
+  }, [reloadComments])
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || isSubmittingComment) {
@@ -81,15 +79,9 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
         throw new Error(error.error || '댓글 작성에 실패했습니다.')
       }
 
-      // 댓글 목록 다시 로드
-      const commentsResponse = await fetch(`/api/comments?post_id=${postId}`)
-      if (commentsResponse.ok) {
-        const { comments: fetchedComments, profiles } = await commentsResponse.json()
-        const transformedComments = transformComments(fetchedComments || [], profiles || [])
-        updateComments(transformedComments)
-      }
+      await reloadComments()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '댓글 작성에 실패했습니다.')
+      toast({ variant: 'destructive', title: '댓글 작성 실패', description: error instanceof Error ? error.message : '댓글 작성에 실패했습니다.' })
       setCommentText(textToSubmit) // 실패 시 텍스트 복원
     } finally {
       setIsSubmittingComment(false)
@@ -127,17 +119,10 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
         throw new Error(error.error || '답글 작성에 실패했습니다.')
       }
 
-      // 댓글 목록 다시 로드
-      const commentsResponse = await fetch(`/api/comments?post_id=${postId}`)
-      if (commentsResponse.ok) {
-        const { comments: fetchedComments, profiles } = await commentsResponse.json()
-        const transformedComments = transformComments(fetchedComments || [], profiles || [])
-        updateComments(transformedComments)
-      }
-
+      await reloadComments()
       setReplyingTo(null)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '답글 작성에 실패했습니다.')
+      toast({ variant: 'destructive', title: '답글 작성 실패', description: error instanceof Error ? error.message : '답글 작성에 실패했습니다.' })
       setReplyText(textToSubmit) // 실패 시 텍스트 복원
     } finally {
       setIsSubmittingReply(null)
@@ -191,11 +176,13 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
               <CommentItem
                 key={comment.id}
                 comment={comment}
+                currentUserId={user?.id}
                 replyingTo={replyingTo}
                 replyText={replyText}
                 onReplyTextChange={setReplyText}
                 onSetReplyingTo={setReplyingTo}
                 onReplySubmit={handleReplySubmit}
+                onCommentUpdated={reloadComments}
                 depth={0}
                 isSubmittingReply={isSubmittingReply}
               />

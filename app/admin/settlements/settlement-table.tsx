@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Loader2, CheckCircle2, XCircle, RefreshCw, AlertCircle } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 
 interface UnsettledMatch {
@@ -68,11 +69,11 @@ export function SettlementManagementTable() {
         throw new Error(data.error || '정산 처리에 실패했습니다.')
       }
 
-      alert(`정산 완료: ${data.settled_count}개 예측이 처리되었습니다.`)
+      toast({ title: '정산 완료', description: `${data.settled_count}개 예측이 처리되었습니다.` })
       // Refresh list
       await fetchUnsettledMatches()
     } catch (err) {
-      alert(err instanceof Error ? err.message : '정산 처리 중 오류가 발생했습니다.')
+      toast({ variant: 'destructive', title: '오류', description: err instanceof Error ? err.message : '정산 처리 중 오류가 발생했습니다.' })
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev)

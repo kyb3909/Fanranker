@@ -13,6 +13,7 @@ import {
   Coins, Award, FileText, MessageSquare, Target,
   Loader2, ShieldCheck, Palette, AlertTriangle,
 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface UserDetail {
   profile: {
@@ -91,7 +92,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
       if (!res.ok) throw new Error((await res.json()).error)
       setData((prev) => prev ? { ...prev, profile: { ...prev.profile, role } } : null)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setActionLoading(false)
     }
@@ -99,7 +100,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
 
   const handleAdjustEconomy = async () => {
     if (!adjustAmount || !adjustReason) {
-      alert('금액과 사유를 입력해주세요.')
+      toast({ variant: 'destructive', title: '입력 오류', description: '금액과 사유를 입력해주세요.' })
       return
     }
     setActionLoading(true)
@@ -120,7 +121,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
       setAdjustAmount('')
       setAdjustReason('')
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setActionLoading(false)
     }

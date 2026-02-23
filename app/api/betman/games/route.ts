@@ -9,7 +9,7 @@ import { computeDailyId, getTodayDailyId, formatDailyIdLabel, getBetOpenAt, getB
  *
  * Get Betman games for prediction using a fixed daily window.
  *
- * Query: sport?, game_type?
+ * Query: sport?, game_type?, date? (YYYY-MM-DD, defaults to today)
  *
  * Daily round: resets at 23:00 KST. Shows games from 08:00 KST ~ next 08:00 KST.
  * Bet deadline = kickoff time. No time-of-day betting restriction.
@@ -23,9 +23,15 @@ export async function GET(request: NextRequest) {
 
     const sportFilter = searchParams.get('sport') || 'all'
     const gameTypeFilter = searchParams.get('game_type') || 'all'
+    const dateParam = searchParams.get('date') // YYYY-MM-DD or null (today)
 
-    // --- Fixed daily window: [today 08:00 KST, tomorrow 08:00 KST) ---
-    const { start: windowStart, end: windowEnd, dailyId } = getDailyWindow()
+    // Validate date param if provided
+    if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      return NextResponse.json({ error: '날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)' }, { status: 400 })
+    }
+
+    // --- Fixed daily window: [date 08:00 KST, date+1 08:00 KST) ---
+    const { start: windowStart, end: windowEnd, dailyId } = getDailyWindow(dateParam || undefined)
     const now = new Date()
 
     // --- Auto-expire past games: scheduled → in_progress ---
@@ -44,14 +50,19 @@ export async function GET(request: NextRequest) {
       .lt('bet_close_at', now.toISOString())
 
     // --- Fetch games in daily window (kickoff-time based) ---
+    const isToday = !dateParam || dailyId === getTodayDailyId()
     let query = supabase
       .from('betman_games')
       .select('*')
-      .eq('status', 'scheduled')
       .gte('match_time', windowStart.toISOString())
       .lt('match_time', windowEnd.toISOString())
       .order('match_time', { ascending: true })
       .order('game_no', { ascending: true })
+
+    // 오늘 경기는 scheduled만, 과거 날짜는 전체 상태 반환
+    if (isToday) {
+      query = query.eq('status', 'scheduled')
+    }
 
     const allowedSports = ['축구', '야구', '농구', '배구']
     const allowedGameTypes = ['일반', '핸디캡', '언더오버', 'SUM']

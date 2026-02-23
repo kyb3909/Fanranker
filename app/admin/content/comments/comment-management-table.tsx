@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2, RotateCcw, Search, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface Comment {
   id: string
@@ -71,7 +72,7 @@ export function CommentManagementTable({ initialComments, total: initialTotal }:
       }
       await fetchComments(search, showDeleted)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류 발생')
+      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
     } finally {
       setLoading(null)
     }

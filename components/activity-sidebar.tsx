@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
+import { AdPlaceholder } from "@/components/ad-placeholder"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 
@@ -107,6 +108,9 @@ export function ActivitySidebar() {
           )}
         </div>
       </Card>
+
+      {/* 광고 플레이스홀더 */}
+      <AdPlaceholder variant="sidebar" />
 
     </div>
   )

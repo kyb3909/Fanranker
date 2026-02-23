@@ -214,7 +214,7 @@
 .tiptap-editor .ProseMirror {
   outline: none;
   min-height: 300px;
-  padding: 1rem;
+  padding: 1.25rem 1.5rem;
   cursor: text;
 }
 
@@ -234,7 +234,7 @@
 
 .tiptap-editor .ProseMirror p {
   margin: 0.5rem 0;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .tiptap-editor .ProseMirror p:first-child {
@@ -357,4 +357,18 @@
 
 .tiptap-editor .ProseMirror ol {
   list-style-type: decimal;
+}
+
+/* Read-only TipTap content (post detail view) */
+.tiptap.ProseMirror {
+  line-height: 1.75;
+}
+
+.tiptap.ProseMirror p {
+  margin: 0.6rem 0;
+  line-height: 1.75;
+}
+
+.tiptap.ProseMirror p:first-child {
+  margin-top: 0;
 }

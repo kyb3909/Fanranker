@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       const userIds = [...new Set(sortedPosts.map((p) => p.user_id))]
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, nickname, avatar_url')
+        .select('user_id, nickname, avatar_url, temperature')
         .in('user_id', userIds)
 
       return NextResponse.json({ posts: postsWithAccurateCounts, profiles: profiles || [] })
@@ -197,10 +197,10 @@ export async function GET(request: NextRequest) {
     const userIds = [...new Set(posts.map((p) => p.user_id))]
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('user_id, nickname, avatar_url')
+      .select('user_id, nickname, avatar_url, temperature')
       .in('user_id', userIds)
 
-    return NextResponse.json({ posts: postsWithAccurateCounts, profiles })
+    return NextResponse.json({ posts: postsWithAccurateCounts, profiles, hasMore: posts.length === limit })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
@@ -230,6 +230,15 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = user.id
+
+    // 정지 유저 차단
+    const { isUserSuspended } = await import('@/lib/check-suspension')
+    if (await isUserSuspended(userId)) {
+      return NextResponse.json(
+        { error: '활동이 정지된 계정입니다.' },
+        { status: 403 }
+      )
+    }
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
