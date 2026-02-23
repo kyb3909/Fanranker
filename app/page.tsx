@@ -234,7 +234,7 @@ function HomeContent() {
       setHasMore(true)
       try {
         const sortParam = sortBy === "hot" ? "hot" : "new"
-        const followedParam = followedCommunities.size > 0 ? '&followed=true' : ''
+        const followedParam = isSignedIn ? '&followed=true' : ''
         const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=0${followedParam}`)
         if (!response.ok) throw new Error('글 목록을 가져오는데 실패했습니다.')
         const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
@@ -257,7 +257,7 @@ function HomeContent() {
     setIsLoadingMore(true)
     try {
       const sortParam = sortBy === "hot" ? "hot" : "new"
-      const followedParam = followedCommunities.size > 0 ? '&followed=true' : ''
+      const followedParam = isSignedIn ? '&followed=true' : ''
       const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}${followedParam}`)
       if (!response.ok) throw new Error()
       const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
@@ -469,15 +469,15 @@ function HomeContent() {
                 ) : (
                   <div className="bg-card border border-border rounded-lg p-8 text-center">
                     <Compass className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {followedCommunities.size > 0
-                        ? "팔로우한 게시판에 게시물이 없습니다."
-                        : "아직 게시물이 없습니다."}
+                    <p className="text-sm text-foreground font-medium mb-2">
+                      {isSignedIn
+                        ? "관심 있는 게시판을 팔로우해보세요!"
+                        : "로그인하고 게시판을 팔로우해보세요!"}
                     </p>
                     <p className="text-xs text-muted-foreground mb-4">
-                      {followedCommunities.size > 0
-                        ? "다른 게시판도 팔로우해보세요!"
-                        : "게시판에서 첫 번째 글을 작성해보세요."}
+                      {isSignedIn
+                        ? "팔로우한 게시판의 글이 피드에 표시됩니다."
+                        : "팔로우한 게시판의 최신 글을 모아볼 수 있어요."}
                     </p>
                     <Link
                       href="/explore"
