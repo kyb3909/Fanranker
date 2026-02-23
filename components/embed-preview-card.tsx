@@ -377,12 +377,23 @@ function InstagramPreviewEmbed({ html }: { html: string }) {
 /**
  * X(Twitter) 임베드 카드 (preview card 확장 시)
  *
- * widgets.js + cdn.syndication.twimg.com 모두 불안정(404)하여
- * blockquote→iframe 변환이 작동하지 않음.
- * 바로 링크 카드를 표시.
+ * fxtwitter API에서 가져온 커스텀 카드 HTML을 렌더링.
+ * HTML이 없거나 기존 blockquote면 링크 카드 표시.
  */
-function XPreviewEmbed({ url, author_name }: { html?: string; url?: string; author_name?: string }) {
+function XPreviewEmbed({ html, url, author_name }: { html?: string; url?: string; author_name?: string }) {
   const linkUrl = url || ''
+
+  // fxtwitter 커스텀 카드 HTML이 있으면 렌더링
+  if (html && !html.includes('twitter-tweet')) {
+    return (
+      <div
+        className="max-w-[550px] mx-auto p-4 [&_img]:rounded-xl"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    )
+  }
+
+  // 폴백: 링크 카드
   return (
     <div className="max-w-[550px] mx-auto p-4 space-y-3">
       <div className="flex items-center gap-2">

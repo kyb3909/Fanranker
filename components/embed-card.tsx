@@ -237,11 +237,11 @@ function XFallbackCard({ url, author_name, className }: { url: string; author_na
 /**
  * X(Twitter) 임베드 전용 컴포넌트
  *
- * widgets.js + cdn.syndication.twimg.com 모두 불안정(404)하여
- * blockquote→iframe 변환이 작동하지 않음.
- * 바로 폴백 링크 카드를 표시.
+ * fxtwitter API에서 가져온 커스텀 카드 HTML을 렌더링.
+ * HTML이 없으면 폴백 링크 카드 표시.
  */
 function XEmbed({
+  html,
   url,
   author_name,
   className,
@@ -252,6 +252,20 @@ function XEmbed({
   author_name?: string
   className?: string
 }) {
-  return <XFallbackCard url={url} author_name={author_name} className={className} />
+  if (!html || html.includes('twitter-tweet')) {
+    // 기존 blockquote HTML이면 폴백 표시
+    return <XFallbackCard url={url} author_name={author_name} className={className} />
+  }
+
+  return (
+    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+      <CardContent className="p-4">
+        <div
+          className="max-w-[550px] mx-auto [&_img]:rounded-xl"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </CardContent>
+    </Card>
+  )
 }
 

@@ -148,9 +148,8 @@ async function fetchInstagramOEmbed(url: string, includeHtml: boolean = true): P
 /**
  * Fetch oEmbed data from X (Twitter)
  *
- * publish.twitter.com/oembed API가 불안정하므로
- * Instagram과 동일하게 blockquote HTML을 직접 생성.
- * widgets.js가 클라이언트에서 blockquote를 인터랙티브 임베드로 변환.
+ * Twitter 공식 oEmbed/widgets.js가 완전히 죽어있으므로
+ * fxtwitter.com API로 트윗 데이터를 가져와서 커스텀 카드 HTML 생성.
  */
 async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
   const match = url.match(URL_PATTERNS.x)
@@ -160,17 +159,80 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
 
   const username = match[1]
   const statusId = match[2]
-  const permalink = `https://twitter.com/${username}/status/${statusId}`
+  const originalUrl = url.startsWith('http') ? url : `https://${url}`
 
-  const blockquoteHtml = includeHtml
-    ? `<blockquote class="twitter-tweet"><a href="${permalink}"></a></blockquote>`
-    : undefined
+  // fxtwitter API로 트윗 데이터 가져오기
+  let tweetText = ''
+  let authorName = `@${username}`
+  let authorAvatar = ''
+  let mediaUrl = ''
+  let displayName = ''
+
+  try {
+    const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
+      headers: { 'User-Agent': 'FanRanker/1.0' },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const tweet = data.tweet
+      if (tweet) {
+        tweetText = tweet.text || ''
+        authorName = `@${tweet.author?.screen_name || username}`
+        displayName = tweet.author?.name || ''
+        authorAvatar = tweet.author?.avatar_url || ''
+        // 첫 번째 미디어 (이미지)
+        if (tweet.media?.photos?.[0]?.url) {
+          mediaUrl = tweet.media.photos[0].url
+        } else if (tweet.media?.all?.[0]?.thumbnail_url) {
+          mediaUrl = tweet.media.all[0].thumbnail_url
+        }
+      }
+    }
+  } catch {
+    // fxtwitter 실패 시 기본값 사용
+  }
+
+  // 커스텀 카드 HTML 생성
+  let cardHtml: string | undefined
+  if (includeHtml) {
+    const escapedText = tweetText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>')
+    const escapedDisplayName = displayName
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+    const mediaHtml = mediaUrl
+      ? `<img src="${mediaUrl}" alt="" style="width:100%;border-radius:12px;margin-top:12px;max-height:300px;object-fit:cover;" />`
+      : ''
+    const avatarHtml = authorAvatar
+      ? `<img src="${authorAvatar}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
+      : `<div style="width:40px;height:40px;border-radius:50%;background:#2a2a2a;"></div>`
+
+    cardHtml = `<div style="max-width:550px;border:1px solid #333;border-radius:16px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#e7e9ea;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    ${avatarHtml}
+    <div>
+      <div style="font-weight:700;font-size:15px;color:#e7e9ea;">${escapedDisplayName}</div>
+      <div style="font-size:13px;color:#71767b;">${authorName}</div>
+    </div>
+    <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#e7e9ea;margin-left:auto;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </div>
+  <div style="font-size:15px;line-height:1.5;margin-bottom:4px;">${escapedText}</div>
+  ${mediaHtml}
+  <a href="${originalUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:13px;color:#1d9bf0;text-decoration:none;">X에서 보기 →</a>
+</div>`
+  }
 
   return {
     provider: 'x',
-    url: url.startsWith('http') ? url : `https://${url}`,
-    html: blockquoteHtml,
-    author_name: `@${username}`,
+    url: originalUrl,
+    html: cardHtml,
+    title: tweetText.slice(0, 100) || undefined,
+    thumbnail_url: mediaUrl || undefined,
+    author_name: displayName ? `${displayName} (${authorName})` : authorName,
   }
 }
 
