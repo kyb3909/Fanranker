@@ -82,7 +82,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   const router = useRouter()
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
-  const [upvotes, setUpvotes] = useState(post.upvotes)
+  const [voteCount, setVoteCount] = useState(post.upvotes)
+  const [myVote, setMyVote] = useState<'up' | 'down' | null>(post.isUpvoted ? 'up' : null)
 
   const handleEditPost = () => {
     router.push(`/write?edit=${post.id}`)
@@ -103,7 +104,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
       alert('삭제 중 오류가 발생했습니다.')
     }
   }
-  const [isUpvoted, setIsUpvoted] = useState(post.isUpvoted)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
 
@@ -117,38 +117,33 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     }
   }
 
-  const handleUpvote = async () => {
+  const handleVote = async (type: 'up' | 'down') => {
+    // Optimistic update
+    const prevVote = myVote
+    const prevCount = voteCount
+    if (myVote === type) {
+      setMyVote(null)
+      setVoteCount(prev => type === 'up' ? prev - 1 : prev + 1)
+    } else {
+      const delta = type === 'up' ? 1 : -1
+      const reverseDelta = prevVote ? (prevVote === 'up' ? -1 : 1) : 0
+      setMyVote(type)
+      setVoteCount(prev => prev + delta + reverseDelta)
+    }
     try {
       const response = await fetch(`/api/posts/${post.id}/vote`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type: 'up' }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '투표 처리에 실패했습니다.')
-      }
-
-      const { action, voteCount } = await response.json()
-
-      // 로컬 상태 업데이트 (서버에서 받은 정확한 vote_count 사용)
-      if (voteCount !== undefined) {
-        setUpvotes(voteCount)
-      } else {
-        // fallback: 로컬 계산
-        if (action === 'deleted') {
-          setUpvotes(Math.max(0, upvotes - 1))
-        } else {
-          setUpvotes(isUpvoted ? upvotes : upvotes + 1)
-        }
-      }
-      
-      setIsUpvoted(action !== 'deleted')
+      if (!response.ok) throw new Error()
+      const data = await response.json()
+      setVoteCount(data.voteCount)
+      setMyVote(data.voteType)
     } catch {
-      // 에러가 발생해도 사용자에게 알리지 않음 (피드에서는 조용히 실패)
+      // Rollback on error
+      setMyVote(prevVote)
+      setVoteCount(prevCount)
     }
   }
 
@@ -191,7 +186,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     }
   }
 
-  const temperature = post.temperature ?? Math.min(100, Math.floor((upvotes * 2 + post.comments * 3) / 10))
+  const temperature = post.temperature ?? Math.min(100, Math.floor((Math.max(0, voteCount) * 2 + post.comments * 3) / 10))
 
   const communityLink = post.communitySlug || post.community
   
@@ -358,18 +353,32 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
 
           {/* 우측: 액션 버튼 - 터치 타겟 최소 44px, 간격 8px 이상 */}
           <div className="flex items-center gap-1">
-            {/* 추천 */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-9 min-h-[36px] px-3 gap-1.5 rounded-md ${isUpvoted ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
-              onClick={handleUpvote}
-              aria-label={`추천 ${upvotes}개`}
-              aria-pressed={isUpvoted}
-            >
-              <ArrowUp className="h-4 w-4" aria-hidden="true" />
-              <span className="text-[12px] font-semibold tabular-nums">{upvotes.toLocaleString()}</span>
-            </Button>
+            {/* 추천/비추천 */}
+            <div className="flex items-center rounded-md border border-border/50">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`h-9 min-h-[36px] px-2.5 rounded-r-none ${myVote === 'up' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => handleVote('up')}
+                aria-label="추천"
+                aria-pressed={myVote === 'up'}
+              >
+                <ArrowUp className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <span className={`text-[12px] font-semibold tabular-nums px-1.5 ${voteCount > 0 ? "text-primary" : voteCount < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                {voteCount}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`h-9 min-h-[36px] px-2.5 rounded-l-none ${myVote === 'down' ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => handleVote('down')}
+                aria-label="비추천"
+                aria-pressed={myVote === 'down'}
+              >
+                <ArrowDown className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
 
             {/* 댓글 */}
             <Link href={`/post/${post.id}`}>

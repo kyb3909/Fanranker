@@ -79,10 +79,18 @@ export async function POST(
 
     const newVoteCount = (upCount || 0) - (downCount || 0)
 
-    await supabase
+    const { data: commentData } = await supabase
       .from('comments')
       .update({ vote_count: newVoteCount })
       .eq('id', commentId)
+      .select('user_id')
+      .single()
+
+    // 댓글 작성자 + 투표한 사람의 유저 온도 갱신
+    if (commentData?.user_id) {
+      supabase.rpc('update_user_temperature', { p_user_id: commentData.user_id }).then(() => {})
+    }
+    supabase.rpc('update_user_temperature', { p_user_id: user.id }).then(() => {})
 
     return NextResponse.json({
       success: true,
