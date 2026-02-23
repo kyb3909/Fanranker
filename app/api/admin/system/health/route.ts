@@ -20,8 +20,21 @@ export async function GET() {
       supabase.from('news_ticker_items').select('*', { count: 'exact', head: true }),
     ])
 
+    // Betman 동기화 상태 체크: 3시간 이상 미동기화 시 warning
+    let betmanSyncWarning: string | null = null
+    if (syncState?.updated_at) {
+      const lastSync = new Date(syncState.updated_at)
+      const hoursSinceSync = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60)
+      if (hoursSinceSync > 3) {
+        betmanSyncWarning = `Betman 동기화 ${Math.floor(hoursSinceSync)}시간 경과 (마지막: ${lastSync.toISOString()})`
+      }
+    } else {
+      betmanSyncWarning = 'Betman 동기화 상태 데이터 없음'
+    }
+
     return NextResponse.json({
       betmanSync: syncState,
+      betmanSyncWarning,
       crawlerRuns,
       dailyRound,
       tickerCount: tickerCount ?? 0,

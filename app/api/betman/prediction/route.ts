@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from '@/lib/betman/daily-round'
+import { apiError } from '@/lib/api-error'
 
 /**
  * POST /api/betman/prediction
@@ -334,11 +335,7 @@ export async function POST(request: NextRequest) {
         : `${predictions.length}개의 예측이 수정되었습니다. (추가 볼 사용 없음)`
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -410,10 +407,6 @@ export async function GET(request: NextRequest) {
       daily_round_id: targetDailyRoundId,
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifyCronSecret } from '@/lib/cron-auth'
+import { apiError } from '@/lib/api-error'
 import { computeDailyId, getTodayDailyId, formatDailyIdLabel, getBetOpenAt, getBetCloseAt, getBettingWindowStatus, getDailyWindow, getGameBetDeadline } from '@/lib/betman/daily-round'
 
 /**
@@ -191,8 +192,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 

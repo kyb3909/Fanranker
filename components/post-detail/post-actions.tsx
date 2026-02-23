@@ -123,11 +123,12 @@ export function PostActions({
           size="icon"
           className={`h-8 w-8 rounded-full ${isUpvoted ? "text-primary" : "text-muted-foreground"}`}
           onClick={handleUpvote}
+          aria-label="추천"
         >
           <ArrowUp className="h-5 w-5" />
         </Button>
         <span className="text-sm font-semibold min-w-[2rem] text-center text-foreground">{upvotes}</span>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" aria-label="비추천">
           <ArrowDown className="h-5 w-5" />
         </Button>
       </div>
@@ -148,6 +149,7 @@ export function PostActions({
         size="icon"
         className={`h-9 w-9 rounded-full ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
         onClick={handleBookmark}
+        aria-label={isBookmarked ? "북마크 해제" : "북마크"}
       >
         <Bookmark className={`h-5 w-5 ${isBookmarked ? "fill-current" : ""}`} />
       </Button>

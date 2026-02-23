@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { computeTemperature } from '@/lib/temperature'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/posts
@@ -202,11 +203,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ posts: postsWithAccurateCounts, profiles, hasMore: posts.length === limit })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -315,10 +312,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

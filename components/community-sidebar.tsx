@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast"
 import { AdPlaceholder } from "@/components/ad-placeholder"
 
 
-export function CommunitySidebar() {
+export const CommunitySidebar = memo(function CommunitySidebar() {
   const { isSignedIn } = useAuth()
   const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState("")
@@ -131,6 +131,13 @@ export function CommunitySidebar() {
           </div>
         )}
         <div className="py-1 overflow-y-auto scrollbar-hide flex-1 min-h-0 max-h-[400px]">
+          {/* 팔로우 0개 + 검색 안 하는 중일 때: 인기 게시판 하이라이트 */}
+          {!loadingFollows && isSignedIn && followedCommunities.size === 0 && !searchQuery && (
+            <div className="px-3 py-2 mb-1">
+              <p className="text-[11px] font-semibold text-primary mb-1.5">인기 게시판</p>
+              <p className="text-[11px] text-muted-foreground">⭐ 별을 눌러 팔로우하면 맞춤 피드를 볼 수 있어요</p>
+            </div>
+          )}
           {filteredCommunities.length > 0 ? (
             filteredCommunities.map((community) => {
               const isFollowed = followedCommunities.has(community.slug)
@@ -200,4 +207,6 @@ export function CommunitySidebar() {
       </nav>
     </div>
   )
-}
+})
+
+CommunitySidebar.displayName = "CommunitySidebar"

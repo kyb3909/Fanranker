@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/api-error'
 
 /** Validate file content via magic bytes to prevent MIME spoofing */
 function validateImageMagicBytes(buffer: ArrayBuffer): boolean {
@@ -117,10 +118,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: imageUrl }, { status: 200 })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
+    return apiError('서버 오류가 발생했습니다.', 500, error
     )
   }
 }

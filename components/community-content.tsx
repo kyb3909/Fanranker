@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -41,7 +41,7 @@ interface CommunityContentProps {
   communitySlug?: string
 }
 
-export function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
+export const CommunityContent = memo(function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
@@ -180,4 +180,6 @@ export function CommunityContent({ community, posts, isMainContent = false, comm
   }
 
   return null
-}
+})
+
+CommunityContent.displayName = "CommunityContent"

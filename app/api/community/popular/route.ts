@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+
+/**
+ * GET /api/community/popular
+ *
+ * 팔로워 수 기준 인기 게시판 상위 3개 반환 (공개 API)
+ */
+export async function GET() {
+  try {
+    const supabase = createServiceRoleClient()
+
+    const { data, error } = await supabase
+      .rpc('get_popular_communities', { lim: 3 })
+
+    if (error) {
+      // RPC 함수가 없는 경우 fallback: 직접 쿼리
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('community_follows')
+        .select('community_slug')
+
+      if (fallbackError) {
+        console.error('Failed to fetch popular communities:', fallbackError)
+        return NextResponse.json({ communities: [] })
+      }
+
+      // 수동으로 집계
+      const counts = new Map<string, number>()
+      for (const row of fallbackData || []) {
+        counts.set(row.community_slug, (counts.get(row.community_slug) || 0) + 1)
+      }
+      const sorted = Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([community_slug, followers]) => ({ community_slug, followers }))
+
+      return NextResponse.json({ communities: sorted })
+    }
+
+    return NextResponse.json({ communities: data || [] })
+  } catch (error) {
+    console.error('Popular communities API error:', error)
+    return NextResponse.json({ communities: [] })
+  }
+}

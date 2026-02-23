@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Lighthouse Best Practices: 소스맵은 개발환경에서만 사용
@@ -14,13 +16,13 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.clerk.accounts.dev",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.clerk.accounts.dev https://*.sentry.io",
               "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               "frame-src https://www.youtube.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.clerk.accounts.dev",
-              "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com",
+              "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://*.sentry.io https://*.ingest.sentry.io",
             ].join('; '),
           },
         ],
@@ -95,4 +97,20 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Sentry 빌드 옵션
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // 소스맵을 Sentry에 업로드 (프로덕션 빌드에서만)
+  silent: !process.env.CI,
+
+  // 클라이언트 번들에서 소스맵 숨김
+  hideSourceMaps: true,
+
+  // 자동 트리 쉐이킹
+  disableLogger: true,
+
+  // SENTRY_AUTH_TOKEN 없으면 빌드 실패하지 않게
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+})

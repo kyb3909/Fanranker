@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
@@ -30,7 +30,7 @@ function mapApiPostsToRecentPosts(posts: { id: string; title: string; community_
   }))
 }
 
-export function ActivitySidebar() {
+export const ActivitySidebar = memo(function ActivitySidebar() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
 
@@ -114,4 +114,6 @@ export function ActivitySidebar() {
 
     </div>
   )
-}
+})
+
+ActivitySidebar.displayName = "ActivitySidebar"

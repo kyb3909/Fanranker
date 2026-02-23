@@ -185,7 +185,7 @@ export function PostDetailContent({ post }: { post: Post }) {
             {/* Image */}
             {post.image && (
               <div className="relative w-full aspect-[2/1] rounded-lg overflow-hidden bg-muted">
-                <Image src={post.image || "/placeholder.svg"} alt="Post image" fill className="object-cover" />
+                <Image src={post.image || "/placeholder.svg"} alt={`${post.title} 첨부 이미지`} fill className="object-cover" />
               </div>
             )}
           </div>

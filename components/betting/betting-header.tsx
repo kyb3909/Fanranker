@@ -36,7 +36,7 @@ export function BettingHeader({
   return (
     <div className="bg-card rounded-xl border border-border mb-3 sm:mb-4 overflow-hidden">
       {/* 1행: 오늘의 경기 | 랭킹 | 마이페이지 */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border" role="tablist" aria-label="승부 예측">
         {[
           { id: "betting", label: "오늘의 경기" },
           { id: "ranking", label: "랭킹" },
@@ -44,6 +44,8 @@ export function BettingHeader({
         ].map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as "betting" | "ranking" | "mypage")}
             className={`flex items-center justify-center gap-2 flex-1 px-4 py-3 text-[14px] font-semibold transition-all border-b-2 -mb-[1px] ${
               activeTab === tab.id

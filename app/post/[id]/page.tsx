@@ -88,6 +88,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description,
       images: post?.image ? [post.image] : undefined,
     },
+    twitter: {
+      card: post?.image ? 'summary_large_image' : 'summary',
+      title: post?.title || '게시글',
+      description,
+      images: post?.image ? [post.image] : undefined,
+    },
     alternates: { canonical: `/post/${id}` },
   }
 }

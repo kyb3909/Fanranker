@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
+import { apiError } from '@/lib/api-error'
 
 /**
  * GET /api/profile/me
@@ -49,11 +50,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(profile || {})
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -210,12 +207,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(profile)
   } catch (error) {
-    console.error('API error (PATCH /api/profile/me):', error)
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }
 
@@ -284,10 +276,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return apiError('서버 오류가 발생했습니다.', 500, error)
   }
 }

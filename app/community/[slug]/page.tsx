@@ -191,6 +191,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: `${name} - FanRanker`,
       description: communityData?.description,
     },
+    twitter: {
+      card: 'summary',
+      title: `${name} - FanRanker`,
+      description: communityData?.description,
+    },
     alternates: { canonical: `/community/${slug}` },
   }
 }
