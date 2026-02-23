@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input"
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
@@ -13,7 +12,6 @@ import { AdPlaceholder } from "@/components/ad-placeholder"
 
 
 export function CommunitySidebar() {
-  const router = useRouter()
   const { isSignedIn } = useAuth()
   const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState("")
@@ -72,9 +70,12 @@ export function CommunitySidebar() {
         } else {
           next.delete(communitySlug)
         }
+        // 홈 피드 등 다른 컴포넌트에 팔로우 변경 알림
+        window.dispatchEvent(new CustomEvent('communityFollowChanged', {
+          detail: { slug: communitySlug, following: data.following, allSlugs: Array.from(next) }
+        }))
         return next
       })
-      router.refresh()
     } catch {
       toast({ variant: "destructive", title: "오류", description: "처리 중 오류가 발생했습니다." })
     } finally {

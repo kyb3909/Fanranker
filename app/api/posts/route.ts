@@ -19,28 +19,15 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     
     const communitySlug = searchParams.get('community_slug')
-    const followed = searchParams.get('followed') === 'true'
+    const communitySlugsParam = searchParams.get('community_slugs')
     const sort = searchParams.get('sort') || 'new' // 'hot', 'new', 'comments', 'recent_comments'
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50)
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
 
-    // 팔로우 게시판 필터: 로그인 유저의 팔로우 목록 조회
-    let followedSlugs: string[] | null = null
-    if (followed) {
-      const user = await currentUser()
-      if (user) {
-        const { createServiceRoleClient } = await import('@/lib/supabase/server')
-        const adminClient = createServiceRoleClient()
-        const { data: follows } = await adminClient
-          .from('community_follows')
-          .select('community_slug')
-          .eq('user_id', user.id)
-        followedSlugs = follows?.map(f => f.community_slug) || []
-      }
-      if (!followedSlugs || followedSlugs.length === 0) {
-        return NextResponse.json({ posts: [], profiles: [], hasMore: false })
-      }
-    }
+    // 팔로우 게시판 필터: 클라이언트에서 전달받은 slug 목록 사용
+    const followedSlugs = communitySlugsParam
+      ? communitySlugsParam.split(',').filter(Boolean)
+      : null
 
     // 최근 댓글이 달린 게시물 조회
     if (sort === 'recent_comments') {

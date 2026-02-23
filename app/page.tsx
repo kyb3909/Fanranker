@@ -177,6 +177,16 @@ function HomeContent() {
       .finally(() => setFollowsLoaded(true))
   }, [isSignedIn])
 
+  // 사이드바에서 팔로우 토글 시 즉시 반영
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { allSlugs } = (e as CustomEvent).detail
+      setFollowedCommunities(new Set<string>(allSlugs))
+    }
+    window.addEventListener('communityFollowChanged', handler)
+    return () => window.removeEventListener('communityFollowChanged', handler)
+  }, [])
+
   // 콘텐츠 탭 상태
   const [activities, setActivities] = useState<{
     id: string
@@ -234,7 +244,10 @@ function HomeContent() {
       setHasMore(true)
       try {
         const sortParam = sortBy === "hot" ? "hot" : "new"
-        const followedParam = isSignedIn ? '&followed=true' : ''
+        const slugsArray = Array.from(followedCommunities)
+        const followedParam = isSignedIn && slugsArray.length > 0
+          ? `&community_slugs=${slugsArray.join(',')}`
+          : ''
         const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=0${followedParam}`)
         if (!response.ok) throw new Error('글 목록을 가져오는데 실패했습니다.')
         const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
@@ -248,8 +261,15 @@ function HomeContent() {
       }
     }
 
-    if (followsLoaded) fetchPosts()
-  }, [sortBy, followedCommunities, followsLoaded, transformPosts])
+    if (!followsLoaded) return
+    // 로그인 유저가 팔로우 없으면 빈 피드 표시 (API 호출 불필요)
+    if (isSignedIn && followedCommunities.size === 0) {
+      setPosts([])
+      setIsLoading(false)
+      return
+    }
+    fetchPosts()
+  }, [sortBy, followedCommunities, followsLoaded, isSignedIn, transformPosts])
 
   // 추가 페이지 로드
   const loadMore = useCallback(async () => {
@@ -257,7 +277,10 @@ function HomeContent() {
     setIsLoadingMore(true)
     try {
       const sortParam = sortBy === "hot" ? "hot" : "new"
-      const followedParam = isSignedIn ? '&followed=true' : ''
+      const slugsArray = Array.from(followedCommunities)
+      const followedParam = isSignedIn && slugsArray.length > 0
+        ? `&community_slugs=${slugsArray.join(',')}`
+        : ''
       const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}${followedParam}`)
       if (!response.ok) throw new Error()
       const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
@@ -270,7 +293,7 @@ function HomeContent() {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [isLoadingMore, hasMore, sortBy, offset, transformPosts])
+  }, [isLoadingMore, hasMore, sortBy, offset, isSignedIn, followedCommunities, transformPosts])
 
   // Intersection Observer로 무한 스크롤
   useEffect(() => {
