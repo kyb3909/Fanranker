@@ -202,10 +202,7 @@ function HomeContent() {
   // 게시글 변환 함수
   const transformPosts = useCallback((fetchedPosts: { id: string; user_id: string; community_slug: string; title: string; content: string | TipTapNode; image?: string; vote_count?: number; comment_count?: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null; temperature?: number }[]) => {
     const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
-    const hasFollows = followedCommunities.size > 0
-    return fetchedPosts
-      .filter((post) => !hasFollows || followedCommunities.has(post.community_slug))
-      .map((post) => {
+    return fetchedPosts.map((post) => {
         const profile = profileMap.get(post.user_id)
         return {
           id: post.id,
@@ -225,7 +222,7 @@ function HomeContent() {
           createdAt: new Date(post.created_at),
         }
       })
-  }, [followedCommunities])
+  }, [])
 
   // Supabase에서 글 목록 가져오기 (첫 페이지)
   useEffect(() => {
@@ -235,7 +232,8 @@ function HomeContent() {
       setHasMore(true)
       try {
         const sortParam = sortBy === "hot" ? "hot" : "new"
-        const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=0`)
+        const followedParam = followedCommunities.size > 0 ? '&followed=true' : ''
+        const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=0${followedParam}`)
         if (!response.ok) throw new Error('글 목록을 가져오는데 실패했습니다.')
         const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
         setPosts(transformPosts(fetchedPosts, profiles))
@@ -257,7 +255,8 @@ function HomeContent() {
     setIsLoadingMore(true)
     try {
       const sortParam = sortBy === "hot" ? "hot" : "new"
-      const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}`)
+      const followedParam = followedCommunities.size > 0 ? '&followed=true' : ''
+      const response = await fetch(`/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}${followedParam}`)
       if (!response.ok) throw new Error()
       const { posts: fetchedPosts, profiles, hasMore: more } = await response.json()
       const newPosts = transformPosts(fetchedPosts, profiles)

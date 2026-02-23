@@ -19,9 +19,28 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     
     const communitySlug = searchParams.get('community_slug')
+    const followed = searchParams.get('followed') === 'true'
     const sort = searchParams.get('sort') || 'new' // 'hot', 'new', 'comments', 'recent_comments'
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50)
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
+
+    // 팔로우 게시판 필터: 로그인 유저의 팔로우 목록 조회
+    let followedSlugs: string[] | null = null
+    if (followed) {
+      const user = await currentUser()
+      if (user) {
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        const adminClient = createServiceRoleClient()
+        const { data: follows } = await adminClient
+          .from('community_follows')
+          .select('community_slug')
+          .eq('user_id', user.id)
+        followedSlugs = follows?.map(f => f.community_slug) || []
+      }
+      if (!followedSlugs || followedSlugs.length === 0) {
+        return NextResponse.json({ posts: [], profiles: [], hasMore: false })
+      }
+    }
 
     // 최근 댓글이 달린 게시물 조회
     if (sort === 'recent_comments') {
@@ -127,7 +146,7 @@ export async function GET(request: NextRequest) {
 
     // 기존 정렬 로직 (hot, new, comments)
     // 홈 피드: 최근 24시간, 커뮤니티 필터 있으면 제한 없음
-    const sinceDays = communitySlug ? null : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const sinceDays = (communitySlug || followedSlugs) ? null : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     let query = supabase
       .from('posts')
       .select(`
@@ -152,6 +171,8 @@ export async function GET(request: NextRequest) {
     // 커뮤니티 필터링
     if (communitySlug) {
       query = query.eq('community_slug', communitySlug)
+    } else if (followedSlugs) {
+      query = query.in('community_slug', followedSlugs)
     }
 
     // 정렬: hot은 DB의 temperature 컬럼 사용
