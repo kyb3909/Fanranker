@@ -16,12 +16,12 @@ export default async function AdminPostsPage() {
     .range(0, 29)
 
   return (
-    <div className="p-6">
+    <main id="main-content" tabIndex={-1} className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">게시글 관리</h1>
         <p className="text-sm text-muted-foreground">커뮤니티 게시글을 조회하고 관리합니다.</p>
       </div>
       <PostManagementTable initialPosts={data ?? []} total={count ?? 0} />
-    </div>
+    </main>
   )
 }

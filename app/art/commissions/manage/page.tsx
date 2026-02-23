@@ -87,7 +87,7 @@ export default function ManagePackagesPage() {
   const editingPkg = editingId ? packages.find(p => p.id === editingId) : null
 
   return (
-    <div className="space-y-5">
+    <main id="main-content" tabIndex={-1} className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/art/commissions" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -149,6 +149,6 @@ export default function ManagePackagesPage() {
           ))}
         </div>
       )}
-    </div>
+    </main>
   )
 }

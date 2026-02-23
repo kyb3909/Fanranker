@@ -53,7 +53,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <main id="main-content" tabIndex={-1} className="max-w-2xl mx-auto space-y-5">
       <Link href="/art/commissions/orders" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
         주문 목록
@@ -66,6 +66,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         profiles={data.profiles}
         onRefresh={fetchOrder}
       />
-    </div>
+    </main>
   )
 }

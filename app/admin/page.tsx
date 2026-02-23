@@ -38,7 +38,7 @@ export default async function AdminDashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <main id="main-content" tabIndex={-1} className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">대시보드</h1>
         <p className="text-sm text-muted-foreground">시스템 현황 요약</p>
@@ -73,6 +73,6 @@ export default async function AdminDashboardPage() {
       />
 
       <DashboardQuickLinks />
-    </div>
+    </main>
   )
 }

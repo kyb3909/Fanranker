@@ -4,7 +4,7 @@ import { SignUp } from '@clerk/nextjs'
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <main id="main-content" tabIndex={-1} className="min-h-screen flex items-center justify-center bg-background">
       <SignUp
         appearance={{
           elements: {
@@ -27,6 +27,6 @@ export default function SignUpPage() {
         }}
         signInUrl="/"
       />
-    </div>
+    </main>
   )
 }

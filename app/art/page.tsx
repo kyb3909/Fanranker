@@ -90,7 +90,7 @@ export default function ArtPage() {
     : MOCK_ARTWORKS.filter(a => a.category === activeCategory)
 
   return (
-    <div className="space-y-5">
+    <main id="main-content" tabIndex={-1} className="space-y-5">
       {/* Sort + Category Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         {/* Sort Buttons */}
@@ -216,7 +216,7 @@ export default function ArtPage() {
           </div>
         </aside>
       </div>
-    </div>
+    </main>
   )
 }
 

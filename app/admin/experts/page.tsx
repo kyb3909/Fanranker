@@ -14,12 +14,12 @@ export default async function AdminExpertsPage() {
     .limit(100)
 
   return (
-    <div className="p-6">
+    <main id="main-content" tabIndex={-1} className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">전문가 승인 관리</h1>
         <p className="text-sm text-muted-foreground">사용자의 전문가 인증을 승인하거나 해제할 수 있습니다.</p>
       </div>
       <ExpertApprovalTable initialProfiles={profiles || []} />
-    </div>
+    </main>
   )
 }

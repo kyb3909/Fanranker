@@ -44,7 +44,7 @@ export default async function AdminSystemPage() {
   const lastCrawlerRun = crawlerRuns?.[0] ?? null
 
   return (
-    <div className="p-6 space-y-8">
+    <main id="main-content" tabIndex={-1} className="p-6 space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-foreground">시스템 상태</h1>
         <p className="text-sm text-muted-foreground">서비스 동기화 및 크롤러 상태를 모니터링합니다.</p>
@@ -83,6 +83,6 @@ export default async function AdminSystemPage() {
       />
 
       <CrawlerHistory runs={crawlerRuns ?? []} />
-    </div>
+    </main>
   )
 }

@@ -86,7 +86,7 @@ export default function OrderPage({ params }: { params: Promise<{ packageId: str
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-5">
+    <main id="main-content" tabIndex={-1} className="max-w-lg mx-auto space-y-5">
       <Link href="/art/commissions" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
         커미션 마켓
@@ -102,6 +102,6 @@ export default function OrderPage({ params }: { params: Promise<{ packageId: str
         userBalance={balance}
         onSubmit={handleSubmit}
       />
-    </div>
+    </main>
   )
 }

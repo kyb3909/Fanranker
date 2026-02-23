@@ -31,7 +31,7 @@ export default async function AdminTickerPage() {
   ])
 
   return (
-    <div className="p-6 space-y-6">
+    <main id="main-content" tabIndex={-1} className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">뉴스 티커 관리</h1>
         <p className="text-sm text-muted-foreground">뉴스 티커 아이템과 크롤러 상태를 관리합니다.</p>
@@ -53,6 +53,6 @@ export default async function AdminTickerPage() {
       />
 
       <TickerManagement initialItems={items ?? []} total={count ?? 0} />
-    </div>
+    </main>
   )
 }

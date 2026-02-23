@@ -119,7 +119,7 @@ export default function ArtworkDetailPage({ params }: { params: Promise<{ id: st
     .slice(0, 6)
 
   return (
-    <div className="space-y-4">
+    <main id="main-content" tabIndex={-1} className="space-y-4">
       {/* Back */}
       <Link href="/art" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
@@ -310,6 +310,6 @@ export default function ArtworkDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </aside>
       </div>
-    </div>
+    </main>
   )
 }

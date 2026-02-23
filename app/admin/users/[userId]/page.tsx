@@ -15,7 +15,7 @@ export default async function AdminUserDetailPage({
   const { userId } = await params
 
   return (
-    <div className="p-6 space-y-4">
+    <main id="main-content" tabIndex={-1} className="p-6 space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
           <Link href="/admin/users">
@@ -28,6 +28,6 @@ export default async function AdminUserDetailPage({
         </div>
       </div>
       <UserDetailTabs userId={userId} />
-    </div>
+    </main>
   )
 }

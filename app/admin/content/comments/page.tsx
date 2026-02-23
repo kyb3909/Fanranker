@@ -16,12 +16,12 @@ export default async function AdminCommentsPage() {
     .range(0, 29)
 
   return (
-    <div className="p-6">
+    <main id="main-content" tabIndex={-1} className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">댓글 관리</h1>
         <p className="text-sm text-muted-foreground">커뮤니티 댓글을 조회하고 관리합니다.</p>
       </div>
       <CommentManagementTable initialComments={data ?? []} total={count ?? 0} />
-    </div>
+    </main>
   )
 }

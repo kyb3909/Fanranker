@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 }
 
 export default function GamesPredictionPage() {
-  return <PredictionPageClient />
+  return (
+    <main id="main-content" tabIndex={-1}>
+      <PredictionPageClient />
+    </main>
+  )
 }

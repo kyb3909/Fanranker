@@ -15,12 +15,12 @@ export default async function AdminUsersPage() {
     .range(0, 29)
 
   return (
-    <div className="p-6">
+    <main id="main-content" tabIndex={-1} className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">사용자 관리</h1>
         <p className="text-sm text-muted-foreground">전체 사용자 목록을 조회하고 관리합니다.</p>
       </div>
       <UserDirectoryTable initialUsers={data ?? []} total={count ?? 0} />
-    </div>
+    </main>
   )
 }

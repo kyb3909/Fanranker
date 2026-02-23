@@ -14,12 +14,12 @@ export default async function AdminBoardsPage() {
     .order('sort_order', { ascending: true })
 
   return (
-    <div className="p-6">
+    <main id="main-content" tabIndex={-1} className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">카테고리 관리</h1>
         <p className="text-sm text-muted-foreground">게시판 카테고리를 설정하고 관리합니다.</p>
       </div>
       <BoardConfigTable initialBoards={data ?? []} />
-    </div>
+    </main>
   )
 }

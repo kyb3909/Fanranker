@@ -42,7 +42,7 @@ export default function OrdersListPage() {
   ]
 
   return (
-    <div className="space-y-5">
+    <main id="main-content" tabIndex={-1} className="space-y-5">
       <div className="flex items-center gap-3">
         <Link href="/art/commissions" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-5 w-5" />
@@ -114,6 +114,6 @@ export default function OrdersListPage() {
           ))}
         </div>
       )}
-    </div>
+    </main>
   )
 }
