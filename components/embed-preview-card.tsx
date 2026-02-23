@@ -256,7 +256,7 @@ export function EmbedPreviewCard({
               provider === 'instagram' ? (
                 <InstagramPreviewEmbed html={embedHtml} />
               ) : provider === 'x' ? (
-                <XPreviewEmbed html={embedHtml} />
+                <XPreviewEmbed html={embedHtml} url={url} author_name={author_name} />
               ) : (
                 <div
                   className={cn(
@@ -375,8 +375,9 @@ function InstagramPreviewEmbed({ html }: { html: string }) {
 }
 
 /** X(Twitter) blockquote + widgets.js 렌더링 (preview card 확장 시) */
-function XPreviewEmbed({ html }: { html: string }) {
+function XPreviewEmbed({ html, url, author_name }: { html: string; url?: string; author_name?: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [widgetFailed, setWidgetFailed] = useState(false)
 
   useEffect(() => {
     type TwttrWindow = Window & typeof globalThis & {
@@ -385,10 +386,18 @@ function XPreviewEmbed({ html }: { html: string }) {
     }
     const win = window as TwttrWindow
 
+    let failTimer: ReturnType<typeof setTimeout>
+
     const load = () => {
       if (containerRef.current) {
         win.twttr?.widgets.load(containerRef.current)
       }
+      // 4초 후 iframe 미생성 시 폴백
+      failTimer = setTimeout(() => {
+        if (!containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
+          setWidgetFailed(true)
+        }
+      }, 4000)
     }
 
     const timer = setTimeout(() => {
@@ -407,11 +416,39 @@ function XPreviewEmbed({ html }: { html: string }) {
       script.src = 'https://platform.twitter.com/widgets.js'
       script.async = true
       script.onload = () => { win.__twttrLoading = false; load() }
+      script.onerror = () => { setWidgetFailed(true) }
       document.body.appendChild(script)
+
+      // widgets.js 로딩 자체 실패 타임아웃
+      failTimer = setTimeout(() => {
+        if (!containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
+          setWidgetFailed(true)
+        }
+      }, 5000)
     }, 0)
 
-    return () => clearTimeout(timer)
+    return () => { clearTimeout(timer); clearTimeout(failTimer) }
   }, [html])
+
+  if (widgetFailed) {
+    const linkUrl = url || html.match(/href="([^"]*x\.com[^"]*)"/)?.[1] || html.match(/href="([^"]*twitter\.com[^"]*)"/)?.[1] || ''
+    return (
+      <div className="max-w-[550px] mx-auto p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-foreground" aria-label="X">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          {author_name && <span className="text-sm font-medium text-foreground">{author_name}</span>}
+        </div>
+        {linkUrl && (
+          <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+            <ExternalLink className="h-4 w-4" />
+            X에서 보기
+          </a>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div

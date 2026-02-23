@@ -3,7 +3,8 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import { ExternalLink } from "lucide-react"
 
 export interface EmbedCardProps {
   provider: 'youtube' | 'instagram' | 'x'
@@ -233,9 +234,42 @@ function loadTwitterWidgetsJs(callback: () => void) {
   document.body.appendChild(script)
 }
 
+/** widgets.js 렌더링 실패 시 표시할 폴백 카드 */
+function XFallbackCard({ url, author_name, className }: { url: string; author_name?: string; className?: string }) {
+  return (
+    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+      <CardContent className="p-4">
+        <div className="max-w-[550px] mx-auto space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-foreground" aria-label="X">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              {author_name && (
+                <span className="text-sm font-medium text-foreground">{author_name}</span>
+              )}
+            </div>
+          </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-primary hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            X에서 보기
+          </a>
+          <p className="text-xs text-muted-foreground break-all">{url}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 /**
  * X(Twitter) 임베드 전용 컴포넌트
  * blockquote를 삽입 후 widgets.js를 로드하여 인터랙티브 렌더링
+ * 4초 내 렌더링 실패 시 폴백 카드 표시
  */
 function XEmbed({
   html,
@@ -251,18 +285,53 @@ function XEmbed({
   className?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [widgetFailed, setWidgetFailed] = useState(false)
 
   useEffect(() => {
+    let failTimer: ReturnType<typeof setTimeout>
+
+    const checkRendered = () => {
+      // widgets.js가 blockquote를 iframe으로 변환했는지 확인
+      if (containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
+        clearTimeout(failTimer)
+      }
+    }
+
     const timer = setTimeout(() => {
       loadTwitterWidgetsJs(() => {
         const win = window as TwttrWindow
         if (containerRef.current) {
           win.twttr?.widgets.load(containerRef.current)
         }
+        // 4초 후 iframe이 없으면 폴백 표시
+        failTimer = setTimeout(() => {
+          if (!containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
+            setWidgetFailed(true)
+          }
+        }, 4000)
       })
+
+      // widgets.js 로딩 자체가 실패할 경우 (5초 타임아웃)
+      failTimer = setTimeout(() => {
+        if (!containerRef.current?.querySelector('iframe.twitter-tweet-rendered, iframe[id^="twitter-widget"]')) {
+          setWidgetFailed(true)
+        }
+      }, 5000)
     }, 0)
-    return () => clearTimeout(timer)
+
+    // 주기적으로 렌더링 완료 체크
+    const pollTimer = setInterval(checkRendered, 500)
+
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(failTimer)
+      clearInterval(pollTimer)
+    }
   }, [html])
+
+  if (widgetFailed) {
+    return <XFallbackCard url={url} author_name={author_name} className={className} />
+  }
 
   return (
     <Card className={cn("border border-border bg-card overflow-hidden", className)}>
@@ -272,20 +341,6 @@ function XEmbed({
           className="max-w-[550px] mx-auto [&_.twitter-tweet]:!mx-auto"
           dangerouslySetInnerHTML={{ __html: html }}
         />
-        {(title || author_name) && (
-          <div className="mt-2 border-t border-border pt-2">
-            {title && (
-              <h3 className="font-semibold text-sm text-foreground line-clamp-2">
-                {title}
-              </h3>
-            )}
-            {author_name && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {author_name}
-              </p>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   )
