@@ -132,8 +132,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 기존 정렬 로직 (hot, new, comments)
-    // 홈 피드: 최근 24시간, 커뮤니티 필터 있으면 제한 없음
-    const sinceDays = (communitySlug || followedSlugs) ? null : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // 홈 피드: 항상 최근 24시간, 커뮤니티 개별 페이지만 제한 없음
+    const sinceDays = communitySlug ? null : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     let query = supabase
       .from('posts')
       .select(`
