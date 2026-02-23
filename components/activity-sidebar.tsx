@@ -45,7 +45,7 @@ export function ActivitySidebar() {
       }
       setIsLoadingPosts(true)
       try {
-        const response = await fetch('/api/posts?sort=recent_comments&limit=4')
+        const response = await fetch('/api/posts?sort=recent_comments&limit=8')
         if (response.ok) {
           const { posts } = await response.json()
           const mapped = mapApiPostsToRecentPosts(posts || [])
