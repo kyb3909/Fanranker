@@ -1,8 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { verifyCronSecret } from '@/lib/cron-auth'
-import { syncSingleGmTs } from '@/app/api/cron/betman-sync/route'
-import { apiError, apiBadRequest } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { verifyCronSecret } from "@/lib/cron-auth"
+import { syncSingleGmTs } from "@/app/api/cron/betman-sync/route"
+import { apiError, apiBadRequest } from "@/lib/api-error"
+import { z } from "zod"
+
+const manualSyncSchema = z.object({
+  gmTs: z.union(
+    [z.string().min(1), z.array(z.union([z.string(), z.number()])).min(1), z.number()],
+    { message: 'gmTs가 필요합니다. 예: {"gmTs":"260021"} 또는 {"gmTs":["260021","260022"]}' }
+  ),
+})
 
 /**
  * POST /api/betman/manual-sync
@@ -33,19 +41,24 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return apiBadRequest('Invalid request body')
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
+
+    const parsed = manualSyncSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiBadRequest(
+        parsed.error.errors[0]?.message ||
+          'gmTs가 필요합니다. 예: {"gmTs":"260021"} 또는 {"gmTs":["260021","260022"]}'
+      )
     }
 
     // gmTs를 단일 또는 배열로 받기
     let gmTsList: string[] = []
-    if (Array.isArray(body.gmTs)) {
-      gmTsList = body.gmTs.map((v: unknown) => String(v).trim()).filter(Boolean)
-    } else if (body.gmTs) {
-      gmTsList = [String(body.gmTs).trim()]
-    }
-
-    if (gmTsList.length === 0) {
-      return apiBadRequest('gmTs가 필요합니다. 예: {"gmTs":"260021"} 또는 {"gmTs":["260021","260022"]}')
+    const gmTsValue = parsed.data.gmTs
+    if (Array.isArray(gmTsValue)) {
+      gmTsList = gmTsValue.map((v) => String(v).trim()).filter(Boolean)
+    } else {
+      gmTsList = [String(gmTsValue).trim()]
     }
 
     // 유효성 검사: gmTs는 숫자 문자열이어야 함
@@ -69,7 +82,7 @@ export async function POST(request: NextRequest) {
     for (const gmTs of gmTsList) {
       const result = await syncSingleGmTs(supabase, gmTs)
 
-      if ('error' in result) {
+      if ("error" in result) {
         errors.push(result.error)
         console.error(`[manual-sync] gmTs ${gmTs} 실패:`, result.error)
         continue
@@ -83,9 +96,9 @@ export async function POST(request: NextRequest) {
     const totalGames = results.reduce((sum, r) => sum + r.games, 0)
 
     const { data: existing } = await supabase
-      .from('betman_sync_state')
-      .select('id')
-      .order('updated_at', { ascending: false })
+      .from("betman_sync_state")
+      .select("id")
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle()
 
@@ -93,15 +106,15 @@ export async function POST(request: NextRequest) {
       last_checked_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       latest_gm_ts: latestGmTs,
-      last_sync_action: 'manual_sync',
+      last_sync_action: "manual_sync",
       last_sync_games_count: totalGames,
-      last_error: errors.length > 0 ? errors.join('; ') : null,
+      last_error: errors.length > 0 ? errors.join("; ") : null,
     }
 
     if (existing) {
-      await supabase.from('betman_sync_state').update(updateData).eq('id', existing.id)
+      await supabase.from("betman_sync_state").update(updateData).eq("id", existing.id)
     } else {
-      await supabase.from('betman_sync_state').insert(updateData)
+      await supabase.from("betman_sync_state").insert(updateData)
     }
 
     const duration = Date.now() - start
@@ -115,6 +128,6 @@ export async function POST(request: NextRequest) {
       duration: `${duration}ms`,
     })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }

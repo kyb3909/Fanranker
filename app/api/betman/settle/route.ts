@@ -1,8 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { updateUserSportStats } from '@/lib/betman/stats'
-import { verifyCronSecret } from '@/lib/cron-auth'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { updateUserSportStats } from "@/lib/betman/stats"
+import { verifyCronSecret } from "@/lib/cron-auth"
+import { apiError, apiBadRequest } from "@/lib/api-error"
+import { z } from "zod"
+
+const settlePostSchema = z
+  .object({
+    round_id: z.string().optional(),
+    gm_ts: z.union([z.string(), z.number()]).transform(String).optional(),
+    daily_round_id: z.string().optional(),
+    daily_id: z.string().optional(),
+  })
+  .refine((data) => data.round_id || data.gm_ts || data.daily_round_id || data.daily_id, {
+    message: "daily_round_id, daily_id, round_id, 또는 gm_ts가 필요합니다.",
+  })
 
 /**
  * POST /api/betman/settle
@@ -25,96 +37,96 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
+    const parsed = settlePostSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiBadRequest(
+        parsed.error.errors[0]?.message ||
+          "daily_round_id, daily_id, round_id, 또는 gm_ts가 필요합니다."
+      )
     }
     const supabase = createServiceRoleClient()
 
     // --- Determine which games to settle ---
     let gameFilter: { column: string; value: string } | null = null
 
-    if (body.daily_round_id) {
-      gameFilter = { column: 'daily_round_id', value: String(body.daily_round_id) }
-    } else if (body.daily_id) {
+    if (parsed.data.daily_round_id) {
+      gameFilter = { column: "daily_round_id", value: parsed.data.daily_round_id }
+    } else if (parsed.data.daily_id) {
       // Look up daily_round_id from daily_id
       const { data: dr } = await supabase
-        .from('betman_daily_rounds')
-        .select('id')
-        .eq('daily_id', String(body.daily_id))
+        .from("betman_daily_rounds")
+        .select("id")
+        .eq("daily_id", parsed.data.daily_id)
         .single()
       if (dr) {
-        gameFilter = { column: 'daily_round_id', value: dr.id }
+        gameFilter = { column: "daily_round_id", value: dr.id }
       }
-    } else if (body.round_id) {
-      gameFilter = { column: 'round_id', value: String(body.round_id) }
-    } else if (body.gm_ts) {
+    } else if (parsed.data.round_id) {
+      gameFilter = { column: "round_id", value: parsed.data.round_id }
+    } else if (parsed.data.gm_ts) {
       const { data: round } = await supabase
-        .from('betman_rounds')
-        .select('id')
-        .eq('gm_ts', String(body.gm_ts))
+        .from("betman_rounds")
+        .select("id")
+        .eq("gm_ts", parsed.data.gm_ts)
         .single()
       if (round) {
-        gameFilter = { column: 'round_id', value: round.id }
+        gameFilter = { column: "round_id", value: round.id }
       }
     }
 
     if (!gameFilter) {
-      return NextResponse.json(
-        { error: 'daily_round_id, daily_id, round_id, 또는 gm_ts가 필요합니다.' },
-        { status: 400 }
-      )
+      return apiBadRequest("daily_round_id, daily_id, round_id, 또는 gm_ts가 필요합니다.")
     }
 
     // 0. 해당 필터의 지난 scheduled 게임 자동 만료 (결과 없이 시간 지난 게임)
     const { error: expireError } = await supabase
-      .from('betman_games')
-      .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+      .from("betman_games")
+      .update({ status: "in_progress", updated_at: new Date().toISOString() })
       .eq(gameFilter.column, gameFilter.value)
-      .eq('status', 'scheduled')
-      .lt('match_time', new Date().toISOString())
-    if (expireError) console.error('Failed to expire scheduled games:', expireError)
+      .eq("status", "scheduled")
+      .lt("match_time", new Date().toISOString())
+    if (expireError) console.error("Failed to expire scheduled games:", expireError)
 
     // 1. 해당 필터의 완료/취소된 경기 조회
     const { data: games, error: gamesError } = await supabase
-      .from('betman_games')
-      .select('id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, daily_round_id')
+      .from("betman_games")
+      .select(
+        "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, daily_round_id"
+      )
       .eq(gameFilter.column, gameFilter.value)
-      .in('status', ['completed', 'cancelled'])
+      .in("status", ["completed", "cancelled"])
 
     if (gamesError) {
-      return NextResponse.json(
-        { error: '경기 조회 실패' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: "경기 조회 실패" }, { status: 500 })
     }
 
     if (!games || games.length === 0) {
-      return NextResponse.json(
-        { error: '정산 가능한 완료된 경기가 없습니다.' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "정산 가능한 완료된 경기가 없습니다." }, { status: 404 })
     }
 
-    const gameMap = new Map(games.map(g => [g.id, g]))
+    const gameMap = new Map(games.map((g) => [g.id, g]))
 
     // 2. 해당 경기들에 대한 pending 예측 조회
-    const gameIds = games.map(g => g.id)
+    const gameIds = games.map((g) => g.id)
     const { data: predictions, error: predError } = await supabase
-      .from('betman_predictions')
-      .select('id, user_id, game_id, prediction, status')
-      .in('game_id', gameIds)
-      .eq('status', 'pending')
+      .from("betman_predictions")
+      .select("id, user_id, game_id, prediction, status")
+      .in("game_id", gameIds)
+      .eq("status", "pending")
 
     if (predError) {
-      return NextResponse.json(
-        { error: '예측 조회 실패' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: "예측 조회 실패" }, { status: 500 })
     }
 
     if (!predictions || predictions.length === 0) {
       return NextResponse.json({
-        message: '정산할 pending 예측이 없습니다.',
-        settled: 0, correct: 0, wrong: 0, cancelled: 0,
+        message: "정산할 pending 예측이 없습니다.",
+        settled: 0,
+        correct: 0,
+        wrong: 0,
+        cancelled: 0,
       })
     }
 
@@ -129,16 +141,16 @@ export async function POST(request: NextRequest) {
       const game = gameMap.get(pred.game_id)
       if (!game) continue
 
-      if (game.status === 'cancelled') {
+      if (game.status === "cancelled") {
         const { error } = await supabase
-          .from('betman_predictions')
+          .from("betman_predictions")
           .update({
-            status: 'cancelled',
+            status: "cancelled",
             is_correct: null,
             points_earned: 0,
             settled_at: new Date().toISOString(),
           })
-          .eq('id', pred.id)
+          .eq("id", pred.id)
 
         if (error) {
           errors.push(`pred=${pred.id}: ${error.message}`)
@@ -163,14 +175,14 @@ export async function POST(request: NextRequest) {
       }
 
       const { error } = await supabase
-        .from('betman_predictions')
+        .from("betman_predictions")
         .update({
-          status: 'settled',
+          status: "settled",
           is_correct: isCorrect,
           points_earned: pointsEarned,
           settled_at: new Date().toISOString(),
         })
-        .eq('id', pred.id)
+        .eq("id", pred.id)
 
       if (error) {
         errors.push(`pred=${pred.id}: ${error.message}`)
@@ -182,50 +194,50 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Update daily round status if settling by daily_round_id
-    const dailyRoundIds = [...new Set(games.map(g => g.daily_round_id).filter(Boolean))]
+    const dailyRoundIds = [...new Set(games.map((g) => g.daily_round_id).filter(Boolean))]
     for (const drId of dailyRoundIds) {
       const { data: remainingGames } = await supabase
-        .from('betman_games')
-        .select('id')
-        .eq('daily_round_id', drId)
-        .in('status', ['scheduled', 'in_progress'])
+        .from("betman_games")
+        .select("id")
+        .eq("daily_round_id", drId)
+        .in("status", ["scheduled", "in_progress"])
         .limit(1)
 
       const allDone = !remainingGames || remainingGames.length === 0
       if (allDone) {
         await supabase
-          .from('betman_daily_rounds')
-          .update({ status: 'settled', updated_at: new Date().toISOString() })
-          .eq('id', drId)
+          .from("betman_daily_rounds")
+          .update({ status: "settled", updated_at: new Date().toISOString() })
+          .eq("id", drId)
       } else {
         await supabase
-          .from('betman_daily_rounds')
-          .update({ status: 'closed', updated_at: new Date().toISOString() })
-          .eq('id', drId)
+          .from("betman_daily_rounds")
+          .update({ status: "closed", updated_at: new Date().toISOString() })
+          .eq("id", drId)
       }
     }
 
     // 4b. Also update proto round status (backward compat)
-    if (gameFilter.column === 'round_id') {
+    if (gameFilter.column === "round_id") {
       const { data: remainingGames } = await supabase
-        .from('betman_games')
-        .select('id')
-        .eq('round_id', gameFilter.value)
-        .in('status', ['scheduled', 'in_progress'])
+        .from("betman_games")
+        .select("id")
+        .eq("round_id", gameFilter.value)
+        .in("status", ["scheduled", "in_progress"])
         .limit(1)
 
       const allDone = !remainingGames || remainingGames.length === 0
       await supabase
-        .from('betman_rounds')
+        .from("betman_rounds")
         .update({
-          status: allDone ? 'settled' : 'closed',
+          status: allDone ? "settled" : "closed",
           updated_at: new Date().toISOString(),
         })
-        .eq('id', gameFilter.value)
+        .eq("id", gameFilter.value)
     }
 
     // 5. 유저별 종목 통계 갱신
-    const affectedUserIds = [...new Set(predictions.map(p => p.user_id))]
+    const affectedUserIds = [...new Set(predictions.map((p) => p.user_id))]
     const statsErrors: string[] = []
 
     for (const userId of affectedUserIds) {
@@ -248,6 +260,6 @@ export async function POST(request: NextRequest) {
       errors: [...errors, ...statsErrors].length > 0 ? [...errors, ...statsErrors] : undefined,
     })
   } catch (e) {
-    return apiError('서버 오류가 발생했습니다.', 500, e)
+    return apiError("서버 오류가 발생했습니다.", 500, e)
   }
 }

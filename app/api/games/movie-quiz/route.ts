@@ -1,6 +1,14 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { apiBadRequest } from "@/lib/api-error"
+import { z } from "zod"
+
+const submitAnswerSchema = z.object({
+  quiz_id: z.string().min(1, "퀴즈 ID가 필요합니다."),
+  selected_answer: z.number({ required_error: "답변이 필요합니다." }),
+  time_taken_ms: z.number().optional(),
+})
 
 // GET: Fetch quiz questions (random set)
 export async function GET(req: NextRequest) {
@@ -12,7 +20,9 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("movie_quizzes")
-      .select("id, category, difficulty, question, image_url, choices, movie_title, movie_year, points")
+      .select(
+        "id, category, difficulty, question, image_url, choices, movie_title, movie_year, points"
+      )
       .eq("is_active", true)
 
     if (category && category !== "all") {
@@ -61,11 +71,11 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceRoleClient()
     const body = await req.json()
-    const { quiz_id, selected_answer, time_taken_ms } = body
-
-    if (!quiz_id || selected_answer === undefined || selected_answer === null) {
-      return NextResponse.json({ error: "퀴즈 ID와 답변이 필요합니다." }, { status: 400 })
+    const parsed = submitAnswerSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiBadRequest(parsed.error.errors[0]?.message || "퀴즈 ID와 답변이 필요합니다.")
     }
+    const { quiz_id, selected_answer, time_taken_ms } = parsed.data
 
     // Check if already answered
     const { data: existing } = await supabase
@@ -94,16 +104,14 @@ export async function POST(req: NextRequest) {
     const pointsEarned = isCorrect ? quiz.points : 0
 
     // Save result
-    const { error: insertError } = await supabase
-      .from("movie_quiz_results")
-      .insert({
-        user_id: user.id,
-        quiz_id,
-        selected_answer,
-        is_correct: isCorrect,
-        points_earned: pointsEarned,
-        time_taken_ms: time_taken_ms || null,
-      })
+    const { error: insertError } = await supabase.from("movie_quiz_results").insert({
+      user_id: user.id,
+      quiz_id,
+      selected_answer,
+      is_correct: isCorrect,
+      points_earned: pointsEarned,
+      time_taken_ms: time_taken_ms || null,
+    })
 
     if (insertError) {
       return NextResponse.json({ error: "결과 저장에 실패했습니다." }, { status: 500 })

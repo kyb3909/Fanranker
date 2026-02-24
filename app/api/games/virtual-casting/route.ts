@@ -1,6 +1,16 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { apiBadRequest } from "@/lib/api-error"
+import { z } from "zod"
+
+const createCastingSchema = z.object({
+  movie_title: z.string().min(1, "영화 제목이 필요합니다."),
+  role_name: z.string().min(1, "배역 이름이 필요합니다."),
+  role_description: z.string().optional(),
+  original_actor: z.string().optional(),
+  image_url: z.string().optional(),
+})
 
 // GET: List castings
 export async function GET(req: NextRequest) {
@@ -10,10 +20,7 @@ export async function GET(req: NextRequest) {
     const sort = searchParams.get("sort") || "latest"
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50)
 
-    let query = supabase
-      .from("virtual_castings")
-      .select("*")
-      .eq("is_active", true)
+    let query = supabase.from("virtual_castings").select("*").eq("is_active", true)
 
     if (sort === "popular") {
       query = query.order("vote_count", { ascending: false })
@@ -70,11 +77,11 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceRoleClient()
     const body = await req.json()
-    const { movie_title, role_name, role_description, original_actor, image_url } = body
-
-    if (!movie_title?.trim() || !role_name?.trim()) {
-      return NextResponse.json({ error: "영화 제목과 배역 이름이 필요합니다." }, { status: 400 })
+    const parsed = createCastingSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiBadRequest(parsed.error.errors[0]?.message || "영화 제목과 배역 이름이 필요합니다.")
     }
+    const { movie_title, role_name, role_description, original_actor, image_url } = parsed.data
 
     const { data: casting, error } = await supabase
       .from("virtual_castings")

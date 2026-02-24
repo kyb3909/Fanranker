@@ -1,24 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
+import { z } from "zod"
+
+const patchPostSchema = z.object({
+  community_slug: z.string().optional(),
+  title: z.string().optional(),
+  content: z.string().optional(),
+  image: z.string().nullable().optional(),
+})
 
 /**
  * GET /api/posts/[id]
  * 특정 글 상세 조회
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const supabase = createAnonClient()
 
     // 1. 게시글 조회
     const { data: post, error: postError } = await supabase
-      .from('posts')
-      .select(`
+      .from("posts")
+      .select(
+        `
         id,
         user_id,
         community_slug,
@@ -30,27 +36,25 @@ export async function GET(
         temperature,
         created_at,
         updated_at
-      `)
-      .eq('id', id)
-      .is('deleted_at', null)
+      `
+      )
+      .eq("id", id)
+      .is("deleted_at", null)
       .single()
 
     if (postError) {
-      return apiError('글을 찾을 수 없습니다.', 404, postError)
+      return apiError("글을 찾을 수 없습니다.", 404, postError)
     }
 
     if (!post) {
-      return NextResponse.json(
-        { error: '글을 찾을 수 없습니다.' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "글을 찾을 수 없습니다." }, { status: 404 })
     }
 
     // 2. 작성자 프로필 조회
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_id, nickname, avatar_url')
-      .eq('user_id', post.user_id)
+      .from("profiles")
+      .select("user_id, nickname, avatar_url")
+      .eq("user_id", post.user_id)
       .single()
 
     return NextResponse.json({
@@ -60,7 +64,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -68,10 +72,7 @@ export async function GET(
  * PATCH /api/posts/[id]
  * 글 수정 (작성자만)
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const user = await currentUser()
@@ -80,17 +81,17 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { community_slug, title, content, image } = body
+    const parsed = patchPostSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
+    }
+    const { community_slug, title, content, image } = parsed.data
 
     const supabase = createServiceRoleClient()
-    const { data: existing } = await supabase
-      .from('posts')
-      .select('user_id')
-      .eq('id', id)
-      .single()
+    const { data: existing } = await supabase.from("posts").select("user_id").eq("id", id).single()
 
     if (!existing || existing.user_id !== user.id) {
-      return NextResponse.json({ error: '수정 권한이 없습니다.' }, { status: 403 })
+      return NextResponse.json({ error: "수정 권한이 없습니다." }, { status: 403 })
     }
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -100,9 +101,9 @@ export async function PATCH(
     if (image !== undefined) updates.image = image
 
     const { data, error } = await supabase
-      .from('posts')
+      .from("posts")
       .update(updates)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single()
 
@@ -111,7 +112,7 @@ export async function PATCH(
     }
     return NextResponse.json(data)
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -131,26 +132,22 @@ export async function DELETE(
     }
 
     const supabase = createServiceRoleClient()
-    const { data: existing } = await supabase
-      .from('posts')
-      .select('user_id')
-      .eq('id', id)
-      .single()
+    const { data: existing } = await supabase.from("posts").select("user_id").eq("id", id).single()
 
     if (!existing || existing.user_id !== user.id) {
-      return NextResponse.json({ error: '삭제 권한이 없습니다.' }, { status: 403 })
+      return NextResponse.json({ error: "삭제 권한이 없습니다." }, { status: 403 })
     }
 
     const { error } = await supabase
-      .from('posts')
+      .from("posts")
       .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id)
+      .eq("id", id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     return NextResponse.json({ success: true })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
