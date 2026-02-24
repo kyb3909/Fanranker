@@ -194,41 +194,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Update daily round status if settling by daily_round_id
-    //    - All games done → "settled"
-    //    - Scheduled games remain (not yet started) → keep "open" (betting still possible)
-    //    - Only in_progress games remain → "closed" (started but not finished)
+    //    - All games completed/cancelled → "settled"
+    //    - Otherwise → do NOT touch (round stays "open" until natural bet_close_at)
+    //    "closed" is only set by games API at bet_close_at (23:00 KST), never by settle.
     const dailyRoundIds = [...new Set(games.map((g) => g.daily_round_id).filter(Boolean))]
     for (const drId of dailyRoundIds) {
-      const { data: remainingScheduled } = await supabase
+      const { data: remainingGames } = await supabase
         .from("betman_games")
         .select("id")
         .eq("daily_round_id", drId)
-        .eq("status", "scheduled")
+        .in("status", ["scheduled", "in_progress"])
         .limit(1)
 
-      const { data: remainingInProgress } = await supabase
-        .from("betman_games")
-        .select("id")
-        .eq("daily_round_id", drId)
-        .eq("status", "in_progress")
-        .limit(1)
-
-      const hasScheduled = remainingScheduled && remainingScheduled.length > 0
-      const hasInProgress = remainingInProgress && remainingInProgress.length > 0
-
-      let newStatus: string
-      if (!hasScheduled && !hasInProgress) {
-        newStatus = "settled"
-      } else if (hasScheduled) {
-        newStatus = "open"
-      } else {
-        newStatus = "closed"
+      const allDone = !remainingGames || remainingGames.length === 0
+      if (allDone) {
+        await supabase
+          .from("betman_daily_rounds")
+          .update({ status: "settled", updated_at: new Date().toISOString() })
+          .eq("id", drId)
       }
-
-      await supabase
-        .from("betman_daily_rounds")
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", drId)
+      // 남은 경기가 있으면 상태 변경하지 않음 — 베팅은 항상 가능
     }
 
     // 4b. Also update proto round status (backward compat)
@@ -241,13 +226,12 @@ export async function POST(request: NextRequest) {
         .limit(1)
 
       const allDone = !remainingGames || remainingGames.length === 0
-      await supabase
-        .from("betman_rounds")
-        .update({
-          status: allDone ? "settled" : "closed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", gameFilter.value)
+      if (allDone) {
+        await supabase
+          .from("betman_rounds")
+          .update({ status: "settled", updated_at: new Date().toISOString() })
+          .eq("id", gameFilter.value)
+      }
     }
 
     // 5. 유저별 종목 통계 갱신
