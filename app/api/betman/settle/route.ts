@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     const gameIds = games.map((g) => g.id)
     const { data: predictions, error: predError } = await supabase
       .from("betman_predictions")
-      .select("id, user_id, game_id, prediction, status")
+      .select("id, user_id, game_id, prediction, status, stake, slip_id")
       .in("game_id", gameIds)
       .eq("status", "pending")
 
@@ -161,6 +161,7 @@ export async function POST(request: NextRequest) {
       }
 
       const isCorrect = pred.prediction === game.result
+      const predStake = pred.stake ?? 1
 
       let pointsEarned = 0
       if (isCorrect) {
@@ -190,6 +191,81 @@ export async function POST(request: NextRequest) {
         settled++
         if (isCorrect) correct++
         else wrong++
+      }
+    }
+
+    // 3b. 슬립 단위 정산 (모든 예측 정산 후)
+    // 슬립의 모든 예측이 settled/cancelled → 슬립 상태 결정
+    const affectedSlipIds = [...new Set(predictions.map((p) => p.slip_id).filter(Boolean))]
+    let slipsWon = 0
+    let slipsLost = 0
+    let totalPayout = 0
+
+    for (const slipId of affectedSlipIds) {
+      // 슬립의 모든 예측 조회
+      const { data: slipPreds } = await supabase
+        .from("betman_predictions")
+        .select("id, status, is_correct, stake")
+        .eq("slip_id", slipId)
+
+      if (!slipPreds) continue
+
+      // 아직 pending인 예측이 있으면 건너뜀
+      const hasPending = slipPreds.some((p) => p.status === "pending")
+      if (hasPending) continue
+
+      // 취소 제외한 예측들
+      const activePreds = slipPreds.filter((p) => p.status === "settled")
+      if (activePreds.length === 0) {
+        // 전부 취소 → 슬립도 취소, 환불
+        const { data: slipData } = await supabase
+          .from("prediction_slips")
+          .select("user_id, stake")
+          .eq("id", slipId)
+          .single()
+
+        await supabase.from("prediction_slips").update({ status: "cancelled" }).eq("id", slipId)
+
+        if (slipData) {
+          await supabase.rpc("refund_tokens", {
+            p_user_id: slipData.user_id,
+            p_amount: slipData.stake,
+            p_description: `경기 취소 환불 (슬립)`,
+          })
+        }
+        continue
+      }
+
+      // 모든 활성 예측 적중 여부
+      const allCorrect = activePreds.every((p) => p.is_correct === true)
+
+      if (allCorrect) {
+        // 적중! → 슬립의 total_odds * stake 지급
+        const { data: slipData } = await supabase
+          .from("prediction_slips")
+          .select("user_id, stake, total_odds")
+          .eq("id", slipId)
+          .single()
+
+        if (slipData) {
+          const payout = Math.round(slipData.stake * slipData.total_odds * 100) / 100
+          totalPayout += payout
+
+          await supabase.rpc("refund_tokens", {
+            p_user_id: slipData.user_id,
+            p_amount: Math.floor(payout),
+            p_description: `승부예측 적중! ${payout}볼 획득`,
+          })
+        }
+
+        await supabase.from("prediction_slips").update({ status: "won" }).eq("id", slipId)
+
+        slipsWon++
+      } else {
+        // 미적중 → 볼은 이미 차감됨
+        await supabase.from("prediction_slips").update({ status: "lost" }).eq("id", slipId)
+
+        slipsLost++
       }
     }
 
@@ -254,6 +330,7 @@ export async function POST(request: NextRequest) {
       wrong,
       cancelled,
       totalPredictions: predictions.length,
+      slips: { total: affectedSlipIds.length, won: slipsWon, lost: slipsLost, totalPayout },
       statsUpdated: affectedUserIds.length,
       errors: [...errors, ...statsErrors].length > 0 ? [...errors, ...statsErrors] : undefined,
     })
