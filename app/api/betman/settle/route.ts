@@ -194,27 +194,41 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Update daily round status if settling by daily_round_id
+    //    - All games done → "settled"
+    //    - Scheduled games remain (not yet started) → keep "open" (betting still possible)
+    //    - Only in_progress games remain → "closed" (started but not finished)
     const dailyRoundIds = [...new Set(games.map((g) => g.daily_round_id).filter(Boolean))]
     for (const drId of dailyRoundIds) {
-      const { data: remainingGames } = await supabase
+      const { data: remainingScheduled } = await supabase
         .from("betman_games")
         .select("id")
         .eq("daily_round_id", drId)
-        .in("status", ["scheduled", "in_progress"])
+        .eq("status", "scheduled")
         .limit(1)
 
-      const allDone = !remainingGames || remainingGames.length === 0
-      if (allDone) {
-        await supabase
-          .from("betman_daily_rounds")
-          .update({ status: "settled", updated_at: new Date().toISOString() })
-          .eq("id", drId)
+      const { data: remainingInProgress } = await supabase
+        .from("betman_games")
+        .select("id")
+        .eq("daily_round_id", drId)
+        .eq("status", "in_progress")
+        .limit(1)
+
+      const hasScheduled = remainingScheduled && remainingScheduled.length > 0
+      const hasInProgress = remainingInProgress && remainingInProgress.length > 0
+
+      let newStatus: string
+      if (!hasScheduled && !hasInProgress) {
+        newStatus = "settled"
+      } else if (hasScheduled) {
+        newStatus = "open"
       } else {
-        await supabase
-          .from("betman_daily_rounds")
-          .update({ status: "closed", updated_at: new Date().toISOString() })
-          .eq("id", drId)
+        newStatus = "closed"
       }
+
+      await supabase
+        .from("betman_daily_rounds")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", drId)
     }
 
     // 4b. Also update proto round status (backward compat)
