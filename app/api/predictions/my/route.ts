@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiUnauthorized } from "@/lib/api-error"
 
 /**
  * GET /api/predictions/my
@@ -18,17 +18,18 @@ export async function GET(request: NextRequest) {
 
     const userId = user.id
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100)
+    const offset = parseInt(searchParams.get("offset") || "0")
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 1. Fetch regular predictions with match details
     const { data: regularPredictions, error: regularError } = await supabase
-      .from('predictions')
-      .select(`
+      .from("predictions")
+      .select(
+        `
         id,
         match_id,
         prediction_type,
@@ -48,19 +49,21 @@ export async function GET(request: NextRequest) {
           away_team:teams!matches_away_team_id_fkey(name_ko, name),
           league:leagues!matches_league_id_fkey(name_ko, name)
         )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      `
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (regularError) {
-      console.error('Failed to fetch regular predictions:', regularError)
+      console.error("Failed to fetch regular predictions:", regularError)
     }
 
-    // 2. Fetch betman predictions with game details AND round info
+    // 2. Fetch betman predictions with game details, round info, AND slip info
     const { data: betmanPredictions, error: betmanError } = await supabase
-      .from('betman_predictions')
-      .select(`
+      .from("betman_predictions")
+      .select(
+        `
         id,
         game_id,
         prediction,
@@ -69,6 +72,8 @@ export async function GET(request: NextRequest) {
         status,
         created_at,
         round_id,
+        slip_id,
+        stake,
         round:betman_rounds(
           id,
           year,
@@ -95,14 +100,21 @@ export async function GET(request: NextRequest) {
           draw_odds,
           over_odds,
           under_odds
+        ),
+        slip:prediction_slips(
+          id,
+          stake,
+          total_odds,
+          status
         )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      `
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (betmanError) {
-      console.error('Failed to fetch betman predictions:', betmanError)
+      console.error("Failed to fetch betman predictions:", betmanError)
     }
 
     // Transform regular predictions (individual items)
@@ -129,13 +141,13 @@ export async function GET(request: NextRequest) {
         isCorrect: pred.is_correct,
         pointsEarned: pred.points_won,
         createdAt: pred.created_at,
-        source: 'regular' as const,
+        source: "regular" as const,
         match: {
-          homeTeam: match?.home_team?.name_ko || match?.home_team?.name || '홈팀',
-          awayTeam: match?.away_team?.name_ko || match?.away_team?.name || '원정팀',
-          league: match?.league?.name_ko || match?.league?.name || '리그',
+          homeTeam: match?.home_team?.name_ko || match?.home_team?.name || "홈팀",
+          awayTeam: match?.away_team?.name_ko || match?.away_team?.name || "원정팀",
+          league: match?.league?.name_ko || match?.league?.name || "리그",
           matchTime: match?.match_time,
-          status: match?.time_status === 3 ? 'finished' : 'scheduled',
+          status: match?.time_status === 3 ? "finished" : "scheduled",
           homeScore: match?.home_score,
           awayScore: match?.away_score,
         },
@@ -170,6 +182,12 @@ export async function GET(request: NextRequest) {
       deadline: string | null
       status: string
     }
+    interface BetmanSlipJoin {
+      id: string
+      stake: number
+      total_odds: number
+      status: string | null
+    }
     interface BetmanPred {
       id: string
       game_id: string
@@ -179,43 +197,49 @@ export async function GET(request: NextRequest) {
       status: string | null
       created_at: string
       round_id: string | null
+      slip_id: string | null
+      stake: number | null
       round: BetmanRoundJoin | null
       game: BetmanGameJoin | null
+      slip: BetmanSlipJoin | null
     }
 
-    // Group betman predictions by round_id for betting slip display
-    // Cast Supabase array-typed joins to single objects at runtime
+    // Group betman predictions by slip_id (or round_id for legacy)
     const betmanPreds = (betmanPredictions || []).map((p) => ({
       ...p,
       round: p.round as unknown as BetmanRoundJoin | null,
       game: p.game as unknown as BetmanGameJoin | null,
+      slip: p.slip as unknown as BetmanSlipJoin | null,
     })) as BetmanPred[]
-    const betmanByRound = new Map<string, BetmanPred[]>()
+    const betmanBySlip = new Map<string, BetmanPred[]>()
     for (const pred of betmanPreds) {
-      const roundId = pred.round_id || 'unknown'
-      if (!betmanByRound.has(roundId)) {
-        betmanByRound.set(roundId, [])
+      const groupKey = pred.slip_id || pred.round_id || "unknown"
+      if (!betmanBySlip.has(groupKey)) {
+        betmanBySlip.set(groupKey, [])
       }
-      betmanByRound.get(roundId)!.push(pred)
+      betmanBySlip.get(groupKey)!.push(pred)
     }
 
     // Transform betman predictions into grouped betting slips
-    const transformedBetmanSlips = Array.from(betmanByRound.entries()).map(([roundId, preds]) => {
+    const transformedBetmanSlips = Array.from(betmanBySlip.entries()).map(([groupKey, preds]) => {
       const firstPred = preds[0]
       const round = firstPred?.round
-      const sport = firstPred?.game?.sport || '스포츠'
+      const slip = firstPred?.slip
+      const sport = firstPred?.game?.sport || "스포츠"
 
-      // Calculate combined odds
-      const totalOdds = preds.reduce((acc: number, pred: BetmanPred) => {
-        const game = pred.game
-        let odds = 1
-        if (pred.prediction === 'home') odds = parseFloat(String(game?.home_win_odds)) || 1
-        else if (pred.prediction === 'away') odds = parseFloat(String(game?.away_win_odds)) || 1
-        else if (pred.prediction === 'draw') odds = parseFloat(String(game?.draw_odds)) || 1
-        else if (pred.prediction === 'over') odds = parseFloat(String(game?.over_odds)) || 1
-        else if (pred.prediction === 'under') odds = parseFloat(String(game?.under_odds)) || 1
-        return acc * odds
-      }, 1)
+      // Use slip's total_odds if available, otherwise calculate
+      const totalOdds =
+        slip?.total_odds ||
+        preds.reduce((acc: number, pred: BetmanPred) => {
+          const game = pred.game
+          let odds = 1
+          if (pred.prediction === "home") odds = parseFloat(String(game?.home_win_odds)) || 1
+          else if (pred.prediction === "away") odds = parseFloat(String(game?.away_win_odds)) || 1
+          else if (pred.prediction === "draw") odds = parseFloat(String(game?.draw_odds)) || 1
+          else if (pred.prediction === "over") odds = parseFloat(String(game?.over_odds)) || 1
+          else if (pred.prediction === "under") odds = parseFloat(String(game?.under_odds)) || 1
+          return acc * odds
+        }, 1)
 
       // Calculate overall result
       const allSettled = preds.every((p: BetmanPred) => p.is_correct !== null)
@@ -232,17 +256,19 @@ export async function GET(request: NextRequest) {
       // Calculate total points earned (only if all correct)
       const totalPointsEarned = allCorrect
         ? preds.reduce((sum: number, p: BetmanPred) => sum + (p.points_earned || 0), 0)
-        : anyIncorrect ? 0 : null
+        : anyIncorrect
+          ? 0
+          : null
 
       // Transform individual games within the slip
       const games = preds.map((pred: BetmanPred) => {
         const game = pred.game
         let odds = 1
-        if (pred.prediction === 'home') odds = parseFloat(String(game?.home_win_odds)) || 1
-        else if (pred.prediction === 'away') odds = parseFloat(String(game?.away_win_odds)) || 1
-        else if (pred.prediction === 'draw') odds = parseFloat(String(game?.draw_odds)) || 1
-        else if (pred.prediction === 'over') odds = parseFloat(String(game?.over_odds)) || 1
-        else if (pred.prediction === 'under') odds = parseFloat(String(game?.under_odds)) || 1
+        if (pred.prediction === "home") odds = parseFloat(String(game?.home_win_odds)) || 1
+        else if (pred.prediction === "away") odds = parseFloat(String(game?.away_win_odds)) || 1
+        else if (pred.prediction === "draw") odds = parseFloat(String(game?.draw_odds)) || 1
+        else if (pred.prediction === "over") odds = parseFloat(String(game?.over_odds)) || 1
+        else if (pred.prediction === "under") odds = parseFloat(String(game?.under_odds)) || 1
 
         return {
           id: pred.id,
@@ -250,35 +276,37 @@ export async function GET(request: NextRequest) {
           prediction: pred.prediction,
           isCorrect: pred.is_correct,
           odds: odds,
-          gameType: game?.game_type || '일반',
+          gameType: game?.game_type || "일반",
           handicap: game?.handicap,
           overUnderLine: game?.over_under_line,
           match: {
-            homeTeam: game?.home_team_name || '홈팀',
-            awayTeam: game?.away_team_name || '원정팀',
-            league: game?.league_code || '리그',
+            homeTeam: game?.home_team_name || "홈팀",
+            awayTeam: game?.away_team_name || "원정팀",
+            league: game?.league_code || "리그",
             matchTime: game?.match_time,
-            status: game?.status === 'completed' ? 'finished' : game?.status || 'scheduled',
+            status: game?.status === "completed" ? "finished" : game?.status || "scheduled",
             homeScore: game?.home_score,
             awayScore: game?.away_score,
-          }
+          },
         }
       })
 
       return {
-        id: roundId,
-        type: 'betman_slip' as const,
-        source: 'betman' as const,
+        id: groupKey,
+        type: "betman_slip" as const,
+        source: "betman" as const,
         sport: sport,
-        roundInfo: round ? {
-          year: round.year,
-          round: round.round,
-          deadline: round.deadline,
-          status: round.status,
-        } : null,
+        roundInfo: round
+          ? {
+              year: round.year,
+              round: round.round,
+              deadline: round.deadline,
+              status: round.status,
+            }
+          : null,
         gameCount: preds.length,
         totalOdds: totalOdds,
-        ballsUsed: preds.length, // Each game = 1 ball
+        ballsUsed: slip?.stake || firstPred?.stake || preds.length,
         isCorrect: overallResult,
         pointsEarned: totalPointsEarned,
         createdAt: firstPred?.created_at,
@@ -297,18 +325,34 @@ export async function GET(request: NextRequest) {
     })
 
     // Combine regular predictions and betman slips, sort by created_at
-    const allItems = [...transformedRegular, ...transformedBetmanSlips]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    const allItems = [...transformedRegular, ...transformedBetmanSlips].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
 
     // Calculate stats from all individual predictions
     const allIndividualPredictions = [...transformedRegular, ...flatBetmanPredictions]
     const totalPredictions = allIndividualPredictions.length
-    interface IndividualPrediction { isCorrect: boolean | null; pointsEarned: number | null; amount: number }
-    const settledPredictions = allIndividualPredictions.filter((p: IndividualPrediction) => p.isCorrect !== null)
-    const correctPredictions = allIndividualPredictions.filter((p: IndividualPrediction) => p.isCorrect === true).length
-    const accuracy = settledPredictions.length > 0 ? (correctPredictions / settledPredictions.length) * 100 : 0
-    const totalPointsEarned = allIndividualPredictions.reduce((sum: number, p: IndividualPrediction) => sum + (p.pointsEarned || 0), 0)
-    const totalPointsUsed = allIndividualPredictions.reduce((sum: number, p: IndividualPrediction) => sum + (p.amount || 0), 0)
+    interface IndividualPrediction {
+      isCorrect: boolean | null
+      pointsEarned: number | null
+      amount: number
+    }
+    const settledPredictions = allIndividualPredictions.filter(
+      (p: IndividualPrediction) => p.isCorrect !== null
+    )
+    const correctPredictions = allIndividualPredictions.filter(
+      (p: IndividualPrediction) => p.isCorrect === true
+    ).length
+    const accuracy =
+      settledPredictions.length > 0 ? (correctPredictions / settledPredictions.length) * 100 : 0
+    const totalPointsEarned = allIndividualPredictions.reduce(
+      (sum: number, p: IndividualPrediction) => sum + (p.pointsEarned || 0),
+      0
+    )
+    const totalPointsUsed = allIndividualPredictions.reduce(
+      (sum: number, p: IndividualPrediction) => sum + (p.amount || 0),
+      0
+    )
 
     return NextResponse.json({
       predictions: allItems,
@@ -326,6 +370,6 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
