@@ -350,28 +350,16 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // 슬립 없는 레거시 예측도 조회
-      const { data: legacyPreds } = await supabase
-        .from("betman_predictions")
-        .select("*, game:betman_games(*)")
-        .eq("user_id", user.id)
-        .is("slip_id", null)
-        .order("created_at", { ascending: false })
-        .limit(100)
-
-      if ((!slips || slips.length === 0) && (!legacyPreds || legacyPreds.length === 0)) {
+      if (!slips || slips.length === 0) {
         return NextResponse.json({ predictions: [], slips: [] })
       }
 
       // 각 슬립의 예측들 조회
-      const slipIds = (slips || []).map((s) => s.id)
-      const { data: allPreds } =
-        slipIds.length > 0
-          ? await supabase
-              .from("betman_predictions")
-              .select("*, game:betman_games(*)")
-              .in("slip_id", slipIds)
-          : { data: [] as typeof legacyPreds }
+      const slipIds = slips.map((s) => s.id)
+      const { data: allPreds } = await supabase
+        .from("betman_predictions")
+        .select("*, game:betman_games(*)")
+        .in("slip_id", slipIds)
 
       // 슬립별로 그룹화
       const slipHistory = slips.map((slip) => {
@@ -429,62 +417,7 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      // 레거시 예측 (slip 없음)을 개별 가상 슬립으로 변환
-      const legacyHistory = (legacyPreds || []).map((p) => {
-        const g = p.game as Record<string, unknown> | null
-        const selectionMap: Record<string, string> = {
-          home: "홈팀",
-          away: "원정팀",
-          draw: "무",
-          over: "오버",
-          under: "언더",
-        }
-        const oddsMap: Record<string, string> = {
-          home: "home_win_odds",
-          away: "away_win_odds",
-          draw: "draw_odds",
-          over: "over_odds",
-          under: "under_odds",
-        }
-        const predStake = p.stake ?? 1
-        const odds = parseFloat(String(g?.[oddsMap[p.prediction] || "home_win_odds"])) || 0
-
-        let legacyStatus = "pending"
-        if (p.is_correct === true) legacyStatus = "win"
-        else if (p.is_correct === false) legacyStatus = "lose"
-
-        return {
-          id: p.id,
-          date: p.created_at,
-          sport: (g?.sport as string) || "축구",
-          stake: predStake,
-          totalOdds: odds,
-          status: legacyStatus,
-          profit:
-            legacyStatus === "win"
-              ? Math.round(predStake * odds) - predStake
-              : legacyStatus === "lose"
-                ? -predStake
-                : 0,
-          matches: [
-            {
-              league: (g?.league_code as string) || "기타",
-              home: (g?.home_team_name as string) || "홈팀",
-              away: (g?.away_team_name as string) || "원정팀",
-              selection: selectionMap[p.prediction] || p.prediction,
-              odds,
-              result: legacyStatus,
-            },
-          ],
-        }
-      })
-
-      // 합치고 날짜순 정렬
-      const allHistory = [...slipHistory, ...legacyHistory]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 50)
-
-      return NextResponse.json({ slips: allHistory })
+      return NextResponse.json({ slips: slipHistory })
     }
 
     // 기본: 특정 일자의 raw predictions 반환
