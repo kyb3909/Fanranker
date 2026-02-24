@@ -1,12 +1,10 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { z } from "zod"
 
 // POST: Add actor suggestion to a casting
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await currentUser()
     if (!user) {
@@ -16,11 +14,15 @@ export async function POST(
     const { id: castingId } = await params
     const supabase = createServiceRoleClient()
     const body = await req.json()
-    const { actor_name, reason } = body
-
-    if (!actor_name?.trim()) {
+    const SuggestionSchema = z.object({
+      actor_name: z.string().min(1, "배우 이름이 필요합니다."),
+      reason: z.string().optional(),
+    })
+    const parsed = SuggestionSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: "배우 이름이 필요합니다." }, { status: 400 })
     }
+    const { actor_name, reason } = parsed.data
 
     // Verify casting exists
     const { data: casting } = await supabase
@@ -64,7 +66,10 @@ export async function POST(
       // Fallback: manual increment
       await supabase
         .from("virtual_castings")
-        .update({ suggestion_count: (casting as unknown as { suggestion_count: number }).suggestion_count + 1 })
+        .update({
+          suggestion_count:
+            (casting as unknown as { suggestion_count: number }).suggestion_count + 1,
+        })
         .eq("id", castingId)
     }
 

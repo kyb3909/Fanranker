@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
-import { writeAuditLog, getIpFromRequest } from '@/lib/admin/audit'
-import { apiError, apiBadRequest } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
+import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
+import { apiError, apiBadRequest } from "@/lib/api-error"
 
 export async function GET() {
   try {
@@ -10,14 +11,14 @@ export async function GET() {
     const { supabase } = auth
 
     const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('sort_order', { ascending: true })
+      .from("categories")
+      .select("*")
+      .order("sort_order", { ascending: true })
 
     if (error) return apiError(error.message, 500, error)
     return NextResponse.json({ boards: data ?? [] })
   } catch (error) {
-    return apiError('서버 오류', 500, error)
+    return apiError("서버 오류", 500, error)
   }
 }
 
@@ -28,11 +29,17 @@ export async function PATCH(request: NextRequest) {
     const { userId, supabase } = auth
 
     const body = await request.json()
-    const { boardId, name, description, icon, sort_order, is_active } = body
-
-    if (!boardId) {
-      return apiBadRequest('boardId가 필요합니다.')
-    }
+    const BoardUpdateSchema = z.object({
+      boardId: z.string().min(1),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      icon: z.string().optional(),
+      sort_order: z.number().optional(),
+      is_active: z.boolean().optional(),
+    })
+    const parsed = BoardUpdateSchema.safeParse(body)
+    if (!parsed.success) return apiBadRequest("boardId가 필요합니다.")
+    const { boardId, name, description, icon, sort_order, is_active } = parsed.data
 
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (name !== undefined) updateData.name = name
@@ -41,13 +48,13 @@ export async function PATCH(request: NextRequest) {
     if (sort_order !== undefined) updateData.sort_order = sort_order
     if (is_active !== undefined) updateData.is_active = is_active
 
-    const { error } = await supabase.from('categories').update(updateData).eq('id', boardId)
+    const { error } = await supabase.from("categories").update(updateData).eq("id", boardId)
     if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
       adminUserId: userId,
-      action: 'update_board',
-      targetType: 'board',
+      action: "update_board",
+      targetType: "board",
       targetId: boardId,
       details: updateData,
       ipAddress: getIpFromRequest(request),
@@ -55,6 +62,6 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    return apiError('서버 오류', 500, error)
+    return apiError("서버 오류", 500, error)
   }
 }

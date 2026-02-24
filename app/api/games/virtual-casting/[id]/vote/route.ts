@@ -1,12 +1,10 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { z } from "zod"
 
 // POST: Vote for a suggestion
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await currentUser()
     if (!user) {
@@ -16,11 +14,12 @@ export async function POST(
     const { id: castingId } = await params
     const supabase = createServiceRoleClient()
     const body = await req.json()
-    const { suggestion_id } = body
-
-    if (!suggestion_id) {
+    const VoteSchema = z.object({ suggestion_id: z.string().min(1) })
+    const parsed = VoteSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: "추천 ID가 필요합니다." }, { status: 400 })
     }
+    const { suggestion_id } = parsed.data
 
     // Verify suggestion belongs to this casting
     const { data: suggestion } = await supabase
@@ -44,10 +43,7 @@ export async function POST(
 
     if (existingVote) {
       // Remove vote (toggle)
-      await supabase
-        .from("virtual_casting_votes")
-        .delete()
-        .eq("id", existingVote.id)
+      await supabase.from("virtual_casting_votes").delete().eq("id", existingVote.id)
 
       // Decrement vote counts
       await supabase
@@ -73,12 +69,10 @@ export async function POST(
     }
 
     // Add vote
-    const { error: voteError } = await supabase
-      .from("virtual_casting_votes")
-      .insert({
-        suggestion_id,
-        user_id: user.id,
-      })
+    const { error: voteError } = await supabase.from("virtual_casting_votes").insert({
+      suggestion_id,
+      user_id: user.id,
+    })
 
     if (voteError) {
       return NextResponse.json({ error: "투표에 실패했습니다." }, { status: 500 })

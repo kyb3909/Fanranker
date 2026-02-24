@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { z } from "zod"
 
 /**
  * GET /api/notifications
@@ -21,22 +22,23 @@ export async function GET(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     let supabase
     try {
       supabase = createServiceRoleClient()
     } catch (error) {
-      return apiError('서버 설정 오류가 발생했습니다.', 500, error)
+      return apiError("서버 설정 오류가 발생했습니다.", 500, error)
     }
     const searchParams = request.nextUrl.searchParams
-    
-    const limit = parseInt(searchParams.get('limit') || '20', 10)
-    const unreadOnly = searchParams.get('unread_only') === 'true'
+
+    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const unreadOnly = searchParams.get("unread_only") === "true"
 
     // 알림 조회
     let query = supabase
-      .from('notifications')
-      .select(`
+      .from("notifications")
+      .select(
+        `
         id,
         type,
         actor_id,
@@ -44,19 +46,20 @@ export async function GET(request: NextRequest) {
         related_comment_id,
         is_read,
         created_at
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      `
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .limit(limit)
 
     if (unreadOnly) {
-      query = query.eq('is_read', false)
+      query = query.eq("is_read", false)
     }
 
     const { data: notifications, error } = await query
 
     if (error) {
-      return apiError('알림을 불러오는 중 오류가 발생했습니다.', 500, error)
+      return apiError("알림을 불러오는 중 오류가 발생했습니다.", 500, error)
     }
 
     if (!notifications || notifications.length === 0) {
@@ -66,22 +69,20 @@ export async function GET(request: NextRequest) {
     // 작성자 프로필 조회
     const actorIds = [...new Set(notifications.map((n) => n.actor_id))]
     const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, nickname, avatar_url')
-      .in('user_id', actorIds)
+      .from("profiles")
+      .select("user_id, nickname, avatar_url")
+      .in("user_id", actorIds)
 
     // 관련 글 제목 조회 (알림 텍스트 생성용)
     const postIds = [...new Set(notifications.map((n) => n.related_post_id).filter(Boolean))]
-    const { data: posts } = postIds.length > 0
-      ? await supabase
-          .from('posts')
-          .select('id, title')
-          .in('id', postIds)
-      : { data: [] }
+    const { data: posts } =
+      postIds.length > 0
+        ? await supabase.from("posts").select("id, title").in("id", postIds)
+        : { data: [] }
 
     return NextResponse.json({ notifications, profiles: profiles || [], posts: posts || [] })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -106,33 +107,33 @@ export async function PATCH(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     let supabase
     try {
       supabase = createServiceRoleClient()
     } catch (error) {
-      return apiError('서버 설정 오류가 발생했습니다.', 500, error)
+      return apiError("서버 설정 오류가 발생했습니다.", 500, error)
     }
     const body = await request.json()
-    const { notification_id } = body
+    const NotificationSchema = z.object({ notification_id: z.string().optional() })
+    const parsed = NotificationSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 })
+    const { notification_id } = parsed.data
 
-    let query = supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', userId)
+    let query = supabase.from("notifications").update({ is_read: true }).eq("user_id", userId)
 
     if (notification_id) {
-      query = query.eq('id', notification_id)
+      query = query.eq("id", notification_id)
     }
 
     const { error } = await query
 
     if (error) {
-      return apiError('알림 읽음 처리 중 오류가 발생했습니다.', 500, error)
+      return apiError("알림 읽음 처리 중 오류가 발생했습니다.", 500, error)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
