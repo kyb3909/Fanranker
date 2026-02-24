@@ -3,7 +3,39 @@
 import { Card } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import type { PredictionHistoryItem } from "./betting-types"
-import { sportColorFill } from "./betting-types"
+import { sportColorFill, SPORT_ICONS } from "./betting-types"
+
+const SPORT_HEADER_STYLES: Record<
+  string,
+  { bg: string; text: string; darkBg: string; darkText: string }
+> = {
+  축구: {
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    darkBg: "dark:bg-rose-950/30",
+    darkText: "dark:text-rose-400",
+  },
+  야구: {
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    darkBg: "dark:bg-blue-950/30",
+    darkText: "dark:text-blue-400",
+  },
+  농구: {
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    darkBg: "dark:bg-orange-950/30",
+    darkText: "dark:text-orange-400",
+  },
+  배구: {
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    darkBg: "dark:bg-purple-950/30",
+    darkText: "dark:text-purple-400",
+  },
+}
+
+const DEFAULT_HEADER_STYLE = { bg: "bg-muted", text: "text-foreground", darkBg: "", darkText: "" }
 
 interface BettingPredictionHistoryProps {
   predictionHistory: PredictionHistoryItem[]
@@ -16,14 +48,14 @@ export function BettingPredictionHistory({
 }: BettingPredictionHistoryProps) {
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
       </div>
     )
   }
 
   if (predictionHistory.length === 0) {
-    return <p className="text-center text-muted-foreground py-8">예측 내역이 없습니다.</p>
+    return <p className="text-muted-foreground py-8 text-center">예측 내역이 없습니다.</p>
   }
 
   return (
@@ -31,63 +63,43 @@ export function BettingPredictionHistory({
       {predictionHistory.map((pred) => (
         <Card key={pred.id} className="overflow-hidden border-0 shadow-sm">
           <div
-            className={`p-2 text-xs flex items-center justify-between ${
-              pred.sport === "축구"
-                ? "bg-rose-50 dark:bg-rose-950/30"
-                : pred.sport === "야구"
-                  ? "bg-blue-50 dark:bg-blue-950/30"
-                  : pred.sport === "농구"
-                    ? "bg-orange-50 dark:bg-orange-950/30"
-                    : "bg-purple-50 dark:bg-purple-950/30"
-            }`}
+            className={`flex items-center justify-between p-2 text-xs ${
+              (SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).bg
+            } ${(SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).darkBg}`}
           >
             <div className="flex items-center gap-2">
               <span
                 className={`font-semibold ${
-                  pred.sport === "축구"
-                    ? "text-rose-700 dark:text-rose-400"
-                    : pred.sport === "야구"
-                      ? "text-blue-700 dark:text-blue-400"
-                      : pred.sport === "농구"
-                        ? "text-orange-700 dark:text-orange-400"
-                        : "text-purple-700 dark:text-purple-400"
-                }`}
+                  (SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).text
+                } ${(SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).darkText}`}
               >
-                {pred.sport === "축구"
-                  ? "⚽"
-                  : pred.sport === "야구"
-                    ? "⚾"
-                    : pred.sport === "농구"
-                      ? "🏀"
-                      : "🏐"}{" "}
-                {pred.sport}
+                {SPORT_ICONS[pred.sport] || "🎯"} {pred.sport}
               </span>
               <span className="text-muted-foreground">{pred.date}</span>
             </div>
             <div
-              className={`text-xs font-semibold px-2 py-0.5 rounded ${
+              className={`rounded px-2 py-0.5 text-xs font-semibold ${
                 pred.status === "win"
-                  ? "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400"
+                  ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
                   : pred.status === "lose"
-                    ? "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400"
+                    ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
                     : "bg-muted text-muted-foreground"
               }`}
             >
               {pred.status === "win" ? "적중" : pred.status === "lose" ? "미적중" : "대기중"}
             </div>
           </div>
-          <div className="p-3 space-y-2">
+          <div className="space-y-2 p-3">
             {pred.matches.map((match, idx) => {
-              const sportKey = pred.sport === "축구" ? "soccer" : pred.sport === "야구" ? "baseball" : pred.sport === "농구" ? "basketball" : "volleyball"
-              const fillColor = sportColorFill[sportKey]
+              const fillColor = sportColorFill[pred.sport] || sportColorFill["축구"]
               const hasDrawOdds = pred.sport === "축구"
 
               return (
-                <div key={idx} className="bg-card rounded-lg border overflow-hidden">
-                  <div className="px-3 py-1.5 bg-muted flex justify-between text-xs text-muted-foreground">
+                <div key={idx} className="bg-card overflow-hidden rounded-lg border">
+                  <div className="bg-muted text-muted-foreground flex justify-between px-3 py-1.5 text-xs">
                     <span>{match.league}</span>
                   </div>
-                  <div className={`p-2 grid ${hasDrawOdds ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
+                  <div className={`grid p-2 ${hasDrawOdds ? "grid-cols-3" : "grid-cols-2"} gap-1`}>
                     <div
                       className={`rounded-lg p-2 text-center ${
                         match.selection === "홈팀"
@@ -95,10 +107,14 @@ export function BettingPredictionHistory({
                           : "bg-muted/50"
                       }`}
                     >
-                      <div className={`text-xs truncate ${match.selection === "홈팀" ? fillColor.text : "text-muted-foreground"}`}>
+                      <div
+                        className={`truncate text-xs ${match.selection === "홈팀" ? fillColor.text : "text-muted-foreground"}`}
+                      >
                         {match.home}
                       </div>
-                      <div className={`font-bold text-sm ${match.selection === "홈팀" ? fillColor.text : "text-foreground"}`}>
+                      <div
+                        className={`text-sm font-bold ${match.selection === "홈팀" ? fillColor.text : "text-foreground"}`}
+                      >
                         {match.odds}
                       </div>
                     </div>
@@ -110,10 +126,14 @@ export function BettingPredictionHistory({
                             : "bg-muted/50"
                         }`}
                       >
-                        <div className={`text-xs ${match.selection === "무" ? fillColor.text : "text-muted-foreground"}`}>
+                        <div
+                          className={`text-xs ${match.selection === "무" ? fillColor.text : "text-muted-foreground"}`}
+                        >
                           무
                         </div>
-                        <div className={`font-bold text-sm ${match.selection === "무" ? fillColor.text : "text-foreground"}`}>
+                        <div
+                          className={`text-sm font-bold ${match.selection === "무" ? fillColor.text : "text-foreground"}`}
+                        >
                           {match.odds}
                         </div>
                       </div>
@@ -125,10 +145,14 @@ export function BettingPredictionHistory({
                           : "bg-muted/50"
                       }`}
                     >
-                      <div className={`text-xs truncate ${match.selection === "원정팀" ? fillColor.text : "text-muted-foreground"}`}>
+                      <div
+                        className={`truncate text-xs ${match.selection === "원정팀" ? fillColor.text : "text-muted-foreground"}`}
+                      >
                         {match.away}
                       </div>
-                      <div className={`font-bold text-sm ${match.selection === "원정팀" ? fillColor.text : "text-foreground"}`}>
+                      <div
+                        className={`text-sm font-bold ${match.selection === "원정팀" ? fillColor.text : "text-foreground"}`}
+                      >
                         {match.odds}
                       </div>
                     </div>
@@ -136,8 +160,8 @@ export function BettingPredictionHistory({
                 </div>
               )
             })}
-            <div className="mt-3 pt-3 border-t flex justify-between items-center">
-              <div className="text-xs text-muted-foreground">
+            <div className="mt-3 flex items-center justify-between border-t pt-3">
+              <div className="text-muted-foreground text-xs">
                 배팅금: {pred.stake.toLocaleString()}G | 총배당: {pred.totalOdds}배
               </div>
               <div
