@@ -284,12 +284,14 @@ export async function POST(request: NextRequest) {
 
       const allDone = !remainingGames || remainingGames.length === 0
       if (allDone) {
+        // bet_close_at이 지난 라운드만 settled로 전환 (베팅 보호)
         await supabase
           .from("betman_daily_rounds")
           .update({ status: "settled", updated_at: new Date().toISOString() })
           .eq("id", drId)
+          .lt("bet_close_at", new Date().toISOString())
       }
-      // 남은 경기가 있으면 상태 변경하지 않음 — 베팅은 항상 가능
+      // bet_close_at 전이면 상태 변경하지 않음 — 베팅은 항상 가능
     }
 
     // 4b. Also update proto round status (backward compat)

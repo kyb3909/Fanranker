@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "일일 라운드 정보를 찾을 수 없습니다." }, { status: 404 })
     }
 
-    if (dailyRound.status !== "open") {
-      return NextResponse.json({ error: "이 일일 라운드는 마감되었습니다." }, { status: 400 })
+    if (dailyRound.status === "settled") {
+      return NextResponse.json({ error: "이 일일 라운드는 정산 완료되었습니다." }, { status: 400 })
     }
 
     // Validate single sport restriction

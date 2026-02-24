@@ -221,10 +221,12 @@ export async function POST(request: NextRequest) {
 
           const allDone = !remaining || remaining.length === 0
           if (allDone) {
+            // bet_close_at이 지난 라운드만 settled로 전환 (베팅 보호)
             await supabase
               .from("betman_daily_rounds")
               .update({ status: "settled", updated_at: new Date().toISOString() })
               .eq("id", drId)
+              .lt("bet_close_at", new Date().toISOString())
           }
         }
       }
