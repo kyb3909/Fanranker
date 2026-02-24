@@ -6,6 +6,17 @@ export default defineConfig({
     environment: "jsdom",
     include: ["__tests__/**/*.test.{ts,tsx}"],
     globals: true,
+    coverage: {
+      provider: "v8",
+      include: ["lib/**/*.ts", "hooks/**/*.ts"],
+      exclude: ["lib/supabase/**", "hooks/use-toast.ts"],
+      thresholds: {
+        statements: 10,
+        branches: 15,
+        functions: 8,
+        lines: 10,
+      },
+    },
   },
   resolve: {
     alias: {
