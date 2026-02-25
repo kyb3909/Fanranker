@@ -177,20 +177,20 @@ export function PredictionSlipCard({
                 <MatchResultBadge result={match.result} />
               </div>
 
-              {/* 선택지 그리드 */}
+              {/* 선택지 그리드 — 각 셀에 해당 옵션의 배당률 표시 */}
               {isOverUnder ? (
                 <div className="grid grid-cols-2 gap-1 p-2">
                   <OddsCell
                     displayLabel="오버"
                     selectionKey="오버"
-                    odds={match.odds}
+                    odds={match.overOdds ?? match.odds}
                     match={match}
                     fillColor={fillColor}
                   />
                   <OddsCell
                     displayLabel="언더"
                     selectionKey="언더"
-                    odds={match.odds}
+                    odds={match.underOdds ?? match.odds}
                     match={match}
                     fillColor={fillColor}
                   />
@@ -200,7 +200,7 @@ export function PredictionSlipCard({
                   <OddsCell
                     displayLabel={match.home || "홈팀"}
                     selectionKey="홈팀"
-                    odds={match.odds}
+                    odds={match.homeOdds ?? match.odds}
                     match={match}
                     fillColor={fillColor}
                   />
@@ -208,7 +208,7 @@ export function PredictionSlipCard({
                     <OddsCell
                       displayLabel="무"
                       selectionKey="무"
-                      odds={match.odds}
+                      odds={match.drawOdds ?? match.odds}
                       match={match}
                       fillColor={fillColor}
                     />
@@ -216,7 +216,7 @@ export function PredictionSlipCard({
                   <OddsCell
                     displayLabel={match.away || "원정팀"}
                     selectionKey="원정팀"
-                    odds={match.odds}
+                    odds={match.awayOdds ?? match.odds}
                     match={match}
                     fillColor={fillColor}
                   />

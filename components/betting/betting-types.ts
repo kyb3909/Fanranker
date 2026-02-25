@@ -153,7 +153,12 @@ export interface PredictionMatch {
   home: string
   away: string
   selection: string // 사용자 선택 (Korean: "홈팀" | "원정팀" | "무" | "오버" | "언더")
-  odds: number
+  odds: number // 사용자가 선택한 옵션의 배당률 (하위 호환)
+  homeOdds?: number
+  awayOdds?: number
+  drawOdds?: number
+  overOdds?: number
+  underOdds?: number
   result: string // 개별 경기 결과: "win" | "lose" | "pending"
   correctAnswer?: string // 정답 선택지 라벨 (Korean: "홈팀" | "원정팀" | "무" | "오버" | "언더")
 }

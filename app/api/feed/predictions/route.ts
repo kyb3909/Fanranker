@@ -223,6 +223,11 @@ export async function GET(request: NextRequest) {
             away: g?.away_team_name || "",
             selection,
             odds: Math.round(odds * 100) / 100,
+            homeOdds: Math.round((parseFloat(g?.home_win_odds) || 0) * 100) / 100,
+            awayOdds: Math.round((parseFloat(g?.away_win_odds) || 0) * 100) / 100,
+            drawOdds: Math.round((parseFloat(g?.draw_odds) || 0) * 100) / 100,
+            overOdds: Math.round((parseFloat(g?.over_odds) || 0) * 100) / 100,
+            underOdds: Math.round((parseFloat(g?.under_odds) || 0) * 100) / 100,
             result: matchResult,
             correctAnswer,
           }

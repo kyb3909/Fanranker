@@ -417,6 +417,11 @@ export async function GET(request: NextRequest) {
               away: (g?.away_team_name as string) || "원정팀",
               selection: selectionMap[p.prediction] || p.prediction,
               odds: parseFloat(String(g?.[oddsMap[p.prediction] || "home_win_odds"])) || 0,
+              homeOdds: parseFloat(String(g?.home_win_odds)) || 0,
+              awayOdds: parseFloat(String(g?.away_win_odds)) || 0,
+              drawOdds: parseFloat(String(g?.draw_odds)) || 0,
+              overOdds: parseFloat(String(g?.over_odds)) || 0,
+              underOdds: parseFloat(String(g?.under_odds)) || 0,
               result: matchResult,
               correctAnswer,
             }
