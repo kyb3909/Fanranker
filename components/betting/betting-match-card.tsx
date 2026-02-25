@@ -145,7 +145,7 @@ export function BettingMatchCard({
                 {options.map((opt) => (
                   <button
                     key={opt.value}
-                    className={`rounded-md px-1.5 py-1 text-center transition-all ${
+                    className={`odds-btn rounded-md px-2 py-2 text-center transition-all ${
                       selectedBet?.selection === opt.value
                         ? `${fillColor.bg} ${fillColor.text} border ${fillColor.border}`
                         : "bg-card hover:bg-accent border"
@@ -169,7 +169,7 @@ export function BettingMatchCard({
                   >
                     <div className="text-muted-foreground truncate text-[10px]">{opt.label}</div>
                     <div
-                      className={`text-xs font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
+                      className={`font-[family-name:var(--font-display)] text-sm font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
                     >
                       {opt.odds ? opt.odds.toFixed(2) : "-"}
                     </div>

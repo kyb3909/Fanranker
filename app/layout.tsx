@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ClerkErrorBoundary } from "@/components/clerk-error-boundary"
@@ -37,21 +36,6 @@ const koLocalization = {
     action__signOut: "로그아웃",
   },
 }
-
-// 폰트 최적화: display: swap으로 FOUT 방지, preload 활성화
-const geistSans = Geist({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-geist-sans",
-  preload: true,
-})
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-geist-mono",
-  preload: true,
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
@@ -107,7 +91,7 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
       <ClerkProvider localization={koLocalization}>
-        <html lang="ko" className={`${geistSans.variable} ${geistMono.variable}`}>
+        <html lang="ko">
           <head>
             {/* DNS Prefetch & Preconnect: 외부 리소스 로딩 최적화 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />

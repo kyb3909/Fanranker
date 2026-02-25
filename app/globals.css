@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Pretendard Variable CDN */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+/* Gmarket Sans Bold */
+@font-face {
+  font-family: "GmarketSansBold";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff")
+    format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ===== Sporty Red × Deep Navy Color System ===== */
   /* Background: #F8FAFC (slate-50) - 전체 배경 */
@@ -59,8 +72,9 @@
 }
 
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: "GmarketSansBold", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -105,6 +119,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    letter-spacing: -0.02em;
+    line-height: 1.6;
   }
 }
 
@@ -274,4 +290,12 @@
 
 .tiptap.ProseMirror p:first-child {
   margin-top: 0;
+}
+
+/* Odds button hover glow */
+.odds-btn {
+  transition: box-shadow 0.2s ease;
+}
+.odds-btn:hover:not(:disabled) {
+  box-shadow: 0 0 14px 2px rgba(255, 59, 48, 0.25);
 }

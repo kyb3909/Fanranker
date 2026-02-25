@@ -110,12 +110,16 @@ function OddsCell({
   const style = getCellStyle(selectionKey, match, fillColor)
 
   return (
-    <div className={`rounded-lg p-2 text-center ${style.container}`}>
+    <div className={`odds-btn rounded-lg px-2 py-2.5 text-center ${style.container}`}>
       <div className={`truncate text-xs ${style.text}`}>
         {style.icon && <span className="mr-0.5">{style.icon}</span>}
         {displayLabel}
       </div>
-      {odds > 0 && <div className={`text-sm font-bold ${style.text}`}>{odds}</div>}
+      {odds > 0 && (
+        <div className={`font-[family-name:var(--font-display)] text-sm font-bold ${style.text}`}>
+          {odds}
+        </div>
+      )}
     </div>
   )
 }
