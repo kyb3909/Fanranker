@@ -34,9 +34,9 @@ export function BettingHeader({
   setMyPageTab,
 }: BettingHeaderProps) {
   return (
-    <div className="bg-card rounded-xl border border-border mb-3 sm:mb-4 overflow-hidden">
+    <div className="bg-card border-border mb-3 overflow-hidden rounded-xl border sm:mb-4">
       {/* 1행: 오늘의 경기 | 랭킹 | 마이페이지 */}
-      <div className="flex border-b border-border" role="tablist" aria-label="승부 예측">
+      <div className="border-border flex border-b" role="tablist" aria-label="승부 예측">
         {[
           { id: "betting", label: "오늘의 경기" },
           { id: "ranking", label: "랭킹" },
@@ -47,10 +47,10 @@ export function BettingHeader({
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as "betting" | "ranking" | "mypage")}
-            className={`flex items-center justify-center gap-2 flex-1 px-4 py-3 text-[14px] font-semibold transition-all border-b-2 -mb-[1px] ${
+            className={`-mb-[1px] flex flex-1 items-center justify-center gap-2 border-b-2 px-4 py-3 text-[14px] font-semibold transition-all ${
               activeTab === tab.id
-                ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                ? "border-primary text-primary bg-rose-50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
             }`}
           >
             {tab.label}
@@ -61,17 +61,17 @@ export function BettingHeader({
       {/* 2행: 종목/필터 탭 */}
       {activeTab === "betting" && (
         <>
-          <div className="flex overflow-x-auto scrollbar-none border-b border-border">
+          <div className="scrollbar-none border-border flex overflow-x-auto border-b">
             {SPORT_TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
                 disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
-                className={`flex items-center justify-center gap-1 flex-1 min-w-0 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
+                className={`-mb-[1px] flex min-w-0 flex-1 items-center justify-center gap-1 border-b-2 px-2 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all ${
                   sportFilter === tab.id
-                    ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                } ${selectedSport && tab.id !== "all" && tab.id !== selectedSport ? "opacity-50 cursor-not-allowed" : ""}`}
+                    ? "border-primary text-primary bg-rose-50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
+                } ${selectedSport && tab.id !== "all" && tab.id !== selectedSport ? "cursor-not-allowed opacity-50" : ""}`}
               >
                 <span className="text-sm">{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -79,7 +79,7 @@ export function BettingHeader({
             ))}
           </div>
           {selectedSport && (
-            <p className="text-[10px] text-orange-500 px-3 py-1.5 bg-orange-50/50">
+            <p className="bg-orange-50/50 px-3 py-1.5 text-[10px] text-orange-500">
               * {selectedSport} 경기만 선택 가능
             </p>
           )}
@@ -89,7 +89,7 @@ export function BettingHeader({
       {activeTab === "ranking" && (
         <>
           {/* 종목 필터 */}
-          <div className="flex overflow-x-auto scrollbar-none border-b border-border">
+          <div className="scrollbar-none border-border flex overflow-x-auto border-b">
             {[
               { id: "전체", label: "전체", icon: "🎯" },
               { id: "축구", label: "축구", icon: "⚽" },
@@ -100,10 +100,10 @@ export function BettingHeader({
               <button
                 key={tab.id}
                 onClick={() => setRankingSportFilter(tab.id)}
-                className={`flex items-center justify-center gap-1 flex-1 min-w-0 px-2 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
+                className={`-mb-[1px] flex min-w-0 flex-1 items-center justify-center gap-1 border-b-2 px-2 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all ${
                   rankingSportFilter === tab.id
-                    ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    ? "border-primary text-primary bg-rose-50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
                 }`}
               >
                 <span className="text-sm">{tab.icon}</span>
@@ -112,7 +112,7 @@ export function BettingHeader({
             ))}
           </div>
           {/* 정렬 필터 */}
-          <div className="flex border-b border-border">
+          <div className="border-border flex border-b">
             {[
               { id: "roi", label: "수익률", icon: TrendingUp },
               { id: "winRate", label: "적중률", icon: Target },
@@ -121,13 +121,13 @@ export function BettingHeader({
               <button
                 key={filter.id}
                 onClick={() => setRankingFilter(filter.id as "profit" | "winRate" | "roi")}
-                className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-2 text-[12px] font-semibold transition-all border-b-2 -mb-[1px] whitespace-nowrap ${
+                className={`-mb-[1px] flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold whitespace-nowrap transition-all ${
                   rankingFilter === filter.id
-                    ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    ? "border-primary text-primary bg-rose-50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
                 }`}
               >
-                <filter.icon className="w-3.5 h-3.5 shrink-0" />
+                <filter.icon className="h-3.5 w-3.5 shrink-0" />
                 {filter.label}
               </button>
             ))}
@@ -136,7 +136,7 @@ export function BettingHeader({
       )}
 
       {activeTab === "mypage" && (
-        <div className="flex border-b border-border">
+        <div className="border-border flex border-b">
           {[
             { id: "predictions", label: "예측 내역" },
             { id: "stats", label: "내 통계" },
@@ -146,10 +146,10 @@ export function BettingHeader({
             <button
               key={tab.id}
               onClick={() => setMyPageTab(tab.id as "predictions" | "stats" | "gold" | "profile")}
-              className={`flex items-center justify-center flex-1 px-4 py-2.5 text-[13px] font-semibold transition-all border-b-2 -mb-[1px] ${
+              className={`-mb-[1px] flex flex-1 items-center justify-center border-b-2 px-4 py-2.5 text-[13px] font-semibold transition-all ${
                 myPageTab === tab.id
-                  ? "border-primary text-primary bg-rose-50 dark:bg-rose-950/30"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  ? "border-primary text-primary bg-rose-50"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
               }`}
             >
               {tab.label}

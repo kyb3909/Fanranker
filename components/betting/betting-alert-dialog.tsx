@@ -19,46 +19,55 @@ interface BettingAlertDialogProps {
 
 export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogProps) {
   return (
-    <Dialog open={alertModal.isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open={alertModal.isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent className="sm:max-w-[400px]" showCloseButton={false}>
         <DialogHeader className="items-center text-center">
-          <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
-            alertModal.type === 'error'
-              ? 'bg-red-100 dark:bg-red-900/30'
-              : alertModal.type === 'warning'
-                ? 'bg-amber-100 dark:bg-amber-900/30'
-                : 'bg-emerald-100 dark:bg-emerald-900/30'
-          }`}>
-            {alertModal.type === 'error' ? (
-              <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
-            ) : alertModal.type === 'warning' ? (
-              <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          <div
+            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
+              alertModal.type === "error"
+                ? "bg-red-100"
+                : alertModal.type === "warning"
+                  ? "bg-amber-100"
+                  : "bg-emerald-100"
+            }`}
+          >
+            {alertModal.type === "error" ? (
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            ) : alertModal.type === "warning" ? (
+              <AlertCircle className="h-8 w-8 text-amber-600" />
             ) : (
-              <Circle className="h-8 w-8 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
+              <Circle className="h-8 w-8 fill-emerald-600 text-emerald-600" />
             )}
           </div>
-          <DialogTitle className={`text-xl ${
-            alertModal.type === 'error'
-              ? 'text-red-600 dark:text-red-400'
-              : alertModal.type === 'warning'
-                ? 'text-amber-600 dark:text-amber-400'
-                : 'text-emerald-600 dark:text-emerald-400'
-          }`}>
+          <DialogTitle
+            className={`text-xl ${
+              alertModal.type === "error"
+                ? "text-red-600"
+                : alertModal.type === "warning"
+                  ? "text-amber-600"
+                  : "text-emerald-600"
+            }`}
+          >
             {alertModal.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-base whitespace-pre-line pt-2">
+          <DialogDescription className="pt-2 text-center text-base whitespace-pre-line">
             {alertModal.message}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="sm:justify-center pt-4">
+        <DialogFooter className="pt-4 sm:justify-center">
           <Button
             onClick={onClose}
-            className={`w-full sm:w-auto px-8 ${
-              alertModal.type === 'error'
-                ? 'bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700'
-                : alertModal.type === 'warning'
-                  ? 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700'
-                  : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700'
+            className={`w-full px-8 sm:w-auto ${
+              alertModal.type === "error"
+                ? "bg-red-600 hover:bg-red-700"
+                : alertModal.type === "warning"
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-emerald-600 hover:bg-emerald-700"
             }`}
           >
             확인

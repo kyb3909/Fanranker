@@ -83,7 +83,7 @@ export function BettingSlip({
               </span>
               <button
                 onClick={onClearAllBets}
-                className="text-xs font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                className="text-xs font-medium text-red-500 hover:text-red-600"
                 aria-label="선택한 경기 전체 삭제"
               >
                 전체 삭제
@@ -104,7 +104,7 @@ export function BettingSlip({
                         e.stopPropagation()
                         onRemoveBet(bet.gameId)
                       }}
-                      className="text-muted-foreground absolute top-2 right-0 flex h-5 w-5 items-center justify-center transition-colors hover:text-red-500 dark:hover:text-red-400"
+                      className="text-muted-foreground absolute top-2 right-0 flex h-5 w-5 items-center justify-center transition-colors hover:text-red-500"
                       aria-label={`${groupedMatch.homeTeam} vs ${groupedMatch.awayTeam} 선택 삭제`}
                     >
                       <X className="h-4 w-4" />

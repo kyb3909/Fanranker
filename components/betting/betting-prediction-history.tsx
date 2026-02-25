@@ -5,37 +5,14 @@ import { Loader2 } from "lucide-react"
 import type { PredictionHistoryItem } from "./betting-types"
 import { sportColorFill, SPORT_ICONS } from "./betting-types"
 
-const SPORT_HEADER_STYLES: Record<
-  string,
-  { bg: string; text: string; darkBg: string; darkText: string }
-> = {
-  축구: {
-    bg: "bg-rose-50",
-    text: "text-rose-700",
-    darkBg: "dark:bg-rose-950/30",
-    darkText: "dark:text-rose-400",
-  },
-  야구: {
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    darkBg: "dark:bg-blue-950/30",
-    darkText: "dark:text-blue-400",
-  },
-  농구: {
-    bg: "bg-orange-50",
-    text: "text-orange-700",
-    darkBg: "dark:bg-orange-950/30",
-    darkText: "dark:text-orange-400",
-  },
-  배구: {
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    darkBg: "dark:bg-purple-950/30",
-    darkText: "dark:text-purple-400",
-  },
+const SPORT_HEADER_STYLES: Record<string, { bg: string; text: string }> = {
+  축구: { bg: "bg-rose-50", text: "text-rose-700" },
+  야구: { bg: "bg-blue-50", text: "text-blue-700" },
+  농구: { bg: "bg-orange-50", text: "text-orange-700" },
+  배구: { bg: "bg-purple-50", text: "text-purple-700" },
 }
 
-const DEFAULT_HEADER_STYLE = { bg: "bg-muted", text: "text-foreground", darkBg: "", darkText: "" }
+const DEFAULT_HEADER_STYLE = { bg: "bg-muted", text: "text-foreground" }
 
 interface BettingPredictionHistoryProps {
   predictionHistory: PredictionHistoryItem[]
@@ -65,13 +42,13 @@ export function BettingPredictionHistory({
           <div
             className={`flex items-center justify-between p-2 text-xs ${
               (SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).bg
-            } ${(SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).darkBg}`}
+            }`}
           >
             <div className="flex items-center gap-2">
               <span
                 className={`font-semibold ${
                   (SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).text
-                } ${(SPORT_HEADER_STYLES[pred.sport] || DEFAULT_HEADER_STYLE).darkText}`}
+                }`}
               >
                 {SPORT_ICONS[pred.sport] || "🎯"} {pred.sport}
               </span>
@@ -80,9 +57,9 @@ export function BettingPredictionHistory({
             <div
               className={`rounded px-2 py-0.5 text-xs font-semibold ${
                 pred.status === "win"
-                  ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                  ? "bg-green-100 text-green-700"
                   : pred.status === "lose"
-                    ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                    ? "bg-red-100 text-red-700"
                     : "bg-muted text-muted-foreground"
               }`}
             >

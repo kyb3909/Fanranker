@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
   /* ===== Sporty Red × Deep Navy Color System ===== */
   /* Background: #F8FAFC (slate-50) - 전체 배경 */
@@ -44,7 +42,7 @@
   --ring: oklch(0.45 0.18 15);
 
   --chart-1: oklch(0.45 0.18 15);
-  --chart-2: oklch(0.50 0.16 15);
+  --chart-2: oklch(0.5 0.16 15);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
@@ -58,102 +56,6 @@
   --sidebar-accent-foreground: oklch(0.129 0.042 264.695);
   --sidebar-border: oklch(0.902 0.014 252.894);
   --sidebar-ring: oklch(0.45 0.18 15);
-}
-
-.dark {
-  /* ===== Dark Mode: Sporty Red × Deep Navy ===== */
-  /* Background: Deep Navy #0F172A */
-  --background: oklch(0.129 0.042 264.695);
-  /* Foreground: Light text */
-  --foreground: oklch(0.968 0.003 264.542);
-
-  /* Card: Slightly lighter than background */
-  --card: oklch(0.178 0.032 264.695);
-  --card-foreground: oklch(0.968 0.003 264.542);
-
-  --popover: oklch(0.178 0.032 264.695);
-  --popover-foreground: oklch(0.968 0.003 264.542);
-
-  /* Primary Accent: Burgundy/Wine Red - 버건디 액센트 */
-  --primary: oklch(0.55 0.16 15);
-  --primary-foreground: oklch(0.99 0.002 247.858);
-
-  --secondary: oklch(0.233 0.032 264.695);
-  --secondary-foreground: oklch(0.968 0.003 264.542);
-
-  --muted: oklch(0.233 0.032 264.695);
-  --muted-foreground: oklch(0.7 0.023 264.695);
-
-  --accent: oklch(0.233 0.032 264.695);
-  --accent-foreground: oklch(0.968 0.003 264.542);
-
-  --destructive: oklch(0.40 0.14 15);
-  --destructive-foreground: oklch(0.55 0.16 15);
-
-  --border: oklch(0.278 0.032 264.695);
-  --input: oklch(0.278 0.032 264.695);
-  --ring: oklch(0.55 0.16 15);
-
-  --chart-1: oklch(0.55 0.16 15);
-  --chart-2: oklch(0.45 0.18 15);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-
-  --sidebar: oklch(0.178 0.032 264.695);
-  --sidebar-foreground: oklch(0.968 0.003 264.542);
-  --sidebar-primary: oklch(0.55 0.16 15);
-  --sidebar-primary-foreground: oklch(0.99 0.002 247.858);
-  --sidebar-accent: oklch(0.233 0.032 264.695);
-  --sidebar-accent-foreground: oklch(0.968 0.003 264.542);
-  --sidebar-border: oklch(0.278 0.032 264.695);
-  --sidebar-ring: oklch(0.55 0.16 15);
-}
-
-/* ===== Culture Identity: Blue #1A70DC ===== */
-[data-identity="culture"] {
-  --primary: oklch(0.50 0.18 255);
-  --destructive: oklch(0.50 0.18 255);
-  --ring: oklch(0.50 0.18 255);
-  --chart-1: oklch(0.50 0.18 255);
-  --chart-2: oklch(0.55 0.16 255);
-  --sidebar-primary: oklch(0.50 0.18 255);
-  --sidebar-ring: oklch(0.50 0.18 255);
-}
-
-[data-identity="culture"].dark,
-[data-identity="culture"] .dark {
-  --primary: oklch(0.60 0.16 255);
-  --destructive: oklch(0.45 0.14 255);
-  --destructive-foreground: oklch(0.60 0.16 255);
-  --ring: oklch(0.60 0.16 255);
-  --chart-1: oklch(0.60 0.16 255);
-  --chart-2: oklch(0.50 0.18 255);
-  --sidebar-primary: oklch(0.60 0.16 255);
-  --sidebar-ring: oklch(0.60 0.16 255);
-}
-
-/* ===== Hybrid Identity: Purple (Red+Blue blend) ===== */
-[data-identity="hybrid"] {
-  --primary: oklch(0.45 0.18 300);
-  --destructive: oklch(0.45 0.18 300);
-  --ring: oklch(0.45 0.18 300);
-  --chart-1: oklch(0.45 0.18 300);
-  --chart-2: oklch(0.50 0.16 300);
-  --sidebar-primary: oklch(0.45 0.18 300);
-  --sidebar-ring: oklch(0.45 0.18 300);
-}
-
-[data-identity="hybrid"].dark,
-[data-identity="hybrid"] .dark {
-  --primary: oklch(0.58 0.16 300);
-  --destructive: oklch(0.43 0.14 300);
-  --destructive-foreground: oklch(0.58 0.16 300);
-  --ring: oklch(0.58 0.16 300);
-  --chart-1: oklch(0.58 0.16 300);
-  --chart-2: oklch(0.45 0.18 300);
-  --sidebar-primary: oklch(0.58 0.16 300);
-  --sidebar-ring: oklch(0.58 0.16 300);
 }
 
 @theme inline {
@@ -287,7 +189,8 @@
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
   font-size: 0.9em;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 .tiptap-editor .ProseMirror pre {
