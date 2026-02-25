@@ -34,6 +34,25 @@ interface Activity {
         }
       }[]
     | null
+  slipGroups?:
+    | {
+        slipId: string
+        sport: string
+        date: string
+        status: string
+        stake: number
+        totalOdds: number
+        profit: number
+        matches: {
+          league: string
+          home: string
+          away: string
+          selection: string
+          odds: number
+          result: string
+        }[]
+      }[]
+    | null
 }
 
 export function ContentSection() {

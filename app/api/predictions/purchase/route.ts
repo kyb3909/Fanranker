@@ -45,13 +45,15 @@ export async function POST(request: NextRequest) {
       return apiBadRequest("자신의 예측은 구매할 필요가 없습니다.")
     }
 
-    // 2. 예측 데이터 조회 (중복구매 체크 및 경기 종료 확인용)
+    // 2. 예측 데이터 조회 (중복구매 체크 및 경기 종료 확인용 + odds/league_code)
     const { data: predictions } = await supabase
       .from("betman_predictions")
       .select(
         `
-        id, game_id, prediction, status,
-        game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result)
+        id, game_id, prediction, status, slip_id, stake,
+        game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result,
+          league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds),
+        slip:prediction_slips(id, stake, total_odds, status)
       `
       )
       .eq("user_id", activity.user_id)
