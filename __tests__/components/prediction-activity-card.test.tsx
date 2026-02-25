@@ -78,6 +78,10 @@ describe("PredictionActivityCard", () => {
 
   it("shows locked purchase button when not purchased", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
+    // BettingSlipCard는 접힌 상태이므로 잠금 배지가 보여야 함
+    expect(screen.getByText("잠금")).toBeDefined()
+    // 헤더를 클릭하여 확장
+    fireEvent.click(screen.getByText("잠금"))
     expect(screen.getByText("500G로 열람")).toBeDefined()
   })
 
@@ -85,13 +89,15 @@ describe("PredictionActivityCard", () => {
     const onPurchase = vi.fn().mockResolvedValue([mockPrediction])
     render(<PredictionActivityCard activity={baseActivity} onPurchase={onPurchase} />)
 
+    // 먼저 카드를 확장
+    fireEvent.click(screen.getByText("잠금"))
     fireEvent.click(screen.getByText("500G로 열람"))
     expect(onPurchase).toHaveBeenCalledWith("act-1")
 
     await waitFor(() => {
       expect(screen.getByText("열람 완료")).toBeDefined()
-      expect(screen.getByText(/서울 vs 수원/)).toBeDefined()
-      expect(screen.getByText("홈")).toBeDefined()
+      // BettingSlipCard 헤더에 "베트맨 축구" 표시
+      expect(screen.getByText(/베트맨 축구/)).toBeDefined()
     })
   })
 
@@ -104,6 +110,8 @@ describe("PredictionActivityCard", () => {
 
     render(<PredictionActivityCard activity={baseActivity} onPurchase={onPurchase} />)
 
+    // 먼저 카드를 확장
+    fireEvent.click(screen.getByText("잠금"))
     fireEvent.click(screen.getByText("500G로 열람"))
     expect(screen.getByText("구매 중...")).toBeDefined()
 

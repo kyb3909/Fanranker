@@ -230,6 +230,7 @@ export async function GET(request: NextRequest) {
             underOdds: Math.round((parseFloat(g?.under_odds) || 0) * 100) / 100,
             result: matchResult,
             correctAnswer,
+            gameType: g?.game_type || "일반",
           }
         })
 

@@ -50,6 +50,7 @@ interface Activity {
           selection: string
           odds: number
           result: string
+          gameType?: string
         }[]
       }[]
     | null

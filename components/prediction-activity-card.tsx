@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Lock, Unlock, TrendingUp, Target, Flame, Loader2, Clock } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
-import { PredictionSlipCard } from "@/components/betting/prediction-slip-card"
+import { BettingSlipCard } from "@/components/my-predictions/prediction-slip-card"
+import type { BetmanSlip, BetmanGame } from "@/components/my-predictions/prediction-types"
 import type { PredictionMatch } from "@/components/betting/betting-types"
+import { gameTypeLabels } from "@/components/betting/betting-types"
 
 interface PredictionGame {
   home_team_name: string
@@ -71,6 +73,91 @@ const SPORT_LABELS: Record<string, string> = {
   배구: "배구",
 }
 
+/** SlipGroup → BetmanSlip 변환 어댑터 */
+function slipGroupToBetmanSlip(group: SlipGroup): BetmanSlip {
+  const PREDICTION_KEY_MAP: Record<string, string> = {
+    홈팀: "home",
+    원정팀: "away",
+    무: "draw",
+    오버: "over",
+    언더: "under",
+  }
+  const RESULT_KEY_MAP: Record<string, string> = {
+    홈팀: "home",
+    원정팀: "away",
+    무: "draw",
+    오버: "over",
+    언더: "under",
+  }
+
+  const games: BetmanGame[] = group.matches.map((m, idx) => {
+    const predKey = PREDICTION_KEY_MAP[m.selection] || m.selection
+    const resultKey = m.correctAnswer ? RESULT_KEY_MAP[m.correctAnswer] || m.correctAnswer : null
+    const isCorrect = m.result === "win" ? true : m.result === "lose" ? false : null
+
+    return {
+      id: `${group.slipId}-${idx}`,
+      gameId: `${group.slipId}-game-${idx}`,
+      prediction: predKey,
+      isCorrect,
+      odds: m.odds,
+      gameType: m.gameType || "일반",
+      handicap: null,
+      overUnderLine: null,
+      result: resultKey,
+      homeOdds: m.homeOdds ?? null,
+      awayOdds: m.awayOdds ?? null,
+      drawOdds: m.drawOdds ?? null,
+      overOdds: m.overOdds ?? null,
+      underOdds: m.underOdds ?? null,
+      match: {
+        homeTeam: m.home,
+        awayTeam: m.away,
+        league: m.league,
+        matchTime: new Date().toISOString(),
+        status: m.result === "pending" ? "scheduled" : "finished",
+      },
+    }
+  })
+
+  const allSettled = games.every((g) => g.isCorrect !== null)
+  const allCorrect = games.every((g) => g.isCorrect === true)
+  const slipIsCorrect = !allSettled ? null : allCorrect
+
+  return {
+    id: group.slipId,
+    type: "betman_slip",
+    source: "betman",
+    sport: group.sport,
+    roundInfo: null,
+    gameCount: group.matches.length,
+    totalOdds: group.totalOdds,
+    ballsUsed: group.stake,
+    isCorrect: slipIsCorrect,
+    pointsEarned: group.profit > 0 ? group.profit : null,
+    createdAt: new Date().toISOString(),
+    games,
+  }
+}
+
+/** locked 상태에서 사용할 최소 BetmanSlip 생성 */
+function createLockedSlip(sport: string, matchCount: number): BetmanSlip {
+  return {
+    id: "locked",
+    type: "betman_slip",
+    source: "betman",
+    sport,
+    roundInfo: null,
+    gameCount: matchCount,
+    totalOdds: 0,
+    ballsUsed: 0,
+    isCorrect: null,
+    pointsEarned: null,
+    createdAt: new Date().toISOString(),
+    games: [],
+  }
+}
+
 export function PredictionActivityCard({
   activity,
   onPurchase,
@@ -87,6 +174,7 @@ export function PredictionActivityCard({
   )
   const [isPurchased, setIsPurchased] = useState(activity.is_purchased)
   const [isFree, setIsFree] = useState(activity.is_free || false)
+  const [expandedSlips, setExpandedSlips] = useState<Set<string>>(new Set())
 
   const handlePurchase = async () => {
     setIsPurchasing(true)
@@ -95,12 +183,20 @@ export function PredictionActivityCard({
       if (result) {
         setLocalPredictions(result)
         setIsPurchased(true)
-        // Purchase API doesn't return slipGroups, so build them from predictions
         setLocalSlipGroups(buildSlipGroupsFromPredictions(result, activity.sport))
       }
     } finally {
       setIsPurchasing(false)
     }
+  }
+
+  const toggleSlip = (slipId: string) => {
+    setExpandedSlips((prev) => {
+      const next = new Set(prev)
+      if (next.has(slipId)) next.delete(slipId)
+      else next.add(slipId)
+      return next
+    })
   }
 
   const sportLabel = SPORT_LABELS[activity.sport] || activity.sport
@@ -183,18 +279,17 @@ export function PredictionActivityCard({
           </div>
           {hasSlipGroups ? (
             <div className="space-y-2">
-              {localSlipGroups!.map((group) => (
-                <PredictionSlipCard
-                  key={group.slipId}
-                  sport={group.sport}
-                  date={group.date}
-                  status={group.status}
-                  matches={group.matches}
-                  stake={group.stake}
-                  totalOdds={group.totalOdds}
-                  profit={group.profit}
-                />
-              ))}
+              {localSlipGroups!.map((group) => {
+                const betmanSlip = slipGroupToBetmanSlip(group)
+                return (
+                  <BettingSlipCard
+                    key={group.slipId}
+                    slip={betmanSlip}
+                    isExpanded={expandedSlips.has(group.slipId)}
+                    onToggle={() => toggleSlip(group.slipId)}
+                  />
+                )
+              })}
             </div>
           ) : localPredictions ? (
             <FallbackPredictionList predictions={localPredictions} />
@@ -202,14 +297,10 @@ export function PredictionActivityCard({
         </div>
       ) : (
         <div className="border-border border-t px-4 py-3">
-          <PredictionSlipCard
-            sport={activity.sport}
-            date=""
-            status="pending"
-            matches={[]}
-            stake={0}
-            totalOdds={0}
-            profit={0}
+          <BettingSlipCard
+            slip={createLockedSlip(activity.sport, activity.prediction_count)}
+            isExpanded={expandedSlips.has("locked")}
+            onToggle={() => toggleSlip("locked")}
             locked
             matchCount={activity.prediction_count}
             lockedContent={
@@ -280,8 +371,6 @@ function buildSlipGroupsFromPredictions(
   predictions: Prediction[],
   activitySport: string
 ): SlipGroup[] {
-  // Purchase API는 odds를 반환하지 않으므로, 가능한 정보로 구성
-  // game에 odds가 있을 수 있음 (purchase API에서 betman_games join 확장 시)
   const game0 = predictions[0]?.game
   const sport = game0?.sport || activitySport
   const date = game0?.match_time
@@ -312,6 +401,7 @@ function buildSlipGroupsFromPredictions(
       odds: 0,
       result: matchResult,
       correctAnswer,
+      gameType: p.game?.game_type || "일반",
     }
   })
 

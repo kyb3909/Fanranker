@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Circle } from "lucide-react"
+import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Circle, Lock } from "lucide-react"
 import {
   type BetmanSlip,
   type BetmanGame,
@@ -109,10 +109,16 @@ export function BettingSlipCard({
   slip,
   isExpanded,
   onToggle,
+  locked = false,
+  lockedContent,
+  matchCount,
 }: {
   slip: BetmanSlip
   isExpanded: boolean
   onToggle: () => void
+  locked?: boolean
+  lockedContent?: React.ReactNode
+  matchCount?: number
 }) {
   const sportColor = sportColorFill[slip.sport] || sportColorFill["축구"]
   const isBasketball = slip.sport === "농구"
@@ -134,6 +140,7 @@ export function BettingSlipCard({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {locked && <Lock className="text-muted-foreground h-4 w-4" />}
             <span className="text-lg">{SPORT_ICONS[slip.sport] || "🎯"}</span>
             <div>
               <div className="flex items-center gap-2">
@@ -147,43 +154,53 @@ export function BettingSlipCard({
                 )}
               </div>
               <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
-                <span>{slip.gameCount}경기</span>
-                <span>·</span>
-                <span>{slip.ballsUsed}볼 사용</span>
-                <span>·</span>
-                <span>배당 {slip.totalOdds.toFixed(2)}배</span>
+                <span>{matchCount ?? slip.gameCount}경기</span>
+                {!locked && (
+                  <>
+                    <span>·</span>
+                    <span>{slip.ballsUsed}볼 사용</span>
+                    <span>·</span>
+                    <span>배당 {slip.totalOdds.toFixed(2)}배</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Result Badge */}
-            <div
-              className={`rounded px-2 py-1 text-xs font-semibold ${
-                resultStatus === "win"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : resultStatus === "lose"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {resultStatus === "win" ? (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  적중
-                </span>
-              ) : resultStatus === "lose" ? (
-                <span className="flex items-center gap-1">
-                  <XCircle className="h-3 w-3" />
-                  미적중
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  대기중
-                </span>
-              )}
-            </div>
+            {locked ? (
+              <span className="bg-muted text-muted-foreground rounded px-2 py-1 text-xs font-medium">
+                잠금
+              </span>
+            ) : (
+              <div
+                className={`rounded px-2 py-1 text-xs font-semibold ${
+                  resultStatus === "win"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : resultStatus === "lose"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {resultStatus === "win" ? (
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    적중
+                  </span>
+                ) : resultStatus === "lose" ? (
+                  <span className="flex items-center gap-1">
+                    <XCircle className="h-3 w-3" />
+                    미적중
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    대기중
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Expand/Collapse Icon */}
             {isExpanded ? (
@@ -196,7 +213,17 @@ export function BettingSlipCard({
       </div>
 
       {/* Expanded Content - Betting Slip Details */}
-      {isExpanded && (
+      {isExpanded && locked && (
+        <div className="border-t px-4 py-5 text-center">
+          <Lock className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
+          <p className="text-muted-foreground text-sm font-medium">구매 후 확인 가능</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            배당률, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
+          </p>
+          {lockedContent && <div className="mt-3">{lockedContent}</div>}
+        </div>
+      )}
+      {isExpanded && !locked && (
         <div className="border-t">
           {/* Games List */}
           <div className="divide-y">

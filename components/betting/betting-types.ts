@@ -161,6 +161,7 @@ export interface PredictionMatch {
   underOdds?: number
   result: string // 개별 경기 결과: "win" | "lose" | "pending"
   correctAnswer?: string // 정답 선택지 라벨 (Korean: "홈팀" | "원정팀" | "무" | "오버" | "언더")
+  gameType?: string // 게임 유형: "일반" | "핸디캡" | "언더오버" 등
 }
 
 export interface PredictionHistoryItem {
