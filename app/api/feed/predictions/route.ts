@@ -180,6 +180,14 @@ export async function GET(request: NextRequest) {
             })
           : ""
 
+        const resultLabelMap: Record<string, string> = {
+          home: "홈팀",
+          away: "원정팀",
+          draw: "무",
+          over: "오버",
+          under: "언더",
+        }
+
         const matches = slipPreds.map((p) => {
           const g = p.game as any
           let odds = 1
@@ -201,13 +209,22 @@ export async function GET(request: NextRequest) {
             selection = "언더"
           }
 
+          // Normalize result to per-match status
+          const dbResult = g?.result as string | undefined
+          let matchResult = "pending"
+          if (dbResult) {
+            matchResult = dbResult === p.prediction ? "win" : "lose"
+          }
+          const correctAnswer = dbResult ? resultLabelMap[dbResult] || dbResult : undefined
+
           return {
             league: g?.league_code || "",
             home: g?.home_team_name || "",
             away: g?.away_team_name || "",
             selection,
             odds: Math.round(odds * 100) / 100,
-            result: g?.result || "",
+            result: matchResult,
+            correctAnswer,
           }
         })
 

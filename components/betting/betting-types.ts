@@ -152,9 +152,10 @@ export interface PredictionMatch {
   league: string
   home: string
   away: string
-  selection: string
+  selection: string // 사용자 선택 (Korean: "홈팀" | "원정팀" | "무" | "오버" | "언더")
   odds: number
-  result: string
+  result: string // 개별 경기 결과: "win" | "lose" | "pending"
+  correctAnswer?: string // 정답 선택지 라벨 (Korean: "홈팀" | "원정팀" | "무" | "오버" | "언더")
 }
 
 export interface PredictionHistoryItem {

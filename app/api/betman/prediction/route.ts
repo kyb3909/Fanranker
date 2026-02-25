@@ -381,6 +381,14 @@ export async function GET(request: NextRequest) {
               ? -slip.stake
               : 0
 
+        const selectionMap: Record<string, string> = {
+          home: "홈팀",
+          away: "원정팀",
+          draw: "무",
+          over: "오버",
+          under: "언더",
+        }
+
         return {
           id: slip.id,
           date: slip.created_at,
@@ -391,13 +399,6 @@ export async function GET(request: NextRequest) {
           profit,
           matches: preds.map((p) => {
             const g = p.game as Record<string, unknown> | null
-            const selectionMap: Record<string, string> = {
-              home: "홈팀",
-              away: "원정팀",
-              draw: "무",
-              over: "오버",
-              under: "언더",
-            }
             const oddsMap: Record<string, string> = {
               home: "home_win_odds",
               away: "away_win_odds",
@@ -405,13 +406,19 @@ export async function GET(request: NextRequest) {
               over: "over_odds",
               under: "under_odds",
             }
+            const matchResult =
+              p.is_correct === true ? "win" : p.is_correct === false ? "lose" : "pending"
+            // 정답: DB의 result 필드 (home/away/draw/over/under)를 한글 라벨로 변환
+            const dbResult = g?.result as string | null
+            const correctAnswer = dbResult ? selectionMap[dbResult] || dbResult : undefined
             return {
               league: (g?.league_code as string) || "기타",
               home: (g?.home_team_name as string) || "홈팀",
               away: (g?.away_team_name as string) || "원정팀",
               selection: selectionMap[p.prediction] || p.prediction,
               odds: parseFloat(String(g?.[oddsMap[p.prediction] || "home_win_odds"])) || 0,
-              result: p.is_correct === true ? "win" : p.is_correct === false ? "lose" : "pending",
+              result: matchResult,
+              correctAnswer,
             }
           }),
         }

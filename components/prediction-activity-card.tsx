@@ -285,17 +285,22 @@ function buildSlipGroupsFromPredictions(
 
   const allSettled = predictions.every((p) => p.game?.result)
   const allCorrect = predictions.every((p) => p.game?.result && p.game.result === p.prediction)
-  const anyWrong = predictions.some((p) => p.game?.result && p.game.result !== p.prediction)
   const status = !allSettled ? "pending" : allCorrect ? "win" : "lose"
 
-  const matches: PredictionMatch[] = predictions.map((p) => ({
-    league: "",
-    home: p.game?.home_team_name || "",
-    away: p.game?.away_team_name || "",
-    selection: SELECTION_MAP[p.prediction] || p.prediction,
-    odds: 0,
-    result: p.game?.result || "",
-  }))
+  const matches: PredictionMatch[] = predictions.map((p) => {
+    const dbResult = p.game?.result
+    const matchResult = dbResult ? (dbResult === p.prediction ? "win" : "lose") : "pending"
+    const correctAnswer = dbResult ? SELECTION_MAP[dbResult] || dbResult : undefined
+    return {
+      league: "",
+      home: p.game?.home_team_name || "",
+      away: p.game?.away_team_name || "",
+      selection: SELECTION_MAP[p.prediction] || p.prediction,
+      odds: 0,
+      result: matchResult,
+      correctAnswer,
+    }
+  })
 
   return [
     {
