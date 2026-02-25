@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
           home_score,
           away_score,
           status,
+          result,
           handicap,
           over_under_line,
           home_win_odds,
@@ -167,6 +168,7 @@ export async function GET(request: NextRequest) {
       home_score: number | null
       away_score: number | null
       status: string
+      result: string | null
       handicap: number | null
       over_under_line: number | null
       home_win_odds: number | null
@@ -279,6 +281,12 @@ export async function GET(request: NextRequest) {
           gameType: game?.game_type || "일반",
           handicap: game?.handicap,
           overUnderLine: game?.over_under_line,
+          result: game?.result || null,
+          homeOdds: game?.home_win_odds || null,
+          awayOdds: game?.away_win_odds || null,
+          drawOdds: game?.draw_odds || null,
+          overOdds: game?.over_odds || null,
+          underOdds: game?.under_odds || null,
           match: {
             homeTeam: game?.home_team_name || "홈팀",
             awayTeam: game?.away_team_name || "원정팀",

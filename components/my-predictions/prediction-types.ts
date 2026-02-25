@@ -1,5 +1,10 @@
 // Re-export shared constants from betting-types (single source of truth)
-export { gameTypeLabels, SPORT_ICONS, sportColorFill, formatMatchTime } from "@/components/betting/betting-types"
+export {
+  gameTypeLabels,
+  SPORT_ICONS,
+  sportColorFill,
+  formatMatchTime,
+} from "@/components/betting/betting-types"
 
 export interface BetmanGame {
   id: string
@@ -9,7 +14,13 @@ export interface BetmanGame {
   odds: number
   gameType: string
   handicap: number | null
-  overUnderLine: number | null  // 언오버 기준선
+  overUnderLine: number | null // 언오버 기준선
+  result: string | null // 실제 결과: "home" | "away" | "draw" | "over" | "under"
+  homeOdds: number | null
+  awayOdds: number | null
+  drawOdds: number | null
+  overOdds: number | null
+  underOdds: number | null
   match: {
     homeTeam: string
     awayTeam: string
@@ -23,8 +34,8 @@ export interface BetmanGame {
 
 export interface BetmanSlip {
   id: string
-  type: 'betman_slip'
-  source: 'betman'
+  type: "betman_slip"
+  source: "betman"
   sport: string
   roundInfo: {
     year: number
@@ -51,7 +62,7 @@ export interface RegularPrediction {
   isCorrect: boolean | null
   pointsEarned: number | null
   createdAt: string
-  source: 'regular'
+  source: "regular"
   sport?: string
   match: {
     homeTeam: string
@@ -77,13 +88,21 @@ export interface Stats {
 // Get prediction label
 export function getPredictionLabel(prediction: string, homeTeam: string, awayTeam: string): string {
   switch (prediction) {
-    case 'home': return homeTeam
-    case 'away': return awayTeam
-    case 'draw': return '무승부'
-    case 'over': return '오버'
-    case 'under': return '언더'
-    case 'odd': return '홀'
-    case 'even': return '짝'
-    default: return prediction
+    case "home":
+      return homeTeam
+    case "away":
+      return awayTeam
+    case "draw":
+      return "무승부"
+    case "over":
+      return "오버"
+    case "under":
+      return "언더"
+    case "odd":
+      return "홀"
+    case "even":
+      return "짝"
+    default:
+      return prediction
   }
 }
