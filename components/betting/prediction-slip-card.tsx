@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
+import { ChevronDown, Lock } from "lucide-react"
 import type { PredictionMatch } from "./betting-types"
 import { sportColorFill, SPORT_ICONS } from "./betting-types"
 
@@ -21,12 +23,16 @@ export interface PredictionSlipCardProps {
   stake: number
   totalOdds: number
   profit: number
+  /** true면 잠금 상태 — 상세 데이터 렌더링 안함 */
+  locked?: boolean
+  /** locked 상태에서 표시할 경기 수 (matches가 비어있을 때) */
+  matchCount?: number
+  /** locked 상태 확장 시 표시할 커스텀 콘텐츠 (e.g. 구매 버튼) */
+  lockedContent?: React.ReactNode
 }
 
-/**
- * 각 그리드 셀의 시각 상태를 결정.
- * selectionKey: 이 셀이 대표하는 선택지 식별자 ("홈팀" | "원정팀" | "무" | "오버" | "언더")
- */
+// ─── 내부 헬퍼 ────────────────────────────────────────────
+
 function getCellStyle(
   selectionKey: string,
   match: PredictionMatch,
@@ -36,7 +42,6 @@ function getCellStyle(
   const isCorrectAnswer = match.correctAnswer === selectionKey
   const matchResult = match.result
 
-  // pending: 선택된 셀만 스포츠 색상 하이라이트
   if (matchResult === "pending") {
     if (isSelected) {
       return {
@@ -48,17 +53,14 @@ function getCellStyle(
     return { container: "bg-muted/50", text: "text-muted-foreground", icon: null as string | null }
   }
 
-  // won: 내 선택 = 정답 → 초록 ✓
   if (matchResult === "win" && isSelected) {
     return { container: "border border-green-300 bg-green-50", text: "text-green-700", icon: "✓" }
   }
 
-  // lost + 내 선택(오답) → 빨강 ✗
   if (matchResult === "lose" && isSelected) {
     return { container: "border border-red-300 bg-red-50", text: "text-red-600", icon: "✗" }
   }
 
-  // lost + 정답 → 초록 테두리 ✓
   if (matchResult === "lose" && isCorrectAnswer) {
     return {
       container: "border border-green-300 bg-green-50/60",
@@ -67,7 +69,6 @@ function getCellStyle(
     }
   }
 
-  // 기본: 비선택, 비정답
   return { container: "bg-muted/50", text: "text-muted-foreground", icon: null as string | null }
 }
 
@@ -93,11 +94,6 @@ function MatchResultBadge({ result }: { result: string }) {
   )
 }
 
-/**
- * 그리드 셀 하나.
- * displayLabel: 화면에 표시할 텍스트 (팀명 또는 "무", "오버", "언더")
- * selectionKey: match.selection과 비교할 키 ("홈팀" | "원정팀" | "무" | "오버" | "언더")
- */
 function OddsCell({
   displayLabel,
   selectionKey,
@@ -124,6 +120,8 @@ function OddsCell({
   )
 }
 
+// ─── 메인 컴포넌트 ─────────────────────────────────────────
+
 export function PredictionSlipCard({
   sport,
   date,
@@ -132,134 +130,169 @@ export function PredictionSlipCard({
   stake,
   totalOdds,
   profit,
+  locked = false,
+  matchCount,
+  lockedContent,
 }: PredictionSlipCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const headerStyle = SPORT_HEADER_STYLES[sport] || DEFAULT_HEADER_STYLE
+  const displayMatchCount = matchCount ?? matches.length
+
   return (
     <Card className="overflow-hidden border-0 shadow-sm">
-      {/* 슬립 헤더 */}
-      <div
-        className={`flex items-center justify-between p-2 text-xs ${
-          (SPORT_HEADER_STYLES[sport] || DEFAULT_HEADER_STYLE).bg
-        }`}
+      {/* ───── 클릭 가능한 헤더 (항상 표시) ───── */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className={`flex w-full items-center justify-between p-2 text-xs ${headerStyle.bg} transition-colors hover:brightness-95`}
       >
         <div className="flex items-center gap-2">
-          <span
-            className={`font-semibold ${(SPORT_HEADER_STYLES[sport] || DEFAULT_HEADER_STYLE).text}`}
-          >
+          {locked && <Lock className="text-muted-foreground h-3 w-3" />}
+          <span className={`font-semibold ${headerStyle.text}`}>
             {SPORT_ICONS[sport] || "🎯"} {sport}
           </span>
-          <span className="text-muted-foreground">{date}</span>
+          {date && <span className="text-muted-foreground">{date}</span>}
+          <span className="text-muted-foreground">{displayMatchCount}경기</span>
         </div>
-        <div
-          className={`rounded px-2 py-0.5 text-xs font-semibold ${
-            status === "win"
-              ? "bg-green-100 text-green-700"
-              : status === "lose"
-                ? "bg-red-100 text-red-700"
-                : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {status === "win" ? "✓ 적중" : status === "lose" ? "✗ 미적중" : "대기중"}
-        </div>
-      </div>
-
-      {/* 경기 목록 */}
-      <div className="space-y-2 p-3">
-        {matches.map((match, idx) => {
-          const fillColor = sportColorFill[sport] || sportColorFill["축구"]
-          const isOverUnder = match.selection === "오버" || match.selection === "언더"
-          const hasDrawOdds = !isOverUnder && sport === "축구"
-
-          return (
-            <div key={idx} className="bg-card overflow-hidden rounded-lg border">
-              {/* 리그 + 경기별 결과 배지 */}
-              <div className="bg-muted text-muted-foreground flex items-center justify-between px-3 py-1.5 text-xs">
-                <span>{match.league}</span>
-                <MatchResultBadge result={match.result} />
-              </div>
-
-              {/* 선택지 그리드 — 각 셀에 해당 옵션의 배당률 표시 */}
-              {isOverUnder ? (
-                <div className="grid grid-cols-2 gap-1 p-2">
-                  <OddsCell
-                    displayLabel="오버"
-                    selectionKey="오버"
-                    odds={match.overOdds ?? match.odds}
-                    match={match}
-                    fillColor={fillColor}
-                  />
-                  <OddsCell
-                    displayLabel="언더"
-                    selectionKey="언더"
-                    odds={match.underOdds ?? match.odds}
-                    match={match}
-                    fillColor={fillColor}
-                  />
-                </div>
-              ) : (
-                <div className={`grid p-2 ${hasDrawOdds ? "grid-cols-3" : "grid-cols-2"} gap-1`}>
-                  <OddsCell
-                    displayLabel={match.home || "홈팀"}
-                    selectionKey="홈팀"
-                    odds={match.homeOdds ?? match.odds}
-                    match={match}
-                    fillColor={fillColor}
-                  />
-                  {hasDrawOdds && (
-                    <OddsCell
-                      displayLabel="무"
-                      selectionKey="무"
-                      odds={match.drawOdds ?? match.odds}
-                      match={match}
-                      fillColor={fillColor}
-                    />
-                  )}
-                  <OddsCell
-                    displayLabel={match.away || "원정팀"}
-                    selectionKey="원정팀"
-                    odds={match.awayOdds ?? match.odds}
-                    match={match}
-                    fillColor={fillColor}
-                  />
-                </div>
-              )}
-
-              {/* lost일 때: 내 선택 / 정답 텍스트 1줄씩 명시 */}
-              {match.result === "lose" && match.correctAnswer && (
-                <div className="border-t px-3 py-1.5 text-xs">
-                  <div className="flex items-center gap-3">
-                    <span className="text-red-600">
-                      <span className="text-muted-foreground">내 선택:</span> ✗ {match.selection}
-                    </span>
-                    <span className="text-green-700">
-                      <span className="text-muted-foreground">정답:</span> ✓ {match.correctAnswer}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {/* 배팅금 / 배당 / 손익 요약 */}
-        <div className="mt-3 flex items-center justify-between border-t pt-3">
-          <div className="text-muted-foreground text-xs">
-            배팅금: {stake.toLocaleString()}볼 | 총배당: {totalOdds}배
-          </div>
-          <div
-            className={`text-sm font-semibold ${
-              status === "win"
-                ? "text-green-600"
-                : status === "lose"
-                  ? "text-red-600"
-                  : "text-muted-foreground"
+        <div className="flex items-center gap-1.5">
+          {locked ? (
+            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-medium">
+              잠금
+            </span>
+          ) : (
+            <span
+              className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                status === "win"
+                  ? "bg-green-100 text-green-700"
+                  : status === "lose"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {status === "win" ? "✓ 적중" : status === "lose" ? "✗ 미적중" : "대기중"}
+            </span>
+          )}
+          <ChevronDown
+            className={`text-muted-foreground h-3.5 w-3.5 transition-transform ${
+              isExpanded ? "rotate-180" : ""
             }`}
-          >
-            {status === "pending"
-              ? "대기중"
-              : `${profit > 0 ? "+" : ""}${profit.toLocaleString()}볼`}
-          </div>
+          />
         </div>
-      </div>
+      </button>
+
+      {/* ───── 확장 영역 ───── */}
+      {isExpanded &&
+        (locked ? (
+          /* ── locked: 민감 데이터 렌더링 안함 ── */
+          <div className="px-4 py-5 text-center">
+            <Lock className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
+            <p className="text-muted-foreground text-sm font-medium">구매 후 확인 가능</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              배당률, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
+            </p>
+            {lockedContent && <div className="mt-3">{lockedContent}</div>}
+          </div>
+        ) : (
+          /* ── expanded: 전체 상세 ── */
+          <div className="space-y-2 p-3">
+            {matches.map((match, idx) => {
+              const fillColor = sportColorFill[sport] || sportColorFill["축구"]
+              const isOverUnder = match.selection === "오버" || match.selection === "언더"
+              const hasDrawOdds = !isOverUnder && sport === "축구"
+
+              return (
+                <div key={idx} className="bg-card overflow-hidden rounded-lg border">
+                  <div className="bg-muted text-muted-foreground flex items-center justify-between px-3 py-1.5 text-xs">
+                    <span>{match.league}</span>
+                    <MatchResultBadge result={match.result} />
+                  </div>
+
+                  {isOverUnder ? (
+                    <div className="grid grid-cols-2 gap-1 p-2">
+                      <OddsCell
+                        displayLabel="오버"
+                        selectionKey="오버"
+                        odds={match.overOdds ?? match.odds}
+                        match={match}
+                        fillColor={fillColor}
+                      />
+                      <OddsCell
+                        displayLabel="언더"
+                        selectionKey="언더"
+                        odds={match.underOdds ?? match.odds}
+                        match={match}
+                        fillColor={fillColor}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className={`grid p-2 ${hasDrawOdds ? "grid-cols-3" : "grid-cols-2"} gap-1`}
+                    >
+                      <OddsCell
+                        displayLabel={match.home || "홈팀"}
+                        selectionKey="홈팀"
+                        odds={match.homeOdds ?? match.odds}
+                        match={match}
+                        fillColor={fillColor}
+                      />
+                      {hasDrawOdds && (
+                        <OddsCell
+                          displayLabel="무"
+                          selectionKey="무"
+                          odds={match.drawOdds ?? match.odds}
+                          match={match}
+                          fillColor={fillColor}
+                        />
+                      )}
+                      <OddsCell
+                        displayLabel={match.away || "원정팀"}
+                        selectionKey="원정팀"
+                        odds={match.awayOdds ?? match.odds}
+                        match={match}
+                        fillColor={fillColor}
+                      />
+                    </div>
+                  )}
+
+                  {match.result === "lose" && match.correctAnswer && (
+                    <div className="border-t px-3 py-1.5 text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="text-red-600">
+                          <span className="text-muted-foreground">내 선택:</span> ✗{" "}
+                          {match.selection}
+                        </span>
+                        <span className="text-green-700">
+                          <span className="text-muted-foreground">정답:</span> ✓{" "}
+                          {match.correctAnswer}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            <div className="mt-3 flex items-center justify-between border-t pt-3">
+              <div className="text-muted-foreground text-xs">
+                배팅금: {stake.toLocaleString()}볼 | 총배당: {totalOdds}배
+              </div>
+              <div
+                className={`text-sm font-semibold ${
+                  status === "win"
+                    ? "text-green-600"
+                    : status === "lose"
+                      ? "text-red-600"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {status === "pending"
+                  ? "대기중"
+                  : `${profit > 0 ? "+" : ""}${profit.toLocaleString()}볼`}
+              </div>
+            </div>
+          </div>
+        ))}
     </Card>
   )
 }

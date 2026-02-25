@@ -202,24 +202,37 @@ export function PredictionActivityCard({
         </div>
       ) : (
         <div className="border-border border-t px-4 py-3">
-          <Button
-            onClick={handlePurchase}
-            disabled={isPurchasing}
-            variant="outline"
-            className="w-full gap-2 border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-          >
-            {isPurchasing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                구매 중...
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4" />
-                500G로 열람
-              </>
-            )}
-          </Button>
+          <PredictionSlipCard
+            sport={activity.sport}
+            date=""
+            status="pending"
+            matches={[]}
+            stake={0}
+            totalOdds={0}
+            profit={0}
+            locked
+            matchCount={activity.prediction_count}
+            lockedContent={
+              <Button
+                onClick={handlePurchase}
+                disabled={isPurchasing}
+                variant="outline"
+                className="w-full gap-2 border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+              >
+                {isPurchasing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    구매 중...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    500G로 열람
+                  </>
+                )}
+              </Button>
+            }
+          />
         </div>
       )}
     </div>
