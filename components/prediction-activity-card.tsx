@@ -161,9 +161,15 @@ function createLockedSlip(sport: string, matchCount: number): BetmanSlip {
 export function PredictionActivityCard({
   activity,
   onPurchase,
+  isFollowed = false,
+  isFollowLoading = false,
+  onFollow,
 }: {
   activity: ActivityData
   onPurchase: (activityId: string) => Promise<Prediction[] | null>
+  isFollowed?: boolean
+  isFollowLoading?: boolean
+  onFollow?: () => void
 }) {
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [localSlipGroups, setLocalSlipGroups] = useState<SlipGroup[] | null>(
@@ -219,6 +225,27 @@ export function PredictionActivityCard({
             <span className="text-foreground text-sm font-semibold">
               {activity.profile.nickname}
             </span>
+            {onFollow && (
+              <Button
+                size="sm"
+                variant={isFollowed ? "outline" : "default"}
+                onClick={onFollow}
+                disabled={isFollowLoading}
+                className={`h-6 rounded-full px-2.5 text-[11px] ${
+                  isFollowed
+                    ? "text-muted-foreground hover:border-red-300 hover:text-red-500"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
+              >
+                {isFollowLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : isFollowed ? (
+                  "팔로잉"
+                ) : (
+                  "팔로우"
+                )}
+              </Button>
+            )}
             {activity.stats && (
               <div className="flex items-center gap-1.5">
                 {activity.stats.accuracy > 0 && (
@@ -230,7 +257,7 @@ export function PredictionActivityCard({
                 {activity.stats.current_streak > 0 && (
                   <Badge
                     variant="secondary"
-                    className="h-5 gap-0.5 px-1.5 py-0 text-[11px] text-orange-600"
+                    className="text-primary h-5 gap-0.5 px-1.5 py-0 text-[11px]"
                   >
                     <Flame className="h-3 w-3" />
                     {activity.stats.current_streak}연승
@@ -239,7 +266,7 @@ export function PredictionActivityCard({
                 {activity.stats.net_profit > 0 && (
                   <Badge
                     variant="secondary"
-                    className="h-5 gap-0.5 px-1.5 py-0 text-[11px] text-emerald-600"
+                    className="text-primary h-5 gap-0.5 px-1.5 py-0 text-[11px]"
                   >
                     <TrendingUp className="h-3 w-3" />+{activity.stats.net_profit.toFixed(0)}
                   </Badge>
@@ -267,13 +294,13 @@ export function PredictionActivityCard({
           <div className="mb-2 flex items-center gap-1.5">
             {isFree && !isPurchased ? (
               <>
-                <Clock className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-[12px] font-medium text-blue-600">경기 종료 - 무료 공개</span>
+                <Clock className="text-primary h-3.5 w-3.5" />
+                <span className="text-primary text-[12px] font-medium">경기 종료 - 무료 공개</span>
               </>
             ) : (
               <>
-                <Unlock className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-[12px] font-medium text-emerald-600">열람 완료</span>
+                <Unlock className="text-primary h-3.5 w-3.5" />
+                <span className="text-primary text-[12px] font-medium">열람 완료</span>
               </>
             )}
           </div>
@@ -308,7 +335,7 @@ export function PredictionActivityCard({
                 onClick={handlePurchase}
                 disabled={isPurchasing}
                 variant="outline"
-                className="w-full gap-2 border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary w-full gap-2"
               >
                 {isPurchasing ? (
                   <>

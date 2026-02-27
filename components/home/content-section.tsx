@@ -61,15 +61,24 @@ export function ContentSection() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [isContentLoading, setIsContentLoading] = useState(false)
   const [contentLoaded, setContentLoaded] = useState(false)
+  const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set())
+  const [followLoading, setFollowLoading] = useState<Set<string>>(new Set())
 
   const fetchActivities = useCallback(async () => {
     if (!isSignedIn) return
     setIsContentLoading(true)
     try {
-      const response = await fetch("/api/feed/predictions?limit=20")
-      if (response.ok) {
-        const data = await response.json()
+      const [activitiesRes, followRes] = await Promise.all([
+        fetch("/api/feed/predictions?limit=20"),
+        fetch("/api/follow"),
+      ])
+      if (activitiesRes.ok) {
+        const data = await activitiesRes.json()
         setActivities(data.activities || [])
+      }
+      if (followRes.ok) {
+        const data = await followRes.json()
+        setFollowedUsers(new Set(data.following || []))
       }
     } catch {
       setActivities([])
@@ -78,6 +87,32 @@ export function ContentSection() {
       setContentLoaded(true)
     }
   }, [isSignedIn])
+
+  const handleFollow = useCallback(async (userId: string) => {
+    setFollowLoading((prev) => new Set(prev).add(userId))
+    try {
+      const res = await fetch("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setFollowedUsers((prev) => {
+          const next = new Set(prev)
+          if (data.action === "followed") next.add(userId)
+          else next.delete(userId)
+          return next
+        })
+      }
+    } finally {
+      setFollowLoading((prev) => {
+        const next = new Set(prev)
+        next.delete(userId)
+        return next
+      })
+    }
+  }, [])
 
   useEffect(() => {
     if (!contentLoaded) {
@@ -126,6 +161,9 @@ export function ContentSection() {
             key={activity.id}
             activity={activity}
             onPurchase={handlePurchase}
+            isFollowed={followedUsers.has(activity.user_id)}
+            isFollowLoading={followLoading.has(activity.user_id)}
+            onFollow={() => handleFollow(activity.user_id)}
           />
         ))
       ) : (
