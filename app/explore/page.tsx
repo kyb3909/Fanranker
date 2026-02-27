@@ -1,294 +1,91 @@
-"use client"
+import { createAnonClient } from "@/lib/supabase/server"
+import { ExploreContent } from "./explore-content"
 
-import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
-import { ActivitySidebar } from "@/components/activity-sidebar"
-import { Eye, MessageSquare, Loader2, ThumbsUp } from "lucide-react"
-import Link from "next/link"
-import { COMMUNITY_NAMES } from "@/lib/constants/communities"
+async function fetchExploreData() {
+  const supabase = createAnonClient()
+  const sinceDays = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-interface Category {
-  id: string
-  slug: string
-  name: string
-  icon: string | null
-  sort_order: number
-  description: string | null
+  const [categoriesResult, popularResult, recommendedResult, commentedResult, viewedResult] =
+    await Promise.all([
+      supabase
+        .from("categories")
+        .select("id, slug, name, icon, sort_order, description")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("posts")
+        .select(
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+        )
+        .is("deleted_at", null)
+        .gte("created_at", sinceDays)
+        .order("temperature", { ascending: false, nullsFirst: false })
+        .range(0, 9),
+      supabase
+        .from("posts")
+        .select(
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+        )
+        .is("deleted_at", null)
+        .gte("created_at", sinceDays)
+        .order("temperature", { ascending: false, nullsFirst: false })
+        .range(0, 2),
+      supabase
+        .from("posts")
+        .select(
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+        )
+        .is("deleted_at", null)
+        .gte("created_at", sinceDays)
+        .order("comment_count", { ascending: false })
+        .range(0, 2),
+      supabase
+        .from("posts")
+        .select(
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+        )
+        .is("deleted_at", null)
+        .gte("created_at", sinceDays)
+        .order("created_at", { ascending: false })
+        .range(0, 2),
+    ])
+
+  // 프로필 조회를 위해 모든 user_id 수집
+  const allPosts = [
+    ...(popularResult.data || []),
+    ...(recommendedResult.data || []),
+    ...(commentedResult.data || []),
+    ...(viewedResult.data || []),
+  ]
+  const userIds = [...new Set(allPosts.map((p) => p.user_id))]
+
+  let profiles: {
+    user_id: string
+    nickname: string
+    avatar_url: string | null
+    temperature: number | null
+  }[] = []
+  if (userIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, nickname, avatar_url, temperature")
+      .in("user_id", userIds)
+    profiles = data || []
+  }
+
+  const makeFallback = (posts: typeof allPosts) => ({ posts: posts || [], profiles })
+
+  return {
+    "/api/categories": { categories: categoriesResult.data || [] },
+    "/api/posts?sort=hot&limit=10": makeFallback(popularResult.data || []),
+    "/api/posts?sort=hot&limit=3": makeFallback(recommendedResult.data || []),
+    "/api/posts?sort=comments&limit=3": makeFallback(commentedResult.data || []),
+    "/api/posts?sort=new&limit=3": makeFallback(viewedResult.data || []),
+  }
 }
 
-interface Post {
-  id: string
-  title: string
-  community: string
-  communitySlug: string
-  comments: number
-  views: number
-  upvotes: number
-}
+export default async function ExplorePage() {
+  const fallback = await fetchExploreData()
 
-export default function ExplorePage() {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [popularPosts, setPopularPosts] = useState<Post[]>([])
-  const [topRecommended, setTopRecommended] = useState<Post[]>([])
-  const [topCommented, setTopCommented] = useState<Post[]>([])
-  const [topViewed, setTopViewed] = useState<Post[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const mapPosts = (posts: { id: string; title: string; community_slug: string; comment_count?: number; view_count?: number; vote_count?: number }[]) => (posts || []).map((p) => ({
-      id: p.id,
-      title: p.title,
-      community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
-      communitySlug: p.community_slug,
-      comments: p.comment_count || 0,
-      views: p.view_count || 0,
-      upvotes: p.vote_count || 0,
-    }))
-
-    async function fetchPosts() {
-      setIsLoading(true)
-      try {
-        // 병렬 fetch로 성능 개선
-        const [categoriesRes, popularRes, recommendedRes, commentedRes, viewedRes] = await Promise.all([
-          fetch('/api/categories'),
-          fetch('/api/posts?sort=hot&limit=10'),
-          fetch('/api/posts?sort=hot&limit=3'),
-          fetch('/api/posts?sort=comments&limit=3'),
-          fetch('/api/posts?sort=new&limit=3'),
-        ])
-
-        if (categoriesRes.ok) {
-          const { categories: cats } = await categoriesRes.json()
-          setCategories(cats || [])
-        }
-        if (popularRes.ok) {
-          const { posts } = await popularRes.json()
-          setPopularPosts(mapPosts(posts))
-        }
-        if (recommendedRes.ok) {
-          const { posts } = await recommendedRes.json()
-          setTopRecommended(mapPosts(posts))
-        }
-        if (commentedRes.ok) {
-          const { posts } = await commentedRes.json()
-          setTopCommented(mapPosts(posts))
-        }
-        if (viewedRes.ok) {
-          const { posts } = await viewedRes.json()
-          setTopViewed(mapPosts(posts))
-        }
-      } catch {
-        // Silent fail - explore page will show empty
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPosts()
-  }, [])
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
-        <div className="grid grid-cols-12 gap-6">
-          {/* Main Content */}
-          <div className="col-span-12 xl:col-span-9 space-y-6">
-            {/* 게시판 둘러보기 */}
-            {categories.length > 0 && (
-              <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 rounded-xl overflow-hidden shadow-lg">
-                <div className="px-4 py-3">
-                  <h2 className="font-bold text-lg text-white">게시판 둘러보기</h2>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 pb-4">
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat.slug}
-                      href={`/community/${cat.slug}`}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
-                    >
-                      <span className="text-3xl drop-shadow-sm">{cat.icon || '📋'}</span>
-                      <span className="text-xs font-bold text-foreground">{cat.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 실시간 인기글 게시판 */}
-            <div className="bg-card border border-border rounded-lg">
-              <div className="flex items-center justify-between p-4 border-b border-border">
-                <h2 className="font-bold text-lg text-primary">실시간 인기글</h2>
-              </div>
-
-              <div className="divide-y divide-border">
-                {isLoading ? (
-                  <div className="p-8 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">글 목록을 불러오는 중...</p>
-                  </div>
-                ) : popularPosts.length > 0 ? (
-                  popularPosts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/post/${post.id}`}
-                      className="flex items-center justify-between p-3 hover:bg-secondary/30 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{post.title}</p>
-                        <span className="text-xs text-muted-foreground mt-1 block">{post.community}</span>
-                      </div>
-                      <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-                        <span className="text-xs text-orange-500 font-medium">[{post.comments}]</span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Eye className="h-3 w-3" />
-                          {post.views}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="p-8 text-center">
-                    <p className="text-sm text-muted-foreground">아직 게시물이 없습니다.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 오늘의 최다 추천글, 댓글, 조회수 */}
-            <div className="grid grid-cols-3 gap-4">
-              {/* Most Recommended */}
-              <div className="bg-card border border-border rounded-lg p-4">
-                <h3 className="font-bold text-sm mb-3 text-foreground flex items-center gap-1">
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                  오늘의 추천글
-                </h3>
-                <div className="space-y-2">
-                  {isLoading ? (
-                    <div className="p-4 text-center">
-                      <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-                    </div>
-                  ) : topRecommended.length > 0 ? (
-                    topRecommended.map((post, index) => (
-                      <Link
-                        key={post.id}
-                        href={`/post/${post.id}`}
-                        className="block hover:bg-secondary/50 p-2 rounded transition-colors"
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-bold text-primary mt-0.5">{index + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-foreground line-clamp-2 mb-1">{post.title}</p>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <MessageSquare className="h-3 w-3" />[{post.comments}]
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Eye className="h-3 w-3" />
-                                {post.views}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-2">게시물 없음</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Most Commented */}
-              <div className="bg-card border border-border rounded-lg p-4">
-                <h3 className="font-bold text-sm mb-3 text-foreground flex items-center gap-1">
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  오늘의 댓글
-                </h3>
-                <div className="space-y-2">
-                  {isLoading ? (
-                    <div className="p-4 text-center">
-                      <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-                    </div>
-                  ) : topCommented.length > 0 ? (
-                    topCommented.map((post, index) => (
-                      <Link
-                        key={post.id}
-                        href={`/post/${post.id}`}
-                        className="block hover:bg-secondary/50 p-2 rounded transition-colors"
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-bold text-primary mt-0.5">{index + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-foreground line-clamp-2 mb-1">{post.title}</p>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <MessageSquare className="h-3 w-3" />[{post.comments}]
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Eye className="h-3 w-3" />
-                                {post.views}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-2">게시물 없음</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Most Viewed */}
-              <div className="bg-card border border-border rounded-lg p-4">
-                <h3 className="font-bold text-sm mb-3 text-foreground flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" />
-                  최신 글
-                </h3>
-                <div className="space-y-2">
-                  {isLoading ? (
-                    <div className="p-4 text-center">
-                      <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-                    </div>
-                  ) : topViewed.length > 0 ? (
-                    topViewed.map((post, index) => (
-                      <Link
-                        key={post.id}
-                        href={`/post/${post.id}`}
-                        className="block hover:bg-secondary/50 p-2 rounded transition-colors"
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-bold text-primary mt-0.5">{index + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-foreground line-clamp-2 mb-1">{post.title}</p>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <MessageSquare className="h-3 w-3" />[{post.comments}]
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Eye className="h-3 w-3" />
-                                {post.views}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-2">게시물 없음</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar */}
-          <aside className="col-span-3 hidden xl:block">
-            <ActivitySidebar />
-          </aside>
-        </div>
-      </main>
-    </div>
-  )
+  return <ExploreContent fallback={fallback} />
 }

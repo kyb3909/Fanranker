@@ -20,7 +20,16 @@ interface RecentPost {
 const RECENT_COMMENTS_CACHE_MS = 60 * 1000
 let recentCommentsCache: { data: RecentPost[]; fetchedAt: number } | null = null
 
-function mapApiPostsToRecentPosts(posts: { id: string; title: string; community_slug: string; comment_count?: number; latest_comment_at?: string; created_at: string }[]): RecentPost[] {
+function mapApiPostsToRecentPosts(
+  posts: {
+    id: string
+    title: string
+    community_slug: string
+    comment_count?: number
+    latest_comment_at?: string
+    created_at: string
+  }[]
+): RecentPost[] {
   return posts.map((p) => ({
     id: p.id,
     title: p.title,
@@ -45,7 +54,7 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
       }
       setIsLoadingPosts(true)
       try {
-        const response = await fetch('/api/posts?sort=recent_comments&limit=8')
+        const response = await fetch("/api/posts?sort=recent_comments&limit=8")
         if (response.ok) {
           const { posts } = await response.json()
           const mapped = mapApiPostsToRecentPosts(posts || [])
@@ -63,37 +72,36 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
   }, [])
 
   return (
-    <div className="space-y-4 sticky top-16">
-
+    <div className="sticky top-16 space-y-4">
       {/* ===== 최근 댓글 섹션 ===== */}
-      <Card className="bg-card border-border rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-primary/5 border-b border-border">
-          <MessageSquare className="w-4 h-4 text-primary" />
-          <h3 className="text-[14px] font-bold text-foreground">최근 댓글</h3>
+      <Card className="bg-card border-border gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
+        <div className="bg-primary/10 border-border flex items-center gap-2 border-b px-4 py-3">
+          <MessageSquare className="text-primary h-4 w-4" />
+          <h3 className="text-primary text-[14px] font-bold">최근 댓글</h3>
         </div>
 
-        <div className="p-2">
+        <div className="py-1">
           {isLoadingPosts ? (
             <div className="p-4 text-center">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+              <Loader2 className="text-muted-foreground mx-auto h-5 w-5 animate-spin" />
             </div>
           ) : recentPosts.length > 0 ? (
-            recentPosts.map((post) => (
+            recentPosts.map((post, idx) => (
               <Link
                 key={post.id}
                 href={`/post/${post.id}`}
-                className="block px-2 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+                className={`hover:bg-muted/40 block px-4 py-2.5 transition-colors ${idx > 0 ? "border-border/30 border-t" : ""}`}
               >
-                <p className="text-[13px] font-medium text-foreground line-clamp-1 mb-1.5">
+                <p className="text-foreground mb-1.5 line-clamp-1 text-[14px] font-medium">
                   {post.title}
                 </p>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] px-1.5 py-0.5 bg-secondary text-muted-foreground rounded font-medium">
+                  <span className="bg-secondary text-muted-foreground rounded px-2 py-0.5 text-[12px] font-medium">
                     {post.community}
                   </span>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-0.5">
-                      <MessageSquare className="w-3 h-3" />
+                  <div className="text-muted-foreground flex items-center gap-2.5 text-[12px]">
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
                       {post.comments}
                     </span>
                     <span>{post.timestamp}</span>
@@ -103,7 +111,7 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
             ))
           ) : (
             <div className="p-4 text-center">
-              <p className="text-xs text-muted-foreground">최근 댓글이 없습니다.</p>
+              <p className="text-muted-foreground text-xs">최근 댓글이 없습니다.</p>
             </div>
           )}
         </div>
@@ -111,7 +119,6 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
 
       {/* 광고 플레이스홀더 */}
       <AdPlaceholder variant="sidebar" />
-
     </div>
   )
 })

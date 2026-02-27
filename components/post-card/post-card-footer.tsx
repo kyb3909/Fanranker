@@ -21,10 +21,10 @@ export interface PostCardFooterProps {
   authorTemperature?: number
   temperature: number
   voteCount: number
-  myVote: 'up' | 'down' | null
+  myVote: "up" | "down" | null
   comments: number
   isBookmarked: boolean
-  onVote: (type: 'up' | 'down') => void
+  onVote: (type: "up" | "down") => void
   onBookmark: () => void
   onBookmarkHover: () => void
   onSearchByAuthor: () => void
@@ -49,19 +49,22 @@ export function PostCardFooter({
   onBlockUser,
 }: PostCardFooterProps) {
   return (
-    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+    <div className="border-border/50 mt-4 flex items-center justify-between border-t pt-3">
       {/* 좌측: 작성자 정보 */}
       <div className="flex items-center gap-2">
-        <Avatar className="h-6 w-6">
+        <Avatar className="h-7 w-7">
           <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
-          <AvatarFallback className="text-[10px]">{author?.[0] ?? "?"}</AvatarFallback>
+          <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
         </Avatar>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-1 text-[13px] font-medium text-foreground hover:text-primary transition-colors cursor-pointer">
+            <button className="text-foreground hover:text-primary flex cursor-pointer items-center gap-1 text-[13px] font-medium transition-colors">
               {author}
               {authorTemperature != null && authorTemperature > 0 && (
-                <span className="text-[12px] font-semibold tabular-nums" style={getTemperatureStyle(authorTemperature)}>
+                <span
+                  className="text-[12px] font-semibold tabular-nums"
+                  style={getTemperatureStyle(authorTemperature)}
+                >
                   {authorTemperature.toFixed(1)}°
                 </span>
               )}
@@ -72,7 +75,7 @@ export function PostCardFooter({
               <Search className="mr-2 h-4 w-4" />
               <span>해당 아이디로 검색</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onBlockUser} className="cursor-pointer text-destructive">
+            <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
               <Ban className="mr-2 h-4 w-4" />
               <span>차단하기</span>
             </DropdownMenuItem>
@@ -92,27 +95,29 @@ export function PostCardFooter({
       {/* 우측: 액션 버튼 - 터치 타겟 최소 44px, 간격 8px 이상 */}
       <div className="flex items-center gap-1">
         {/* 추천/비추천 */}
-        <div className="flex items-center rounded-md border border-border/50">
+        <div className="border-border/50 flex items-center rounded-md border">
           <Button
             variant="ghost"
             size="sm"
-            className={`h-9 min-h-[36px] px-2.5 rounded-r-none ${myVote === 'up' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
-            onClick={() => onVote('up')}
+            className={`h-9 min-h-[36px] rounded-r-none px-2.5 ${myVote === "up" ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => onVote("up")}
             aria-label="추천"
-            aria-pressed={myVote === 'up'}
+            aria-pressed={myVote === "up"}
           >
             <ArrowUp className="h-4 w-4" aria-hidden="true" />
           </Button>
-          <span className={`text-[12px] font-semibold tabular-nums px-1.5 ${voteCount > 0 ? "text-primary" : voteCount < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+          <span
+            className={`px-1.5 text-[12px] font-semibold tabular-nums ${voteCount > 0 ? "text-primary" : voteCount < 0 ? "text-destructive" : "text-muted-foreground"}`}
+          >
             {voteCount}
           </span>
           <Button
             variant="ghost"
             size="sm"
-            className={`h-9 min-h-[36px] px-2.5 rounded-l-none ${myVote === 'down' ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-foreground"}`}
-            onClick={() => onVote('down')}
+            className={`h-9 min-h-[36px] rounded-l-none px-2.5 ${myVote === "down" ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => onVote("down")}
             aria-label="비추천"
-            aria-pressed={myVote === 'down'}
+            aria-pressed={myVote === "down"}
           >
             <ArrowDown className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -123,7 +128,7 @@ export function PostCardFooter({
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 min-h-[36px] px-3 gap-1.5 rounded-md text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground h-9 min-h-[36px] gap-1.5 rounded-md px-3"
             aria-label={`댓글 ${comments}개`}
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -142,7 +147,10 @@ export function PostCardFooter({
           aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
           aria-pressed={isBookmarked}
         >
-          <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`} aria-hidden="true" />
+          <Bookmark
+            className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`}
+            aria-hidden="true"
+          />
         </Button>
 
         {/* 공유 */}

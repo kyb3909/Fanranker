@@ -47,7 +47,7 @@ export function BettingHeader({
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as "betting" | "ranking" | "mypage")}
-            className={`-mb-[1px] flex flex-1 items-center justify-center gap-2 border-b-2 px-4 py-3 text-[14px] font-semibold transition-all ${
+            className={`-mb-[1px] flex flex-1 items-center justify-center gap-2 border-b-2 px-4 py-3.5 text-[15px] font-semibold transition-all ${
               activeTab === tab.id
                 ? "border-primary text-primary bg-rose-50"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
@@ -67,19 +67,19 @@ export function BettingHeader({
                 key={tab.id}
                 onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
                 disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
-                className={`-mb-[1px] flex min-w-0 flex-1 items-center justify-center gap-1 border-b-2 px-2 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all ${
+                className={`-mb-[1px] flex min-w-0 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 py-3 text-[14px] font-semibold whitespace-nowrap transition-all ${
                   sportFilter === tab.id
                     ? "border-primary text-primary bg-rose-50"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
                 } ${selectedSport && tab.id !== "all" && tab.id !== selectedSport ? "cursor-not-allowed opacity-50" : ""}`}
               >
-                <span className="text-sm">{tab.icon}</span>
+                <span className="text-base">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
           </div>
           {selectedSport && (
-            <p className="bg-orange-50/50 px-3 py-1.5 text-[10px] text-orange-500">
+            <p className="bg-orange-50/50 px-3 py-2 text-[11px] text-orange-500">
               * {selectedSport} 경기만 선택 가능
             </p>
           )}
@@ -100,13 +100,13 @@ export function BettingHeader({
               <button
                 key={tab.id}
                 onClick={() => setRankingSportFilter(tab.id)}
-                className={`-mb-[1px] flex min-w-0 flex-1 items-center justify-center gap-1 border-b-2 px-2 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all ${
+                className={`-mb-[1px] flex min-w-0 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 py-3 text-[14px] font-semibold whitespace-nowrap transition-all ${
                   rankingSportFilter === tab.id
                     ? "border-primary text-primary bg-rose-50"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
                 }`}
               >
-                <span className="text-sm">{tab.icon}</span>
+                <span className="text-base">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -121,7 +121,7 @@ export function BettingHeader({
               <button
                 key={filter.id}
                 onClick={() => setRankingFilter(filter.id as "profit" | "winRate" | "roi")}
-                className={`-mb-[1px] flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold whitespace-nowrap transition-all ${
+                className={`-mb-[1px] flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[13px] font-semibold whitespace-nowrap transition-all ${
                   rankingFilter === filter.id
                     ? "border-primary text-primary bg-rose-50"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
@@ -146,7 +146,7 @@ export function BettingHeader({
             <button
               key={tab.id}
               onClick={() => setMyPageTab(tab.id as "predictions" | "stats" | "gold" | "profile")}
-              className={`-mb-[1px] flex flex-1 items-center justify-center border-b-2 px-4 py-2.5 text-[13px] font-semibold transition-all ${
+              className={`-mb-[1px] flex flex-1 items-center justify-center border-b-2 px-4 py-3 text-[14px] font-semibold transition-all ${
                 myPageTab === tab.id
                   ? "border-primary text-primary bg-rose-50"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"

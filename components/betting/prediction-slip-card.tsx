@@ -53,42 +53,54 @@ function getCellStyle(
     return { container: "bg-muted/50", text: "text-muted-foreground", icon: null as string | null }
   }
 
+  // 적중한 내 선택: primary 배경 + 흰 글씨
   if (matchResult === "win" && isSelected) {
-    return { container: "border border-green-300 bg-green-50", text: "text-green-700", icon: "✓" }
-  }
-
-  if (matchResult === "lose" && isSelected) {
-    return { container: "border border-red-300 bg-red-50", text: "text-red-600", icon: "✗" }
-  }
-
-  if (matchResult === "lose" && isCorrectAnswer) {
     return {
-      container: "border border-green-300 bg-green-50/60",
-      text: "text-green-700",
+      container: "bg-primary text-primary-foreground",
+      text: "text-primary-foreground",
       icon: "✓",
     }
   }
 
-  return { container: "bg-muted/50", text: "text-muted-foreground", icon: null as string | null }
+  // 미적중한 내 선택: 연한 배경 + 흐린 텍스트
+  if (matchResult === "lose" && isSelected) {
+    return {
+      container: "bg-muted/60 border border-border",
+      text: "text-muted-foreground",
+      icon: "✗",
+    }
+  }
+
+  // 정답 (내가 안 골랐지만 이게 정답): primary 테두리
+  if (matchResult === "lose" && isCorrectAnswer) {
+    return {
+      container: "border-2 border-primary/40 bg-primary/5",
+      text: "text-primary",
+      icon: "✓",
+    }
+  }
+
+  // 나머지 (선택도 아니고 정답도 아님)
+  return { container: "bg-muted/20", text: "text-muted-foreground/50", icon: null as string | null }
 }
 
 function MatchResultBadge({ result }: { result: string }) {
   if (result === "win") {
     return (
-      <span className="inline-flex items-center gap-0.5 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+      <span className="bg-primary text-primary-foreground inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">
         ✓ 적중
       </span>
     )
   }
   if (result === "lose") {
     return (
-      <span className="inline-flex items-center gap-0.5 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-600">
+      <span className="bg-muted text-muted-foreground inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">
         ✗ 미적중
       </span>
     )
   }
   return (
-    <span className="bg-muted text-muted-foreground inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium">
+    <span className="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
       결과 대기
     </span>
   )
@@ -168,10 +180,10 @@ export function PredictionSlipCard({
             <span
               className={`rounded px-2 py-0.5 text-xs font-semibold ${
                 status === "win"
-                  ? "bg-green-100 text-green-700"
+                  ? "bg-primary text-primary-foreground"
                   : status === "lose"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-muted text-muted-foreground"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-amber-50 text-amber-600"
               }`}
             >
               {status === "win" ? "✓ 적중" : status === "lose" ? "✗ 미적중" : "대기중"}
@@ -262,11 +274,11 @@ export function PredictionSlipCard({
                   {match.result === "lose" && match.correctAnswer && (
                     <div className="border-t px-3 py-1.5 text-xs">
                       <div className="flex items-center gap-3">
-                        <span className="text-red-600">
+                        <span className="text-muted-foreground">
                           <span className="text-muted-foreground">내 선택:</span> ✗{" "}
                           {match.selection}
                         </span>
-                        <span className="text-green-700">
+                        <span className="text-primary">
                           <span className="text-muted-foreground">정답:</span> ✓{" "}
                           {match.correctAnswer}
                         </span>
@@ -284,9 +296,9 @@ export function PredictionSlipCard({
               <div
                 className={`text-sm font-semibold ${
                   status === "win"
-                    ? "text-green-600"
+                    ? "text-primary"
                     : status === "lose"
-                      ? "text-red-600"
+                      ? "text-muted-foreground"
                       : "text-muted-foreground"
                 }`}
               >

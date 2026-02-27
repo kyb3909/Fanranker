@@ -105,40 +105,46 @@ function HomeContent() {
               <>
                 {/* 탭 네비게이션 */}
                 <div className="bg-card border-border overflow-hidden rounded-xl border">
-                  <div className="border-border flex border-b" role="tablist" aria-label="홈 탭">
+                  <div className="flex" role="tablist" aria-label="홈 탭">
                     <button
                       role="tab"
                       aria-selected={activeTab === "feed"}
                       onClick={() => setActiveTab("feed")}
-                      className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-[14px] font-semibold transition-all ${
+                      className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
                         activeTab === "feed"
-                          ? "text-foreground border-primary border-b-2"
+                          ? "text-foreground"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Newspaper className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <Newspaper className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                       피드
+                      {activeTab === "feed" && (
+                        <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
+                      )}
                     </button>
                     <button
                       role="tab"
                       aria-selected={activeTab === "content"}
                       onClick={() => setActiveTab("content")}
-                      className={`flex flex-1 items-center justify-center gap-2 px-4 py-3 text-[14px] font-semibold transition-all ${
+                      className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
                         activeTab === "content"
-                          ? "text-foreground border-primary border-b-2"
+                          ? "text-foreground"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Trophy className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <Trophy className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                       승부 예측
+                      {activeTab === "content" && (
+                        <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
+                      )}
                     </button>
                   </div>
 
                   {/* 피드 탭: 정렬 바 */}
                   {activeTab === "feed" && (
-                    <div className="bg-muted/30 flex items-center justify-center px-4 py-3">
+                    <div className="border-border bg-muted/20 flex items-center justify-center border-t px-4 py-2.5">
                       <div
-                        className="flex items-center gap-2 sm:gap-3"
+                        className="flex items-center gap-1.5 sm:gap-2"
                         role="group"
                         aria-label="피드 정렬"
                       >
@@ -151,13 +157,13 @@ function HomeContent() {
                             key={key}
                             onClick={() => setSortBy(key)}
                             aria-pressed={sortBy === key}
-                            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold whitespace-nowrap transition-all sm:gap-2 sm:px-4 sm:text-[15px] ${
+                            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-all sm:gap-2 sm:px-5 sm:text-[14px] ${
                               sortBy === key
                                 ? "bg-primary text-primary-foreground shadow-sm"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                             }`}
                           >
-                            <Icon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden="true" />
+                            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                             {label}
                           </button>
                         ))}
@@ -174,7 +180,7 @@ function HomeContent() {
 
                 {/* 피드 탭 콘텐츠 */}
                 {activeTab === "feed" && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <FeedSection
                       posts={posts}
                       isLoading={isLoading}

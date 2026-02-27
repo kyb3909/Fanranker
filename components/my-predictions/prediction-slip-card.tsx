@@ -14,9 +14,11 @@ import {
 
 /**
  * 개별 배당률 셀의 스타일을 결정합니다.
- * - 내 선택 + 적중: 초록 하이라이트
- * - 내 선택 + 미적중: 빨간 하이라이트
- * - 정답 (내가 선택하지 않음): 초록 아웃라인
+ *
+ * 디자인 원칙 (베트맨 참고, 자체 스타일):
+ * - 적중한 내 선택: primary 배경 + 흰 글씨 (포인트 강조)
+ * - 미적중한 내 선택: 연한 배경 + 흐린 텍스트 (선택 표시만)
+ * - 정답 (내가 안 고른): primary 테두리 (정답 표시)
  * - 대기중 내 선택: 스포츠 색상
  * - 기본: 회색 배경
  */
@@ -31,38 +33,38 @@ function getOddsCellStyle(
 
   // 경기 결과 확정된 경우
   if (isSettled) {
-    // 내 선택 + 적중
+    // 내 선택 + 적중: primary 배경 + 흰 글씨
     if (isSelected && game.isCorrect) {
       return {
-        container: "border-2 border-green-400 bg-green-50",
-        label: "text-green-700",
-        odds: "text-green-700",
+        container: "bg-primary text-primary-foreground",
+        label: "text-primary-foreground",
+        odds: "text-primary-foreground",
         icon: "✓",
       }
     }
-    // 내 선택 + 미적중
+    // 내 선택 + 미적중: 연한 배경 + 흐린 텍스트
     if (isSelected && !game.isCorrect) {
       return {
-        container: "border-2 border-red-300 bg-red-50",
-        label: "text-red-600",
-        odds: "text-red-600",
+        container: "bg-muted/60 border border-border",
+        label: "text-muted-foreground",
+        odds: "text-muted-foreground",
         icon: "✗",
       }
     }
-    // 정답 (내가 안 골랐지만 이게 정답)
+    // 정답 (내가 안 골랐지만 이게 정답): primary 테두리
     if (isCorrectAnswer) {
       return {
-        container: "border-2 border-green-300 bg-green-50/60",
-        label: "text-green-700",
-        odds: "text-green-700",
+        container: "border-2 border-primary/40 bg-primary/5",
+        label: "text-primary",
+        odds: "text-primary",
         icon: "✓",
       }
     }
     // 나머지 (선택도 아니고 정답도 아님)
     return {
-      container: "border border-transparent bg-muted/30",
-      label: "text-muted-foreground",
-      odds: "text-muted-foreground/60",
+      container: "bg-muted/20",
+      label: "text-muted-foreground/50",
+      odds: "text-muted-foreground/40",
       icon: null as string | null,
     }
   }
@@ -79,7 +81,7 @@ function getOddsCellStyle(
 
   // 대기중: 선택 안한 옵션
   return {
-    container: "border border-transparent bg-muted/30",
+    container: "bg-muted/30",
     label: "text-muted-foreground",
     odds: "text-foreground",
     icon: null as string | null,
@@ -175,12 +177,12 @@ export function BettingSlipCard({
               </span>
             ) : (
               <div
-                className={`rounded px-2 py-1 text-xs font-semibold ${
+                className={`rounded px-2.5 py-1 text-xs font-semibold ${
                   resultStatus === "win"
-                    ? "bg-emerald-100 text-emerald-700"
+                    ? "bg-primary text-primary-foreground"
                     : resultStatus === "lose"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-amber-100 text-amber-700"
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-amber-50 text-amber-600"
                 }`}
               >
                 {resultStatus === "win" ? (
@@ -277,9 +279,9 @@ export function BettingSlipCard({
                     )}
                     {game.isCorrect !== null &&
                       (game.isCorrect ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <CheckCircle2 className="text-primary h-3.5 w-3.5" />
                       ) : (
-                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                        <XCircle className="text-muted-foreground h-3.5 w-3.5" />
                       ))}
                   </div>
 
@@ -355,9 +357,9 @@ export function BettingSlipCard({
                 <div
                   className={`text-sm font-bold ${
                     resultStatus === "win"
-                      ? "text-emerald-600"
+                      ? "text-primary"
                       : resultStatus === "lose"
-                        ? "text-red-600"
+                        ? "text-muted-foreground"
                         : "text-muted-foreground"
                   }`}
                 >

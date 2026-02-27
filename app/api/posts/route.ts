@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient } from '@/lib/supabase/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { computeTemperature } from '@/lib/temperature'
-import { apiError, apiBadRequest, checkRateLimit } from '@/lib/api-error'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from "next/server"
+import { createAnonClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { computeTemperature } from "@/lib/temperature"
+import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
+import { z } from "zod"
 
 const PostCreateSchema = z.object({
-  community_slug: z.string().min(1, '게시판을 선택해주세요.'),
-  title: z.string().min(1, '제목을 입력해주세요.'),
-  content: z.any().refine((v) => v !== undefined && v !== null && v !== '', {
-    message: '내용을 입력해주세요.',
+  community_slug: z.string().min(1, "게시판을 선택해주세요."),
+  title: z.string().min(1, "제목을 입력해주세요."),
+  content: z.any().refine((v) => v !== undefined && v !== null && v !== "", {
+    message: "내용을 입력해주세요.",
   }),
-  image: z.string().optional(),
+  image: z.string().nullable().optional(),
 })
 
 /**
@@ -28,32 +28,32 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAnonClient()
     const searchParams = request.nextUrl.searchParams
-    
-    const communitySlug = searchParams.get('community_slug')
-    const communitySlugsParam = searchParams.get('community_slugs')
-    const sort = searchParams.get('sort') || 'new' // 'hot', 'new', 'comments', 'recent_comments'
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50)
-    const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
+
+    const communitySlug = searchParams.get("community_slug")
+    const communitySlugsParam = searchParams.get("community_slugs")
+    const sort = searchParams.get("sort") || "new" // 'hot', 'new', 'comments', 'recent_comments'
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
 
     // 팔로우 게시판 필터: 클라이언트에서 전달받은 slug 목록 사용
     const followedSlugs = communitySlugsParam
-      ? communitySlugsParam.split(',').filter(Boolean)
+      ? communitySlugsParam.split(",").filter(Boolean)
       : null
 
     // 최근 댓글이 달린 게시물 조회
-    if (sort === 'recent_comments') {
+    if (sort === "recent_comments") {
       // 1. 최근 댓글 조회 (최신 댓글 시간 순)
       const { data: recentComments, error: commentsError } = await supabase
-        .from('comments')
-        .select('post_id, created_at')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
+        .from("comments")
+        .select("post_id, created_at")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
         .limit(limit * 10) // 충분한 댓글을 가져와서 중복 제거
 
       if (commentsError) {
-        console.error('Failed to fetch recent comments:', commentsError)
+        console.error("Failed to fetch recent comments:", commentsError)
         return NextResponse.json(
-          { error: '댓글을 가져오는 중 오류가 발생했습니다.' },
+          { error: "댓글을 가져오는 중 오류가 발생했습니다." },
           { status: 500 }
         )
       }
@@ -85,8 +85,9 @@ export async function GET(request: NextRequest) {
 
       // 4. 게시물 정보 조회
       let postsQuery = supabase
-        .from('posts')
-        .select(`
+        .from("posts")
+        .select(
+          `
           id,
           user_id,
           community_slug,
@@ -97,21 +98,22 @@ export async function GET(request: NextRequest) {
           comment_count,
           temperature,
           created_at
-        `)
-        .in('id', sortedPostIds)
-        .is('deleted_at', null)
+        `
+        )
+        .in("id", sortedPostIds)
+        .is("deleted_at", null)
 
       // 커뮤니티 필터링
       if (communitySlug) {
-        postsQuery = postsQuery.eq('community_slug', communitySlug)
+        postsQuery = postsQuery.eq("community_slug", communitySlug)
       }
 
       const { data: posts, error: postsError } = await postsQuery
 
       if (postsError) {
-        console.error('Failed to fetch posts:', postsError)
+        console.error("Failed to fetch posts:", postsError)
         return NextResponse.json(
-          { error: '글 목록을 가져오는 중 오류가 발생했습니다.' },
+          { error: "글 목록을 가져오는 중 오류가 발생했습니다." },
           { status: 500 }
         )
       }
@@ -124,30 +126,38 @@ export async function GET(request: NextRequest) {
       const postMap = new Map(posts.map((p) => [p.id, p]))
       const sortedPosts = sortedPostIds
         .map((id) => postMap.get(id))
-        .filter((p): p is typeof posts[0] => p !== undefined)
+        .filter((p): p is (typeof posts)[0] => p !== undefined)
 
       // 6. 온도 계산 (comment_count는 DB 트리거가 관리하므로 그대로 사용)
       const postsWithAccurateCounts = sortedPosts.map((post) => {
-        const row = { ...post, latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at }
+        const row = {
+          ...post,
+          latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at,
+        }
         return { ...row, temperature: computeTemperature(row) }
       })
 
       // 7. 작성자 프로필 조회
       const userIds = [...new Set(sortedPosts.map((p) => p.user_id))]
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, nickname, avatar_url, temperature')
-        .in('user_id', userIds)
+        .from("profiles")
+        .select("user_id, nickname, avatar_url, temperature")
+        .in("user_id", userIds)
 
-      return NextResponse.json({ posts: postsWithAccurateCounts, profiles: profiles || [] })
+      const res = NextResponse.json({ posts: postsWithAccurateCounts, profiles: profiles || [] })
+      res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
+      return res
     }
 
     // 기존 정렬 로직 (hot, new, comments)
     // 홈 피드: 항상 최근 24시간, 커뮤니티 개별 페이지만 제한 없음
-    const sinceDays = communitySlug ? null : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const sinceDays = communitySlug
+      ? null
+      : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     let query = supabase
-      .from('posts')
-      .select(`
+      .from("posts")
+      .select(
+        `
         id,
         user_id,
         community_slug,
@@ -158,41 +168,42 @@ export async function GET(request: NextRequest) {
         comment_count,
         temperature,
         created_at
-      `)
-      .is('deleted_at', null)
+      `
+      )
+      .is("deleted_at", null)
       .range(offset, offset + limit - 1)
 
     if (sinceDays) {
-      query = query.gte('created_at', sinceDays)
+      query = query.gte("created_at", sinceDays)
     }
 
     // 커뮤니티 필터링
     if (communitySlug) {
-      query = query.eq('community_slug', communitySlug)
+      query = query.eq("community_slug", communitySlug)
     } else if (followedSlugs) {
-      query = query.in('community_slug', followedSlugs)
+      query = query.in("community_slug", followedSlugs)
     }
 
     // 정렬: hot은 DB의 temperature 컬럼 사용
     switch (sort) {
-      case 'hot':
-        query = query.order('temperature', { ascending: false, nullsFirst: false })
+      case "hot":
+        query = query.order("temperature", { ascending: false, nullsFirst: false })
         break
-      case 'comments':
-        query = query.order('comment_count', { ascending: false })
+      case "comments":
+        query = query.order("comment_count", { ascending: false })
         break
-      case 'new':
+      case "new":
       default:
-        query = query.order('created_at', { ascending: false })
+        query = query.order("created_at", { ascending: false })
         break
     }
 
     const { data: posts, error } = await query
 
     if (error) {
-      console.error('Failed to fetch posts:', error)
+      console.error("Failed to fetch posts:", error)
       return NextResponse.json(
-        { error: '글 목록을 가져오는 중 오류가 발생했습니다.' },
+        { error: "글 목록을 가져오는 중 오류가 발생했습니다." },
         { status: 500 }
       )
     }
@@ -207,13 +218,19 @@ export async function GET(request: NextRequest) {
     // 3. 작성자 프로필 조회
     const userIds = [...new Set(posts.map((p) => p.user_id))]
     const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, nickname, avatar_url, temperature')
-      .in('user_id', userIds)
+      .from("profiles")
+      .select("user_id, nickname, avatar_url, temperature")
+      .in("user_id", userIds)
 
-    return NextResponse.json({ posts: postsWithAccurateCounts, profiles, hasMore: posts.length === limit })
+    const res = NextResponse.json({
+      posts: postsWithAccurateCounts,
+      profiles,
+      hasMore: posts.length === limit,
+    })
+    res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
+    return res
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -233,40 +250,34 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
     }
 
     const userId = user.id
 
     // 정지 유저 차단
-    const { isUserSuspended } = await import('@/lib/check-suspension')
+    const { isUserSuspended } = await import("@/lib/check-suspension")
     if (await isUserSuspended(userId)) {
-      return NextResponse.json(
-        { error: '활동이 정지된 계정입니다.' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: "활동이 정지된 계정입니다." }, { status: 403 })
     }
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     const body = await request.json()
     const result = PostCreateSchema.safeParse(body)
     if (!result.success) {
-      return apiBadRequest(result.error.issues[0]?.message || '잘못된 입력입니다.')
+      return apiBadRequest(result.error.issues[0]?.message || "잘못된 입력입니다.")
     }
     const { community_slug, title, content, image } = result.data
 
     // 이미지 URL 유효성 검사 (허용된 도메인만)
     let imageUrl = null
     if (image) {
-      const { isAllowedImageUrl } = await import('@/lib/validate-image-url')
+      const { isAllowedImageUrl } = await import("@/lib/validate-image-url")
       if (!isAllowedImageUrl(image)) {
         return NextResponse.json(
-          { error: '허용되지 않은 이미지 URL입니다. 이미지를 다시 업로드해주세요.' },
+          { error: "허용되지 않은 이미지 URL입니다. 이미지를 다시 업로드해주세요." },
           { status: 400 }
         )
       }
@@ -276,7 +287,7 @@ export async function POST(request: NextRequest) {
     // Supabase에 글 저장
     // community_slug → category_id 변환은 DB 트리거가 자동 처리
     const { data, error } = await supabase
-      .from('posts')
+      .from("posts")
       .insert({
         user_id: userId, // Clerk user ID
         community_slug,
@@ -288,39 +299,35 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
-      return NextResponse.json(
-        { error: '글 저장 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+      console.error("Supabase error:", error)
+      return NextResponse.json({ error: "글 저장 중 오류가 발생했습니다." }, { status: 500 })
     }
 
     // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
-    Promise.resolve(supabase
-      .from('user_follows')
-      .select('follower_id')
-      .eq('followed_user_id', userId))
+    Promise.resolve(
+      supabase.from("user_follows").select("follower_id").eq("followed_user_id", userId)
+    )
       .then(({ data: followers }) => {
         if (!followers || followers.length === 0) return
 
         // 각 팔로워에게 알림 생성
         const notifications = followers.map((follow) => ({
           user_id: follow.follower_id,
-          type: 'new_post_by_followed',
+          type: "new_post_by_followed",
           actor_id: userId,
           related_post_id: data.id,
           related_comment_id: null,
           is_read: false,
         }))
 
-        return supabase.from('notifications').insert(notifications)
+        return supabase.from("notifications").insert(notifications)
       })
       .catch((err: unknown) => {
-        console.error('Failed to create notifications for followers:', err)
+        console.error("Failed to create notifications for followers:", err)
       })
 
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }

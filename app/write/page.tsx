@@ -10,26 +10,31 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Image as ImageIcon, X, Loader2 } from "lucide-react"
 import Image from "next/image"
+import useSWR from "swr"
+import { fetcher } from "@/lib/swr"
 
 const TipTapEditor = dynamic(
-  () => import("@/components/tiptap-editor").then(mod => ({ default: mod.TipTapEditor })),
-  { ssr: false, loading: () => <div className="h-64 bg-muted animate-pulse rounded-lg" /> }
+  () => import("@/components/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
+  { ssr: false, loading: () => <div className="bg-muted h-64 animate-pulse rounded-lg" /> }
 )
 
-const COMMUNITIES = [
-  { slug: "overseas-football", name: "해외축구" },
-  { slug: "baseball", name: "야구" },
-  { slug: "basketball", name: "농구" },
-  { slug: "free-board", name: "자유게시판" },
-  { slug: "esports", name: "e스포츠" },
-  { slug: "domestic-football", name: "국내축구" },
-  { slug: "volleyball", name: "배구" },
-  { slug: "tips", name: "정보게시판" },
-  { slug: "movies", name: "영화" },
-]
+interface Category {
+  id: string
+  slug: string
+  name: string
+  icon: string | null
+  sort_order: number
+  description: string | null
+}
 
 function WriteContent() {
   const searchParams = useSearchParams()
@@ -37,6 +42,12 @@ function WriteContent() {
   const { isSignedIn, isLoaded } = useAuth()
   const communitySlug = searchParams.get("community") || ""
   const editId = searchParams.get("edit") || ""
+
+  const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
+  const communities = catData?.categories || []
 
   const [selectedCommunity, setSelectedCommunity] = useState(communitySlug)
   const [title, setTitle] = useState("")
@@ -60,16 +71,16 @@ function WriteContent() {
     setIsLoadingEdit(true)
     setEditLoadError(null)
     fetch(`/api/posts/${editId}`)
-      .then((res) => res.ok ? res.json() : Promise.reject(new Error('글을 불러올 수 없습니다.')))
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("글을 불러올 수 없습니다."))))
       .then((data) => {
         const p = data.post
-        setSelectedCommunity(p.community_slug || '')
-        setTitle(p.title || '')
+        setSelectedCommunity(p.community_slug || "")
+        setTitle(p.title || "")
         setContent(p.content || null)
         setImagePreview(p.image || null)
       })
       .catch((err) => {
-        setEditLoadError(err.message || '글을 불러오는 데 실패했습니다.')
+        setEditLoadError(err.message || "글을 불러오는 데 실패했습니다.")
       })
       .finally(() => setIsLoadingEdit(false))
   }, [editId])
@@ -79,14 +90,14 @@ function WriteContent() {
     if (!file) return
 
     // 파일 타입 검증
-    if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 업로드할 수 있습니다.')
+    if (!file.type.startsWith("image/")) {
+      alert("이미지 파일만 업로드할 수 있습니다.")
       return
     }
 
     // 파일 크기 제한 (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('파일 크기는 10MB를 초과할 수 없습니다.')
+      alert("파일 크기는 10MB를 초과할 수 없습니다.")
       return
     }
 
@@ -104,22 +115,22 @@ function WriteContent() {
     setIsUploadingImage(true)
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append("file", file)
 
-      const response = await fetch('/api/upload/image', {
-        method: 'POST',
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
         body: formData,
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '이미지 업로드에 실패했습니다.')
+        throw new Error(error.error || "이미지 업로드에 실패했습니다.")
       }
 
       const { url } = await response.json()
       setImagePreview(url) // URL로 교체 (업로드된 이미지 URL)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '이미지 업로드 중 오류가 발생했습니다.')
+      alert(error instanceof Error ? error.message : "이미지 업로드 중 오류가 발생했습니다.")
       setImagePreview(null)
       setImageFile(null)
     } finally {
@@ -134,7 +145,7 @@ function WriteContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // 유효성 검사
     if (!selectedCommunity || !title || !content) {
       alert("모든 필드를 입력해주세요.")
@@ -142,7 +153,7 @@ function WriteContent() {
     }
 
     // TipTap JSON이 비어있는지 확인
-    if (typeof content === 'object' && (!content.content || content.content.length === 0)) {
+    if (typeof content === "object" && (!content.content || content.content.length === 0)) {
       alert("내용을 입력해주세요.")
       return
     }
@@ -154,22 +165,22 @@ function WriteContent() {
       // Supabase Storage URL인 경우 그대로 사용, base64인 경우는 업로드 필요
       let imageUrl = null
       if (imagePreview) {
-        if (imagePreview.startsWith('http://') || imagePreview.startsWith('https://')) {
+        if (imagePreview.startsWith("http://") || imagePreview.startsWith("https://")) {
           // 이미 업로드된 URL
           imageUrl = imagePreview
         } else if (imageFile) {
           // base64인 경우 업로드
           const formData = new FormData()
-          formData.append('file', imageFile)
+          formData.append("file", imageFile)
 
-          const uploadResponse = await fetch('/api/upload/image', {
-            method: 'POST',
+          const uploadResponse = await fetch("/api/upload/image", {
+            method: "POST",
             body: formData,
           })
 
           if (!uploadResponse.ok) {
             const error = await uploadResponse.json()
-            throw new Error(error.error || '이미지 업로드에 실패했습니다.')
+            throw new Error(error.error || "이미지 업로드에 실패했습니다.")
           }
 
           const { url } = await uploadResponse.json()
@@ -181,11 +192,11 @@ function WriteContent() {
         }
       }
 
-      const url = editId ? `/api/posts/${editId}` : '/api/posts'
-      const method = editId ? 'PATCH' : 'POST'
+      const url = editId ? `/api/posts/${editId}` : "/api/posts"
+      const method = editId ? "PATCH" : "POST"
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           community_slug: selectedCommunity,
           title,
@@ -196,7 +207,9 @@ function WriteContent() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || (editId ? '글 수정에 실패했습니다.' : '글 작성에 실패했습니다.'))
+        throw new Error(
+          error.error || (editId ? "글 수정에 실패했습니다." : "글 작성에 실패했습니다.")
+        )
       }
 
       if (editId) {
@@ -205,7 +218,7 @@ function WriteContent() {
         router.push(`/community/${selectedCommunity}`)
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : '글 작성 중 오류가 발생했습니다.')
+      alert(error instanceof Error ? error.message : "글 작성 중 오류가 발생했습니다.")
     } finally {
       setIsSubmitting(false)
     }
@@ -213,12 +226,16 @@ function WriteContent() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="bg-background min-h-screen">
         <Header />
-        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">로딩 중...</p>
+        <main
+          id="main-content"
+          className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+          tabIndex={-1}
+        >
+          <div className="bg-card border-border rounded-lg border p-8 text-center">
+            <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground text-sm">로딩 중...</p>
           </div>
         </main>
       </div>
@@ -227,14 +244,18 @@ function WriteContent() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="bg-background min-h-screen">
         <Header />
-        <div className="flex items-center justify-center py-20 px-4">
-          <div className="bg-card border border-border rounded-xl p-8 text-center max-w-sm">
-            <h2 className="text-lg font-bold mb-2">로그인이 필요합니다</h2>
-            <p className="text-sm text-muted-foreground mb-4">글을 작성하려면 먼저 로그인해주세요.</p>
-            <div className="flex gap-2 justify-center">
-              <Button variant="outline" onClick={() => router.push("/")}>홈으로</Button>
+        <div className="flex items-center justify-center px-4 py-20">
+          <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
+            <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
+            <p className="text-muted-foreground mb-4 text-sm">
+              글을 작성하려면 먼저 로그인해주세요.
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button variant="outline" onClick={() => router.push("/")}>
+                홈으로
+              </Button>
               <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
             </div>
           </div>
@@ -245,12 +266,16 @@ function WriteContent() {
 
   if (isLoadingEdit) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="bg-background min-h-screen">
         <Header />
-        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">글을 불러오는 중...</p>
+        <main
+          id="main-content"
+          className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+          tabIndex={-1}
+        >
+          <div className="bg-card border-border rounded-lg border p-8 text-center">
+            <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground text-sm">글을 불러오는 중...</p>
           </div>
         </main>
       </div>
@@ -259,12 +284,18 @@ function WriteContent() {
 
   if (editLoadError) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="bg-background min-h-screen">
         <Header />
-        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <p className="text-sm text-destructive mb-2">{editLoadError}</p>
-            <Button variant="outline" onClick={() => router.push('/')}>홈으로</Button>
+        <main
+          id="main-content"
+          className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+          tabIndex={-1}
+        >
+          <div className="bg-card border-border rounded-lg border p-8 text-center">
+            <p className="text-destructive mb-2 text-sm">{editLoadError}</p>
+            <Button variant="outline" onClick={() => router.push("/")}>
+              홈으로
+            </Button>
           </div>
         </main>
       </div>
@@ -272,21 +303,27 @@ function WriteContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       <Header />
 
-      <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
+      <main
+        id="main-content"
+        className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+        tabIndex={-1}
+      >
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
-          <div className="col-span-12 lg:col-span-9 space-y-4">
+          <div className="col-span-12 space-y-4 lg:col-span-9">
             <BackButton />
 
-            <Card className="border border-border bg-card p-6">
-              <h1 className="text-2xl font-bold text-foreground mb-6">{editId ? '글 수정' : '글쓰기'}</h1>
+            <Card className="border-border bg-card border p-6">
+              <h1 className="text-foreground mb-6 text-2xl font-bold">
+                {editId ? "글 수정" : "글쓰기"}
+              </h1>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* 게시판 선택 */}
                 <div className="space-y-2">
-                  <Label htmlFor="community" className="text-sm font-semibold text-foreground">
+                  <Label htmlFor="community" className="text-foreground text-sm font-semibold">
                     게시판 선택
                   </Label>
                   <Select value={selectedCommunity} onValueChange={setSelectedCommunity}>
@@ -294,8 +331,9 @@ function WriteContent() {
                       <SelectValue placeholder="게시판을 선택하세요" />
                     </SelectTrigger>
                     <SelectContent>
-                      {COMMUNITIES.map((community) => (
+                      {communities.map((community) => (
                         <SelectItem key={community.slug} value={community.slug}>
+                          {community.icon ? `${community.icon} ` : ""}
                           {community.name}
                         </SelectItem>
                       ))}
@@ -305,7 +343,7 @@ function WriteContent() {
 
                 {/* 제목 */}
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm font-semibold text-foreground">
+                  <Label htmlFor="title" className="text-foreground text-sm font-semibold">
                     제목
                   </Label>
                   <Input
@@ -321,7 +359,7 @@ function WriteContent() {
 
                 {/* 내용 */}
                 <div className="space-y-2">
-                  <Label htmlFor="content" className="text-sm font-semibold text-foreground">
+                  <Label htmlFor="content" className="text-foreground text-sm font-semibold">
                     내용
                   </Label>
                   <TipTapEditor
@@ -334,24 +372,24 @@ function WriteContent() {
 
                 {/* 이미지 업로드 */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-foreground">이미지</Label>
+                  <Label className="text-foreground text-sm font-semibold">이미지</Label>
                   {!imagePreview ? (
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                    <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
                       <label
                         htmlFor="image-upload"
-                        className={`cursor-pointer flex flex-col items-center gap-2 ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+                        className={`flex cursor-pointer flex-col items-center gap-2 ${isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
                       >
                         {isUploadingImage ? (
                           <>
-                            <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-                            <span className="text-sm text-muted-foreground">
+                            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                            <span className="text-muted-foreground text-sm">
                               이미지 업로드 중...
                             </span>
                           </>
                         ) : (
                           <>
-                            <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
+                            <ImageIcon className="text-muted-foreground h-8 w-8" />
+                            <span className="text-muted-foreground text-sm">
                               이미지를 클릭하거나 드래그하여 업로드
                             </span>
                           </>
@@ -367,13 +405,8 @@ function WriteContent() {
                       </label>
                     </div>
                   ) : (
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                      <Image
-                        src={imagePreview}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
+                    <div className="border-border relative aspect-video w-full overflow-hidden rounded-lg border">
+                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
                       <Button
                         type="button"
                         variant="destructive"
@@ -388,7 +421,7 @@ function WriteContent() {
                 </div>
 
                 {/* 버튼 */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
                   <Button type="button" variant="outline" onClick={() => window.history.back()}>
                     취소
                   </Button>
@@ -400,7 +433,8 @@ function WriteContent() {
                       !selectedCommunity ||
                       !title ||
                       !content ||
-                      (typeof content === 'object' && (!content.content || content.content.length === 0))
+                      (typeof content === "object" &&
+                        (!content.content || content.content.length === 0))
                     }
                   >
                     {isEmbedLoading ? (
@@ -414,9 +448,9 @@ function WriteContent() {
                         작성 중...
                       </>
                     ) : editId ? (
-                      '수정하기'
+                      "수정하기"
                     ) : (
-                      '작성하기'
+                      "작성하기"
                     )}
                   </Button>
                 </div>
@@ -431,17 +465,23 @@ function WriteContent() {
 
 export default function WritePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main id="main-content" className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]" tabIndex={-1}>
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">로딩 중...</p>
-          </div>
-        </main>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="bg-background min-h-screen">
+          <Header />
+          <main
+            id="main-content"
+            className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+            tabIndex={-1}
+          >
+            <div className="bg-card border-border rounded-lg border p-8 text-center">
+              <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+              <p className="text-muted-foreground text-sm">로딩 중...</p>
+            </div>
+          </main>
+        </div>
+      }
+    >
       <WriteContent />
     </Suspense>
   )

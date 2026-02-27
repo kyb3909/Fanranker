@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Home, Compass, Bell, Search, Loader2, Trophy } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react"
@@ -61,7 +60,11 @@ export function Header() {
   const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault()
-      runSearch()
+      const q = searchQuery.trim()
+      if (q) {
+        setDropdownOpen(false)
+        router.push(`/search?q=${encodeURIComponent(q)}&type=title_content`)
+      }
     }
   }
 
@@ -78,20 +81,19 @@ export function Header() {
   return (
     <header className="border-border bg-card/95 sticky top-0 z-50 w-full border-b backdrop-blur-md">
       {/* Threads 스타일: 충분한 높이, 명확한 구조 */}
-      <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
+      <div className="mx-auto max-w-[1280px] px-6 sm:px-10">
         {/* 높이 56px: Threads 스타일 - 여유있는 헤더 */}
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex shrink-0 items-center">
-            <Link href="/" className="flex items-center" aria-label="홈">
-              <Image
-                src="/logo.png"
-                alt="FanRanker"
-                width={120}
-                height={32}
-                className="h-8 w-auto object-contain"
-                priority
-              />
+            <Link href="/" className="flex items-center gap-0.5" aria-label="홈">
+              <span
+                className="text-[32px] leading-none font-black"
+                style={{ letterSpacing: "-0.04em" }}
+              >
+                <span className="text-primary">Fan</span>
+                <span className="text-foreground">Ranker</span>
+              </span>
             </Link>
           </div>
 
@@ -151,10 +153,10 @@ export function Header() {
                         onClick={() => setDropdownOpen(false)}
                         className="hover:bg-muted/60 block px-4 py-2.5 text-left"
                       >
-                        <p className="text-foreground line-clamp-1 text-[13px] font-medium">
+                        <p className="text-foreground line-clamp-1 text-[14px] font-medium">
                           {post.title}
                         </p>
-                        <p className="text-muted-foreground mt-0.5 text-[11px]">
+                        <p className="text-muted-foreground mt-0.5 text-[12px]">
                           {COMMUNITY_NAMES[post.community_slug] || post.community_slug}
                         </p>
                       </Link>
@@ -215,18 +217,18 @@ export function Header() {
 
       {/* 메뉴바: 좌우 폭 끝까지 (피드, 탐색, 승부 예측) */}
       <nav
-        className="border-primary/20 bg-primary grid w-full grid-cols-[1fr_auto_1fr] items-center border-t px-2 pt-2 pb-1.5"
+        className="border-primary/20 bg-primary grid w-full grid-cols-[1fr_auto_1fr] items-center border-t px-2 pt-2 pb-2"
         aria-label="주요 메뉴"
       >
         <div />
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-center gap-1.5">
           <Link href="/">
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-primary-foreground/15 h-9 gap-1.5 rounded-md px-2.5 text-[13px] font-medium whitespace-nowrap text-white hover:text-white sm:gap-2 sm:px-4 sm:text-[14px]"
+              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
             >
-              <Home className="h-4 w-4 shrink-0 text-white" />
+              <Home className="h-[18px] w-[18px] shrink-0 text-white" />
               피드
             </Button>
           </Link>
@@ -234,9 +236,9 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-primary-foreground/15 h-9 gap-1.5 rounded-md px-2.5 text-[13px] font-medium whitespace-nowrap text-white hover:text-white sm:gap-2 sm:px-4 sm:text-[14px]"
+              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
             >
-              <Compass className="h-4 w-4 shrink-0 text-white" />
+              <Compass className="h-[18px] w-[18px] shrink-0 text-white" />
               탐색
             </Button>
           </Link>
@@ -244,9 +246,9 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-primary-foreground/15 h-9 gap-1.5 rounded-md px-2.5 text-[13px] font-medium whitespace-nowrap text-white hover:text-white sm:gap-2 sm:px-4 sm:text-[14px]"
+              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
             >
-              <Trophy className="h-4 w-4 shrink-0 text-white" />
+              <Trophy className="h-[18px] w-[18px] shrink-0 text-white" />
               승부 예측
             </Button>
           </Link>

@@ -1,29 +1,37 @@
-import type { MetadataRoute } from 'next'
-import { SITE_CONFIG } from '@/lib/seo'
-import { createServerAnonClient } from '@/lib/supabase'
+import type { MetadataRoute } from "next"
+import { SITE_CONFIG } from "@/lib/seo"
+import { createServerAnonClient } from "@/lib/supabase"
 
 const COMMUNITIES = [
-  'overseas-football', 'domestic-football', 'baseball',
-  'basketball', 'volleyball', 'esports', 'free-board', 'tips', 'movies',
+  "football",
+  "baseball",
+  "basketball",
+  "volleyball",
+  "game",
+  "movies",
+  "music",
+  "idol",
+  "anime",
+  "free-board",
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_CONFIG.url
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: base, changeFrequency: 'daily', priority: 1 },
-    { url: `${base}/explore`, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${base}/art`, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${base}/games/prediction`, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${base}/about`, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${base}/terms`, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${base}/privacy`, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${base}/content-policy`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: base, changeFrequency: "daily", priority: 1 },
+    { url: `${base}/explore`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${base}/art`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${base}/games/prediction`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${base}/about`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${base}/content-policy`, changeFrequency: "yearly", priority: 0.2 },
   ]
 
-  const communityPages: MetadataRoute.Sitemap = COMMUNITIES.map(slug => ({
+  const communityPages: MetadataRoute.Sitemap = COMMUNITIES.map((slug) => ({
     url: `${base}/community/${slug}`,
-    changeFrequency: 'daily',
+    changeFrequency: "daily",
     priority: 0.8,
   }))
 
@@ -32,16 +40,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const supabase = createServerAnonClient()
     const { data: posts } = await supabase
-      .from('posts')
-      .select('id, updated_at')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
+      .from("posts")
+      .select("id, updated_at")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
       .limit(200)
 
-    postPages = (posts || []).map(p => ({
+    postPages = (posts || []).map((p) => ({
       url: `${base}/post/${p.id}`,
       lastModified: new Date(p.updated_at),
-      changeFrequency: 'weekly',
+      changeFrequency: "weekly",
       priority: 0.6,
     }))
   } catch {
