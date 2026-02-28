@@ -150,55 +150,88 @@ export async function GET(request: NextRequest) {
     }
 
     // 기존 정렬 로직 (hot, new, comments)
-    // 홈 피드: 항상 최근 24시간, 커뮤니티 개별 페이지만 제한 없음
-    const sinceDays = communitySlug
-      ? null
-      : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    let query = supabase
-      .from("posts")
-      .select(
+    // 커뮤니티 개별 페이지: 기간 제한 없음
+    // 홈 피드: 최근 24시간 먼저 시도, 부족하면 7일로 확장
+    const isHomeFeed = !communitySlug
+
+    const buildQuery = (sinceDate: string | null) => {
+      let q = supabase
+        .from("posts")
+        .select(
+          `
+          id,
+          user_id,
+          community_slug,
+          title,
+          content,
+          image,
+          vote_count,
+          comment_count,
+          temperature,
+          created_at
         `
-        id,
-        user_id,
-        community_slug,
-        title,
-        content,
-        image,
-        vote_count,
-        comment_count,
-        temperature,
-        created_at
-      `
-      )
-      .is("deleted_at", null)
-      .range(offset, offset + limit - 1)
+        )
+        .is("deleted_at", null)
+        .range(offset, offset + limit - 1)
 
-    if (sinceDays) {
-      query = query.gte("created_at", sinceDays)
+      if (sinceDate) {
+        q = q.gte("created_at", sinceDate)
+      }
+
+      // 커뮤니티 필터링
+      if (communitySlug) {
+        q = q.eq("community_slug", communitySlug)
+      } else if (followedSlugs) {
+        q = q.in("community_slug", followedSlugs)
+      }
+
+      // 정렬
+      switch (sort) {
+        case "hot":
+          q = q.order("temperature", { ascending: false, nullsFirst: false })
+          break
+        case "comments":
+          q = q.order("comment_count", { ascending: false })
+          break
+        case "new":
+        default:
+          q = q.order("created_at", { ascending: false })
+          break
+      }
+
+      return q
     }
 
-    // 커뮤니티 필터링
-    if (communitySlug) {
-      query = query.eq("community_slug", communitySlug)
-    } else if (followedSlugs) {
-      query = query.in("community_slug", followedSlugs)
-    }
+    // 홈 피드: 24시간 → 부족하면 7일 → 부족하면 전체로 폴백
+    type QueryResult = Awaited<ReturnType<typeof buildQuery>>
+    let posts: QueryResult["data"] = null
+    let error: QueryResult["error"] = null
 
-    // 정렬: hot은 DB의 temperature 컬럼 사용
-    switch (sort) {
-      case "hot":
-        query = query.order("temperature", { ascending: false, nullsFirst: false })
-        break
-      case "comments":
-        query = query.order("comment_count", { ascending: false })
-        break
-      case "new":
-      default:
-        query = query.order("created_at", { ascending: false })
-        break
-    }
+    if (isHomeFeed) {
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const result24h = await buildQuery(since24h)
+      posts = result24h.data
+      error = result24h.error
 
-    const { data: posts, error } = await query
+      // 24시간 내 게시글이 부족하면 7일로 확장
+      if (!error && (!posts || posts.length < 5)) {
+        const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+        const result7d = await buildQuery(since7d)
+        posts = result7d.data
+        error = result7d.error
+      }
+
+      // 7일 내에도 부족하면 기간 제한 없이 조회
+      if (!error && (!posts || posts.length < 5)) {
+        const resultAll = await buildQuery(null)
+        posts = resultAll.data
+        error = resultAll.error
+      }
+    } else {
+      const result = await buildQuery(null)
+      posts = result.data
+      error = result.error
+    }
 
     if (error) {
       console.error("Failed to fetch posts:", error)

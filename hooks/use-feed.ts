@@ -122,10 +122,28 @@ export function useFeed(
     if (!data) return []
     const allPosts = data.flatMap((page) => transformPosts(page.posts || [], page.profiles || []))
 
+    // ID 기반 중복 제거 (페이지 간 동일 게시글 제거)
+    const seen = new Set<string>()
+    const uniquePosts = allPosts.filter((post) => {
+      if (seen.has(post.id)) return false
+      seen.add(post.id)
+      return true
+    })
+
+    // 제목 기반 유사 중복 제거 (크롤링으로 인한 동일 제목 게시글)
+    const seenTitles = new Map<string, string>() // normalized title → first post id
+    const dedupedPosts = uniquePosts.filter((post) => {
+      const normalized = post.title.trim().toLowerCase()
+      const existing = seenTitles.get(normalized)
+      if (existing && existing !== post.id) return false
+      seenTitles.set(normalized, post.id)
+      return true
+    })
+
     if (sortBy === "random") {
-      return [...allPosts].sort(() => Math.random() - 0.5)
+      return [...dedupedPosts].sort(() => Math.random() - 0.5)
     }
-    return allPosts
+    return dedupedPosts
   }, [data, sortBy])
 
   const isLoadingMore = !isLoading && isValidating && size > 1
