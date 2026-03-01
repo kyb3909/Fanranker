@@ -26,12 +26,20 @@ const MEMBER_COUNTS: Record<string, number> = {
   "free-board": 894000,
 }
 
+const POSTS_PER_PAGE = 25
+
 // Supabase에서 게시글 가져오기
-async function fetchPosts(communitySlug: string) {
+async function fetchPosts(communitySlug: string, page: number = 1) {
   const supabase = createServerAnonClient()
 
-  // 1. 게시글 조회
-  const { data: posts, error } = await supabase
+  const offset = (page - 1) * POSTS_PER_PAGE
+
+  // 1. 게시글 조회 (count 포함)
+  const {
+    data: posts,
+    error,
+    count,
+  } = await supabase
     .from("posts")
     .select(
       `
@@ -47,19 +55,21 @@ async function fetchPosts(communitySlug: string) {
       temperature,
       is_notice,
       created_at
-    `
+    `,
+      { count: "exact" }
     )
     .eq("community_slug", communitySlug)
     .is("deleted_at", null)
     .order("is_notice", { ascending: false }) // 공지 먼저
     .order("created_at", { ascending: false }) // 최신순
+    .range(offset, offset + POSTS_PER_PAGE - 1)
 
   if (error) {
     console.error("Failed to fetch posts:", error)
-    return []
+    return { posts: [], totalCount: 0 }
   }
 
-  if (!posts || posts.length === 0) return []
+  if (!posts || posts.length === 0) return { posts: [], totalCount: count || 0 }
 
   // 2. 작성자 프로필 조회
   const userIds = [...new Set(posts.map((p) => p.user_id))]
@@ -71,17 +81,20 @@ async function fetchPosts(communitySlug: string) {
   // 3. 프로필 매핑
   const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
 
-  return posts.map((post) => {
-    const profile = profileMap.get(post.user_id) || null
-    return {
-      ...post,
-      profile: profile || null,
-      author: profile?.nickname || "익명",
-      avatar: profile?.avatar_url || "/placeholder-user.jpg",
-      authorTemperature: profile?.temperature ?? 0,
-      userId: post.user_id,
-    }
-  })
+  return {
+    posts: posts.map((post) => {
+      const profile = profileMap.get(post.user_id) || null
+      return {
+        ...post,
+        profile: profile || null,
+        author: profile?.nickname || "익명",
+        avatar: profile?.avatar_url || "/placeholder-user.jpg",
+        authorTemperature: profile?.temperature ?? 0,
+        userId: post.user_id,
+      }
+    }),
+    totalCount: count || 0,
+  }
 }
 
 // DB 데이터를 컴포넌트 형식으로 변환 (반감기 적용 온도 포함)
@@ -154,8 +167,16 @@ export async function generateMetadata({
   }
 }
 
-export default async function CommunityPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CommunityPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ page?: string }>
+}) {
   const { slug } = await params
+  const { page: pageParam } = await searchParams
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1)
 
   const info = COMMUNITY_MAP[slug]
   const community = info
@@ -173,8 +194,9 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
       }
 
   // Supabase에서 실제 데이터 가져오기
-  const rawPosts = await fetchPosts(slug)
+  const { posts: rawPosts, totalCount } = await fetchPosts(slug, currentPage)
   const communityPosts = transformPosts(rawPosts)
+  const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
 
   return (
     <div className="bg-background min-h-screen">
@@ -196,7 +218,13 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
         {/* 12컬럼 그리드: 조밀한 간격 */}
         <div className="grid grid-cols-12 gap-4 lg:gap-5">
           <div className="col-span-12 lg:col-span-9">
-            <CommunityContent community={community} posts={communityPosts} communitySlug={slug} />
+            <CommunityContent
+              community={community}
+              posts={communityPosts}
+              communitySlug={slug}
+              currentPage={currentPage}
+              totalPages={totalPages}
+            />
           </div>
 
           <aside className="hidden lg:col-span-3 lg:block">

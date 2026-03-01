@@ -3,6 +3,15 @@
 import { useState, useEffect, memo } from "react"
 import { Users, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
 
@@ -39,9 +48,18 @@ interface CommunityContentProps {
   posts: Post[]
   isMainContent?: boolean
   communitySlug?: string
+  currentPage?: number
+  totalPages?: number
 }
 
-export const CommunityContent = memo(function CommunityContent({ community, posts, isMainContent = false, communitySlug }: CommunityContentProps) {
+export const CommunityContent = memo(function CommunityContent({
+  community,
+  posts,
+  isMainContent = false,
+  communitySlug,
+  currentPage = 1,
+  totalPages = 1,
+}: CommunityContentProps) {
   const { isSignedIn } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
@@ -50,20 +68,20 @@ export const CommunityContent = memo(function CommunityContent({ community, post
   useEffect(() => {
     if (!isSignedIn || !communitySlug) return
     fetch(`/api/community/${communitySlug}/follow`)
-      .then(res => res.ok ? res.json() : { following: false })
-      .then(data => setIsFollowing(data.following))
+      .then((res) => (res.ok ? res.json() : { following: false }))
+      .then((data) => setIsFollowing(data.following))
       .catch(() => {})
   }, [isSignedIn, communitySlug])
 
   const handleFollow = async () => {
     if (!isSignedIn) {
-      alert('로그인이 필요합니다.')
+      alert("로그인이 필요합니다.")
       return
     }
     if (!communitySlug || isFollowLoading) return
     setIsFollowLoading(true)
     try {
-      const method = isFollowing ? 'DELETE' : 'POST'
+      const method = isFollowing ? "DELETE" : "POST"
       const res = await fetch(`/api/community/${communitySlug}/follow`, { method })
       if (res.ok) {
         const data = await res.json()
@@ -85,11 +103,11 @@ export const CommunityContent = memo(function CommunityContent({ community, post
         {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
         <div className="py-4">
           {/* 커뮤니티 헤더: 간격 축소 */}
-          <div className="flex items-start justify-between mb-4">
+          <div className="mb-4 flex items-start justify-between">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold text-foreground">{community.name}</h1>
-              <p className="text-sm text-muted-foreground">{community.description}</p>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+              <h1 className="text-foreground text-2xl font-bold">{community.name}</h1>
+              <p className="text-muted-foreground text-sm">{community.description}</p>
+              <div className="text-muted-foreground flex items-center gap-3 pt-1 text-xs">
                 <div className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5" />
                   <span>{community.members}</span>
@@ -99,7 +117,7 @@ export const CommunityContent = memo(function CommunityContent({ community, post
             <Button
               variant={isFollowing ? "default" : "outline"}
               size="sm"
-              className="h-8 text-sm px-4 font-medium"
+              className="h-8 px-4 text-sm font-medium"
               onClick={handleFollow}
               disabled={isFollowLoading}
             >
@@ -107,12 +125,12 @@ export const CommunityContent = memo(function CommunityContent({ community, post
             </Button>
           </div>
 
-          <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <div className="bg-card border-border overflow-hidden rounded-lg border">
             {/* 테이블 상단 */}
-            <div className="flex items-center justify-end px-3 py-2 border-b border-border bg-muted/50">
+            <div className="border-border bg-muted/50 flex items-center justify-end border-b px-3 py-2">
               {communitySlug && (
                 <Link href={`/write?community=${communitySlug}`}>
-                  <Button size="sm" className="h-7 text-xs px-3 gap-1.5">
+                  <Button size="sm" className="h-7 gap-1.5 px-3 text-xs">
                     <Pencil className="h-3.5 w-3.5" />
                     글쓰기
                   </Button>
@@ -121,7 +139,7 @@ export const CommunityContent = memo(function CommunityContent({ community, post
             </div>
 
             {/* 테이블 헤더: 컴팩트한 패딩 */}
-            <div className="hidden sm:grid grid-cols-10 gap-2 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+            <div className="border-border bg-muted/30 text-muted-foreground hidden grid-cols-10 gap-2 border-b px-3 py-2 text-xs font-medium sm:grid">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-5">제목</div>
               <div className="col-span-2 text-center">글쓴이</div>
@@ -129,7 +147,7 @@ export const CommunityContent = memo(function CommunityContent({ community, post
               <div className="col-span-1 text-center">추천</div>
             </div>
             {/* 모바일 헤더 */}
-            <div className="grid sm:hidden grid-cols-12 gap-1 px-3 py-2 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+            <div className="border-border bg-muted/30 text-muted-foreground grid grid-cols-12 gap-1 border-b px-3 py-2 text-xs font-medium sm:hidden">
               <div className="col-span-8">제목</div>
               <div className="col-span-4 text-right">글쓴이</div>
             </div>
@@ -140,40 +158,69 @@ export const CommunityContent = memo(function CommunityContent({ community, post
                 <Link
                   key={post.id}
                   href={`/post/${post.id}`}
-                  className="block sm:grid sm:grid-cols-10 gap-2 px-3 py-2 border-b border-border/50 hover:bg-muted/50 transition-colors text-xs last:border-0"
+                  className="border-border/50 hover:bg-muted/50 block gap-2 border-b px-3 py-2 text-xs transition-colors last:border-0 sm:grid sm:grid-cols-10"
                 >
                   {/* 데스크탑 레이아웃 */}
-                  <div className="hidden sm:block col-span-1 text-center text-muted-foreground">
-                    {post.isNotice ? <span className="text-rose-500 font-semibold">공지</span> : posts.length - index}
-                  </div>
-                  <div className="hidden sm:flex col-span-5 items-center gap-1.5">
-                    <span className="font-medium text-foreground truncate">{post.title}</span>
-                    {post.comments > 0 && (
-                      <span className="text-orange-500 font-medium flex-shrink-0">[{post.comments}]</span>
+                  <div className="text-muted-foreground col-span-1 hidden text-center sm:block">
+                    {post.isNotice ? (
+                      <span className="font-semibold text-rose-500">공지</span>
+                    ) : (
+                      posts.length - index
                     )}
                   </div>
-                  <div className="hidden sm:block col-span-2 text-center text-muted-foreground truncate">{post.author}</div>
-                  <div className="hidden sm:block col-span-1 text-center text-muted-foreground">{post.timestamp}</div>
-                  <div className="hidden sm:block col-span-1 text-center text-muted-foreground tabular-nums">{post.upvotes}</div>
+                  <div className="col-span-5 hidden items-center gap-1.5 sm:flex">
+                    <span className="text-foreground truncate font-medium">{post.title}</span>
+                    {post.comments > 0 && (
+                      <span className="flex-shrink-0 font-medium text-orange-500">
+                        [{post.comments}]
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground col-span-2 hidden truncate text-center sm:block">
+                    {post.author}
+                  </div>
+                  <div className="text-muted-foreground col-span-1 hidden text-center sm:block">
+                    {post.timestamp}
+                  </div>
+                  <div className="text-muted-foreground col-span-1 hidden text-center tabular-nums sm:block">
+                    {post.upvotes}
+                  </div>
                   {/* 모바일 레이아웃 */}
-                  <div className="sm:hidden grid grid-cols-12 gap-1 items-center">
-                    <div className="col-span-8 flex items-center gap-1.5 min-w-0">
-                      {post.isNotice && <span className="text-rose-500 font-semibold shrink-0">[공지]</span>}
-                      <span className="font-medium text-foreground truncate">{post.title}</span>
+                  <div className="grid grid-cols-12 items-center gap-1 sm:hidden">
+                    <div className="col-span-8 flex min-w-0 items-center gap-1.5">
+                      {post.isNotice && (
+                        <span className="shrink-0 font-semibold text-rose-500">[공지]</span>
+                      )}
+                      <span className="text-foreground truncate font-medium">{post.title}</span>
                       {post.comments > 0 && (
-                        <span className="text-orange-500 font-medium shrink-0">[{post.comments}]</span>
+                        <span className="shrink-0 font-medium text-orange-500">
+                          [{post.comments}]
+                        </span>
                       )}
                     </div>
-                    <div className="col-span-4 text-right text-muted-foreground truncate">{post.author}</div>
+                    <div className="text-muted-foreground col-span-4 truncate text-right">
+                      {post.author}
+                    </div>
                   </div>
                 </Link>
               ))
             ) : (
               <div className="p-6 text-center">
-                <p className="text-sm text-muted-foreground">아직 게시물이 없습니다.</p>
+                <p className="text-muted-foreground text-sm">아직 게시물이 없습니다.</p>
               </div>
             )}
           </div>
+
+          {/* 페이지네이션 */}
+          {totalPages > 1 && (
+            <div className="mt-4">
+              <PostPagination
+                communitySlug={communitySlug!}
+                currentPage={currentPage}
+                totalPages={totalPages}
+              />
+            </div>
+          )}
         </div>
       </>
     )
@@ -181,5 +228,64 @@ export const CommunityContent = memo(function CommunityContent({ community, post
 
   return null
 })
+
+function PostPagination({
+  communitySlug,
+  currentPage,
+  totalPages,
+}: {
+  communitySlug: string
+  currentPage: number
+  totalPages: number
+}) {
+  const pageUrl = (page: number) =>
+    page === 1 ? `/community/${communitySlug}` : `/community/${communitySlug}?page=${page}`
+
+  // 표시할 페이지 번호 계산 (현재 페이지 주변 2개씩)
+  const pages: (number | "ellipsis")[] = []
+  const delta = 2
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    const start = Math.max(2, currentPage - delta)
+    const end = Math.min(totalPages - 1, currentPage + delta)
+    if (start > 2) pages.push("ellipsis")
+    for (let i = start; i <= end; i++) pages.push(i)
+    if (end < totalPages - 1) pages.push("ellipsis")
+    pages.push(totalPages)
+  }
+
+  return (
+    <Pagination>
+      <PaginationContent>
+        {currentPage > 1 && (
+          <PaginationItem>
+            <PaginationPrevious href={pageUrl(currentPage - 1)} />
+          </PaginationItem>
+        )}
+        {pages.map((page, i) =>
+          page === "ellipsis" ? (
+            <PaginationItem key={`ellipsis-${i}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem key={page}>
+              <PaginationLink href={pageUrl(page)} isActive={page === currentPage}>
+                {page}
+              </PaginationLink>
+            </PaginationItem>
+          )
+        )}
+        {currentPage < totalPages && (
+          <PaginationItem>
+            <PaginationNext href={pageUrl(currentPage + 1)} />
+          </PaginationItem>
+        )}
+      </PaginationContent>
+    </Pagination>
+  )
+}
 
 CommunityContent.displayName = "CommunityContent"
