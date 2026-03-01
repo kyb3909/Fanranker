@@ -2,14 +2,14 @@
 
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useState, useEffect, useMemo, memo } from "react"
+import { useState, useMemo, memo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
 import type { CommunityInfo } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
 import { AdPlaceholder } from "@/components/ad-placeholder"
-import useSWR from "swr"
+import useSWR, { useSWRConfig } from "swr"
 import { fetcher } from "@/lib/swr"
 
 interface Category {
@@ -23,10 +23,9 @@ interface Category {
 
 export const CommunitySidebar = memo(function CommunitySidebar() {
   const { isSignedIn } = useAuth()
-  const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
+  const { mutate: globalMutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [loadingFollows, setLoadingFollows] = useState(true)
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null)
 
   // DB categories 기반 게시판 목록
@@ -41,6 +40,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
       slug: c.slug,
       name: c.name,
       emoji: c.icon || "📋",
+      description: c.description || "",
     }))
     // sort_order ≤ 4 = 스포츠, > 4 = 라이프
     const sports = cats
@@ -49,6 +49,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
         slug: c.slug,
         name: c.name,
         emoji: c.icon || "📋",
+        description: c.description || "",
       }))
     const life = cats
       .filter((c) => c.sort_order > 4)
@@ -56,40 +57,23 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
         slug: c.slug,
         name: c.name,
         emoji: c.icon || "📋",
+        description: c.description || "",
       }))
     return { allCommunities: mapped, sportsCommunities: sports, lifeCommunities: life }
   }, [catData])
 
-  // 서버에서 팔로우한 커뮤니티 목록 로드
-  useEffect(() => {
-    if (!isSignedIn) {
-      setLoadingFollows(false)
-      return
-    }
-    let cancelled = false
-    setLoadingFollows(true)
-    fetch("/api/community/follows")
-      .then((res) => {
-        if (!res.ok) return { communities: [] }
-        return res.json()
-      })
-      .then((data) => {
-        if (cancelled) return
-        const slugs = new Set<string>(
-          (data.communities || []).map((c: { community_slug: string }) => c.community_slug)
-        )
-        setFollowedCommunities(slugs)
-      })
-      .catch(() => {
-        if (!cancelled) setFollowedCommunities(new Set())
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingFollows(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [isSignedIn])
+  // SWR로 팔로우 커뮤니티 로드 (page.tsx와 캐시 공유 → 중복 호출 제거)
+  const { data: followsData } = useSWR(isSignedIn ? "/api/community/follows" : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
+  const followedCommunities = useMemo(() => {
+    if (!followsData) return new Set<string>()
+    return new Set<string>(
+      (followsData.communities || []).map((c: { community_slug: string }) => c.community_slug)
+    )
+  }, [followsData])
+  const loadingFollows = isSignedIn ? !followsData : false
 
   const toggleFollow = async (communitySlug: string) => {
     const isFollowed = followedCommunities.has(communitySlug)
@@ -116,21 +100,14 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
         }
         return
       }
-      setFollowedCommunities((prev) => {
-        const next = new Set(prev)
-        if (data.following) {
-          next.add(communitySlug)
-        } else {
-          next.delete(communitySlug)
-        }
-        // 홈 피드 등 다른 컴포넌트에 팔로우 변경 알림
-        window.dispatchEvent(
-          new CustomEvent("communityFollowChanged", {
-            detail: { slug: communitySlug, following: data.following, allSlugs: Array.from(next) },
-          })
-        )
-        return next
-      })
+      // SWR 캐시 재검증 → page.tsx 등 다른 컴포넌트도 자동 갱신
+      globalMutate("/api/community/follows")
+      // 홈 피드 등 다른 컴포넌트에 팔로우 변경 알림
+      window.dispatchEvent(
+        new CustomEvent("communityFollowChanged", {
+          detail: { slug: communitySlug, following: data.following },
+        })
+      )
     } catch {
       toast({ variant: "destructive", title: "오류", description: "처리 중 오류가 발생했습니다." })
     } finally {
@@ -193,10 +170,11 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
   return (
     <div className="sticky top-16 flex flex-col gap-4">
       {/* ===== 게시판 (왼쪽 사이드바) ===== */}
-      <Card className="bg-card border-border gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
-        <div className="bg-primary/10 border-border flex items-center justify-between border-b px-4 py-3">
+      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
+        <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+        <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-primary flex items-center gap-2 text-[14px] font-bold">
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-3.5 w-3.5" />
             게시판
           </h3>
           <button
@@ -260,7 +238,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
               )}
               {lifeCommunities.length > 0 && (
                 <>
-                  <div className="border-border/40 my-1 border-t" />
+                  <div className="my-1 border-t" />
                   <p className="text-muted-foreground px-4 pt-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">
                     라이프
                   </p>
@@ -279,10 +257,11 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
 
       {/* 3. 리소스 (사이트맵 하단) */}
       <nav className="mt-auto shrink-0">
-        <Card className="bg-card border-border gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
-          <div className="bg-primary/10 border-border border-b px-4 py-3">
+        <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
+          <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+          <div className="px-4 py-3">
             <h3 className="text-primary flex items-center gap-2 text-[14px] font-bold">
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="h-3.5 w-3.5" />
               리소스
             </h3>
           </div>

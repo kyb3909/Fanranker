@@ -1,19 +1,31 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
-  Coins, Award, FileText, MessageSquare, Target,
-  Loader2, ShieldCheck, Palette, AlertTriangle,
-} from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
+  Coins,
+  Award,
+  FileText,
+  MessageSquare,
+  Target,
+  Loader2,
+  ShieldCheck,
+  Palette,
+  AlertTriangle,
+} from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface UserDetail {
   profile: {
@@ -53,26 +65,26 @@ interface UserDetail {
   }>
 }
 
-type Tab = 'overview' | 'economy' | 'activity' | 'sanctions'
+type Tab = "overview" | "economy" | "activity" | "sanctions"
 
 const sanctionTypeLabels: Record<string, string> = {
-  warning: '경고',
-  timeout: '타임아웃',
-  ban: '밴',
-  shadowban: '섀도우밴',
-  content_restrict: '콘텐츠 제한',
+  warning: "경고",
+  timeout: "타임아웃",
+  ban: "밴",
+  shadowban: "섀도우밴",
+  content_restrict: "콘텐츠 제한",
 }
 
 export function UserDetailTabs({ userId }: { userId: string }) {
   const [data, setData] = useState<UserDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [activeTab, setActiveTab] = useState<Tab>("overview")
   const [actionLoading, setActionLoading] = useState(false)
 
   // Economy adjustment
-  const [adjustType, setAdjustType] = useState<'token' | 'gold'>('token')
-  const [adjustAmount, setAdjustAmount] = useState('')
-  const [adjustReason, setAdjustReason] = useState('')
+  const [adjustType, setAdjustType] = useState<"token" | "gold">("token")
+  const [adjustAmount, setAdjustAmount] = useState("")
+  const [adjustReason, setAdjustReason] = useState("")
 
   useEffect(() => {
     fetch(`/api/admin/users/${userId}`)
@@ -85,14 +97,18 @@ export function UserDetailTabs({ userId }: { userId: string }) {
     setActionLoading(true)
     try {
       const res = await fetch(`/api/admin/users/${userId}/role`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
-      setData((prev) => prev ? { ...prev, profile: { ...prev.profile, role } } : null)
+      setData((prev) => (prev ? { ...prev, profile: { ...prev.profile, role } } : null))
     } catch (error) {
-      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "오류 발생",
+      })
     } finally {
       setActionLoading(false)
     }
@@ -100,14 +116,18 @@ export function UserDetailTabs({ userId }: { userId: string }) {
 
   const handleAdjustEconomy = async () => {
     if (!adjustAmount || !adjustReason) {
-      toast({ variant: 'destructive', title: '입력 오류', description: '금액과 사유를 입력해주세요.' })
+      toast({
+        variant: "destructive",
+        title: "입력 오류",
+        description: "금액과 사유를 입력해주세요.",
+      })
       return
     }
     setActionLoading(true)
     try {
       const res = await fetch(`/api/admin/users/${userId}/adjust-economy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: adjustType,
           amount: parseInt(adjustAmount),
@@ -118,10 +138,14 @@ export function UserDetailTabs({ userId }: { userId: string }) {
       // Refresh data
       const refreshed = await fetch(`/api/admin/users/${userId}`).then((r) => r.json())
       setData(refreshed)
-      setAdjustAmount('')
-      setAdjustReason('')
+      setAdjustAmount("")
+      setAdjustReason("")
     } catch (error) {
-      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "오류 발생",
+      })
     } finally {
       setActionLoading(false)
     }
@@ -129,23 +153,23 @@ export function UserDetailTabs({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
       </div>
     )
   }
 
   if (!data) {
-    return <div className="text-center text-muted-foreground py-12">사용자를 찾을 수 없습니다.</div>
+    return <div className="text-muted-foreground py-12 text-center">사용자를 찾을 수 없습니다.</div>
   }
 
   const { profile, economy, activity, sanctions, recentPosts } = data
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'overview', label: '개요' },
-    { key: 'economy', label: '경제' },
-    { key: 'activity', label: '활동' },
-    { key: 'sanctions', label: '제재' },
+    { key: "overview", label: "개요" },
+    { key: "economy", label: "경제" },
+    { key: "activity", label: "활동" },
+    { key: "sanctions", label: "제재" },
   ]
 
   return (
@@ -155,35 +179,37 @@ export function UserDetailTabs({ userId }: { userId: string }) {
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14">
-              <AvatarImage src={profile.avatar_url || ''} />
-              <AvatarFallback className="text-lg">{profile.nickname?.[0] ?? '?'}</AvatarFallback>
+              <AvatarImage src={profile.avatar_url || ""} alt={profile.nickname || "사용자"} />
+              <AvatarFallback className="text-lg">{profile.nickname?.[0] ?? "?"}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold">{profile.nickname}</h2>
                 <Badge className="text-xs">{profile.role}</Badge>
                 {profile.is_expert && (
-                  <Badge variant="default" className="text-xs bg-green-600">
-                    <ShieldCheck className="h-3 w-3 mr-0.5" />전문가
+                  <Badge variant="default" className="bg-green-600 text-xs">
+                    <ShieldCheck className="mr-0.5 h-3 w-3" />
+                    전문가
                   </Badge>
                 )}
                 {profile.is_artist && (
-                  <Badge variant="default" className="text-xs bg-purple-600">
-                    <Palette className="h-3 w-3 mr-0.5" />아티스트
+                  <Badge variant="default" className="bg-purple-600 text-xs">
+                    <Palette className="mr-0.5 h-3 w-3" />
+                    아티스트
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 ID: <code className="text-xs">{profile.user_id}</code>
-                {' · '}온도: {profile.temperature?.toFixed(1)}°
-                {' · '}가입: {new Date(profile.created_at).toLocaleDateString('ko-KR')}
+                {" · "}온도: {profile.temperature?.toFixed(1)}°{" · "}가입:{" "}
+                {new Date(profile.created_at).toLocaleDateString("ko-KR")}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {['user', 'moderator', 'admin'].map((role) => (
+              {["user", "moderator", "admin"].map((role) => (
                 <Button
                   key={role}
-                  variant={profile.role === role ? 'default' : 'outline'}
+                  variant={profile.role === role ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleRoleChange(role)}
                   disabled={actionLoading || profile.role === role}
@@ -202,10 +228,10 @@ export function UserDetailTabs({ userId }: { userId: string }) {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+                ? "border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground border-transparent"
             }`}
           >
             {tab.label}
@@ -214,11 +240,11 @@ export function UserDetailTabs({ userId }: { userId: string }) {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {activeTab === "overview" && (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs text-muted-foreground">토큰 잔액</CardTitle>
+              <CardTitle className="text-muted-foreground text-xs">토큰 잔액</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-yellow-500" />
@@ -227,7 +253,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs text-muted-foreground">골드 잔액</CardTitle>
+              <CardTitle className="text-muted-foreground text-xs">골드 잔액</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-2">
               <Award className="h-4 w-4 text-amber-500" />
@@ -236,7 +262,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs text-muted-foreground">게시글</CardTitle>
+              <CardTitle className="text-muted-foreground text-xs">게시글</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-500" />
@@ -245,7 +271,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs text-muted-foreground">예측</CardTitle>
+              <CardTitle className="text-muted-foreground text-xs">예측</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-2">
               <Target className="h-4 w-4 text-purple-500" />
@@ -255,16 +281,18 @@ export function UserDetailTabs({ userId }: { userId: string }) {
         </div>
       )}
 
-      {activeTab === 'economy' && (
+      {activeTab === "economy" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">토큰</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{economy.tokenBalance.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">총 획득: {economy.totalTokensEarned.toLocaleString()}</p>
+                <p className="text-muted-foreground text-xs">
+                  총 획득: {economy.totalTokensEarned.toLocaleString()}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -284,16 +312,16 @@ export function UserDetailTabs({ userId }: { userId: string }) {
             <CardContent className="space-y-3">
               <div className="flex gap-2">
                 <Button
-                  variant={adjustType === 'token' ? 'default' : 'outline'}
+                  variant={adjustType === "token" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setAdjustType('token')}
+                  onClick={() => setAdjustType("token")}
                 >
                   토큰
                 </Button>
                 <Button
-                  variant={adjustType === 'gold' ? 'default' : 'outline'}
+                  variant={adjustType === "gold" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setAdjustType('gold')}
+                  onClick={() => setAdjustType("gold")}
                 >
                   골드
                 </Button>
@@ -313,7 +341,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
                   className="flex-1"
                 />
                 <Button onClick={handleAdjustEconomy} disabled={actionLoading}>
-                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : '적용'}
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "적용"}
                 </Button>
               </div>
             </CardContent>
@@ -321,33 +349,33 @@ export function UserDetailTabs({ userId }: { userId: string }) {
         </div>
       )}
 
-      {activeTab === 'activity' && (
+      {activeTab === "activity" && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <Card>
-              <CardContent className="pt-6 flex items-center gap-3">
+              <CardContent className="flex items-center gap-3 pt-6">
                 <FileText className="h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-2xl font-bold">{activity.postCount}</p>
-                  <p className="text-xs text-muted-foreground">게시글</p>
+                  <p className="text-muted-foreground text-xs">게시글</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6 flex items-center gap-3">
+              <CardContent className="flex items-center gap-3 pt-6">
                 <MessageSquare className="h-5 w-5 text-green-500" />
                 <div>
                   <p className="text-2xl font-bold">{activity.commentCount}</p>
-                  <p className="text-xs text-muted-foreground">댓글</p>
+                  <p className="text-muted-foreground text-xs">댓글</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6 flex items-center gap-3">
+              <CardContent className="flex items-center gap-3 pt-6">
                 <Target className="h-5 w-5 text-purple-500" />
                 <div>
                   <p className="text-2xl font-bold">{activity.predictionCount}</p>
-                  <p className="text-xs text-muted-foreground">예측</p>
+                  <p className="text-muted-foreground text-xs">예측</p>
                 </div>
               </CardContent>
             </Card>
@@ -359,16 +387,18 @@ export function UserDetailTabs({ userId }: { userId: string }) {
             </CardHeader>
             <CardContent>
               {recentPosts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">게시글이 없습니다.</p>
+                <p className="text-muted-foreground text-sm">게시글이 없습니다.</p>
               ) : (
                 <div className="space-y-2">
                   {recentPosts.map((post) => (
                     <div key={post.id} className="flex items-center justify-between text-sm">
-                      <span className="truncate flex-1">{post.title}</span>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Badge variant="outline" className="text-xs">{post.community_slug}</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(post.created_at).toLocaleDateString('ko-KR')}
+                      <span className="flex-1 truncate">{post.title}</span>
+                      <div className="ml-4 flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {post.community_slug}
+                        </Badge>
+                        <span className="text-muted-foreground text-xs">
+                          {new Date(post.created_at).toLocaleDateString("ko-KR")}
                         </span>
                       </div>
                     </div>
@@ -380,16 +410,16 @@ export function UserDetailTabs({ userId }: { userId: string }) {
         </div>
       )}
 
-      {activeTab === 'sanctions' && (
+      {activeTab === "sanctions" && (
         <div className="space-y-4">
           {sanctions.length === 0 ? (
             <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
+              <CardContent className="text-muted-foreground pt-6 text-center">
                 제재 이력이 없습니다.
               </CardContent>
             </Card>
           ) : (
-            <div className="border rounded-lg">
+            <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -405,20 +435,32 @@ export function UserDetailTabs({ userId }: { userId: string }) {
                     <TableRow key={s.id}>
                       <TableCell>
                         <Badge variant="destructive" className="text-xs">
-                          <AlertTriangle className="h-3 w-3 mr-0.5" />
+                          <AlertTriangle className="mr-0.5 h-3 w-3" />
                           {sanctionTypeLabels[s.type] ?? s.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm max-w-[200px] truncate">{s.reason}</TableCell>
-                      <TableCell className="text-xs">{new Date(s.starts_at).toLocaleDateString('ko-KR')}</TableCell>
-                      <TableCell className="text-xs">{s.expires_at ? new Date(s.expires_at).toLocaleDateString('ko-KR') : '무기한'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">{s.reason}</TableCell>
+                      <TableCell className="text-xs">
+                        {new Date(s.starts_at).toLocaleDateString("ko-KR")}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {s.expires_at
+                          ? new Date(s.expires_at).toLocaleDateString("ko-KR")
+                          : "무기한"}
+                      </TableCell>
                       <TableCell>
                         {s.lifted_at ? (
-                          <Badge variant="secondary" className="text-xs">해제됨</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            해제됨
+                          </Badge>
                         ) : s.expires_at && new Date(s.expires_at) < new Date() ? (
-                          <Badge variant="outline" className="text-xs">만료됨</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            만료됨
+                          </Badge>
                         ) : (
-                          <Badge variant="destructive" className="text-xs">활성</Badge>
+                          <Badge variant="destructive" className="text-xs">
+                            활성
+                          </Badge>
                         )}
                       </TableCell>
                     </TableRow>

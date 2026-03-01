@@ -7,87 +7,23 @@ import { createServerAnonClient } from "@/lib/supabase"
 import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatMemberCount } from "@/lib/utils/format"
+import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 
-const COMMUNITY_DATA: Record<
-  string,
-  {
-    name: string
-    description: string
-    memberCount: number
-    banner: string
-    emoji: string
-  }
-> = {
-  football: {
-    name: "축구",
-    description: "K리그, EPL, 라리가, 세리에A 등 국내외 축구 소식과 분석",
-    memberCount: 1245000,
-    banner: "/placeholder.jpg",
-    emoji: "⚽",
-  },
-  baseball: {
-    name: "야구",
-    description: "KBO, MLB 야구 정보, 경기 분석, 선수 이야기",
-    memberCount: 982000,
-    banner: "/placeholder.jpg",
-    emoji: "⚾",
-  },
-  basketball: {
-    name: "농구",
-    description: "NBA, KBL 농구 소식, 경기 분석, 선수 정보",
-    memberCount: 387000,
-    banner: "/placeholder.jpg",
-    emoji: "🏀",
-  },
-  volleyball: {
-    name: "배구",
-    description: "V리그 남녀 배구 경기 정보와 분석",
-    memberCount: 221000,
-    banner: "/placeholder.jpg",
-    emoji: "🏐",
-  },
-  game: {
-    name: "게임",
-    description: "PC, 모바일, 콘솔 게임 소식과 e스포츠 이야기",
-    memberCount: 671000,
-    banner: "/placeholder.jpg",
-    emoji: "🎮",
-  },
-  movies: {
-    name: "영화",
-    description: "영화 리뷰, 추천, 박스오피스, 신작 소식과 토론",
-    memberCount: 567000,
-    banner: "/placeholder.jpg",
-    emoji: "🎬",
-  },
-  music: {
-    name: "음악",
-    description: "K-POP, 힙합, 인디, 해외 음악 소식과 추천",
-    memberCount: 432000,
-    banner: "/placeholder.jpg",
-    emoji: "🎵",
-  },
-  idol: {
-    name: "아이돌",
-    description: "아이돌 컴백, 팬캠, 팬미팅, 덕질 이야기",
-    memberCount: 789000,
-    banner: "/placeholder.jpg",
-    emoji: "🎤",
-  },
-  anime: {
-    name: "애니",
-    description: "애니메이션 추천, 리뷰, 신작 소식과 토론",
-    memberCount: 345000,
-    banner: "/placeholder.jpg",
-    emoji: "🎌",
-  },
-  "free-board": {
-    name: "자유",
-    description: "자유롭게 이야기 나누는 공간, 잡담과 유머",
-    memberCount: 894000,
-    banner: "/placeholder.jpg",
-    emoji: "💬",
-  },
+/** slug → community info lookup (from centralized constants) */
+const COMMUNITY_MAP = Object.fromEntries(ALL_COMMUNITIES.map((c) => [c.slug, c]))
+
+/** Member counts (placeholder until real analytics) */
+const MEMBER_COUNTS: Record<string, number> = {
+  football: 1245000,
+  baseball: 982000,
+  basketball: 387000,
+  volleyball: 221000,
+  game: 671000,
+  movies: 567000,
+  music: 432000,
+  idol: 789000,
+  anime: 345000,
+  "free-board": 894000,
 }
 
 // Supabase에서 게시글 가져오기
@@ -197,19 +133,22 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const communityData = COMMUNITY_DATA[slug]
-  const name = communityData?.name || slug
+  const info = COMMUNITY_MAP[slug]
+  const name = info?.name || slug
+  const description =
+    info?.metaDescription || info?.description || `${name} 게시판 - FanRanker 커뮤니티`
   return {
     title: name,
-    description: communityData?.description,
+    description,
+    keywords: info?.keywords,
     openGraph: {
       title: `${name} - FanRanker`,
-      description: communityData?.description,
+      description,
     },
     twitter: {
       card: "summary",
       title: `${name} - FanRanker`,
-      description: communityData?.description,
+      description,
     },
     alternates: { canonical: `/community/${slug}` },
   }
@@ -218,13 +157,13 @@ export async function generateMetadata({
 export default async function CommunityPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
 
-  const communityData = COMMUNITY_DATA[slug]
-  const community = communityData
+  const info = COMMUNITY_MAP[slug]
+  const community = info
     ? {
-        name: communityData.name,
-        description: communityData.description,
-        members: formatMemberCount(communityData.memberCount),
-        banner: communityData.banner,
+        name: info.name,
+        description: info.description,
+        members: formatMemberCount(MEMBER_COUNTS[slug] || 0),
+        banner: "/placeholder.jpg",
       }
     : {
         name: slug,
@@ -237,8 +176,6 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
   const rawPosts = await fetchPosts(slug)
   const communityPosts = transformPosts(rawPosts)
 
-  const currentCommunityData = COMMUNITY_DATA[slug]
-
   return (
     <div className="bg-background min-h-screen">
       <Header />
@@ -249,8 +186,8 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
           __html: jsonLd({
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            name: currentCommunityData?.name || slug,
-            description: currentCommunityData?.description,
+            name: info?.name || slug,
+            description: info?.description || `${slug} 게시판`,
           }),
         }}
       />

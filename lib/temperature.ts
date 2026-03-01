@@ -15,10 +15,11 @@
  */
 export function getTemperatureStyle(temp: number): React.CSSProperties {
   const t = Math.max(0, Math.min(100, temp))
-  // hue: 220 (blue) → 0 (red), saturation: 70-85%, lightness: 45-50%
+  // hue: 220 (blue) → 0 (red), saturation: 70-90%, lightness: 28-33%
+  // WCAG AA 4.5:1 대비 충족 (흰색 배경 기준 lightness ≤33% 필요)
   const hue = 220 - (t / 100) * 220
-  const saturation = 70 + (t / 100) * 15
-  const lightness = 50 - (t / 100) * 5
+  const saturation = 70 + (t / 100) * 20
+  const lightness = 33 - (t / 100) * 5
   return { color: `hsl(${hue}, ${saturation}%, ${lightness}%)` }
 }
 
@@ -53,16 +54,14 @@ export interface TemperatureInput {
  * 클라이언트 fallback 온도 계산 (DB 값이 없을 때만 사용)
  * DB의 update_temperature_score()와 동일한 로직
  */
-export function computeTemperature(
-  post: TemperatureInput,
-  now: Date = new Date()
-): number {
+export function computeTemperature(post: TemperatureInput, now: Date = new Date()): number {
   const ageHours = (now.getTime() - new Date(post.created_at).getTime()) / (1000 * 60 * 60)
 
   // Engagement score (ln 기반)
-  const e = W_UP * Math.log(1 + Math.max(post.vote_count, 0))
-    + W_COMMENT * Math.log(1 + Math.max(post.comment_count, 0))
-    + W_VIEW * Math.log(1 + Math.max(post.view_count_unique ?? 0, 0))
+  const e =
+    W_UP * Math.log(1 + Math.max(post.vote_count, 0)) +
+    W_COMMENT * Math.log(1 + Math.max(post.comment_count, 0)) +
+    W_VIEW * Math.log(1 + Math.max(post.view_count_unique ?? 0, 0))
 
   // Time decay
   const d = Math.pow(2, -(ageHours / HALF_LIFE_HOURS))
@@ -70,7 +69,7 @@ export function computeTemperature(
   // New post boost
   let boost = 0
   if (ageHours <= 1.0) boost = NEW_BOOST_MAX
-  else if (ageHours <= 4.0) boost = NEW_BOOST_MAX * (4.0 - ageHours) / 3.0
+  else if (ageHours <= 4.0) boost = (NEW_BOOST_MAX * (4.0 - ageHours)) / 3.0
 
   const score = e * d + boost
   return Math.min(100, Math.max(0, Math.round(score * 10) / 10))

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Star, Loader2 } from "lucide-react"
+import { X, Star, Loader2, Trophy, Pencil, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { ALL_COMMUNITIES, type CommunityInfo } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
@@ -45,11 +45,14 @@ export function OnboardingBanner({ onFollowChange }: { onFollowChange?: () => vo
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast({ variant: "destructive", title: "오류", description: data.error || "팔로우에 실패했습니다." })
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: data.error || "팔로우에 실패했습니다.",
+        })
         return
       }
       setFollowingSet((prev) => new Set(prev).add(slug))
-      // 홈 피드 갱신 알림
       window.dispatchEvent(
         new CustomEvent("communityFollowChanged", {
           detail: { slug, following: true, allSlugs: [slug] },
@@ -73,70 +76,120 @@ export function OnboardingBanner({ onFollowChange }: { onFollowChange?: () => vo
       return info ? { ...info, followers: p.followers } : null
     })
     .filter((c): c is CommunityInfo & { followers: number } => c !== null)
-    .slice(0, 3)
+    .slice(0, 4)
 
-  // API 데이터 없으면 기본 인기 게시판 3개 표시
   const displayCommunities =
     topCommunities.length > 0
       ? topCommunities
-      : ALL_COMMUNITIES.slice(0, 3).map((c) => ({ ...c, followers: 0 }))
+      : ALL_COMMUNITIES.slice(0, 4).map((c) => ({ ...c, followers: 0 }))
 
   return (
-    <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 relative">
+    <div className="border-primary/20 from-primary/8 via-card to-primary/4 relative overflow-hidden rounded-xl border bg-gradient-to-br">
+      <div className="via-primary/60 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 p-1 rounded-lg hover:bg-muted transition-colors"
+        className="hover:bg-muted absolute top-3 right-3 rounded-lg p-1 transition-colors"
         aria-label="닫기"
       >
-        <X className="w-4 h-4 text-muted-foreground" />
+        <X className="text-muted-foreground h-4 w-4" />
       </button>
 
-      <p className="text-[14px] font-semibold text-foreground mb-1 pr-6">
-        관심 있는 게시판을 팔로우해보세요
-      </p>
-      <p className="text-[12px] text-muted-foreground mb-3">
-        팔로우하면 맞춤 피드를 볼 수 있어요. 지금은 전체 글이 표시됩니다.
-      </p>
+      <div className="p-4">
+        <p className="text-foreground mb-3 pr-6 text-[15px] font-bold">
+          FanRanker에서 이런 걸 할 수 있어요
+        </p>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        {displayCommunities.map((community) => {
-          const isFollowed = followingSet.has(community.slug)
-          return (
-            <button
-              key={community.slug}
-              onClick={() => !isFollowed && handleQuickFollow(community.slug)}
-              disabled={loadingSlug === community.slug || isFollowed}
-              aria-label={isFollowed ? `${community.name} 팔로우됨` : `${community.name} 팔로우`}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all ${
-                isFollowed
-                  ? "bg-primary/10 text-primary border border-primary/30"
-                  : "bg-card border border-border hover:border-primary/50 hover:bg-primary/5 text-foreground"
-              }`}
-            >
-              {loadingSlug === community.slug ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <>
-                  <span>{community.emoji}</span>
-                  <span>{community.name}</span>
-                  {isFollowed ? (
-                    <Star className="w-3.5 h-3.5 fill-primary text-primary" />
+        {/* 3가지 핵심 기능 카드 */}
+        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {/* 1. 게시판 팔로우 */}
+          <div className="border-border bg-card/80 rounded-lg border p-3">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="from-primary/20 to-primary/5 flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br">
+                <Star className="text-primary h-3.5 w-3.5" />
+              </span>
+              <span className="text-foreground text-[13px] font-semibold">맞춤 피드</span>
+            </div>
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
+              관심 게시판을 팔로우하고 나만의 피드를 만들어보세요
+            </p>
+          </div>
+
+          {/* 2. 승부예측 */}
+          <Link
+            href="/games/prediction"
+            className="group border-border bg-card/80 hover:border-primary/30 rounded-lg border p-3 transition-colors"
+          >
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="from-primary/20 to-primary/5 flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br">
+                <Trophy className="text-primary h-3.5 w-3.5" />
+              </span>
+              <span className="text-foreground text-[13px] font-semibold">승부예측</span>
+              <ArrowRight className="text-muted-foreground ml-auto h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
+              매일 무료 볼로 경기 결과를 예측하고 랭킹에 도전하세요
+            </p>
+          </Link>
+
+          {/* 3. 글쓰기 */}
+          <Link
+            href="/write"
+            className="group border-border bg-card/80 hover:border-primary/30 rounded-lg border p-3 transition-colors"
+          >
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="from-primary/20 to-primary/5 flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br">
+                <Pencil className="text-primary h-3.5 w-3.5" />
+              </span>
+              <span className="text-foreground text-[13px] font-semibold">커뮤니티</span>
+              <ArrowRight className="text-muted-foreground ml-auto h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
+              좋아하는 주제의 게시판에서 자유롭게 글을 작성하세요
+            </p>
+          </Link>
+        </div>
+
+        {/* 빠른 팔로우 */}
+        <div className="border-border/50 bg-muted/30 rounded-lg border p-3">
+          <p className="text-muted-foreground mb-2 text-[12px] font-semibold">
+            인기 게시판 바로 팔로우
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {displayCommunities.map((community) => {
+              const isFollowed = followingSet.has(community.slug)
+              return (
+                <button
+                  key={community.slug}
+                  onClick={() => !isFollowed && handleQuickFollow(community.slug)}
+                  disabled={loadingSlug === community.slug || isFollowed}
+                  aria-label={
+                    isFollowed ? `${community.name} 팔로우됨` : `${community.name} 팔로우`
+                  }
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all ${
+                    isFollowed
+                      ? "border-primary/30 bg-primary/10 text-primary border"
+                      : "border-border bg-card text-foreground hover:border-primary/50 hover:bg-primary/5 border"
+                  }`}
+                >
+                  {loadingSlug === community.slug ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Star className="w-3.5 h-3.5 text-muted-foreground" />
+                    <>
+                      <span>{community.emoji}</span>
+                      <span>{community.name}</span>
+                      {isFollowed ? (
+                        <Star className="fill-primary text-primary h-3.5 w-3.5" />
+                      ) : (
+                        <Star className="text-muted-foreground h-3.5 w-3.5" />
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </button>
-          )
-        })}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
-
-      <Link
-        href="/explore"
-        className="text-[12px] text-primary hover:underline font-medium"
-      >
-        모든 게시판 보기 →
-      </Link>
     </div>
   )
 }

@@ -48,9 +48,18 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   const isAuthor = post.userId === user?.id
 
   const {
-    voteCount, myVote, isBookmarked, reportOpen, setReportOpen,
-    handleEditPost, handleDeletePost, handleSearchByAuthor,
-    handleBlockUser, handleVote, handleBookmark, checkBookmarkStatus,
+    voteCount,
+    myVote,
+    isBookmarked,
+    reportOpen,
+    setReportOpen,
+    handleEditPost,
+    handleDeletePost,
+    handleSearchByAuthor,
+    handleBlockUser,
+    handleVote,
+    handleBookmark,
+    checkBookmarkStatus,
   } = usePostCardActions({
     postId: post.id,
     author: post.author,
@@ -58,17 +67,18 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     isUpvoted: post.isUpvoted,
   })
 
-  const temperature = post.temperature ?? Math.min(100, Math.floor((Math.max(0, voteCount) * 2 + post.comments * 3) / 10))
+  const temperature =
+    post.temperature ??
+    Math.min(100, Math.floor((Math.max(0, voteCount) * 2 + post.comments * 3) / 10))
   const communityLink = post.communitySlug || post.community
-  const firstEmbed = typeof post.content === 'object'
-    ? extractFirstEmbedFromTipTapJSON(post.content)
-    : null
+  const firstEmbed =
+    typeof post.content === "object" ? extractFirstEmbedFromTipTapJSON(post.content) : null
   const displayImage = post.image || firstEmbed?.attrs.thumbnail_url || null
 
   return (
     <article>
-      <Card className="overflow-hidden border border-border bg-card hover:border-muted-foreground/30 transition-colors">
-        <div className="p-4 sm:p-5">
+      <Card className="border-border hover:border-muted-foreground/30 overflow-hidden border transition-colors">
+        <div className="relative p-4 sm:p-5">
           <PostCardHeader
             community={post.community}
             communityLink={communityLink}

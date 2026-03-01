@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, memo } from "react"
+import { useState, useEffect, memo, Fragment } from "react"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { AdPlaceholder } from "@/components/ad-placeholder"
+import { MonthlyPrizeBanner } from "@/components/monthly-prize-banner"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 
@@ -73,11 +74,18 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
 
   return (
     <div className="sticky top-16 space-y-4">
+      {/* ===== 이달의 상품 배너 ===== */}
+      <MonthlyPrizeBanner />
+
+      {/* ===== 광고 플레이스홀더 ===== */}
+      <AdPlaceholder variant="sidebar" />
+
       {/* ===== 최근 댓글 섹션 ===== */}
-      <Card className="bg-card border-border gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
-        <div className="bg-primary/10 border-border flex items-center gap-2 border-b px-4 py-3">
-          <MessageSquare className="text-primary h-4 w-4" />
-          <h3 className="text-primary text-[14px] font-bold">최근 댓글</h3>
+      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
+        <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+        <div className="flex items-center gap-2 px-4 py-3">
+          <MessageSquare className="text-primary h-3.5 w-3.5" />
+          <h3 className="text-primary text-[14px] font-bold">최근 댓글 달린 게시물</h3>
         </div>
 
         <div className="py-1">
@@ -87,27 +95,29 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
             </div>
           ) : recentPosts.length > 0 ? (
             recentPosts.map((post, idx) => (
-              <Link
-                key={post.id}
-                href={`/post/${post.id}`}
-                className={`hover:bg-muted/40 block px-4 py-2.5 transition-colors ${idx > 0 ? "border-border/30 border-t" : ""}`}
-              >
-                <p className="text-foreground mb-1.5 line-clamp-1 text-[14px] font-medium">
-                  {post.title}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="bg-secondary text-muted-foreground rounded px-2 py-0.5 text-[12px] font-medium">
-                    {post.community}
-                  </span>
-                  <div className="text-muted-foreground flex items-center gap-2.5 text-[12px]">
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
-                      {post.comments}
+              <Fragment key={post.id}>
+                {idx > 0 && <div className="mx-4 border-t" />}
+                <Link
+                  href={`/post/${post.id}`}
+                  className="hover:bg-muted/40 block px-4 py-2.5 transition-colors"
+                >
+                  <p className="text-foreground mb-1.5 line-clamp-1 text-[14px] font-medium">
+                    {post.title}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="bg-secondary text-muted-foreground rounded px-2 py-0.5 text-[12px] font-medium">
+                      {post.community}
                     </span>
-                    <span>{post.timestamp}</span>
+                    <div className="text-muted-foreground flex items-center gap-2.5 text-[12px]">
+                      <span className="flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3" />
+                        {post.comments}
+                      </span>
+                      <span>{post.timestamp}</span>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </Fragment>
             ))
           ) : (
             <div className="p-4 text-center">
@@ -116,9 +126,6 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
           )}
         </div>
       </Card>
-
-      {/* 광고 플레이스홀더 */}
-      <AdPlaceholder variant="sidebar" />
     </div>
   )
 })

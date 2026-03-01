@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { sanitizeEmbedHtml } from '@/lib/sanitize-embed'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { sanitizeEmbedHtml } from "@/lib/sanitize-embed"
+import { apiError } from "@/lib/api-error"
 
 /**
  * Normalized oEmbed response structure
- * 
+ *
  * Note: html은 선택적입니다. 피드에서는 메타데이터만 필요하므로
  * html은 상세 페이지에서만 필요할 때 가져올 수 있습니다.
  */
 interface OEmbedResponse {
-  provider: 'youtube' | 'instagram' | 'x'
+  provider: "youtube" | "instagram" | "x"
   url: string
   html?: string // 선택적: includeHtml 파라미터로 제어
   title?: string
@@ -21,23 +21,23 @@ interface OEmbedResponse {
  * Provider-specific oEmbed endpoint configurations
  */
 const OEMBED_ENDPOINTS = {
-  youtube: 'https://www.youtube.com/oembed',
+  youtube: "https://www.youtube.com/oembed",
 }
 
 /**
  * Allowed hostnames for SSRF prevention (defense-in-depth)
  */
 const ALLOWED_HOSTS = new Set([
-  'www.youtube.com',
-  'youtube.com',
-  'youtu.be',
-  'm.youtube.com',
-  'www.instagram.com',
-  'instagram.com',
-  'twitter.com',
-  'www.twitter.com',
-  'x.com',
-  'www.x.com',
+  "www.youtube.com",
+  "youtube.com",
+  "youtu.be",
+  "m.youtube.com",
+  "www.instagram.com",
+  "instagram.com",
+  "twitter.com",
+  "www.twitter.com",
+  "x.com",
+  "www.x.com",
 ])
 
 /**
@@ -52,15 +52,15 @@ const URL_PATTERNS = {
 /**
  * Detect which provider a URL belongs to
  */
-function detectProvider(url: string): 'youtube' | 'instagram' | 'x' | null {
+function detectProvider(url: string): "youtube" | "instagram" | "x" | null {
   if (URL_PATTERNS.youtube.test(url)) {
-    return 'youtube'
+    return "youtube"
   }
   if (URL_PATTERNS.instagram.test(url)) {
-    return 'instagram'
+    return "instagram"
   }
   if (URL_PATTERNS.x.test(url)) {
-    return 'x'
+    return "x"
   }
   return null
 }
@@ -82,17 +82,19 @@ function normalizeYouTubeUrl(url: string): string {
  */
 function normalizeInstagramUrl(url: string): string {
   // Ensure full URL format
-  if (!url.startsWith('http')) {
+  if (!url.startsWith("http")) {
     return `https://${url}`
   }
   return url
 }
 
-
 /**
  * Fetch oEmbed data from YouTube
  */
-async function fetchYouTubeOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
+async function fetchYouTubeOEmbed(
+  url: string,
+  includeHtml: boolean = true
+): Promise<OEmbedResponse> {
   const normalizedUrl = normalizeYouTubeUrl(url)
   const oembedUrl = `${OEMBED_ENDPOINTS.youtube}?url=${encodeURIComponent(normalizedUrl)}&format=json`
 
@@ -104,9 +106,9 @@ async function fetchYouTubeOEmbed(url: string, includeHtml: boolean = true): Pro
   const data = await response.json()
 
   return {
-    provider: 'youtube',
+    provider: "youtube",
     url: normalizedUrl,
-    html: includeHtml ? (data.html || '') : undefined,
+    html: includeHtml ? data.html || "" : undefined,
     title: data.title,
     thumbnail_url: data.thumbnail_url,
     author_name: data.author_name,
@@ -119,19 +121,22 @@ async function fetchYouTubeOEmbed(url: string, includeHtml: boolean = true): Pro
  * blockquote + embed.js 방식: Facebook Access Token 불필요
  * embed.js가 클라이언트에서 blockquote를 인터랙티브 임베드로 변환
  */
-async function fetchInstagramOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
+async function fetchInstagramOEmbed(
+  url: string,
+  includeHtml: boolean = true
+): Promise<OEmbedResponse> {
   const normalizedUrl = normalizeInstagramUrl(url)
 
   // URL에서 shortcode 추출
   const match = normalizedUrl.match(URL_PATTERNS.instagram)
   if (!match) {
-    throw new Error('Invalid Instagram URL')
+    throw new Error("Invalid Instagram URL")
   }
 
   // 검증된 shortcode로 안전한 permalink 생성 (XSS 방지)
   const shortcode = match[1]
-  const isReel = normalizedUrl.includes('/reel/')
-  const permalink = `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${shortcode}/`
+  const isReel = normalizedUrl.includes("/reel/")
+  const permalink = `https://www.instagram.com/${isReel ? "reel" : "p"}/${shortcode}/`
 
   // blockquote HTML 생성 (embed.js가 클라이언트에서 렌더링)
   const blockquoteHtml = includeHtml
@@ -139,7 +144,7 @@ async function fetchInstagramOEmbed(url: string, includeHtml: boolean = true): P
     : undefined
 
   return {
-    provider: 'instagram',
+    provider: "instagram",
     url: normalizedUrl,
     html: blockquoteHtml,
     author_name: undefined,
@@ -155,32 +160,32 @@ async function fetchInstagramOEmbed(url: string, includeHtml: boolean = true): P
 async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
   const match = url.match(URL_PATTERNS.x)
   if (!match) {
-    throw new Error('Invalid X URL')
+    throw new Error("Invalid X URL")
   }
 
   const username = match[1]
   const statusId = match[2]
-  const originalUrl = url.startsWith('http') ? url : `https://${url}`
+  const originalUrl = url.startsWith("http") ? url : `https://${url}`
 
   // fxtwitter API로 트윗 데이터 가져오기
-  let tweetText = ''
+  let tweetText = ""
   let authorName = `@${username}`
-  let authorAvatar = ''
-  let mediaUrl = ''
-  let displayName = ''
+  let authorAvatar = ""
+  let mediaUrl = ""
+  let displayName = ""
 
   try {
     const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
-      headers: { 'User-Agent': 'FanRanker/1.0' },
+      headers: { "User-Agent": "FanRanker/1.0" },
     })
     if (res.ok) {
       const data = await res.json()
       const tweet = data.tweet
       if (tweet) {
-        tweetText = tweet.text || ''
+        tweetText = tweet.text || ""
         authorName = `@${tweet.author?.screen_name || username}`
-        displayName = tweet.author?.name || ''
-        authorAvatar = tweet.author?.avatar_url || ''
+        displayName = tweet.author?.name || ""
+        authorAvatar = tweet.author?.avatar_url || ""
         // 첫 번째 미디어 (이미지)
         if (tweet.media?.photos?.[0]?.url) {
           mediaUrl = tweet.media.photos[0].url
@@ -197,19 +202,19 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
   let cardHtml: string | undefined
   if (includeHtml) {
     const escapedText = tweetText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br/>')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br/>")
     const escapedDisplayName = displayName
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
     const mediaHtml = mediaUrl
-      ? `<img src="${mediaUrl}" alt="" style="width:100%;border-radius:12px;margin-top:12px;max-height:300px;object-fit:cover;" />`
-      : ''
+      ? `<img src="${mediaUrl}" alt="${escapedDisplayName}의 게시물 이미지" style="width:100%;border-radius:12px;margin-top:12px;max-height:300px;object-fit:cover;" />`
+      : ""
     const avatarHtml = authorAvatar
-      ? `<img src="${authorAvatar}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
+      ? `<img src="${authorAvatar}" alt="${escapedDisplayName} 프로필" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
       : `<div style="width:40px;height:40px;border-radius:50%;background:#2a2a2a;"></div>`
 
     cardHtml = `<div style="max-width:550px;border:1px solid #333;border-radius:16px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#e7e9ea;">
@@ -228,7 +233,7 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
   }
 
   return {
-    provider: 'x',
+    provider: "x",
     url: originalUrl,
     html: cardHtml,
     title: tweetText.slice(0, 100) || undefined,
@@ -239,9 +244,9 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
 
 /**
  * Main oEmbed API route handler
- * 
+ *
  * GET /api/oembed?url=<url>
- * 
+ *
  * Returns normalized oEmbed data for supported providers:
  * - YouTube (youtube.com, youtu.be)
  * - Instagram (instagram.com/p/*, /reel/*)
@@ -250,12 +255,12 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const url = searchParams.get('url')
-    const includeHtml = searchParams.get('includeHtml') === 'true' // html 포함 여부
+    const url = searchParams.get("url")
+    const includeHtml = searchParams.get("includeHtml") === "true" // html 포함 여부
 
     if (!url || url.length > 2048) {
       return NextResponse.json(
-        { error: 'URL parameter is required (max 2048 chars)' },
+        { error: "URL parameter is required (max 2048 chars)" },
         { status: 400 }
       )
     }
@@ -263,30 +268,21 @@ export async function GET(request: NextRequest) {
     // Validate URL format and hostname whitelist (SSRF prevention)
     try {
       const parsed = new URL(url)
-      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-        return NextResponse.json(
-          { error: 'Invalid URL protocol' },
-          { status: 400 }
-        )
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return NextResponse.json({ error: "Invalid URL protocol" }, { status: 400 })
       }
       if (!ALLOWED_HOSTS.has(parsed.hostname)) {
-        return NextResponse.json(
-          { error: 'Unsupported domain' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: "Unsupported domain" }, { status: 400 })
       }
     } catch {
-      return NextResponse.json(
-        { error: 'Invalid URL format' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Invalid URL format" }, { status: 400 })
     }
 
     // Detect provider
     const provider = detectProvider(url)
     if (!provider) {
       return NextResponse.json(
-        { error: 'Unsupported oEmbed provider. Supported: YouTube, Instagram, X' },
+        { error: "Unsupported oEmbed provider. Supported: YouTube, Instagram, X" },
         { status: 422 }
       )
     }
@@ -296,23 +292,20 @@ export async function GET(request: NextRequest) {
 
     try {
       switch (provider) {
-        case 'youtube':
+        case "youtube":
           oembedData = await fetchYouTubeOEmbed(url, includeHtml)
           break
-        case 'instagram':
+        case "instagram":
           oembedData = await fetchInstagramOEmbed(url, includeHtml)
           break
-        case 'x':
+        case "x":
           oembedData = await fetchXOEmbed(url, includeHtml)
           break
         default:
-          return NextResponse.json(
-            { error: 'Unsupported provider' },
-            { status: 422 }
-          )
+          return NextResponse.json({ error: "Unsupported provider" }, { status: 422 })
       }
     } catch (error) {
-      return apiError('임베드 데이터를 가져오는 중 오류가 발생했습니다.', 500, error)
+      return apiError("임베드 데이터를 가져오는 중 오류가 발생했습니다.", 500, error)
     }
 
     // Sanitize HTML to prevent XSS
@@ -322,7 +315,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(oembedData)
   } catch (error) {
-    return apiError('Internal server error', 500, error)
+    return apiError("Internal server error", 500, error)
   }
 }
-

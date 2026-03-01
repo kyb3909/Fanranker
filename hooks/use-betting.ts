@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
+import useSWR from "swr"
 import { getMsUntilReset } from "@/lib/betman/daily-round"
 
 import type {
@@ -15,6 +16,8 @@ import type {
   MyStatsData,
   PredictionHistoryItem,
 } from "@/components/betting/betting-types"
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 interface PredictionMatch {
   match_time?: string
@@ -43,7 +46,6 @@ export function useBetting() {
   const [, setDailyRound] = useState<DailyRoundInfo | null>(null)
   const [, setBettingWindow] = useState<BettingWindowInfo | null>(null)
   const [groupedMatches, setGroupedMatches] = useState<GroupedMatch[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [deadlineCountdown, setDeadlineCountdown] = useState<string | null>(null)
@@ -84,30 +86,44 @@ export function useBetting() {
   }, [])
 
   // ============================================================
-  // Data Loading
+  // Data Loading (SWR - auto deduplication & revalidation)
   // ============================================================
 
-  const loadMatches = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const sportParam = sportFilter !== "all" ? `&sport=${sportFilter}` : ""
-      const res = await fetch(`/api/betman/games?${sportParam}`)
-      const data = await res.json()
+  const gamesKey = `/api/betman/games?${sportFilter !== "all" ? `sport=${sportFilter}` : ""}`
+  const {
+    data: gamesData,
+    error: gamesError,
+    isLoading: gamesLoading,
+    isValidating: gamesValidating,
+    mutate: mutateGames,
+  } = useSWR(gamesKey, fetcher, {
+    refreshInterval: 5 * 60 * 1000, // 5분마다 자동 갱신
+    revalidateOnFocus: true, // 탭 복귀 시 자동 갱신
+    dedupingInterval: 10_000, // 10초 내 중복 요청 방지
+  })
 
-      if (data.today) setTodayInfo(data.today)
-      if (data.dailyRound) setDailyRound(data.dailyRound)
-      if (data.bettingWindow) setBettingWindow(data.bettingWindow)
-      if (data.groupedGames) setGroupedMatches(data.groupedGames)
-      if (data.window) setWindowInfo(data.window)
-      setEarliestBetClose(data.earliestBetClose || null)
-      setLastUpdated(new Date())
-    } catch {
-      setError("경기 데이터를 불러오는데 실패했습니다.")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [sportFilter])
+  // SWR 데이터를 기존 state에 동기화
+  useEffect(() => {
+    if (!gamesData) return
+    if (gamesData.today) setTodayInfo(gamesData.today)
+    if (gamesData.dailyRound) setDailyRound(gamesData.dailyRound)
+    if (gamesData.bettingWindow) setBettingWindow(gamesData.bettingWindow)
+    if (gamesData.groupedGames) setGroupedMatches(gamesData.groupedGames)
+    if (gamesData.window) setWindowInfo(gamesData.window)
+    setEarliestBetClose(gamesData.earliestBetClose || null)
+    setLastUpdated(new Date())
+  }, [gamesData])
+
+  useEffect(() => {
+    if (gamesError) setError("경기 데이터를 불러오는데 실패했습니다.")
+    else setError(null)
+  }, [gamesError])
+
+  const isLoading = gamesLoading || (gamesValidating && !gamesData)
+
+  const loadMatches = useCallback(() => {
+    mutateGames()
+  }, [mutateGames])
 
   const loadUserBalls = useCallback(async () => {
     if (!isSignedIn) return
@@ -228,19 +244,10 @@ export function useBetting() {
   // ============================================================
 
   useEffect(() => {
-    loadMatches()
     loadUserBalls()
     loadFollows()
-  }, [loadMatches, loadUserBalls, loadFollows])
-  useEffect(() => {
-    const i = setInterval(
-      () => {
-        loadMatches()
-      },
-      5 * 60 * 1000
-    )
-    return () => clearInterval(i)
-  }, [loadMatches])
+  }, [loadUserBalls, loadFollows])
+  // SWR handles: initial fetch, 5-min polling, visibility revalidation
   useEffect(() => {
     const t = setInterval(() => {
       setCurrentTime(new Date())
@@ -296,13 +303,13 @@ export function useBetting() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        loadMatches()
+        // SWR handles games revalidation via revalidateOnFocus
         loadUserBalls()
       }
     }
     document.addEventListener("visibilitychange", handleVisibility)
     return () => document.removeEventListener("visibilitychange", handleVisibility)
-  }, [loadMatches, loadUserBalls])
+  }, [loadUserBalls])
 
   useEffect(() => {
     if (activeTab === "ranking") loadRankings()

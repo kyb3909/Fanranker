@@ -109,9 +109,9 @@ function ExploreInner() {
           <div className="col-span-12 space-y-6 xl:col-span-9">
             {/* 게시판 둘러보기 */}
             {categories.length > 0 && (
-              <div className="bg-card border-border overflow-hidden rounded-xl border">
-                <div className="bg-primary/10 border-border flex items-center gap-2 border-b px-4 py-3">
-                  <LayoutGrid className="text-primary h-4 w-4" />
+              <div className="border-border overflow-hidden rounded-xl border">
+                <div className="flex items-center gap-2 px-4 py-3">
+                  <LayoutGrid className="text-primary h-3.5 w-3.5" />
                   <h2 className="text-primary text-[14px] font-bold">게시판 둘러보기</h2>
                 </div>
                 <div className="divide-border grid grid-cols-5 gap-0 divide-x">
@@ -174,7 +174,7 @@ function ExploreInner() {
             </div>
 
             {/* 오늘의 최다 추천글, 댓글, 조회수 */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {/* Most Recommended */}
               <div className="bg-card border-border rounded-lg border p-4">
                 <h3 className="text-foreground mb-3 flex items-center gap-1 text-sm font-bold">

@@ -103,7 +103,7 @@ export function UserDirectoryTable({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-7 w-7">
-                        <AvatarImage src={user.avatar_url || ""} />
+                        <AvatarImage src={user.avatar_url || ""} alt={user.nickname || "사용자"} />
                         <AvatarFallback className="text-xs">
                           {user.nickname?.[0] ?? "?"}
                         </AvatarFallback>

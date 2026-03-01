@@ -52,11 +52,20 @@ export const metadata: Metadata = {
     title: SITE_CONFIG.description,
     description: SITE_CONFIG.description,
     url: "/",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_CONFIG.name} - 스포츠 예측 커뮤니티`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_CONFIG.description,
     description: SITE_CONFIG.description,
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
@@ -93,28 +102,28 @@ export default function RootLayout({
       <ClerkProvider localization={koLocalization}>
         <html lang="ko">
           <head>
-            {/* DNS Prefetch & Preconnect: 외부 리소스 로딩 최적화 */}
+            {/* Pretendard: CSS @import 대신 preload → 렌더 블로킹 제거 */}
+            <link
+              rel="preload"
+              href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+              as="style"
+            />
+            <link
+              rel="stylesheet"
+              href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+            />
+            {/* DNS Prefetch: 외부 리소스 사전 조회 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />
             <link rel="dns-prefetch" href="https://img.clerk.com" />
             <link rel="dns-prefetch" href="https://definite-mollusk-7.clerk.accounts.dev" />
-            <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="anonymous" />
             <link rel="preconnect" href="https://img.clerk.com" crossOrigin="anonymous" />
             <link
               rel="preconnect"
               href="https://definite-mollusk-7.clerk.accounts.dev"
               crossOrigin="anonymous"
             />
-            {/* Supabase 연결 최적화 */}
-            {process.env.NEXT_PUBLIC_SUPABASE_URL && (
-              <>
-                <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
-                <link
-                  rel="preconnect"
-                  href={process.env.NEXT_PUBLIC_SUPABASE_URL}
-                  crossOrigin="anonymous"
-                />
-              </>
-            )}
+            {/* GmarketSans preconnect */}
+            <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
           </head>
           <body className={`pb-14 font-sans antialiased sm:pb-0`}>
             <script

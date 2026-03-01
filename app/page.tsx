@@ -1,17 +1,53 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useMemo, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Header } from "@/components/header"
-import { CommunitySidebar } from "@/components/community-sidebar"
-import { ActivitySidebar } from "@/components/activity-sidebar"
+
+const CommunitySidebar = dynamic(
+  () => import("@/components/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
+  {
+    ssr: false,
+    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
+  }
+)
+const ActivitySidebar = dynamic(
+  () => import("@/components/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
+  {
+    ssr: false,
+    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
+  }
+)
 import { Dices, Flame, Clock, Newspaper, Trophy } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
-import { OnboardingBanner } from "@/components/onboarding-banner"
+const OnboardingBanner = dynamic(
+  () => import("@/components/onboarding-banner").then((m) => ({ default: m.OnboardingBanner })),
+  {
+    ssr: false,
+  }
+)
 import { FeedSection } from "@/components/home/feed-section"
-import { ContentSection } from "@/components/home/content-section"
+
+const ContentSection = dynamic(
+  () => import("@/components/home/content-section").then((m) => ({ default: m.ContentSection })),
+  {
+    loading: () => (
+      <div className="bg-card border-border animate-pulse rounded-xl border p-6">
+        <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-muted h-20 rounded" />
+          ))}
+        </div>
+      </div>
+    ),
+    ssr: false,
+  }
+)
 import { useFeed, type SortType } from "@/hooks/use-feed"
+import useSWR from "swr"
+import { fetcher } from "@/lib/swr"
 
 const BettingPage = dynamic(() => import("@/components/betting-page"), {
   loading: () => (
@@ -43,36 +79,29 @@ function HomeContent() {
   const isPredictionView = searchParams.get("view") === "prediction"
   const [activeTab, setActiveTab] = useState<TabType>("feed")
   const [sortBy, setSortBy] = useState<SortType>("hot")
-  const [followedCommunities, setFollowedCommunities] = useState<Set<string>>(new Set())
-  const [followsLoaded, setFollowsLoaded] = useState(false)
+  // SWR로 팔로우 커뮤니티 로드 (community-sidebar와 캐시 공유 → 중복 호출 제거)
+  const { data: followsData, mutate: mutateFollows } = useSWR(
+    isSignedIn ? "/api/community/follows" : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+  const followedCommunities = useMemo(() => {
+    if (!isSignedIn) return new Set<string>()
+    if (!followsData) return new Set<string>()
+    return new Set<string>(
+      (followsData.communities || []).map((c: { community_slug: string }) => c.community_slug)
+    )
+  }, [isSignedIn, followsData])
+  const followsLoaded = !isSignedIn || !!followsData
 
-  // 로그인 유저의 팔로우 커뮤니티 로드
+  // 사이드바에서 팔로우 토글 시 SWR 캐시 재검증
   useEffect(() => {
-    if (!isSignedIn) {
-      setFollowsLoaded(true)
-      return
-    }
-    fetch("/api/community/follows")
-      .then((res) => (res.ok ? res.json() : { communities: [] }))
-      .then((data) => {
-        const slugs = new Set<string>(
-          (data.communities || []).map((c: { community_slug: string }) => c.community_slug)
-        )
-        setFollowedCommunities(slugs)
-      })
-      .catch(() => setFollowedCommunities(new Set()))
-      .finally(() => setFollowsLoaded(true))
-  }, [isSignedIn])
-
-  // 사이드바에서 팔로우 토글 시 즉시 반영
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { allSlugs } = (e as CustomEvent).detail
-      setFollowedCommunities(new Set<string>(allSlugs))
+    const handler = () => {
+      mutateFollows()
     }
     window.addEventListener("communityFollowChanged", handler)
     return () => window.removeEventListener("communityFollowChanged", handler)
-  }, [])
+  }, [mutateFollows])
 
   // 피드 데이터 훅
   const { posts, isLoading, isLoadingMore, loadMore } = useFeed(

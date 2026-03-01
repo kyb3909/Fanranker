@@ -17,6 +17,7 @@ import 'dotenv/config'
 
 import supabase from './core/db.js'
 import { fetchRedditPosts } from './core/reddit-fetcher.js'
+import { fetchNaverNewsPosts } from './core/naver-news-fetcher.js'
 import { summarizePosts } from './core/summarizer.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -172,6 +173,76 @@ async function processRedditSource(source) {
   return { fetched: posts.length, saved: rows.length }
 }
 
+async function processNaverNewsSource(source) {
+  const queryLabel = source.search_queries?.join(', ') || source.search_query || '?'
+  log(source.id, `Fetching Naver news (queries="${queryLabel}")...`)
+  const posts = await fetchNaverNewsPosts(source)
+  log(source.id, `Fetched ${posts.length} articles`)
+
+  if (posts.length === 0) return { fetched: 0, saved: 0 }
+
+  // Check which posts already exist
+  const { data: existing } = await supabase
+    .from('news_ticker_items')
+    .select('external_id')
+    .eq('source_id', source.id)
+    .in('external_id', posts.map(p => p.external_id))
+
+  const existingIds = new Set((existing || []).map(e => e.external_id))
+  const newPosts = posts.filter(p => !existingIds.has(p.external_id))
+
+  if (newPosts.length === 0) {
+    log(source.id, 'No new articles to process')
+    return { fetched: posts.length, saved: 0 }
+  }
+
+  log(source.id, `${newPosts.length} new articles → GPT summarization...`)
+
+  if (dryRun) {
+    newPosts.forEach((p, i) => log(source.id, `  [${i + 1}] ${p.original_title.slice(0, 80)}`))
+    log(source.id, '[DRY RUN] Skipping GPT & DB')
+    return { fetched: posts.length, saved: 0 }
+  }
+
+  // GPT summarization
+  const summaries = await summarizePosts(newPosts, source)
+  log(source.id, `GPT returned ${summaries.length} news items`)
+
+  if (summaries.length === 0) return { fetched: posts.length, saved: 0 }
+
+  // Build rows for upsert
+  const rows = summaries.map(item => ({
+    source_id: source.id,
+    community_slug: source.community_slug,
+    external_id: item.post.external_id,
+    external_url: item.post.external_url,
+    original_title: item.post.original_title,
+    link_url: item.post.link_url,
+    thumbnail_url: item.post.thumbnail_url || null,
+    media_type: item.post.media_type || 'article',
+    score: 0,
+    num_comments: 0,
+    flair: null,
+    author: item.post.author,
+    posted_at: item.post.posted_at,
+    category: item.category,
+    importance: item.importance,
+    headline_kr: item.headline_kr,
+    summary_kr: item.summary_lines.join('\n'),
+    ticker_tag: categoryToTag(item.category, item.importance),
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error } = await supabase
+    .from('news_ticker_items')
+    .upsert(rows, { onConflict: 'source_id,external_id' })
+
+  if (error) throw new Error(`DB upsert failed: ${error.message}`)
+
+  log(source.id, `Saved ${rows.length} items to DB`)
+  return { fetched: posts.length, saved: rows.length }
+}
+
 // --------------- Cleanup ---------------
 
 async function cleanup() {
@@ -225,6 +296,9 @@ async function main() {
       switch (source.type) {
         case 'reddit':
           result = await processRedditSource(source)
+          break
+        case 'naver-news':
+          result = await processNaverNewsSource(source)
           break
         default:
           log(source.id, `Unknown type "${source.type}", skipping`)

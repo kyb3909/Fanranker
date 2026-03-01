@@ -1,21 +1,23 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useMemo } from 'react'
-import { Bell } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useState, useMemo } from "react"
+import { Bell } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2 } from 'lucide-react'
-import Link from 'next/link'
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Loader2 } from "lucide-react"
+import Link from "next/link"
 import { formatRelativeTime } from "@/lib/utils/date"
+import useSWR from "swr"
+import { fetcher } from "@/lib/swr"
 
 interface Notification {
   id: string
-  type: 'comment' | 'reply' | 'new_post_by_followed' | 'expert_prediction'
+  type: "comment" | "reply" | "new_post_by_followed" | "expert_prediction"
   actor_id: string
   related_post_id: string | null
   related_comment_id: string | null
@@ -39,40 +41,35 @@ export function NotificationDropdown() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
 
-  // 알림 로드
-  useEffect(() => {
-    if (isOpen) {
-      loadNotifications()
-    }
-  }, [isOpen])
-
-  // 주기적으로 읽지 않은 알림 개수 확인
-  useEffect(() => {
-    checkUnreadCount()
-    const interval = setInterval(checkUnreadCount, 30000) // 30초마다 확인
-    return () => clearInterval(interval)
-  }, [])
+  // SWR로 읽지 않은 알림 개수 확인 (30초 자동 갱신, 중복 호출 방지)
+  const { data: unreadData, mutate: mutateUnread } = useSWR(
+    "/api/notifications?limit=1&unread_only=true",
+    fetcher,
+    { refreshInterval: 30000, revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+  const unreadCount = unreadData?.notifications?.length || 0
 
   async function loadNotifications() {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/notifications?limit=20')
+      const response = await fetch("/api/notifications?limit=20")
       if (response.ok) {
-        const { notifications: fetchedNotifications, profiles: fetchedProfiles, posts: fetchedPosts } = await response.json()
+        const {
+          notifications: fetchedNotifications,
+          profiles: fetchedProfiles,
+          posts: fetchedPosts,
+        } = await response.json()
         setNotifications(fetchedNotifications || [])
         setProfiles(fetchedProfiles || [])
         setPosts(fetchedPosts || [])
       } else {
-        // 에러 발생 시 빈 배열로 설정
         setNotifications([])
         setProfiles([])
         setPosts([])
       }
     } catch {
-      // 네트워크 에러 등은 빈 배열로 설정
       setNotifications([])
       setProfiles([])
       setPosts([])
@@ -81,35 +78,19 @@ export function NotificationDropdown() {
     }
   }
 
-  async function checkUnreadCount() {
-    try {
-      const response = await fetch('/api/notifications?limit=1&unread_only=true')
-      if (response.ok) {
-        const { notifications: fetchedNotifications } = await response.json()
-        setUnreadCount(fetchedNotifications?.length || 0)
-      } else {
-        // 응답이 실패했지만 에러를 조용히 처리 (로그인하지 않은 경우 등)
-        setUnreadCount(0)
-      }
-    } catch {
-      // 네트워크 에러 등은 조용히 처리 (서버가 다운되었거나 네트워크 문제)
-      setUnreadCount(0)
-    }
-  }
-
   async function markAsRead(notificationId: string) {
     try {
-      await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notification_id: notificationId }),
       })
-      
+
       // 로컬 상태 업데이트
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
       )
-      setUnreadCount((prev) => Math.max(0, prev - 1))
+      mutateUnread()
     } catch {
       // Silent fail - marking as read is non-critical
     }
@@ -120,52 +101,58 @@ export function NotificationDropdown() {
 
   const getNotificationText = (notification: Notification) => {
     const actor = profileMap.get(notification.actor_id)
-    const actorName = actor?.nickname || '익명'
+    const actorName = actor?.nickname || "익명"
 
     switch (notification.type) {
-      case 'comment':
+      case "comment":
         return `${actorName}님이 댓글을 남겼습니다`
-      case 'reply':
+      case "reply":
         return `${actorName}님이 답글을 남겼습니다`
-      case 'new_post_by_followed':
+      case "new_post_by_followed":
         return `${actorName}님이 새로운 글을 작성했습니다`
-      case 'expert_prediction':
+      case "expert_prediction":
         return `${actorName}님이 새로운 전문가 예측을 올렸습니다`
       default:
-        return '새 알림이 있습니다'
+        return "새 알림이 있습니다"
     }
   }
 
   const getNotificationLink = (notification: Notification): string => {
     switch (notification.type) {
-      case 'comment':
-      case 'reply':
-      case 'new_post_by_followed':
-        return notification.related_post_id ? `/post/${notification.related_post_id}` : '/'
-      case 'expert_prediction':
+      case "comment":
+      case "reply":
+      case "new_post_by_followed":
+        return notification.related_post_id ? `/post/${notification.related_post_id}` : "/"
+      case "expert_prediction":
         // 전문가 예측 알림은 예측 페이지로 이동
-        return '/games/prediction'
+        return "/games/prediction"
       default:
-        return '/'
+        return "/"
     }
   }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open)
+        if (open) loadNotifications()
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-full relative"
+          className="relative h-9 w-9 rounded-full"
           aria-label={unreadCount > 0 ? `알림 ${unreadCount}개` : "알림"}
         >
           <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
           {unreadCount > 0 && (
             <span
-              className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
+              className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white"
               aria-hidden="true"
             >
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </Button>
@@ -173,27 +160,29 @@ export function NotificationDropdown() {
 
       <DropdownMenuContent
         align="end"
-        className="w-80 p-0 mt-2 bg-card border border-border shadow-lg rounded-xl overflow-hidden"
+        className="bg-card border-border mt-2 w-80 overflow-hidden rounded-xl border p-0 shadow-lg"
       >
-        <div className="p-4 border-b border-border">
-          <h3 className="text-base font-semibold text-foreground">알림</h3>
+        <div className="border-border border-b p-4">
+          <h3 className="text-foreground text-base font-semibold">알림</h3>
         </div>
 
         <div className="max-h-[400px] overflow-y-auto">
           {isLoading ? (
             <div className="p-8 text-center">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">알림을 불러오는 중...</p>
+              <Loader2 className="text-muted-foreground mx-auto mb-2 h-6 w-6 animate-spin" />
+              <p className="text-muted-foreground text-sm">알림을 불러오는 중...</p>
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-sm text-muted-foreground">알림이 없습니다</p>
+              <p className="text-muted-foreground text-sm">알림이 없습니다</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="divide-border divide-y">
               {notifications.map((notification) => {
                 const actor = profileMap.get(notification.actor_id)
-                const post = notification.related_post_id ? postMap.get(notification.related_post_id) : null
+                const post = notification.related_post_id
+                  ? postMap.get(notification.related_post_id)
+                  : null
 
                 return (
                   <Link
@@ -204,28 +193,33 @@ export function NotificationDropdown() {
                         markAsRead(notification.id)
                       }
                     }}
-                    className="block p-4 hover:bg-muted/50 transition-colors"
+                    className="hover:bg-muted/50 block p-4 transition-colors"
                   >
                     <div className="flex gap-3">
                       <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage src={actor?.avatar_url || '/placeholder-user.jpg'} alt={actor?.nickname} />
-                        <AvatarFallback>{actor?.nickname?.[0] || '?'}</AvatarFallback>
+                        <AvatarImage
+                          src={actor?.avatar_url || "/placeholder-user.jpg"}
+                          alt={actor?.nickname}
+                        />
+                        <AvatarFallback>{actor?.nickname?.[0] || "?"}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${notification.is_read ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`text-sm ${notification.is_read ? "text-muted-foreground" : "text-foreground font-medium"}`}
+                        >
                           {getNotificationText(notification)}
                         </p>
                         {post && (
-                          <p className="text-xs text-muted-foreground truncate mt-1">
+                          <p className="text-muted-foreground mt-1 truncate text-xs">
                             {post.title}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           {formatRelativeTime(new Date(notification.created_at))}
                         </p>
                       </div>
                       {!notification.is_read && (
-                        <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+                        <div className="bg-primary mt-2 h-2 w-2 flex-shrink-0 rounded-full" />
                       )}
                     </div>
                   </Link>

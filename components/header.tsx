@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Loader2, Trophy } from "lucide-react"
+import { Home, Compass, Bell, Search, Loader2, Trophy, PieChart } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react"
@@ -240,6 +240,16 @@ export function Header() {
             >
               <Compass className="h-[18px] w-[18px] shrink-0 text-white" />
               탐색
+            </Button>
+          </Link>
+          <Link href="/share">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
+            >
+              <PieChart className="h-[18px] w-[18px] shrink-0 text-white" />
+              점유율
             </Button>
           </Link>
           <Link href="/?view=prediction">

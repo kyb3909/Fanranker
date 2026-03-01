@@ -53,6 +53,12 @@ async function fetchViaRSS(source) {
     /^monday moan/i,
     /^change my view/i,
     /^\[match thread\]/i,
+    /^weekly.*(thread|discussion|megathread)/i,
+    /^monthly.*(thread|discussion|megathread)/i,
+    /^(meta|mod) (post|announcement)/i,
+    /^\[megathread\]/i,
+    /^recommendations?\s*(thread|megathread)/i,
+    /^what (are you|have you) (playing|watching|reading|listening)/i,
   ]
 
   const posts = entries

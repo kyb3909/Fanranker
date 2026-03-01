@@ -251,10 +251,14 @@ export async function POST(request: NextRequest) {
           const payout = Math.round(slipData.stake * slipData.total_odds * 100) / 100
           totalPayout += payout
 
-          await supabase.rpc("refund_tokens", {
-            p_user_id: slipData.user_id,
-            p_amount: Math.floor(payout),
-            p_description: `승부예측 적중! ${payout}볼 획득`,
+          // 수익금은 token_transactions에만 기록 (수익률 계산용)
+          // token_balance에는 추가하지 않음 — 볼은 소모성, 수익은 기록용
+          await supabase.from("token_transactions").insert({
+            user_id: slipData.user_id,
+            transaction_type: "reward_earned",
+            amount: Math.floor(payout),
+            balance_after: 0, // 잔액 변경 없음
+            description: `승부예측 적중! ${payout}볼 수익 (기록용)`,
           })
         }
 

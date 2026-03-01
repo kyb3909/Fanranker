@@ -1,12 +1,19 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Shield, ShieldCheck, ShieldOff } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { toast } from '@/hooks/use-toast'
+import { useState } from "react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Shield, ShieldCheck, ShieldOff } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { toast } from "@/hooks/use-toast"
 
 interface Profile {
   user_id: string
@@ -28,9 +35,9 @@ export function ExpertApprovalTable({ initialProfiles }: ExpertApprovalTableProp
   const handleToggleExpert = async (userId: string, currentStatus: boolean) => {
     setLoading(userId)
     try {
-      const response = await fetch('/api/admin/users/certify-expert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/users/certify-expert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: userId,
           revoke: currentStatus,
@@ -39,24 +46,26 @@ export function ExpertApprovalTable({ initialProfiles }: ExpertApprovalTableProp
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '전문가 인증 상태 변경에 실패했습니다.')
+        throw new Error(error.error || "전문가 인증 상태 변경에 실패했습니다.")
       }
 
       const { profile } = await response.json()
 
       // Update local state
-      setProfiles((prev) =>
-        prev.map((p) => (p.user_id === userId ? { ...p, ...profile } : p))
-      )
+      setProfiles((prev) => prev.map((p) => (p.user_id === userId ? { ...p, ...profile } : p)))
     } catch (error) {
-      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류가 발생했습니다.' })
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "오류가 발생했습니다.",
+      })
     } finally {
       setLoading(null)
     }
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -70,7 +79,7 @@ export function ExpertApprovalTable({ initialProfiles }: ExpertApprovalTableProp
         <TableBody>
           {profiles.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
                 사용자가 없습니다.
               </TableCell>
             </TableRow>
@@ -80,53 +89,55 @@ export function ExpertApprovalTable({ initialProfiles }: ExpertApprovalTableProp
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile.avatar_url || ''} />
+                      <AvatarImage src={profile.avatar_url || ""} alt={profile.nickname} />
                       <AvatarFallback>{profile.nickname[0]}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium">{profile.nickname}</div>
-                      <div className="text-xs text-muted-foreground">{profile.user_id.slice(-8)}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {profile.user_id.slice(-8)}
+                      </div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   {profile.is_expert ? (
                     <Badge variant="default" className="bg-green-500">
-                      <ShieldCheck className="h-3 w-3 mr-1" />
+                      <ShieldCheck className="mr-1 h-3 w-3" />
                       전문가
                     </Badge>
                   ) : (
                     <Badge variant="secondary">
-                      <ShieldOff className="h-3 w-3 mr-1" />
+                      <ShieldOff className="mr-1 h-3 w-3" />
                       일반
                     </Badge>
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {profile.expert_certified_at
-                    ? new Date(profile.expert_certified_at).toLocaleString('ko-KR')
-                    : '-'}
+                    ? new Date(profile.expert_certified_at).toLocaleString("ko-KR")
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(profile.created_at).toLocaleDateString('ko-KR')}
+                  {new Date(profile.created_at).toLocaleDateString("ko-KR")}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
                     size="sm"
-                    variant={profile.is_expert ? 'destructive' : 'default'}
+                    variant={profile.is_expert ? "destructive" : "default"}
                     onClick={() => handleToggleExpert(profile.user_id, profile.is_expert)}
                     disabled={loading === profile.user_id}
                   >
                     {loading === profile.user_id ? (
-                      '처리 중...'
+                      "처리 중..."
                     ) : profile.is_expert ? (
                       <>
-                        <ShieldOff className="h-4 w-4 mr-1" />
+                        <ShieldOff className="mr-1 h-4 w-4" />
                         인증 해제
                       </>
                     ) : (
                       <>
-                        <ShieldCheck className="h-4 w-4 mr-1" />
+                        <ShieldCheck className="mr-1 h-4 w-4" />
                         인증 승인
                       </>
                     )}

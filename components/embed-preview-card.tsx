@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
+import useSWR from "swr"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { ExternalLink, Play, Image as ImageIcon, X } from "lucide-react"
@@ -43,8 +44,15 @@ export function EmbedPreviewCard({
   autoExpand = false,
 }: EmbedPreviewCardProps) {
   const [isExpanded, setIsExpanded] = useState(autoExpand)
-  const [embedHtml, setEmbedHtml] = useState<string | null>(null)
-  const [isLoadingEmbed, setIsLoadingEmbed] = useState(false)
+  // SWR: 확장 시에만 fetch (key가 null이면 fetch 안 함)
+  const oembedKey = isExpanded
+    ? `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
+    : null
+  const { data: oembedData, isLoading: isLoadingEmbed } = useSWR(
+    oembedKey,
+    (u: string) => fetch(u).then((r) => (r.ok ? r.json() : null)),
+    { dedupingInterval: 60_000, revalidateOnFocus: false }
+  )
 
   // 제공자별 아이콘 및 색상
   const providerConfig = {
@@ -69,7 +77,7 @@ export function EmbedPreviewCard({
   const Icon = config.icon
 
   // iframe HTML에 보안 속성 추가
-  const sanitizeEmbedHtml = (html: string, provider: "youtube" | "instagram" | "x"): string => {
+  const sanitizeEmbedHtml = (html: string, prov: "youtube" | "instagram" | "x"): string => {
     if (!html) return html
 
     // 브라우저 환경에서만 실행
@@ -83,39 +91,25 @@ export function EmbedPreviewCard({
 
       if (iframe) {
         // 보안 속성 추가
-        // sandbox: 기본적으로 모든 권한 차단, 필요한 것만 허용
         const sandboxPermissions = [
-          "allow-scripts", // JavaScript 실행 허용
-          "allow-same-origin", // 같은 origin 접근 허용 (필수)
-          "allow-popups", // 팝업 허용 (일부 임베드에 필요)
-          "allow-forms", // 폼 제출 허용 (일부 임베드에 필요)
+          "allow-scripts",
+          "allow-same-origin",
+          "allow-popups",
+          "allow-forms",
         ]
 
-        // provider별 추가 권한
-        if (provider === "youtube") {
-          sandboxPermissions.push("allow-presentation") // YouTube 플레이어에 필요
+        if (prov === "youtube") {
+          sandboxPermissions.push("allow-presentation")
         }
 
         iframe.setAttribute("sandbox", sandboxPermissions.join(" "))
-
-        // allow 속성: 필요한 기능만 허용
-        const allowPermissions = [
-          "accelerometer",
-          "autoplay",
-          "clipboard-write",
-          "encrypted-media",
-          "gyroscope",
-          "picture-in-picture",
-        ]
-        iframe.setAttribute("allow", allowPermissions.join("; "))
-
-        // referrerpolicy 추가
+        iframe.setAttribute(
+          "allow",
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        )
         iframe.setAttribute("referrerpolicy", "no-referrer-when-downgrade")
-
-        // loading 속성 추가 (성능 최적화)
         iframe.setAttribute("loading", "lazy")
 
-        // 수정된 HTML 반환
         return tempDiv.innerHTML
       }
     } catch {
@@ -125,65 +119,15 @@ export function EmbedPreviewCard({
     return html
   }
 
-  // autoExpand: 마운트 시 자동으로 HTML 가져오기
-  useEffect(() => {
-    if (!autoExpand || embedHtml) return
-    let cancelled = false
-    setIsLoadingEmbed(true)
-    fetch(`/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled || !data) return
-        const sanitizedHtml = data.html ? sanitizeEmbedHtml(data.html, provider) : null
-        setEmbedHtml(sanitizedHtml)
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setIsLoadingEmbed(false)
-      })
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoExpand, url])
+  // SWR 데이터에서 sanitized HTML 추출
+  const embedHtml = oembedData?.html ? sanitizeEmbedHtml(oembedData.html, provider) : null
 
-  // 확장/축소 토글 및 oembed HTML 가져오기
-  const handleToggleExpand = async (e: React.MouseEvent) => {
+  // 확장/축소 토글
+  const handleToggleExpand = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
-    if (isExpanded) {
-      // 이미 확장된 경우 축소
-      setIsExpanded(false)
-      return
-    }
-
-    // 확장하고 oembed HTML 가져오기
-    setIsExpanded(true)
-
-    // 이미 HTML이 있으면 다시 가져오지 않음
-    if (embedHtml) {
-      return
-    }
-
-    setIsLoadingEmbed(true)
-
-    try {
-      // oembed API에서 HTML 가져오기 (includeHtml=true를 문자열로 전달)
-      const response = await fetch(`/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`)
-      if (response.ok) {
-        const data = await response.json()
-        // 보안 속성이 추가된 HTML로 변환
-        const sanitizedHtml = data.html ? sanitizeEmbedHtml(data.html, provider) : null
-        setEmbedHtml(sanitizedHtml)
-      } else {
-        setEmbedHtml(null)
-      }
-    } catch {
-      setEmbedHtml(null)
-    } finally {
-      setIsLoadingEmbed(false)
-    }
+    setIsExpanded((prev) => !prev)
+    // SWR가 key 변경으로 자동 fetch — 중복 방지 내장
   }
 
   return (
@@ -272,7 +216,10 @@ export function EmbedPreviewCard({
             </button>
 
             {isLoadingEmbed ? (
-              <div className="bg-muted flex aspect-video w-full items-center justify-center rounded-lg">
+              <div
+                className="bg-muted flex w-full items-center justify-center rounded-lg"
+                style={{ minHeight: provider === "instagram" ? 480 : 320 }}
+              >
                 <div className="text-center">
                   <div className="border-primary mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2"></div>
                   <p className="text-muted-foreground text-sm">로딩 중...</p>
@@ -401,6 +348,7 @@ function InstagramPreviewEmbed({ html }: { html: string }) {
     <div
       ref={containerRef}
       className="mx-auto max-w-[540px] p-4 [&_.instagram-media]:!mx-auto"
+      style={{ minHeight: 480 }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
@@ -428,6 +376,7 @@ function XPreviewEmbed({
     return (
       <div
         className="mx-auto max-w-[550px] p-4 [&_img]:rounded-xl"
+        style={{ minHeight: 200 }}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     )
