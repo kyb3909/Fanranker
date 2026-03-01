@@ -74,12 +74,6 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
 
   return (
     <div className="sticky top-16 space-y-4">
-      {/* ===== 이달의 상품 배너 ===== */}
-      <MonthlyPrizeBanner />
-
-      {/* ===== 광고 플레이스홀더 ===== */}
-      <AdPlaceholder variant="sidebar" />
-
       {/* ===== 최근 댓글 섹션 ===== */}
       <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
@@ -126,6 +120,12 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
           )}
         </div>
       </Card>
+
+      {/* ===== 광고 플레이스홀더 ===== */}
+      <AdPlaceholder variant="sidebar" />
+
+      {/* ===== 이달의 상품 배너 ===== */}
+      <MonthlyPrizeBanner />
     </div>
   )
 })
