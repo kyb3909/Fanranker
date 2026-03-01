@@ -86,13 +86,19 @@ export function Header() {
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex shrink-0 items-center">
-            <Link href="/" className="ml-10 flex items-center" aria-label="홈">
+            <Link href="/" className="ml-3 flex items-baseline gap-1" aria-label="홈">
               <span
                 className="text-foreground text-[30px] leading-none"
                 style={{ letterSpacing: "-0.02em" }}
               >
                 <span className="font-bold">gongnori</span>
                 <span className="text-primary font-normal">.fan</span>
+              </span>
+              <span
+                className="text-foreground/50 translate-y-[2px] self-end text-[14px] leading-none"
+                style={{ fontFamily: '"GmarketSansBold", sans-serif' }}
+              >
+                공놀이판
               </span>
             </Link>
           </div>

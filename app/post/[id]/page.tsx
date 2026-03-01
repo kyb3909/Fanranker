@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { Header } from "@/components/header"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { PostDetailContent } from "@/components/post-detail-content"
+import { BoardRecentPosts } from "@/components/board-recent-posts"
 import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
@@ -16,8 +17,9 @@ async function fetchPost(id: string) {
 
   // 1. 게시글 조회
   const { data: post, error: postError } = await supabase
-    .from('posts')
-    .select(`
+    .from("posts")
+    .select(
+      `
       id,
       user_id,
       community_slug,
@@ -30,9 +32,10 @@ async function fetchPost(id: string) {
       temperature,
       created_at,
       updated_at
-    `)
-    .eq('id', id)
-    .is('deleted_at', null)
+    `
+    )
+    .eq("id", id)
+    .is("deleted_at", null)
     .single()
 
   if (postError || !post) {
@@ -42,9 +45,9 @@ async function fetchPost(id: string) {
   // 2. 작성자 프로필 조회
   // Note: 조회수 증가는 클라이언트에서 /api/posts/[id]/view 엔드포인트를 호출하여 처리
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('user_id, nickname, avatar_url')
-    .eq('user_id', post.user_id)
+    .from("profiles")
+    .select("user_id, nickname, avatar_url")
+    .eq("user_id", post.user_id)
     .single()
 
   return {
@@ -53,29 +56,72 @@ async function fetchPost(id: string) {
   }
 }
 
+async function fetchBoardRecentPosts(communitySlug: string, excludePostId: string) {
+  const supabase = createServerAnonClient()
+  const { data } = await supabase
+    .from("posts")
+    .select("id, title, comment_count, vote_count, created_at")
+    .eq("community_slug", communitySlug)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(16)
+
+  if (!data) return []
+  return data
+    .filter((p: { id: string }) => p.id !== excludePostId)
+    .slice(0, 15)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      comment_count: p.comment_count ?? 0,
+      vote_count: p.vote_count ?? 0,
+      created_at: p.created_at,
+      profile: null,
+    }))
+}
+
 function extractDescription(content: unknown): string {
-  if (!content) return ''
+  if (!content) return ""
   // Supabase jsonb columns return parsed objects, not strings
-  const parsed = typeof content === 'string' ? (() => { try { return JSON.parse(content) } catch { return null } })() : content
-  if (parsed && typeof parsed === 'object') {
+  const parsed =
+    typeof content === "string"
+      ? (() => {
+          try {
+            return JSON.parse(content)
+          } catch {
+            return null
+          }
+        })()
+      : content
+  if (parsed && typeof parsed === "object") {
     const texts: string[] = []
-    interface TipTapNode { text?: string; content?: TipTapNode[] }
+    interface TipTapNode {
+      text?: string
+      content?: TipTapNode[]
+    }
     function walk(node: TipTapNode) {
       if (node.text) texts.push(node.text)
       if (node.content) node.content.forEach(walk)
     }
     walk(parsed)
-    const plain = texts.join(' ').replace(/\s+/g, ' ').trim()
-    return plain.length > 160 ? plain.slice(0, 157) + '...' : plain
+    const plain = texts.join(" ").replace(/\s+/g, " ").trim()
+    return plain.length > 160 ? plain.slice(0, 157) + "..." : plain
   }
-  if (typeof content === 'string') {
-    const plain = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-    return plain.length > 160 ? plain.slice(0, 157) + '...' : plain
+  if (typeof content === "string") {
+    const plain = content
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+    return plain.length > 160 ? plain.slice(0, 157) + "..." : plain
   }
-  return ''
+  return ""
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
   const { id } = await params
   const post = await fetchPost(id)
   const description = extractDescription(post?.content)
@@ -83,14 +129,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title: post?.title || "게시글",
     description,
     openGraph: {
-      type: 'article',
+      type: "article",
       title: post?.title,
       description,
       images: post?.image ? [post.image] : undefined,
     },
     twitter: {
-      card: post?.image ? 'summary_large_image' : 'summary',
-      title: post?.title || '게시글',
+      card: post?.image ? "summary_large_image" : "summary",
+      title: post?.title || "게시글",
       description,
       images: post?.image ? [post.image] : undefined,
     },
@@ -107,6 +153,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   if (!postData) {
     notFound()
   }
+
+  const recentPosts = await fetchBoardRecentPosts(postData.community_slug, id)
+  const boardName = COMMUNITY_NAMES[postData.community_slug] || postData.community_slug
 
   // 데이터 변환 (반감기 적용 온도 포함)
   const post = {
@@ -132,33 +181,43 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       <Header />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd({
-          '@context': 'https://schema.org',
-          '@type': 'Article',
-          headline: postData.title,
-          datePublished: postData.created_at,
-          dateModified: postData.updated_at,
-          author: { '@type': 'Person', name: postData.profile?.nickname || '익명' },
-          ...(postData.image ? { image: postData.image } : {}),
-        })}}
+        dangerouslySetInnerHTML={{
+          __html: jsonLd({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: postData.title,
+            datePublished: postData.created_at,
+            dateModified: postData.updated_at,
+            author: { "@type": "Person", name: postData.profile?.nickname || "익명" },
+            ...(postData.image ? { image: postData.image } : {}),
+          }),
+        }}
       />
 
-      <main id="main-content" className="container mx-auto px-4 py-6 max-w-[1280px]" tabIndex={-1}>
+      <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-6">
           {/* Main Content - 9 columns */}
-          <div className="col-span-12 lg:col-span-9 space-y-4">
+          <div className="col-span-12 space-y-4 lg:col-span-9">
             <BackButton />
 
             {/* Post Detail Content */}
             <PostDetailContent post={post} />
+
+            {/* Board Recent Posts */}
+            <BoardRecentPosts
+              posts={recentPosts}
+              boardName={boardName}
+              boardSlug={postData.community_slug}
+              currentPostId={id}
+            />
           </div>
 
           {/* Right Sidebar - 3 columns - Only recent comments */}
-          <aside className="hidden lg:block col-span-3">
+          <aside className="col-span-3 hidden lg:block">
             <ActivitySidebar />
           </aside>
         </div>

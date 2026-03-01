@@ -73,17 +73,17 @@ function ExploreInner() {
     swrOptions
   )
   const { data: recommendedData, isLoading: recommendedLoading } = useSWR<{ posts: RawPost[] }>(
-    "/api/posts?sort=hot&limit=3",
+    "/api/posts?sort=votes&limit=5",
     fetcher,
     swrOptions
   )
   const { data: commentedData, isLoading: commentedLoading } = useSWR<{ posts: RawPost[] }>(
-    "/api/posts?sort=comments&limit=3",
+    "/api/posts?sort=comments&limit=5",
     fetcher,
     swrOptions
   )
   const { data: viewedData, isLoading: viewedLoading } = useSWR<{ posts: RawPost[] }>(
-    "/api/posts?sort=new&limit=3",
+    "/api/posts?sort=views&limit=5",
     fetcher,
     swrOptions
   )
@@ -179,7 +179,7 @@ function ExploreInner() {
               <div className="bg-card border-border rounded-lg border p-4">
                 <h3 className="text-foreground mb-3 flex items-center gap-1 text-sm font-bold">
                   <ThumbsUp className="h-3.5 w-3.5" />
-                  오늘의 추천글
+                  최다 추천
                 </h3>
                 <div className="space-y-2">
                   {isRecommendedLoading ? (
@@ -222,7 +222,7 @@ function ExploreInner() {
               <div className="bg-card border-border rounded-lg border p-4">
                 <h3 className="text-foreground mb-3 flex items-center gap-1 text-sm font-bold">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  오늘의 댓글
+                  최다 댓글
                 </h3>
                 <div className="space-y-2">
                   {isCommentedLoading ? (
@@ -265,7 +265,7 @@ function ExploreInner() {
               <div className="bg-card border-border rounded-lg border p-4">
                 <h3 className="text-foreground mb-3 flex items-center gap-1 text-sm font-bold">
                   <Eye className="h-3.5 w-3.5" />
-                  최신 글
+                  최다 조회
                 </h3>
                 <div className="space-y-2">
                   {isViewedLoading ? (

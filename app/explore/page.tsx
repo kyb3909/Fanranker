@@ -24,30 +24,30 @@ async function fetchExploreData() {
       supabase
         .from("posts")
         .select(
-          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, view_count, temperature, created_at"
         )
         .is("deleted_at", null)
         .gte("created_at", sinceDays)
-        .order("temperature", { ascending: false, nullsFirst: false })
-        .range(0, 2),
+        .order("vote_count", { ascending: false })
+        .range(0, 4),
       supabase
         .from("posts")
         .select(
-          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, view_count, temperature, created_at"
         )
         .is("deleted_at", null)
         .gte("created_at", sinceDays)
         .order("comment_count", { ascending: false })
-        .range(0, 2),
+        .range(0, 4),
       supabase
         .from("posts")
         .select(
-          "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+          "id, user_id, community_slug, title, content, image, vote_count, comment_count, view_count, temperature, created_at"
         )
         .is("deleted_at", null)
         .gte("created_at", sinceDays)
-        .order("created_at", { ascending: false })
-        .range(0, 2),
+        .order("view_count", { ascending: false })
+        .range(0, 4),
     ])
 
   // 프로필 조회를 위해 모든 user_id 수집
@@ -78,9 +78,9 @@ async function fetchExploreData() {
   return {
     "/api/categories": { categories: categoriesResult.data || [] },
     "/api/posts?sort=hot&limit=10": makeFallback(popularResult.data || []),
-    "/api/posts?sort=hot&limit=3": makeFallback(recommendedResult.data || []),
-    "/api/posts?sort=comments&limit=3": makeFallback(commentedResult.data || []),
-    "/api/posts?sort=new&limit=3": makeFallback(viewedResult.data || []),
+    "/api/posts?sort=votes&limit=5": makeFallback(recommendedResult.data || []),
+    "/api/posts?sort=comments&limit=5": makeFallback(commentedResult.data || []),
+    "/api/posts?sort=views&limit=5": makeFallback(viewedResult.data || []),
   }
 }
 
