@@ -1,6 +1,11 @@
 "use client"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Share2 } from "lucide-react"
 
 interface ShareMenuProps {
@@ -39,11 +44,11 @@ export function ShareMenu({ postId, postTitle }: ShareMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className="gap-2 rounded-full bg-secondary text-foreground hover:bg-secondary/80"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground h-9 w-9"
+          aria-label="공유"
         >
-          <Share2 className="h-5 w-5" />
-          <span className="text-sm font-medium">공유</span>
+          <Share2 className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
