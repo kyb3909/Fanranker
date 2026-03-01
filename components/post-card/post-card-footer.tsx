@@ -49,16 +49,16 @@ export function PostCardFooter({
   onBlockUser,
 }: PostCardFooterProps) {
   return (
-    <div className="border-border/50 mt-4 space-y-2.5 border-t pt-3">
-      {/* 1행: 작성자 정보 */}
-      <div className="flex items-center gap-2">
+    <div className="border-border/50 mt-4 flex items-center justify-between border-t pt-3">
+      {/* 좌측: 작성자 + 온도 */}
+      <div className="flex min-w-0 items-center gap-2">
         <Avatar className="h-7 w-7 shrink-0">
           <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
           <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
         </Avatar>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="text-foreground hover:text-primary flex cursor-pointer items-center gap-1 text-[13px] font-medium transition-colors">
+            <button className="text-foreground hover:text-primary cursor-pointer truncate text-[13px] font-medium transition-colors">
               {author}
             </button>
           </DropdownMenuTrigger>
@@ -74,17 +74,19 @@ export function PostCardFooter({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <span className="text-border">|</span>
+        <span className="text-border shrink-0">|</span>
 
-        <div className="flex items-center gap-0.5" style={getTemperatureStyle(temperature)}>
+        <div
+          className="flex shrink-0 items-center gap-0.5"
+          style={getTemperatureStyle(temperature)}
+        >
           <Thermometer className="h-3.5 w-3.5" />
           <span className="text-[12px] font-semibold tabular-nums">{temperature}°</span>
         </div>
       </div>
 
-      {/* 2행: 액션 버튼 */}
-      <div className="flex items-center justify-between">
-        {/* 추천/비추천 */}
+      {/* 우측: 액션 버튼 */}
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
         <div className="border-border/50 flex items-center rounded-md border">
           <Button
             variant="ghost"
@@ -113,40 +115,36 @@ export function PostCardFooter({
           </Button>
         </div>
 
-        <div className="flex items-center gap-1">
-          {/* 댓글 */}
-          <Link href={`/post/${postId}`}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground h-9 min-h-[36px] gap-1.5 rounded-md px-3"
-              aria-label={`댓글 ${comments}개`}
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              <span className="text-[12px] font-semibold tabular-nums">{comments}</span>
-            </Button>
-          </Link>
-
-          {/* 북마크 (모바일 숨김) */}
+        <Link href={`/post/${postId}`}>
           <Button
             variant="ghost"
-            size="icon"
-            className={`hidden h-9 w-9 min-w-[36px] sm:inline-flex ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
-            onClick={onBookmark}
-            onMouseEnter={onBookmarkHover}
-            onFocus={onBookmarkHover}
-            aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
-            aria-pressed={isBookmarked}
+            size="sm"
+            className="text-muted-foreground hover:text-foreground h-9 min-h-[36px] gap-1.5 rounded-md px-3"
+            aria-label={`댓글 ${comments}개`}
           >
-            <Bookmark
-              className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`}
-              aria-hidden="true"
-            />
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            <span className="text-[12px] font-semibold tabular-nums">{comments}</span>
           </Button>
+        </Link>
 
-          {/* 공유 */}
-          <ShareMenu postId={postId} postTitle={postTitle} />
-        </div>
+        {/* 북마크 (모바일 숨김) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`hidden h-9 w-9 min-w-[36px] sm:inline-flex ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
+          onClick={onBookmark}
+          onMouseEnter={onBookmarkHover}
+          onFocus={onBookmarkHover}
+          aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
+          aria-pressed={isBookmarked}
+        >
+          <Bookmark
+            className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`}
+            aria-hidden="true"
+          />
+        </Button>
+
+        <ShareMenu postId={postId} postTitle={postTitle} />
       </div>
     </div>
   )
