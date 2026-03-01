@@ -127,11 +127,11 @@ export function PostCardFooter({
             </Button>
           </Link>
 
-          {/* 북마크 */}
+          {/* 북마크 (모바일 숨김) */}
           <Button
             variant="ghost"
             size="icon"
-            className={`h-9 w-9 min-w-[36px] ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
+            className={`hidden h-9 w-9 min-w-[36px] sm:inline-flex ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
             onClick={onBookmark}
             onMouseEnter={onBookmarkHover}
             onFocus={onBookmarkHover}
