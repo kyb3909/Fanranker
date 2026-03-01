@@ -250,16 +250,8 @@ export async function POST(request: NextRequest) {
         if (slipData) {
           const payout = Math.round(slipData.stake * slipData.total_odds * 100) / 100
           totalPayout += payout
-
-          // 수익금은 token_transactions에만 기록 (수익률 계산용)
-          // token_balance에는 추가하지 않음 — 볼은 소모성, 수익은 기록용
-          await supabase.from("token_transactions").insert({
-            user_id: slipData.user_id,
-            transaction_type: "reward_earned",
-            amount: Math.floor(payout),
-            balance_after: 0, // 잔액 변경 없음
-            description: `승부예측 적중! ${payout}볼 수익 (기록용)`,
-          })
+          // 볼은 소모성 — 적중해도 볼을 돌려받지 않음
+          // 포인트(points_earned)만 betman_predictions에 기록됨
         }
 
         await supabase.from("prediction_slips").update({ status: "won" }).eq("id", slipId)

@@ -162,7 +162,7 @@ function HomeContent() {
                       }`}
                     >
                       <Trophy className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                      승부 예측
+                      경기 분석글
                       {activeTab === "content" && (
                         <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
                       )}

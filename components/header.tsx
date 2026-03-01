@@ -86,13 +86,13 @@ export function Header() {
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex shrink-0 items-center">
-            <Link href="/" className="flex items-center gap-0.5" aria-label="홈">
+            <Link href="/" className="ml-10 flex items-center" aria-label="홈">
               <span
-                className="text-[32px] leading-none font-black"
-                style={{ letterSpacing: "-0.04em" }}
+                className="text-foreground text-[30px] leading-none"
+                style={{ letterSpacing: "-0.02em" }}
               >
-                <span className="text-primary">Fan</span>
-                <span className="text-foreground">Ranker</span>
+                <span className="font-bold">gongnori</span>
+                <span className="text-primary font-normal">.fan</span>
               </span>
             </Link>
           </div>
