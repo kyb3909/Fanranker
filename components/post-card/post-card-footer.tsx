@@ -60,14 +60,6 @@ export function PostCardFooter({
           <DropdownMenuTrigger asChild>
             <button className="text-foreground hover:text-primary flex cursor-pointer items-center gap-1 text-[13px] font-medium transition-colors">
               {author}
-              {authorTemperature != null && authorTemperature > 0 && (
-                <span
-                  className="text-[12px] font-semibold tabular-nums"
-                  style={getTemperatureStyle(authorTemperature)}
-                >
-                  {authorTemperature.toFixed(1)}°
-                </span>
-              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
