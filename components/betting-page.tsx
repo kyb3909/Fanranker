@@ -19,6 +19,9 @@ export default function BettingPage() {
         sportFilter={b.sportFilter}
         setSportFilter={b.setSportFilter}
         selectedSport={b.selectedSport}
+        leagueFilter={b.leagueFilter}
+        setLeagueFilter={b.setLeagueFilter}
+        availableLeagues={b.availableLeagues}
         rankingSportFilter={b.rankingSportFilter}
         setRankingSportFilter={b.setRankingSportFilter}
         rankingFilter={b.rankingFilter}
@@ -30,8 +33,6 @@ export default function BettingPage() {
       <div className="space-y-2 sm:space-y-4">
         {b.activeTab === "betting" && (
           <BettingTab
-            todayInfo={b.todayInfo}
-            deadlineCountdown={b.deadlineCountdown}
             lastUpdated={b.lastUpdated}
             isLoading={b.isLoading}
             error={b.error}
@@ -80,13 +81,15 @@ export default function BettingPage() {
           onRemoveBet={b.removeBet}
           onClearAllBets={b.clearAllBets}
           onSubmit={b.handleSubmitPrediction}
+          isJournalist={b.isJournalist}
+          analysisTitle={b.analysisTitle}
+          setAnalysisTitle={b.setAnalysisTitle}
+          analysisText={b.analysisText}
+          setAnalysisText={b.setAnalysisText}
         />
       )}
 
-      <BettingAlertDialog
-        alertModal={b.alertModal}
-        onClose={b.closeAlert}
-      />
+      <BettingAlertDialog alertModal={b.alertModal} onClose={b.closeAlert} />
     </div>
   )
 }

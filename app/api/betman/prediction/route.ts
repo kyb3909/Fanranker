@@ -14,6 +14,8 @@ const predictionItemSchema = z.object({
 const predictionPostSchema = z.object({
   predictions: z.array(predictionItemSchema).min(1, "예측 데이터가 필요합니다."),
   betAmount: z.number().int().min(1, "베팅 금액은 1볼 이상이어야 합니다.").optional(),
+  analysis_title: z.string().max(100).optional(),
+  analysis_text: z.string().max(5000).optional(),
 })
 
 /**
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 예측 데이터입니다.")
     }
-    const { predictions, betAmount } = parsed.data
+    const { predictions, betAmount, analysis_title, analysis_text } = parsed.data
 
     // Get all game details for validation
     const gameIds = predictions.map((p) => p.game_id)
@@ -162,6 +164,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ===== 기자 여부 확인 (분석글 저장용) =====
+    let isJournalist = false
+    if (analysis_text) {
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("is_journalist")
+        .eq("user_id", user.id)
+        .single()
+      isJournalist = !!userProfile?.is_journalist
+    }
+
     // ===== 볼(토큰) 차감 =====
     const stake = betAmount ?? predictions.length
 
@@ -173,7 +186,7 @@ export async function POST(request: NextRequest) {
         p_description: `승부예측 ${predictions.length}경기 ${stake}볼 (${dailyRound.daily_id})`,
       })
       .single()) as {
-      data: { success: boolean; new_balance: number; error_message: string | null } | null
+      data: { success: boolean; remaining_balance: number; error_message: string | null } | null
       error: unknown
     }
 
@@ -186,7 +199,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "볼이 부족합니다." }, { status: 400 })
     }
 
-    const newBalance = spendResult.new_balance
+    const newBalance = spendResult.remaining_balance
 
     // ===== 베팅 슬립(조합) 생성 =====
     // 각 베팅은 독립적인 슬립. 이전 베팅을 삭제하지 않음.
@@ -203,15 +216,21 @@ export async function POST(request: NextRequest) {
       return acc * (oddsMap[pred.prediction] || 1)
     }, 1)
 
+    const slipInsert: Record<string, unknown> = {
+      user_id: user.id,
+      daily_round_id: dailyRoundId,
+      sport: sports[0],
+      stake,
+      total_odds: Math.round(totalOdds * 100) / 100,
+    }
+    if (isJournalist && analysis_text) {
+      if (analysis_title) slipInsert.analysis_title = analysis_title
+      slipInsert.analysis_text = analysis_text
+    }
+
     const { data: slip, error: slipError } = await supabase
       .from("prediction_slips")
-      .insert({
-        user_id: user.id,
-        daily_round_id: dailyRoundId,
-        sport: sports[0],
-        stake,
-        total_odds: Math.round(totalOdds * 100) / 100,
-      })
+      .insert(slipInsert)
       .select()
       .single()
 

@@ -30,7 +30,10 @@ interface PredictionMatch {
 export function useBetting() {
   const { isSignedIn } = useAuth()
   const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "mypage">("betting")
-  const [sportFilter, setSportFilter] = useState<"all" | "축구" | "야구" | "농구" | "배구">("all")
+  const [sportFilter, setSportFilterRaw] = useState<"all" | "축구" | "야구" | "농구" | "배구">(
+    "all"
+  )
+  const [leagueFilter, setLeagueFilter] = useState<"all" | string>("all")
   const [selectedBets, setSelectedBets] = useState<SelectedBet[]>([])
   const [isSlipExpanded, setIsSlipExpanded] = useState(false)
   const [betAmount, setBetAmount] = useState<number>(1)
@@ -66,6 +69,14 @@ export function useBetting() {
 
   const [isSubmittingPrediction, setIsSubmittingPrediction] = useState(false)
   const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [analysisTitle, setAnalysisTitle] = useState("")
+  const [analysisText, setAnalysisText] = useState("")
+  const [isJournalist, setIsJournalist] = useState(false)
+
+  const setSportFilter = useCallback((filter: "all" | "축구" | "야구" | "농구" | "배구") => {
+    setSportFilterRaw(filter)
+    setLeagueFilter("all")
+  }, [])
 
   const [alertModal, setAlertModal] = useState<AlertModalState>({
     isOpen: false,
@@ -132,6 +143,19 @@ export function useBetting() {
       if (res.ok) {
         const data = await res.json()
         setUserBalls(data.balance || 10)
+      }
+    } catch {
+      /* Silent fail */
+    }
+  }, [isSignedIn])
+
+  const loadJournalistStatus = useCallback(async () => {
+    if (!isSignedIn) return
+    try {
+      const res = await fetch("/api/profile/me")
+      if (res.ok) {
+        const data = await res.json()
+        setIsJournalist(!!data.is_journalist)
       }
     } catch {
       /* Silent fail */
@@ -246,7 +270,8 @@ export function useBetting() {
   useEffect(() => {
     loadUserBalls()
     loadFollows()
-  }, [loadUserBalls, loadFollows])
+    loadJournalistStatus()
+  }, [loadUserBalls, loadFollows, loadJournalistStatus])
   // SWR handles: initial fetch, 5-min polling, visibility revalidation
   useEffect(() => {
     const t = setInterval(() => {
@@ -345,10 +370,15 @@ export function useBetting() {
         game_id: bet.gameId,
         prediction: bet.selection,
       }))
+      const payload: Record<string, unknown> = { predictions: predictionsArray, betAmount }
+      if (isJournalist && analysisText.trim()) {
+        if (analysisTitle.trim()) payload.analysis_title = analysisTitle.trim()
+        payload.analysis_text = analysisText.trim()
+      }
       const res = await fetch("/api/betman/prediction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ predictions: predictionsArray, betAmount }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "예측 저장에 실패했습니다.")
@@ -362,6 +392,8 @@ export function useBetting() {
       setIsSlipExpanded(false)
       setSelectedSport(null)
       setBetAmount(1)
+      setAnalysisTitle("")
+      setAnalysisText("")
       loadMatches()
       loadUserBalls()
       window.dispatchEvent(new CustomEvent("ballBalanceUpdate"))
@@ -374,7 +406,17 @@ export function useBetting() {
     } finally {
       setIsSubmittingPrediction(false)
     }
-  }, [selectedBets, betAmount, userBalls, showAlert, loadMatches, loadUserBalls])
+  }, [
+    selectedBets,
+    betAmount,
+    userBalls,
+    showAlert,
+    loadMatches,
+    loadUserBalls,
+    isJournalist,
+    analysisTitle,
+    analysisText,
+  ])
 
   const handleBetSelection = useCallback(
     (
@@ -497,11 +539,23 @@ export function useBetting() {
   const totalOdds = selectedBets.reduce((acc, bet) => acc * (bet.odds || 1), 1)
   const expectedReturn = Math.floor(betAmount * totalOdds)
 
+  const availableLeagues = useMemo(() => {
+    if (sportFilter === "all") return []
+    const leagues = new Set<string>()
+    for (const m of groupedMatches) {
+      if (m.sport === sportFilter && new Date(m.matchTime) > currentTime) {
+        leagues.add(m.leagueCode)
+      }
+    }
+    return Array.from(leagues).sort()
+  }, [groupedMatches, sportFilter, currentTime])
+
   const filteredMatches = useMemo(() => {
     return groupedMatches
       .filter((m) => new Date(m.matchTime) > currentTime)
       .filter((m) => sportFilter === "all" || m.sport === sportFilter)
-  }, [groupedMatches, sportFilter, currentTime])
+      .filter((m) => leagueFilter === "all" || m.leagueCode === leagueFilter)
+  }, [groupedMatches, sportFilter, leagueFilter, currentTime])
 
   return {
     // Tab state
@@ -509,6 +563,9 @@ export function useBetting() {
     setActiveTab,
     sportFilter,
     setSportFilter,
+    leagueFilter,
+    setLeagueFilter,
+    availableLeagues,
     myPageTab,
     setMyPageTab,
     rankingFilter,
@@ -553,6 +610,13 @@ export function useBetting() {
     // Alert
     alertModal,
     closeAlert,
+
+    // Journalist
+    isJournalist,
+    analysisTitle,
+    setAnalysisTitle,
+    analysisText,
+    setAnalysisText,
 
     // Handlers
     loadMatches,

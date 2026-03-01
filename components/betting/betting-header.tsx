@@ -10,6 +10,10 @@ interface BettingHeaderProps {
   sportFilter: "all" | "축구" | "야구" | "농구" | "배구"
   setSportFilter: (filter: "all" | "축구" | "야구" | "농구" | "배구") => void
   selectedSport: string | null
+  // League filter
+  leagueFilter: "all" | string
+  setLeagueFilter: (filter: "all" | string) => void
+  availableLeagues: string[]
   // Ranking tab filters
   rankingSportFilter: string
   setRankingSportFilter: (filter: string) => void
@@ -26,6 +30,9 @@ export function BettingHeader({
   sportFilter,
   setSportFilter,
   selectedSport,
+  leagueFilter,
+  setLeagueFilter,
+  availableLeagues,
   rankingSportFilter,
   setRankingSportFilter,
   rankingFilter,
@@ -81,10 +88,25 @@ export function BettingHeader({
               </button>
             ))}
           </div>
-          {selectedSport && (
-            <p className="bg-orange-50/50 px-3 py-2 text-[11px] text-orange-500">
-              * {selectedSport} 경기만 선택 가능
-            </p>
+          {sportFilter !== "all" && availableLeagues.length > 0 && (
+            <div className="scrollbar-none border-border flex overflow-x-auto border-b">
+              {[
+                { id: "all", label: "전체" },
+                ...availableLeagues.map((l) => ({ id: l, label: l })),
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setLeagueFilter(tab.id)}
+                  className={`-mb-[1px] flex shrink-0 items-center justify-center border-b-2 px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition-all ${
+                    leagueFilter === tab.id
+                      ? "border-primary text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-transparent"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           )}
         </>
       )}
