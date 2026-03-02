@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: SITE_CONFIG.name,
     locale: "ko_KR",
-    title: SITE_CONFIG.description,
+    title: SITE_CONFIG.title,
     description: SITE_CONFIG.description,
     url: "/",
     images: [
@@ -116,13 +116,9 @@ export default function RootLayout({
             {/* DNS Prefetch: 외부 리소스 사전 조회 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />
             <link rel="dns-prefetch" href="https://img.clerk.com" />
-            <link rel="dns-prefetch" href="https://definite-mollusk-7.clerk.accounts.dev" />
+            <link rel="dns-prefetch" href="https://clerk.gongnori.fan" />
             <link rel="preconnect" href="https://img.clerk.com" crossOrigin="anonymous" />
-            <link
-              rel="preconnect"
-              href="https://definite-mollusk-7.clerk.accounts.dev"
-              crossOrigin="anonymous"
-            />
+            <link rel="preconnect" href="https://clerk.gongnori.fan" crossOrigin="anonymous" />
             {/* GmarketSans preconnect */}
             <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
           </head>
