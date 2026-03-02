@@ -66,27 +66,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // vote_count 업데이트: up - down — 병렬 조회
-    const [{ count: upCount }, { count: downCount }] = await Promise.all([
-      supabase
-        .from("comment_votes")
-        .select("id", { count: "exact", head: true })
-        .eq("comment_id", commentId)
-        .eq("vote_type", "up"),
-      supabase
-        .from("comment_votes")
-        .select("id", { count: "exact", head: true })
-        .eq("comment_id", commentId)
-        .eq("vote_type", "down"),
-    ])
-
-    const newVoteCount = (upCount || 0) - (downCount || 0)
-
+    // vote_count는 DB trigger(trg_comment_vote_count)가 자동 갱신
+    // 갱신된 vote_count 조회 + 댓글 작성자 ID 확인
     const { data: commentData } = await supabase
       .from("comments")
-      .update({ vote_count: newVoteCount })
+      .select("vote_count, user_id")
       .eq("id", commentId)
-      .select("user_id")
       .single()
 
     // 댓글 작성자 + 투표한 사람의 유저 온도 갱신
@@ -107,7 +92,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       success: true,
       action,
       voteType: newVoteType,
-      voteCount: newVoteCount,
+      voteCount: commentData?.vote_count ?? 0,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)

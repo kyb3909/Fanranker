@@ -54,57 +54,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ activities: [] })
     }
 
-    // 3. 구매 여부 체크
+    // 3~7. 독립 쿼리 5개 병렬 실행
     const activityIds = activities.map((a) => a.id)
-    const { data: purchases } = await supabase
-      .from("prediction_purchases")
-      .select("activity_id")
-      .eq("buyer_id", user.id)
-      .in("activity_id", activityIds)
+    const userIds = [...new Set(activities.map((a) => a.user_id))]
+    const roundIds = [...new Set(activities.map((a) => a.round_id))]
+
+    const [
+      { data: purchases },
+      { data: profiles },
+      { data: stats },
+      { data: rounds },
+      { data: allPreds },
+    ] = await Promise.all([
+      // 3. 구매 여부 체크
+      supabase
+        .from("prediction_purchases")
+        .select("activity_id")
+        .eq("buyer_id", user.id)
+        .in("activity_id", activityIds),
+      // 4. 프로필 조회
+      supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
+      // 5. 유저 스탯 조회 (전체 종목)
+      supabase
+        .from("betman_user_sport_stats")
+        .select("user_id, accuracy, net_profit, current_streak")
+        .in("user_id", userIds)
+        .eq("sport", "전체"),
+      // 6. 라운드 정보 조회
+      supabase.from("betman_rounds").select("id, year, round, status").in("id", roundIds),
+      // 7. 모든 활동의 예측 데이터 일괄 조회
+      supabase
+        .from("betman_predictions")
+        .select(
+          `
+          id, user_id, round_id, game_id, prediction, status, slip_id, stake,
+          game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result,
+            league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds),
+          slip:prediction_slips(id, stake, total_odds, status)
+        `
+        )
+        .in("user_id", userIds)
+        .in("round_id", roundIds),
+    ])
 
     const purchasedSet = new Set(purchases?.map((p) => p.activity_id) || [])
-
-    // 4. 프로필 조회
-    const userIds = [...new Set(activities.map((a) => a.user_id))]
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, nickname, avatar_url")
-      .in("user_id", userIds)
-
     const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
-
-    // 5. 유저 스탯 조회 (전체 종목)
-    const { data: stats } = await supabase
-      .from("betman_user_sport_stats")
-      .select("user_id, accuracy, net_profit, current_streak")
-      .in("user_id", userIds)
-      .eq("sport", "전체")
-
     const statsMap = new Map(stats?.map((s) => [s.user_id, s]) || [])
-
-    // 6. 라운드 정보 조회
-    const roundIds = [...new Set(activities.map((a) => a.round_id))]
-    const { data: rounds } = await supabase
-      .from("betman_rounds")
-      .select("id, year, round, status")
-      .in("id", roundIds)
-
     const roundMap = new Map(rounds?.map((r) => [r.id, r]) || [])
-
-    // 7. 모든 활동의 예측 데이터 일괄 조회 (경기 종료 여부 판단용 + odds/league_code)
-    const allRoundIds = [...new Set(activities.map((a) => a.round_id))]
-    const { data: allPreds } = await supabase
-      .from("betman_predictions")
-      .select(
-        `
-        id, user_id, round_id, game_id, prediction, status, slip_id, stake,
-        game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result,
-          league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds),
-        slip:prediction_slips(id, stake, total_odds, status)
-      `
-      )
-      .in("user_id", userIds)
-      .in("round_id", allRoundIds)
 
     // 활동별로 예측 그룹핑
     const predictionsMap = new Map<string, typeof allPreds>()

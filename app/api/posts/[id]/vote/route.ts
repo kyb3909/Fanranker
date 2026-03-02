@@ -98,35 +98,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // 3. posts.vote_count 업데이트 (net count: up - down) — 병렬 조회
-    const [{ count: upCount }, { count: downCount }] = await Promise.all([
-      supabase
-        .from("post_votes")
-        .select("id", { count: "exact", head: true })
-        .eq("post_id", postId)
-        .eq("vote_type", "up"),
-      supabase
-        .from("post_votes")
-        .select("id", { count: "exact", head: true })
-        .eq("post_id", postId)
-        .eq("vote_type", "down"),
-    ])
-
-    const newVoteCount = (upCount || 0) - (downCount || 0)
-
-    // vote_count 업데이트 + 게시물 작성자 온도 갱신
-    const { data: postData, error: updateError } = await supabase
+    // vote_count는 DB trigger(trg_post_vote_count)가 자동 갱신
+    // 갱신된 vote_count 조회 + 게시물 작성자 ID 확인
+    const { data: postData } = await supabase
       .from("posts")
-      .update({ vote_count: newVoteCount })
+      .select("vote_count, user_id")
       .eq("id", postId)
-      .select("user_id")
       .single()
 
-    if (updateError) {
-      console.error("Failed to update vote count:", updateError)
-    }
-
-    // 게시물 작성자 유저 온도 비동기 갱신
+    // 게시물 작성자 + 투표자 온도 비동기 갱신
     if (postData?.user_id) {
       Promise.resolve(
         supabase.rpc("update_user_temperature", { p_user_id: postData.user_id })
@@ -134,7 +114,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         console.error("Failed to update post author temperature:", e)
       })
     }
-    // 투표한 사람의 온도도 갱신 (투표 활동 반영)
     Promise.resolve(supabase.rpc("update_user_temperature", { p_user_id: userId })).catch(
       (e: unknown) => {
         console.error("Failed to update voter temperature:", e)
@@ -145,7 +124,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       success: true,
       action: voteAction,
       voteType: newVoteType,
-      voteCount: newVoteCount, // 업데이트된 vote_count 반환
+      voteCount: postData?.vote_count ?? 0,
       message: voteAction === "deleted" ? "투표가 취소되었습니다." : "투표가 저장되었습니다.",
     })
   } catch (error) {
