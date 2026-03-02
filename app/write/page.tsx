@@ -157,6 +157,15 @@ function WriteContent() {
       finalUrl = "https://" + finalUrl
     }
 
+    // 직접 이미지 URL인지 확인 (확장자 기반)
+    const imageExtRegex = /\.(jpe?g|png|gif|webp|svg|bmp|avif|ico)(\?.*)?$/i
+    if (imageExtRegex.test(finalUrl)) {
+      setImagePreview(finalUrl)
+      setImageFile(null)
+      setOgData(null)
+      return
+    }
+
     setIsFetchingOg(true)
     setOgData(null)
     try {
