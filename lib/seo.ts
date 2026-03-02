@@ -2,6 +2,7 @@ import { SITE_META } from "./site-config"
 
 export const SITE_CONFIG = {
   name: SITE_META.name,
+  title: SITE_META.title,
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://community-app-brown.vercel.app",
   description: SITE_META.description,
   locale: "ko_KR",

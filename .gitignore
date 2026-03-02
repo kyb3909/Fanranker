@@ -67,3 +67,25 @@ localhost_*.json
 /bet365_*.json
 /current.png
 /image.png
+
+# Screenshots & temp images (root level)
+/*.png
+/*.webp
+/*.jpg
+/*.jpeg
+
+# Environment files (non-local)
+.env.production
+.env.vercel-check
+
+# MCP config
+.mcp.json
+
+# Misc data dumps
+/10.5.0.2_*.json
+/console-debug.txt
+*.sh.tmp
+
+# Crawler node_modules
+data/crawlers/node_modules/
+data/crawlers/logs/
