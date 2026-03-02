@@ -5,38 +5,28 @@ import { useAuth } from "@clerk/nextjs"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Loader2,
-  CreditCard,
-  ArrowLeft,
-  Circle,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Clock,
-} from "lucide-react"
+import { Loader2, Coins, ArrowLeft, ArrowUpRight, ArrowDownLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface Transaction {
   id: string
-  type: "earn" | "spend" | "reset" | "purchase"
+  type: "earn" | "spend"
+  transactionType: string
   amount: number
   description: string
-  createdAt: Date
-  balanceAfter?: number
+  createdAt: string
+  balanceAfter: number
 }
 
-interface TokenInfo {
+interface GoldInfo {
   balance: number
-  totalEarned: number
-  totalSpent: number
-  lastResetAt: string
 }
 
 export default function PaymentsPage() {
   const { isSignedIn, isLoaded } = useAuth()
   const router = useRouter()
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null)
+  const [goldInfo, setGoldInfo] = useState<GoldInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
   const [activeTab, setActiveTab] = useState<"all" | "earn" | "spend">("all")
@@ -47,25 +37,21 @@ export default function PaymentsPage() {
       return
     }
 
-    async function fetchTransactions() {
+    async function fetchData() {
       if (!isSignedIn) return
 
       setIsLoading(true)
       try {
-        // Fetch token balance
-        const balanceRes = await fetch("/api/tokens/balance")
+        const [balanceRes, historyRes] = await Promise.all([
+          fetch("/api/gold/balance"),
+          fetch("/api/gold/history"),
+        ])
+
         if (balanceRes.ok) {
           const balanceData = await balanceRes.json()
-          setTokenInfo({
-            balance: balanceData.balance,
-            totalEarned: balanceData.totalEarned || 0,
-            totalSpent: 0,
-            lastResetAt: balanceData.lastResetAt,
-          })
+          setGoldInfo({ balance: balanceData.balance })
         }
 
-        // Fetch transaction history
-        const historyRes = await fetch("/api/tokens/history")
         if (historyRes.ok) {
           const historyData = await historyRes.json()
           setTransactions(historyData.transactions || [])
@@ -78,17 +64,23 @@ export default function PaymentsPage() {
     }
 
     if (isSignedIn) {
-      fetchTransactions()
+      fetchData()
     }
   }, [isSignedIn, isLoaded, router])
 
-  // 필터링된 거래 목록
   const filteredTransactions = transactions.filter((tx) => {
     if (activeTab === "all") return true
-    if (activeTab === "earn") return tx.type === "earn" || tx.type === "reset"
+    if (activeTab === "earn") return tx.type === "earn"
     if (activeTab === "spend") return tx.type === "spend"
     return true
   })
+
+  const totalEarned = transactions
+    .filter((tx) => tx.type === "earn")
+    .reduce((sum, tx) => sum + tx.amount, 0)
+  const totalSpent = transactions
+    .filter((tx) => tx.type === "spend")
+    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
 
   if (!isLoaded) {
     return (
@@ -110,8 +102,8 @@ export default function PaymentsPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <CreditCard className="text-primary h-6 w-6" />
-          <h1 className="text-xl font-bold">볼 내역</h1>
+          <Coins className="h-6 w-6 text-amber-500" />
+          <h1 className="text-xl font-bold">골드 내역</h1>
         </div>
       </div>
 
@@ -126,27 +118,19 @@ export default function PaymentsPage() {
       )}
 
       {/* 현재 잔액 카드 */}
-      {tokenInfo && (
-        <Card className="from-primary/10 to-primary/5 border-primary/20 mb-6 bg-gradient-to-br p-6">
+      {goldInfo && (
+        <Card className="mb-6 border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground mb-1 text-sm">현재 보유 볼</p>
+              <p className="text-muted-foreground mb-1 text-sm">보유 골드</p>
               <div className="flex items-center gap-2">
-                <Circle className="fill-primary text-primary h-6 w-6" />
-                <span className="text-primary text-3xl font-bold">{tokenInfo.balance}</span>
+                <Coins className="h-6 w-6 text-amber-500" />
+                <span className="text-3xl font-bold text-amber-600">{goldInfo.balance}</span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-muted-foreground text-xs">매일 자정 10볼 충전</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                마지막 충전:{" "}
-                {new Date(tokenInfo.lastResetAt).toLocaleDateString("ko-KR", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
+              <p className="text-muted-foreground text-xs">다른 유저의 승부예측을</p>
+              <p className="text-muted-foreground text-xs">구매할 때 사용됩니다</p>
             </div>
           </div>
         </Card>
@@ -159,14 +143,14 @@ export default function PaymentsPage() {
             <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
             <span className="text-muted-foreground text-sm">총 획득</span>
           </div>
-          <p className="text-xl font-bold text-emerald-600">+{tokenInfo?.totalEarned || 0} 볼</p>
+          <p className="text-xl font-bold text-emerald-600">+{totalEarned} 골드</p>
         </Card>
         <Card className="p-4">
           <div className="mb-2 flex items-center gap-2">
             <ArrowUpRight className="h-4 w-4 text-red-500" />
             <span className="text-muted-foreground text-sm">총 사용</span>
           </div>
-          <p className="text-xl font-bold text-red-600">-{tokenInfo?.totalSpent || 0} 볼</p>
+          <p className="text-xl font-bold text-red-600">-{totalSpent} 골드</p>
         </Card>
       </div>
 
@@ -196,12 +180,12 @@ export default function PaymentsPage() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`rounded-full p-2 ${
-                          tx.type === "earn" || tx.type === "reset"
+                          tx.type === "earn"
                             ? "bg-emerald-100 text-emerald-600"
                             : "bg-red-100 text-red-600"
                         }`}
                       >
-                        {tx.type === "earn" || tx.type === "reset" ? (
+                        {tx.type === "earn" ? (
                           <ArrowDownLeft className="h-4 w-4" />
                         ) : (
                           <ArrowUpRight className="h-4 w-4" />
@@ -223,17 +207,13 @@ export default function PaymentsPage() {
                     <div className="text-right">
                       <p
                         className={`font-bold ${
-                          tx.type === "earn" || tx.type === "reset"
-                            ? "text-emerald-600"
-                            : "text-red-600"
+                          tx.type === "earn" ? "text-emerald-600" : "text-red-600"
                         }`}
                       >
-                        {tx.type === "earn" || tx.type === "reset" ? "+" : "-"}
-                        {Math.abs(tx.amount)} 볼
+                        {tx.type === "earn" ? "+" : ""}
+                        {tx.amount} 골드
                       </p>
-                      {tx.balanceAfter !== undefined && (
-                        <p className="text-muted-foreground text-xs">잔액: {tx.balanceAfter}</p>
-                      )}
+                      <p className="text-muted-foreground text-xs">잔액: {tx.balanceAfter}</p>
                     </div>
                   </div>
                 </Card>
@@ -241,7 +221,7 @@ export default function PaymentsPage() {
             </div>
           ) : (
             <Card className="p-12 text-center">
-              <Circle className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+              <Coins className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
               <h3 className="mb-2 text-lg font-semibold">
                 {activeTab === "all"
                   ? "거래 내역이 없습니다"
@@ -250,7 +230,7 @@ export default function PaymentsPage() {
                     : "사용 내역이 없습니다"}
               </h3>
               <p className="text-muted-foreground text-sm">
-                매일 자정에 10볼이 자동으로 충전됩니다.
+                골드는 다른 유저의 승부예측을 구매할 때 사용됩니다.
               </p>
             </Card>
           )}

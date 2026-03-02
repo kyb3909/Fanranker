@@ -5,6 +5,9 @@ import { Trophy, Target, TrendingUp, CheckCircle2 } from "lucide-react"
 import { type Stats } from "./prediction-types"
 
 export function PredictionStatsSummary({ stats }: { stats: Stats }) {
+  const netPoints = Number(stats.totalPointsEarned) - Number(stats.totalPointsUsed)
+  const netFormatted = netPoints.toFixed(2)
+
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
       <Card className="p-4 text-center">
@@ -24,10 +27,11 @@ export function PredictionStatsSummary({ stats }: { stats: Stats }) {
       </Card>
       <Card className="p-4 text-center">
         <Trophy className="mx-auto mb-2 h-5 w-5 text-amber-500" />
-        <p className="text-2xl font-bold text-emerald-600">
-          +{Number(stats.totalPointsEarned).toFixed(2)}
+        <p className={`text-2xl font-bold ${netPoints >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+          {netPoints >= 0 ? "+" : ""}
+          {netFormatted}
         </p>
-        <p className="text-muted-foreground text-xs">획득 볼</p>
+        <p className="text-muted-foreground text-xs">획득 점수</p>
       </Card>
     </div>
   )
