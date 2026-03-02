@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Image as ImageIcon, X, Loader2 } from "lucide-react"
+import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
 import Image from "next/image"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -58,6 +58,13 @@ function WriteContent() {
   const [isEmbedLoading, setIsEmbedLoading] = useState(false)
   const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId)
   const [editLoadError, setEditLoadError] = useState<string | null>(null)
+  const [sourceUrl, setSourceUrl] = useState("")
+  const [isFetchingOg, setIsFetchingOg] = useState(false)
+  const [ogData, setOgData] = useState<{
+    title?: string
+    description?: string
+    siteName?: string
+  } | null>(null)
 
   useEffect(() => {
     if (communitySlug) {
@@ -140,6 +147,38 @@ function WriteContent() {
   const handleRemoveImage = () => {
     setImagePreview(null)
     setImageFile(null)
+  }
+
+  const handleFetchOg = async (url: string) => {
+    if (!url.trim()) return
+    // 프로토콜 없으면 추가
+    let finalUrl = url.trim()
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = "https://" + finalUrl
+    }
+
+    setIsFetchingOg(true)
+    setOgData(null)
+    try {
+      const res = await fetch(`/api/og?url=${encodeURIComponent(finalUrl)}`)
+      if (!res.ok) throw new Error("OG 정보를 가져올 수 없습니다.")
+      const data = await res.json()
+
+      if (data.image) {
+        setImagePreview(data.image)
+        setImageFile(null) // OG 이미지는 외부 URL이므로 file 없음
+      }
+      setOgData({ title: data.title, description: data.description, siteName: data.siteName })
+
+      // 제목이 비어있으면 OG 제목으로 자동 채움
+      if (!title && data.title) {
+        setTitle(data.title)
+      }
+    } catch {
+      // 실패해도 무시 - 사용자가 직접 이미지 업로드 가능
+    } finally {
+      setIsFetchingOg(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,6 +360,51 @@ function WriteContent() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* 소스 URL */}
+              <div className="space-y-2">
+                <Label htmlFor="source-url" className="text-foreground text-sm font-semibold">
+                  소스 URL <span className="text-muted-foreground font-normal">(선택)</span>
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                    <Input
+                      id="source-url"
+                      type="text"
+                      placeholder="뉴스나 기사 URL을 붙여넣으면 이미지를 자동으로 가져옵니다"
+                      value={sourceUrl}
+                      onChange={(e) => setSourceUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          handleFetchOg(sourceUrl)
+                        }
+                      }}
+                      onPaste={(e) => {
+                        // 붙여넣기 시 자동으로 OG 가져오기
+                        const pasted = e.clipboardData.getData("text")
+                        if (pasted && /^https?:\/\//i.test(pasted.trim())) {
+                          setTimeout(() => handleFetchOg(pasted.trim()), 100)
+                        }
+                      }}
+                      className="h-10 pl-9"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleFetchOg(sourceUrl)}
+                    disabled={isFetchingOg || !sourceUrl.trim()}
+                    className="shrink-0"
+                  >
+                    {isFetchingOg ? <Loader2 className="h-4 w-4 animate-spin" /> : "가져오기"}
+                  </Button>
+                </div>
+                {ogData?.siteName && (
+                  <p className="text-muted-foreground text-xs">출처: {ogData.siteName}</p>
+                )}
               </div>
 
               {/* 제목 */}
