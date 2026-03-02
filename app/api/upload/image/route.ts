@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError } from "@/lib/api-error"
+import sharp from "sharp"
 
 /** Validate file content via magic bytes to prevent MIME spoofing */
 function validateImageMagicBytes(buffer: ArrayBuffer): boolean {
@@ -41,11 +42,18 @@ function validateImageMagicBytes(buffer: ArrayBuffer): boolean {
   return false
 }
 
+// 이미지 최적화 설정
+const IMAGE_CONFIG = {
+  post: { maxWidth: 1200, quality: 80 },
+  avatar: { maxWidth: 256, quality: 85 },
+} as const
+
 /**
  * POST /api/upload/image
- * 이미지를 Supabase Storage에 업로드
+ * 이미지를 WebP로 변환 후 Supabase Storage에 업로드
  *
  * Body: FormData with 'file' field
+ * Query: ?type=avatar (아바타) | 없으면 게시글 이미지
  *
  * Returns: { url: string }
  */
@@ -78,28 +86,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "유효하지 않은 이미지 파일입니다." }, { status: 400 })
     }
 
-    // 파일 크기 제한 (10MB)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // 파일 크기 제한 (10MB - 변환 전 원본 기준)
+    const maxSize = 10 * 1024 * 1024
     if (file.size > maxSize) {
       return NextResponse.json({ error: "파일 크기는 10MB를 초과할 수 없습니다." }, { status: 400 })
     }
+
+    // sharp로 WebP 변환 + 리사이즈
+    const config = type === "avatar" ? IMAGE_CONFIG.avatar : IMAGE_CONFIG.post
+    const optimizedBuffer = await sharp(Buffer.from(fileBuffer))
+      .resize(config.maxWidth, undefined, { withoutEnlargement: true, fit: "inside" })
+      .webp({ quality: config.quality })
+      .toBuffer()
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
-    // 파일명 생성: avatar → avatars/userId/... , 게시글 → userId/...
-    const fileExt = file.name.split(".").pop() || "jpg"
+    // 파일명 생성 (항상 .webp)
     const timestamp = Date.now()
     const randomUUID = crypto.randomUUID().substring(0, 8)
-    const baseName = `${timestamp}-${randomUUID}.${fileExt}`
+    const baseName = `${timestamp}-${randomUUID}.webp`
     const fileName = type === "avatar" ? `avatars/${userId}/${baseName}` : `${userId}/${baseName}`
 
-    // Supabase Storage에 업로드 (이미 읽은 buffer 사용)
+    // Supabase Storage에 업로드
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("posts")
-      .upload(fileName, fileBuffer, {
-        contentType: file.type,
+      .upload(fileName, optimizedBuffer, {
+        contentType: "image/webp",
         upsert: false,
       })
 
@@ -114,9 +128,7 @@ export async function POST(request: NextRequest) {
     // Public URL 가져오기
     const { data: publicUrlData } = supabase.storage.from("posts").getPublicUrl(uploadData.path)
 
-    const imageUrl = publicUrlData.publicUrl
-
-    return NextResponse.json({ url: imageUrl }, { status: 200 })
+    return NextResponse.json({ url: publicUrlData.publicUrl }, { status: 200 })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
