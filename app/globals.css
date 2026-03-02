@@ -125,6 +125,15 @@
   }
 }
 
+/* 스크롤바 숨김 유틸리티 */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* TipTap Editor Styles */
 .tiptap-editor {
   min-height: 300px;

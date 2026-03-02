@@ -48,6 +48,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "자기 자신을 팔로우할 수 없습니다." }, { status: 400 })
     }
 
+    // Check if target user is a journalist (only journalists can be followed)
+    if (action !== "unfollow") {
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("is_journalist")
+        .eq("user_id", followedUserId)
+        .single()
+
+      if (!targetProfile?.is_journalist) {
+        return NextResponse.json({ error: "기자만 팔로우할 수 있습니다." }, { status: 403 })
+      }
+    }
+
     // Check if already following
     const { data: existingFollow, error: checkError } = await supabase
       .from("user_follows")
