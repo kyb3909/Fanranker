@@ -88,15 +88,9 @@ export function Header() {
           <div className="flex shrink-0 items-center">
             <Link
               href="/"
-              scroll={false}
-              onClick={(e) => {
-                e.preventDefault()
-                if (window.location.pathname === "/") {
-                  window.scrollTo({ top: 0, behavior: "auto" })
-                } else {
-                  router.push("/")
-                  window.scrollTo({ top: 0, behavior: "auto" })
-                }
+              onClick={() => {
+                window.scrollTo(0, 0)
+                setTimeout(() => window.scrollTo(0, 0), 100)
               }}
               className="ml-3 flex items-baseline gap-1"
               aria-label="홈"
