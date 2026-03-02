@@ -1,15 +1,18 @@
 /**
  * Sanitize oEmbed HTML to only allow trusted iframe embeds.
- * Strips all tags except iframes from allowed domains.
+ * - Iframe embeds (YouTube): whitelist-reconstruct approach
+ * - Blockquote embeds (X/Twitter, Instagram): DOMPurify
  */
 
+import DOMPurify from "isomorphic-dompurify"
+
 const ALLOWED_IFRAME_HOSTS = [
-  'www.youtube.com',
-  'youtube.com',
-  'www.instagram.com',
-  'instagram.com',
-  'platform.twitter.com',
-  'platform.x.com',
+  "www.youtube.com",
+  "youtube.com",
+  "www.instagram.com",
+  "instagram.com",
+  "platform.twitter.com",
+  "platform.x.com",
 ]
 
 /**
@@ -17,32 +20,32 @@ const ALLOWED_IFRAME_HOSTS = [
  * Returns safe HTML containing only the iframe, or empty string.
  */
 export function sanitizeEmbedHtml(html: string, provider: string): string {
-  // X/Twitter and Instagram use blockquote (not iframe) - sanitize similarly
-  if (provider === 'x' || provider === 'instagram') {
+  // X/Twitter and Instagram use blockquote (not iframe) — sanitize with DOMPurify
+  if (provider === "x" || provider === "instagram") {
     return sanitizeBlockquoteHtml(html)
   }
 
   // Extract iframe src using regex (no DOM parser needed on Edge)
   const iframeMatch = html.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i)
-  if (!iframeMatch) return ''
+  if (!iframeMatch) return ""
 
   const src = iframeMatch[1]
 
   // Validate iframe src domain
   try {
     const url = new URL(src)
-    if (!ALLOWED_IFRAME_HOSTS.includes(url.hostname)) return ''
-    if (url.protocol !== 'https:') return ''
+    if (!ALLOWED_IFRAME_HOSTS.includes(url.hostname)) return ""
+    if (url.protocol !== "https:") return ""
   } catch {
-    return ''
+    return ""
   }
 
   // Extract width/height if present
   const widthMatch = html.match(/width=["'](\d+)["']/i)
   const heightMatch = html.match(/height=["'](\d+)["']/i)
 
-  const width = widthMatch ? ` width="${widthMatch[1]}"` : ''
-  const height = heightMatch ? ` height="${heightMatch[1]}"` : ''
+  const width = widthMatch ? ` width="${widthMatch[1]}"` : ""
+  const height = heightMatch ? ` height="${heightMatch[1]}"` : ""
 
   // Reconstruct safe iframe
   return `<iframe src="${src}"${width}${height} frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
@@ -50,17 +53,43 @@ export function sanitizeEmbedHtml(html: string, provider: string): string {
 
 /**
  * Blockquote-based embeds (Twitter/X, Instagram).
- * Strip all script tags and only keep the blockquote with safe text content.
+ * Uses DOMPurify instead of regex for robust XSS prevention.
  */
 function sanitizeBlockquoteHtml(html: string): string {
-  // Remove all script tags
-  let safe = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-
-  // Remove event handlers (onclick, onerror, etc.)
-  safe = safe.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
-
-  // Remove javascript: URLs
-  safe = safe.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
-
-  return safe
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      "blockquote",
+      "a",
+      "p",
+      "br",
+      "span",
+      "div",
+      "img",
+      "strong",
+      "em",
+      "b",
+      "i",
+      "time",
+    ],
+    ALLOWED_ATTR: [
+      "href",
+      "target",
+      "rel",
+      "class",
+      "style",
+      "data-instgrm-version",
+      "data-instgrm-permalink",
+      "data-instgrm-captioned",
+      "cite",
+      "datetime",
+      "lang",
+      "dir",
+      "src",
+      "alt",
+      "width",
+      "height",
+    ],
+    ALLOW_DATA_ATTR: true,
+    ALLOW_ARIA_ATTR: false,
+  })
 }

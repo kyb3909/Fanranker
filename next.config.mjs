@@ -71,10 +71,6 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'img.clerk.com', // Clerk avatars
       },
-      {
-        protocol: 'https',
-        hostname: '**', // OG 이미지 (외부 소스)
-      },
     ],
     // 모던 이미지 포맷 사용
     formats: ['image/avif', 'image/webp'],
