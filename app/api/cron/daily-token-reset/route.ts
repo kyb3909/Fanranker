@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient } from '@/lib/supabase/server'
-import { verifyCronSecret } from '@/lib/cron-auth'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createAnonClient } from "@/lib/supabase/server"
+import { verifyCronSecret } from "@/lib/cron-auth"
+import { apiError } from "@/lib/api-error"
 
 /**
  * POST /api/cron/daily-token-reset
@@ -19,37 +19,41 @@ export async function POST(request: NextRequest) {
     const supabase = createAnonClient()
 
     // Get all user_ids that have token records
-    const { data: users, error: fetchError } = await supabase
-      .from('user_tokens')
-      .select('user_id')
+    const { data: users, error: fetchError } = await supabase.from("user_tokens").select("user_id")
 
     if (fetchError) {
-      return apiError('Failed to fetch users', 500, fetchError)
+      return apiError("Failed to fetch users", 500, fetchError)
     }
 
     if (!users || users.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No users found',
+        message: "No users found",
         resetCount: 0,
       })
     }
 
-    // Call ensure_daily_token_reset for each user — the DB function
-    // checks get_token_reset_date internally and only resets if needed
+    // 배치 처리: 50명씩 병렬 실행 (Vercel timeout 방지)
+    const BATCH_SIZE = 50
     let resetCount = 0
     let errorCount = 0
 
-    for (const user of users) {
-      const { error: resetError } = await supabase.rpc('ensure_daily_token_reset', {
-        target_user_id: user.user_id,
-      })
+    for (let i = 0; i < users.length; i += BATCH_SIZE) {
+      const batch = users.slice(i, i + BATCH_SIZE)
+      const results = await Promise.allSettled(
+        batch.map((user) =>
+          supabase.rpc("ensure_daily_token_reset", {
+            target_user_id: user.user_id,
+          })
+        )
+      )
 
-      if (resetError) {
-        console.error(`Failed to reset tokens for user ${user.user_id}:`, resetError)
-        errorCount++
-      } else {
-        resetCount++
+      for (const result of results) {
+        if (result.status === "fulfilled" && !result.value.error) {
+          resetCount++
+        } else {
+          errorCount++
+        }
       }
     }
 
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest) {
       totalUsers: users.length,
     })
   } catch (error) {
-    return apiError('Internal server error', 500, error)
+    return apiError("Internal server error", 500, error)
   }
 }
 
@@ -70,11 +74,8 @@ export async function POST(request: NextRequest) {
  * Manual trigger for testing (development only)
  */
 export async function GET(request: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'Not available in production' },
-      { status: 403 }
-    )
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not available in production" }, { status: 403 })
   }
 
   return POST(request)

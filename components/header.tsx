@@ -95,7 +95,7 @@ export function Header() {
                 <span className="text-primary font-normal">.fan</span>
               </span>
               <span
-                className="text-foreground/50 translate-y-[2px] self-end text-[14px] leading-none"
+                className="text-foreground/65 translate-y-[2px] self-end text-[14px] leading-none"
                 style={{ fontFamily: '"GmarketSansBold", sans-serif' }}
               >
                 공놀이판

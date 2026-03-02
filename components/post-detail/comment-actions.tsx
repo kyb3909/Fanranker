@@ -7,11 +7,11 @@ export interface CommentActionsProps {
   depth: number
   maxDepth: number
   voteCount: number
-  myVote: 'up' | 'down' | null
+  myVote: "up" | "down" | null
   isReplying: boolean
   isOwner: boolean
   currentUserId?: string | null
-  onVote: (type: 'up' | 'down') => void
+  onVote: (type: "up" | "down") => void
   onToggleReply: () => void
   onReport: () => void
 }
@@ -35,19 +35,23 @@ export function CommentActions({
       <Button
         variant="ghost"
         size="sm"
-        className={`gap-0.5 h-7 px-1.5 ${myVote === 'up' ? 'text-primary' : 'text-muted-foreground'}`}
-        onClick={() => onVote('up')}
+        className={`h-7 gap-0.5 px-1.5 ${myVote === "up" ? "text-primary" : "text-muted-foreground"}`}
+        onClick={() => onVote("up")}
+        aria-label="추천"
       >
         <ArrowUp className={iconSize} />
       </Button>
-      <span className={`text-sm font-medium min-w-[1.5rem] text-center ${voteCount > 0 ? 'text-primary' : voteCount < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+      <span
+        className={`min-w-[1.5rem] text-center text-sm font-medium ${voteCount > 0 ? "text-primary" : voteCount < 0 ? "text-destructive" : "text-muted-foreground"}`}
+      >
         {voteCount}
       </span>
       <Button
         variant="ghost"
         size="sm"
-        className={`gap-0.5 h-7 px-1.5 ${myVote === 'down' ? 'text-destructive' : 'text-muted-foreground'}`}
-        onClick={() => onVote('down')}
+        className={`h-7 gap-0.5 px-1.5 ${myVote === "down" ? "text-destructive" : "text-muted-foreground"}`}
+        onClick={() => onVote("down")}
+        aria-label="비추천"
       >
         <ArrowDown className={iconSize} />
       </Button>
@@ -56,7 +60,7 @@ export function CommentActions({
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1 text-muted-foreground h-7 ml-1"
+          className="text-muted-foreground ml-1 h-7 gap-1"
           onClick={onToggleReply}
         >
           <MessageCircle className={iconSize} />
@@ -68,9 +72,10 @@ export function CommentActions({
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1 text-muted-foreground h-7 ml-auto"
+          className="text-muted-foreground ml-auto h-7 gap-1"
           onClick={onReport}
           title="신고하기"
+          aria-label="신고하기"
         >
           <Flag className={iconSize} />
         </Button>

@@ -15,11 +15,15 @@
  */
 export function getTemperatureStyle(temp: number): React.CSSProperties {
   const t = Math.max(0, Math.min(100, temp))
-  // hue: 220 (blue) → 0 (red), saturation: 70-90%, lightness: 28-33%
-  // WCAG AA 4.5:1 대비 충족 (흰색 배경 기준 lightness ≤33% 필요)
+  // hue: 220 (blue) → 0 (red), saturation: 70-90%
+  // WCAG AA 4.5:1 대비 충족 (흰색 배경 기준)
   const hue = 220 - (t / 100) * 220
   const saturation = 70 + (t / 100) * 20
-  const lightness = 33 - (t / 100) * 5
+  // lightness: green-cyan 영역(hue 80-170)은 밝게 인식되어 대비가 낮으므로
+  // 해당 구간에서 lightness를 추가로 낮춤 (최대 -5%)
+  const baseLightness = 33 - (t / 100) * 5
+  const greenDip = hue >= 80 && hue <= 170 ? 5 * Math.sin(((hue - 80) / 90) * Math.PI) : 0
+  const lightness = baseLightness - greenDip
   return { color: `hsl(${hue}, ${saturation}%, ${lightness}%)` }
 }
 

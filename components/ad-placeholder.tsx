@@ -25,7 +25,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       className={`${config.className} border-border flex flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed`}
     >
       <span className="text-muted-foreground text-[11px] font-bold tracking-wider">AD</span>
-      <span className="text-muted-foreground/70 text-[10px]">{config.dimensions}</span>
+      <span className="text-muted-foreground text-[10px]">{config.dimensions}</span>
     </div>
   )
 }
