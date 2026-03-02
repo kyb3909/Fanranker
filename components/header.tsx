@@ -88,9 +88,13 @@ export function Header() {
           <div className="flex shrink-0 items-center">
             <Link
               href="/"
-              onClick={() => {
-                window.scrollTo(0, 0)
-                setTimeout(() => window.scrollTo(0, 0), 100)
+              onClick={(e) => {
+                // 같은 페이지(홈)에서 로고 클릭 시 Next.js 소프트 내비게이션을 막아
+                // <main tabIndex={-1}> 자동 포커스로 인한 스크롤 오프셋 방지
+                if (window.location.pathname === "/" && !window.location.search) {
+                  e.preventDefault()
+                  window.scrollTo(0, 0)
+                }
               }}
               className="ml-3 flex items-baseline gap-1"
               aria-label="홈"
