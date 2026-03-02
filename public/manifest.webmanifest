@@ -1,7 +1,7 @@
 {
-  "name": "FanRanker - 스포츠 예측 커뮤니티",
+  "name": "FanRanker - 스포츠 팬 커뮤니티 & 예측 놀이터",
   "short_name": "FanRanker",
-  "description": "스포츠 승부예측과 커뮤니티를 한곳에서",
+  "description": "그깟 공놀이를 좋아하는 팬들의 놀이터. 스포츠 팬들을 위한 가벼운 경기 예측 커뮤니티입니다.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
