@@ -7,14 +7,12 @@ import dynamic from "next/dynamic"
 const CommunitySidebar = dynamic(
   () => import("@/components/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
   {
-    ssr: false,
     loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
   }
 )
 const ActivitySidebar = dynamic(
   () => import("@/components/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
   {
-    ssr: false,
     loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
   }
 )

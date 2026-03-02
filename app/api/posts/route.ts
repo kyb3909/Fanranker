@@ -149,12 +149,8 @@ export async function GET(request: NextRequest) {
       return res
     }
 
-    // 기존 정렬 로직 (hot, new, comments)
-    // 커뮤니티 개별 페이지: 기간 제한 없음
-    // 홈 피드: 최근 24시간 먼저 시도, 부족하면 7일로 확장
-    const isHomeFeed = !communitySlug
-
-    const buildQuery = (sinceDate: string | null) => {
+    // 정렬 로직 (hot, new, comments)
+    const buildQuery = () => {
       let q = supabase
         .from("posts")
         .select(
@@ -173,10 +169,6 @@ export async function GET(request: NextRequest) {
         )
         .is("deleted_at", null)
         .range(offset, offset + limit - 1)
-
-      if (sinceDate) {
-        q = q.gte("created_at", sinceDate)
-      }
 
       // 커뮤니티 필터링
       if (communitySlug) {
@@ -202,36 +194,10 @@ export async function GET(request: NextRequest) {
       return q
     }
 
-    // 홈 피드: 24시간 → 부족하면 7일 → 부족하면 전체로 폴백
-    type QueryResult = Awaited<ReturnType<typeof buildQuery>>
-    let posts: QueryResult["data"] = null
-    let error: QueryResult["error"] = null
-
-    if (isHomeFeed) {
-      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const result24h = await buildQuery(since24h)
-      posts = result24h.data
-      error = result24h.error
-
-      // 24시간 내 게시글이 부족하면 7일로 확장
-      if (!error && (!posts || posts.length < 5)) {
-        const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-        const result7d = await buildQuery(since7d)
-        posts = result7d.data
-        error = result7d.error
-      }
-
-      // 7일 내에도 부족하면 기간 제한 없이 조회
-      if (!error && (!posts || posts.length < 5)) {
-        const resultAll = await buildQuery(null)
-        posts = resultAll.data
-        error = resultAll.error
-      }
-    } else {
-      const result = await buildQuery(null)
-      posts = result.data
-      error = result.error
-    }
+    // 단일 쿼리로 조회 (CDN 캐시 s-maxage=30으로 DB 부하 제어)
+    const result = await buildQuery()
+    const posts = result.data
+    const error = result.error
 
     if (error) {
       console.error("Failed to fetch posts:", error)
