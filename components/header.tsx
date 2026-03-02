@@ -86,7 +86,21 @@ export function Header() {
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex shrink-0 items-center">
-            <Link href="/" className="ml-3 flex items-baseline gap-1" aria-label="홈">
+            <Link
+              href="/"
+              scroll={false}
+              onClick={(e) => {
+                e.preventDefault()
+                if (window.location.pathname === "/") {
+                  window.scrollTo({ top: 0, behavior: "auto" })
+                } else {
+                  router.push("/")
+                  window.scrollTo({ top: 0, behavior: "auto" })
+                }
+              }}
+              className="ml-3 flex items-baseline gap-1"
+              aria-label="홈"
+            >
               <span
                 className="text-foreground text-[30px] leading-none"
                 style={{ letterSpacing: "-0.02em" }}

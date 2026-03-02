@@ -1,21 +1,18 @@
-import { Header } from "@/components/header"
-
 export default function ProfileLoading() {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="mx-auto px-4 sm:px-6 py-5 sm:py-6 max-w-full sm:max-w-[600px] lg:max-w-[1280px]">
-        <div className="bg-card border border-border rounded-xl p-6 animate-pulse">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-20 w-20 bg-muted rounded-full" />
+    <div className="bg-background min-h-screen">
+      <main className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]">
+        <div className="bg-card border-border animate-pulse rounded-xl border p-6">
+          <div className="mb-6 flex items-center gap-4">
+            <div className="bg-muted h-20 w-20 rounded-full" />
             <div className="space-y-2">
-              <div className="h-6 bg-muted rounded w-32" />
-              <div className="h-4 bg-muted rounded w-48" />
+              <div className="bg-muted h-6 w-32 rounded" />
+              <div className="bg-muted h-4 w-48 rounded" />
             </div>
           </div>
           <div className="space-y-3">
-            <div className="h-4 bg-muted rounded w-full" />
-            <div className="h-4 bg-muted rounded w-3/4" />
+            <div className="bg-muted h-4 w-full rounded" />
+            <div className="bg-muted h-4 w-3/4 rounded" />
           </div>
         </div>
       </main>
