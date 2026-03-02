@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useAuth } from "@clerk/nextjs"
 import dynamic from "next/dynamic"
-import { Header } from "@/components/header"
 import { BackButton } from "@/components/back-button"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -226,8 +225,227 @@ function WriteContent() {
 
   if (!isLoaded) {
     return (
-      <div className="bg-background min-h-screen">
-        <Header />
+      <main
+        id="main-content"
+        className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+        tabIndex={-1}
+      >
+        <div className="bg-card border-border rounded-lg border p-8 text-center">
+          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">로딩 중...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="flex items-center justify-center px-4 py-20">
+        <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
+          <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
+          <p className="text-muted-foreground mb-4 text-sm">글을 작성하려면 먼저 로그인해주세요.</p>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" onClick={() => router.push("/")}>
+              홈으로
+            </Button>
+            <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoadingEdit) {
+    return (
+      <main
+        id="main-content"
+        className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+        tabIndex={-1}
+      >
+        <div className="bg-card border-border rounded-lg border p-8 text-center">
+          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">글을 불러오는 중...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (editLoadError) {
+    return (
+      <main
+        id="main-content"
+        className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+        tabIndex={-1}
+      >
+        <div className="bg-card border-border rounded-lg border p-8 text-center">
+          <p className="text-destructive mb-2 text-sm">{editLoadError}</p>
+          <Button variant="outline" onClick={() => router.push("/")}>
+            홈으로
+          </Button>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main
+      id="main-content"
+      className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+      tabIndex={-1}
+    >
+      <div className="grid grid-cols-12 gap-5 lg:gap-6">
+        <div className="col-span-12 space-y-4 lg:col-span-9">
+          <BackButton />
+
+          <Card className="border-border bg-card border p-6">
+            <h1 className="text-foreground mb-6 text-2xl font-bold">
+              {editId ? "글 수정" : "글쓰기"}
+            </h1>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* 게시판 선택 */}
+              <div className="space-y-2">
+                <Label htmlFor="community" className="text-foreground text-sm font-semibold">
+                  게시판 선택
+                </Label>
+                <Select value={selectedCommunity} onValueChange={setSelectedCommunity}>
+                  <SelectTrigger id="community" className="h-10">
+                    <SelectValue placeholder="게시판을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {communities.map((community) => (
+                      <SelectItem key={community.slug} value={community.slug}>
+                        {community.icon ? `${community.icon} ` : ""}
+                        {community.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 제목 */}
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-foreground text-sm font-semibold">
+                  제목
+                </Label>
+                <Input
+                  id="title"
+                  type="text"
+                  placeholder="제목을 입력하세요"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="h-10"
+                  required
+                />
+              </div>
+
+              {/* 내용 */}
+              <div className="space-y-2">
+                <Label htmlFor="content" className="text-foreground text-sm font-semibold">
+                  내용
+                </Label>
+                <TipTapEditor
+                  content={content}
+                  onChange={(json) => setContent(json)}
+                  onEmbedLoading={setIsEmbedLoading}
+                  placeholder="내용을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드됩니다."
+                />
+              </div>
+
+              {/* 이미지 업로드 */}
+              <div className="space-y-2">
+                <Label className="text-foreground text-sm font-semibold">이미지</Label>
+                {!imagePreview ? (
+                  <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
+                    <label
+                      htmlFor="image-upload"
+                      className={`flex cursor-pointer flex-col items-center gap-2 ${isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
+                    >
+                      {isUploadingImage ? (
+                        <>
+                          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                          <span className="text-muted-foreground text-sm">이미지 업로드 중...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className="text-muted-foreground h-8 w-8" />
+                          <span className="text-muted-foreground text-sm">
+                            이미지를 클릭하거나 드래그하여 업로드
+                          </span>
+                        </>
+                      )}
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        disabled={isUploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="border-border relative aspect-video w-full overflow-hidden rounded-lg border">
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* 버튼 */}
+              <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
+                <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                  취소
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    isEmbedLoading ||
+                    !selectedCommunity ||
+                    !title ||
+                    !content ||
+                    (typeof content === "object" &&
+                      (!content.content || content.content.length === 0))
+                  }
+                >
+                  {isEmbedLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      임베드 로딩 중...
+                    </>
+                  ) : isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      작성 중...
+                    </>
+                  ) : editId ? (
+                    "수정하기"
+                  ) : (
+                    "작성하기"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function WritePage() {
+  return (
+    <Suspense
+      fallback={
         <main
           id="main-content"
           className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
@@ -238,248 +456,6 @@ function WriteContent() {
             <p className="text-muted-foreground text-sm">로딩 중...</p>
           </div>
         </main>
-      </div>
-    )
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="bg-background min-h-screen">
-        <Header />
-        <div className="flex items-center justify-center px-4 py-20">
-          <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
-            <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
-            <p className="text-muted-foreground mb-4 text-sm">
-              글을 작성하려면 먼저 로그인해주세요.
-            </p>
-            <div className="flex justify-center gap-2">
-              <Button variant="outline" onClick={() => router.push("/")}>
-                홈으로
-              </Button>
-              <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (isLoadingEdit) {
-    return (
-      <div className="bg-background min-h-screen">
-        <Header />
-        <main
-          id="main-content"
-          className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-          tabIndex={-1}
-        >
-          <div className="bg-card border-border rounded-lg border p-8 text-center">
-            <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground text-sm">글을 불러오는 중...</p>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
-  if (editLoadError) {
-    return (
-      <div className="bg-background min-h-screen">
-        <Header />
-        <main
-          id="main-content"
-          className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-          tabIndex={-1}
-        >
-          <div className="bg-card border-border rounded-lg border p-8 text-center">
-            <p className="text-destructive mb-2 text-sm">{editLoadError}</p>
-            <Button variant="outline" onClick={() => router.push("/")}>
-              홈으로
-            </Button>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-background min-h-screen">
-      <Header />
-
-      <main
-        id="main-content"
-        className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-        tabIndex={-1}
-      >
-        <div className="grid grid-cols-12 gap-5 lg:gap-6">
-          <div className="col-span-12 space-y-4 lg:col-span-9">
-            <BackButton />
-
-            <Card className="border-border bg-card border p-6">
-              <h1 className="text-foreground mb-6 text-2xl font-bold">
-                {editId ? "글 수정" : "글쓰기"}
-              </h1>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* 게시판 선택 */}
-                <div className="space-y-2">
-                  <Label htmlFor="community" className="text-foreground text-sm font-semibold">
-                    게시판 선택
-                  </Label>
-                  <Select value={selectedCommunity} onValueChange={setSelectedCommunity}>
-                    <SelectTrigger id="community" className="h-10">
-                      <SelectValue placeholder="게시판을 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {communities.map((community) => (
-                        <SelectItem key={community.slug} value={community.slug}>
-                          {community.icon ? `${community.icon} ` : ""}
-                          {community.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* 제목 */}
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-foreground text-sm font-semibold">
-                    제목
-                  </Label>
-                  <Input
-                    id="title"
-                    type="text"
-                    placeholder="제목을 입력하세요"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="h-10"
-                    required
-                  />
-                </div>
-
-                {/* 내용 */}
-                <div className="space-y-2">
-                  <Label htmlFor="content" className="text-foreground text-sm font-semibold">
-                    내용
-                  </Label>
-                  <TipTapEditor
-                    content={content}
-                    onChange={(json) => setContent(json)}
-                    onEmbedLoading={setIsEmbedLoading}
-                    placeholder="내용을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드됩니다."
-                  />
-                </div>
-
-                {/* 이미지 업로드 */}
-                <div className="space-y-2">
-                  <Label className="text-foreground text-sm font-semibold">이미지</Label>
-                  {!imagePreview ? (
-                    <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
-                      <label
-                        htmlFor="image-upload"
-                        className={`flex cursor-pointer flex-col items-center gap-2 ${isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
-                      >
-                        {isUploadingImage ? (
-                          <>
-                            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-                            <span className="text-muted-foreground text-sm">
-                              이미지 업로드 중...
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <ImageIcon className="text-muted-foreground h-8 w-8" />
-                            <span className="text-muted-foreground text-sm">
-                              이미지를 클릭하거나 드래그하여 업로드
-                            </span>
-                          </>
-                        )}
-                        <input
-                          id="image-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          disabled={isUploadingImage}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="border-border relative aspect-video w-full overflow-hidden rounded-lg border">
-                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8"
-                        onClick={handleRemoveImage}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 버튼 */}
-                <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
-                  <Button type="button" variant="outline" onClick={() => window.history.back()}>
-                    취소
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={
-                      isSubmitting ||
-                      isEmbedLoading ||
-                      !selectedCommunity ||
-                      !title ||
-                      !content ||
-                      (typeof content === "object" &&
-                        (!content.content || content.content.length === 0))
-                    }
-                  >
-                    {isEmbedLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        임베드 로딩 중...
-                      </>
-                    ) : isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        작성 중...
-                      </>
-                    ) : editId ? (
-                      "수정하기"
-                    ) : (
-                      "작성하기"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </Card>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-export default function WritePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="bg-background min-h-screen">
-          <Header />
-          <main
-            id="main-content"
-            className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-            tabIndex={-1}
-          >
-            <div className="bg-card border-border rounded-lg border p-8 text-center">
-              <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground text-sm">로딩 중...</p>
-            </div>
-          </main>
-        </div>
       }
     >
       <WriteContent />

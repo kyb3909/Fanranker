@@ -3,25 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useParams, useRouter } from "next/navigation"
-import { Header } from "@/components/header"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import {
-  Loader2,
-  ArrowLeft,
-  User,
-  Camera,
-  Hash,
-  Lock,
-  Check,
-  Save,
-  Trash2,
-  X,
-} from "lucide-react"
+import { Loader2, ArrowLeft, User, Camera, Hash, Lock, Check, Save, Trash2, X } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +55,10 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [passwordSaving, setPasswordSaving] = useState(false)
-  const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [passwordMessage, setPasswordMessage] = useState<{
+    type: "success" | "error"
+    text: string
+  } | null>(null)
 
   const loadProfile = useCallback(async () => {
     try {
@@ -123,7 +114,7 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     const trimmedNickname = nickname.trim()
-    
+
     if (!trimmedNickname) {
       alert("닉네임을 입력해주세요.")
       return
@@ -156,7 +147,7 @@ export default function ProfilePage() {
         setTimeout(() => setSaveSuccess(false), 3000)
       } else {
         const errorData = await response.json().catch(() => ({ error: "저장에 실패했습니다." }))
-        const errorMessage = errorData.details 
+        const errorMessage = errorData.details
           ? `${errorData.error}\n\n상세: ${errorData.details}`
           : errorData.error || "저장에 실패했습니다."
         alert(errorMessage)
@@ -175,9 +166,7 @@ export default function ProfilePage() {
       })
 
       if (response.ok) {
-        setFollowedCommunities((prev) =>
-          prev.filter((c) => c.community_slug !== communitySlug)
-        )
+        setFollowedCommunities((prev) => prev.filter((c) => c.community_slug !== communitySlug))
       }
     } catch {
       // Silent fail - unfollow action
@@ -289,11 +278,8 @@ export default function ProfilePage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     )
   }
@@ -303,289 +289,276 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main id="main-content" className="mx-auto px-4 py-6 max-w-[600px]" tabIndex={-1}>
-        {/* 헤더 */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <User className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">내 정보</h1>
-          </div>
+    <main id="main-content" className="mx-auto max-w-[600px] px-4 py-6" tabIndex={-1}>
+      {/* 헤더 */}
+      <div className="mb-6 flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <User className="text-primary h-6 w-6" />
+          <h1 className="text-xl font-bold">내 정보</h1>
         </div>
+      </div>
 
-        {isLoading ? (
-          <Card className="p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">정보를 불러오는 중...</p>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {/* 프로필 사진 */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Camera className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">프로필 사진</h2>
-              </div>
+      {isLoading ? (
+        <Card className="p-8 text-center">
+          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+          <p className="text-muted-foreground text-sm">정보를 불러오는 중...</p>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* 프로필 사진 */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Camera className="text-primary h-5 w-5" />
+              <h2 className="font-semibold">프로필 사진</h2>
+            </div>
 
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage
-                    src={profile?.avatar_url || user?.imageUrl || "/placeholder-user.jpg"}
-                    alt={profile?.nickname || "프로필"}
-                  />
-                  <AvatarFallback className="text-2xl">
-                    {(profile?.nickname || user?.username || "U")[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    이미지 파일(JPG, PNG 등)을 선택하면 프로필 사진이 변경됩니다.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={avatarUploading}
-                    onClick={() => avatarInputRef.current?.click()}
-                  >
-                    {avatarUploading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4 mr-2" />
-                    )}
-                    {avatarUploading ? "업로드 중..." : "사진 변경"}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {/* 닉네임 변경 */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <User className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">닉네임</h2>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nickname">닉네임</Label>
-                  <Input
-                    id="nickname"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    placeholder="닉네임을 입력하세요"
-                    maxLength={20}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    2~20자 이내로 입력해주세요.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>이메일</Label>
-                  <Input
-                    value={user?.primaryEmailAddress?.emailAddress || ""}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    이메일은 변경할 수 없습니다.
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            {/* 팔로우한 게시판 */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Hash className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">팔로우한 게시판</h2>
-              </div>
-
-              {followedCommunities.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  팔로우한 게시판이 없습니다.
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage
+                  src={profile?.avatar_url || user?.imageUrl || "/placeholder-user.jpg"}
+                  alt={profile?.nickname || "프로필"}
+                />
+                <AvatarFallback className="text-2xl">
+                  {(profile?.nickname || user?.username || "U")[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <p className="text-muted-foreground mb-2 text-sm">
+                  이미지 파일(JPG, PNG 등)을 선택하면 프로필 사진이 변경됩니다.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {followedCommunities.map((community) => (
-                    <div
-                      key={community.community_slug}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                    >
-                      <span className="font-medium">
-                        {COMMUNITY_NAMES[community.community_slug] || community.community_slug}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleUnfollowCommunity(community.community_slug)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* 비밀번호 변경 */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Lock className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">비밀번호</h2>
-              </div>
-
-              <p className="text-sm text-muted-foreground mb-4">
-                현재 비밀번호를 입력한 뒤 새 비밀번호로 변경할 수 있습니다. (8자 이상)
-              </p>
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">현재 비밀번호</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="현재 비밀번호"
-                    autoComplete="current-password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">새 비밀번호</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="새 비밀번호 (8자 이상)"
-                    autoComplete="new-password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="새 비밀번호 다시 입력"
-                    autoComplete="new-password"
-                  />
-                </div>
-                {passwordMessage && (
-                  <p
-                    className={`text-sm ${
-                      passwordMessage.type === "success" ? "text-green-600" : "text-destructive"
-                    }`}
-                  >
-                    {passwordMessage.text}
-                  </p>
-                )}
                 <Button
                   variant="outline"
-                  onClick={handleChangePassword}
-                  disabled={passwordSaving}
+                  size="sm"
+                  disabled={avatarUploading}
+                  onClick={() => avatarInputRef.current?.click()}
                 >
-                  {passwordSaving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {avatarUploading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Lock className="h-4 w-4 mr-2" />
+                    <Camera className="mr-2 h-4 w-4" />
                   )}
-                  {passwordSaving ? "변경 중..." : "비밀번호 변경"}
+                  {avatarUploading ? "업로드 중..." : "사진 변경"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                소셜 로그인(Google 등)만 사용 중인 경우 비밀번호가 없을 수 있습니다.
-              </p>
-            </Card>
+            </div>
+          </Card>
 
-            {/* 저장 버튼 */}
-            <Button
-              className="w-full"
-              onClick={handleSaveProfile}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : saveSuccess ? (
-                <Check className="h-4 w-4 mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {isSaving ? "저장 중..." : saveSuccess ? "저장됨" : "변경사항 저장"}
-            </Button>
+          {/* 닉네임 변경 */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <User className="text-primary h-5 w-5" />
+              <h2 className="font-semibold">닉네임</h2>
+            </div>
 
-            <Separator />
-
-            {/* 계정 삭제 */}
-            <Card className="p-6 border-destructive/50">
-              <div className="flex items-center gap-2 mb-4">
-                <Trash2 className="h-5 w-5 text-destructive" />
-                <h2 className="font-semibold text-destructive">계정 삭제</h2>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nickname">닉네임</Label>
+                <Input
+                  id="nickname"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="닉네임을 입력하세요"
+                  maxLength={20}
+                />
+                <p className="text-muted-foreground text-xs">2~20자 이내로 입력해주세요.</p>
               </div>
 
-              <p className="text-sm text-muted-foreground mb-4">
-                계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
-              </p>
+              <div className="space-y-2">
+                <Label>이메일</Label>
+                <Input
+                  value={user?.primaryEmailAddress?.emailAddress || ""}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-muted-foreground text-xs">이메일은 변경할 수 없습니다.</p>
+              </div>
+            </div>
+          </Card>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    계정 삭제
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>정말 계정을 삭제하시겠습니까?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      이 작업은 되돌릴 수 없습니다. 모든 게시글, 댓글, 예측 내역이 영구적으로
-                      삭제됩니다.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="py-2">
-                    <Label htmlFor="delete-confirm" className="text-sm text-muted-foreground">
-                      확인을 위해 <span className="font-semibold text-destructive">계정삭제</span>를 입력해주세요
-                    </Label>
-                    <Input
-                      id="delete-confirm"
-                      value={deleteConfirmText}
-                      onChange={(e) => setDeleteConfirmText(e.target.value)}
-                      placeholder="계정삭제"
-                      className="mt-2"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>취소</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteAccount}
-                      disabled={deleteConfirmText !== "계정삭제"}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+          {/* 팔로우한 게시판 */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Hash className="text-primary h-5 w-5" />
+              <h2 className="font-semibold">팔로우한 게시판</h2>
+            </div>
+
+            {followedCommunities.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-center text-sm">
+                팔로우한 게시판이 없습니다.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {followedCommunities.map((community) => (
+                  <div
+                    key={community.community_slug}
+                    className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
+                  >
+                    <span className="font-medium">
+                      {COMMUNITY_NAMES[community.community_slug] || community.community_slug}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleUnfollowCommunity(community.community_slug)}
+                      className="text-muted-foreground hover:text-destructive"
                     >
-                      삭제
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </Card>
-          </div>
-        )}
-      </main>
-    </div>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* 비밀번호 변경 */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Lock className="text-primary h-5 w-5" />
+              <h2 className="font-semibold">비밀번호</h2>
+            </div>
+
+            <p className="text-muted-foreground mb-4 text-sm">
+              현재 비밀번호를 입력한 뒤 새 비밀번호로 변경할 수 있습니다. (8자 이상)
+            </p>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">현재 비밀번호</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="현재 비밀번호"
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password">새 비밀번호</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="새 비밀번호 (8자 이상)"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="새 비밀번호 다시 입력"
+                  autoComplete="new-password"
+                />
+              </div>
+              {passwordMessage && (
+                <p
+                  className={`text-sm ${
+                    passwordMessage.type === "success" ? "text-green-600" : "text-destructive"
+                  }`}
+                >
+                  {passwordMessage.text}
+                </p>
+              )}
+              <Button variant="outline" onClick={handleChangePassword} disabled={passwordSaving}>
+                {passwordSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Lock className="mr-2 h-4 w-4" />
+                )}
+                {passwordSaving ? "변경 중..." : "비밀번호 변경"}
+              </Button>
+            </div>
+            <p className="text-muted-foreground mt-3 text-xs">
+              소셜 로그인(Google 등)만 사용 중인 경우 비밀번호가 없을 수 있습니다.
+            </p>
+          </Card>
+
+          {/* 저장 버튼 */}
+          <Button className="w-full" onClick={handleSaveProfile} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : saveSuccess ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {isSaving ? "저장 중..." : saveSuccess ? "저장됨" : "변경사항 저장"}
+          </Button>
+
+          <Separator />
+
+          {/* 계정 삭제 */}
+          <Card className="border-destructive/50 p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Trash2 className="text-destructive h-5 w-5" />
+              <h2 className="text-destructive font-semibold">계정 삭제</h2>
+            </div>
+
+            <p className="text-muted-foreground mb-4 text-sm">
+              계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+            </p>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  계정 삭제
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>정말 계정을 삭제하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    이 작업은 되돌릴 수 없습니다. 모든 게시글, 댓글, 예측 내역이 영구적으로
+                    삭제됩니다.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-2">
+                  <Label htmlFor="delete-confirm" className="text-muted-foreground text-sm">
+                    확인을 위해 <span className="text-destructive font-semibold">계정삭제</span>를
+                    입력해주세요
+                  </Label>
+                  <Input
+                    id="delete-confirm"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="계정삭제"
+                    className="mt-2"
+                    autoComplete="off"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>
+                    취소
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== "계정삭제"}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                  >
+                    삭제
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Card>
+        </div>
+      )}
+    </main>
   )
 }

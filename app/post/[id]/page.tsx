@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { Header } from "@/components/header"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { PostDetailContent } from "@/components/post-detail-content"
 import { BoardRecentPosts } from "@/components/board-recent-posts"
@@ -181,8 +180,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="bg-background min-h-screen">
-      <Header />
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -222,6 +220,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           </aside>
         </div>
       </main>
-    </div>
+    </>
   )
 }

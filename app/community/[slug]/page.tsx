@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { Header } from "@/components/header"
 import { NewsTicker } from "@/components/news-ticker"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
@@ -199,8 +198,7 @@ export default async function CommunityPage({
   const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
 
   return (
-    <div className="bg-background min-h-screen">
-      <Header />
+    <>
       <NewsTicker communitySlug={slug} />
       <script
         type="application/ld+json"
@@ -232,6 +230,6 @@ export default async function CommunityPage({
           </aside>
         </div>
       </main>
-    </div>
+    </>
   )
 }
