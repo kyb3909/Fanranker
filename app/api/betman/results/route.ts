@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         // 해당 게임들의 pending 예측 조회
         const { data: predictions } = await supabase
           .from("betman_predictions")
-          .select("id, user_id, game_id, prediction, status")
+          .select("id, user_id, game_id, prediction, status, slip_id")
           .in("game_id", gameIds)
           .eq("status", "pending")
 
@@ -185,6 +185,61 @@ export async function POST(request: NextRequest) {
               else autoSettleWrong++
             } else {
               settleErrors.push(`pred=${pred.id}: ${error.message}`)
+            }
+          }
+
+          // 3b. 슬립 단위 정산 (개별 예측 정산 후)
+          const affectedSlipIds = [...new Set(predictions.map((p) => p.slip_id).filter(Boolean))]
+          for (const slipId of affectedSlipIds) {
+            try {
+              const { data: slipPreds } = await supabase
+                .from("betman_predictions")
+                .select("id, status, is_correct, stake")
+                .eq("slip_id", slipId)
+
+              if (!slipPreds) continue
+              if (slipPreds.some((p) => p.status === "pending")) continue
+
+              const activePreds = slipPreds.filter((p) => p.status === "settled")
+              if (activePreds.length === 0) {
+                // 전부 취소 → 슬립도 취소, 환불
+                const { data: slipData } = await supabase
+                  .from("prediction_slips")
+                  .select("user_id, stake, status")
+                  .eq("id", slipId)
+                  .single()
+
+                if (slipData && slipData.status === "pending") {
+                  await supabase
+                    .from("prediction_slips")
+                    .update({ status: "cancelled" })
+                    .eq("id", slipId)
+                  await supabase.rpc("refund_tokens", {
+                    p_user_id: slipData.user_id,
+                    p_amount: slipData.stake,
+                    p_description: "경기 취소 환불 (슬립)",
+                  })
+                }
+                continue
+              }
+
+              // 이미 정산된 슬립은 건너뜀
+              const { data: currentSlip } = await supabase
+                .from("prediction_slips")
+                .select("status")
+                .eq("id", slipId)
+                .single()
+              if (currentSlip && currentSlip.status !== "pending") continue
+
+              const allCorrect = activePreds.every((p) => p.is_correct === true)
+              if (allCorrect) {
+                await supabase.from("prediction_slips").update({ status: "won" }).eq("id", slipId)
+              } else {
+                await supabase.from("prediction_slips").update({ status: "lost" }).eq("id", slipId)
+              }
+              // 볼은 소모성 — 적중해도 볼을 돌려받지 않음 (포인트만 기록)
+            } catch (slipErr) {
+              settleErrors.push(`slip=${slipId}: ${(slipErr as Error).message}`)
             }
           }
 
