@@ -168,7 +168,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
   )
 
   return (
-    <div className="sticky top-16 flex flex-col gap-4">
+    <div className="sticky top-0 flex flex-col gap-4">
       {/* ===== 게시판 (왼쪽 사이드바) ===== */}
       <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />

@@ -7,6 +7,7 @@ import { ProfileSync } from "@/components/profile-sync"
 import { MobileTabBar } from "@/components/mobile-tab-bar"
 import { FloatingWriteButton } from "@/components/floating-write-button"
 import { SITE_CONFIG, jsonLd } from "@/lib/seo"
+import { AppShell } from "@/components/app-shell"
 import "./globals.css"
 
 const koLocalization = {
@@ -155,7 +156,7 @@ export default function RootLayout({
               본문으로 건너뛰기
             </a>
             <ProfileSync />
-            {children}
+            <AppShell>{children}</AppShell>
             <FloatingWriteButton />
             <MobileTabBar />
             <Analytics />

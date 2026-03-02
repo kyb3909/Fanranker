@@ -40,7 +40,11 @@ function mapApiPostsToRecentPosts(
   }))
 }
 
-export const ActivitySidebar = memo(function ActivitySidebar() {
+export const ActivitySidebar = memo(function ActivitySidebar({
+  showPrize = false,
+}: {
+  showPrize?: boolean
+}) {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
 
@@ -55,7 +59,7 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
       }
       setIsLoadingPosts(true)
       try {
-        const response = await fetch("/api/posts?sort=recent_comments&limit=8")
+        const response = await fetch("/api/posts?sort=recent_comments&limit=10")
         if (response.ok) {
           const { posts } = await response.json()
           const mapped = mapApiPostsToRecentPosts(posts || [])
@@ -73,7 +77,10 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
   }, [])
 
   return (
-    <div className="sticky top-16 space-y-4">
+    <div className="sticky top-0 space-y-4">
+      {/* ===== 이달의 상품 배너 (메인 페이지만) ===== */}
+      {showPrize && <MonthlyPrizeBanner />}
+
       {/* ===== 최근 댓글 섹션 ===== */}
       <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
@@ -93,23 +100,19 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
                 {idx > 0 && <div className="mx-4 border-t" />}
                 <Link
                   href={`/post/${post.id}`}
-                  className="hover:bg-muted/40 block px-4 py-2.5 transition-colors"
+                  className="hover:bg-muted/40 flex items-center gap-2 px-4 py-2.5 transition-colors"
                 >
-                  <p className="text-foreground mb-1.5 line-clamp-1 text-[14px] font-medium">
-                    {post.title}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="bg-secondary text-muted-foreground rounded px-2 py-0.5 text-[12px] font-medium">
-                      {post.community}
-                    </span>
-                    <div className="text-muted-foreground flex items-center gap-2.5 text-[12px]">
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        {post.comments}
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <p className="text-foreground truncate text-[14px] font-medium">{post.title}</p>
+                    {post.comments > 0 && (
+                      <span className="text-primary shrink-0 text-[12px] font-semibold">
+                        [{post.comments}]
                       </span>
-                      <span>{post.timestamp}</span>
-                    </div>
+                    )}
                   </div>
+                  <span className="text-muted-foreground shrink-0 text-[12px]">
+                    {post.community}
+                  </span>
                 </Link>
               </Fragment>
             ))
@@ -123,9 +126,6 @@ export const ActivitySidebar = memo(function ActivitySidebar() {
 
       {/* ===== 광고 플레이스홀더 ===== */}
       <AdPlaceholder variant="sidebar" />
-
-      {/* ===== 이달의 상품 배너 ===== */}
-      <MonthlyPrizeBanner />
     </div>
   )
 })

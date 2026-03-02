@@ -228,7 +228,19 @@ export function Header() {
       >
         <div />
         <div className="flex items-center justify-center gap-1.5">
-          <Link href="/">
+          <Link
+            href="/"
+            scroll={false}
+            onClick={(e) => {
+              e.preventDefault()
+              if (window.location.pathname === "/") {
+                window.scrollTo({ top: 0, behavior: "auto" })
+              } else {
+                router.push("/")
+                window.scrollTo({ top: 0, behavior: "auto" })
+              }
+            }}
+          >
             <Button
               variant="ghost"
               size="sm"
