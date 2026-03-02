@@ -57,12 +57,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .eq("user_id", post.user_id)
       .single()
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       post: {
         ...post,
         profile: profile || null,
       },
     })
+    res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
+    return res
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

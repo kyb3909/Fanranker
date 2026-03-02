@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { apiError } from '@/lib/api-error'
+import { NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { apiError } from "@/lib/api-error"
 
 /**
  * GET /api/community/popular
@@ -11,17 +11,17 @@ export async function GET() {
   try {
     const supabase = createServiceRoleClient()
 
-    const { data, error } = await supabase
-      .rpc('get_popular_communities', { lim: 3 })
+    const { data, error } = await supabase.rpc("get_popular_communities", { lim: 3 })
 
     if (error) {
       // RPC 함수가 없는 경우 fallback: 직접 쿼리
       const { data: fallbackData, error: fallbackError } = await supabase
-        .from('community_follows')
-        .select('community_slug')
+        .from("community_follows")
+        .select("community_slug")
+        .limit(5000)
 
       if (fallbackError) {
-        return apiError('인기 게시판 조회 실패', 500, fallbackError)
+        return apiError("인기 게시판 조회 실패", 500, fallbackError)
       }
 
       // 수동으로 집계
@@ -37,8 +37,10 @@ export async function GET() {
       return NextResponse.json({ communities: sorted })
     }
 
-    return NextResponse.json({ communities: data || [] })
+    const res = NextResponse.json({ communities: data || [] })
+    res.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600")
+    return res
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }

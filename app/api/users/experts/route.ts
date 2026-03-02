@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient } from '@/lib/supabase/server'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createAnonClient } from "@/lib/supabase/server"
+import { apiError } from "@/lib/api-error"
 
 /**
  * GET /api/users/experts
- * 
+ *
  * Get list of expert users, sorted by total profit (performance)
- * 
+ *
  * Query Parameters:
  * - sort?: "profit" | "accuracy" | "roi" (default: "profit")
  * - limit?: number (default: 20)
@@ -17,14 +17,15 @@ export async function GET(request: NextRequest) {
     const supabase = createAnonClient()
     const { searchParams } = new URL(request.url)
 
-    const sort = searchParams.get('sort') || 'profit' // 'profit' | 'accuracy' | 'roi'
-    const limit = parseInt(searchParams.get('limit') || '20', 10)
-    const offset = parseInt(searchParams.get('offset') || '0', 10)
+    const sort = searchParams.get("sort") || "profit" // 'profit' | 'accuracy' | 'roi'
+    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const offset = parseInt(searchParams.get("offset") || "0", 10)
 
     // Join profiles with user_prediction_stats to get expert users with their stats
     let query = supabase
-      .from('profiles')
-      .select(`
+      .from("profiles")
+      .select(
+        `
         user_id,
         nickname,
         avatar_url,
@@ -40,8 +41,9 @@ export async function GET(request: NextRequest) {
           current_streak,
           longest_streak
         )
-      `)
-      .eq('is_expert', true)
+      `
+      )
+      .eq("is_expert", true)
       .limit(limit)
       .range(offset, offset + limit - 1)
 
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
     const { data: experts, error } = await query
 
     if (error) {
-      return apiError('전문가 목록 조회 중 오류가 발생했습니다.', 500, error)
+      return apiError("전문가 목록 조회 중 오류가 발생했습니다.", 500, error)
     }
 
     // Transform and sort data
@@ -59,14 +61,19 @@ export async function GET(request: NextRequest) {
       .map((expert) => {
         // Supabase types inner-join as array; access first element at runtime
         const statsArr = expert.user_prediction_stats as unknown as Array<{
-          total_predictions: number; correct_predictions: number; accuracy: number;
-          total_points: number; profit: number; roi: number;
-          current_streak: number; longest_streak: number;
+          total_predictions: number
+          correct_predictions: number
+          accuracy: number
+          total_points: number
+          profit: number
+          roi: number
+          current_streak: number
+          longest_streak: number
         }>
-        const stats = statsArr?.[0] || {} as Record<string, number>
+        const stats = statsArr?.[0] || ({} as Record<string, number>)
         return {
           user_id: expert.user_id,
-          nickname: expert.nickname || '익명',
+          nickname: expert.nickname || "익명",
           avatar_url: expert.avatar_url || null,
           is_expert: expert.is_expert,
           expert_certified_at: expert.expert_certified_at,
@@ -82,24 +89,26 @@ export async function GET(request: NextRequest) {
       })
       .sort((a, b) => {
         switch (sort) {
-          case 'accuracy':
+          case "accuracy":
             return (b.accuracy || 0) - (a.accuracy || 0)
-          case 'roi':
+          case "roi":
             return (b.roi || 0) - (a.roi || 0)
-          case 'profit':
+          case "profit":
           default:
             return (b.profit || 0) - (a.profit || 0)
         }
       })
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       experts: transformedExperts,
       sort,
       limit,
       offset,
       total: transformedExperts.length,
     })
+    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+    return res
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }

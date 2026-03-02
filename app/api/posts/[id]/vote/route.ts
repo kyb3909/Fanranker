@@ -98,18 +98,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // 3. posts.vote_count 업데이트 (net count: up - down)
-    const { count: upCount } = await supabase
-      .from("post_votes")
-      .select("id", { count: "exact", head: true })
-      .eq("post_id", postId)
-      .eq("vote_type", "up")
-
-    const { count: downCount } = await supabase
-      .from("post_votes")
-      .select("id", { count: "exact", head: true })
-      .eq("post_id", postId)
-      .eq("vote_type", "down")
+    // 3. posts.vote_count 업데이트 (net count: up - down) — 병렬 조회
+    const [{ count: upCount }, { count: downCount }] = await Promise.all([
+      supabase
+        .from("post_votes")
+        .select("id", { count: "exact", head: true })
+        .eq("post_id", postId)
+        .eq("vote_type", "up"),
+      supabase
+        .from("post_votes")
+        .select("id", { count: "exact", head: true })
+        .eq("post_id", postId)
+        .eq("vote_type", "down"),
+    ])
 
     const newVoteCount = (upCount || 0) - (downCount || 0)
 
@@ -127,10 +128,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // 게시물 작성자 유저 온도 비동기 갱신
     if (postData?.user_id) {
-      supabase.rpc("update_user_temperature", { p_user_id: postData.user_id }).then(() => {})
+      Promise.resolve(
+        supabase.rpc("update_user_temperature", { p_user_id: postData.user_id })
+      ).catch((e: unknown) => {
+        console.error("Failed to update post author temperature:", e)
+      })
     }
     // 투표한 사람의 온도도 갱신 (투표 활동 반영)
-    supabase.rpc("update_user_temperature", { p_user_id: userId }).then(() => {})
+    Promise.resolve(supabase.rpc("update_user_temperature", { p_user_id: userId })).catch(
+      (e: unknown) => {
+        console.error("Failed to update voter temperature:", e)
+      }
+    )
 
     return NextResponse.json({
       success: true,

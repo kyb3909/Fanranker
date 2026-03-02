@@ -55,20 +55,19 @@ export async function GET(request: NextRequest) {
     const { start: windowStart, end: windowEnd, dailyId } = getDailyWindow(dateParam || undefined)
     const now = new Date()
 
-    // --- Auto-expire past games: scheduled → in_progress ---
-    // 현재 시간 기준으로 이미 시작된 경기 상태 업데이트
-    await supabase
-      .from("betman_games")
-      .update({ status: "in_progress", updated_at: now.toISOString() })
-      .eq("status", "scheduled")
-      .lt("match_time", now.toISOString())
-
-    // --- Auto-close past daily rounds ---
-    await supabase
-      .from("betman_daily_rounds")
-      .update({ status: "closed", updated_at: now.toISOString() })
-      .eq("status", "open")
-      .lt("bet_close_at", now.toISOString())
+    // --- Auto-expire past games + close past daily rounds (병렬) ---
+    await Promise.all([
+      supabase
+        .from("betman_games")
+        .update({ status: "in_progress", updated_at: now.toISOString() })
+        .eq("status", "scheduled")
+        .lt("match_time", now.toISOString()),
+      supabase
+        .from("betman_daily_rounds")
+        .update({ status: "closed", updated_at: now.toISOString() })
+        .eq("status", "open")
+        .lt("bet_close_at", now.toISOString()),
+    ])
 
     // --- Fetch games in daily window (kickoff-time based) ---
     const isToday = !dateParam || dailyId === getTodayDailyId()
@@ -214,7 +213,7 @@ export async function GET(request: NextRequest) {
           )
         : null
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       // Daily window info: [08:00 KST today, 08:00 KST tomorrow)
       window: {
         start: windowStart.toISOString(),
@@ -236,6 +235,8 @@ export async function GET(request: NextRequest) {
         lastChecked: syncState?.last_checked_at,
       },
     })
+    res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
+    return res
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

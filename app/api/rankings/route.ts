@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient } from '@/lib/supabase/server'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createAnonClient } from "@/lib/supabase/server"
+import { apiError } from "@/lib/api-error"
 
 /**
  * GET /api/rankings
- * 
+ *
  * Get user rankings based on various metrics
- * 
+ *
  * Query Parameters:
  * - sort?: "profit" | "accuracy" | "roi" (default: "profit")
  * - sport?: "soccer" | "baseball" | "basketball" | "volleyball" | "all" (default: "all")
@@ -18,36 +18,36 @@ export async function GET(request: NextRequest) {
     const supabase = createAnonClient()
     const { searchParams } = new URL(request.url)
 
-    const sort = searchParams.get('sort') || 'profit' // 'profit' | 'accuracy' | 'roi'
-    const sportFilter = searchParams.get('sport') || 'all'
-    const limit = parseInt(searchParams.get('limit') || '10', 10)
-    const offset = parseInt(searchParams.get('offset') || '0', 10)
+    const sort = searchParams.get("sort") || "profit" // 'profit' | 'accuracy' | 'roi'
+    const sportFilter = searchParams.get("sport") || "all"
+    const limit = parseInt(searchParams.get("limit") || "10", 10)
+    const offset = parseInt(searchParams.get("offset") || "0", 10)
 
     // Determine sorting column
     let orderColumn: string
     switch (sort) {
-      case 'accuracy':
-        orderColumn = 'win_rate'
+      case "accuracy":
+        orderColumn = "win_rate"
         break
-      case 'roi':
-        orderColumn = 'total_points'
+      case "roi":
+        orderColumn = "total_points"
         break
-      case 'profit':
+      case "profit":
       default:
-        orderColumn = 'points_won'
+        orderColumn = "points_won"
         break
     }
 
     // Fetch user prediction stats
     const { data: stats, error: statsError } = await supabase
-      .from('user_prediction_stats')
-      .select('*')
-      .gte('total_predictions', 1)
+      .from("user_prediction_stats")
+      .select("*")
+      .gte("total_predictions", 1)
       .order(orderColumn, { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (statsError) {
-      return apiError('랭킹 조회 중 오류가 발생했습니다.', 500, statsError)
+      return apiError("랭킹 조회 중 오류가 발생했습니다.", 500, statsError)
     }
 
     // Get user IDs to fetch profiles
@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
     let profiles: ProfileRow[] = []
     if (userIds.length > 0) {
       const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, nickname, avatar_url')
-        .in('user_id', userIds)
+        .from("profiles")
+        .select("user_id, nickname, avatar_url")
+        .in("user_id", userIds)
 
       profiles = profilesData || []
     }
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       return {
         rank: offset + index + 1,
         user_id: item.user_id,
-        nickname: profile?.nickname || '익명',
+        nickname: profile?.nickname || "익명",
         avatar_url: profile?.avatar_url || null,
         total_predictions: item.total_predictions || 0,
         correct_predictions: item.correct_predictions || 0,
@@ -101,14 +101,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       rankings: transformedRankings,
       sort,
       sport_filter: sportFilter,
       limit,
       offset,
     })
+    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+    return res
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
