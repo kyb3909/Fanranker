@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, user_id, nickname, avatar_url, temperature, role, notification_settings, created_at, updated_at"
+        "id, user_id, nickname, avatar_url, temperature, role, is_journalist, created_at, updated_at"
       )
       .eq("user_id", userId)
       .single()
@@ -148,7 +148,7 @@ export async function PATCH(request: NextRequest) {
             : {}),
         })
         .select(
-          "id, user_id, nickname, avatar_url, temperature, role, notification_settings, created_at, updated_at"
+          "id, user_id, nickname, avatar_url, temperature, role, is_journalist, created_at, updated_at"
         )
         .single()
 
@@ -182,7 +182,7 @@ export async function PATCH(request: NextRequest) {
         .update(updateData)
         .eq("user_id", userId)
         .select(
-          "id, user_id, nickname, avatar_url, temperature, role, notification_settings, created_at, updated_at"
+          "id, user_id, nickname, avatar_url, temperature, role, is_journalist, created_at, updated_at"
         )
         .single()
 

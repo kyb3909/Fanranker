@@ -103,8 +103,8 @@ export async function POST(request: NextRequest) {
       .single()) as {
       data: {
         success: boolean
-        new_balance?: number
-        current_balance?: number
+        remaining?: number
+        spent?: number
         error_message?: string
       } | null
       error: unknown
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: spendResult.error_message || "골드가 부족합니다.",
-          gold_balance: spendResult.current_balance,
+          gold_balance: spendResult.remaining,
         },
         { status: 400 }
       )
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       already_purchased: false,
-      new_balance: spendResult.new_balance,
+      new_balance: spendResult.remaining,
       gold_spent: GOLD_COST,
       predictions: predictions || [],
     })
