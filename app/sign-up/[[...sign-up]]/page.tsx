@@ -176,6 +176,17 @@ export default function SignUpPage() {
   // ── Submit state ──
   const [submitting, setSubmitting] = useState(false)
 
+  // ── Clerk load timeout: if Clerk fails to init (e.g. prod keys on localhost),
+  //    don't block the page forever — assume not signed in after 3s.
+  const [clerkTimedOut, setClerkTimedOut] = useState(false)
+  useEffect(() => {
+    if (authLoaded) return
+    const timer = setTimeout(() => setClerkTimedOut(true), 3000)
+    return () => clearTimeout(timer)
+  }, [authLoaded])
+
+  const effectiveLoaded = authLoaded || clerkTimedOut
+
   // ── Profile check (for already-signed-in users) ──
   const { data: profile, isLoading: profileLoading } = useSWR(
     isSignedIn ? "/api/profile/me" : null,
@@ -185,15 +196,15 @@ export default function SignUpPage() {
 
   // If already signed in + onboarding completed → redirect home
   useEffect(() => {
-    if (!authLoaded) return
+    if (!effectiveLoaded) return
     if (isSignedIn && profile?.onboarding_completed === true) {
       router.replace("/")
     }
-  }, [authLoaded, isSignedIn, profile, router])
+  }, [effectiveLoaded, isSignedIn, profile, router])
 
   // OAuth redirect return: signed in + sessionStorage has terms agreed → skip to step 3
   useEffect(() => {
-    if (!authLoaded) return
+    if (!effectiveLoaded) return
     if (isSignedIn && profile && profile.onboarding_completed !== true) {
       const termsWereAgreed = sessionStorage.getItem(SS_TERMS_AGREED)
       if (termsWereAgreed === "true") {
@@ -206,7 +217,7 @@ export default function SignUpPage() {
         setStep(1)
       }
     }
-  }, [authLoaded, isSignedIn, profile])
+  }, [effectiveLoaded, isSignedIn, profile])
 
   // Pre-fill nickname from existing profile
   useEffect(() => {
@@ -434,7 +445,9 @@ export default function SignUpPage() {
   const canProceedStep4 = selectedSlugs.size >= 1
 
   // ── Loading state ──
-  if (!authLoaded || !signUpLoaded || (isSignedIn && profileLoading)) {
+  // Uses effectiveLoaded (authLoaded OR 3s timeout) so the page is never
+  // permanently blocked when Clerk can't initialise (e.g. prod keys on localhost).
+  if (!effectiveLoaded || (isSignedIn && profileLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="text-primary h-8 w-8 animate-spin" />
@@ -565,86 +578,94 @@ export default function SignUpPage() {
                 Google 또는 이메일로 가입할 수 있습니다.
               </p>
 
-              {/* Google OAuth */}
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full gap-3 font-medium"
-                onClick={handleGoogleSignUp}
-                disabled={googleLoading}
-              >
-                {googleLoading ? <Spinner className="size-5" /> : <GoogleIcon />}
-                Google로 가입하기
-              </Button>
-
-              {/* Divider */}
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="border-border w-full border-t" />
+              {!signUpLoaded ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="text-primary h-6 w-6 animate-spin" />
                 </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-card text-muted-foreground px-2">or</span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  {/* Google OAuth */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 w-full gap-3 font-medium"
+                    onClick={handleGoogleSignUp}
+                    disabled={googleLoading}
+                  >
+                    {googleLoading ? <Spinner className="size-5" /> : <GoogleIcon />}
+                    Google로 가입하기
+                  </Button>
 
-              {/* Email/Password form */}
-              <form onSubmit={handleEmailSignUp} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="signup-email" className="text-sm">
-                    이메일 주소
-                  </Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                  />
-                </div>
+                  {/* Divider */}
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="border-border w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-card text-muted-foreground px-2">or</span>
+                    </div>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="signup-password" className="text-sm">
-                    비밀번호
-                  </Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="8자 이상"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="new-password"
-                    minLength={8}
-                  />
-                </div>
+                  {/* Email/Password form */}
+                  <form onSubmit={handleEmailSignUp} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signup-email" className="text-sm">
+                        이메일 주소
+                      </Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        autoComplete="email"
+                      />
+                    </div>
 
-                {authError && (
-                  <p className="text-destructive text-sm" role="alert">
-                    {authError}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signup-password" className="text-sm">
+                        비밀번호
+                      </Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="8자 이상"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        minLength={8}
+                      />
+                    </div>
+
+                    {authError && (
+                      <p className="text-destructive text-sm" role="alert">
+                        {authError}
+                      </p>
+                    )}
+
+                    <Button type="submit" className="w-full" disabled={authLoading}>
+                      {authLoading ? <Spinner className="size-4" /> : "이메일로 가입하기"}
+                    </Button>
+                  </form>
+
+                  {/* Sign in link */}
+                  <p className="text-muted-foreground mt-4 text-center text-sm">
+                    이미 계정이 있으신가요?{" "}
+                    <Link href="/" className="text-primary hover:text-primary/80 font-medium">
+                      로그인
+                    </Link>
                   </p>
-                )}
 
-                <Button type="submit" className="w-full" disabled={authLoading}>
-                  {authLoading ? <Spinner className="size-4" /> : "이메일로 가입하기"}
-                </Button>
-              </form>
-
-              {/* Sign in link */}
-              <p className="text-muted-foreground mt-4 text-center text-sm">
-                이미 계정이 있으신가요?{" "}
-                <Link href="/" className="text-primary hover:text-primary/80 font-medium">
-                  로그인
-                </Link>
-              </p>
-
-              <div className="mt-4 flex justify-start">
-                <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="gap-1">
-                  <ChevronLeft className="h-4 w-4" />
-                  이전
-                </Button>
-              </div>
+                  <div className="mt-4 flex justify-start">
+                    <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="gap-1">
+                      <ChevronLeft className="h-4 w-4" />
+                      이전
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
