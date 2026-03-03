@@ -130,7 +130,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
           const isOnboardingIncomplete = profile && profile.onboarding_completed === false
 
           if (isNewUser || isOnboardingIncomplete) {
-            return NextResponse.redirect(new URL("/onboarding", req.url))
+            return NextResponse.redirect(new URL("/sign-up", req.url))
           }
         } catch {
           // Supabase 연결 실패 시 온보딩 체크 스킵
