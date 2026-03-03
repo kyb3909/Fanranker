@@ -1,9 +1,10 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
+  MonitorCheck,
   Users,
   FileText,
   MessageSquare,
@@ -16,7 +17,7 @@ import {
   Target,
   Activity,
   ChevronRight,
-} from 'lucide-react'
+} from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -31,54 +32,47 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-} from '@/components/ui/sidebar'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+} from "@/components/ui/sidebar"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 const navGroups = [
   {
-    label: '개요',
+    label: "개요",
     items: [
-      { title: '대시보드', href: '/admin', icon: LayoutDashboard },
+      { title: "대시보드", href: "/admin", icon: LayoutDashboard },
+      { title: "운영 모니터링", href: "/admin/operations", icon: MonitorCheck },
     ],
   },
   {
-    label: 'User Ops',
-    items: [
-      { title: '사용자 관리', href: '/admin/users', icon: Users },
-    ],
+    label: "User Ops",
+    items: [{ title: "사용자 관리", href: "/admin/users", icon: Users }],
   },
   {
-    label: 'Content Ops',
+    label: "Content Ops",
     collapsible: true,
     icon: FileText,
     items: [
-      { title: '게시글', href: '/admin/content/posts', icon: FileText },
-      { title: '댓글', href: '/admin/content/comments', icon: MessageSquare },
-      { title: '뉴스 티커', href: '/admin/content/ticker', icon: Newspaper },
-      { title: '카테고리', href: '/admin/content/boards', icon: FolderOpen },
-      { title: '신고 관리', href: '/admin/content/reports', icon: Flag },
+      { title: "게시글", href: "/admin/content/posts", icon: FileText },
+      { title: "댓글", href: "/admin/content/comments", icon: MessageSquare },
+      { title: "뉴스 티커", href: "/admin/content/ticker", icon: Newspaper },
+      { title: "카테고리", href: "/admin/content/boards", icon: FolderOpen },
+      { title: "신고 관리", href: "/admin/content/reports", icon: Flag },
     ],
   },
   {
-    label: 'Game Economy',
+    label: "Game Economy",
     collapsible: true,
     icon: Trophy,
     items: [
-      { title: '경기 관리', href: '/admin/matches', icon: Trophy },
-      { title: '전문가 승인', href: '/admin/experts', icon: Shield },
-      { title: '정산 처리', href: '/admin/settlements', icon: Coins },
-      { title: '토큰 모니터링', href: '/admin/tokens', icon: Target },
+      { title: "경기 관리", href: "/admin/matches", icon: Trophy },
+      { title: "전문가 승인", href: "/admin/experts", icon: Shield },
+      { title: "정산 처리", href: "/admin/settlements", icon: Coins },
+      { title: "토큰 모니터링", href: "/admin/tokens", icon: Target },
     ],
   },
   {
-    label: '시스템',
-    items: [
-      { title: '시스템 상태', href: '/admin/system', icon: Activity },
-    ],
+    label: "시스템",
+    items: [{ title: "시스템 상태", href: "/admin/system", icon: Activity }],
   },
 ]
 
@@ -89,7 +83,7 @@ export function AdminSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-3">
         <Link href="/admin" className="flex items-center gap-2 font-semibold">
-          <Shield className="h-5 w-5 text-primary" />
+          <Shield className="text-primary h-5 w-5" />
           <span>관리자 패널</span>
         </Link>
       </SidebarHeader>
@@ -99,10 +93,7 @@ export function AdminSidebar() {
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               {group.collapsible ? (
-                <CollapsibleNavGroup
-                  items={group.items}
-                  pathname={pathname}
-                />
+                <CollapsibleNavGroup items={group.items} pathname={pathname} />
               ) : (
                 <SidebarMenu>
                   {group.items.map((item) => (
@@ -110,8 +101,8 @@ export function AdminSidebar() {
                       <SidebarMenuButton
                         asChild
                         isActive={
-                          item.href === '/admin'
-                            ? pathname === '/admin'
+                          item.href === "/admin"
+                            ? pathname === "/admin"
                             : pathname.startsWith(item.href)
                         }
                         tooltip={item.title}
@@ -140,13 +131,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-function CollapsibleNavGroup({
-  items,
-  pathname,
-}: {
-  items: NavItem[]
-  pathname: string
-}) {
+function CollapsibleNavGroup({ items, pathname }: { items: NavItem[]; pathname: string }) {
   const isAnyActive = items.some((item) => pathname.startsWith(item.href))
   const FirstIcon = items[0]?.icon
 
@@ -165,10 +150,7 @@ function CollapsibleNavGroup({
             <SidebarMenuSub>
               {items.map((item) => (
                 <SidebarMenuSubItem key={item.href}>
-                  <SidebarMenuSubButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
-                  >
+                  <SidebarMenuSubButton asChild isActive={pathname.startsWith(item.href)}>
                     <Link href={item.href}>
                       <item.icon className="h-3.5 w-3.5" />
                       <span>{item.title}</span>
