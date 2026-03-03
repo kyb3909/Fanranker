@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/commission-auto-release",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/reddit-seed-posts",
+      "schedule": "0 */6 * * *"
     }
   ]
 }
