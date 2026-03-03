@@ -221,103 +221,109 @@ export async function GET(request: Request) {
     errorDetails: string[]
   }[] = []
 
-  for (const source of SOURCES) {
-    const stat = {
-      source: source.subreddit,
-      inserted: 0,
-      skipped: 0,
-      errors: 0,
-      errorDetails: [] as string[],
-    }
-
-    try {
-      // 1. Reddit에서 인기글 가져오기
-      const entries = await fetchSubredditHot(source.subreddit, 15)
-      console.log(`[reddit-seed] r/${source.subreddit}: ${entries.length}개 fetch`)
-
-      if (entries.length === 0) {
-        results.push(stat)
-        continue
+  // 모든 소스를 병렬 처리
+  const sourceResults = await Promise.all(
+    SOURCES.map(async (source) => {
+      const stat = {
+        source: source.subreddit,
+        inserted: 0,
+        skipped: 0,
+        errors: 0,
+        errorDetails: [] as string[],
       }
 
-      // 2. 이미 시딩된 reddit_id 조회
-      const redditIds = entries.map((e) => extractRedditId(e))
-      const { data: existing } = await supabase
-        .from("seeded_reddit_posts")
-        .select("reddit_id")
-        .in("reddit_id", redditIds)
+      try {
+        // 1. Reddit에서 인기글 가져오기
+        const entries = await fetchSubredditHot(source.subreddit, 15)
+        console.log(`[reddit-seed] r/${source.subreddit}: ${entries.length}개 fetch`)
 
-      const existingIds = new Set((existing ?? []).map((r) => r.reddit_id))
+        if (entries.length === 0) return stat
 
-      // 3. 새 글만 필터 (최대 MAX_NEW_PER_SOURCE개)
-      const newEntries = entries
-        .filter((e) => !existingIds.has(extractRedditId(e)))
-        .slice(0, MAX_NEW_PER_SOURCE)
+        // 2. 이미 시딩된 reddit_id 조회
+        const redditIds = entries.map((e) => extractRedditId(e))
+        const { data: existing } = await supabase
+          .from("seeded_reddit_posts")
+          .select("reddit_id")
+          .in("reddit_id", redditIds)
 
-      console.log(`[reddit-seed] r/${source.subreddit}: ${newEntries.length}개 새 글`)
+        const existingIds = new Set((existing ?? []).map((r) => r.reddit_id))
 
-      // 4. 번역 → 게시글 등록
-      for (const entry of newEntries) {
-        const redditId = extractRedditId(entry)
+        // 3. 새 글만 필터 (최대 MAX_NEW_PER_SOURCE개)
+        const newEntries = entries
+          .filter((e) => !existingIds.has(extractRedditId(e)))
+          .slice(0, MAX_NEW_PER_SOURCE)
 
-        const translated = await translateWithOpenAI(
-          entry.title,
-          source.subreddit,
-          source.communitySlug
+        console.log(`[reddit-seed] r/${source.subreddit}: ${newEntries.length}개 새 글`)
+
+        // 4. 번역을 병렬 처리
+        const translations = await Promise.all(
+          newEntries.map(async (entry) => {
+            const translated = await translateWithOpenAI(
+              entry.title,
+              source.subreddit,
+              source.communitySlug
+            )
+            return { entry, translated }
+          })
         )
 
-        if (!translated) {
-          stat.errors++
-          stat.errorDetails.push(`translate_fail: ${entry.title.slice(0, 50)}`)
-          continue
-        }
+        // 5. DB 삽입은 순차 처리 (순서 보장)
+        for (const { entry, translated } of translations) {
+          const redditId = extractRedditId(entry)
 
-        const content = textToTipTapJson(translated.body)
+          if (!translated) {
+            stat.errors++
+            stat.errorDetails.push(`translate_fail: ${entry.title.slice(0, 50)}`)
+            continue
+          }
 
-        // posts 테이블에 삽입
-        const { data: post, error: postError } = await supabase
-          .from("posts")
-          .insert({
-            user_id: source.botUserId,
+          const content = textToTipTapJson(translated.body)
+
+          const { data: post, error: postError } = await supabase
+            .from("posts")
+            .insert({
+              user_id: source.botUserId,
+              community_slug: source.communitySlug,
+              title: translated.title.slice(0, 200),
+              content,
+            })
+            .select("id")
+            .single()
+
+          if (postError) {
+            console.error(`[reddit-seed] post insert error:`, postError.message)
+            stat.errors++
+            stat.errorDetails.push(`post_insert: ${postError.message}`)
+            continue
+          }
+
+          const { error: trackError } = await supabase.from("seeded_reddit_posts").insert({
+            reddit_id: redditId,
+            subreddit: source.subreddit,
             community_slug: source.communitySlug,
-            title: translated.title.slice(0, 200),
-            content,
+            post_id: post.id,
+            original_title: entry.title.slice(0, 500),
           })
-          .select("id")
-          .single()
 
-        if (postError) {
-          console.error(`[reddit-seed] post insert error:`, postError.message)
-          stat.errors++
-          stat.errorDetails.push(`post_insert: ${postError.message}`)
-          continue
+          if (trackError) {
+            console.error(`[reddit-seed] tracking insert error:`, trackError.message)
+          }
+
+          stat.inserted++
+          console.log(`[reddit-seed] ✓ r/${source.subreddit}: ${translated.title}`)
         }
 
-        // 추적 테이블에 기록
-        const { error: trackError } = await supabase.from("seeded_reddit_posts").insert({
-          reddit_id: redditId,
-          subreddit: source.subreddit,
-          community_slug: source.communitySlug,
-          post_id: post.id,
-          original_title: entry.title.slice(0, 500),
-        })
-
-        if (trackError) {
-          console.error(`[reddit-seed] tracking insert error:`, trackError.message)
-        }
-
-        stat.inserted++
-        console.log(`[reddit-seed] ✓ r/${source.subreddit}: ${translated.title}`)
+        stat.skipped = entries.length - newEntries.length - stat.errors
+      } catch (err) {
+        console.error(`[reddit-seed] r/${source.subreddit} error:`, err)
+        stat.errors++
       }
 
-      stat.skipped = entries.length - newEntries.length - stat.errors
-    } catch (err) {
-      console.error(`[reddit-seed] r/${source.subreddit} error:`, err)
-      stat.errors++
-    }
+      return stat
+    })
+  )
 
-    results.push(stat)
-  }
+  results.push(...sourceResults)
 
   const totalInserted = results.reduce((s, r) => s + r.inserted, 0)
   const totalErrors = results.reduce((s, r) => s + r.errors, 0)
