@@ -30,6 +30,7 @@ const ONBOARDING_EXCLUDED = [
   "/api/",
   "/sign-up",
   "/sign-in",
+  "/sso-callback",
   "/terms",
   "/privacy",
   "/content-policy",
