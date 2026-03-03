@@ -19,9 +19,27 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 // Define protected routes
 const isAdminRoute = createRouteMatcher(["/admin(.*)"])
+
+// Paths excluded from onboarding redirect
+const ONBOARDING_EXCLUDED = [
+  "/onboarding",
+  "/api/",
+  "/sign-up",
+  "/sign-in",
+  "/terms",
+  "/privacy",
+  "/content-policy",
+  "/_next/",
+  "/favicon.ico",
+]
+
+function isOnboardingExcluded(pathname: string): boolean {
+  return ONBOARDING_EXCLUDED.some((p) => pathname.startsWith(p))
+}
 
 // Sensitive endpoints that need strict rate limiting
 const STRICT_PATHS = [
@@ -81,6 +99,41 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         const signInUrl = new URL("/sign-up", req.url)
         signInUrl.searchParams.set("redirect_url", req.url)
         return NextResponse.redirect(signInUrl)
+      }
+    }
+
+    // Onboarding redirect: logged in + onboarding not completed → /onboarding
+    if (!isOnboardingExcluded(req.nextUrl.pathname)) {
+      const { userId, getToken } = await auth()
+
+      if (userId) {
+        try {
+          const supabase = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+            {
+              accessToken: async () => {
+                return (await getToken()) ?? null
+              },
+            }
+          )
+
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("user_id", userId)
+            .single()
+
+          // 프로필 없음(신규 유저) 또는 온보딩 미완료 → /onboarding
+          const isNewUser = !profile && profileError?.code === "PGRST116"
+          const isOnboardingIncomplete = profile && profile.onboarding_completed === false
+
+          if (isNewUser || isOnboardingIncomplete) {
+            return NextResponse.redirect(new URL("/onboarding", req.url))
+          }
+        } catch {
+          // Supabase 연결 실패 시 온보딩 체크 스킵
+        }
       }
     }
   } catch (error) {

@@ -7,6 +7,8 @@ const patchProfileSchema = z.object({
   nickname: z.string().optional(),
   avatar_url: z.string().nullable().optional(),
   notification_settings: z.record(z.unknown()).optional(),
+  bio: z.string().max(50).nullable().optional(),
+  onboarding_completed: z.boolean().optional(),
 })
 
 const deleteProfileSchema = z.object({
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, user_id, nickname, avatar_url, temperature, role, is_journalist, created_at, updated_at"
+        "id, user_id, nickname, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
       )
       .eq("user_id", userId)
       .single()
@@ -81,7 +83,7 @@ export async function PATCH(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
-    const { nickname, avatar_url, notification_settings } = parsed.data
+    const { nickname, avatar_url, notification_settings, bio, onboarding_completed } = parsed.data
 
     // 닉네임 유효성 검사
     if (nickname !== undefined) {
@@ -118,11 +120,15 @@ export async function PATCH(request: NextRequest) {
       nickname?: string
       avatar_url?: string | null
       notification_settings?: Record<string, unknown>
+      bio?: string | null
+      onboarding_completed?: boolean
     } = {}
     if (nickname !== undefined) updateData.nickname = nickname.trim()
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url
     if (notification_settings !== undefined)
       updateData.notification_settings = notification_settings
+    if (bio !== undefined) updateData.bio = bio
+    if (onboarding_completed !== undefined) updateData.onboarding_completed = onboarding_completed
 
     // 먼저 프로필이 존재하는지 확인
     const { data: existingProfile, error: fetchError } = await supabase
@@ -136,7 +142,7 @@ export async function PATCH(request: NextRequest) {
 
     if (fetchError && fetchError.code === "PGRST116") {
       // 프로필이 없으면 생성 (기본값 포함)
-      const defaultNickname = user.username || user.firstName || `User_${userId.slice(-8)}`
+      const defaultNickname = `User_${userId.slice(-8)}`
       const { data: newProfile, error: insertError } = await supabase
         .from("profiles")
         .insert({
@@ -146,9 +152,11 @@ export async function PATCH(request: NextRequest) {
           ...(notification_settings !== undefined
             ? { notification_settings: notification_settings }
             : {}),
+          ...(bio !== undefined ? { bio } : {}),
+          ...(onboarding_completed !== undefined ? { onboarding_completed } : {}),
         })
         .select(
-          "id, user_id, nickname, avatar_url, temperature, role, is_journalist, created_at, updated_at"
+          "id, user_id, nickname, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
         )
         .single()
 
@@ -182,7 +190,7 @@ export async function PATCH(request: NextRequest) {
         .update(updateData)
         .eq("user_id", userId)
         .select(
-          "id, user_id, nickname, avatar_url, temperature, role, is_journalist, created_at, updated_at"
+          "id, user_id, nickname, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
         )
         .single()
 
