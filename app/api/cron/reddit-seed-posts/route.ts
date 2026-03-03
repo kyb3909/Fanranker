@@ -213,10 +213,22 @@ export async function GET(request: Request) {
   if (authError) return authError
 
   const supabase = createServiceRoleClient()
-  const results: { source: string; inserted: number; skipped: number; errors: number }[] = []
+  const results: {
+    source: string
+    inserted: number
+    skipped: number
+    errors: number
+    errorDetails: string[]
+  }[] = []
 
   for (const source of SOURCES) {
-    const stat = { source: source.subreddit, inserted: 0, skipped: 0, errors: 0 }
+    const stat = {
+      source: source.subreddit,
+      inserted: 0,
+      skipped: 0,
+      errors: 0,
+      errorDetails: [] as string[],
+    }
 
     try {
       // 1. Reddit에서 인기글 가져오기
@@ -256,6 +268,7 @@ export async function GET(request: Request) {
 
         if (!translated) {
           stat.errors++
+          stat.errorDetails.push(`translate_fail: ${entry.title.slice(0, 50)}`)
           continue
         }
 
@@ -276,6 +289,7 @@ export async function GET(request: Request) {
         if (postError) {
           console.error(`[reddit-seed] post insert error:`, postError.message)
           stat.errors++
+          stat.errorDetails.push(`post_insert: ${postError.message}`)
           continue
         }
 
