@@ -291,6 +291,34 @@ export async function POST(request: NextRequest) {
       if (matchUpdateError) {
         console.error("Failed to update match settlement status:", matchUpdateError)
       }
+
+      // 정산 결과 알림 비동기 전송 (응답 지연 방지)
+      Promise.resolve().then(async () => {
+        try {
+          const notificationRows = Array.from(userStatsMap.entries()).map(([userId, stats]) => ({
+            user_id: userId,
+            type: "settlement_result" as const,
+            actor_id: user.id,
+            metadata: {
+              match_id,
+              is_correct: stats.correct > 0,
+              points_earned: stats.points,
+            },
+          }))
+
+          if (notificationRows.length > 0) {
+            const { error: notifError } = await supabase
+              .from("notifications")
+              .insert(notificationRows)
+
+            if (notifError) {
+              console.error("Failed to insert settlement notifications:", notifError)
+            }
+          }
+        } catch (err) {
+          console.error("Settlement notification error:", err)
+        }
+      })
     }
 
     return NextResponse.json({

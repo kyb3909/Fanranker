@@ -15,14 +15,21 @@ import { formatRelativeTime } from "@/lib/utils/date"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 
+interface NotificationMetadata {
+  match_id?: string
+  is_correct?: boolean
+  points_earned?: number
+}
+
 interface Notification {
   id: string
-  type: "comment" | "reply" | "new_post_by_followed" | "expert_prediction"
+  type: "comment" | "reply" | "new_post_by_followed" | "expert_prediction" | "settlement_result"
   actor_id: string
   related_post_id: string | null
   related_comment_id: string | null
   is_read: boolean
   created_at: string
+  metadata: NotificationMetadata | null
 }
 
 interface Profile {
@@ -45,11 +52,11 @@ export function NotificationDropdown() {
 
   // SWR로 읽지 않은 알림 개수 확인 (30초 자동 갱신, 중복 호출 방지)
   const { data: unreadData, mutate: mutateUnread } = useSWR(
-    "/api/notifications?limit=1&unread_only=true",
+    "/api/notifications?count_only=true",
     fetcher,
     { refreshInterval: 30000, revalidateOnFocus: false, dedupingInterval: 10000 }
   )
-  const unreadCount = unreadData?.notifications?.length || 0
+  const unreadCount = unreadData?.unread_count || 0
 
   async function loadNotifications() {
     setIsLoading(true)
@@ -96,6 +103,20 @@ export function NotificationDropdown() {
     }
   }
 
+  async function markAllAsRead() {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+      mutateUnread()
+    } catch {
+      // Silent fail
+    }
+  }
+
   const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p])), [profiles])
   const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts])
 
@@ -112,6 +133,13 @@ export function NotificationDropdown() {
         return `${actorName}님이 새로운 글을 작성했습니다`
       case "expert_prediction":
         return `${actorName}님이 새로운 전문가 예측을 올렸습니다`
+      case "settlement_result": {
+        const meta = notification.metadata
+        if (meta?.is_correct) {
+          return `예측이 적중했습니다! +${meta.points_earned || 0}P`
+        }
+        return "아쉽게 빗나갔습니다"
+      }
       default:
         return "새 알림이 있습니다"
     }
@@ -124,8 +152,9 @@ export function NotificationDropdown() {
       case "new_post_by_followed":
         return notification.related_post_id ? `/post/${notification.related_post_id}` : "/"
       case "expert_prediction":
-        // 전문가 예측 알림은 예측 페이지로 이동
         return "/games/prediction"
+      case "settlement_result":
+        return "/my-predictions"
       default:
         return "/"
     }
@@ -162,8 +191,16 @@ export function NotificationDropdown() {
         align="end"
         className="bg-card border-border mt-2 w-80 overflow-hidden rounded-xl border p-0 shadow-lg"
       >
-        <div className="border-border border-b p-4">
+        <div className="border-border flex items-center justify-between border-b p-4">
           <h3 className="text-foreground text-base font-semibold">알림</h3>
+          {notifications.some((n) => !n.is_read) && (
+            <button
+              onClick={markAllAsRead}
+              className="text-primary hover:text-primary/80 text-xs font-medium"
+            >
+              모두 읽음
+            </button>
+          )}
         </div>
 
         <div className="max-h-[400px] overflow-y-auto">
@@ -196,13 +233,21 @@ export function NotificationDropdown() {
                     className="hover:bg-muted/50 block p-4 transition-colors"
                   >
                     <div className="flex gap-3">
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage
-                          src={actor?.avatar_url || "/placeholder-user.jpg"}
-                          alt={actor?.nickname}
-                        />
-                        <AvatarFallback>{actor?.nickname?.[0] || "?"}</AvatarFallback>
-                      </Avatar>
+                      {notification.type === "settlement_result" ? (
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                          <span className="text-lg">
+                            {notification.metadata?.is_correct ? "🎯" : "💫"}
+                          </span>
+                        </div>
+                      ) : (
+                        <Avatar className="h-10 w-10 flex-shrink-0">
+                          <AvatarImage
+                            src={actor?.avatar_url || "/placeholder-user.jpg"}
+                            alt={actor?.nickname}
+                          />
+                          <AvatarFallback>{actor?.nickname?.[0] || "?"}</AvatarFallback>
+                        </Avatar>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p
                           className={`text-sm ${notification.is_read ? "text-muted-foreground" : "text-foreground font-medium"}`}

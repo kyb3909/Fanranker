@@ -31,6 +31,22 @@ export async function GET(request: NextRequest) {
     }
     const searchParams = request.nextUrl.searchParams
 
+    // count_only=true: 읽지 않은 알림 개수만 반환 (뱃지용)
+    const countOnly = searchParams.get("count_only") === "true"
+    if (countOnly) {
+      const { count, error: countError } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("is_read", false)
+
+      if (countError) {
+        return apiError("알림 개수 조회 중 오류가 발생했습니다.", 500, countError)
+      }
+
+      return NextResponse.json({ unread_count: count || 0 })
+    }
+
     const limit = parseInt(searchParams.get("limit") || "20", 10)
     const unreadOnly = searchParams.get("unread_only") === "true"
 
@@ -45,7 +61,8 @@ export async function GET(request: NextRequest) {
         related_post_id,
         related_comment_id,
         is_read,
-        created_at
+        created_at,
+        metadata
       `
       )
       .eq("user_id", userId)
