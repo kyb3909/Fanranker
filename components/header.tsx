@@ -97,11 +97,11 @@ export function Header() {
                   window.scrollTo(0, 0)
                 }
               }}
-              className="ml-3 flex items-baseline gap-1"
+              className="relative ml-3 flex items-baseline"
               aria-label="홈"
             >
-              {/* 그깟 공놀이 붓글씨 장식 */}
-              <span className="relative hidden h-8 w-auto shrink-0 sm:block" aria-hidden>
+              {/* 그깟 공놀이 붓글씨 (뒤쪽 레이어) */}
+              <span className="relative z-0 -ml-1 hidden h-8 w-auto shrink-0 sm:block" aria-hidden>
                 <Image
                   src="/logo-brush.webp"
                   alt=""
@@ -111,8 +111,9 @@ export function Header() {
                   priority
                 />
               </span>
+              {/* gongnori.fan 텍스트가 붓글씨 오른쪽과 겹치게 */}
               <span
-                className="text-foreground text-[30px] leading-none"
+                className="text-foreground relative z-10 ml-1 text-[30px] leading-none sm:-ml-[4px]"
                 style={{ letterSpacing: "-0.02em" }}
               >
                 <span className="font-bold">gongnori</span>
