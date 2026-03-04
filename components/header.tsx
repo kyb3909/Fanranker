@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Home, Compass, Bell, Search, Loader2, Trophy } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react"
 import { SignedIn, SignedOut } from "@clerk/nextjs"
@@ -83,9 +84,9 @@ export function Header() {
       {/* Threads 스타일: 충분한 높이, 명확한 구조 */}
       <div className="mx-auto max-w-[1280px] px-6 sm:px-10">
         {/* 높이 56px: Threads 스타일 - 여유있는 헤더 */}
-        <div className="flex h-14 items-center justify-between">
-          {/* Logo */}
-          <div className="flex shrink-0 items-center">
+        <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2">
+          {/* Logo: 왼쪽 정렬 */}
+          <div className="-ml-[25px] flex min-w-0 shrink-0 items-center justify-start gap-2 sm:gap-3">
             <Link
               href="/"
               onClick={(e) => {
@@ -99,6 +100,17 @@ export function Header() {
               className="ml-3 flex items-baseline gap-1"
               aria-label="홈"
             >
+              {/* 그깟 공놀이 붓글씨 장식 */}
+              <span className="relative hidden h-8 w-auto shrink-0 sm:block" aria-hidden>
+                <Image
+                  src="/logo-brush.webp"
+                  alt=""
+                  width={120}
+                  height={32}
+                  className="h-8 w-auto object-contain object-left"
+                  priority
+                />
+              </span>
               <span
                 className="text-foreground text-[30px] leading-none"
                 style={{ letterSpacing: "-0.02em" }}
@@ -106,20 +118,11 @@ export function Header() {
                 <span className="font-bold">gongnori</span>
                 <span className="text-primary font-normal">.fan</span>
               </span>
-              <span
-                className="text-foreground/65 translate-y-[2px] self-end text-[14px] leading-none"
-                style={{ fontFamily: '"GmarketSansBold", sans-serif' }}
-              >
-                공놀이판
-              </span>
             </Link>
           </div>
 
-          {/* Search: 좁은 폭, 헤더에서 바로 검색 */}
-          <div
-            className="relative mx-4 hidden w-full max-w-[400px] min-w-0 shrink-0 sm:block"
-            ref={containerRef}
-          >
+          {/* Search: 헤더 중앙 고정 */}
+          <div className="relative hidden w-[min(100%,400px)] shrink-0 sm:block" ref={containerRef}>
             <div className="relative">
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <input
@@ -203,8 +206,8 @@ export function Header() {
             <Search className="h-[18px] w-[18px]" />
           </Button>
 
-          {/* Actions: 여유있는 간격 */}
-          <div className="flex items-center gap-1">
+          {/* Actions: 오른쪽 정렬 */}
+          <div className="flex min-w-0 items-center justify-end gap-1">
             <SignedIn>
               <GoldBalance />
               <BallBalance />

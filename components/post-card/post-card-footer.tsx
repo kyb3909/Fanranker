@@ -58,7 +58,7 @@ export function PostCardFooter({
         </Avatar>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="text-foreground hover:text-primary cursor-pointer truncate text-[13px] font-medium transition-colors">
+            <button className="text-foreground hover:text-primary cursor-pointer truncate text-[15px] font-medium transition-colors">
               {author}
             </button>
           </DropdownMenuTrigger>

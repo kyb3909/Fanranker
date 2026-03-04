@@ -78,7 +78,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   return (
     <article>
       <Card className="border-border hover:border-muted-foreground/30 overflow-hidden border transition-colors">
-        <div className="relative p-4 sm:p-5">
+        <div className="relative px-4 py-3 sm:px-5">
           <PostCardHeader
             community={post.community}
             communityLink={communityLink}
