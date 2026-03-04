@@ -138,7 +138,7 @@ export default function MyPostsPage() {
       {/* 글 목록 */}
       {errorMessage ? (
         <Card className="p-8 text-center">
-          <p className="mb-3 text-sm text-red-500">{errorMessage}</p>
+          <p className="mb-3 text-sm text-primary">{errorMessage}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             다시 시도
           </Button>

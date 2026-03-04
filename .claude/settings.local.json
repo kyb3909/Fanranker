@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__get_advisors",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(python3:*)",
+      "Bash(npm install:*)",
+      "Bash(npx -y @anthropic-ai/claude-code mcp add playwright -- npx -y @playwright/mcp@latest --headless)",
+      "Bash(node -e:*)",
+      "Bash(curl:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_type",
+      "Bash(npx next lint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)",
+      "mcp__playwright__browser_close",
+      "Bash(git restore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(FanRanker\"\\)\n- Add metadata to all 22 pages \\(static exports + generateMetadata for dynamic routes\\)\n- Create layout.tsx for client component pages to enable metadata\n- Fix TipTap duplicate extension warning by removing redundant .extend\\(\\) in tiptap-content\n- Improve community board table for mobile: show title + author only on small screens\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx next build:*)",
+      "mcp__supabase__execute_sql",
+      "Bash(python:*)",
+      "Bash(\"C:/Users/user/AppData/Local/gh-cli/bin/gh.exe\" run list --workflow=betman-check-round.yml --repo kyb3909/Fanranker --limit 1)",
+      "Bash(npx vercel ls)",
+      "Bash(ssh:*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "Bash(cat:*)",
+      "Bash(head:*)"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "community-crawlers",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Unified news crawler for community ticker system",
+  "scripts": {
+    "start": "node runner.js",
+    "dry-run": "node runner.js --dry-run",
+    "soccer": "node runner.js --source=reddit-soccer"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "dotenv": "^16.6.1",
+    "openai": "^4.104.0"
+  }
+}

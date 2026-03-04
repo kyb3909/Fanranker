@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
+    "@google-analytics/data": "^5.2.1",
+    "@next/third-parties": "^16.1.6",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-avatar": "1.1.2",
     "@radix-ui/react-dialog": "1.1.4",

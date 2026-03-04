@@ -46,7 +46,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   if (error || !data) {
     return (
       <div className="text-center py-20">
-        <p className="text-sm text-red-500">{error || '주문을 찾을 수 없습니다.'}</p>
+        <p className="text-sm text-primary">{error || '주문을 찾을 수 없습니다.'}</p>
         <Link href="/art/commissions/orders" className="text-primary text-sm mt-2 inline-block hover:underline">주문 목록으로</Link>
       </div>
     )

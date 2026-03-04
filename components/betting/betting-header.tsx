@@ -43,7 +43,7 @@ export function BettingHeader({
   return (
     <div className="bg-card border-border mb-3 overflow-hidden rounded-xl border sm:mb-4">
       {/* 1행: 오늘의 경기 | 랭킹 | 마이페이지 */}
-      <div className="border-border flex border-b" role="tablist" aria-label="승부 예측">
+      <div className="border-border flex border-b" role="tablist" aria-label="경기 예측">
         {[
           { id: "betting", label: "오늘의 경기" },
           { id: "ranking", label: "랭킹" },

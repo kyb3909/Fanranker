@@ -315,24 +315,24 @@ test.describe('예측 페이지', () => {
   });
 });
 
-test.describe('메인 페이지 승부 예측 탭', () => {
-  test('메인 페이지에서 승부 예측 탭으로 전환 가능해야 한다', async ({ page }) => {
+test.describe('메인 페이지 경기 예측 탭', () => {
+  test('메인 페이지에서 경기 예측 탭으로 전환 가능해야 한다', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+    const bettingTab = page.getByRole('button', { name: /경기 예측/ });
     await bettingTab.click();
 
-    // 승부 예측 콘텐츠가 표시됨
+    // 경기 예측 콘텐츠가 표시됨
     const bettingContent = page.getByText(/오늘의 경기|예측|랭킹/);
     await expect(bettingContent.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('승부 예측 탭에서 경기 목록이 표시되어야 한다', async ({ page }) => {
+  test('경기 예측 탭에서 경기 목록이 표시되어야 한다', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+    const bettingTab = page.getByRole('button', { name: /경기 예측/ });
     await bettingTab.click();
 
     await page.waitForLoadState('networkidle');

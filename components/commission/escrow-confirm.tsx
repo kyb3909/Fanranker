@@ -45,14 +45,14 @@ export function EscrowConfirmDialog({ packageName, priceGold, userBalance, onCon
         </div>
 
         <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-          hasEnough ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+          hasEnough ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-primary/10 border border-primary/30 text-primary'
         }`}>
           <span>보유 골드</span>
           <span className="font-bold">{userBalance.toLocaleString()}G</span>
         </div>
 
         {!hasEnough && (
-          <div className="flex items-center gap-2 text-sm text-red-500">
+          <div className="flex items-center gap-2 text-sm text-primary">
             <AlertCircle className="h-4 w-4" />
             골드가 {(priceGold - userBalance).toLocaleString()}G 부족합니다.
           </div>

@@ -165,7 +165,7 @@ export function BettingRankings({
                     disabled={isFollowLoading}
                     className={`h-7 shrink-0 rounded-full px-3 text-xs ${
                       isFollowed
-                        ? "text-muted-foreground hover:border-red-300 hover:text-red-500"
+                        ? "text-muted-foreground hover:border-primary/50 hover:text-primary"
                         : "bg-primary text-primary-foreground hover:bg-primary/90"
                     }`}
                   >

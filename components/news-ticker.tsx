@@ -185,8 +185,8 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
             <Zap className="h-4 w-4 text-amber-400" />
             <span className="text-[12px] font-bold tracking-wide text-white">LIVE</span>
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
           </div>
 

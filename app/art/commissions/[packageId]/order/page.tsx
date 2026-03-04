@@ -79,7 +79,7 @@ export default function OrderPage({ params }: { params: Promise<{ packageId: str
   if (error || !pkg) {
     return (
       <div className="text-center py-20">
-        <p className="text-sm text-red-500">{error || '패키지를 찾을 수 없습니다.'}</p>
+        <p className="text-sm text-primary">{error || '패키지를 찾을 수 없습니다.'}</p>
         <Link href="/art/commissions" className="text-primary text-sm mt-2 inline-block hover:underline">커미션 마켓으로</Link>
       </div>
     )

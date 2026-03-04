@@ -1,6 +1,8 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
+import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
+import { GoogleAnalytics } from "@next/third-parties/google"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ClerkErrorBoundary } from "@/components/clerk-error-boundary"
 import { ProfileSync } from "@/components/profile-sync"
@@ -103,6 +105,10 @@ export default function RootLayout({
       <ClerkProvider localization={koLocalization}>
         <html lang="ko">
           <head>
+            {/* Google AdSense 계정 메타 태그 */}
+            {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+              <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_ID} />
+            )}
             {/* Pretendard: CSS @import 대신 preload → 렌더 블로킹 제거 */}
             <link
               rel="preload"
@@ -121,6 +127,15 @@ export default function RootLayout({
             <link rel="preconnect" href="https://clerk.gongnori.fan" crossOrigin="anonymous" />
             {/* GmarketSans preconnect */}
             <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+            {/* Google AdSense: head에 위치해야 크롤러가 인식 */}
+            {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+              <Script
+                async
+                src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
+                crossOrigin="anonymous"
+                strategy="afterInteractive"
+              />
+            )}
           </head>
           <body className={`pb-14 font-sans antialiased sm:pb-0`}>
             <script
@@ -156,6 +171,9 @@ export default function RootLayout({
             <FloatingWriteButton />
             <MobileTabBar />
             <Analytics />
+            {process.env.NEXT_PUBLIC_GA_ID && (
+              <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+            )}
           </body>
         </html>
       </ClerkProvider>

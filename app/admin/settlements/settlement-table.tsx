@@ -96,7 +96,7 @@ export function SettlementManagementTable() {
   if (error) {
     return (
       <Card>
-        <div className="flex flex-col items-center justify-center h-64 text-red-500">
+        <div className="flex flex-col items-center justify-center h-64 text-primary">
           <XCircle className="h-10 w-10 mb-2" />
           <p className="text-lg font-medium">데이터를 불러오는데 실패했습니다.</p>
           <p className="text-sm text-muted-foreground">{error}</p>

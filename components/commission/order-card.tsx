@@ -54,7 +54,7 @@ export function CommissionOrderCard({ order, currentUserId, profiles }: OrderCar
           <span className="font-bold text-sm text-primary">{order.price_gold.toLocaleString()}G</span>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {daysLeft !== null && !['completed', 'cancelled'].includes(order.status) && (
-              <span className={`flex items-center gap-1 ${daysLeft < 0 ? 'text-red-500' : daysLeft <= 2 ? 'text-orange-500' : ''}`}>
+              <span className={`flex items-center gap-1 ${daysLeft < 0 ? 'text-primary' : daysLeft <= 2 ? 'text-orange-500' : ''}`}>
                 <Clock className="h-3 w-3" />
                 {daysLeft < 0 ? `${Math.abs(daysLeft)}일 초과` : `D-${daysLeft}`}
               </span>

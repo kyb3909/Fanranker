@@ -48,7 +48,7 @@ export function CommissionOrderForm({ packageData, userBalance, onSubmit }: Prop
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 border border-primary/30 rounded-lg px-3 py-2">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -73,7 +73,7 @@ export function CommissionOrderForm({ packageData, userBalance, onSubmit }: Prop
 
       {/* Balance Check */}
       <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-        hasEnough ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+        hasEnough ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-primary/10 border border-primary/30 text-primary'
       }`}>
         <span>보유 골드</span>
         <span className="font-bold">{userBalance.toLocaleString()}G</span>

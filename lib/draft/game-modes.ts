@@ -1,9 +1,33 @@
-import type { GameConfig } from "./types"
+// Legacy single-player draft modes (not used by multiplayer draft)
+// Keep for backward compatibility if any pages reference it
+
+interface LegacyPlayer {
+  id: string
+  name: string
+  position: string
+  rating: number
+  salary: number
+}
+
+interface LegacyGameConfig {
+  id: string
+  name: string
+  description: string
+  category: string
+  icon: string
+  totalPicks: number
+  picksPerTeam: number
+  budget: number
+  positions: string[]
+  timerSeconds: number
+  salaryRange: { min: number; max: number }
+  players: LegacyPlayer[]
+}
 
 // ============================
 // EPL Draft
 // ============================
-const epl: GameConfig = {
+const epl: LegacyGameConfig = {
   id: "epl",
   name: "EPL 드래프트",
   description: "프리미어리그 최고의 선수들",
@@ -52,7 +76,7 @@ const epl: GameConfig = {
 // ============================
 // World Soccer Draft
 // ============================
-const soccer: GameConfig = {
+const soccer: LegacyGameConfig = {
   id: "soccer",
   name: "축구 선수 드래프트",
   description: "세계 최고의 축구 선수들",
@@ -101,7 +125,7 @@ const soccer: GameConfig = {
 // ============================
 // Slam Dunk Draft
 // ============================
-const slamDunk: GameConfig = {
+const slamDunk: LegacyGameConfig = {
   id: "slam-dunk",
   name: "슬램덩크 드래프트",
   description: "북산고 vs 산왕공고 드림팀",
@@ -145,7 +169,7 @@ const slamDunk: GameConfig = {
 // ============================
 // K-POP Idol Draft
 // ============================
-const idol: GameConfig = {
+const idol: LegacyGameConfig = {
   id: "idol",
   name: "아이돌 드래프트",
   description: "K-POP 스타 선발전",
@@ -189,7 +213,7 @@ const idol: GameConfig = {
 // ============================
 // NBA Draft
 // ============================
-const nba: GameConfig = {
+const nba: LegacyGameConfig = {
   id: "nba",
   name: "NBA 드래프트",
   description: "현역 NBA 올스타",
@@ -233,7 +257,7 @@ const nba: GameConfig = {
 // ============================
 // NBA Legend Draft
 // ============================
-const nbaLegend: GameConfig = {
+const nbaLegend: LegacyGameConfig = {
   id: "nba-legend",
   name: "NBA 레전드 드래프트",
   description: "역대 최고의 전설들",
@@ -277,7 +301,7 @@ const nbaLegend: GameConfig = {
 // ============================
 // Korea National Team Draft
 // ============================
-const korea: GameConfig = {
+const korea: LegacyGameConfig = {
   id: "korea",
   name: "한국 국가대표팀 드래프트",
   description: "태극전사 선발전",
@@ -321,7 +345,7 @@ const korea: GameConfig = {
 // ============================
 // Three Kingdoms Draft
 // ============================
-const threeKingdoms: GameConfig = {
+const threeKingdoms: LegacyGameConfig = {
   id: "three-kingdoms",
   name: "삼국지 드래프트",
   description: "역사 속 영웅 장수들",
@@ -365,7 +389,7 @@ const threeKingdoms: GameConfig = {
 // ============================
 // All Game Modes Export
 // ============================
-export const GAME_MODES: Record<string, GameConfig> = {
+export const GAME_MODES: Record<string, LegacyGameConfig> = {
   epl,
   soccer,
   "slam-dunk": slamDunk,

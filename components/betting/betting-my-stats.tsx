@@ -44,7 +44,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center p-2 bg-muted/40 rounded-lg">
               <div className={`text-lg font-bold ${
-                (myStats.summary.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                (myStats.summary.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-primary'
               }`}>
                 {(myStats.summary.profit_rate || 0) >= 0 ? '+' : ''}{(myStats.summary.profit_rate || 0).toFixed(1)}%
               </div>
@@ -58,7 +58,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
             </div>
             <div className="text-center p-2 bg-muted/40 rounded-lg">
               <div className={`text-lg font-bold ${
-                (myStats.summary.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                (myStats.summary.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-primary'
               }`}>
                 {(myStats.summary.net_profit || 0) >= 0 ? '+' : ''}{(myStats.summary.net_profit || 0).toFixed(2)}
               </div>
@@ -76,13 +76,13 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
               <span className="font-medium">
                 <span className="text-emerald-600">{myStats.summary.correct_predictions}</span>
                 /
-                <span className="text-red-500">{myStats.summary.wrong_predictions}</span>
+                <span className="text-primary">{myStats.summary.wrong_predictions}</span>
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">현재</span>
               <span className={`font-medium ${
-                (myStats.summary.current_streak || 0) > 0 ? 'text-emerald-600' : (myStats.summary.current_streak || 0) < 0 ? 'text-red-500' : ''
+                (myStats.summary.current_streak || 0) > 0 ? 'text-emerald-600' : (myStats.summary.current_streak || 0) < 0 ? 'text-primary' : ''
               }`}>
                 {myStats.summary.current_streak > 0
                   ? `${myStats.summary.current_streak}연승 🔥`
@@ -127,7 +127,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                         sport.current_streak > 0
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-red-100 text-red-700'
+                          : 'bg-primary/15 text-primary'
                       }`}>
                         {sport.current_streak > 0 ? `${sport.current_streak}연승` : `${Math.abs(sport.current_streak)}연패`}
                       </span>
@@ -136,7 +136,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                   <div className="grid grid-cols-3 gap-1.5">
                     <div className="text-center px-2 py-1.5 bg-muted/40 rounded">
                       <div className={`text-xs font-bold ${
-                        (sport.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                        (sport.profit_rate || 0) >= 0 ? 'text-emerald-600' : 'text-primary'
                       }`}>
                         {(sport.profit_rate || 0) >= 0 ? '+' : ''}{(sport.profit_rate || 0).toFixed(1)}%
                       </div>
@@ -150,7 +150,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                     </div>
                     <div className="text-center px-2 py-1.5 bg-muted/40 rounded">
                       <div className={`text-xs font-bold ${
-                        (sport.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                        (sport.net_profit || 0) >= 0 ? 'text-emerald-600' : 'text-primary'
                       }`}>
                         {(sport.net_profit || 0) >= 0 ? '+' : ''}{(sport.net_profit || 0).toFixed(2)}
                       </div>

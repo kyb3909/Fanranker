@@ -7,7 +7,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   review: { label: "검토중", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   revision: { label: "수정요청", className: "bg-orange-100 text-orange-800 border-orange-200" },
   completed: { label: "완료", className: "bg-green-100 text-green-800 border-green-200" },
-  cancelled: { label: "취소됨", className: "bg-red-100 text-red-800 border-red-200" },
+  cancelled: { label: "취소됨", className: "bg-primary/15 text-primary border-primary/30" },
   // Milestone statuses
   submitted: { label: "제출됨", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   approved: { label: "승인됨", className: "bg-green-100 text-green-800 border-green-200" },

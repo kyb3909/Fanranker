@@ -9,6 +9,7 @@ import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
 import type { CommunityInfo } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
 import { AdPlaceholder } from "@/components/ad-placeholder"
+import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import useSWR, { useSWRConfig } from "swr"
 import { fetcher } from "@/lib/swr"
 
@@ -24,6 +25,7 @@ interface Category {
 export const CommunitySidebar = memo(function CommunitySidebar() {
   const { isSignedIn } = useAuth()
   const { mutate: globalMutate } = useSWRConfig()
+  const { ref: stickyRef, stickyTop } = useStickySidebar()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null)
@@ -168,7 +170,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
   )
 
   return (
-    <div className="sticky top-0 flex flex-col gap-4">
+    <div ref={stickyRef} className="sticky flex flex-col gap-4" style={{ top: `${stickyTop}px` }}>
       {/* ===== 게시판 (왼쪽 사이드바) ===== */}
       <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
@@ -208,7 +210,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
             <div className="mb-1 px-4 py-2.5">
               <p className="text-primary mb-1.5 text-[12px] font-semibold">인기 게시판</p>
               <p className="text-muted-foreground text-[12px]">
-                ⭐ 별을 눌러 팔로우하면 맞춤 피드를 볼 수 있어요
+                ⭐ 별을 눌러 팔로우하면 맞춤 담벼락을 볼 수 있어요
               </p>
             </div>
           )}

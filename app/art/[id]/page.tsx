@@ -11,17 +11,17 @@ import { formatCount } from "@/lib/utils/format"
 
 const GRADIENTS = [
   "from-zinc-800 via-neutral-700 to-stone-800",
-  "from-red-950 via-rose-900 to-red-950",
+  "from-primary/95 via-primary/80 to-primary/95",
   "from-slate-800 via-slate-700 to-zinc-800",
   "from-stone-800 via-neutral-700 to-stone-900",
   "from-neutral-800 via-zinc-700 to-neutral-900",
-  "from-red-900/80 via-stone-800 to-neutral-800",
+  "from-primary/70 via-stone-800 to-neutral-800",
   "from-zinc-700 via-stone-700 to-neutral-800",
   "from-stone-900 via-zinc-800 to-stone-900",
   "from-neutral-700 via-stone-700 to-zinc-800",
-  "from-red-950/70 via-neutral-800 to-zinc-900",
+  "from-primary/70 via-neutral-800 to-zinc-900",
   "from-slate-700 via-zinc-700 to-slate-800",
-  "from-stone-800 via-red-950/50 to-neutral-800",
+  "from-stone-800 via-primary/50 to-neutral-800",
 ]
 
 interface MockArtwork {
@@ -147,10 +147,10 @@ export default function ArtworkDetailPage({ params }: { params: Promise<{ id: st
               <Button
                 variant="ghost"
                 size="sm"
-                className={`gap-1.5 ${liked ? "text-red-500" : "text-muted-foreground"}`}
+                className={`gap-1.5 ${liked ? "text-primary" : "text-muted-foreground"}`}
                 onClick={() => setLiked(!liked)}
               >
-                <Heart className={`h-4 w-4 ${liked ? "fill-red-500" : ""}`} />
+                <Heart className={`h-4 w-4 ${liked ? "fill-primary" : ""}`} />
                 <span className="text-sm">{liked ? artwork.likes + 1 : artwork.likes}</span>
               </Button>
               <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
@@ -301,9 +301,9 @@ export default function ArtworkDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Print / Goods CTA */}
-          <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 border border-red-700/30 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-primary/90 via-primary to-primary/90 border border-primary/30 rounded-xl p-4">
             <h3 className="font-bold text-sm text-white mb-1.5">프린팅 요청</h3>
-            <p className="text-xs text-red-200 mb-3">이 작품으로 포스터, 티셔츠 등 굿즈를 만들어보세요.</p>
+            <p className="text-xs text-primary-foreground/80 mb-3">이 작품으로 포스터, 티셔츠 등 굿즈를 만들어보세요.</p>
             <button className="w-full py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-colors">
               굿즈 만들기
             </button>

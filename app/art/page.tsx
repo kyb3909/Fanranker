@@ -39,17 +39,17 @@ interface MockArtwork {
 
 const GRADIENTS = [
   "from-zinc-800 via-neutral-700 to-stone-800",
-  "from-red-950 via-rose-900 to-red-950",
+  "from-primary/95 via-primary/80 to-primary/95",
   "from-slate-800 via-slate-700 to-zinc-800",
   "from-stone-800 via-neutral-700 to-stone-900",
   "from-neutral-800 via-zinc-700 to-neutral-900",
-  "from-red-900/80 via-stone-800 to-neutral-800",
+  "from-primary/70 via-stone-800 to-neutral-800",
   "from-zinc-700 via-stone-700 to-neutral-800",
   "from-stone-900 via-zinc-800 to-stone-900",
   "from-neutral-700 via-stone-700 to-zinc-800",
-  "from-red-950/70 via-neutral-800 to-zinc-900",
+  "from-primary/70 via-neutral-800 to-zinc-900",
   "from-slate-700 via-zinc-700 to-slate-800",
-  "from-stone-800 via-red-950/50 to-neutral-800",
+  "from-stone-800 via-primary/50 to-neutral-800",
 ]
 
 const MOCK_ARTWORKS: MockArtwork[] = [
@@ -192,9 +192,9 @@ export default function ArtPage() {
           </div>
 
           {/* Commission Banner */}
-          <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 border border-red-700/30 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-primary/90 via-primary to-primary/90 border border-primary/30 rounded-xl p-4">
             <h3 className="font-bold text-sm text-white mb-1.5">커미션 의뢰하기</h3>
-            <p className="text-xs text-red-200 mb-3">마음에 드는 작가에게 직접 작품을 의뢰해보세요.</p>
+            <p className="text-xs text-primary-foreground/80 mb-3">마음에 드는 작가에게 직접 작품을 의뢰해보세요.</p>
             <Link href="/art/commissions" className="block w-full py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition-colors text-center">
               커미션 마켓 둘러보기
             </Link>

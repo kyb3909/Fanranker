@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { AdPlaceholder } from "@/components/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/monthly-prize-banner"
+import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 
@@ -45,6 +46,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
 }: {
   showPrize?: boolean
 }) {
+  const { ref: stickyRef, stickyTop } = useStickySidebar()
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
 
@@ -77,7 +79,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
   }, [])
 
   return (
-    <div className="sticky top-0 space-y-4">
+    <div ref={stickyRef} className="sticky space-y-4" style={{ top: `${stickyTop}px` }}>
       {/* ===== 이달의 상품 배너 (메인 페이지만) ===== */}
       {showPrize && <MonthlyPrizeBanner />}
 

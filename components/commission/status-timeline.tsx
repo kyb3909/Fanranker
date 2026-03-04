@@ -26,10 +26,10 @@ export function CommissionStatusTimeline({ status }: { status: string }) {
   if (status === 'cancelled') {
     return (
       <div className="flex items-center gap-2 py-3">
-        <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
           <X className="h-3.5 w-3.5 text-white" />
         </div>
-        <span className="text-sm font-medium text-red-600">주문이 취소되었습니다</span>
+        <span className="text-sm font-medium text-primary">주문이 취소되었습니다</span>
       </div>
     )
   }

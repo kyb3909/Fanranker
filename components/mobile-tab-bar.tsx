@@ -3,25 +3,25 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { Home, Compass, Trophy, User } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, User } from "lucide-react"
 
 const tabs = [
   {
     href: "/",
-    icon: Home,
-    label: "피드",
+    icon: LayoutGrid,
+    label: "담벼락",
     match: (p: string, view?: string | null) => p === "/" && view !== "prediction",
   },
   {
     href: "/explore",
     icon: Compass,
-    label: "탐색",
+    label: "운동장",
     match: (p: string) => p.startsWith("/explore") || p.startsWith("/community"),
   },
   {
     href: "/?view=prediction",
     icon: Trophy,
-    label: "승부 예측",
+    label: "경기 예측",
     match: (p: string, view?: string | null) => p === "/" && view === "prediction",
   },
   {
@@ -55,7 +55,7 @@ function MobileTabBarContent() {
               }`}
             >
               <tab.icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              <span className="font-sans text-[10px] font-medium tracking-tight">{tab.label}</span>
             </Link>
           )
         })}

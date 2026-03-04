@@ -23,7 +23,7 @@ function StatusBadge({ status }: { status: "ok" | "stale" | "error" }) {
   const variants: Record<string, { label: string; className: string }> = {
     ok: { label: "정상", className: "bg-green-100 text-green-800" },
     stale: { label: "지연", className: "bg-yellow-100 text-yellow-800" },
-    error: { label: "오류", className: "bg-red-100 text-red-800" },
+    error: { label: "오류", className: "bg-primary/15 text-primary" },
   }
   const v = variants[status] ?? variants.error
   return <Badge className={v.className}>{v.label}</Badge>

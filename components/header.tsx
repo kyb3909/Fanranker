@@ -1,10 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Home, Compass, Bell, Search, Loader2, Trophy } from "lucide-react"
+import { Compass, LayoutGrid, Bell, Search, Loader2, Trophy } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react"
 import { SignedIn, SignedOut } from "@clerk/nextjs"
 import { UserMenu } from "./user-menu"
@@ -24,6 +24,12 @@ interface SearchResultPost {
 
 export function Header() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const view = searchParams.get("view")
+  const isFeed = pathname === "/" && view !== "prediction"
+  const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
+  const isPrediction = pathname === "/" && view === "prediction"
 
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResultPost[]>([])
@@ -210,8 +216,10 @@ export function Header() {
           {/* Actions: 오른쪽 정렬 */}
           <div className="flex min-w-0 items-center justify-end gap-1">
             <SignedIn>
-              <GoldBalance />
-              <BallBalance />
+              <div className="flex items-center gap-2">
+                <GoldBalance />
+                <BallBalance />
+              </div>
               <NotificationDropdown />
             </SignedIn>
             <SignedOut>
@@ -237,7 +245,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* 메뉴바: 좌우 폭 끝까지 (피드, 탐색, 승부 예측) */}
+      {/* 메뉴바: 좌우 폭 끝까지 (담벼락, 운동장, 경기 예측) */}
       <nav
         className="border-primary/20 bg-primary grid w-full grid-cols-[1fr_auto_1fr] items-center border-t px-2 pt-2 pb-2"
         aria-label="주요 메뉴"
@@ -260,31 +268,42 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
+              className={`font-sans h-10 gap-2 rounded-md px-3 text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+                isFeed
+                  ? "text-white hover:bg-white/10 hover:text-white"
+                  : "text-white/90 hover:bg-white/10 hover:text-white"
+              }`}
             >
-              <Home className="h-[18px] w-[18px] shrink-0 text-white" />
-              피드
+              <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
+              담벼락
             </Button>
           </Link>
           <Link href="/explore">
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
+              className={`font-sans h-10 gap-2 rounded-md px-3 text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+                isExplore
+                  ? "text-white hover:bg-white/10 hover:text-white"
+                  : "text-white/90 hover:bg-white/10 hover:text-white"
+              }`}
             >
-              <Compass className="h-[18px] w-[18px] shrink-0 text-white" />
-              탐색
+              <Compass className="h-[18px] w-[18px] shrink-0" />
+              운동장
             </Button>
           </Link>
-          {/* 점유율 메뉴 — 현재 비활성화 */}
           <Link href="/?view=prediction">
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-primary-foreground/15 h-10 gap-2 rounded-md px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:text-white sm:gap-2.5 sm:px-5 sm:text-[15px]"
+              className={`font-sans h-10 gap-2 rounded-md px-3 text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+                isPrediction
+                  ? "text-white hover:bg-white/10 hover:text-white"
+                  : "text-white/90 hover:bg-white/10 hover:text-white"
+              }`}
             >
-              <Trophy className="h-[18px] w-[18px] shrink-0 text-white" />
-              승부 예측
+              <Trophy className="h-[18px] w-[18px] shrink-0" />
+              경기 예측
             </Button>
           </Link>
         </div>

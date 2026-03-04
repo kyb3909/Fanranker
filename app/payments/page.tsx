@@ -110,7 +110,7 @@ export default function PaymentsPage() {
       {/* 에러 상태 */}
       {errorMessage && (
         <Card className="mb-6 p-8 text-center">
-          <p className="mb-3 text-sm text-red-500">{errorMessage}</p>
+          <p className="mb-3 text-sm text-primary">{errorMessage}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             다시 시도
           </Button>
@@ -147,10 +147,10 @@ export default function PaymentsPage() {
         </Card>
         <Card className="p-4">
           <div className="mb-2 flex items-center gap-2">
-            <ArrowUpRight className="h-4 w-4 text-red-500" />
+            <ArrowUpRight className="h-4 w-4 text-primary" />
             <span className="text-muted-foreground text-sm">총 사용</span>
           </div>
-          <p className="text-xl font-bold text-red-600">-{totalSpent} 골드</p>
+          <p className="text-xl font-bold text-primary">-{totalSpent} 골드</p>
         </Card>
       </div>
 
@@ -182,7 +182,7 @@ export default function PaymentsPage() {
                         className={`rounded-full p-2 ${
                           tx.type === "earn"
                             ? "bg-emerald-100 text-emerald-600"
-                            : "bg-red-100 text-red-600"
+                            : "bg-primary/15 text-primary"
                         }`}
                       >
                         {tx.type === "earn" ? (
@@ -207,7 +207,7 @@ export default function PaymentsPage() {
                     <div className="text-right">
                       <p
                         className={`font-bold ${
-                          tx.type === "earn" ? "text-emerald-600" : "text-red-600"
+                          tx.type === "earn" ? "text-emerald-600" : "text-primary"
                         }`}
                       >
                         {tx.type === "earn" ? "+" : ""}

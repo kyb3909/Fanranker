@@ -58,7 +58,7 @@ export function EmbedPreviewCard({
   const providerConfig = {
     youtube: {
       icon: Play,
-      color: "bg-red-500/10 text-red-600 border-red-500/20",
+      color: "bg-primary/10 text-primary border-primary/20",
       label: "YouTube",
     },
     instagram: {

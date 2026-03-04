@@ -72,7 +72,7 @@ export const FeedSection = memo(function FeedSection({
         </p>
         <p className="text-muted-foreground mb-4 text-xs">
           {isSignedIn
-            ? "팔로우한 게시판의 글이 피드에 표시됩니다."
+            ? "팔로우한 게시판의 글이 담벼락에 표시됩니다."
             : "팔로우한 게시판의 최신 글을 모아볼 수 있어요."}
         </p>
         <Link

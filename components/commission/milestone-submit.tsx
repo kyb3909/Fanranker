@@ -41,7 +41,7 @@ export function MilestoneSubmitForm({ milestoneId, milestoneTitle, orderId, onSu
         <Upload className="h-4 w-4 text-primary" />
         &ldquo;{milestoneTitle}&rdquo; 결과물 제출
       </h4>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-primary">{error}</p>}
       <textarea
         className="w-full h-20 px-3 py-2 bg-secondary text-sm text-foreground rounded-lg border border-transparent focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
         placeholder="결과물에 대한 메모를 입력하세요..."

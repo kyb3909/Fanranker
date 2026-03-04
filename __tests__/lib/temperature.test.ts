@@ -30,8 +30,8 @@ describe("getTemperatureColor", () => {
   })
 
   it("returns red for 80+", () => {
-    expect(getTemperatureColor(80)).toBe("text-red-600")
-    expect(getTemperatureColor(100)).toBe("text-red-600")
+    expect(getTemperatureColor(80)).toBe("text-primary")
+    expect(getTemperatureColor(100)).toBe("text-primary")
   })
 })
 

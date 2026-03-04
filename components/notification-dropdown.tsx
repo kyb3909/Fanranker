@@ -178,7 +178,7 @@ export function NotificationDropdown() {
           <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
           {unreadCount > 0 && (
             <span
-              className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white"
+              className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white"
               aria-hidden="true"
             >
               {unreadCount > 9 ? "9+" : unreadCount}

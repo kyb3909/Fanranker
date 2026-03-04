@@ -41,8 +41,8 @@ test.describe('메인 페이지 (홈)', () => {
       await expect(communityTab).toHaveClass(/border-primary|text-primary/);
     });
 
-    test('승부 예측 탭을 클릭하면 탭이 전환되어야 한다', async ({ page }) => {
-      const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+    test('경기 예측 탭을 클릭하면 탭이 전환되어야 한다', async ({ page }) => {
+      const bettingTab = page.getByRole('button', { name: /경기 예측/ });
       await bettingTab.click();
 
       await expect(bettingTab).toHaveClass(/border-primary|text-primary/);
@@ -52,11 +52,11 @@ test.describe('메인 페이지 (홈)', () => {
       // 커뮤니티 탭 콘텐츠 확인
       await page.waitForLoadState('networkidle');
 
-      // 승부 예측 탭으로 전환
-      const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+      // 경기 예측 탭으로 전환
+      const bettingTab = page.getByRole('button', { name: /경기 예측/ });
       await bettingTab.click();
 
-      // 승부 예측 콘텐츠가 표시되는지 확인
+      // 경기 예측 콘텐츠가 표시되는지 확인
       await page.waitForTimeout(500);
       const bettingContent = page.locator('text=/예측|경기|랭킹/');
       await expect(bettingContent.first()).toBeVisible({ timeout: 10000 });

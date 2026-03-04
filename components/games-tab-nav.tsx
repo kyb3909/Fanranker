@@ -2,19 +2,40 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Trophy } from "lucide-react"
+import { Target, Trophy } from "lucide-react"
 
 const games = [
   {
     href: "/games/prediction",
     icon: Trophy,
-    label: "승부 예측",
+    label: "경기 예측",
     description: "프로토 경기 결과를 예측하세요",
     color: "from-amber-500 to-orange-500",
     bgLight: "bg-amber-50",
     borderActive: "ring-amber-500/50",
     iconBg: "bg-amber-500/10 text-amber-600",
   },
+  {
+    href: "/games/penalty-kick",
+    icon: Target,
+    label: "페널티킥",
+    description: "타이밍에 맞춰 골을 넣으세요",
+    color: "from-green-500 to-emerald-600",
+    bgLight: "bg-green-50",
+    borderActive: "ring-green-500/50",
+    iconBg: "bg-green-500/10 text-green-600",
+  },
+  // TODO: 기획 완성 후 활성화
+  // {
+  //   href: "/games/draft",
+  //   icon: Users,
+  //   label: "드래프트",
+  //   description: "친구와 실시간 선수 드래프트",
+  //   color: "from-violet-500 to-purple-600",
+  //   bgLight: "bg-violet-50",
+  //   borderActive: "ring-violet-500/50",
+  //   iconBg: "bg-violet-500/10 text-violet-600",
+  // },
 ]
 
 export function GamesTabNav() {

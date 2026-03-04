@@ -49,7 +49,7 @@ export function UserStatsCard({
               <TrendingUp className="h-3 w-3" />
               수익률
             </div>
-            <div className={`text-lg font-bold ${roi >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+            <div className={`text-lg font-bold ${roi >= 0 ? 'text-orange-600' : 'text-primary'}`}>
               {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
             </div>
           </div>
@@ -58,7 +58,7 @@ export function UserStatsCard({
               <Trophy className="h-3 w-3" />
               총 수익
             </div>
-            <div className={`text-lg font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+            <div className={`text-lg font-bold ${profit >= 0 ? 'text-blue-600' : 'text-primary'}`}>
               {profit >= 0 ? '+' : ''}{profit.toLocaleString()}P
             </div>
           </div>

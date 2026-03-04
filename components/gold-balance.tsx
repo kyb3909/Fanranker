@@ -45,7 +45,7 @@ export function GoldBalance() {
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-center">
           <p className="font-medium">보유 골드</p>
-          <p className="text-muted-foreground text-xs">예측 콘텐츠 열람에 사용</p>
+          <p className="text-background mt-0.5 text-xs">예측 콘텐츠 열람에 사용</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

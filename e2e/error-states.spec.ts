@@ -32,8 +32,8 @@ test.describe('네트워크 오류 처리', () => {
     });
 
     test('예측 API 실패 시 에러 상태 표시', async ({ page }) => {
-      await page.route('**/api/prediction**', route => route.abort());
-      await page.route('**/api/rankings**', route => route.abort());
+      await page.route('**/api/betman/prediction**', route => route.abort());
+      await page.route('**/api/betman/rankings**', route => route.abort());
 
       await page.goto('/prediction');
       await page.waitForTimeout(2000);
@@ -94,7 +94,7 @@ test.describe('네트워크 오류 처리', () => {
       await context.setOffline(true);
 
       // 탭 클릭으로 새 API 요청 트리거
-      const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+      const bettingTab = page.getByRole('button', { name: /경기 예측/ });
       await bettingTab.click();
 
       await page.waitForTimeout(2000);
@@ -355,7 +355,7 @@ test.describe('엣지 케이스', () => {
     await page.waitForLoadState('networkidle');
 
     const communityTab = page.getByRole('button', { name: /커뮤니티/ });
-    const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+    const bettingTab = page.getByRole('button', { name: /경기 예측/ });
 
     // 빠르게 탭 전환
     await bettingTab.click();
@@ -418,7 +418,7 @@ test.describe('엣지 케이스', () => {
     await page.waitForLoadState('networkidle');
 
     // 탭 변경
-    const bettingTab = page.getByRole('button', { name: /승부 예측/ });
+    const bettingTab = page.getByRole('button', { name: /경기 예측/ });
     await bettingTab.click();
 
     // 새로고침

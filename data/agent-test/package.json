@@ -1,0 +1,19 @@
+{
+  "name": "agent-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node runner.js --phase setup",
+    "generate": "node runner.js --phase generate",
+    "execute": "node runner.js --phase execute",
+    "validate": "node runner.js --phase validate",
+    "report": "node runner.js --phase report",
+    "run-all": "node runner.js --phase all",
+    "cleanup": "node runner.js --phase cleanup"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.0",
+    "openai": "^4.80.0"
+  }
+}

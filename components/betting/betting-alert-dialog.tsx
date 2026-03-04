@@ -30,14 +30,14 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
           <div
             className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
               alertModal.type === "error"
-                ? "bg-red-100"
+                ? "bg-primary/15"
                 : alertModal.type === "warning"
                   ? "bg-amber-100"
                   : "bg-emerald-100"
             }`}
           >
             {alertModal.type === "error" ? (
-              <AlertCircle className="h-8 w-8 text-red-600" />
+              <AlertCircle className="h-8 w-8 text-primary" />
             ) : alertModal.type === "warning" ? (
               <AlertCircle className="h-8 w-8 text-amber-600" />
             ) : (
@@ -47,7 +47,7 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
           <DialogTitle
             className={`text-xl ${
               alertModal.type === "error"
-                ? "text-red-600"
+                ? "text-primary"
                 : alertModal.type === "warning"
                   ? "text-amber-600"
                   : "text-emerald-600"
@@ -64,7 +64,7 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
             onClick={onClose}
             className={`w-full px-8 sm:w-auto ${
               alertModal.type === "error"
-                ? "bg-red-600 hover:bg-red-700"
+                ? "bg-primary hover:bg-primary/90"
                 : alertModal.type === "warning"
                   ? "bg-amber-600 hover:bg-amber-700"
                   : "bg-emerald-600 hover:bg-emerald-700"

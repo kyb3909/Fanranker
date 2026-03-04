@@ -45,7 +45,7 @@ export async function GET() {
         .eq("status", "pending"),
       supabase
         .from("betman_sync_state")
-        .select("updated_at")
+        .select("last_checked_at")
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -99,9 +99,9 @@ export async function GET() {
     // Betman 동기화 지연 체크 (3시간 기준)
     let betmanSyncStale = false
     let betmanLastSync: string | null = null
-    if (syncState?.updated_at) {
-      betmanLastSync = syncState.updated_at
-      const hoursSince = (Date.now() - new Date(syncState.updated_at).getTime()) / (1000 * 60 * 60)
+    if (syncState?.last_checked_at) {
+      betmanLastSync = syncState.last_checked_at
+      const hoursSince = (Date.now() - new Date(syncState.last_checked_at).getTime()) / (1000 * 60 * 60)
       betmanSyncStale = hoursSince > 3
     } else {
       betmanSyncStale = true

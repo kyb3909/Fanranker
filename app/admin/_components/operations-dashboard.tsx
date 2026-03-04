@@ -259,7 +259,7 @@ export function OperationsDashboard() {
                 {growthRate > 0 ? (
                   <TrendingUp className="h-4 w-4 text-green-600" />
                 ) : growthRate < 0 ? (
-                  <TrendingDown className="h-4 w-4 text-red-600" />
+                  <TrendingDown className="h-4 w-4 text-primary" />
                 ) : (
                   <Minus className="text-muted-foreground h-4 w-4" />
                 )}
@@ -268,7 +268,7 @@ export function OperationsDashboard() {
                     growthRate > 0
                       ? "text-sm font-medium text-green-600"
                       : growthRate < 0
-                        ? "text-sm font-medium text-red-600"
+                        ? "text-sm font-medium text-primary"
                         : "text-muted-foreground text-sm"
                   }
                 >
@@ -338,14 +338,14 @@ function AlertCard({
       variant={isRed ? "destructive" : "default"}
       className={
         isRed
-          ? "border-red-500/50 bg-red-50 dark:bg-red-950/20"
+          ? "border-primary/50 bg-primary/10 dark:bg-primary/10"
           : "border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20"
       }
     >
-      <AlertTriangle className={`h-4 w-4 ${isRed ? "text-red-600" : "text-yellow-600"}`} />
+      <AlertTriangle className={`h-4 w-4 ${isRed ? "text-primary" : "text-yellow-600"}`} />
       <AlertTitle
         className={
-          isRed ? "text-red-700 dark:text-red-400" : "text-yellow-700 dark:text-yellow-400"
+          isRed ? "text-primary dark:text-primary" : "text-yellow-700 dark:text-yellow-400"
         }
       >
         {title}
@@ -353,7 +353,7 @@ function AlertCard({
       <AlertDescription>
         <span
           className={
-            isRed ? "text-red-600 dark:text-red-500" : "text-yellow-600 dark:text-yellow-500"
+            isRed ? "text-primary dark:text-primary" : "text-yellow-600 dark:text-yellow-500"
           }
         >
           {description}

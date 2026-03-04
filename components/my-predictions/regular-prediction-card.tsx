@@ -71,7 +71,7 @@ export function RegularPredictionCard({ prediction }: { prediction: RegularPredi
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-red-500">
+            <div className="flex items-center gap-1 text-primary">
               <XCircle className="h-4 w-4" />
               <span className="text-xs font-medium">미적중</span>
             </div>

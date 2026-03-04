@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  BarChart3,
   LayoutDashboard,
   MonitorCheck,
   Users,
@@ -41,6 +42,7 @@ const navGroups = [
     items: [
       { title: "대시보드", href: "/admin", icon: LayoutDashboard },
       { title: "운영 모니터링", href: "/admin/operations", icon: MonitorCheck },
+      { title: "분석 리포트", href: "/admin/analytics", icon: BarChart3 },
     ],
   },
   {

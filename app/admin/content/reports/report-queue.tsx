@@ -124,7 +124,7 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
                 const reasonInfo = REPORT_REASONS[report.reason]
                 const isRed = reasonInfo?.card === 'red'
                 return (
-                <TableRow key={report.id} className={isRed ? 'border-l-4 border-l-red-500' : ''}>
+                <TableRow key={report.id} className={isRed ? 'border-l-4 border-l-primary' : ''}>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {report.target_type}
@@ -132,7 +132,7 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <span className={`inline-block w-2 h-2 rounded-full ${isRed ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                      <span className={`inline-block w-2 h-2 rounded-full ${isRed ? 'bg-primary' : 'bg-yellow-500'}`} />
                       <Badge variant="secondary" className="text-xs">
                         {reasonInfo?.label ?? report.reason}
                       </Badge>

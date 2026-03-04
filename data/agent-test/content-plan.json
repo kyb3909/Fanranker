@@ -1,0 +1,300 @@
+{
+  "_doc": "SECTION 2: Content Plan + SECTION 3: Behavior Rules",
+
+  "post_allocation": {
+    "_total": 100,
+    "_per_persona": 10,
+    "plan": [
+      {
+        "persona_id": "P01", "nickname": "축구전술연구소",
+        "posts": [
+          { "community": "overseas-football", "theme": "tactical_analysis", "title_hint": "맨시티 4-3-3 변형 전술 분석", "has_embed": "youtube" },
+          { "community": "overseas-football", "theme": "player_review", "title_hint": "홀란드 vs 음바페 시즌 스탯 비교" },
+          { "community": "overseas-football", "theme": "match_review", "title_hint": "챔스 8강 1차전 리뷰", "has_embed": "youtube" },
+          { "community": "domestic-football", "theme": "league_analysis", "title_hint": "K리그 상위권 전술 트렌드" },
+          { "community": "overseas-football", "theme": "transfer_rumor", "title_hint": "여름 이적시장 EPL 빅딜 전망", "has_embed": "x" },
+          { "community": "tips", "theme": "how_to", "title_hint": "축구 전술 분석하는 법 (입문 가이드)" },
+          { "community": "overseas-football", "theme": "hot_take", "title_hint": "과르디올라 시대가 끝나가고 있다?" },
+          { "community": "overseas-football", "theme": "data_analysis", "title_hint": "xG 모델로 보는 이번 시즌 서프라이즈 팀" },
+          { "community": "domestic-football", "theme": "match_preview", "title_hint": "이번 주 K리그 주요 경기 프리뷰" },
+          { "community": "tips", "theme": "resource_share", "title_hint": "무료 축구 데이터 사이트 모음", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P02", "nickname": "야구초보집사",
+        "posts": [
+          { "community": "baseball", "theme": "question", "title_hint": "볼넷이랑 사구가 같은 건가요?? 🤔" },
+          { "community": "baseball", "theme": "fan_diary", "title_hint": "첫 야구장 직관 후기!! ⚾✨", "has_embed": "instagram" },
+          { "community": "free-board", "theme": "daily", "title_hint": "오늘 고양이가 야구 보더니 TV 때림 ㅋㅋ" },
+          { "community": "baseball", "theme": "question", "title_hint": "WAR이 뭐예요? 쉽게 설명해주세요 🙏" },
+          { "community": "movies", "theme": "review", "title_hint": "머니볼 봤는데 야구 좋아하게 됨 😭", "has_embed": "youtube" },
+          { "community": "baseball", "theme": "fan_diary", "title_hint": "LG 트윈스 입덕 3개월차 근황" },
+          { "community": "free-board", "theme": "humor", "title_hint": "야구 초보가 겪는 당황스러운 순간들" },
+          { "community": "baseball", "theme": "question", "title_hint": "치어리더 응원가 가사 어디서 봐요?" },
+          { "community": "baseball", "theme": "highlight", "title_hint": "어제 홈런 장면 소름돋았어요", "has_embed": "x" },
+          { "community": "movies", "theme": "recommendation", "title_hint": "스포츠 영화 추천 받아요! 🎬", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P03", "nickname": "리갈마에스트로",
+        "posts": [
+          { "community": "overseas-football", "theme": "deep_analysis", "title_hint": "라리가 프레싱 강도 변화 3년 추이 분석" },
+          { "community": "overseas-football", "theme": "player_comparison", "title_hint": "비니시우스 vs 살라 - 왜 비교가 안 되는가", "has_embed": "x" },
+          { "community": "overseas-football", "theme": "controversy", "title_hint": "EPL 과대평가론: 유럽 대회 성적이 증명한다" },
+          { "community": "tips", "theme": "methodology", "title_hint": "축구 분석할 때 흔히 하는 통계적 오류들" },
+          { "community": "overseas-football", "theme": "transfer_analysis", "title_hint": "레알 마드리드 중원 재편 시나리오", "has_embed": "x" },
+          { "community": "overseas-football", "theme": "match_analysis", "title_hint": "엘 클라시코 수비 라인 분석", "has_embed": "youtube" },
+          { "community": "domestic-football", "theme": "comparison", "title_hint": "K리그와 J리그 수비 조직력 비교" },
+          { "community": "overseas-football", "theme": "historical", "title_hint": "갈라시아코스 세대 vs 현재 라리가 레전드 비교" },
+          { "community": "tips", "theme": "education", "title_hint": "PPDA, xG, xA 완벽 가이드" },
+          { "community": "overseas-football", "theme": "hot_take", "title_hint": "세리에 A가 진정한 전술 리그인 이유", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P04", "nickname": "찐팬아님말고",
+        "posts": [
+          { "community": "overseas-football", "theme": "fact_check", "title_hint": "이번 이적 루머 팩트체크 해봄", "has_embed": "x" },
+          { "community": "esports", "theme": "skeptical_review", "title_hint": "T1 우승 가능성 객관적으로 보자" },
+          { "community": "free-board", "theme": "rant", "title_hint": "커뮤니티 루머 무비판 퍼나르기 좀..." },
+          { "community": "overseas-football", "theme": "debunk", "title_hint": "그 기사 원문 확인해봤는데 오역임" },
+          { "community": "esports", "theme": "analysis", "title_hint": "LCK 팀별 실력 과대평가 순위", "has_embed": "youtube" },
+          { "community": "free-board", "theme": "question", "title_hint": "소스 없는 글 신뢰하는 사람들 진짜 있음?" },
+          { "community": "overseas-football", "theme": "counter_narrative", "title_hint": "손흥민 과대평가라는 해외 기사 번역", "has_embed": "x" },
+          { "community": "esports", "theme": "prediction", "title_hint": "월즈 예측글들 얼마나 맞았는지 검증" },
+          { "community": "free-board", "theme": "meta", "title_hint": "이 커뮤니티 글 품질 솔직히 어떰?" },
+          { "community": "overseas-football", "theme": "data", "title_hint": "팬 편향 없이 보는 EPL 미드필더 탑10", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P05", "nickname": "영화광무비러",
+        "posts": [
+          { "community": "movies", "theme": "review", "title_hint": "신작 리뷰: 역대급 영화 나왔다!! 🔥🔥", "has_embed": "youtube" },
+          { "community": "movies", "theme": "recommendation", "title_hint": "이번 주 넷플릭스 신작 정리 🎬" },
+          { "community": "movies", "theme": "discussion", "title_hint": "놀란 감독 신작 티저 분석!!", "has_embed": "youtube" },
+          { "community": "free-board", "theme": "excitement", "title_hint": "주말에 영화 3편 몰아봤는데 미쳤다" },
+          { "community": "movies", "theme": "list", "title_hint": "2024 한국 영화 베스트 5 🏆" },
+          { "community": "movies", "theme": "news", "title_hint": "마블 페이즈 새 로드맵 유출?!", "has_embed": "x" },
+          { "community": "esports", "theme": "crossover", "title_hint": "아케인 시즌2 봤는데 겜보다 재밌음 ㅋㅋ", "has_embed": "youtube" },
+          { "community": "movies", "theme": "ranking", "title_hint": "역대 스포츠 영화 TOP 10 🥇" },
+          { "community": "free-board", "theme": "poll", "title_hint": "극장 vs 넷플릭스 어디서 봄??" },
+          { "community": "movies", "theme": "trailer_reaction", "title_hint": "이 트레일러 보고 소름돋음", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P06", "nickname": "논쟁의왕",
+        "posts": [
+          { "community": "overseas-football", "theme": "debate_starter", "title_hint": "메시 vs 호날두 논쟁에 마침표를 찍자" },
+          { "community": "baseball", "theme": "controversial", "title_hint": "KBO 외국인 선수 제도 개편 필요한 이유" },
+          { "community": "free-board", "theme": "opinion", "title_hint": "한국 스포츠 팬 문화의 문제점 3가지", "has_embed": "x" },
+          { "community": "overseas-football", "theme": "counter_argument", "title_hint": "EPL이 최고 리그라는 주장에 대한 반론", "has_embed": "youtube" },
+          { "community": "tips", "theme": "criticism", "title_hint": "WAR 지표의 한계를 아는 사람이 적다" },
+          { "community": "baseball", "theme": "debate", "title_hint": "타율 vs OPS: 어떤 지표가 더 중요한가" },
+          { "community": "free-board", "theme": "essay", "title_hint": "커뮤니티 토론 문화가 발전하려면" },
+          { "community": "overseas-football", "theme": "ranking_debate", "title_hint": "현역 수비수 순위를 다시 매겨보자", "has_embed": "x" },
+          { "community": "tips", "theme": "methodology_critique", "title_hint": "xG 모델 신뢰도에 대한 진지한 논의" },
+          { "community": "baseball", "theme": "hot_take", "title_hint": "KBO가 NPB보다 재미있는 객관적 이유", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P07", "nickname": "게시판지킴이",
+        "posts": [
+          { "community": "free-board", "theme": "announcement", "title_hint": "커뮤니티 이용 에티켓 정리" },
+          { "community": "free-board", "theme": "welcome", "title_hint": "신규 가입자분들 환영합니다! 가이드라인 안내" },
+          { "community": "baseball", "theme": "recap", "title_hint": "이번 주 야구 게시판 주요 글 모음" },
+          { "community": "basketball", "theme": "guide", "title_hint": "NBA 입문자를 위한 기초 가이드", "has_embed": "youtube" },
+          { "community": "free-board", "theme": "feedback", "title_hint": "커뮤니티 개선사항 건의 모음 스레드" },
+          { "community": "movies", "theme": "curation", "title_hint": "이번 달 영화 게시판 베스트 글 모음" },
+          { "community": "free-board", "theme": "event", "title_hint": "주간 토론 주제: 최고의 스포츠 명장면" },
+          { "community": "basketball", "theme": "news", "title_hint": "KBL 시즌 일정 & 관전 포인트", "has_embed": "x" },
+          { "community": "free-board", "theme": "meta", "title_hint": "게시판 태그 활용법 안내" },
+          { "community": "volleyball", "theme": "intro", "title_hint": "배구 게시판 활성화 프로젝트!", "has_embed": "instagram" }
+        ]
+      },
+      {
+        "persona_id": "P08", "nickname": "잠수함출격",
+        "posts": [
+          { "community": "esports", "theme": "highlight", "title_hint": "이 플레이 실화냐", "has_embed": "youtube" },
+          { "community": "movies", "theme": "one_liner", "title_hint": "방금 본 영화 한줄평" },
+          { "community": "free-board", "theme": "meme", "title_hint": "ㅋㅋㅋㅋ 이거 봐" },
+          { "community": "esports", "theme": "clip", "title_hint": "페이커 순간", "has_embed": "youtube" },
+          { "community": "movies", "theme": "reaction", "title_hint": "이 장면에서 소리 지름" },
+          { "community": "esports", "theme": "result", "title_hint": "오늘 경기 결과 ㄷㄷ" },
+          { "community": "free-board", "theme": "random", "title_hint": "심심해서 왔음", "has_embed": "x" },
+          { "community": "esports", "theme": "prediction", "title_hint": "내일 경기 예측 ㄱㄱ" },
+          { "community": "movies", "theme": "question", "title_hint": "이 영화 제목 뭐임?", "has_embed": "instagram" },
+          { "community": "free-board", "theme": "observation", "title_hint": "여기 사람 많네" }
+        ]
+      },
+      {
+        "persona_id": "P09", "nickname": "코트위의현자",
+        "posts": [
+          { "community": "basketball", "theme": "humor", "title_hint": "NBA 선수들 웃긴 순간 모음 ㅋㅋㅋ", "has_embed": "youtube" },
+          { "community": "basketball", "theme": "meme_analysis", "title_hint": "이번 시즌 최고의 농구 밈 🏀😂" },
+          { "community": "volleyball", "theme": "humor", "title_hint": "배구 경기 중 일어난 레전드 해프닝", "has_embed": "youtube" },
+          { "community": "free-board", "theme": "comedy", "title_hint": "스포츠 중계 레전드 멘트 모음" },
+          { "community": "basketball", "theme": "highlight", "title_hint": "이 덩크 보고 뒤집어짐 ㅋㅋㅋ", "has_embed": "youtube" },
+          { "community": "free-board", "theme": "story", "title_hint": "운동하다 생긴 웃긴 일 썰 푼다" },
+          { "community": "basketball", "theme": "comparison_fun", "title_hint": "NBA 선수 닮은꼴 찾기 대회 🤣" },
+          { "community": "volleyball", "theme": "fan_content", "title_hint": "배구 팬캠 보다가 발견한 관중 리액션", "has_embed": "instagram" },
+          { "community": "movies", "theme": "sports_movie", "title_hint": "스포츠 영화에서 가장 비현실적인 장면 top5" },
+          { "community": "basketball", "theme": "debate_fun", "title_hint": "역대 가장 웃긴 파울은?", "has_embed": "x" }
+        ]
+      },
+      {
+        "persona_id": "P10", "nickname": "반대의견드림",
+        "posts": [
+          { "community": "overseas-football", "theme": "unpopular_opinion", "title_hint": "과르디올라는 시스템 감독일 뿐이다" },
+          { "community": "baseball", "theme": "contrarian", "title_hint": "KBO 올스타전 무의미한 이유", "has_embed": "x" },
+          { "community": "esports", "theme": "counter_narrative", "title_hint": "T1 팬덤이 LCK를 망치고 있다" },
+          { "community": "tips", "theme": "alternative_view", "title_hint": "스포츠 통계가 팬을 멍청하게 만드는 이유" },
+          { "community": "overseas-football", "theme": "underdog_defense", "title_hint": "번리가 EPL에서 가장 흥미로운 팀인 이유" },
+          { "community": "baseball", "theme": "criticism", "title_hint": "야구 중계 수준 솔직히 문제 많다", "has_embed": "youtube" },
+          { "community": "esports", "theme": "hot_take", "title_hint": "한국 e스포츠 황금기는 이미 끝났다", "has_embed": "instagram" },
+          { "community": "free-board", "theme": "essay", "title_hint": "다수의 의견이 항상 옳지 않은 이유" },
+          { "community": "overseas-football", "theme": "reevaluation", "title_hint": "과소평가된 선수: 번리 미드필더를 주목하라", "has_embed": "x" },
+          { "community": "tips", "theme": "methodology", "title_hint": "팬 투표 기반 순위가 의미없는 과학적 이유", "has_embed": "instagram" }
+        ]
+      }
+    ]
+  },
+
+  "comment_allocation": {
+    "_total": 300,
+    "_per_persona": 30,
+    "_distribution_rules": {
+      "min_distinct_posts": 12,
+      "min_threaded_replies": 10,
+      "cross_thread_required": true
+    },
+    "strategy": {
+      "P01": { "own_posts": 5, "others_posts": 25, "replies_to_comments": 12, "target_communities": ["overseas-football", "domestic-football", "tips"] },
+      "P02": { "own_posts": 6, "others_posts": 24, "replies_to_comments": 10, "target_communities": ["baseball", "free-board", "movies"] },
+      "P03": { "own_posts": 4, "others_posts": 26, "replies_to_comments": 14, "target_communities": ["overseas-football", "tips", "domestic-football"] },
+      "P04": { "own_posts": 3, "others_posts": 27, "replies_to_comments": 15, "target_communities": ["overseas-football", "esports", "free-board"] },
+      "P05": { "own_posts": 5, "others_posts": 25, "replies_to_comments": 10, "target_communities": ["movies", "free-board", "esports"] },
+      "P06": { "own_posts": 3, "others_posts": 27, "replies_to_comments": 18, "target_communities": ["overseas-football", "baseball", "free-board", "tips"] },
+      "P07": { "own_posts": 4, "others_posts": 26, "replies_to_comments": 12, "target_communities": ["free-board", "baseball", "basketball", "movies"] },
+      "P08": { "own_posts": 5, "others_posts": 25, "replies_to_comments": 10, "target_communities": ["esports", "movies", "free-board"] },
+      "P09": { "own_posts": 5, "others_posts": 25, "replies_to_comments": 11, "target_communities": ["basketball", "volleyball", "free-board", "movies"] },
+      "P10": { "own_posts": 3, "others_posts": 27, "replies_to_comments": 16, "target_communities": ["overseas-football", "baseball", "esports", "tips"] }
+    }
+  },
+
+  "embed_allocation": {
+    "_minimums": { "youtube_per_persona": 1, "x_per_persona": 1, "instagram_per_persona": 1 },
+    "_system_totals": { "youtube": 22, "x": 22, "instagram": 20 },
+    "sample_urls": {
+      "youtube": [
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://youtu.be/jNQXAC9IVRw",
+        "https://www.youtube.com/watch?v=9bZkp7q19f0",
+        "https://www.youtube.com/watch?v=kJQP7kiw5Fk"
+      ],
+      "x": [
+        "https://x.com/FabrizioRomano/status/1234567890",
+        "https://x.com/OptaJoe/status/9876543210",
+        "https://x.com/ESPNFC/status/1122334455"
+      ],
+      "instagram": [
+        "https://www.instagram.com/p/ABC123def/",
+        "https://www.instagram.com/reel/XYZ789abc/",
+        "https://www.instagram.com/p/DEF456ghi/"
+      ]
+    }
+  },
+
+  "debate_arcs": [
+    {
+      "arc_id": "DEBATE_01",
+      "topic": "EPL vs 라리가 최고 리그 논쟁",
+      "trigger_post": "P03의 'EPL 과대평가론' or P01의 전술 분석 글",
+      "participants": ["P01", "P03", "P06", "P10"],
+      "min_exchanges": 4,
+      "flow": [
+        "P01: EPL 전술 다양성 주장 (데이터 기반)",
+        "P03: 라리가 수비 조직력 반론 (경기 영상 인용)",
+        "P06: 양쪽 논리 분석 후 제3의 관점 제시",
+        "P10: 둘 다 과대평가, 세리에A/분데스 언급",
+        "P01: 데이터로 재반론",
+        "P03: 최종 입장 정리",
+        "P07: 중재 코멘트"
+      ]
+    },
+    {
+      "arc_id": "DEBATE_02",
+      "topic": "스포츠 통계의 유용성 vs 한계",
+      "trigger_post": "P06의 'WAR 지표의 한계' or P10의 통계 비판",
+      "participants": ["P01", "P04", "P06", "P10", "P02"],
+      "min_exchanges": 3,
+      "flow": [
+        "P06: 통계만으로 선수 평가 불가 주장",
+        "P01: 통계는 객관적 도구, 활용법 문제 반론",
+        "P04: 양쪽 다 소스 부족하다며 질문",
+        "P10: 통계가 팬 문화를 해친다는 극단적 의견",
+        "P02: 초보 입장에서 통계 어렵다는 공감",
+        "P06: 재반론 + 대안 제시"
+      ]
+    },
+    {
+      "arc_id": "DEBATE_03",
+      "topic": "한국 e스포츠 미래",
+      "trigger_post": "P10의 'e스포츠 황금기 끝났다' 글",
+      "participants": ["P04", "P08", "P10", "P06"],
+      "min_exchanges": 3,
+      "flow": [
+        "P10: 한국 e스포츠 하향세 주장",
+        "P04: 근거 부족하다며 반론 + 소스 요청",
+        "P08: 짧지만 날카로운 한마디",
+        "P06: 구조적 문제 분석으로 토론 확장",
+        "P10: 재반론",
+        "P04: 팩트체크 결과 공유"
+      ]
+    }
+  ],
+
+  "behavior_rules": {
+    "posting": {
+      "time_between_posts_ms": [30000, 120000],
+      "content_must_match_persona_style": true,
+      "title_diversity": "no two titles from same persona can start with same 3 chars"
+    },
+    "commenting": {
+      "time_between_comments_ms": [15000, 60000],
+      "must_reference_parent_context": true,
+      "context_keyword_min": 1,
+      "reply_probability_by_role": {
+        "analyst": 0.4,
+        "newbie": 0.3,
+        "expert": 0.5,
+        "skeptic": 0.6,
+        "hype_fan": 0.3,
+        "debater": 0.8,
+        "moderator_type": 0.5,
+        "lurker": 0.2,
+        "comedian": 0.4,
+        "contrarian": 0.7
+      }
+    },
+    "reactions": {
+      "upvote_probability_by_role": {
+        "analyst": 0.3,
+        "newbie": 0.7,
+        "expert": 0.2,
+        "skeptic": 0.1,
+        "hype_fan": 0.8,
+        "debater": 0.3,
+        "moderator_type": 0.5,
+        "lurker": 0.6,
+        "comedian": 0.5,
+        "contrarian": 0.15
+      },
+      "delay_after_reading_ms": [5000, 30000]
+    },
+    "debate": {
+      "escalation_cap": 0.7,
+      "format": "claim -> reasoning -> question",
+      "forbidden": ["slurs", "personal_attacks", "threats", "doxxing"],
+      "cooldown_after_3_exchanges_ms": 60000
+    }
+  }
+}

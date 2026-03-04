@@ -1,0 +1,824 @@
+GK
+Raya	Arsenal	115	£6.0
+Pickford	Everton	117	£5.6
+Donnarumma	Man City	101	£5.6
+A.Becker	Liverpool	85	£5.4
+Ederson M.	Man City	0	£5.3
+Martinez	Aston Villa	96	£5.1
+Pope	Newcastle	82	£5.1
+Henderson	Crystal Palace	112	£5.0
+Lammens	Man Utd	70	£5.0
+Sánchez	Chelsea	97	£4.9
+Leno	Fulham	76	£4.9
+Onana	Man Utd	0	£4.9
+Roefs	Sunderland	110	£4.9
+Ramsdale	Newcastle	11	£4.8
+Kelleher	Brentford	104	£4.7
+Ortega Moreno	Nott'm Forest	11	£4.7
+Bayindir	Man Utd	11	£4.7
+Vicario	Spurs	84	£4.7
+Sels	Nott'm Forest	63	£4.6
+Neto	Bournemouth	0	£4.5
+Petrović	Bournemouth	94	£4.5
+Verbruggen	Brighton	89	£4.5
+Trafford	Man City	11	£4.5
+Perri	Leeds	43	£4.5
+Fabianski	West Ham	0	£4.5
+Johnstone	Wolves	21	£4.4
+Weiss	Burnley	0	£4.3
+Jörgensen	Chelsea	3	£4.3
+Travers	Everton	0	£4.3
+Areola	West Ham	51	£4.3
+M.Bizot	Aston Villa	11	£4.2
+Steele	Brighton	0	£4.2
+Patterson	Sunderland	0	£4.2
+José Sá	Wolves	56	£4.2
+Hermansen	West Ham	31	£4.2
+Arrizabalaga	Arsenal	0	£4.1
+Meslier	Leeds	0	£4.1
+Mamardashvili	Liverpool	19	£4.1
+Hein	Arsenal	0	£4.0
+Gauci	Aston Villa	0	£4.0
+Marschall	Aston Villa	0	£4.0
+Dennis	Bournemouth	0	£4.0
+Paulsen	Bournemouth	0	£4.0
+Rushworth	Brighton	0	£4.0
+Scherpen	Brighton	0	£4.0
+Green	Burnley	0	£4.0
+Penders	Chelsea	0	£4.0
+Benitez	Crystal Palace	0	£4.0
+Benda	Fulham	0	£4.0
+Harrison	Man Utd	0	£4.0
+Dúbravka	Burnley	80	£4.0
+Odysseas	Newcastle	0	£4.0
+C.Miguel	Nott'm Forest	0	£4.0
+Turner	Nott'm Forest	0	£4.0
+Foderingham	West Ham	0	£4.0
+Gunn	Nott'm Forest	1	£4.0
+John	Nott'm Forest	11	£4.0
+Ruddy	Newcastle	0	£4.0
+Hollingshead	Aston Villa	0	£4.0
+Forster	Bournemouth	0	£4.0
+McNally	Fulham	0	£4.0
+Merrick	Chelsea	0	£4.0
+Sharman-Lowe	Chelsea	0	£4.0
+Mandas	Bournemouth	0	£4.0
+Ellborg	Sunderland	10	£4.0
+Setford	Arsenal	0	£3.9
+McKenna	Bournemouth	0	£3.9
+Balcombe	Brentford	0	£3.9
+Cox	Brentford	0	£3.9
+Eyestone	Brentford	0	£3.9
+Valdimarsson	Brentford	1	£3.9
+McGill	Brighton	0	£3.9
+Hladký	Burnley	0	£3.9
+Slonina	Chelsea	0	£3.9
+Matthews	Crystal Palace	0	£3.9
+Tyrer	Everton	0	£3.9
+Cairns	Leeds	0	£3.9
+Darlow	Leeds	30	£3.9
+Woodman	Liverpool	0	£3.9
+Heaton	Man Utd	0	£3.9
+Mee	Man Utd	0	£3.9
+Gillespie	Newcastle	0	£3.9
+Moore	Sunderland	0	£3.9
+Nna Noukeu	Sunderland	0	£3.9
+Austin	Spurs	0	£3.9
+Kinsky	Spurs	0	£3.9
+Hegyi	West Ham	0	£3.9
+Bentley	Wolves	0	£3.9
+King	Everton	0	£3.9
+Lecomte	Fulham	0	£3.9
+Wright	Aston Villa	0	£3.9
+Proctor	Aston Villa	0	£3.9
+Pécsi	Liverpool	0	£3.8
+Bettinelli	Man City	0	£3.8
+DEF
+Gabriel	Arsenal	153	£7.1
+J.Timber	Arsenal	135	£6.3
+Saliba	Arsenal	96	£6.1
+Virgil	Liverpool	130	£6.1
+Cucurella	Chelsea	90	£6.0
+Muñoz	Crystal Palace	108	£5.9
+Gvardiol	Man City	77	£5.9
+Tarkowski	Everton	136	£5.7
+Frimpong	Liverpool	45	£5.7
+Robertson	Liverpool	34	£5.7
+Aït-Nouri	Man City	39	£5.7
+Calafiori	Arsenal	86	£5.6
+James	Chelsea	109	£5.6
+Chalobah	Chelsea	127	£5.6
+Kerkez	Liverpool	73	£5.6
+Konaté	Liverpool	111	£5.5
+Rúben	Man City	111	£5.5
+Kiwior	Arsenal	0	£5.4
+Akanji	Man City	0	£5.4
+Khusanov	Man City	32	£5.4
+Matheus N.	Man City	125	£5.4
+Stones	Man City	12	£5.4
+Branthwaite	Everton	24	£5.3
+Hall	Newcastle	64	£5.3
+Mosquera	Arsenal	22	£5.3
+Guéhi	Man City	132	£5.2
+Aké	Man City	27	£5.2
+Schär	Newcastle	51	£5.2
+Murillo	Nott'm Forest	67	£5.2
+Lewis-Skelly	Arsenal	12	£5.1
+White	Arsenal	30	£5.1
+Lacroix	Crystal Palace	119	£5.1
+O'Reilly	Man City	123	£5.1
+Milenković	Nott'm Forest	81	£5.1
+Pedro Porro	Spurs	79	£5.1
+Hincapie	Arsenal	61	£5.1
+Zabarnyi	Bournemouth	0	£5.0
+Mitchell	Crystal Palace	106	£5.0
+Vitor Reis	Man City	0	£5.0
+Burn	Newcastle	72	£5.0
+Romero	Spurs	89	£5.0
+Thiaw	Newcastle	101	£5.0
+Zinchenko	Nott'm Forest	7	£4.9
+Senesi	Bournemouth	126	£4.9
+Collins	Brentford	99	£4.9
+Gusto	Chelsea	84	£4.9
+Mykolenko	Everton	76	£4.9
+O'Brien	Everton	93	£4.9
+Robinson	Fulham	33	£4.9
+Bradley	Liverpool	42	£4.9
+Gomez	Liverpool	28	£4.9
+De Ligt	Man Utd	43	£4.9
+Mazraoui	Man Utd	27	£4.9
+Botman	Newcastle	53	£4.9
+Livramento	Newcastle	49	£4.9
+Trippier	Newcastle	42	£4.9
+Leoni	Liverpool	0	£4.9
+Cash	Aston Villa	101	£4.8
+Lewis-Potter	Brentford	79	£4.8
+Sosa	Crystal Palace	5	£4.8
+Tsimikas	Liverpool	0	£4.8
+Martinez	Man Utd	39	£4.8
+Colwill	Chelsea	0	£4.7
+Aina	Nott'm Forest	37	£4.7
+N.Williams	Nott'm Forest	83	£4.7
+Truffert	Bournemouth	107	£4.6
+Keane	Everton	107	£4.6
+Lewis	Man City	19	£4.6
+Dalot	Man Utd	94	£4.6
+Ballard	Sunderland	114	£4.6
+Hato	Chelsea	8	£4.6
+Digne	Aston Villa	74	£4.5
+Kayode	Brentford	78	£4.5
+Roerslev	Brentford	0	£4.5
+Van den Berg	Brentford	83	£4.5
+Dunk	Brighton	70	£4.5
+Estupiñan	Brighton	0	£4.5
+Igor	Brighton	6	£4.5
+M.Sarr	Chelsea	2	£4.5
+Andersen	Fulham	93	£4.5
+Tete	Fulham	73	£4.5
+Shaw	Man Utd	69	£4.5
+David Carmo	Nott'm Forest	0	£4.5
+O.Richards	Nott'm Forest	0	£4.5
+Hume	Sunderland	85	£4.5
+Dragusin	Spurs	11	£4.5
+Mukiele	Sunderland	115	£4.5
+Krejčí	Wolves	59	£4.5
+A.Jimenez	Bournemouth	63	£4.5
+Savona	Nott'm Forest	39	£4.5
+Lindelöf	Aston Villa	22	£4.5
+Canvot	Crystal Palace	35	£4.5
+Geertruida	Sunderland	41	£4.5
+Cuiabano	Nott'm Forest	0	£4.5
+Netz	Nott'm Forest	2	£4.5
+Disasi	West Ham	12	£4.5
+Konsa	Aston Villa	88	£4.4
+Smith	Bournemouth	30	£4.4
+Ajer	Brentford	70	£4.4
+F.Kadıoğlu	Brighton	75	£4.4
+Lamptey	Brighton	0	£4.4
+Van Hecke	Brighton	105	£4.4
+Webster	Brighton	0	£4.4
+Roberts	Burnley	0	£4.4
+Walker	Burnley	55	£4.4
+B.Badiashile	Chelsea	7	£4.4
+Fofana	Chelsea	48	£4.4
+Richards	Crystal Palace	100	£4.4
+Patterson	Everton	21	£4.4
+Bassey	Fulham	65	£4.4
+Bogle	Leeds	70	£4.4
+Maguire	Man Utd	61	£4.4
+Van de Ven	Spurs	100	£4.4
+Emerson	West Ham	0	£4.4
+Mavropanos	West Ham	61	£4.4
+N.Aguerd	West Ham	3	£4.4
+Doherty	Wolves	12	£4.4
+R.Gomes	Wolves	34	£4.4
+S.Bueno	Wolves	71	£4.4
+Tchatchoua	Wolves	50	£4.4
+Milosavljević	Bournemouth	19	£4.4
+Mings	Aston Villa	41	£4.3
+Pau	Aston Villa	50	£4.3
+Henry	Brentford	52	£4.3
+De Cuyper	Brighton	60	£4.3
+Veltman	Brighton	33	£4.3
+Castagne	Fulham	29	£4.3
+Diop	Fulham	11	£4.3
+J.Cuenca	Fulham	39	£4.3
+Struijk	Leeds	80	£4.3
+Krafth	Newcastle	0	£4.3
+Lascelles	Newcastle	1	£4.3
+Morato	Nott'm Forest	34	£4.3
+Davies	Spurs	10	£4.3
+Udogie	Spurs	15	£4.3
+Scarles	West Ham	21	£4.3
+Todibo	West Ham	31	£4.3
+H.Bueno	Wolves	72	£4.3
+Mosquera	Wolves	50	£4.3
+Maatsen	Aston Villa	39	£4.2
+Pinnock	Brentford	4	£4.2
+Boscagli	Brighton	20	£4.2
+Coppola	Brighton	10	£4.2
+Coleman	Everton	3	£4.2
+D.Leon	Man Utd	0	£4.2
+Dorgu	Man Utd	74	£4.2
+Jair Cunha	Nott'm Forest	4	£4.2
+Danso	Spurs	28	£4.2
+Spence	Spurs	55	£4.2
+Agbadou	Wolves	23	£4.2
+Toti	Wolves	28	£4.2
+Walker-Peters	West Ham	32	£4.2
+Aznou	Everton	0	£4.2
+Møller Wolfe	Wolves	29	£4.2
+Diakité	Bournemouth	46	£4.2
+Hill	Bournemouth	75	£4.1
+Yoro	Man Utd	45	£4.1
+Kilman	West Ham	36	£4.1
+Wan-Bissaka	West Ham	54	£4.1
+Alderete	Sunderland	100	£4.1
+Alex Moreno	Aston Villa	0	£4.0
+Bogarde	Aston Villa	33	£4.0
+Yasin	Aston Villa	0	£4.0
+Mepham	Bournemouth	0	£4.0
+Soler	Bournemouth	3	£4.0
+Fredrick	Brentford	0	£4.0
+Hickey	Brentford	33	£4.0
+Meghoma	Brentford	0	£4.0
+Cashin	Brighton	0	£4.0
+Slater	Brighton	0	£4.0
+Dodgson	Burnley	0	£4.0
+Hartman	Burnley	46	£4.0
+Sambo	Burnley	0	£4.0
+Tosin	Chelsea	32	£4.0
+Anselmino	Chelsea	0	£4.0
+Chadi Riad	Crystal Palace	12	£4.0
+Holding	Crystal Palace	0	£4.0
+Kporha	Crystal Palace	0	£4.0
+Schmidt	Leeds	0	£4.0
+Amass	Man Utd	0	£4.0
+Targett	Newcastle	0	£4.0
+Alese	Sunderland	0	£4.0
+Cirkin	Sunderland	13	£4.0
+Hjelde	Sunderland	0	£4.0
+Huggins	Sunderland	0	£4.0
+O'Nien	Sunderland	7	£4.0
+Seelt	Sunderland	2	£4.0
+Phillips	Spurs	0	£4.0
+Takai	Spurs	0	£4.0
+Diouf	West Ham	73	£4.0
+Casey	West Ham	0	£4.0
+Meupiyou	Wolves	0	£4.0
+Pedro Lima	Wolves	3	£4.0
+Rowe	Aston Villa	0	£4.0
+Byfield	Spurs	1	£4.0
+Mayers	West Ham	6	£4.0
+Rowswell	Spurs	0	£4.0
+Golambeckis	West Ham	0	£4.0
+Salmon	Arsenal	0	£4.0
+Lucky	Liverpool	0	£4.0
+Simmonds	Brighton	0	£4.0
+Shahar	Newcastle	0	£4.0
+Olagunju	Wolves	0	£4.0
+Leon Routh	Aston Villa	0	£4.0
+Benamar	Crystal Palace	0	£4.0
+Jenson Jones	Sunderland	0	£4.0
+Carroll	Aston Villa	0	£4.0
+Kukonki	Man Utd	0	£4.0
+King	Crystal Palace	0	£4.0
+Alleyne	Man City	5	£4.0
+Imray	Crystal Palace	0	£4.0
+Souza	Spurs	2	£4.0
+Shield	Brentford	0	£4.0
+Kacurri	Arsenal	0	£3.9
+A.García	Aston Villa	2	£3.9
+Ji-soo	Brentford	0	£3.9
+Ekdal	Burnley	44	£3.9
+Estève	Burnley	60	£3.9
+Humphreys	Burnley	33	£3.9
+Jordan	Burnley	0	£3.9
+Tuanzebe	Burnley	27	£3.9
+Bijol	Leeds	48	£3.9
+Rodon	Leeds	85	£3.9
+Ashby	Newcastle	0	£3.9
+Pembele	Sunderland	0	£3.9
+Vuskovic	Spurs	0	£3.9
+Pond	Wolves	0	£3.9
+Masuaku	Sunderland	1	£3.9
+Campbell	Everton	0	£3.9
+Justin	Leeds	49	£3.9
+Patterson	Aston Villa	0	£3.9
+Mfuni	Man City	0	£3.9
+Clarke	Arsenal	0	£3.8
+Sousa	Aston Villa	0	£3.8
+Akinmboni	Bournemouth	0	£3.8
+Bevan	Bournemouth	0	£3.8
+J.Araujo	Bournemouth	0	£3.8
+Arthur	Brentford	0	£3.8
+Tasker	Brighton	0	£3.8
+Delcroix	Burnley	0	£3.8
+Lucas Pires	Burnley	18	£3.8
+Sonne	Burnley	13	£3.8
+Worrall	Burnley	19	£3.8
+Clyne	Crystal Palace	14	£3.8
+Dixon	Everton	0	£3.8
+Welch	Everton	0	£3.8
+Amissah	Fulham	0	£3.8
+Bornauw	Leeds	17	£3.8
+Byram	Leeds	1	£3.8
+Gudmundsson	Leeds	61	£3.8
+Ramsay	Liverpool	0	£3.8
+Fredricson	Man Utd	1	£3.8
+Malacia	Man Utd	1	£3.8
+A.Murphy	Newcastle	1	£3.8
+Pivas	Newcastle	0	£3.8
+Abbott	Nott'm Forest	2	£3.8
+Boly	Nott'm Forest	0	£3.8
+Anderson	Sunderland	0	£3.8
+Johnson	Sunderland	0	£3.8
+Reinildo	Sunderland	51	£3.8
+Hoever	Wolves	10	£3.8
+Nichols	Arsenal	0	£3.7
+Acheampong	Chelsea	33	£3.7
+Nallo	Liverpool	0	£3.7
+R.Williams	Liverpool	0	£3.7
+Heaven	Man Utd	27	£3.7
+MID
+M.Salah	Liverpool	96	£14.0
+Palmer	Chelsea	83	£10.6
+B.Fernandes	Man Utd	158	£10.0
+Saka	Arsenal	121	£9.8
+Mbeumo	Man Utd	117	£8.7
+Son	Spurs	0	£8.5
+Wirtz	Liverpool	100	£8.3
+Marmoush	Man City	37	£8.3
+Semenyo	Man City	165	£8.2
+Foden	Man City	109	£8.1
+Luis Díaz	Liverpool	0	£8.0
+Cunha	Man Utd	101	£8.0
+Ødegaard	Arsenal	62	£7.8
+Rogers	Aston Villa	129	£7.6
+Rice	Arsenal	157	£7.5
+Gakpo	Liverpool	101	£7.3
+Gibbs-White	Nott'm Forest	114	£7.3
+Eze	Arsenal	88	£7.2
+Gordon	Newcastle	70	£7.2
+Kluivert	Bournemouth	40	£7.0
+Neto	Chelsea	106	£7.0
+Rashford	Man Utd	0	£7.0
+Schade	Brentford	97	£6.9
+Szoboszlai	Liverpool	109	£6.9
+Savinho	Man City	26	£6.9
+Madueke	Arsenal	51	£6.8
+Martinelli	Arsenal	42	£6.8
+Bruno G.	Newcastle	134	£6.8
+Maddison	Spurs	0	£6.8
+Trossard	Arsenal	98	£6.7
+Enzo	Chelsea	121	£6.7
+Elanga	Newcastle	37	£6.5
+Johnson	Crystal Palace	50	£6.5
+Xavi	Spurs	62	£6.5
+Estêvão	Chelsea	55	£6.4
+Iwobi	Fulham	89	£6.4
+Cherki	Man City	94	£6.4
+Doku	Man City	72	£6.4
+Garnacho	Chelsea	43	£6.4
+Kudus	Spurs	75	£6.4
+Kulusevski	Spurs	0	£6.4
+Sarr	Crystal Palace	75	£6.3
+Chiesa	Liverpool	33	£6.3
+Grealish	Everton	79	£6.3
+Gündoğan	Man City	0	£6.3
+Rodrigo	Man City	44	£6.3
+Ndiaye	Everton	100	£6.2
+Mac Allister	Liverpool	76	£6.2
+Bernardo	Man City	70	£6.2
+Amad	Man Utd	69	£6.2
+Tel	Spurs	50	£6.2
+Guessand	Crystal Palace	37	£6.2
+Mitoma	Brighton	49	£6.1
+Barnes	Newcastle	77	£6.1
+O.Dango	Brentford	97	£6.0
+Gittens	Chelsea	25	£6.0
+Wilson	Fulham	140	£6.0
+Tielemans	Aston Villa	52	£5.9
+Nkunku	Chelsea	0	£5.9
+N.Gonzalez	Man City	55	£5.9
+Antony	Man Utd	0	£5.9
+Mount	Man Utd	46	£5.9
+J.Murphy	Newcastle	60	£5.9
+Joelinton	Newcastle	61	£5.9
+L.Paquetá	West Ham	69	£5.9
+Bakwa	Nott'm Forest	14	£5.9
+March	Brighton	1	£5.8
+Kovačić	Man City	1	£5.8
+Sancho	Aston Villa	25	£5.8
+Yeremy	Crystal Palace	65	£5.8
+Kevin	Fulham	43	£5.8
+Caicedo	Chelsea	91	£5.7
+Hudson-Odoi	Nott'm Forest	70	£5.7
+Souček	West Ham	70	£5.7
+Summerville	West Ham	81	£5.7
+Damsgaard	Brentford	85	£5.6
+Georginio	Brighton	65	£5.6
+Smith Rowe	Fulham	63	£5.6
+Casemiro	Man Utd	119	£5.6
+Ward-Prowse	Burnley	19	£5.6
+Hee Chan	Wolves	44	£5.6
+Rayan	Bournemouth	27	£5.6
+Bailey	Aston Villa	6	£5.5
+Iling Jr	Aston Villa	0	£5.5
+Minteh	Brighton	84	£5.5
+O'Riley	Brighton	13	£5.5
+McNeil	Everton	40	£5.5
+Gravenberch	Liverpool	119	£5.5
+Guedes	Wolves	0	£5.5
+Ndoye	Nott'm Forest	47	£5.5
+J.Palhinha	Spurs	90	£5.5
+Okafor	Leeds	67	£5.5
+M.Fernandes	West Ham	102	£5.5
+Traoré	Sunderland	30	£5.5
+Groß	Brighton	31	£5.5
+Merino	Arsenal	66	£5.4
+Fábio Vieira	Arsenal	0	£5.4
+McGinn	Aston Villa	71	£5.4
+Enciso	Brighton	0	£5.4
+Gruda	Brighton	35	£5.4
+Sima	Brighton	0	£5.4
+Benson	Burnley	0	£5.4
+Gana	Everton	62	£5.4
+Sessegnon	Fulham	77	£5.4
+Aaronson	Leeds	105	£5.4
+C.Jones	Liverpool	47	£5.4
+Echeverri	Man City	0	£5.4
+Anderson	Nott'm Forest	119	£5.4
+Jota	Nott'm Forest	1	£5.4
+Roberts	Sunderland	1	£5.4
+Solomon	Spurs	0	£5.4
+Hutchinson	Nott'm Forest	60	£5.4
+Adli	Bournemouth	60	£5.4
+Buendía	Aston Villa	77	£5.3
+J.Ramsey	Newcastle	36	£5.3
+Tavernier	Bournemouth	104	£5.3
+Bruun Larsen	Burnley	36	£5.3
+Andreas	Fulham	0	£5.3
+Tonali	Newcastle	69	£5.3
+Diarra	Sunderland	44	£5.3
+Odobert	Spurs	46	£5.3
+J.Gomes	Wolves	85	£5.3
+Munetsi	Wolves	38	£5.3
+Dibling	Everton	18	£5.3
+Chukwueze	Fulham	48	£5.3
+Gallagher	Spurs	18	£5.3
+Zubimendi	Arsenal	111	£5.2
+Milambo	Brentford	1	£5.2
+Alcaraz	Everton	26	£5.2
+Garner	Everton	129	£5.2
+Gnonto	Leeds	22	£5.2
+James	Leeds	17	£5.2
+Bentancur	Spurs	64	£5.2
+Bergvall	Spurs	39	£5.2
+Bissouma	Spurs	13	£5.2
+André	Wolves	75	£5.2
+Nørgaard	Arsenal	5	£5.1
+Malen	Aston Villa	55	£5.1
+Scott	Bournemouth	101	£5.1
+Hinshelwood	Brighton	48	£5.1
+Dewsbury-Hall	Everton	112	£5.1
+Adama	West Ham	20	£5.1
+Harrison	Leeds	12	£5.1
+Elliott	Aston Villa	5	£5.1
+Bobb	Fulham	26	£5.1
+Bellegarde	Wolves	34	£5.1
+Fer López	Wolves	12	£5.1
+Xhaka	Sunderland	94	£5.1
+Nwaneri	Arsenal	8	£5.0
+Barrenechea	Aston Villa	0	£5.0
+Dobbin	Aston Villa	0	£5.0
+Brooks	Bournemouth	46	£5.0
+Sinisterra	Bournemouth	0	£5.0
+Henderson	Brentford	68	£5.0
+Yarmoliuk	Brentford	76	£5.0
+Yalcouye	Brighton	0	£5.0
+Anthony	Burnley	100	£5.0
+Koleosho	Burnley	0	£5.0
+Kamada	Crystal Palace	50	£5.0
+Wharton	Crystal Palace	80	£5.0
+McAtee	Nott'm Forest	7	£5.0
+Reijnders	Man City	85	£5.0
+Nypan	Man City	0	£5.0
+Willock	Newcastle	20	£5.0
+Dominguez	Nott'm Forest	34	£5.0
+O'Brien	Nott'm Forest	0	£5.0
+E.Le Fée	Sunderland	107	£5.0
+Moore	Spurs	0	£5.0
+B.Traore	Wolves	0	£5.0
+Ugochukwu	Burnley	81	£5.0
+S.Magassa	West Ham	38	£5.0
+Florentino	Burnley	66	£5.0
+Röhl	Everton	16	£5.0
+Alysson	Aston Villa	2	£5.0
+Jocelin.T	Sunderland	1	£5.0
+Tóth.A	Bournemouth	3	£5.0
+Lamadrid	West Ham	0	£5.0
+Angulo	Sunderland	9	£5.0
+Kamara	Aston Villa	61	£4.9
+Adams	Bournemouth	60	£4.9
+Christie	Bournemouth	28	£4.9
+Cook	Bournemouth	38	£4.9
+Philip	Bournemouth	0	£4.9
+Janelt	Brentford	70	£4.9
+Jensen	Brentford	65	£4.9
+Nunes	Brentford	0	£4.9
+Gomez	Brighton	78	£4.9
+Milner	Brighton	29	£4.9
+Sarmiento	Brighton	0	£4.9
+Wieffer	Brighton	61	£4.9
+Churlinov	Burnley	0	£4.9
+Cullen	Burnley	70	£4.9
+Tchaouna	Burnley	38	£4.9
+Lavia	Chelsea	5	£4.9
+Mudryk	Chelsea	0	£4.9
+Doucouré	Crystal Palace	0	£4.9
+Lerma	Crystal Palace	51	£4.9
+Berge	Fulham	69	£4.9
+Lukić	Fulham	50	£4.9
+Ampadu	Leeds	92	£4.9
+Greenwood	Leeds	0	£4.9
+Ramazani	Leeds	0	£4.9
+Endo	Liverpool	12	£4.9
+Antoñito C.	Newcastle	0	£4.9
+Sangaré	Nott'm Forest	67	£4.9
+Adingra	Sunderland	34	£4.9
+Aleksić	Sunderland	0	£4.9
+Mundle	Sunderland	14	£4.9
+Sadiki	Sunderland	58	£4.9
+Talbi	Sunderland	65	£4.9
+Bryan	Spurs	0	£4.9
+Álvarez	West Ham	0	£4.9
+Cornet	West Ham	0	£4.9
+L.Guilherme	West Ham	5	£4.9
+J.Arias	Wolves	45	£4.9
+Douglas Luiz	Aston Villa	21	£4.9
+Dasilva	Brentford	0	£4.9
+Nelson	Brentford	6	£4.8
+Barkley	Aston Villa	19	£4.8
+Onana	Aston Villa	62	£4.8
+Onyeka	Brentford	12	£4.8
+Ayari	Brighton	83	£4.8
+Watson	Brighton	5	£4.8
+Laurent	Burnley	48	£4.8
+George	Everton	9	£4.8
+Iroegbunam	Everton	53	£4.8
+Cairney	Fulham	25	£4.8
+Tanaka	Leeds	43	£4.8
+Gannon-Doak	Bournemouth	7	£4.8
+Longstaff	Leeds	44	£4.8
+Neil	Sunderland	3	£4.8
+Poveda	Sunderland	0	£4.8
+Gray	Spurs	48	£4.8
+G.Rodriguez	West Ham	8	£4.8
+Angel	Wolves	9	£4.8
+Carvalho	Brentford	13	£4.7
+Boateng	Burnley	0	£4.7
+Edwards	Burnley	43	£4.7
+Hannibal	Burnley	49	£4.7
+Esse	Crystal Palace	4	£4.7
+Hughes	Crystal Palace	38	£4.7
+Gruev	Leeds	53	£4.7
+Phillips	Man City	0	£4.7
+Ugarte	Man Utd	31	£4.7
+Yates	Nott'm Forest	17	£4.7
+Rigg	Sunderland	16	£4.7
+Stach	Leeds	114	£4.7
+Buonanotte	Leeds	2	£4.6
+Mainoo	Man Utd	37	£4.6
+Kabia	Arsenal	0	£4.5
+Sambi	Arsenal	0	£4.5
+Dendoncker	Aston Villa	0	£4.5
+Jimoh-Aloba	Aston Villa	1	£4.5
+Faivre	Bournemouth	0	£4.5
+H.Traorè	Bournemouth	4	£4.5
+Sadi	Bournemouth	0	£4.5
+Winterburn	Bournemouth	1	£4.5
+Maghoma	Brentford	0	£4.5
+Trevitt	Brentford	0	£4.5
+Baleba	Brighton	38	£4.5
+Mazilu	Brighton	0	£4.5
+Moran	Brighton	0	£4.5
+Adewumi	Burnley	0	£4.5
+Banel	Burnley	1	£4.5
+Andrey Santos	Chelsea	30	£4.5
+Paez	Chelsea	0	£4.5
+Ebiowei	Crystal Palace	0	£4.5
+M.França	Crystal Palace	0	£4.5
+Ozoh	Crystal Palace	0	£4.5
+Umeh	Crystal Palace	0	£4.5
+Armstrong	Everton	18	£4.5
+Heath	Everton	0	£4.5
+Metcalfe	Everton	0	£4.5
+Godo	Fulham	0	£4.5
+Harris	Fulham	0	£4.5
+Crew	Leeds	0	£4.5
+Gelhardt	Leeds	0	£4.5
+Gyabi	Leeds	0	£4.5
+Morton	Liverpool	0	£4.5
+Collyer	Man Utd	0	£4.5
+Moorhouse	Man Utd	0	£4.5
+Hayden	Newcastle	0	£4.5
+White	Newcastle	0	£4.5
+Da Silva Moreira	Nott'm Forest	0	£4.5
+Stamenic	Nott'm Forest	0	£4.5
+Browne	Sunderland	0	£4.5
+Ekwah	Sunderland	0	£4.5
+P.M.Sarr	Spurs	58	£4.5
+Min-hyeok	Spurs	0	£4.5
+Earthy	West Ham	1	£4.5
+Hodge	Wolves	0	£4.5
+Onyango	Everton	0	£4.5
+McAidoo	Man City	0	£4.5
+Emenalo	Chelsea	0	£4.5
+Oriola	Brighton	1	£4.5
+Morrison	Liverpool	0	£4.5
+Akhamrich	Spurs	0	£4.5
+George Hemmings	Aston Villa	2	£4.5
+Lacey	Man Utd	2	£4.5
+DaCosta	Bournemouth	0	£4.5
+Mohamadou Kanté	West Ham	5	£4.5
+Drakes-Thomas	Crystal Palace	2	£4.5
+Gray	Man City	0	£4.5
+Heskey	Man City	0	£4.5
+Rawlings	Wolves	0	£4.5
+Bendito Mantato	Man Utd	1	£4.5
+Ridgeon	Fulham	0	£4.5
+Alabi	Newcastle	0	£4.5
+Tutierov	Sunderland	0	£4.5
+Pimlott	Burnley	0	£4.5
+Ojinnaka	Wolves	0	£4.5
+Sutherland	Wolves	0	£4.5
+Brierley	Burnley	0	£4.5
+Williams-Barnett	Spurs	0	£4.5
+Howell	Brighton	3	£4.5
+Stevens	Bournemouth	0	£4.5
+Abbey	Wolves	0	£4.5
+Bentt	Brentford	0	£4.5
+Kyerematen	Spurs	0	£4.5
+McMahon-Brown	Burnley	0	£4.5
+Broggio	Aston Villa	0	£4.4
+Silcott-Duberry	Bournemouth	0	£4.4
+Donovan	Brentford	4	£4.4
+Peart-Harris	Brentford	1	£4.4
+Knight	Brighton	1	£4.4
+A.Ramsey	Burnley	0	£4.4
+Trésor	Burnley	4	£4.4
+J.Rak-Sakyi	Crystal Palace	0	£4.4
+Rodney	Crystal Palace	1	£4.4
+Ebere	Everton	0	£4.4
+King	Fulham	38	£4.4
+McConnell	Liverpool	0	£4.4
+Kuol	Newcastle	0	£4.4
+L.Miley	Newcastle	58	£4.4
+Triantis	Sunderland	0	£4.4
+Orford	West Ham	0	£4.4
+Potts	West Ham	34	£4.4
+Cardines	Crystal Palace	0	£4.4
+Burrowes	Aston Villa	1	£4.4
+Harriman-Annous	Arsenal	0	£4.4
+Mukasa	Man City	2	£4.4
+Fletcher	Man Utd	1	£4.4
+Chambers	Leeds	0	£4.4
+Young	Aston Villa	0	£4.3
+Konak	Brentford	0	£4.3
+D.Essugo	Chelsea	0	£4.3
+Agbinone	Crystal Palace	0	£4.3
+Ahamada	Crystal Palace	0	£4.3
+Devenny	Crystal Palace	29	£4.3
+Bates	Everton	0	£4.3
+Reed	Fulham	12	£4.3
+Nyoni	Liverpool	3	£4.3
+Fitzgerald	Man Utd	0	£4.3
+J.Fletcher	Man Utd	3	£4.3
+Kone	Man Utd	0	£4.3
+Ba	Sunderland	0	£4.3
+H.Jones	Sunderland	0	£4.3
+Matete	Sunderland	0	£4.3
+Olusesi	Spurs	0	£4.3
+Irving	West Ham	9	£4.3
+Chirewa	Wolves	2	£4.3
+Edozie	Wolves	6	£4.3
+Gonzalez	Wolves	0	£4.3
+Ngumoha	Liverpool	16	£4.3
+Rees-Dottin	Bournemouth	0	£4.3
+Seung soo	Newcastle	0	£4.3
+Bajcetic	Liverpool	0	£4.2
+Dowman	Arsenal	5	£4.2
+FW
+Haaland	Man City	193	£14.7
+Isak	Liverpool	29	£10.3
+Ekitiké	Liverpool	123	£9.1
+Gyökeres	Arsenal	93	£8.8
+Watkins	Aston Villa	99	£8.5
+João Pedro	Chelsea	141	£7.6
+Mateta	Crystal Palace	84	£7.5
+Bowen	West Ham	131	£7.5
+Havertz	Arsenal	9	£7.3
+Wissa	Newcastle	19	£7.3
+Šeško	Man Utd	87	£7.3
+Thiago	Brentford	143	£7.2
+Wood	Nott'm Forest	25	£7.2
+Solanke	Spurs	24	£7.2
+Kolo Muani	Spurs	36	£6.9
+Evanilson	Bournemouth	87	£6.8
+Woltemade	Newcastle	86	£6.8
+N.Jackson	Chelsea	0	£6.5
+Darwin	Liverpool	0	£6.5
+G.Jesus	Arsenal	17	£6.4
+Højlund	Man Utd	0	£6.3
+Richarlison	Spurs	81	£6.3
+Delap	Chelsea	35	£6.2
+Raúl	Fulham	96	£6.2
+Welbeck	Brighton	91	£6.1
+Strand Larsen	Crystal Palace	56	£6.1
+Kalimuendo	Nott'm Forest	9	£6.0
+Abraham	Aston Villa	12	£6.0
+Zirkzee	Man Utd	36	£5.8
+Igor Jesus	Nott'm Forest	66	£5.8
+Wilson	West Ham	63	£5.8
+Barry	Everton	74	£5.7
+Calvert-Lewin	Leeds	108	£5.7
+Füllkrug	West Ham	12	£5.6
+Ferguson	Brighton	0	£5.5
+Uche	Crystal Palace	16	£5.5
+Taty	West Ham	26	£5.5
+Lucca	Nott'm Forest	8	£5.5
+Enes Ünal	Bournemouth	20	£5.4
+Nketiah	Crystal Palace	23	£5.4
+Osula	Newcastle	23	£5.4
+Tolu	Wolves	54	£5.4
+Brobbey	Sunderland	62	£5.4
+Pablo	West Ham	8	£5.4
+Flemming	Burnley	62	£5.3
+Muniz	Fulham	21	£5.3
+Armstrong	Wolves	15	£5.3
+Tzimas	Brighton	16	£5.2
+Awoniyi	Nott'm Forest	14	£5.2
+Mayenda	Sunderland	37	£5.2
+Broja	Burnley	38	£5.2
+Isidor	Sunderland	60	£5.1
+Édouard	Crystal Palace	1	£5.0
+Beto	Everton	58	£5.0
+Mateo Joseph	Leeds	0	£5.0
+Nmecha	Leeds	63	£5.0
+Foster	Burnley	48	£4.9
+Y.Chermiti	Everton	0	£4.9
+Piroe	Leeds	14	£4.9
+Bamford	Leeds	0	£4.9
+Fábio Silva	Wolves	0	£4.9
+Kalajdžić	Wolves	1	£4.9
+Kostoulas	Brighton	30	£4.8
+Amdouni	Burnley	0	£4.8
+Kroupi.Jr	Bournemouth	72	£4.7
+Redmond	Aston Villa	0	£4.5
+Wheatley	Man Utd	0	£4.5
+Lankshear	Spurs	0	£4.5
+Kusi-Asare	Fulham	4	£4.5
+Gray	Leeds	0	£4.5
+Mané	Wolves	52	£4.5
+Graham	Everton	0	£4.5
+Casey	Crystal Palace	0	£4.5
+Furo	Brentford	0	£4.5
+Wilson	Spurs	0	£4.5
+Adu-Adjei	Bournemouth	0	£4.4
+Morgan	Brentford	0	£4.4
+Obafemi	Burnley	0	£4.4
+Marsh	Crystal Palace	0	£4.4
+Sherif	Everton	0	£4.4
+Luís Hemir	Sunderland	0	£4.4
+Rusyn	Sunderland	0	£4.4
+Chiwome	Wolves	0	£4.4
+Danns	Liverpool	0	£4.3
+Neave	Newcastle	0	£4.3
+Scarlett	Spurs	2	£4.3
+Marshall	West Ham	2	£4.3
+Barnes	Burnley	4	£4.2
+Obi	Man Utd	0	£4.2
+Abdullahi	Sunderland	0	£4.2
+Fraser	Wolves	0	£4.2
+Marc Guiu	Chelsea	12	£4.1

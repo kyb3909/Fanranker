@@ -16,7 +16,7 @@ const ActivitySidebar = dynamic(
     loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
   }
 )
-import { Dices, Flame, Clock, Newspaper, Trophy } from "lucide-react"
+import { Dices, Flame, Clock, FileText, Trophy } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 const OnboardingBanner = dynamic(
   () => import("@/components/onboarding-banner").then((m) => ({ default: m.OnboardingBanner })),
@@ -146,8 +146,8 @@ function HomeContent() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Newspaper className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                    피드
+                    <FileText className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                    게시물
                     {activeTab === "feed" && (
                       <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
                     )}
@@ -170,13 +170,13 @@ function HomeContent() {
                   </button>
                 </div>
 
-                {/* 피드 탭: 정렬 바 */}
+                {/* 게시물 탭: 정렬 바 */}
                 {activeTab === "feed" && (
                   <div className="border-border bg-muted/20 flex items-center justify-center border-t px-4 py-2.5">
                     <div
                       className="flex items-center gap-1.5 sm:gap-2"
                       role="group"
-                      aria-label="피드 정렬"
+                      aria-label="게시물 정렬"
                     >
                       {[
                         { key: "random" as const, icon: Dices, label: "랜덤" },
@@ -208,7 +208,7 @@ function HomeContent() {
                 followedCommunities.size === 0 &&
                 followsLoaded && <OnboardingBanner />}
 
-              {/* 피드 탭 콘텐츠 */}
+              {/* 게시물 탭 콘텐츠 */}
               {activeTab === "feed" && (
                 <div className="space-y-4">
                   <FeedSection

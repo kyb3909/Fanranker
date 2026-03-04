@@ -73,7 +73,7 @@ export function BettingTab({
       {/* Today's matches header + deadline countdown */}
 
       {/* Loading/Error/Refresh status */}
-      <div className="text-muted-foreground mb-2 flex items-center justify-between text-xs">
+      <div className="mb-2 flex items-center justify-between text-sm text-foreground/85">
         <div className="flex items-center gap-2">
           {lastUpdated && <span>마지막 업데이트: {lastUpdated.toLocaleTimeString("ko-KR")}</span>}
         </div>

@@ -162,7 +162,7 @@ export function CommissionOrderDetail({ order, milestones, currentUserId, profil
 
           {/* Cancel */}
           {!['review', 'revision', 'completed', 'cancelled'].includes(order.status) && (
-            <Button size="sm" variant="outline" className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50" onClick={() => { if (confirm('정말 취소하시겠습니까?')) callAction('cancel') }} disabled={!!loading}>
+            <Button size="sm" variant="outline" className="gap-1.5 text-primary border-primary/30 hover:bg-primary/10" onClick={() => { if (confirm('정말 취소하시겠습니까?')) callAction('cancel') }} disabled={!!loading}>
               취소
             </Button>
           )}

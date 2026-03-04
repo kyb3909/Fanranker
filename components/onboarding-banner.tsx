@@ -107,10 +107,10 @@ export function OnboardingBanner({ onFollowChange }: { onFollowChange?: () => vo
               <span className="from-primary/20 to-primary/5 flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br">
                 <Star className="text-primary h-3.5 w-3.5" />
               </span>
-              <span className="text-foreground text-[13px] font-semibold">맞춤 피드</span>
+              <span className="text-foreground text-[13px] font-semibold">맞춤 담벼락</span>
             </div>
             <p className="text-muted-foreground text-[11px] leading-relaxed">
-              관심 게시판을 팔로우하고 나만의 피드를 만들어보세요
+              관심 게시판을 팔로우하고 나만의 담벼락을 만들어보세요
             </p>
           </div>
 

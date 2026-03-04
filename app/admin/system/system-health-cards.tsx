@@ -44,7 +44,7 @@ function SyncStatusBadge({
   lastChecked: string | null
   error: string | null
 }) {
-  if (error) return <Badge className="bg-red-100 text-red-800">오류</Badge>
+  if (error) return <Badge className="bg-primary/15 text-primary">오류</Badge>
   if (!lastChecked) return <Badge variant="secondary">알 수 없음</Badge>
   const hours = (Date.now() - new Date(lastChecked).getTime()) / 3600000
   if (hours < 3) return <Badge className="bg-green-100 text-green-800">정상</Badge>
@@ -100,7 +100,7 @@ export function SystemHealthCards({ data }: { data: SystemHealthData }) {
               <span>{data.betmanSync.gamesCount ?? 0}</span>
             </div>
             {data.betmanSync.lastError && (
-              <div className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">
+              <div className="mt-2 rounded bg-primary/10 p-2 text-xs text-primary">
                 {data.betmanSync.lastError}
               </div>
             )}

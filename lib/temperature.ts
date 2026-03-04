@@ -31,7 +31,7 @@ export function getTemperatureStyle(temp: number): React.CSSProperties {
  * 온도에 따른 Tailwind 색상 클래스 (fallback용)
  */
 export function getTemperatureColor(temp: number): string {
-  if (temp >= 80) return "text-red-600"
+  if (temp >= 80) return "text-primary"
   if (temp >= 60) return "text-orange-500"
   if (temp >= 40) return "text-amber-500"
   if (temp >= 20) return "text-yellow-500"

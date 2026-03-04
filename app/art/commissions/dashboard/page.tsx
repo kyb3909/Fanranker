@@ -39,7 +39,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="text-center py-20">
-        <p className="text-sm text-red-500">{error}</p>
+        <p className="text-sm text-primary">{error}</p>
         <Link href="/art/commissions" className="text-primary text-sm mt-2 inline-block hover:underline">커미션 마켓으로</Link>
       </div>
     )

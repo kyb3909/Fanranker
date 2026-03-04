@@ -5,7 +5,7 @@
 | # | 항목 | 상태 |
 |---|---|---|
 | 1 | Clerk Production 전환 | ✅ 완료 |
-| 2 | 이용약관 / 개인정보처리방침 / 운영정책 실제 내용 작성 | ⬜ 미완 |
+| 2 | 이용약관 / 개인정보처리방침 / 운영정책 실제 내용 작성 | ✅ 완료 |
 | 3 | OG title 버그 수정 (description → title) | ✅ 완료 |
 
 ## HIGH (오픈 전 권장)
@@ -23,11 +23,11 @@
 
 | # | 항목 | 상태 |
 |---|---|---|
-| 10 | Rate limiter 인메모리 → 분산 환경 대응 | ⬜ 미완 |
-| 11 | embed HTML sanitize regex → DOMPurify | ⬜ 미완 |
+| 10 | Rate limiter 인메모리 → 분산 환경 대응 (Upstash Redis) | ⏳ 보류 (트래픽 증가 시) |
+| 11 | embed HTML sanitize regex → DOMPurify | ✅ 완료 |
 | 12 | `/api/predictions/purchase` STRICT rate limit 추가 | ✅ 이미 적용됨 |
-| 13 | Migration 번호 중복 정리 (029, 030) | ⬜ 미완 |
-| 14 | 환경변수 런타임 검증 (`lib/env.ts` + zod) | ⬜ 미완 |
+| 13 | Migration 번호 중복 정리 (029, 030) | ✅ 완료 |
+| 14 | 환경변수 런타임 검증 (`lib/env.ts` + zod) | ✅ 완료 |
 | 15 | DB 백업 전략 수립 | ⬜ 미완 |
 
 ## LOW (나중에)
@@ -35,18 +35,10 @@
 | # | 항목 | 상태 |
 |---|---|---|
 | 16 | 댓글 수정/삭제 버튼 aria-label 추가 | ✅ 완료 |
-| 17 | `images.remotePatterns` 와일드카드 제한 | ⬜ 미완 |
-| 18 | Google Analytics / Search Console 연동 | ⬜ 미완 |
-| 19 | 초기 시드 콘텐츠 (빈 게시판 방지) | ⬜ 미완 |
-
-## Lighthouse 개선 목표
-
-| 카테고리 | 현재 | 목표 |
-|---|---|---|
-| Performance | 88 | 93+ (폰트 최적화 후) |
-| Accessibility | 97 | 100 (contrast 수정 후) |
-| Best Practices | 77 | 92+ (Clerk Production 후) |
-| SEO | 100 | 100 ✅ |
+| 17 | `images.remotePatterns` 와일드카드 제한 | ✅ 완료 |
+| 18 | Google Analytics / Search Console 연동 | ✅ GA4 완료 (SC는 별도) |
+| 19 | 초기 시드 콘텐츠 (빈 게시판 방지) | ✅ 완료 (reddit-seed cron + 수동 작성) |
+| 26 | 알림 시스템 보강 (정산 알림 + 모두읽음 + 정확한 카운트) | ✅ 완료 |
 
 ## FINAL (오픈 후 가입 고도화 — 외부 인증 발급 필요)
 
@@ -55,17 +47,13 @@
 | 20 | 카카오 소셜 로그인 추가 | ⬜ 미완 | 카카오 개발자 앱 등록 필요 |
 | 21 | 네이버 소셜 로그인 추가 | ⬜ 미완 | 네이버 개발자 앱 등록 필요 |
 | 22 | 휴대폰 인증 추가 | ⬜ 미완 | Clerk Dashboard에서 활성화 |
-| 23 | 가입 약관 동의 체크박스 | ⬜ 미완 | Clerk Dashboard Legal 설정 |
-| 24 | 커스텀 온보딩 페이지 (`/onboarding`) | ⬜ 미완 | 닉네임, 프로필 사진, MBTI, 관심사 선택 (틴더 스타일) |
-| 25 | 온보딩 미완료 유저 리다이렉트 처리 | ⬜ 미완 | middleware에서 프로필 미완성 시 /onboarding으로 이동 |
+| 23 | 가입 약관 동의 체크박스 | ✅ 완료 | 가입 페이지 하단에 약관 동의 안내 추가 |
+| 24 | 커스텀 온보딩 페이지 (`/onboarding`) | ✅ 완료 | sign-up 4단계 플로우로 구현 (약관→계정→프로필→관심사) |
+| 25 | 온보딩 미완료 유저 리다이렉트 처리 | ✅ 완료 | middleware에서 onboarding_completed=false 시 /sign-up 리다이렉트 |
 
 ## 담당 구분
 
-### Claude가 코드로 처리
-- 5, 6, 7, 8, 9, 12, 16
-
 ### 사용자가 직접 처리
-- 2 (법률 문서 내용 작성)
 - 15 (Supabase 백업 플랜)
 - 18 (Google 계정 연동)
 - 19 (콘텐츠 준비)

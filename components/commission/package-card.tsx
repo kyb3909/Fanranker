@@ -80,7 +80,7 @@ export function CommissionPackageCard({ pkg, showOrderButton = true }: { pkg: Co
         <span className="flex items-center gap-1">
           <Layers className="h-3 w-3" />
           {isFull ? (
-            <span className="text-red-500">마감</span>
+            <span className="text-primary">마감</span>
           ) : (
             <>{slotsAvailable}/{pkg.max_slots} 슬롯</>
           )}

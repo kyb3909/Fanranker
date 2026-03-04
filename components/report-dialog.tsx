@@ -104,7 +104,7 @@ export function ReportDialog({ targetType, targetId, open, onOpenChange }: Repor
                 />
                 <span
                   className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold text-white ${
-                    r.card === "red" ? "bg-red-500" : "bg-yellow-500"
+                    r.card === "red" ? "bg-primary" : "bg-yellow-500"
                   }`}
                 >
                   {r.card === "red" ? "레드" : "옐로"}

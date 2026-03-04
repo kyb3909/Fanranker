@@ -65,7 +65,7 @@ export function MatchManagementTable() {
     return (
       <Card>
         <div className="flex flex-col items-center justify-center h-64 text-center p-6">
-          <XCircle className="h-10 w-10 mb-2 text-red-500" />
+          <XCircle className="h-10 w-10 mb-2 text-primary" />
           <p className="text-lg font-medium">데이터를 불러오는데 실패했습니다.</p>
           <p className="text-sm text-muted-foreground mt-2">{error}</p>
           <p className="text-xs text-muted-foreground mt-4 max-w-md">

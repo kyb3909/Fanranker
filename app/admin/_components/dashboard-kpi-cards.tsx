@@ -17,7 +17,7 @@ const kpiConfig = [
   { key: 'totalPosts' as const, label: '전체 게시글', icon: FileText, color: 'text-green-600' },
   { key: 'totalPredictions' as const, label: '전체 예측', icon: Target, color: 'text-purple-600' },
   { key: 'activeGames' as const, label: '진행 중 경기', icon: Trophy, color: 'text-orange-600' },
-  { key: 'pendingReports' as const, label: '대기 중 신고', icon: Flag, color: 'text-red-600' },
+  { key: 'pendingReports' as const, label: '대기 중 신고', icon: Flag, color: 'text-primary' },
 ]
 
 export function DashboardKpiCards({ data }: { data: KpiData }) {
@@ -49,7 +49,7 @@ export function DashboardKpiCards({ data }: { data: KpiData }) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
-            <Activity className={`h-4 w-4 ${data.systemHealthy ? 'text-green-600' : 'text-red-600'}`} />
+            <Activity className={`h-4 w-4 ${data.systemHealthy ? 'text-green-600' : 'text-primary'}`} />
             <span className="text-2xl font-bold">{data.systemHealthy ? '정상' : '점검'}</span>
           </div>
         </CardContent>

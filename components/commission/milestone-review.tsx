@@ -71,7 +71,7 @@ export function MilestoneReviewCard({ milestoneId, milestoneTitle, orderId, deli
         </div>
       )}
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-primary">{error}</p>}
 
       <textarea
         className="w-full h-16 px-3 py-2 bg-secondary text-sm text-foreground rounded-lg border border-transparent focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"

@@ -36,12 +36,12 @@ export function BettingMatchCard({
       className={`overflow-hidden border-0 shadow-sm ${hasSelectionFromThisMatch ? "ring-primary ring-2" : ""}`}
     >
       {/* Match Header */}
-      <div className="bg-accent-surface text-accent-surface-foreground flex items-center justify-between px-3 py-1.5">
+      <div className="bg-muted text-foreground flex items-center justify-between px-3 py-1.5">
         <div className="flex items-center gap-1.5">
           <span className="text-sm">{SPORT_ICONS[groupedMatch.sport] || "⚽"}</span>
           <span className="text-xs font-medium">{groupedMatch.leagueCode}</span>
         </div>
-        <div className="text-accent-surface-foreground/90 flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 text-xs text-foreground/90">
           <Clock className="h-3 w-3" />
           <span>{formatMatchTime(groupedMatch.matchTime)}</span>
         </div>
@@ -51,7 +51,7 @@ export function BettingMatchCard({
       <div className="px-2 pb-1">
         <div className="flex items-center justify-center gap-2 py-1">
           <span className="text-sm font-bold">{groupedMatch.homeTeam}</span>
-          <span className="text-muted-foreground text-xs">vs</span>
+          <span className="text-foreground/80 text-xs">vs</span>
           <span className="text-sm font-bold">{groupedMatch.awayTeam}</span>
         </div>
       </div>
@@ -95,7 +95,7 @@ export function BettingMatchCard({
             <div key={game.id} className="bg-muted/50 rounded-lg border p-1.5">
               <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
                 <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
                     {gameTypeLabel}
                   </Badge>
                   {/* Handicap badge */}
@@ -103,7 +103,7 @@ export function BettingMatchCard({
                     (game.handicap !== null && game.handicap !== 0 ? (
                       <Badge
                         variant="outline"
-                        className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[10px]"
+                        className="border-primary/40 bg-primary/15 px-1.5 py-0 text-[10px] font-medium text-primary"
                       >
                         {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? "+" : ""}
                         {game.handicap}
@@ -121,7 +121,7 @@ export function BettingMatchCard({
                     (game.over_under_line !== null && game.over_under_line !== undefined ? (
                       <Badge
                         variant="outline"
-                        className="border-purple-200 bg-purple-50 px-1.5 py-0 text-[10px] text-purple-600"
+                        className="border-purple-300 bg-purple-100 px-1.5 py-0 text-[10px] font-medium text-purple-800"
                       >
                         기준 {game.over_under_line}
                       </Badge>
@@ -135,7 +135,7 @@ export function BettingMatchCard({
                     ))}
                 </div>
                 {gameBetClosed && (
-                  <span className="text-[10px] font-medium text-red-500">마감</span>
+                  <span className="text-[10px] font-medium text-primary">마감</span>
                 )}
                 {sportMismatch && !gameBetClosed && (
                   <span className="text-[10px] text-orange-500">다른 종목</span>
@@ -167,7 +167,7 @@ export function BettingMatchCard({
                     aria-label={`${opt.label} 선택, 배당 ${opt.odds ? opt.odds.toFixed(2) : "없음"}`}
                     aria-pressed={selectedBet?.selection === opt.value}
                   >
-                    <div className="text-muted-foreground truncate text-[10px]">{opt.label}</div>
+                    <div className="truncate text-xs text-foreground/85">{opt.label}</div>
                     <div
                       className={`font-[family-name:var(--font-display)] text-sm font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
                     >
