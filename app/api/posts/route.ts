@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAnonClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
-import { computeTemperature } from "@/lib/temperature"
+import { computeTemperature, type TemperatureInput } from "@/lib/temperature"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { z } from "zod"
 
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       const result = data || { posts: [], profiles: [] }
       const posts = (result.posts || []).map((post: Record<string, unknown>) => ({
         ...post,
-        temperature: computeTemperature(post),
+        temperature: computeTemperature(post as unknown as TemperatureInput),
       }))
 
       const res = NextResponse.json({ posts, profiles: result.profiles || [] })

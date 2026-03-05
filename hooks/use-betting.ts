@@ -475,7 +475,7 @@ export function useBetting() {
         }
         if (prev.length === 0) {
           setSelectedSport(sport)
-          setSportFilter(sport)
+          setSportFilter(sport as "축구" | "야구" | "농구" | "배구")
           return [{ gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds }]
         }
         if (sport !== selectedSport) {
