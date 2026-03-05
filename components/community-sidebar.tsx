@@ -140,6 +140,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
     >
       <Link
         href={`/community/${community.slug}`}
+        prefetch={false}
         className="flex min-w-0 flex-1 items-center gap-3"
       >
         <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
@@ -270,24 +271,28 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
           <div className="py-1">
             <Link
               href="/about"
+              prefetch={false}
               className="hover:bg-muted/40 group text-foreground group-hover:text-primary flex items-center gap-2.5 px-4 py-2.5 text-[14px] font-medium transition-colors"
             >
               회사 소개
             </Link>
             <Link
               href="/terms"
+              prefetch={false}
               className="hover:bg-muted/40 group text-foreground group-hover:text-primary flex items-center gap-2.5 px-4 py-2.5 text-[14px] font-medium transition-colors"
             >
               이용약관
             </Link>
             <Link
               href="/content-policy"
+              prefetch={false}
               className="hover:bg-muted/40 group text-foreground group-hover:text-primary flex items-center gap-2.5 px-4 py-2.5 text-[14px] font-medium transition-colors"
             >
               게시물 운영정책
             </Link>
             <Link
               href="/privacy"
+              prefetch={false}
               className="hover:bg-muted/40 group text-foreground group-hover:text-primary flex items-center gap-2.5 px-4 py-2.5 text-[14px] font-medium transition-colors"
             >
               개인정보처리방침

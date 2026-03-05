@@ -268,7 +268,7 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className={`font-sans h-10 gap-2 rounded-md px-3 text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
                 isFeed
                   ? "text-white hover:bg-white/10 hover:text-white"
                   : "text-white/90 hover:bg-white/10 hover:text-white"
@@ -278,11 +278,11 @@ export function Header() {
               담벼락
             </Button>
           </Link>
-          <Link href="/explore">
+          <Link href="/explore" prefetch={false}>
             <Button
               variant="ghost"
               size="sm"
-              className={`font-sans h-10 gap-2 rounded-md px-3 text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
                 isExplore
                   ? "text-white hover:bg-white/10 hover:text-white"
                   : "text-white/90 hover:bg-white/10 hover:text-white"
@@ -292,11 +292,11 @@ export function Header() {
               운동장
             </Button>
           </Link>
-          <Link href="/?view=prediction">
+          <Link href="/?view=prediction" prefetch={false}>
             <Button
               variant="ghost"
               size="sm"
-              className={`font-sans h-10 gap-2 rounded-md px-3 text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
                 isPrediction
                   ? "text-white hover:bg-white/10 hover:text-white"
                   : "text-white/90 hover:bg-white/10 hover:text-white"

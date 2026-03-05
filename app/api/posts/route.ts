@@ -40,112 +40,29 @@ export async function GET(request: NextRequest) {
       ? communitySlugsParam.split(",").filter(Boolean)
       : null
 
-    // 최근 댓글이 달린 게시물 조회
+    // 최근 댓글이 달린 게시물 조회 (RPC로 1 round trip)
     if (sort === "recent_comments") {
-      // 1. 최근 댓글 조회 (최신 댓글 시간 순)
-      const { data: recentComments, error: commentsError } = await supabase
-        .from("comments")
-        .select("post_id, created_at")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(limit * 10) // 충분한 댓글을 가져와서 중복 제거
-
-      if (commentsError) {
-        console.error("Failed to fetch recent comments:", commentsError)
-        return NextResponse.json(
-          { error: "댓글을 가져오는 중 오류가 발생했습니다." },
-          { status: 500 }
-        )
-      }
-
-      if (!recentComments || recentComments.length === 0) {
-        return NextResponse.json({ posts: [], profiles: [] })
-      }
-
-      // 2. post_id별로 가장 최근 댓글 시간 추출 (중복 제거)
-      const postIdToLatestComment = new Map<string, Date>()
-      recentComments.forEach((comment) => {
-        const postId = comment.post_id
-        const commentTime = new Date(comment.created_at)
-        const existing = postIdToLatestComment.get(postId)
-        if (!existing || commentTime > existing) {
-          postIdToLatestComment.set(postId, commentTime)
-        }
+      const { data, error } = await supabase.rpc("get_recent_commented_posts", {
+        p_limit: limit,
+        p_community_slug: communitySlug || null,
       })
 
-      // 3. 최근 댓글 시간 순으로 정렬
-      const sortedPostIds = Array.from(postIdToLatestComment.entries())
-        .sort((a, b) => b[1].getTime() - a[1].getTime())
-        .slice(0, limit)
-        .map(([postId]) => postId)
-
-      if (sortedPostIds.length === 0) {
-        return NextResponse.json({ posts: [], profiles: [] })
-      }
-
-      // 4. 게시물 정보 조회
-      let postsQuery = supabase
-        .from("posts")
-        .select(
-          `
-          id,
-          user_id,
-          community_slug,
-          title,
-          content,
-          image,
-          vote_count,
-          comment_count,
-          temperature,
-          created_at
-        `
-        )
-        .in("id", sortedPostIds)
-        .is("deleted_at", null)
-
-      // 커뮤니티 필터링
-      if (communitySlug) {
-        postsQuery = postsQuery.eq("community_slug", communitySlug)
-      }
-
-      const { data: posts, error: postsError } = await postsQuery
-
-      if (postsError) {
-        console.error("Failed to fetch posts:", postsError)
+      if (error) {
+        console.error("Failed to fetch recent commented posts:", error)
         return NextResponse.json(
           { error: "글 목록을 가져오는 중 오류가 발생했습니다." },
           { status: 500 }
         )
       }
 
-      if (!posts || posts.length === 0) {
-        return NextResponse.json({ posts: [], profiles: [] })
-      }
+      const result = data || { posts: [], profiles: [] }
+      const posts = (result.posts || []).map((post: Record<string, unknown>) => ({
+        ...post,
+        temperature: computeTemperature(post),
+      }))
 
-      // 5. 최근 댓글 시간 순으로 정렬 (DB에서 가져온 순서 유지)
-      const postMap = new Map(posts.map((p) => [p.id, p]))
-      const sortedPosts = sortedPostIds
-        .map((id) => postMap.get(id))
-        .filter((p): p is (typeof posts)[0] => p !== undefined)
-
-      // 6. 온도 계산 (comment_count는 DB 트리거가 관리하므로 그대로 사용)
-      const postsWithAccurateCounts = sortedPosts.map((post) => {
-        const row = {
-          ...post,
-          latest_comment_at: postIdToLatestComment.get(post.id)?.toISOString() || post.created_at,
-        }
-        return { ...row, temperature: computeTemperature(row) }
-      })
-
-      // 7. 작성자 프로필 조회
-      const userIds = [...new Set(sortedPosts.map((p) => p.user_id))]
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, nickname, avatar_url, temperature")
-        .in("user_id", userIds)
-
-      const res = NextResponse.json({ posts: postsWithAccurateCounts, profiles: profiles || [] })
-      res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
+      const res = NextResponse.json({ posts, profiles: result.profiles || [] })
+      res.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300")
       return res
     }
 
@@ -226,7 +143,7 @@ export async function GET(request: NextRequest) {
       profiles,
       hasMore: posts.length === limit,
     })
-    res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
+    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=180")
     return res
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
