@@ -359,6 +359,11 @@ export function useBetting() {
       showAlert("warning", "베팅 금액 확인", "베팅할 볼 수를 입력해주세요.")
       return
     }
+    const MAX_BET = 10
+    if (betAmount > MAX_BET) {
+      showAlert("warning", "베팅 금액 초과", `베팅 금액은 최대 ${MAX_BET}볼입니다.`)
+      return
+    }
     if (betAmount > userBalls) {
       showAlert("warning", "볼 부족", `보유 볼이 부족합니다.\n현재 보유: ${userBalls}볼`)
       return
@@ -370,7 +375,8 @@ export function useBetting() {
         game_id: bet.gameId,
         prediction: bet.selection,
       }))
-      const payload: Record<string, unknown> = { predictions: predictionsArray, betAmount }
+      const idempotencyKey = crypto.randomUUID()
+      const payload: Record<string, unknown> = { predictions: predictionsArray, betAmount, idempotency_key: idempotencyKey }
       if (isJournalist && analysisText.trim()) {
         if (analysisTitle.trim()) payload.analysis_title = analysisTitle.trim()
         payload.analysis_text = analysisText.trim()

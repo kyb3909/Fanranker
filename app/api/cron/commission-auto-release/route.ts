@@ -31,6 +31,19 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     for (const order of orders) {
+      // Atomic status lock: review → completing (prevents double release)
+      const { data: locked } = await supabase
+        .from("commission_orders")
+        .update({ status: "completing" })
+        .eq("id", order.id)
+        .eq("status", "review")
+        .select("id")
+
+      if (!locked || locked.length === 0) {
+        errors.push(`${order.order_number}: already processing or completed`)
+        continue
+      }
+
       const { data: result } = (await supabase
         .rpc("escrow_release_gold", { p_order_id: order.id })
         .single()) as { data: EscrowReleaseResult | null }
@@ -73,6 +86,12 @@ export async function POST(request: NextRequest) {
           content: "3일 경과로 자동 정산이 완료되었습니다.",
         })
       } else {
+        // Rollback status to review on failure
+        await supabase
+          .from("commission_orders")
+          .update({ status: "review" })
+          .eq("id", order.id)
+          .eq("status", "completing")
         errors.push(`${order.order_number}: ${result?.error_message || "unknown error"}`)
       }
     }

@@ -73,7 +73,21 @@ export async function POST(
       .select()
       .single()
 
-    if (joinErr) return apiError('참가에 실패했습니다.', 500, joinErr)
+    if (joinErr) {
+      if (joinErr.code === '23505') return apiBadRequest('이미 참가 중입니다.')
+      return apiError('참가에 실패했습니다.', 500, joinErr)
+    }
+
+    // Post-insert re-check: verify participant count didn't exceed max during concurrent joins
+    const { count: postCount } = await supabase
+      .from('draft_participants')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', room.id)
+
+    if ((postCount || 0) > 4) {
+      await supabase.from('draft_participants').delete().eq('id', participant.id)
+      return apiBadRequest('방이 가득 찼습니다. (동시 요청 감지)')
+    }
 
     return NextResponse.json({ participant })
   } catch (error) {

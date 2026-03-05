@@ -45,27 +45,44 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Remove vote (toggle)
       await supabase.from("virtual_casting_votes").delete().eq("id", existingVote.id)
 
-      // Decrement vote counts
+      // Recount votes from source of truth (votes table) for atomic accuracy
+      const { count: newSuggestionCount } = await supabase
+        .from("virtual_casting_votes")
+        .select("id", { count: "exact", head: true })
+        .eq("suggestion_id", suggestion_id)
+
+      const suggestionVoteCount = newSuggestionCount ?? 0
       await supabase
         .from("virtual_casting_suggestions")
-        .update({ vote_count: Math.max(0, suggestion.vote_count - 1) })
+        .update({ vote_count: suggestionVoteCount })
         .eq("id", suggestion_id)
 
-      // Decrement casting total
-      const { data: casting } = await supabase
-        .from("virtual_castings")
-        .select("vote_count")
-        .eq("id", castingId)
-        .single()
+      // Recount casting total
+      const { count: newCastingCount } = await supabase
+        .from("virtual_casting_votes")
+        .select("id", { count: "exact", head: true })
+        .eq("suggestion_id", suggestion_id)
 
-      if (casting) {
+      // Get all suggestion IDs for this casting to count total
+      const { data: allSuggestions } = await supabase
+        .from("virtual_casting_suggestions")
+        .select("id")
+        .eq("casting_id", castingId)
+
+      if (allSuggestions) {
+        const suggestionIds = allSuggestions.map((s) => s.id)
+        const { count: totalCastingVotes } = await supabase
+          .from("virtual_casting_votes")
+          .select("id", { count: "exact", head: true })
+          .in("suggestion_id", suggestionIds)
+
         await supabase
           .from("virtual_castings")
-          .update({ vote_count: Math.max(0, casting.vote_count - 1) })
+          .update({ vote_count: totalCastingVotes ?? 0 })
           .eq("id", castingId)
       }
 
-      return NextResponse.json({ voted: false, vote_count: Math.max(0, suggestion.vote_count - 1) })
+      return NextResponse.json({ voted: false, vote_count: suggestionVoteCount })
     }
 
     // Add vote
@@ -75,29 +92,44 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
 
     if (voteError) {
+      if (voteError.code === "23505") {
+        return NextResponse.json({ error: "이미 투표했습니다." }, { status: 400 })
+      }
       return NextResponse.json({ error: "투표에 실패했습니다." }, { status: 500 })
     }
 
-    // Increment vote counts
+    // Recount votes from source of truth for atomic accuracy
+    const { count: newSuggestionCount } = await supabase
+      .from("virtual_casting_votes")
+      .select("id", { count: "exact", head: true })
+      .eq("suggestion_id", suggestion_id)
+
+    const suggestionVoteCount = newSuggestionCount ?? 0
     await supabase
       .from("virtual_casting_suggestions")
-      .update({ vote_count: suggestion.vote_count + 1 })
+      .update({ vote_count: suggestionVoteCount })
       .eq("id", suggestion_id)
 
-    const { data: casting } = await supabase
-      .from("virtual_castings")
-      .select("vote_count")
-      .eq("id", castingId)
-      .single()
+    // Recount casting total
+    const { data: allSuggestions } = await supabase
+      .from("virtual_casting_suggestions")
+      .select("id")
+      .eq("casting_id", castingId)
 
-    if (casting) {
+    if (allSuggestions) {
+      const suggestionIds = allSuggestions.map((s) => s.id)
+      const { count: totalCastingVotes } = await supabase
+        .from("virtual_casting_votes")
+        .select("id", { count: "exact", head: true })
+        .in("suggestion_id", suggestionIds)
+
       await supabase
         .from("virtual_castings")
-        .update({ vote_count: casting.vote_count + 1 })
+        .update({ vote_count: totalCastingVotes ?? 0 })
         .eq("id", castingId)
     }
 
-    return NextResponse.json({ voted: true, vote_count: suggestion.vote_count + 1 })
+    return NextResponse.json({ voted: true, vote_count: suggestionVoteCount })
   } catch {
     return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 })
   }

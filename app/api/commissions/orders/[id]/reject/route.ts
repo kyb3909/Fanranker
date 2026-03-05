@@ -29,9 +29,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (order.status !== "pending")
       return NextResponse.json({ error: "대기 중인 주문만 거절할 수 있습니다." }, { status: 400 })
 
+    // Atomic status lock: pending → rejecting (prevents double reject/refund)
+    const { data: locked } = await supabase
+      .from("commission_orders")
+      .update({ status: "rejecting" })
+      .eq("id", id)
+      .eq("status", "pending")
+      .select("id")
+
+    if (!locked || locked.length === 0) {
+      return NextResponse.json({ error: "이미 처리 중이거나 거절할 수 없는 상태입니다." }, { status: 409 })
+    }
+
     const rawBody = await request.json().catch(() => ({}))
     const parsed = rejectOrderSchema.safeParse(rawBody)
     if (!parsed.success) {
+      await supabase.from("commission_orders").update({ status: "pending" }).eq("id", id).eq("status", "rejecting")
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
     const body = parsed.data
@@ -42,6 +55,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .single()) as { data: EscrowRefundResult | null }
 
     if (!refundResult?.success) {
+      await supabase.from("commission_orders").update({ status: "pending" }).eq("id", id).eq("status", "rejecting")
       return NextResponse.json({ error: "환불 처리 실패" }, { status: 500 })
     }
 

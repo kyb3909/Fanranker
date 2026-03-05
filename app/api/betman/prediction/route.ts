@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
+import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 
 const predictionItemSchema = z.object({
@@ -13,9 +14,10 @@ const predictionItemSchema = z.object({
 
 const predictionPostSchema = z.object({
   predictions: z.array(predictionItemSchema).min(1, "예측 데이터가 필요합니다."),
-  betAmount: z.number().int().min(1, "베팅 금액은 1볼 이상이어야 합니다.").optional(),
+  betAmount: z.number().int().min(1, "베팅 금액은 1볼 이상이어야 합니다.").max(10, "베팅 금액은 최대 10볼입니다.").optional(),
   analysis_title: z.string().max(100).optional(),
   analysis_text: z.string().max(5000).optional(),
+  idempotency_key: z.string().uuid().optional(),
 })
 
 /**
@@ -41,7 +43,25 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 예측 데이터입니다.")
     }
-    const { predictions, betAmount, analysis_title, analysis_text } = parsed.data
+    const { predictions, betAmount, analysis_title, analysis_text, idempotency_key } = parsed.data
+
+    // Idempotency check: prevent duplicate submissions
+    if (idempotency_key) {
+      const { data: existingSlip } = await supabase
+        .from("prediction_slips")
+        .select("id")
+        .eq("idempotency_key", idempotency_key)
+        .maybeSingle()
+
+      if (existingSlip) {
+        return NextResponse.json({
+          success: true,
+          slipId: existingSlip.id,
+          message: "이미 처리된 요청입니다.",
+          duplicate: true,
+        })
+      }
+    }
 
     // Get all game details for validation
     const gameIds = predictions.map((p) => p.game_id)
@@ -227,6 +247,7 @@ export async function POST(request: NextRequest) {
       if (analysis_title) slipInsert.analysis_title = analysis_title
       slipInsert.analysis_text = analysis_text
     }
+    if (idempotency_key) slipInsert.idempotency_key = idempotency_key
 
     const { data: slip, error: slipError } = await supabase
       .from("prediction_slips")
@@ -236,11 +257,7 @@ export async function POST(request: NextRequest) {
 
     if (slipError || !slip) {
       console.error("Failed to create slip:", slipError)
-      await supabase.rpc("refund_tokens", {
-        p_user_id: user.id,
-        p_amount: stake,
-        p_description: "슬립 생성 실패 환불",
-      })
+      await retryRefundTokens(supabase, user.id, stake, "슬립 생성 실패 환불")
       return NextResponse.json({ error: "베팅 슬립 생성 중 오류가 발생했습니다." }, { status: 500 })
     }
 
@@ -263,13 +280,8 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Failed to insert predictions:", insertError)
-      // 슬립 삭제 + 환불
       await supabase.from("prediction_slips").delete().eq("id", slip.id)
-      await supabase.rpc("refund_tokens", {
-        p_user_id: user.id,
-        p_amount: stake,
-        p_description: "예측 저장 실패 환불",
-      })
+      await retryRefundTokens(supabase, user.id, stake, "예측 저장 실패 환불")
       return NextResponse.json({ error: "예측 저장 중 오류가 발생했습니다." }, { status: 500 })
     }
 
@@ -497,4 +509,21 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
+}
+
+async function retryRefundTokens(supabase: { rpc: (fn: string, params: Record<string, unknown>) => { error: unknown } | PromiseLike<{ error: unknown }> }, userId: string, amount: number, description: string, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const { error } = await supabase.rpc("refund_tokens", {
+      p_user_id: userId,
+      p_amount: amount,
+      p_description: description,
+    })
+    if (!error) return
+    console.error(`refund_tokens attempt ${attempt}/${maxRetries} failed:`, error)
+    if (attempt < maxRetries) await new Promise((r) => setTimeout(r, 500 * attempt))
+  }
+  Sentry.captureMessage(`refund_tokens failed after ${maxRetries} retries`, {
+    level: "fatal",
+    extra: { userId, amount, description },
+  })
 }

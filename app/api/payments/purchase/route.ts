@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 
 const PurchaseSchema = z.object({
@@ -138,14 +139,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (purchaseError) {
-      // Refund: 구매 기록 실패 시 토큰 환불 (원자적 RPC)
-      const { error: refundError } = await supabase.rpc("refund_tokens", {
-        p_user_id: userId,
-        p_amount: prediction.price,
-        p_description: "구매 기록 실패 환불",
-      })
-      if (refundError)
-        console.error("Critical: refund failed after purchase record failure:", refundError)
+      await retryRefundTokens(supabase, userId, prediction.price, "구매 기록 실패 환불")
       return apiError("구매 기록 생성 중 오류가 발생했습니다.", 500, purchaseError)
     }
 
@@ -223,4 +217,21 @@ export async function GET(request: NextRequest) {
     console.error("API error:", error)
     return NextResponse.json({ purchased: false })
   }
+}
+
+async function retryRefundTokens(supabase: { rpc: (fn: string, params: Record<string, unknown>) => { error: unknown } | PromiseLike<{ error: unknown }> }, userId: string, amount: number, description: string, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const { error } = await supabase.rpc("refund_tokens", {
+      p_user_id: userId,
+      p_amount: amount,
+      p_description: description,
+    })
+    if (!error) return
+    console.error(`refund_tokens attempt ${attempt}/${maxRetries} failed:`, error)
+    if (attempt < maxRetries) await new Promise((r) => setTimeout(r, 500 * attempt))
+  }
+  Sentry.captureMessage(`refund_tokens failed after ${maxRetries} retries`, {
+    level: "fatal",
+    extra: { userId, amount, description },
+  })
 }

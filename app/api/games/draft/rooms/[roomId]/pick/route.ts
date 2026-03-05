@@ -55,6 +55,9 @@ export async function POST(
       return apiBadRequest('현재 당신의 턴이 아닙니다.')
     }
 
+    // Atomic turn claim: only proceeds if current_pick hasn't changed
+    const expectedPick = room.current_pick
+
     const mode = getDraftMode(room.game_mode_id)
     if (!mode) return apiBadRequest('게임 모드를 찾을 수 없습니다.')
 
@@ -86,7 +89,7 @@ export async function POST(
     const capCheck = validateSalaryCap(player.cost, spent, mode.salaryCap, remainingPicks)
     if (!capCheck.valid) return apiBadRequest(capCheck.reason!)
 
-    // 픽 삽입
+    // 픽 삽입 (pick_number uniqueness prevents duplicate picks for the same turn)
     const { data: pick, error: pickErr } = await supabase
       .from('draft_picks')
       .insert({
@@ -99,7 +102,10 @@ export async function POST(
       .select()
       .single()
 
-    if (pickErr) return apiError('선수 선택에 실패했습니다.', 500, pickErr)
+    if (pickErr) {
+      if (pickErr.code === '23505') return apiBadRequest('이미 이 턴에서 픽이 진행되었습니다.')
+      return apiError('선수 선택에 실패했습니다.', 500, pickErr)
+    }
 
     // 다음 픽 진행 + 봇 연쇄 픽
     const totalPicks = mode.teamCount * mode.picksPerTeam
@@ -152,7 +158,7 @@ export async function POST(
       })
     }
 
-    // 다음 턴 설정
+    // Atomic turn advance: only update if current_pick hasn't been changed by another request
     const deadline = new Date(Date.now() + mode.timerSeconds * 1000).toISOString()
     const { data: updatedRoom } = await supabase
       .from('draft_rooms')
@@ -162,6 +168,7 @@ export async function POST(
         updated_at: new Date().toISOString(),
       })
       .eq('id', room.id)
+      .eq('current_pick', expectedPick)
       .select()
       .single()
 

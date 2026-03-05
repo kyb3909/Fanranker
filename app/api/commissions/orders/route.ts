@@ -141,6 +141,18 @@ export async function POST(request: NextRequest) {
       return apiError("주문 생성 실패", 500, orderError)
     }
 
+    // Post-insert slot re-check: verify slot count didn't exceed max during concurrent inserts
+    const { count: postInsertCount } = await supabase
+      .from("commission_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("package_id", package_id)
+      .not("status", "in", '("cancelled","rejected","completed")')
+
+    if ((postInsertCount || 0) > pkg.max_slots) {
+      await supabase.from("commission_orders").delete().eq("id", order.id)
+      return NextResponse.json({ error: "슬롯이 가득 찼습니다. (동시 요청 감지)" }, { status: 409 })
+    }
+
     // Create milestones based on package type
     const milestoneNames = MILESTONE_PRESETS[pkg.type] || MILESTONE_PRESETS["custom"]
     const milestones = milestoneNames.map((name, idx) => ({

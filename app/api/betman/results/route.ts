@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
             if (!game) continue
 
             if (game.status === "cancelled") {
-              const { error } = await supabase
+              const { data: updated, error } = await supabase
                 .from("betman_predictions")
                 .update({
                   status: "cancelled",
@@ -151,8 +151,10 @@ export async function POST(request: NextRequest) {
                   settled_at: new Date().toISOString(),
                 })
                 .eq("id", pred.id)
-              if (!error) autoSettleCancelled++
-              else settleErrors.push(`pred=${pred.id}: ${error.message}`)
+                .eq("status", "pending")
+                .select("id")
+              if (!error && updated && updated.length > 0) autoSettleCancelled++
+              else if (error) settleErrors.push(`pred=${pred.id}: ${error.message}`)
               continue
             }
 
@@ -169,7 +171,7 @@ export async function POST(request: NextRequest) {
               pointsEarned = oddsMap[pred.prediction] || 0
             }
 
-            const { error } = await supabase
+            const { data: updated, error } = await supabase
               .from("betman_predictions")
               .update({
                 status: "settled",
@@ -178,12 +180,14 @@ export async function POST(request: NextRequest) {
                 settled_at: new Date().toISOString(),
               })
               .eq("id", pred.id)
+              .eq("status", "pending")
+              .select("id")
 
-            if (!error) {
+            if (!error && updated && updated.length > 0) {
               autoSettled++
               if (isCorrect) autoSettleCorrect++
               else autoSettleWrong++
-            } else {
+            } else if (error) {
               settleErrors.push(`pred=${pred.id}: ${error.message}`)
             }
           }
@@ -210,15 +214,19 @@ export async function POST(request: NextRequest) {
                   .single()
 
                 if (slipData && slipData.status === "pending") {
-                  await supabase
+                  const { data: cancelledSlip } = await supabase
                     .from("prediction_slips")
                     .update({ status: "cancelled" })
                     .eq("id", slipId)
-                  await supabase.rpc("refund_tokens", {
-                    p_user_id: slipData.user_id,
-                    p_amount: slipData.stake,
-                    p_description: "경기 취소 환불 (슬립)",
-                  })
+                    .eq("status", "pending")
+                    .select("id")
+                  if (cancelledSlip && cancelledSlip.length > 0) {
+                    await supabase.rpc("refund_tokens", {
+                      p_user_id: slipData.user_id,
+                      p_amount: slipData.stake,
+                      p_description: "경기 취소 환불 (슬립)",
+                    })
+                  }
                 }
                 continue
               }
@@ -233,9 +241,17 @@ export async function POST(request: NextRequest) {
 
               const allCorrect = activePreds.every((p) => p.is_correct === true)
               if (allCorrect) {
-                await supabase.from("prediction_slips").update({ status: "won" }).eq("id", slipId)
+                await supabase
+                  .from("prediction_slips")
+                  .update({ status: "won" })
+                  .eq("id", slipId)
+                  .eq("status", "pending")
               } else {
-                await supabase.from("prediction_slips").update({ status: "lost" }).eq("id", slipId)
+                await supabase
+                  .from("prediction_slips")
+                  .update({ status: "lost" })
+                  .eq("id", slipId)
+                  .eq("status", "pending")
               }
               // 볼은 소모성 — 적중해도 볼을 돌려받지 않음 (포인트만 기록)
             } catch (slipErr) {

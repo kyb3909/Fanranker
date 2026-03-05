@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Target, Trophy } from "lucide-react"
+import { Trophy } from "lucide-react"
 
 const games = [
   {
@@ -14,16 +14,6 @@ const games = [
     bgLight: "bg-amber-50",
     borderActive: "ring-amber-500/50",
     iconBg: "bg-amber-500/10 text-amber-600",
-  },
-  {
-    href: "/games/penalty-kick",
-    icon: Target,
-    label: "페널티킥",
-    description: "타이밍에 맞춰 골을 넣으세요",
-    color: "from-green-500 to-emerald-600",
-    bgLight: "bg-green-50",
-    borderActive: "ring-green-500/50",
-    iconBg: "bg-green-500/10 text-green-600",
   },
   // TODO: 기획 완성 후 활성화
   // {

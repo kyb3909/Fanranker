@@ -25,12 +25,30 @@ export async function PATCH(
     if (order.client_id !== user.id) return NextResponse.json({ error: '의뢰인만 완료 처리할 수 있습니다.' }, { status: 403 })
     if (order.status !== 'review') return NextResponse.json({ error: '검토 중인 주문만 완료할 수 있습니다.' }, { status: 400 })
 
+    // Atomic status lock: review → completing (prevents double release)
+    const { data: locked } = await supabase
+      .from('commission_orders')
+      .update({ status: 'completing' })
+      .eq('id', id)
+      .eq('status', 'review')
+      .select('id')
+
+    if (!locked || locked.length === 0) {
+      return NextResponse.json({ error: '이미 처리 중이거나 완료된 주문입니다.' }, { status: 409 })
+    }
+
     // Release escrow (10% fee)
     const { data: result } = await supabase
       .rpc('escrow_release_gold', { p_order_id: id })
       .single() as { data: EscrowReleaseResult | null }
 
     if (!result?.success) {
+      // Rollback status to review
+      await supabase
+        .from('commission_orders')
+        .update({ status: 'review' })
+        .eq('id', id)
+        .eq('status', 'completing')
       return NextResponse.json({ error: result?.error_message || '정산 처리 실패' }, { status: 500 })
     }
 

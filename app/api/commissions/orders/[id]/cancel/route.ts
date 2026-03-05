@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 })
 
     // Cannot cancel in review/revision/completed states
-    if (["review", "revision", "completed", "cancelled"].includes(order.status)) {
+    if (["review", "revision", "completed", "cancelled", "cancelling"].includes(order.status)) {
       return NextResponse.json({ error: "현재 상태에서는 취소할 수 없습니다." }, { status: 400 })
     }
 
@@ -39,15 +39,30 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     let refundPercent = 100
     if (order.status === "in_progress") {
       if (isArtist) {
-        refundPercent = 100 // Artist cancels → full refund
+        refundPercent = 100
       } else {
-        refundPercent = 50 // Client cancels during work → 50% refund
+        refundPercent = 50
       }
+    }
+
+    // Atomic status lock: current → cancelling (prevents double cancel/refund)
+    const allowedStatuses = ["pending", "accepted", "in_progress"]
+    const { data: locked } = await supabase
+      .from("commission_orders")
+      .update({ status: "cancelling" })
+      .eq("id", id)
+      .in("status", allowedStatuses)
+      .select("id")
+
+    if (!locked || locked.length === 0) {
+      return NextResponse.json({ error: "이미 처리 중이거나 취소할 수 없는 상태입니다." }, { status: 409 })
     }
 
     const rawBody = await request.json().catch(() => ({}))
     const parsed = cancelOrderSchema.safeParse(rawBody)
     if (!parsed.success) {
+      // Rollback status
+      await supabase.from("commission_orders").update({ status: order.status }).eq("id", id).eq("status", "cancelling")
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
     const body = parsed.data
@@ -57,6 +72,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .single()) as { data: EscrowRefundResult | null }
 
     if (!refundResult?.success) {
+      // Rollback status on refund failure
+      await supabase.from("commission_orders").update({ status: order.status }).eq("id", id).eq("status", "cancelling")
       return NextResponse.json({ error: "환불 처리 실패" }, { status: 500 })
     }
 

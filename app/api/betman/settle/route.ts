@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       if (!game) continue
 
       if (game.status === "cancelled") {
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from("betman_predictions")
           .update({
             status: "cancelled",
@@ -151,10 +151,12 @@ export async function POST(request: NextRequest) {
             settled_at: new Date().toISOString(),
           })
           .eq("id", pred.id)
+          .eq("status", "pending")
+          .select("id")
 
         if (error) {
           errors.push(`pred=${pred.id}: ${error.message}`)
-        } else {
+        } else if (updated && updated.length > 0) {
           cancelled++
         }
         continue
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest) {
         pointsEarned = oddsMap[pred.prediction] || 0
       }
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("betman_predictions")
         .update({
           status: "settled",
@@ -184,10 +186,12 @@ export async function POST(request: NextRequest) {
           settled_at: new Date().toISOString(),
         })
         .eq("id", pred.id)
+        .eq("status", "pending")
+        .select("id")
 
       if (error) {
         errors.push(`pred=${pred.id}: ${error.message}`)
-      } else {
+      } else if (updated && updated.length > 0) {
         settled++
         if (isCorrect) correct++
         else wrong++
@@ -224,9 +228,14 @@ export async function POST(request: NextRequest) {
           .eq("id", slipId)
           .single()
 
-        await supabase.from("prediction_slips").update({ status: "cancelled" }).eq("id", slipId)
+        const { data: cancelledSlip } = await supabase
+          .from("prediction_slips")
+          .update({ status: "cancelled" })
+          .eq("id", slipId)
+          .eq("status", "pending")
+          .select("id")
 
-        if (slipData) {
+        if (cancelledSlip && cancelledSlip.length > 0 && slipData) {
           await supabase.rpc("refund_tokens", {
             p_user_id: slipData.user_id,
             p_amount: slipData.stake,
@@ -254,14 +263,21 @@ export async function POST(request: NextRequest) {
           // 포인트(points_earned)만 betman_predictions에 기록됨
         }
 
-        await supabase.from("prediction_slips").update({ status: "won" }).eq("id", slipId)
-
-        slipsWon++
+        const { data: wonSlip } = await supabase
+          .from("prediction_slips")
+          .update({ status: "won" })
+          .eq("id", slipId)
+          .eq("status", "pending")
+          .select("id")
+        if (wonSlip && wonSlip.length > 0) slipsWon++
       } else {
-        // 미적중 → 볼은 이미 차감됨
-        await supabase.from("prediction_slips").update({ status: "lost" }).eq("id", slipId)
-
-        slipsLost++
+        const { data: lostSlip } = await supabase
+          .from("prediction_slips")
+          .update({ status: "lost" })
+          .eq("id", slipId)
+          .eq("status", "pending")
+          .select("id")
+        if (lostSlip && lostSlip.length > 0) slipsLost++
       }
     }
 

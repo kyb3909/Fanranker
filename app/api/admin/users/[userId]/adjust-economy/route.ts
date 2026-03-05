@@ -4,9 +4,14 @@ import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
+const MAX_GRANT = 10000
+const MAX_DEDUCT = -1000
+
 const AdjustEconomySchema = z.object({
   type: z.enum(["token", "gold"]),
-  amount: z.number(),
+  amount: z.number()
+    .max(MAX_GRANT, `1회 최대 지급 금액은 ${MAX_GRANT}입니다.`)
+    .min(MAX_DEDUCT, `1회 최대 차감 금액은 ${Math.abs(MAX_DEDUCT)}입니다.`),
   reason: z.string().min(1),
 })
 
