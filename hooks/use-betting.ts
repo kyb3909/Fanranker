@@ -451,7 +451,10 @@ export function useBetting() {
         if (existingGameBet) {
           if (existingGameBet.selection === selection) {
             const newBets = prev.filter((b) => b.gameId !== gameId)
-            if (newBets.length === 0) setSelectedSport(null)
+            if (newBets.length === 0) {
+              setSelectedSport(null)
+              setSportFilter("all")
+            }
             return newBets
           }
           return prev.map((b) => (b.gameId === gameId ? { ...b, selection, odds } : b))
@@ -472,6 +475,7 @@ export function useBetting() {
         }
         if (prev.length === 0) {
           setSelectedSport(sport)
+          setSportFilter(sport)
           return [{ gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds }]
         }
         if (sport !== selectedSport) {
@@ -494,7 +498,10 @@ export function useBetting() {
   const removeBet = useCallback((gameId: string) => {
     setSelectedBets((prev) => {
       const newBets = prev.filter((b) => b.gameId !== gameId)
-      if (newBets.length === 0) setSelectedSport(null)
+      if (newBets.length === 0) {
+        setSelectedSport(null)
+        setSportFilter("all")
+      }
       return newBets
     })
   }, [])
@@ -502,6 +509,7 @@ export function useBetting() {
   const clearAllBets = useCallback(() => {
     setSelectedBets([])
     setSelectedSport(null)
+    setSportFilter("all")
   }, [])
 
   const handleFollow = useCallback(async (userId: string) => {

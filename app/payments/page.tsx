@@ -110,7 +110,7 @@ export default function PaymentsPage() {
       {/* 에러 상태 */}
       {errorMessage && (
         <Card className="mb-6 p-8 text-center">
-          <p className="mb-3 text-sm text-primary">{errorMessage}</p>
+          <p className="text-primary mb-3 text-sm">{errorMessage}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             다시 시도
           </Button>
@@ -147,10 +147,10 @@ export default function PaymentsPage() {
         </Card>
         <Card className="p-4">
           <div className="mb-2 flex items-center gap-2">
-            <ArrowUpRight className="h-4 w-4 text-primary" />
+            <ArrowUpRight className="text-primary h-4 w-4" />
             <span className="text-muted-foreground text-sm">총 사용</span>
           </div>
-          <p className="text-xl font-bold text-primary">-{totalSpent} 골드</p>
+          <p className="text-primary text-xl font-bold">-{totalSpent} 골드</p>
         </Card>
       </div>
 
@@ -229,9 +229,7 @@ export default function PaymentsPage() {
                     ? "획득 내역이 없습니다"
                     : "사용 내역이 없습니다"}
               </h3>
-              <p className="text-muted-foreground text-sm">
-                골드는 다른 유저의 승부예측을 구매할 때 사용됩니다.
-              </p>
+              <p className="text-muted-foreground text-sm">골드는 컨텐츠를 구매할 때 사용됩니다.</p>
             </Card>
           )}
         </TabsContent>
