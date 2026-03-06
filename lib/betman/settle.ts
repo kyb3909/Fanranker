@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js"
-import { updateUserSportStats } from "./stats"
+import { batchUpdateUserStats } from "./stats"
 
 interface GameData {
   id: string
@@ -214,16 +214,11 @@ export async function settlePredictions(
     }
   }
 
-  // 3. 유저별 종목 통계 갱신
+  // 3. 유저별 종목 통계 갱신 (병렬 배치)
   const affectedUserIds = [...new Set(predictions.map((p) => p.user_id))]
-  for (const userId of affectedUserIds) {
-    try {
-      await updateUserSportStats(supabase, userId)
-      result.statsUpdated++
-    } catch (e) {
-      result.errors.push(`stats user=${userId}: ${(e as Error).message}`)
-    }
-  }
+  const statsResult = await batchUpdateUserStats(supabase, affectedUserIds, 10)
+  result.statsUpdated = statsResult.updated
+  result.errors.push(...statsResult.errors)
 
   return result
 }
