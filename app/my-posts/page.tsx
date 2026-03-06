@@ -37,10 +37,7 @@ export default function MyPostsPage() {
   const [errorMessage, setErrorMessage] = useState("")
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/")
-      return
-    }
+    if (isLoaded && !isSignedIn) return
 
     async function fetchMyPosts() {
       if (!isSignedIn) return
@@ -118,7 +115,23 @@ export default function MyPostsPage() {
   }
 
   if (!isSignedIn) {
-    return null
+    return (
+      <div className="flex items-center justify-center px-4 py-20">
+        <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
+          <FileText className="text-muted-foreground mx-auto mb-3 h-10 w-10" />
+          <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            내 작성글을 보려면 먼저 로그인해주세요.
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" onClick={() => router.push("/")}>
+              홈으로
+            </Button>
+            <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -138,7 +151,7 @@ export default function MyPostsPage() {
       {/* 글 목록 */}
       {errorMessage ? (
         <Card className="p-8 text-center">
-          <p className="mb-3 text-sm text-primary">{errorMessage}</p>
+          <p className="text-primary mb-3 text-sm">{errorMessage}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             다시 시도
           </Button>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { NewsTicker } from "@/components/news-ticker"
 import { ActivitySidebar } from "@/components/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
@@ -179,19 +180,18 @@ export default async function CommunityPage({
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1)
 
   const info = COMMUNITY_MAP[slug]
-  const community = info
-    ? {
-        name: info.name,
-        description: info.description,
-        members: formatMemberCount(MEMBER_COUNTS[slug] || 0),
-        banner: "/placeholder.jpg",
-      }
-    : {
-        name: slug,
-        description: "커뮤니티 설명",
-        members: "0명",
-        banner: "/placeholder.svg",
-      }
+
+  // 존재하지 않는 커뮤니티 → 404
+  if (!info) {
+    notFound()
+  }
+
+  const community = {
+    name: info.name,
+    description: info.description,
+    members: formatMemberCount(MEMBER_COUNTS[slug] || 0),
+    banner: "/placeholder.jpg",
+  }
 
   // 하위 채널 목록 조회
   const supabaseForChannels = createServerAnonClient()

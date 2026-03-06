@@ -32,7 +32,7 @@ export function BoardRecentPosts({
       <div className="border-border flex items-center justify-between border-b px-4 py-3">
         <h3 className="text-sm font-semibold">{boardName} 최근 글</h3>
         <Link
-          href={`/board/${boardSlug}`}
+          href={`/community/${boardSlug}`}
           className="text-primary text-xs font-medium hover:underline"
         >
           더보기

@@ -32,10 +32,7 @@ export default function PaymentsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "earn" | "spend">("all")
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/")
-      return
-    }
+    if (isLoaded && !isSignedIn) return
 
     async function fetchData() {
       if (!isSignedIn) return
@@ -91,7 +88,23 @@ export default function PaymentsPage() {
   }
 
   if (!isSignedIn) {
-    return null
+    return (
+      <div className="flex items-center justify-center px-4 py-20">
+        <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
+          <Coins className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+          <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            골드 내역을 보려면 먼저 로그인해주세요.
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" onClick={() => router.push("/")}>
+              홈으로
+            </Button>
+            <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

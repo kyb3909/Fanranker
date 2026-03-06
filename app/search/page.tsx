@@ -56,41 +56,29 @@ function SearchContent() {
   const [hasSearched, setHasSearched] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // URL에서 검색어가 있으면 자동 검색
+  // URL에서 검색어가 있으면 자동 검색 (초기 진입 시에만)
+  const initialSearchDone = useState(false)
   useEffect(() => {
+    if (initialSearchDone[0]) return
     const q = searchParams.get("q")
     const type = (searchParams.get("type") as SearchType) || "title_content"
     if (q && q.trim().length > 0) {
       setSearchQuery(q)
       setSearchType(type)
-      handleSearch(q, type)
+      initialSearchDone[1](true)
+      performSearch(q, type)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  const handleSearch = async (query?: string, type?: SearchType) => {
-    const finalQuery = query || searchQuery
-    const finalType = type || searchType
-
-    if (!finalQuery || finalQuery.trim().length === 0) {
-      return
-    }
-
+  const performSearch = async (query: string, type: SearchType) => {
     setIsLoading(true)
     setHasSearched(true)
     setErrorMessage(null)
 
     try {
-      // URL 업데이트
-      const params = new URLSearchParams()
-      params.set("q", finalQuery.trim())
-      params.set("type", finalType)
-      router.push(`/search?${params.toString()}`, { scroll: false })
-
       // API 호출
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(finalQuery.trim())}&type=${finalType}`
-      )
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&type=${type}`)
 
       if (!response.ok) {
         const errorData = await response
@@ -157,6 +145,22 @@ function SearchContent() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSearch = (query?: string, type?: SearchType) => {
+    const finalQuery = (query || searchQuery).trim()
+    const finalType = type || searchType
+
+    if (!finalQuery) return
+
+    // URL 업데이트
+    const params = new URLSearchParams()
+    params.set("q", finalQuery)
+    params.set("type", finalType)
+    router.push(`/search?${params.toString()}`, { scroll: false })
+
+    // API 호출
+    performSearch(finalQuery, finalType)
   }
 
   const handleSubmit = (e: React.FormEvent) => {

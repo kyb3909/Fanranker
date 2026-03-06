@@ -9,7 +9,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, ArrowLeft, User, Camera, Hash, Lock, Check, Save, Trash2, X } from "lucide-react"
+import {
+  Loader2,
+  ArrowLeft,
+  User,
+  Camera,
+  Hash,
+  Lock,
+  Check,
+  Save,
+  Trash2,
+  X,
+  MessageSquare,
+  ThumbsUp,
+  Calendar,
+} from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +36,34 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
+import { UserProfileHeader } from "@/components/user-profile-header"
+import { formatRelativeTime } from "@/lib/utils/date"
+import Link from "next/link"
 
 interface Profile {
   user_id: string
   nickname: string
   avatar_url: string
+}
+
+interface PublicProfile {
+  user_id: string
+  nickname: string
+  avatar_url: string | null
+  bio: string | null
+  temperature: number
+  is_journalist: boolean
+  is_expert: boolean
+  created_at: string
+}
+
+interface PublicPost {
+  id: string
+  title: string
+  vote_count: number
+  comment_count: number
+  created_at: string
+  community_slug: string
 }
 
 interface FollowedCommunity {
@@ -45,6 +82,11 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isCurrentUser, setIsCurrentUser] = useState(false)
+
+  // 공개 프로필 상태
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null)
+  const [publicPosts, setPublicPosts] = useState<PublicPost[]>([])
+  const [profileNotFound, setProfileNotFound] = useState(false)
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [nickname, setNickname] = useState("")
@@ -88,29 +130,43 @@ export default function ProfilePage() {
     }
   }, [])
 
+  // 공개 프로필 로드
+  const loadPublicProfile = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch(`/api/profile/${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPublicProfile(data.profile)
+        setPublicPosts(data.recent_posts || [])
+      } else if (response.status === 404) {
+        setProfileNotFound(true)
+      }
+    } catch {
+      setProfileNotFound(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [userId])
+
   // 현재 사용자 확인 및 데이터 로드
   useEffect(() => {
     if (!isLoaded) return
 
     const currentUserId = user?.id
-    const isSameUser = currentUserId === userId
+    const isSameUser = !!(currentUserId && currentUserId === userId)
 
     setIsCurrentUser(isSameUser)
 
-    if (!isSameUser) {
-      // 다른 사용자의 프로필 - 현재는 지원하지 않음
-      router.push("/")
-      return
+    if (isSameUser && isSignedIn) {
+      // 본인 프로필 → 설정 화면
+      loadProfile()
+      loadFollowedCommunities()
+    } else {
+      // 타인 프로필 또는 비로그인 → 공개 프로필
+      loadPublicProfile()
     }
-
-    if (!isSignedIn) {
-      router.push("/")
-      return
-    }
-
-    loadProfile()
-    loadFollowedCommunities()
-  }, [isLoaded, isSignedIn, user, userId, router, loadProfile, loadFollowedCommunities])
+  }, [isLoaded, isSignedIn, user, userId, loadProfile, loadFollowedCommunities, loadPublicProfile])
 
   const handleSaveProfile = async () => {
     const trimmedNickname = nickname.trim()
@@ -284,8 +340,119 @@ export default function ProfilePage() {
     )
   }
 
-  if (!isSignedIn || !isCurrentUser) {
-    return null
+  // 타인 프로필 또는 비로그인 → 공개 프로필 뷰
+  if (!isCurrentUser) {
+    if (!isLoaded) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </div>
+      )
+    }
+
+    if (profileNotFound) {
+      return (
+        <main id="main-content" className="mx-auto max-w-[600px] px-4 py-6" tabIndex={-1}>
+          <div className="mb-6 flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </div>
+          <Card className="p-8 text-center">
+            <User className="text-muted-foreground mx-auto mb-3 h-12 w-12" />
+            <h2 className="text-lg font-semibold">사용자를 찾을 수 없습니다</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              탈퇴했거나 존재하지 않는 사용자입니다.
+            </p>
+          </Card>
+        </main>
+      )
+    }
+
+    if (isLoading || !publicProfile) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </div>
+      )
+    }
+
+    return (
+      <main id="main-content" className="mx-auto max-w-[600px] px-4 py-6" tabIndex={-1}>
+        <div className="mb-6 flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">프로필</h1>
+        </div>
+
+        {/* 프로필 헤더 */}
+        <Card className="mb-4 overflow-hidden">
+          <UserProfileHeader
+            userId={publicProfile.user_id}
+            nickname={publicProfile.nickname}
+            avatarUrl={publicProfile.avatar_url}
+            isExpert={publicProfile.is_expert}
+            isJournalist={publicProfile.is_journalist}
+            temperature={publicProfile.temperature}
+            currentUserId={user?.id || null}
+          />
+          {publicProfile.bio && (
+            <p className="text-muted-foreground px-4 pb-4 text-sm sm:px-6">{publicProfile.bio}</p>
+          )}
+          <div className="text-muted-foreground flex items-center gap-1.5 px-4 pb-4 text-xs sm:px-6">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>
+              {new Date(publicProfile.created_at).toLocaleDateString("ko-KR", {
+                year: "numeric",
+                month: "long",
+              })}
+              {" 가입"}
+            </span>
+          </div>
+        </Card>
+
+        {/* 최근 작성글 */}
+        <Card className="overflow-hidden">
+          <div className="border-border border-b px-4 py-3">
+            <h3 className="text-sm font-semibold">최근 작성글</h3>
+          </div>
+          {publicPosts.length === 0 ? (
+            <p className="text-muted-foreground py-8 text-center text-sm">작성한 글이 없습니다.</p>
+          ) : (
+            <div className="divide-border divide-y">
+              {publicPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/post/${post.id}`}
+                  className="hover:bg-muted/50 block px-4 py-3 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-foreground truncate text-sm font-medium">{post.title}</p>
+                      <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
+                        <span>{COMMUNITY_NAMES[post.community_slug] || post.community_slug}</span>
+                        <span>{formatRelativeTime(new Date(post.created_at))}</span>
+                      </div>
+                    </div>
+                    <div className="text-muted-foreground flex shrink-0 items-center gap-2.5 text-xs">
+                      <span className="flex items-center gap-0.5">
+                        <ThumbsUp className="h-3 w-3" />
+                        {post.vote_count || 0}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <MessageSquare className="h-3 w-3" />
+                        {post.comment_count || 0}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      </main>
+    )
   }
 
   return (

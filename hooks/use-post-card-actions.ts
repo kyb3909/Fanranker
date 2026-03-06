@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@clerk/nextjs"
 
 interface UsePostCardActionsOptions {
   postId: number | string
@@ -8,11 +9,17 @@ interface UsePostCardActionsOptions {
   isUpvoted: boolean
 }
 
-export function usePostCardActions({ postId, author, upvotes, isUpvoted }: UsePostCardActionsOptions) {
+export function usePostCardActions({
+  postId,
+  author,
+  upvotes,
+  isUpvoted,
+}: UsePostCardActionsOptions) {
   const router = useRouter()
+  const { isSignedIn } = useAuth()
 
   const [voteCount, setVoteCount] = useState(upvotes)
-  const [myVote, setMyVote] = useState<'up' | 'down' | null>(isUpvoted ? 'up' : null)
+  const [myVote, setMyVote] = useState<"up" | "down" | null>(isUpvoted ? "up" : null)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkChecked, setBookmarkChecked] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
@@ -22,18 +29,18 @@ export function usePostCardActions({ postId, author, upvotes, isUpvoted }: UsePo
   }
 
   const handleDeletePost = async () => {
-    if (!confirm('이 글을 삭제하시겠습니까?')) return
+    if (!confirm("이 글을 삭제하시겠습니까?")) return
     try {
-      const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(data.error || '삭제에 실패했습니다.')
+        alert(data.error || "삭제에 실패했습니다.")
         return
       }
-      router.push('/')
+      router.push("/")
       router.refresh()
     } catch {
-      alert('삭제 중 오류가 발생했습니다.')
+      alert("삭제 중 오류가 발생했습니다.")
     }
   }
 
@@ -43,26 +50,30 @@ export function usePostCardActions({ postId, author, upvotes, isUpvoted }: UsePo
 
   const handleBlockUser = () => {
     if (confirm(`${author}님을 차단하시겠습니까?`)) {
-      alert('차단 기능은 준비 중입니다.')
+      alert("차단 기능은 준비 중입니다.")
     }
   }
 
-  const handleVote = async (type: 'up' | 'down') => {
+  const handleVote = async (type: "up" | "down") => {
+    if (!isSignedIn) {
+      alert("로그인이 필요합니다.")
+      return
+    }
     const prevVote = myVote
     const prevCount = voteCount
     if (myVote === type) {
       setMyVote(null)
-      setVoteCount(prev => type === 'up' ? prev - 1 : prev + 1)
+      setVoteCount((prev) => (type === "up" ? prev - 1 : prev + 1))
     } else {
-      const delta = type === 'up' ? 1 : -1
-      const reverseDelta = prevVote ? (prevVote === 'up' ? -1 : 1) : 0
+      const delta = type === "up" ? 1 : -1
+      const reverseDelta = prevVote ? (prevVote === "up" ? -1 : 1) : 0
       setMyVote(type)
-      setVoteCount(prev => prev + delta + reverseDelta)
+      setVoteCount((prev) => prev + delta + reverseDelta)
     }
     try {
       const response = await fetch(`/api/posts/${postId}/vote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type }),
       })
       if (!response.ok) throw new Error()
@@ -76,7 +87,7 @@ export function usePostCardActions({ postId, author, upvotes, isUpvoted }: UsePo
   }
 
   const checkBookmarkStatus = async () => {
-    if (bookmarkChecked) return
+    if (bookmarkChecked || !isSignedIn) return
     try {
       const response = await fetch(`/api/posts/${postId}/bookmark`)
       if (response.ok) {
@@ -90,20 +101,24 @@ export function usePostCardActions({ postId, author, upvotes, isUpvoted }: UsePo
   }
 
   const handleBookmark = async () => {
+    if (!isSignedIn) {
+      alert("로그인이 필요합니다.")
+      return
+    }
     try {
       const response = await fetch(`/api/posts/${postId}/bookmark`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       })
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || '북마크 처리에 실패했습니다.')
+        throw new Error(error.error || "북마크 처리에 실패했습니다.")
       }
       const { bookmarked } = await response.json()
       setIsBookmarked(bookmarked)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '북마크 처리에 실패했습니다.')
+      alert(error instanceof Error ? error.message : "북마크 처리에 실패했습니다.")
     }
   }
 
