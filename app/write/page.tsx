@@ -33,6 +33,7 @@ interface Category {
   icon: string | null
   sort_order: number
   description: string | null
+  parent_slug: string | null
 }
 
 function WriteContent() {
@@ -361,12 +362,26 @@ function WriteContent() {
                     <SelectValue placeholder="게시판을 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
-                    {communities.map((community) => (
-                      <SelectItem key={community.slug} value={community.slug}>
-                        {community.icon ? `${community.icon} ` : ""}
-                        {community.name}
-                      </SelectItem>
-                    ))}
+                    {communities
+                      .filter((c) => !c.parent_slug)
+                      .map((parent) => {
+                        const channels = communities.filter((c) => c.parent_slug === parent.slug)
+                        return (
+                          <div key={parent.slug}>
+                            <SelectItem value={parent.slug}>
+                              {parent.icon ? `${parent.icon} ` : ""}
+                              {parent.name}
+                            </SelectItem>
+                            {channels.map((ch) => (
+                              <SelectItem key={ch.slug} value={ch.slug} className="pl-8">
+                                <span className="text-muted-foreground mr-1">└</span>
+                                {ch.icon ? `${ch.icon} ` : ""}
+                                {ch.name}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        )
+                      })}
                   </SelectContent>
                 </Select>
               </div>

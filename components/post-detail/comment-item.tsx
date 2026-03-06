@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
@@ -27,7 +27,7 @@ export interface CommentItemProps {
 const MAX_DEPTH = 5
 
 /** 재귀적으로 댓글을 렌더링하는 컴포넌트 (무한 중첩 대댓글 지원) */
-export function CommentItem({
+export const CommentItem = memo(function CommentItem({
   comment,
   currentUserId,
   replyingTo,
@@ -243,4 +243,4 @@ export function CommentItem({
       )}
     </div>
   )
-}
+})

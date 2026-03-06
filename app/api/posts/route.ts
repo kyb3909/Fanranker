@@ -5,12 +5,26 @@ import { computeTemperature, type TemperatureInput } from "@/lib/temperature"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { z } from "zod"
 
+const MAX_CONTENT_SIZE = 100_000 // 100KB
+
 const PostCreateSchema = z.object({
   community_slug: z.string().min(1, "게시판을 선택해주세요."),
-  title: z.string().min(1, "제목을 입력해주세요."),
-  content: z.any().refine((v) => v !== undefined && v !== null && v !== "", {
-    message: "내용을 입력해주세요.",
-  }),
+  title: z.string().min(1, "제목을 입력해주세요.").max(200, "제목은 200자 이하여야 합니다."),
+  content: z
+    .any()
+    .refine((v) => v !== undefined && v !== null && v !== "", {
+      message: "내용을 입력해주세요.",
+    })
+    .refine(
+      (v) => {
+        try {
+          return JSON.stringify(v).length <= MAX_CONTENT_SIZE
+        } catch {
+          return false
+        }
+      },
+      { message: "내용이 너무 깁니다. (최대 100KB)" }
+    ),
   image: z.string().nullable().optional(),
 })
 

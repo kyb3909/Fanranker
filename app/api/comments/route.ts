@@ -6,7 +6,10 @@ import { z } from "zod"
 
 const CommentCreateSchema = z.object({
   post_id: z.string().min(1, "게시글 ID가 필요합니다."),
-  content: z.string().min(1, "댓글 내용을 입력해주세요."),
+  content: z
+    .string()
+    .min(1, "댓글 내용을 입력해주세요.")
+    .max(5000, "댓글은 5000자 이하여야 합니다."),
   parent_id: z.string().optional(),
 })
 

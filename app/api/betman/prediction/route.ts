@@ -14,7 +14,12 @@ const predictionItemSchema = z.object({
 
 const predictionPostSchema = z.object({
   predictions: z.array(predictionItemSchema).min(1, "예측 데이터가 필요합니다."),
-  betAmount: z.number().int().min(1, "베팅 금액은 1볼 이상이어야 합니다.").max(10, "베팅 금액은 최대 10볼입니다.").optional(),
+  betAmount: z
+    .number()
+    .int()
+    .min(1, "베팅 금액은 1볼 이상이어야 합니다.")
+    .max(10, "베팅 금액은 최대 10볼입니다.")
+    .optional(),
   analysis_title: z.string().max(100).optional(),
   analysis_text: z.string().max(5000).optional(),
   idempotency_key: z.string().uuid().optional(),
@@ -511,7 +516,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function retryRefundTokens(supabase: { rpc: (fn: string, params: Record<string, unknown>) => { error: unknown } | PromiseLike<{ error: unknown }> }, userId: string, amount: number, description: string, maxRetries = 3) {
+async function retryRefundTokens(
+  supabase: {
+    rpc: (
+      fn: string,
+      params: Record<string, unknown>
+    ) => { error: unknown } | PromiseLike<{ error: unknown }>
+    from: (table: string) => {
+      insert: (
+        data: Record<string, unknown>
+      ) => { error: unknown } | PromiseLike<{ error: unknown }>
+    }
+  },
+  userId: string,
+  amount: number,
+  description: string,
+  maxRetries = 3
+) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const { error } = await supabase.rpc("refund_tokens", {
       p_user_id: userId,
@@ -522,8 +543,20 @@ async function retryRefundTokens(supabase: { rpc: (fn: string, params: Record<st
     console.error(`refund_tokens attempt ${attempt}/${maxRetries} failed:`, error)
     if (attempt < maxRetries) await new Promise((r) => setTimeout(r, 500 * attempt))
   }
-  Sentry.captureMessage(`refund_tokens failed after ${maxRetries} retries`, {
-    level: "fatal",
-    extra: { userId, amount, description },
+  // All retries failed - record in pending_refunds for admin resolution
+  await supabase.from("pending_refunds").insert({
+    user_id: userId,
+    amount,
+    description,
+    source: "refund_retry_exhausted",
+    attempts: maxRetries,
+    last_error: "All retry attempts failed",
   })
+  Sentry.captureMessage(
+    `refund_tokens failed after ${maxRetries} retries - recorded in pending_refunds`,
+    {
+      level: "fatal",
+      extra: { userId, amount, description },
+    }
+  )
 }

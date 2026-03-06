@@ -9,10 +9,12 @@ const MAX_DEDUCT = -1000
 
 const AdjustEconomySchema = z.object({
   type: z.enum(["token", "gold"]),
-  amount: z.number()
+  amount: z
+    .number()
     .max(MAX_GRANT, `1회 최대 지급 금액은 ${MAX_GRANT}입니다.`)
     .min(MAX_DEDUCT, `1회 최대 차감 금액은 ${Math.abs(MAX_DEDUCT)}입니다.`),
   reason: z.string().min(1),
+  idempotency_key: z.string().uuid("멱등성 키는 UUID여야 합니다."),
 })
 
 export async function POST(
@@ -28,7 +30,20 @@ export async function POST(
     const body = await request.json()
     const parsed = AdjustEconomySchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("type(token|gold), amount, reason이 필요합니다.")
-    const { type, amount, reason } = parsed.data
+    const { type, amount, reason, idempotency_key } = parsed.data
+
+    // Idempotency check
+    const txTable = type === "token" ? "token_transactions" : "gold_transactions"
+    const { data: existingTx } = await supabase
+      .from(txTable)
+      .select("id")
+      .eq("user_id", userId)
+      .eq("idempotency_key", idempotency_key)
+      .single()
+
+    if (existingTx) {
+      return NextResponse.json({ success: true, duplicate: true })
+    }
 
     if (type === "token") {
       const { data: current } = await supabase
@@ -48,13 +63,11 @@ export async function POST(
         if (updateErr)
           return NextResponse.json({ error: "토큰 잔액 업데이트 실패" }, { status: 500 })
       } else {
-        const { error: insertErr } = await supabase
-          .from("user_tokens")
-          .insert({
-            user_id: userId,
-            token_balance: Math.max(0, amount),
-            total_tokens_earned: Math.max(0, amount),
-          })
+        const { error: insertErr } = await supabase.from("user_tokens").insert({
+          user_id: userId,
+          token_balance: Math.max(0, amount),
+          total_tokens_earned: Math.max(0, amount),
+        })
         if (insertErr) return NextResponse.json({ error: "토큰 레코드 생성 실패" }, { status: 500 })
       }
 
@@ -63,6 +76,7 @@ export async function POST(
         amount,
         type: amount > 0 ? "admin_grant" : "admin_deduct",
         description: reason,
+        idempotency_key,
       })
       if (txErr) return NextResponse.json({ error: "토큰 거래 기록 실패" }, { status: 500 })
     } else if (type === "gold") {
@@ -94,6 +108,7 @@ export async function POST(
         amount,
         type: amount > 0 ? "admin_grant" : "admin_deduct",
         description: reason,
+        idempotency_key,
       })
       if (txErr) return NextResponse.json({ error: "골드 거래 기록 실패" }, { status: 500 })
     }

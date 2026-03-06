@@ -15,17 +15,6 @@ const games = [
     borderActive: "ring-amber-500/50",
     iconBg: "bg-amber-500/10 text-amber-600",
   },
-  // TODO: 기획 완성 후 활성화
-  // {
-  //   href: "/games/draft",
-  //   icon: Users,
-  //   label: "드래프트",
-  //   description: "친구와 실시간 선수 드래프트",
-  //   color: "from-violet-500 to-purple-600",
-  //   bgLight: "bg-violet-50",
-  //   borderActive: "ring-violet-500/50",
-  //   iconBg: "bg-violet-500/10 text-violet-600",
-  // },
 ]
 
 export function GamesTabNav() {

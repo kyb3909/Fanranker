@@ -14,7 +14,7 @@
 |---|---|---|
 | 4 | HSTS 헤더 추가 | ✅ 완료 |
 | 5 | Sentry 환경변수 `.env.example`에 문서화 | ✅ 완료 |
-| 6 | `commission-auto-release` cron 인증을 `verifyCronSecret()`으로 통일 | ✅ 완료 |
+| 6 | cron 인증을 `verifyCronSecret()`으로 통일 | ✅ 완료 |
 | 7 | `daily-token-reset` sequential loop → 배치 처리 (스케일링) | ✅ 완료 |
 | 8 | GmarketSans 폰트 최적화 (366KB → unicode-range 4글자만) | ✅ 완료 |
 | 9 | Color contrast 접근성 수정 | ✅ 완료 |

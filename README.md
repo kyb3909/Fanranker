@@ -69,7 +69,6 @@ e2e/                  # E2E test specs (Playwright)
 - **Sports Predictions**: Daily free tokens, real odds from betman.co.kr, automated settlement
 - **Community Boards**: Topic-based boards with follow system, rich text editor (TipTap)
 - **Ranking System**: Verified accuracy rankings, streaks, sport-specific stats
-- **Art Gallery**: Community artwork with commission marketplace
 - **Embed Support**: YouTube, Instagram, X (Twitter) embeds with oEmbed
 
 ## Environment Variables

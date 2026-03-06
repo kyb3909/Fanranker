@@ -8,6 +8,7 @@ const TokenSpendSchema = z.object({
   amount: z.number().int("토큰 양은 정수여야 합니다.").positive("토큰 양은 0보다 커야 합니다."),
   description: z.string().optional(),
   related_prediction_id: z.string().optional(),
+  idempotency_key: z.string().uuid().optional(),
 })
 
 /**
@@ -42,7 +43,32 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.issues[0]?.message || "유효하지 않은 토큰 양입니다.")
     }
-    const { amount, description, related_prediction_id } = parsed.data
+    const { amount, description, related_prediction_id, idempotency_key } = parsed.data
+
+    // Idempotency check: prevent duplicate spend requests
+    if (idempotency_key) {
+      const { data: existing } = await supabase
+        .from("token_transactions")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("idempotency_key", idempotency_key)
+        .single()
+
+      if (existing) {
+        // Already processed - return current balance
+        const { data: tokenData } = await supabase
+          .from("user_tokens")
+          .select("token_balance")
+          .eq("user_id", userId)
+          .single()
+        return NextResponse.json({
+          success: true,
+          balance: tokenData?.token_balance ?? 0,
+          spent: amount,
+          duplicate: true,
+        })
+      }
+    }
 
     // Atomic token deduction via RPC (prevents race conditions)
     const { data: result, error: rpcError } = (await supabase

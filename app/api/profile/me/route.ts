@@ -94,6 +94,13 @@ export async function PATCH(request: NextRequest) {
       if (trimmedNickname.length > 20) {
         return NextResponse.json({ error: "닉네임은 20자 이하여야 합니다." }, { status: 400 })
       }
+      // 허용 문자: 한글, 영문, 숫자, 공백, 하이픈, 밑줄, 점
+      if (!/^[\p{L}\p{N}\s\-_.]+$/u.test(trimmedNickname)) {
+        return NextResponse.json(
+          { error: "닉네임에 특수문자를 사용할 수 없습니다." },
+          { status: 400 }
+        )
+      }
     }
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.

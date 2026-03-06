@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ unread_count: count || 0 })
     }
 
-    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const offset = parseInt(searchParams.get("offset") || "0", 10)
     const unreadOnly = searchParams.get("unread_only") === "true"
 
     // 알림 조회
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(limit)
+      .range(offset, offset + limit - 1)
 
     if (unreadOnly) {
       query = query.eq("is_read", false)

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input"
 import { useState, useMemo, memo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
-import { Star, Search, BookOpen, Loader2, LayoutGrid } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Star, Search, BookOpen, Loader2, LayoutGrid, ChevronRight } from "lucide-react"
 import type { CommunityInfo } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
 import { AdPlaceholder } from "@/components/ad-placeholder"
@@ -20,15 +21,18 @@ interface Category {
   icon: string | null
   sort_order: number
   description: string | null
+  parent_slug: string | null
 }
 
 export const CommunitySidebar = memo(function CommunitySidebar() {
   const { isSignedIn } = useAuth()
   const { mutate: globalMutate } = useSWRConfig()
   const { ref: stickyRef, stickyTop } = useStickySidebar()
+  const pathname = usePathname()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null)
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
 
   // DB categories 기반 게시판 목록
   const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
@@ -36,35 +40,42 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
     dedupingInterval: 30000,
   })
 
-  const { allCommunities, sportsCommunities, lifeCommunities } = useMemo(() => {
-    const cats = catData?.categories || []
-    const mapped: CommunityInfo[] = cats.map((c) => ({
-      slug: c.slug,
-      name: c.name,
-      emoji: c.icon || "📋",
-      description: c.description || "",
-    }))
-    // sort_order ≤ 4 = 스포츠, > 4 = 라이프
-    const sports = cats
-      .filter((c) => c.sort_order <= 4)
-      .map((c) => ({
-        slug: c.slug,
-        name: c.name,
-        emoji: c.icon || "📋",
-        description: c.description || "",
-      }))
-    const life = cats
-      .filter((c) => c.sort_order > 4)
-      .map((c) => ({
-        slug: c.slug,
-        name: c.name,
-        emoji: c.icon || "📋",
-        description: c.description || "",
-      }))
-    return { allCommunities: mapped, sportsCommunities: sports, lifeCommunities: life }
-  }, [catData])
+  const { parentCategories, channelMap, sportsCommunities, lifeCommunities, allCommunities } =
+    useMemo(() => {
+      const cats = catData?.categories || []
+      // 상위 카테고리 (parent_slug가 null)
+      const parents = cats.filter((c) => !c.parent_slug)
+      // 채널 맵: parent_slug → 하위 채널 배열
+      const chMap = new Map<string, Category[]>()
+      cats
+        .filter((c) => c.parent_slug)
+        .forEach((c) => {
+          const list = chMap.get(c.parent_slug!) || []
+          list.push(c)
+          chMap.set(c.parent_slug!, list)
+        })
 
-  // SWR로 팔로우 커뮤니티 로드 (page.tsx와 캐시 공유 → 중복 호출 제거)
+      const toInfo = (c: Category): CommunityInfo => ({
+        slug: c.slug,
+        name: c.name,
+        emoji: c.icon || "",
+        description: c.description || "",
+      })
+
+      const sports = parents.filter((c) => c.sort_order <= 4).map(toInfo)
+      const life = parents.filter((c) => c.sort_order > 4).map(toInfo)
+      const all = parents.map(toInfo)
+
+      return {
+        parentCategories: parents,
+        channelMap: chMap,
+        sportsCommunities: sports,
+        lifeCommunities: life,
+        allCommunities: all,
+      }
+    }, [catData])
+
+  // SWR로 팔로우 커뮤니티 로드
   const { data: followsData } = useSWR(isSignedIn ? "/api/community/follows" : null, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
@@ -76,6 +87,27 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
     )
   }, [followsData])
   const loadingFollows = isSignedIn ? !followsData : false
+
+  // 현재 보고 있는 채널의 부모를 자동 펼침
+  useMemo(() => {
+    const currentSlug = pathname.startsWith("/community/") ? pathname.split("/")[2] : null
+    if (!currentSlug) return
+    // 현재 slug가 채널인지 확인
+    const cats = catData?.categories || []
+    const current = cats.find((c) => c.slug === currentSlug)
+    if (current?.parent_slug) {
+      setExpandedParents((prev) => new Set([...prev, current.parent_slug!]))
+    }
+  }, [pathname, catData])
+
+  const toggleExpand = (slug: string) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev)
+      if (next.has(slug)) next.delete(slug)
+      else next.add(slug)
+      return next
+    })
+  }
 
   const toggleFollow = async (communitySlug: string) => {
     const isFollowed = followedCommunities.has(communitySlug)
@@ -102,9 +134,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
         }
         return
       }
-      // SWR 캐시 재검증 → page.tsx 등 다른 컴포넌트도 자동 갱신
       globalMutate("/api/community/follows")
-      // 홈 피드 등 다른 컴포넌트에 팔로우 변경 알림
       window.dispatchEvent(
         new CustomEvent("communityFollowChanged", {
           detail: { slug: communitySlug, following: data.following },
@@ -119,34 +149,48 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
 
   const toggleSearch = () => {
     setIsSearchOpen(!isSearchOpen)
-    if (isSearchOpen) {
-      setSearchQuery("") // 검색 닫을 때 검색어 초기화
-    }
+    if (isSearchOpen) setSearchQuery("")
   }
 
-  // 검색어로 커뮤니티 필터링
-  const filteredCommunities = useMemo(
-    () =>
-      allCommunities.filter((community) =>
-        community.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    [searchQuery, allCommunities]
-  )
+  // 검색: 상위 + 채널 모두 포함
+  const filteredCommunities = useMemo(() => {
+    if (!searchQuery) return []
+    const cats = catData?.categories || []
+    return cats
+      .filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map((c) => ({
+        slug: c.slug,
+        name: c.name,
+        emoji: c.icon || "",
+        description: c.description || "",
+        parentSlug: c.parent_slug,
+      }))
+  }, [searchQuery, catData])
 
-  const renderCommunityRow = (community: CommunityInfo, isFollowed: boolean) => (
+  const renderCommunityRow = (community: CommunityInfo, isFollowed: boolean, isChannel = false) => (
     <div
       key={community.slug}
-      className="hover:bg-muted/40 group flex items-center justify-between px-4 py-2.5 transition-colors"
+      className={`hover:bg-muted/40 group flex items-center justify-between transition-colors ${
+        isChannel ? "py-2 pr-4 pl-10" : "px-4 py-2.5"
+      }`}
     >
       <Link
         href={`/community/${community.slug}`}
         prefetch={false}
         className="flex min-w-0 flex-1 items-center gap-3"
       >
-        <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
+        <span
+          className={`bg-secondary flex shrink-0 items-center justify-center rounded text-base ${
+            isChannel ? "h-6 w-6 text-sm" : "h-7 w-7"
+          }`}
+        >
           {community.emoji}
         </span>
-        <span className="text-foreground group-hover:text-primary truncate text-[14px] font-medium">
+        <span
+          className={`text-foreground group-hover:text-primary truncate font-medium ${
+            isChannel ? "text-[13px]" : "text-[14px]"
+          }`}
+        >
           {community.name}
         </span>
       </Link>
@@ -170,9 +214,114 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
     </div>
   )
 
+  const renderParentWithChannels = (community: CommunityInfo) => {
+    const channels = channelMap.get(community.slug)
+    const hasChannels = channels && channels.length > 0
+    const isExpanded = expandedParents.has(community.slug)
+
+    return (
+      <div key={community.slug}>
+        <div className="hover:bg-muted/40 group flex items-center justify-between px-4 py-2.5 transition-colors">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {/* 채널이 있으면 펼침 버튼 */}
+            {hasChannels ? (
+              <button
+                onClick={() => toggleExpand(community.slug)}
+                className="flex items-center gap-3"
+              >
+                <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
+                  {community.emoji}
+                </span>
+                <span className="text-foreground group-hover:text-primary text-[14px] font-medium">
+                  {community.name}
+                </span>
+                <ChevronRight
+                  className={`text-muted-foreground h-3.5 w-3.5 transition-transform ${
+                    isExpanded ? "rotate-90" : ""
+                  }`}
+                />
+              </button>
+            ) : (
+              <Link
+                href={`/community/${community.slug}`}
+                prefetch={false}
+                className="flex items-center gap-3"
+              >
+                <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
+                  {community.emoji}
+                </span>
+                <span className="text-foreground group-hover:text-primary truncate text-[14px] font-medium">
+                  {community.name}
+                </span>
+              </Link>
+            )}
+          </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              toggleFollow(community.slug)
+            }}
+            disabled={togglingSlug === community.slug}
+            className="hover:bg-muted flex-shrink-0 rounded-lg p-1.5 disabled:opacity-50"
+            aria-label={followedCommunities.has(community.slug) ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+          >
+            {togglingSlug === community.slug ? (
+              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+            ) : (
+              <Star
+                className={`h-4 w-4 ${followedCommunities.has(community.slug) ? "fill-primary text-primary" : "text-muted-foreground group-hover:text-primary"}`}
+              />
+            )}
+          </button>
+        </div>
+
+        {/* 하위 채널 */}
+        {hasChannels && isExpanded && (
+          <div className="bg-muted/20">
+            {/* 종목 일반 게시판 링크 */}
+            <div className="hover:bg-muted/40 group flex items-center justify-between py-2 pr-4 pl-10 transition-colors">
+              <Link
+                href={`/community/${community.slug}`}
+                prefetch={false}
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
+                <span className="bg-secondary flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm">
+                  {community.emoji}
+                </span>
+                <span className="text-foreground group-hover:text-primary truncate text-[13px] font-medium">
+                  {community.name} 일반
+                </span>
+              </Link>
+            </div>
+            {channels.map((ch) =>
+              renderCommunityRow(
+                {
+                  slug: ch.slug,
+                  name: ch.name,
+                  emoji: ch.icon || "",
+                  description: ch.description || "",
+                },
+                followedCommunities.has(ch.slug),
+                true
+              )
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderGroup = (label: string, communities: CommunityInfo[]) => (
+    <>
+      <p className="text-muted-foreground px-4 pt-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">
+        {label}
+      </p>
+      {communities.map((community) => renderParentWithChannels(community))}
+    </>
+  )
+
   return (
     <div ref={stickyRef} className="sticky flex flex-col gap-4" style={{ top: `${stickyTop}px` }}>
-      {/* ===== 게시판 (왼쪽 사이드바) ===== */}
       <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
         <div className="flex items-center justify-between px-4 py-3">
@@ -206,20 +355,22 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
           </div>
         )}
         <div className="py-1">
-          {/* 팔로우 0개 + 검색 안 하는 중일 때: 인기 게시판 하이라이트 */}
           {!loadingFollows && isSignedIn && followedCommunities.size === 0 && !searchQuery && (
             <div className="mb-1 px-4 py-2.5">
               <p className="text-primary mb-1.5 text-[12px] font-semibold">인기 게시판</p>
               <p className="text-muted-foreground text-[12px]">
-                ⭐ 별을 눌러 팔로우하면 맞춤 담벼락을 볼 수 있어요
+                별을 눌러 팔로우하면 맞춤 담벼락을 볼 수 있어요
               </p>
             </div>
           )}
           {searchQuery ? (
-            // 검색 중: 그룹 구분 없이 flat 리스트
             filteredCommunities.length > 0 ? (
-              filteredCommunities.map((community) =>
-                renderCommunityRow(community, followedCommunities.has(community.slug))
+              filteredCommunities.map((c) =>
+                renderCommunityRow(
+                  { slug: c.slug, name: c.name, emoji: c.emoji, description: c.description },
+                  followedCommunities.has(c.slug),
+                  !!c.parentSlug
+                )
               )
             ) : (
               <div className="px-4 py-6 text-center">
@@ -227,27 +378,12 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
               </div>
             )
           ) : (
-            // 기본: 스포츠 / 라이프 그룹 구분
             <>
-              {sportsCommunities.length > 0 && (
-                <>
-                  <p className="text-muted-foreground px-4 pt-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">
-                    스포츠
-                  </p>
-                  {sportsCommunities.map((community) =>
-                    renderCommunityRow(community, followedCommunities.has(community.slug))
-                  )}
-                </>
-              )}
+              {sportsCommunities.length > 0 && renderGroup("스포츠", sportsCommunities)}
               {lifeCommunities.length > 0 && (
                 <>
                   <div className="my-1 border-t" />
-                  <p className="text-muted-foreground px-4 pt-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">
-                    라이프
-                  </p>
-                  {lifeCommunities.map((community) =>
-                    renderCommunityRow(community, followedCommunities.has(community.slug))
-                  )}
+                  {renderGroup("라이프", lifeCommunities)}
                 </>
               )}
             </>
@@ -255,10 +391,8 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
         </div>
       </Card>
 
-      {/* 광고 플레이스홀더 */}
       <AdPlaceholder variant="sidebar" />
 
-      {/* 3. 리소스 (사이트맵 하단) */}
       <nav className="mt-auto shrink-0">
         <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
           <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />

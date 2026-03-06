@@ -30,14 +30,14 @@ const nextConfig = {
       },
       {
         // Cache read-only API responses (posts, profiles, communities)
-        source: '/api/(posts|communities|profiles|games|art)/:path*',
+        source: '/api/(posts|communities|profiles)/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, s-maxage=30, stale-while-revalidate=120' },
         ],
       },
       {
         // No cache for mutation/auth APIs
-        source: '/api/(upload|payments|tokens|commissions|admin|cron|auth)/:path*',
+        source: '/api/(upload|payments|tokens|admin|cron|auth)/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store' },
         ],

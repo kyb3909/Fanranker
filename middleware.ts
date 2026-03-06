@@ -47,7 +47,6 @@ const STRICT_PATHS = [
   "/api/tokens/spend",
   "/api/payments/purchase",
   "/api/predictions/settle",
-  "/api/commissions/orders",
   "/api/upload/image",
   "/api/posts",
   "/api/votes",

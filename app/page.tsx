@@ -24,6 +24,13 @@ const OnboardingBanner = dynamic(
     ssr: false,
   }
 )
+const AnnouncementCarousel = dynamic(
+  () =>
+    import("@/components/home/announcement-carousel").then((m) => ({
+      default: m.AnnouncementCarousel,
+    })),
+  { ssr: false }
+)
 import { FeedSection } from "@/components/home/feed-section"
 
 const ContentSection = dynamic(
@@ -128,6 +135,9 @@ function HomeContent() {
 
         {/* Main Content */}
         <div className="col-span-12 space-y-4 lg:col-span-6">
+          {/* 공지/소개 캐러솔 */}
+          <AnnouncementCarousel />
+
           {/* 승부 예측 뷰 */}
           {isPredictionView ? (
             <BettingPage />
