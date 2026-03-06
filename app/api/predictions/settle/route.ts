@@ -405,6 +405,7 @@ export async function GET(request: NextRequest) {
         .limit(50)
 
       if (error) {
+        console.error("[settle GET] Supabase query error:", error)
         return NextResponse.json({ error: "경기 조회 중 오류가 발생했습니다." }, { status: 500 })
       }
 
@@ -413,6 +414,7 @@ export async function GET(request: NextRequest) {
 
     return apiBadRequest("match_id 또는 unsettled_only 파라미터가 필요합니다.")
   } catch (error) {
+    console.error("[settle GET] Unhandled error:", error instanceof Error ? error.stack : error)
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
