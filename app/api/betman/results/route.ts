@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { updateUserSportStats } from "@/lib/betman/stats"
+import { settlePredictions } from "@/lib/betman/settle"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { z } from "zod"
@@ -23,17 +23,7 @@ const resultsPostSchema = z.object({
  *
  * 크롤링 스크립트(betman-fetch-results.ts)가 호출.
  * betman_games 테이블의 결과(home_score, away_score, result, status)를 업데이트.
- *
- * Body: {
- *   gmTs: string,
- *   results: Array<{
- *     game_no: number,
- *     home_score: number | null,
- *     away_score: number | null,
- *     result: string,   // 'home' | 'draw' | 'away' | 'over' | 'under' | 'cancelled' | ''
- *     status: string,   // 'completed' | 'cancelled'
- *   }>
- * }
+ * 결과 반영 후 자동 정산 실행.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -80,11 +70,9 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       }
 
-      // home_score, away_score 설정 (null이 아닌 경우만)
       if (r.home_score !== null) updateData.home_score = r.home_score
       if (r.away_score !== null) updateData.away_score = r.away_score
 
-      // result 설정 (빈 문자열이면 null 유지 — SUM 게임)
       if (r.result && r.result !== "") {
         updateData.result = r.result
       }
@@ -106,15 +94,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // --- 결과 반영된 게임의 daily round 자동 정산 ---
-    let autoSettled = 0
-    let autoSettleCorrect = 0
-    let autoSettleWrong = 0
-    let autoSettleCancelled = 0
+    // --- 결과 반영된 게임의 자동 정산 ---
     const settleErrors: string[] = []
+    let settleResult = null
 
     try {
-      // 결과가 반영된 게임들의 daily_round_id 수집
       const updatedGameNos = results.map((r) => r.game_no)
       const { data: updatedGames } = await supabase
         .from("betman_games")
@@ -126,155 +110,17 @@ export async function POST(request: NextRequest) {
         .in("status", ["completed", "cancelled"])
 
       if (updatedGames && updatedGames.length > 0) {
-        const gameMap = new Map(updatedGames.map((g) => [g.id, g]))
         const gameIds = updatedGames.map((g) => g.id)
 
-        // 해당 게임들의 pending 예측 조회
         const { data: predictions } = await supabase
           .from("betman_predictions")
-          .select("id, user_id, game_id, prediction, status, slip_id, locked_odds")
+          .select("id, user_id, game_id, prediction, status, slip_id, locked_odds, stake")
           .in("game_id", gameIds)
           .eq("status", "pending")
 
         if (predictions && predictions.length > 0) {
-          for (const pred of predictions) {
-            const game = gameMap.get(pred.game_id)
-            if (!game) continue
-
-            if (game.status === "cancelled") {
-              const { data: updated, error } = await supabase
-                .from("betman_predictions")
-                .update({
-                  status: "cancelled",
-                  is_correct: null,
-                  points_earned: 0,
-                  settled_at: new Date().toISOString(),
-                })
-                .eq("id", pred.id)
-                .eq("status", "pending")
-                .select("id")
-              if (!error && updated && updated.length > 0) autoSettleCancelled++
-              else if (error) settleErrors.push(`pred=${pred.id}: ${error.message}`)
-              continue
-            }
-
-            const isCorrect = pred.prediction === game.result
-            let pointsEarned = 0
-            if (isCorrect) {
-              // locked_odds 우선 사용 (베팅 시점 배당률), 없으면 현재 게임 배당률 fallback
-              if (pred.locked_odds && pred.locked_odds > 0) {
-                pointsEarned = pred.locked_odds
-              } else {
-                const oddsMap: Record<string, number> = {
-                  home: parseFloat(game.home_win_odds) || 0,
-                  away: parseFloat(game.away_win_odds) || 0,
-                  draw: parseFloat(game.draw_odds) || 0,
-                  over: parseFloat(game.over_odds) || 0,
-                  under: parseFloat(game.under_odds) || 0,
-                  odd: parseFloat(game.odd_odds) || 0,
-                  even: parseFloat(game.even_odds) || 0,
-                }
-                pointsEarned = oddsMap[pred.prediction] || 0
-              }
-            }
-
-            const { data: updated, error } = await supabase
-              .from("betman_predictions")
-              .update({
-                status: "settled",
-                is_correct: isCorrect,
-                points_earned: pointsEarned,
-                settled_at: new Date().toISOString(),
-              })
-              .eq("id", pred.id)
-              .eq("status", "pending")
-              .select("id")
-
-            if (!error && updated && updated.length > 0) {
-              autoSettled++
-              if (isCorrect) autoSettleCorrect++
-              else autoSettleWrong++
-            } else if (error) {
-              settleErrors.push(`pred=${pred.id}: ${error.message}`)
-            }
-          }
-
-          // 3b. 슬립 단위 정산 (개별 예측 정산 후)
-          const affectedSlipIds = [...new Set(predictions.map((p) => p.slip_id).filter(Boolean))]
-          for (const slipId of affectedSlipIds) {
-            try {
-              const { data: slipPreds } = await supabase
-                .from("betman_predictions")
-                .select("id, status, is_correct, stake")
-                .eq("slip_id", slipId)
-
-              if (!slipPreds) continue
-              if (slipPreds.some((p) => p.status === "pending")) continue
-
-              const activePreds = slipPreds.filter((p) => p.status === "settled")
-              if (activePreds.length === 0) {
-                // 전부 취소 → 슬립도 취소, 환불
-                const { data: slipData } = await supabase
-                  .from("prediction_slips")
-                  .select("user_id, stake, status")
-                  .eq("id", slipId)
-                  .single()
-
-                if (slipData && slipData.status === "pending") {
-                  const { data: cancelledSlip } = await supabase
-                    .from("prediction_slips")
-                    .update({ status: "cancelled" })
-                    .eq("id", slipId)
-                    .eq("status", "pending")
-                    .select("id")
-                  if (cancelledSlip && cancelledSlip.length > 0) {
-                    await supabase.rpc("refund_tokens", {
-                      p_user_id: slipData.user_id,
-                      p_amount: slipData.stake,
-                      p_description: "경기 취소 환불 (슬립)",
-                    })
-                  }
-                }
-                continue
-              }
-
-              // 이미 정산된 슬립은 건너뜀
-              const { data: currentSlip } = await supabase
-                .from("prediction_slips")
-                .select("status")
-                .eq("id", slipId)
-                .single()
-              if (currentSlip && currentSlip.status !== "pending") continue
-
-              const allCorrect = activePreds.every((p) => p.is_correct === true)
-              if (allCorrect) {
-                await supabase
-                  .from("prediction_slips")
-                  .update({ status: "won" })
-                  .eq("id", slipId)
-                  .eq("status", "pending")
-              } else {
-                await supabase
-                  .from("prediction_slips")
-                  .update({ status: "lost" })
-                  .eq("id", slipId)
-                  .eq("status", "pending")
-              }
-              // 볼은 소모성 — 적중해도 볼을 돌려받지 않음 (포인트만 기록)
-            } catch (slipErr) {
-              settleErrors.push(`slip=${slipId}: ${(slipErr as Error).message}`)
-            }
-          }
-
-          // 유저별 종목 통계 갱신
-          const affectedUserIds = [...new Set(predictions.map((p) => p.user_id))]
-          for (const userId of affectedUserIds) {
-            try {
-              await updateUserSportStats(supabase, userId)
-            } catch (e) {
-              settleErrors.push(`stats user=${userId}: ${(e as Error).message}`)
-            }
-          }
+          // 공통 정산 로직 실행
+          settleResult = await settlePredictions(supabase, updatedGames, predictions)
         }
 
         // daily round 상태 업데이트
@@ -282,7 +128,6 @@ export async function POST(request: NextRequest) {
           ...new Set(updatedGames.map((g) => g.daily_round_id).filter(Boolean)),
         ]
         for (const drId of dailyRoundIds) {
-          // 지난 scheduled 게임 자동 만료 처리
           await supabase
             .from("betman_games")
             .update({ status: "in_progress", updated_at: new Date().toISOString() })
@@ -299,7 +144,6 @@ export async function POST(request: NextRequest) {
 
           const allDone = !remaining || remaining.length === 0
           if (allDone) {
-            // bet_close_at이 지난 라운드만 settled로 전환 (베팅 보호)
             await supabase
               .from("betman_daily_rounds")
               .update({ status: "settled", updated_at: new Date().toISOString() })
@@ -319,14 +163,19 @@ export async function POST(request: NextRequest) {
       updated,
       cancelled,
       total: results.length,
-      autoSettle: {
-        settled: autoSettled,
-        correct: autoSettleCorrect,
-        wrong: autoSettleWrong,
-        cancelled: autoSettleCancelled,
-      },
-      errors: [...errors, ...settleErrors].length > 0 ? [...errors, ...settleErrors] : undefined,
-      message: `${updated}건 업데이트, ${cancelled}건 취소, ${autoSettled}건 자동 정산`,
+      autoSettle: settleResult
+        ? {
+            settled: settleResult.settled,
+            correct: settleResult.correct,
+            wrong: settleResult.wrong,
+            cancelled: settleResult.cancelled,
+          }
+        : { settled: 0, correct: 0, wrong: 0, cancelled: 0 },
+      errors:
+        [...errors, ...settleErrors, ...(settleResult?.errors || [])].length > 0
+          ? [...errors, ...settleErrors, ...(settleResult?.errors || [])]
+          : undefined,
+      message: `${updated}건 업데이트, ${cancelled}건 취소${settleResult ? `, ${settleResult.settled}건 자동 정산` : ""}`,
     })
   } catch (e) {
     return apiError("서버 오류가 발생했습니다.", 500, e)
