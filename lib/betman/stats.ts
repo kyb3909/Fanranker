@@ -21,25 +21,36 @@ export function calculateStreaks(results: boolean[]) {
 
 /** 유저의 종목별 + 전체 통계를 재계산하여 UPSERT */
 export async function updateUserSportStats(supabase: SupabaseClient, userId: string) {
-  // 1. 개별 예측 + 슬립을 병렬 조회
-  const [predsResult, slipsResult] = await Promise.all([
-    supabase
-      .from("betman_predictions")
-      .select("id, is_correct, status, betman_games(sport)")
-      .eq("user_id", userId)
-      .in("status", ["settled", "cancelled"]),
-    supabase
+  // 1. 개별 예측 조회
+  const { data: userPreds, error: predsError } = await supabase
+    .from("betman_predictions")
+    .select("id, is_correct, status, slip_id, betman_games(sport)")
+    .eq("user_id", userId)
+    .in("status", ["settled", "cancelled"])
+
+  if (predsError || !userPreds || userPreds.length === 0) return
+
+  // 2. 예측의 slip_id로 슬립 조회 (user_id 불일치 방어)
+  const slipIds = [...new Set(userPreds.map((p) => p.slip_id).filter(Boolean))]
+  let userSlips: Array<{
+    id: string
+    sport: string | null
+    stake: number | null
+    total_odds: number | null
+    status: string
+    created_at: string
+  }> | null = []
+
+  if (slipIds.length > 0) {
+    const { data, error: slipsError } = await supabase
       .from("prediction_slips")
       .select("id, sport, stake, total_odds, status, created_at")
-      .eq("user_id", userId)
+      .in("id", slipIds)
       .in("status", ["won", "lost", "cancelled"])
-      .order("created_at", { ascending: true }),
-  ])
-
-  const userPreds = predsResult.data
-  if (predsResult.error || !userPreds || userPreds.length === 0) return
-  if (slipsResult.error) return
-  const userSlips = slipsResult.data
+      .order("created_at", { ascending: true })
+    if (slipsError) return
+    userSlips = data
+  }
 
   // 종목별 그룹핑
   const sportMap = new Map<
