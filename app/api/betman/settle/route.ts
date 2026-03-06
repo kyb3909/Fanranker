@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     const { data: games, error: gamesError } = await supabase
       .from("betman_games")
       .select(
-        "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, daily_round_id"
+        "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
       )
       .eq(gameFilter.column, gameFilter.value)
       .in("status", ["completed", "cancelled"])
@@ -173,6 +173,8 @@ export async function POST(request: NextRequest) {
           draw: parseFloat(game.draw_odds) || 0,
           over: parseFloat(game.over_odds) || 0,
           under: parseFloat(game.under_odds) || 0,
+          odd: parseFloat(game.odd_odds) || 0,
+          even: parseFloat(game.even_odds) || 0,
         }
         pointsEarned = oddsMap[pred.prediction] || 0
       }

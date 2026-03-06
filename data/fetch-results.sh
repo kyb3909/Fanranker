@@ -136,15 +136,17 @@ for GMTS in $GMTS_LIST; do
     # 2단계: 각 항목 매핑
     [.detlBody[] |
       ((.HANDI_VAL // 0) | tostring) as $hv |
-      ({"0":"일반","14":"일반","2":"핸디캡","9":"언더오버","5":"SUM"}[$hv] // "일반") as $gt |
+      ({"0":"일반","14":"일반","2":"핸디캡","9":"언더오버","5":"SUM","6":"S핸디캡","7":"S언더오버"}[$hv] // "일반") as $gt |
       (.GAME_RESULT // "" | tostring) as $gr |
 
       # result 매핑
       (if $gr == "4" then "cancelled"
-       elif $gt == "일반" or $gt == "핸디캡" then
+       elif $gt == "일반" or $gt == "핸디캡" or $gt == "S핸디캡" then
          (if $gr == "0" then "home" elif $gr == "1" then "draw" elif $gr == "2" then "away" else "" end)
-       elif $gt == "언더오버" then
+       elif $gt == "언더오버" or $gt == "S언더오버" then
          (if $gr == "0" then "under" elif $gr == "2" then "over" else "" end)
+       elif $gt == "SUM" then
+         (if $gr == "0" then "odd" elif $gr == "2" then "even" else "" end)
        else "" end) as $result |
 
       # status 매핑
@@ -190,6 +192,19 @@ for GMTS in $GMTS_LIST; do
     RESULT=$(echo "$ROW" | jq -r '.result')
     HOME_SCORE=$(echo "$ROW" | jq '.home_score')
     AWAY_SCORE=$(echo "$ROW" | jq '.away_score')
+
+    # 핸디캡/언더오버/SUM에서 점수가 null이면 DB의 같은 경기 일반 타입에서 조회 (fallback)
+    if [ "$HOME_SCORE" = "null" ] && [ "$AWAY_SCORE" = "null" ] && [ "$STATUS" = "completed" ]; then
+      DB_SCORE=$(curl_retry \
+        "${SUPABASE_URL}/rest/v1/betman_games?select=home_score,away_score&round_id=eq.${ROUND_ID}&game_type=eq.일반&home_score=not.is.null&game_no=lt.${GAME_NO}&order=game_no.desc&limit=1" \
+        "${SB_HEADERS[@]}" 2>/dev/null) || DB_SCORE="[]"
+      DB_HOME=$(echo "$DB_SCORE" | jq '.[0].home_score // empty' 2>/dev/null)
+      DB_AWAY=$(echo "$DB_SCORE" | jq '.[0].away_score // empty' 2>/dev/null)
+      if [ -n "$DB_HOME" ] && [ -n "$DB_AWAY" ]; then
+        HOME_SCORE="$DB_HOME"
+        AWAY_SCORE="$DB_AWAY"
+      fi
+    fi
 
     # PATCH 데이터 구성
     PATCH_DATA="{\"status\":\"${STATUS}\",\"updated_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
@@ -240,11 +255,32 @@ for GMTS in $GMTS_LIST; do
     TOTAL_SETTLED=$((TOTAL_SETTLED + SETTLED))
   fi
 
-  # ── Phase 5: 모든 게임 결과 확정 시 회차를 settled로 전환 ──
+  # ── Phase 5: 모든 게임의 result가 실제로 DB에 존재하는지 확인 후 settled 전환 ──
   if [ "$PARSED_COUNT" = "$ITEMS_COUNT" ] && [ "$PARSED_COUNT" -gt 0 ]; then
-    SETTLE_RND_HTTP=$(curl -sf -o /dev/null -w "%{http_code}" -X PATCH       "${SB_HEADERS[@]}"       "${SUPABASE_URL}/rest/v1/betman_rounds?gm_ts=eq.${GMTS}"       -d "{\"status\":\"settled\"}" 2>/dev/null) || SETTLE_RND_HTTP="000"
-    if [ "$SETTLE_RND_HTTP" = "200" ] || [ "$SETTLE_RND_HTTP" = "204" ]; then
-      log "  회차 ${GMTS} -> settled (모든 결과 확정)"
+    # DB에서 해당 회차의 result=null인 게임 수 확인
+    NULL_RESULT_COUNT=$(curl_retry \
+      "${SUPABASE_URL}/rest/v1/betman_games?select=id&round_id=eq.${ROUND_ID}&result=is.null&status=neq.cancelled" \
+      "${SB_HEADERS[@]}" \
+      -H "Prefer: count=exact" \
+      -o /dev/null -w '%{http_code}' 2>/dev/null) || NULL_RESULT_COUNT=""
+
+    # REST API로 count 조회
+    NULL_COUNT_RESP=$(curl_retry \
+      "${SUPABASE_URL}/rest/v1/betman_games?select=id&round_id=eq.${ROUND_ID}&result=is.null&status=neq.cancelled" \
+      "${SB_HEADERS[@]}" \
+      -H "Prefer: count=exact" 2>/dev/null) || NULL_COUNT_RESP="[]"
+    NULL_COUNT=$(echo "$NULL_COUNT_RESP" | jq 'length' 2>/dev/null || echo "999")
+
+    if [ "$NULL_COUNT" = "0" ]; then
+      SETTLE_RND_HTTP=$(curl -sf -o /dev/null -w "%{http_code}" -X PATCH \
+        "${SB_HEADERS[@]}" \
+        "${SUPABASE_URL}/rest/v1/betman_rounds?gm_ts=eq.${GMTS}" \
+        -d "{\"status\":\"settled\"}" 2>/dev/null) || SETTLE_RND_HTTP="000"
+      if [ "$SETTLE_RND_HTTP" = "200" ] || [ "$SETTLE_RND_HTTP" = "204" ]; then
+        log "  회차 ${GMTS} -> settled (모든 result 확인 완료)"
+      fi
+    else
+      log "  회차 ${GMTS}: result=null 게임 ${NULL_COUNT}건 남음, settled 보류"
     fi
   fi
 
