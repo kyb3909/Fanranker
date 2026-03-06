@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
       .gte("total_predictions", minPredictions)
       .gt("total_wagered", 0)
       .order(sortColumn, { ascending: false })
+      .order("total_predictions", { ascending: false })
+      .order("user_id", { ascending: true })
       .range(offset, offset + limit - 1)
 
     if (statsError) {

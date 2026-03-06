@@ -140,6 +140,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check game status (must be scheduled, not in-progress or completed)
+    const nonScheduledGames = games.filter((g) => g.status !== "scheduled")
+    if (nonScheduledGames.length > 0) {
+      const names = nonScheduledGames
+        .map((g) => `${g.home_team_name} vs ${g.away_team_name}`)
+        .join(", ")
+      return NextResponse.json(
+        { error: `이미 시작되었거나 종료된 경기가 포함되어 있습니다: ${names}` },
+        { status: 400 }
+      )
+    }
+
     // Check per-game bet deadlines (must bet before kickoff)
     const now = new Date()
     const closedGames = games.filter((g) => {
@@ -160,6 +172,26 @@ export async function POST(request: NextRequest) {
     if (outOfWindow.length > 0) {
       return NextResponse.json(
         { error: "오늘의 베팅 윈도우 밖의 경기가 포함되어 있습니다." },
+        { status: 400 }
+      )
+    }
+
+    // Check for duplicate bets on same game across existing slips
+    const { data: existingPreds } = await supabase
+      .from("betman_predictions")
+      .select("game_id")
+      .eq("user_id", user.id)
+      .in("game_id", gameIds)
+      .in("status", ["pending", "settled"])
+
+    if (existingPreds && existingPreds.length > 0) {
+      const dupeGameIds = new Set(existingPreds.map((p) => p.game_id))
+      const dupeGames = games
+        .filter((g) => dupeGameIds.has(g.id))
+        .map((g) => `${g.home_team_name} vs ${g.away_team_name}`)
+        .join(", ")
+      return NextResponse.json(
+        { error: `이미 베팅한 경기가 포함되어 있습니다: ${dupeGames}` },
         { status: 400 }
       )
     }
@@ -231,11 +263,12 @@ export async function POST(request: NextRequest) {
 
     const newBalance = spendResult.remaining_balance
 
-    // ===== 베팅 슬립(조합) 생성 =====
+    // ===== 배당률 검증 + 슬립 생성 =====
     // 각 베팅은 독립적인 슬립. 이전 베팅을 삭제하지 않음.
-    const totalOdds = predictions.reduce((acc, pred) => {
+    let totalOdds = 1
+    for (const pred of predictions) {
       const game = games.find((g) => g.id === pred.game_id)
-      if (!game) return acc
+      if (!game) continue
       const oddsMap: Record<string, number> = {
         home: parseFloat(game.home_win_odds) || 0,
         away: parseFloat(game.away_win_odds) || 0,
@@ -243,8 +276,17 @@ export async function POST(request: NextRequest) {
         over: parseFloat(game.over_odds) || 0,
         under: parseFloat(game.under_odds) || 0,
       }
-      return acc * (oddsMap[pred.prediction] || 1)
-    }, 1)
+      const odds = oddsMap[pred.prediction]
+      if (!odds || odds <= 0) {
+        return NextResponse.json(
+          {
+            error: `배당률이 설정되지 않은 경기가 있습니다: ${game.home_team_name} vs ${game.away_team_name}`,
+          },
+          { status: 400 }
+        )
+      }
+      totalOdds *= odds
+    }
 
     const slipInsert: Record<string, unknown> = {
       user_id: user.id,

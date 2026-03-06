@@ -166,11 +166,14 @@ export async function settlePredictions(
             .select("id")
 
           if (cancelledSlip && cancelledSlip.length > 0) {
-            await supabase.rpc("refund_tokens", {
+            const { error: refundError } = await supabase.rpc("refund_tokens", {
               p_user_id: slipData.user_id,
               p_amount: slipData.stake,
               p_description: "경기 취소 환불 (슬립)",
             })
+            if (refundError) {
+              result.errors.push(`refund slip=${slipId}: ${refundError.message}`)
+            }
           }
         }
         continue
