@@ -311,20 +311,8 @@ async function main() {
     const resBody = await res.json()
     console.log("저장 완료:", resBody)
 
-    // === 자동 정산 트리거 ===
-    console.log("\n--- 정산 시작 ---")
-    const settleRes = await fetch(`${apiBase}/api/betman/settle`, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ gm_ts: gmTs }),
-    })
-
-    if (!settleRes.ok) {
-      console.error("정산 API 실패:", settleRes.status, await settleRes.text())
-    } else {
-      const settleBody = await settleRes.json()
-      console.log("정산 완료:", settleBody)
-    }
+    // NOTE: /api/betman/results 내부에서 자동 정산이 실행됨
+    // 별도 /api/betman/settle 호출은 중복이므로 제거 (BUG-3)
   } finally {
     await browser.close()
   }

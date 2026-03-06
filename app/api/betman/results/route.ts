@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         // 해당 게임들의 pending 예측 조회
         const { data: predictions } = await supabase
           .from("betman_predictions")
-          .select("id, user_id, game_id, prediction, status, slip_id")
+          .select("id, user_id, game_id, prediction, status, slip_id, locked_odds")
           .in("game_id", gameIds)
           .eq("status", "pending")
 
@@ -161,16 +161,21 @@ export async function POST(request: NextRequest) {
             const isCorrect = pred.prediction === game.result
             let pointsEarned = 0
             if (isCorrect) {
-              const oddsMap: Record<string, number> = {
-                home: parseFloat(game.home_win_odds) || 0,
-                away: parseFloat(game.away_win_odds) || 0,
-                draw: parseFloat(game.draw_odds) || 0,
-                over: parseFloat(game.over_odds) || 0,
-                under: parseFloat(game.under_odds) || 0,
-                odd: parseFloat(game.odd_odds) || 0,
-                even: parseFloat(game.even_odds) || 0,
+              // locked_odds 우선 사용 (베팅 시점 배당률), 없으면 현재 게임 배당률 fallback
+              if (pred.locked_odds && pred.locked_odds > 0) {
+                pointsEarned = pred.locked_odds
+              } else {
+                const oddsMap: Record<string, number> = {
+                  home: parseFloat(game.home_win_odds) || 0,
+                  away: parseFloat(game.away_win_odds) || 0,
+                  draw: parseFloat(game.draw_odds) || 0,
+                  over: parseFloat(game.over_odds) || 0,
+                  under: parseFloat(game.under_odds) || 0,
+                  odd: parseFloat(game.odd_odds) || 0,
+                  even: parseFloat(game.even_odds) || 0,
+                }
+                pointsEarned = oddsMap[pred.prediction] || 0
               }
-              pointsEarned = oddsMap[pred.prediction] || 0
             }
 
             const { data: updated, error } = await supabase

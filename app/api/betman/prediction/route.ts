@@ -272,16 +272,27 @@ export async function POST(request: NextRequest) {
     }
 
     // ===== 예측 레코드 삽입 (슬립에 연결) =====
-    const predictionRecords = predictions.map((pred) => ({
-      user_id: user.id,
-      round_id: games[0].round_id,
-      daily_round_id: dailyRoundId,
-      game_id: pred.game_id,
-      prediction: pred.prediction,
-      slip_id: slip.id,
-      stake,
-      created_at: new Date().toISOString(),
-    }))
+    const predictionRecords = predictions.map((pred) => {
+      const game = games.find((g) => g.id === pred.game_id)
+      const oddsMap: Record<string, number> = {
+        home: parseFloat(game?.home_win_odds) || 0,
+        away: parseFloat(game?.away_win_odds) || 0,
+        draw: parseFloat(game?.draw_odds) || 0,
+        over: parseFloat(game?.over_odds) || 0,
+        under: parseFloat(game?.under_odds) || 0,
+      }
+      return {
+        user_id: user.id,
+        round_id: games[0].round_id,
+        daily_round_id: dailyRoundId,
+        game_id: pred.game_id,
+        prediction: pred.prediction,
+        slip_id: slip.id,
+        stake,
+        locked_odds: oddsMap[pred.prediction] || 0,
+        created_at: new Date().toISOString(),
+      }
+    })
 
     const { data: insertedPredictions, error: insertError } = await supabase
       .from("betman_predictions")
