@@ -141,16 +141,17 @@ export async function settlePredictions(
     try {
       const { data: slipPreds } = await supabase
         .from("betman_predictions")
-        .select("id, status, is_correct, stake")
+        .select("id, status, is_correct, locked_odds")
         .eq("slip_id", slipId)
 
       if (!slipPreds) continue
       if (slipPreds.some((p) => p.status === "pending")) continue
 
       const activePreds = slipPreds.filter((p) => p.status === "settled")
+      const cancelledPreds = slipPreds.filter((p) => p.status === "cancelled")
 
       if (activePreds.length === 0) {
-        // 전부 취소 → 슬립도 취소, 환불
+        // 전부 취소 → 슬립도 취소, 전액 환불
         const { data: slipData } = await supabase
           .from("prediction_slips")
           .select("user_id, stake, status")
@@ -188,10 +189,26 @@ export async function settlePredictions(
 
       if (!currentSlip || currentSlip.status !== "pending") continue
 
+      // 부분 취소 시: 취소된 경기의 배당률을 제외하고 total_odds 재계산
+      let adjustedTotalOdds = currentSlip.total_odds
+      if (cancelledPreds.length > 0 && activePreds.length > 0) {
+        adjustedTotalOdds = activePreds.reduce((acc, p) => {
+          const odds = p.locked_odds && p.locked_odds > 0 ? p.locked_odds : 1
+          return acc * odds
+        }, 1)
+        adjustedTotalOdds = Math.round(adjustedTotalOdds * 100) / 100
+
+        // 슬립의 total_odds도 업데이트
+        await supabase
+          .from("prediction_slips")
+          .update({ total_odds: adjustedTotalOdds })
+          .eq("id", slipId)
+      }
+
       const allCorrect = activePreds.every((p) => p.is_correct === true)
 
       if (allCorrect) {
-        const payout = Math.round(currentSlip.stake * currentSlip.total_odds * 100) / 100
+        const payout = Math.round(currentSlip.stake * adjustedTotalOdds * 100) / 100
         result.totalPayout += payout
 
         const { data: wonSlip } = await supabase
