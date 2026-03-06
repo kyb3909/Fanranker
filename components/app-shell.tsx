@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { Suspense } from "react"
+import { usePathname } from "next/navigation"
 import { Header } from "@/components/header"
 
 interface AppShellProps {
@@ -19,13 +20,17 @@ function HeaderFallback() {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname()
+  const isAdmin = pathname.startsWith("/admin")
+
   return (
     <div className="bg-background min-h-screen">
-      {/* 전역 헤더 영역: useSearchParams 사용으로 Suspense 필요 (Next.js 15 prerender) */}
-      <Suspense fallback={<HeaderFallback />}>
-        <Header />
-      </Suspense>
-      {/* 페이지별 콘텐츠: window 자체가 스크롤 컨테이너가 되도록 별도 overflow는 두지 않음 */}
+      {/* admin 페이지는 자체 레이아웃 사용 — 메인 헤더 숨김 */}
+      {!isAdmin && (
+        <Suspense fallback={<HeaderFallback />}>
+          <Header />
+        </Suspense>
+      )}
       {children}
     </div>
   )

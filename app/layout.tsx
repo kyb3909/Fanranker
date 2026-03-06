@@ -103,7 +103,7 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
       <ClerkProvider localization={koLocalization}>
-        <html lang="ko">
+        <html lang="ko" suppressHydrationWarning>
           <head>
             {/* Google AdSense 계정 메타 태그 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
@@ -137,7 +137,7 @@ export default function RootLayout({
               />
             )}
           </head>
-          <body className={`pb-14 font-sans antialiased sm:pb-0`}>
+          <body className={`pb-14 font-sans antialiased sm:pb-0`} suppressHydrationWarning>
             <script
               type="application/ld+json"
               dangerouslySetInnerHTML={{

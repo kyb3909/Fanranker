@@ -38,6 +38,8 @@ function MobileTabBarContent() {
   const searchParams = useSearchParams()
   const view = searchParams.get("view")
 
+  if (pathname.startsWith("/admin")) return null
+
   return (
     <nav
       className="bg-card border-border fixed right-0 bottom-0 left-0 z-50 border-t sm:hidden"

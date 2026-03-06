@@ -17,16 +17,12 @@ export function UserMenu() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
 
-  if (!isLoaded) {
+  if (!isLoaded || !user) {
     return (
-      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" aria-label="사용자 메뉴">
         <div className="bg-muted h-9 w-9 animate-pulse rounded-full" />
       </Button>
     )
-  }
-
-  if (!user) {
-    return null
   }
 
   const userInitials = user.firstName
