@@ -153,8 +153,12 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (settleErr) {
-      console.error("Auto-settle error (non-fatal):", settleErr)
+      console.error("Auto-settle error:", settleErr)
       settleErrors.push(`auto-settle: ${(settleErr as Error).message}`)
+      const Sentry = await import("@sentry/nextjs")
+      Sentry.captureException(settleErr, {
+        extra: { roundId, gmTs, updatedGameCount: results.length },
+      })
     }
 
     return NextResponse.json({

@@ -1,5 +1,40 @@
 import { SupabaseClient } from "@supabase/supabase-js"
+import * as Sentry from "@sentry/nextjs"
 import { batchUpdateUserStats } from "./stats"
+
+/**
+ * 환불 재시도 (3회) + 실패 시 pending_refunds 기록
+ */
+async function retryRefund(
+  supabase: SupabaseClient,
+  userId: string,
+  amount: number,
+  description: string
+): Promise<string | null> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { error } = await supabase.rpc("refund_tokens", {
+      p_user_id: userId,
+      p_amount: amount,
+      p_description: description,
+    })
+    if (!error) return null
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt))
+  }
+  // 모든 재시도 실패 → pending_refunds에 기록
+  await supabase.from("pending_refunds").insert({
+    user_id: userId,
+    amount,
+    description,
+    source: "settlement_refund_failed",
+    attempts: 3,
+    last_error: "All retry attempts failed",
+  })
+  Sentry.captureMessage("settlement refund failed after 3 retries", {
+    level: "fatal",
+    extra: { userId, amount, description },
+  })
+  return `refund failed for user=${userId} amount=${amount}`
+}
 
 interface GameData {
   id: string
@@ -167,14 +202,13 @@ export async function settlePredictions(
             .select("id")
 
           if (cancelledSlip && cancelledSlip.length > 0) {
-            const { error: refundError } = await supabase.rpc("refund_tokens", {
-              p_user_id: slipData.user_id,
-              p_amount: slipData.stake,
-              p_description: "경기 취소 환불 (슬립)",
-            })
-            if (refundError) {
-              result.errors.push(`refund slip=${slipId}: ${refundError.message}`)
-            }
+            const refundErr = await retryRefund(
+              supabase,
+              slipData.user_id,
+              slipData.stake,
+              `경기 취소 환불 (슬립 ${slipId})`
+            )
+            if (refundErr) result.errors.push(refundErr)
           }
         }
         continue
