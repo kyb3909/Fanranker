@@ -29,7 +29,20 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdminApi()
   if (isErrorResponse(auth)) return auth
 
-  const body = await request.json()
+  let body: {
+    title?: string
+    description?: string | null
+    image_url?: string | null
+    link_url?: string | null
+    gradient?: string | null
+    sort_order?: number
+    is_active?: boolean
+  }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "잘못된 요청 본문입니다." }, { status: 400 })
+  }
   const { title, description, image_url, link_url, gradient, sort_order, is_active } = body
 
   if (!title?.trim()) {

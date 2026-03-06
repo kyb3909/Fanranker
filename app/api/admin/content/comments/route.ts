@@ -49,7 +49,12 @@ export async function PATCH(request: NextRequest) {
     if (isErrorResponse(auth)) return auth
     const { userId, supabase } = auth
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = CommentActionSchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("commentId와 action(delete|restore)이 필요합니다.")
     const { commentId, action } = parsed.data

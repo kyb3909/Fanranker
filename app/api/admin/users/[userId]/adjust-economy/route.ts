@@ -27,7 +27,12 @@ export async function POST(
     const { userId: adminId, supabase } = auth
     const { userId } = await params
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = AdjustEconomySchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("type(token|gold), amount, reason이 필요합니다.")
     const { type, amount, reason, idempotency_key } = parsed.data

@@ -132,7 +132,12 @@ export async function PATCH(request: NextRequest) {
     } catch (error) {
       return apiError("서버 설정 오류가 발생했습니다.", 500, error)
     }
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: "잘못된 요청 본문입니다." }, { status: 400 })
+    }
     const NotificationSchema = z.object({ notification_id: z.string().optional() })
     const parsed = NotificationSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 })

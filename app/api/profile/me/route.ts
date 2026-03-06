@@ -6,7 +6,6 @@ import { z } from "zod"
 const patchProfileSchema = z.object({
   nickname: z.string().optional(),
   avatar_url: z.string().nullable().optional(),
-  notification_settings: z.record(z.unknown()).optional(),
   bio: z.string().max(50).nullable().optional(),
   onboarding_completed: z.boolean().optional(),
 })
@@ -78,12 +77,17 @@ export async function PATCH(request: NextRequest) {
 
     const userId = user.id
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = patchProfileSchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
-    const { nickname, avatar_url, notification_settings, bio, onboarding_completed } = parsed.data
+    const { nickname, avatar_url, bio, onboarding_completed } = parsed.data
 
     // 닉네임 유효성 검사
     if (nickname !== undefined) {
@@ -126,14 +130,11 @@ export async function PATCH(request: NextRequest) {
     const updateData: {
       nickname?: string
       avatar_url?: string | null
-      notification_settings?: Record<string, unknown>
       bio?: string | null
       onboarding_completed?: boolean
     } = {}
     if (nickname !== undefined) updateData.nickname = nickname.trim()
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url
-    if (notification_settings !== undefined)
-      updateData.notification_settings = notification_settings
     if (bio !== undefined) updateData.bio = bio
     if (onboarding_completed !== undefined) updateData.onboarding_completed = onboarding_completed
 
@@ -156,9 +157,6 @@ export async function PATCH(request: NextRequest) {
           user_id: userId,
           nickname: updateData.nickname || defaultNickname,
           avatar_url: updateData.avatar_url || user.imageUrl || null,
-          ...(notification_settings !== undefined
-            ? { notification_settings: notification_settings }
-            : {}),
           ...(bio !== undefined ? { bio } : {}),
           ...(onboarding_completed !== undefined ? { onboarding_completed } : {}),
         })

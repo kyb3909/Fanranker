@@ -18,7 +18,12 @@ export async function PATCH(
     const { userId: adminId, supabase } = auth
     const { userId } = await params
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = RoleSchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("유효한 role이 필요합니다: user, moderator, admin")
     const { role } = parsed.data

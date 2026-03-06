@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     if (isErrorResponse(auth)) return auth
     const { userId, supabase } = auth
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const ChannelCreateSchema = z.object({
       slug: z
         .string()
@@ -107,7 +112,12 @@ export async function PATCH(request: NextRequest) {
     if (isErrorResponse(auth)) return auth
     const { userId, supabase } = auth
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const BoardUpdateSchema = z.object({
       boardId: z.string().min(1),
       name: z.string().optional(),

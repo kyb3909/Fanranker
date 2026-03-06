@@ -47,7 +47,12 @@ export async function PATCH(request: NextRequest) {
     if (isErrorResponse(auth)) return auth
     const { userId, supabase } = auth
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = tickerPatchSchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "itemId와 importance가 필요합니다.")

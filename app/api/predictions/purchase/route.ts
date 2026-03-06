@@ -23,7 +23,12 @@ export async function POST(request: NextRequest) {
 
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const PurchaseSchema = z.object({ activity_id: z.string().min(1) })
     const parsed = PurchaseSchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("activity_id가 필요합니다.")

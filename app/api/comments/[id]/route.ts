@@ -15,7 +15,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const { id: commentId } = await params
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const CommentEditSchema = z.object({ content: z.string().min(1) })
     const parsed = CommentEditSchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("댓글 내용을 입력해주세요.")

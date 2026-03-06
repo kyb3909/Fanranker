@@ -41,7 +41,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceRoleClient()
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = CertifyJournalistSchema.safeParse(body)
     if (!parsed.success) return apiBadRequest("user_id가 필요합니다.")
     const { user_id, revoke } = parsed.data

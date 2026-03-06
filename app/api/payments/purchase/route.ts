@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const result = PurchaseSchema.safeParse(body)
     if (!result.success) {
       return apiBadRequest(result.error.issues[0]?.message || "잘못된 입력입니다.")
@@ -219,7 +224,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function retryRefundTokens(supabase: { rpc: (fn: string, params: Record<string, unknown>) => { error: unknown } | PromiseLike<{ error: unknown }> }, userId: string, amount: number, description: string, maxRetries = 3) {
+async function retryRefundTokens(
+  supabase: {
+    rpc: (
+      fn: string,
+      params: Record<string, unknown>
+    ) => { error: unknown } | PromiseLike<{ error: unknown }>
+  },
+  userId: string,
+  amount: number,
+  description: string,
+  maxRetries = 3
+) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const { error } = await supabase.rpc("refund_tokens", {
       p_user_id: userId,

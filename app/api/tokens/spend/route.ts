@@ -38,7 +38,12 @@ export async function POST(request: NextRequest) {
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = TokenSpendSchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest(parsed.error.issues[0]?.message || "유효하지 않은 토큰 양입니다.")

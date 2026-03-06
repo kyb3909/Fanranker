@@ -15,7 +15,12 @@ export async function POST(request: NextRequest) {
     const auth = await requireAdminApi()
     if (isErrorResponse(auth)) return auth
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest("periodStart, periodEnd (YYYY-MM-DD) 형식이 필요합니다")

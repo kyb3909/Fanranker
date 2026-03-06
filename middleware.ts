@@ -124,7 +124,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
             .eq("user_id", userId)
             .single()
 
-          // 프로필 없음(신규 유저) 또는 온보딩 미완료 → /onboarding
+          // 프로필 없음(신규 유저) 또는 온보딩 미완료 → /sign-up (4단계 통합 온보딩 플로우)
           const isNewUser = !profile && profileError?.code === "PGRST116"
           const isOnboardingIncomplete = profile && profile.onboarding_completed === false
 

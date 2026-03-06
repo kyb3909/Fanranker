@@ -18,7 +18,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const { id: commentId } = await params
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: "잘못된 요청 본문입니다." }, { status: 400 })
+    }
     const VoteSchema = z.object({ type: z.enum(["up", "down"]).default("up") })
     const parsed = VoteSchema.safeParse(body)
     if (!parsed.success) {

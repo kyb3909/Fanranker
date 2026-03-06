@@ -26,7 +26,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: "잘못된 요청 본문입니다." }, { status: 400 })
+    }
     const BookmarkSchema = z.object({ action: z.enum(["add", "remove"]).optional() })
     const parsed = BookmarkSchema.safeParse(body)
     const action = parsed.success ? parsed.data.action : undefined

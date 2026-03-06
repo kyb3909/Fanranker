@@ -82,7 +82,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return apiUnauthorized()
     }
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = patchPostSchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")

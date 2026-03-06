@@ -33,7 +33,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
+    }
     const parsed = followActionSchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
