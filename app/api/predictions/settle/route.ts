@@ -400,7 +400,7 @@ export async function GET(request: NextRequest) {
         .from("matches")
         .select("id, match_time, time_status, score_home, score_away, is_settled")
         .eq("time_status", 3) // Finished
-        .eq("is_settled", false)
+        .or("is_settled.eq.false,is_settled.is.null")
         .order("match_time", { ascending: false })
         .limit(50)
 

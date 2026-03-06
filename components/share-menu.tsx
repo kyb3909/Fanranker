@@ -14,10 +14,10 @@ interface ShareMenuProps {
 }
 
 export function ShareMenu({ postId, postTitle }: ShareMenuProps) {
-  const postUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/post/${postId}`
+  const getPostUrl = () => `${window.location.origin}/post/${postId}`
 
   const shareToSNS = (platform: string) => {
-    const encodedUrl = encodeURIComponent(postUrl)
+    const encodedUrl = encodeURIComponent(getPostUrl())
     const encodedTitle = encodeURIComponent(postTitle)
 
     const urls: { [key: string]: string } = {
@@ -35,7 +35,7 @@ export function ShareMenu({ postId, postTitle }: ShareMenuProps) {
   }
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(postUrl)
+    navigator.clipboard.writeText(getPostUrl())
     alert("링크가 복사되었습니다!")
   }
 
