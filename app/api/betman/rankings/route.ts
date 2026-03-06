@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
             .eq("sport", sport)
             .gte("total_predictions", minPredictions)
             .gt("total_wagered", 0)
-            .gt(sortColumn, parseFloat(myStats[sortColumn]) || 0)
+            .gt(sortColumn, parseFloat(String(myStats[sortColumn] ?? 0)))
 
           const myProfile =
             profileMap.get(userId) ||

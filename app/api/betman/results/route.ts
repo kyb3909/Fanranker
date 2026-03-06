@@ -77,14 +77,17 @@ export async function POST(request: NextRequest) {
         updateData.result = r.result
       }
 
-      const { error: updateError } = await supabase
+      const { data: updatedRows, error: updateError } = await supabase
         .from("betman_games")
         .update(updateData)
         .eq("round_id", roundId)
         .eq("game_no", r.game_no)
+        .select("id")
 
       if (updateError) {
         errors.push(`game_no=${r.game_no}: ${updateError.message}`)
+      } else if (!updatedRows || updatedRows.length === 0) {
+        errors.push(`game_no=${r.game_no}: 해당 경기를 찾을 수 없습니다 (round=${roundId})`)
       } else {
         if (r.status === "cancelled") {
           cancelled++
