@@ -1,352 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { currentUser } from "@clerk/nextjs/server"
 import { isAdmin } from "@/lib/supabase/admin"
-import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
-import { z } from "zod"
+import { settlePredictions } from "@/lib/betman/settle"
+import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 
-const settleSchema = z.object({
-  match_id: z.string().min(1, "경기 ID가 필요합니다."),
-  force: z.boolean().optional(),
-})
+export const dynamic = "force-dynamic"
 
 /**
- * Helper function to update user stats after prediction settlement
- */
-async function updateUserStats(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  userId: string,
-  isCorrect: boolean,
-  pointsEarned: number,
-  tokensSpent: number = 100 // Default: assume 100 tokens per prediction
-) {
-  // Get current stats or create new
-  const { data: existingStats } = await supabase
-    .from("user_prediction_stats")
-    .select("*")
-    .eq("user_id", userId)
-    .single()
-
-  if (!existingStats) {
-    // Create initial stats
-    const { error: createError } = await supabase.from("user_prediction_stats").insert({
-      user_id: userId,
-      total_predictions: 1,
-      correct_predictions: isCorrect ? 1 : 0,
-      accuracy: isCorrect ? 100 : 0,
-      total_points: pointsEarned,
-      total_tokens_spent: tokensSpent,
-      profit: pointsEarned - tokensSpent,
-      roi: tokensSpent > 0 ? ((pointsEarned - tokensSpent) / tokensSpent) * 100 : 0,
-      current_streak: isCorrect ? 1 : 0,
-      longest_streak: isCorrect ? 1 : 0,
-      level: 1,
-      badges: [],
-    })
-
-    if (createError) {
-      console.error("Failed to create user stats:", createError)
-    }
-  } else {
-    // Update existing stats
-    const newTotalPredictions = (existingStats.total_predictions || 0) + 1
-    const newCorrectPredictions = (existingStats.correct_predictions || 0) + (isCorrect ? 1 : 0)
-    const newAccuracy =
-      newTotalPredictions > 0 ? (newCorrectPredictions / newTotalPredictions) * 100 : 0
-    const newTotalPoints = (existingStats.total_points || 0) + pointsEarned
-    const newTotalTokensSpent = (existingStats.total_tokens_spent || 0) + tokensSpent
-    const newProfit = newTotalPoints - newTotalTokensSpent
-    const newRoi = newTotalTokensSpent > 0 ? (newProfit / newTotalTokensSpent) * 100 : 0
-
-    // Update streak
-    let newCurrentStreak = existingStats.current_streak || 0
-    let newLongestStreak = existingStats.longest_streak || 0
-
-    if (isCorrect) {
-      newCurrentStreak += 1
-      newLongestStreak = Math.max(newLongestStreak, newCurrentStreak)
-    } else {
-      newCurrentStreak = 0
-    }
-
-    const { error: updateError } = await supabase
-      .from("user_prediction_stats")
-      .update({
-        total_predictions: newTotalPredictions,
-        correct_predictions: newCorrectPredictions,
-        accuracy: newAccuracy,
-        total_points: newTotalPoints,
-        total_tokens_spent: newTotalTokensSpent,
-        profit: newProfit,
-        roi: newRoi,
-        current_streak: newCurrentStreak,
-        longest_streak: newLongestStreak,
-      })
-      .eq("user_id", userId)
-
-    if (updateError) {
-      console.error("Failed to update user stats:", updateError)
-    }
-  }
-}
-
-/**
- * POST /api/predictions/settle
+ * GET /api/predictions/settle?unsettled_only=true
  *
- * Settle predictions for a specific match
- * Updates is_correct and points_earned for all predictions related to the match
- *
- * Body:
- * - match_id: string (required) - Match ID to settle
- * - force?: boolean - Force settlement even if already settled
- */
-export async function POST(request: NextRequest) {
-  try {
-    const limited = checkRateLimit(request, "STRICT")
-    if (limited) return limited
-
-    const user = await currentUser()
-    if (!user) {
-      return apiUnauthorized()
-    }
-
-    // Admin-only: settlement affects all users' points and stats
-    const admin = await isAdmin()
-    if (!admin) {
-      return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
-    }
-
-    const supabase = createServiceRoleClient()
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return apiBadRequest("잘못된 요청 본문입니다.")
-    }
-    const parsed = settleSchema.safeParse(body)
-    if (!parsed.success) {
-      return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
-    }
-    const { match_id, force } = parsed.data
-
-    // Get match data
-    const { data: match, error: matchError } = await supabase
-      .from("matches")
-      .select("id, time_status, score_home, score_away, is_settled, sport_type")
-      .eq("id", match_id)
-      .single()
-
-    if (matchError || !match) {
-      return NextResponse.json({ error: "경기를 찾을 수 없습니다." }, { status: 404 })
-    }
-
-    // Check if match is finished (time_status = 3)
-    if (match.time_status !== 3) {
-      return apiBadRequest(
-        "경기가 아직 종료되지 않았습니다. (time_status: " + match.time_status + ")"
-      )
-    }
-
-    // Check if already settled
-    if (match.is_settled && !force) {
-      return NextResponse.json(
-        { error: "이미 정산된 경기입니다.", already_settled: true },
-        { status: 400 }
-      )
-    }
-
-    // Check if scores are available
-    if (match.score_home === null || match.score_away === null) {
-      return apiBadRequest("경기 결과(스코어)가 없습니다.")
-    }
-
-    // Get all predictions for this match
-    const { data: predictions, error: predictionsError } = await supabase
-      .from("predictions")
-      .select("id, user_id, prediction_type, predicted_value, odds_at_prediction")
-      .eq("match_id", match_id)
-      .is("is_correct", null) // Only unsettled predictions
-
-    if (predictionsError) {
-      return apiError("예측 조회 중 오류가 발생했습니다.", 500, predictionsError)
-    }
-
-    if (!predictions || predictions.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "정산할 예측이 없습니다.",
-        settled_count: 0,
-      })
-    }
-
-    // Calculate actual result based on prediction_type
-    const homeScore = match.score_home
-    const awayScore = match.score_away
-    const totalGoals = homeScore + awayScore
-    const bothScored = homeScore > 0 && awayScore > 0
-
-    // Determine actual result for each prediction type
-    let actualResult: {
-      full_time_result?: "home" | "draw" | "away"
-      goals_over_under?: boolean // true if over, false if under
-      both_teams_to_score?: boolean
-    } = {}
-
-    // Full time result
-    if (homeScore > awayScore) {
-      actualResult.full_time_result = "home"
-    } else if (homeScore < awayScore) {
-      actualResult.full_time_result = "away"
-    } else {
-      actualResult.full_time_result = "draw"
-    }
-
-    // Process each prediction
-    let settledCount = 0
-    let errorCount = 0
-
-    // Group predictions by user_id for batch stats update
-    const userStatsMap = new Map<string, { correct: number; points: number; tokensSpent: number }>()
-
-    for (const prediction of predictions) {
-      let isCorrect = false
-      let pointsEarned = 0
-
-      // Evaluate prediction based on type
-      switch (prediction.prediction_type) {
-        case "full_time_result":
-          // predicted_value should be 'home', 'draw', or 'away'
-          isCorrect = prediction.predicted_value === actualResult.full_time_result
-          break
-
-        case "goals_over_under":
-          // predicted_value should be a number (threshold), e.g., "2.5"
-          const threshold = parseFloat(prediction.predicted_value as string)
-          if (!isNaN(threshold)) {
-            const isOver = totalGoals > threshold
-            // Assume predicted_value format: "over:2.5" or "under:2.5"
-            const predictedStr = String(prediction.predicted_value).toLowerCase()
-            const isOverPrediction = predictedStr.startsWith("over")
-            isCorrect = isOver === isOverPrediction
-            actualResult.goals_over_under = isOver
-          }
-          break
-
-        case "both_teams_to_score":
-          // predicted_value should be 'yes' or 'no'
-          const predictedBTTS = String(prediction.predicted_value).toLowerCase()
-          isCorrect =
-            (predictedBTTS === "yes" && bothScored) || (predictedBTTS === "no" && !bothScored)
-          actualResult.both_teams_to_score = bothScored
-          break
-
-        default:
-          console.warn(`Unknown prediction_type: ${prediction.prediction_type}`)
-          continue
-      }
-
-      // Calculate points earned (only if correct)
-      // 기본 베팅 금액 100 (향후 token_transactions에서 실제 금액 조회 가능)
-      const tokensSpent = 100
-      if (isCorrect && prediction.odds_at_prediction) {
-        pointsEarned = Math.floor(tokensSpent * prediction.odds_at_prediction)
-      }
-
-      // Update prediction
-      const { error: updateError } = await supabase
-        .from("predictions")
-        .update({
-          is_correct: isCorrect,
-          points_earned: pointsEarned,
-        })
-        .eq("id", prediction.id)
-
-      if (updateError) {
-        console.error(`Failed to update prediction ${prediction.id}:`, updateError)
-        errorCount++
-      } else {
-        settledCount++
-
-        // Accumulate stats for batch update
-        const current = userStatsMap.get(prediction.user_id) || {
-          correct: 0,
-          points: 0,
-          tokensSpent: 0,
-        }
-        userStatsMap.set(prediction.user_id, {
-          correct: current.correct + (isCorrect ? 1 : 0),
-          points: current.points + pointsEarned,
-          tokensSpent: current.tokensSpent + tokensSpent,
-        })
-      }
-    }
-
-    // Update user stats for all affected users
-    for (const [userId, stats] of userStatsMap.entries()) {
-      await updateUserStats(supabase, userId, stats.correct > 0, stats.points, stats.tokensSpent)
-    }
-
-    // Update match settlement status
-    if (settledCount > 0) {
-      const { error: matchUpdateError } = await supabase
-        .from("matches")
-        .update({ is_settled: true })
-        .eq("id", match_id)
-
-      if (matchUpdateError) {
-        console.error("Failed to update match settlement status:", matchUpdateError)
-      }
-
-      // 정산 결과 알림 비동기 전송 (응답 지연 방지)
-      Promise.resolve().then(async () => {
-        try {
-          const notificationRows = Array.from(userStatsMap.entries()).map(([userId, stats]) => ({
-            user_id: userId,
-            type: "settlement_result" as const,
-            actor_id: user.id,
-            metadata: {
-              match_id,
-              is_correct: stats.correct > 0,
-              points_earned: stats.points,
-            },
-          }))
-
-          if (notificationRows.length > 0) {
-            const { error: notifError } = await supabase
-              .from("notifications")
-              .insert(notificationRows)
-
-            if (notifError) {
-              console.error("Failed to insert settlement notifications:", notifError)
-            }
-          }
-        } catch (err) {
-          console.error("Settlement notification error:", err)
-        }
-      })
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `정산 완료: ${settledCount}개 예측 처리됨`,
-      settled_count: settledCount,
-      error_count: errorCount,
-      total_predictions: predictions.length,
-      actual_result: actualResult,
-    })
-  } catch (error) {
-    return apiError("서버 오류가 발생했습니다.", 500, error)
-  }
-}
-
-/**
- * GET /api/predictions/settle
- *
- * Get settlement status for a match or list of unsettled matches
- *
- * Query Parameters:
- * - match_id?: string - Specific match ID
- * - unsettled_only?: boolean - List all unsettled matches
+ * betman_games 기반 미정산 경기 목록 조회 (관리자 전용)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -357,64 +20,152 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
-    const matchId = searchParams.get("match_id")
     const unsettledOnly = searchParams.get("unsettled_only") === "true"
-
-    if (matchId) {
-      // Get specific match settlement status
-      const { data: match, error } = await supabase
-        .from("matches")
-        .select("id, time_status, score_home, score_away, is_settled")
-        .eq("id", matchId)
-        .single()
-
-      if (error || !match) {
-        return NextResponse.json({ error: "경기를 찾을 수 없습니다." }, { status: 404 })
-      }
-
-      // Count predictions for this match
-      const { count } = await supabase
-        .from("predictions")
-        .select("id", { count: "exact", head: true })
-        .eq("match_id", matchId)
-
-      const { count: settledCount } = await supabase
-        .from("predictions")
-        .select("id", { count: "exact", head: true })
-        .eq("match_id", matchId)
-        .not("is_correct", "is", null)
-
-      return NextResponse.json({
-        match_id: match.id,
-        time_status: match.time_status,
-        is_settled: match.is_settled,
-        has_score: match.score_home !== null && match.score_away !== null,
-        total_predictions: count || 0,
-        settled_predictions: settledCount || 0,
-      })
-    }
+    const dailyRoundId = searchParams.get("daily_round_id")
 
     if (unsettledOnly) {
-      // List all finished but unsettled matches
-      const { data: matches, error } = await supabase
-        .from("matches")
-        .select("id, match_time, time_status, score_home, score_away, is_settled")
-        .eq("time_status", 3) // Finished
-        .or("is_settled.eq.false,is_settled.is.null")
+      const { data: games, error } = await supabase
+        .from("betman_games")
+        .select(
+          "id, game_no, sport, game_type, home_team_name, away_team_name, match_time, status, result, home_score, away_score, daily_round_id"
+        )
+        .lt("match_time", new Date().toISOString())
+        .is("result", null)
         .order("match_time", { ascending: false })
-        .limit(50)
+        .limit(200)
 
       if (error) {
-        console.error("[settle GET] Supabase query error:", error)
+        console.error("[settle GET] query error:", error)
         return NextResponse.json({ error: "경기 조회 중 오류가 발생했습니다." }, { status: 500 })
       }
 
-      return NextResponse.json({ matches: matches || [] })
+      const matches = (games || []).map((g) => ({
+        id: g.id,
+        game_no: g.game_no,
+        sport: g.sport,
+        game_type: g.game_type,
+        home_team: g.home_team_name,
+        away_team: g.away_team_name,
+        match_time: g.match_time,
+        status: g.status,
+        result: g.result,
+        home_score: g.home_score,
+        away_score: g.away_score,
+        daily_round_id: g.daily_round_id,
+        has_result: !!g.result,
+      }))
+
+      return NextResponse.json({ matches, total: matches.length })
     }
 
-    return apiBadRequest("match_id 또는 unsettled_only 파라미터가 필요합니다.")
+    if (dailyRoundId) {
+      const { data: games, error } = await supabase
+        .from("betman_games")
+        .select(
+          "id, game_no, sport, game_type, home_team_name, away_team_name, match_time, status, result, home_score, away_score"
+        )
+        .eq("daily_round_id", dailyRoundId)
+        .order("game_no")
+
+      if (error) {
+        return NextResponse.json({ error: "경기 조회 중 오류가 발생했습니다." }, { status: 500 })
+      }
+
+      return NextResponse.json({ matches: games || [] })
+    }
+
+    return apiBadRequest("unsettled_only 또는 daily_round_id 파라미터가 필요합니다.")
   } catch (error) {
-    console.error("[settle GET] Unhandled error:", error instanceof Error ? error.stack : error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
+  }
+}
+
+/**
+ * POST /api/predictions/settle
+ *
+ * 관리자 수동 정산: daily_round_id 또는 game_ids 기반
+ * Body: { daily_round_id?: string, game_ids?: string[] }
+ *
+ * 공통 settlePredictions 함수를 활용하여 기존 betman/settle 경로와 동일한 로직 적용
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
+    const admin = await isAdmin()
+    if (!admin) {
+      return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
+    }
+
+    const supabase = createServiceRoleClient()
+    const body = await request.json().catch(() => ({}))
+    const { daily_round_id, game_ids } = body as {
+      daily_round_id?: string
+      game_ids?: string[]
+    }
+
+    if (!daily_round_id && (!game_ids || game_ids.length === 0)) {
+      return apiBadRequest("daily_round_id 또는 game_ids가 필요합니다.")
+    }
+
+    let games
+    if (game_ids && game_ids.length > 0) {
+      const { data, error } = await supabase
+        .from("betman_games")
+        .select(
+          "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
+        )
+        .in("id", game_ids)
+        .not("result", "is", null)
+
+      if (error) return apiError("경기 조회 실패", 500, error)
+      games = data
+    } else if (daily_round_id) {
+      const { data, error } = await supabase
+        .from("betman_games")
+        .select(
+          "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
+        )
+        .eq("daily_round_id", daily_round_id)
+        .not("result", "is", null)
+
+      if (error) return apiError("경기 조회 실패", 500, error)
+      games = data
+    }
+
+    if (!games || games.length === 0) {
+      return NextResponse.json(
+        { error: "결과가 입력된 정산 가능 경기가 없습니다. 먼저 경기 결과를 입력해주세요." },
+        { status: 404 }
+      )
+    }
+
+    const gameIds = games.map((g) => g.id)
+    const { data: predictions, error: predError } = await supabase
+      .from("betman_predictions")
+      .select("id, user_id, game_id, prediction, status, stake, slip_id, locked_odds")
+      .in("game_id", gameIds)
+      .eq("status", "pending")
+
+    if (predError) return apiError("예측 조회 실패", 500, predError)
+
+    if (!predictions || predictions.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "정산할 pending 예측이 없습니다.",
+        settled: 0,
+      })
+    }
+
+    const result = await settlePredictions(supabase, games, predictions)
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+      message: `${result.settled}건 정산 완료 (적중 ${result.correct}, 미적중 ${result.wrong}, 취소 ${result.cancelled})`,
+    })
+  } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
