@@ -17,10 +17,9 @@ import { apiError } from '@/lib/api-error'
  * 4. 동기화 상태 헬스체크 및 로깅
  */
 
-const STALE_THRESHOLD_HOURS = 3 // 3시간 이상 동기화 없으면 stale
-const URGENT_THRESHOLD_HOURS = 6 // 6시간 이상이면 urgent
+const STALE_THRESHOLD_HOURS = 3
+const URGENT_THRESHOLD_HOURS = 6
 
-// --- 게임 데이터 직접 가져오기 (Vercel에서도 시도 - 실패할 수 있음) ---
 const BETMAN_BASE = 'https://www.betman.co.kr'
 const GM_ID = 'G101'
 
@@ -188,6 +187,174 @@ function parseGames(datas: unknown[], roundId: string): BetmanGame[] {
         even_odds: isSum && (d[18] as number) > 0 ? (d[18] as number) : null,
       }
     })
+}
+
+// --- 경기 결과 가져오기 (직접 HTTP, Playwright 불필요) ---
+
+const RESULT_HANDI_MAP: Record<number, string> = {
+  0: '일반', 2: '핸디캡', 5: 'SUM', 6: 'S핸디캡', 7: 'S언더오버', 9: '언더오버', 14: '일반',
+}
+
+function mapGameResult(gameResult: string, gameType: string): { result: string; status: string } {
+  if (gameResult === '4') return { result: 'cancelled', status: 'cancelled' }
+
+  if (gameType === '일반' || gameType === '핸디캡' || gameType === 'S핸디캡') {
+    if (gameResult === '0') return { result: 'home', status: 'completed' }
+    if (gameResult === '1') return { result: 'draw', status: 'completed' }
+    if (gameResult === '2') return { result: 'away', status: 'completed' }
+  } else if (gameType === '언더오버' || gameType === 'S언더오버') {
+    if (gameResult === '0') return { result: 'under', status: 'completed' }
+    if (gameResult === '2') return { result: 'over', status: 'completed' }
+  } else if (gameType === 'SUM') {
+    if (gameResult === '0') return { result: 'odd', status: 'completed' }
+    if (gameResult === '2') return { result: 'even', status: 'completed' }
+  }
+  return { result: '', status: 'completed' }
+}
+
+function parseScore(mchScore: string): { home: number; away: number } | null {
+  if (!mchScore || !mchScore.includes(':')) return null
+  const [h, a] = mchScore.split(':').map(Number)
+  if (isNaN(h) || isNaN(a)) return null
+  return { home: h, away: a }
+}
+
+interface ResultItem {
+  GAME_RESULT: string
+  GM_SEQ: number
+  MCH_SCORE: string
+  HANDI_VAL: number
+  HOME_TEAM: string
+  AWAY_TEAM: string
+}
+
+async function fetchResultData(gmTs: string): Promise<ResultItem[] | null> {
+  try {
+    await fetch(
+      `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
+      { headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'] }, redirect: 'follow' }
+    ).catch(() => {})
+
+    const resp = await fetchWithRetry(
+      `${BETMAN_BASE}/gamebuy/winrst/inqWinrstDetlBody.do`,
+      {
+        method: 'POST',
+        headers: {
+          ...BROWSER_HEADERS,
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
+        },
+        body: JSON.stringify({
+          gmId: GM_ID,
+          gmTs: Number(gmTs),
+          _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
+        }),
+      },
+    )
+
+    const data = await resp.json()
+    const items = data?.detlBody
+    if (!Array.isArray(items) || items.length === 0) return null
+    return items as ResultItem[]
+  } catch {
+    return null
+  }
+}
+
+export async function fetchAndApplyResults(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  gmTs: string,
+): Promise<{ updated: number; cancelled: number; errors: string[] }> {
+  const resultData = await fetchResultData(gmTs)
+  if (!resultData) return { updated: 0, cancelled: 0, errors: [] }
+
+  const { data: round } = await supabase
+    .from('betman_rounds')
+    .select('id')
+    .eq('gm_ts', gmTs)
+    .maybeSingle()
+
+  if (!round) return { updated: 0, cancelled: 0, errors: [`no round for gmTs=${gmTs}`] }
+
+  const actualScoreMap = new Map<string, { home: number; away: number }>()
+  for (const item of resultData) {
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
+    if (gameType === '일반') {
+      const score = parseScore(item.MCH_SCORE)
+      if (score) {
+        actualScoreMap.set(`${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`, score)
+      }
+    }
+  }
+
+  const results: Array<{
+    game_no: number
+    home_score: number | null
+    away_score: number | null
+    result: string
+    status: string
+  }> = []
+
+  for (const item of resultData) {
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
+    const mapped = mapGameResult(item.GAME_RESULT, gameType)
+    if (mapped.result === '' && mapped.status === 'completed') continue
+
+    let homeScore: number | null = null
+    let awayScore: number | null = null
+
+    if (gameType === '일반') {
+      const score = parseScore(item.MCH_SCORE)
+      if (score) { homeScore = score.home; awayScore = score.away }
+    } else {
+      const key = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`
+      const actual = actualScoreMap.get(key)
+      if (actual) { homeScore = actual.home; awayScore = actual.away }
+      else {
+        const fallback = parseScore(item.MCH_SCORE)
+        if (fallback) { homeScore = fallback.home; awayScore = fallback.away }
+      }
+    }
+
+    results.push({
+      game_no: item.GM_SEQ,
+      home_score: homeScore,
+      away_score: awayScore,
+      result: mapped.result,
+      status: mapped.status,
+    })
+  }
+
+  let updated = 0
+  let cancelled = 0
+  const errors: string[] = []
+
+  for (const r of results) {
+    const updateData: Record<string, unknown> = {
+      status: r.status,
+      updated_at: new Date().toISOString(),
+    }
+    if (r.home_score !== null) updateData.home_score = r.home_score
+    if (r.away_score !== null) updateData.away_score = r.away_score
+    if (r.result) updateData.result = r.result
+
+    const { data: updatedRows, error } = await supabase
+      .from('betman_games')
+      .update(updateData)
+      .eq('round_id', round.id)
+      .eq('game_no', r.game_no)
+      .in('status', ['scheduled', 'in_progress'])
+      .select('id')
+
+    if (error) {
+      errors.push(`game_no=${r.game_no}: ${error.message}`)
+    } else if (updatedRows && updatedRows.length > 0) {
+      if (r.status === 'cancelled') cancelled++
+      else updated++
+    }
+  }
+
+  return { updated, cancelled, errors }
 }
 
 // --- 단일 gmTs에 대한 동기화 로직 (재사용 가능) ---
@@ -427,6 +594,79 @@ export async function GET(request: NextRequest) {
     }
 
     // ============================================
+    // Phase 3.5: 경기 결과 수집 + 자동 정산
+    // ============================================
+    let resultsFetched = 0
+    let resultsCancelled = 0
+    const resultErrors: string[] = []
+
+    // 결과가 없는 게임이 있는 라운드의 gmTs 목록 조회
+    const { data: roundsNeedingResults } = await supabase
+      .from('betman_rounds')
+      .select('id, gm_ts')
+      .in('status', ['open', 'closed'])
+      .order('gm_ts', { ascending: false })
+      .limit(5)
+
+    if (roundsNeedingResults && roundsNeedingResults.length > 0) {
+      for (const round of roundsNeedingResults) {
+        // 해당 라운드에 결과 미입력 게임이 있는지 확인
+        const { count: pendingCount } = await supabase
+          .from('betman_games')
+          .select('*', { count: 'exact', head: true })
+          .eq('round_id', round.id)
+          .in('status', ['scheduled', 'in_progress'])
+
+        if (!pendingCount || pendingCount === 0) continue
+
+        const { updated, cancelled, errors } = await fetchAndApplyResults(supabase, round.gm_ts)
+        if (updated > 0 || cancelled > 0) {
+          resultsFetched += updated
+          resultsCancelled += cancelled
+          actions.push(`results_fetched: gmTs=${round.gm_ts} (${updated} updated, ${cancelled} cancelled)`)
+        }
+        resultErrors.push(...errors)
+      }
+    }
+
+    // 결과가 새로 입력된 게임에 대해 자동 정산 실행
+    let autoSettleResult = null
+    if (resultsFetched > 0 || resultsCancelled > 0) {
+      try {
+        const { settlePredictions } = await import('@/lib/betman/settle')
+
+        // 방금 결과가 업데이트된 게임들 조회
+        const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
+        const { data: recentlyUpdatedGames } = await supabase
+          .from('betman_games')
+          .select(
+            'id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id'
+          )
+          .in('status', ['completed', 'cancelled'])
+          .not('result', 'is', null)
+          .gte('updated_at', fiveMinAgo)
+
+        if (recentlyUpdatedGames && recentlyUpdatedGames.length > 0) {
+          const gameIds = recentlyUpdatedGames.map((g) => g.id)
+          const { data: predictions } = await supabase
+            .from('betman_predictions')
+            .select('id, user_id, game_id, prediction, status, slip_id, locked_odds, stake')
+            .in('game_id', gameIds)
+            .eq('status', 'pending')
+
+          if (predictions && predictions.length > 0) {
+            autoSettleResult = await settlePredictions(supabase, recentlyUpdatedGames, predictions)
+            actions.push(
+              `auto_settled: ${autoSettleResult.settled} predictions (${autoSettleResult.correct} correct, ${autoSettleResult.wrong} wrong)`
+            )
+          }
+        }
+      } catch (settleErr) {
+        actions.push(`auto_settle_error: ${(settleErr as Error).message}`)
+      }
+    }
+
+    // ============================================
     // Phase 4: VPS에 urgent resync 신호 (DB 플래그)
     // ============================================
     if (isStale && directSyncResults.length === 0) {
@@ -479,6 +719,16 @@ export async function GET(request: NextRequest) {
       actions,
       directSyncResults,
       totalGames,
+      results: {
+        fetched: resultsFetched,
+        cancelled: resultsCancelled,
+        errors: resultErrors.length > 0 ? resultErrors : undefined,
+      },
+      autoSettle: autoSettleResult ? {
+        settled: autoSettleResult.settled,
+        correct: autoSettleResult.correct,
+        wrong: autoSettleResult.wrong,
+      } : null,
       duration: `${duration}ms`,
     })
   } catch (error) {

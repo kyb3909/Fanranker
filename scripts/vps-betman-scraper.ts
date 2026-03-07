@@ -314,6 +314,143 @@ async function probeNextGmTs(knownGmTsList: string[]): Promise<string[]> {
   return discovered
 }
 
+// --- 9. 경기 결과 수집 (winrstDetl API) ---
+
+const RESULT_HANDI_MAP: Record<number, string> = {
+  0: '일반', 2: '핸디캡', 5: 'SUM', 6: 'S핸디캡', 7: 'S언더오버', 9: '언더오버', 14: '일반',
+}
+
+function mapGameResult(gameResult: string, gameType: string): { result: string; status: string } {
+  if (gameResult === '4') return { result: 'cancelled', status: 'cancelled' }
+  if (gameType === '일반' || gameType === '핸디캡' || gameType === 'S핸디캡') {
+    if (gameResult === '0') return { result: 'home', status: 'completed' }
+    if (gameResult === '1') return { result: 'draw', status: 'completed' }
+    if (gameResult === '2') return { result: 'away', status: 'completed' }
+  } else if (gameType === '언더오버' || gameType === 'S언더오버') {
+    if (gameResult === '0') return { result: 'under', status: 'completed' }
+    if (gameResult === '2') return { result: 'over', status: 'completed' }
+  } else if (gameType === 'SUM') {
+    if (gameResult === '0') return { result: 'odd', status: 'completed' }
+    if (gameResult === '2') return { result: 'even', status: 'completed' }
+  }
+  return { result: '', status: 'completed' }
+}
+
+function parseScoreStr(mchScore: string): { home: number; away: number } | null {
+  if (!mchScore || !mchScore.includes(':')) return null
+  const [h, a] = mchScore.split(':').map(Number)
+  if (isNaN(h) || isNaN(a)) return null
+  return { home: h, away: a }
+}
+
+interface ResultItem {
+  GAME_RESULT: string
+  GM_SEQ: number
+  MCH_SCORE: string
+  HANDI_VAL: number
+  HOME_TEAM: string
+  AWAY_TEAM: string
+}
+
+async function fetchResultsForGmTs(gmTs: string): Promise<ResultItem[] | null> {
+  try {
+    await fetch(
+      `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
+      { headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'] }, redirect: 'follow' }
+    ).catch(() => {})
+
+    const resp = await fetchWithRetry(
+      `${BETMAN_BASE}/gamebuy/winrst/inqWinrstDetlBody.do`,
+      {
+        method: 'POST',
+        headers: {
+          ...BROWSER_HEADERS,
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
+        },
+        body: JSON.stringify({
+          gmId: GM_ID,
+          gmTs: Number(gmTs),
+          _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
+        }),
+      },
+    )
+
+    const data = await resp.json()
+    const items = data?.detlBody
+    if (!Array.isArray(items) || items.length === 0) return null
+    return items as ResultItem[]
+  } catch (e) {
+    logError(`결과 조회 실패 (gmTs=${gmTs}):`, e)
+    return null
+  }
+}
+
+async function sendResultsToApi(gmTs: string, resultItems: ResultItem[]): Promise<{ updated: number; cancelled: number }> {
+  const actualScoreMap = new Map<string, { home: number; away: number }>()
+  for (const item of resultItems) {
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
+    if (gameType === '일반') {
+      const score = parseScoreStr(item.MCH_SCORE)
+      if (score) {
+        actualScoreMap.set(`${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`, score)
+      }
+    }
+  }
+
+  const results: Array<{
+    game_no: number
+    home_score: number | null
+    away_score: number | null
+    result: string
+    status: string
+  }> = []
+
+  for (const item of resultItems) {
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
+    const mapped = mapGameResult(item.GAME_RESULT, gameType)
+    if (mapped.result === '' && mapped.status === 'completed') continue
+
+    let homeScore: number | null = null
+    let awayScore: number | null = null
+
+    if (gameType === '일반') {
+      const score = parseScoreStr(item.MCH_SCORE)
+      if (score) { homeScore = score.home; awayScore = score.away }
+    } else {
+      const key = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`
+      const actual = actualScoreMap.get(key)
+      if (actual) { homeScore = actual.home; awayScore = actual.away }
+      else {
+        const fallback = parseScoreStr(item.MCH_SCORE)
+        if (fallback) { homeScore = fallback.home; awayScore = fallback.away }
+      }
+    }
+
+    results.push({
+      game_no: item.GM_SEQ,
+      home_score: homeScore,
+      away_score: awayScore,
+      result: mapped.result,
+      status: mapped.status,
+    })
+  }
+
+  if (results.length === 0) return { updated: 0, cancelled: 0 }
+
+  const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/results`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CRON_SECRET}`,
+    },
+    body: JSON.stringify({ gmTs, results }),
+  })
+
+  const data = await resp.json()
+  return { updated: data.updated || 0, cancelled: data.cancelled || 0 }
+}
+
 // --- 메인 실행 ---
 async function main() {
   if (!API_BASE_URL || !CRON_SECRET) {
@@ -428,7 +565,35 @@ async function main() {
       }
     }
 
-    // Phase 5: sync_state 업데이트
+    // Phase 5: 경기 결과 수집 (완료된 라운드)
+    let totalResultsUpdated = 0
+    let totalResultsCancelled = 0
+
+    const allGmTsForResults = [...new Set([...allProcessedGmTs, ...gmTsList])]
+    for (const gmTs of allGmTsForResults) {
+      try {
+        const items = await fetchResultsForGmTs(gmTs)
+        if (!items || items.length === 0) continue
+
+        log(`결과 수집: gmTs=${gmTs} → ${items.length}건 원시 데이터`)
+        const { updated, cancelled } = await sendResultsToApi(gmTs, items)
+        if (updated > 0 || cancelled > 0) {
+          log(`  결과 반영: ${updated}건 업데이트, ${cancelled}건 취소`)
+          totalResultsUpdated += updated
+          totalResultsCancelled += cancelled
+        }
+      } catch (e) {
+        const errMsg = `결과 수집 gmTs=${gmTs}: ${(e as Error).message}`
+        logError(errMsg)
+        syncErrors.push(errMsg)
+      }
+    }
+
+    if (totalResultsUpdated > 0 || totalResultsCancelled > 0) {
+      log(`결과 수집 합계: ${totalResultsUpdated}건 업데이트, ${totalResultsCancelled}건 취소`)
+    }
+
+    // Phase 6: sync_state 업데이트
     const latestGmTs = allProcessedGmTs.length > 0
       ? allProcessedGmTs[allProcessedGmTs.length - 1]
       : undefined
@@ -442,7 +607,7 @@ async function main() {
     })
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1)
-    log(`=== 동기화 완료 === ${allProcessedGmTs.length}개 라운드, ${totalGames}건, ${duration}s`)
+    log(`=== 동기화 완료 === ${allProcessedGmTs.length}개 라운드, ${totalGames}건 게임, ${totalResultsUpdated}건 결과, ${duration}s`)
 
     if (syncErrors.length > 0) {
       log(`경고: ${syncErrors.length}개 에러 발생`)
