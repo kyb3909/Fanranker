@@ -124,6 +124,11 @@ export async function settlePredictions(
     const game = gameMap.get(pred.game_id)
     if (!game) continue
 
+    // Guardrail: skip non-cancelled games that still do not have a final result.
+    if (game.status !== "cancelled" && (!game.result || game.result === "")) {
+      continue
+    }
+
     if (game.status === "cancelled") {
       const { data: updated, error } = await supabase
         .from("betman_predictions")

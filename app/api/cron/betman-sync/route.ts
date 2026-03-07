@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { verifyCronSecret } from '@/lib/cron-auth'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { verifyCronSecret } from "@/lib/cron-auth"
+import { apiError } from "@/lib/api-error"
 
 /**
  * GET /api/cron/betman-sync
@@ -20,25 +20,34 @@ import { apiError } from '@/lib/api-error'
 const STALE_THRESHOLD_HOURS = 3
 const URGENT_THRESHOLD_HOURS = 6
 
-const BETMAN_BASE = 'https://www.betman.co.kr'
-const GM_ID = 'G101'
+const BETMAN_BASE = "https://www.betman.co.kr"
+const GM_ID = "G101"
 
 const BROWSER_HEADERS: Record<string, string> = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/javascript, */*; q=0.01',
-  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Cache-Control': 'no-cache',
-  'Pragma': 'no-cache',
-  'X-Requested-With': 'XMLHttpRequest',
-  'Origin': BETMAN_BASE,
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Accept: "application/json, text/javascript, */*; q=0.01",
+  "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  "X-Requested-With": "XMLHttpRequest",
+  Origin: BETMAN_BASE,
 }
 
 const SPORT_MAP: Record<string, string> = {
-  SC: '축구', BK: '농구', VL: '배구', BS: '야구',
+  SC: "축구",
+  BK: "농구",
+  VL: "배구",
+  BS: "야구",
 }
 const TYPE_MAP: Record<string, string> = {
-  '0': '일반', '2': '핸디캡', '5': 'SUM', '9': '언더오버', '12': '핸디캡', '14': '일반',
+  "0": "일반",
+  "2": "핸디캡",
+  "5": "SUM",
+  "9": "언더오버",
+  "12": "핸디캡",
+  "14": "일반",
 }
 
 interface BetmanGame {
@@ -66,7 +75,7 @@ interface BetmanGame {
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  maxRetries = 3,
+  maxRetries = 3
 ): Promise<Response> {
   let lastError: Error | null = null
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -88,23 +97,20 @@ async function fetchWithRetry(
       await new Promise((r) => setTimeout(r, delay))
     }
   }
-  throw lastError || new Error('fetch failed after retries')
+  throw lastError || new Error("fetch failed after retries")
 }
 
 async function fetchAllGmTs(): Promise<string[]> {
   try {
-    const resp = await fetchWithRetry(
-      `${BETMAN_BASE}/buyPsblGame/inqBuyAbleGameInfoList.do`,
-      {
-        method: 'POST',
-        headers: {
-          ...BROWSER_HEADERS,
-          'Content-Type': 'application/json;charset=UTF-8',
-          'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/buyableGameList.do`,
-        },
-        body: JSON.stringify({ _sbmInfo: { _sbmInfo: { debugMode: 'false' } } }),
+    const resp = await fetchWithRetry(`${BETMAN_BASE}/buyPsblGame/inqBuyAbleGameInfoList.do`, {
+      method: "POST",
+      headers: {
+        ...BROWSER_HEADERS,
+        "Content-Type": "application/json;charset=UTF-8",
+        Referer: `${BETMAN_BASE}/main/mainPage/gamebuy/buyableGameList.do`,
       },
-    )
+      body: JSON.stringify({ _sbmInfo: { _sbmInfo: { debugMode: "false" } } }),
+    })
     const data = await resp.json()
     const protoGames = data?.protoGames || []
     const gmTsList: string[] = []
@@ -122,27 +128,24 @@ async function fetchAllGmTs(): Promise<string[]> {
 async function fetchGameData(gmTs: string): Promise<unknown[] | null> {
   try {
     await fetch(`${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`, {
-      headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'] },
-      redirect: 'follow',
+      headers: { "User-Agent": BROWSER_HEADERS["User-Agent"] },
+      redirect: "follow",
     }).catch(() => {})
 
-    const resp = await fetchWithRetry(
-      `${BETMAN_BASE}/buyPsblGame/gameInfoInq.do`,
-      {
-        method: 'POST',
-        headers: {
-          ...BROWSER_HEADERS,
-          'Content-Type': 'application/json;charset=UTF-8',
-          'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`,
-        },
-        body: JSON.stringify({
-          gmId: GM_ID,
-          gmTs: Number(gmTs),
-          gameYear: '',
-          _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
-        }),
+    const resp = await fetchWithRetry(`${BETMAN_BASE}/buyPsblGame/gameInfoInq.do`, {
+      method: "POST",
+      headers: {
+        ...BROWSER_HEADERS,
+        "Content-Type": "application/json;charset=UTF-8",
+        Referer: `${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`,
       },
-    )
+      body: JSON.stringify({
+        gmId: GM_ID,
+        gmTs: Number(gmTs),
+        gameYear: "",
+        _sbmInfo: { _sbmInfo: { debugMode: "false" } },
+      }),
+    })
     const data = await resp.json()
     return data?.compSchedules?.datas || null
   } catch {
@@ -152,31 +155,36 @@ async function fetchGameData(gmTs: string): Promise<unknown[] | null> {
 
 function parseGames(datas: unknown[], roundId: string): BetmanGame[] {
   return (datas as unknown[][])
-    .filter((d) => (d[16] as number || 0) !== 0 || (d[17] as number || 0) !== 0 || (d[18] as number || 0) !== 0)
+    .filter(
+      (d) =>
+        ((d[16] as number) || 0) !== 0 ||
+        ((d[17] as number) || 0) !== 0 ||
+        ((d[18] as number) || 0) !== 0
+    )
     .map((d) => {
-      const sportCode = (d[0] as string) || ''
-      const sport = SPORT_MAP[sportCode] || sportCode || '축구'
-      const gameTypeCode = String(d[19] ?? '0')
-      const gameType = TYPE_MAP[gameTypeCode] || '일반'
+      const sportCode = (d[0] as string) || ""
+      const sport = SPORT_MAP[sportCode] || sportCode || "축구"
+      const gameTypeCode = String(d[19] ?? "0")
+      const gameType = TYPE_MAP[gameTypeCode] || "일반"
       const matchTimeMs = d[3] as number | null
       const matchTime = matchTimeMs ? new Date(matchTimeMs).toISOString() : null
 
-      const isNormalOrHandicap = gameType === '일반' || gameType === '핸디캡'
-      const isUnderOver = gameType === '언더오버'
-      const isSum = gameType === 'SUM'
+      const isNormalOrHandicap = gameType === "일반" || gameType === "핸디캡"
+      const isUnderOver = gameType === "언더오버"
+      const isSum = gameType === "SUM"
 
       return {
         round_id: roundId,
         game_no: (d[11] as number) || 0,
         match_time: matchTime,
         sport,
-        league_code: (d[7] as string) || '',
+        league_code: (d[7] as string) || "",
         game_type: gameType,
-        home_team_name: (d[14] as string) || '',
-        away_team_name: (d[15] as string) || '',
+        home_team_name: (d[14] as string) || "",
+        away_team_name: (d[15] as string) || "",
         venue: (d[10] as string) || null,
-        status: 'scheduled',
-        handicap: gameType === '핸디캡' && d[20] ? (d[20] as number) : null,
+        status: "scheduled",
+        handicap: gameType === "핸디캡" && d[20] ? (d[20] as number) : null,
         over_under_line: isUnderOver && d[20] ? (d[20] as number) : null,
         home_win_odds: isNormalOrHandicap && (d[16] as number) > 0 ? (d[16] as number) : null,
         draw_odds: isNormalOrHandicap && (d[17] as number) > 0 ? (d[17] as number) : null,
@@ -192,30 +200,77 @@ function parseGames(datas: unknown[], roundId: string): BetmanGame[] {
 // --- 경기 결과 가져오기 (직접 HTTP, Playwright 불필요) ---
 
 const RESULT_HANDI_MAP: Record<number, string> = {
-  0: '일반', 2: '핸디캡', 5: 'SUM', 6: 'S핸디캡', 7: 'S언더오버', 9: '언더오버', 14: '일반',
+  0: "일반",
+  2: "핸디캡",
+  5: "SUM",
+  6: "S핸디캡",
+  7: "S언더오버",
+  9: "언더오버",
+  14: "일반",
 }
 
-function mapGameResult(gameResult: string, gameType: string): { result: string; status: string } {
-  if (gameResult === '4') return { result: 'cancelled', status: 'cancelled' }
+function mapGameResult(
+  rawGameResult: string | number,
+  gameType: string
+): { result: string; status: string } {
+  const gameResult = String(rawGameResult)
 
-  if (gameType === '일반' || gameType === '핸디캡' || gameType === 'S핸디캡') {
-    if (gameResult === '0') return { result: 'home', status: 'completed' }
-    if (gameResult === '1') return { result: 'draw', status: 'completed' }
-    if (gameResult === '2') return { result: 'away', status: 'completed' }
-  } else if (gameType === '언더오버' || gameType === 'S언더오버') {
-    if (gameResult === '0') return { result: 'under', status: 'completed' }
-    if (gameResult === '2') return { result: 'over', status: 'completed' }
-  } else if (gameType === 'SUM') {
-    if (gameResult === '0') return { result: 'odd', status: 'completed' }
-    if (gameResult === '2') return { result: 'even', status: 'completed' }
+  if (gameResult === "4") return { result: "cancelled", status: "cancelled" }
+
+  if (gameType === "일반" || gameType === "핸디캡" || gameType === "S핸디캡") {
+    if (gameResult === "0") return { result: "home", status: "completed" }
+    if (gameResult === "1") return { result: "draw", status: "completed" }
+    if (gameResult === "2") return { result: "away", status: "completed" }
+  } else if (gameType === "언더오버" || gameType === "S언더오버") {
+    if (gameResult === "0") return { result: "under", status: "completed" }
+    if (gameResult === "2") return { result: "over", status: "completed" }
+  } else if (gameType === "SUM") {
+    if (gameResult === "0") return { result: "odd", status: "completed" }
+    if (gameResult === "2") return { result: "even", status: "completed" }
   }
-  return { result: '', status: 'completed' }
+  return { result: "", status: "completed" }
+}
+
+/**
+ * 스코어 기반 결과 추론 (크롤러가 GAME_RESULT를 주지 않을 때 fallback)
+ * 핸디캡/언더오버/SUM 게임에서 실제 스코어와 게임 조건으로 결과를 계산
+ */
+function deriveResultFromScore(
+  homeScore: number,
+  awayScore: number,
+  gameType: string,
+  handicap: number | null,
+  overUnderLine: number | null
+): string {
+  if (gameType === "핸디캡" || gameType === "S핸디캡") {
+    const h = handicap ?? 0
+    const adjusted = homeScore + h
+    if (adjusted > awayScore) return "home"
+    if (adjusted < awayScore) return "away"
+    return "draw"
+  }
+  if (gameType === "언더오버" || gameType === "S언더오버") {
+    const total = homeScore + awayScore
+    const line = overUnderLine ?? 0
+    if (line === 0) return ""
+    if (total > line) return "over"
+    if (total < line) return "under"
+    return ""
+  }
+  if (gameType === "SUM") {
+    const total = homeScore + awayScore
+    return total % 2 === 0 ? "even" : "odd"
+  }
+  if (homeScore > awayScore) return "home"
+  if (homeScore < awayScore) return "away"
+  return "draw"
 }
 
 function parseScore(mchScore: string): { home: number; away: number } | null {
-  if (!mchScore || !mchScore.includes(':')) return null
-  const [h, a] = mchScore.split(':').map(Number)
+  if (!mchScore || !mchScore.includes(":")) return null
+  const [h, a] = mchScore.split(":").map(Number)
   if (isNaN(h) || isNaN(a)) return null
+  if (!Number.isInteger(h) || !Number.isInteger(a)) return null
   return { home: h, away: a }
 }
 
@@ -226,31 +281,34 @@ interface ResultItem {
   HANDI_VAL: number
   HOME_TEAM: string
   AWAY_TEAM: string
+  FIX_MCH_DTM?: string
+}
+
+function buildMatchKey(item: Pick<ResultItem, "HOME_TEAM" | "AWAY_TEAM" | "FIX_MCH_DTM">): string {
+  const base = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`
+  return item.FIX_MCH_DTM ? `${base}|${item.FIX_MCH_DTM}` : base
 }
 
 async function fetchResultData(gmTs: string): Promise<ResultItem[] | null> {
   try {
-    await fetch(
-      `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
-      { headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'] }, redirect: 'follow' }
-    ).catch(() => {})
+    await fetch(`${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`, {
+      headers: { "User-Agent": BROWSER_HEADERS["User-Agent"] },
+      redirect: "follow",
+    }).catch(() => {})
 
-    const resp = await fetchWithRetry(
-      `${BETMAN_BASE}/gamebuy/winrst/inqWinrstDetlBody.do`,
-      {
-        method: 'POST',
-        headers: {
-          ...BROWSER_HEADERS,
-          'Content-Type': 'application/json;charset=UTF-8',
-          'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
-        },
-        body: JSON.stringify({
-          gmId: GM_ID,
-          gmTs: Number(gmTs),
-          _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
-        }),
+    const resp = await fetchWithRetry(`${BETMAN_BASE}/gamebuy/winrst/inqWinrstDetlBody.do`, {
+      method: "POST",
+      headers: {
+        ...BROWSER_HEADERS,
+        "Content-Type": "application/json;charset=UTF-8",
+        Referer: `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
       },
-    )
+      body: JSON.stringify({
+        gmId: GM_ID,
+        gmTs: Number(gmTs),
+        _sbmInfo: { _sbmInfo: { debugMode: "false" } },
+      }),
+    })
 
     const data = await resp.json()
     const items = data?.detlBody
@@ -263,29 +321,37 @@ async function fetchResultData(gmTs: string): Promise<ResultItem[] | null> {
 
 export async function fetchAndApplyResults(
   supabase: ReturnType<typeof createServiceRoleClient>,
-  gmTs: string,
+  gmTs: string
 ): Promise<{ updated: number; cancelled: number; errors: string[] }> {
   const resultData = await fetchResultData(gmTs)
   if (!resultData) return { updated: 0, cancelled: 0, errors: [] }
 
   const { data: round } = await supabase
-    .from('betman_rounds')
-    .select('id')
-    .eq('gm_ts', gmTs)
+    .from("betman_rounds")
+    .select("id")
+    .eq("gm_ts", gmTs)
     .maybeSingle()
 
   if (!round) return { updated: 0, cancelled: 0, errors: [`no round for gmTs=${gmTs}`] }
 
   const actualScoreMap = new Map<string, { home: number; away: number }>()
   for (const item of resultData) {
-    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
-    if (gameType === '일반') {
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? "일반"
+    if (gameType === "일반") {
       const score = parseScore(item.MCH_SCORE)
       if (score) {
-        actualScoreMap.set(`${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`, score)
+        actualScoreMap.set(buildMatchKey(item), score)
       }
     }
   }
+
+  // 게임별 handicap/over_under_line 조회 (스코어 기반 결과 추론에 필요)
+  const { data: gamesWithConditions } = await supabase
+    .from("betman_games")
+    .select("game_no, game_type, handicap, over_under_line")
+    .eq("round_id", round.id)
+
+  const gameConditionMap = new Map((gamesWithConditions || []).map((g) => [g.game_no, g]))
 
   const results: Array<{
     game_no: number
@@ -296,25 +362,54 @@ export async function fetchAndApplyResults(
   }> = []
 
   for (const item of resultData) {
-    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
-    const mapped = mapGameResult(item.GAME_RESULT, gameType)
-    if (mapped.result === '' && mapped.status === 'completed') continue
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? "일반"
+    let mapped = mapGameResult(item.GAME_RESULT, gameType)
 
     let homeScore: number | null = null
     let awayScore: number | null = null
 
-    if (gameType === '일반') {
+    if (gameType === "일반") {
       const score = parseScore(item.MCH_SCORE)
-      if (score) { homeScore = score.home; awayScore = score.away }
+      if (score) {
+        homeScore = score.home
+        awayScore = score.away
+      }
     } else {
-      const key = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`
+      const key = buildMatchKey(item)
       const actual = actualScoreMap.get(key)
-      if (actual) { homeScore = actual.home; awayScore = actual.away }
-      else {
+      if (actual) {
+        homeScore = actual.home
+        awayScore = actual.away
+      } else {
         const fallback = parseScore(item.MCH_SCORE)
-        if (fallback) { homeScore = fallback.home; awayScore = fallback.away }
+        if (fallback) {
+          homeScore = fallback.home
+          awayScore = fallback.away
+        }
       }
     }
+
+    // GAME_RESULT 매핑이 실패한 경우, 스코어 기반으로 결과 추론
+    if (
+      mapped.result === "" &&
+      mapped.status === "completed" &&
+      homeScore !== null &&
+      awayScore !== null
+    ) {
+      const cond = gameConditionMap.get(item.GM_SEQ)
+      const derived = deriveResultFromScore(
+        homeScore,
+        awayScore,
+        cond?.game_type || gameType,
+        cond?.handicap ?? null,
+        cond?.over_under_line ?? null
+      )
+      if (derived) {
+        mapped = { result: derived, status: "completed" }
+      }
+    }
+
+    if (mapped.result === "" && mapped.status === "completed") continue
 
     results.push({
       game_no: item.GM_SEQ,
@@ -339,17 +434,17 @@ export async function fetchAndApplyResults(
     if (r.result) updateData.result = r.result
 
     const { data: updatedRows, error } = await supabase
-      .from('betman_games')
+      .from("betman_games")
       .update(updateData)
-      .eq('round_id', round.id)
-      .eq('game_no', r.game_no)
-      .in('status', ['scheduled', 'in_progress'])
-      .select('id')
+      .eq("round_id", round.id)
+      .eq("game_no", r.game_no)
+      .in("status", ["scheduled", "in_progress", "completed"])
+      .select("id")
 
     if (error) {
       errors.push(`game_no=${r.game_no}: ${error.message}`)
     } else if (updatedRows && updatedRows.length > 0) {
-      if (r.status === 'cancelled') cancelled++
+      if (r.status === "cancelled") cancelled++
       else updated++
     }
   }
@@ -360,20 +455,20 @@ export async function fetchAndApplyResults(
 // --- 단일 gmTs에 대한 동기화 로직 (재사용 가능) ---
 export async function syncSingleGmTs(
   supabase: ReturnType<typeof createServiceRoleClient>,
-  gmTs: string,
+  gmTs: string
 ): Promise<{ action: string; roundId: string; games: number; errors: number } | { error: string }> {
   const rawDatas = await fetchGameData(gmTs)
   if (!rawDatas || rawDatas.length === 0) {
-    return { action: 'checked', roundId: '', games: 0, errors: 0 }
+    return { action: "checked", roundId: "", games: 0, errors: 0 }
   }
 
   const year = new Date().getFullYear()
   const roundNum = parseInt(gmTs, 10) || 0
 
   const { data: existingRound } = await supabase
-    .from('betman_rounds')
-    .select('id')
-    .eq('gm_ts', gmTs)
+    .from("betman_rounds")
+    .select("id")
+    .eq("gm_ts", gmTs)
     .maybeSingle()
 
   let roundId: string
@@ -382,25 +477,25 @@ export async function syncSingleGmTs(
   if (existingRound) {
     roundId = existingRound.id
     await supabase
-      .from('betman_rounds')
-      .update({ status: 'open' })
-      .eq('id', roundId)
-      .eq('status', 'closed')
+      .from("betman_rounds")
+      .update({ status: "open" })
+      .eq("id", roundId)
+      .eq("status", "closed")
   } else {
     const deadline = new Date()
     deadline.setDate(deadline.getDate() + 7)
     deadline.setHours(23, 59, 59, 999)
 
     const { data: newRound, error: insertError } = await supabase
-      .from('betman_rounds')
+      .from("betman_rounds")
       .insert({
         gm_ts: gmTs,
         year,
         round: roundNum,
-        status: 'open',
+        status: "open",
         deadline: deadline.toISOString(),
       })
-      .select('id')
+      .select("id")
       .single()
 
     if (insertError || !newRound) {
@@ -413,10 +508,10 @@ export async function syncSingleGmTs(
   const games = parseGames(rawDatas, roundId)
 
   const { data: finishedGames } = await supabase
-    .from('betman_games')
-    .select('game_no')
-    .eq('round_id', roundId)
-    .in('status', ['completed', 'cancelled'])
+    .from("betman_games")
+    .select("game_no")
+    .eq("round_id", roundId)
+    .in("status", ["completed", "cancelled"])
 
   const finishedGameNos = new Set((finishedGames || []).map((g: { game_no: number }) => g.game_no))
   const newOrScheduledGames = games.filter((g) => !finishedGameNos.has(g.game_no))
@@ -428,8 +523,8 @@ export async function syncSingleGmTs(
   for (let i = 0; i < newOrScheduledGames.length; i += BATCH_SIZE) {
     const batch = newOrScheduledGames.slice(i, i + BATCH_SIZE)
     const { error } = await supabase
-      .from('betman_games')
-      .upsert(batch, { onConflict: 'round_id,game_no', ignoreDuplicates: false })
+      .from("betman_games")
+      .upsert(batch, { onConflict: "round_id,game_no", ignoreDuplicates: false })
 
     if (error) {
       console.error(`[betman-sync] Batch upsert error (gmTs=${gmTs}):`, error)
@@ -440,7 +535,7 @@ export async function syncSingleGmTs(
   }
 
   return {
-    action: isNew ? 'created' : 'updated',
+    action: isNew ? "created" : "updated",
     roundId,
     games: upsertedCount,
     errors: errorCount,
@@ -461,9 +556,9 @@ export async function GET(request: NextRequest) {
     // Phase 1: 동기화 상태 점검 (Staleness Check)
     // ============================================
     const { data: syncState } = await supabase
-      .from('betman_sync_state')
-      .select('*')
-      .order('updated_at', { ascending: false })
+      .from("betman_sync_state")
+      .select("*")
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle()
 
@@ -483,7 +578,7 @@ export async function GET(request: NextRequest) {
       }
     } else {
       isUrgent = true
-      actions.push('no_sync_state: first run or missing state')
+      actions.push("no_sync_state: first run or missing state")
     }
 
     // ============================================
@@ -492,10 +587,10 @@ export async function GET(request: NextRequest) {
 
     // 2-pre. 과거 scheduled 게임 자동 정리 → in_progress
     const { count: cleanedCount } = await supabase
-      .from('betman_games')
-      .update({ status: 'in_progress', updated_at: now.toISOString() })
-      .eq('status', 'scheduled')
-      .lt('match_time', now.toISOString())
+      .from("betman_games")
+      .update({ status: "in_progress", updated_at: now.toISOString() })
+      .eq("status", "scheduled")
+      .lt("match_time", now.toISOString())
 
     if (cleanedCount && cleanedCount > 0) {
       actions.push(`stale_games_cleaned: ${cleanedCount} past-due scheduled → in_progress`)
@@ -503,25 +598,25 @@ export async function GET(request: NextRequest) {
 
     // 2a. 모든 게임이 completed인 open 라운드 → closed
     const { data: openRounds } = await supabase
-      .from('betman_rounds')
-      .select('id, gm_ts, round, status')
-      .in('status', ['open'])
+      .from("betman_rounds")
+      .select("id, gm_ts, round, status")
+      .in("status", ["open"])
 
     if (openRounds && openRounds.length > 0) {
       for (const round of openRounds) {
         const { data: scheduledGames } = await supabase
-          .from('betman_games')
-          .select('id')
-          .eq('round_id', round.id)
-          .eq('status', 'scheduled')
+          .from("betman_games")
+          .select("id")
+          .eq("round_id", round.id)
+          .eq("status", "scheduled")
           .limit(1)
 
         if (!scheduledGames || scheduledGames.length === 0) {
           // 남은 scheduled 게임 없음 → closed
           await supabase
-            .from('betman_rounds')
-            .update({ status: 'closed', updated_at: now.toISOString() })
-            .eq('id', round.id)
+            .from("betman_rounds")
+            .update({ status: "closed", updated_at: now.toISOString() })
+            .eq("id", round.id)
           actions.push(`round_closed: ${round.gm_ts} (no scheduled games left)`)
         }
       }
@@ -529,17 +624,17 @@ export async function GET(request: NextRequest) {
 
     // 2b. 마감 기한 지난 open 라운드 → closed
     const { data: expiredRounds } = await supabase
-      .from('betman_rounds')
-      .select('id, gm_ts')
-      .eq('status', 'open')
-      .lt('deadline', now.toISOString())
+      .from("betman_rounds")
+      .select("id, gm_ts")
+      .eq("status", "open")
+      .lt("deadline", now.toISOString())
 
     if (expiredRounds && expiredRounds.length > 0) {
       for (const round of expiredRounds) {
         await supabase
-          .from('betman_rounds')
-          .update({ status: 'closed', updated_at: now.toISOString() })
-          .eq('id', round.id)
+          .from("betman_rounds")
+          .update({ status: "closed", updated_at: now.toISOString() })
+          .eq("id", round.id)
         actions.push(`round_expired: ${round.gm_ts}`)
       }
     }
@@ -560,19 +655,19 @@ export async function GET(request: NextRequest) {
     const gmTsList = await fetchAllGmTs()
 
     if (gmTsList.length > 0) {
-      actions.push(`direct_api_success: found gmTs ${gmTsList.join(', ')}`)
+      actions.push(`direct_api_success: found gmTs ${gmTsList.join(", ")}`)
 
       for (const gmTs of gmTsList) {
         const result = await syncSingleGmTs(supabase, gmTs)
-        if (!('error' in result)) {
+        if (!("error" in result)) {
           directSyncResults.push({ gmTs, ...result })
-          if (result.action === 'created') {
+          if (result.action === "created") {
             actions.push(`new_round_synced: ${gmTs} (${result.games} games)`)
           }
         }
       }
     } else {
-      actions.push('direct_api_failed: betman unreachable from Vercel (expected)')
+      actions.push("direct_api_failed: betman unreachable from Vercel (expected)")
 
       // 3b. Fallback: DB 기반 프로빙 (+1 ~ +5)
       const latestGmTs = syncState?.latest_gm_ts
@@ -584,7 +679,7 @@ export async function GET(request: NextRequest) {
           for (let i = 1; i <= 5; i++) {
             const candidate = String(current + i)
             const result = await syncSingleGmTs(supabase, candidate)
-            if (!('error' in result) && result.games > 0) {
+            if (!("error" in result) && result.games > 0) {
               directSyncResults.push({ gmTs: candidate, ...result })
               actions.push(`probe_success: gmTs ${candidate} (${result.games} games)`)
             }
@@ -602,20 +697,20 @@ export async function GET(request: NextRequest) {
 
     // 결과가 없는 게임이 있는 라운드의 gmTs 목록 조회
     const { data: roundsNeedingResults } = await supabase
-      .from('betman_rounds')
-      .select('id, gm_ts')
-      .in('status', ['open', 'closed'])
-      .order('gm_ts', { ascending: false })
+      .from("betman_rounds")
+      .select("id, gm_ts")
+      .in("status", ["open", "closed"])
+      .order("gm_ts", { ascending: false })
       .limit(5)
 
     if (roundsNeedingResults && roundsNeedingResults.length > 0) {
       for (const round of roundsNeedingResults) {
         // 해당 라운드에 결과 미입력 게임이 있는지 확인
         const { count: pendingCount } = await supabase
-          .from('betman_games')
-          .select('*', { count: 'exact', head: true })
-          .eq('round_id', round.id)
-          .in('status', ['scheduled', 'in_progress'])
+          .from("betman_games")
+          .select("*", { count: "exact", head: true })
+          .eq("round_id", round.id)
+          .in("status", ["scheduled", "in_progress"])
 
         if (!pendingCount || pendingCount === 0) continue
 
@@ -623,7 +718,9 @@ export async function GET(request: NextRequest) {
         if (updated > 0 || cancelled > 0) {
           resultsFetched += updated
           resultsCancelled += cancelled
-          actions.push(`results_fetched: gmTs=${round.gm_ts} (${updated} updated, ${cancelled} cancelled)`)
+          actions.push(
+            `results_fetched: gmTs=${round.gm_ts} (${updated} updated, ${cancelled} cancelled)`
+          )
         }
         resultErrors.push(...errors)
       }
@@ -633,26 +730,26 @@ export async function GET(request: NextRequest) {
     let autoSettleResult = null
     if (resultsFetched > 0 || resultsCancelled > 0) {
       try {
-        const { settlePredictions } = await import('@/lib/betman/settle')
+        const { settlePredictions } = await import("@/lib/betman/settle")
 
         // 방금 결과가 업데이트된 게임들 조회
         const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
         const { data: recentlyUpdatedGames } = await supabase
-          .from('betman_games')
+          .from("betman_games")
           .select(
-            'id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id'
+            "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
           )
-          .in('status', ['completed', 'cancelled'])
-          .not('result', 'is', null)
-          .gte('updated_at', fiveMinAgo)
+          .in("status", ["completed", "cancelled"])
+          .not("result", "is", null)
+          .gte("updated_at", fiveMinAgo)
 
         if (recentlyUpdatedGames && recentlyUpdatedGames.length > 0) {
           const gameIds = recentlyUpdatedGames.map((g) => g.id)
           const { data: predictions } = await supabase
-            .from('betman_predictions')
-            .select('id, user_id, game_id, prediction, status, slip_id, locked_odds, stake')
-            .in('game_id', gameIds)
-            .eq('status', 'pending')
+            .from("betman_predictions")
+            .select("id, user_id, game_id, prediction, status, slip_id, locked_odds, stake")
+            .in("game_id", gameIds)
+            .eq("status", "pending")
 
           if (predictions && predictions.length > 0) {
             autoSettleResult = await settlePredictions(supabase, recentlyUpdatedGames, predictions)
@@ -674,7 +771,7 @@ export async function GET(request: NextRequest) {
       const resyncFlag = {
         needs_resync: true,
         requested_at: now.toISOString(),
-        reason: isUrgent ? 'urgent' : 'stale',
+        reason: isUrgent ? "urgent" : "stale",
         hours_since_sync: hoursSinceSync,
         probe_range_start: syncState?.latest_gm_ts
           ? String(parseInt(syncState.latest_gm_ts, 10) + 1)
@@ -684,8 +781,10 @@ export async function GET(request: NextRequest) {
           : null,
       }
 
-      await updateSyncState(supabase, null, 'watchdog_alert', 0, JSON.stringify(resyncFlag))
-      actions.push(`resync_flagged: ${isUrgent ? 'URGENT' : 'stale'} (${hoursSinceSync.toFixed(1)}h)`)
+      await updateSyncState(supabase, null, "watchdog_alert", 0, JSON.stringify(resyncFlag))
+      actions.push(
+        `resync_flagged: ${isUrgent ? "URGENT" : "stale"} (${hoursSinceSync.toFixed(1)}h)`
+      )
     }
 
     // ============================================
@@ -695,24 +794,17 @@ export async function GET(request: NextRequest) {
 
     if (directSyncResults.length > 0 && totalGames > 0) {
       const latestGmTs = directSyncResults[directSyncResults.length - 1].gmTs
-      const activeGmTs = directSyncResults.map(r => r.gmTs)
-      await updateSyncState(
-        supabase,
-        latestGmTs,
-        'watchdog_sync',
-        totalGames,
-        null,
-        activeGmTs,
-      )
+      const activeGmTs = directSyncResults.map((r) => r.gmTs)
+      await updateSyncState(supabase, latestGmTs, "watchdog_sync", totalGames, null, activeGmTs)
     } else if (!isStale) {
       // 정상 상태, sync_state만 체크 기록
-      await updateSyncState(supabase, null, 'watchdog_ok', 0, null)
+      await updateSyncState(supabase, null, "watchdog_ok", 0, null)
     }
 
     const duration = Date.now() - start
 
     return NextResponse.json({
-      mode: 'watchdog',
+      mode: "watchdog",
       isStale,
       isUrgent,
       hoursSinceSync: hoursSinceSync.toFixed(1),
@@ -724,15 +816,17 @@ export async function GET(request: NextRequest) {
         cancelled: resultsCancelled,
         errors: resultErrors.length > 0 ? resultErrors : undefined,
       },
-      autoSettle: autoSettleResult ? {
-        settled: autoSettleResult.settled,
-        correct: autoSettleResult.correct,
-        wrong: autoSettleResult.wrong,
-      } : null,
+      autoSettle: autoSettleResult
+        ? {
+            settled: autoSettleResult.settled,
+            correct: autoSettleResult.correct,
+            wrong: autoSettleResult.wrong,
+          }
+        : null,
       duration: `${duration}ms`,
     })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -746,13 +840,13 @@ async function updateSyncState(
   action: string,
   gamesCount: number,
   lastError: string | null,
-  activeRounds?: string[],
+  activeRounds?: string[]
 ) {
   try {
     const { data: existing } = await supabase
-      .from('betman_sync_state')
-      .select('id')
-      .order('updated_at', { ascending: false })
+      .from("betman_sync_state")
+      .select("id")
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle()
 
@@ -767,11 +861,11 @@ async function updateSyncState(
     if (activeRounds) updateData.active_rounds = activeRounds
 
     if (existing) {
-      await supabase.from('betman_sync_state').update(updateData).eq('id', existing.id)
+      await supabase.from("betman_sync_state").update(updateData).eq("id", existing.id)
     } else {
-      await supabase.from('betman_sync_state').insert(updateData)
+      await supabase.from("betman_sync_state").insert(updateData)
     }
   } catch (e) {
-    console.error('[betman-watchdog] Failed to update sync state:', e)
+    console.error("[betman-watchdog] Failed to update sync state:", e)
   }
 }

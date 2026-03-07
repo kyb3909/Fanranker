@@ -31,7 +31,6 @@ interface Post {
   upvotes: number
   comments: number
   temperature?: number
-  authorTemperature?: number
   isUpvoted: boolean
   views?: number
   userId?: string
@@ -104,7 +103,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             postTitle={post.title}
             author={post.author}
             avatar={post.avatar}
-            authorTemperature={post.authorTemperature}
             temperature={temperature}
             voteCount={voteCount}
             myVote={myVote}

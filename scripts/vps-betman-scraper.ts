@@ -20,27 +20,36 @@
  *   API_BASE_URL=https://your-domain.vercel.app CRON_SECRET=xxx npx tsx scripts/vps-betman-scraper.ts
  */
 
-const BETMAN_BASE = 'https://www.betman.co.kr'
-const GM_ID = 'G101' // 프로토 승부식
+const BETMAN_BASE = "https://www.betman.co.kr"
+const GM_ID = "G101" // 프로토 승부식
 
 const API_BASE_URL = process.env.API_BASE_URL
 const CRON_SECRET = process.env.CRON_SECRET
 
 const SPORT_MAP: Record<string, string> = {
-  SC: '축구', BK: '농구', VL: '배구', BS: '야구',
+  SC: "축구",
+  BK: "농구",
+  VL: "배구",
+  BS: "야구",
 }
 const TYPE_MAP: Record<string, string> = {
-  '0': '일반', '2': '핸디캡', '5': 'SUM', '9': '언더오버', '12': '핸디캡', '14': '일반',
+  "0": "일반",
+  "2": "핸디캡",
+  "5": "SUM",
+  "9": "언더오버",
+  "12": "핸디캡",
+  "14": "일반",
 }
 
 const BROWSER_HEADERS: Record<string, string> = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/javascript, */*; q=0.01',
-  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Cache-Control': 'no-cache',
-  'X-Requested-With': 'XMLHttpRequest',
-  'Origin': BETMAN_BASE,
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Accept: "application/json, text/javascript, */*; q=0.01",
+  "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  "X-Requested-With": "XMLHttpRequest",
+  Origin: BETMAN_BASE,
 }
 
 function log(msg: string) {
@@ -48,14 +57,14 @@ function log(msg: string) {
 }
 
 function logError(msg: string, err?: unknown) {
-  console.error(`[${new Date().toISOString()}] [vps-scraper] ERROR: ${msg}`, err || '')
+  console.error(`[${new Date().toISOString()}] [vps-scraper] ERROR: ${msg}`, err || "")
 }
 
 // --- Retry helper ---
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  maxRetries = 3,
+  maxRetries = 3
 ): Promise<Response> {
   let lastError: Error | null = null
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -78,23 +87,20 @@ async function fetchWithRetry(
       await new Promise((r) => setTimeout(r, delay))
     }
   }
-  throw lastError || new Error('fetch failed after retries')
+  throw lastError || new Error("fetch failed after retries")
 }
 
 // --- 1. 구매 가능 gmTs 목록 조회 ---
 async function fetchAvailableGmTs(): Promise<string[]> {
-  const resp = await fetchWithRetry(
-    `${BETMAN_BASE}/buyPsblGame/inqBuyAbleGameInfoList.do`,
-    {
-      method: 'POST',
-      headers: {
-        ...BROWSER_HEADERS,
-        'Content-Type': 'application/json;charset=UTF-8',
-        'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/buyableGameList.do`,
-      },
-      body: JSON.stringify({ _sbmInfo: { _sbmInfo: { debugMode: 'false' } } }),
+  const resp = await fetchWithRetry(`${BETMAN_BASE}/buyPsblGame/inqBuyAbleGameInfoList.do`, {
+    method: "POST",
+    headers: {
+      ...BROWSER_HEADERS,
+      "Content-Type": "application/json;charset=UTF-8",
+      Referer: `${BETMAN_BASE}/main/mainPage/gamebuy/buyableGameList.do`,
     },
-  )
+    body: JSON.stringify({ _sbmInfo: { _sbmInfo: { debugMode: "false" } } }),
+  })
 
   const data = await resp.json()
   const protoGames = data?.protoGames || []
@@ -113,27 +119,24 @@ async function fetchAvailableGmTs(): Promise<string[]> {
 async function fetchGameData(gmTs: string): Promise<unknown[] | null> {
   // 쿠키 초기화 요청
   await fetch(`${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`, {
-    headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'] },
-    redirect: 'follow',
+    headers: { "User-Agent": BROWSER_HEADERS["User-Agent"] },
+    redirect: "follow",
   }).catch(() => {})
 
-  const resp = await fetchWithRetry(
-    `${BETMAN_BASE}/buyPsblGame/gameInfoInq.do`,
-    {
-      method: 'POST',
-      headers: {
-        ...BROWSER_HEADERS,
-        'Content-Type': 'application/json;charset=UTF-8',
-        'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`,
-      },
-      body: JSON.stringify({
-        gmId: GM_ID,
-        gmTs: Number(gmTs),
-        gameYear: '',
-        _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
-      }),
+  const resp = await fetchWithRetry(`${BETMAN_BASE}/buyPsblGame/gameInfoInq.do`, {
+    method: "POST",
+    headers: {
+      ...BROWSER_HEADERS,
+      "Content-Type": "application/json;charset=UTF-8",
+      Referer: `${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`,
     },
-  )
+    body: JSON.stringify({
+      gmId: GM_ID,
+      gmTs: Number(gmTs),
+      gameYear: "",
+      _sbmInfo: { _sbmInfo: { debugMode: "false" } },
+    }),
+  })
 
   const data = await resp.json()
   return data?.compSchedules?.datas || null
@@ -163,30 +166,35 @@ interface ParsedGame {
 
 function parseGames(datas: unknown[]): ParsedGame[] {
   return (datas as unknown[][])
-    .filter((d) => (d[16] as number || 0) !== 0 || (d[17] as number || 0) !== 0 || (d[18] as number || 0) !== 0)
+    .filter(
+      (d) =>
+        ((d[16] as number) || 0) !== 0 ||
+        ((d[17] as number) || 0) !== 0 ||
+        ((d[18] as number) || 0) !== 0
+    )
     .map((d) => {
-      const sportCode = (d[0] as string) || ''
-      const sport = SPORT_MAP[sportCode] || sportCode || '축구'
-      const gameTypeCode = String(d[19] ?? '0')
-      const gameType = TYPE_MAP[gameTypeCode] || '일반'
+      const sportCode = (d[0] as string) || ""
+      const sport = SPORT_MAP[sportCode] || sportCode || "축구"
+      const gameTypeCode = String(d[19] ?? "0")
+      const gameType = TYPE_MAP[gameTypeCode] || "일반"
       const matchTimeMs = d[3] as number | null
       const matchTime = matchTimeMs ? new Date(matchTimeMs).toISOString() : null
 
-      const isNormalOrHandicap = gameType === '일반' || gameType === '핸디캡'
-      const isUnderOver = gameType === '언더오버'
-      const isSum = gameType === 'SUM'
+      const isNormalOrHandicap = gameType === "일반" || gameType === "핸디캡"
+      const isUnderOver = gameType === "언더오버"
+      const isSum = gameType === "SUM"
 
       return {
         game_no: (d[11] as number) || 0,
         match_time: matchTime,
         sport,
-        league_code: (d[7] as string) || '',
+        league_code: (d[7] as string) || "",
         game_type: gameType,
-        home_team_name: (d[14] as string) || '',
-        away_team_name: (d[15] as string) || '',
+        home_team_name: (d[14] as string) || "",
+        away_team_name: (d[15] as string) || "",
         venue: (d[10] as string) || null,
-        status: 'scheduled',
-        handicap: gameType === '핸디캡' && d[20] ? (d[20] as number) : null,
+        status: "scheduled",
+        handicap: gameType === "핸디캡" && d[20] ? (d[20] as number) : null,
         over_under_line: isUnderOver && d[20] ? (d[20] as number) : null,
         home_win_odds: isNormalOrHandicap && (d[16] as number) > 0 ? (d[16] as number) : null,
         draw_odds: isNormalOrHandicap && (d[17] as number) > 0 ? (d[17] as number) : null,
@@ -202,10 +210,10 @@ function parseGames(datas: unknown[]): ParsedGame[] {
 // --- 4. API 호출: 라운드 생성 ---
 async function ensureRound(gmTs: string): Promise<string> {
   const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/round`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CRON_SECRET}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CRON_SECRET}`,
     },
     body: JSON.stringify({ gmTs }),
   })
@@ -217,10 +225,10 @@ async function ensureRound(gmTs: string): Promise<string> {
 // --- 5. API 호출: 게임 업서트 ---
 async function sendGames(roundId: string, games: ParsedGame[]): Promise<number> {
   const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/games`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CRON_SECRET}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CRON_SECRET}`,
     },
     body: JSON.stringify({ roundId, games }),
   })
@@ -239,15 +247,15 @@ async function updateSyncState(data: {
 }): Promise<void> {
   try {
     await fetchWithRetry(`${API_BASE_URL}/api/betman/sync-state`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CRON_SECRET}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${CRON_SECRET}`,
       },
       body: JSON.stringify(data),
     })
   } catch (e) {
-    logError('sync_state 업데이트 실패:', e)
+    logError("sync_state 업데이트 실패:", e)
   }
 }
 
@@ -259,9 +267,9 @@ async function checkResyncRequest(): Promise<{
 }> {
   try {
     const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/sync-state`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${CRON_SECRET}`,
+        Authorization: `Bearer ${CRON_SECRET}`,
       },
     })
     const data = await resp.json()
@@ -288,10 +296,35 @@ async function checkResyncRequest(): Promise<{
 }
 
 // --- 8. 다음 gmTs 프로빙 (새 회차 자동 감지) ---
+interface PendingResultRound {
+  gmTs: string
+  missingGames: number
+}
+
+async function fetchPendingResultGmTs(): Promise<string[]> {
+  try {
+    const resp = await fetchWithRetry(
+      `${API_BASE_URL}/api/betman/pending-results?limit=30&days=45`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${CRON_SECRET}`,
+        },
+      }
+    )
+
+    const data = await resp.json()
+    const items = Array.isArray(data?.items) ? (data.items as PendingResultRound[]) : []
+    return [...new Set(items.map((item) => String(item.gmTs)).filter(Boolean))]
+  } catch (e) {
+    logError("pending-results lookup failed:", e)
+    return []
+  }
+}
 async function probeNextGmTs(knownGmTsList: string[]): Promise<string[]> {
   if (knownGmTsList.length === 0) return []
 
-  const maxKnown = Math.max(...knownGmTsList.map(s => parseInt(s, 10)))
+  const maxKnown = Math.max(...knownGmTsList.map((s) => parseInt(s, 10)))
   if (isNaN(maxKnown)) return []
 
   const discovered: string[] = []
@@ -317,29 +350,40 @@ async function probeNextGmTs(knownGmTsList: string[]): Promise<string[]> {
 // --- 9. 경기 결과 수집 (winrstDetl API) ---
 
 const RESULT_HANDI_MAP: Record<number, string> = {
-  0: '일반', 2: '핸디캡', 5: 'SUM', 6: 'S핸디캡', 7: 'S언더오버', 9: '언더오버', 14: '일반',
+  0: "일반",
+  2: "핸디캡",
+  5: "SUM",
+  6: "S핸디캡",
+  7: "S언더오버",
+  9: "언더오버",
+  14: "일반",
 }
 
-function mapGameResult(gameResult: string, gameType: string): { result: string; status: string } {
-  if (gameResult === '4') return { result: 'cancelled', status: 'cancelled' }
-  if (gameType === '일반' || gameType === '핸디캡' || gameType === 'S핸디캡') {
-    if (gameResult === '0') return { result: 'home', status: 'completed' }
-    if (gameResult === '1') return { result: 'draw', status: 'completed' }
-    if (gameResult === '2') return { result: 'away', status: 'completed' }
-  } else if (gameType === '언더오버' || gameType === 'S언더오버') {
-    if (gameResult === '0') return { result: 'under', status: 'completed' }
-    if (gameResult === '2') return { result: 'over', status: 'completed' }
-  } else if (gameType === 'SUM') {
-    if (gameResult === '0') return { result: 'odd', status: 'completed' }
-    if (gameResult === '2') return { result: 'even', status: 'completed' }
+function mapGameResult(
+  rawGameResult: string | number,
+  gameType: string
+): { result: string; status: string } {
+  const gameResult = String(rawGameResult)
+  if (gameResult === "4") return { result: "cancelled", status: "cancelled" }
+  if (gameType === "일반" || gameType === "핸디캡" || gameType === "S핸디캡") {
+    if (gameResult === "0") return { result: "home", status: "completed" }
+    if (gameResult === "1") return { result: "draw", status: "completed" }
+    if (gameResult === "2") return { result: "away", status: "completed" }
+  } else if (gameType === "언더오버" || gameType === "S언더오버") {
+    if (gameResult === "0") return { result: "under", status: "completed" }
+    if (gameResult === "2") return { result: "over", status: "completed" }
+  } else if (gameType === "SUM") {
+    if (gameResult === "0") return { result: "odd", status: "completed" }
+    if (gameResult === "2") return { result: "even", status: "completed" }
   }
-  return { result: '', status: 'completed' }
+  return { result: "", status: "completed" }
 }
 
 function parseScoreStr(mchScore: string): { home: number; away: number } | null {
-  if (!mchScore || !mchScore.includes(':')) return null
-  const [h, a] = mchScore.split(':').map(Number)
+  if (!mchScore || !mchScore.includes(":")) return null
+  const [h, a] = mchScore.split(":").map(Number)
   if (isNaN(h) || isNaN(a)) return null
+  if (!Number.isInteger(h) || !Number.isInteger(a)) return null
   return { home: h, away: a }
 }
 
@@ -350,31 +394,34 @@ interface ResultItem {
   HANDI_VAL: number
   HOME_TEAM: string
   AWAY_TEAM: string
+  FIX_MCH_DTM?: string
+}
+
+function buildMatchKey(item: Pick<ResultItem, "HOME_TEAM" | "AWAY_TEAM" | "FIX_MCH_DTM">): string {
+  const base = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`
+  return item.FIX_MCH_DTM ? `${base}|${item.FIX_MCH_DTM}` : base
 }
 
 async function fetchResultsForGmTs(gmTs: string): Promise<ResultItem[] | null> {
   try {
-    await fetch(
-      `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
-      { headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'] }, redirect: 'follow' }
-    ).catch(() => {})
+    await fetch(`${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`, {
+      headers: { "User-Agent": BROWSER_HEADERS["User-Agent"] },
+      redirect: "follow",
+    }).catch(() => {})
 
-    const resp = await fetchWithRetry(
-      `${BETMAN_BASE}/gamebuy/winrst/inqWinrstDetlBody.do`,
-      {
-        method: 'POST',
-        headers: {
-          ...BROWSER_HEADERS,
-          'Content-Type': 'application/json;charset=UTF-8',
-          'Referer': `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
-        },
-        body: JSON.stringify({
-          gmId: GM_ID,
-          gmTs: Number(gmTs),
-          _sbmInfo: { _sbmInfo: { debugMode: 'false' } },
-        }),
+    const resp = await fetchWithRetry(`${BETMAN_BASE}/gamebuy/winrst/inqWinrstDetlBody.do`, {
+      method: "POST",
+      headers: {
+        ...BROWSER_HEADERS,
+        "Content-Type": "application/json;charset=UTF-8",
+        Referer: `${BETMAN_BASE}/main/mainPage/gamebuy/winrstDetl.do?gmId=${GM_ID}&gmTs=${gmTs}`,
       },
-    )
+      body: JSON.stringify({
+        gmId: GM_ID,
+        gmTs: Number(gmTs),
+        _sbmInfo: { _sbmInfo: { debugMode: "false" } },
+      }),
+    })
 
     const data = await resp.json()
     const items = data?.detlBody
@@ -386,14 +433,17 @@ async function fetchResultsForGmTs(gmTs: string): Promise<ResultItem[] | null> {
   }
 }
 
-async function sendResultsToApi(gmTs: string, resultItems: ResultItem[]): Promise<{ updated: number; cancelled: number }> {
+async function sendResultsToApi(
+  gmTs: string,
+  resultItems: ResultItem[]
+): Promise<{ updated: number; cancelled: number }> {
   const actualScoreMap = new Map<string, { home: number; away: number }>()
   for (const item of resultItems) {
-    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
-    if (gameType === '일반') {
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? "일반"
+    if (gameType === "일반") {
       const score = parseScoreStr(item.MCH_SCORE)
       if (score) {
-        actualScoreMap.set(`${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`, score)
+        actualScoreMap.set(buildMatchKey(item), score)
       }
     }
   }
@@ -407,26 +457,52 @@ async function sendResultsToApi(gmTs: string, resultItems: ResultItem[]): Promis
   }> = []
 
   for (const item of resultItems) {
-    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? '일반'
-    const mapped = mapGameResult(item.GAME_RESULT, gameType)
-    if (mapped.result === '' && mapped.status === 'completed') continue
+    const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? "일반"
+    let mapped = mapGameResult(item.GAME_RESULT, gameType)
 
     let homeScore: number | null = null
     let awayScore: number | null = null
 
-    if (gameType === '일반') {
+    if (gameType === "일반") {
       const score = parseScoreStr(item.MCH_SCORE)
-      if (score) { homeScore = score.home; awayScore = score.away }
+      if (score) {
+        homeScore = score.home
+        awayScore = score.away
+      }
     } else {
-      const key = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}`
+      const key = buildMatchKey(item)
       const actual = actualScoreMap.get(key)
-      if (actual) { homeScore = actual.home; awayScore = actual.away }
-      else {
+      if (actual) {
+        homeScore = actual.home
+        awayScore = actual.away
+      } else {
         const fallback = parseScoreStr(item.MCH_SCORE)
-        if (fallback) { homeScore = fallback.home; awayScore = fallback.away }
+        if (fallback) {
+          homeScore = fallback.home
+          awayScore = fallback.away
+        }
       }
     }
 
+    // Score fallback when GAME_RESULT is missing.
+    if (
+      mapped.result === "" &&
+      mapped.status === "completed" &&
+      homeScore !== null &&
+      awayScore !== null
+    ) {
+      const total = homeScore + awayScore
+      if (gameType === "SUM") {
+        mapped = { result: total % 2 === 0 ? "even" : "odd", status: "completed" }
+      } else if (
+        gameType === "\uC5B8\uB354\uC624\uBC84" ||
+        gameType === "S\uC5B8\uB354\uC624\uBC84"
+      ) {
+        // Under/Over requires a line value; server API handles second-stage derivation.
+      }
+    }
+
+    if (mapped.result === "" && mapped.status === "completed") continue
     results.push({
       game_no: item.GM_SEQ,
       home_score: homeScore,
@@ -439,10 +515,10 @@ async function sendResultsToApi(gmTs: string, resultItems: ResultItem[]): Promis
   if (results.length === 0) return { updated: 0, cancelled: 0 }
 
   const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/results`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CRON_SECRET}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CRON_SECRET}`,
     },
     body: JSON.stringify({ gmTs, results }),
   })
@@ -454,7 +530,7 @@ async function sendResultsToApi(gmTs: string, resultItems: ResultItem[]): Promis
 // --- 메인 실행 ---
 async function main() {
   if (!API_BASE_URL || !CRON_SECRET) {
-    logError('환경 변수가 설정되지 않았습니다: API_BASE_URL, CRON_SECRET')
+    logError("환경 변수가 설정되지 않았습니다: API_BASE_URL, CRON_SECRET")
     process.exit(1)
   }
 
@@ -469,28 +545,30 @@ async function main() {
     // Phase 1: Watchdog resync 요청 확인
     const resyncReq = await checkResyncRequest()
     if (resyncReq.needsResync) {
-      log(`⚠️  Watchdog resync 요청 감지! 범위: ${resyncReq.probeRangeStart} ~ ${resyncReq.probeRangeEnd}`)
+      log(
+        `⚠️  Watchdog resync 요청 감지! 범위: ${resyncReq.probeRangeStart} ~ ${resyncReq.probeRangeEnd}`
+      )
     }
 
     // Phase 2: 구매 가능 gmTs 조회
     let gmTsList: string[] = []
     try {
       gmTsList = await fetchAvailableGmTs()
-      log(`구매 가능 gmTs: ${gmTsList.length > 0 ? gmTsList.join(', ') : '없음'}`)
+      log(`구매 가능 gmTs: ${gmTsList.length > 0 ? gmTsList.join(", ") : "없음"}`)
     } catch (e) {
-      logError('gmTs 목록 조회 실패:', e)
+      logError("gmTs 목록 조회 실패:", e)
       syncErrors.push(`gmTs 목록 조회 실패: ${(e as Error).message}`)
     }
 
     // Phase 3: 다음 gmTs 프로빙 (새 회차 자동 감지)
     if (gmTsList.length > 0) {
-      log('다음 회차 프로빙 시작...')
+      log("다음 회차 프로빙 시작...")
       const probed = await probeNextGmTs(gmTsList)
       if (probed.length > 0) {
         gmTsList = [...gmTsList, ...probed]
-        log(`프로빙으로 추가 발견: ${probed.join(', ')}`)
+        log(`프로빙으로 추가 발견: ${probed.join(", ")}`)
       } else {
-        log('추가 회차 없음')
+        log("추가 회차 없음")
       }
     }
 
@@ -517,9 +595,9 @@ async function main() {
     }
 
     if (gmTsList.length === 0) {
-      log('동기화할 gmTs가 없습니다.')
+      log("동기화할 gmTs가 없습니다.")
       await updateSyncState({
-        lastSyncAction: 'checked',
+        lastSyncAction: "checked",
         lastSyncGamesCount: 0,
         lastError: null,
       })
@@ -569,7 +647,12 @@ async function main() {
     let totalResultsUpdated = 0
     let totalResultsCancelled = 0
 
-    const allGmTsForResults = [...new Set([...allProcessedGmTs, ...gmTsList])]
+    const pendingResultGmTs = await fetchPendingResultGmTs()
+    if (pendingResultGmTs.length > 0) {
+      log("pending result rounds: " + pendingResultGmTs.join(", "))
+    }
+
+    const allGmTsForResults = [...new Set([...allProcessedGmTs, ...gmTsList, ...pendingResultGmTs])]
     for (const gmTs of allGmTsForResults) {
       try {
         const items = await fetchResultsForGmTs(gmTs)
@@ -594,30 +677,31 @@ async function main() {
     }
 
     // Phase 6: sync_state 업데이트
-    const latestGmTs = allProcessedGmTs.length > 0
-      ? allProcessedGmTs[allProcessedGmTs.length - 1]
-      : undefined
+    const latestGmTs =
+      allProcessedGmTs.length > 0 ? allProcessedGmTs[allProcessedGmTs.length - 1] : undefined
 
     await updateSyncState({
       latestGmTs,
       activeRounds: allProcessedGmTs,
-      lastSyncAction: totalGames > 0 ? 'vps_synced' : 'vps_checked',
+      lastSyncAction: totalGames > 0 ? "vps_synced" : "vps_checked",
       lastSyncGamesCount: totalGames,
-      lastError: syncErrors.length > 0 ? syncErrors.join('; ') : null,
+      lastError: syncErrors.length > 0 ? syncErrors.join("; ") : null,
     })
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1)
-    log(`=== 동기화 완료 === ${allProcessedGmTs.length}개 라운드, ${totalGames}건 게임, ${totalResultsUpdated}건 결과, ${duration}s`)
+    log(
+      `=== 동기화 완료 === ${allProcessedGmTs.length}개 라운드, ${totalGames}건 게임, ${totalResultsUpdated}건 결과, ${duration}s`
+    )
 
     if (syncErrors.length > 0) {
       log(`경고: ${syncErrors.length}개 에러 발생`)
-      syncErrors.forEach(e => log(`  - ${e}`))
+      syncErrors.forEach((e) => log(`  - ${e}`))
     }
   } catch (err) {
-    logError('치명적 오류:', err)
+    logError("치명적 오류:", err)
 
     await updateSyncState({
-      lastSyncAction: 'vps_error',
+      lastSyncAction: "vps_error",
       lastSyncGamesCount: 0,
       lastError: `치명적 오류: ${(err as Error).message}`,
     })

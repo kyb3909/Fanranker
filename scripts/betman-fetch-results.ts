@@ -27,28 +27,57 @@ const handiMap: Record<number, string> = {
   14: "일반",
 }
 
-// GAME_RESULT 코드 → DB result 값 (게임 타입별)
-function mapGameResult(gameResult: string, gameType: string): { result: string; status: string } {
-  // 취소/적특
-  if (gameResult === "4") {
-    return { result: "cancelled", status: "cancelled" }
-  }
+function mapGameResult(
+  rawGameResult: string | number,
+  gameType: string
+): { result: string; status: string } {
+  const gameResult = String(rawGameResult)
+
+  if (gameResult === "4") return { result: "cancelled", status: "cancelled" }
 
   if (gameType === "일반" || gameType === "핸디캡" || gameType === "S핸디캡") {
-    // 0=WIN(홈승), 1=DRAW(무), 2=LOSE(원정승)
     if (gameResult === "0") return { result: "home", status: "completed" }
     if (gameResult === "1") return { result: "draw", status: "completed" }
     if (gameResult === "2") return { result: "away", status: "completed" }
   } else if (gameType === "언더오버" || gameType === "S언더오버") {
-    // 0=WIN(언더), 2=LOSE(오버)
     if (gameResult === "0") return { result: "under", status: "completed" }
     if (gameResult === "2") return { result: "over", status: "completed" }
   } else if (gameType === "SUM") {
-    // 0=홀(odd), 2=짝(even)
     if (gameResult === "0") return { result: "odd", status: "completed" }
     if (gameResult === "2") return { result: "even", status: "completed" }
   }
   return { result: "", status: "completed" }
+}
+
+function deriveResultFromScore(
+  homeScore: number,
+  awayScore: number,
+  gameType: string,
+  handicap: number | null,
+  overUnderLine: number | null
+): string {
+  if (gameType === "핸디캡" || gameType === "S핸디캡") {
+    const h = handicap ?? 0
+    const adjusted = homeScore + h
+    if (adjusted > awayScore) return "home"
+    if (adjusted < awayScore) return "away"
+    return "draw"
+  }
+  if (gameType === "언더오버" || gameType === "S언더오버") {
+    const total = homeScore + awayScore
+    const line = overUnderLine ?? 0
+    if (line === 0) return ""
+    if (total > line) return "over"
+    if (total < line) return "under"
+    return ""
+  }
+  if (gameType === "SUM") {
+    const total = homeScore + awayScore
+    return total % 2 === 0 ? "even" : "odd"
+  }
+  if (homeScore > awayScore) return "home"
+  if (homeScore < awayScore) return "away"
+  return "draw"
 }
 
 /** MCH_SCORE 파싱: "104:101" → { home: 104, away: 101 } */
@@ -56,6 +85,7 @@ function parseScore(mchScore: string): { home: number; away: number } | null {
   if (!mchScore || !mchScore.includes(":")) return null
   const [h, a] = mchScore.split(":").map(Number)
   if (isNaN(h) || isNaN(a)) return null
+  if (!Number.isInteger(h) || !Number.isInteger(a)) return null
   return { home: h, away: a }
 }
 
@@ -238,38 +268,67 @@ async function main() {
       status: string
     }> = []
 
-    let skippedSUM = 0
+    // DB에서 게임별 핸디캡/라인 조건 조회 (스코어 기반 결과 추론에 필요)
+    let gameConditionMap = new Map<
+      number,
+      { game_type: string; handicap: number | null; over_under_line: number | null }
+    >()
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (supabaseUrl && serviceKey) {
+        const condRes = await fetch(
+          `${supabaseUrl}/rest/v1/betman_games?select=game_no,game_type,handicap,over_under_line&round_id=eq.${await (async () => {
+            const roundRes = await fetch(
+              `${supabaseUrl}/rest/v1/betman_rounds?select=id&gm_ts=eq.${gmTs}&limit=1`,
+              { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+            )
+            const rows = await roundRes.json()
+            return rows?.[0]?.id || ""
+          })()}`,
+          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+        )
+        if (condRes.ok) {
+          const condData = await condRes.json()
+          gameConditionMap = new Map(
+            (condData || []).map(
+              (g: {
+                game_no: number
+                game_type: string
+                handicap: number | null
+                over_under_line: number | null
+              }) => [g.game_no, g]
+            )
+          )
+        }
+      }
+    } catch {
+      console.error("게임 조건 조회 실패 (스코어 기반 추론 비활성)")
+    }
+
+    let skipped = 0
+    let derived = 0
 
     for (const item of items) {
       const gameType = handiMap[item.HANDI_VAL] ?? "일반"
-      const { result, status } = mapGameResult(item.GAME_RESULT, gameType)
+      let mapped = mapGameResult(item.GAME_RESULT, gameType)
 
-      // result 매핑 실패 시 (알 수 없는 game_type) 스킵
-      if (result === "" && status === "completed") {
-        skippedSUM++
-        continue
-      }
-
-      // 실제 점수 조회 (같은 팀/시간의 일반 게임에서)
       const matchKey = `${item.HOME_TEAM.trim()}|${item.AWAY_TEAM.trim()}|${item.FIX_MCH_DTM}`
       let homeScore: number | null = null
       let awayScore: number | null = null
 
       if (gameType === "일반") {
-        // 일반 게임은 MCH_SCORE가 실제 점수
         const score = parseScore(item.MCH_SCORE)
         if (score) {
           homeScore = score.home
           awayScore = score.away
         }
       } else {
-        // 핸디캡/언더오버/SUM은 일반 게임의 실제 점수 사용
         const actual = actualScoreMap.get(matchKey)
         if (actual) {
           homeScore = actual.home
           awayScore = actual.away
         } else {
-          // fallback: MCH_SCORE 직접 파싱 시도 (일부 게임 타입에서 점수 포함)
           const fallbackScore = parseScore(item.MCH_SCORE)
           if (fallbackScore) {
             homeScore = fallbackScore.home
@@ -278,20 +337,45 @@ async function main() {
         }
       }
 
+      // GAME_RESULT 매핑 실패 시 스코어 기반 결과 추론
+      if (
+        mapped.result === "" &&
+        mapped.status === "completed" &&
+        homeScore !== null &&
+        awayScore !== null
+      ) {
+        const cond = gameConditionMap.get(item.GM_SEQ)
+        const derivedResult = deriveResultFromScore(
+          homeScore,
+          awayScore,
+          cond?.game_type || gameType,
+          cond?.handicap ?? null,
+          cond?.over_under_line ?? null
+        )
+        if (derivedResult) {
+          mapped = { result: derivedResult, status: "completed" }
+          derived++
+        }
+      }
+
+      if (mapped.result === "" && mapped.status === "completed") {
+        skipped++
+        continue
+      }
+
       results.push({
         game_no: item.GM_SEQ,
         home_score: homeScore,
         away_score: awayScore,
-        result,
-        status,
+        result: mapped.result,
+        status: mapped.status,
       })
     }
 
-    // 통계 출력
     const completed = results.filter((r) => r.status === "completed").length
     const cancelled = results.filter((r) => r.status === "cancelled").length
     console.log(
-      `매핑 완료: completed=${completed}, cancelled=${cancelled}, SUM(result빈값)=${skippedSUM}`
+      `매핑 완료: completed=${completed}, cancelled=${cancelled}, derived=${derived}, skipped=${skipped}`
     )
 
     // API 호출하여 DB 업데이트

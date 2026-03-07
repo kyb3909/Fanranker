@@ -1,11 +1,7 @@
 import React from "react"
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { render, screen } from "@testing-library/react"
 import { ShareMenu } from "@/components/share-menu"
-
-// ShareMenu uses Radix DropdownMenu which doesn't fully render in jsdom.
-// Instead of testing click interactions on the dropdown items,
-// we test the component's internal logic by importing and testing the functions.
 
 describe("ShareMenu", () => {
   beforeEach(() => {
@@ -16,31 +12,29 @@ describe("ShareMenu", () => {
     })
   })
 
-  it("renders share button with text", () => {
+  it("renders share button", () => {
     render(<ShareMenu postId={1} postTitle="테스트" />)
-    expect(screen.getByText("공유")).toBeDefined()
+    expect(screen.getByRole("button")).toBeDefined()
   })
 
-  it("renders as a button element", () => {
+  it("renders as an accessible button element", () => {
     render(<ShareMenu postId={1} postTitle="테스트" />)
-    const btn = screen.getByText("공유").closest("button")
-    expect(btn).not.toBeNull()
+    const button = screen.getByRole("button")
+    expect(button.getAttribute("aria-label")).toBeTruthy()
   })
 
-  it("constructs correct post URL from postId", () => {
-    // The component builds URL as `${window.location.origin}/post/${postId}`
-    // We can verify by checking the component renders without error
+  it("constructs URL-capable share menu from postId", () => {
     render(<ShareMenu postId={42} postTitle="재미있는 글" />)
-    expect(screen.getByText("공유")).toBeDefined()
+    expect(screen.getByRole("button")).toBeDefined()
   })
 
   it("accepts string postId", () => {
     render(<ShareMenu postId="abc-123" postTitle="테스트" />)
-    expect(screen.getByText("공유")).toBeDefined()
+    expect(screen.getByRole("button")).toBeDefined()
   })
 
   it("accepts number postId", () => {
     render(<ShareMenu postId={999} postTitle="테스트" />)
-    expect(screen.getByText("공유")).toBeDefined()
+    expect(screen.getByRole("button")).toBeDefined()
   })
 })

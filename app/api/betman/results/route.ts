@@ -18,12 +18,43 @@ const resultsPostSchema = z.object({
   results: z.array(resultItemSchema).min(1, "results 배열이 비어 있습니다."),
 })
 
+function deriveResultFromScore(
+  homeScore: number,
+  awayScore: number,
+  gameType: string,
+  handicap: number | null,
+  overUnderLine: number | null
+): string {
+  if (gameType === "핸디캡" || gameType === "S핸디캡") {
+    const adjusted = homeScore + (handicap ?? 0)
+    if (adjusted > awayScore) return "home"
+    if (adjusted < awayScore) return "away"
+    return "draw"
+  }
+
+  if (gameType === "언더오버" || gameType === "S언더오버") {
+    const line = overUnderLine ?? 0
+    if (line === 0) return ""
+    const total = homeScore + awayScore
+    if (total > line) return "over"
+    if (total < line) return "under"
+    return ""
+  }
+
+  if (gameType === "SUM") {
+    const total = homeScore + awayScore
+    return total % 2 === 0 ? "even" : "odd"
+  }
+
+  if (homeScore > awayScore) return "home"
+  if (homeScore < awayScore) return "away"
+  return "draw"
+}
+
 /**
  * POST /api/betman/results
  *
- * 크롤링 스크립트(betman-fetch-results.ts)가 호출.
- * betman_games 테이블의 결과(home_score, away_score, result, status)를 업데이트.
- * 결과 반영 후 자동 정산 실행.
+ * VPS 스크립트가 호출하여 경기 결과를 반영하고 자동 정산을 수행한다.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,15 +67,15 @@ export async function POST(request: NextRequest) {
     } catch {
       return apiBadRequest("잘못된 요청 본문입니다.")
     }
+
     const parsed = resultsPostSchema.safeParse(body)
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
-    const { gmTs, results } = parsed.data
 
+    const { gmTs, results } = parsed.data
     const supabase = createServiceRoleClient()
 
-    // gmTs로 round_id 조회
     const { data: round, error: roundError } = await supabase
       .from("betman_rounds")
       .select("id")
@@ -53,18 +84,61 @@ export async function POST(request: NextRequest) {
 
     if (roundError || !round) {
       return NextResponse.json(
-        { error: `gmTs=${gmTs}에 해당하는 회차를 찾을 수 없습니다.` },
+        { error: `gmTs=${gmTs}에 해당하는 라운드를 찾을 수 없습니다.` },
         { status: 404 }
       )
     }
 
     const roundId = round.id
+    const targetGameNos = Array.from(new Set(results.map((r) => r.game_no)))
+
+    const { data: targetGames, error: targetGamesError } = await supabase
+      .from("betman_games")
+      .select("id, game_no, game_type, handicap, over_under_line")
+      .eq("round_id", roundId)
+      .in("game_no", targetGameNos)
+
+    if (targetGamesError) {
+      return apiError("정산 대상 경기 조회 실패", 500, targetGamesError)
+    }
+
+    const gameByNo = new Map((targetGames || []).map((g) => [g.game_no, g]))
+
     let updated = 0
     let cancelled = 0
+    let derived = 0
+    let unresolved = 0
     const errors: string[] = []
 
-    // 각 경기 결과 업데이트
     for (const r of results) {
+      const gameMeta = gameByNo.get(r.game_no)
+      if (!gameMeta) {
+        errors.push(`game_no=${r.game_no}: 해당 경기 없음 (round=${roundId})`)
+        continue
+      }
+
+      let finalResult = r.result
+      if (
+        (!finalResult || finalResult === "") &&
+        r.status === "completed" &&
+        r.home_score !== null &&
+        r.away_score !== null
+      ) {
+        finalResult = deriveResultFromScore(
+          r.home_score,
+          r.away_score,
+          gameMeta.game_type,
+          gameMeta.handicap,
+          gameMeta.over_under_line
+        )
+        if (finalResult) derived++
+      }
+
+      if ((!finalResult || finalResult === "") && r.status === "completed") {
+        unresolved++
+        errors.push(`game_no=${r.game_no}: 완료 상태이지만 결과를 확정하지 못함`)
+      }
+
       const updateData: Record<string, unknown> = {
         status: r.status,
         updated_at: new Date().toISOString(),
@@ -72,10 +146,7 @@ export async function POST(request: NextRequest) {
 
       if (r.home_score !== null) updateData.home_score = r.home_score
       if (r.away_score !== null) updateData.away_score = r.away_score
-
-      if (r.result && r.result !== "") {
-        updateData.result = r.result
-      }
+      if (finalResult && finalResult !== "") updateData.result = finalResult
 
       const { data: updatedRows, error: updateError } = await supabase
         .from("betman_games")
@@ -87,33 +158,32 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         errors.push(`game_no=${r.game_no}: ${updateError.message}`)
       } else if (!updatedRows || updatedRows.length === 0) {
-        errors.push(`game_no=${r.game_no}: 해당 경기를 찾을 수 없습니다 (round=${roundId})`)
+        errors.push(`game_no=${r.game_no}: 해당 경기를 찾을 수 없음 (round=${roundId})`)
       } else {
-        if (r.status === "cancelled") {
-          cancelled++
-        } else {
-          updated++
-        }
+        if (r.status === "cancelled") cancelled++
+        else updated++
       }
     }
 
-    // --- 결과 반영된 게임의 자동 정산 ---
     const settleErrors: string[] = []
     let settleResult = null
 
     try {
-      const updatedGameNos = results.map((r) => r.game_no)
       const { data: updatedGames } = await supabase
         .from("betman_games")
         .select(
           "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
         )
         .eq("round_id", roundId)
-        .in("game_no", updatedGameNos)
+        .in("game_no", targetGameNos)
         .in("status", ["completed", "cancelled"])
 
-      if (updatedGames && updatedGames.length > 0) {
-        const gameIds = updatedGames.map((g) => g.id)
+      const settleableGames = (updatedGames || []).filter(
+        (g) => g.status === "cancelled" || (!!g.result && g.result !== "")
+      )
+
+      if (settleableGames.length > 0) {
+        const gameIds = settleableGames.map((g) => g.id)
 
         const { data: predictions } = await supabase
           .from("betman_predictions")
@@ -122,14 +192,13 @@ export async function POST(request: NextRequest) {
           .eq("status", "pending")
 
         if (predictions && predictions.length > 0) {
-          // 공통 정산 로직 실행
-          settleResult = await settlePredictions(supabase, updatedGames, predictions)
+          settleResult = await settlePredictions(supabase, settleableGames, predictions)
         }
 
-        // daily round 상태 업데이트
         const dailyRoundIds = [
-          ...new Set(updatedGames.map((g) => g.daily_round_id).filter(Boolean)),
+          ...new Set(settleableGames.map((g) => g.daily_round_id).filter(Boolean)),
         ]
+
         for (const drId of dailyRoundIds) {
           await supabase
             .from("betman_games")
@@ -169,6 +238,8 @@ export async function POST(request: NextRequest) {
       gmTs,
       updated,
       cancelled,
+      derived,
+      unresolved,
       total: results.length,
       autoSettle: settleResult
         ? {
@@ -182,7 +253,9 @@ export async function POST(request: NextRequest) {
         [...errors, ...settleErrors, ...(settleResult?.errors || [])].length > 0
           ? [...errors, ...settleErrors, ...(settleResult?.errors || [])]
           : undefined,
-      message: `${updated}건 업데이트, ${cancelled}건 취소${settleResult ? `, ${settleResult.settled}건 자동 정산` : ""}`,
+      message: `${updated}건 업데이트, ${cancelled}건 취소${derived > 0 ? `, ${derived}건 결과 유추` : ""}${
+        settleResult ? `, ${settleResult.settled}건 자동 정산` : ""
+      }`,
     })
   } catch (e) {
     return apiError("서버 오류가 발생했습니다.", 500, e)

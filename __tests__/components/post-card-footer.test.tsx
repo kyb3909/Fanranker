@@ -3,14 +3,12 @@ import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { PostCardFooter } from "@/components/post-card/post-card-footer"
 
-// Mock next/link
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
 }))
 
-// Mock ShareMenu to simplify testing
 vi.mock("@/components/share-menu", () => ({
   ShareMenu: () => <div data-testid="share-menu">Share</div>,
 }))
@@ -20,7 +18,6 @@ const defaultProps = {
   postTitle: "테스트 포스트",
   author: "testUser",
   avatar: "/test-avatar.jpg",
-  authorTemperature: 36.5,
   temperature: 42,
   voteCount: 10,
   myVote: null as "up" | "down" | null,
@@ -55,21 +52,10 @@ describe("PostCardFooter", () => {
     expect(screen.getByText("42°")).toBeDefined()
   })
 
-  it("renders author temperature when positive", () => {
-    render(<PostCardFooter {...defaultProps} />)
-    expect(screen.getByText("36.5°")).toBeDefined()
-  })
-
-  it("hides author temperature when zero", () => {
-    render(<PostCardFooter {...defaultProps} authorTemperature={0} />)
-    expect(screen.queryByText("0.0°")).toBeNull()
-  })
-
-  it("hides author temperature when undefined", () => {
-    render(<PostCardFooter {...defaultProps} authorTemperature={undefined} />)
-    // Only post temperature should show
-    const temps = screen.getAllByText(/°/)
-    expect(temps.length).toBe(1)
+  it("keeps author temperature hidden", () => {
+    const { container } = render(<PostCardFooter {...defaultProps} />)
+    const thermometers = container.querySelectorAll("svg.lucide-thermometer")
+    expect(thermometers.length).toBe(1)
   })
 
   it("calls onVote with 'up' when upvote clicked", () => {

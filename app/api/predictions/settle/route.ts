@@ -9,13 +9,12 @@ export const dynamic = "force-dynamic"
 /**
  * GET /api/predictions/settle?unsettled_only=true
  *
- * betman_games 기반 미정산 경기 목록 조회 (관리자 전용)
- */
+ * ?온?귐딆쁽 ?類ㅺ텦 ?遺얇늺?癒?퐣 pending ??됰?????λ툡??덈뮉 野껋럡由?筌뤴뫖以?鈺곌퀬?? */
 export async function GET(request: NextRequest) {
   try {
     const admin = await isAdmin()
     if (!admin) {
-      return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
+      return NextResponse.json({ error: "Admin privileges required." }, { status: 403 })
     }
 
     const supabase = createServiceRoleClient()
@@ -24,19 +23,47 @@ export async function GET(request: NextRequest) {
     const dailyRoundId = searchParams.get("daily_round_id")
 
     if (unsettledOnly) {
+      const { data: pendingPredictions, error: pendingError } = await supabase
+        .from("betman_predictions")
+        .select("game_id")
+        .eq("status", "pending")
+
+      if (pendingError) {
+        console.error("[settle GET] pending predictions query error:", pendingError)
+        return NextResponse.json({ error: "Failed to fetch pending predictions." }, { status: 500 })
+      }
+
+      const pendingGameIds = Array.from(
+        new Set(
+          (pendingPredictions || [])
+            .map((p) => p.game_id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0)
+        )
+      )
+
+      if (pendingGameIds.length === 0) {
+        return NextResponse.json({ matches: [], total: 0 })
+      }
+
       const { data: games, error } = await supabase
         .from("betman_games")
         .select(
-          "id, game_no, sport, game_type, home_team_name, away_team_name, match_time, status, result, home_score, away_score, daily_round_id"
+          "id, game_no, sport, game_type, home_team_name, away_team_name, match_time, status, result, home_score, away_score, daily_round_id, handicap, over_under_line"
         )
+        .in("id", pendingGameIds)
         .lt("match_time", new Date().toISOString())
-        .is("result", null)
         .order("match_time", { ascending: false })
         .limit(200)
 
       if (error) {
-        console.error("[settle GET] query error:", error)
-        return NextResponse.json({ error: "경기 조회 중 오류가 발생했습니다." }, { status: 500 })
+        console.error("[settle GET] game query error:", error)
+        return NextResponse.json({ error: "Failed to fetch games." }, { status: 500 })
+      }
+
+      const pendingCountByGameId = new Map<string, number>()
+      for (const p of pendingPredictions || []) {
+        if (!p.game_id) continue
+        pendingCountByGameId.set(p.game_id, (pendingCountByGameId.get(p.game_id) || 0) + 1)
       }
 
       const matches = (games || []).map((g) => ({
@@ -52,7 +79,10 @@ export async function GET(request: NextRequest) {
         home_score: g.home_score,
         away_score: g.away_score,
         daily_round_id: g.daily_round_id,
-        has_result: !!g.result,
+        has_result: !!g.result || g.status === "cancelled",
+        handicap: g.handicap,
+        over_under_line: g.over_under_line,
+        pending_count: pendingCountByGameId.get(g.id) || 0,
       }))
 
       return NextResponse.json({ matches, total: matches.length })
@@ -68,25 +98,22 @@ export async function GET(request: NextRequest) {
         .order("game_no")
 
       if (error) {
-        return NextResponse.json({ error: "경기 조회 중 오류가 발생했습니다." }, { status: 500 })
+        return NextResponse.json({ error: "Failed to fetch games." }, { status: 500 })
       }
 
       return NextResponse.json({ matches: games || [] })
     }
 
-    return apiBadRequest("unsettled_only 또는 daily_round_id 파라미터가 필요합니다.")
+    return apiBadRequest("unsettled_only or daily_round_id is required.")
   } catch (error) {
-    return apiError("서버 오류가 발생했습니다.", 500, error)
+    return apiError("Server error occurred.", 500, error)
   }
 }
 
 /**
  * POST /api/predictions/settle
  *
- * 관리자 수동 정산: daily_round_id 또는 game_ids 기반
- * Body: { daily_round_id?: string, game_ids?: string[] }
- *
- * 공통 settlePredictions 함수를 활용하여 기존 betman/settle 경로와 동일한 로직 적용
+ * ?온?귐딆쁽 ??롫짗 ?類ㅺ텦: daily_round_id ?癒?뮉 game_ids 疫꿸퀡而? * Body: { daily_round_id?: string, game_ids?: string[] }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -95,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     const admin = await isAdmin()
     if (!admin) {
-      return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
+      return NextResponse.json({ error: "Admin privileges required." }, { status: 403 })
     }
 
     const supabase = createServiceRoleClient()
@@ -106,39 +133,35 @@ export async function POST(request: NextRequest) {
     }
 
     if (!daily_round_id && (!game_ids || game_ids.length === 0)) {
-      return apiBadRequest("daily_round_id 또는 game_ids가 필요합니다.")
+      return apiBadRequest("daily_round_id or game_ids is required.")
     }
+
+    const gameSelect =
+      "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
 
     let games
     if (game_ids && game_ids.length > 0) {
       const { data, error } = await supabase
         .from("betman_games")
-        .select(
-          "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
-        )
+        .select(gameSelect)
         .in("id", game_ids)
-        .not("result", "is", null)
+        .in("status", ["completed", "cancelled"])
 
-      if (error) return apiError("경기 조회 실패", 500, error)
-      games = data
+      if (error) return apiError("Failed to fetch games", 500, error)
+      games = (data || []).filter((g) => g.status === "cancelled" || g.result !== null)
     } else if (daily_round_id) {
       const { data, error } = await supabase
         .from("betman_games")
-        .select(
-          "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
-        )
+        .select(gameSelect)
         .eq("daily_round_id", daily_round_id)
-        .not("result", "is", null)
+        .in("status", ["completed", "cancelled"])
 
-      if (error) return apiError("경기 조회 실패", 500, error)
-      games = data
+      if (error) return apiError("Failed to fetch games", 500, error)
+      games = (data || []).filter((g) => g.status === "cancelled" || g.result !== null)
     }
 
     if (!games || games.length === 0) {
-      return NextResponse.json(
-        { error: "결과가 입력된 정산 가능 경기가 없습니다. 먼저 경기 결과를 입력해주세요." },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "No settleable games with results." }, { status: 404 })
     }
 
     const gameIds = games.map((g) => g.id)
@@ -148,12 +171,12 @@ export async function POST(request: NextRequest) {
       .in("game_id", gameIds)
       .eq("status", "pending")
 
-    if (predError) return apiError("예측 조회 실패", 500, predError)
+    if (predError) return apiError("Failed to fetch predictions", 500, predError)
 
     if (!predictions || predictions.length === 0) {
       return NextResponse.json({
         success: true,
-        message: "정산할 pending 예측이 없습니다.",
+        message: "No pending predictions to settle.",
         settled: 0,
       })
     }
@@ -163,9 +186,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result,
-      message: `${result.settled}건 정산 완료 (적중 ${result.correct}, 미적중 ${result.wrong}, 취소 ${result.cancelled})`,
+      message: `${result.settled} settled (correct ${result.correct}, wrong ${result.wrong}, cancelled ${result.cancelled})`,
     })
   } catch (error) {
-    return apiError("서버 오류가 발생했습니다.", 500, error)
+    return apiError("Server error occurred.", 500, error)
   }
 }
