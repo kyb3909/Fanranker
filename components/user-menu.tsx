@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useUser, useClerk } from "@clerk/nextjs"
 import {
   DropdownMenu,
@@ -16,6 +17,17 @@ import Link from "next/link"
 export function UserMenu() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoaded || !user) return
+    fetch("/api/profile/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.avatar_url) setProfileAvatarUrl(data.avatar_url)
+      })
+      .catch(() => {})
+  }, [isLoaded, user])
 
   if (!isLoaded || !user) {
     return (
@@ -39,7 +51,7 @@ export function UserMenu() {
           aria-label="사용자 메뉴"
         >
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.imageUrl} alt={user.fullName || "사용자"} />
+            <AvatarImage src={profileAvatarUrl || user.imageUrl} alt={user.fullName || "사용자"} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
               {userInitials}
             </AvatarFallback>
@@ -55,7 +67,10 @@ export function UserMenu() {
         <div className="mb-1 px-3 py-3">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={user.imageUrl} alt={user.fullName || "사용자"} />
+              <AvatarImage
+                src={profileAvatarUrl || user.imageUrl}
+                alt={user.fullName || "사용자"}
+              />
               <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
                 {userInitials}
               </AvatarFallback>

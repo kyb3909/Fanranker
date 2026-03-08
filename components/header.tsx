@@ -88,11 +88,11 @@ export function Header() {
   return (
     <header className="border-border bg-card/95 sticky top-0 z-50 w-full border-b backdrop-blur-md">
       {/* Threads 스타일: 충분한 높이, 명확한 구조 */}
-      <div className="mx-auto max-w-[1280px] px-6 sm:px-10">
+      <div className="mx-auto max-w-[1280px] px-3 sm:px-10">
         {/* 높이 56px: Threads 스타일 - 여유있는 헤더 */}
         <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2">
           {/* Logo: 왼쪽 정렬 */}
-          <div className="-ml-[25px] flex min-w-0 shrink-0 items-center justify-start gap-2 sm:gap-3">
+          <div className="flex min-w-0 items-center justify-start">
             <Link
               href="/"
               onClick={(e) => {
@@ -103,10 +103,10 @@ export function Header() {
                   window.scrollTo(0, 0)
                 }
               }}
-              className="relative ml-3 flex items-baseline"
+              className="relative flex items-baseline"
               aria-label="홈"
             >
-              {/* 그깟 공놀이 붓글씨 (뒤쪽 레이어) */}
+              {/* 그깟 공놀이 붓글씨 (데스크탑만) */}
               <span className="relative z-0 -ml-1 hidden h-8 w-auto shrink-0 sm:block" aria-hidden>
                 <Image
                   src="/logo-brush.webp"
@@ -117,9 +117,9 @@ export function Header() {
                   priority
                 />
               </span>
-              {/* gongnori.fan 텍스트가 붓글씨 오른쪽과 겹치게 */}
+              {/* gongnori.fan 텍스트: 모바일 20px, 데스크탑 30px */}
               <span
-                className="text-foreground relative z-10 ml-1 text-[30px] leading-none sm:-ml-[4px]"
+                className="text-foreground relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
                 style={{ letterSpacing: "-0.02em" }}
               >
                 <span className="font-bold">gongnori</span>
