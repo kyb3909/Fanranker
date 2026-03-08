@@ -176,26 +176,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for duplicate bets on same game across existing slips
-    const { data: existingPreds } = await supabase
-      .from("betman_predictions")
-      .select("game_id")
-      .eq("user_id", user.id)
-      .in("game_id", gameIds)
-      .in("status", ["pending", "settled"])
-
-    if (existingPreds && existingPreds.length > 0) {
-      const dupeGameIds = new Set(existingPreds.map((p) => p.game_id))
-      const dupeGames = games
-        .filter((g) => dupeGameIds.has(g.id))
-        .map((g) => `${g.home_team_name} vs ${g.away_team_name}`)
-        .join(", ")
-      return NextResponse.json(
-        { error: `이미 베팅한 경기가 포함되어 있습니다: ${dupeGames}` },
-        { status: 400 }
-      )
-    }
-
     // Validate prediction type matches game type
     for (const pred of predictions) {
       const game = games.find((g) => g.id === pred.game_id)
