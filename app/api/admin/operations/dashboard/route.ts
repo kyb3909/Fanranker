@@ -89,9 +89,9 @@ export async function GET() {
         .gte("created_at", prevWeekStartISO)
         .lt("created_at", weekStartISO),
       supabase
-        .from("profiles")
-        .select("user_id, display_name, token_balance")
-        .gt("token_balance", 50)
+        .from("user_tokens")
+        .select("user_id, token_balance, profiles!inner(nickname)")
+        .gt("token_balance", 5000)
         .order("token_balance", { ascending: false })
         .limit(10),
     ])
@@ -124,7 +124,14 @@ export async function GET() {
       weekly: {
         usersThisWeek: usersThisWeek ?? 0,
         usersPrevWeek: usersPrevWeek ?? 0,
-        abnormalTokenBalances: abnormalTokenBalances ?? [],
+        abnormalTokenBalances: (abnormalTokenBalances ?? []).map((row: Record<string, unknown>) => {
+          const profile = row.profiles as Record<string, unknown> | null
+          return {
+            user_id: row.user_id,
+            nickname: profile?.nickname ?? null,
+            token_balance: row.token_balance,
+          }
+        }),
       },
       fetchedAt: now.toISOString(),
     })

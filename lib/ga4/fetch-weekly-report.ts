@@ -157,44 +157,38 @@ export async function fetchWeeklyReport(
   const prevEndTs = new Date(prevEnd.getTime() + 86400000).toISOString()
 
   const [
-    { data: predSlips },
-    { count: predSlipCount },
+    { data: predUsers },
+    { count: predCount },
     { data: purchases },
     { count: purchaseCount },
-    { data: prevPredSlips },
+    { data: prevPredUsers },
     { count: prevPurchaseCount },
   ] = await Promise.all([
-    // 이번주 예측 참여 유니크 유저
     supabase
-      .from("prediction_slips")
+      .from("betman_predictions")
       .select("user_id")
       .gte("created_at", periodStartTs)
       .lt("created_at", periodEndTs),
-    // 이번주 예측 슬립 수
     supabase
-      .from("prediction_slips")
+      .from("betman_predictions")
       .select("*", { count: "exact", head: true })
       .gte("created_at", periodStartTs)
       .lt("created_at", periodEndTs),
-    // 이번주 구매 유니크 유저
     supabase
       .from("purchased_content")
       .select("user_id")
       .gte("purchased_at", periodStartTs)
       .lt("purchased_at", periodEndTs),
-    // 이번주 구매 건수
     supabase
       .from("purchased_content")
       .select("*", { count: "exact", head: true })
       .gte("purchased_at", periodStartTs)
       .lt("purchased_at", periodEndTs),
-    // 지난주 예측 참여 유니크 유저
     supabase
-      .from("prediction_slips")
+      .from("betman_predictions")
       .select("user_id")
       .gte("created_at", prevStartTs)
       .lt("created_at", prevEndTs),
-    // 지난주 구매 건수
     supabase
       .from("purchased_content")
       .select("*", { count: "exact", head: true })
@@ -202,14 +196,14 @@ export async function fetchWeeklyReport(
       .lt("purchased_at", prevEndTs),
   ])
 
-  const predictionUserIds = new Set((predSlips ?? []).map((r) => r.user_id))
+  const predictionUserIds = new Set((predUsers ?? []).map((r) => r.user_id))
   const predictionUsers = predictionUserIds.size
-  const predictionSlipCount = predSlipCount ?? 0
+  const predictionSlipCount = predCount ?? 0
   const purchaseUserIds = new Set((purchases ?? []).map((r) => r.user_id))
   const purchaseUsers = purchaseUserIds.size
   const purchaseTotal = purchaseCount ?? 0
-  const prevPredictionUserIds = new Set((prevPredSlips ?? []).map((r) => r.user_id))
-  const prevPredUsers = prevPredictionUserIds.size
+  const prevPredictionUserIds = new Set((prevPredUsers ?? []).map((r) => r.user_id))
+  const prevPredUsersCount = prevPredictionUserIds.size
   const prevPurchTotal = prevPurchaseCount ?? 0
   const predictionParticipationRate = wau > 0 ? Math.round((predictionUsers / wau) * 1000) / 10 : 0
 
@@ -248,9 +242,9 @@ export async function fetchWeeklyReport(
       predictionParticipationRate,
       purchaseUsers,
       purchaseCount: purchaseTotal,
-      prevPredictionUsers: prevPredUsers,
+      prevPredictionUsers: prevPredUsersCount,
       prevPurchaseCount: prevPurchTotal,
-      predictionUsersChangePercent: changePercent(predictionUsers, prevPredUsers),
+      predictionUsersChangePercent: changePercent(predictionUsers, prevPredUsersCount),
       purchaseCountChangePercent: changePercent(purchaseTotal, prevPurchTotal),
     },
   }

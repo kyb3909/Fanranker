@@ -40,7 +40,7 @@ interface DashboardData {
   weekly: {
     usersThisWeek: number
     usersPrevWeek: number
-    abnormalTokenBalances: { user_id: string; display_name: string | null; token_balance: number }[]
+    abnormalTokenBalances: { user_id: string; nickname: string | null; token_balance: number }[]
   }
   fetchedAt: string
 }
@@ -283,7 +283,7 @@ export function OperationsDashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                비정상 토큰 잔액 (&gt;50볼)
+                비정상 토큰 잔액 (&gt;5,000볼)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -302,7 +302,7 @@ export function OperationsDashboard() {
                       {weekly.abnormalTokenBalances.map((u) => (
                         <tr key={u.user_id} className="border-b last:border-0">
                           <td className="max-w-[150px] truncate py-1">
-                            {u.display_name || u.user_id.slice(0, 12)}
+                            {u.nickname || u.user_id.slice(0, 12)}
                           </td>
                           <td className="py-1 text-right font-mono">
                             {u.token_balance.toLocaleString()}

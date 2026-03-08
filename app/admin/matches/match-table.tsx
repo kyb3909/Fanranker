@@ -10,48 +10,110 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
-import { Loader2, XCircle, RefreshCw, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Loader2, XCircle, RefreshCw, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 
-interface MatchWithStats {
-  match_id: string
-  sport_type: string
+interface GameMatch {
+  id: string
+  game_no: number
+  sport: string
+  game_type: string
+  home_team: string
+  away_team: string
   match_time: string | null
+  status: string | null
+  result: string | null
+  home_score: number | null
+  away_score: number | null
+  handicap: number | null
+  over_under_line: number | null
   prediction_count: number
-  is_prediction_open: boolean | null
+}
+
+const SPORT_LABELS: Record<string, string> = {
+  '축구': '축구',
+  '야구': '야구',
+  '농구': '농구',
+  '배구': '배구',
+  'soccer': '축구',
+  'baseball': '야구',
+  'basketball': '농구',
+  'volleyball': '배구',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  finished: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+}
+
+const RESULT_LABELS: Record<string, string> = {
+  home: '홈승',
+  away: '원정승',
+  draw: '무승부',
+  over: '오버',
+  under: '언더',
+  odd: '홀',
+  even: '짝',
+  cancelled: '취소',
 }
 
 export function MatchManagementTable() {
-  const [matches, setMatches] = useState<MatchWithStats[]>([])
+  const [matches, setMatches] = useState<GameMatch[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sportFilter, setSportFilter] = useState('all')
+  const [search, setSearch] = useState('')
 
   const fetchMatches = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/admin/matches/list')
+      const params = new URLSearchParams({ page: String(page), status: statusFilter, sport: sportFilter })
+      const response = await fetch(`/api/admin/matches/list?${params}`)
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('경기 조회 API가 아직 구현되지 않았습니다.')
-        }
         const errorData = await response.json()
         throw new Error(errorData.error || '경기 목록을 불러오는데 실패했습니다.')
       }
       const data = await response.json()
       setMatches(data.matches || [])
+      setTotal(data.total || 0)
     } catch (err) {
       setError(err instanceof Error ? err.message : '경기 목록을 불러오는데 실패했습니다.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [page, statusFilter, sportFilter])
 
   useEffect(() => {
     fetchMatches()
   }, [fetchMatches])
 
-  if (isLoading) {
+  const filteredMatches = search
+    ? matches.filter(
+        (m) =>
+          m.home_team.toLowerCase().includes(search.toLowerCase()) ||
+          m.away_team.toLowerCase().includes(search.toLowerCase()) ||
+          String(m.game_no).includes(search)
+      )
+    : matches
+
+  const totalPages = Math.ceil(total / 50)
+
+  if (isLoading && matches.length === 0) {
     return (
       <Card>
         <div className="flex justify-center items-center h-64">
@@ -61,102 +123,179 @@ export function MatchManagementTable() {
     )
   }
 
-  if (error) {
+  if (error && matches.length === 0) {
     return (
       <Card>
         <div className="flex flex-col items-center justify-center h-64 text-center p-6">
-          <XCircle className="h-10 w-10 mb-2 text-primary" />
+          <XCircle className="h-10 w-10 mb-2 text-destructive" />
           <p className="text-lg font-medium">데이터를 불러오는데 실패했습니다.</p>
           <p className="text-sm text-muted-foreground mt-2">{error}</p>
-          <p className="text-xs text-muted-foreground mt-4 max-w-md">
-            경기 관리 기능을 사용하려면 <code className="bg-muted px-2 py-1 rounded">/api/admin/matches/list</code> API
-            엔드포인트가 필요합니다.
-          </p>
-          <button onClick={fetchMatches} className="mt-4 px-4 py-2 text-sm border rounded hover:bg-muted">
-            <RefreshCw className="h-4 w-4 inline mr-2" /> 다시 시도
-          </button>
+          <Button variant="outline" onClick={fetchMatches} className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" /> 다시 시도
+          </Button>
         </div>
       </Card>
     )
   }
 
-  const sportLabels: Record<string, string> = {
-    soccer: '축구',
-    baseball: '야구',
-    basketball: '농구',
-    volleyball: '배구',
-  }
-
   return (
     <Card>
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="text-lg font-semibold">예측된 경기 목록</h2>
-        <button
-          onClick={fetchMatches}
-          className="px-4 py-2 text-sm border rounded hover:bg-muted flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" /> 새로고침
-        </button>
+      <div className="p-4 border-b space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-lg font-semibold">경기 관리 (Betman)</h2>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{total.toLocaleString()}개</Badge>
+            <Button variant="outline" size="sm" onClick={fetchMatches} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} /> 새로고침
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input
+            placeholder="팀명 또는 경기번호 검색..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs h-9"
+          />
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-[130px] h-9">
+              <SelectValue placeholder="상태" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 상태</SelectItem>
+              <SelectItem value="active">진행중</SelectItem>
+              <SelectItem value="finished">종료</SelectItem>
+              <SelectItem value="cancelled">취소</SelectItem>
+              <SelectItem value="unsettled">미정산</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sportFilter} onValueChange={(v) => { setSportFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-[130px] h-9">
+              <SelectValue placeholder="종목" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 종목</SelectItem>
+              <SelectItem value="축구">축구</SelectItem>
+              <SelectItem value="야구">야구</SelectItem>
+              <SelectItem value="농구">농구</SelectItem>
+              <SelectItem value="배구">배구</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>경기 ID</TableHead>
-              <TableHead>종목</TableHead>
-              <TableHead>경기 시간</TableHead>
-              <TableHead className="text-right">예측 수</TableHead>
-              <TableHead>상태</TableHead>
+              <TableHead className="w-[70px]">번호</TableHead>
+              <TableHead className="w-[60px]">종목</TableHead>
+              <TableHead className="w-[80px]">유형</TableHead>
+              <TableHead>홈 vs 원정</TableHead>
+              <TableHead className="w-[130px]">경기시간</TableHead>
+              <TableHead className="w-[80px] text-center">스코어</TableHead>
+              <TableHead className="w-[70px]">결과</TableHead>
+              <TableHead className="w-[60px]">조건</TableHead>
+              <TableHead className="w-[70px] text-right">예측 수</TableHead>
+              <TableHead className="w-[70px]">상태</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {matches.length === 0 ? (
+            {filteredMatches.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  예측된 경기가 없습니다.
+                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                  {search ? '검색 결과가 없습니다.' : '경기가 없습니다.'}
                 </TableCell>
               </TableRow>
             ) : (
-              matches.map((match) => {
-                const isUpcoming = match.match_time ? new Date(match.match_time) > new Date() : false
-                const isOpen = match.is_prediction_open !== false
-
-                return (
-                  <TableRow key={match.match_id}>
-                    <TableCell className="font-mono text-sm">{match.match_id.slice(0, 8)}...</TableCell>
-                    <TableCell>{sportLabels[match.sport_type] || match.sport_type}</TableCell>
-                    <TableCell>
-                      {match.match_time ? (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          {format(new Date(match.match_time), 'yyyy-MM-dd HH:mm')}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">{match.prediction_count}</TableCell>
-                    <TableCell>
-                      {isUpcoming && isOpen ? (
-                        <span className="inline-flex items-center gap-1 text-green-600">
-                          <CheckCircle2 className="h-4 w-4" /> 예측 가능
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-muted-foreground">
-                          <AlertCircle className="h-4 w-4" /> 마감
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
+              filteredMatches.map((match) => (
+                <TableRow key={match.id}>
+                  <TableCell className="font-mono text-xs">{match.game_no}</TableCell>
+                  <TableCell className="text-sm">{SPORT_LABELS[match.sport] || match.sport}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {match.game_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <span className="font-medium">{match.home_team}</span>
+                    <span className="text-muted-foreground mx-1">vs</span>
+                    <span className="font-medium">{match.away_team}</span>
+                  </TableCell>
+                  <TableCell>
+                    {match.match_time ? (
+                      <span className="flex items-center gap-1 text-xs">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        {format(new Date(match.match_time), 'MM/dd HH:mm')}
+                      </span>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="text-center font-mono text-sm">
+                    {match.home_score !== null && match.away_score !== null
+                      ? `${match.home_score} : ${match.away_score}`
+                      : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {match.result ? (
+                      <Badge variant="secondary" className="text-xs">
+                        {RESULT_LABELS[match.result] || match.result}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {match.game_type === '핸디캡' && match.handicap !== null && (
+                      <Badge variant="outline" className="text-xs">H {match.handicap > 0 ? '+' : ''}{match.handicap}</Badge>
+                    )}
+                    {(match.game_type === '언더오버' || match.game_type === 'SUM') && match.over_under_line !== null && (
+                      <Badge variant="outline" className="text-xs">L {match.over_under_line}</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {match.prediction_count > 0 ? (
+                      <Badge variant="default" className="text-xs">{match.prediction_count}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${STATUS_COLORS[match.status || ''] || ''}`}
+                    >
+                      {match.status === 'active' ? '진행' : match.status === 'finished' ? '종료' : match.status === 'cancelled' ? '취소' : match.status || '-'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="p-4 border-t text-sm text-muted-foreground">
-        총 {matches.length}개의 경기
-      </div>
+
+      {totalPages > 1 && (
+        <div className="p-4 border-t flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {total.toLocaleString()}개 중 {((page - 1) * 50) + 1}-{Math.min(page * 50, total)}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">{page} / {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {totalPages <= 1 && (
+        <div className="p-4 border-t text-sm text-muted-foreground">
+          총 {total.toLocaleString()}개의 경기
+        </div>
+      )}
     </Card>
   )
 }
