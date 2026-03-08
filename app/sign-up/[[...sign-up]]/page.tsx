@@ -13,14 +13,16 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   User,
   Camera,
   Loader2,
-  ExternalLink,
   Sparkles,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { TermsContent } from "@/components/legal/terms-content"
+import { PrivacyContent } from "@/components/legal/privacy-content"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 
@@ -146,6 +148,8 @@ export default function SignUpPage() {
 
   // ── Step state ──
   const [step, setStep] = useState(1)
+  const [termsOpen, setTermsOpen] = useState(false)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
 
   // ── Step 1: Terms ──
   const [termsAgreed, setTermsAgreed] = useState(false)
@@ -498,68 +502,82 @@ export default function SignUpPage() {
 
               <div className="space-y-3">
                 {/* 이용약관 */}
-                <label className="border-border hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={termsAgreed}
-                    onClick={() => setTermsAgreed(!termsAgreed)}
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                      termsAgreed
-                        ? "bg-primary border-primary text-white"
-                        : "border-input bg-background"
-                    }`}
-                  >
-                    {termsAgreed && <Check className="h-3.5 w-3.5" />}
-                  </button>
-                  <div className="flex-1">
-                    <span className="text-foreground text-sm font-medium">
-                      이용약관에 동의합니다
-                    </span>
-                    <span className="text-muted-foreground ml-1 text-xs">(필수)</span>
+                <div className="border-border overflow-hidden rounded-lg border">
+                  <div className="flex items-center gap-3 p-4">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={termsAgreed}
+                      onClick={() => setTermsAgreed(!termsAgreed)}
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                        termsAgreed
+                          ? "bg-primary border-primary text-white"
+                          : "border-input bg-background"
+                      }`}
+                    >
+                      {termsAgreed && <Check className="h-3.5 w-3.5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTermsOpen(!termsOpen)}
+                      className="flex flex-1 items-center justify-between"
+                    >
+                      <span>
+                        <span className="text-foreground text-sm font-medium">
+                          이용약관에 동의합니다
+                        </span>
+                        <span className="text-muted-foreground ml-1 text-xs">(필수)</span>
+                      </span>
+                      <ChevronDown
+                        className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${termsOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
                   </div>
-                  <a
-                    href="/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </label>
+                  {termsOpen && (
+                    <div className="border-border max-h-48 overflow-y-auto border-t px-4 py-3">
+                      <TermsContent />
+                    </div>
+                  )}
+                </div>
 
                 {/* 개인정보처리방침 */}
-                <label className="border-border hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors">
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={privacyAgreed}
-                    onClick={() => setPrivacyAgreed(!privacyAgreed)}
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                      privacyAgreed
-                        ? "bg-primary border-primary text-white"
-                        : "border-input bg-background"
-                    }`}
-                  >
-                    {privacyAgreed && <Check className="h-3.5 w-3.5" />}
-                  </button>
-                  <div className="flex-1">
-                    <span className="text-foreground text-sm font-medium">
-                      개인정보처리방침에 동의합니다
-                    </span>
-                    <span className="text-muted-foreground ml-1 text-xs">(필수)</span>
+                <div className="border-border overflow-hidden rounded-lg border">
+                  <div className="flex items-center gap-3 p-4">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={privacyAgreed}
+                      onClick={() => setPrivacyAgreed(!privacyAgreed)}
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                        privacyAgreed
+                          ? "bg-primary border-primary text-white"
+                          : "border-input bg-background"
+                      }`}
+                    >
+                      {privacyAgreed && <Check className="h-3.5 w-3.5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrivacyOpen(!privacyOpen)}
+                      className="flex flex-1 items-center justify-between"
+                    >
+                      <span>
+                        <span className="text-foreground text-sm font-medium">
+                          개인정보처리방침에 동의합니다
+                        </span>
+                        <span className="text-muted-foreground ml-1 text-xs">(필수)</span>
+                      </span>
+                      <ChevronDown
+                        className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${privacyOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
                   </div>
-                  <a
-                    href="/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </label>
+                  {privacyOpen && (
+                    <div className="border-border max-h-48 overflow-y-auto border-t px-4 py-3">
+                      <PrivacyContent />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="mt-6 flex justify-end">
