@@ -18,6 +18,7 @@ import {
   Coins,
   Target,
   Activity,
+  StickyNote,
   ChevronRight,
 } from "lucide-react"
 import {
@@ -76,7 +77,10 @@ const navGroups = [
   },
   {
     label: "시스템",
-    items: [{ title: "시스템 상태", href: "/admin/system", icon: Activity }],
+    items: [
+      { title: "시스템 상태", href: "/admin/system", icon: Activity },
+      { title: "메모장", href: "/admin/notes", icon: StickyNote },
+    ],
   },
 ]
 
