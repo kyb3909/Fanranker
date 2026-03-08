@@ -55,7 +55,7 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
     if (!tickerId) return
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/ticker/${tickerId}/comments`)
+      const res = await fetch(`/api/ticker/${tickerId}/comments`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setComments(data.comments || [])

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(
       { comments: comments || [] },
-      { headers: { "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30" } }
+      { headers: { "Cache-Control": "no-store" } }
     )
   } catch (error) {
     return apiError("서버 오류", 500, error)
