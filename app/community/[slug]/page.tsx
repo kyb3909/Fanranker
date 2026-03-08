@@ -259,6 +259,7 @@ export default async function CommunityPage({
               communitySlug={slug}
               currentPage={currentPage}
               totalPages={totalPages}
+              totalCount={totalCount}
             />
           </div>
 

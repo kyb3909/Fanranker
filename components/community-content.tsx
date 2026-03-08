@@ -50,6 +50,7 @@ interface CommunityContentProps {
   communitySlug?: string
   currentPage?: number
   totalPages?: number
+  totalCount?: number
 }
 
 export const CommunityContent = memo(function CommunityContent({
@@ -59,6 +60,7 @@ export const CommunityContent = memo(function CommunityContent({
   communitySlug,
   currentPage = 1,
   totalPages = 1,
+  totalCount = 0,
 }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
@@ -165,7 +167,7 @@ export const CommunityContent = memo(function CommunityContent({
                     {post.isNotice ? (
                       <span className="font-semibold text-rose-500">공지</span>
                     ) : (
-                      posts.length - index
+                      totalCount - (currentPage - 1) * 25 - index
                     )}
                   </div>
                   <div className="col-span-5 hidden items-center gap-1.5 sm:flex">
