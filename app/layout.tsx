@@ -10,6 +10,7 @@ import { MobileTabBar } from "@/components/mobile-tab-bar"
 import { FloatingWriteButton } from "@/components/floating-write-button"
 import { SITE_CONFIG, jsonLd } from "@/lib/seo"
 import { AppShell } from "@/components/app-shell"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 const koLocalization = {
@@ -170,6 +171,7 @@ export default function RootLayout({
             <AppShell>{children}</AppShell>
             <FloatingWriteButton />
             <MobileTabBar />
+            <Toaster />
             <Analytics />
             {process.env.NEXT_PUBLIC_GA_ID && (
               <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />

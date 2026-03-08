@@ -45,11 +45,7 @@ export function BoardConfigTable({ initialBoards }: { initialBoards: Board[] }) 
 
   const handleAddChannel = async () => {
     if (!newChannel.slug || !newChannel.name || !newChannel.parent_slug) {
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: "slug, 이름, 상위 게시판은 필수입니다.",
-      })
+      alert("slug, 이름, 상위 게시판은 필수입니다.")
       return
     }
     setAddingChannel(true)
@@ -60,17 +56,15 @@ export function BoardConfigTable({ initialBoards }: { initialBoards: Board[] }) 
         body: JSON.stringify(newChannel),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) throw new Error(data.error || "생성 실패")
       setBoards((prev) => [...prev, data.board])
       setNewChannel({ slug: "", name: "", icon: "", description: "", parent_slug: "" })
       setShowAddChannel(false)
       toast({ title: "채널 추가 완료", description: `${newChannel.name} 채널이 생성되었습니다.` })
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: error instanceof Error ? error.message : "생성 실패",
-      })
+      const msg = error instanceof Error ? error.message : "생성 실패"
+      alert(`채널 생성 오류: ${msg}`)
+      toast({ variant: "destructive", title: "오류", description: msg })
     } finally {
       setAddingChannel(false)
     }
