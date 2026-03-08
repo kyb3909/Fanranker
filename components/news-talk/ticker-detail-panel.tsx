@@ -46,6 +46,7 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   const commentsEndRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -109,6 +110,17 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
         const newComment: TickerComment = await res.json()
         setComments((prev) => [newComment, ...prev])
         setInputValue("")
+        // 15초 쿨타임 시작
+        setCooldown(15)
+        const timer = setInterval(() => {
+          setCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer)
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
       } else {
         const err = await res.json().catch(() => null)
         alert(err?.error || "댓글 작성에 실패했습니다.")
@@ -333,14 +345,16 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
                     handleSubmit()
                   }
                 }}
-                placeholder="댓글을 입력하세요... (300자)"
+                placeholder={
+                  cooldown > 0 ? `${cooldown}초 후 작성 가능` : "댓글을 입력하세요... (300자)"
+                }
                 maxLength={300}
-                disabled={isSubmitting}
+                disabled={isSubmitting || cooldown > 0}
                 className="bg-secondary text-foreground placeholder:text-muted-foreground focus:ring-ring focus:border-border h-10 flex-1 rounded-full border border-transparent px-4 text-[14px] focus:ring-2 focus:outline-none disabled:opacity-50"
               />
               <Button
                 onClick={handleSubmit}
-                disabled={!inputValue.trim() || isSubmitting}
+                disabled={!inputValue.trim() || isSubmitting || cooldown > 0}
                 size="icon"
                 className="h-10 w-10 shrink-0 rounded-full"
               >

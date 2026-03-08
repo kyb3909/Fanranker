@@ -74,6 +74,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const supabase = createServiceRoleClient()
 
+    // 15초 쿨타임 체크
+    const { data: lastComment } = await supabase
+      .from("ticker_comments")
+      .select("created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (lastComment) {
+      const elapsed = Date.now() - new Date(lastComment.created_at).getTime()
+      const cooldown = 15 * 1000
+      if (elapsed < cooldown) {
+        const remaining = Math.ceil((cooldown - elapsed) / 1000)
+        return NextResponse.json(
+          { error: `${remaining}초 후에 다시 작성할 수 있습니다.` },
+          { status: 429 }
+        )
+      }
+    }
+
     // 닉네임 조회
     const { data: profile } = await supabase
       .from("profiles")
