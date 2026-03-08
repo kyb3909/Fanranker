@@ -257,7 +257,7 @@ export function Header() {
             scroll={false}
             onClick={(e) => {
               e.preventDefault()
-              if (window.location.pathname === "/") {
+              if (window.location.pathname === "/" && !window.location.search) {
                 window.scrollTo({ top: 0, behavior: "auto" })
               } else {
                 router.push("/")

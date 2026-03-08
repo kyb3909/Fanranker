@@ -154,6 +154,7 @@ export default function SignUpPage() {
   // ── Step 2: Account creation ──
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [authError, setAuthError] = useState("")
   const [authLoading, setAuthLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -328,6 +329,10 @@ export default function SignUpPage() {
     async (e: React.FormEvent) => {
       e.preventDefault()
       if (!signUpLoaded || !signUp) return
+      if (password !== confirmPassword) {
+        setAuthError("비밀번호가 일치하지 않습니다.")
+        return
+      }
       setAuthError("")
       setAuthLoading(true)
       try {
@@ -354,7 +359,7 @@ export default function SignUpPage() {
         setAuthLoading(false)
       }
     },
-    [signUpLoaded, signUp, email, password, setActive]
+    [signUpLoaded, signUp, email, password, confirmPassword, setActive]
   )
 
   // ── Step 2.5: Verify email code ──
@@ -639,13 +644,36 @@ export default function SignUpPage() {
                       />
                     </div>
 
+                    <div className="space-y-1.5">
+                      <Label htmlFor="signup-confirm-password" className="text-sm">
+                        비밀번호 확인
+                      </Label>
+                      <Input
+                        id="signup-confirm-password"
+                        type="password"
+                        placeholder="비밀번호를 다시 입력해주세요"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        minLength={8}
+                      />
+                      {confirmPassword && password !== confirmPassword && (
+                        <p className="text-destructive text-xs">비밀번호가 일치하지 않습니다.</p>
+                      )}
+                    </div>
+
                     {authError && (
                       <p className="text-destructive text-sm" role="alert">
                         {authError}
                       </p>
                     )}
 
-                    <Button type="submit" className="w-full" disabled={authLoading}>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={authLoading || password !== confirmPassword}
+                    >
                       {authLoading ? <Spinner className="size-4" /> : "이메일로 가입하기"}
                     </Button>
                   </form>
