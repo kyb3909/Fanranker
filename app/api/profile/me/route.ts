@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, user_id, nickname, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
       )
       .eq("user_id", userId)
       .single()
@@ -129,6 +129,7 @@ export async function PATCH(request: NextRequest) {
     // Build update object
     const updateData: {
       nickname?: string
+      nickname_changed_at?: string
       avatar_url?: string | null
       bio?: string | null
       onboarding_completed?: boolean
@@ -141,7 +142,7 @@ export async function PATCH(request: NextRequest) {
     // 먼저 프로필이 존재하는지 확인
     const { data: existingProfile, error: fetchError } = await supabase
       .from("profiles")
-      .select("user_id")
+      .select("user_id, nickname, nickname_changed_at")
       .eq("user_id", userId)
       .single()
 
@@ -179,7 +180,24 @@ export async function PATCH(request: NextRequest) {
         })
         return NextResponse.json({ error: "프로필 생성 중 오류가 발생했습니다." }, { status: 500 })
       }
-    } else if (fetchError) {
+    } else if (!fetchError && existingProfile && nickname !== undefined) {
+      // 닉네임 변경 쿨다운 체크 (3개월)
+      const trimmedNickname = nickname.trim()
+      if (trimmedNickname !== existingProfile.nickname && existingProfile.nickname_changed_at) {
+        const cooldownMs = 90 * 24 * 60 * 60 * 1000 // 90일
+        const changedAt = new Date(existingProfile.nickname_changed_at).getTime()
+        const nextChangeAt = changedAt + cooldownMs
+        if (Date.now() < nextChangeAt) {
+          const nextDate = new Date(nextChangeAt).toLocaleDateString("ko-KR")
+          return NextResponse.json(
+            { error: `닉네임은 ${nextDate} 이후에 변경할 수 있습니다.` },
+            { status: 429 }
+          )
+        }
+      }
+    }
+
+    if (fetchError && fetchError.code !== "PGRST116" && !existingProfile) {
       // 다른 에러
       console.error("Failed to check profile existence:", {
         error: fetchError,
@@ -189,13 +207,22 @@ export async function PATCH(request: NextRequest) {
       })
       return NextResponse.json({ error: "프로필 확인 중 오류가 발생했습니다." }, { status: 500 })
     } else {
+      // 닉네임이 실제로 변경되면 nickname_changed_at 기록
+      if (
+        updateData.nickname &&
+        existingProfile &&
+        updateData.nickname !== existingProfile.nickname
+      ) {
+        updateData.nickname_changed_at = new Date().toISOString()
+      }
+
       // 프로필이 존재하면 업데이트
       const { data: updatedProfile, error: updateError } = await supabase
         .from("profiles")
         .update(updateData)
         .eq("user_id", userId)
         .select(
-          "id, user_id, nickname, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+          "id, user_id, nickname, nickname_changed_at, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
         )
         .single()
 

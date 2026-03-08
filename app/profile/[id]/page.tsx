@@ -43,6 +43,7 @@ import Link from "next/link"
 interface Profile {
   user_id: string
   nickname: string
+  nickname_changed_at: string | null
   avatar_url: string
 }
 
@@ -530,14 +531,37 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nickname">닉네임</Label>
-                <Input
-                  id="nickname"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="닉네임을 입력하세요"
-                  maxLength={20}
-                />
-                <p className="text-muted-foreground text-xs">2~20자 이내로 입력해주세요.</p>
+                {(() => {
+                  const cooldownMs = 90 * 24 * 60 * 60 * 1000
+                  const changedAt = profile?.nickname_changed_at
+                    ? new Date(profile.nickname_changed_at).getTime()
+                    : 0
+                  const nextChangeAt = changedAt + cooldownMs
+                  const isOnCooldown = changedAt > 0 && Date.now() < nextChangeAt
+                  return (
+                    <>
+                      <Input
+                        id="nickname"
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        placeholder="닉네임을 입력하세요"
+                        maxLength={20}
+                        disabled={isOnCooldown}
+                        className={isOnCooldown ? "bg-muted" : ""}
+                      />
+                      {isOnCooldown ? (
+                        <p className="text-xs text-amber-600">
+                          닉네임은 {new Date(nextChangeAt).toLocaleDateString("ko-KR")} 이후에
+                          변경할 수 있습니다.
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          2~20자 이내로 입력해주세요. 변경 후 3개월간 재변경이 불가합니다.
+                        </p>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
 
               <div className="space-y-2">

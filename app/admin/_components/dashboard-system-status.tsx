@@ -44,7 +44,9 @@ export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
         <CardContent>
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Database className="h-3.5 w-3.5" />
-            <span>마지막 동기화: {formatKoreanTime(data.betmanSync.lastSync)}</span>
+            <span suppressHydrationWarning>
+              마지막 동기화: {formatKoreanTime(data.betmanSync.lastSync)}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -59,7 +61,9 @@ export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
         <CardContent>
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Rss className="h-3.5 w-3.5" />
-            <span>마지막 실행: {formatKoreanTime(data.crawler.lastRun)}</span>
+            <span suppressHydrationWarning>
+              마지막 실행: {formatKoreanTime(data.crawler.lastRun)}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -74,7 +78,9 @@ export function DashboardSystemStatus({ data }: { data: SyncStatus }) {
         <CardContent>
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <Clock className="h-3.5 w-3.5" />
-            <span>리셋 시각: {formatKoreanTime(data.dailyRound.resetAt)}</span>
+            <span suppressHydrationWarning>
+              리셋 시각: {formatKoreanTime(data.dailyRound.resetAt)}
+            </span>
           </div>
         </CardContent>
       </Card>
