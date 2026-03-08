@@ -11,6 +11,7 @@ async function fetchExploreData() {
         .from("categories")
         .select("id, slug, name, icon, sort_order, description")
         .eq("is_active", true)
+        .is("parent_slug", null)
         .order("sort_order", { ascending: true }),
       supabase
         .from("posts")
