@@ -160,13 +160,6 @@ export default function RootLayout({
                 }),
               }}
             />
-            {/* 스킵 링크: 키보드·스크린리더 사용자 본문 바로가기 (Lighthouse 접근성) */}
-            <a
-              href="#main-content"
-              className="bg-primary text-primary-foreground focus:ring-ring fixed top-4 left-4 z-[100] -translate-y-[200%] rounded-md px-4 py-2 text-sm font-medium shadow-md transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
-            >
-              본문으로 건너뛰기
-            </a>
             <ProfileSync />
             <AppShell>{children}</AppShell>
             <FloatingWriteButton />
