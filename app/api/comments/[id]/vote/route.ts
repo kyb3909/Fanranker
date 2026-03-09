@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
 /**
@@ -31,7 +32,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     const voteType = parsed.data.type
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 기존 투표 확인

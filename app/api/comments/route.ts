@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { isUserSuspended } from "@/lib/check-suspension"
 import { z } from "zod"
 
 const CommentCreateSchema = z.object({
@@ -19,7 +20,6 @@ const CommentCreateSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const { createAnonClient } = await import("@/lib/supabase/server")
     const supabase = createAnonClient()
     const searchParams = request.nextUrl.searchParams
     const postId = searchParams.get("post_id")
@@ -89,13 +89,11 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     // 정지 유저 차단
-    const { isUserSuspended } = await import("@/lib/check-suspension")
     if (await isUserSuspended(userId)) {
       return NextResponse.json({ error: "활동이 정지된 계정입니다." }, { status: 403 })
     }
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     let body: unknown
     try {

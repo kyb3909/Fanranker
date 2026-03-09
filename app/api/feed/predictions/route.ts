@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
  * GET /api/feed/predictions
@@ -15,7 +16,6 @@ export async function GET(request: NextRequest) {
       return apiUnauthorized()
     }
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     const { searchParams } = new URL(request.url)

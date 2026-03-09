@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { apiError } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
  * GET /api/profile/[userId]
@@ -14,7 +15,6 @@ export async function GET(
   try {
     const { userId } = await params
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 프로필 기본 정보

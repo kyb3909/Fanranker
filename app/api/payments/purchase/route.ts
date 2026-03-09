@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import * as Sentry from "@sentry/nextjs"
@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     let body: unknown
     try {
@@ -178,7 +177,6 @@ export async function GET(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const predictionId = searchParams.get("prediction_id")

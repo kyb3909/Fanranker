@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiUnauthorized } from "@/lib/api-error"
 
 /**
  * GET /api/tokens/history
@@ -19,25 +19,24 @@ export async function GET(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
 
     // Fetch token transactions
     const { data: transactions, error: txError } = await supabase
-      .from('token_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .from("token_transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .limit(50)
 
     if (txError) {
       // If table doesn't exist, return empty array
-      if (txError.code === '42P01') {
+      if (txError.code === "42P01") {
         return NextResponse.json({
           transactions: [],
         })
       }
-      return apiError('거래 내역을 가져오는 중 오류가 발생했습니다.', 500, txError)
+      return apiError("거래 내역을 가져오는 중 오류가 발생했습니다.", 500, txError)
     }
 
     // Transform transactions
@@ -51,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
     const transformedTransactions = (transactions || []).map((tx: TokenTransaction) => ({
       id: tx.id,
-      type: tx.type || (tx.amount > 0 ? 'earn' : 'spend'),
+      type: tx.type || (tx.amount > 0 ? "earn" : "spend"),
       amount: Math.abs(tx.amount),
       description: tx.description || getDefaultDescription(tx.type, tx.amount),
       createdAt: tx.created_at,
@@ -62,21 +61,21 @@ export async function GET(request: NextRequest) {
       transactions: transformedTransactions,
     })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
 function getDefaultDescription(type: string, amount: number): string {
   switch (type) {
-    case 'reset':
-      return '매일 볼 충전'
-    case 'earn':
-      return '적중 보상'
-    case 'spend':
-      return '승부예측 사용'
-    case 'purchase':
-      return '볼 구매'
+    case "reset":
+      return "매일 볼 충전"
+    case "earn":
+      return "적중 보상"
+    case "spend":
+      return "승부예측 사용"
+    case "purchase":
+      return "볼 구매"
     default:
-      return amount > 0 ? '볼 획득' : '볼 사용'
+      return amount > 0 ? "볼 획득" : "볼 사용"
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
 /**
@@ -22,7 +23,6 @@ export async function GET(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     let supabase
     try {
       supabase = createServiceRoleClient()
@@ -125,7 +125,6 @@ export async function PATCH(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     let supabase
     try {
       supabase = createServiceRoleClient()

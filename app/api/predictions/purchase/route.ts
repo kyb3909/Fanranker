@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
 const GOLD_COST = 500
@@ -21,7 +22,6 @@ export async function POST(request: NextRequest) {
       return apiUnauthorized()
     }
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     let body: unknown
     try {

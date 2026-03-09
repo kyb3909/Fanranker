@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
 /**
@@ -26,7 +27,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!parsed.success) return apiBadRequest("댓글 내용을 입력해주세요.")
     const { content } = parsed.data
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 본인 댓글인지 확인
@@ -78,7 +78,6 @@ export async function DELETE(
 
     const { id: commentId } = await params
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 본인 댓글인지 확인

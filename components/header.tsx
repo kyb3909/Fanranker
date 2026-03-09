@@ -5,7 +5,7 @@ import { Compass, LayoutGrid, Bell, Search, Loader2, Trophy } from "lucide-react
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo, KeyboardEvent } from "react"
 import { SignedIn, SignedOut } from "@clerk/nextjs"
 import { UserMenu } from "./user-menu"
 import { SignInMenu } from "./sign-in-menu"
@@ -38,9 +38,9 @@ export function Header() {
   const [searchedOnce, setSearchedOnce] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const runSearch = useCallback(async () => {
-    const q = searchQuery.trim()
-    if (!q) {
+  const runSearch = useCallback(async (q: string) => {
+    const trimmed = q.trim()
+    if (!trimmed) {
       setSearchResults([])
       setDropdownOpen(false)
       setSearchedOnce(false)
@@ -50,7 +50,9 @@ export function Header() {
     setDropdownOpen(true)
     setSearchedOnce(true)
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=title_content&limit=8`)
+      const res = await fetch(
+        `/api/search?q=${encodeURIComponent(trimmed)}&type=title_content&limit=8`
+      )
       const data = await res.json().catch(() => ({}))
       if (res.ok && Array.isArray(data.posts)) {
         setSearchResults(data.posts)
@@ -62,11 +64,27 @@ export function Header() {
     } finally {
       setSearchLoading(false)
     }
-  }, [searchQuery])
+  }, [])
+
+  // 디바운스: 타이핑 후 300ms 대기 후 자동 검색
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedSearch = useCallback(
+    (q: string) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => runSearch(q), 300)
+    },
+    [runSearch]
+  )
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
       const q = searchQuery.trim()
       if (q) {
         setDropdownOpen(false)
@@ -138,8 +156,16 @@ export function Header() {
                 aria-label="게시글 검색"
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  if (!e.target.value.trim()) setDropdownOpen(false)
+                  const val = e.target.value
+                  setSearchQuery(val)
+                  if (!val.trim()) {
+                    if (debounceRef.current) clearTimeout(debounceRef.current)
+                    setSearchResults([])
+                    setDropdownOpen(false)
+                    setSearchedOnce(false)
+                  } else {
+                    debouncedSearch(val)
+                  }
                 }}
                 onKeyDown={handleSearchKeyDown}
                 onFocus={() => searchResults.length > 0 && setDropdownOpen(true)}

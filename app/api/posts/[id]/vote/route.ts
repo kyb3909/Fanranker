@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient, createAnonClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { z } from "zod"
@@ -42,7 +42,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     // currentUser()로 이미 user_id를 검증했으므로 안전합니다.
     // ⚠️ 중요: Service Role은 RLS를 우회하므로, 반드시 코드에서 user_id를 검증해야 합니다!
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 1. 기존 투표 확인
@@ -153,7 +152,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const userId = user.id
 
     const { id: postId } = await params
-    const { createAnonClient } = await import("@/lib/supabase/server")
     const supabase = createAnonClient()
 
     const { data: vote } = await supabase

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized, checkRateLimit } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 
 /**
  * POST /api/community/[slug]/follow
@@ -26,15 +26,14 @@ export async function POST(
     const { slug } = await params
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
 
     // Check if already following
     const { data: existing } = await supabase
-      .from('community_follows')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('community_slug', slug)
+      .from("community_follows")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("community_slug", slug)
       .single()
 
     if (existing) {
@@ -42,20 +41,18 @@ export async function POST(
     }
 
     // Add follow
-    const { error } = await supabase
-      .from('community_follows')
-      .insert({
-        user_id: userId,
-        community_slug: slug,
-      })
+    const { error } = await supabase.from("community_follows").insert({
+      user_id: userId,
+      community_slug: slug,
+    })
 
     if (error) {
-      return apiError('팔로우 중 오류가 발생했습니다.', 500, error)
+      return apiError("팔로우 중 오류가 발생했습니다.", 500, error)
     }
 
     return NextResponse.json({ success: true, following: true })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -82,22 +79,21 @@ export async function DELETE(
     const { slug } = await params
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
 
     const { error } = await supabase
-      .from('community_follows')
+      .from("community_follows")
       .delete()
-      .eq('user_id', userId)
-      .eq('community_slug', slug)
+      .eq("user_id", userId)
+      .eq("community_slug", slug)
 
     if (error) {
-      return apiError('팔로우 취소 중 오류가 발생했습니다.', 500, error)
+      return apiError("팔로우 취소 중 오류가 발생했습니다.", 500, error)
     }
 
     return NextResponse.json({ success: true, following: false })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }
 
@@ -106,10 +102,7 @@ export async function DELETE(
  *
  * Check if current user is following this community
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const user = await currentUser()
 
@@ -122,19 +115,18 @@ export async function GET(
     const { slug } = await params
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
 
     const { data } = await supabase
-      .from('community_follows')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('community_slug', slug)
+      .from("community_follows")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("community_slug", slug)
       .single()
 
     return NextResponse.json({ following: !!data })
   } catch (error) {
-    console.error('API error:', error)
+    console.error("API error:", error)
     return NextResponse.json({ following: false })
   }
 }

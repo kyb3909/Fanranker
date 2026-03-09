@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
+import { isUserSuspended } from "@/lib/check-suspension"
 
 /**
  * GET /api/ticker/[id]/comments
@@ -55,7 +56,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const userId = user.id
 
     // 정지 유저 차단
-    const { isUserSuspended } = await import("@/lib/check-suspension")
     if (await isUserSuspended(userId)) {
       return NextResponse.json({ error: "활동이 정지된 계정입니다." }, { status: 403 })
     }

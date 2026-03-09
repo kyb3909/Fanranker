@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAnonClient } from "@/lib/supabase/server"
+import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { computeTemperature, type TemperatureInput } from "@/lib/temperature"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
+import { isUserSuspended } from "@/lib/check-suspension"
+import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { z } from "zod"
 
 const MAX_CONTENT_SIZE = 100_000 // 100KB
@@ -186,13 +188,11 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     // 정지 유저 차단
-    const { isUserSuspended } = await import("@/lib/check-suspension")
     if (await isUserSuspended(userId)) {
       return NextResponse.json({ error: "활동이 정지된 계정입니다." }, { status: 403 })
     }
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     let body: unknown
     try {
@@ -209,7 +209,6 @@ export async function POST(request: NextRequest) {
     // 이미지 URL 유효성 검사 (허용된 도메인만)
     let imageUrl = null
     if (image) {
-      const { isAllowedImageUrl } = await import("@/lib/validate-image-url")
       if (!isAllowedImageUrl(image)) {
         return NextResponse.json(
           { error: "허용되지 않은 이미지 URL입니다. 이미지를 다시 업로드해주세요." },

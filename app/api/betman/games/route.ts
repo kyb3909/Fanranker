@@ -35,7 +35,6 @@ const gamesPostSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
 

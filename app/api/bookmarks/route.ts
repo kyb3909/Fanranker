@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiUnauthorized } from "@/lib/api-error"
 
 /**
  * GET /api/bookmarks
- * 
+ *
  * Get current user's bookmarked posts
- * 
+ *
  * Query Parameters:
  * - limit?: number (default: 20)
  * - offset?: number (default: 0)
@@ -23,16 +23,16 @@ export async function GET(request: NextRequest) {
     const userId = user.id
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '20', 10)
-    const offset = parseInt(searchParams.get('offset') || '0', 10)
+    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const offset = parseInt(searchParams.get("offset") || "0", 10)
 
     // Get bookmarks with post data
     const { data: bookmarks, error } = await supabase
-      .from('bookmarks')
-      .select(`
+      .from("bookmarks")
+      .select(
+        `
         id,
         created_at,
         post:posts!inner(
@@ -48,26 +48,33 @@ export async function GET(request: NextRequest) {
           temperature,
           created_at
         )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      `
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (error) {
-      return apiError('북마크를 가져오는 중 오류가 발생했습니다.', 500, error)
+      return apiError("북마크를 가져오는 중 오류가 발생했습니다.", 500, error)
     }
 
     // Get user profiles for posts
     if (bookmarks && bookmarks.length > 0) {
       // Supabase types inner-join as array but it's a single object at runtime
-      const userIds = [...new Set(bookmarks.map((b) => {
-        const post = b.post as unknown as { user_id: string } | null
-        return post?.user_id
-      }).filter(Boolean))]
+      const userIds = [
+        ...new Set(
+          bookmarks
+            .map((b) => {
+              const post = b.post as unknown as { user_id: string } | null
+              return post?.user_id
+            })
+            .filter(Boolean)
+        ),
+      ]
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, nickname, avatar_url')
-        .in('user_id', userIds)
+        .from("profiles")
+        .select("user_id, nickname, avatar_url")
+        .in("user_id", userIds)
 
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
 
@@ -77,10 +84,12 @@ export async function GET(request: NextRequest) {
         const post = bookmark.post as unknown as Record<string, unknown> | null
         return {
           ...bookmark,
-          post: post ? {
-            ...post,
-            profile: profileMap.get(post.user_id as string) || null,
-          } : null,
+          post: post
+            ? {
+                ...post,
+                profile: profileMap.get(post.user_id as string) || null,
+              }
+            : null,
         }
       })
 
@@ -89,6 +98,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ bookmarks: [] })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
-import { apiError, apiUnauthorized } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { apiError, apiUnauthorized } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
  * GET /api/gold/balance
@@ -15,25 +16,24 @@ export async function GET(request: NextRequest) {
       return apiUnauthorized()
     }
 
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const supabase = createServiceRoleClient()
 
     const { data: goldData, error } = await supabase
-      .from('user_gold')
-      .select('gold_balance, updated_at')
-      .eq('user_id', user.id)
+      .from("user_gold")
+      .select("gold_balance, updated_at")
+      .eq("user_id", user.id)
       .single()
 
-    if (error && error.code === 'PGRST116') {
+    if (error && error.code === "PGRST116") {
       // 레코드 없음 - 자동 생성
       const { data: newGold, error: insertError } = await supabase
-        .from('user_gold')
+        .from("user_gold")
         .insert({ user_id: user.id, gold_balance: 0 })
-        .select('gold_balance, updated_at')
+        .select("gold_balance, updated_at")
         .single()
 
       if (insertError) {
-        return apiError('골드 정보를 생성하는 중 오류가 발생했습니다.', 500, insertError)
+        return apiError("골드 정보를 생성하는 중 오류가 발생했습니다.", 500, insertError)
       }
 
       return NextResponse.json({
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (error) {
-      return apiError('골드 정보를 가져오는 중 오류가 발생했습니다.', 500, error)
+      return apiError("골드 정보를 가져오는 중 오류가 발생했습니다.", 500, error)
     }
 
     return NextResponse.json({
@@ -51,6 +51,6 @@ export async function GET(request: NextRequest) {
       updated_at: goldData.updated_at,
     })
   } catch (error) {
-    return apiError('서버 오류가 발생했습니다.', 500, error)
+    return apiError("서버 오류가 발생했습니다.", 500, error)
   }
 }

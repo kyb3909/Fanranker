@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
@@ -41,7 +42,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
     }
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     let body: unknown
     try {
@@ -400,7 +400,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
     }
 
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const dailyRoundId = searchParams.get("daily_round_id")

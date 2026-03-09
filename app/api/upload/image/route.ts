@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError } from "@/lib/api-error"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import sharp from "sharp"
 
 /** Validate file content via magic bytes to prevent MIME spoofing */
@@ -100,7 +101,6 @@ export async function POST(request: NextRequest) {
       .toBuffer()
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     const supabase = createServiceRoleClient()
 
     // 파일명 생성 (항상 .webp)
