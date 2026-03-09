@@ -37,12 +37,14 @@ const ContentSection = dynamic(
   () => import("@/components/home/content-section").then((m) => ({ default: m.ContentSection })),
   {
     loading: () => (
-      <div className="bg-card border-border animate-pulse rounded-xl border p-6">
-        <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-muted h-20 rounded" />
-          ))}
+      <div className="min-h-[400px]">
+        <div className="bg-card border-border animate-pulse rounded-xl border p-6">
+          <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-muted h-20 rounded" />
+            ))}
+          </div>
         </div>
       </div>
     ),
@@ -55,16 +57,40 @@ import { fetcher } from "@/lib/swr"
 
 const BettingPage = dynamic(() => import("@/components/betting-page"), {
   loading: () => (
-    <div className="bg-card border-border animate-pulse rounded-xl border p-6">
-      <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-muted h-24 rounded" />
+    <div className="min-h-[600px]">
+      {/* BettingHeader skeleton */}
+      <div className="bg-card border-border rounded-xl border p-4">
+        <div className="flex gap-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-muted h-10 w-24 animate-pulse rounded-lg" />
+          ))}
+        </div>
+        <div className="mt-3 flex gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-muted h-8 w-16 animate-pulse rounded-full" />
+          ))}
+        </div>
+      </div>
+      {/* Match cards skeleton */}
+      <div className="mt-2 space-y-2 sm:mt-4 sm:space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-card border-border animate-pulse rounded-xl border p-4">
+            <div className="bg-muted mb-2 h-4 w-1/4 rounded" />
+            <div className="flex items-center justify-between">
+              <div className="bg-muted h-6 w-1/3 rounded" />
+              <div className="bg-muted h-8 w-12 rounded" />
+              <div className="bg-muted h-6 w-1/3 rounded" />
+            </div>
+            <div className="mt-2 flex gap-2">
+              <div className="bg-muted h-10 flex-1 rounded-lg" />
+              <div className="bg-muted h-10 flex-1 rounded-lg" />
+              <div className="bg-muted h-10 flex-1 rounded-lg" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
   ),
-  ssr: false,
 })
 
 type TabType = "feed" | "content"
@@ -124,7 +150,7 @@ function HomeContent() {
   return (
     <main
       id="main-content"
-      className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+      className="mx-auto min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
       tabIndex={-1}
     >
       <div className="grid grid-cols-12 gap-5 lg:gap-6">

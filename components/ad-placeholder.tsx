@@ -9,7 +9,7 @@ const VARIANT_CONFIG = {
   },
   sidebar: {
     dimensions: "300x250",
-    className: "w-full aspect-[300/250]",
+    className: "w-full aspect-[300/250] min-h-[250px]",
   },
   inline: {
     dimensions: "468x60",
