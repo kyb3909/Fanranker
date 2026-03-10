@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
         .from("betman_games")
         .update(updateData)
         .eq("id", r.game_id)
-        .in("status", ["scheduled", "in_progress", "completed", "cancelled"])
         .select("id")
 
       if (error) {
@@ -79,6 +78,17 @@ export async function POST(request: NextRequest) {
         if (status === "cancelled") cancelled++
         else updated++
       }
+    }
+
+    if (updated + cancelled === 0 && errors.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: errors[0],
+          errors,
+        },
+        { status: 409 }
+      )
     }
 
     return NextResponse.json({
