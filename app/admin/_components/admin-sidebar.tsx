@@ -20,6 +20,7 @@ import {
   Activity,
   StickyNote,
   ChevronRight,
+  LineChart,
 } from "lucide-react"
 import {
   Sidebar,
@@ -45,6 +46,7 @@ const navGroups = [
       { title: "대시보드", href: "/admin", icon: LayoutDashboard },
       { title: "운영 모니터링", href: "/admin/operations", icon: MonitorCheck },
       { title: "분석 리포트", href: "/admin/analytics", icon: BarChart3 },
+      { title: "통계", href: "/admin/stats", icon: LineChart },
     ],
   },
   {
