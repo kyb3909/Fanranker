@@ -803,7 +803,6 @@ export function SettlementManagementTable() {
                   <div>
                     {"→ "}
                     <Badge variant="secondary">{editResult}</Badge>
-                    <span className="text-muted-foreground ml-1">(저장 시 자동 정산)</span>
                   </div>
                 </div>
               )}
@@ -822,7 +821,7 @@ export function SettlementManagementTable() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 저장 중...
                 </>
               ) : (
-                "결과 저장 + 정산"
+                "결과 저장"
               )}
             </Button>
           </DialogFooter>

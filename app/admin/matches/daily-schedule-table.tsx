@@ -12,8 +12,12 @@ import {
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, XCircle, RefreshCw, Clock, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, XCircle, RefreshCw, Clock, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import { format } from "date-fns"
+import {
+  MatchResultEditorDialog,
+  type EditableMatchResultGame,
+} from "../_components/match-result-editor-dialog"
 
 const SPORT_LABELS: Record<string, string> = {
   축구: "축구",
@@ -29,21 +33,9 @@ const PHASE_COLORS: Record<string, string> = {
   결과입력됨: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
 }
 
-interface ScheduleGame {
-  id: string
-  game_no: number
-  sport: string
-  game_type: string
-  home_team: string
-  away_team: string
-  match_time: string
+interface ScheduleGame extends EditableMatchResultGame {
   status: string | null
-  result: string | null
   result_label: string | null
-  home_score: number | null
-  away_score: number | null
-  handicap: number | null
-  over_under_line: number | null
   phase: "진행전" | "진행중" | "경기후" | "결과입력됨"
   prediction_count: number
 }
@@ -80,11 +72,42 @@ function getConditionLabel(
   return "-"
 }
 
+function formatDecimal(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
+function getJudgementDetail(
+  match: Pick<
+    ScheduleGame,
+    "game_type" | "home_score" | "away_score" | "handicap" | "over_under_line"
+  >
+) {
+  if (match.home_score === null || match.away_score === null) return null
+
+  if (match.game_type === "핸디캡" || match.game_type === "S핸디캡") {
+    const adjustedHome = match.home_score + (match.handicap ?? 0)
+    return `보정 ${formatDecimal(adjustedHome)} : ${formatDecimal(match.away_score)}`
+  }
+
+  if (match.game_type === "언더오버" || match.game_type === "S언더오버") {
+    const total = match.home_score + match.away_score
+    return `합계 ${formatDecimal(total)} / 기준 ${formatDecimal(match.over_under_line ?? 0)}`
+  }
+
+  if (match.game_type === "SUM") {
+    const total = match.home_score + match.away_score
+    return `합계 ${formatDecimal(total)} (${total % 2 === 0 ? "짝" : "홀"})`
+  }
+
+  return null
+}
+
 export function DailyScheduleTable() {
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
   const [data, setData] = useState<ScheduleResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editGame, setEditGame] = useState<ScheduleGame | null>(null)
 
   const fetchSchedule = useCallback(async () => {
     setIsLoading(true)
@@ -207,12 +230,13 @@ export function DailyScheduleTable() {
               <TableHead className="w-[80px] text-center">스코어</TableHead>
               <TableHead className="w-[90px]">적중 결과</TableHead>
               <TableHead className="w-[70px] text-right">예측 수</TableHead>
+              <TableHead className="w-[80px] text-right">수정</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {games.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-muted-foreground h-24 text-center">
+                <TableCell colSpan={11} className="text-muted-foreground h-24 text-center">
                   이 날짜에 등록된 경기가 없습니다.
                 </TableCell>
               </TableRow>
@@ -261,11 +285,18 @@ export function DailyScheduleTable() {
                       ? `${match.home_score} : ${match.away_score}`
                       : "-"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-[130px]">
                     {match.result_label ? (
-                      <Badge variant="secondary" className="text-xs">
-                        {match.result_label}
-                      </Badge>
+                      <div className="space-y-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {match.result_label}
+                        </Badge>
+                        {getJudgementDetail(match) && (
+                          <p className="text-muted-foreground text-[11px]">
+                            {getJudgementDetail(match)}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-muted-foreground text-xs">-</span>
                     )}
@@ -279,12 +310,27 @@ export function DailyScheduleTable() {
                       <span className="text-muted-foreground text-xs">0</span>
                     )}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm" onClick={() => setEditGame(match)}>
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
+                      수정
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <MatchResultEditorDialog
+        game={editGame}
+        open={!!editGame}
+        onOpenChange={(open) => {
+          if (!open) setEditGame(null)
+        }}
+        onSaved={fetchSchedule}
+      />
     </Card>
   )
 }
