@@ -267,10 +267,14 @@ export function DailyScheduleTable() {
                     <span className="font-medium">{match.away_team}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="flex items-center gap-1 text-xs">
-                      <Clock className="text-muted-foreground h-3 w-3" />
-                      {format(new Date(match.match_time), "MM/dd HH:mm")}
-                    </span>
+                    {match.match_time ? (
+                      <span className="flex items-center gap-1 text-xs">
+                        <Clock className="text-muted-foreground h-3 w-3" />
+                        {format(new Date(match.match_time), "MM/dd HH:mm")}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge
