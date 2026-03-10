@@ -6,6 +6,9 @@ import { settlePredictions } from "../lib/betman/settle"
 type MissingGameRow = {
   round_id: string | null
   match_time: string | null
+  result: string | null
+  home_score: number | null
+  away_score: number | null
 }
 
 type RoundRow = {
@@ -26,6 +29,18 @@ type ScoreCandidate = {
 
 const GAME_SELECT =
   "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
+
+function hasMissingResult(game: Pick<MissingGameRow, "result">) {
+  return game.result === null || game.result === ""
+}
+
+function hasMissingScore(game: Pick<MissingGameRow, "result" | "home_score" | "away_score">) {
+  return !hasMissingResult(game) && (game.home_score === null || game.away_score === null)
+}
+
+function isBackfillCandidate(game: Pick<MissingGameRow, "result" | "home_score" | "away_score">) {
+  return hasMissingResult(game) || hasMissingScore(game)
+}
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -78,15 +93,37 @@ function deriveResultFromScore(
 
 async function countMissingPastGames(supabase: ReturnType<typeof createServiceClient>) {
   const nowIso = new Date().toISOString()
-  const { count, error } = await supabase
-    .from("betman_games")
-    .select("*", { head: true, count: "exact" })
-    .lt("match_time", nowIso)
-    .in("status", ["scheduled", "in_progress", "completed"])
-    .or("result.is.null,result.eq.")
+  const pageSize = 1000
+  let from = 0
+  let total = 0
+  let missingResult = 0
+  let missingScore = 0
 
-  if (error) throw error
-  return count ?? 0
+  while (true) {
+    const { data, error } = await supabase
+      .from("betman_games")
+      .select("result, home_score, away_score, match_time")
+      .lt("match_time", nowIso)
+      .in("status", ["scheduled", "in_progress", "completed"])
+      .or("result.is.null,result.eq.,home_score.is.null,away_score.is.null")
+      .order("match_time", { ascending: false })
+      .range(from, from + pageSize - 1)
+
+    if (error) throw error
+
+    const rows = (data || []) as MissingGameRow[]
+    for (const row of rows) {
+      if (!isBackfillCandidate(row)) continue
+      total++
+      if (hasMissingResult(row)) missingResult++
+      if (hasMissingScore(row)) missingScore++
+    }
+
+    if (rows.length < pageSize) break
+    from += pageSize
+  }
+
+  return { total, missingResult, missingScore }
 }
 
 async function listPendingRoundGmTs(
@@ -100,17 +137,17 @@ async function listPendingRoundGmTs(
 
   const { data: missingGames, error: missingError } = await supabase
     .from("betman_games")
-    .select("round_id, match_time")
+    .select("round_id, match_time, result, home_score, away_score")
     .not("round_id", "is", null)
     .lt("match_time", now.toISOString())
     .gte("match_time", from.toISOString())
     .in("status", ["scheduled", "in_progress", "completed"])
-    .or("result.is.null,result.eq.")
+    .or("result.is.null,result.eq.,home_score.is.null,away_score.is.null")
     .order("match_time", { ascending: false })
     .limit(Math.max(limit * 60, 300))
 
   if (missingError) throw missingError
-  const rows = (missingGames || []) as MissingGameRow[]
+  const rows = ((missingGames || []) as MissingGameRow[]).filter(isBackfillCandidate)
   if (rows.length === 0) return []
 
   const missingByRound = new Map<string, number>()
@@ -350,7 +387,9 @@ async function main() {
   const supabase = createServiceClient()
 
   const beforeMissing = await countMissingPastGames(supabase)
-  console.log(`[start] missing past games: ${beforeMissing}`)
+  console.log(
+    `[start] backfill candidates: total=${beforeMissing.total}, result=${beforeMissing.missingResult}, score=${beforeMissing.missingScore}`
+  )
 
   const roundLimit = getNumericOption("limit", 30)
   const days = getNumericOption("days", 60)

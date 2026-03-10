@@ -57,6 +57,29 @@ interface ScheduleResponse {
   total: number
 }
 
+function getConditionLabel(
+  match: Pick<ScheduleGame, "game_type" | "handicap" | "over_under_line">
+) {
+  if ((match.game_type === "핸디캡" || match.game_type === "S핸디캡") && match.handicap !== null) {
+    return `H ${match.handicap > 0 ? "+" : ""}${match.handicap}`
+  }
+
+  if (
+    (match.game_type === "언더오버" ||
+      match.game_type === "S언더오버" ||
+      match.game_type === "SUM") &&
+    match.over_under_line !== null
+  ) {
+    return `기준 ${match.over_under_line}`
+  }
+
+  if (match.game_type === "SUM") {
+    return "합계 홀짝"
+  }
+
+  return "-"
+}
+
 export function DailyScheduleTable() {
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
   const [data, setData] = useState<ScheduleResponse | null>(null)
@@ -177,6 +200,7 @@ export function DailyScheduleTable() {
               <TableHead className="w-[70px]">번호</TableHead>
               <TableHead className="w-[60px]">종목</TableHead>
               <TableHead className="w-[80px]">유형</TableHead>
+              <TableHead className="w-[110px]">조건</TableHead>
               <TableHead>홈 vs 원정</TableHead>
               <TableHead className="w-[130px]">경기시간</TableHead>
               <TableHead className="w-[100px]">단계</TableHead>
@@ -188,7 +212,7 @@ export function DailyScheduleTable() {
           <TableBody>
             {games.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+                <TableCell colSpan={10} className="text-muted-foreground h-24 text-center">
                   이 날짜에 등록된 경기가 없습니다.
                 </TableCell>
               </TableRow>
@@ -203,6 +227,15 @@ export function DailyScheduleTable() {
                     <Badge variant="outline" className="text-xs">
                       {match.game_type}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {getConditionLabel(match) === "-" ? (
+                      <span className="text-muted-foreground">-</span>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        {getConditionLabel(match)}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">
                     <span className="font-medium">{match.home_team}</span>
