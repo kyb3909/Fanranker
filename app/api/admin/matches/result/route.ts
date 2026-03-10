@@ -11,6 +11,7 @@ const resultSchema = z.object({
   home_score: z.number().int().min(0).max(999),
   away_score: z.number().int().min(0).max(999),
   result: z.enum(["home", "away", "draw", "over", "under", "odd", "even", "cancelled"]),
+  status: z.enum(["scheduled", "in_progress", "finished", "completed", "cancelled"]).optional(),
 })
 
 const batchResultSchema = z.object({
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     for (const r of results) {
-      const status = r.result === "cancelled" ? "cancelled" : "completed"
+      const status = r.result === "cancelled" ? "cancelled" : (r.status ?? "completed")
 
       const updateData: Record<string, unknown> = {
         home_score: r.home_score,

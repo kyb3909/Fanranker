@@ -79,7 +79,7 @@ function formatDecimal(value: number) {
 function getJudgementDetail(
   match: Pick<
     ScheduleGame,
-    "game_type" | "home_score" | "away_score" | "handicap" | "over_under_line"
+    "game_type" | "home_score" | "away_score" | "handicap" | "over_under_line" | "sport"
   >
 ) {
   if (match.home_score === null || match.away_score === null) return null
@@ -90,6 +90,7 @@ function getJudgementDetail(
   }
 
   if (match.game_type === "언더오버" || match.game_type === "S언더오버") {
+    if (match.sport === "배구") return null
     const total = match.home_score + match.away_score
     return `합계 ${formatDecimal(total)} / 기준 ${formatDecimal(match.over_under_line ?? 0)}`
   }

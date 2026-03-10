@@ -14,6 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
 
 export interface EditableMatchResultGame {
@@ -29,6 +36,7 @@ export interface EditableMatchResultGame {
   away_score: number | null
   handicap: number | null
   over_under_line: number | null
+  status?: string | null
 }
 
 const SPORT_LABELS: Record<string, string> = {
@@ -75,6 +83,14 @@ const RESULT_OPTIONS: Record<string, { label: string; value: string }[]> = {
 function getResultOptions(gameType: string) {
   return RESULT_OPTIONS[gameType] || RESULT_OPTIONS["일반"]
 }
+
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "scheduled", label: "진행전" },
+  { value: "in_progress", label: "진행중" },
+  { value: "finished", label: "경기후" },
+  { value: "completed", label: "결과입력됨" },
+  { value: "cancelled", label: "취소" },
+]
 
 function deriveResult(
   gameType: string,
@@ -125,6 +141,7 @@ export function MatchResultEditorDialog({
   const [editHomeScore, setEditHomeScore] = useState("")
   const [editAwayScore, setEditAwayScore] = useState("")
   const [editResult, setEditResult] = useState("")
+  const [editStatus, setEditStatus] = useState("completed")
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -132,6 +149,9 @@ export function MatchResultEditorDialog({
     setEditHomeScore(game.home_score !== null ? String(game.home_score) : "")
     setEditAwayScore(game.away_score !== null ? String(game.away_score) : "")
     setEditResult(game.result || "")
+    setEditStatus(
+      game.status && STATUS_OPTIONS.some((o) => o.value === game.status) ? game.status : "completed"
+    )
   }, [game, open])
 
   const closeDialog = () => {
@@ -139,6 +159,7 @@ export function MatchResultEditorDialog({
     setEditHomeScore("")
     setEditAwayScore("")
     setEditResult("")
+    setEditStatus("completed")
   }
 
   const handleScoreChange = (side: "home" | "away", value: string) => {
@@ -188,6 +209,7 @@ export function MatchResultEditorDialog({
               home_score: parseInt(editHomeScore, 10),
               away_score: parseInt(editAwayScore, 10),
               result: editResult,
+              status: editResult === "cancelled" ? "cancelled" : editStatus,
             },
           ],
         }),
@@ -284,6 +306,26 @@ export function MatchResultEditorDialog({
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">경기 상태</label>
+              <Select value={editStatus} onValueChange={(v) => setEditStatus(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="상태 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground mt-1 text-xs">
+                결과 저장 시 선택한 상태로 반영됩니다. 경기후인 경우 &quot;결과입력됨&quot;으로 바꾼
+                뒤 저장하세요.
+              </p>
             </div>
 
             <div>
