@@ -9,6 +9,7 @@
     "start": "next start",
     "reddit-seed": "tsx scripts/reddit-seed-bot.ts",
     "betman-fetch": "tsx scripts/betman-fetch-games.ts",
+    "standings-scrape": "tsx scripts/standings-scraper.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

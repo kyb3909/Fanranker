@@ -5,6 +5,7 @@ import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { AdPlaceholder } from "@/components/ad-placeholder"
+import { StandingsWidget } from "@/components/standings-widget"
 import { MonthlyPrizeBanner } from "@/components/monthly-prize-banner"
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -129,6 +130,9 @@ export const ActivitySidebar = memo(function ActivitySidebar({
 
       {/* ===== 광고 플레이스홀더 ===== */}
       <AdPlaceholder variant="sidebar" />
+
+      {/* ===== 리그 순위표 위젯 ===== */}
+      <StandingsWidget />
     </div>
   )
 })
