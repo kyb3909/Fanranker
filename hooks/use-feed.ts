@@ -49,7 +49,7 @@ interface RawProfile {
   temperature?: number
 }
 
-interface PostsResponse {
+export interface PostsResponse {
   posts: RawPost[]
   profiles: RawProfile[]
   hasMore?: boolean
@@ -83,7 +83,8 @@ function transformPosts(fetchedPosts: RawPost[], profiles: RawProfile[]): Post[]
 export function useFeed(
   sortBy: SortType,
   followedCommunities: Set<string>,
-  followsLoaded: boolean
+  followsLoaded: boolean,
+  initialData?: PostsResponse
 ) {
   const { isSignedIn } = useAuth()
 
@@ -112,6 +113,7 @@ export function useFeed(
     getKey,
     fetcher,
     {
+      fallbackData: initialData ? [initialData] : undefined,
       revalidateOnFocus: false,
       revalidateFirstPage: false,
       dedupingInterval: 5000,

@@ -20,9 +20,10 @@ export async function GET(
     // 프로필 기본 정보
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("user_id, nickname, avatar_url, bio, temperature, is_journalist, role, created_at")
+      .select(
+        "user_id, nickname, avatar_url, bio, temperature, is_journalist, is_expert, created_at"
+      )
       .eq("user_id", userId)
-      .is("deleted_at", null)
       .single()
 
     if (profileError) {
@@ -104,7 +105,7 @@ export async function GET(
         bio: profile.bio,
         temperature: profile.temperature,
         is_journalist: profile.is_journalist,
-        is_expert: profile.role === "expert",
+        is_expert: profile.is_expert ?? false,
         created_at: profile.created_at,
       },
       recent_posts: recentPosts || [],
