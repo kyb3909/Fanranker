@@ -5,15 +5,17 @@ import { useBettingMatches } from "@/hooks/use-betting-matches"
 import { useBettingSlip } from "@/hooks/use-betting-slip"
 import { useBettingRankings } from "@/hooks/use-betting-rankings"
 import { useBettingMyPage } from "@/hooks/use-betting-mypage"
+import { useBettingCommunityStats } from "@/hooks/use-betting-community-stats"
 import { BettingHeader } from "./betting-header"
 import { BettingTab } from "./betting-tab"
 import { RankingTab } from "./ranking-tab"
+import { StatsTab } from "./stats-tab"
 import { MypageTab } from "./mypage-tab"
 import { BettingSlip } from "./betting-slip"
 import { BettingAlertDialog } from "./betting-alert-dialog"
 
 export default function BettingPage() {
-  const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "mypage">("betting")
+  const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "stats" | "mypage">("betting")
   const [myPageTab, setMyPageTab] = useState<"predictions" | "stats" | "gold" | "profile">(
     "predictions"
   )
@@ -21,6 +23,7 @@ export default function BettingPage() {
   const matches = useBettingMatches()
   const slip = useBettingSlip(matches.groupedMatches, matches.loadMatches)
   const rankings = useBettingRankings(activeTab === "ranking")
+  const communityStats = useBettingCommunityStats(activeTab === "stats")
   const myPage = useBettingMyPage(activeTab === "mypage", myPageTab)
 
   return (
@@ -65,6 +68,10 @@ export default function BettingPage() {
             followLoading={rankings.followLoading}
             onFollow={rankings.handleFollow}
           />
+        )}
+
+        {activeTab === "stats" && (
+          <StatsTab stats={communityStats.stats} isLoading={communityStats.isLoading} />
         )}
 
         {activeTab === "mypage" && (

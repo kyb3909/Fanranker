@@ -4,8 +4,8 @@ import { TrendingUp, Target, Coins } from "lucide-react"
 import { SPORT_TABS } from "./betting-types"
 
 interface BettingHeaderProps {
-  activeTab: "betting" | "ranking" | "mypage"
-  setActiveTab: (tab: "betting" | "ranking" | "mypage") => void
+  activeTab: "betting" | "ranking" | "stats" | "mypage"
+  setActiveTab: (tab: "betting" | "ranking" | "stats" | "mypage") => void
   // Betting tab filters
   sportFilter: "all" | "축구" | "야구" | "농구" | "배구"
   setSportFilter: (filter: "all" | "축구" | "야구" | "농구" | "배구") => void
@@ -47,13 +47,14 @@ export function BettingHeader({
         {[
           { id: "betting", label: "오늘의 경기" },
           { id: "ranking", label: "랭킹" },
+          { id: "stats", label: "통계" },
           { id: "mypage", label: "마이페이지" },
         ].map((tab) => (
           <button
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id as "betting" | "ranking" | "mypage")}
+            onClick={() => setActiveTab(tab.id as "betting" | "ranking" | "stats" | "mypage")}
             className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
               activeTab === tab.id
                 ? "text-foreground"
