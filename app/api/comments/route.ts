@@ -6,14 +6,16 @@ import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { z } from "zod"
 
-const CommentCreateSchema = z.object({
-  post_id: z.string().min(1, "게시글 ID가 필요합니다."),
-  content: z
-    .string()
-    .min(1, "댓글 내용을 입력해주세요.")
-    .max(5000, "댓글은 5000자 이하여야 합니다."),
-  parent_id: z.string().optional(),
-})
+const CommentCreateSchema = z
+  .object({
+    post_id: z.string().min(1, "게시글 ID가 필요합니다."),
+    content: z.string().max(5000, "댓글은 5000자 이하여야 합니다.").optional().default(""),
+    parent_id: z.string().optional(),
+    sticker_id: z.string().uuid().optional(),
+  })
+  .refine((data) => data.content.trim().length > 0 || data.sticker_id, {
+    message: "댓글 내용 또는 스티커를 선택해주세요.",
+  })
 
 /**
  * GET /api/comments?post_id=<uuid>
@@ -41,7 +43,9 @@ export async function GET(request: NextRequest) {
         content,
         vote_count,
         created_at,
-        updated_at
+        updated_at,
+        sticker_id,
+        stickers ( id, name, image_url )
       `
       )
       .eq("post_id", postId)
@@ -109,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return apiBadRequest(result.error.issues[0]?.message || "잘못된 입력입니다.")
     }
-    const { post_id, parent_id, content } = result.data
+    const { post_id, parent_id, content, sticker_id } = result.data
 
     // 쿨다운 체크 (10초 간격)
     const { data: canPost, error: cooldownError } = await supabase.rpc("can_post_comment", {
@@ -136,14 +140,27 @@ export async function POST(request: NextRequest) {
         post_id,
         user_id: userId,
         parent_id: parent_id || null,
-        content: content.trim(),
+        content: content.trim() || (sticker_id ? "" : ""),
         vote_count: 0,
+        sticker_id: sticker_id || null,
       })
       .select()
       .single()
 
     if (insertError) {
       return apiError("댓글 저장 중 오류가 발생했습니다.", 500, insertError)
+    }
+
+    // 스티커 사용 카운트 증가 (비동기)
+    if (sticker_id) {
+      supabase.rpc("increment_sticker_use", { p_sticker_id: sticker_id }).then(
+        () => {
+          /* done */
+        },
+        () => {
+          /* ignore */
+        }
+      )
     }
 
     // 포인트 적립 (비동기, 실패 무시) — 게시글의 community_slug를 조회해서 적립

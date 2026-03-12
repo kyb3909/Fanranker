@@ -209,9 +209,24 @@ export const CommentItem = memo(function CommentItem({
               onCancel={() => setIsEditing(false)}
             />
           ) : (
-            <p className={`text-foreground leading-relaxed ${depth === 0 ? "" : "text-sm"}`}>
-              {comment.content}
-            </p>
+            <div>
+              {comment.content && (
+                <p className={`text-foreground leading-relaxed ${depth === 0 ? "" : "text-sm"}`}>
+                  {comment.content}
+                </p>
+              )}
+              {comment.sticker && (
+                <div className="mt-1">
+                  <img
+                    src={comment.sticker.image_url}
+                    alt={comment.sticker.name}
+                    className="h-20 w-20 object-contain"
+                    title={comment.sticker.name}
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
           )}
           <CommentActions
             depth={depth}

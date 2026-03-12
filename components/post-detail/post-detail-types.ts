@@ -22,6 +22,12 @@ export interface TitleDisplay {
   rarity?: "common" | "rare" | "epic" | "legendary" | null
 }
 
+export interface CommentSticker {
+  id: string
+  name: string
+  image_url: string
+}
+
 export interface Comment {
   id: string | number
   userId?: string
@@ -31,6 +37,7 @@ export interface Comment {
   content: string
   upvotes: number
   titleDisplay?: TitleDisplay | null
+  sticker?: CommentSticker | null
   replies?: Comment[]
 }
 
@@ -56,6 +63,8 @@ export function transformComments(
     content: string
     vote_count: number
     created_at: string
+    sticker_id?: string | null
+    stickers?: { id: string; name: string; image_url: string } | null
   }[],
   profiles: { user_id: string; nickname: string; avatar_url: string | null }[],
   equippedTitles?: {
@@ -98,6 +107,13 @@ export function transformComments(
       content: comment.content,
       upvotes: comment.vote_count || 0,
       titleDisplay,
+      sticker: comment.stickers
+        ? {
+            id: comment.stickers.id,
+            name: comment.stickers.name,
+            image_url: comment.stickers.image_url,
+          }
+        : null,
       replies: [],
     }
     commentMap.set(comment.id, transformed)

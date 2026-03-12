@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
+import { Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -10,6 +11,7 @@ import { toast } from "@/hooks/use-toast"
 import { CommentItem } from "./comment-item"
 import { countAllComments, transformComments } from "./post-detail-types"
 import type { Comment } from "./post-detail-types"
+import { StickerPicker } from "@/components/sticker/sticker-picker"
 
 interface CommentSectionProps {
   postId: string | number
@@ -33,6 +35,12 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
   const [replyText, setReplyText] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [isSubmittingReply, setIsSubmittingReply] = useState<string | number | null>(null)
+  const [showStickerPicker, setShowStickerPicker] = useState(false)
+  const [selectedSticker, setSelectedSticker] = useState<{
+    id: string
+    name: string
+    image_url: string
+  } | null>(null)
 
   // 댓글 로드
   const reloadComments = useCallback(async () => {
@@ -57,13 +65,17 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
   }, [reloadComments])
 
   const handleCommentSubmit = async () => {
-    if (!commentText.trim() || isSubmittingComment) {
+    if (!commentText.trim() && !selectedSticker) {
       return
     }
+    if (isSubmittingComment) return
 
     setIsSubmittingComment(true)
     const textToSubmit = commentText.trim()
-    setCommentText("") // 즉시 입력 필드 비우기 (중복 제출 방지)
+    const stickerToSubmit = selectedSticker
+    setCommentText("")
+    setSelectedSticker(null)
+    setShowStickerPicker(false)
 
     try {
       const response = await fetch("/api/comments", {
@@ -74,6 +86,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
         body: JSON.stringify({
           post_id: postId,
           content: textToSubmit,
+          ...(stickerToSubmit && { sticker_id: stickerToSubmit.id }),
         }),
       })
 
@@ -96,6 +109,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
         description: error instanceof Error ? error.message : "댓글 작성에 실패했습니다.",
       })
       setCommentText(textToSubmit) // 실패 시 텍스트 복원
+      setSelectedSticker(stickerToSubmit) // 실패 시 스티커 복원
     } finally {
       setIsSubmittingComment(false)
     }
@@ -168,10 +182,49 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
               }
             }}
           />
-          <div className="flex justify-end">
+          {/* 선택된 스티커 미리보기 */}
+          {selectedSticker && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              <img
+                src={selectedSticker.image_url}
+                alt={selectedSticker.name}
+                className="h-12 w-12 object-contain"
+              />
+              <span className="text-foreground text-xs font-medium">{selectedSticker.name}</span>
+              <button
+                onClick={() => setSelectedSticker(null)}
+                className="text-muted-foreground hover:text-foreground ml-auto text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="relative">
+              <button
+                onClick={() => setShowStickerPicker(!showStickerPicker)}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  showStickerPicker
+                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                스티커
+              </button>
+              {showStickerPicker && (
+                <StickerPicker
+                  onSelect={(sticker) => {
+                    setSelectedSticker(sticker)
+                    setShowStickerPicker(false)
+                  }}
+                  onClose={() => setShowStickerPicker(false)}
+                />
+              )}
+            </div>
             <Button
               onClick={handleCommentSubmit}
-              disabled={!commentText.trim() || isSubmittingComment}
+              disabled={(!commentText.trim() && !selectedSticker) || isSubmittingComment}
             >
               {isSubmittingComment ? "작성 중..." : "댓글 작성"}
             </Button>
