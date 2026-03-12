@@ -1,6 +1,10 @@
 "use client"
 
-import { useBetting } from "@/hooks/use-betting"
+import { useState } from "react"
+import { useBettingMatches } from "@/hooks/use-betting-matches"
+import { useBettingSlip } from "@/hooks/use-betting-slip"
+import { useBettingRankings } from "@/hooks/use-betting-rankings"
+import { useBettingMyPage } from "@/hooks/use-betting-mypage"
 import { BettingHeader } from "./betting/betting-header"
 import { BettingTab } from "./betting/betting-tab"
 import { RankingTab } from "./betting/ranking-tab"
@@ -9,87 +13,95 @@ import { BettingSlip } from "./betting/betting-slip"
 import { BettingAlertDialog } from "./betting/betting-alert-dialog"
 
 export default function BettingPage() {
-  const b = useBetting()
+  const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "mypage">("betting")
+  const [myPageTab, setMyPageTab] = useState<"predictions" | "stats" | "gold" | "profile">(
+    "predictions"
+  )
+
+  const matches = useBettingMatches()
+  const slip = useBettingSlip(matches.groupedMatches, matches.loadMatches)
+  const rankings = useBettingRankings(activeTab === "ranking")
+  const myPage = useBettingMyPage(activeTab === "mypage", myPageTab)
 
   return (
     <div className="w-full">
       <BettingHeader
-        activeTab={b.activeTab}
-        setActiveTab={b.setActiveTab}
-        sportFilter={b.sportFilter}
-        setSportFilter={b.setSportFilter}
-        selectedSport={b.selectedSport}
-        leagueFilter={b.leagueFilter}
-        setLeagueFilter={b.setLeagueFilter}
-        availableLeagues={b.availableLeagues}
-        rankingSportFilter={b.rankingSportFilter}
-        setRankingSportFilter={b.setRankingSportFilter}
-        rankingFilter={b.rankingFilter}
-        setRankingFilter={b.setRankingFilter}
-        myPageTab={b.myPageTab}
-        setMyPageTab={b.setMyPageTab}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        sportFilter={matches.sportFilter}
+        setSportFilter={matches.setSportFilter}
+        selectedSport={slip.selectedSport}
+        leagueFilter={matches.leagueFilter}
+        setLeagueFilter={matches.setLeagueFilter}
+        availableLeagues={matches.availableLeagues}
+        rankingSportFilter={rankings.rankingSportFilter}
+        setRankingSportFilter={rankings.setRankingSportFilter}
+        rankingFilter={rankings.rankingFilter}
+        setRankingFilter={rankings.setRankingFilter}
+        myPageTab={myPageTab}
+        setMyPageTab={setMyPageTab}
       />
 
       <div className="space-y-2 sm:space-y-4">
-        {b.activeTab === "betting" && (
+        {activeTab === "betting" && (
           <BettingTab
-            lastUpdated={b.lastUpdated}
-            isLoading={b.isLoading}
-            error={b.error}
-            filteredMatches={b.filteredMatches}
-            selectedBets={b.selectedBets}
-            selectedSport={b.selectedSport}
-            onBetSelection={b.handleBetSelection}
-            onRefresh={b.loadMatches}
+            lastUpdated={matches.lastUpdated}
+            isLoading={matches.isLoading}
+            error={matches.error}
+            filteredMatches={matches.filteredMatches}
+            selectedBets={slip.selectedBets}
+            selectedSport={slip.selectedSport}
+            onBetSelection={slip.handleBetSelection}
+            onRefresh={matches.loadMatches}
           />
         )}
 
-        {b.activeTab === "ranking" && (
+        {activeTab === "ranking" && (
           <RankingTab
-            rankings={b.rankings}
-            myRank={b.myRank}
-            isLoading={b.isLoadingRankings}
-            followedUsers={b.followedUsers}
-            followLoading={b.followLoading}
-            onFollow={b.handleFollow}
+            rankings={rankings.rankings}
+            myRank={rankings.myRank}
+            isLoading={rankings.isLoadingRankings}
+            followedUsers={rankings.followedUsers}
+            followLoading={rankings.followLoading}
+            onFollow={rankings.handleFollow}
           />
         )}
 
-        {b.activeTab === "mypage" && (
+        {activeTab === "mypage" && (
           <MypageTab
-            myPageTab={b.myPageTab}
-            predictionHistory={b.predictionHistory}
-            isLoadingHistory={b.isLoadingHistory}
-            myStats={b.myStats}
-            isLoadingMyStats={b.isLoadingMyStats}
+            myPageTab={myPageTab}
+            predictionHistory={myPage.predictionHistory}
+            isLoadingHistory={myPage.isLoadingHistory}
+            myStats={myPage.myStats}
+            isLoadingMyStats={myPage.isLoadingMyStats}
           />
         )}
       </div>
 
-      {b.activeTab === "betting" && (
+      {activeTab === "betting" && (
         <BettingSlip
-          selectedBets={b.selectedBets}
-          groupedMatches={b.groupedMatches}
-          isSlipExpanded={b.isSlipExpanded}
-          setIsSlipExpanded={b.setIsSlipExpanded}
-          betAmount={b.betAmount}
-          setBetAmount={b.setBetAmount}
-          userBalls={b.userBalls}
-          totalOdds={b.totalOdds}
-          expectedReturn={b.expectedReturn}
-          isSubmitting={b.isSubmittingPrediction}
-          onRemoveBet={b.removeBet}
-          onClearAllBets={b.clearAllBets}
-          onSubmit={b.handleSubmitPrediction}
-          isJournalist={b.isJournalist}
-          analysisTitle={b.analysisTitle}
-          setAnalysisTitle={b.setAnalysisTitle}
-          analysisText={b.analysisText}
-          setAnalysisText={b.setAnalysisText}
+          selectedBets={slip.selectedBets}
+          groupedMatches={matches.groupedMatches}
+          isSlipExpanded={slip.isSlipExpanded}
+          setIsSlipExpanded={slip.setIsSlipExpanded}
+          betAmount={slip.betAmount}
+          setBetAmount={slip.setBetAmount}
+          userBalls={slip.userBalls}
+          totalOdds={slip.totalOdds}
+          expectedReturn={slip.expectedReturn}
+          isSubmitting={slip.isSubmittingPrediction}
+          onRemoveBet={slip.removeBet}
+          onClearAllBets={slip.clearAllBets}
+          onSubmit={slip.handleSubmitPrediction}
+          isJournalist={slip.isJournalist}
+          analysisTitle={slip.analysisTitle}
+          setAnalysisTitle={slip.setAnalysisTitle}
+          analysisText={slip.analysisText}
+          setAnalysisText={slip.setAnalysisText}
         />
       )}
 
-      <BettingAlertDialog alertModal={b.alertModal} onClose={b.closeAlert} />
+      <BettingAlertDialog alertModal={slip.alertModal} onClose={slip.closeAlert} />
     </div>
   )
 }
