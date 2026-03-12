@@ -50,13 +50,13 @@ export function PostCardFooter({
 }: PostCardFooterProps) {
   return (
     <div className="border-border/50 mt-4 flex items-center justify-between border-t pt-3">
-      {/* 좌측: 작성자 + 온도 */}
+      {/* 좌측: 프사 + 닉네임 + 칭호 */}
       <div className="flex min-w-0 items-center gap-2">
         <Avatar className="h-7 w-7 shrink-0">
           <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
           <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
         </Avatar>
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 items-center gap-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="text-foreground hover:text-primary cursor-pointer truncate text-left text-[15px] font-medium transition-colors">
@@ -88,7 +88,6 @@ export function PostCardFooter({
               nounTitle={titleDisplay.nounTitle}
               rarity={titleDisplay.rarity}
               size="sm"
-              className="mt-0.5 w-fit"
             />
           )}
         </div>

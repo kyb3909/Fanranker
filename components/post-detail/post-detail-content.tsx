@@ -113,18 +113,17 @@ export function PostDetailContent({ post }: { post: Post }) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  {post.titleDisplay &&
+                    (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (
+                      <TitleBadge
+                        adjTitle={post.titleDisplay.adjTitle}
+                        nounTitle={post.titleDisplay.nounTitle}
+                        rarity={post.titleDisplay.rarity}
+                        size="sm"
+                      />
+                    )}
                   <span className="text-muted-foreground text-sm">{post.timestamp}</span>
                 </div>
-                {post.titleDisplay &&
-                  (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (
-                    <TitleBadge
-                      adjTitle={post.titleDisplay.adjTitle}
-                      nounTitle={post.titleDisplay.nounTitle}
-                      rarity={post.titleDisplay.rarity}
-                      size="sm"
-                      className="mt-0.5 w-fit"
-                    />
-                  )}
               </div>
             </div>
             <div className="flex items-center gap-2">
