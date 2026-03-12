@@ -12,7 +12,7 @@ interface UserProfileBadgeProps {
 
 /**
  * UserProfileBadge Component
- * 
+ *
  * Displays an expert badge next to user names/avatars when they are certified experts
  */
 export function UserProfileBadge({ isExpert, className, size = "sm" }: UserProfileBadgeProps) {
@@ -36,7 +36,7 @@ export function UserProfileBadge({ isExpert, className, size = "sm" }: UserProfi
     <Badge
       variant="default"
       className={cn(
-        "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 font-medium",
+        "border-0 bg-gradient-to-r from-amber-500 to-orange-500 font-medium text-white",
         "inline-flex items-center gap-1",
         sizeClasses[size],
         className

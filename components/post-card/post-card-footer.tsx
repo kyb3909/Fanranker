@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ShareMenu } from "@/components/share-menu"
-import { TitleBadge, type TitleDisplay } from "@/components/title-badge"
+import { TitleBadge, type TitleDisplay } from "@/components/profile/title-badge"
 
 export interface PostCardFooterProps {
   postId: number | string

@@ -1,7 +1,7 @@
 import React from "react"
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
-import { PredictionActivityCard } from "@/components/prediction-activity-card"
+import { PredictionActivityCard } from "@/components/my-predictions/prediction-activity-card"
 
 // Mock date utility
 vi.mock("@/lib/utils/date", () => ({

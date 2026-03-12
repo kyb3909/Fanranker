@@ -22,7 +22,7 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 
 const TipTapEditor = dynamic(
-  () => import("@/components/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
+  () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
   { ssr: false, loading: () => <div className="bg-muted h-64 animate-pulse rounded-lg" /> }
 )
 

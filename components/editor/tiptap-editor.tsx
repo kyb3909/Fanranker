@@ -1,16 +1,16 @@
 "use client"
 
-import React from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
-import TextAlign from '@tiptap/extension-text-align'
-import Underline from '@tiptap/extension-underline'
-import { Embed } from '@/lib/tiptap/extensions/embed'
-import { EmbedPaste } from '@/lib/tiptap/extensions/embed-paste'
-import { cn } from '@/lib/utils'
-import { Toggle } from '@/components/ui/toggle'
-import { Separator } from '@/components/ui/separator'
+import React from "react"
+import { useEditor, EditorContent } from "@tiptap/react"
+import StarterKit from "@tiptap/starter-kit"
+import Placeholder from "@tiptap/extension-placeholder"
+import TextAlign from "@tiptap/extension-text-align"
+import Underline from "@tiptap/extension-underline"
+import { Embed } from "@/lib/tiptap/extensions/embed"
+import { EmbedPaste } from "@/lib/tiptap/extensions/embed-paste"
+import { cn } from "@/lib/utils"
+import { Toggle } from "@/components/ui/toggle"
+import { Separator } from "@/components/ui/separator"
 import {
   Bold,
   Italic,
@@ -29,7 +29,7 @@ import {
   Undo,
   Redo,
   Minus,
-} from 'lucide-react'
+} from "lucide-react"
 
 export interface TipTapEditorProps {
   content?: string | any // string 또는 TipTap JSON
@@ -42,7 +42,7 @@ export interface TipTapEditorProps {
 
 /**
  * TipTap Editor Component with oEmbed support
- * 
+ *
  * Features:
  * - Automatic URL to embed conversion (YouTube, Instagram, X)
  * - Rich text editing with StarterKit
@@ -62,22 +62,22 @@ export function TipTapEditor({
       StarterKit,
       Placeholder.configure({
         placeholder,
-        emptyEditorClass: 'is-editor-empty',
+        emptyEditorClass: "is-editor-empty",
       }),
       TextAlign.configure({
-        types: ['heading', 'paragraph'],
+        types: ["heading", "paragraph"],
       }),
       Underline,
       Embed.configure({
         HTMLAttributes: {
-          class: 'embed-node',
+          class: "embed-node",
         },
       }),
       EmbedPaste.configure({
         onEmbedLoading,
       }),
     ],
-    content: content || '',
+    content: content || "",
     editable,
     immediatelyRender: false, // SSR hydration mismatch 방지
     onUpdate: ({ editor }) => {
@@ -87,27 +87,24 @@ export function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: cn(
-          'focus:outline-none',
-          className
-        ),
+        class: cn("focus:outline-none", className),
       },
     },
   })
 
   if (!editor) {
     return (
-      <div className="border border-border rounded-lg bg-background min-h-[300px] p-4 flex items-center justify-center">
+      <div className="border-border bg-background flex min-h-[300px] items-center justify-center rounded-lg border p-4">
         <p className="text-muted-foreground">에디터를 불러오는 중...</p>
       </div>
     )
   }
 
   return (
-    <div className="border border-border rounded-lg bg-background overflow-hidden">
+    <div className="border-border bg-background overflow-hidden rounded-lg border">
       {/* Toolbar */}
       {editable && (
-        <div className="border-b border-border bg-muted/30 p-2 flex flex-wrap items-center gap-1">
+        <div className="border-border bg-muted/30 flex flex-wrap items-center gap-1 border-b p-2">
           {/* Undo/Redo */}
           <Toggle
             size="sm"
@@ -131,7 +128,7 @@ export function TipTapEditor({
           {/* Headings */}
           <Toggle
             size="sm"
-            pressed={editor.isActive('heading', { level: 1 })}
+            pressed={editor.isActive("heading", { level: 1 })}
             onPressedChange={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             aria-label="제목 1"
           >
@@ -139,7 +136,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('heading', { level: 2 })}
+            pressed={editor.isActive("heading", { level: 2 })}
             onPressedChange={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             aria-label="제목 2"
           >
@@ -147,7 +144,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('heading', { level: 3 })}
+            pressed={editor.isActive("heading", { level: 3 })}
             onPressedChange={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             aria-label="제목 3"
           >
@@ -159,7 +156,7 @@ export function TipTapEditor({
           {/* Text Formatting */}
           <Toggle
             size="sm"
-            pressed={editor.isActive('bold')}
+            pressed={editor.isActive("bold")}
             onPressedChange={() => editor.chain().focus().toggleBold().run()}
             aria-label="굵게"
           >
@@ -167,7 +164,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('italic')}
+            pressed={editor.isActive("italic")}
             onPressedChange={() => editor.chain().focus().toggleItalic().run()}
             aria-label="기울임"
           >
@@ -175,7 +172,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('underline')}
+            pressed={editor.isActive("underline")}
             onPressedChange={() => editor.chain().focus().toggleUnderline().run()}
             aria-label="밑줄"
           >
@@ -183,7 +180,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('strike')}
+            pressed={editor.isActive("strike")}
             onPressedChange={() => editor.chain().focus().toggleStrike().run()}
             aria-label="취소선"
           >
@@ -191,7 +188,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('code')}
+            pressed={editor.isActive("code")}
             onPressedChange={() => editor.chain().focus().toggleCode().run()}
             aria-label="인라인 코드"
           >
@@ -203,24 +200,24 @@ export function TipTapEditor({
           {/* Text Align */}
           <Toggle
             size="sm"
-            pressed={editor.isActive({ textAlign: 'left' })}
-            onPressedChange={() => editor.chain().focus().setTextAlign('left').run()}
+            pressed={editor.isActive({ textAlign: "left" })}
+            onPressedChange={() => editor.chain().focus().setTextAlign("left").run()}
             aria-label="왼쪽 정렬"
           >
             <AlignLeft className="h-4 w-4" />
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive({ textAlign: 'center' })}
-            onPressedChange={() => editor.chain().focus().setTextAlign('center').run()}
+            pressed={editor.isActive({ textAlign: "center" })}
+            onPressedChange={() => editor.chain().focus().setTextAlign("center").run()}
             aria-label="가운데 정렬"
           >
             <AlignCenter className="h-4 w-4" />
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive({ textAlign: 'right' })}
-            onPressedChange={() => editor.chain().focus().setTextAlign('right').run()}
+            pressed={editor.isActive({ textAlign: "right" })}
+            onPressedChange={() => editor.chain().focus().setTextAlign("right").run()}
             aria-label="오른쪽 정렬"
           >
             <AlignRight className="h-4 w-4" />
@@ -231,7 +228,7 @@ export function TipTapEditor({
           {/* Lists */}
           <Toggle
             size="sm"
-            pressed={editor.isActive('bulletList')}
+            pressed={editor.isActive("bulletList")}
             onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
             aria-label="글머리 기호 목록"
           >
@@ -239,7 +236,7 @@ export function TipTapEditor({
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive('orderedList')}
+            pressed={editor.isActive("orderedList")}
             onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
             aria-label="번호 매기기 목록"
           >
@@ -251,7 +248,7 @@ export function TipTapEditor({
           {/* Block Elements */}
           <Toggle
             size="sm"
-            pressed={editor.isActive('blockquote')}
+            pressed={editor.isActive("blockquote")}
             onPressedChange={() => editor.chain().focus().toggleBlockquote().run()}
             aria-label="인용"
           >
@@ -268,11 +265,7 @@ export function TipTapEditor({
       )}
 
       {/* Editor Content */}
-      <EditorContent 
-        editor={editor} 
-        className="tiptap-editor"
-      />
+      <EditorContent editor={editor} className="tiptap-editor" />
     </div>
   )
 }
-

@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { CommunitySidebar } from "@/components/community-sidebar"
-import { ActivitySidebar } from "@/components/activity-sidebar"
+import { CommunitySidebar } from "@/components/sidebar/community-sidebar"
+import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {

@@ -1,6 +1,6 @@
 "use client"
 
-import { TitleBadge } from "@/components/title-badge"
+import { TitleBadge } from "@/components/profile/title-badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

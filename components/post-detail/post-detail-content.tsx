@@ -10,7 +10,7 @@ import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { extractEmbedsFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
-import { EmbedPreviewCard } from "@/components/embed-preview-card"
+import { EmbedPreviewCard } from "@/components/editor/embed-preview-card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
 import { getTemperatureStyle, getDisplayTemperature } from "@/lib/temperature"
-import { PostActions } from "./post-detail/post-actions"
-import { CommentSection } from "./post-detail/comment-section"
-import type { Post } from "./post-detail/post-detail-types"
+import { PostActions } from "./post-actions"
+import { CommentSection } from "./comment-section"
+import type { Post } from "./post-detail-types"
 
 const TipTapContent = dynamic(
-  () => import("@/components/tiptap-content").then((mod) => ({ default: mod.TipTapContent })),
+  () =>
+    import("@/components/editor/tiptap-content").then((mod) => ({ default: mod.TipTapContent })),
   { ssr: false, loading: () => <div className="bg-muted h-32 animate-pulse rounded" /> }
 )
 

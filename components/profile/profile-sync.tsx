@@ -8,7 +8,7 @@
  * of creating/updating the user's Supabase profile.
  */
 
-import { ensureProfile } from '@/lib/supabase/ensure-profile'
+import { ensureProfile } from "@/lib/supabase/ensure-profile"
 
 export async function ProfileSync() {
   // This will create the profile if it doesn't exist

@@ -5,12 +5,12 @@ import { useBettingMatches } from "@/hooks/use-betting-matches"
 import { useBettingSlip } from "@/hooks/use-betting-slip"
 import { useBettingRankings } from "@/hooks/use-betting-rankings"
 import { useBettingMyPage } from "@/hooks/use-betting-mypage"
-import { BettingHeader } from "./betting/betting-header"
-import { BettingTab } from "./betting/betting-tab"
-import { RankingTab } from "./betting/ranking-tab"
-import { MypageTab } from "./betting/mypage-tab"
-import { BettingSlip } from "./betting/betting-slip"
-import { BettingAlertDialog } from "./betting/betting-alert-dialog"
+import { BettingHeader } from "./betting-header"
+import { BettingTab } from "./betting-tab"
+import { RankingTab } from "./ranking-tab"
+import { MypageTab } from "./mypage-tab"
+import { BettingSlip } from "./betting-slip"
+import { BettingAlertDialog } from "./betting-alert-dialog"
 
 export default function BettingPage() {
   const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "mypage">("betting")

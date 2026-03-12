@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react"
 import { ExternalLink } from "lucide-react"
 
 export interface EmbedCardProps {
-  provider: 'youtube' | 'instagram' | 'x'
+  provider: "youtube" | "instagram" | "x"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요
   title?: string
@@ -18,11 +18,11 @@ export interface EmbedCardProps {
 
 /**
  * EmbedCard Component (Full Embed)
- * 
+ *
  * 상세 페이지용 전체 임베드 카드
  * - iframe 포함 전체 렌더링
  * - dangerouslySetInnerHTML 사용
- * 
+ *
  * Features:
  * - Responsive aspect ratio for video embeds
  * - Mobile-optimized sizing
@@ -40,19 +40,19 @@ export function EmbedCard({
   // If no HTML, fallback to a preview card
   if (!html) {
     return (
-      <Card className={cn("border border-border bg-card", className)}>
+      <Card className={cn("border-border bg-card border", className)}>
         <CardContent className="p-4">
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block space-y-2 hover:opacity-80 transition-opacity"
+            className="block space-y-2 transition-opacity hover:opacity-80"
           >
             {thumbnail_url && (
-              <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted">
+              <div className="bg-muted relative aspect-video w-full overflow-hidden rounded-md">
                 <Image
                   src={thumbnail_url}
-                  alt={title || 'Embed preview'}
+                  alt={title || "Embed preview"}
                   fill
                   sizes="(max-width: 640px) 100vw, 600px"
                   className="object-cover"
@@ -60,19 +60,9 @@ export function EmbedCard({
               </div>
             )}
             <div>
-              {title && (
-                <h3 className="font-semibold text-foreground line-clamp-2">
-                  {title}
-                </h3>
-              )}
-              {author_name && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {author_name}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground mt-2 break-all">
-                {url}
-              </p>
+              {title && <h3 className="text-foreground line-clamp-2 font-semibold">{title}</h3>}
+              {author_name && <p className="text-muted-foreground mt-1 text-sm">{author_name}</p>}
+              <p className="text-muted-foreground mt-2 text-xs break-all">{url}</p>
             </div>
           </a>
         </CardContent>
@@ -81,38 +71,34 @@ export function EmbedCard({
   }
 
   // Instagram: blockquote + embed.js 렌더링
-  if (provider === 'instagram') {
+  if (provider === "instagram") {
     return <InstagramEmbed html={html} url={url} className={className} />
   }
 
   // X: blockquote + widgets.js 렌더링
-  if (provider === 'x') {
-    return <XEmbed html={html} url={url} title={title} author_name={author_name} className={className} />
+  if (provider === "x") {
+    return (
+      <XEmbed html={html} url={url} title={title} author_name={author_name} className={className} />
+    )
   }
 
   // Render embed HTML with responsive wrapper (YouTube)
   return (
-    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
       <CardContent className="p-0">
-        <div className="relative w-full aspect-video">
+        <div className="relative aspect-video w-full">
           <div
-            className="w-full h-full [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:border-0"
+            className="h-full w-full [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
 
         {(title || author_name) && (
-          <div className="p-4 border-t border-border bg-muted/30">
+          <div className="border-border bg-muted/30 border-t p-4">
             {title && (
-              <h3 className="font-semibold text-sm text-foreground line-clamp-2">
-                {title}
-              </h3>
+              <h3 className="text-foreground line-clamp-2 text-sm font-semibold">{title}</h3>
             )}
-            {author_name && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {author_name}
-              </p>
-            )}
+            {author_name && <p className="text-muted-foreground mt-1 text-xs">{author_name}</p>}
           </div>
         )}
       </CardContent>
@@ -121,10 +107,11 @@ export function EmbedCard({
 }
 
 /** embed.js 로드 유틸리티 (전역 1회만 로드) */
-type InstgrmWindow = Window & typeof globalThis & {
-  instgrm?: { Embeds: { process: () => void } }
-  __igEmbedLoading?: boolean
-}
+type InstgrmWindow = Window &
+  typeof globalThis & {
+    instgrm?: { Embeds: { process: () => void } }
+    __igEmbedLoading?: boolean
+  }
 
 function loadInstagramEmbedJs(callback: () => void) {
   const win = window as InstgrmWindow
@@ -145,8 +132,8 @@ function loadInstagramEmbedJs(callback: () => void) {
   }
   // 최초 로드
   win.__igEmbedLoading = true
-  const script = document.createElement('script')
-  script.src = 'https://www.instagram.com/embed.js'
+  const script = document.createElement("script")
+  script.src = "https://www.instagram.com/embed.js"
   script.async = true
   script.onload = () => {
     win.__igEmbedLoading = false
@@ -182,18 +169,18 @@ function InstagramEmbed({
   }, [html])
 
   return (
-    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
       <CardContent className="p-4">
         <div
           ref={containerRef}
-          className="max-w-[540px] mx-auto [&_.instagram-media]:!mx-auto"
+          className="mx-auto max-w-[540px] [&_.instagram-media]:!mx-auto"
           dangerouslySetInnerHTML={{ __html: html }}
         />
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-xs text-muted-foreground mt-2 hover:underline break-all"
+          className="text-muted-foreground mt-2 block text-xs break-all hover:underline"
         >
           {url}
         </a>
@@ -203,18 +190,26 @@ function InstagramEmbed({
 }
 
 /** X(Twitter) 폴백 카드 — widgets.js/syndication API가 불안정하여 바로 링크 카드 표시 */
-function XFallbackCard({ url, author_name, className }: { url: string; author_name?: string; className?: string }) {
+function XFallbackCard({
+  url,
+  author_name,
+  className,
+}: {
+  url: string
+  author_name?: string
+  className?: string
+}) {
   return (
-    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
       <CardContent className="p-4">
-        <div className="max-w-[550px] mx-auto space-y-3">
+        <div className="mx-auto max-w-[550px] space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-foreground" aria-label="X">
+              <svg viewBox="0 0 24 24" className="fill-foreground h-5 w-5" aria-label="X">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
               {author_name && (
-                <span className="text-sm font-medium text-foreground">{author_name}</span>
+                <span className="text-foreground text-sm font-medium">{author_name}</span>
               )}
             </div>
           </div>
@@ -222,12 +217,12 @@ function XFallbackCard({ url, author_name, className }: { url: string; author_na
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
+            className="text-primary flex items-center gap-2 text-sm hover:underline"
           >
             <ExternalLink className="h-4 w-4" />
             X에서 보기
           </a>
-          <p className="text-xs text-muted-foreground break-all">{url}</p>
+          <p className="text-muted-foreground text-xs break-all">{url}</p>
         </div>
       </CardContent>
     </Card>
@@ -252,20 +247,19 @@ function XEmbed({
   author_name?: string
   className?: string
 }) {
-  if (!html || html.includes('twitter-tweet')) {
+  if (!html || html.includes("twitter-tweet")) {
     // 기존 blockquote HTML이면 폴백 표시
     return <XFallbackCard url={url} author_name={author_name} className={className} />
   }
 
   return (
-    <Card className={cn("border border-border bg-card overflow-hidden", className)}>
+    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
       <CardContent className="p-4">
         <div
-          className="max-w-[550px] mx-auto [&_img]:rounded-xl"
+          className="mx-auto max-w-[550px] [&_img]:rounded-xl"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </CardContent>
     </Card>
   )
 }
-

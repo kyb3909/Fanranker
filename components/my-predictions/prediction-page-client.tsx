@@ -67,7 +67,7 @@ function PredictionSkeleton() {
   )
 }
 
-const BettingPage = dynamic(() => import("@/components/betting-page"), {
+const BettingPage = dynamic(() => import("@/components/betting/betting-page"), {
   loading: () => <PredictionSkeleton />,
   ssr: false,
 })

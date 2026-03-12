@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { Suspense } from "react"
 import { usePathname } from "next/navigation"
-import { Header } from "@/components/header"
+import { Header } from "@/components/header/header"
 
 interface AppShellProps {
   children: ReactNode

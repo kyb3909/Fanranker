@@ -2,7 +2,7 @@
 
 import React, { memo } from "react"
 import { PostCard } from "@/components/post-card"
-import { AdPlaceholder } from "@/components/ad-placeholder"
+import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { Loader2, Compass } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"

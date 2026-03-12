@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { EmbedPreviewCard } from "@/components/embed-preview-card"
+import { EmbedPreviewCard } from "@/components/editor/embed-preview-card"
 import type { TipTapNode } from "@/components/post-card"
 
 /**

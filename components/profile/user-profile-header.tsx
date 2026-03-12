@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { UserProfileBadge } from "@/components/user-profile-badge"
+import { UserProfileBadge } from "@/components/profile/user-profile-badge"
 import { UserPlus, UserMinus, Newspaper } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getTemperatureStyle } from "@/lib/temperature"

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
-import { CommunitySidebar } from "@/components/community-sidebar"
-import { ActivitySidebar } from "@/components/activity-sidebar"
+import { CommunitySidebar } from "@/components/sidebar/community-sidebar"
+import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 
 interface TopicItem {
   label: string

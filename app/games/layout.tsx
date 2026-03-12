@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { GamesTabNav } from "@/components/games-tab-nav"
-import { ActivitySidebar } from "@/components/activity-sidebar"
+import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 
 export const metadata: Metadata = {
   title: "게임",

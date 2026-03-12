@@ -1,10 +1,10 @@
-import React from 'react'
-import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
-import { EmbedCard } from '@/components/embed-card'
+import React from "react"
+import { NodeViewWrapper, NodeViewProps } from "@tiptap/react"
+import { EmbedCard } from "@/components/editor/embed-card"
 
 /**
  * React component for rendering Embed nodes in TipTap
- * 
+ *
  * This component is used by TipTap to render embed nodes in the editor.
  * It extracts attributes from the node and passes them to EmbedCard.
  */
@@ -24,4 +24,3 @@ export function EmbedRenderer({ node }: NodeViewProps) {
     </NodeViewWrapper>
   )
 }
-

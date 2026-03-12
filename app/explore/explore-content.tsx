@@ -1,7 +1,7 @@
 "use client"
 
 import useSWR, { SWRConfig } from "swr"
-import { ActivitySidebar } from "@/components/activity-sidebar"
+import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { Eye, MessageSquare, Loader2, ThumbsUp, LayoutGrid } from "lucide-react"
 import Link from "next/link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"

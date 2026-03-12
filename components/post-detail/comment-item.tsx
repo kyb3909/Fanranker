@@ -11,7 +11,7 @@ import { ReportDialog } from "@/components/report-dialog"
 import { CommentActions } from "./comment-actions"
 import { CommentEditForm } from "./comment-edit-form"
 import { CommentReplyForm } from "./comment-reply-form"
-import { TitleBadge } from "@/components/title-badge"
+import { TitleBadge } from "@/components/profile/title-badge"
 
 export interface CommentItemProps {
   comment: Comment

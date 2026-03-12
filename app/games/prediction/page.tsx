@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { PredictionPageClient } from "@/components/prediction-page-client"
+import { PredictionPageClient } from "@/components/my-predictions/prediction-page-client"
 
 export const metadata: Metadata = {
   title: "승부예측",

@@ -16,8 +16,8 @@ import {
   ImageIcon,
 } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
-import { UserProfileHeader } from "@/components/user-profile-header"
-import { TitleBadge } from "@/components/title-badge"
+import { UserProfileHeader } from "@/components/profile/user-profile-header"
+import { TitleBadge } from "@/components/profile/title-badge"
 import { formatRelativeTime } from "@/lib/utils/date"
 import Link from "next/link"
 import Image from "next/image"

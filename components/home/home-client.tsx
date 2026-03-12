@@ -10,13 +10,15 @@ import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 
 const CommunitySidebar = dynamic(
-  () => import("@/components/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
+  () =>
+    import("@/components/sidebar/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
   {
     loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
   }
 )
 const ActivitySidebar = dynamic(
-  () => import("@/components/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
+  () =>
+    import("@/components/sidebar/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
   {
     loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
   }
@@ -50,7 +52,7 @@ const ContentSection = dynamic(
     ssr: false,
   }
 )
-const BettingPage = dynamic(() => import("@/components/betting-page"), {
+const BettingPage = dynamic(() => import("@/components/betting/betting-page"), {
   loading: () => (
     <div className="min-h-[600px]">
       <div className="bg-card border-border rounded-xl border p-4">
