@@ -110,15 +110,23 @@ export default function RootLayout({
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_ID} />
             )}
-            {/* Pretendard: CSS @import 대신 preload → 렌더 블로킹 제거 */}
+            {/* Pretendard: preload로 빠르게 가져오되 렌더 블로킹 없이 적용 */}
             <link
               rel="preload"
               href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
               as="style"
             />
-            <link
-              rel="stylesheet"
-              href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+            <Script
+              id="pretendard-loader"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  var l=document.createElement('link');
+                  l.rel='stylesheet';
+                  l.href='https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css';
+                  document.head.appendChild(l);
+                `,
+              }}
             />
             {/* DNS Prefetch: 외부 리소스 사전 조회 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />
@@ -128,13 +136,13 @@ export default function RootLayout({
             <link rel="preconnect" href="https://clerk.gongnori.fan" crossOrigin="anonymous" />
             {/* GmarketSans preconnect */}
             <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-            {/* Google AdSense: head에 위치해야 크롤러가 인식 */}
+            {/* Google AdSense: lazyOnload로 초기 렌더링에 영향 없게 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <Script
                 async
                 src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
                 crossOrigin="anonymous"
-                strategy="afterInteractive"
+                strategy="lazyOnload"
               />
             )}
           </head>
