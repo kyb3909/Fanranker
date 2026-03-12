@@ -81,6 +81,13 @@ localhost_*.json
 # MCP config
 .mcp.json
 
+# Supabase data dumps
+gongnori.fan-*.json
+
+# Debug/inspect files
+standings-*.json
+standings-*.html
+
 # Misc data dumps
 /10.5.0.2_*.json
 /console-debug.txt
