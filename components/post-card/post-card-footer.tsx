@@ -52,45 +52,43 @@ export function PostCardFooter({
     <div className="border-border/50 mt-4 flex items-center justify-between border-t pt-3">
       {/* 좌측: 프사 + 닉네임 + 칭호 */}
       <div className="flex min-w-0 items-center gap-2">
-        <Avatar className="h-7 w-7 shrink-0">
-          <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
-          <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
-        </Avatar>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="text-foreground hover:text-primary cursor-pointer truncate text-left text-[15px] font-medium transition-colors">
-                {author}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {userId && (
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href={`/profile/${userId}`}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>프로필 보기</span>
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={onSearchByAuthor} className="cursor-pointer">
-                <Search className="mr-2 h-4 w-4" />
-                <span>해당 아이디로 검색</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="shrink-0 cursor-pointer">
+              <Avatar className="h-7 w-7">
+                <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
+                <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {userId && (
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href={`/profile/${userId}`}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>프로필 보기</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
-                <Ban className="mr-2 h-4 w-4" />
-                <span>차단하기</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle) && (
-            <TitleBadge
-              adjTitle={titleDisplay.adjTitle}
-              nounTitle={titleDisplay.nounTitle}
-              rarity={titleDisplay.rarity}
-              size="sm"
-            />
-          )}
-        </div>
+            )}
+            <DropdownMenuItem onClick={onSearchByAuthor} className="cursor-pointer">
+              <Search className="mr-2 h-4 w-4" />
+              <span>해당 아이디로 검색</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
+              <Ban className="mr-2 h-4 w-4" />
+              <span>차단하기</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <span className="text-foreground truncate text-[13px] font-medium">{author}</span>
+        {titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle) && (
+          <TitleBadge
+            adjTitle={titleDisplay.adjTitle}
+            nounTitle={titleDisplay.nounTitle}
+            rarity={titleDisplay.rarity}
+            size="sm"
+          />
+        )}
       </div>
 
       {/* 우측: 액션 버튼 */}

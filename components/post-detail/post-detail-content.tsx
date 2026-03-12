@@ -78,53 +78,48 @@ export function PostDetailContent({ post }: { post: Post }) {
         <div className="p-5 sm:p-6">
           {/* Header */}
           <div className="mb-3 flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
-                <AvatarFallback>{post.author?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="text-foreground hover:text-primary cursor-pointer text-base font-semibold transition-colors">
-                        {post.author}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      {post.userId && (
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                          <Link href={`/profile/${post.userId}`}>
-                            <User className="mr-2 h-4 w-4" />
-                            <span>프로필 보기</span>
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
-                        <Search className="mr-2 h-4 w-4" />
-                        <span>해당 아이디로 검색</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={handleBlockUser}
-                        className="text-destructive cursor-pointer"
-                      >
-                        <Ban className="mr-2 h-4 w-4" />
-                        <span>차단하기</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {post.titleDisplay &&
-                    (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (
-                      <TitleBadge
-                        adjTitle={post.titleDisplay.adjTitle}
-                        nounTitle={post.titleDisplay.nounTitle}
-                        rarity={post.titleDisplay.rarity}
-                        size="sm"
-                      />
-                    )}
-                  <span className="text-muted-foreground text-sm">{post.timestamp}</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="shrink-0 cursor-pointer">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
+                      <AvatarFallback>{post.author?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  {post.userId && (
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href={`/profile/${post.userId}`}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>프로필 보기</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
+                    <Search className="mr-2 h-4 w-4" />
+                    <span>해당 아이디로 검색</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleBlockUser}
+                    className="text-destructive cursor-pointer"
+                  >
+                    <Ban className="mr-2 h-4 w-4" />
+                    <span>차단하기</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="text-foreground text-base font-semibold">{post.author}</span>
+              {post.titleDisplay && (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (
+                <TitleBadge
+                  adjTitle={post.titleDisplay.adjTitle}
+                  nounTitle={post.titleDisplay.nounTitle}
+                  rarity={post.titleDisplay.rarity}
+                  size="sm"
+                />
+              )}
+              <span className="text-muted-foreground text-sm">{post.timestamp}</span>
             </div>
             <div className="flex items-center gap-2">
               <Button
