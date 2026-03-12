@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
-import type { SelectedBet, GroupedMatch, AlertModalState } from "@/components/betting/betting-types"
+import type { SelectedBet, GroupedMatch } from "@/components/betting/betting-types"
+import { useAlertModal } from "./use-alert-modal"
 
 export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () => void) {
   const { isSignedIn } = useAuth()
+  const { alertModal, showAlert, closeAlert } = useAlertModal()
 
   const [selectedBets, setSelectedBets] = useState<SelectedBet[]>([])
   const [selectedSport, setSelectedSport] = useState<string | null>(null)
@@ -16,25 +18,6 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
   const [isJournalist, setIsJournalist] = useState(false)
   const [analysisTitle, setAnalysisTitle] = useState("")
   const [analysisText, setAnalysisText] = useState("")
-
-  // Alert modal
-  const [alertModal, setAlertModal] = useState<AlertModalState>({
-    isOpen: false,
-    type: "error",
-    title: "",
-    message: "",
-  })
-
-  const showAlert = useCallback(
-    (type: "error" | "warning" | "success", title: string, message: string) => {
-      setAlertModal({ isOpen: true, type, title, message })
-    },
-    []
-  )
-
-  const closeAlert = useCallback(() => {
-    setAlertModal((prev) => ({ ...prev, isOpen: false }))
-  }, [])
 
   // Load user balance
   const loadUserBalls = useCallback(async () => {

@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
-import * as Sentry from "@sentry/nextjs"
+import { retryRefundTokens } from "@/lib/betman/refund-tokens"
 import { z } from "zod"
 
 const predictionItemSchema = z.object({
@@ -551,49 +551,4 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
-}
-
-async function retryRefundTokens(
-  supabase: {
-    rpc: (
-      fn: string,
-      params: Record<string, unknown>
-    ) => { error: unknown } | PromiseLike<{ error: unknown }>
-    from: (table: string) => {
-      insert: (
-        data: Record<string, unknown>
-      ) => { error: unknown } | PromiseLike<{ error: unknown }>
-    }
-  },
-  userId: string,
-  amount: number,
-  description: string,
-  maxRetries = 3
-) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const { error } = await supabase.rpc("refund_tokens", {
-      p_user_id: userId,
-      p_amount: amount,
-      p_description: description,
-    })
-    if (!error) return
-    console.error(`refund_tokens attempt ${attempt}/${maxRetries} failed:`, error)
-    if (attempt < maxRetries) await new Promise((r) => setTimeout(r, 500 * attempt))
-  }
-  // All retries failed - record in pending_refunds for admin resolution
-  await supabase.from("pending_refunds").insert({
-    user_id: userId,
-    amount,
-    description,
-    source: "refund_retry_exhausted",
-    attempts: maxRetries,
-    last_error: "All retry attempts failed",
-  })
-  Sentry.captureMessage(
-    `refund_tokens failed after ${maxRetries} retries - recorded in pending_refunds`,
-    {
-      level: "fatal",
-      extra: { userId, amount, description },
-    }
-  )
 }

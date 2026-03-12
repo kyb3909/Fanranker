@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
+import { Suspense } from "react"
 import dynamic from "next/dynamic"
 import { BackButton } from "@/components/back-button"
 import { Card } from "@/components/ui/card"
@@ -18,261 +16,17 @@ import {
 } from "@/components/ui/select"
 import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
 import Image from "next/image"
-import useSWR from "swr"
-import { fetcher } from "@/lib/swr"
+import { useWriteEditor } from "@/hooks/use-write-editor"
 
 const TipTapEditor = dynamic(
   () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
   { ssr: false, loading: () => <div className="bg-muted h-64 animate-pulse rounded-lg" /> }
 )
 
-interface Category {
-  id: string
-  slug: string
-  name: string
-  icon: string | null
-  sort_order: number
-  description: string | null
-  parent_slug: string | null
-}
-
 function WriteContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { isSignedIn, isLoaded } = useAuth()
-  const communitySlug = searchParams.get("community") || ""
-  const editId = searchParams.get("edit") || ""
+  const editor = useWriteEditor()
 
-  const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30000,
-  })
-  const communities = catData?.categories || []
-
-  const [selectedCommunity, setSelectedCommunity] = useState(communitySlug)
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState<any>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [isEmbedLoading, setIsEmbedLoading] = useState(false)
-  const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId)
-  const [editLoadError, setEditLoadError] = useState<string | null>(null)
-  const [sourceUrl, setSourceUrl] = useState("")
-  const [isFetchingOg, setIsFetchingOg] = useState(false)
-  const [ogData, setOgData] = useState<{
-    title?: string
-    description?: string
-    siteName?: string
-  } | null>(null)
-
-  useEffect(() => {
-    if (communitySlug) {
-      setSelectedCommunity(communitySlug)
-    }
-  }, [communitySlug])
-
-  useEffect(() => {
-    if (!editId) return
-    setIsLoadingEdit(true)
-    setEditLoadError(null)
-    fetch(`/api/posts/${editId}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("글을 불러올 수 없습니다."))))
-      .then((data) => {
-        const p = data.post
-        setSelectedCommunity(p.community_slug || "")
-        setTitle(p.title || "")
-        setContent(p.content || null)
-        setImagePreview(p.image || null)
-      })
-      .catch((err) => {
-        setEditLoadError(err.message || "글을 불러오는 데 실패했습니다.")
-      })
-      .finally(() => setIsLoadingEdit(false))
-  }, [editId])
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // 파일 타입 검증
-    if (!file.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드할 수 있습니다.")
-      return
-    }
-
-    // 파일 크기 제한 (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert("파일 크기는 10MB를 초과할 수 없습니다.")
-      return
-    }
-
-    // 미리보기를 위한 base64 변환
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
-
-    // 원본 파일 저장
-    setImageFile(file)
-
-    // 자동으로 Supabase Storage에 업로드
-    setIsUploadingImage(true)
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload/image", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "이미지 업로드에 실패했습니다.")
-      }
-
-      const { url } = await response.json()
-      setImagePreview(url) // URL로 교체 (업로드된 이미지 URL)
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "이미지 업로드 중 오류가 발생했습니다.")
-      setImagePreview(null)
-      setImageFile(null)
-    } finally {
-      setIsUploadingImage(false)
-    }
-  }
-
-  const handleRemoveImage = () => {
-    setImagePreview(null)
-    setImageFile(null)
-  }
-
-  const handleFetchOg = async (url: string) => {
-    if (!url.trim()) return
-    // 프로토콜 없으면 추가
-    let finalUrl = url.trim()
-    if (!/^https?:\/\//i.test(finalUrl)) {
-      finalUrl = "https://" + finalUrl
-    }
-
-    // 직접 이미지 URL인지 확인 (확장자 기반)
-    const imageExtRegex = /\.(jpe?g|png|gif|webp|svg|bmp|avif|ico)(\?.*)?$/i
-    if (imageExtRegex.test(finalUrl)) {
-      setImagePreview(finalUrl)
-      setImageFile(null)
-      setOgData(null)
-      return
-    }
-
-    setIsFetchingOg(true)
-    setOgData(null)
-    try {
-      const res = await fetch(`/api/og?url=${encodeURIComponent(finalUrl)}`)
-      if (!res.ok) throw new Error("OG 정보를 가져올 수 없습니다.")
-      const data = await res.json()
-
-      if (data.image) {
-        setImagePreview(data.image)
-        setImageFile(null) // OG 이미지는 외부 URL이므로 file 없음
-      }
-      setOgData({ title: data.title, description: data.description, siteName: data.siteName })
-
-      // 제목이 비어있으면 OG 제목으로 자동 채움
-      if (!title && data.title) {
-        setTitle(data.title)
-      }
-    } catch {
-      // 실패해도 무시 - 사용자가 직접 이미지 업로드 가능
-    } finally {
-      setIsFetchingOg(false)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // 유효성 검사
-    if (!selectedCommunity || !title || !content) {
-      alert("모든 필드를 입력해주세요.")
-      return
-    }
-
-    // TipTap JSON이 비어있는지 확인
-    if (typeof content === "object" && (!content.content || content.content.length === 0)) {
-      alert("내용을 입력해주세요.")
-      return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-      // imagePreview가 이미 URL인지 base64인지 확인
-      // Supabase Storage URL인 경우 그대로 사용, base64인 경우는 업로드 필요
-      let imageUrl = null
-      if (imagePreview) {
-        if (imagePreview.startsWith("http://") || imagePreview.startsWith("https://")) {
-          // 이미 업로드된 URL
-          imageUrl = imagePreview
-        } else if (imageFile) {
-          // base64인 경우 업로드
-          const formData = new FormData()
-          formData.append("file", imageFile)
-
-          const uploadResponse = await fetch("/api/upload/image", {
-            method: "POST",
-            body: formData,
-          })
-
-          if (!uploadResponse.ok) {
-            const error = await uploadResponse.json()
-            throw new Error(error.error || "이미지 업로드에 실패했습니다.")
-          }
-
-          const { url } = await uploadResponse.json()
-          imageUrl = url
-        } else {
-          // base64 데이터 URL (구버전 호환성)
-          // Base64 이미지가 감지됨 - 파일 재선택 필요
-          imageUrl = null
-        }
-      }
-
-      const url = editId ? `/api/posts/${editId}` : "/api/posts"
-      const method = editId ? "PATCH" : "POST"
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          community_slug: selectedCommunity,
-          title,
-          content,
-          image: imageUrl,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(
-          error.error || (editId ? "글 수정에 실패했습니다." : "글 작성에 실패했습니다.")
-        )
-      }
-
-      if (editId) {
-        router.push(`/post/${editId}`)
-      } else {
-        router.push(`/community/${selectedCommunity}`)
-      }
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "글 작성 중 오류가 발생했습니다.")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  if (!isLoaded) {
+  if (!editor.isLoaded) {
     return (
       <main
         id="main-content"
@@ -287,24 +41,24 @@ function WriteContent() {
     )
   }
 
-  if (!isSignedIn) {
+  if (!editor.isSignedIn) {
     return (
       <div className="flex items-center justify-center px-4 py-20">
         <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
           <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
           <p className="text-muted-foreground mb-4 text-sm">글을 작성하려면 먼저 로그인해주세요.</p>
           <div className="flex justify-center gap-2">
-            <Button variant="outline" onClick={() => router.push("/")}>
+            <Button variant="outline" onClick={() => editor.router.push("/")}>
               홈으로
             </Button>
-            <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+            <Button onClick={() => editor.router.push("/sign-up")}>로그인 / 가입</Button>
           </div>
         </div>
       </div>
     )
   }
 
-  if (isLoadingEdit) {
+  if (editor.isLoadingEdit) {
     return (
       <main
         id="main-content"
@@ -319,7 +73,7 @@ function WriteContent() {
     )
   }
 
-  if (editLoadError) {
+  if (editor.editLoadError) {
     return (
       <main
         id="main-content"
@@ -327,8 +81,8 @@ function WriteContent() {
         tabIndex={-1}
       >
         <div className="bg-card border-border rounded-lg border p-8 text-center">
-          <p className="text-destructive mb-2 text-sm">{editLoadError}</p>
-          <Button variant="outline" onClick={() => router.push("/")}>
+          <p className="text-destructive mb-2 text-sm">{editor.editLoadError}</p>
+          <Button variant="outline" onClick={() => editor.router.push("/")}>
             홈으로
           </Button>
         </div>
@@ -348,24 +102,29 @@ function WriteContent() {
 
           <Card className="border-border bg-card border p-6">
             <h1 className="text-foreground mb-6 text-2xl font-bold">
-              {editId ? "글 수정" : "글쓰기"}
+              {editor.editId ? "글 수정" : "글쓰기"}
             </h1>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={editor.handleSubmit} className="space-y-6">
               {/* 게시판 선택 */}
               <div className="space-y-2">
                 <Label htmlFor="community" className="text-foreground text-sm font-semibold">
                   게시판 선택
                 </Label>
-                <Select value={selectedCommunity} onValueChange={setSelectedCommunity}>
+                <Select
+                  value={editor.selectedCommunity}
+                  onValueChange={editor.setSelectedCommunity}
+                >
                   <SelectTrigger id="community" className="h-10">
                     <SelectValue placeholder="게시판을 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
-                    {communities
+                    {editor.communities
                       .filter((c) => !c.parent_slug)
                       .map((parent) => {
-                        const channels = communities.filter((c) => c.parent_slug === parent.slug)
+                        const channels = editor.communities.filter(
+                          (c) => c.parent_slug === parent.slug
+                        )
                         return (
                           <div key={parent.slug}>
                             <SelectItem value={parent.slug}>
@@ -398,19 +157,18 @@ function WriteContent() {
                       id="source-url"
                       type="text"
                       placeholder="뉴스나 기사 URL을 붙여넣으면 이미지를 자동으로 가져옵니다"
-                      value={sourceUrl}
-                      onChange={(e) => setSourceUrl(e.target.value)}
+                      value={editor.sourceUrl}
+                      onChange={(e) => editor.setSourceUrl(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault()
-                          handleFetchOg(sourceUrl)
+                          editor.handleFetchOg(editor.sourceUrl)
                         }
                       }}
                       onPaste={(e) => {
-                        // 붙여넣기 시 자동으로 OG 가져오기
                         const pasted = e.clipboardData.getData("text")
                         if (pasted && /^https?:\/\//i.test(pasted.trim())) {
-                          setTimeout(() => handleFetchOg(pasted.trim()), 100)
+                          setTimeout(() => editor.handleFetchOg(pasted.trim()), 100)
                         }
                       }}
                       className="h-10 pl-9"
@@ -419,15 +177,19 @@ function WriteContent() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleFetchOg(sourceUrl)}
-                    disabled={isFetchingOg || !sourceUrl.trim()}
+                    onClick={() => editor.handleFetchOg(editor.sourceUrl)}
+                    disabled={editor.isFetchingOg || !editor.sourceUrl.trim()}
                     className="shrink-0"
                   >
-                    {isFetchingOg ? <Loader2 className="h-4 w-4 animate-spin" /> : "가져오기"}
+                    {editor.isFetchingOg ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "가져오기"
+                    )}
                   </Button>
                 </div>
-                {ogData?.siteName && (
-                  <p className="text-muted-foreground text-xs">출처: {ogData.siteName}</p>
+                {editor.ogData?.siteName && (
+                  <p className="text-muted-foreground text-xs">출처: {editor.ogData.siteName}</p>
                 )}
               </div>
 
@@ -440,8 +202,8 @@ function WriteContent() {
                   id="title"
                   type="text"
                   placeholder="제목을 입력하세요"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={editor.title}
+                  onChange={(e) => editor.setTitle(e.target.value)}
                   className="h-10"
                   required
                 />
@@ -453,9 +215,9 @@ function WriteContent() {
                   내용
                 </Label>
                 <TipTapEditor
-                  content={content}
-                  onChange={(json) => setContent(json)}
-                  onEmbedLoading={setIsEmbedLoading}
+                  content={editor.content}
+                  onChange={(json: unknown) => editor.setContent(json)}
+                  onEmbedLoading={editor.setIsEmbedLoading}
                   placeholder="내용을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드됩니다."
                 />
               </div>
@@ -463,13 +225,13 @@ function WriteContent() {
               {/* 이미지 업로드 */}
               <div className="space-y-2">
                 <Label className="text-foreground text-sm font-semibold">이미지</Label>
-                {!imagePreview ? (
+                {!editor.imagePreview ? (
                   <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
                     <label
                       htmlFor="image-upload"
-                      className={`flex cursor-pointer flex-col items-center gap-2 ${isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
+                      className={`flex cursor-pointer flex-col items-center gap-2 ${editor.isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
                     >
-                      {isUploadingImage ? (
+                      {editor.isUploadingImage ? (
                         <>
                           <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
                           <span className="text-muted-foreground text-sm">이미지 업로드 중...</span>
@@ -486,21 +248,21 @@ function WriteContent() {
                         id="image-upload"
                         type="file"
                         accept="image/*"
-                        onChange={handleImageChange}
-                        disabled={isUploadingImage}
+                        onChange={editor.handleImageChange}
+                        disabled={editor.isUploadingImage}
                         className="hidden"
                       />
                     </label>
                   </div>
                 ) : (
                   <div className="border-border relative aspect-video w-full overflow-hidden rounded-lg border">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    <Image src={editor.imagePreview} alt="Preview" fill className="object-cover" />
                     <Button
                       type="button"
                       variant="destructive"
                       size="icon"
                       className="absolute top-2 right-2 h-8 w-8"
-                      onClick={handleRemoveImage}
+                      onClick={editor.handleRemoveImage}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -513,29 +275,18 @@ function WriteContent() {
                 <Button type="button" variant="outline" onClick={() => window.history.back()}>
                   취소
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    isEmbedLoading ||
-                    !selectedCommunity ||
-                    !title ||
-                    !content ||
-                    (typeof content === "object" &&
-                      (!content.content || content.content.length === 0))
-                  }
-                >
-                  {isEmbedLoading ? (
+                <Button type="submit" disabled={!editor.canSubmit}>
+                  {editor.isEmbedLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       임베드 로딩 중...
                     </>
-                  ) : isSubmitting ? (
+                  ) : editor.isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       작성 중...
                     </>
-                  ) : editId ? (
+                  ) : editor.editId ? (
                     "수정하기"
                   ) : (
                     "작성하기"
