@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { MoreHorizontal, Thermometer, Search, Ban, Pencil, Trash2, User } from "lucide-react"
+import { MoreHorizontal, Search, Ban, Pencil, Trash2, User } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useCallback } from "react"
@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
-import { getTemperatureStyle, getDisplayTemperature } from "@/lib/temperature"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
@@ -72,12 +71,6 @@ export function PostDetailContent({ post }: { post: Post }) {
     }
   }
 
-  const rawTemperature =
-    post.temperature ?? Math.min(100, Math.floor((post.upvotes * 2 + post.comments * 3) / 10))
-  const temperature = post.createdAt
-    ? getDisplayTemperature(rawTemperature, post.createdAt)
-    : rawTemperature
-
   return (
     <div className="space-y-4">
       {/* Post Detail Card */}
@@ -121,10 +114,6 @@ export function PostDetailContent({ post }: { post: Post }) {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <span className="text-muted-foreground text-sm">{post.timestamp}</span>
-                  <div className="flex items-center gap-1" style={getTemperatureStyle(temperature)}>
-                    <Thermometer className="h-4 w-4" />
-                    <span className="text-sm font-semibold">{temperature}°</span>
-                  </div>
                 </div>
                 {post.titleDisplay &&
                   (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (

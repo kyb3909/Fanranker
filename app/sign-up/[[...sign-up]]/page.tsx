@@ -130,7 +130,10 @@ export default function SignUpPage() {
   }, [catData])
 
   // ── Nickname validation ──
-  const nicknameError = useMemo(() => {
+  const [nicknameTaken, setNicknameTaken] = useState(false)
+  const [nicknameChecking, setNicknameChecking] = useState(false)
+
+  const nicknameFormatError = useMemo(() => {
     if (!nickname) return null
     const trimmed = nickname.trim()
     if (trimmed.length < 2) return "2자 이상 입력해주세요."
@@ -138,6 +141,35 @@ export default function SignUpPage() {
     if (!/^[가-힣a-zA-Z0-9]+$/.test(trimmed)) return "한글, 영문, 숫자만 사용할 수 있습니다."
     return null
   }, [nickname])
+
+  // 닉네임 중복 체크 (debounce)
+  useEffect(() => {
+    setNicknameTaken(false)
+    const trimmed = nickname.trim()
+    if (!trimmed || trimmed.length < 2 || nicknameFormatError) return
+
+    setNicknameChecking(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/profile/check-nickname?nickname=${encodeURIComponent(trimmed)}`
+        )
+        const data = await res.json()
+        setNicknameTaken(!data.available)
+      } catch {
+        // 실패 시 무시
+      } finally {
+        setNicknameChecking(false)
+      }
+    }, 400)
+    return () => {
+      clearTimeout(timer)
+      setNicknameChecking(false)
+    }
+  }, [nickname, nicknameFormatError])
+
+  const nicknameError =
+    nicknameFormatError || (nicknameTaken ? "이미 사용 중인 닉네임입니다." : null)
 
   // ── Avatar upload ──
   const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -409,6 +441,7 @@ export default function SignUpPage() {
               nickname={nickname}
               setNickname={setNickname}
               nicknameError={nicknameError}
+              nicknameChecking={nicknameChecking}
               bio={bio}
               setBio={setBio}
               avatarUrl={avatarUrl}

@@ -8,6 +8,7 @@ interface ProfileStepProps {
   nickname: string
   setNickname: (v: string) => void
   nicknameError: string | null
+  nicknameChecking?: boolean
   bio: string
   setBio: (v: string) => void
   avatarUrl: string | null
@@ -21,6 +22,7 @@ export function ProfileStep({
   nickname,
   setNickname,
   nicknameError,
+  nicknameChecking,
   bio,
   setBio,
   avatarUrl,
@@ -30,7 +32,7 @@ export function ProfileStep({
   onBack,
 }: ProfileStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const canProceed = nickname.trim().length >= 2 && !nicknameError
+  const canProceed = nickname.trim().length >= 2 && !nicknameError && !nicknameChecking
 
   return (
     <div className="p-6">
@@ -89,7 +91,13 @@ export function ProfileStep({
           maxLength={20}
           aria-invalid={!!nicknameError}
         />
-        {nicknameError && <p className="text-destructive mt-1 text-xs">{nicknameError}</p>}
+        {nicknameChecking && <p className="text-muted-foreground mt-1 text-xs">중복 확인 중...</p>}
+        {!nicknameChecking && nicknameError && (
+          <p className="text-destructive mt-1 text-xs">{nicknameError}</p>
+        )}
+        {!nicknameChecking && !nicknameError && nickname.trim().length >= 2 && (
+          <p className="mt-1 text-xs text-green-600">사용 가능한 닉네임입니다.</p>
+        )}
         <p className="text-muted-foreground mt-1 text-xs">{nickname.trim().length}/20</p>
       </div>
 

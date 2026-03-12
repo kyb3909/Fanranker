@@ -125,6 +125,23 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // 닉네임 중복 체크
+    if (nickname !== undefined) {
+      const trimmedNickname = nickname.trim()
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .ilike("nickname", trimmedNickname)
+        .is("deleted_at", null)
+        .neq("user_id", userId)
+        .limit(1)
+        .single()
+
+      if (existing) {
+        return NextResponse.json({ error: "이미 사용 중인 닉네임입니다." }, { status: 409 })
+      }
+    }
+
     // Build update object
     const updateData: {
       nickname?: string

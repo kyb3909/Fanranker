@@ -19,7 +19,6 @@ export interface PostCardFooterProps {
   author: string
   avatar: string
   userId?: string
-  temperature: number
   voteCount: number
   myVote: "up" | "down" | null
   comments: number
@@ -38,7 +37,6 @@ export function PostCardFooter({
   author,
   avatar,
   userId,
-  temperature,
   voteCount,
   myVote,
   comments,
