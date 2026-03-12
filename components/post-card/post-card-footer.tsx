@@ -2,7 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUp, ArrowDown, MessageCircle, Thermometer, Bookmark, Search, Ban } from "lucide-react"
+import {
+  ArrowUp,
+  ArrowDown,
+  MessageCircle,
+  Thermometer,
+  Bookmark,
+  Search,
+  Ban,
+  User,
+} from "lucide-react"
 import Link from "next/link"
 import {
   DropdownMenu,
@@ -12,12 +21,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ShareMenu } from "@/components/share-menu"
 import { getTemperatureStyle } from "@/lib/temperature"
+import { TitleBadge, type TitleDisplay } from "@/components/title-badge"
 
 export interface PostCardFooterProps {
   postId: number | string
   postTitle: string
   author: string
   avatar: string
+  userId?: string
   temperature: number
   voteCount: number
   myVote: "up" | "down" | null
@@ -26,6 +37,7 @@ export interface PostCardFooterProps {
   onVote: (type: "up" | "down") => void
   onBookmark: () => void
   onBookmarkHover: () => void
+  titleDisplay?: TitleDisplay | null
   onSearchByAuthor: () => void
   onBlockUser: () => void
 }
@@ -35,6 +47,7 @@ export function PostCardFooter({
   postTitle,
   author,
   avatar,
+  userId,
   temperature,
   voteCount,
   myVote,
@@ -43,6 +56,7 @@ export function PostCardFooter({
   onVote,
   onBookmark,
   onBookmarkHover,
+  titleDisplay,
   onSearchByAuthor,
   onBlockUser,
 }: PostCardFooterProps) {
@@ -54,23 +68,42 @@ export function PostCardFooter({
           <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
           <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
         </Avatar>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="text-foreground hover:text-primary cursor-pointer truncate text-[15px] font-medium transition-colors">
-              {author}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuItem onClick={onSearchByAuthor} className="cursor-pointer">
-              <Search className="mr-2 h-4 w-4" />
-              <span>해당 아이디로 검색</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
-              <Ban className="mr-2 h-4 w-4" />
-              <span>차단하기</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex min-w-0 flex-col">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="text-foreground hover:text-primary cursor-pointer truncate text-left text-[15px] font-medium transition-colors">
+                {author}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {userId && (
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href={`/profile/${userId}`}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>프로필 보기</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={onSearchByAuthor} className="cursor-pointer">
+                <Search className="mr-2 h-4 w-4" />
+                <span>해당 아이디로 검색</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
+                <Ban className="mr-2 h-4 w-4" />
+                <span>차단하기</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle) && (
+            <TitleBadge
+              adjTitle={titleDisplay.adjTitle}
+              nounTitle={titleDisplay.nounTitle}
+              rarity={titleDisplay.rarity}
+              size="sm"
+              className="mt-0.5 w-fit"
+            />
+          )}
+        </div>
 
         <span className="text-border shrink-0">|</span>
 

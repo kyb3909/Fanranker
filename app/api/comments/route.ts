@@ -3,6 +3,7 @@ import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
+import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { z } from "zod"
 
 const CommentCreateSchema = z.object({
@@ -141,6 +142,23 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       return apiError("댓글 저장 중 오류가 발생했습니다.", 500, insertError)
     }
+
+    // 포인트 적립 (비동기, 실패 무시) — 게시글의 community_slug를 조회해서 적립
+    Promise.resolve(supabase.from("posts").select("community_slug").eq("id", post_id).single())
+      .then(({ data: postForPoints }) => {
+        if (postForPoints?.community_slug) {
+          return awardPoints(
+            supabase,
+            userId,
+            postForPoints.community_slug,
+            POINT_VALUES.comment,
+            "comment",
+            "댓글 작성",
+            String(comment.id)
+          )
+        }
+      })
+      .catch((err: unknown) => console.error("Failed to award points for comment:", err))
 
     // 알림 생성 (비동기로 처리, 실패해도 무시)
     Promise.resolve(supabase.from("posts").select("user_id").eq("id", post_id).single())

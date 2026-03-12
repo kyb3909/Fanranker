@@ -4,12 +4,14 @@ import { useState, memo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
 import type { Comment } from "./post-detail-types"
 import { ReportDialog } from "@/components/report-dialog"
 import { CommentActions } from "./comment-actions"
 import { CommentEditForm } from "./comment-edit-form"
 import { CommentReplyForm } from "./comment-reply-form"
+import { TitleBadge } from "@/components/title-badge"
 
 export interface CommentItemProps {
   comment: Comment
@@ -143,12 +145,35 @@ export const CommentItem = memo(function CommentItem({
         </Avatar>
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
-            <span className={`text-foreground font-semibold ${depth === 0 ? "" : "text-sm"}`}>
-              {comment.author}
-            </span>
-            <span className={`text-muted-foreground ${depth === 0 ? "text-sm" : "text-xs"}`}>
-              {comment.timestamp}
-            </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                {comment.userId ? (
+                  <Link
+                    href={`/profile/${comment.userId}`}
+                    className={`text-foreground hover:text-primary font-semibold transition-colors ${depth === 0 ? "" : "text-sm"}`}
+                  >
+                    {comment.author}
+                  </Link>
+                ) : (
+                  <span className={`text-foreground font-semibold ${depth === 0 ? "" : "text-sm"}`}>
+                    {comment.author}
+                  </span>
+                )}
+                <span className={`text-muted-foreground ${depth === 0 ? "text-sm" : "text-xs"}`}>
+                  {comment.timestamp}
+                </span>
+              </div>
+              {comment.titleDisplay &&
+                (comment.titleDisplay.adjTitle || comment.titleDisplay.nounTitle) && (
+                  <TitleBadge
+                    adjTitle={comment.titleDisplay.adjTitle}
+                    nounTitle={comment.titleDisplay.nounTitle}
+                    rarity={comment.titleDisplay.rarity}
+                    size="sm"
+                    className="mt-0.5 w-fit"
+                  />
+                )}
+            </div>
             {isOwner && !isEditing && (
               <div className="ml-auto flex items-center gap-0.5">
                 <Button

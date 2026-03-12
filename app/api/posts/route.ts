@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { computeTemperature, type TemperatureInput } from "@/lib/temperature"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
+import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { z } from "zod"
 
@@ -236,6 +237,17 @@ export async function POST(request: NextRequest) {
       console.error("Supabase error:", error)
       return NextResponse.json({ error: "글 저장 중 오류가 발생했습니다." }, { status: 500 })
     }
+
+    // 포인트 적립 (비동기, 실패 무시)
+    awardPoints(
+      supabase,
+      userId,
+      community_slug,
+      POINT_VALUES.post,
+      "post",
+      "글 작성",
+      String(data.id)
+    ).catch((err: unknown) => console.error("Failed to award points for post:", err))
 
     // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
     Promise.resolve(

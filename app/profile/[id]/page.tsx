@@ -23,6 +23,9 @@ import {
   MessageSquare,
   ThumbsUp,
   Calendar,
+  Trophy,
+  Star,
+  ImageIcon,
 } from "lucide-react"
 import {
   AlertDialog,
@@ -37,8 +40,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { UserProfileHeader } from "@/components/user-profile-header"
+import { TitleBadge } from "@/components/title-badge"
 import { formatRelativeTime } from "@/lib/utils/date"
 import Link from "next/link"
+import Image from "next/image"
 
 interface Profile {
   user_id: string
@@ -67,6 +72,32 @@ interface PublicPost {
   community_slug: string
 }
 
+interface BoardPointInfo {
+  board_slug: string
+  total_points: number
+  available_points: number
+  level: number
+}
+
+interface EquippedTitleInfo {
+  board_slug: string
+  adj_title: string | null
+  noun_title: string | null
+  rarity: string | null
+}
+
+interface PixelArtInfo {
+  pixel_art_id: string
+  purchased_at: string
+  pixel_art_items: {
+    id: string
+    slug: string
+    name: string
+    image_url: string
+    category: string
+  }
+}
+
 interface FollowedCommunity {
   community_slug: string
   created_at: string
@@ -87,6 +118,9 @@ export default function ProfilePage() {
   // 공개 프로필 상태
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null)
   const [publicPosts, setPublicPosts] = useState<PublicPost[]>([])
+  const [boardPoints, setBoardPoints] = useState<BoardPointInfo[]>([])
+  const [equippedTitles, setEquippedTitles] = useState<EquippedTitleInfo[]>([])
+  const [pixelArts, setPixelArts] = useState<PixelArtInfo[]>([])
   const [profileNotFound, setProfileNotFound] = useState(false)
 
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -140,6 +174,9 @@ export default function ProfilePage() {
         const data = await response.json()
         setPublicProfile(data.profile)
         setPublicPosts(data.recent_posts || [])
+        setBoardPoints(data.board_points || [])
+        setEquippedTitles(data.equipped_titles || [])
+        setPixelArts(data.pixel_arts || [])
       } else if (response.status === 404) {
         setProfileNotFound(true)
       }
@@ -412,6 +449,80 @@ export default function ProfilePage() {
             </span>
           </div>
         </Card>
+
+        {/* 게시판별 칭호 & 레벨 */}
+        {boardPoints.length > 0 && (
+          <Card className="overflow-hidden">
+            <div className="border-border border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                <h3 className="text-sm font-semibold">활동 & 칭호</h3>
+              </div>
+            </div>
+            <div className="divide-border divide-y">
+              {boardPoints.map((bp) => {
+                const equipped = equippedTitles.find((t) => t.board_slug === bp.board_slug)
+                return (
+                  <div key={bp.board_slug} className="flex items-center justify-between px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium">
+                        {COMMUNITY_NAMES[bp.board_slug] || bp.board_slug}
+                      </span>
+                      {equipped && (equipped.adj_title || equipped.noun_title) && (
+                        <TitleBadge
+                          adjTitle={equipped.adj_title}
+                          nounTitle={equipped.noun_title}
+                          rarity={
+                            equipped.rarity as "common" | "rare" | "epic" | "legendary" | null
+                          }
+                          size="sm"
+                        />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-muted-foreground">Lv.{bp.level}</span>
+                      <span className="font-medium text-amber-600 tabular-nums dark:text-amber-400">
+                        {bp.total_points.toLocaleString()}P
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+        )}
+
+        {/* 보유 픽셀아트 */}
+        {pixelArts.length > 0 && (
+          <Card className="overflow-hidden">
+            <div className="border-border border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="text-primary h-4 w-4" />
+                <h3 className="text-sm font-semibold">픽셀아트 컬렉션</h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-3 p-4 sm:grid-cols-5">
+              {pixelArts.map((pa) => (
+                <div key={pa.pixel_art_id} className="flex flex-col items-center gap-1">
+                  <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg">
+                    <Image
+                      src={pa.pixel_art_items.image_url}
+                      alt={pa.pixel_art_items.name}
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                      style={{ imageRendering: "pixelated" }}
+                      unoptimized
+                    />
+                  </div>
+                  <span className="text-muted-foreground text-[10px]">
+                    {pa.pixel_art_items.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* 최근 작성글 */}
         <Card className="overflow-hidden">

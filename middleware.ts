@@ -36,6 +36,7 @@ const ONBOARDING_EXCLUDED = [
   "/content-policy",
   "/_next/",
   "/favicon.ico",
+  "/design-demo",
 ]
 
 function isOnboardingExcluded(pathname: string): boolean {

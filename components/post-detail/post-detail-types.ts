@@ -12,6 +12,13 @@ export interface Post {
   temperature?: number
   isUpvoted: boolean
   userId?: string // Clerk user_id (optional, for user actions)
+  createdAt?: Date | string
+}
+
+export interface TitleDisplay {
+  adjTitle?: string | null
+  nounTitle?: string | null
+  rarity?: "common" | "rare" | "epic" | "legendary" | null
 }
 
 export interface Comment {
@@ -22,6 +29,7 @@ export interface Comment {
   timestamp: string
   content: string
   upvotes: number
+  titleDisplay?: TitleDisplay | null
   replies?: Comment[]
 }
 
@@ -39,7 +47,17 @@ import { formatRelativeTime } from "@/lib/utils/date"
 export { formatRelativeTime }
 
 // DB 댓글 데이터를 컴포넌트 형식으로 변환 (계층 구조로)
-export function transformComments(comments: { id: string; user_id: string; parent_id: string | null; content: string; vote_count: number; created_at: string }[], profiles: { user_id: string; nickname: string; avatar_url: string | null }[]): Comment[] {
+export function transformComments(
+  comments: {
+    id: string
+    user_id: string
+    parent_id: string | null
+    content: string
+    vote_count: number
+    created_at: string
+  }[],
+  profiles: { user_id: string; nickname: string; avatar_url: string | null }[]
+): Comment[] {
   const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
 
   // 댓글 맵 생성
@@ -80,8 +98,8 @@ export function transformComments(comments: { id: string; user_id: string; paren
 
   // 시간순 정렬
   rootComments.sort((a, b) => {
-    const aTime = comments.find(c => c.id === a.id)?.created_at || ''
-    const bTime = comments.find(c => c.id === b.id)?.created_at || ''
+    const aTime = comments.find((c) => c.id === a.id)?.created_at || ""
+    const bTime = comments.find((c) => c.id === b.id)?.created_at || ""
     return new Date(aTime).getTime() - new Date(bTime).getTime()
   })
 
@@ -89,8 +107,8 @@ export function transformComments(comments: { id: string; user_id: string; paren
   const sortReplies = (comment: Comment) => {
     if (comment.replies && comment.replies.length > 0) {
       comment.replies.sort((a, b) => {
-        const aTime = comments.find(c => c.id === a.id)?.created_at || ''
-        const bTime = comments.find(c => c.id === b.id)?.created_at || ''
+        const aTime = comments.find((c) => c.id === a.id)?.created_at || ""
+        const bTime = comments.find((c) => c.id === b.id)?.created_at || ""
         return new Date(aTime).getTime() - new Date(bTime).getTime()
       })
       comment.replies.forEach(sortReplies)

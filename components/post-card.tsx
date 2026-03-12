@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { useUser } from "@clerk/nextjs"
 import { ReportDialog } from "@/components/report-dialog"
 import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
+import { getDisplayTemperature } from "@/lib/temperature"
 import { usePostCardActions } from "@/hooks/use-post-card-actions"
 import { PostCardHeader } from "@/components/post-card/post-card-header"
 import { PostCardContent } from "@/components/post-card/post-card-content"
@@ -34,6 +35,7 @@ interface Post {
   isUpvoted: boolean
   views?: number
   userId?: string
+  createdAt?: Date | string
 }
 
 interface PostCardProps {
@@ -66,9 +68,12 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     isUpvoted: post.isUpvoted,
   })
 
-  const temperature =
+  const rawTemperature =
     post.temperature ??
     Math.min(100, Math.floor((Math.max(0, voteCount) * 2 + post.comments * 3) / 10))
+  const temperature = post.createdAt
+    ? getDisplayTemperature(rawTemperature, post.createdAt)
+    : rawTemperature
   const communityLink = post.communitySlug || post.community
   const firstEmbed =
     typeof post.content === "object" ? extractFirstEmbedFromTipTapJSON(post.content) : null
@@ -103,6 +108,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             postTitle={post.title}
             author={post.author}
             avatar={post.avatar}
+            userId={post.userId}
             temperature={temperature}
             voteCount={voteCount}
             myVote={myVote}

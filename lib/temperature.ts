@@ -78,3 +78,19 @@ export function computeTemperature(post: TemperatureInput, now: Date = new Date(
   const score = e * d + boost
   return Math.min(100, Math.max(0, Math.round(score * 10) / 10))
 }
+
+/**
+ * 사용자에게 보여줄 표시 온도 (부스트 제거)
+ * 정렬용 온도(DB)에서 신규 글 부스트를 빼서 순수 engagement만 반영
+ */
+export function getDisplayTemperature(
+  temperature: number,
+  createdAt: string | Date,
+  now: Date = new Date()
+): number {
+  const ageHours = (now.getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60)
+  let boost = 0
+  if (ageHours <= 1.0) boost = NEW_BOOST_MAX
+  else if (ageHours <= 4.0) boost = (NEW_BOOST_MAX * (4.0 - ageHours)) / 3.0
+  return Math.max(0, Math.round((temperature - boost) * 10) / 10)
+}

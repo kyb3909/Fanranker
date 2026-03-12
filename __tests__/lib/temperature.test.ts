@@ -3,6 +3,7 @@ import {
   getTemperatureColor,
   getTemperatureStyle,
   computeTemperature,
+  getDisplayTemperature,
 } from "@/lib/temperature"
 
 describe("getTemperatureColor", () => {
@@ -60,10 +61,7 @@ describe("computeTemperature", () => {
 
   it("gives new posts a boost", () => {
     const now = new Date()
-    const temp = computeTemperature(
-      { ...basePost, created_at: now.toISOString() },
-      now
-    )
+    const temp = computeTemperature({ ...basePost, created_at: now.toISOString() }, now)
     // New post boost = 8 points
     expect(temp).toBeGreaterThanOrEqual(8)
   })
@@ -71,20 +69,14 @@ describe("computeTemperature", () => {
   it("returns 0 for old posts with no engagement", () => {
     const oldDate = new Date()
     oldDate.setDate(oldDate.getDate() - 30)
-    const temp = computeTemperature(
-      { ...basePost, created_at: oldDate.toISOString() },
-      new Date()
-    )
+    const temp = computeTemperature({ ...basePost, created_at: oldDate.toISOString() }, new Date())
     expect(temp).toBe(0)
   })
 
   it("increases with votes and comments", () => {
     const now = new Date()
     const created = new Date(now.getTime() - 2 * 60 * 60 * 1000) // 2 hours ago
-    const noEngagement = computeTemperature(
-      { ...basePost, created_at: created.toISOString() },
-      now
-    )
+    const noEngagement = computeTemperature({ ...basePost, created_at: created.toISOString() }, now)
     const withEngagement = computeTemperature(
       { ...basePost, vote_count: 10, comment_count: 5, created_at: created.toISOString() },
       now
@@ -95,7 +87,12 @@ describe("computeTemperature", () => {
   it("caps at 100", () => {
     const now = new Date()
     const temp = computeTemperature(
-      { vote_count: 10000, comment_count: 5000, view_count_unique: 50000, created_at: now.toISOString() },
+      {
+        vote_count: 10000,
+        comment_count: 5000,
+        view_count_unique: 50000,
+        created_at: now.toISOString(),
+      },
       now
     )
     expect(temp).toBeLessThanOrEqual(100)
@@ -108,5 +105,37 @@ describe("computeTemperature", () => {
       now
     )
     expect(temp).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe("getDisplayTemperature", () => {
+  it("strips boost from new posts (< 1 hour)", () => {
+    const now = new Date()
+    // 새 글의 온도가 8(부스트)이면 표시 온도는 0
+    const display = getDisplayTemperature(8, now.toISOString(), now)
+    expect(display).toBe(0)
+  })
+
+  it("strips partial boost from 1-4 hour old posts", () => {
+    const now = new Date()
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+    // 2시간 된 글: boost = 8 * (4-2)/3 ≈ 5.33
+    const display = getDisplayTemperature(10, twoHoursAgo.toISOString(), now)
+    expect(display).toBeGreaterThan(0)
+    expect(display).toBeLessThan(10)
+  })
+
+  it("returns temperature as-is for old posts (> 4 hours)", () => {
+    const now = new Date()
+    const oldDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    // 24시간 된 글: boost = 0이므로 온도 그대로
+    const display = getDisplayTemperature(25, oldDate.toISOString(), now)
+    expect(display).toBe(25)
+  })
+
+  it("never returns negative", () => {
+    const now = new Date()
+    const display = getDisplayTemperature(3, now.toISOString(), now)
+    expect(display).toBeGreaterThanOrEqual(0)
   })
 })
