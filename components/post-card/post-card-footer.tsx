@@ -80,7 +80,7 @@ export function PostCardFooter({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <span className="text-foreground truncate text-[13px] font-medium">{author}</span>
+        <span className="text-foreground truncate text-[15px] font-medium">{author}</span>
         {titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle) && (
           <TitleBadge
             adjTitle={titleDisplay.adjTitle}
