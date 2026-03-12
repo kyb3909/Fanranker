@@ -1,7 +1,16 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Compass, LayoutGrid, Bell, Search, Loader2, Trophy } from "lucide-react"
+import {
+  Compass,
+  LayoutGrid,
+  Bell,
+  Search,
+  Loader2,
+  Trophy,
+  Gamepad2,
+  Sparkles,
+} from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
@@ -30,6 +39,8 @@ export function Header() {
   const isFeed = pathname === "/" && view !== "prediction"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname === "/" && view === "prediction"
+  const isGames = pathname.startsWith("/games")
+  const isShop = pathname.startsWith("/shop")
 
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResultPost[]>([])
@@ -330,6 +341,34 @@ export function Header() {
             >
               <Trophy className="h-[18px] w-[18px] shrink-0" />
               경기 예측
+            </Button>
+          </Link>
+          <Link href="/games" prefetch={false}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+                isGames
+                  ? "text-white hover:bg-white/10 hover:text-white"
+                  : "text-white/90 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
+              게임
+            </Button>
+          </Link>
+          <Link href="/shop" prefetch={false}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+                isShop
+                  ? "text-white hover:bg-white/10 hover:text-white"
+                  : "text-white/90 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Sparkles className="h-[18px] w-[18px] shrink-0" />
+              상점
             </Button>
           </Link>
         </div>

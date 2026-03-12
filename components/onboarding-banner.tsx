@@ -116,7 +116,7 @@ export function OnboardingBanner({ onFollowChange }: { onFollowChange?: () => vo
 
           {/* 2. 승부예측 */}
           <Link
-            href="/games/prediction"
+            href="/?view=prediction"
             className="group border-border bg-card/80 hover:border-primary/30 rounded-lg border p-3 transition-colors"
           >
             <div className="mb-1.5 flex items-center gap-2">

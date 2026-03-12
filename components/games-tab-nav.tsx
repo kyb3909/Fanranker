@@ -2,18 +2,38 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Trophy } from "lucide-react"
+import { Flame, Trophy, ListOrdered } from "lucide-react"
 
 const games = [
   {
-    href: "/games/prediction",
+    href: "/games/galcup",
+    icon: Flame,
+    label: "갈드컵",
+    description: "댓글로 투표하는 응원 대결",
+    color: "from-orange-500 to-red-500",
+    bgLight: "bg-orange-50",
+    borderActive: "ring-orange-500/50",
+    iconBg: "bg-orange-500/10 text-orange-600",
+  },
+  {
+    href: "/games/worldcup",
     icon: Trophy,
-    label: "경기 예측",
-    description: "프로토 경기 결과를 예측하세요",
-    color: "from-amber-500 to-orange-500",
-    bgLight: "bg-amber-50",
-    borderActive: "ring-amber-500/50",
-    iconBg: "bg-amber-500/10 text-amber-600",
+    label: "이상형 월드컵",
+    description: "토너먼트로 최강자를 가려라",
+    color: "from-violet-500 to-purple-500",
+    bgLight: "bg-violet-50",
+    borderActive: "ring-violet-500/50",
+    iconBg: "bg-violet-500/10 text-violet-600",
+  },
+  {
+    href: "/games/draft",
+    icon: ListOrdered,
+    label: "드래프트 게임",
+    description: "스네이크 드래프트로 팀 짜기",
+    color: "from-emerald-500 to-teal-500",
+    bgLight: "bg-emerald-50",
+    borderActive: "ring-emerald-500/50",
+    iconBg: "bg-emerald-500/10 text-emerald-600",
   },
 ]
 
@@ -23,7 +43,7 @@ export function GamesTabNav() {
   return (
     <div className="bg-card border-border border-b">
       <div className="mx-auto max-w-[1280px] px-4 py-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-3">
           {games.map((game) => {
             const isActive = pathname.startsWith(game.href)
             return (
