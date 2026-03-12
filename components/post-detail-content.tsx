@@ -97,6 +97,14 @@ export function PostDetailContent({ post }: { post: Post }) {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-48">
+                      {post.userId && (
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/profile/${post.userId}`}>
+                            <User className="mr-2 h-4 w-4" />
+                            <span>프로필 보기</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
                         <Search className="mr-2 h-4 w-4" />
                         <span>해당 아이디로 검색</span>
@@ -149,6 +157,14 @@ export function PostDetailContent({ post }: { post: Post }) {
                     </>
                   ) : (
                     <>
+                      {post.userId && (
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/profile/${post.userId}`}>
+                            <User className="mr-2 h-4 w-4" />
+                            프로필 보기
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
                         <Search className="mr-2 h-4 w-4" />
                         해당 아이디로 검색
