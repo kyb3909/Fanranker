@@ -1,0 +1,7 @@
+slug,title,description,rarity,board_slug,condition_type,condition_value
+football_maniac,축잘알,축구 포인트 5000 이상 달성,epic,football,points,5000
+prophet,예언자,승부예측 10연속 적중,legendary,,prediction_streak,10
+active_writer,다작러,게시글 100개 이상 작성,rare,,post_count,100
+hot_commenter,수다쟁이,댓글 500개 이상 작성,rare,,comment_count,500
+popular,인싸,추천 100개 이상 받기,rare,,vote_received,100
+newbie,풋내기,가입 후 첫 글 작성,common,,post_count,1
