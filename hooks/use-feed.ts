@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import useSWRInfinite from "swr/infinite"
 import { type TipTapNode } from "@/components/post-card"
+import { type TitleDisplay } from "@/components/title-badge"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { fetcher } from "@/lib/swr"
@@ -25,6 +26,7 @@ export interface Post {
   temperature: number
   isUpvoted: boolean
   createdAt: Date
+  titleDisplay?: TitleDisplay | null
 }
 
 const PAGE_SIZE = 20
@@ -49,16 +51,46 @@ interface RawProfile {
   temperature?: number
 }
 
+interface RawEquippedTitle {
+  user_id: string
+  board_slug: string
+  adj_titles: { title: string; rarity: string } | null
+  noun_titles: { title: string } | null
+}
+
 export interface PostsResponse {
   posts: RawPost[]
   profiles: RawProfile[]
+  equippedTitles?: RawEquippedTitle[]
   hasMore?: boolean
 }
 
-function transformPosts(fetchedPosts: RawPost[], profiles: RawProfile[]): Post[] {
+function transformPosts(
+  fetchedPosts: RawPost[],
+  profiles: RawProfile[],
+  equippedTitles?: RawEquippedTitle[]
+): Post[] {
   const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+  // key: "user_id:board_slug" → title
+  const titleMap = new Map<string, RawEquippedTitle>()
+  if (equippedTitles) {
+    for (const t of equippedTitles) {
+      titleMap.set(`${t.user_id}:${t.board_slug}`, t)
+    }
+  }
+
   return fetchedPosts.map((post) => {
     const profile = profileMap.get(post.user_id)
+    const equipped = titleMap.get(`${post.user_id}:${post.community_slug}`)
+    const titleDisplay: TitleDisplay | null = equipped
+      ? {
+          adjTitle: equipped.adj_titles?.title || null,
+          nounTitle: equipped.noun_titles?.title || null,
+          rarity: (equipped.adj_titles?.rarity as TitleDisplay["rarity"]) || null,
+        }
+      : null
+
     return {
       id: post.id,
       community: COMMUNITY_NAMES[post.community_slug] || post.community_slug,
@@ -76,6 +108,7 @@ function transformPosts(fetchedPosts: RawPost[], profiles: RawProfile[]): Post[]
       temperature: post.temperature ?? 0,
       isUpvoted: false,
       createdAt: new Date(post.created_at),
+      titleDisplay,
     }
   })
 }
@@ -122,7 +155,9 @@ export function useFeed(
 
   const posts = useMemo(() => {
     if (!data) return []
-    const allPosts = data.flatMap((page) => transformPosts(page.posts || [], page.profiles || []))
+    const allPosts = data.flatMap((page) =>
+      transformPosts(page.posts || [], page.profiles || [], page.equippedTitles)
+    )
 
     // ID 기반 중복 제거 (페이지 간 동일 게시글 제거)
     const seen = new Set<string>()

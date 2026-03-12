@@ -2,16 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  ArrowUp,
-  ArrowDown,
-  MessageCircle,
-  Thermometer,
-  Bookmark,
-  Search,
-  Ban,
-  User,
-} from "lucide-react"
+import { ArrowUp, ArrowDown, MessageCircle, Bookmark, Search, Ban, User } from "lucide-react"
 import Link from "next/link"
 import {
   DropdownMenu,
@@ -20,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ShareMenu } from "@/components/share-menu"
-import { getTemperatureStyle } from "@/lib/temperature"
 import { TitleBadge, type TitleDisplay } from "@/components/title-badge"
 
 export interface PostCardFooterProps {
@@ -103,16 +93,6 @@ export function PostCardFooter({
               className="mt-0.5 w-fit"
             />
           )}
-        </div>
-
-        <span className="text-border shrink-0">|</span>
-
-        <div
-          className="flex shrink-0 items-center gap-0.5"
-          style={getTemperatureStyle(temperature)}
-        >
-          <Thermometer className="h-3.5 w-3.5" />
-          <span className="text-[12px] font-semibold tabular-nums">{temperature}°</span>
         </div>
       </div>
 

@@ -36,6 +36,11 @@ interface Post {
   views?: number
   userId?: string
   createdAt?: Date | string
+  titleDisplay?: {
+    adjTitle?: string | null
+    nounTitle?: string | null
+    rarity?: "common" | "rare" | "epic" | "legendary" | null
+  } | null
 }
 
 interface PostCardProps {
@@ -117,6 +122,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             onVote={handleVote}
             onBookmark={handleBookmark}
             onBookmarkHover={checkBookmarkStatus}
+            titleDisplay={post.titleDisplay}
             onSearchByAuthor={handleSearchByAuthor}
             onBlockUser={handleBlockUser}
           />

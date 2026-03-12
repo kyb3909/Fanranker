@@ -148,16 +148,23 @@ export async function GET(request: NextRequest) {
     // DB temperature 값 그대로 사용 (pg_cron이 매분 큐 처리)
     const postsWithAccurateCounts = posts
 
-    // 3. 작성자 프로필 조회
+    // 3. 작성자 프로필 + 장착 칭호 조회
     const userIds = [...new Set(posts.map((p) => p.user_id))]
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, nickname, avatar_url, temperature")
-      .in("user_id", userIds)
+    const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("user_id, nickname, avatar_url, temperature")
+        .in("user_id", userIds),
+      supabase
+        .from("user_equipped_titles")
+        .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
+        .in("user_id", userIds),
+    ])
 
     const res = NextResponse.json({
       posts: postsWithAccurateCounts,
       profiles,
+      equippedTitles: equippedTitles || [],
       hasMore: posts.length === limit,
     })
     res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=180")
