@@ -41,17 +41,51 @@ async function fetchPost(id: string) {
     return null
   }
 
-  // 2. 작성자 프로필 조회
+  // 2. 작성자 프로필 + 장착 칭호 조회
   // Note: 조회수 증가는 클라이언트에서 /api/posts/[id]/view 엔드포인트를 호출하여 처리
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("user_id, nickname, avatar_url")
-    .eq("user_id", post.user_id)
-    .single()
+  const [{ data: profile }, { data: equippedTitles }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("user_id, nickname, avatar_url")
+      .eq("user_id", post.user_id)
+      .single(),
+    supabase
+      .from("user_equipped_titles")
+      .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
+      .eq("user_id", post.user_id)
+      .eq("board_slug", post.community_slug),
+  ])
+
+  const equipped = (equippedTitles?.[0] || null) as {
+    adj_titles: unknown
+    noun_titles: unknown
+  } | null
+  const adjTitlesRaw = equipped?.adj_titles as
+    | { title: string; rarity: string }[]
+    | { title: string; rarity: string }
+    | null
+  const adjTitle = adjTitlesRaw
+    ? Array.isArray(adjTitlesRaw)
+      ? adjTitlesRaw[0]
+      : adjTitlesRaw
+    : null
+  const nounTitlesRaw = equipped?.noun_titles as { title: string }[] | { title: string } | null
+  const nounTitle = nounTitlesRaw
+    ? Array.isArray(nounTitlesRaw)
+      ? nounTitlesRaw[0]
+      : nounTitlesRaw
+    : null
 
   return {
     ...post,
     profile: profile || null,
+    titleDisplay: equipped
+      ? {
+          adjTitle: adjTitle?.title || null,
+          nounTitle: nounTitle?.title || null,
+          rarity: (adjTitle?.rarity as "common" | "rare" | "epic" | "legendary") || null,
+        }
+      : null,
   }
 }
 
@@ -177,6 +211,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     }),
     isUpvoted: false,
     createdAt: new Date(postData.created_at),
+    titleDisplay: postData.titleDisplay || null,
   }
 
   return (

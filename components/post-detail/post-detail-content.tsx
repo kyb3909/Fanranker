@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
 import { getTemperatureStyle, getDisplayTemperature } from "@/lib/temperature"
+import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import type { Post } from "./post-detail-types"
@@ -125,6 +126,16 @@ export function PostDetailContent({ post }: { post: Post }) {
                     <span className="text-sm font-semibold">{temperature}°</span>
                   </div>
                 </div>
+                {post.titleDisplay &&
+                  (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (
+                    <TitleBadge
+                      adjTitle={post.titleDisplay.adjTitle}
+                      nounTitle={post.titleDisplay.nounTitle}
+                      rarity={post.titleDisplay.rarity}
+                      size="sm"
+                      className="mt-0.5 w-fit"
+                    />
+                  )}
               </div>
             </div>
             <div className="flex items-center gap-2">

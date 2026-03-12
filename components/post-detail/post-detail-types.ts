@@ -13,6 +13,7 @@ export interface Post {
   isUpvoted: boolean
   userId?: string // Clerk user_id (optional, for user actions)
   createdAt?: Date | string
+  titleDisplay?: TitleDisplay | null
 }
 
 export interface TitleDisplay {
@@ -56,9 +57,29 @@ export function transformComments(
     vote_count: number
     created_at: string
   }[],
-  profiles: { user_id: string; nickname: string; avatar_url: string | null }[]
+  profiles: { user_id: string; nickname: string; avatar_url: string | null }[],
+  equippedTitles?: {
+    user_id: string
+    board_slug: string
+    adj_titles: { title: string; rarity: string } | null
+    noun_titles: { title: string } | null
+  }[]
 ): Comment[] {
   const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
+
+  // 칭호 매핑 (user_id → first equipped title)
+  const titleMap = new Map<string, TitleDisplay>()
+  if (equippedTitles) {
+    for (const t of equippedTitles) {
+      if (!titleMap.has(t.user_id)) {
+        titleMap.set(t.user_id, {
+          adjTitle: t.adj_titles?.title || null,
+          nounTitle: t.noun_titles?.title || null,
+          rarity: (t.adj_titles?.rarity as TitleDisplay["rarity"]) || null,
+        })
+      }
+    }
+  }
 
   // 댓글 맵 생성
   const commentMap = new Map<string, Comment>()
@@ -67,6 +88,7 @@ export function transformComments(
   // 먼저 모든 댓글을 맵에 추가
   comments.forEach((comment) => {
     const profile = profileMap.get(comment.user_id)
+    const titleDisplay = titleMap.get(comment.user_id) || null
     const transformed: Comment = {
       id: comment.id,
       userId: comment.user_id,
@@ -75,6 +97,7 @@ export function transformComments(
       timestamp: formatRelativeTime(new Date(comment.created_at)),
       content: comment.content,
       upvotes: comment.vote_count || 0,
+      titleDisplay,
       replies: [],
     }
     commentMap.set(comment.id, transformed)

@@ -72,19 +72,42 @@ async function fetchPosts(communitySlug: string, page: number = 1) {
 
   if (!posts || posts.length === 0) return { posts: [], totalCount: count || 0 }
 
-  // 2. 작성자 프로필 조회
+  // 2. 작성자 프로필 + 장착 칭호 조회
   const userIds = [...new Set(posts.map((p) => p.user_id))]
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("user_id, nickname, avatar_url, temperature")
-    .in("user_id", userIds)
+  const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("user_id, nickname, avatar_url, temperature")
+      .in("user_id", userIds),
+    supabase
+      .from("user_equipped_titles")
+      .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
+      .in("user_id", userIds),
+  ])
 
-  // 3. 프로필 매핑
+  // 3. 프로필 + 칭호 매핑
   const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+  type EquippedTitle = {
+    user_id: string
+    board_slug: string
+    adj_titles: unknown
+    noun_titles: unknown
+  }
+  const titleMap = new Map(
+    ((equippedTitles || []) as EquippedTitle[]).map((t) => [`${t.user_id}:${t.board_slug}`, t])
+  )
 
   return {
     posts: posts.map((post) => {
       const profile = profileMap.get(post.user_id) || null
+      const equipped = titleMap.get(`${post.user_id}:${post.community_slug}`)
+      const adjTitles = equipped?.adj_titles as
+        | { title: string; rarity: string }[]
+        | { title: string; rarity: string }
+        | null
+      const adjTitle = Array.isArray(adjTitles) ? adjTitles[0] : adjTitles
+      const nounTitles = equipped?.noun_titles as { title: string }[] | { title: string } | null
+      const nounTitle = Array.isArray(nounTitles) ? nounTitles[0] : nounTitles
       return {
         ...post,
         profile: profile || null,
@@ -92,6 +115,13 @@ async function fetchPosts(communitySlug: string, page: number = 1) {
         avatar: profile?.avatar_url || "/placeholder-user.jpg",
         authorTemperature: profile?.temperature ?? 0,
         userId: post.user_id,
+        titleDisplay: equipped
+          ? {
+              adjTitle: adjTitle?.title || null,
+              nounTitle: nounTitle?.title || null,
+              rarity: adjTitle?.rarity || null,
+            }
+          : null,
       }
     }),
     totalCount: count || 0,
@@ -114,6 +144,11 @@ function transformPosts(
     is_notice?: boolean
     created_at: string
     profile?: { nickname?: string; avatar_url?: string | null } | null
+    titleDisplay?: {
+      adjTitle?: string | null
+      nounTitle?: string | null
+      rarity?: string | null
+    } | null
   }[]
 ) {
   return posts.map((post) => {
@@ -137,6 +172,7 @@ function transformPosts(
       isNotice: post.is_notice || false,
       isUpvoted: false,
       createdAt: new Date(post.created_at),
+      titleDisplay: post.titleDisplay || null,
     }
   })
 }

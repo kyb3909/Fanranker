@@ -34,6 +34,11 @@ interface Post {
   userId?: string
   createdAt: Date
   isNotice?: boolean
+  titleDisplay?: {
+    adjTitle?: string | null
+    nounTitle?: string | null
+    rarity?: string | null
+  } | null
 }
 
 interface Community {

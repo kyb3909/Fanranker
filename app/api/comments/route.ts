@@ -56,14 +56,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ comments: [], profiles: [] })
     }
 
-    // 작성자 프로필 조회
+    // 작성자 프로필 + 장착 칭호 조회
     const userIds = [...new Set(comments.map((c) => c.user_id))]
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, nickname, avatar_url")
-      .in("user_id", userIds)
+    const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
+      supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
+      supabase
+        .from("user_equipped_titles")
+        .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
+        .in("user_id", userIds),
+    ])
 
-    const res = NextResponse.json({ comments, profiles })
+    const res = NextResponse.json({ comments, profiles, equippedTitles: equippedTitles || [] })
     res.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120")
     return res
   } catch (error) {

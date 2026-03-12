@@ -21,10 +21,13 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoadingComments, setIsLoadingComments] = useState(true)
 
-  const updateComments = useCallback((newComments: Comment[]) => {
-    setComments(newComments)
-    onCommentCountChange?.(countAllComments(newComments))
-  }, [onCommentCountChange])
+  const updateComments = useCallback(
+    (newComments: Comment[]) => {
+      setComments(newComments)
+      onCommentCountChange?.(countAllComments(newComments))
+    },
+    [onCommentCountChange]
+  )
   const [commentText, setCommentText] = useState("")
   const [replyingTo, setReplyingTo] = useState<string | number | null>(null)
   const [replyText, setReplyText] = useState("")
@@ -35,9 +38,13 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
   const reloadComments = useCallback(async () => {
     try {
       const response = await fetch(`/api/comments?post_id=${postId}`)
-      if (!response.ok) throw new Error('댓글을 불러오는데 실패했습니다.')
-      const { comments: fetchedComments, profiles } = await response.json()
-      const transformedComments = transformComments(fetchedComments || [], profiles || [])
+      if (!response.ok) throw new Error("댓글을 불러오는데 실패했습니다.")
+      const { comments: fetchedComments, profiles, equippedTitles } = await response.json()
+      const transformedComments = transformComments(
+        fetchedComments || [],
+        profiles || [],
+        equippedTitles || []
+      )
       updateComments(transformedComments)
     } catch {
       updateComments([])
@@ -59,10 +66,10 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     setCommentText("") // 즉시 입력 필드 비우기 (중복 제출 방지)
 
     try {
-      const response = await fetch('/api/comments', {
-        method: 'POST',
+      const response = await fetch("/api/comments", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           post_id: postId,
@@ -73,15 +80,21 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
       if (!response.ok) {
         const error = await response.json()
         // 쿨다운 에러인 경우 특별 처리
-        if (response.status === 429 && error.code === 'COOLDOWN_ACTIVE') {
-          throw new Error(error.error || '댓글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요.')
+        if (response.status === 429 && error.code === "COOLDOWN_ACTIVE") {
+          throw new Error(
+            error.error || "댓글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요."
+          )
         }
-        throw new Error(error.error || '댓글 작성에 실패했습니다.')
+        throw new Error(error.error || "댓글 작성에 실패했습니다.")
       }
 
       await reloadComments()
     } catch (error) {
-      toast({ variant: 'destructive', title: '댓글 작성 실패', description: error instanceof Error ? error.message : '댓글 작성에 실패했습니다.' })
+      toast({
+        variant: "destructive",
+        title: "댓글 작성 실패",
+        description: error instanceof Error ? error.message : "댓글 작성에 실패했습니다.",
+      })
       setCommentText(textToSubmit) // 실패 시 텍스트 복원
     } finally {
       setIsSubmittingComment(false)
@@ -98,10 +111,10 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     setReplyText("") // 즉시 입력 필드 비우기 (중복 제출 방지)
 
     try {
-      const response = await fetch('/api/comments', {
-        method: 'POST',
+      const response = await fetch("/api/comments", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           post_id: postId,
@@ -113,16 +126,22 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
       if (!response.ok) {
         const error = await response.json()
         // 쿨다운 에러인 경우 특별 처리
-        if (response.status === 429 && error.code === 'COOLDOWN_ACTIVE') {
-          throw new Error(error.error || '답글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요.')
+        if (response.status === 429 && error.code === "COOLDOWN_ACTIVE") {
+          throw new Error(
+            error.error || "답글을 너무 빠르게 작성하셨습니다. 10초 후에 다시 시도해주세요."
+          )
         }
-        throw new Error(error.error || '답글 작성에 실패했습니다.')
+        throw new Error(error.error || "답글 작성에 실패했습니다.")
       }
 
       await reloadComments()
       setReplyingTo(null)
     } catch (error) {
-      toast({ variant: 'destructive', title: '답글 작성 실패', description: error instanceof Error ? error.message : '답글 작성에 실패했습니다.' })
+      toast({
+        variant: "destructive",
+        title: "답글 작성 실패",
+        description: error instanceof Error ? error.message : "답글 작성에 실패했습니다.",
+      })
       setReplyText(textToSubmit) // 실패 시 텍스트 복원
     } finally {
       setIsSubmittingReply(null)
@@ -130,9 +149,9 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
   }
 
   return (
-    <Card className="border border-border bg-card">
-      <div className="p-6 space-y-6">
-        <h3 className="text-xl font-semibold text-foreground">
+    <Card className="border-border bg-card border">
+      <div className="space-y-6 p-6">
+        <h3 className="text-foreground text-xl font-semibold">
           댓글 {countAllComments(comments)}개
         </h3>
 
@@ -144,7 +163,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 handleCommentSubmit()
               }
             }}
@@ -154,7 +173,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
               onClick={handleCommentSubmit}
               disabled={!commentText.trim() || isSubmittingComment}
             >
-              {isSubmittingComment ? '작성 중...' : '댓글 작성'}
+              {isSubmittingComment ? "작성 중..." : "댓글 작성"}
             </Button>
           </div>
         </div>
@@ -164,12 +183,12 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
         {/* Comment List */}
         <div className="space-y-6">
           {isLoadingComments ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
+            <div className="py-8 text-center">
+              <p className="text-muted-foreground text-sm">댓글을 불러오는 중...</p>
             </div>
           ) : comments.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">아직 댓글이 없습니다.</p>
+            <div className="py-8 text-center">
+              <p className="text-muted-foreground text-sm">아직 댓글이 없습니다.</p>
             </div>
           ) : (
             comments.map((comment) => (
