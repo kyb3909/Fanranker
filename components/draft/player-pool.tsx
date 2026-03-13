@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { Search } from "lucide-react"
-import { ALL_PLAYERS, POSITION_COLORS, type Player, type Position } from "@/lib/draft/players"
+import { getAllPlayers, POSITION_COLORS, type Player, type Position } from "@/lib/draft/players"
 import type { DraftState } from "@/lib/draft/engine"
 import { getSeatLimits } from "@/lib/draft/engine"
 
@@ -34,7 +34,7 @@ export function PlayerPool({ state, myTurn, mySeat, onPick }: PlayerPoolProps) {
   }, [state.roster, mySeat])
 
   const players = useMemo(() => {
-    let list = [...ALL_PLAYERS]
+    let list = [...getAllPlayers()]
 
     // 포지션 필터
     if (posFilter !== "ALL") {

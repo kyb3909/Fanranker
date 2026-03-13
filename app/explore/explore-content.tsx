@@ -105,7 +105,7 @@ function ExploreInner() {
         <div className="col-span-12 space-y-6 xl:col-span-9">
           {/* 게시판 둘러보기 */}
           {categories.length > 0 && (
-            <div className="border-border overflow-hidden rounded-xl border">
+            <div className="bg-card border-border overflow-hidden rounded-xl border shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
               <div className="flex items-center gap-2 px-4 py-3">
                 <LayoutGrid className="text-primary h-3.5 w-3.5" />
                 <h2 className="text-primary text-[14px] font-bold">게시판 둘러보기</h2>

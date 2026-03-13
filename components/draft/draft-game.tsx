@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { DraftBoard } from "./draft-board"
 import { FormationField } from "./formation-field"
-import { POSITION_COLORS, ALL_PLAYERS, type Player } from "@/lib/draft/players"
+import { POSITION_COLORS, getAllPlayers, loadPlayers, type Player } from "@/lib/draft/players"
 import {
   createInitialState,
   getCurrentSeat,
@@ -33,7 +33,13 @@ export function DraftGame() {
   const [myFormation, setMyFormation] = useState<Formation>("4-3-3")
   const [state, setState] = useState<DraftState | null>(null)
   const [timerReset, setTimerReset] = useState(0)
+  const [playersLoaded, setPlayersLoaded] = useState(false)
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 선수 데이터 lazy load
+  useEffect(() => {
+    loadPlayers().then(() => setPlayersLoaded(true))
+  }, [])
 
   // AI 턴 자동 실행
   const processAITurn = useCallback((currentState: DraftState) => {
@@ -336,7 +342,7 @@ export function DraftGame() {
                 {selectedLimits.MF}, FW {selectedLimits.FW}
               </li>
               <li>• 픽 제한시간 30초 (초과 시 자동 선택)</li>
-              <li>• 총 {ALL_PLAYERS.length}명의 EPL 선수</li>
+              <li>• 총 {getAllPlayers().length}명의 EPL 선수</li>
             </ul>
           </div>
 

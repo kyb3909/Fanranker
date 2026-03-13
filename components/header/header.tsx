@@ -284,7 +284,7 @@ export function Header() {
 
       {/* 메뉴바: 좌우 폭 끝까지 (담벼락, 운동장, 경기 예측) */}
       <nav
-        className="grid w-full grid-cols-[1fr_auto_1fr] items-center border-t border-[#EEEEEE] bg-white px-2"
+        className="bg-primary grid w-full grid-cols-[1fr_auto_1fr] items-center border-t border-white/10 px-2"
         aria-label="주요 메뉴"
       >
         <div />
@@ -302,74 +302,64 @@ export function Header() {
               }
             }}
           >
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+            <span
+              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isFeed
-                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
-                  : "hover:text-foreground text-[#555555]"
+                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
+                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
               }`}
             >
               <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
               담벼락
-            </Button>
+            </span>
           </Link>
           <Link href="/explore" prefetch={false}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+            <span
+              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isExplore
-                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
-                  : "hover:text-foreground text-[#555555]"
+                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
+                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
               }`}
             >
               <Compass className="h-[18px] w-[18px] shrink-0" />
               운동장
-            </Button>
+            </span>
           </Link>
           <Link href="/?view=prediction" prefetch={false}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+            <span
+              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isPrediction
-                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
-                  : "hover:text-foreground text-[#555555]"
+                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
+                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
               }`}
             >
               <Trophy className="h-[18px] w-[18px] shrink-0" />
               경기 예측
-            </Button>
+            </span>
           </Link>
           <Link href="/games" prefetch={false}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+            <span
+              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isGames
-                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
-                  : "hover:text-foreground text-[#555555]"
+                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
+                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
               }`}
             >
               <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
               게임
-            </Button>
+            </span>
           </Link>
           <Link href="/shop" prefetch={false}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+            <span
+              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isShop
-                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
-                  : "hover:text-foreground text-[#555555]"
+                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
+                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
               }`}
             >
               <Sparkles className="h-[18px] w-[18px] shrink-0" />
               상점
-            </Button>
+            </span>
           </Link>
         </div>
         <div />

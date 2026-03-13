@@ -1,5 +1,3 @@
-import playersData from "@/data/fpl-players.json"
-
 export type Position = "GK" | "DF" | "MF" | "FW"
 
 export interface Player {
@@ -12,14 +10,26 @@ export interface Player {
   price: number
 }
 
-export const ALL_PLAYERS: Player[] = playersData as Player[]
+let _players: Player[] | null = null
+
+export async function loadPlayers(): Promise<Player[]> {
+  if (_players) return _players
+  const data = await import("@/data/fpl-players.json")
+  _players = (data.default ?? data) as Player[]
+  return _players
+}
+
+/** Sync access — only works after loadPlayers() has been called */
+export function getAllPlayers(): Player[] {
+  return _players ?? []
+}
 
 export function getPlayersByPosition(pos: Position): Player[] {
-  return ALL_PLAYERS.filter((p) => p.position === pos)
+  return getAllPlayers().filter((p) => p.position === pos)
 }
 
 export function getPlayerById(id: string): Player | undefined {
-  return ALL_PLAYERS.find((p) => p.id === id)
+  return getAllPlayers().find((p) => p.id === id)
 }
 
 export const POSITION_COLORS: Record<Position, string> = {

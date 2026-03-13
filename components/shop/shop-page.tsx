@@ -101,40 +101,34 @@ export default function ShopPage() {
 
   return (
     <div className="space-y-5">
-      {/* ====== 상점 히어로 ====== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a0a2e] via-[#2d1b4e] to-[#0a1628] shadow-xl">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-amber-500/10 blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-violet-500/10 blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/5 blur-3xl" />
-        </div>
-        <div className="relative p-6 text-center sm:p-8">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70">
-            <ShoppingBag className="h-3 w-3" />
-            팬랭커 상점
+      {/* ====== 상점 헤더 ====== */}
+      <div className="bg-card border-border rounded-xl border px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 flex h-9 w-9 items-center justify-center rounded-lg">
+            <ShoppingBag className="text-primary h-4.5 w-4.5" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-            ✨ 아이템 상점
-          </h1>
-          <p className="mt-1 text-sm text-white/50">
-            스티커 · 칭호 · 픽셀아트를 활동 포인트로 구매하세요
-          </p>
+          <div>
+            <h1 className="text-foreground text-lg font-bold tracking-tight">아이템 상점</h1>
+            <p className="text-muted-foreground text-[12px]">
+              스티커 · 칭호 · 픽셀아트를 활동 포인트로 구매하세요
+            </p>
+          </div>
         </div>
       </div>
 
       {/* ====== 탭 네비게이션 ====== */}
-      <div className="flex gap-2">
+      <div className="border-border flex gap-1 border-b">
         {SHOP_TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium transition-colors ${
               activeTab === tab.id
-                ? "bg-foreground text-background shadow-lg"
-                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <tab.icon className={`h-4 w-4 ${activeTab === tab.id ? "" : tab.color}`} />
+            <tab.icon className="h-4 w-4" />
             {tab.label}
           </button>
         ))}
@@ -161,7 +155,7 @@ export default function ShopPage() {
                   onClick={() => setSortBy("popular")}
                   className={`flex items-center gap-1 px-3 py-2 text-xs font-medium ${
                     sortBy === "popular"
-                      ? "bg-foreground text-background"
+                      ? "bg-primary/10 text-primary font-semibold"
                       : "bg-background text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -172,7 +166,7 @@ export default function ShopPage() {
                   onClick={() => setSortBy("newest")}
                   className={`flex items-center gap-1 px-3 py-2 text-xs font-medium ${
                     sortBy === "newest"
-                      ? "bg-foreground text-background"
+                      ? "bg-primary/10 text-primary font-semibold"
                       : "bg-background text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -182,7 +176,7 @@ export default function ShopPage() {
               </div>
               <button
                 onClick={() => setShowUpload(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:shadow-md"
+                className="bg-primary flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90"
               >
                 <Upload className="h-3.5 w-3.5" />
                 스티커 만들기
@@ -197,7 +191,7 @@ export default function ShopPage() {
                 onClick={() => setSelectedPack(null)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                   !selectedPack
-                    ? "bg-foreground text-background"
+                    ? "bg-primary/10 text-primary font-semibold"
                     : "bg-muted text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -209,7 +203,7 @@ export default function ShopPage() {
                   onClick={() => setSelectedPack(pack.id)}
                   className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                     selectedPack === pack.id
-                      ? "bg-foreground text-background"
+                      ? "bg-primary/10 text-primary font-semibold"
                       : "bg-muted text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -238,7 +232,7 @@ export default function ShopPage() {
               </p>
               <button
                 onClick={() => setShowUpload(true)}
-                className="mt-4 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-sm font-bold text-white"
+                className="bg-primary mt-4 rounded-lg px-5 py-2 text-sm font-bold text-white hover:opacity-90"
               >
                 스티커 만들기
               </button>
