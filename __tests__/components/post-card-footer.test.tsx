@@ -18,7 +18,6 @@ const defaultProps = {
   postTitle: "테스트 포스트",
   author: "testUser",
   avatar: "/test-avatar.jpg",
-  temperature: 42,
   voteCount: 10,
   myVote: null as "up" | "down" | null,
   comments: 5,
@@ -47,15 +46,10 @@ describe("PostCardFooter", () => {
     expect(screen.getByText("5")).toBeDefined()
   })
 
-  it("renders temperature", () => {
+  it("does not render temperature (removed feature)", () => {
     render(<PostCardFooter {...defaultProps} />)
-    expect(screen.getByText("42°")).toBeDefined()
-  })
-
-  it("keeps author temperature hidden", () => {
-    const { container } = render(<PostCardFooter {...defaultProps} />)
-    const thermometers = container.querySelectorAll("svg.lucide-thermometer")
-    expect(thermometers.length).toBe(1)
+    const temperatureElements = screen.queryAllByText(/°$/)
+    expect(temperatureElements.length).toBe(0)
   })
 
   it("calls onVote with 'up' when upvote clicked", () => {
