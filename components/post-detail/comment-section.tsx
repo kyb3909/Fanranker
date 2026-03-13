@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useUser } from "@clerk/nextjs"
 import { Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,17 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     image_url: string
   } | null>(null)
 
+  // @멘션 스티커 자동완성
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionResults, setMentionResults] = useState<
+    { id: string; name: string; image_url: string }[]
+  >([])
+  const [mentionLoading, setMentionLoading] = useState(false)
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const mentionRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const mentionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // 댓글 로드
   const reloadComments = useCallback(async () => {
     try {
@@ -63,6 +74,112 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     setIsLoadingComments(true)
     reloadComments().finally(() => setIsLoadingComments(false))
   }, [reloadComments])
+
+  // @멘션 스티커 검색
+  const searchStickers = useCallback(async (query: string) => {
+    if (!query) {
+      setMentionResults([])
+      return
+    }
+    setMentionLoading(true)
+    try {
+      const res = await fetch(`/api/stickers/my?q=${encodeURIComponent(query)}`)
+      const data = await res.json()
+      if (data.stickers) {
+        setMentionResults(
+          data.stickers.map((s: { id: string; name: string; image_url: string }) => ({
+            id: s.id,
+            name: s.name,
+            image_url: s.image_url,
+          }))
+        )
+      }
+    } catch {
+      setMentionResults([])
+    } finally {
+      setMentionLoading(false)
+    }
+  }, [])
+
+  const handleTextChange = useCallback(
+    (value: string) => {
+      setCommentText(value)
+
+      // @ 감지: 커서 위치에서 가장 가까운 @를 찾음
+      const textarea = textareaRef.current
+      if (!textarea) return
+      const cursorPos = textarea.selectionStart
+      const textBeforeCursor = value.slice(0, cursorPos)
+
+      // 마지막 @를 찾되, 그 앞이 공백이거나 줄 시작이어야 함
+      const mentionMatch = textBeforeCursor.match(/(^|[\s])@([^\s@]*)$/)
+      if (mentionMatch) {
+        const query = mentionMatch[2]
+        setMentionQuery(query)
+        setMentionIndex(0)
+        if (mentionDebounceRef.current) clearTimeout(mentionDebounceRef.current)
+        if (query.length >= 1) {
+          mentionDebounceRef.current = setTimeout(() => searchStickers(query), 200)
+        } else {
+          setMentionResults([])
+        }
+      } else {
+        setMentionQuery(null)
+        setMentionResults([])
+      }
+    },
+    [searchStickers]
+  )
+
+  const selectMentionSticker = useCallback(
+    (sticker: { id: string; name: string; image_url: string }) => {
+      setSelectedSticker(sticker)
+      setMentionQuery(null)
+      setMentionResults([])
+
+      // @키워드 부분을 텍스트에서 제거
+      const textarea = textareaRef.current
+      if (textarea) {
+        const cursorPos = textarea.selectionStart
+        const textBeforeCursor = commentText.slice(0, cursorPos)
+        const match = textBeforeCursor.match(/(^|[\s])@[^\s@]*$/)
+        if (match) {
+          const start = textBeforeCursor.lastIndexOf("@")
+          const newText = commentText.slice(0, start) + commentText.slice(cursorPos)
+          setCommentText(newText.trimStart())
+        }
+      }
+    },
+    [commentText]
+  )
+
+  const handleMentionKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (mentionQuery === null || mentionResults.length === 0) return
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setMentionIndex((prev) => (prev + 1) % mentionResults.length)
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setMentionIndex((prev) => (prev - 1 + mentionResults.length) % mentionResults.length)
+      } else if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        selectMentionSticker(mentionResults[mentionIndex])
+      } else if (e.key === "Escape") {
+        setMentionQuery(null)
+        setMentionResults([])
+      }
+    },
+    [mentionQuery, mentionResults, mentionIndex, selectMentionSticker]
+  )
+
+  // cleanup debounce
+  useEffect(() => {
+    return () => {
+      if (mentionDebounceRef.current) clearTimeout(mentionDebounceRef.current)
+    }
+  }, [])
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim() && !selectedSticker) {
@@ -171,17 +288,56 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
 
         {/* Comment Input */}
         <div className="space-y-3">
-          <Textarea
-            placeholder="댓글을 입력하세요..."
-            className="min-h-[100px] resize-none"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                handleCommentSubmit()
-              }
-            }}
-          />
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              placeholder="댓글을 입력하세요... (@스티커이름으로 스티커 검색)"
+              className="min-h-[100px] resize-none"
+              value={commentText}
+              onChange={(e) => handleTextChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (mentionQuery !== null && mentionResults.length > 0) {
+                  handleMentionKeyDown(e)
+                  return
+                }
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  handleCommentSubmit()
+                }
+              }}
+            />
+            {/* @멘션 스티커 자동완성 드롭다운 */}
+            {mentionQuery !== null && (mentionLoading || mentionResults.length > 0) && (
+              <div
+                ref={mentionRef}
+                className="border-border bg-card absolute right-0 bottom-0 left-0 z-50 translate-y-full rounded-lg border shadow-xl"
+              >
+                {mentionLoading ? (
+                  <div className="text-muted-foreground px-3 py-3 text-center text-xs">
+                    검색 중...
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto py-1">
+                    {mentionResults.map((sticker, i) => (
+                      <button
+                        key={sticker.id}
+                        onClick={() => selectMentionSticker(sticker)}
+                        className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
+                          i === mentionIndex ? "bg-amber-500/10" : "hover:bg-muted/60"
+                        }`}
+                      >
+                        <img
+                          src={sticker.image_url}
+                          alt={sticker.name}
+                          className="h-10 w-10 rounded object-contain"
+                        />
+                        <span className="text-foreground text-sm font-medium">{sticker.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           {/* 선택된 스티커 미리보기 */}
           {selectedSticker && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
