@@ -220,7 +220,7 @@ export const CommentItem = memo(function CommentItem({
                   <img
                     src={comment.sticker.image_url}
                     alt={comment.sticker.name}
-                    className="h-20 w-20 object-contain"
+                    className="h-40 w-40 object-contain"
                     title={comment.sticker.name}
                     loading="lazy"
                   />
