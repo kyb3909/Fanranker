@@ -4,10 +4,32 @@ import { apiError, apiBadRequest } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
+const VALID_MBTI = [
+  "INTJ",
+  "INTP",
+  "ENTJ",
+  "ENTP",
+  "INFJ",
+  "INFP",
+  "ENFJ",
+  "ENFP",
+  "ISTJ",
+  "ISFJ",
+  "ESTJ",
+  "ESFJ",
+  "ISTP",
+  "ISFP",
+  "ESTP",
+  "ESFP",
+] as const
+
 const patchProfileSchema = z.object({
   nickname: z.string().optional(),
   avatar_url: z.string().nullable().optional(),
   bio: z.string().max(50).nullable().optional(),
+  favorite_team: z.string().max(30).nullable().optional(),
+  favorite_player: z.string().max(30).nullable().optional(),
+  mbti: z.enum(VALID_MBTI).nullable().optional(),
   onboarding_completed: z.boolean().optional(),
 })
 
@@ -43,7 +65,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
       )
       .eq("user_id", userId)
       .single()
@@ -87,7 +109,15 @@ export async function PATCH(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
-    const { nickname, avatar_url, bio, onboarding_completed } = parsed.data
+    const {
+      nickname,
+      avatar_url,
+      bio,
+      favorite_team,
+      favorite_player,
+      mbti,
+      onboarding_completed,
+    } = parsed.data
 
     // 닉네임 유효성 검사
     if (nickname !== undefined) {
@@ -148,11 +178,17 @@ export async function PATCH(request: NextRequest) {
       nickname_changed_at?: string
       avatar_url?: string | null
       bio?: string | null
+      favorite_team?: string | null
+      favorite_player?: string | null
+      mbti?: string | null
       onboarding_completed?: boolean
     } = {}
     if (nickname !== undefined) updateData.nickname = nickname.trim()
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url
     if (bio !== undefined) updateData.bio = bio
+    if (favorite_team !== undefined) updateData.favorite_team = favorite_team
+    if (favorite_player !== undefined) updateData.favorite_player = favorite_player
+    if (mbti !== undefined) updateData.mbti = mbti
     if (onboarding_completed !== undefined) updateData.onboarding_completed = onboarding_completed
 
     // 먼저 프로필이 존재하는지 확인
@@ -175,10 +211,13 @@ export async function PATCH(request: NextRequest) {
           nickname: updateData.nickname || defaultNickname,
           avatar_url: updateData.avatar_url || user.imageUrl || null,
           ...(bio !== undefined ? { bio } : {}),
+          ...(favorite_team !== undefined ? { favorite_team } : {}),
+          ...(favorite_player !== undefined ? { favorite_player } : {}),
+          ...(mbti !== undefined ? { mbti } : {}),
           ...(onboarding_completed !== undefined ? { onboarding_completed } : {}),
         })
         .select(
-          "id, user_id, nickname, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+          "id, user_id, nickname, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
         )
         .single()
 
@@ -238,7 +277,7 @@ export async function PATCH(request: NextRequest) {
         .update(updateData)
         .eq("user_id", userId)
         .select(
-          "id, user_id, nickname, nickname_changed_at, avatar_url, bio, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+          "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
         )
         .single()
 

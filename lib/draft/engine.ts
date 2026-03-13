@@ -1,4 +1,4 @@
-import { ALL_PLAYERS, type Player, type Position } from "./players"
+import { getAllPlayers, type Player, type Position } from "./players"
 
 export type Formation = "4-4-2" | "4-3-3" | "3-5-2" | "3-4-3" | "5-3-2" | "5-4-1"
 
@@ -110,7 +110,7 @@ function getRemainingPicks(state: DraftState, seatIndex: number): number {
 export function isValidPick(state: DraftState, seatIndex: number, playerId: string): boolean {
   if (state.draftedPlayerIds.has(playerId)) return false
 
-  const player = ALL_PLAYERS.find((p) => p.id === playerId)
+  const player = getAllPlayers().find((p: Player) => p.id === playerId)
   if (!player) return false
 
   if (state.budget[seatIndex] < player.price) return false
@@ -136,7 +136,7 @@ export function isValidPick(state: DraftState, seatIndex: number, playerId: stri
 /** 픽 실행 - 새 state 반환 */
 export function makePick(state: DraftState, playerId: string, isAutoPick = false): DraftState {
   const seatIndex = getCurrentSeat(state)
-  const player = ALL_PLAYERS.find((p) => p.id === playerId)!
+  const player = getAllPlayers().find((p: Player) => p.id === playerId)!
 
   const newPick: Pick = {
     pickNumber: state.currentPick,
@@ -189,7 +189,8 @@ export function getAIPick(state: DraftState, seatIndex: number): string {
   }
 
   // 후보 선수 필터링
-  const available = ALL_PLAYERS.filter((p) => {
+  const allPlayers = getAllPlayers()
+  const available = allPlayers.filter((p: Player) => {
     if (state.draftedPlayerIds.has(p.id)) return false
     if (p.price > budget) return false
     if (counts[p.position] >= limits[p.position]) return false
@@ -197,8 +198,10 @@ export function getAIPick(state: DraftState, seatIndex: number): string {
   })
 
   if (available.length === 0) {
-    const fallback = ALL_PLAYERS.find((p) => !state.draftedPlayerIds.has(p.id) && p.price <= budget)
-    return fallback?.id || ALL_PLAYERS[0].id
+    const fallback = allPlayers.find(
+      (p: Player) => !state.draftedPlayerIds.has(p.id) && p.price <= budget
+    )
+    return fallback?.id || allPlayers[0].id
   }
 
   // urgent 포지션이 있으면 해당 포지션 우선
@@ -225,10 +228,10 @@ export function getAIPick(state: DraftState, seatIndex: number): string {
 
 /** 가용 선수 목록 (드래프트 안 된 선수) */
 export function getAvailablePlayers(state: DraftState): Player[] {
-  return ALL_PLAYERS.filter((p) => !state.draftedPlayerIds.has(p.id))
+  return getAllPlayers().filter((p: Player) => !state.draftedPlayerIds.has(p.id))
 }
 
 /** 특정 좌석이 픽 가능한 선수 목록 */
 export function getPickablePlayers(state: DraftState, seatIndex: number): Player[] {
-  return ALL_PLAYERS.filter((p) => isValidPick(state, seatIndex, p.id))
+  return getAllPlayers().filter((p: Player) => isValidPick(state, seatIndex, p.id))
 }

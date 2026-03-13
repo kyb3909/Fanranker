@@ -20,7 +20,10 @@ export interface CommentItemProps {
   replyText: string
   onReplyTextChange: (text: string) => void
   onSetReplyingTo: (id: string | number | null) => void
-  onReplySubmit: (commentId: string | number) => void
+  onReplySubmit: (
+    commentId: string | number,
+    sticker?: { id: string; name: string; image_url: string } | null
+  ) => void
   onCommentUpdated: () => void
   depth: number
   isSubmittingReply?: string | number | null
@@ -52,14 +55,17 @@ export const CommentItem = memo(function CommentItem({
   const [isVoting, setIsVoting] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
 
-  const handleEdit = async () => {
-    if (!editText.trim() || isSavingEdit) return
+  const handleEdit = async (sticker?: { id: string; name: string; image_url: string } | null) => {
+    if ((!editText.trim() && !sticker) || isSavingEdit) return
     setIsSavingEdit(true)
     try {
       const res = await fetch(`/api/comments/${comment.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: editText.trim() }),
+        body: JSON.stringify({
+          content: editText.trim(),
+          sticker_id: sticker?.id || null,
+        }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -204,6 +210,7 @@ export const CommentItem = memo(function CommentItem({
             <CommentEditForm
               editText={editText}
               isSaving={isSavingEdit}
+              currentSticker={comment.sticker ?? undefined}
               onEditTextChange={setEditText}
               onSave={handleEdit}
               onCancel={() => setIsEditing(false)}
@@ -245,7 +252,7 @@ export const CommentItem = memo(function CommentItem({
               replyText={replyText}
               isSubmitting={isSubmittingReply === comment.id}
               onReplyTextChange={onReplyTextChange}
-              onSubmit={() => onReplySubmit(comment.id)}
+              onSubmit={(sticker) => onReplySubmit(comment.id, sticker)}
               onCancel={() => {
                 onSetReplyingTo(null)
                 onReplyTextChange("")

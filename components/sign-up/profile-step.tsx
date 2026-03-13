@@ -1,8 +1,27 @@
 import { useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronRight, User, Camera, Loader2 } from "lucide-react"
+import { ChevronRight, User, Camera, Loader2, Coins } from "lucide-react"
 import Image from "next/image"
+
+const MBTI_TYPES = [
+  "INTJ",
+  "INTP",
+  "ENTJ",
+  "ENTP",
+  "INFJ",
+  "INFP",
+  "ENFJ",
+  "ENFP",
+  "ISTJ",
+  "ISFJ",
+  "ESTJ",
+  "ESFJ",
+  "ISTP",
+  "ISFP",
+  "ESTP",
+  "ESFP",
+] as const
 
 interface ProfileStepProps {
   nickname: string
@@ -14,6 +33,12 @@ interface ProfileStepProps {
   avatarUrl: string | null
   avatarUploading: boolean
   onAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  favoriteTeam: string
+  setFavoriteTeam: (v: string) => void
+  favoritePlayer: string
+  setFavoritePlayer: (v: string) => void
+  mbti: string
+  setMbti: (v: string) => void
   onNext: () => void
   onBack: () => void
 }
@@ -28,6 +53,12 @@ export function ProfileStep({
   avatarUrl,
   avatarUploading,
   onAvatarUpload,
+  favoriteTeam,
+  setFavoriteTeam,
+  favoritePlayer,
+  setFavoritePlayer,
+  mbti,
+  setMbti,
   onNext,
   onBack,
 }: ProfileStepProps) {
@@ -42,7 +73,7 @@ export function ProfileStep({
       </p>
 
       {/* Avatar */}
-      <div className="mb-5 flex justify-center">
+      <div className="mb-5 flex flex-col items-center gap-1.5">
         <div className="relative">
           <div className="bg-muted border-border flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2">
             {avatarUrl ? (
@@ -77,6 +108,13 @@ export function ProfileStep({
             className="hidden"
           />
         </div>
+        {!avatarUrl && (
+          <span className="flex items-center gap-1 text-[11px] text-amber-600">
+            <Coins className="h-3 w-3" />
+            프로필 사진 설정 시 +200 골드
+          </span>
+        )}
+        {avatarUrl && <span className="text-[11px] text-green-600">+200 골드 보상 예정!</span>}
       </div>
 
       {/* Nickname */}
@@ -113,6 +151,74 @@ export function ProfileStep({
           maxLength={50}
         />
         <p className="text-muted-foreground mt-1 text-xs">{bio.length}/50</p>
+      </div>
+
+      {/* Favorite Team & Player */}
+      <div className="border-border bg-muted/30 mb-4 rounded-lg border p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Coins className="h-4 w-4 text-amber-500" />
+          <p className="text-foreground text-sm font-medium">최애 팀 & 선수</p>
+          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+            +300 골드
+          </span>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-foreground mb-1.5 block text-xs font-medium">
+              최애 팀 <span className="text-muted-foreground">(선택)</span>
+            </label>
+            <Input
+              value={favoriteTeam}
+              onChange={(e) => setFavoriteTeam(e.target.value)}
+              placeholder="예: 리버풀, LG 트윈스, T1"
+              maxLength={30}
+            />
+          </div>
+          <div>
+            <label className="text-foreground mb-1.5 block text-xs font-medium">
+              최애 선수 <span className="text-muted-foreground">(선택)</span>
+            </label>
+            <Input
+              value={favoritePlayer}
+              onChange={(e) => setFavoritePlayer(e.target.value)}
+              placeholder="예: 손흥민, 오타니, 페이커"
+              maxLength={30}
+            />
+          </div>
+        </div>
+        <p className="text-muted-foreground mt-2 text-[11px]">
+          하나라도 입력하면 300 골드를 드려요!
+        </p>
+      </div>
+
+      {/* MBTI */}
+      <div className="border-border bg-muted/30 mb-4 rounded-lg border p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Coins className="h-4 w-4 text-amber-500" />
+          <p className="text-foreground text-sm font-medium">MBTI</p>
+          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+            +500 골드
+          </span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {MBTI_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setMbti(mbti === type ? "" : type)}
+              className={`rounded-lg py-2 text-xs font-bold transition-all ${
+                mbti === type
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-background border-border text-foreground hover:bg-muted border"
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+        <p className="text-muted-foreground mt-2 text-[11px]">
+          MBTI를 선택하면 500 골드 + 게임에서 MBTI별 통계를 볼 수 있어요!
+        </p>
       </div>
 
       <div className="mt-6 flex justify-between">

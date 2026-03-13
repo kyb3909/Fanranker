@@ -267,8 +267,11 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
     }
   }
 
-  const handleReplySubmit = async (commentId: string | number) => {
-    if (!replyText.trim() || isSubmittingReply === commentId) {
+  const handleReplySubmit = async (
+    commentId: string | number,
+    sticker?: { id: string; name: string; image_url: string } | null
+  ) => {
+    if ((!replyText.trim() && !sticker) || isSubmittingReply === commentId) {
       return
     }
 
@@ -285,7 +288,8 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
         body: JSON.stringify({
           post_id: postId,
           parent_id: commentId,
-          content: textToSubmit,
+          content: textToSubmit || (sticker ? "" : ""),
+          sticker_id: sticker?.id || null,
         }),
       })
 

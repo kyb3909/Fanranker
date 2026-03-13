@@ -54,6 +54,9 @@ export default function SignUpPage() {
   const [bio, setBio] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [favoriteTeam, setFavoriteTeam] = useState("")
+  const [favoritePlayer, setFavoritePlayer] = useState("")
+  const [mbti, setMbti] = useState("")
 
   // ── Step 4: Communities ──
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set())
@@ -329,6 +332,9 @@ export default function SignUpPage() {
           nickname: nickname.trim(),
           avatar_url: avatarUrl,
           bio: bio.trim() || null,
+          favorite_team: favoriteTeam.trim() || null,
+          favorite_player: favoritePlayer.trim() || null,
+          mbti: mbti || null,
           onboarding_completed: true,
         }),
       })
@@ -347,7 +353,58 @@ export default function SignUpPage() {
       )
       await Promise.allSettled(followPromises)
 
-      // 3. Redirect to home
+      // 3. Gold rewards (fire-and-forget, don't block redirect)
+      const rewardPromises: Promise<unknown>[] = []
+
+      // 프로필 사진 설정 보상: +200 골드
+      if (avatarUrl) {
+        rewardPromises.push(
+          fetch("/api/gold/reward", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: 200,
+              description: "온보딩 프로필 사진 설정 보상",
+              transaction_type: "onboarding_reward",
+            }),
+          })
+        )
+      }
+
+      // 최애 팀/선수 설정 보상: +300 골드
+      if (favoriteTeam.trim() || favoritePlayer.trim()) {
+        rewardPromises.push(
+          fetch("/api/gold/reward", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: 300,
+              description: "온보딩 최애 팀/선수 설정 보상",
+              transaction_type: "onboarding_reward",
+            }),
+          })
+        )
+      }
+
+      // MBTI 설정 보상: +500 골드
+      if (mbti) {
+        rewardPromises.push(
+          fetch("/api/gold/reward", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: 500,
+              description: "온보딩 MBTI 설정 보상",
+              transaction_type: "onboarding_reward",
+            }),
+          })
+        )
+      }
+
+      // Don't await rewards — redirect immediately
+      Promise.allSettled(rewardPromises)
+
+      // 4. Redirect to home
       router.replace("/")
     } catch (err) {
       toast({
@@ -357,7 +414,17 @@ export default function SignUpPage() {
       })
       setSubmitting(false)
     }
-  }, [submitting, nickname, avatarUrl, bio, selectedSlugs, router])
+  }, [
+    submitting,
+    nickname,
+    avatarUrl,
+    bio,
+    favoriteTeam,
+    favoritePlayer,
+    mbti,
+    selectedSlugs,
+    router,
+  ])
 
   // ── Derived ──
   const isAlreadySignedIn = isSignedIn && step !== 2
@@ -447,6 +514,12 @@ export default function SignUpPage() {
               avatarUrl={avatarUrl}
               avatarUploading={avatarUploading}
               onAvatarUpload={handleAvatarUpload}
+              favoriteTeam={favoriteTeam}
+              setFavoriteTeam={setFavoriteTeam}
+              favoritePlayer={favoritePlayer}
+              setFavoritePlayer={setFavoritePlayer}
+              mbti={mbti}
+              setMbti={setMbti}
               onNext={() => setStep(4)}
               onBack={() => setStep(isAlreadySignedIn ? 1 : 2)}
             />

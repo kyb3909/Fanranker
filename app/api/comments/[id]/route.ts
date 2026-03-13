@@ -22,10 +22,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     } catch {
       return apiBadRequest("잘못된 요청 본문입니다.")
     }
-    const CommentEditSchema = z.object({ content: z.string().min(1) })
+    const CommentEditSchema = z
+      .object({
+        content: z.string(),
+        sticker_id: z.string().uuid().nullable().optional(),
+      })
+      .refine(
+        (d) => d.content.trim().length > 0 || (d.sticker_id !== undefined && d.sticker_id !== null),
+        { message: "댓글 내용 또는 스티커를 입력해주세요." }
+      )
     const parsed = CommentEditSchema.safeParse(body)
-    if (!parsed.success) return apiBadRequest("댓글 내용을 입력해주세요.")
-    const { content } = parsed.data
+    if (!parsed.success)
+      return apiBadRequest(parsed.error.errors[0]?.message || "댓글 내용을 입력해주세요.")
+    const { content, sticker_id } = parsed.data
 
     const supabase = createServiceRoleClient()
 
@@ -45,9 +54,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: "본인의 댓글만 수정할 수 있습니다." }, { status: 403 })
     }
 
+    const updateData: Record<string, unknown> = {
+      content: content.trim(),
+      updated_at: new Date().toISOString(),
+    }
+    if (sticker_id !== undefined) {
+      updateData.sticker_id = sticker_id
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from("comments")
-      .update({ content: content.trim(), updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("id", commentId)
       .select()
       .single()
