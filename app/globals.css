@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Pretendard: layout.tsx <head>에서 preload로 로드 (렌더 블로킹 제거) */
+/* Noto Sans KR - Google Fonts CDN */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap");
 
 /* Gmarket Sans Bold - 로고 "공놀이판"에만 사용, unicode-range로 필요 글자만 로드 */
 @font-face {
@@ -18,64 +19,65 @@
 }
 
 :root {
-  /* ===== Sporty Red × Deep Navy Color System ===== */
-  /* Background: #F8FAFC (slate-50) - 전체 배경 */
-  --background: oklch(0.984 0.003 247.858);
-  /* Primary Text: #0F172A (slate-900) - 주요 텍스트 */
-  --foreground: oklch(0.129 0.042 264.695);
+  /* ===== KT BizMeka-inspired Clean Design System ===== */
+  /* Background: #FFFFFF - 깨끗한 화이트 배경 */
+  --background: #ffffff;
+  /* Primary Text: #111111 - 주요 텍스트 */
+  --foreground: #111111;
 
   /* Card: White - 카드 배경 */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card: #ffffff;
+  --card-foreground: #111111;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
+  --popover: #ffffff;
+  --popover-foreground: #111111;
 
-  /* Primary Accent: Burgundy/Wine Red - 버튼, 액티브 상태, 핵심 강조 */
-  --primary: oklch(0.45 0.18 15);
-  --primary-foreground: oklch(0.99 0.002 247.858);
+  /* Primary Accent: KT Red - 버튼, 액티브 상태, 핵심 강조 */
+  --primary: #e5001b;
+  --primary-foreground: #ffffff;
 
   /* Secondary: Light gray for secondary elements */
-  --secondary: oklch(0.968 0.003 264.542);
-  --secondary-foreground: oklch(0.129 0.042 264.695);
+  --secondary: #f5f5f5;
+  --secondary-foreground: #222222;
 
   /* Muted: For muted backgrounds */
-  --muted: oklch(0.968 0.003 264.542);
-  /* Secondary Text: #475569 (slate-600) - 메타 정보, 라벨, 설명 */
-  --muted-foreground: oklch(0.446 0.043 257.281);
+  --muted: #f5f5f5;
+  /* Secondary Text: #777777 - 메타 정보, 라벨, 설명 */
+  --muted-foreground: #777777;
 
-  --accent: oklch(0.968 0.003 264.542);
-  --accent-foreground: oklch(0.129 0.042 264.695);
+  --accent: #f7f7f7;
+  --accent-foreground: #222222;
 
-  --destructive: oklch(0.45 0.18 15);
-  --destructive-foreground: oklch(0.99 0 0);
+  --destructive: #e5001b;
+  --destructive-foreground: #ffffff;
 
-  /* Border: Light border color */
-  --border: oklch(0.902 0.014 252.894);
-  --input: oklch(0.902 0.014 252.894);
+  /* Border: Clean border color */
+  --border: #e5e5e5;
+  --input: #e0e0e0;
 
-  /* Ring: Burgundy for focus states */
-  --ring: oklch(0.45 0.18 15);
+  /* Ring: Red for focus states */
+  --ring: #e5001b;
 
-  --chart-1: oklch(0.45 0.18 15);
-  --chart-2: oklch(0.5 0.16 15);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --chart-1: #e5001b;
+  --chart-2: #ff4d4d;
+  --chart-3: #444444;
+  --chart-4: #999999;
+  --chart-5: #cccccc;
   --radius: 0.5rem;
 
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.45 0.18 15);
-  --sidebar-primary-foreground: oklch(0.99 0.002 247.858);
-  --sidebar-accent: oklch(0.968 0.003 264.542);
-  --sidebar-accent-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-border: oklch(0.902 0.014 252.894);
-  --sidebar-ring: oklch(0.45 0.18 15);
+  --sidebar: #fafafa;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #e5001b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #222222;
+  --sidebar-border: #eeeeee;
+  --sidebar-ring: #e5001b;
 }
 
 @theme inline {
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+  --font-sans:
+    "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --font-display: "GmarketSansBold", sans-serif;
   --color-background: var(--background);
@@ -122,8 +124,10 @@
   }
   body {
     @apply bg-background text-foreground;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 

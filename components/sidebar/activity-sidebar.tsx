@@ -85,7 +85,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
       {showPrize && <MonthlyPrizeBanner />}
 
       {/* ===== 최근 댓글 섹션 ===== */}
-      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
+      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
         <div className="flex items-center gap-2 px-4 py-3">
           <MessageSquare className="text-primary h-3.5 w-3.5" />

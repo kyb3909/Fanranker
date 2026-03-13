@@ -115,7 +115,7 @@ export function Header() {
   }, [])
 
   return (
-    <header className="border-border bg-card/95 sticky top-0 z-50 w-full border-b backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
       {/* Threads 스타일: 충분한 높이, 명확한 구조 */}
       <div className="mx-auto max-w-[1280px] px-3 sm:px-10">
         {/* 높이 56px: Threads 스타일 - 여유있는 헤더 */}
@@ -180,7 +180,7 @@ export function Header() {
                 }}
                 onKeyDown={handleSearchKeyDown}
                 onFocus={() => searchResults.length > 0 && setDropdownOpen(true)}
-                className="bg-secondary text-foreground focus:ring-ring focus:border-border placeholder:text-muted-foreground h-9 w-full rounded-full border border-transparent pr-4 pl-9 text-[14px] focus:ring-2 focus:outline-none"
+                className="text-foreground focus:ring-primary/30 h-9 w-full rounded-full border border-transparent bg-[#F5F5F5] pr-4 pl-9 text-[14px] placeholder:text-[#999999] focus:border-[#E0E0E0] focus:ring-2 focus:outline-none"
               />
               {searchLoading && (
                 <Loader2 className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin" />
@@ -284,11 +284,11 @@ export function Header() {
 
       {/* 메뉴바: 좌우 폭 끝까지 (담벼락, 운동장, 경기 예측) */}
       <nav
-        className="border-primary/20 bg-primary grid w-full grid-cols-[1fr_auto_1fr] items-center border-t px-2 pt-2 pb-2"
+        className="grid w-full grid-cols-[1fr_auto_1fr] items-center border-t border-[#EEEEEE] bg-white px-2"
         aria-label="주요 메뉴"
       >
         <div />
-        <div className="flex items-center justify-center gap-1.5">
+        <div className="flex items-center justify-center">
           <Link
             href="/"
             scroll={false}
@@ -305,10 +305,10 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isFeed
-                  ? "text-white hover:bg-white/10 hover:text-white"
-                  : "text-white/90 hover:bg-white/10 hover:text-white"
+                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
+                  : "hover:text-foreground text-[#555555]"
               }`}
             >
               <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
@@ -319,10 +319,10 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isExplore
-                  ? "text-white hover:bg-white/10 hover:text-white"
-                  : "text-white/90 hover:bg-white/10 hover:text-white"
+                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
+                  : "hover:text-foreground text-[#555555]"
               }`}
             >
               <Compass className="h-[18px] w-[18px] shrink-0" />
@@ -333,10 +333,10 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isPrediction
-                  ? "text-white hover:bg-white/10 hover:text-white"
-                  : "text-white/90 hover:bg-white/10 hover:text-white"
+                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
+                  : "hover:text-foreground text-[#555555]"
               }`}
             >
               <Trophy className="h-[18px] w-[18px] shrink-0" />
@@ -347,10 +347,10 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isGames
-                  ? "text-white hover:bg-white/10 hover:text-white"
-                  : "text-white/90 hover:bg-white/10 hover:text-white"
+                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
+                  : "hover:text-foreground text-[#555555]"
               }`}
             >
               <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
@@ -361,10 +361,10 @@ export function Header() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-10 gap-2 rounded-md px-3 font-sans text-[14px] font-semibold tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[15px] ${
+              className={`relative h-11 gap-2 rounded-none px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isShop
-                  ? "text-white hover:bg-white/10 hover:text-white"
-                  : "text-white/90 hover:bg-white/10 hover:text-white"
+                  ? "text-primary after:bg-primary font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px]"
+                  : "hover:text-foreground text-[#555555]"
               }`}
             >
               <Sparkles className="h-[18px] w-[18px] shrink-0" />
