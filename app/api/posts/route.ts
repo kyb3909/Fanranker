@@ -29,6 +29,7 @@ const PostCreateSchema = z.object({
       { message: "내용이 너무 깁니다. (최대 100KB)" }
     ),
   image: z.string().nullable().optional(),
+  flair_id: z.string().uuid().nullable().optional(),
 })
 
 /**
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
 
     const communitySlug = searchParams.get("community_slug")
     const communitySlugsParam = searchParams.get("community_slugs")
+    const flairId = searchParams.get("flair_id")
     const sort = searchParams.get("sort") || "new" // 'hot', 'new', 'comments', 'recent_comments'
     const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
@@ -98,7 +100,9 @@ export async function GET(request: NextRequest) {
           vote_count,
           comment_count,
           temperature,
-          created_at
+          created_at,
+          flair_id,
+          post_flairs ( id, name, color )
         `
         )
         .is("deleted_at", null)
@@ -109,6 +113,11 @@ export async function GET(request: NextRequest) {
         q = q.eq("community_slug", communitySlug)
       } else if (followedSlugs) {
         q = q.in("community_slug", followedSlugs)
+      }
+
+      // 말머리 필터링
+      if (flairId) {
+        q = q.eq("flair_id", flairId)
       }
 
       // 정렬
@@ -202,6 +211,29 @@ export async function POST(request: NextRequest) {
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const supabase = createServiceRoleClient()
+
+    // 등급 체크: newcomer는 글쓰기 불가
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("grade, created_at, is_journalist")
+      .eq("user_id", userId)
+      .single()
+
+    if (profile && profile.grade === "newcomer" && !profile.is_journalist) {
+      // 24시간 경과 시 자동 승급
+      const createdAt = new Date(profile.created_at)
+      if (Date.now() - createdAt.getTime() > 24 * 60 * 60 * 1000) {
+        await supabase.from("profiles").update({ grade: "regular" }).eq("user_id", userId)
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              "새내기 등급은 글쓰기가 제한됩니다. 댓글 5개 작성 또는 가입 후 24시간이 지나면 글을 작성할 수 있습니다.",
+          },
+          { status: 403 }
+        )
+      }
+    }
     let body: unknown
     try {
       body = await request.json()
@@ -212,7 +244,7 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return apiBadRequest(result.error.issues[0]?.message || "잘못된 입력입니다.")
     }
-    const { community_slug, title, content, image } = result.data
+    const { community_slug, title, content, image, flair_id } = result.data
 
     // 이미지 URL 유효성 검사 (허용된 도메인만)
     let imageUrl = null
@@ -236,6 +268,7 @@ export async function POST(request: NextRequest) {
         title,
         content, // TipTap JSON
         image: imageUrl,
+        flair_id: flair_id || null,
       })
       .select()
       .single()

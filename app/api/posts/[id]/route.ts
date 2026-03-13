@@ -9,6 +9,7 @@ const patchPostSchema = z.object({
   title: z.string().optional(),
   content: z.string().optional(),
   image: z.string().nullable().optional(),
+  flair_id: z.string().uuid().nullable().optional(),
 })
 
 /**
@@ -92,7 +93,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
-    const { community_slug, title, content, image } = parsed.data
+    const { community_slug, title, content, image, flair_id } = parsed.data
 
     const supabase = createServiceRoleClient()
     const { data: existing } = await supabase.from("posts").select("user_id").eq("id", id).single()
@@ -106,6 +107,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (title != null) updates.title = title
     if (content != null) updates.content = content
     if (image !== undefined) updates.image = image
+    if (flair_id !== undefined) updates.flair_id = flair_id
 
     const { data, error } = await supabase
       .from("posts")

@@ -122,7 +122,7 @@ async function fetchComments(postId: string) {
       `
       id, post_id, user_id, parent_id, content, vote_count, created_at, updated_at,
       sticker_id,
-      stickers ( id, name, image_url )
+      stickers ( id, name, image_url, media_type )
     `
     )
     .eq("post_id", postId)

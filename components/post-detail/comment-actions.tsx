@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowUp, ArrowDown, MessageCircle, Flag } from "lucide-react"
+import { ArrowUp, ArrowDown, MessageCircle, Flag, Ban } from "lucide-react"
 
 export interface CommentActionsProps {
   depth: number
@@ -14,6 +14,7 @@ export interface CommentActionsProps {
   onVote: (type: "up" | "down") => void
   onToggleReply: () => void
   onReport: () => void
+  onBlock?: () => void
 }
 
 export function CommentActions({
@@ -27,6 +28,7 @@ export function CommentActions({
   onVote,
   onToggleReply,
   onReport,
+  onBlock,
 }: CommentActionsProps) {
   const iconSize = depth === 0 ? "h-4 w-4" : "h-3 w-3"
 
@@ -69,16 +71,30 @@ export function CommentActions({
       )}
 
       {!isOwner && currentUserId && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground ml-auto h-7 gap-1"
-          onClick={onReport}
-          title="신고하기"
-          aria-label="신고하기"
-        >
-          <Flag className={iconSize} />
-        </Button>
+        <div className="ml-auto flex items-center gap-0.5">
+          {onBlock && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive h-7 gap-1"
+              onClick={onBlock}
+              title="차단하기"
+              aria-label="차단하기"
+            >
+              <Ban className={iconSize} />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground h-7 gap-1"
+            onClick={onReport}
+            title="신고하기"
+            aria-label="신고하기"
+          >
+            <Flag className={iconSize} />
+          </Button>
+        </div>
       )}
     </div>
   )

@@ -27,6 +27,7 @@ export interface CommentItemProps {
   onCommentUpdated: () => void
   depth: number
   isSubmittingReply?: string | number | null
+  onBlockUser?: (userId: string) => void
 }
 
 const MAX_DEPTH = 5
@@ -43,6 +44,7 @@ export const CommentItem = memo(function CommentItem({
   onCommentUpdated,
   depth,
   isSubmittingReply = null,
+  onBlockUser,
 }: CommentItemProps) {
   const isReplying = replyingTo === comment.id
   const hasReplies = comment.replies && comment.replies.length > 0
@@ -246,6 +248,19 @@ export const CommentItem = memo(function CommentItem({
             onVote={handleVote}
             onToggleReply={() => onSetReplyingTo(isReplying ? null : comment.id)}
             onReport={() => setReportOpen(true)}
+            onBlock={
+              onBlockUser && comment.userId
+                ? () => {
+                    if (
+                      confirm(
+                        `${comment.author}님을 차단하시겠습니까?\n차단하면 이 유저의 글과 댓글이 보이지 않습니다.`
+                      )
+                    ) {
+                      onBlockUser(comment.userId!)
+                    }
+                  }
+                : undefined
+            }
           />
           {isReplying && (
             <CommentReplyForm
@@ -284,6 +299,7 @@ export const CommentItem = memo(function CommentItem({
               onCommentUpdated={onCommentUpdated}
               depth={depth + 1}
               isSubmittingReply={isSubmittingReply}
+              onBlockUser={onBlockUser}
             />
           ))}
         </div>

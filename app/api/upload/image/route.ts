@@ -95,7 +95,11 @@ export async function POST(request: NextRequest) {
 
     // sharp로 WebP 변환 + 리사이즈
     const config = type === "avatar" ? IMAGE_CONFIG.avatar : IMAGE_CONFIG.post
-    const optimizedBuffer = await sharp(Buffer.from(fileBuffer))
+    const isGif = file.type === "image/gif"
+    const sharpInput = isGif
+      ? sharp(Buffer.from(fileBuffer), { animated: true, pages: -1 })
+      : sharp(Buffer.from(fileBuffer))
+    const optimizedBuffer = await sharpInput
       .resize(config.maxWidth, undefined, { withoutEnlargement: true, fit: "inside" })
       .webp({ quality: config.quality })
       .toBuffer()

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         sticker_id,
-        stickers ( id, name, image_url )
+        stickers ( id, name, image_url, media_type )
       `
       )
       .eq("post_id", postId)

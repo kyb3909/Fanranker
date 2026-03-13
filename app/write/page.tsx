@@ -145,6 +145,37 @@ function WriteContent() {
                 </Select>
               </div>
 
+              {/* 말머리 선택 */}
+              {editor.flairs.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-foreground text-sm font-semibold">
+                    말머리 <span className="text-muted-foreground font-normal">(선택)</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {editor.flairs.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() =>
+                          editor.setSelectedFlair(editor.selectedFlair === f.id ? null : f.id)
+                        }
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                          editor.selectedFlair === f.id
+                            ? "text-white shadow-sm"
+                            : "hover:opacity-80"
+                        }`}
+                        style={{
+                          backgroundColor: editor.selectedFlair === f.id ? f.color : `${f.color}15`,
+                          color: editor.selectedFlair === f.id ? "white" : f.color,
+                        }}
+                      >
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* 소스 URL */}
               <div className="space-y-2">
                 <Label htmlFor="source-url" className="text-foreground text-sm font-semibold">

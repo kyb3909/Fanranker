@@ -3,8 +3,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { UserProfileBadge } from "@/components/profile/user-profile-badge"
-import { UserPlus, UserMinus, Newspaper } from "lucide-react"
+import { UserPlus, UserMinus, Newspaper, MessageCircle, Ban } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { getTemperatureStyle } from "@/lib/temperature"
 
 interface UserProfileHeaderProps {
@@ -30,6 +31,7 @@ export function UserProfileHeader({
 }: UserProfileHeaderProps) {
   const [isFollowing, setIsFollowing] = useState(initialFollowing)
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
   const isOwnProfile = currentUserId === userId
 
   useEffect(() => {
@@ -91,26 +93,39 @@ export function UserProfileHeader({
           </div>
         </div>
       </div>
-      {!isOwnProfile && currentUserId && isJournalist && (
-        <Button
-          variant={isFollowing ? "outline" : "default"}
-          size="sm"
-          onClick={handleFollow}
-          disabled={isLoading}
-          className="gap-2"
-        >
-          {isFollowing ? (
-            <>
-              <UserMinus className="h-4 w-4" />
-              <span>언팔로우</span>
-            </>
-          ) : (
-            <>
-              <UserPlus className="h-4 w-4" />
-              <span>팔로우</span>
-            </>
+      {!isOwnProfile && currentUserId && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/messages?user=${userId}`)}
+            className="gap-1.5"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>쪽지</span>
+          </Button>
+          {isJournalist && (
+            <Button
+              variant={isFollowing ? "outline" : "default"}
+              size="sm"
+              onClick={handleFollow}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              {isFollowing ? (
+                <>
+                  <UserMinus className="h-4 w-4" />
+                  <span>언팔로우</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  <span>팔로우</span>
+                </>
+              )}
+            </Button>
           )}
-        </Button>
+        </div>
       )}
     </div>
   )

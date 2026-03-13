@@ -14,6 +14,12 @@ interface Category {
   parent_slug: string | null
 }
 
+interface Flair {
+  id: string
+  name: string
+  color: string
+}
+
 interface OgData {
   title?: string
   description?: string
@@ -46,10 +52,28 @@ export function useWriteEditor() {
   const [sourceUrl, setSourceUrl] = useState("")
   const [isFetchingOg, setIsFetchingOg] = useState(false)
   const [ogData, setOgData] = useState<OgData | null>(null)
+  const [flairs, setFlairs] = useState<Flair[]>([])
+  const [selectedFlair, setSelectedFlair] = useState<string | null>(null)
 
   useEffect(() => {
     if (communitySlug) setSelectedCommunity(communitySlug)
   }, [communitySlug])
+
+  // 게시판 변경 시 말머리 목록 로드
+  useEffect(() => {
+    if (!selectedCommunity) {
+      setFlairs([])
+      setSelectedFlair(null)
+      return
+    }
+    fetch(`/api/flairs?community_slug=${selectedCommunity}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setFlairs(data.flairs || [])
+        setSelectedFlair(null)
+      })
+      .catch(() => setFlairs([]))
+  }, [selectedCommunity])
 
   useEffect(() => {
     if (!editId) return
@@ -200,6 +224,7 @@ export function useWriteEditor() {
             title,
             content,
             image: imageUrl,
+            flair_id: selectedFlair || null,
           }),
         })
 
@@ -217,7 +242,7 @@ export function useWriteEditor() {
         setIsSubmitting(false)
       }
     },
-    [selectedCommunity, title, content, imagePreview, imageFile, editId, router]
+    [selectedCommunity, title, content, imagePreview, imageFile, editId, selectedFlair, router]
   )
 
   const canSubmit =
@@ -252,6 +277,9 @@ export function useWriteEditor() {
     sourceUrl,
     setSourceUrl,
     ogData,
+    flairs,
+    selectedFlair,
+    setSelectedFlair,
     // Loading states
     isSubmitting,
     isUploadingImage,

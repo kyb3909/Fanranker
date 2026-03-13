@@ -92,28 +92,29 @@ export async function POST(request: NextRequest) {
     if (!file) return apiBadRequest("파일이 필요합니다")
     if (!name || name.length < 1 || name.length > 50) return apiBadRequest("이름은 1~50자")
     if (!file.type.startsWith("image/")) return apiBadRequest("이미지 파일만 가능합니다")
-    if (file.size > 5 * 1024 * 1024) return apiBadRequest("파일 크기는 5MB 이하")
+    const isGif = file.type === "image/gif"
+    const maxSize = isGif ? 10 * 1024 * 1024 : 5 * 1024 * 1024
+    if (file.size > maxSize)
+      return apiBadRequest(isGif ? "GIF 파일은 10MB 이하" : "파일 크기는 5MB 이하")
 
-    // 이미지 → WebP 변환 (스티커 크기: 최대 512px)
+    // 이미지 → animated WebP 변환 (스티커 크기: 최대 512px)
     const sharp = (await import("sharp")).default
     const fileBuffer = await file.arrayBuffer()
-
-    const isGif = file.type === "image/gif"
     let optimizedBuffer: Buffer
     let contentType: string
     let ext: string
 
     if (isGif) {
-      // GIF → animated WebP
-      optimizedBuffer = await sharp(Buffer.from(fileBuffer), { animated: true })
-        .resize(256, 256, { fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 80 })
+      // GIF → animated WebP (512px, 고품질)
+      optimizedBuffer = await sharp(Buffer.from(fileBuffer), { animated: true, pages: -1 })
+        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 85, effort: 4 })
         .toBuffer()
       contentType = "image/webp"
       ext = "webp"
     } else {
       optimizedBuffer = await sharp(Buffer.from(fileBuffer))
-        .resize(256, 256, { fit: "inside", withoutEnlargement: true })
+        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
         .webp({ quality: 85 })
         .toBuffer()
       contentType = "image/webp"

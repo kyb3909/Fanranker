@@ -15,6 +15,12 @@ import {
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
 
+interface Flair {
+  id: string
+  name: string
+  color: string
+}
+
 interface Post {
   id: number | string
   community: string
@@ -34,6 +40,7 @@ interface Post {
   userId?: string
   createdAt: Date
   isNotice?: boolean
+  flair?: Flair | null
   titleDisplay?: {
     adjTitle?: string | null
     nounTitle?: string | null
@@ -56,6 +63,8 @@ interface CommunityContentProps {
   currentPage?: number
   totalPages?: number
   totalCount?: number
+  flairs?: Flair[]
+  activeFlairId?: string
 }
 
 export const CommunityContent = memo(function CommunityContent({
@@ -66,6 +75,8 @@ export const CommunityContent = memo(function CommunityContent({
   currentPage = 1,
   totalPages = 1,
   totalCount = 0,
+  flairs = [],
+  activeFlairId,
 }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
@@ -133,10 +144,47 @@ export const CommunityContent = memo(function CommunityContent({
           </div>
 
           <div className="bg-card border-border overflow-hidden rounded-lg border">
-            {/* 테이블 상단 */}
-            <div className="border-border bg-muted/50 flex items-center justify-end border-b px-3 py-2">
+            {/* 테이블 상단: 말머리 필터 + 글쓰기 */}
+            <div className="border-border bg-muted/50 flex items-center justify-between gap-2 border-b px-3 py-2">
+              {/* 말머리 필터 */}
+              <div className="flex flex-wrap items-center gap-1">
+                {flairs.length > 0 && (
+                  <>
+                    <Link
+                      href={`/community/${communitySlug}`}
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                        !activeFlairId
+                          ? "bg-foreground text-background"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      전체
+                    </Link>
+                    {flairs.map((f) => (
+                      <Link
+                        key={f.id}
+                        href={`/community/${communitySlug}?flair=${f.id}`}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          activeFlairId === f.id
+                            ? "text-white"
+                            : "text-muted-foreground hover:opacity-80"
+                        }`}
+                        style={{
+                          backgroundColor: activeFlairId === f.id ? f.color : undefined,
+                          ...(activeFlairId !== f.id && {
+                            backgroundColor: `${f.color}15`,
+                            color: f.color,
+                          }),
+                        }}
+                      >
+                        {f.name}
+                      </Link>
+                    ))}
+                  </>
+                )}
+              </div>
               {communitySlug && (
-                <Link href={`/write?community=${communitySlug}`}>
+                <Link href={`/write?community=${communitySlug}`} className="shrink-0">
                   <Button size="sm" className="h-7 gap-1.5 px-3 text-xs">
                     <Pencil className="h-3.5 w-3.5" />
                     글쓰기
@@ -176,6 +224,17 @@ export const CommunityContent = memo(function CommunityContent({
                     )}
                   </div>
                   <div className="col-span-5 hidden items-center gap-1.5 sm:flex">
+                    {post.flair && (
+                      <span
+                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        style={{
+                          backgroundColor: `${post.flair.color}20`,
+                          color: post.flair.color,
+                        }}
+                      >
+                        {post.flair.name}
+                      </span>
+                    )}
                     <span className="text-foreground truncate font-medium">{post.title}</span>
                     {post.comments > 0 && (
                       <span className="flex-shrink-0 font-medium text-orange-500">
@@ -197,6 +256,17 @@ export const CommunityContent = memo(function CommunityContent({
                     <div className="col-span-8 flex min-w-0 items-center gap-1.5">
                       {post.isNotice && (
                         <span className="shrink-0 font-semibold text-rose-500">[공지]</span>
+                      )}
+                      {!post.isNotice && post.flair && (
+                        <span
+                          className="shrink-0 rounded px-1 py-0.5 text-[10px] font-bold"
+                          style={{
+                            backgroundColor: `${post.flair.color}20`,
+                            color: post.flair.color,
+                          }}
+                        >
+                          {post.flair.name}
+                        </span>
                       )}
                       <span className="text-foreground truncate font-medium">{post.title}</span>
                       {post.comments > 0 && (
@@ -225,6 +295,7 @@ export const CommunityContent = memo(function CommunityContent({
                 communitySlug={communitySlug!}
                 currentPage={currentPage}
                 totalPages={totalPages}
+                activeFlairId={activeFlairId}
               />
             </div>
           )}
@@ -240,13 +311,20 @@ function PostPagination({
   communitySlug,
   currentPage,
   totalPages,
+  activeFlairId,
 }: {
   communitySlug: string
   currentPage: number
   totalPages: number
+  activeFlairId?: string
 }) {
-  const pageUrl = (page: number) =>
-    page === 1 ? `/community/${communitySlug}` : `/community/${communitySlug}?page=${page}`
+  const pageUrl = (page: number) => {
+    const params = new URLSearchParams()
+    if (page > 1) params.set("page", String(page))
+    if (activeFlairId) params.set("flair", activeFlairId)
+    const qs = params.toString()
+    return `/community/${communitySlug}${qs ? `?${qs}` : ""}`
+  }
 
   // 표시할 페이지 번호 계산 (현재 페이지 주변 2개씩)
   const pages: (number | "ellipsis")[] = []

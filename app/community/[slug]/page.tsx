@@ -30,17 +30,13 @@ const MEMBER_COUNTS: Record<string, number> = {
 const POSTS_PER_PAGE = 25
 
 // Supabase에서 게시글 가져오기
-async function fetchPosts(communitySlug: string, page: number = 1) {
+async function fetchPosts(communitySlug: string, page: number = 1, flairId?: string) {
   const supabase = createServerAnonClient()
 
   const offset = (page - 1) * POSTS_PER_PAGE
 
   // 1. 게시글 조회 (count 포함)
-  const {
-    data: posts,
-    error,
-    count,
-  } = await supabase
+  let query = supabase
     .from("posts")
     .select(
       `
@@ -55,12 +51,24 @@ async function fetchPosts(communitySlug: string, page: number = 1) {
       comment_count,
       temperature,
       is_notice,
-      created_at
+      created_at,
+      flair_id,
+      post_flairs ( id, name, color )
     `,
       { count: "exact" }
     )
     .eq("community_slug", communitySlug)
     .is("deleted_at", null)
+
+  if (flairId) {
+    query = query.eq("flair_id", flairId)
+  }
+
+  const {
+    data: posts,
+    error,
+    count,
+  } = await query
     .order("is_notice", { ascending: false }) // 공지 먼저
     .order("created_at", { ascending: false }) // 최신순
     .range(offset, offset + POSTS_PER_PAGE - 1)
@@ -143,6 +151,11 @@ function transformPosts(
     temperature?: number
     is_notice?: boolean
     created_at: string
+    flair_id?: string | null
+    post_flairs?:
+      | { id: string; name: string; color: string }
+      | { id: string; name: string; color: string }[]
+      | null
     profile?: { nickname?: string; avatar_url?: string | null } | null
     titleDisplay?: {
       adjTitle?: string | null
@@ -172,6 +185,9 @@ function transformPosts(
       isNotice: post.is_notice || false,
       isUpvoted: false,
       createdAt: new Date(post.created_at),
+      flair: Array.isArray(post.post_flairs)
+        ? post.post_flairs[0] || null
+        : post.post_flairs || null,
       titleDisplay: post.titleDisplay || null,
     }
   })
@@ -209,10 +225,10 @@ export default async function CommunityPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; flair?: string }>
 }) {
   const { slug } = await params
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, flair: flairId } = await searchParams
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1)
 
   const info = COMMUNITY_MAP[slug]
@@ -229,17 +245,25 @@ export default async function CommunityPage({
     banner: "/placeholder.jpg",
   }
 
-  // 하위 채널 목록 조회
-  const supabaseForChannels = createServerAnonClient()
-  const { data: channels } = await supabaseForChannels
-    .from("categories")
-    .select("slug, name, icon, description")
-    .eq("parent_slug", slug)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
+  // 하위 채널 + 말머리 목록 조회
+  const supabaseForMeta = createServerAnonClient()
+  const [{ data: channels }, { data: flairs }] = await Promise.all([
+    supabaseForMeta
+      .from("categories")
+      .select("slug, name, icon, description")
+      .eq("parent_slug", slug)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabaseForMeta
+      .from("post_flairs")
+      .select("id, name, color, sort_order")
+      .eq("community_slug", slug)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+  ])
 
   // Supabase에서 실제 데이터 가져오기
-  const { posts: rawPosts, totalCount } = await fetchPosts(slug, currentPage)
+  const { posts: rawPosts, totalCount } = await fetchPosts(slug, currentPage, flairId)
   const communityPosts = transformPosts(rawPosts)
   const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
 
@@ -296,6 +320,8 @@ export default async function CommunityPage({
               currentPage={currentPage}
               totalPages={totalPages}
               totalCount={totalCount}
+              flairs={flairs || []}
+              activeFlairId={flairId}
             />
           </div>
 

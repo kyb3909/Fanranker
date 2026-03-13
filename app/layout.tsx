@@ -11,6 +11,7 @@ import { FloatingWriteButton } from "@/components/floating-write-button"
 import { SITE_CONFIG, jsonLd } from "@/lib/seo"
 import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
+import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
 
 const koLocalization = {
@@ -93,7 +94,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#ffffff",
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 }
 
 export default function RootLayout({
@@ -110,6 +116,10 @@ export default function RootLayout({
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_ID} />
             )}
+            {/* PWA: iOS Safari standalone 모드 */}
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+            <meta name="apple-mobile-web-app-title" content="공놀이" />
             {/* Noto Sans KR: globals.css에서 @import로 로드 */}
             {/* DNS Prefetch: 외부 리소스 사전 조회 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />
@@ -156,6 +166,7 @@ export default function RootLayout({
             <FloatingWriteButton />
             <MobileTabBar />
             <Toaster />
+            <PWARegister />
             <Analytics />
             {process.env.NEXT_PUBLIC_GA_ID && (
               <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />

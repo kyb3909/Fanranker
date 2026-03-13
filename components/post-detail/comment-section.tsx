@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useUser } from "@clerk/nextjs"
-import { Sparkles } from "lucide-react"
+import { ArrowUpDown, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -12,6 +12,7 @@ import { CommentItem } from "./comment-item"
 import { countAllComments, transformComments } from "./post-detail-types"
 import type { Comment } from "./post-detail-types"
 import { StickerPicker } from "@/components/sticker/sticker-picker"
+import { useBlockedUsers } from "@/hooks/use-blocked-users"
 
 interface InitialData {
   comments: {
@@ -41,6 +42,7 @@ interface CommentSectionProps {
 
 export function CommentSection({ postId, onCommentCountChange, initialData }: CommentSectionProps) {
   const { user } = useUser()
+  const { isBlocked, toggleBlock } = useBlockedUsers()
 
   // SSR 데이터가 있으면 즉시 transform하여 초기값으로 사용
   const initialComments = initialData
@@ -79,6 +81,7 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
   const mentionRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const mentionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [commentSort, setCommentSort] = useState<"newest" | "popular">("newest")
 
   // 댓글 로드
   const reloadComments = useCallback(async () => {
@@ -321,9 +324,20 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
   return (
     <Card className="border-border bg-card border">
       <div className="space-y-6 p-6">
-        <h3 className="text-foreground text-xl font-semibold">
-          댓글 {countAllComments(comments)}개
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-foreground text-xl font-semibold">
+            댓글 {countAllComments(comments)}개
+          </h3>
+          {comments.length > 1 && (
+            <button
+              onClick={() => setCommentSort((s) => (s === "newest" ? "popular" : "newest"))}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs font-medium transition-colors"
+            >
+              <ArrowUpDown className="h-3 w-3" />
+              {commentSort === "newest" ? "최신순" : "인기순"}
+            </button>
+          )}
+        </div>
 
         {/* Comment Input */}
         <div className="space-y-3">
@@ -439,21 +453,33 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
               <p className="text-muted-foreground text-sm">아직 댓글이 없습니다.</p>
             </div>
           ) : (
-            comments.map((comment) => (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                currentUserId={user?.id}
-                replyingTo={replyingTo}
-                replyText={replyText}
-                onReplyTextChange={setReplyText}
-                onSetReplyingTo={setReplyingTo}
-                onReplySubmit={handleReplySubmit}
-                onCommentUpdated={reloadComments}
-                depth={0}
-                isSubmittingReply={isSubmittingReply}
-              />
-            ))
+            [...comments]
+              .filter((c) => !c.userId || !isBlocked(c.userId))
+              .sort(
+                (a, b) => (commentSort === "popular" ? (b.upvotes || 0) - (a.upvotes || 0) : 0) // newest는 API에서 이미 정렬됨
+              )
+              .map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  currentUserId={user?.id}
+                  replyingTo={replyingTo}
+                  replyText={replyText}
+                  onReplyTextChange={setReplyText}
+                  onSetReplyingTo={setReplyingTo}
+                  onReplySubmit={handleReplySubmit}
+                  onCommentUpdated={reloadComments}
+                  depth={0}
+                  isSubmittingReply={isSubmittingReply}
+                  onBlockUser={async (userId) => {
+                    await toggleBlock(userId)
+                    toast({
+                      title: "차단되었습니다",
+                      description: "해당 유저의 글과 댓글이 숨겨집니다.",
+                    })
+                  }}
+                />
+              ))
           )}
         </div>
       </div>

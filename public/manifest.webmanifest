@@ -1,14 +1,21 @@
 {
-  "name": "FanRanker - 스포츠 팬 커뮤니티 & 예측 놀이터",
-  "short_name": "FanRanker",
+  "name": "공놀이 - 스포츠 팬 커뮤니티",
+  "short_name": "공놀이",
   "description": "그깟 공놀이를 좋아하는 팬들의 놀이터. 스포츠 팬들을 위한 가벼운 경기 예측 커뮤니티입니다.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["sports", "entertainment", "social"],
+  "lang": "ko",
+  "dir": "ltr",
   "icons": [
-    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "/icon-light-32x32.png", "sizes": "32x32", "type": "image/png" },
-    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png" }
-  ]
+    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

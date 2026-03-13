@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Bell } from "lucide-react"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { Bell, BellRing } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import Link from "next/link"
 import { formatRelativeTime } from "@/lib/utils/date"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
+import { usePushNotifications } from "@/hooks/use-push-notifications"
 
 interface NotificationMetadata {
   match_id?: string
@@ -23,7 +24,13 @@ interface NotificationMetadata {
 
 interface Notification {
   id: string
-  type: "comment" | "reply" | "new_post_by_followed" | "expert_prediction" | "settlement_result"
+  type:
+    | "comment"
+    | "reply"
+    | "new_post_by_followed"
+    | "expert_prediction"
+    | "settlement_result"
+    | "message"
   actor_id: string
   related_post_id: string | null
   related_comment_id: string | null
@@ -50,13 +57,32 @@ export function NotificationDropdown() {
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
 
-  // SWR로 읽지 않은 알림 개수 확인 (30초 자동 갱신, 중복 호출 방지)
+  // SWR로 읽지 않은 알림 개수 확인 (10초 자동 갱신)
   const { data: unreadData, mutate: mutateUnread } = useSWR(
     "/api/notifications?count_only=true",
     fetcher,
-    { refreshInterval: 30000, revalidateOnFocus: false, dedupingInterval: 10000 }
+    { refreshInterval: 10000, revalidateOnFocus: true, dedupingInterval: 5000 }
   )
   const unreadCount = unreadData?.unread_count || 0
+
+  // 브라우저 푸시 알림
+  const { permission, requestPermission, handleCountChange } = usePushNotifications()
+
+  // 알림 개수 변경 시 브라우저 알림 트리거
+  useEffect(() => {
+    handleCountChange(unreadCount)
+  }, [unreadCount, handleCountChange])
+
+  // 최초 방문 시 알림 권한 요청 (조용히)
+  useEffect(() => {
+    if (permission === "default") {
+      // 사용자가 사이트를 5초 이상 사용한 후 요청
+      const timer = setTimeout(() => {
+        requestPermission()
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [permission, requestPermission])
 
   async function loadNotifications() {
     setIsLoading(true)
@@ -131,6 +157,8 @@ export function NotificationDropdown() {
         return `${actorName}님이 답글을 남겼습니다`
       case "new_post_by_followed":
         return `${actorName}님이 새로운 글을 작성했습니다`
+      case "message":
+        return `${actorName}님이 쪽지를 보냈습니다`
       case "expert_prediction":
         return `${actorName}님이 새로운 전문가 예측을 올렸습니다`
       case "settlement_result": {
@@ -151,6 +179,8 @@ export function NotificationDropdown() {
       case "reply":
       case "new_post_by_followed":
         return notification.related_post_id ? `/post/${notification.related_post_id}` : "/"
+      case "message":
+        return notification.actor_id ? `/messages?user=${notification.actor_id}` : "/messages"
       case "expert_prediction":
         return "/?view=prediction"
       case "settlement_result":
@@ -175,7 +205,11 @@ export function NotificationDropdown() {
           className="relative h-9 w-9 rounded-full"
           aria-label={unreadCount > 0 ? `알림 ${unreadCount}개` : "알림"}
         >
-          <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+          {unreadCount > 0 ? (
+            <BellRing className="h-[18px] w-[18px] animate-pulse" aria-hidden="true" />
+          ) : (
+            <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+          )}
           {unreadCount > 0 && (
             <span
               className="bg-primary absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
