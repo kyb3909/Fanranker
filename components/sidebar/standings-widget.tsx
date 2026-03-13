@@ -23,6 +23,33 @@ type StandingsApiResponse = {
   fetchedAt: string | null
 }
 
+/** 순위 1~3위 메달 색상 */
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1)
+    return (
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15 text-[11px] font-bold text-amber-500">
+        1
+      </span>
+    )
+  if (rank === 2)
+    return (
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-400/15 text-[11px] font-bold text-slate-400">
+        2
+      </span>
+    )
+  if (rank === 3)
+    return (
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-700/15 text-[11px] font-bold text-amber-700">
+        3
+      </span>
+    )
+  return (
+    <span className="text-muted-foreground inline-flex h-5 w-5 items-center justify-center text-[11px] tabular-nums">
+      {rank}
+    </span>
+  )
+}
+
 export function StandingsWidget() {
   const [sport, setSport] = useState<SportKey>("football")
   const leagues = getLeaguesBySport(sport)
@@ -65,14 +92,32 @@ export function StandingsWidget() {
   const isFootball = sport === "football"
 
   return (
-    <Card className="border-border overflow-hidden rounded-xl border shadow-none">
-      <div className="border-b px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <Trophy className="text-primary h-4 w-4 shrink-0" />
-          <h3 className="text-primary text-sm font-bold">리그 순위표</h3>
+    <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-none">
+      {/* 빨간 그라디언트 상단 바 — 다른 위젯과 동일 */}
+      <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+
+      {/* 헤더 */}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-primary flex items-center gap-2 text-[14px] font-bold">
+            <Trophy className="h-3.5 w-3.5" />
+            리그 순위표
+          </h3>
+          {naverUrl && (
+            <a
+              href={naverUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="네이버에서 보기"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
+
         {/* 종목 탭 */}
-        <div className="mt-2 flex justify-center gap-1">
+        <div className="mt-2.5 flex gap-1">
           {SPORT_TABS.map(({ key, label }) => (
             <button
               key={key}
@@ -86,7 +131,7 @@ export function StandingsWidget() {
                 setGroupKey(null)
                 setPage(1)
               }}
-              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+              className={`flex-1 rounded-md py-1.5 text-[12px] font-semibold transition-colors ${
                 sport === key
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted/60 text-muted-foreground hover:bg-muted"
@@ -96,8 +141,9 @@ export function StandingsWidget() {
             </button>
           ))}
         </div>
+
         {/* 리그 탭 */}
-        <div className="mt-1.5 flex flex-wrap justify-center gap-1">
+        <div className="mt-1.5 flex flex-wrap gap-1">
           {leagues.map((L) => (
             <button
               key={L.id}
@@ -108,19 +154,20 @@ export function StandingsWidget() {
                 setGroupKey(null)
                 setPage(1)
               }}
-              className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${
+              className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
                 leagueId === L.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               }`}
             >
               {L.tabLabel ?? L.name}
             </button>
           ))}
         </div>
+
         {/* 디비전/컨퍼런스 서브탭 */}
         {groups && groups.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap justify-center gap-1">
+          <div className="mt-1.5 flex flex-wrap gap-1">
             {groups.map((g) => (
               <button
                 key={g.key}
@@ -130,10 +177,10 @@ export function StandingsWidget() {
                   setGroupKey(g.key)
                   setPage(1)
                 }}
-                className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${
+                className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
                   activeGroupKey === g.key
-                    ? "bg-foreground/10 text-foreground ring-foreground/20 ring-1"
-                    : "bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                    ? "bg-foreground/10 text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 {g.label}
@@ -143,98 +190,104 @@ export function StandingsWidget() {
         )}
       </div>
 
-      <div className="min-h-[280px]">
+      {/* 테이블 영역 */}
+      <div className="min-h-[260px]">
         {isLoading && (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center gap-2 py-10">
             <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+            <p className="text-muted-foreground text-[11px]">순위 불러오는 중</p>
           </div>
         )}
 
         {!isLoading && !error && hasData && filteredRows.length > 0 && (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed text-xs">
-                <colgroup>
-                  <col style={{ width: isFootball ? "50%" : "52%" }} />
-                  <col style={{ width: isFootball ? "17%" : "16%" }} />
-                  <col style={{ width: isFootball ? "17%" : "16%" }} />
-                  <col style={{ width: "16%" }} />
-                </colgroup>
-                <thead>
-                  <tr className="text-muted-foreground bg-muted/40 border-b">
-                    <th className="px-3 py-1.5 text-left text-[11px] font-semibold">팀 이름</th>
-                    <th className="px-1 py-1.5 text-center text-[11px] font-semibold">경기</th>
-                    {isFootball ? (
-                      <>
-                        <th className="px-1 py-1.5 text-center text-[11px] font-semibold">승점</th>
-                        <th className="px-1 py-1.5 text-center text-[11px] font-semibold">
-                          골득실
-                        </th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="px-1 py-1.5 text-center text-[11px] font-semibold">승</th>
-                        <th className="px-1 py-1.5 text-center text-[11px] font-semibold">패</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, i) => (
-                    <tr key={start + i} className="hover:bg-muted/30 border-b last:border-0">
-                      <td className="truncate px-3 py-1.5 text-[12px]" title={row.teamName}>
-                        <span className="text-muted-foreground mr-1 tabular-nums">
-                          {start + i + 1}.
-                        </span>
-                        <span className="font-medium">{row.teamName}</span>
+            <table className="w-full table-fixed border-t text-xs">
+              <colgroup>
+                <col style={{ width: isFootball ? "50%" : "52%" }} />
+                <col style={{ width: isFootball ? "17%" : "16%" }} />
+                <col style={{ width: isFootball ? "17%" : "16%" }} />
+                <col style={{ width: "16%" }} />
+              </colgroup>
+              <thead>
+                <tr className="text-muted-foreground bg-muted/30">
+                  <th className="px-4 py-2 text-left text-[11px] font-medium">팀</th>
+                  <th className="py-2 text-center text-[11px] font-medium">경기</th>
+                  {isFootball ? (
+                    <>
+                      <th className="py-2 text-center text-[11px] font-medium">승점</th>
+                      <th className="py-2 pr-3 text-center text-[11px] font-medium">골득실</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="py-2 text-center text-[11px] font-medium">승</th>
+                      <th className="py-2 pr-3 text-center text-[11px] font-medium">패</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  const rank = start + i + 1
+                  return (
+                    <tr
+                      key={start + i}
+                      className="hover:bg-muted/30 border-border/50 border-t transition-colors"
+                    >
+                      <td className="px-4 py-2" title={row.teamName}>
+                        <div className="flex items-center gap-2">
+                          <RankBadge rank={rank} />
+                          <span className="truncate text-[12px] font-medium">{row.teamName}</span>
+                        </div>
                       </td>
-                      <td className="px-1 py-1.5 text-center text-[12px] tabular-nums">
+                      <td className="text-muted-foreground py-2 text-center text-[12px] tabular-nums">
                         {row.played}
                       </td>
                       {isFootball ? (
                         <>
-                          <td className="px-1 py-1.5 text-center text-[12px] font-semibold tabular-nums">
+                          <td className="py-2 text-center text-[12px] font-semibold tabular-nums">
                             {row.points}
                           </td>
-                          <td className="px-1 py-1.5 text-center text-[12px] tabular-nums">
+                          <td className="text-muted-foreground py-2 pr-3 text-center text-[12px] tabular-nums">
                             {row.goalDiff}
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="px-1 py-1.5 text-center text-[12px] font-semibold tabular-nums">
+                          <td className="py-2 text-center text-[12px] font-semibold tabular-nums">
                             {row.wins}
                           </td>
-                          <td className="px-1 py-1.5 text-center text-[12px] tabular-nums">
+                          <td className="text-muted-foreground py-2 pr-3 text-center text-[12px] tabular-nums">
                             {row.losses}
                           </td>
                         </>
                       )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  )
+                })}
+              </tbody>
+            </table>
+
+            {/* 페이지네이션 */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+              <div className="flex items-center justify-between border-t px-4 py-2">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!hasPrev}
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-[11px] font-semibold disabled:opacity-40"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-0.5 rounded-md px-2 py-1 text-[11px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" /> 이전
                 </button>
-                <span className="text-muted-foreground text-[11px] font-medium">
+                <span className="text-muted-foreground text-[11px] tabular-nums">
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={!hasNext}
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-[11px] font-semibold disabled:opacity-40"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-0.5 rounded-md px-2 py-1 text-[11px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-30"
                 >
-                  더보기 <ChevronRight className="h-3.5 w-3.5" />
+                  다음 <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
             )}
@@ -242,23 +295,24 @@ export function StandingsWidget() {
         )}
 
         {!isLoading && error && (
-          <div className="px-3 py-6 text-center">
-            <p className="text-destructive text-xs">순위를 불러오지 못했습니다.</p>
+          <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+            <Trophy className="text-muted-foreground/50 h-8 w-8" />
+            <p className="text-muted-foreground text-[13px]">순위를 불러오지 못했습니다</p>
           </div>
         )}
 
         {!isLoading && !error && !hasData && (
-          <div className="px-3 py-6 text-center">
-            <p className="text-muted-foreground text-xs">캐시된 순위가 없습니다.</p>
-            <p className="text-muted-foreground mt-1 text-[11px]">크론 수집 후 표시됩니다.</p>
+          <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+            <Trophy className="text-muted-foreground/50 h-8 w-8" />
+            <p className="text-muted-foreground text-[13px]">순위 데이터가 아직 없습니다</p>
             {naverUrl && (
               <a
                 href={naverUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary mt-2 inline-flex items-center gap-1 text-xs underline"
+                className="text-primary mt-1 inline-flex items-center gap-1 text-[12px] font-medium hover:underline"
               >
-                네이버에서 보기 <ExternalLink className="h-3.5 w-3.5" />
+                네이버에서 보기 <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
