@@ -31,7 +31,33 @@ const TipTapContent = dynamic(
 
 export type { Post }
 
-export function PostDetailContent({ post }: { post: Post }) {
+export interface InitialCommentsData {
+  comments: {
+    id: string
+    user_id: string
+    parent_id: string | null
+    content: string
+    vote_count: number
+    created_at: string
+    sticker_id?: string | null
+    stickers?: { id: string; name: string; image_url: string } | null
+  }[]
+  profiles: { user_id: string; nickname: string; avatar_url: string | null }[]
+  equippedTitles: {
+    user_id: string
+    board_slug: string
+    adj_titles: { title: string; rarity: string } | null
+    noun_titles: { title: string } | null
+  }[]
+}
+
+export function PostDetailContent({
+  post,
+  initialCommentsData,
+}: {
+  post: Post
+  initialCommentsData?: InitialCommentsData
+}) {
   const router = useRouter()
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
@@ -241,7 +267,11 @@ export function PostDetailContent({ post }: { post: Post }) {
       </Card>
 
       {/* Comments Section */}
-      <CommentSection postId={post.id} onCommentCountChange={handleCommentCountChange} />
+      <CommentSection
+        postId={post.id}
+        onCommentCountChange={handleCommentCountChange}
+        initialData={initialCommentsData}
+      />
     </div>
   )
 }

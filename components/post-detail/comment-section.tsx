@@ -13,15 +13,42 @@ import { countAllComments, transformComments } from "./post-detail-types"
 import type { Comment } from "./post-detail-types"
 import { StickerPicker } from "@/components/sticker/sticker-picker"
 
+interface InitialData {
+  comments: {
+    id: string
+    user_id: string
+    parent_id: string | null
+    content: string
+    vote_count: number
+    created_at: string
+    sticker_id?: string | null
+    stickers?: { id: string; name: string; image_url: string } | null
+  }[]
+  profiles: { user_id: string; nickname: string; avatar_url: string | null }[]
+  equippedTitles: {
+    user_id: string
+    board_slug: string
+    adj_titles: { title: string; rarity: string } | null
+    noun_titles: { title: string } | null
+  }[]
+}
+
 interface CommentSectionProps {
   postId: string | number
   onCommentCountChange?: (count: number) => void
+  initialData?: InitialData
 }
 
-export function CommentSection({ postId, onCommentCountChange }: CommentSectionProps) {
+export function CommentSection({ postId, onCommentCountChange, initialData }: CommentSectionProps) {
   const { user } = useUser()
-  const [comments, setComments] = useState<Comment[]>([])
-  const [isLoadingComments, setIsLoadingComments] = useState(true)
+
+  // SSR 데이터가 있으면 즉시 transform하여 초기값으로 사용
+  const initialComments = initialData
+    ? transformComments(initialData.comments, initialData.profiles, initialData.equippedTitles)
+    : []
+
+  const [comments, setComments] = useState<Comment[]>(initialComments)
+  const [isLoadingComments, setIsLoadingComments] = useState(!initialData)
 
   const updateComments = useCallback(
     (newComments: Comment[]) => {
@@ -70,9 +97,17 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     }
   }, [postId, updateComments])
 
+  const hasInitialData = useRef(!!initialData)
   useEffect(() => {
+    // SSR에서 이미 댓글을 가져왔으면 첫 fetch 스킵
+    if (hasInitialData.current) {
+      hasInitialData.current = false
+      onCommentCountChange?.(countAllComments(initialComments))
+      return
+    }
     setIsLoadingComments(true)
     reloadComments().finally(() => setIsLoadingComments(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadComments])
 
   // @멘션 스티커 검색

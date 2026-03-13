@@ -113,6 +113,66 @@ async function fetchBoardRecentPosts(communitySlug: string, excludePostId: strin
     }))
 }
 
+async function fetchComments(postId: string) {
+  const supabase = createServerAnonClient()
+
+  const { data: comments } = await supabase
+    .from("comments")
+    .select(
+      `
+      id, post_id, user_id, parent_id, content, vote_count, created_at, updated_at,
+      sticker_id,
+      stickers ( id, name, image_url )
+    `
+    )
+    .eq("post_id", postId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+
+  if (!comments || comments.length === 0) {
+    return { comments: [], profiles: [], equippedTitles: [] }
+  }
+
+  const userIds = [...new Set(comments.map((c) => c.user_id))]
+  const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
+    supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
+    supabase
+      .from("user_equipped_titles")
+      .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
+      .in("user_id", userIds),
+  ])
+
+  // Supabase는 stickers를 배열로 추론하지만, sticker_id FK가 단일 관계이므로 단일 객체로 변환
+  const normalizedComments = comments.map((c) => ({
+    ...c,
+    stickers: Array.isArray(c.stickers) ? c.stickers[0] || null : c.stickers,
+  }))
+
+  return {
+    comments: normalizedComments as {
+      id: string
+      user_id: string
+      parent_id: string | null
+      content: string
+      vote_count: number
+      created_at: string
+      sticker_id: string | null
+      stickers: { id: string; name: string; image_url: string } | null
+    }[],
+    profiles: (profiles || []) as {
+      user_id: string
+      nickname: string
+      avatar_url: string | null
+    }[],
+    equippedTitles: (equippedTitles || []) as unknown as {
+      user_id: string
+      board_slug: string
+      adj_titles: { title: string; rarity: string } | null
+      noun_titles: { title: string } | null
+    }[],
+  }
+}
+
 function extractDescription(content: unknown): string {
   if (!content) return ""
   // Supabase jsonb columns return parsed objects, not strings
@@ -187,7 +247,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  const recentPosts = await fetchBoardRecentPosts(postData.community_slug, id)
+  const [recentPosts, commentsData] = await Promise.all([
+    fetchBoardRecentPosts(postData.community_slug, id),
+    fetchComments(id),
+  ])
   const boardName = COMMUNITY_NAMES[postData.community_slug] || postData.community_slug
 
   // 데이터 변환 (반감기 적용 온도 포함)
@@ -238,7 +301,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             <BackButton />
 
             {/* Post Detail Content */}
-            <PostDetailContent post={post} />
+            <PostDetailContent post={post} initialCommentsData={commentsData} />
 
             {/* Board Recent Posts */}
             <BoardRecentPosts

@@ -135,25 +135,8 @@ export function transformComments(
     }
   })
 
-  // 시간순 정렬
-  rootComments.sort((a, b) => {
-    const aTime = comments.find((c) => c.id === a.id)?.created_at || ""
-    const bTime = comments.find((c) => c.id === b.id)?.created_at || ""
-    return new Date(aTime).getTime() - new Date(bTime).getTime()
-  })
-
-  // 각 댓글의 대댓글도 정렬
-  const sortReplies = (comment: Comment) => {
-    if (comment.replies && comment.replies.length > 0) {
-      comment.replies.sort((a, b) => {
-        const aTime = comments.find((c) => c.id === a.id)?.created_at || ""
-        const bTime = comments.find((c) => c.id === b.id)?.created_at || ""
-        return new Date(aTime).getTime() - new Date(bTime).getTime()
-      })
-      comment.replies.forEach(sortReplies)
-    }
-  }
-  rootComments.forEach(sortReplies)
+  // DB에서 이미 created_at ASC로 정렬되어 오므로 삽입 순서가 곧 시간순.
+  // 별도 정렬 불필요.
 
   return rootComments
 }
