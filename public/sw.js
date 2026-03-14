@@ -29,10 +29,13 @@ self.addEventListener("activate", (event) => {
   self.clients.claim()
 })
 
-// Fetch: Network-first 전략 (API 제외)
+// Fetch: Network-first 전략 (API/외부 도메인 제외)
 self.addEventListener("fetch", (event) => {
   const { request } = event
   const url = new URL(request.url)
+
+  // 외부 도메인 요청은 SW가 가로채지 않음 (Clerk, Cloudflare 등)
+  if (url.origin !== self.location.origin) return
 
   // API 요청은 캐시하지 않음
   if (url.pathname.startsWith("/api/")) return
