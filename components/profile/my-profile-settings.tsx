@@ -8,17 +8,41 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, ArrowLeft, User, Check, Save } from "lucide-react"
+import { Loader2, ArrowLeft, User, Check, Save, Coins } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import { AvatarSection } from "./settings/avatar-section"
 import { PasswordSection } from "./settings/password-section"
 import { FollowedCommunitiesSection } from "./settings/followed-communities-section"
 import { DeleteAccountSection } from "./settings/delete-account-section"
+
+const MBTI_TYPES = [
+  "INTJ",
+  "INTP",
+  "ENTJ",
+  "ENTP",
+  "INFJ",
+  "INFP",
+  "ENFJ",
+  "ENFP",
+  "ISTJ",
+  "ISFJ",
+  "ESTJ",
+  "ESFJ",
+  "ISTP",
+  "ISFP",
+  "ESTP",
+  "ESFP",
+] as const
 
 interface Profile {
   user_id: string
   nickname: string
   nickname_changed_at: string | null
   avatar_url: string
+  bio: string | null
+  favorite_team: string | null
+  favorite_player: string | null
+  mbti: string | null
 }
 
 interface FollowedCommunity {
@@ -35,8 +59,13 @@ export function MyProfileSettings() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
+  const { toast } = useToast()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [nickname, setNickname] = useState("")
+  const [bio, setBio] = useState("")
+  const [favoriteTeam, setFavoriteTeam] = useState("")
+  const [favoritePlayer, setFavoritePlayer] = useState("")
+  const [mbti, setMbti] = useState("")
   const [followedCommunities, setFollowedCommunities] = useState<FollowedCommunity[]>([])
 
   const loadProfile = useCallback(async () => {
@@ -47,6 +76,10 @@ export function MyProfileSettings() {
         const data = await response.json()
         setProfile(data)
         setNickname(data.nickname || user?.username || "")
+        setBio(data.bio || "")
+        setFavoriteTeam(data.favorite_team || "")
+        setFavoritePlayer(data.favorite_player || "")
+        setMbti(data.mbti || "")
       }
     } catch (err) {
       console.error("Failed to load profile:", err)
@@ -95,11 +128,56 @@ export function MyProfileSettings() {
       const response = await fetch("/api/profile/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: trimmedNickname }),
+        body: JSON.stringify({
+          nickname: trimmedNickname,
+          bio: bio.trim() || null,
+          favorite_team: favoriteTeam.trim() || null,
+          favorite_player: favoritePlayer.trim() || null,
+          mbti: mbti || null,
+        }),
       })
 
       if (response.ok) {
         const updatedProfile = await response.json()
+
+        // 첫 1회 보상: 이전에 없던 필드를 새로 설정한 경우
+        const rewards: Promise<unknown>[] = []
+        if (
+          (favoriteTeam.trim() || favoritePlayer.trim()) &&
+          !profile?.favorite_team &&
+          !profile?.favorite_player
+        ) {
+          rewards.push(
+            fetch("/api/gold/reward", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: 200,
+                description: "최애 팀/선수 첫 설정 보상",
+                transaction_type: "onboarding_reward",
+              }),
+            })
+          )
+        }
+        if (mbti && !profile?.mbti) {
+          rewards.push(
+            fetch("/api/gold/reward", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: 100,
+                description: "MBTI 첫 설정 보상",
+                transaction_type: "onboarding_reward",
+              }),
+            })
+          )
+        }
+        if (rewards.length > 0) {
+          await Promise.allSettled(rewards)
+          toast({ title: "보상 지급!", description: "첫 설정 보상 골드가 지급되었습니다." })
+          window.dispatchEvent(new Event("goldBalanceUpdate"))
+        }
+
         setProfile(updatedProfile)
         setSaveSuccess(true)
         setTimeout(() => setSaveSuccess(false), 3000)
@@ -227,6 +305,78 @@ export function MyProfileSettings() {
                 />
                 <p className="text-muted-foreground text-xs">이메일은 변경할 수 없습니다.</p>
               </div>
+            </div>
+          </Card>
+
+          {/* 한줄 소개 */}
+          <Card className="p-6">
+            <h2 className="mb-4 font-semibold">한줄 소개</h2>
+            <Input
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="자신을 한 줄로 소개해보세요"
+              maxLength={50}
+            />
+            <p className="text-muted-foreground mt-1 text-xs">{bio.length}/50</p>
+          </Card>
+
+          {/* 최애 팀 & 선수 */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <h2 className="font-semibold">최애 팀 & 선수</h2>
+              {!profile?.favorite_team && !profile?.favorite_player && (
+                <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+                  <Coins className="h-3 w-3" />첫 설정 시 +200 골드
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label>최애 팀</Label>
+                <Input
+                  value={favoriteTeam}
+                  onChange={(e) => setFavoriteTeam(e.target.value)}
+                  placeholder="예: 리버풀, LG 트윈스, T1"
+                  maxLength={30}
+                />
+              </div>
+              <div>
+                <Label>최애 선수</Label>
+                <Input
+                  value={favoritePlayer}
+                  onChange={(e) => setFavoritePlayer(e.target.value)}
+                  placeholder="예: 손흥민, 오타니, 페이커"
+                  maxLength={30}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* MBTI */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <h2 className="font-semibold">MBTI</h2>
+              {!profile?.mbti && (
+                <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+                  <Coins className="h-3 w-3" />첫 설정 시 +100 골드
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {MBTI_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setMbti(mbti === type ? "" : type)}
+                  className={`rounded-lg py-2 text-xs font-bold transition-all ${
+                    mbti === type
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
           </Card>
 
