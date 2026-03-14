@@ -10,7 +10,7 @@
  */
 
 import { auth, currentUser } from "@clerk/nextjs/server"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
  * Server-side: Ensure current user has a profile in Supabase
@@ -28,22 +28,14 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
  */
 export async function ensureProfile() {
   try {
-    const { userId, getToken } = await auth()
+    const { userId } = await auth()
 
     if (!userId) {
       return null
     }
 
-    // Create authenticated Supabase client
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        accessToken: async () => {
-          return (await getToken()) ?? null
-        },
-      }
-    )
+    // Service Role 클라이언트로 RLS 우회
+    const supabase = createServiceRoleClient()
 
     // Check if profile exists (include onboarding_completed for middleware check)
     const { data: existingProfile, error: fetchError } = await supabase
@@ -114,7 +106,7 @@ export async function ensureProfile() {
 export async function syncProfile() {
   "use server"
 
-  const { userId, getToken } = await auth()
+  const { userId } = await auth()
 
   if (!userId) {
     return { success: false, error: "Not authenticated" }
@@ -126,15 +118,7 @@ export async function syncProfile() {
     return { success: false, error: "User not found" }
   }
 
-  const supabase = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      accessToken: async () => {
-        return (await getToken()) ?? null
-      },
-    }
-  )
+  const supabase = createServiceRoleClient()
 
   const { data, error } = await supabase
     .from("profiles")

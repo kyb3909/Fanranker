@@ -26,18 +26,28 @@ export function useOnboardingGuard() {
 
   const shouldCheck = isLoaded && isSignedIn && !EXCLUDED_PATHS.some((p) => pathname.startsWith(p))
 
-  const { data: profile } = useSWR(shouldCheck ? "/api/profile/me" : null, fetcher, {
+  const { data: profile, error } = useSWR(shouldCheck ? "/api/profile/me" : null, fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 10000,
+    dedupingInterval: 30000,
+    errorRetryCount: 0,
   })
 
   useEffect(() => {
-    if (!shouldCheck || !profile) return
+    // API 에러 시 무시 (무한 루프 방지)
+    if (!shouldCheck || error) return
+    if (!profile) return
 
-    // 프로필이 빈 객체이거나 onboarding_completed가 false면 온보딩으로
-    const hasProfile = profile && Object.keys(profile).length > 0
-    if (!hasProfile || profile.onboarding_completed === false) {
+    // 500 에러 응답 무시 (error 필드가 있으면 실패)
+    if (profile.error) return
+
+    // user_id가 있는 정상 프로필인데 onboarding 미완료면 리다이렉트
+    if (profile.user_id && profile.onboarding_completed === false) {
       router.replace("/sign-up")
     }
-  }, [shouldCheck, profile, router])
+
+    // 빈 객체 (프로필 없음) → 리다이렉트
+    if (!profile.user_id && !profile.error) {
+      router.replace("/sign-up")
+    }
+  }, [shouldCheck, profile, error, router])
 }
