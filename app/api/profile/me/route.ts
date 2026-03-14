@@ -80,7 +80,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(profile || {})
   } catch (error) {
-    return apiError("서버 오류가 발생했습니다.", 500, error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error("GET /api/profile/me error:", msg)
+    return NextResponse.json({ error: "서버 오류", debug: msg }, { status: 500 })
   }
 }
 
@@ -303,7 +305,9 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(profile)
   } catch (error) {
-    return apiError("서버 오류가 발생했습니다.", 500, error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error("PATCH /api/profile/me error:", msg)
+    return NextResponse.json({ error: "서버 오류", debug: msg }, { status: 500 })
   }
 }
 
