@@ -107,11 +107,14 @@ export function PostDetailContent({
             <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="shrink-0 cursor-pointer">
+                  <button className="flex shrink-0 cursor-pointer items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
                       <AvatarFallback>{post.author?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
                     </Avatar>
+                    <span className="text-foreground text-base font-semibold hover:underline">
+                      {post.author}
+                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
@@ -136,7 +139,6 @@ export function PostDetailContent({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <span className="text-foreground text-base font-semibold">{post.author}</span>
               {post.titleDisplay && (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (
                 <TitleBadge
                   adjTitle={post.titleDisplay.adjTitle}

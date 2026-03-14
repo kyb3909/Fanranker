@@ -54,11 +54,14 @@ export function PostCardFooter({
       <div className="flex min-w-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="shrink-0 cursor-pointer">
+            <button className="flex shrink-0 cursor-pointer items-center gap-2">
               <Avatar className="h-7 w-7">
                 <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
                 <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
               </Avatar>
+              <span className="text-foreground text-[15px] font-medium hover:underline">
+                {author}
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -80,7 +83,6 @@ export function PostCardFooter({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <span className="text-foreground shrink-0 text-[15px] font-medium">{author}</span>
         {titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle) && (
           <TitleBadge
             adjTitle={titleDisplay.adjTitle}
