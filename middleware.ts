@@ -106,7 +106,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     // Onboarding redirect: logged in + onboarding not completed → /sign-up
     // 쿠키에 캐싱하여 매 요청마다 Supabase 쿼리 방지
     if (!isOnboardingExcluded(req.nextUrl.pathname)) {
-      const { userId, getToken } = await auth()
+      const { userId } = await auth()
 
       if (userId) {
         const onboardingCookie = req.cookies.get("onboarding_done")
@@ -114,12 +114,14 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         // 쿠키가 있으면 Supabase 쿼리 스킵
         if (!onboardingCookie) {
           try {
+            // Service Role 키로 RLS 우회하여 확실하게 프로필 조회
             const supabase = createSupabaseClient(
               process.env.NEXT_PUBLIC_SUPABASE_URL!,
-              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+              process.env.SUPABASE_SERVICE_ROLE_KEY!,
               {
-                accessToken: async () => {
-                  return (await getToken()) ?? null
+                auth: {
+                  autoRefreshToken: false,
+                  persistSession: false,
                 },
               }
             )
@@ -146,8 +148,10 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
               maxAge: 60 * 60 * 24, // 24h
             })
             return response
-          } catch {
-            // Supabase 연결 실패 시 온보딩 체크 스킵
+          } catch (onboardingError) {
+            // Supabase 연결 실패 시에도 신규 유저일 수 있으므로 온보딩으로 보냄
+            console.error("Onboarding check failed:", onboardingError)
+            return NextResponse.redirect(new URL("/sign-up", req.url))
           }
         }
       }
