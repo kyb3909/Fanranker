@@ -406,7 +406,11 @@ export default function SignUpPage() {
         await Promise.allSettled(rewardPromises)
       }
 
-      // 4. Redirect to home
+      // 4. 환영 메시지 + 홈으로 이동
+      toast({
+        title: "가입을 환영합니다!",
+        description: "공놀이판에 오신 것을 환영해요. 즐거운 시간 보내세요!",
+      })
       router.replace("/")
     } catch (err) {
       toast({
