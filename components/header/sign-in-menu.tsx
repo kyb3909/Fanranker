@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useSignIn } from "@clerk/nextjs"
+import { useSignIn, useSignUp } from "@clerk/nextjs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +42,7 @@ function getErrorMessage(err: unknown): string {
 
 export function SignInMenu() {
   const { signIn, setActive, isLoaded } = useSignIn()
+  const { signUp: clerkSignUp } = useSignUp()
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -59,8 +60,20 @@ export function SignInMenu() {
         redirectUrl: "/sso-callback",
         redirectUrlComplete: "/",
       })
-    } catch (err) {
-      setError(getErrorMessage(err))
+    } catch {
+      // 계정이 없으면 signIn 실패 → 자동으로 signUp으로 폴백
+      try {
+        if (clerkSignUp) {
+          await clerkSignUp.authenticateWithRedirect({
+            strategy: "oauth_google",
+            redirectUrl: "/sso-callback",
+            redirectUrlComplete: "/sign-up",
+          })
+          return
+        }
+      } catch (signUpErr) {
+        setError(getErrorMessage(signUpErr))
+      }
       setGoogleLoading(false)
     }
   }
