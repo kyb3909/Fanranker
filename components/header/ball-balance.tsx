@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
+import { usePathname } from "next/navigation"
 import { Circle } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import useSWR from "swr"
@@ -9,10 +10,16 @@ import { fetcher } from "@/lib/swr"
 
 export function BallBalance() {
   const { isSignedIn } = useAuth()
-  const { data: tokenData, mutate } = useSWR(isSignedIn ? "/api/tokens/balance" : null, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30000,
-  })
+  const pathname = usePathname()
+  const isOnboarding = pathname.startsWith("/sign-up")
+  const { data: tokenData, mutate } = useSWR(
+    isSignedIn && !isOnboarding ? "/api/tokens/balance" : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+    }
+  )
 
   // Listen for ball balance update events (dispatched after predictions)
   useEffect(() => {

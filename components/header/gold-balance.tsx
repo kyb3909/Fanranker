@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
+import { usePathname } from "next/navigation"
 import { Coins } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import useSWR from "swr"
@@ -9,10 +10,16 @@ import { fetcher } from "@/lib/swr"
 
 export function GoldBalance() {
   const { isSignedIn } = useAuth()
-  const { data, mutate } = useSWR(isSignedIn ? "/api/gold/balance" : null, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30000,
-  })
+  const pathname = usePathname()
+  const isOnboarding = pathname.startsWith("/sign-up")
+  const { data, mutate } = useSWR(
+    isSignedIn && !isOnboarding ? "/api/gold/balance" : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+    }
+  )
 
   useEffect(() => {
     const handleUpdate = () => {
