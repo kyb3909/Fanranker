@@ -57,7 +57,7 @@ export function SignInMenu() {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/sign-up",
+        redirectUrlComplete: "/",
       })
     } catch (err) {
       setError(getErrorMessage(err))
