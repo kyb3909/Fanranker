@@ -283,12 +283,8 @@ export function Header() {
       </div>
 
       {/* 메뉴바: 좌우 폭 끝까지 (담벼락, 운동장, 경기 예측) */}
-      <nav
-        className="bg-primary grid w-full grid-cols-[1fr_auto_1fr] items-center border-t border-white/10 px-2"
-        aria-label="주요 메뉴"
-      >
-        <div />
-        <div className="flex items-center justify-center">
+      <nav className="bg-primary w-full border-t border-white/10" aria-label="주요 메뉴">
+        <div className="scrollbar-none flex items-center justify-center overflow-x-auto">
           <Link
             href="/"
             scroll={false}
@@ -303,7 +299,7 @@ export function Header() {
             }}
           >
             <span
-              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isFeed
                   ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
                   : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
@@ -315,7 +311,7 @@ export function Header() {
           </Link>
           <Link href="/explore" prefetch={false}>
             <span
-              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isExplore
                   ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
                   : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
@@ -327,7 +323,7 @@ export function Header() {
           </Link>
           <Link href="/?view=prediction" prefetch={false}>
             <span
-              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isPrediction
                   ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
                   : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
@@ -339,7 +335,7 @@ export function Header() {
           </Link>
           <Link href="/games" prefetch={false}>
             <span
-              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isGames
                   ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
                   : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
@@ -351,7 +347,7 @@ export function Header() {
           </Link>
           <Link href="/shop" prefetch={false}>
             <span
-              className={`relative inline-flex h-11 items-center gap-2 px-4 font-sans text-[14px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
                 isShop
                   ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
                   : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
@@ -362,7 +358,6 @@ export function Header() {
             </span>
           </Link>
         </div>
-        <div />
       </nav>
     </header>
   )

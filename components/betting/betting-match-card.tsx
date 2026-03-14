@@ -41,7 +41,7 @@ export function BettingMatchCard({
           <span className="text-sm">{SPORT_ICONS[groupedMatch.sport] || "⚽"}</span>
           <span className="text-xs font-medium">{groupedMatch.leagueCode}</span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-foreground/90">
+        <div className="text-foreground/90 flex items-center gap-1 text-xs">
           <Clock className="h-3 w-3" />
           <span>{formatMatchTime(groupedMatch.matchTime)}</span>
         </div>
@@ -49,10 +49,14 @@ export function BettingMatchCard({
 
       {/* Teams */}
       <div className="px-2 pb-1">
-        <div className="flex items-center justify-center gap-2 py-1">
-          <span className="text-sm font-bold">{groupedMatch.homeTeam}</span>
-          <span className="text-foreground/80 text-xs">vs</span>
-          <span className="text-sm font-bold">{groupedMatch.awayTeam}</span>
+        <div className="flex items-center justify-center gap-1.5 py-1 sm:gap-2">
+          <span className="max-w-[40%] min-w-0 truncate text-sm font-bold">
+            {groupedMatch.homeTeam}
+          </span>
+          <span className="text-foreground/80 shrink-0 text-xs">vs</span>
+          <span className="max-w-[40%] min-w-0 truncate text-sm font-bold">
+            {groupedMatch.awayTeam}
+          </span>
         </div>
       </div>
 
@@ -103,7 +107,7 @@ export function BettingMatchCard({
                     (game.handicap !== null && game.handicap !== 0 ? (
                       <Badge
                         variant="outline"
-                        className="border-primary/40 bg-primary/15 px-1.5 py-0 text-[10px] font-medium text-primary"
+                        className="border-primary/40 bg-primary/15 text-primary px-1.5 py-0 text-[10px] font-medium"
                       >
                         {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? "+" : ""}
                         {game.handicap}
@@ -135,7 +139,7 @@ export function BettingMatchCard({
                     ))}
                 </div>
                 {gameBetClosed && (
-                  <span className="text-[10px] font-medium text-primary">마감</span>
+                  <span className="text-primary text-[10px] font-medium">마감</span>
                 )}
                 {sportMismatch && !gameBetClosed && (
                   <span className="text-[10px] text-orange-500">다른 종목</span>
@@ -167,7 +171,7 @@ export function BettingMatchCard({
                     aria-label={`${opt.label} 선택, 배당 ${opt.odds ? opt.odds.toFixed(2) : "없음"}`}
                     aria-pressed={selectedBet?.selection === opt.value}
                   >
-                    <div className="truncate text-xs text-foreground/85">{opt.label}</div>
+                    <div className="text-foreground/85 truncate text-xs">{opt.label}</div>
                     <div
                       className={`font-[family-name:var(--font-display)] text-sm font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
                     >

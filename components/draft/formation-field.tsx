@@ -157,9 +157,9 @@ export function FormationField({ formation, roster, onComplete }: FormationField
         </p>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
         {/* 미배치 선수 목록 */}
-        <div className="w-[220px] shrink-0">
+        <div className="w-full shrink-0 lg:w-[220px]">
           <div className="border-border bg-card rounded-xl border shadow-sm">
             <div className="border-border border-b px-3 py-2.5">
               <h3 className="text-foreground text-sm font-bold">

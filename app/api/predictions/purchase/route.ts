@@ -5,6 +5,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
 const GOLD_COST = 500
+const SELLER_SHARE = 450 // 90% to seller
+const PLATFORM_FEE = 50 // 10% platform commission
 
 /**
  * POST /api/predictions/purchase
@@ -139,14 +141,66 @@ export async function POST(request: NextRequest) {
 
     if (purchaseError) {
       console.error("Failed to record purchase:", purchaseError)
+      // 구매 기록 실패 시 골드 환불
+      try {
+        await supabase.rpc("reward_gold", {
+          p_user_id: user.id,
+          p_amount: GOLD_COST,
+          p_description: "구매 기록 실패 환불",
+          p_transaction_type: "purchase_refund",
+        })
+      } catch (e) {
+        console.error("Failed to refund gold:", e)
+      }
+      return NextResponse.json(
+        { error: "구매 처리 중 오류가 발생했습니다. 골드가 환불됩니다." },
+        { status: 500 }
+      )
     }
 
-    // 6. 예측 데이터 반환 (이미 위에서 조회함)
+    // 6. 판매자에게 골드 정산 (90% = 450골드)
+    try {
+      const { error: rewardError } = await supabase.rpc("reward_gold", {
+        p_user_id: activity.user_id,
+        p_amount: SELLER_SHARE,
+        p_description: `분석글 판매 수익 (${activity.sport})`,
+        p_transaction_type: "analysis_sale_revenue",
+      })
+
+      if (rewardError) {
+        console.error("Failed to reward seller:", rewardError)
+        // 판매자 정산 실패 시 로그만 남기고 구매는 유지
+        // TODO: 실패 시 재시도 큐 또는 관리자 알림 추가
+      }
+    } catch (e) {
+      console.error("Seller reward error:", e)
+    }
+
+    // 7. 판매자에게 알림 전송
+    try {
+      const { data: buyerProfile } = await supabase
+        .from("profiles")
+        .select("nickname")
+        .eq("user_id", user.id)
+        .single()
+
+      await supabase.from("notifications").insert({
+        user_id: activity.user_id,
+        type: "analysis_purchased",
+        actor_id: user.id,
+        message: `${buyerProfile?.nickname || "누군가"}님이 회원님의 분석글을 구매했습니다. (+${SELLER_SHARE}골드)`,
+      })
+    } catch (e) {
+      console.error("Failed to send seller notification:", e)
+    }
+
+    // 8. 예측 데이터 반환 (이미 위에서 조회함)
     return NextResponse.json({
       success: true,
       already_purchased: false,
       new_balance: spendResult.remaining,
       gold_spent: GOLD_COST,
+      seller_received: SELLER_SHARE,
       predictions: predictions || [],
     })
   } catch (error) {

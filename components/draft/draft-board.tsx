@@ -35,9 +35,9 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   const viewBudget = state.budget[viewSeat] ?? 0
 
   return (
-    <div className="flex h-[calc(100vh-160px)] min-h-[600px] gap-3">
-      {/* 왼쪽: 선수 풀 */}
-      <div className="border-border bg-card flex w-[420px] flex-col rounded-xl border shadow-sm">
+    <div className="flex h-[calc(100vh-160px)] min-h-[400px] flex-col gap-3 lg:min-h-[600px] lg:flex-row">
+      {/* 왼쪽: 선수 풀 (모바일: 탭으로 전환) */}
+      <div className="border-border bg-card flex max-h-[50vh] flex-col rounded-xl border shadow-sm lg:max-h-none lg:w-[420px]">
         <PlayerPool state={state} myTurn={myTurn} mySeat={mySeat} onPick={onPick} />
       </div>
 
@@ -74,7 +74,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
         </div>
 
         {/* 참가자 요약 - 클릭하면 로스터 확인 */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {state.participants.map((p) => {
             const isCurrentTurn = p.seatIndex === currentSeat
             const isMe = p.seatIndex === mySeat
@@ -181,8 +181,8 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
         </div>
       </div>
 
-      {/* 오른쪽: 팀 로스터 (탭으로 전환) */}
-      <div className="border-border bg-card w-[280px] rounded-xl border shadow-sm">
+      {/* 오른쪽: 팀 로스터 */}
+      <div className="border-border bg-card w-full rounded-xl border shadow-sm lg:w-[280px]">
         <MyRoster
           roster={viewRoster}
           budget={viewBudget}

@@ -102,7 +102,7 @@ export function BettingSlip({
                 </span>
                 <button
                   onClick={onClearAllBets}
-                  className="text-xs font-medium text-primary hover:text-primary/80"
+                  className="text-primary hover:text-primary/80 text-xs font-medium"
                   aria-label="선택한 경기 전체 삭제"
                 >
                   전체 삭제
@@ -110,7 +110,7 @@ export function BettingSlip({
               </div>
 
               {/* Selected bets list */}
-              <div className="divide-border divide-y">
+              <div className="divide-border max-h-[40vh] divide-y overflow-y-auto">
                 {selectedBets.map((bet) => {
                   const groupedMatch = groupedMatches.find((m) => m.matchKey === bet.matchKey)
                   const game = groupedMatch?.games.find((g) => g.id === bet.gameId)
@@ -123,7 +123,7 @@ export function BettingSlip({
                           e.stopPropagation()
                           onRemoveBet(bet.gameId)
                         }}
-                        className="text-muted-foreground absolute top-2 right-0 flex h-5 w-5 items-center justify-center transition-colors hover:text-primary"
+                        className="text-muted-foreground hover:text-primary absolute top-2 right-0 flex h-5 w-5 items-center justify-center transition-colors"
                         aria-label={`${groupedMatch.homeTeam} vs ${groupedMatch.awayTeam} 선택 삭제`}
                       >
                         <X className="h-4 w-4" />
@@ -212,7 +212,7 @@ export function BettingSlip({
                             Math.max(0, Math.min(userBalls, parseInt(e.target.value) || 0))
                           )
                         }
-                        className="h-8 w-24 text-right text-sm"
+                        className="h-8 w-20 text-right text-sm sm:w-24"
                         min={0}
                         max={userBalls}
                       />

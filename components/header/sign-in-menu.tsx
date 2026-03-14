@@ -98,7 +98,7 @@ export function SignInMenu() {
 
       <DropdownMenuContent
         align="end"
-        className="bg-card border-border mt-2 w-[360px] overflow-hidden rounded-xl border p-0 shadow-lg"
+        className="bg-card border-border mt-2 w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-xl border p-0 shadow-lg"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <div className="px-6 pt-6 pb-2">

@@ -216,7 +216,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
               <h3 className="text-sm font-semibold">픽셀아트 컬렉션</h3>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-3 p-4 sm:grid-cols-5">
+          <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 md:grid-cols-5">
             {pixelArts.map((pa) => (
               <div key={pa.pixel_art_id} className="flex flex-col items-center gap-1">
                 <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg">

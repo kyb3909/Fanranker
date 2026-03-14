@@ -88,12 +88,12 @@ export function BettingRankings({
       ) : (
         <div className="border-border overflow-hidden rounded-xl border shadow-none">
           {/* 테이블 헤더 */}
-          <div className="border-border bg-primary/10 text-primary grid grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] items-center gap-2 border-b px-4 py-2.5 text-[12px] font-medium">
+          <div className="border-border bg-primary/10 text-primary grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 border-b px-3 py-2.5 text-[12px] font-medium sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4">
             <span className="text-center">#</span>
             <span>유저</span>
             <span className="text-right">수익률</span>
-            <span className="text-right">적중률</span>
-            <span className="text-right">순수익</span>
+            <span className="hidden text-right sm:block">적중률</span>
+            <span className="hidden text-right sm:block">순수익</span>
             <span />
           </div>
 
@@ -107,7 +107,7 @@ export function BettingRankings({
             return (
               <div
                 key={user.user_id}
-                className={`grid grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] items-center gap-2 px-4 py-3 transition-colors ${
+                className={`grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 px-3 py-3 transition-colors sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4 ${
                   isTop3 ? `${medalRowBg[rank - 1]} hover:brightness-95` : "hover:bg-muted/40"
                 } ${index > 0 ? "border-border/30 border-t" : ""}`}
               >
@@ -138,14 +138,14 @@ export function BettingRankings({
                 </div>
 
                 {/* 적중률 */}
-                <div className="text-right">
+                <div className="hidden text-right sm:block">
                   <span className="text-primary text-xs font-bold">
                     {(user.accuracy || 0).toFixed(1)}%
                   </span>
                 </div>
 
                 {/* 순수익 */}
-                <div className="text-right">
+                <div className="hidden text-right sm:block">
                   <span
                     className={`text-xs font-bold ${
                       (user.net_profit || 0) >= 0 ? "text-primary" : "text-muted-foreground"
