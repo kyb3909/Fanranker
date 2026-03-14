@@ -371,14 +371,14 @@ export default function SignUpPage() {
         )
       }
 
-      // 최애 팀/선수 설정 보상: +300 골드
+      // 최애 팀/선수 설정 보상: +200 골드
       if (favoriteTeam.trim() || favoritePlayer.trim()) {
         rewardPromises.push(
           fetch("/api/gold/reward", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              amount: 300,
+              amount: 200,
               description: "온보딩 최애 팀/선수 설정 보상",
               transaction_type: "onboarding_reward",
             }),
@@ -386,14 +386,14 @@ export default function SignUpPage() {
         )
       }
 
-      // MBTI 설정 보상: +500 골드
+      // MBTI 설정 보상: +100 골드
       if (mbti) {
         rewardPromises.push(
           fetch("/api/gold/reward", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              amount: 500,
+              amount: 100,
               description: "온보딩 MBTI 설정 보상",
               transaction_type: "onboarding_reward",
             }),
