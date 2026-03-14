@@ -19,8 +19,8 @@ export function TermsStep({
   setPrivacyAgreed,
   onNext,
 }: TermsStepProps) {
-  const [termsOpen, setTermsOpen] = useState(false)
-  const [privacyOpen, setPrivacyOpen] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(true)
+  const [privacyOpen, setPrivacyOpen] = useState(true)
 
   const canProceed = termsAgreed && privacyAgreed
 
