@@ -401,8 +401,10 @@ export default function SignUpPage() {
         )
       }
 
-      // Don't await rewards — redirect immediately
-      Promise.allSettled(rewardPromises)
+      // 보상 지급 완료 후 리다이렉트 (fetch 취소 방지)
+      if (rewardPromises.length > 0) {
+        await Promise.allSettled(rewardPromises)
+      }
 
       // 4. Redirect to home
       router.replace("/")
