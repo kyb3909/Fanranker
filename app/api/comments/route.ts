@@ -8,10 +8,13 @@ import { z } from "zod"
 
 const CommentCreateSchema = z
   .object({
-    post_id: z.string().min(1, "게시글 ID가 필요합니다."),
+    post_id: z
+      .union([z.string(), z.number()])
+      .transform(String)
+      .pipe(z.string().min(1, "게시글 ID가 필요합니다.")),
     content: z.string().max(5000, "댓글은 5000자 이하여야 합니다.").optional().default(""),
-    parent_id: z.string().optional(),
-    sticker_id: z.string().uuid().optional(),
+    parent_id: z.union([z.string(), z.number()]).transform(String).optional(),
+    sticker_id: z.string().uuid().nullable().optional(),
   })
   .refine((data) => data.content.trim().length > 0 || data.sticker_id, {
     message: "댓글 내용 또는 스티커를 선택해주세요.",
