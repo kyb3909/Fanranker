@@ -200,9 +200,23 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const info = COMMUNITY_MAP[slug]
-  const name = info?.name || slug
-  const description =
+  let name = info?.name || slug
+  let description =
     info?.metaDescription || info?.description || `${name} 게시판 - FanRanker 커뮤니티`
+
+  // DB fallback for dynamic categories (하위 채널 등)
+  if (!info) {
+    const supabase = createServerAnonClient()
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("name, description")
+      .eq("slug", slug)
+      .single()
+    if (cat) {
+      name = cat.name
+      description = cat.description || `${name} 게시판 - FanRanker 커뮤니티`
+    }
+  }
   return {
     title: name,
     description,
@@ -233,20 +247,29 @@ export default async function CommunityPage({
 
   const info = COMMUNITY_MAP[slug]
 
-  // 존재하지 않는 커뮤니티 → 404
-  if (!info) {
+  // DB에서 카테고리 확인 (하위 채널 포함)
+  const supabaseForMeta = createServerAnonClient()
+  const { data: dbCategory } = await supabaseForMeta
+    .from("categories")
+    .select("slug, name, description, icon, parent_slug")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .single()
+
+  // 상수에도 DB에도 없으면 404
+  if (!info && !dbCategory) {
     notFound()
   }
 
+  const communityName = info?.name || dbCategory?.name || slug
+  const communityDesc = info?.description || dbCategory?.description || ""
+
   const community = {
-    name: info.name,
-    description: info.description,
+    name: communityName,
+    description: communityDesc,
     members: formatMemberCount(MEMBER_COUNTS[slug] || 0),
     banner: "/placeholder.jpg",
   }
-
-  // 하위 채널 + 말머리 목록 조회
-  const supabaseForMeta = createServerAnonClient()
   const [{ data: channels }, { data: flairs }] = await Promise.all([
     supabaseForMeta
       .from("categories")

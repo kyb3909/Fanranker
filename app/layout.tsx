@@ -116,8 +116,8 @@ export default function RootLayout({
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_ID} />
             )}
-            {/* PWA: iOS Safari standalone 모드 */}
-            <meta name="apple-mobile-web-app-capable" content="yes" />
+            {/* PWA: standalone 모드 */}
+            <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
             <meta name="apple-mobile-web-app-title" content="공놀이" />
             {/* Noto Sans KR: globals.css에서 @import로 로드 */}
