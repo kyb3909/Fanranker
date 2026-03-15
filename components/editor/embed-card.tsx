@@ -3,8 +3,8 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useEffect, useRef } from "react"
-import { ExternalLink } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { ExternalLink, Loader2 } from "lucide-react"
 
 export interface EmbedCardProps {
   provider: "youtube" | "instagram" | "x"
@@ -20,24 +20,48 @@ export interface EmbedCardProps {
  * EmbedCard Component (Full Embed)
  *
  * 상세 페이지용 전체 임베드 카드
+ * - html이 없으면 oEmbed API에서 자동 fetch
  * - iframe 포함 전체 렌더링
- * - dangerouslySetInnerHTML 사용
- *
- * Features:
- * - Responsive aspect ratio for video embeds
- * - Mobile-optimized sizing
- * - Fallback to preview if HTML is missing
  */
 export function EmbedCard({
   provider,
   url,
-  html,
+  html: htmlProp,
   title,
   thumbnail_url,
   author_name,
   className,
 }: EmbedCardProps) {
-  // If no HTML, fallback to a preview card
+  const [fetchedHtml, setFetchedHtml] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // html prop이 없으면 oEmbed API에서 자동 fetch
+  useEffect(() => {
+    if (htmlProp || fetchedHtml) return
+    setIsLoading(true)
+    fetch(`/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.html) setFetchedHtml(data.html)
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [url, htmlProp, fetchedHtml])
+
+  const html = htmlProp || fetchedHtml
+
+  // 로딩 중
+  if (!html && isLoading) {
+    return (
+      <Card className={cn("border-border bg-card border", className)}>
+        <CardContent className="flex aspect-video items-center justify-center p-4">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // HTML 없으면 fallback
   if (!html) {
     return (
       <Card className={cn("border-border bg-card border", className)}>

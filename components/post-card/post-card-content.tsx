@@ -85,8 +85,7 @@ export function PostCardContent({
         </Link>
       )}
 
-      {/* 임베드 미리보기 (피드용) - 이미지가 없을 때만 표시 */}
-      {/* autoExpand 제거: 피드에서 iframe 로딩은 CLS/LCP 악화 원인 */}
+      {/* 임베드 (피드용) - YouTube는 바로 재생, 나머지는 미리보기 */}
       {firstEmbed && !image && (
         <div className="mt-2">
           <EmbedPreviewCard
@@ -96,6 +95,7 @@ export function PostCardContent({
             thumbnail_url={firstEmbed.attrs.thumbnail_url}
             author_name={firstEmbed.attrs.author_name}
             priority={priority}
+            autoExpand={firstEmbed.attrs.provider === "youtube"}
           />
         </div>
       )}

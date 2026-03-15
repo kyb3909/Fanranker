@@ -10,7 +10,7 @@ import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { extractEmbedsFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
-import { EmbedPreviewCard } from "@/components/editor/embed-preview-card"
+import { EmbedCard } from "@/components/editor/embed-card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -236,7 +236,7 @@ export function PostDetailContent({
                 return (
                   <div className="mt-2 space-y-3">
                     {embeds.map((embed, i) => (
-                      <EmbedPreviewCard
+                      <EmbedCard
                         key={i}
                         provider={embed.attrs.provider}
                         url={embed.attrs.url}
