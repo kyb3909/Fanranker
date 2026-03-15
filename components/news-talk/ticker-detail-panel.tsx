@@ -5,6 +5,7 @@ import { X, ThumbsUp, MessageSquare, Share2, Users, Send, ChevronUp, Loader2 } f
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useUser } from "@clerk/nextjs"
+import { toast } from "@/hooks/use-toast"
 import type { TalkBoardItem, ItemDetail } from "./news-talk-types"
 import { NEWS_DETAILS } from "./news-talk-types"
 
@@ -123,10 +124,14 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
         }, 1000)
       } else {
         const err = await res.json().catch(() => null)
-        alert(err?.error || "댓글 작성에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: err?.error || "댓글 작성에 실패했습니다.",
+        })
       }
     } catch {
-      alert("네트워크 오류가 발생했습니다.")
+      toast({ variant: "destructive", title: "오류", description: "네트워크 오류가 발생했습니다." })
     } finally {
       setIsSubmitting(false)
     }

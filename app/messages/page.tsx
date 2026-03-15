@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Send, Mail } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
+import { toast } from "@/hooks/use-toast"
 
 interface Message {
   id: string
@@ -98,10 +99,10 @@ export default function MessagesPage() {
         setText("")
       } else {
         const err = await res.json()
-        alert(err.error || "전송 실패")
+        toast({ variant: "destructive", title: "오류", description: err.error || "전송 실패" })
       }
     } catch {
-      alert("전송 중 오류가 발생했습니다.")
+      toast({ variant: "destructive", title: "오류", description: "전송 중 오류가 발생했습니다." })
     } finally {
       setSending(false)
     }

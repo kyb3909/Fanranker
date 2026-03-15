@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/pagination"
 import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
+import { toast } from "@/hooks/use-toast"
 
 interface Flair {
   id: string
@@ -93,7 +94,7 @@ export const CommunityContent = memo(function CommunityContent({
 
   const handleFollow = async () => {
     if (!isSignedIn) {
-      alert("로그인이 필요합니다.")
+      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
       return
     }
     if (!communitySlug || isFollowLoading) return

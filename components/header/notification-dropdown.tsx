@@ -16,39 +16,15 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 
-interface NotificationMetadata {
-  match_id?: string
-  is_correct?: boolean
-  points_earned?: number
-}
-
-interface Notification {
-  id: string
-  type:
-    | "comment"
-    | "reply"
-    | "new_post_by_followed"
-    | "expert_prediction"
-    | "settlement_result"
-    | "message"
-  actor_id: string
-  related_post_id: string | null
-  related_comment_id: string | null
-  is_read: boolean
-  created_at: string
-  metadata: NotificationMetadata | null
-}
-
-interface Profile {
-  user_id: string
-  nickname: string
-  avatar_url: string | null
-}
+import type { Notification } from "@/types/notification"
+import type { BaseProfile } from "@/types/user"
 
 interface Post {
   id: string
   title: string
 }
+
+type Profile = BaseProfile
 
 export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([])

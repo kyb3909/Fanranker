@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
+import { useSWRConfig } from "swr"
 import type { SelectedBet, GroupedMatch } from "@/components/betting/betting-types"
 import { useAlertModal } from "./use-alert-modal"
 
 export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () => void) {
   const { isSignedIn } = useAuth()
+  const { mutate: globalMutate } = useSWRConfig()
   const { alertModal, showAlert, closeAlert } = useAlertModal()
 
   const [selectedBets, setSelectedBets] = useState<SelectedBet[]>([])
@@ -235,7 +237,7 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
       setAnalysisText("")
       loadMatches()
       loadUserBalls()
-      window.dispatchEvent(new CustomEvent("ballBalanceUpdate"))
+      globalMutate("/api/tokens/balance")
     } catch (err) {
       showAlert(
         "error",

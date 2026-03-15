@@ -10,28 +10,10 @@ import { PostCardHeader } from "@/components/post-card/post-card-header"
 import { PostCardContent } from "@/components/post-card/post-card-content"
 import { PostCardFooter } from "@/components/post-card/post-card-footer"
 
-export interface TipTapNode {
-  type?: string
-  content?: TipTapNode[]
-  text?: string
-  attrs?: Record<string, unknown>
-  marks?: { type: string; attrs?: Record<string, unknown> }[]
-}
+export type { TipTapNode } from "@/types/post"
+import type { Post as BasePost, TipTapNode } from "@/types/post"
 
-interface Post {
-  id: number | string
-  community: string
-  communitySlug?: string
-  author: string
-  avatar: string
-  timestamp: string
-  title: string
-  content: string | TipTapNode
-  image?: string
-  upvotes: number
-  comments: number
-  temperature?: number
-  isUpvoted: boolean
+interface Post extends BasePost {
   views?: number
   userId?: string
   createdAt?: Date | string

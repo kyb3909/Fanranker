@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { toast } from "@/hooks/use-toast"
 import {
   BarChart3,
   Calendar,
@@ -122,10 +123,14 @@ export function AnalyticsDashboard() {
         setGenStart("")
         setGenEnd("")
       } else {
-        alert(data.error || "리포트 생성 실패")
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: data.error || "리포트 생성 실패",
+        })
       }
     } catch {
-      alert("리포트 생성 중 오류 발생")
+      toast({ variant: "destructive", title: "오류", description: "리포트 생성 중 오류 발생" })
     } finally {
       setGenerating(false)
     }
@@ -152,9 +157,7 @@ export function AnalyticsDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-foreground text-2xl font-bold">GA4 분석 리포트</h1>
-          <p className="text-muted-foreground text-sm">
-            주간 사이트 분석 데이터를 확인합니다.
-          </p>
+          <p className="text-muted-foreground text-sm">주간 사이트 분석 데이터를 확인합니다.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => mutateList()}>
@@ -194,7 +197,11 @@ export function AnalyticsDashboard() {
                   className="border-input bg-background rounded-md border px-3 py-1.5 text-sm"
                 />
               </div>
-              <Button size="sm" onClick={handleGenerate} disabled={generating || !genStart || !genEnd}>
+              <Button
+                size="sm"
+                onClick={handleGenerate}
+                disabled={generating || !genStart || !genEnd}
+              >
                 {generating ? (
                   <>
                     <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -446,9 +453,7 @@ function ReportDetailView({ report }: { report: ReportDetail }) {
                   {d.trafficSources.map((src, i) => (
                     <TableRow key={i}>
                       <TableCell>{src.channel}</TableCell>
-                      <TableCell className="text-right">
-                        {src.sessions.toLocaleString()}
-                      </TableCell>
+                      <TableCell className="text-right">{src.sessions.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -530,7 +535,9 @@ function ChangeText({ value }: { value: number }) {
 
   const isUp = value > 0
   return (
-    <p className={`mt-1 flex items-center gap-0.5 text-xs ${isUp ? "text-green-600" : "text-primary"}`}>
+    <p
+      className={`mt-1 flex items-center gap-0.5 text-xs ${isUp ? "text-green-600" : "text-primary"}`}
+    >
       {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       {isUp ? "+" : ""}
       {value}% 전주 대비

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
@@ -21,6 +20,8 @@ import { TitleBadge } from "@/components/profile/title-badge"
 import { formatRelativeTime } from "@/lib/utils/date"
 import Link from "next/link"
 import Image from "next/image"
+import useSWR from "swr"
+import { fetcher } from "@/lib/swr"
 
 interface PublicProfile {
   user_id: string
@@ -72,38 +73,16 @@ export function PublicProfileView({ userId }: { userId: string }) {
   const router = useRouter()
   const { user } = useUser()
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null)
-  const [publicPosts, setPublicPosts] = useState<PublicPost[]>([])
-  const [boardPoints, setBoardPoints] = useState<BoardPointInfo[]>([])
-  const [equippedTitles, setEquippedTitles] = useState<EquippedTitleInfo[]>([])
-  const [pixelArts, setPixelArts] = useState<PixelArtInfo[]>([])
-  const [profileNotFound, setProfileNotFound] = useState(false)
+  const { data, isLoading, error } = useSWR(`/api/profile/${userId}`, fetcher, {
+    revalidateOnFocus: false,
+  })
 
-  const loadPublicProfile = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch(`/api/profile/${userId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPublicProfile(data.profile)
-        setPublicPosts(data.recent_posts || [])
-        setBoardPoints(data.board_points || [])
-        setEquippedTitles(data.equipped_titles || [])
-        setPixelArts(data.pixel_arts || [])
-      } else if (response.status === 404) {
-        setProfileNotFound(true)
-      }
-    } catch {
-      setProfileNotFound(true)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [userId])
-
-  useEffect(() => {
-    loadPublicProfile()
-  }, [loadPublicProfile])
+  const publicProfile: PublicProfile | null = data?.profile ?? null
+  const publicPosts: PublicPost[] = data?.recent_posts ?? []
+  const boardPoints: BoardPointInfo[] = data?.board_points ?? []
+  const equippedTitles: EquippedTitleInfo[] = data?.equipped_titles ?? []
+  const pixelArts: PixelArtInfo[] = data?.pixel_arts ?? []
+  const profileNotFound = !!error || (data && !data.profile)
 
   if (profileNotFound) {
     return (

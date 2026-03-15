@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
+import { toast } from "@/hooks/use-toast"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
@@ -73,7 +74,7 @@ export function PostDetailContent({
 
   const handleBlockUser = () => {
     if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
-      alert("차단 기능은 준비 중입니다.")
+      toast({ variant: "destructive", title: "알림", description: "차단 기능은 준비 중입니다." })
     }
   }
 
@@ -87,13 +88,17 @@ export function PostDetailContent({
       const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(data.error || "삭제에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: data.error || "삭제에 실패했습니다.",
+        })
         return
       }
       router.push("/")
       router.refresh()
     } catch {
-      alert("삭제 중 오류가 발생했습니다.")
+      toast({ variant: "destructive", title: "오류", description: "삭제 중 오류가 발생했습니다." })
     }
   }
 

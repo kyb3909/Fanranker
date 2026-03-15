@@ -109,15 +109,23 @@ export function MyProfileSettings() {
     const trimmedNickname = nickname.trim()
 
     if (!trimmedNickname) {
-      alert("닉네임을 입력해주세요.")
+      toast({ variant: "destructive", title: "알림", description: "닉네임을 입력해주세요." })
       return
     }
     if (trimmedNickname.length < 2) {
-      alert("닉네임은 2자 이상이어야 합니다.")
+      toast({
+        variant: "destructive",
+        title: "알림",
+        description: "닉네임은 2자 이상이어야 합니다.",
+      })
       return
     }
     if (trimmedNickname.length > 20) {
-      alert("닉네임은 20자 이하여야 합니다.")
+      toast({
+        variant: "destructive",
+        title: "알림",
+        description: "닉네임은 20자 이하여야 합니다.",
+      })
       return
     }
 
@@ -186,10 +194,14 @@ export function MyProfileSettings() {
         const errorMessage = errorData.details
           ? `${errorData.error}\n\n상세: ${errorData.details}`
           : errorData.error || "저장에 실패했습니다."
-        alert(errorMessage)
+        toast({ variant: "destructive", title: "오류", description: errorMessage })
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : "저장 중 오류가 발생했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "저장 중 오류가 발생했습니다.",
+      })
     } finally {
       setIsSaving(false)
     }
@@ -217,10 +229,14 @@ export function MyProfileSettings() {
         await signOut()
         router.push("/")
       } else {
-        alert("계정 삭제에 실패했습니다.")
+        toast({ variant: "destructive", title: "오류", description: "계정 삭제에 실패했습니다." })
       }
     } catch {
-      alert("계정 삭제 중 오류가 발생했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: "계정 삭제 중 오류가 발생했습니다.",
+      })
     }
   }
 

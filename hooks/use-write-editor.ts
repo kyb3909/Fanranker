@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react"
+import { useReducer, useEffect, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
+import { toast } from "@/hooks/use-toast"
 
 interface Category {
   id: string
@@ -26,6 +27,69 @@ interface OgData {
   siteName?: string
 }
 
+// ── State & Reducer ──
+
+interface EditorState {
+  selectedCommunity: string
+  title: string
+  content: unknown
+  imagePreview: string | null
+  imageFile: File | null
+  sourceUrl: string
+  ogData: OgData | null
+  flairs: Flair[]
+  selectedFlair: string | null
+  isSubmitting: boolean
+  isUploadingImage: boolean
+  isEmbedLoading: boolean
+  isLoadingEdit: boolean
+  isFetchingOg: boolean
+  editLoadError: string | null
+}
+
+type EditorAction =
+  | { type: "SET_FIELD"; field: keyof EditorState; value: unknown }
+  | { type: "SET_IMAGE"; preview: string | null; file: File | null }
+  | {
+      type: "LOAD_EDIT_SUCCESS"
+      community: string
+      title: string
+      content: unknown
+      image: string | null
+    }
+  | { type: "LOAD_EDIT_ERROR"; error: string }
+  | { type: "SET_FLAIRS"; flairs: Flair[] }
+  | { type: "RESET_OG" }
+
+function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  switch (action.type) {
+    case "SET_FIELD":
+      return { ...state, [action.field]: action.value }
+    case "SET_IMAGE":
+      return { ...state, imagePreview: action.preview, imageFile: action.file }
+    case "LOAD_EDIT_SUCCESS":
+      return {
+        ...state,
+        selectedCommunity: action.community,
+        title: action.title,
+        content: action.content,
+        imagePreview: action.image,
+        isLoadingEdit: false,
+        editLoadError: null,
+      }
+    case "LOAD_EDIT_ERROR":
+      return { ...state, isLoadingEdit: false, editLoadError: action.error }
+    case "SET_FLAIRS":
+      return { ...state, flairs: action.flairs, selectedFlair: null }
+    case "RESET_OG":
+      return { ...state, ogData: null, isFetchingOg: false }
+    default:
+      return state
+  }
+}
+
+// ── Hook ──
+
 export function useWriteEditor() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -39,59 +103,63 @@ export function useWriteEditor() {
   })
   const communities = catData?.categories || []
 
-  const [selectedCommunity, setSelectedCommunity] = useState(communitySlug)
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState<unknown>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [isEmbedLoading, setIsEmbedLoading] = useState(false)
-  const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId)
-  const [editLoadError, setEditLoadError] = useState<string | null>(null)
-  const [sourceUrl, setSourceUrl] = useState("")
-  const [isFetchingOg, setIsFetchingOg] = useState(false)
-  const [ogData, setOgData] = useState<OgData | null>(null)
-  const [flairs, setFlairs] = useState<Flair[]>([])
-  const [selectedFlair, setSelectedFlair] = useState<string | null>(null)
+  const [state, dispatch] = useReducer(editorReducer, {
+    selectedCommunity: communitySlug,
+    title: "",
+    content: null,
+    imagePreview: null,
+    imageFile: null,
+    sourceUrl: "",
+    ogData: null,
+    flairs: [],
+    selectedFlair: null,
+    isSubmitting: false,
+    isUploadingImage: false,
+    isEmbedLoading: false,
+    isLoadingEdit: !!editId,
+    isFetchingOg: false,
+    editLoadError: null,
+  })
 
   useEffect(() => {
-    if (communitySlug) setSelectedCommunity(communitySlug)
+    if (communitySlug)
+      dispatch({ type: "SET_FIELD", field: "selectedCommunity", value: communitySlug })
   }, [communitySlug])
 
   // 게시판 변경 시 말머리 목록 로드
   useEffect(() => {
-    if (!selectedCommunity) {
-      setFlairs([])
-      setSelectedFlair(null)
+    if (!state.selectedCommunity) {
+      dispatch({ type: "SET_FLAIRS", flairs: [] })
       return
     }
-    fetch(`/api/flairs?community_slug=${selectedCommunity}`)
+    fetch(`/api/flairs?community_slug=${state.selectedCommunity}`)
       .then((res) => res.json())
-      .then((data) => {
-        setFlairs(data.flairs || [])
-        setSelectedFlair(null)
-      })
-      .catch(() => setFlairs([]))
-  }, [selectedCommunity])
+      .then((data) => dispatch({ type: "SET_FLAIRS", flairs: data.flairs || [] }))
+      .catch(() => dispatch({ type: "SET_FLAIRS", flairs: [] }))
+  }, [state.selectedCommunity])
 
+  // 수정 모드: 기존 글 로드
   useEffect(() => {
     if (!editId) return
-    setIsLoadingEdit(true)
-    setEditLoadError(null)
+    dispatch({ type: "SET_FIELD", field: "isLoadingEdit", value: true })
     fetch(`/api/posts/${editId}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("글을 불러올 수 없습니다."))))
       .then((data) => {
         const p = data.post
-        setSelectedCommunity(p.community_slug || "")
-        setTitle(p.title || "")
-        setContent(p.content || null)
-        setImagePreview(p.image || null)
+        dispatch({
+          type: "LOAD_EDIT_SUCCESS",
+          community: p.community_slug || "",
+          title: p.title || "",
+          content: p.content || null,
+          image: p.image || null,
+        })
       })
-      .catch((err) => {
-        setEditLoadError(err.message || "글을 불러오는 데 실패했습니다.")
-      })
-      .finally(() => setIsLoadingEdit(false))
+      .catch((err) =>
+        dispatch({
+          type: "LOAD_EDIT_ERROR",
+          error: err.message || "글을 불러오는 데 실패했습니다.",
+        })
+      )
   }, [editId])
 
   const handleImageChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,20 +167,27 @@ export function useWriteEditor() {
     if (!file) return
 
     if (!file.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드할 수 있습니다.")
+      toast({
+        variant: "destructive",
+        title: "알림",
+        description: "이미지 파일만 업로드할 수 있습니다.",
+      })
       return
     }
     if (file.size > 10 * 1024 * 1024) {
-      alert("파일 크기는 10MB를 초과할 수 없습니다.")
+      toast({
+        variant: "destructive",
+        title: "알림",
+        description: "파일 크기는 10MB를 초과할 수 없습니다.",
+      })
       return
     }
 
     const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result as string)
+    reader.onloadend = () => dispatch({ type: "SET_IMAGE", preview: reader.result as string, file })
     reader.readAsDataURL(file)
-    setImageFile(file)
 
-    setIsUploadingImage(true)
+    dispatch({ type: "SET_FIELD", field: "isUploadingImage", value: true })
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -122,19 +197,22 @@ export function useWriteEditor() {
         throw new Error(error.error || "이미지 업로드에 실패했습니다.")
       }
       const { url } = await response.json()
-      setImagePreview(url)
+      dispatch({ type: "SET_IMAGE", preview: url, file: null })
     } catch (error) {
-      alert(error instanceof Error ? error.message : "이미지 업로드 중 오류가 발생했습니다.")
-      setImagePreview(null)
-      setImageFile(null)
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description:
+          error instanceof Error ? error.message : "이미지 업로드 중 오류가 발생했습니다.",
+      })
+      dispatch({ type: "SET_IMAGE", preview: null, file: null })
     } finally {
-      setIsUploadingImage(false)
+      dispatch({ type: "SET_FIELD", field: "isUploadingImage", value: false })
     }
   }, [])
 
   const handleRemoveImage = useCallback(() => {
-    setImagePreview(null)
-    setImageFile(null)
+    dispatch({ type: "SET_IMAGE", preview: null, file: null })
   }, [])
 
   const handleFetchOg = useCallback(
@@ -145,62 +223,66 @@ export function useWriteEditor() {
 
       const imageExtRegex = /\.(jpe?g|png|gif|webp|svg|bmp|avif|ico)(\?.*)?$/i
       if (imageExtRegex.test(finalUrl)) {
-        setImagePreview(finalUrl)
-        setImageFile(null)
-        setOgData(null)
+        dispatch({ type: "SET_IMAGE", preview: finalUrl, file: null })
+        dispatch({ type: "RESET_OG" })
         return
       }
 
-      setIsFetchingOg(true)
-      setOgData(null)
+      dispatch({ type: "SET_FIELD", field: "isFetchingOg", value: true })
+      dispatch({ type: "SET_FIELD", field: "ogData", value: null })
       try {
         const res = await fetch(`/api/og?url=${encodeURIComponent(finalUrl)}`)
         if (!res.ok) throw new Error("OG 정보를 가져올 수 없습니다.")
         const data = await res.json()
 
-        if (data.image) {
-          setImagePreview(data.image)
-          setImageFile(null)
-        }
-        setOgData({ title: data.title, description: data.description, siteName: data.siteName })
+        if (data.image) dispatch({ type: "SET_IMAGE", preview: data.image, file: null })
+        dispatch({
+          type: "SET_FIELD",
+          field: "ogData",
+          value: { title: data.title, description: data.description, siteName: data.siteName },
+        })
 
-        if (!title && data.title) setTitle(data.title)
+        if (!state.title && data.title)
+          dispatch({ type: "SET_FIELD", field: "title", value: data.title })
       } catch {
-        // 실패해도 무시 - 사용자가 직접 이미지 업로드 가능
+        // 실패해도 무시
       } finally {
-        setIsFetchingOg(false)
+        dispatch({ type: "SET_FIELD", field: "isFetchingOg", value: false })
       }
     },
-    [title]
+    [state.title]
   )
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!selectedCommunity || !title || !content) {
-        alert("모든 필드를 입력해주세요.")
+      if (!state.selectedCommunity || !state.title || !state.content) {
+        toast({ variant: "destructive", title: "알림", description: "모든 필드를 입력해주세요." })
         return
       }
       if (
-        typeof content === "object" &&
-        content !== null &&
-        (!("content" in content) ||
-          !Array.isArray((content as { content: unknown[] }).content) ||
-          (content as { content: unknown[] }).content.length === 0)
+        typeof state.content === "object" &&
+        state.content !== null &&
+        (!("content" in state.content) ||
+          !Array.isArray((state.content as { content: unknown[] }).content) ||
+          (state.content as { content: unknown[] }).content.length === 0)
       ) {
-        alert("내용을 입력해주세요.")
+        toast({ variant: "destructive", title: "알림", description: "내용을 입력해주세요." })
         return
       }
 
-      setIsSubmitting(true)
+      dispatch({ type: "SET_FIELD", field: "isSubmitting", value: true })
       try {
         let imageUrl = null
-        if (imagePreview) {
-          if (imagePreview.startsWith("http://") || imagePreview.startsWith("https://")) {
-            imageUrl = imagePreview
-          } else if (imageFile) {
+        if (state.imagePreview) {
+          if (
+            state.imagePreview.startsWith("http://") ||
+            state.imagePreview.startsWith("https://")
+          ) {
+            imageUrl = state.imagePreview
+          } else if (state.imageFile) {
             const formData = new FormData()
-            formData.append("file", imageFile)
+            formData.append("file", state.imageFile)
             const uploadResponse = await fetch("/api/upload/image", {
               method: "POST",
               body: formData,
@@ -220,11 +302,11 @@ export function useWriteEditor() {
           method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            community_slug: selectedCommunity,
-            title,
-            content,
+            community_slug: state.selectedCommunity,
+            title: state.title,
+            content: state.content,
             image: imageUrl,
-            flair_id: selectedFlair || null,
+            flair_id: state.selectedFlair || null,
           }),
         })
 
@@ -235,61 +317,71 @@ export function useWriteEditor() {
           )
         }
 
-        router.push(editId ? `/post/${editId}` : `/community/${selectedCommunity}`)
+        router.push(editId ? `/post/${editId}` : `/community/${state.selectedCommunity}`)
       } catch (error) {
-        alert(error instanceof Error ? error.message : "글 작성 중 오류가 발생했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: error instanceof Error ? error.message : "글 작성 중 오류가 발생했습니다.",
+        })
       } finally {
-        setIsSubmitting(false)
+        dispatch({ type: "SET_FIELD", field: "isSubmitting", value: false })
       }
     },
-    [selectedCommunity, title, content, imagePreview, imageFile, editId, selectedFlair, router]
+    [state, editId, router]
   )
 
   const canSubmit =
-    !isSubmitting &&
-    !isEmbedLoading &&
-    !!selectedCommunity &&
-    !!title &&
-    !!content &&
+    !state.isSubmitting &&
+    !state.isEmbedLoading &&
+    !!state.selectedCommunity &&
+    !!state.title &&
+    !!state.content &&
     !(
-      typeof content === "object" &&
-      content !== null &&
-      "content" in content &&
-      (!Array.isArray((content as { content: unknown[] }).content) ||
-        (content as { content: unknown[] }).content.length === 0)
+      typeof state.content === "object" &&
+      state.content !== null &&
+      "content" in state.content &&
+      (!Array.isArray((state.content as { content: unknown[] }).content) ||
+        (state.content as { content: unknown[] }).content.length === 0)
     )
 
+  // Setter helpers for external components
+  const setSelectedCommunity = (v: string) =>
+    dispatch({ type: "SET_FIELD", field: "selectedCommunity", value: v })
+  const setTitle = (v: string) => dispatch({ type: "SET_FIELD", field: "title", value: v })
+  const setContent = (v: unknown) => dispatch({ type: "SET_FIELD", field: "content", value: v })
+  const setSourceUrl = (v: string) => dispatch({ type: "SET_FIELD", field: "sourceUrl", value: v })
+  const setSelectedFlair = (v: string | null) =>
+    dispatch({ type: "SET_FIELD", field: "selectedFlair", value: v })
+  const setIsEmbedLoading = (v: boolean) =>
+    dispatch({ type: "SET_FIELD", field: "isEmbedLoading", value: v })
+
   return {
-    // Auth
     isSignedIn,
     isLoaded,
-    // Data
     editId,
     communities,
-    // Form state
-    selectedCommunity,
+    selectedCommunity: state.selectedCommunity,
     setSelectedCommunity,
-    title,
+    title: state.title,
     setTitle,
-    content,
-    setContent: setContent as (v: unknown) => void,
-    imagePreview,
-    sourceUrl,
+    content: state.content,
+    setContent,
+    imagePreview: state.imagePreview,
+    sourceUrl: state.sourceUrl,
     setSourceUrl,
-    ogData,
-    flairs,
-    selectedFlair,
+    ogData: state.ogData,
+    flairs: state.flairs,
+    selectedFlair: state.selectedFlair,
     setSelectedFlair,
-    // Loading states
-    isSubmitting,
-    isUploadingImage,
-    isEmbedLoading,
+    isSubmitting: state.isSubmitting,
+    isUploadingImage: state.isUploadingImage,
+    isEmbedLoading: state.isEmbedLoading,
     setIsEmbedLoading,
-    isLoadingEdit,
-    editLoadError,
-    isFetchingOg,
+    isLoadingEdit: state.isLoadingEdit,
+    editLoadError: state.editLoadError,
+    isFetchingOg: state.isFetchingOg,
     canSubmit,
-    // Handlers
     handleImageChange,
     handleRemoveImage,
     handleFetchOg,

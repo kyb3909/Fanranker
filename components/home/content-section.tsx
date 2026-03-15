@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
+import { toast } from "@/hooks/use-toast"
 import { PredictionActivityCard } from "@/components/my-predictions/prediction-activity-card"
 import { Loader2, Trophy } from "lucide-react"
 import Link from "next/link"
@@ -129,7 +130,11 @@ export function ContentSection() {
       })
       const data = await response.json()
       if (!response.ok) {
-        alert(data.error || "구매에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: data.error || "구매에 실패했습니다.",
+        })
         return null
       }
       if (!data.is_free) {
@@ -137,7 +142,7 @@ export function ContentSection() {
       }
       return data.predictions || null
     } catch {
-      alert("구매 중 오류가 발생했습니다.")
+      toast({ variant: "destructive", title: "오류", description: "구매 중 오류가 발생했습니다." })
       return null
     }
   }

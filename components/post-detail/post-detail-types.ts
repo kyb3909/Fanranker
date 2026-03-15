@@ -1,26 +1,7 @@
-export interface Post {
-  id: string | number
-  community: string
-  author: string
-  avatar: string
-  timestamp: string
-  title: string
-  content: string | any // string 또는 TipTap JSON
-  image?: string
-  upvotes: number
-  comments: number
-  temperature?: number
-  isUpvoted: boolean
-  userId?: string // Clerk user_id (optional, for user actions)
-  createdAt?: Date | string
-  titleDisplay?: TitleDisplay | null
-}
+export type { Post } from "@/types/post"
+export type { TitleDisplay } from "@/types/user"
 
-export interface TitleDisplay {
-  adjTitle?: string | null
-  nounTitle?: string | null
-  rarity?: "common" | "rare" | "epic" | "legendary" | null
-}
+import type { TitleDisplay } from "@/types/user"
 
 export interface CommentSticker {
   id: string

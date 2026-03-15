@@ -1,33 +1,16 @@
 import { useCallback, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import useSWRInfinite from "swr/infinite"
-import { type TipTapNode } from "@/components/post-card"
-import { type TitleDisplay } from "@/components/profile/title-badge"
+import type { TipTapNode } from "@/types/post"
+import type { TitleDisplay } from "@/types/user"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { fetcher } from "@/lib/swr"
 
 export type SortType = "random" | "hot" | "new"
 
-export interface Post {
-  id: string
-  community: string
-  communitySlug?: string
-  author: string
-  avatar: string
-  authorTemperature?: number
-  userId?: string
-  timestamp: string
-  title: string
-  content: string | TipTapNode
-  image?: string
-  upvotes: number
-  comments: number
-  temperature: number
-  isUpvoted: boolean
-  createdAt: Date
-  titleDisplay?: TitleDisplay | null
-}
+export type { Post } from "@/types/post"
+import type { Post } from "@/types/post"
 
 const PAGE_SIZE = 20
 
@@ -162,18 +145,20 @@ export function useFeed(
     // ID 기반 중복 제거 (페이지 간 동일 게시글 제거)
     const seen = new Set<string>()
     const uniquePosts = allPosts.filter((post) => {
-      if (seen.has(post.id)) return false
-      seen.add(post.id)
+      const id = String(post.id)
+      if (seen.has(id)) return false
+      seen.add(id)
       return true
     })
 
     // 제목 기반 유사 중복 제거 (크롤링으로 인한 동일 제목 게시글)
     const seenTitles = new Map<string, string>() // normalized title → first post id
     const dedupedPosts = uniquePosts.filter((post) => {
+      const id = String(post.id)
       const normalized = post.title.trim().toLowerCase()
       const existing = seenTitles.get(normalized)
-      if (existing && existing !== post.id) return false
-      seenTitles.set(normalized, post.id)
+      if (existing && existing !== id) return false
+      seenTitles.set(normalized, id)
       return true
     })
 

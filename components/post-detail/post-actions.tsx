@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { ArrowUp, ArrowDown, MessageCircle, Bookmark } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 import { ShareMenu } from "@/components/share-menu"
 
 interface PostActionsProps {
@@ -66,7 +67,7 @@ export function PostActions({
 
   const handleUpvote = async () => {
     if (!isSignedIn) {
-      alert("로그인이 필요합니다.")
+      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
       return
     }
 
@@ -100,13 +101,17 @@ export function PostActions({
 
       setIsUpvoted(action !== "deleted" && voteType === "up")
     } catch (error) {
-      alert(error instanceof Error ? error.message : "투표 처리에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "투표 처리에 실패했습니다.",
+      })
     }
   }
 
   const handleBookmark = async () => {
     if (!isSignedIn) {
-      alert("로그인이 필요합니다.")
+      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
       return
     }
 
@@ -126,7 +131,11 @@ export function PostActions({
       const { bookmarked } = await response.json()
       setIsBookmarked(bookmarked)
     } catch (error) {
-      alert(error instanceof Error ? error.message : "북마크 처리에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "북마크 처리에 실패했습니다.",
+      })
     }
   }
 

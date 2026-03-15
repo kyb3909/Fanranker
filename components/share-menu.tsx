@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Share2 } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface ShareMenuProps {
   postId: number | string
@@ -36,7 +37,7 @@ export function ShareMenu({ postId, postTitle }: ShareMenuProps) {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getPostUrl())
-    alert("링크가 복사되었습니다!")
+    toast({ title: "완료", description: "링크가 복사되었습니다!" })
   }
 
   return (

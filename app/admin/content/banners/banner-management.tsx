@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Pencil,
 } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface Banner {
   id: string
@@ -111,7 +112,11 @@ export function BannerManagement({ initialBanners }: { initialBanners: Banner[] 
         setForm((prev) => ({ ...prev, image_url: data.url }))
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "업로드 실패")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: err instanceof Error ? err.message : "업로드 실패",
+      })
     } finally {
       setUploading(false)
       setUploadTargetId(null)
@@ -120,7 +125,7 @@ export function BannerManagement({ initialBanners }: { initialBanners: Banner[] 
 
   const handleSave = async () => {
     if (!form.title.trim()) {
-      alert("제목을 입력하세요.")
+      toast({ variant: "destructive", title: "알림", description: "제목을 입력하세요." })
       return
     }
     setSaving(true)
@@ -147,7 +152,11 @@ export function BannerManagement({ initialBanners }: { initialBanners: Banner[] 
       }
       resetForm()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "저장 실패")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: err instanceof Error ? err.message : "저장 실패",
+      })
     } finally {
       setSaving(false)
     }

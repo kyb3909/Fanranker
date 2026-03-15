@@ -2,11 +2,8 @@
 
 import { cn } from "@/lib/utils"
 
-export interface TitleDisplay {
-  adjTitle?: string | null
-  nounTitle?: string | null
-  rarity?: "common" | "rare" | "epic" | "legendary" | null
-}
+export type { TitleDisplay } from "@/types/user"
+import type { TitleDisplay } from "@/types/user"
 
 interface TitleBadgeProps extends TitleDisplay {
   className?: string

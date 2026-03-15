@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@clerk/nextjs"
+import { toast } from "@/hooks/use-toast"
 
 interface UsePostCardActionsOptions {
   postId: number | string
@@ -34,13 +35,17 @@ export function usePostCardActions({
       const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(data.error || "삭제에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: data.error || "삭제에 실패했습니다.",
+        })
         return
       }
       router.push("/")
       router.refresh()
     } catch {
-      alert("삭제 중 오류가 발생했습니다.")
+      toast({ variant: "destructive", title: "오류", description: "삭제 중 오류가 발생했습니다." })
     }
   }
 
@@ -50,13 +55,13 @@ export function usePostCardActions({
 
   const handleBlockUser = () => {
     if (confirm(`${author}님을 차단하시겠습니까?`)) {
-      alert("차단 기능은 준비 중입니다.")
+      toast({ variant: "destructive", title: "알림", description: "차단 기능은 준비 중입니다." })
     }
   }
 
   const handleVote = async (type: "up" | "down") => {
     if (!isSignedIn) {
-      alert("로그인이 필요합니다.")
+      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
       return
     }
     const prevVote = myVote
@@ -102,7 +107,7 @@ export function usePostCardActions({
 
   const handleBookmark = async () => {
     if (!isSignedIn) {
-      alert("로그인이 필요합니다.")
+      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
       return
     }
     try {
@@ -118,7 +123,11 @@ export function usePostCardActions({
       const { bookmarked } = await response.json()
       setIsBookmarked(bookmarked)
     } catch (error) {
-      alert(error instanceof Error ? error.message : "북마크 처리에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "북마크 처리에 실패했습니다.",
+      })
     }
   }
 

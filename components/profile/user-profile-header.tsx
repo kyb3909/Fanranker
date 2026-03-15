@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { UserProfileBadge } from "@/components/profile/user-profile-badge"
 import { UserPlus, UserMinus, Newspaper, MessageCircle, Ban } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getTemperatureStyle } from "@/lib/temperature"
@@ -40,7 +41,7 @@ export function UserProfileHeader({
 
   const handleFollow = async () => {
     if (!currentUserId) {
-      alert("로그인이 필요합니다.")
+      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
       return
     }
 
@@ -61,7 +62,11 @@ export function UserProfileHeader({
       const { following } = await response.json()
       setIsFollowing(following)
     } catch (error) {
-      alert(error instanceof Error ? error.message : "팔로우 처리에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "팔로우 처리에 실패했습니다.",
+      })
     } finally {
       setIsLoading(false)
     }

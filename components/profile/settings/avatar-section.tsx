@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Loader2, Camera } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface AvatarSectionProps {
   avatarUrl: string
@@ -26,7 +27,11 @@ export function AvatarSection({
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드할 수 있습니다.")
+      toast({
+        variant: "destructive",
+        title: "알림",
+        description: "이미지 파일만 업로드할 수 있습니다.",
+      })
       return
     }
     setUploading(true)
@@ -50,7 +55,11 @@ export function AvatarSection({
       }
       onAvatarChanged(url)
     } catch (err) {
-      alert(err instanceof Error ? err.message : "프로필 사진 변경에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: err instanceof Error ? err.message : "프로필 사진 변경에 실패했습니다.",
+      })
     } finally {
       setUploading(false)
       e.target.value = ""
