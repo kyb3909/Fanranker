@@ -175,6 +175,13 @@ export function AuthStep({
                 autoComplete="new-password"
                 minLength={8}
               />
+              <ul className="text-muted-foreground space-y-0.5 text-[11px]">
+                <li className={password.length >= 8 ? "text-emerald-500" : ""}>
+                  {password.length >= 8 ? "✓" : "•"} 8자 이상
+                </li>
+                <li>• 유출된 적 없는 비밀번호 (보안 검사 자동 수행)</li>
+                <li>• 너무 단순한 패턴 금지 (예: 12345678, password)</li>
+              </ul>
             </div>
 
             <div className="space-y-1.5">
