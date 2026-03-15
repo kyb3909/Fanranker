@@ -395,11 +395,12 @@ export default function SignUpPage() {
         await Promise.allSettled(rewardPromises)
       }
 
-      // 4. 환영 메시지 + 홈으로 이동
+      // 4. 환영 메시지 + 홈으로 이동 (toast가 보이도록 약간 딜레이)
       toast({
-        title: "가입을 환영합니다!",
-        description: "공놀이판에 오신 것을 환영해요. 즐거운 시간 보내세요!",
+        title: "공놀이판에 오신 것을 환영합니다!",
+        duration: 5000,
       })
+      await new Promise((r) => setTimeout(r, 500))
       router.replace("/")
     } catch (err) {
       toast({
