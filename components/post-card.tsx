@@ -67,6 +67,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             community={post.community}
             communityLink={communityLink}
             timestamp={post.timestamp}
+            temperature={post.temperature}
             isAuthor={isAuthor}
             onEdit={handleEditPost}
             onDelete={handleDeletePost}
