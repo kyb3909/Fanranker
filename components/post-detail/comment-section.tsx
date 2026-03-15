@@ -64,7 +64,9 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
 
   const reloadComments = useCallback(async () => {
     try {
-      const response = await fetch(`/api/comments?post_id=${postId}`)
+      const response = await fetch(`/api/comments?post_id=${postId}`, {
+        cache: "no-store",
+      })
       if (!response.ok) throw new Error("댓글을 불러오는데 실패했습니다.")
       const { comments: fetchedComments, profiles, equippedTitles } = await response.json()
       const transformedComments = transformComments(
