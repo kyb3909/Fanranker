@@ -32,12 +32,20 @@ export function EmbedCard({
   author_name,
   className,
 }: EmbedCardProps) {
+  // YouTube: 직접 iframe 렌더링 (oEmbed API 불필요)
+  const youtubeVideoId =
+    provider === "youtube"
+      ? url.match(
+          /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+        )?.[1]
+      : null
+
   const [fetchedHtml, setFetchedHtml] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // html prop이 없으면 oEmbed API에서 자동 fetch
+  // YouTube가 아닌 경우: html prop이 없으면 oEmbed API에서 자동 fetch
   useEffect(() => {
-    if (htmlProp || fetchedHtml) return
+    if (youtubeVideoId || htmlProp || fetchedHtml) return
     setIsLoading(true)
     fetch(`/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`)
       .then((r) => (r.ok ? r.json() : null))
@@ -46,7 +54,33 @@ export function EmbedCard({
       })
       .catch(() => {})
       .finally(() => setIsLoading(false))
-  }, [url, htmlProp, fetchedHtml])
+  }, [url, htmlProp, fetchedHtml, youtubeVideoId])
+
+  // YouTube: 직접 iframe
+  if (youtubeVideoId && !htmlProp) {
+    return (
+      <Card className={cn("border-border bg-card overflow-hidden border", className)}>
+        <CardContent className="p-0">
+          <div className="relative aspect-video w-full">
+            <iframe
+              src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
+              className="h-full w-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          {(title || author_name) && (
+            <div className="border-border bg-muted/30 border-t p-4">
+              {title && (
+                <h3 className="text-foreground line-clamp-2 text-sm font-semibold">{title}</h3>
+              )}
+              {author_name && <p className="text-muted-foreground mt-1 text-xs">{author_name}</p>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   const html = htmlProp || fetchedHtml
 

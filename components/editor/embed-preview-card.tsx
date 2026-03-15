@@ -44,10 +44,14 @@ export function EmbedPreviewCard({
   autoExpand = false,
 }: EmbedPreviewCardProps) {
   const [isExpanded, setIsExpanded] = useState(autoExpand)
-  // SWR: 확장 시에만 fetch (key가 null이면 fetch 안 함)
-  const oembedKey = isExpanded
-    ? `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
-    : null
+  // YouTube는 oEmbed API 없이 직접 embed URL 생성 가능
+  const youtubeVideoId = provider === "youtube" ? extractYouTubeId(url) : null
+
+  // SWR: YouTube가 아닌 경우에만 확장 시 fetch
+  const oembedKey =
+    isExpanded && !youtubeVideoId
+      ? `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
+      : null
   const { data: oembedData, isLoading: isLoadingEmbed } = useSWR(
     oembedKey,
     (u: string) => fetch(u).then((r) => (r.ok ? r.json() : null)),
@@ -225,19 +229,24 @@ export function EmbedPreviewCard({
                   <p className="text-muted-foreground text-sm">로딩 중...</p>
                 </div>
               </div>
+            ) : youtubeVideoId ? (
+              // YouTube: 직접 iframe 렌더링 (oEmbed API 불필요)
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                <iframe
+                  src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
             ) : embedHtml ? (
-              // oembed HTML 렌더링
+              // 기타 provider: oembed HTML 렌더링
               provider === "instagram" ? (
                 <InstagramPreviewEmbed html={embedHtml} />
               ) : provider === "x" ? (
                 <XPreviewEmbed html={embedHtml} url={url} author_name={author_name} />
               ) : (
-                <div
-                  className={cn(
-                    "relative w-full overflow-hidden rounded-lg",
-                    provider === "youtube" && "aspect-video"
-                  )}
-                >
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg">
                   <div
                     className="h-full w-full [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
                     dangerouslySetInnerHTML={{ __html: embedHtml }}
@@ -404,4 +413,12 @@ function XPreviewEmbed({
       )}
     </div>
   )
+}
+
+/** YouTube URL에서 video ID 추출 */
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+  )
+  return match ? match[1] : null
 }
