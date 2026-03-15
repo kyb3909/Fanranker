@@ -108,13 +108,6 @@ export function ProfileStep({
             className="hidden"
           />
         </div>
-        {!avatarUrl && (
-          <span className="flex items-center gap-1 text-[11px] text-amber-600">
-            <Coins className="h-3 w-3" />
-            프로필 사진 설정 시 +200 골드
-          </span>
-        )}
-        {avatarUrl && <span className="text-[11px] text-green-600">+200 골드 보상 예정!</span>}
       </div>
 
       {/* Nickname */}
@@ -159,7 +152,7 @@ export function ProfileStep({
           <Coins className="h-4 w-4 text-amber-500" />
           <p className="text-foreground text-sm font-medium">최애 팀 & 선수</p>
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
-            +200 골드
+            +100 골드
           </span>
         </div>
         <div className="space-y-3">
@@ -187,7 +180,7 @@ export function ProfileStep({
           </div>
         </div>
         <p className="text-muted-foreground mt-2 text-[11px]">
-          하나라도 입력하면 200 골드를 드려요!
+          하나라도 입력하면 100 골드를 드려요!
         </p>
       </div>
 

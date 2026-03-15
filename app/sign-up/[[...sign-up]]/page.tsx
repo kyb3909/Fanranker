@@ -360,29 +360,14 @@ export default function SignUpPage() {
       // 3. Gold rewards (fire-and-forget, don't block redirect)
       const rewardPromises: Promise<unknown>[] = []
 
-      // 프로필 사진 설정 보상: +200 골드
-      if (avatarUrl) {
-        rewardPromises.push(
-          fetch("/api/gold/reward", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              amount: 200,
-              description: "온보딩 프로필 사진 설정 보상",
-              transaction_type: "onboarding_reward",
-            }),
-          })
-        )
-      }
-
-      // 최애 팀/선수 설정 보상: +200 골드
+      // 최애 팀/선수 설정 보상: +100 골드
       if (favoriteTeam.trim() || favoritePlayer.trim()) {
         rewardPromises.push(
           fetch("/api/gold/reward", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              amount: 200,
+              amount: 100,
               description: "온보딩 최애 팀/선수 설정 보상",
               transaction_type: "onboarding_reward",
             }),
