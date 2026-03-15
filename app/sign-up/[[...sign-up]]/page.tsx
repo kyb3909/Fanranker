@@ -100,11 +100,13 @@ export default function SignUpPage() {
         setTermsAgreed(true)
         setPrivacyAgreed(true)
         setStep(3)
-      } else {
+      } else if (step <= 2) {
         // Signed in but no terms flag (e.g. middleware redirect) → start from step 1
+        // step > 2인 경우는 이메일 인증 완료 후이므로 리셋하지 않음
         setStep(1)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveLoaded, isSignedIn, profile])
 
   // Pre-fill nickname from existing profile
@@ -253,6 +255,8 @@ export default function SignUpPage() {
       }
       setAuthError("")
       setAuthLoading(true)
+      // 약관 동의 플래그 저장 (인증 후 useEffect에서 step 리셋 방지)
+      sessionStorage.setItem(SS_TERMS_AGREED, "true")
       try {
         const result = await signUp.create({
           emailAddress: email,
