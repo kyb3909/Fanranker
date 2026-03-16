@@ -17,6 +17,7 @@ import {
 import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
 import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
+import { SignIn } from "@clerk/nextjs"
 
 const TipTapEditor = dynamic(
   () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
@@ -44,16 +45,17 @@ function WriteContent() {
   if (!editor.isSignedIn) {
     return (
       <div className="flex items-center justify-center px-4 py-20">
-        <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
-          <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
-          <p className="text-muted-foreground mb-4 text-sm">글을 작성하려면 먼저 로그인해주세요.</p>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" onClick={() => editor.router.push("/")}>
-              홈으로
-            </Button>
-            <Button onClick={() => editor.router.push("/sign-up")}>로그인 / 가입</Button>
-          </div>
-        </div>
+        <SignIn
+          routing="hash"
+          fallbackRedirectUrl="/write"
+          signUpUrl="/sign-up"
+          appearance={{
+            elements: {
+              rootBox: "mx-auto",
+              card: "shadow-md",
+            },
+          }}
+        />
       </div>
     )
   }
