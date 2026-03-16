@@ -67,6 +67,10 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             community={post.community}
             communityLink={communityLink}
             timestamp={post.timestamp}
+            author={post.author}
+            avatar={post.avatar}
+            userId={post.userId}
+            titleDisplay={post.titleDisplay}
             isAuthor={isAuthor}
             onEdit={handleEditPost}
             onDelete={handleDeletePost}
@@ -86,9 +90,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
           <PostCardFooter
             postId={post.id}
             postTitle={post.title}
-            author={post.author}
-            avatar={post.avatar}
-            userId={post.userId}
             voteCount={voteCount}
             myVote={myVote}
             comments={post.comments}
@@ -97,9 +98,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             onVote={handleVote}
             onBookmark={handleBookmark}
             onBookmarkHover={checkBookmarkStatus}
-            titleDisplay={post.titleDisplay}
-            onSearchByAuthor={handleSearchByAuthor}
-            onBlockUser={handleBlockUser}
           />
         </div>
       </Card>

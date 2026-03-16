@@ -16,8 +16,6 @@ vi.mock("@/components/share-menu", () => ({
 const defaultProps = {
   postId: 123,
   postTitle: "테스트 포스트",
-  author: "testUser",
-  avatar: "/test-avatar.jpg",
   voteCount: 10,
   myVote: null as "up" | "down" | null,
   comments: 5,
@@ -25,16 +23,9 @@ const defaultProps = {
   onVote: vi.fn(),
   onBookmark: vi.fn(),
   onBookmarkHover: vi.fn(),
-  onSearchByAuthor: vi.fn(),
-  onBlockUser: vi.fn(),
 }
 
 describe("PostCardFooter", () => {
-  it("renders author name", () => {
-    render(<PostCardFooter {...defaultProps} />)
-    expect(screen.getByText("testUser")).toBeDefined()
-  })
-
   it("renders vote count", () => {
     render(<PostCardFooter {...defaultProps} />)
     expect(screen.getByText("10")).toBeDefined()
@@ -46,10 +37,14 @@ describe("PostCardFooter", () => {
     expect(screen.getByText("5")).toBeDefined()
   })
 
-  it("does not render temperature (removed feature)", () => {
-    render(<PostCardFooter {...defaultProps} />)
-    const temperatureElements = screen.queryAllByText(/°$/)
-    expect(temperatureElements.length).toBe(0)
+  it("renders temperature when provided", () => {
+    render(<PostCardFooter {...defaultProps} temperature={42} />)
+    expect(screen.getByText("42°")).toBeDefined()
+  })
+
+  it("does not render temperature when 0", () => {
+    render(<PostCardFooter {...defaultProps} temperature={0} />)
+    expect(screen.queryByText(/°$/)).toBeNull()
   })
 
   it("calls onVote with 'up' when upvote clicked", () => {
@@ -101,18 +96,20 @@ describe("PostCardFooter", () => {
     expect(link?.getAttribute("href")).toBe("/post/456")
   })
 
-  it("renders avatar fallback with first character of author", () => {
-    render(<PostCardFooter {...defaultProps} author="홍길동" />)
-    expect(screen.getByText("홍")).toBeDefined()
-  })
-
-  it("renders avatar fallback '?' when author is empty", () => {
-    render(<PostCardFooter {...defaultProps} author="" />)
-    expect(screen.getByText("?")).toBeDefined()
-  })
-
   it("renders ShareMenu component", () => {
     render(<PostCardFooter {...defaultProps} />)
     expect(screen.getByTestId("share-menu")).toBeDefined()
+  })
+
+  it("applies correct color for high temperature", () => {
+    render(<PostCardFooter {...defaultProps} temperature={85} />)
+    const tempEl = screen.getByText("85°")
+    expect(tempEl.closest("div")?.className).toContain("text-red-500")
+  })
+
+  it("applies correct color for medium temperature", () => {
+    render(<PostCardFooter {...defaultProps} temperature={45} />)
+    const tempEl = screen.getByText("45°")
+    expect(tempEl.closest("div")?.className).toContain("text-amber-500")
   })
 })
