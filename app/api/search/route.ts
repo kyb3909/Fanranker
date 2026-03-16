@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
 
     const query = searchParams.get("q")
     const type = searchParams.get("type") || "title_content" // 'nickname' | 'id' | 'title' | 'title_content'
-    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
 
     if (!query || query.trim().length === 0) {
       return apiBadRequest("검색어를 입력해주세요.")
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
       `
       )
       .is("deleted_at", null)
-      .limit(limit)
+      .range(offset, offset + limit - 1)
 
     // 검색 타입별 필터링
     switch (type) {

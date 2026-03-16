@@ -53,8 +53,12 @@ function SearchContent() {
   )
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const PAGE_SIZE = 20
 
   // URL에서 검색어가 있으면 자동 검색 (초기 진입 시에만)
   const initialSearchDone = useState(false)
@@ -71,14 +75,22 @@ function SearchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  const performSearch = async (query: string, type: SearchType) => {
-    setIsLoading(true)
-    setHasSearched(true)
+  const performSearch = async (query: string, type: SearchType, loadMore = false) => {
+    if (loadMore) {
+      setIsLoadingMore(true)
+    } else {
+      setIsLoading(true)
+      setHasSearched(true)
+    }
     setErrorMessage(null)
+
+    const offset = loadMore ? posts.length : 0
 
     try {
       // API 호출
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&type=${type}`)
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(query.trim())}&type=${type}&limit=${PAGE_SIZE}&offset=${offset}`
+      )
 
       if (!response.ok) {
         const errorData = await response
@@ -133,10 +145,14 @@ function SearchContent() {
         }
       )
 
-      setPosts(transformedPosts)
+      if (loadMore) {
+        setPosts((prev) => [...prev, ...transformedPosts])
+      } else {
+        setPosts(transformedPosts)
+      }
+      setHasMore(transformedPosts.length >= PAGE_SIZE)
     } catch (error) {
-      setPosts([])
-      // 사용자에게 에러 메시지 표시
+      if (!loadMore) setPosts([])
       if (error instanceof Error) {
         setErrorMessage(error.message || "검색 중 오류가 발생했습니다.")
       } else {
@@ -144,6 +160,7 @@ function SearchContent() {
       }
     } finally {
       setIsLoading(false)
+      setIsLoadingMore(false)
     }
   }
 
@@ -308,6 +325,24 @@ function SearchContent() {
                     </Link>
                   ))}
                 </div>
+                {hasMore && (
+                  <div className="py-4 text-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => performSearch(searchQuery, searchType, true)}
+                      disabled={isLoadingMore}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          불러오는 중...
+                        </>
+                      ) : (
+                        "더 보기"
+                      )}
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="bg-card border-border rounded-lg border p-8 text-center">
