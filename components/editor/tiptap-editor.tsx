@@ -6,11 +6,13 @@ import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import TextAlign from "@tiptap/extension-text-align"
 import Underline from "@tiptap/extension-underline"
+import TiptapImage from "@tiptap/extension-image"
 import { Embed } from "@/lib/tiptap/extensions/embed"
 import { EmbedPaste } from "@/lib/tiptap/extensions/embed-paste"
 import { cn } from "@/lib/utils"
 import { Toggle } from "@/components/ui/toggle"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "@/hooks/use-toast"
 import {
   Bold,
   Italic,
@@ -29,6 +31,8 @@ import {
   Undo,
   Redo,
   Minus,
+  ImageIcon,
+  Loader2,
 } from "lucide-react"
 
 export interface TipTapEditorProps {
@@ -57,6 +61,9 @@ export function TipTapEditor({
   className,
   editable = true,
 }: TipTapEditorProps) {
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false)
+  const imageInputRef = React.useRef<HTMLInputElement>(null)
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -68,6 +75,12 @@ export function TipTapEditor({
         types: ["heading", "paragraph"],
       }),
       Underline,
+      TiptapImage.configure({
+        HTMLAttributes: {
+          class: "tiptap-image",
+        },
+        allowBase64: false,
+      }),
       Embed.configure({
         HTMLAttributes: {
           class: "embed-node",
@@ -91,6 +104,54 @@ export function TipTapEditor({
       },
     },
   })
+
+  const handleImageUpload = React.useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file || !editor) return
+      // input 초기화 (같은 파일 재선택 가능)
+      e.target.value = ""
+
+      if (!file.type.startsWith("image/")) {
+        toast({
+          variant: "destructive",
+          title: "알림",
+          description: "이미지 파일만 업로드할 수 있습니다.",
+        })
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "알림",
+          description: "파일 크기는 10MB를 초과할 수 없습니다.",
+        })
+        return
+      }
+
+      setIsUploadingImage(true)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        const res = await fetch("/api/upload/image", { method: "POST", body: formData })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || "이미지 업로드에 실패했습니다.")
+        }
+        const { url } = await res.json()
+        editor.chain().focus().setImage({ src: url, alt: file.name }).run()
+      } catch (err) {
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: err instanceof Error ? err.message : "이미지 업로드 중 오류가 발생했습니다.",
+        })
+      } finally {
+        setIsUploadingImage(false)
+      }
+    },
+    [editor]
+  )
 
   if (!editor) {
     return (
@@ -261,6 +322,29 @@ export function TipTapEditor({
           >
             <Minus className="h-4 w-4" />
           </Toggle>
+
+          <Separator orientation="vertical" className="mx-1 h-6" />
+
+          {/* 이미지 삽입 */}
+          <Toggle
+            size="sm"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={isUploadingImage}
+            aria-label="이미지 삽입"
+          >
+            {isUploadingImage ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
+          </Toggle>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
         </div>
       )}
 

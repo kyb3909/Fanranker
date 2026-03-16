@@ -2,6 +2,7 @@
 
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
+import TiptapImage from "@tiptap/extension-image"
 import { Embed } from "@/lib/tiptap/extensions/embed"
 import { cn } from "@/lib/utils"
 
@@ -20,6 +21,11 @@ export function TipTapContent({ content, className }: TipTapContentProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      TiptapImage.configure({
+        HTMLAttributes: {
+          class: "tiptap-image",
+        },
+      }),
       Embed.configure({
         HTMLAttributes: {
           class: "embed-node",

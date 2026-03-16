@@ -273,6 +273,25 @@
   margin: 1rem 0;
 }
 
+/* TipTap 이미지 스타일 */
+.tiptap-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  cursor: default;
+}
+
+.tiptap-editor .tiptap-image {
+  cursor: grab;
+}
+
+.tiptap-editor .tiptap-image.ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
 /* Text alignment */
 .tiptap-editor .ProseMirror [style*="text-align: left"] {
   text-align: left;
