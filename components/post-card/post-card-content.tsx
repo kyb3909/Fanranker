@@ -72,12 +72,13 @@ export function PostCardContent({
       {/* 이미지 또는 임베드 미리보기 (피드용) */}
       {displayImage && !firstEmbed && (
         <Link href={`/post/${postId}`} className="mt-2 block">
-          <div className="bg-muted relative aspect-[16/9] w-full overflow-hidden rounded-lg transition-opacity hover:opacity-95">
+          <div className="bg-muted flex max-h-[400px] w-full items-center justify-center overflow-hidden rounded-lg transition-opacity hover:opacity-95">
             <Image
               src={displayImage}
               alt={title || "Post image"}
-              fill
-              className="object-cover"
+              width={560}
+              height={400}
+              className="h-auto max-h-[400px] w-full object-contain"
               priority={priority}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
             />

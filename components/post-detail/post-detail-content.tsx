@@ -249,16 +249,20 @@ export function PostDetailContent({
                 )
               })()}
 
-            {/* Image */}
+            {/* Image — 클릭하면 원본 보기 */}
             {post.image && (
-              <div className="bg-muted relative aspect-[2/1] w-full overflow-hidden rounded-lg">
-                <Image
-                  src={post.image || "/placeholder.svg"}
-                  alt={`${post.title} 첨부 이미지`}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+              <a href={post.image} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                <div className="bg-muted flex w-full items-center justify-center overflow-hidden rounded-lg">
+                  <Image
+                    src={post.image}
+                    alt={`${post.title} 첨부 이미지`}
+                    width={700}
+                    height={700}
+                    className="h-auto max-h-[600px] w-full object-contain"
+                    sizes="(max-width: 640px) 100vw, 700px"
+                  />
+                </div>
+              </a>
             )}
           </div>
 
