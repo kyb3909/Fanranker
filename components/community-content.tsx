@@ -134,7 +134,7 @@ export const CommunityContent = memo(function CommunityContent({
               </div>
             </div>
             <Button
-              variant={isFollowing ? "default" : "outline"}
+              variant={isFollowing ? "outline" : "default"}
               size="sm"
               className="h-8 px-4 text-sm font-medium"
               onClick={handleFollow}
