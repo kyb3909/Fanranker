@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { MoreHorizontal, Search, Ban, Pencil, Trash2, User } from "lucide-react"
+import { MoreHorizontal, Search, Ban, Pencil, Trash2, User, Flag } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useCallback } from "react"
@@ -22,6 +22,7 @@ import { toast } from "@/hooks/use-toast"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
+import { ReportDialog } from "@/components/report-dialog"
 import type { Post } from "./post-detail-types"
 
 const TipTapContent = dynamic(
@@ -63,6 +64,7 @@ export function PostDetailContent({
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
   const [commentCount, setCommentCount] = useState(0)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const handleCommentCountChange = useCallback((count: number) => {
     setCommentCount(count)
@@ -204,6 +206,13 @@ export function PostDetailContent({
                         <Ban className="mr-2 h-4 w-4" />
                         차단하기
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setReportOpen(true)}
+                        className="text-destructive cursor-pointer"
+                      >
+                        <Flag className="mr-2 h-4 w-4" />
+                        신고하기
+                      </DropdownMenuItem>
                     </>
                   )}
                 </DropdownMenuContent>
@@ -282,6 +291,13 @@ export function PostDetailContent({
         postId={post.id}
         onCommentCountChange={handleCommentCountChange}
         initialData={initialCommentsData}
+      />
+
+      <ReportDialog
+        targetType="post"
+        targetId={String(post.id)}
+        open={reportOpen}
+        onOpenChange={setReportOpen}
       />
     </div>
   )
