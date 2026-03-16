@@ -16,7 +16,6 @@ export interface PostCardHeaderProps {
   community: string
   communityLink: string
   timestamp: string
-  temperature?: number
   isAuthor: boolean
   onEdit: () => void
   onDelete: () => void
@@ -25,19 +24,10 @@ export interface PostCardHeaderProps {
   onReport: () => void
 }
 
-function getTemperatureColor(temp: number) {
-  if (temp >= 80) return "text-red-500"
-  if (temp >= 60) return "text-orange-500"
-  if (temp >= 40) return "text-amber-500"
-  if (temp >= 20) return "text-blue-500"
-  return "text-slate-400"
-}
-
 export function PostCardHeader({
   community,
   communityLink,
   timestamp,
-  temperature,
   isAuthor,
   onEdit,
   onDelete,
@@ -56,14 +46,6 @@ export function PostCardHeader({
             {community}
           </span>
         </Link>
-        {/* 게시물 온도 */}
-        {temperature != null && temperature > 0 && (
-          <span
-            className={`text-[12px] font-semibold tabular-nums ${getTemperatureColor(temperature)}`}
-          >
-            {temperature.toFixed(0)}°
-          </span>
-        )}
       </div>
 
       {/* 우측: 시간 + 더보기 */}
