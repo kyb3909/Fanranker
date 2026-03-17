@@ -1,13 +1,19 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { CheckCircle2, XCircle, Eye, Loader2 } from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { CheckCircle2, XCircle, Eye, Loader2, ExternalLink } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 interface Report {
   id: string
@@ -21,28 +27,39 @@ interface Report {
   resolved_at: string | null
   resolution: string | null
   created_at: string
+  post_id: string | null
+  post_title: string | null
 }
 
-const REPORT_REASONS: Record<string, { label: string; card: 'red' | 'yellow' }> = {
-  discrimination: { label: '차별적 표현', card: 'red' },
-  advertising:    { label: '광고/스팸',   card: 'red' },
-  profanity:      { label: '욕설/비하',   card: 'yellow' },
-  abuse:          { label: '어뷰징',      card: 'yellow' },
-  political:      { label: '정치글',      card: 'yellow' },
+const REPORT_REASONS: Record<string, { label: string; card: "red" | "yellow" }> = {
+  discrimination: { label: "차별적 표현", card: "red" },
+  advertising: { label: "광고/스팸", card: "red" },
+  profanity: { label: "욕설/비하", card: "yellow" },
+  abuse: { label: "어뷰징", card: "yellow" },
+  political: { label: "정치글", card: "yellow" },
 }
 
-const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: '대기', variant: 'destructive' },
-  reviewing: { label: '검토 중', variant: 'default' },
-  resolved: { label: '처리됨', variant: 'secondary' },
-  dismissed: { label: '기각', variant: 'outline' },
+const statusConfig: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  pending: { label: "대기", variant: "destructive" },
+  reviewing: { label: "검토 중", variant: "default" },
+  resolved: { label: "처리됨", variant: "secondary" },
+  dismissed: { label: "기각", variant: "outline" },
 }
 
-export function ReportQueue({ initialReports, total: initialTotal }: { initialReports: Report[]; total: number }) {
+export function ReportQueue({
+  initialReports,
+  total: initialTotal,
+}: {
+  initialReports: Report[]
+  total: number
+}) {
   const [reports, setReports] = useState<Report[]>(initialReports)
   const [total, setTotal] = useState(initialTotal)
   const [loading, setLoading] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState('pending')
+  const [statusFilter, setStatusFilter] = useState("pending")
 
   const fetchReports = async (status: string) => {
     try {
@@ -58,15 +75,19 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
   const handleAction = async (reportId: string, action: string) => {
     setLoading(reportId)
     try {
-      const res = await fetch('/api/admin/content/reports', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/content/reports", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reportId, action }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       await fetchReports(statusFilter)
     } catch (error) {
-      toast({ variant: 'destructive', title: '오류', description: error instanceof Error ? error.message : '오류 발생' })
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: error instanceof Error ? error.message : "오류 발생",
+      })
     } finally {
       setLoading(null)
     }
@@ -83,7 +104,7 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
         {Object.entries(statusConfig).map(([key, cfg]) => (
           <Button
             key={key}
-            variant={statusFilter === key ? 'default' : 'outline'}
+            variant={statusFilter === key ? "default" : "outline"}
             size="sm"
             onClick={() => handleStatusFilter(key)}
           >
@@ -91,16 +112,16 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
           </Button>
         ))}
         <Button
-          variant={statusFilter === 'all' ? 'default' : 'outline'}
+          variant={statusFilter === "all" ? "default" : "outline"}
           size="sm"
-          onClick={() => handleStatusFilter('all')}
+          onClick={() => handleStatusFilter("all")}
         >
           전체
         </Button>
-        <span className="text-sm text-muted-foreground ml-auto">총 {total}건</span>
+        <span className="text-muted-foreground ml-auto text-sm">총 {total}건</span>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -115,101 +136,131 @@ export function ReportQueue({ initialReports, total: initialTotal }: { initialRe
           <TableBody>
             {reports.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
                   신고가 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
               reports.map((report) => {
                 const reasonInfo = REPORT_REASONS[report.reason]
-                const isRed = reasonInfo?.card === 'red'
+                const isRed = reasonInfo?.card === "red"
                 return (
-                <TableRow key={report.id} className={isRed ? 'border-l-4 border-l-primary' : ''}>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {report.target_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`inline-block w-2 h-2 rounded-full ${isRed ? 'bg-primary' : 'bg-yellow-500'}`} />
-                      <Badge variant="secondary" className="text-xs">
-                        {reasonInfo?.label ?? report.reason}
+                  <TableRow key={report.id} className={isRed ? "border-l-primary border-l-4" : ""}>
+                    <TableCell>
+                      {report.post_id ? (
+                        <Link
+                          href={`/post/${report.post_id}`}
+                          target="_blank"
+                          className="text-primary inline-flex items-center gap-1 hover:underline"
+                        >
+                          <Badge
+                            variant="outline"
+                            className="hover:bg-primary/10 cursor-pointer text-xs"
+                          >
+                            {report.target_type === "post" ? "게시글" : "댓글"}
+                          </Badge>
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          {report.target_type === "post" ? "게시글" : "댓글"}
+                        </Badge>
+                      )}
+                      {report.post_title && (
+                        <p className="text-muted-foreground mt-0.5 max-w-[150px] truncate text-xs">
+                          {report.post_title}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${isRed ? "bg-primary" : "bg-yellow-500"}`}
+                        />
+                        <Badge variant="secondary" className="text-xs">
+                          {reasonInfo?.label ?? report.reason}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm">
+                      {report.description || "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={statusConfig[report.status]?.variant ?? "outline"}
+                        className="text-xs"
+                      >
+                        {statusConfig[report.status]?.label ?? report.status}
                       </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm">
-                    {report.description || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusConfig[report.status]?.variant ?? 'outline'} className="text-xs">
-                      {statusConfig[report.status]?.label ?? report.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {new Date(report.created_at).toLocaleDateString('ko-KR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {report.status === 'pending' && (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleAction(report.id, 'reviewing')}
-                          disabled={loading === report.id}
-                          title="검토 시작"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-green-600"
-                          onClick={() => handleAction(report.id, 'resolve')}
-                          disabled={loading === report.id}
-                          title="처리"
-                        >
-                          {loading === report.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive"
-                          onClick={() => handleAction(report.id, 'dismiss')}
-                          disabled={loading === report.id}
-                          title="기각"
-                        >
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                    {report.status === 'reviewing' && (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-green-600"
-                          onClick={() => handleAction(report.id, 'resolve')}
-                          disabled={loading === report.id}
-                          title="처리"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive"
-                          onClick={() => handleAction(report.id, 'dismiss')}
-                          disabled={loading === report.id}
-                          title="기각"
-                        >
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {new Date(report.created_at).toLocaleDateString("ko-KR")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {report.status === "pending" && (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleAction(report.id, "reviewing")}
+                            disabled={loading === report.id}
+                            title="검토 시작"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-green-600"
+                            onClick={() => handleAction(report.id, "resolve")}
+                            disabled={loading === report.id}
+                            title="처리"
+                          >
+                            {loading === report.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive h-7 w-7"
+                            onClick={() => handleAction(report.id, "dismiss")}
+                            disabled={loading === report.id}
+                            title="기각"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                      {report.status === "reviewing" && (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-green-600"
+                            onClick={() => handleAction(report.id, "resolve")}
+                            disabled={loading === report.id}
+                            title="처리"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive h-7 w-7"
+                            onClick={() => handleAction(report.id, "dismiss")}
+                            disabled={loading === report.id}
+                            title="기각"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
                 )
               })
             )}

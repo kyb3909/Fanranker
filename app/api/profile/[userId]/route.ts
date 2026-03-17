@@ -47,12 +47,11 @@ export async function GET(
       board_slug: string
       total_points: number
       available_points: number
-      level: number
     }[] = []
     try {
       const res = await supabase
         .from("user_board_points")
-        .select("board_slug, total_points, available_points, level")
+        .select("board_slug, total_points, available_points")
         .eq("user_id", userId)
         .order("total_points", { ascending: false })
       boardPoints = res.data || []

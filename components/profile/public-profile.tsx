@@ -47,7 +47,6 @@ interface BoardPointInfo {
   board_slug: string
   total_points: number
   available_points: number
-  level: number
 }
 
 interface EquippedTitleInfo {
@@ -173,12 +172,9 @@ export function PublicProfileView({ userId }: { userId: string }) {
                       />
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="text-muted-foreground">Lv.{bp.level}</span>
-                    <span className="font-medium text-amber-600 tabular-nums dark:text-amber-400">
-                      {bp.total_points.toLocaleString()}P
-                    </span>
-                  </div>
+                  <span className="text-xs font-medium text-amber-600 tabular-nums dark:text-amber-400">
+                    {bp.total_points.toLocaleString()}P
+                  </span>
                 </div>
               )
             })}

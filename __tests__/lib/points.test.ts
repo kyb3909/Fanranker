@@ -49,7 +49,7 @@ describe("awardPoints", () => {
 
   it("calls the award_points RPC with the correct parameters", async () => {
     const mockSupabase = makeMockSupabase({
-      data: { success: true, amount: 10, total_points: 110, level: 3 },
+      data: { success: true, amount: 10, total_points: 110 },
       error: null,
     })
 
@@ -71,7 +71,6 @@ describe("awardPoints", () => {
       amount: 10,
       total_points: 110,
       available_points: 100,
-      level: 2,
     }
     const mockSupabase = makeMockSupabase({ data: rpcData, error: null })
 
@@ -125,7 +124,7 @@ describe("awardPoints", () => {
   })
 
   it("returns the raw data object from a successful RPC without modification", async () => {
-    const rawData = { success: true, amount: 15, total_points: 250, level: 5 }
+    const rawData = { success: true, amount: 15, total_points: 250 }
     const mockSupabase = makeMockSupabase({ data: rawData, error: null })
 
     const result = await awardPoints(mockSupabase, "user-3", "baseball", 15, "prediction_hit")

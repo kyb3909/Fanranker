@@ -11,7 +11,6 @@ interface AwardResult {
   amount?: number
   total_points?: number
   available_points?: number
-  level?: number
   reason?: string
 }
 

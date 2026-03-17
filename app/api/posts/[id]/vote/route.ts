@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient, createServiceRoleClient, createAnonClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { z } from "zod"
 
 /**
@@ -103,10 +104,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // vote_count는 DB trigger(trg_post_vote_count)가 자동 갱신
-    // 갱신된 vote_count 조회 + 게시물 작성자 ID 확인
+    // 갱신된 vote_count 조회 + 게시물 작성자 ID + 게시판 slug
     const { data: postData } = await supabase
       .from("posts")
-      .select("vote_count, user_id")
+      .select("vote_count, user_id, community_slug")
       .eq("id", postId)
       .single()
 
@@ -117,6 +118,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ).catch((e: unknown) => {
         console.error("Failed to update post author temperature:", e)
       })
+
+      // 추천(up) 시 작성자에게 포인트 적립 (자추 방지, 새 투표일 때만)
+      if (
+        voteType === "up" &&
+        voteAction === "created" &&
+        postData.user_id !== userId &&
+        postData.community_slug
+      ) {
+        awardPoints(
+          supabase,
+          postData.user_id,
+          postData.community_slug,
+          POINT_VALUES.vote_received,
+          "vote_received",
+          "게시글 추천 받음",
+          postId
+        ).catch(console.error)
+      }
     }
     Promise.resolve(supabase.rpc("update_user_temperature", { p_user_id: userId })).catch(
       (e: unknown) => {

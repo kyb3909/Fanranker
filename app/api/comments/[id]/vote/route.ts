@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { z } from "zod"
 
 /**
@@ -72,10 +73,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // vote_count는 DB trigger(trg_comment_vote_count)가 자동 갱신
-    // 갱신된 vote_count 조회 + 댓글 작성자 ID 확인
+    // 갱신된 vote_count 조회 + 댓글 작성자 ID + 게시글 ID 확인
     const { data: commentData } = await supabase
       .from("comments")
-      .select("vote_count, user_id")
+      .select("vote_count, user_id, post_id")
       .eq("id", commentId)
       .single()
 
@@ -86,6 +87,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ).catch((e: unknown) => {
         console.error("Failed to update comment author temperature:", e)
       })
+
+      // 추천(up) 시 작성자에게 포인트 적립 (자추 방지, 새 투표일 때만)
+      if (
+        voteType === "up" &&
+        action === "created" &&
+        commentData.user_id !== user.id &&
+        commentData.post_id
+      ) {
+        // 게시글의 community_slug 조회
+        Promise.resolve(
+          supabase.from("posts").select("community_slug").eq("id", commentData.post_id).single()
+        )
+          .then(({ data: postData }) => {
+            if (postData?.community_slug) {
+              awardPoints(
+                supabase,
+                commentData.user_id,
+                postData.community_slug,
+                POINT_VALUES.vote_received,
+                "vote_received",
+                "댓글 추천 받음",
+                commentId
+              ).catch(console.error)
+            }
+          })
+          .catch(console.error)
+      }
     }
     Promise.resolve(supabase.rpc("update_user_temperature", { p_user_id: user.id })).catch(
       (e: unknown) => {
