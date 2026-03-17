@@ -122,14 +122,55 @@ export function NotificationDropdown() {
   const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p])), [profiles])
   const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts])
 
-  const getNotificationText = (notification: Notification) => {
+  // 같은 글의 comment/reply 알림을 묶기
+  interface GroupedNotification {
+    notification: Notification
+    count: number
+    ids: string[]
+  }
+
+  const groupedNotifications = useMemo(() => {
+    const groups: GroupedNotification[] = []
+    const seen = new Map<string, number>() // key → index in groups
+
+    for (const n of notifications) {
+      // comment/reply만 묶기
+      if ((n.type === "comment" || n.type === "reply") && n.related_post_id) {
+        const key = `${n.type}:${n.related_post_id}`
+        const existingIdx = seen.get(key)
+        if (existingIdx !== undefined) {
+          groups[existingIdx].count++
+          groups[existingIdx].ids.push(n.id)
+          // 읽지 않은 게 있으면 그룹도 미읽음
+          if (!n.is_read)
+            groups[existingIdx].notification = {
+              ...groups[existingIdx].notification,
+              is_read: false,
+            }
+          continue
+        }
+        seen.set(key, groups.length)
+      }
+      groups.push({ notification: n, count: 1, ids: [n.id] })
+    }
+    return groups
+  }, [notifications])
+
+  const getNotificationText = (group: GroupedNotification) => {
+    const { notification, count } = group
     const actor = profileMap.get(notification.actor_id)
     const actorName = actor?.nickname || "익명"
+    const post = notification.related_post_id ? postMap.get(notification.related_post_id) : null
+    const postTitle = post?.title
+      ? `"${post.title.slice(0, 20)}${post.title.length > 20 ? "..." : ""}"`
+      : "게시글"
 
     switch (notification.type) {
       case "comment":
+        if (count > 1) return `${postTitle}에 댓글이 ${count}개 달렸습니다`
         return `${actorName}님이 댓글을 남겼습니다`
       case "reply":
+        if (count > 1) return `${postTitle}에 답글이 ${count}개 달렸습니다`
         return `${actorName}님이 답글을 남겼습니다`
       case "new_post_by_followed":
         return `${actorName}님이 새로운 글을 작성했습니다`
@@ -221,7 +262,8 @@ export function NotificationDropdown() {
             </div>
           ) : (
             <div className="divide-border divide-y">
-              {notifications.map((notification) => {
+              {groupedNotifications.map((group) => {
+                const notification = group.notification
                 const actor = profileMap.get(notification.actor_id)
                 const post = notification.related_post_id
                   ? postMap.get(notification.related_post_id)
@@ -229,11 +271,13 @@ export function NotificationDropdown() {
 
                 return (
                   <Link
-                    key={notification.id}
+                    key={group.ids.join(",")}
                     href={getNotificationLink(notification)}
                     onClick={() => {
-                      if (!notification.is_read) {
-                        markAsRead(notification.id)
+                      // 그룹의 모든 알림을 읽음 처리
+                      for (const id of group.ids) {
+                        const n = notifications.find((x) => x.id === id)
+                        if (n && !n.is_read) markAsRead(id)
                       }
                     }}
                     className="hover:bg-muted/50 block p-4 transition-colors"
@@ -258,7 +302,7 @@ export function NotificationDropdown() {
                         <p
                           className={`text-sm ${notification.is_read ? "text-muted-foreground" : "text-foreground font-medium"}`}
                         >
-                          {getNotificationText(notification)}
+                          {getNotificationText(group)}
                         </p>
                         {post && (
                           <p className="text-muted-foreground mt-1 truncate text-xs">
