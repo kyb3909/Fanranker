@@ -69,6 +69,7 @@ export function transformComments(
       author: profile?.nickname || "익명",
       avatar: profile?.avatar_url || "/placeholder-user.jpg",
       timestamp: formatRelativeTime(new Date(comment.created_at)),
+      createdAt: comment.created_at,
       content: comment.content,
       upvotes: comment.vote_count || 0,
       titleDisplay,

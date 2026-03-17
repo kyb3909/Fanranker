@@ -15,6 +15,7 @@ export interface Comment {
   author: string
   avatar: string
   timestamp: string
+  createdAt: string
   content: string
   upvotes: number
   titleDisplay?: TitleDisplay | null

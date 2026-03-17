@@ -208,7 +208,11 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
           ) : (
             [...comments]
               .filter((c) => !c.userId || !isBlocked(c.userId))
-              .sort((a, b) => (commentSort === "popular" ? (b.upvotes || 0) - (a.upvotes || 0) : 0))
+              .sort((a, b) => {
+                if (commentSort === "popular") return (b.upvotes || 0) - (a.upvotes || 0)
+                // 최신순: createdAt 내림차순 (최신이 위)
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              })
               .map((comment) => (
                 <CommentItem
                   key={comment.id}

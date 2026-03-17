@@ -9,8 +9,16 @@ describe("countAllComments", () => {
 
   it("counts flat comments", () => {
     const comments: Comment[] = [
-      { id: "1", author: "A", avatar: "", timestamp: "", content: "hi", upvotes: 0 },
-      { id: "2", author: "B", avatar: "", timestamp: "", content: "hey", upvotes: 0 },
+      { id: "1", author: "A", avatar: "", timestamp: "", createdAt: "", content: "hi", upvotes: 0 },
+      {
+        id: "2",
+        author: "B",
+        avatar: "",
+        timestamp: "",
+        createdAt: "",
+        content: "hey",
+        upvotes: 0,
+      },
     ]
     expect(countAllComments(comments)).toBe(2)
   })
@@ -22,6 +30,7 @@ describe("countAllComments", () => {
         author: "A",
         avatar: "",
         timestamp: "",
+        createdAt: "",
         content: "hi",
         upvotes: 0,
         replies: [
@@ -30,6 +39,7 @@ describe("countAllComments", () => {
             author: "B",
             avatar: "",
             timestamp: "",
+            createdAt: "",
             content: "reply",
             upvotes: 0,
             replies: [
@@ -38,6 +48,7 @@ describe("countAllComments", () => {
                 author: "C",
                 avatar: "",
                 timestamp: "",
+                createdAt: "",
                 content: "nested",
                 upvotes: 0,
               },
@@ -51,7 +62,7 @@ describe("countAllComments", () => {
 
   it("handles comments without replies property", () => {
     const comments: Comment[] = [
-      { id: "1", author: "A", avatar: "", timestamp: "", content: "hi", upvotes: 0 },
+      { id: "1", author: "A", avatar: "", timestamp: "", createdAt: "", content: "hi", upvotes: 0 },
     ]
     expect(countAllComments(comments)).toBe(1)
   })
