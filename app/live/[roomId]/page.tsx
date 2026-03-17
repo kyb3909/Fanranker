@@ -11,17 +11,18 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useLiveChat, type ChatMessage } from "@/hooks/use-live-chat"
+import { StadiumView } from "@/components/live/stadium-view"
 
-const SPORT_EMOJI: Record<string, string> = {
-  football: "⚽",
-  soccer: "⚽",
-  baseball: "⚾",
-  basketball: "🏀",
-  volleyball: "🏐",
-  축구: "⚽",
-  야구: "⚾",
-  농구: "🏀",
-  배구: "🏐",
+const SPORT_MAP: Record<string, string> = {
+  football: "football",
+  soccer: "football",
+  baseball: "baseball",
+  basketball: "basketball",
+  volleyball: "volleyball",
+  축구: "football",
+  야구: "baseball",
+  농구: "basketball",
+  배구: "volleyball",
 }
 
 export default function LiveRoomPage() {
@@ -35,14 +36,20 @@ export default function LiveRoomPage() {
   })
   const room = data?.room
 
-  const { messages, onlineCount, isConnected, sendMessage, cooldownRemaining, maxLength } =
-    useLiveChat(roomId)
+  const {
+    messages,
+    occupants,
+    onlineCount,
+    isConnected,
+    sendMessage,
+    cooldownRemaining,
+    maxLength,
+  } = useLiveChat(roomId)
 
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // 새 메시지 시 스크롤
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
@@ -86,14 +93,11 @@ export default function LiveRoomPage() {
   }
 
   const game = room.betman_games
-  const emoji = SPORT_EMOJI[room.sport] || SPORT_EMOJI[game?.sport ?? ""] || "🏟️"
+  const sportKey = SPORT_MAP[room.sport] || SPORT_MAP[game?.sport ?? ""] || "football"
   const isRoomClosed = room.status === "closed"
 
   return (
-    <main
-      className="mx-auto flex max-w-[600px] flex-col px-4 py-4"
-      style={{ height: "calc(100dvh - 100px)" }}
-    >
+    <main className="mx-auto max-w-[1100px] px-4 py-4">
       {/* 상단 바 */}
       <div className="mb-3 flex items-center gap-3">
         <Button
@@ -106,7 +110,6 @@ export default function LiveRoomPage() {
         </Button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span>{emoji}</span>
             <h1 className="truncate text-sm font-bold">{room.name}</h1>
             {room.status === "live" && (
               <Badge variant="destructive" className="text-[10px]">
@@ -123,101 +126,120 @@ export default function LiveRoomPage() {
         </div>
       </div>
 
-      {/* 경기 정보 */}
-      {game && (
-        <Card className="mb-3 px-4 py-3">
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <span className="flex-1 truncate text-right font-semibold">{game.home_team_name}</span>
-            <span className="text-muted-foreground text-xs">vs</span>
-            <span className="flex-1 truncate font-semibold">{game.away_team_name}</span>
-          </div>
-          {game.match_time && (
-            <p className="text-muted-foreground mt-1 text-center text-[11px]">
-              {new Date(game.match_time).toLocaleString("ko-KR", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+      {/* 메인: 경기장 + 채팅 패널 */}
+      <div className="flex flex-col gap-3 lg:flex-row">
+        {/* 경기장 뷰 */}
+        <div className="lg:flex-1">
+          <StadiumView
+            sport={sportKey}
+            occupants={occupants}
+            messages={messages}
+            homeTeam={game?.home_team_name}
+            awayTeam={game?.away_team_name}
+          />
+          {/* 경기 정보 */}
+          {game && (
+            <Card className="mt-2 px-4 py-2">
+              <div className="flex items-center justify-center gap-4 text-sm">
+                <span className="flex-1 truncate text-right font-semibold">
+                  {game.home_team_name}
+                </span>
+                <span className="text-muted-foreground text-xs">vs</span>
+                <span className="flex-1 truncate font-semibold">{game.away_team_name}</span>
+              </div>
+              {game.match_time && (
+                <p className="text-muted-foreground mt-0.5 text-center text-[11px]">
+                  {new Date(game.match_time).toLocaleString("ko-KR", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
+            </Card>
+          )}
+        </div>
+
+        {/* 채팅 패널 */}
+        <div className="flex h-[400px] flex-col lg:h-auto lg:w-[320px]">
+          <Card className="flex flex-1 flex-col overflow-hidden">
+            <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+              <span className="text-xs font-semibold">채팅</span>
+              <span className="text-muted-foreground text-[10px]">{messages.length}개 메시지</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
+              {!isSignedIn ? (
+                <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                  로그인하면 채팅에 참여할 수 있습니다.
+                </div>
+              ) : !isConnected ? (
+                <div className="flex h-full items-center justify-center gap-2">
+                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  <span className="text-muted-foreground text-sm">연결 중...</span>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                  첫 메시지를 보내보세요!
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {messages.map((msg) => (
+                    <MessageLine key={msg.id} message={msg} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* 입력 */}
+          {isSignedIn && !isRoomClosed && (
+            <div className="mt-2 flex items-center gap-2">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value.slice(0, maxLength))}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  cooldownRemaining > 0
+                    ? `${Math.ceil(cooldownRemaining / 1000)}초 후 입력 가능`
+                    : "메시지를 입력하세요..."
+                }
+                disabled={!isConnected || cooldownRemaining > 0}
+                maxLength={maxLength}
+                className="flex-1"
+                autoComplete="off"
+              />
+              <Button
+                size="icon"
+                onClick={handleSend}
+                disabled={!isConnected || !input.trim() || cooldownRemaining > 0}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          {isRoomClosed && (
+            <p className="text-muted-foreground py-2 text-center text-sm">
+              이 채팅방은 종료되었습니다.
             </p>
           )}
-        </Card>
-      )}
-
-      {/* 메시지 영역 */}
-      <Card className="mb-3 flex-1 overflow-hidden">
-        <div className="flex h-full flex-col">
-          <div className="flex-1 overflow-y-auto p-3">
-            {!isSignedIn ? (
-              <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                로그인하면 채팅에 참여할 수 있습니다.
-              </div>
-            ) : !isConnected ? (
-              <div className="flex h-full items-center justify-center gap-2">
-                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                <span className="text-muted-foreground text-sm">연결 중...</span>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                첫 메시지를 보내보세요!
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {messages.map((msg) => (
-                  <MessageBubble key={msg.id} message={msg} />
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </div>
         </div>
-      </Card>
-
-      {/* 입력 영역 */}
-      {isSignedIn && !isRoomClosed && (
-        <div className="flex items-center gap-2">
-          <Input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, maxLength))}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              cooldownRemaining > 0
-                ? `${Math.ceil(cooldownRemaining / 1000)}초 후 입력 가능`
-                : "메시지를 입력하세요..."
-            }
-            disabled={!isConnected || cooldownRemaining > 0}
-            maxLength={maxLength}
-            className="flex-1"
-            autoComplete="off"
-          />
-          <Button
-            size="icon"
-            onClick={handleSend}
-            disabled={!isConnected || !input.trim() || cooldownRemaining > 0}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-      {isRoomClosed && (
-        <p className="text-muted-foreground py-2 text-center text-sm">
-          이 채팅방은 종료되었습니다.
-        </p>
-      )}
+      </div>
     </main>
   )
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageLine({ message }: { message: ChatMessage }) {
   if (message.type === "system") {
-    return <p className="text-muted-foreground text-center text-[11px]">{message.text}</p>
+    return <p className="text-muted-foreground text-center text-[10px]">{message.text}</p>
   }
 
   return (
-    <div className="flex items-start gap-2">
-      <span className="text-primary shrink-0 text-xs font-semibold">{message.nickname}</span>
-      <p className="text-foreground text-sm break-all">{message.text}</p>
+    <div className="flex gap-1.5 text-xs">
+      <span className="text-primary shrink-0 font-bold">{message.nickname}</span>
+      <span className="text-foreground break-all">{message.text}</span>
     </div>
   )
 }

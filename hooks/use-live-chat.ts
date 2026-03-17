@@ -14,30 +14,47 @@ export interface ChatMessage {
   type: "chat" | "system"
 }
 
-interface PresenceState {
+export interface SeatOccupant {
   userId: string
   nickname: string
+  seatIndex: number
+}
+
+interface PresencePayload {
+  userId: string
+  nickname: string
+  seatIndex: number
 }
 
 const COOLDOWN_MS = 3000
 const MAX_LENGTH = 100
 const MAX_MESSAGES = 200
+const MAX_SEATS = 20
 
 export function useLiveChat(roomId: string) {
-  // Broadcast/Presence는 인증 불필요 → anon 클라이언트 사용 (세션 변경에 재생성 방지)
   const supabase = useMemo(() => createAnonClient(), [])
   const { user } = useUser()
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [occupants, setOccupants] = useState<SeatOccupant[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [lastSentAt, setLastSentAt] = useState(0)
+  const mySeatRef = useRef<number>(-1)
 
   const nickname = user?.username || user?.firstName || "익명"
   const userId = user?.id
 
-  // 채널 연결
+  // 빈 좌석 찾기
+  function findEmptySeat(currentOccupants: PresencePayload[]): number {
+    const taken = new Set(currentOccupants.map((o) => o.seatIndex))
+    for (let i = 0; i < MAX_SEATS; i++) {
+      if (!taken.has(i)) return i
+    }
+    return Math.floor(Math.random() * MAX_SEATS)
+  }
+
   useEffect(() => {
     if (!roomId || !userId) return
 
@@ -45,21 +62,34 @@ export function useLiveChat(roomId: string) {
       config: { presence: { key: userId } },
     })
 
-    // Presence: 접속자 추적
+    // Presence sync: 전체 접속자 + 좌석 동기화
     channel.on("presence", { event: "sync" }, () => {
-      const state = channel.presenceState()
-      const count = Object.keys(state).length
-      setOnlineCount(count)
+      const state = channel.presenceState<PresencePayload>()
+      const entries = Object.entries(state)
+      setOnlineCount(entries.length)
+
+      const occs: SeatOccupant[] = []
+      for (const [, presences] of entries) {
+        const p = presences[0]
+        if (p) {
+          occs.push({
+            userId: p.userId,
+            nickname: p.nickname,
+            seatIndex: p.seatIndex,
+          })
+        }
+      }
+      setOccupants(occs)
     })
 
-    channel.on("presence", { event: "join" }, ({ key, newPresences }) => {
-      const joined = newPresences[0] as unknown as PresenceState | undefined
+    channel.on("presence", { event: "join" }, ({ newPresences }) => {
+      const joined = newPresences[0] as unknown as PresencePayload | undefined
       if (joined && joined.userId !== userId) {
         setMessages((prev) =>
           [
             ...prev,
             {
-              id: `sys-join-${Date.now()}`,
+              id: `sys-join-${Date.now()}-${joined.userId}`,
               userId: "",
               nickname: joined.nickname,
               text: `${joined.nickname}님이 입장했습니다.`,
@@ -71,14 +101,14 @@ export function useLiveChat(roomId: string) {
       }
     })
 
-    channel.on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-      const left = leftPresences[0] as unknown as PresenceState | undefined
+    channel.on("presence", { event: "leave" }, ({ leftPresences }) => {
+      const left = leftPresences[0] as unknown as PresencePayload | undefined
       if (left && left.userId !== userId) {
         setMessages((prev) =>
           [
             ...prev,
             {
-              id: `sys-leave-${Date.now()}`,
+              id: `sys-leave-${Date.now()}-${left.userId}`,
               userId: "",
               nickname: left.nickname,
               text: `${left.nickname}님이 퇴장했습니다.`,
@@ -99,7 +129,18 @@ export function useLiveChat(roomId: string) {
     channel.subscribe(async (status, err) => {
       if (status === "SUBSCRIBED") {
         setIsConnected(true)
-        await channel.track({ userId, nickname })
+
+        // 현재 접속자 기반으로 빈 좌석 배정
+        const currentState = channel.presenceState<PresencePayload>()
+        const currentOccupants: PresencePayload[] = []
+        for (const presences of Object.values(currentState)) {
+          if (presences[0]) currentOccupants.push(presences[0])
+        }
+
+        const seat = findEmptySeat(currentOccupants)
+        mySeatRef.current = seat
+
+        await channel.track({ userId, nickname, seatIndex: seat })
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         console.error("[LiveChat] channel error:", status, err)
       }
@@ -112,20 +153,18 @@ export function useLiveChat(roomId: string) {
       supabase.removeChannel(channel)
       channelRef.current = null
       setIsConnected(false)
+      mySeatRef.current = -1
     }
   }, [roomId, userId, nickname, supabase])
 
-  // 메시지 전송
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim()
       if (!trimmed || !userId || !channelRef.current) return false
 
-      // 쿨다운 체크
       const now = Date.now()
       if (now - lastSentAt < COOLDOWN_MS) return false
 
-      // 길이 제한
       const sanitized = trimmed.slice(0, MAX_LENGTH)
 
       const msg: ChatMessage = {
@@ -143,7 +182,6 @@ export function useLiveChat(roomId: string) {
         payload: msg,
       })
 
-      // 자신의 메시지도 로컬에 추가 (broadcast는 자신에게 안 옴)
       setMessages((prev) => [...prev, msg].slice(-MAX_MESSAGES))
       setLastSentAt(now)
       return true
@@ -155,6 +193,7 @@ export function useLiveChat(roomId: string) {
 
   return {
     messages,
+    occupants,
     onlineCount,
     isConnected,
     sendMessage,
