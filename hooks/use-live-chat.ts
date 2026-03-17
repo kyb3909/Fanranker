@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useUser } from "@clerk/nextjs"
+import useSWR from "swr"
 import { createAnonClient } from "@/lib/supabase/client"
+import { fetcher } from "@/lib/swr"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
 export interface ChatMessage {
@@ -43,7 +45,10 @@ export function useLiveChat(roomId: string) {
   const [lastSentAt, setLastSentAt] = useState(0)
   const mySeatRef = useRef<number>(-1)
 
-  const nickname = user?.username || user?.firstName || "익명"
+  const { data: profileData } = useSWR(user?.id ? "/api/profile/me" : null, fetcher, {
+    revalidateOnFocus: false,
+  })
+  const nickname = profileData?.nickname || user?.firstName || "익명"
   const userId = user?.id
 
   // 빈 좌석 찾기
