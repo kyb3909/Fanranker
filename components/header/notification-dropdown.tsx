@@ -133,8 +133,6 @@ export function NotificationDropdown() {
         return `${actorName}님이 답글을 남겼습니다`
       case "new_post_by_followed":
         return `${actorName}님이 새로운 글을 작성했습니다`
-      case "message":
-        return `${actorName}님이 쪽지를 보냈습니다`
       case "expert_prediction":
         return `${actorName}님이 새로운 전문가 예측을 올렸습니다`
       case "settlement_result": {
@@ -155,8 +153,6 @@ export function NotificationDropdown() {
       case "reply":
       case "new_post_by_followed":
         return notification.related_post_id ? `/post/${notification.related_post_id}` : "/"
-      case "message":
-        return notification.actor_id ? `/messages?user=${notification.actor_id}` : "/messages"
       case "expert_prediction":
         return "/?view=prediction"
       case "settlement_result":

@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { UserProfileBadge } from "@/components/profile/user-profile-badge"
-import { UserPlus, UserMinus, Newspaper, MessageCircle, Ban } from "lucide-react"
+import { UserPlus, UserMinus, Newspaper } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -100,15 +100,6 @@ export function UserProfileHeader({
       </div>
       {!isOwnProfile && currentUserId && (
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/messages?user=${userId}`)}
-            className="gap-1.5"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span>쪽지</span>
-          </Button>
           {isJournalist && (
             <Button
               variant={isFollowing ? "outline" : "default"}
