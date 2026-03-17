@@ -7,6 +7,14 @@ CREATE OR REPLACE FUNCTION sync_live_room_status()
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  -- scheduled → waiting: 경기 시작 30분 전
+  UPDATE live_rooms lr
+  SET status = 'waiting'
+  FROM betman_games bg
+  WHERE lr.game_id = bg.id
+    AND lr.status = 'scheduled'
+    AND bg.match_time <= now() + interval '30 minutes';
+
   -- waiting → live: 경기가 시작됨 (in_progress)
   UPDATE live_rooms lr
   SET status = 'live'

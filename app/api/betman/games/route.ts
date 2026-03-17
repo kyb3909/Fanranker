@@ -403,7 +403,7 @@ export async function POST(request: NextRequest) {
               game_id: gameRow.id,
               name: `${match.home} vs ${match.away}`,
               sport: sportMap[match.sport] || match.sport,
-              status: "waiting",
+              status: "scheduled",
             })
             liveRoomsCreated++
           }
