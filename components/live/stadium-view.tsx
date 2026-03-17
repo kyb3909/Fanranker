@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { PixelAvatar } from "./pixel-avatar"
+import { PixelAvatar, type AvatarDirection } from "./pixel-avatar"
 import { SpeechBubble } from "./speech-bubble"
 import type { ChatMessage, Occupant } from "@/hooks/use-live-chat"
 
@@ -34,6 +34,11 @@ interface ActiveBubble {
   text: string
 }
 
+interface MotionState {
+  direction: AvatarDirection
+  moving: boolean
+}
+
 interface StadiumViewProps {
   sport: string
   occupants: Occupant[]
@@ -58,8 +63,11 @@ export function StadiumView({
   onMove,
 }: StadiumViewProps) {
   const [bubbles, setBubbles] = useState<ActiveBubble[]>([])
+  const [motionMap, setMotionMap] = useState<Record<string, MotionState>>({})
   const processedRef = useRef(new Set<string>())
   const containerRef = useRef<HTMLDivElement>(null)
+  const prevPositionsRef = useRef(new Map<string, { x: number; y: number }>())
+  const stopTimersRef = useRef(new Map<string, number>())
 
   // 새 메시지 → 말풍선 표시
   useEffect(() => {
@@ -78,6 +86,82 @@ export function StadiumView({
 
   const removeBubble = useCallback((id: string) => {
     setBubbles((prev) => prev.filter((b) => b.id !== id))
+  }, [])
+
+  const resolveDirection = useCallback((dx: number, dy: number): AvatarDirection => {
+    const angle = Math.atan2(dy, dx)
+    const normalized = (angle + Math.PI * 2) % (Math.PI * 2)
+    const sector = Math.round(normalized / (Math.PI / 4)) % 8
+    const directions: AvatarDirection[] = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"]
+    return directions[sector]
+  }, [])
+
+  useEffect(() => {
+    setMotionMap((prev) => {
+      const next: Record<string, MotionState> = { ...prev }
+      const currentIds = new Set(occupants.map((occ) => occ.userId))
+
+      for (const occ of occupants) {
+        const prevPos = prevPositionsRef.current.get(occ.userId)
+
+        if (!next[occ.userId]) {
+          next[occ.userId] = { direction: "S", moving: false }
+        }
+
+        if (prevPos) {
+          const dx = occ.x - prevPos.x
+          const dy = occ.y - prevPos.y
+          const distance = Math.hypot(dx, dy)
+
+          if (distance > 0.35) {
+            const direction = resolveDirection(dx, dy)
+            next[occ.userId] = { direction, moving: true }
+
+            const prevTimer = stopTimersRef.current.get(occ.userId)
+            if (prevTimer) {
+              window.clearTimeout(prevTimer)
+            }
+
+            const timer = window.setTimeout(() => {
+              setMotionMap((latest) => ({
+                ...latest,
+                [occ.userId]: {
+                  direction: latest[occ.userId]?.direction ?? direction,
+                  moving: false,
+                },
+              }))
+            }, 260)
+
+            stopTimersRef.current.set(occ.userId, timer)
+          }
+        }
+
+        prevPositionsRef.current.set(occ.userId, { x: occ.x, y: occ.y })
+      }
+
+      for (const userId of Object.keys(next)) {
+        if (!currentIds.has(userId)) {
+          delete next[userId]
+          prevPositionsRef.current.delete(userId)
+          const timer = stopTimersRef.current.get(userId)
+          if (timer) {
+            window.clearTimeout(timer)
+            stopTimersRef.current.delete(userId)
+          }
+        }
+      }
+
+      return next
+    })
+  }, [occupants, resolveDirection])
+
+  useEffect(() => {
+    return () => {
+      for (const timer of stopTimersRef.current.values()) {
+        window.clearTimeout(timer)
+      }
+      stopTimersRef.current.clear()
+    }
   }, [])
 
   // 클릭/탭으로 이동
@@ -154,6 +238,10 @@ export function StadiumView({
         {occupants.map((occ) => {
           const bubble = bubbles.find((b) => b.userId === occ.userId)
           const isMe = occ.userId === myUserId
+          const motion = motionMap[occ.userId] ?? {
+            direction: "S" as AvatarDirection,
+            moving: false,
+          }
 
           return (
             <div
@@ -176,10 +264,16 @@ export function StadiumView({
                     onExpire={() => removeBubble(bubble.id)}
                   />
                 )}
-                <PixelAvatar userId={occ.userId} nickname={occ.nickname} size={40} />
+                <PixelAvatar
+                  userId={occ.userId}
+                  nickname={occ.nickname}
+                  size={52}
+                  direction={motion.direction}
+                  moving={motion.moving}
+                />
                 {/* 닉네임 + 내 표시 */}
                 <span
-                  className={`mt-0.5 max-w-[60px] truncate text-center text-[8px] font-bold ${
+                  className={`mt-0.5 max-w-[72px] truncate text-center text-[8px] font-bold ${
                     isMe ? "text-yellow-300" : "text-white/70"
                   }`}
                 >
