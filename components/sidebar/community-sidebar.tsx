@@ -25,7 +25,11 @@ interface Category {
   parent_slug: string | null
 }
 
-export const CommunitySidebar = memo(function CommunitySidebar() {
+export const CommunitySidebar = memo(function CommunitySidebar({
+  initialCategories,
+}: {
+  initialCategories?: unknown[]
+}) {
   const { isSignedIn } = useAuth()
   const { mutate: globalMutate } = useSWRConfig()
   const { ref: stickyRef, stickyTop } = useStickySidebar()
@@ -39,6 +43,7 @@ export const CommunitySidebar = memo(function CommunitySidebar() {
   const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
+    fallbackData: initialCategories ? { categories: initialCategories as Category[] } : undefined,
   })
 
   const { parentCategories, channelMap, sportsCommunities, lifeCommunities, allCommunities } =

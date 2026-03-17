@@ -44,15 +44,28 @@ function mapApiPostsToRecentPosts(
 
 export const ActivitySidebar = memo(function ActivitySidebar({
   showPrize = false,
+  initialRecentComments,
 }: {
   showPrize?: boolean
+  initialRecentComments?: unknown[]
 }) {
   const { ref: stickyRef, stickyTop } = useStickySidebar()
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
 
-  // 최근 댓글이 달린 글 가져오기 (60초 캐시 사용)
+  // 최근 댓글이 달린 글 가져오기 (서버 프리페치 데이터 우선 사용, 60초 캐시)
   useEffect(() => {
+    // 서버에서 받은 초기 데이터가 있으면 바로 사용
+    if (initialRecentComments && initialRecentComments.length > 0 && recentPosts.length === 0) {
+      const mapped = mapApiPostsToRecentPosts(
+        initialRecentComments as Parameters<typeof mapApiPostsToRecentPosts>[0]
+      )
+      setRecentPosts(mapped)
+      recentCommentsCache = { data: mapped, fetchedAt: Date.now() }
+      setIsLoadingPosts(false)
+      return
+    }
+
     async function fetchRecentPosts() {
       const now = Date.now()
       if (recentCommentsCache && now - recentCommentsCache.fetchedAt < RECENT_COMMENTS_CACHE_MS) {
@@ -77,7 +90,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
     }
 
     fetchRecentPosts()
-  }, [])
+  }, [initialRecentComments])
 
   return (
     <div ref={stickyRef} className="sticky space-y-4" style={{ top: `${stickyTop}px` }}>

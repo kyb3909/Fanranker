@@ -18,7 +18,7 @@ interface Banner {
 
 const STORAGE_KEY = "announcement_dismissed_until"
 
-export function AnnouncementCarousel() {
+export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unknown[] }) {
   const [dismissed, setDismissed] = useState(true) // 기본 숨김 (깜빡임 방지)
   const [current, setCurrent] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
@@ -27,6 +27,7 @@ export function AnnouncementCarousel() {
   const { data } = useSWR<{ banners: Banner[] }>("/api/banners", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
+    fallbackData: initialBanners ? { banners: initialBanners as Banner[] } : undefined,
   })
 
   const banners = data?.banners ?? []

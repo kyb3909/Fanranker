@@ -92,10 +92,19 @@ type TabType = "feed" | "content"
 
 interface HomeClientProps {
   initialFeed: PostsResponse
+  initialCategories?: unknown[]
+  initialRecentComments?: unknown[]
+  initialBanners?: unknown[]
   isPredictionView: boolean
 }
 
-export function HomeClient({ initialFeed, isPredictionView }: HomeClientProps) {
+export function HomeClient({
+  initialFeed,
+  initialCategories,
+  initialRecentComments,
+  initialBanners,
+  isPredictionView,
+}: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const [activeTab, setActiveTab] = useState<TabType>("feed")
   const [sortBy, setSortBy] = useState<SortType>("hot")
@@ -147,12 +156,12 @@ export function HomeClient({ initialFeed, isPredictionView }: HomeClientProps) {
       <div className="grid grid-cols-12 gap-5 lg:gap-6">
         {/* Left Sidebar */}
         <aside className="col-span-3 hidden lg:block">
-          <CommunitySidebar />
+          <CommunitySidebar initialCategories={initialCategories} />
         </aside>
 
         {/* Main Content */}
         <div className="col-span-12 space-y-4 lg:col-span-6">
-          <AnnouncementCarousel />
+          <AnnouncementCarousel initialBanners={initialBanners} />
 
           {isPredictionView ? (
             <BettingPage />
@@ -249,7 +258,7 @@ export function HomeClient({ initialFeed, isPredictionView }: HomeClientProps) {
 
         {/* Right Sidebar */}
         <aside className="col-span-3 hidden lg:block">
-          <ActivitySidebar showPrize />
+          <ActivitySidebar showPrize initialRecentComments={initialRecentComments} />
         </aside>
       </div>
     </main>
