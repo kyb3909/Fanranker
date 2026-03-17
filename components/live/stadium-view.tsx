@@ -64,9 +64,19 @@ interface StadiumViewProps {
   messages: ChatMessage[]
   homeTeam?: string
   awayTeam?: string
+  homeScore?: number | null
+  awayScore?: number | null
 }
 
-export function StadiumView({ sport, occupants, messages, homeTeam, awayTeam }: StadiumViewProps) {
+export function StadiumView({
+  sport,
+  occupants,
+  messages,
+  homeTeam,
+  awayTeam,
+  homeScore,
+  awayScore,
+}: StadiumViewProps) {
   const [bubbles, setBubbles] = useState<ActiveBubble[]>([])
   const processedRef = useRef(new Set<string>())
 
@@ -115,6 +125,14 @@ export function StadiumView({ sport, occupants, messages, homeTeam, awayTeam }: 
             className="absolute top-1/2 left-1/2 h-[40px] w-[40px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
             style={{ borderColor: bg.lineColor }}
           />
+          {/* 실시간 점수 */}
+          {homeScore != null && awayScore != null && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-black/50 px-2 py-0.5 text-center">
+              <span className="text-xs font-bold text-white tabular-nums">
+                {homeScore} : {awayScore}
+              </span>
+            </div>
+          )}
           {/* 팀 이름 */}
           {homeTeam && (
             <span className="absolute top-1/2 left-3 -translate-y-1/2 text-[10px] font-bold text-white/70">

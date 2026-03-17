@@ -33,6 +33,8 @@ export default function LiveRoomPage() {
 
   const { data, isLoading } = useSWR(`/api/live-rooms/${roomId}`, fetcher, {
     revalidateOnFocus: false,
+    refreshInterval: (latestData: { room?: { status?: string } } | undefined) =>
+      latestData?.room?.status === "live" ? 30000 : 0, // 라이브 중 30초마다 점수 갱신
   })
   const room = data?.room
 
@@ -136,6 +138,8 @@ export default function LiveRoomPage() {
             messages={messages}
             homeTeam={game?.home_team_name}
             awayTeam={game?.away_team_name}
+            homeScore={game?.home_score}
+            awayScore={game?.away_score}
           />
           {/* 경기 정보 */}
           {game && (
@@ -144,7 +148,15 @@ export default function LiveRoomPage() {
                 <span className="flex-1 truncate text-right font-semibold">
                   {game.home_team_name}
                 </span>
-                <span className="text-muted-foreground text-xs">vs</span>
+                {game.home_score != null && game.away_score != null ? (
+                  <span className="flex items-center gap-1.5 font-bold tabular-nums">
+                    <span className="text-base">{game.home_score}</span>
+                    <span className="text-muted-foreground text-xs">:</span>
+                    <span className="text-base">{game.away_score}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground text-xs">vs</span>
+                )}
                 <span className="flex-1 truncate font-semibold">{game.away_team_name}</span>
               </div>
               {game.match_time && (
@@ -155,6 +167,9 @@ export default function LiveRoomPage() {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
+                  {game.home_score != null && game.status === "in_progress" && (
+                    <span className="ml-1.5 text-red-500">● LIVE</span>
+                  )}
                 </p>
               )}
             </Card>

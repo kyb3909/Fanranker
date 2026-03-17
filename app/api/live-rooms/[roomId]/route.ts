@@ -32,7 +32,9 @@ export async function GET(
           status,
           sport,
           league_code,
-          result
+          result,
+          home_score,
+          away_score
         )
       `
       )
