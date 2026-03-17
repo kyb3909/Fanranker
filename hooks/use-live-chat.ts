@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
-import { useSupabase } from "@/lib/supabase/hooks"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useUser } from "@clerk/nextjs"
+import { createAnonClient } from "@/lib/supabase/client"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
 export interface ChatMessage {
@@ -24,7 +24,8 @@ const MAX_LENGTH = 100
 const MAX_MESSAGES = 200
 
 export function useLiveChat(roomId: string) {
-  const supabase = useSupabase()
+  // Broadcast/Presence는 인증 불필요 → anon 클라이언트 사용 (세션 변경에 재생성 방지)
+  const supabase = useMemo(() => createAnonClient(), [])
   const { user } = useUser()
   const channelRef = useRef<RealtimeChannel | null>(null)
 
@@ -95,10 +96,12 @@ export function useLiveChat(roomId: string) {
       setMessages((prev) => [...prev, msg].slice(-MAX_MESSAGES))
     })
 
-    channel.subscribe(async (status) => {
+    channel.subscribe(async (status, err) => {
       if (status === "SUBSCRIBED") {
         setIsConnected(true)
         await channel.track({ userId, nickname })
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.error("[LiveChat] channel error:", status, err)
       }
     })
 
