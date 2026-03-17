@@ -31,12 +31,35 @@ export default function LiveRoomPage() {
   const { isSignedIn, user } = useUser()
   const roomId = params.roomId as string
 
-  const { data, isLoading } = useSWR(`/api/live-rooms/${roomId}`, fetcher, {
+  const {
+    data,
+    isLoading,
+    mutate: mutateRoom,
+  } = useSWR(`/api/live-rooms/${roomId}`, fetcher, {
     revalidateOnFocus: false,
-    refreshInterval: (latestData: { room?: { status?: string } } | undefined) =>
-      latestData?.room?.status === "live" ? 30000 : 0, // 라이브 중 30초마다 점수 갱신
+    refreshInterval: (latestData: { room?: { status?: string } } | undefined) => {
+      const status = latestData?.room?.status
+      // live/waiting 상태: 30초마다 갱신, ended: 60초
+      if (status === "live" || status === "waiting") return 30_000
+      if (status === "ended") return 60_000
+      return 0
+    },
   })
   const room = data?.room
+
+  // WiseToto 30초 폴링: live/waiting 상태일 때 점수 동기화 트리거
+  useSWR(
+    room?.status === "live" || room?.status === "waiting" ? "/api/wisetoto/sync" : null,
+    fetcher,
+    {
+      refreshInterval: 30_000,
+      revalidateOnFocus: false,
+      onSuccess: () => {
+        // 점수 동기화 후 룸 데이터 갱신
+        mutateRoom()
+      },
+    }
+  )
 
   const {
     messages,

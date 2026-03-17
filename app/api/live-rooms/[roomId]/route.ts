@@ -5,6 +5,7 @@ import { apiError } from "@/lib/api-error"
 /**
  * GET /api/live-rooms/[roomId]
  * 채팅방 상세 (경기 정보 포함)
+ * 매 요청 시 라이브룸 상태 동기화 실행
  */
 export async function GET(
   request: NextRequest,
@@ -13,6 +14,15 @@ export async function GET(
   try {
     const { roomId } = await params
     const supabase = createServiceRoleClient()
+
+    // 시간 기반 상태 전환 + 라이브룸 상태 동기화
+    const now = new Date().toISOString()
+    await supabase
+      .from("betman_games")
+      .update({ status: "in_progress", updated_at: now })
+      .eq("status", "scheduled")
+      .lt("match_time", now)
+    await Promise.resolve(supabase.rpc("sync_live_room_status")).catch(() => {})
 
     const { data, error } = await supabase
       .from("live_rooms")

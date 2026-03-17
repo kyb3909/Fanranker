@@ -44,8 +44,22 @@ interface LiveRoom {
 }
 
 export default function LiveRoomsPage() {
-  const { data, isLoading } = useSWR("/api/live-rooms", fetcher, {
-    refreshInterval: 30000,
+  const {
+    data,
+    isLoading,
+    mutate: mutateRooms,
+  } = useSWR("/api/live-rooms", fetcher, {
+    refreshInterval: 30_000,
+  })
+
+  // 라이브 경기가 있으면 wisetoto 30초 폴링
+  const hasActiveRooms = (data?.rooms ?? []).some(
+    (r: { status: string }) => r.status === "live" || r.status === "waiting"
+  )
+  useSWR(hasActiveRooms ? "/api/wisetoto/sync" : null, fetcher, {
+    refreshInterval: 30_000,
+    revalidateOnFocus: false,
+    onSuccess: () => mutateRooms(),
   })
 
   const rooms: LiveRoom[] = data?.rooms ?? []

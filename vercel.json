@@ -9,6 +9,10 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/wisetoto/sync",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/reddit-seed-posts",
       "schedule": "0 */6 * * *"
     },
