@@ -35,6 +35,12 @@ export async function onboardingGuard(
   const onboardingCookie = req.cookies.get("onboarding_done")
   if (onboardingCookie) return null
 
+  // 미완료 상태도 캐싱 — 5분간 DB 재조회 방지
+  const incompleteCookie = req.cookies.get("onboarding_status")
+  if (incompleteCookie?.value === "incomplete") {
+    return NextResponse.redirect(new URL("/sign-up", req.url))
+  }
+
   try {
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,7 +58,14 @@ export async function onboardingGuard(
     const isOnboardingIncomplete = profile && profile.onboarding_completed === false
 
     if (isNewUser || isOnboardingIncomplete) {
-      return NextResponse.redirect(new URL("/sign-up", req.url))
+      const response = NextResponse.redirect(new URL("/sign-up", req.url))
+      response.cookies.set("onboarding_status", "incomplete", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 5, // 5분간 캐싱
+      })
+      return response
     }
 
     // 온보딩 완료 확인됨 → 쿠키에 캐싱 (24시간)

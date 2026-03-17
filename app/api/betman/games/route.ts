@@ -76,7 +76,9 @@ export async function GET(request: NextRequest) {
     const isToday = !dateParam || dailyId === getTodayDailyId()
     let query = supabase
       .from("betman_games")
-      .select("*")
+      .select(
+        "id, round_id, game_no, match_time, sport, league_code, game_type, home_team_name, away_team_name, handicap, over_under_line, venue, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
+      )
       .gte("match_time", windowStart.toISOString())
       .lt("match_time", windowEnd.toISOString())
       .order("match_time", { ascending: true })
@@ -371,41 +373,60 @@ export async function POST(request: NextRequest) {
             arr.findIndex((x) => x.home === m.home && x.away === m.away && x.time === m.time) === i
         )
 
-        for (const match of uniqueMatches) {
-          // 해당 경기의 DB id 조회
-          const { data: gameRow } = await supabase
-            .from("betman_games")
-            .select("id")
-            .eq("home_team_name", match.home)
-            .eq("away_team_name", match.away)
-            .eq("match_time", match.time)
-            .eq("game_type", "일반")
-            .limit(1)
-            .maybeSingle()
+        // 1) Batch fetch: 모든 '일반' 경기의 DB id를 한 번에 조회
+        const matchTimes = [...new Set(uniqueMatches.map((m) => m.time).filter(Boolean))]
+        const { data: allGameRows } = await supabase
+          .from("betman_games")
+          .select("id, home_team_name, away_team_name, match_time, sport")
+          .eq("game_type", "일반")
+          .in("match_time", matchTimes as string[])
 
-          if (!gameRow) continue
+        if (allGameRows && allGameRows.length > 0) {
+          // game lookup map: "home_away_time" → gameRow
+          const gameMap = new Map<string, (typeof allGameRows)[0]>()
+          for (const g of allGameRows) {
+            gameMap.set(`${g.home_team_name}_${g.away_team_name}_${g.match_time}`, g)
+          }
 
-          // 이미 live_room이 있으면 스킵 (UNIQUE index가 방어하지만 에러 방지)
-          const { data: existing } = await supabase
+          // 2) Batch fetch: 이미 존재하는 live_rooms 조회
+          const allGameIds = allGameRows.map((g) => g.id)
+          const { data: existingRooms } = await supabase
             .from("live_rooms")
-            .select("id")
-            .eq("game_id", gameRow.id)
-            .maybeSingle()
+            .select("game_id")
+            .in("game_id", allGameIds)
 
-          if (!existing) {
-            const sportMap: Record<string, string> = {
-              축구: "football",
-              야구: "baseball",
-              농구: "basketball",
-              배구: "volleyball",
-            }
-            await supabase.from("live_rooms").insert({
+          const existingGameIds = new Set((existingRooms ?? []).map((r) => r.game_id))
+
+          // 3) Batch insert: 새 live_rooms 일괄 생성
+          const sportMap: Record<string, string> = {
+            축구: "football",
+            야구: "baseball",
+            농구: "basketball",
+            배구: "volleyball",
+          }
+          const newRooms: Array<{
+            game_id: string
+            name: string
+            sport: string
+            status: string
+          }> = []
+
+          for (const match of uniqueMatches) {
+            const key = `${match.home}_${match.away}_${match.time}`
+            const gameRow = gameMap.get(key)
+            if (!gameRow || existingGameIds.has(gameRow.id)) continue
+
+            newRooms.push({
               game_id: gameRow.id,
               name: `${match.home} vs ${match.away}`,
               sport: sportMap[match.sport] || match.sport,
               status: "scheduled",
             })
-            liveRoomsCreated++
+          }
+
+          if (newRooms.length > 0) {
+            await supabase.from("live_rooms").insert(newRooms)
+            liveRoomsCreated = newRooms.length
           }
         }
       }

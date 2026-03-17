@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
       .eq("post_id", postId)
       .is("deleted_at", null)
       .order("created_at", { ascending: true })
+      .limit(200)
 
     if (error) {
       return apiError("댓글을 불러오는 중 오류가 발생했습니다.", 500, error)

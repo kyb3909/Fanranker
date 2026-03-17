@@ -30,6 +30,15 @@ export async function GET(request: NextRequest) {
     const sortColumn =
       sort === "accuracy" ? "accuracy" : sort === "net_profit" ? "net_profit" : "profit_rate"
 
+    // 현재 유저 ID를 한 번만 조회
+    let currentUserId: string | null = null
+    try {
+      const { userId } = await auth()
+      currentUserId = userId
+    } catch {
+      /* not logged in */
+    }
+
     // 랭킹 조회
     const {
       data: stats,
@@ -37,7 +46,10 @@ export async function GET(request: NextRequest) {
       count,
     } = await supabase
       .from("betman_user_sport_stats")
-      .select("*", { count: "exact" })
+      .select(
+        "user_id, sport, total_predictions, correct_predictions, wrong_predictions, accuracy, total_wagered, total_returns, net_profit, profit_rate, current_streak, best_win_streak",
+        { count: "exact" }
+      )
       .eq("sport", sport)
       .gte("total_predictions", minPredictions)
       .gt("total_wagered", 0)
@@ -53,22 +65,19 @@ export async function GET(request: NextRequest) {
     if (!stats || stats.length === 0) {
       // 내 순위도 조회
       let myRank = null
-      try {
-        const { userId } = await auth()
-        if (userId) {
-          const { data: myStats } = await supabase
-            .from("betman_user_sport_stats")
-            .select("*")
-            .eq("user_id", userId)
-            .eq("sport", sport)
-            .single()
+      if (currentUserId) {
+        const { data: myStats } = await supabase
+          .from("betman_user_sport_stats")
+          .select(
+            "user_id, sport, total_predictions, correct_predictions, wrong_predictions, accuracy, total_wagered, total_returns, net_profit, profit_rate, current_streak, best_win_streak"
+          )
+          .eq("user_id", currentUserId)
+          .eq("sport", sport)
+          .single()
 
-          if (myStats) {
-            myRank = { ...myStats, rank: null, nickname: null, avatar_url: null }
-          }
+        if (myStats) {
+          myRank = { ...myStats, rank: null, nickname: null, avatar_url: null }
         }
-      } catch {
-        /* not logged in */
       }
 
       return NextResponse.json({
@@ -109,57 +118,61 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 내 순위 조회
+    // 내 순위 조회 (이미 위에서 auth()로 조회한 currentUserId 재사용)
     let myRank = null
-    try {
-      const { userId } = await auth()
-      if (userId) {
-        const { data: myStats } = await supabase
-          .from("betman_user_sport_stats")
-          .select("*")
-          .eq("user_id", userId)
-          .eq("sport", sport)
-          .single()
-
-        if (myStats && (myStats.total_wagered ?? 0) > 0) {
-          // 내 순위 계산: 나보다 높은 사람 수 + 1
-          const { count: higherCount } = await supabase
+    if (currentUserId) {
+      // 랭킹 목록에 이미 포함된 경우 재사용, 아니면 DB 조회
+      const existingInRankings = stats.find((s) => s.user_id === currentUserId)
+      const myStats =
+        existingInRankings ||
+        (
+          await supabase
             .from("betman_user_sport_stats")
-            .select("id", { count: "exact", head: true })
+            .select(
+              "user_id, sport, total_predictions, correct_predictions, wrong_predictions, accuracy, total_wagered, total_returns, net_profit, profit_rate, current_streak, best_win_streak"
+            )
+            .eq("user_id", currentUserId)
             .eq("sport", sport)
-            .gte("total_predictions", minPredictions)
-            .gt("total_wagered", 0)
-            .gt(sortColumn, parseFloat(String(myStats[sortColumn] ?? 0)))
+            .single()
+        ).data
 
-          const myProfile =
-            profileMap.get(userId) ||
-            (
-              await supabase
-                .from("profiles")
-                .select("nickname, avatar_url")
-                .eq("user_id", userId)
-                .single()
-            ).data
+      if (myStats && (myStats.total_wagered ?? 0) > 0) {
+        // 내 순위 계산: 나보다 높은 사람 수 + 1
+        const { count: higherCount } = await supabase
+          .from("betman_user_sport_stats")
+          .select("id", { count: "exact", head: true })
+          .eq("sport", sport)
+          .gte("total_predictions", minPredictions)
+          .gt("total_wagered", 0)
+          .gt(sortColumn, parseFloat(String(myStats[sortColumn as keyof typeof myStats] ?? 0)))
 
-          myRank = {
-            rank: (higherCount ?? 0) + 1,
-            user_id: userId,
-            nickname: myProfile?.nickname || "익명",
-            avatar_url: myProfile?.avatar_url || null,
-            sport: myStats.sport,
-            total_predictions: myStats.total_predictions,
-            correct_predictions: myStats.correct_predictions,
-            accuracy: parseFloat(myStats.accuracy) || 0,
-            total_wagered: myStats.total_wagered,
-            net_profit: parseFloat(myStats.net_profit) || 0,
-            profit_rate: parseFloat(myStats.profit_rate) || 0,
-            current_streak: myStats.current_streak,
-            best_win_streak: myStats.best_win_streak,
-          }
+        // profileMap에 있으면 재사용, 없으면 DB 조회
+        const myProfile =
+          profileMap.get(currentUserId) ||
+          (
+            await supabase
+              .from("profiles")
+              .select("nickname, avatar_url")
+              .eq("user_id", currentUserId)
+              .single()
+          ).data
+
+        myRank = {
+          rank: (higherCount ?? 0) + 1,
+          user_id: currentUserId,
+          nickname: myProfile?.nickname || "익명",
+          avatar_url: myProfile?.avatar_url || null,
+          sport: myStats.sport,
+          total_predictions: myStats.total_predictions,
+          correct_predictions: myStats.correct_predictions,
+          accuracy: parseFloat(myStats.accuracy) || 0,
+          total_wagered: myStats.total_wagered,
+          net_profit: parseFloat(myStats.net_profit) || 0,
+          profit_rate: parseFloat(myStats.profit_rate) || 0,
+          current_streak: myStats.current_streak,
+          best_win_streak: myStats.best_win_streak,
         }
       }
-    } catch {
-      /* not logged in */
     }
 
     const res = NextResponse.json({

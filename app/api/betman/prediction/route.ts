@@ -77,7 +77,9 @@ export async function POST(request: NextRequest) {
     const gameIds = predictions.map((p) => p.game_id)
     const { data: games, error: gamesError } = await supabase
       .from("betman_games")
-      .select("*")
+      .select(
+        "id, round_id, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds"
+      )
       .in("id", gameIds)
 
     if (gamesError || !games) {

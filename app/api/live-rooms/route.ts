@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         .eq("game_type", "일반")
         .gte("match_time", todayStart.toISOString())
         .lt("match_time", tomorrowEnd.toISOString())
+        .limit(200)
 
       // 이미 채팅방이 있는 game_id 조회
       const { data: existingRooms } = await supabase
@@ -49,9 +50,11 @@ export async function GET(request: NextRequest) {
           sport: sportMap[g.sport as string] || String(g.sport),
           status: "scheduled",
         }))
-        // 개별 insert (UNIQUE index가 중복 방지)
-        for (const row of roomRows) {
-          await supabase.from("live_rooms").insert(row).select().maybeSingle()
+        // 일괄 insert (UNIQUE index on game_id가 중복 방지)
+        try {
+          await supabase.from("live_rooms").insert(roomRows)
+        } catch {
+          // unique constraint violation 등은 무시 (일부가 이미 존재할 수 있음)
         }
       }
     } catch {
