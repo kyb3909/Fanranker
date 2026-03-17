@@ -72,5 +72,10 @@ BEGIN
   WHERE game_id IS NULL
     AND status NOT IN ('closed')
     AND created_at < now() - interval '24 hours';
+
+  -- closed 후 30분 경과한 방 삭제 (DB 정리)
+  DELETE FROM live_rooms
+  WHERE status = 'closed'
+    AND closed_at < now() - interval '30 minutes';
 END;
 $$;
