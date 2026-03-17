@@ -58,7 +58,15 @@ export async function GET(request: NextRequest) {
       // 자동 생성 실패해도 목록 조회는 계속
     }
 
-    // 2) 경기 시간 기반 상태 자동 전환 (scheduled→waiting→live→ended→closed)
+    // 2) 시작 시간이 지난 경기를 in_progress로 전환 (betman_games 상태 동기화)
+    const now = new Date()
+    await supabase
+      .from("betman_games")
+      .update({ status: "in_progress", updated_at: now.toISOString() })
+      .eq("status", "scheduled")
+      .lt("match_time", now.toISOString())
+
+    // 3) 경기 시간 기반 채팅방 상태 자동 전환 (scheduled→waiting→live→ended→closed)
     await Promise.resolve(supabase.rpc("sync_live_room_status")).catch(() => {})
 
     const { data, error } = await supabase
