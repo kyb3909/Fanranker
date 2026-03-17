@@ -94,7 +94,7 @@ export default function AdminStatsPage() {
     dateLabel: format(new Date(d.date + "T12:00:00"), "M/d (E)", { locale: ko }).replace(".", ""),
     수익률: d.avgProfitRate ?? 0,
     적중률: d.avgAccuracy ?? 0,
-    토사장손익: d.housePnl,
+    주인장손익: d.housePnl,
   }))
 
   return (
@@ -103,7 +103,7 @@ export default function AdminStatsPage() {
         <div>
           <h1 className="text-2xl font-bold">승부예측 통계</h1>
           <p className="text-muted-foreground text-sm">
-            전체 유저 수익률·적중률, 토사장 손익, 종목별·일자별 추이
+            전체 유저 수익률·적중률, 주인장 손익, 종목별·일자별 추이
           </p>
         </div>
         <button
@@ -158,7 +158,7 @@ export default function AdminStatsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
               <Banknote className="h-4 w-4" />
-              토사장 손익
+              주인장 손익
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -170,7 +170,7 @@ export default function AdminStatsPage() {
               {formatPnl(overall.housePnl)}
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
-              {overall.housePnl >= 0 ? "토사장 흑자" : "토사장 적자"}
+              {overall.housePnl >= 0 ? "주인장 흑자" : "주인장 적자"}
             </p>
           </CardContent>
         </Card>
@@ -180,7 +180,7 @@ export default function AdminStatsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">최근 7일 추이</CardTitle>
-          <p className="text-muted-foreground text-sm">일자별 수익률·적중률·토사장 손익</p>
+          <p className="text-muted-foreground text-sm">일자별 수익률·적중률·주인장 손익</p>
         </CardHeader>
         <CardContent>
           <div className="h-[320px] w-full">
@@ -252,11 +252,11 @@ export default function AdminStatsPage() {
                 <Line
                   yAxisId="right"
                   type="monotone"
-                  dataKey="토사장손익"
+                  dataKey="주인장손익"
                   stroke="var(--chart-3)"
                   strokeWidth={2}
                   dot={{ r: 4 }}
-                  name="토사장 손익 (볼)"
+                  name="주인장 손익 (볼)"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -268,7 +268,7 @@ export default function AdminStatsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">종목별 통계</CardTitle>
-          <p className="text-muted-foreground text-sm">수익률·적중률·토사장 손익</p>
+          <p className="text-muted-foreground text-sm">수익률·적중률·주인장 손익</p>
         </CardHeader>
         <CardContent>
           {bySport.length === 0 ? (
@@ -280,7 +280,7 @@ export default function AdminStatsPage() {
                   <TableHead>종목</TableHead>
                   <TableHead className="text-right">평균 수익률</TableHead>
                   <TableHead className="text-right">평균 적중률</TableHead>
-                  <TableHead className="text-right">토사장 손익</TableHead>
+                  <TableHead className="text-right">주인장 손익</TableHead>
                   <TableHead className="text-right">배팅금</TableHead>
                 </TableRow>
               </TableHeader>

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const { start: windowStart, end: windowEnd, dailyId } = getDailyWindow(dateParam || undefined)
     const now = new Date()
 
-    // --- Auto-expire past games + close past daily rounds (병렬) ---
+    // --- Auto-expire past games + close past daily rounds + update live rooms (병렬) ---
     await Promise.all([
       supabase
         .from("betman_games")
@@ -66,6 +66,10 @@ export async function GET(request: NextRequest) {
         .update({ status: "closed", updated_at: now.toISOString() })
         .eq("status", "open")
         .lt("bet_close_at", now.toISOString()),
+      // live_rooms: 경기 시작 → live, 경기 끝나고 30분 → closed
+      Promise.resolve(supabase.rpc("sync_live_room_status")).catch(() => {
+        /* RPC가 없으면 무시 */
+      }),
     ])
 
     // --- Fetch games in daily window (kickoff-time based) ---
@@ -336,11 +340,86 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // --- Auto-create live rooms for upcoming matches ---
+    // 같은 매치(홈팀+원정팀+시간)를 하나의 라이브 채팅방으로 묶음
+    // game_type이 일반인 경기의 id를 game_id로 사용 (대표 경기)
+    let liveRoomsCreated = 0
+    try {
+      // 방금 upsert한 경기들 중 '일반' 타입만 가져와서 대표 경기로 사용
+      const matchKeys = [
+        ...new Set(
+          rows
+            .filter((r) => r.match_time && (r.game_type === "일반" || r.game_type === "S일반"))
+            .map((r) => `${r.home_team_name}_${r.away_team_name}_${r.match_time}`)
+        ),
+      ]
+
+      if (matchKeys.length > 0) {
+        // 해당 경기들의 실제 DB id 조회
+        const gameConditions = rows
+          .filter((r) => r.match_time && (r.game_type === "일반" || r.game_type === "S일반"))
+          .map((r) => ({
+            home: r.home_team_name,
+            away: r.away_team_name,
+            time: r.match_time,
+            sport: r.sport,
+          }))
+
+        // 중복 제거
+        const uniqueMatches = gameConditions.filter(
+          (m, i, arr) =>
+            arr.findIndex((x) => x.home === m.home && x.away === m.away && x.time === m.time) === i
+        )
+
+        for (const match of uniqueMatches) {
+          // 해당 경기의 DB id 조회
+          const { data: gameRow } = await supabase
+            .from("betman_games")
+            .select("id")
+            .eq("home_team_name", match.home)
+            .eq("away_team_name", match.away)
+            .eq("match_time", match.time)
+            .eq("game_type", "일반")
+            .limit(1)
+            .maybeSingle()
+
+          if (!gameRow) continue
+
+          // 이미 live_room이 있으면 스킵 (UNIQUE index가 방어하지만 에러 방지)
+          const { data: existing } = await supabase
+            .from("live_rooms")
+            .select("id")
+            .eq("game_id", gameRow.id)
+            .maybeSingle()
+
+          if (!existing) {
+            const sportMap: Record<string, string> = {
+              축구: "football",
+              야구: "baseball",
+              농구: "basketball",
+              배구: "volleyball",
+            }
+            await supabase.from("live_rooms").insert({
+              game_id: gameRow.id,
+              name: `${match.home} vs ${match.away}`,
+              sport: sportMap[match.sport] || match.sport,
+              status: "waiting",
+            })
+            liveRoomsCreated++
+          }
+        }
+      }
+    } catch (e) {
+      // live_rooms 생성 실패해도 게임 동기화는 성공으로 처리
+      console.error("live_rooms auto-create error:", e)
+    }
+
     return NextResponse.json({
       roundId,
       count: rows.length,
       dailyRoundsProcessed: dailyRoundsCreated,
-      message: `${rows.length}개 경기가 저장되었습니다. (${dailyRoundsCreated}개 일일 라운드 처리)`,
+      liveRoomsCreated,
+      message: `${rows.length}개 경기가 저장되었습니다. (${dailyRoundsCreated}개 일일 라운드, ${liveRoomsCreated}개 채팅방 생성)`,
     })
   } catch (e) {
     console.error("API error:", e)

@@ -10,6 +10,7 @@ import {
   Trophy,
   Gamepad2,
   Sparkles,
+  Radio,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -40,6 +41,7 @@ export function Header() {
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname === "/" && view === "prediction"
   const isGames = pathname.startsWith("/games")
+  const isLive = pathname.startsWith("/live")
   const isShop = pathname.startsWith("/shop")
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -331,6 +333,18 @@ export function Header() {
             >
               <Trophy className="h-[18px] w-[18px] shrink-0" />
               경기 예측
+            </span>
+          </Link>
+          <Link href="/live" prefetch={false}>
+            <span
+              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
+                isLive
+                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
+                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
+              }`}
+            >
+              <Radio className="h-[18px] w-[18px] shrink-0" />
+              라이브
             </span>
           </Link>
           <Link href="/games" prefetch={false}>

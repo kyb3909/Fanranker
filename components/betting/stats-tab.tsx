@@ -39,11 +39,11 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* 토사장 vs 유저 대결 보드 */}
+      {/* 주인장 vs 유저 대결 보드 */}
       <Card className="border-border bg-card overflow-hidden border">
         <div className="p-4 sm:p-5">
           <div className="mb-4 text-center">
-            <h3 className="text-foreground text-lg font-bold">토사장 vs 유저</h3>
+            <h3 className="text-foreground text-lg font-bold">주인장 vs 유저</h3>
             <p className="text-muted-foreground mt-0.5 text-sm">누가 이기고 있을까?</p>
           </div>
 
@@ -70,11 +70,11 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
               {usersWinning
                 ? "유저들이 이기고 있다!"
                 : housePnl > 0
-                  ? "토사장이 웃고 있다..."
+                  ? "주인장이 웃고 있다..."
                   : "현재 무승부!"}
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
-              토사장 {usersWinning ? "손실" : "수익"}:{" "}
+              주인장 {usersWinning ? "손실" : "수익"}:{" "}
               <span className="font-semibold">
                 {usersWinning ? "-" : "+"}
                 {formatBalls(Math.abs(housePnl))} 볼
@@ -176,7 +176,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                           : "text-red-600 dark:text-red-400"
                       }`}
                     >
-                      {sportHouseLosing ? "유저 승" : "토사장 승"}
+                      {sportHouseLosing ? "유저 승" : "주인장 승"}
                     </p>
                     <p className="text-muted-foreground text-[11px]">
                       {formatBalls(Math.abs(s.housePnl))} 볼
@@ -199,7 +199,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
         <div className="p-4 sm:p-5">
           <h3 className="text-foreground mb-1 text-base font-bold">최근 7일 전세</h3>
           <p className="text-muted-foreground mb-4 text-xs">
-            위로 갈수록 토사장 유리, 아래로 갈수록 유저 유리
+            위로 갈수록 주인장 유리, 아래로 갈수록 유저 유리
           </p>
           <div className="space-y-1.5">
             {dailyTrend.map((day) => {
@@ -218,7 +218,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                     {day.housePnl === 0 ? (
                       <div className="bg-muted absolute left-1/2 h-5 w-1 -translate-x-1/2 rounded" />
                     ) : isHouseWin ? (
-                      /* 토사장 승: 오른쪽으로 (빨간) */
+                      /* 주인장 승: 오른쪽으로 (빨간) */
                       <div
                         className="absolute left-1/2 h-5 rounded-r bg-red-400/70 dark:bg-red-500/50"
                         style={{ width: `${barWidth / 2}%` }}
@@ -249,7 +249,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
           </div>
           <div className="mt-3 flex justify-between text-[11px]">
             <span className="text-emerald-600 dark:text-emerald-400">← 유저 유리</span>
-            <span className="text-red-600 dark:text-red-400">토사장 유리 →</span>
+            <span className="text-red-600 dark:text-red-400">주인장 유리 →</span>
           </div>
         </div>
       </Card>
