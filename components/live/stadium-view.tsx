@@ -3,25 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { PixelAvatar } from "./pixel-avatar"
 import { SpeechBubble } from "./speech-bubble"
-import type { ChatMessage } from "@/hooks/use-live-chat"
-
-// 좌석 배치: 4행 5열 = 20석 (경기장 관중석 느낌)
-const SEAT_LAYOUT = (() => {
-  const seats: { x: number; y: number }[] = []
-  const rows = 4
-  const cols = 5
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      // 곡선 배치 (가운데가 약간 앞으로 나옴)
-      const centerOffset = Math.abs(col - 2) * 4
-      seats.push({
-        x: 10 + col * 20, // % 기준
-        y: 30 + row * 17 + centerOffset,
-      })
-    }
-  }
-  return seats
-})()
+import type { ChatMessage, Occupant } from "@/hooks/use-live-chat"
 
 const SPORT_BG: Record<string, { gradient: string; fieldColor: string; lineColor: string }> = {
   football: {
@@ -46,12 +28,6 @@ const SPORT_BG: Record<string, { gradient: string; fieldColor: string; lineColor
   },
 }
 
-interface SeatOccupant {
-  userId: string
-  nickname: string
-  seatIndex: number
-}
-
 interface ActiveBubble {
   id: string
   userId: string
@@ -60,12 +36,14 @@ interface ActiveBubble {
 
 interface StadiumViewProps {
   sport: string
-  occupants: SeatOccupant[]
+  occupants: Occupant[]
   messages: ChatMessage[]
   homeTeam?: string
   awayTeam?: string
   homeScore?: number | null
   awayScore?: number | null
+  myUserId?: string
+  onMove?: (x: number, y: number) => void
 }
 
 export function StadiumView({
@@ -76,9 +54,12 @@ export function StadiumView({
   awayTeam,
   homeScore,
   awayScore,
+  myUserId,
+  onMove,
 }: StadiumViewProps) {
   const [bubbles, setBubbles] = useState<ActiveBubble[]>([])
   const processedRef = useRef(new Set<string>())
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // 새 메시지 → 말풍선 표시
   useEffect(() => {
@@ -99,16 +80,29 @@ export function StadiumView({
     setBubbles((prev) => prev.filter((b) => b.id !== id))
   }, [])
 
+  // 클릭/탭으로 이동
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!onMove || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const x = ((e.clientX - rect.left) / rect.width) * 100
+      const y = ((e.clientY - rect.top) / rect.height) * 100
+      // 필드 영역(상단 27%)은 이동 불가
+      if (y < 28) return
+      onMove(x, y)
+    },
+    [onMove]
+  )
+
   const bg = SPORT_BG[sport] || SPORT_BG.football
 
-  // occupant → seat mapping
-  const seatMap = new Map<number, SeatOccupant>()
-  for (const occ of occupants) {
-    seatMap.set(occ.seatIndex, occ)
-  }
-
   return (
-    <div className="relative w-full overflow-hidden rounded-xl" style={{ paddingBottom: "70%" }}>
+    <div
+      ref={containerRef}
+      className="relative w-full cursor-pointer overflow-hidden rounded-xl select-none"
+      style={{ paddingBottom: "70%" }}
+      onClick={handleClick}
+    >
       {/* 배경: 경기장 */}
       <div className={`absolute inset-0 bg-gradient-to-b ${bg.gradient}`}>
         {/* 경기장 필드 */}
@@ -146,61 +140,59 @@ export function StadiumView({
           )}
         </div>
 
-        {/* 관중석 배경 줄 */}
-        {[0, 1, 2, 3].map((row) => (
-          <div
-            key={row}
-            className="absolute left-[5%] w-[90%] rounded"
-            style={{
-              top: `${28 + row * 17}%`,
-              height: "14%",
-              backgroundColor: `rgba(0,0,0,${0.1 + row * 0.05})`,
-            }}
-          />
-        ))}
+        {/* 관중석 배경 (이동 가능 영역 표시) */}
+        <div
+          className="absolute left-[2%] w-[96%] rounded-lg"
+          style={{
+            top: "28%",
+            height: "70%",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.25))",
+          }}
+        />
 
-        {/* 좌석 + 아바타 */}
-        {SEAT_LAYOUT.map((seat, idx) => {
-          const occupant = seatMap.get(idx)
-          const bubble = occupant ? bubbles.find((b) => b.userId === occupant.userId) : null
+        {/* 아바타들: 자유 위치 + CSS transition 이동 */}
+        {occupants.map((occ) => {
+          const bubble = bubbles.find((b) => b.userId === occ.userId)
+          const isMe = occ.userId === myUserId
 
           return (
             <div
-              key={idx}
+              key={occ.userId}
               className="absolute"
               style={{
-                left: `${seat.x}%`,
-                top: `${seat.y}%`,
+                left: `${occ.x}%`,
+                top: `${occ.y}%`,
                 transform: "translate(-50%, -50%)",
+                transition: "left 0.4s ease-out, top 0.4s ease-out",
+                zIndex: Math.round(occ.y), // 아래쪽이 앞으로
               }}
             >
-              {occupant ? (
-                <div className="relative flex flex-col items-center">
-                  {/* 말풍선 */}
-                  {bubble && (
-                    <SpeechBubble
-                      key={bubble.id}
-                      text={bubble.text}
-                      onExpire={() => removeBubble(bubble.id)}
-                    />
-                  )}
-                  <PixelAvatar userId={occupant.userId} nickname={occupant.nickname} size={40} />
-                </div>
-              ) : (
-                // 빈 좌석
-                <div className="flex h-[20px] w-[20px] items-center justify-center rounded-sm bg-gray-600/30">
-                  <div className="h-[8px] w-[12px] rounded-t-sm bg-gray-500/40" />
-                </div>
-              )}
+              <div className="relative flex flex-col items-center">
+                {/* 말풍선 */}
+                {bubble && (
+                  <SpeechBubble
+                    key={bubble.id}
+                    text={bubble.text}
+                    onExpire={() => removeBubble(bubble.id)}
+                  />
+                )}
+                <PixelAvatar userId={occ.userId} nickname={occ.nickname} size={40} />
+                {/* 닉네임 + 내 표시 */}
+                <span
+                  className={`mt-0.5 max-w-[60px] truncate text-center text-[8px] font-bold ${
+                    isMe ? "text-yellow-300" : "text-white/70"
+                  }`}
+                >
+                  {occ.nickname}
+                </span>
+              </div>
             </div>
           )
         })}
 
-        {/* 관중석 하단 그라데이션 */}
+        {/* 하단 그라데이션 */}
         <div className="absolute right-0 bottom-0 left-0 h-[10%] bg-gradient-to-t from-black/30 to-transparent" />
       </div>
     </div>
   )
 }
-
-export { SEAT_LAYOUT }

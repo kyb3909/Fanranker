@@ -16,22 +16,33 @@ export interface ChatMessage {
   type: "chat" | "system"
 }
 
-export interface SeatOccupant {
+export interface Occupant {
   userId: string
   nickname: string
-  seatIndex: number
+  x: number // 0~100 (%)
+  y: number // 0~100 (%)
 }
 
 interface PresencePayload {
   userId: string
   nickname: string
-  seatIndex: number
+  x: number
+  y: number
 }
 
 const COOLDOWN_MS = 3000
 const MAX_LENGTH = 100
 const MAX_MESSAGES = 200
-const MAX_SEATS = 20
+
+// 관중 이동 가능 영역 (% 기준)
+const MOVE_AREA = { xMin: 5, xMax: 95, yMin: 30, yMax: 95 }
+
+function randomPosition() {
+  return {
+    x: MOVE_AREA.xMin + Math.random() * (MOVE_AREA.xMax - MOVE_AREA.xMin),
+    y: MOVE_AREA.yMin + Math.random() * (MOVE_AREA.yMax - MOVE_AREA.yMin),
+  }
+}
 
 export function useLiveChat(roomId: string) {
   const supabase = useMemo(() => createAnonClient(), [])
@@ -39,26 +50,17 @@ export function useLiveChat(roomId: string) {
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [occupants, setOccupants] = useState<SeatOccupant[]>([])
+  const [occupants, setOccupants] = useState<Occupant[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [lastSentAt, setLastSentAt] = useState(0)
-  const mySeatRef = useRef<number>(-1)
+  const myPosRef = useRef<{ x: number; y: number }>({ x: 50, y: 60 })
 
   const { data: profileData } = useSWR(user?.id ? "/api/profile/me" : null, fetcher, {
     revalidateOnFocus: false,
   })
   const nickname = profileData?.nickname || user?.firstName || "익명"
   const userId = user?.id
-
-  // 빈 좌석 찾기
-  function findEmptySeat(currentOccupants: PresencePayload[]): number {
-    const taken = new Set(currentOccupants.map((o) => o.seatIndex))
-    for (let i = 0; i < MAX_SEATS; i++) {
-      if (!taken.has(i)) return i
-    }
-    return Math.floor(Math.random() * MAX_SEATS)
-  }
 
   useEffect(() => {
     if (!roomId || !userId) return
@@ -67,20 +69,21 @@ export function useLiveChat(roomId: string) {
       config: { presence: { key: userId } },
     })
 
-    // Presence sync: 전체 접속자 + 좌석 동기화
+    // Presence sync: 전체 접속자 + 위치 동기화
     channel.on("presence", { event: "sync" }, () => {
       const state = channel.presenceState<PresencePayload>()
       const entries = Object.entries(state)
       setOnlineCount(entries.length)
 
-      const occs: SeatOccupant[] = []
+      const occs: Occupant[] = []
       for (const [, presences] of entries) {
         const p = presences[0]
         if (p) {
           occs.push({
             userId: p.userId,
             nickname: p.nickname,
-            seatIndex: p.seatIndex,
+            x: p.x,
+            y: p.y,
           })
         }
       }
@@ -135,17 +138,11 @@ export function useLiveChat(roomId: string) {
       if (status === "SUBSCRIBED") {
         setIsConnected(true)
 
-        // 현재 접속자 기반으로 빈 좌석 배정
-        const currentState = channel.presenceState<PresencePayload>()
-        const currentOccupants: PresencePayload[] = []
-        for (const presences of Object.values(currentState)) {
-          if (presences[0]) currentOccupants.push(presences[0])
-        }
+        // 랜덤 위치에서 시작
+        const pos = randomPosition()
+        myPosRef.current = pos
 
-        const seat = findEmptySeat(currentOccupants)
-        mySeatRef.current = seat
-
-        await channel.track({ userId, nickname, seatIndex: seat })
+        await channel.track({ userId, nickname, x: pos.x, y: pos.y })
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         console.error("[LiveChat] channel error:", status, err)
       }
@@ -158,9 +155,21 @@ export function useLiveChat(roomId: string) {
       supabase.removeChannel(channel)
       channelRef.current = null
       setIsConnected(false)
-      mySeatRef.current = -1
     }
   }, [roomId, userId, nickname, supabase])
+
+  // 아바타 이동
+  const moveToPosition = useCallback(
+    (x: number, y: number) => {
+      if (!userId || !channelRef.current) return
+      // 이동 영역 제한
+      const clampedX = Math.max(MOVE_AREA.xMin, Math.min(MOVE_AREA.xMax, x))
+      const clampedY = Math.max(MOVE_AREA.yMin, Math.min(MOVE_AREA.yMax, y))
+      myPosRef.current = { x: clampedX, y: clampedY }
+      channelRef.current.track({ userId, nickname, x: clampedX, y: clampedY })
+    },
+    [userId, nickname]
+  )
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -202,6 +211,7 @@ export function useLiveChat(roomId: string) {
     onlineCount,
     isConnected,
     sendMessage,
+    moveToPosition,
     cooldownRemaining,
     maxLength: MAX_LENGTH,
   }

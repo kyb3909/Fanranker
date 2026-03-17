@@ -28,7 +28,7 @@ const SPORT_MAP: Record<string, string> = {
 export default function LiveRoomPage() {
   const params = useParams()
   const router = useRouter()
-  const { isSignedIn } = useUser()
+  const { isSignedIn, user } = useUser()
   const roomId = params.roomId as string
 
   const { data, isLoading } = useSWR(`/api/live-rooms/${roomId}`, fetcher, {
@@ -44,6 +44,7 @@ export default function LiveRoomPage() {
     onlineCount,
     isConnected,
     sendMessage,
+    moveToPosition,
     cooldownRemaining,
     maxLength,
   } = useLiveChat(roomId)
@@ -140,6 +141,8 @@ export default function LiveRoomPage() {
             awayTeam={game?.away_team_name}
             homeScore={game?.home_score}
             awayScore={game?.away_score}
+            myUserId={user?.id}
+            onMove={moveToPosition}
           />
           {/* 경기 정보 */}
           {game && (
