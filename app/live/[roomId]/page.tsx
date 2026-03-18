@@ -87,6 +87,21 @@ export default function LiveRoomPage() {
     const pressed = new Set<string>()
     let intervalId: number | null = null
 
+    const getMoveKey = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+
+      if (event.code === "KeyW") return "up"
+      if (event.code === "KeyA") return "left"
+      if (event.code === "KeyS") return "down"
+      if (event.code === "KeyD") return "right"
+      if (key === "arrowup") return "up"
+      if (key === "arrowleft") return "left"
+      if (key === "arrowdown") return "down"
+      if (key === "arrowright") return "right"
+
+      return null
+    }
+
     const isTypingTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false
       const tag = target.tagName
@@ -94,10 +109,10 @@ export default function LiveRoomPage() {
     }
 
     const getVector = () => {
-      const left = pressed.has("a") || pressed.has("arrowleft")
-      const right = pressed.has("d") || pressed.has("arrowright")
-      const up = pressed.has("w") || pressed.has("arrowup")
-      const down = pressed.has("s") || pressed.has("arrowdown")
+      const left = pressed.has("left")
+      const right = pressed.has("right")
+      const up = pressed.has("up")
+      const down = pressed.has("down")
 
       let dx = 0
       let dy = 0
@@ -136,20 +151,21 @@ export default function LiveRoomPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isTypingTarget(event.target)) return
 
-      const key = event.key.toLowerCase()
-      if (!["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+      const moveKey = getMoveKey(event)
+      if (!moveKey) {
         return
       }
 
       event.preventDefault()
-      pressed.add(key)
+      pressed.add(moveKey)
       tick()
       ensureLoop()
     }
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase()
-      pressed.delete(key)
+      const moveKey = getMoveKey(event)
+      if (!moveKey) return
+      pressed.delete(moveKey)
       if (pressed.size === 0) {
         clearLoop()
       }
