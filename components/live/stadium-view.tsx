@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { PixelAvatar, type AvatarDirection } from "./pixel-avatar"
+import { type AvatarDirection } from "./pixel-avatar"
+import { SpriteAvatar } from "./sprite-avatar"
 import { SpeechBubble } from "./speech-bubble"
 import type { ChatMessage, Occupant } from "@/hooks/use-live-chat"
 
@@ -264,10 +265,10 @@ export function StadiumView({
                     onExpire={() => removeBubble(bubble.id)}
                   />
                 )}
-                <PixelAvatar
+                <SpriteAvatar
                   userId={occ.userId}
                   nickname={occ.nickname}
-                  size={52}
+                  size={64}
                   direction={motion.direction}
                   moving={motion.moving}
                 />
