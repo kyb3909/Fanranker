@@ -68,6 +68,7 @@ export default function LiveRoomPage() {
     isConnected,
     sendMessage,
     moveToPosition,
+    moveByKeyboard,
     cooldownRemaining,
     maxLength,
   } = useLiveChat(roomId)
@@ -79,6 +80,97 @@ export default function LiveRoomPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  useEffect(() => {
+    if (!isSignedIn || !isConnected || isLoading || room?.status === "closed") return
+
+    const pressed = new Set<string>()
+    let intervalId: number | null = null
+
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false
+      const tag = target.tagName
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable
+    }
+
+    const getVector = () => {
+      const left = pressed.has("a") || pressed.has("arrowleft")
+      const right = pressed.has("d") || pressed.has("arrowright")
+      const up = pressed.has("w") || pressed.has("arrowup")
+      const down = pressed.has("s") || pressed.has("arrowdown")
+
+      let dx = 0
+      let dy = 0
+
+      if (left) dx -= 1
+      if (right) dx += 1
+      if (up) dy -= 1
+      if (down) dy += 1
+
+      if (dx !== 0 && dy !== 0) {
+        const normalized = Math.SQRT1_2
+        dx *= normalized
+        dy *= normalized
+      }
+
+      return { dx, dy }
+    }
+
+    const tick = () => {
+      const { dx, dy } = getVector()
+      if (dx === 0 && dy === 0) return
+      moveByKeyboard(dx, dy)
+    }
+
+    const ensureLoop = () => {
+      if (intervalId !== null) return
+      intervalId = window.setInterval(tick, 80)
+    }
+
+    const clearLoop = () => {
+      if (intervalId === null) return
+      window.clearInterval(intervalId)
+      intervalId = null
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return
+
+      const key = event.key.toLowerCase()
+      if (!["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        return
+      }
+
+      event.preventDefault()
+      pressed.add(key)
+      tick()
+      ensureLoop()
+    }
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+      pressed.delete(key)
+      if (pressed.size === 0) {
+        clearLoop()
+      }
+    }
+
+    const handleBlur = () => {
+      pressed.clear()
+      clearLoop()
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    window.addEventListener("blur", handleBlur)
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+      window.removeEventListener("blur", handleBlur)
+      clearLoop()
+    }
+  }, [isConnected, isLoading, isSignedIn, moveByKeyboard, room?.status])
 
   const handleSend = useCallback(() => {
     if (!input.trim()) return
@@ -167,6 +259,9 @@ export default function LiveRoomPage() {
             myUserId={user?.id}
             onMove={moveToPosition}
           />
+          <p className="text-muted-foreground mt-2 text-center text-xs">
+            <code>WASD</code> 또는 방향키로 이동할 수 있습니다.
+          </p>
           {/* 경기 정보 */}
           {game && (
             <Card className="mt-2 px-4 py-2">

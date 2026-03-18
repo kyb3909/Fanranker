@@ -33,6 +33,7 @@ interface PresencePayload {
 const COOLDOWN_MS = 3000
 const MAX_LENGTH = 100
 const MAX_MESSAGES = 200
+const KEYBOARD_MOVE_STEP = 2.4
 
 // 관중 이동 가능 영역 (% 기준)
 const MOVE_AREA = { xMin: 5, xMax: 95, yMin: 30, yMax: 95 }
@@ -41,6 +42,13 @@ function randomPosition() {
   return {
     x: MOVE_AREA.xMin + Math.random() * (MOVE_AREA.xMax - MOVE_AREA.xMin),
     y: MOVE_AREA.yMin + Math.random() * (MOVE_AREA.yMax - MOVE_AREA.yMin),
+  }
+}
+
+function clampPosition(x: number, y: number) {
+  return {
+    x: Math.max(MOVE_AREA.xMin, Math.min(MOVE_AREA.xMax, x)),
+    y: Math.max(MOVE_AREA.yMin, Math.min(MOVE_AREA.yMax, y)),
   }
 }
 
@@ -162,11 +170,27 @@ export function useLiveChat(roomId: string) {
   const moveToPosition = useCallback(
     (x: number, y: number) => {
       if (!userId || !channelRef.current) return
-      // 이동 영역 제한
-      const clampedX = Math.max(MOVE_AREA.xMin, Math.min(MOVE_AREA.xMax, x))
-      const clampedY = Math.max(MOVE_AREA.yMin, Math.min(MOVE_AREA.yMax, y))
-      myPosRef.current = { x: clampedX, y: clampedY }
-      channelRef.current.track({ userId, nickname, x: clampedX, y: clampedY })
+      const next = clampPosition(x, y)
+      myPosRef.current = next
+      channelRef.current.track({ userId, nickname, x: next.x, y: next.y })
+    },
+    [userId, nickname]
+  )
+
+  const moveByKeyboard = useCallback(
+    (dx: number, dy: number) => {
+      if (!userId || !channelRef.current) return
+      if (dx === 0 && dy === 0) return
+
+      const next = clampPosition(
+        myPosRef.current.x + dx * KEYBOARD_MOVE_STEP,
+        myPosRef.current.y + dy * KEYBOARD_MOVE_STEP
+      )
+
+      if (next.x === myPosRef.current.x && next.y === myPosRef.current.y) return
+
+      myPosRef.current = next
+      channelRef.current.track({ userId, nickname, x: next.x, y: next.y })
     },
     [userId, nickname]
   )
@@ -212,6 +236,7 @@ export function useLiveChat(roomId: string) {
     isConnected,
     sendMessage,
     moveToPosition,
+    moveByKeyboard,
     cooldownRemaining,
     maxLength: MAX_LENGTH,
   }
