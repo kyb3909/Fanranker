@@ -157,11 +157,13 @@ export function StadiumView({
   }, [occupants, resolveDirection])
 
   useEffect(() => {
+    const timers = stopTimersRef.current
+
     return () => {
-      for (const timer of stopTimersRef.current.values()) {
+      for (const timer of timers.values()) {
         window.clearTimeout(timer)
       }
-      stopTimersRef.current.clear()
+      timers.clear()
     }
   }, [])
 
