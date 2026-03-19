@@ -37,14 +37,23 @@ export async function GET(request: NextRequest) {
       const existingGameIds = new Set((existingRooms ?? []).map((r) => r.game_id))
       const gamesWithoutRoom = (todayGames ?? []).filter((g) => !existingGameIds.has(g.id))
 
-      if (gamesWithoutRoom && gamesWithoutRoom.length > 0) {
+      // 같은 팀+같은 시간 경기 중복 제거 (betman에서 같은 경기가 여러 건 등록될 수 있음)
+      const seenMatches = new Set<string>()
+      const uniqueGames = gamesWithoutRoom.filter((g) => {
+        const key = `${g.home_team_name}_${g.away_team_name}_${g.match_time}`
+        if (seenMatches.has(key)) return false
+        seenMatches.add(key)
+        return true
+      })
+
+      if (uniqueGames && uniqueGames.length > 0) {
         const sportMap: Record<string, string> = {
           축구: "football",
           야구: "baseball",
           농구: "basketball",
           배구: "volleyball",
         }
-        const roomRows = gamesWithoutRoom.map((g) => ({
+        const roomRows = uniqueGames.map((g) => ({
           game_id: g.id,
           name: `${g.home_team_name} vs ${g.away_team_name}`,
           sport: sportMap[g.sport as string] || String(g.sport),
@@ -101,7 +110,18 @@ export async function GET(request: NextRequest) {
       return apiError("채팅방 목록 조회 실패", 500, error)
     }
 
-    return NextResponse.json({ rooms: data ?? [] })
+    // 같은 매치(이름+시간) 중복 룸 제거 (먼저 생성된 것만 유지)
+    const seenRoomKeys = new Set<string>()
+    const dedupedRooms = (data ?? []).filter((r: any) => {
+      const key = r.betman_games
+        ? `${r.betman_games.home_team_name}_${r.betman_games.away_team_name}_${r.betman_games.match_time}`
+        : r.id
+      if (seenRoomKeys.has(key)) return false
+      seenRoomKeys.add(key)
+      return true
+    })
+
+    return NextResponse.json({ rooms: dedupedRooms })
   } catch (error) {
     return apiError("서버 오류", 500, error)
   }
