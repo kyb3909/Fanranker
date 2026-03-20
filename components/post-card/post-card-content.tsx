@@ -1,9 +1,10 @@
 "use client"
 
+import { useState, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { EmbedPreviewCard } from "@/components/editor/embed-preview-card"
-import { Play, ExternalLink, Image as ImageIcon } from "lucide-react"
+import { Play } from "lucide-react"
 import type { TipTapNode } from "@/components/post-card"
 
 /**
@@ -90,32 +91,13 @@ export function PostCardContent({
       {/* 임베드 (피드용) */}
       {firstEmbed && !image && (
         <div className="mt-2">
-          {firstEmbed.attrs.provider === "youtube" && firstEmbed.attrs.thumbnail_url ? (
-            <Link href={`/post/${postId}`} className="group block">
-              <div className="bg-muted relative aspect-video w-full overflow-hidden rounded-lg">
-                <Image
-                  src={firstEmbed.attrs.thumbnail_url}
-                  alt={firstEmbed.attrs.title || "YouTube"}
-                  fill
-                  className="object-cover transition-transform group-hover:scale-[1.02]"
-                  priority={priority}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 shadow-lg transition-transform group-hover:scale-110">
-                    <Play className="ml-1 h-7 w-7 text-white" fill="white" />
-                  </div>
-                </div>
-                <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/70 to-transparent px-3 pt-8 pb-2.5">
-                  {firstEmbed.attrs.title && (
-                    <p className="line-clamp-2 text-sm leading-snug font-medium text-white">
-                      {firstEmbed.attrs.title}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-white/70">YouTube</p>
-                </div>
-              </div>
-            </Link>
+          {firstEmbed.attrs.provider === "youtube" ? (
+            <YouTubeInlinePlayer
+              url={firstEmbed.attrs.url}
+              thumbnail_url={firstEmbed.attrs.thumbnail_url}
+              title={firstEmbed.attrs.title}
+              priority={priority}
+            />
           ) : (
             <EmbedPreviewCard
               provider={firstEmbed.attrs.provider}
@@ -127,6 +109,73 @@ export function PostCardContent({
             />
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/* ── YouTube 인라인 플레이어 (Reddit 스타일) ── */
+
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+  )
+  return m ? m[1] : null
+}
+
+function YouTubeInlinePlayer({
+  url,
+  thumbnail_url,
+  title,
+  priority,
+}: {
+  url: string
+  thumbnail_url?: string
+  title?: string
+  priority: boolean
+}) {
+  const [playing, setPlaying] = useState(false)
+  const videoId = extractYouTubeId(url)
+
+  const thumb =
+    thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+
+  const handlePlay = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setPlaying(true)
+  }, [])
+
+  if (!videoId) return null
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+      {playing ? (
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+          className="absolute inset-0 h-full w-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      ) : (
+        <button onClick={handlePlay} className="group block h-full w-full">
+          {thumb && (
+            <Image
+              src={thumb}
+              alt={title || "YouTube"}
+              fill
+              className="object-cover"
+              priority={priority}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
+            />
+          )}
+          {/* 재생 버튼 */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+            <div className="flex h-[48px] w-[68px] items-center justify-center rounded-xl bg-red-600/90 shadow-lg transition-opacity group-hover:bg-red-600">
+              <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
+            </div>
+          </div>
+        </button>
       )}
     </div>
   )
