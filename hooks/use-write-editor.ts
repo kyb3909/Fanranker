@@ -317,7 +317,8 @@ export function useWriteEditor() {
           )
         }
 
-        router.push(editId ? `/post/${editId}` : `/community/${state.selectedCommunity}`)
+        const result = await response.json()
+        router.push(editId ? `/post/${editId}` : `/post/${result.id}`)
       } catch (error) {
         toast({
           variant: "destructive",
