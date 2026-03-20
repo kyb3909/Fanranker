@@ -1,19 +1,30 @@
 import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
 
-function linkHrefIfSingleLink(marks: unknown): string | null {
-  if (!Array.isArray(marks) || marks.length !== 1) return null
-  const m = marks[0] as { type?: string; attrs?: { href?: string } }
-  if (m.type !== "link" || typeof m.attrs?.href !== "string") return null
-  return m.attrs.href.trim()
+const EMBED_PATTERNS: { provider: "youtube" | "instagram" | "x"; re: RegExp }[] = [
+  {
+    provider: "youtube",
+    re: /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  },
+  {
+    provider: "instagram",
+    re: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/,
+  },
+  {
+    provider: "x",
+    re: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/,
+  },
+]
+
+function detectEmbedProvider(url: string): "youtube" | "instagram" | "x" | null {
+  for (const { provider, re } of EMBED_PATTERNS) {
+    if (re.test(url)) return provider
+  }
+  return null
 }
 
-/**
- * 문단에 이미지 URL만 있는 경우 image 노드로 승격 (기존 글 표시용)
- */
-function tryLiftParagraph(node: Record<string, unknown>): Record<string, unknown>[] | null {
-  if (node.type !== "paragraph" || !Array.isArray(node.content) || node.content.length !== 1) {
+function extractSingleParagraphUrl(node: Record<string, unknown>): string | null {
+  if (node.type !== "paragraph" || !Array.isArray(node.content) || node.content.length !== 1)
     return null
-  }
   const child = node.content[0] as Record<string, unknown>
   if (child.type !== "text" || typeof child.text !== "string") return null
 
@@ -22,17 +33,36 @@ function tryLiftParagraph(node: Record<string, unknown>): Record<string, unknown
   let url = text
 
   if (marks && marks.length > 0) {
-    const href = linkHrefIfSingleLink(marks)
-    if (!href || href !== text) return null
-    url = href
+    if (!Array.isArray(marks) || marks.length !== 1) return null
+    const m = marks[0] as { type?: string; attrs?: { href?: string } }
+    if (m.type !== "link" || m.attrs?.href?.trim() !== text) return null
+    url = m.attrs!.href!.trim()
   }
 
-  if (!/^https?:\/\//i.test(url) || !isProbablyDirectImageUrl(url)) return null
+  if (!/^https?:\/\//i.test(url)) return null
+  return url
+}
 
-  return [
-    { type: "image", attrs: { src: url, alt: "" } },
-    { type: "paragraph", content: [] },
-  ]
+/**
+ * 문단에 URL만 있을 때 image / embed 노드로 승격 (기존 글 읽기 전용 표시용)
+ */
+function tryLiftParagraph(node: Record<string, unknown>): Record<string, unknown>[] | null {
+  const url = extractSingleParagraphUrl(node)
+  if (!url) return null
+
+  const embedProvider = detectEmbedProvider(url)
+  if (embedProvider) {
+    return [{ type: "embed", attrs: { provider: embedProvider, url, html: null } }]
+  }
+
+  if (isProbablyDirectImageUrl(url)) {
+    return [
+      { type: "image", attrs: { src: url, alt: "" } },
+      { type: "paragraph", content: [] },
+    ]
+  }
+
+  return null
 }
 
 function transformNode(node: unknown): unknown | unknown[] {
