@@ -1,5 +1,25 @@
-import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Extension } from "@tiptap/core"
+import type { Node as PMNode } from "@tiptap/pm/model"
+import { Plugin, PluginKey } from "@tiptap/pm/state"
+import { isProbablyDirectImageUrl, needsOembedImageResolve } from "@/lib/image-paste-url"
+
+function findLoadingTextRange(doc: PMNode, loadingText: string) {
+  let startPos = -1
+  doc.descendants((node, pos) => {
+    if (startPos !== -1) return false
+    if (node.isText) {
+      const nodeText = node.text || ""
+      const localIndex = nodeText.indexOf(loadingText)
+      if (localIndex !== -1) {
+        startPos = pos + localIndex
+        return false
+      }
+    }
+    return true
+  })
+  if (startPos === -1) return null
+  return { start: startPos, end: startPos + loadingText.length }
+}
 
 /**
  * URL detection regex patterns for supported providers
@@ -14,15 +34,15 @@ const URL_PATTERNS = {
 /**
  * Detect if a URL matches any supported oEmbed provider
  */
-function detectProvider(url: string): 'youtube' | 'instagram' | 'x' | null {
+function detectProvider(url: string): "youtube" | "instagram" | "x" | null {
   if (URL_PATTERNS.youtube.test(url)) {
-    return 'youtube'
+    return "youtube"
   }
   if (URL_PATTERNS.instagram.test(url)) {
-    return 'instagram'
+    return "instagram"
   }
   if (URL_PATTERNS.x.test(url)) {
-    return 'x'
+    return "x"
   }
   return null
 }
@@ -31,23 +51,21 @@ function detectProvider(url: string): 'youtube' | 'instagram' | 'x' | null {
  * Normalize URL to ensure it's a full URL
  */
 function normalizeUrl(url: string): string {
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
     return url
   }
   return `https://${url}`
 }
 
 /**
- * TipTap Extension that automatically converts pasted URLs into embed nodes
+ * TipTap Extension: 단일 URL 붙여넣기 시 자동 변환
  *
- * When a user pastes a URL that matches a supported provider:
- * 1. Detects the provider
- * 2. Shows loading placeholder
- * 3. Calls /api/oembed to fetch embed data
- * 4. Replaces placeholder with embed node (or URL on error)
+ * - YouTube / Instagram / X → oEmbed 임베드
+ * - .jpg 등 직접 이미지 URL → image 노드
+ * - imgur.com / giphy.com 페이지 URL → /api/resolve-pasted-image 로 직접 이미지 주소 확보 후 image 노드
  */
 export const EmbedPaste = Extension.create({
-  name: 'embedPaste',
+  name: "embedPaste",
 
   addOptions() {
     return {
@@ -66,145 +84,141 @@ export const EmbedPaste = Extension.create({
 
     return [
       new Plugin({
-        key: new PluginKey('embedPaste'),
+        key: new PluginKey("embedPaste"),
         props: {
           handlePaste: (view, event) => {
-            const text = event.clipboardData?.getData('text/plain') || ''
+            const text = event.clipboardData?.getData("text/plain") || ""
             const trimmedText = text.trim()
 
             // Check if pasted content is a single URL
-            if (!trimmedText || trimmedText.includes('\n') || trimmedText.split(/\s+/).length > 1) {
+            if (!trimmedText || trimmedText.includes("\n") || trimmedText.split(/\s+/).length > 1) {
               return false // Not a single URL, let default handler process
             }
 
             const provider = detectProvider(trimmedText)
-            if (!provider) {
-              return false // Not a supported provider
+            const normalizedUrl = normalizeUrl(trimmedText)
+
+            if (provider) {
+              event.preventDefault()
+
+              const loadingText = `⏳ ${provider} 임베드 로딩 중...`
+              const { state } = view
+              const { from } = state.selection
+              view.dispatch(state.tr.insertText(loadingText, from))
+
+              updateLoading(1)
+              fetch(`/api/oembed?url=${encodeURIComponent(normalizedUrl)}&includeHtml=true`)
+                .then(async (res) => {
+                  if (!res.ok) throw new Error("Failed to fetch oEmbed data")
+                  return res.json()
+                })
+                .then((data) => {
+                  const currentState = view.state
+                  const range = findLoadingTextRange(currentState.doc, loadingText)
+                  if (!range) {
+                    console.warn("Could not find loading text position")
+                    return
+                  }
+
+                  const embedNodeType = currentState.schema.nodes.embed
+                  if (!embedNodeType) {
+                    console.error("Embed node type not found in schema")
+                    view.dispatch(
+                      currentState.tr.replaceWith(
+                        range.start,
+                        range.end,
+                        currentState.schema.text(normalizedUrl)
+                      )
+                    )
+                    return
+                  }
+
+                  const embedNode = embedNodeType.create({
+                    provider: data.provider,
+                    url: data.url,
+                    html: data.html,
+                    title: data.title,
+                    thumbnail_url: data.thumbnail_url,
+                    author_name: data.author_name,
+                  })
+                  view.dispatch(currentState.tr.replaceWith(range.start, range.end, embedNode))
+                  updateLoading(-1)
+                })
+                .catch((error) => {
+                  console.warn("Failed to fetch oEmbed:", error)
+                  const currentState = view.state
+                  const range = findLoadingTextRange(currentState.doc, loadingText)
+                  if (range) {
+                    view.dispatch(
+                      currentState.tr.replaceWith(
+                        range.start,
+                        range.end,
+                        currentState.schema.text(normalizedUrl)
+                      )
+                    )
+                  }
+                  updateLoading(-1)
+                })
+
+              return true
             }
 
-            // Prevent default paste behavior
-            event.preventDefault()
+            if (isProbablyDirectImageUrl(normalizedUrl)) {
+              const imageType = view.state.schema.nodes.image
+              if (!imageType) return false
+              event.preventDefault()
+              const imgNode = imageType.create({ src: normalizedUrl, alt: "" })
+              view.dispatch(view.state.tr.replaceSelectionWith(imgNode))
+              return true
+            }
 
-            const normalizedUrl = normalizeUrl(trimmedText)
-            
-            // 즉시 로딩 텍스트 삽입
-            const loadingText = `⏳ ${provider} 임베드 로딩 중...`
-            
-            // 현재 커서 위치에 로딩 텍스트 삽입
-            const { state } = view
-            const { from } = state.selection
-            let tr = state.tr.insertText(loadingText, from)
-            view.dispatch(tr)
+            if (needsOembedImageResolve(normalizedUrl)) {
+              event.preventDefault()
+              const loadingText = "⏳ 이미지 불러오는 중..."
+              const { state } = view
+              const { from } = state.selection
+              view.dispatch(state.tr.insertText(loadingText, from))
 
-            // oEmbed 데이터 가져오기
-            updateLoading(1)
-            fetch(`/api/oembed?url=${encodeURIComponent(normalizedUrl)}&includeHtml=true`)
-              .then(async (res) => {
-                if (!res.ok) {
-                  throw new Error('Failed to fetch oEmbed data')
-                }
-                return res.json()
-              })
-              .then((data) => {
-                // 로딩 텍스트 찾기
-                const currentState = view.state
-                const docText = currentState.doc.textContent
-                const loadingIndex = docText.indexOf(loadingText)
-                
-                if (loadingIndex === -1) {
-                  console.warn('Loading text not found, inserting at cursor')
-                  return
-                }
-
-                // 텍스트 위치를 문서 위치로 변환
-                let textOffset = 0
-                let startPos = -1
-                
-                currentState.doc.descendants((node, pos) => {
-                  if (startPos !== -1) return false
-                  
-                  if (node.isText) {
-                    const nodeText = node.text || ''
-                    const localIndex = nodeText.indexOf(loadingText)
-                    if (localIndex !== -1) {
-                      startPos = pos + localIndex
-                      return false
-                    }
+              updateLoading(1)
+              fetch(`/api/resolve-pasted-image?url=${encodeURIComponent(normalizedUrl)}`)
+                .then(async (res) => {
+                  if (!res.ok) throw new Error("resolve failed")
+                  return res.json() as Promise<{ url?: string }>
+                })
+                .then((data) => {
+                  const currentState = view.state
+                  const range = findLoadingTextRange(currentState.doc, loadingText)
+                  if (!range || !data.url) {
+                    throw new Error("missing url")
                   }
-                  return true
+                  const imageType = currentState.schema.nodes.image
+                  if (!imageType) throw new Error("no image node")
+                  const imgNode = imageType.create({ src: data.url, alt: "" })
+                  view.dispatch(currentState.tr.replaceWith(range.start, range.end, imgNode))
+                  updateLoading(-1)
                 })
-
-                if (startPos === -1) {
-                  console.warn('Could not find loading text position')
-                  return
-                }
-
-                const endPos = startPos + loadingText.length
-                const embedNodeType = currentState.schema.nodes.embed
-
-                if (!embedNodeType) {
-                  console.error('Embed node type not found in schema')
-                  const replaceTr = currentState.tr.replaceWith(
-                    startPos,
-                    endPos,
-                    currentState.schema.text(normalizedUrl)
-                  )
-                  view.dispatch(replaceTr)
-                  return
-                }
-
-                // Embed 노드 생성 및 삽입
-                const embedNode = embedNodeType.create({
-                  provider: data.provider,
-                  url: data.url,
-                  html: data.html,
-                  title: data.title,
-                  thumbnail_url: data.thumbnail_url,
-                  author_name: data.author_name,
-                })
-
-                const replaceTr = currentState.tr.replaceWith(startPos, endPos, embedNode)
-                view.dispatch(replaceTr)
-                updateLoading(-1)
-              })
-              .catch((error) => {
-                console.warn('Failed to fetch oEmbed:', error)
-                
-                // 로딩 텍스트를 URL로 교체
-                const currentState = view.state
-                let startPos = -1
-                
-                currentState.doc.descendants((node, pos) => {
-                  if (startPos !== -1) return false
-                  
-                  if (node.isText) {
-                    const nodeText = node.text || ''
-                    const localIndex = nodeText.indexOf(loadingText)
-                    if (localIndex !== -1) {
-                      startPos = pos + localIndex
-                      return false
-                    }
+                .catch(() => {
+                  const currentState = view.state
+                  const range = findLoadingTextRange(currentState.doc, loadingText)
+                  if (range) {
+                    view.dispatch(
+                      currentState.tr.replaceWith(
+                        range.start,
+                        range.end,
+                        currentState.schema.text(normalizedUrl)
+                      )
+                    )
                   }
-                  return true
+                  updateLoading(-1)
                 })
 
-                if (startPos !== -1) {
-                  const endPos = startPos + loadingText.length
-                  const replaceTr = currentState.tr.replaceWith(
-                    startPos,
-                    endPos,
-                    currentState.schema.text(normalizedUrl)
-                  )
-                  view.dispatch(replaceTr)
-                }
-                updateLoading(-1)
-              })
+              return true
+            }
 
-            return true
+            return false
           },
         },
       }),
     ]
   },
 })
-

@@ -1,10 +1,12 @@
 "use client"
 
+import { useMemo } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import TiptapImage from "@tiptap/extension-image"
 import { Embed } from "@/lib/tiptap/extensions/embed"
 import { cn } from "@/lib/utils"
+import { transformBareImageUrlsInTipTapJSON } from "@/lib/tiptap/transform-bare-image-urls"
 
 export interface TipTapContentProps {
   content: any // TipTap JSON
@@ -18,6 +20,8 @@ export interface TipTapContentProps {
  * Used for displaying posts with embedded content.
  */
 export function TipTapContent({ content, className }: TipTapContentProps) {
+  const displayContent = useMemo(() => transformBareImageUrlsInTipTapJSON(content), [content])
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -32,7 +36,7 @@ export function TipTapContent({ content, className }: TipTapContentProps) {
         },
       }),
     ],
-    content: content || "",
+    content: displayContent || content || "",
     editable: false,
     immediatelyRender: false, // SSR hydration mismatch 방지
     editorProps: {
