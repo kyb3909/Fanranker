@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { forwardRef, useImperativeHandle } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
@@ -44,6 +44,11 @@ export interface TipTapEditorProps {
   editable?: boolean
 }
 
+export type TipTapEditorHandle = {
+  /** 업로드된 이미지 URL들을 커서 위치에 순서대로 삽입 */
+  insertImagesFromUrls: (urls: string[]) => void
+}
+
 /**
  * TipTap Editor Component with oEmbed support
  *
@@ -53,14 +58,17 @@ export interface TipTapEditorProps {
  * - JSON output for Supabase storage
  * - Toolbar with formatting options
  */
-export function TipTapEditor({
-  content,
-  onChange,
-  onEmbedLoading,
-  placeholder = "내용을 입력하세요...",
-  className,
-  editable = true,
-}: TipTapEditorProps) {
+export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(function TipTapEditor(
+  {
+    content,
+    onChange,
+    onEmbedLoading,
+    placeholder = "내용을 입력하세요...",
+    className,
+    editable = true,
+  },
+  ref
+) {
   const [isUploadingImage, setIsUploadingImage] = React.useState(false)
   const imageInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -150,6 +158,21 @@ export function TipTapEditor({
         setIsUploadingImage(false)
       }
     },
+    [editor]
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      insertImagesFromUrls: (urls: string[]) => {
+        if (!editor || urls.length === 0) return
+        const nodes = urls.flatMap((src) => [
+          { type: "image" as const, attrs: { src, alt: "" } },
+          { type: "paragraph" as const },
+        ])
+        editor.chain().focus().insertContent(nodes).run()
+      },
+    }),
     [editor]
   )
 
@@ -352,4 +375,4 @@ export function TipTapEditor({
       <EditorContent editor={editor} className="tiptap-editor" />
     </div>
   )
-}
+})

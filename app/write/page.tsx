@@ -1,7 +1,8 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useRef, useCallback } from "react"
 import dynamic from "next/dynamic"
+import type { TipTapEditorHandle } from "@/components/editor/tiptap-editor"
 import { BackButton } from "@/components/back-button"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,35 @@ const TipTapEditor = dynamic(
 
 function WriteContent() {
   const editor = useWriteEditor()
+  const tiptapRef = useRef<TipTapEditorHandle>(null)
+
+  const insertBodyImages = useCallback((urls: string[]) => {
+    tiptapRef.current?.insertImagesFromUrls(urls)
+  }, [])
+
+  const onBottomImageInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files ? Array.from(e.target.files) : []
+      e.target.value = ""
+      void editor.handleBottomImages(files, insertBodyImages)
+    },
+    [editor, insertBodyImages]
+  )
+
+  const onBottomImageDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const files = Array.from(e.dataTransfer.files)
+      void editor.handleBottomImages(files, insertBodyImages)
+    },
+    [editor, insertBodyImages]
+  )
+
+  const onBottomImageDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
 
   if (!editor.isLoaded) {
     return (
@@ -248,6 +278,7 @@ function WriteContent() {
                   내용
                 </Label>
                 <TipTapEditor
+                  ref={tiptapRef}
                   content={editor.content}
                   onChange={(json: unknown) => editor.setContent(json)}
                   onEmbedLoading={editor.setIsEmbedLoading}
@@ -255,52 +286,69 @@ function WriteContent() {
                 />
               </div>
 
-              {/* 이미지 업로드 */}
+              {/* 이미지: 소스 URL 등으로 지정한 대표 이미지 + 본문 삽입용 업로드 */}
               <div className="space-y-2">
                 <Label className="text-foreground text-sm font-semibold">이미지</Label>
-                {!editor.imagePreview ? (
-                  <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
-                    <label
-                      htmlFor="image-upload"
-                      className={`flex cursor-pointer flex-col items-center gap-2 ${editor.isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
-                    >
-                      {editor.isUploadingImage ? (
-                        <>
-                          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-                          <span className="text-muted-foreground text-sm">이미지 업로드 중...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="text-muted-foreground h-8 w-8" />
-                          <span className="text-muted-foreground text-sm">
-                            이미지를 클릭하거나 드래그하여 업로드
-                          </span>
-                        </>
-                      )}
-                      <input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={editor.handleImageChange}
-                        disabled={editor.isUploadingImage}
-                        className="hidden"
+                {editor.imagePreview && (
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground text-xs">
+                      대표 이미지 (소스 URL·수정 시 기존 썸네일)
+                    </p>
+                    <div className="border-border relative aspect-video w-full max-w-md overflow-hidden rounded-lg border">
+                      <Image
+                        src={editor.imagePreview}
+                        alt="대표 이미지"
+                        fill
+                        className="object-cover"
                       />
-                    </label>
-                  </div>
-                ) : (
-                  <div className="border-border relative aspect-video w-full overflow-hidden rounded-lg border">
-                    <Image src={editor.imagePreview} alt="Preview" fill className="object-cover" />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-8 w-8"
-                      onClick={editor.handleRemoveImage}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8"
+                        onClick={editor.handleRemoveImage}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
+                <div
+                  className="border-border rounded-lg border-2 border-dashed p-6 text-center"
+                  onDragOver={onBottomImageDragOver}
+                  onDrop={onBottomImageDrop}
+                >
+                  <label
+                    htmlFor="image-upload"
+                    className={`flex cursor-pointer flex-col items-center gap-2 ${editor.isUploadingImage ? "pointer-events-none opacity-50" : ""}`}
+                  >
+                    {editor.isUploadingImage ? (
+                      <>
+                        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                        <span className="text-muted-foreground text-sm">이미지 업로드 중...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="text-muted-foreground h-8 w-8" />
+                        <span className="text-muted-foreground text-sm">
+                          클릭 또는 드래그로 본문에 이미지 삽입
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          한 번에 최대 10장 · 각 파일 10MB 이하
+                        </span>
+                      </>
+                    )}
+                    <input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={onBottomImageInputChange}
+                      disabled={editor.isUploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
 
               {/* 버튼 */}
