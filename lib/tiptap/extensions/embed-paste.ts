@@ -3,13 +3,13 @@ import type { Node as PMNode } from "@tiptap/pm/model"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
 import { isProbablyDirectImageUrl, needsOembedImageResolve } from "@/lib/image-paste-url"
 
+/** 로딩 텍스트의 인라인 범위 (텍스트→텍스트 교체용) */
 function findLoadingTextRange(doc: PMNode, loadingText: string) {
   let startPos = -1
   doc.descendants((node, pos) => {
     if (startPos !== -1) return false
     if (node.isText) {
-      const nodeText = node.text || ""
-      const localIndex = nodeText.indexOf(loadingText)
+      const localIndex = (node.text || "").indexOf(loadingText)
       if (localIndex !== -1) {
         startPos = pos + localIndex
         return false
@@ -19,6 +19,26 @@ function findLoadingTextRange(doc: PMNode, loadingText: string) {
   })
   if (startPos === -1) return null
   return { start: startPos, end: startPos + loadingText.length }
+}
+
+/** 로딩 텍스트를 감싸는 부모 블록(paragraph) 전체 범위 (텍스트→블록노드 교체용) */
+function findLoadingBlockRange(
+  doc: PMNode,
+  loadingText: string
+): { start: number; end: number } | null {
+  let start = -1
+  let end = -1
+  doc.descendants((node, pos) => {
+    if (start !== -1) return false
+    if (node.isText && (node.text || "").includes(loadingText)) {
+      const $pos = doc.resolve(pos)
+      start = $pos.before($pos.depth)
+      end = $pos.after($pos.depth)
+      return false
+    }
+    return true
+  })
+  return start === -1 ? null : { start, end }
 }
 
 /**
@@ -114,22 +134,21 @@ export const EmbedPaste = Extension.create({
                 })
                 .then((data) => {
                   const currentState = view.state
-                  const range = findLoadingTextRange(currentState.doc, loadingText)
-                  if (!range) {
-                    console.warn("Could not find loading text position")
-                    return
-                  }
-
                   const embedNodeType = currentState.schema.nodes.embed
-                  if (!embedNodeType) {
-                    console.error("Embed node type not found in schema")
-                    view.dispatch(
-                      currentState.tr.replaceWith(
-                        range.start,
-                        range.end,
-                        currentState.schema.text(normalizedUrl)
+
+                  const blockRange = findLoadingBlockRange(currentState.doc, loadingText)
+                  if (!blockRange || !embedNodeType) {
+                    const textRange = findLoadingTextRange(currentState.doc, loadingText)
+                    if (textRange) {
+                      view.dispatch(
+                        currentState.tr.replaceWith(
+                          textRange.start,
+                          textRange.end,
+                          currentState.schema.text(normalizedUrl)
+                        )
                       )
-                    )
+                    }
+                    updateLoading(-1)
                     return
                   }
 
@@ -141,7 +160,9 @@ export const EmbedPaste = Extension.create({
                     thumbnail_url: data.thumbnail_url,
                     author_name: data.author_name,
                   })
-                  view.dispatch(currentState.tr.replaceWith(range.start, range.end, embedNode))
+                  view.dispatch(
+                    currentState.tr.replaceWith(blockRange.start, blockRange.end, embedNode)
+                  )
                   updateLoading(-1)
                 })
                 .catch((error) => {
@@ -187,14 +208,15 @@ export const EmbedPaste = Extension.create({
                 })
                 .then((data) => {
                   const currentState = view.state
-                  const range = findLoadingTextRange(currentState.doc, loadingText)
-                  if (!range || !data.url) {
-                    throw new Error("missing url")
-                  }
                   const imageType = currentState.schema.nodes.image
-                  if (!imageType) throw new Error("no image node")
+                  const blockRange = findLoadingBlockRange(currentState.doc, loadingText)
+                  if (!blockRange || !data.url || !imageType) {
+                    throw new Error("missing url or range")
+                  }
                   const imgNode = imageType.create({ src: data.url, alt: "" })
-                  view.dispatch(currentState.tr.replaceWith(range.start, range.end, imgNode))
+                  view.dispatch(
+                    currentState.tr.replaceWith(blockRange.start, blockRange.end, imgNode)
+                  )
                   updateLoading(-1)
                 })
                 .catch(() => {
