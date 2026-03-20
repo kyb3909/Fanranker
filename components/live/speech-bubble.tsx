@@ -33,10 +33,10 @@ export function SpeechBubble({ text, duration = 5000, onExpire }: SpeechBubblePr
       className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2"
       style={{ opacity, transition: "opacity 800ms ease-out" }}
     >
-      <div className="relative max-w-[140px] rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-gray-900 shadow-lg">
-        <p className="leading-tight break-all">
-          {text.slice(0, 30)}
-          {text.length > 30 ? "..." : ""}
+      <div className="relative max-w-[220px] min-w-[120px] rounded-lg bg-white px-3 py-2 text-xs font-medium text-gray-900 shadow-lg sm:max-w-[260px]">
+        <p className="leading-snug break-words">
+          {text.slice(0, 50)}
+          {text.length > 50 ? "..." : ""}
         </p>
         {/* 말풍선 꼬리 */}
         <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2">

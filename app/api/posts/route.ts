@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "새내기 등급은 글쓰기가 제한됩니다. 댓글 5개 작성 또는 가입 후 24시간이 지나면 글을 작성할 수 있습니다.",
+              "뉴비 등급은 글쓰기가 제한됩니다. 가입 후 24시간이 지나면 자동으로 레귤러 등급이 되어 글을 작성할 수 있습니다.",
           },
           { status: 403 }
         )
