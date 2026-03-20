@@ -7,7 +7,7 @@ import { z } from "zod"
 const patchPostSchema = z.object({
   community_slug: z.string().optional(),
   title: z.string().optional(),
-  content: z.string().optional(),
+  content: z.any().optional(),
   image: z.string().nullable().optional(),
   flair_id: z.string().uuid().nullable().optional(),
 })
@@ -108,6 +108,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (content != null) updates.content = content
     if (image !== undefined) updates.image = image
     if (flair_id !== undefined) updates.flair_id = flair_id
+
+    if (updates.image === undefined && content != null) {
+      const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
+      const thumb = extractFirstImageSrcFromTipTapJSON(content)
+      if (thumb) updates.image = thumb
+    }
 
     const { data, error } = await supabase
       .from("posts")

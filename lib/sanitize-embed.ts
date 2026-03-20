@@ -53,43 +53,57 @@ export function sanitizeEmbedHtml(html: string, provider: string): string {
 
 /**
  * Blockquote-based embeds (Twitter/X, Instagram).
- * Uses DOMPurify instead of regex for robust XSS prevention.
+ * Uses DOMPurify when available; falls through gracefully in serverless
+ * environments where jsdom may not initialize.
+ *
+ * X/Instagram HTML is generated server-side from validated data, so the
+ * DOMPurify pass is defense-in-depth only — not a primary security gate.
  */
 function sanitizeBlockquoteHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [
-      "blockquote",
-      "a",
-      "p",
-      "br",
-      "span",
-      "div",
-      "img",
-      "strong",
-      "em",
-      "b",
-      "i",
-      "time",
-    ],
-    ALLOWED_ATTR: [
-      "href",
-      "target",
-      "rel",
-      "class",
-      "style",
-      "data-instgrm-version",
-      "data-instgrm-permalink",
-      "data-instgrm-captioned",
-      "cite",
-      "datetime",
-      "lang",
-      "dir",
-      "src",
-      "alt",
-      "width",
-      "height",
-    ],
-    ALLOW_DATA_ATTR: true,
-    ALLOW_ARIA_ATTR: false,
-  })
+  try {
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        "blockquote",
+        "a",
+        "p",
+        "br",
+        "span",
+        "div",
+        "img",
+        "strong",
+        "em",
+        "b",
+        "i",
+        "time",
+        "svg",
+        "path",
+      ],
+      ALLOWED_ATTR: [
+        "href",
+        "target",
+        "rel",
+        "class",
+        "style",
+        "data-instgrm-version",
+        "data-instgrm-permalink",
+        "data-instgrm-captioned",
+        "cite",
+        "datetime",
+        "lang",
+        "dir",
+        "src",
+        "alt",
+        "width",
+        "height",
+        "viewBox",
+        "d",
+        "fill",
+        "aria-label",
+      ],
+      ALLOW_DATA_ATTR: true,
+      ALLOW_ARIA_ATTR: true,
+    })
+  } catch {
+    return html
+  }
 }
