@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import useSWR from "swr"
 import { EmbedPreviewCard } from "@/components/editor/embed-preview-card"
-import { Play } from "lucide-react"
+import { Play, ExternalLink } from "lucide-react"
 import type { TipTapNode } from "@/components/post-card"
 
 /**
@@ -98,6 +99,10 @@ export function PostCardContent({
               title={firstEmbed.attrs.title}
               priority={priority}
             />
+          ) : firstEmbed.attrs.provider === "x" ? (
+            <XInlinePreview url={firstEmbed.attrs.url} />
+          ) : firstEmbed.attrs.provider === "instagram" ? (
+            <InstagramInlinePreview url={firstEmbed.attrs.url} />
           ) : (
             <EmbedPreviewCard
               provider={firstEmbed.attrs.provider}
@@ -169,7 +174,6 @@ function YouTubeInlinePlayer({
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
             />
           )}
-          {/* 재생 버튼 */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
             <div className="flex h-[48px] w-[68px] items-center justify-center rounded-xl bg-red-600/90 shadow-lg transition-opacity group-hover:bg-red-600">
               <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
@@ -178,5 +182,225 @@ function YouTubeInlinePlayer({
         </button>
       )}
     </div>
+  )
+}
+
+/* ── X (Twitter) 인라인 프리뷰 ── */
+
+const oembedFetcher = (url: string) => fetch(url).then((r) => (r.ok ? r.json() : null))
+
+interface XOEmbedData {
+  title?: string
+  author_name?: string
+  author_avatar?: string
+  thumbnail_url?: string
+  media?: { type: "photo" | "video"; url: string; thumbnail_url?: string }[]
+}
+
+function XInlinePreview({ url }: { url: string }) {
+  const { data, isLoading } = useSWR<XOEmbedData | null>(
+    `/api/oembed?url=${encodeURIComponent(url)}`,
+    oembedFetcher,
+    { dedupingInterval: 60_000, revalidateOnFocus: false }
+  )
+
+  if (isLoading) {
+    return (
+      <div className="bg-muted animate-pulse rounded-lg p-4">
+        <div className="flex items-center gap-2">
+          <div className="bg-muted-foreground/20 h-8 w-8 rounded-full" />
+          <div className="bg-muted-foreground/20 h-4 w-24 rounded" />
+        </div>
+        <div className="bg-muted-foreground/20 mt-3 h-4 w-full rounded" />
+        <div className="bg-muted-foreground/20 mt-2 h-4 w-3/4 rounded" />
+        <div className="bg-muted-foreground/20 mt-3 aspect-video w-full rounded-lg" />
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary flex items-center gap-1.5 text-sm hover:underline"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        X에서 보기
+      </a>
+    )
+  }
+
+  const firstMedia = data.media?.[0]
+
+  return (
+    <div className="border-border bg-card overflow-hidden rounded-lg border">
+      {/* 헤더 */}
+      <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+        {data.author_avatar ? (
+          <img src={data.author_avatar} alt="" className="h-6 w-6 rounded-full object-cover" />
+        ) : (
+          <div className="bg-muted-foreground/30 h-6 w-6 rounded-full" />
+        )}
+        <span className="text-foreground text-sm font-medium">{data.author_name}</span>
+        <svg viewBox="0 0 24 24" className="fill-foreground ml-auto h-4 w-4 opacity-60">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      </div>
+
+      {/* 트윗 텍스트 */}
+      {data.title && (
+        <p className="text-foreground/90 line-clamp-3 px-3 pt-1 pb-2 text-sm leading-relaxed">
+          {data.title}
+        </p>
+      )}
+
+      {/* 미디어 */}
+      {firstMedia && <XInlineMedia media={firstMedia} />}
+
+      {/* 푸터 */}
+      <div className="px-3 py-2">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground flex items-center gap-1 text-xs hover:underline"
+        >
+          <ExternalLink className="h-3 w-3" />
+          X에서 보기
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function XInlineMedia({
+  media,
+}: {
+  media: { type: "photo" | "video"; url: string; thumbnail_url?: string }
+}) {
+  const [playing, setPlaying] = useState(false)
+
+  if (media.type === "photo") {
+    return (
+      <div className="relative aspect-video w-full overflow-hidden">
+        <img src={media.url} alt="" className="h-full w-full object-cover" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden bg-black">
+      {playing ? (
+        <video
+          src={media.url}
+          autoPlay
+          controls
+          playsInline
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <button onClick={() => setPlaying(true)} className="group block h-full w-full">
+          {media.thumbnail_url && (
+            <img
+              src={media.thumbnail_url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+            <div className="rounded-full bg-white/90 p-3 transition-transform group-hover:scale-110">
+              <Play className="text-foreground ml-0.5 h-6 w-6" fill="currentColor" />
+            </div>
+          </div>
+        </button>
+      )}
+    </div>
+  )
+}
+
+/* ── Instagram 인라인 프리뷰 ── */
+
+function InstagramInlinePreview({ url }: { url: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { data, isLoading } = useSWR<{ html?: string } | null>(
+    `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
+    oembedFetcher,
+    { dedupingInterval: 60_000, revalidateOnFocus: false }
+  )
+
+  useEffect(() => {
+    if (!data?.html) return
+
+    type InstgrmWindow = Window &
+      typeof globalThis & {
+        instgrm?: { Embeds: { process: () => void } }
+        __igEmbedLoading?: boolean
+      }
+    const win = window as InstgrmWindow
+
+    const process = () => win.instgrm?.Embeds.process()
+
+    const timer = setTimeout(() => {
+      if (win.instgrm) {
+        process()
+        return
+      }
+      if (win.__igEmbedLoading) {
+        const interval = setInterval(() => {
+          if (win.instgrm) {
+            clearInterval(interval)
+            process()
+          }
+        }, 100)
+        return
+      }
+      win.__igEmbedLoading = true
+      const script = document.createElement("script")
+      script.src = "https://www.instagram.com/embed.js"
+      script.async = true
+      script.onload = () => {
+        win.__igEmbedLoading = false
+        process()
+      }
+      document.body.appendChild(script)
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [data?.html])
+
+  if (isLoading) {
+    return (
+      <div className="bg-muted flex aspect-square max-h-[480px] w-full animate-pulse items-center justify-center rounded-lg">
+        <div className="text-center">
+          <div className="border-primary mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-b-2" />
+          <p className="text-muted-foreground text-xs">Instagram 로딩 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data?.html) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary flex items-center gap-1.5 text-sm hover:underline"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        Instagram에서 보기
+      </a>
+    )
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="overflow-hidden rounded-lg [&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
+      style={{ minHeight: 300 }}
+      dangerouslySetInnerHTML={{ __html: data.html }}
+    />
   )
 }

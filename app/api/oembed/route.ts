@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from "next/server"
 import { sanitizeEmbedHtml } from "@/lib/sanitize-embed"
 import { apiError } from "@/lib/api-error"
 
-/**
- * Normalized oEmbed response structure
- *
- * Note: html은 선택적입니다. 피드에서는 메타데이터만 필요하므로
- * html은 상세 페이지에서만 필요할 때 가져올 수 있습니다.
- */
+interface EmbedMedia {
+  type: "photo" | "video"
+  url: string
+  thumbnail_url?: string
+}
+
 interface OEmbedResponse {
   provider: "youtube" | "instagram" | "x"
   url: string
-  html?: string // 선택적: includeHtml 파라미터로 제어
+  html?: string
   title?: string
   thumbnail_url?: string
   author_name?: string
+  author_avatar?: string
+  media?: EmbedMedia[]
 }
 
 /**
@@ -167,12 +169,12 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
   const statusId = match[2]
   const originalUrl = url.startsWith("http") ? url : `https://${url}`
 
-  // fxtwitter API로 트윗 데이터 가져오기
   let tweetText = ""
   let authorName = `@${username}`
   let authorAvatar = ""
   let mediaUrl = ""
   let displayName = ""
+  const mediaItems: EmbedMedia[] = []
 
   try {
     const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
@@ -186,12 +188,26 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
         authorName = `@${tweet.author?.screen_name || username}`
         displayName = tweet.author?.name || ""
         authorAvatar = tweet.author?.avatar_url || ""
-        // 첫 번째 미디어 (이미지)
-        if (tweet.media?.photos?.[0]?.url) {
-          mediaUrl = tweet.media.photos[0].url
-        } else if (tweet.media?.all?.[0]?.thumbnail_url) {
-          mediaUrl = tweet.media.all[0].thumbnail_url
+
+        if (tweet.media?.photos) {
+          for (const photo of tweet.media.photos) {
+            if (photo.url) mediaItems.push({ type: "photo", url: photo.url })
+          }
         }
+        if (tweet.media?.videos) {
+          for (const video of tweet.media.videos) {
+            if (video.url) {
+              mediaItems.push({
+                type: "video",
+                url: video.url,
+                thumbnail_url: video.thumbnail_url,
+              })
+            }
+          }
+        }
+
+        mediaUrl =
+          mediaItems[0]?.type === "photo" ? mediaItems[0].url : mediaItems[0]?.thumbnail_url || ""
       }
     }
   } catch {
@@ -239,6 +255,8 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
     title: tweetText.slice(0, 100) || undefined,
     thumbnail_url: mediaUrl || undefined,
     author_name: displayName ? `${displayName} (${authorName})` : authorName,
+    author_avatar: authorAvatar || undefined,
+    media: mediaItems.length > 0 ? mediaItems : undefined,
   }
 }
 
