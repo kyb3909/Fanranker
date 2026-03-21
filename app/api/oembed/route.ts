@@ -233,7 +233,7 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
       ? `<img src="${authorAvatar}" alt="${escapedDisplayName} 프로필" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
       : `<div style="width:40px;height:40px;border-radius:50%;background:#2a2a2a;"></div>`
 
-    cardHtml = `<div style="width:100%;border:1px solid #333;border-radius:16px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#e7e9ea;box-sizing:border-box;">
+    cardHtml = `<div style="max-width:550px;border:1px solid #333;border-radius:16px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#e7e9ea;">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
     ${avatarHtml}
     <div>

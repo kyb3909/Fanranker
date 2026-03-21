@@ -312,9 +312,9 @@ function XEmbed({
 
   return (
     <Card className={cn("border-border bg-card overflow-hidden border", className)}>
-      <CardContent className="p-0">
+      <CardContent className="p-4">
         <div
-          className="w-full [&_div:first-child]:!max-w-none [&_img]:rounded-xl"
+          className="mx-auto max-w-[550px] [&_img]:rounded-xl"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </CardContent>
