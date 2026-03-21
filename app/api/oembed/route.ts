@@ -140,16 +140,69 @@ async function fetchInstagramOEmbed(
   const isReel = normalizedUrl.includes("/reel/")
   const permalink = `https://www.instagram.com/${isReel ? "reel" : "p"}/${shortcode}/`
 
-  // blockquote HTML 생성 (embed.js가 클라이언트에서 렌더링)
+  // blockquote HTML 생성 (embed.js가 클라이언트에서 렌더링, 상세 페이지용)
   const blockquoteHtml = includeHtml
     ? `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
     : undefined
+
+  // 메타데이터 추출 (피드 썸네일용): og:image, og:title 등
+  let thumbnailUrl: string | undefined
+  let title: string | undefined
+  let authorName: string | undefined
+
+  try {
+    const res = await fetch(permalink, {
+      headers: { "User-Agent": "FanRanker/1.0" },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      // 처음 50KB만 읽어 meta 태그 추출
+      const reader = res.body?.getReader()
+      if (reader) {
+        let html = ""
+        const decoder = new TextDecoder()
+        while (html.length < 50000) {
+          const { done, value } = await reader.read()
+          if (done) break
+          html += decoder.decode(value, { stream: true })
+        }
+        reader.cancel()
+
+        // og:image
+        const ogImage =
+          html.match(/property=["']og:image["']\s+content=["']([^"']+)["']/i)?.[1] ||
+          html.match(/content=["']([^"']+)["']\s+property=["']og:image["']/i)?.[1]
+        if (ogImage) thumbnailUrl = ogImage
+
+        // og:title → author name 추출
+        const ogTitle =
+          html.match(/property=["']og:title["']\s+content=["']([^"']+)["']/i)?.[1] ||
+          html.match(/content=["']([^"']+)["']\s+property=["']og:title["']/i)?.[1]
+        if (ogTitle) {
+          // "username on Instagram: ..." 패턴에서 username 추출
+          const nameMatch =
+            ogTitle.match(/^(.+?)\s+on\s+Instagram/i) || ogTitle.match(/^(.+?)님의?\s+Instagram/i)
+          authorName = nameMatch ? nameMatch[1] : ogTitle.slice(0, 50)
+        }
+
+        // og:description → caption
+        const ogDesc =
+          html.match(/property=["']og:description["']\s+content=["']([^"']+)["']/i)?.[1] ||
+          html.match(/content=["']([^"']+)["']\s+property=["']og:description["']/i)?.[1]
+        if (ogDesc) title = ogDesc.slice(0, 200)
+      }
+    }
+  } catch {
+    // 메타데이터 추출 실패 시 기본값 사용
+  }
 
   return {
     provider: "instagram",
     url: normalizedUrl,
     html: blockquoteHtml,
-    author_name: undefined,
+    thumbnail_url: thumbnailUrl,
+    title,
+    author_name: authorName,
   }
 }
 
@@ -331,7 +384,11 @@ export async function GET(request: NextRequest) {
       oembedData.html = sanitizeEmbedHtml(oembedData.html, provider)
     }
 
-    return NextResponse.json(oembedData)
+    return NextResponse.json(oembedData, {
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
+    })
   } catch (error) {
     return apiError("Internal server error", 500, error)
   }
