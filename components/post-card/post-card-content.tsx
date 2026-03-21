@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef, memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import useSWR from "swr"
-import { Play, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
+import { Play, ChevronLeft, ChevronRight } from "lucide-react"
 import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
 import type { TipTapNode } from "@/components/post-card"
 
@@ -405,15 +405,12 @@ function XInlineContent({ url }: { url: string }) {
 
   if (!data) {
     return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-primary flex items-center gap-1.5 text-sm hover:underline"
-      >
-        <ExternalLink className="h-3.5 w-3.5" />
-        X에서 보기
-      </a>
+      <div className="border-border bg-card overflow-hidden rounded-lg border px-3 py-3">
+        <div className="flex items-center gap-2">
+          <XIcon className="text-muted-foreground h-5 w-5" />
+          <span className="text-muted-foreground text-sm">트윗을 불러올 수 없습니다</span>
+        </div>
+      </div>
     )
   }
 
@@ -458,18 +455,11 @@ function XInlineContent({ url }: { url: string }) {
           </p>
         )}
 
-        {/* 미디어 없을 때 X 뱃지를 하단에 */}
+        {/* 미디어 없는 텍스트 트윗: X 아이콘 표시 */}
         {!firstMedia && (
-          <div className="mt-2">
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground flex items-center gap-1 text-xs hover:underline"
-            >
-              <ExternalLink className="h-3 w-3" />
-              X에서 보기
-            </a>
+          <div className="mt-1.5 flex items-center gap-1">
+            <XIcon className="text-muted-foreground/50 h-3.5 w-3.5" />
+            <span className="text-muted-foreground/50 text-xs">X</span>
           </div>
         )}
       </div>
@@ -594,15 +584,12 @@ function InstagramInlineContent({ url }: { url: string }) {
 
   if (!data?.html) {
     return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-primary flex items-center gap-1.5 text-sm hover:underline"
-      >
-        <ExternalLink className="h-3.5 w-3.5" />
-        Instagram에서 보기
-      </a>
+      <div className="border-border bg-card overflow-hidden rounded-lg border px-3 py-3">
+        <div className="flex items-center gap-2">
+          <InstagramIcon className="text-muted-foreground h-5 w-5" />
+          <span className="text-muted-foreground text-sm">게시물을 불러올 수 없습니다</span>
+        </div>
+      </div>
     )
   }
 
