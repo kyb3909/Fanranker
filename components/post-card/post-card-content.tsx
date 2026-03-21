@@ -525,20 +525,64 @@ function LazyInstagramPreview({ url }: { url: string }) {
 }
 
 function InstagramInlineContent({ url }: { url: string }) {
-  const { data, isLoading } = useSWR<{
-    thumbnail_url?: string
-    author_name?: string
-    title?: string
-  } | null>(`/api/oembed?url=${encodeURIComponent(url)}`, oembedFetcher, {
-    dedupingInterval: 60_000,
-    revalidateOnFocus: false,
-  })
+  const containerRef = useRef<HTMLDivElement>(null)
+  const processedRef = useRef(false)
+  const { data, isLoading } = useSWR<{ html?: string } | null>(
+    `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
+    oembedFetcher,
+    { dedupingInterval: 60_000, revalidateOnFocus: false }
+  )
+
+  /* ref 기반 DOM 주입: React가 embed.js 변환 DOM을 덮어쓰지 않도록 */
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !data?.html || processedRef.current) return
+
+    container.innerHTML = data.html
+    processedRef.current = true
+
+    type InstgrmWindow = Window &
+      typeof globalThis & {
+        instgrm?: { Embeds: { process: () => void } }
+        __igEmbedLoading?: boolean
+      }
+    const win = window as InstgrmWindow
+
+    const process = () => win.instgrm?.Embeds.process()
+
+    const timer = setTimeout(() => {
+      if (win.instgrm) {
+        process()
+        return
+      }
+      if (win.__igEmbedLoading) {
+        const interval = setInterval(() => {
+          if (win.instgrm) {
+            clearInterval(interval)
+            process()
+          }
+        }, 100)
+        return
+      }
+      win.__igEmbedLoading = true
+      const script = document.createElement("script")
+      script.src = "https://www.instagram.com/embed.js"
+      script.async = true
+      script.onload = () => {
+        win.__igEmbedLoading = false
+        process()
+      }
+      document.body.appendChild(script)
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [data?.html])
 
   if (isLoading) {
     return <EmbedSkeleton provider="instagram" />
   }
 
-  if (!data) {
+  if (!data?.html) {
     return (
       <div className="border-border bg-card overflow-hidden rounded-lg border px-3 py-3">
         <div className="flex items-center gap-2">
@@ -550,36 +594,18 @@ function InstagramInlineContent({ url }: { url: string }) {
   }
 
   return (
-    <div className="border-border overflow-hidden rounded-lg border">
-      {data.thumbnail_url && (
-        <div className="relative aspect-square w-full overflow-hidden bg-black">
-          <img
-            src={data.thumbnail_url}
-            alt={data.title || "Instagram"}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute bottom-2 left-2 z-10">
-            <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-              <InstagramIcon className="h-3.5 w-3.5" />
-              <span>Instagram</span>
-            </div>
-          </div>
+    <div className="relative overflow-hidden rounded-lg">
+      <div
+        ref={containerRef}
+        className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
+        style={{ minHeight: 300 }}
+      />
+      {/* Instagram 뱃지 */}
+      <div className="pointer-events-none absolute bottom-2 left-2 z-10">
+        <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          <InstagramIcon className="h-3.5 w-3.5" />
+          <span>Instagram</span>
         </div>
-      )}
-      <div className="bg-card px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <InstagramIcon className="text-muted-foreground/50 h-4 w-4" />
-          <span className="text-foreground text-sm font-medium">
-            {data.author_name || "Instagram"}
-          </span>
-        </div>
-        {data.title && (
-          <p className="text-foreground/80 mt-1.5 line-clamp-3 text-sm leading-relaxed">
-            {data.title}
-          </p>
-        )}
       </div>
     </div>
   )
