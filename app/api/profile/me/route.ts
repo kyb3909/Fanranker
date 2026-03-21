@@ -78,7 +78,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(profile || {})
+    return NextResponse.json(profile || {}, {
+      headers: { "Cache-Control": "private, max-age=30" },
+    })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error("GET /api/profile/me error:", msg)

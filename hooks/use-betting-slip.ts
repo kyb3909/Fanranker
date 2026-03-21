@@ -35,25 +35,31 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
     }
   }, [isSignedIn])
 
-  // Load journalist status
-  const loadJournalistStatus = useCallback(async () => {
+  // Initial data load — fetch balance and profile in parallel
+  useEffect(() => {
     if (!isSignedIn) return
-    try {
-      const res = await fetch("/api/profile/me")
-      if (res.ok) {
-        const data = await res.json()
+    const loadInitialData = async () => {
+      const [balanceRes, profileRes] = await Promise.all([
+        fetch("/api/tokens/balance").catch((err) => {
+          console.error("Failed to load user balls:", err)
+          return null
+        }),
+        fetch("/api/profile/me").catch((err) => {
+          console.error("Failed to load journalist status:", err)
+          return null
+        }),
+      ])
+      if (balanceRes?.ok) {
+        const data = await balanceRes.json()
+        setUserBalls(data.balance || 10)
+      }
+      if (profileRes?.ok) {
+        const data = await profileRes.json()
         setIsJournalist(!!data.is_journalist)
       }
-    } catch (err) {
-      console.error("Failed to load journalist status:", err)
     }
+    loadInitialData()
   }, [isSignedIn])
-
-  // Initial data load
-  useEffect(() => {
-    loadUserBalls()
-    loadJournalistStatus()
-  }, [loadUserBalls, loadJournalistStatus])
 
   // Reload balance on visibility change
   useEffect(() => {

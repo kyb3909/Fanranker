@@ -80,11 +80,16 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({
-        rankings: [],
-        total: 0,
-        my_rank: myRank,
-      })
+      return NextResponse.json(
+        {
+          rankings: [],
+          total: 0,
+          my_rank: myRank,
+        },
+        {
+          headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+        }
+      )
     }
 
     // 프로필 정보 조회
@@ -180,7 +185,7 @@ export async function GET(request: NextRequest) {
       total: count ?? 0,
       my_rank: myRank,
     })
-    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120")
     return res
   } catch (e) {
     return apiError("서버 오류가 발생했습니다.", 500, e)
