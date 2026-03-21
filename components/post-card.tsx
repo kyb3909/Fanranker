@@ -3,7 +3,7 @@
 import { memo } from "react"
 import { Card } from "@/components/ui/card"
 import { useUser } from "@clerk/nextjs"
-import { ReportDialog } from "@/components/report-dialog"
+import { openReport } from "@/hooks/use-report-dialog"
 import {
   extractAllImageSrcsFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
@@ -41,8 +41,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     voteCount,
     myVote,
     isBookmarked,
-    reportOpen,
-    setReportOpen,
     handleEditPost,
     handleDeletePost,
     handleSearchByAuthor,
@@ -82,7 +80,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             onDelete={handleDeletePost}
             onSearchByAuthor={handleSearchByAuthor}
             onBlockUser={handleBlockUser}
-            onReport={() => setReportOpen(true)}
+            onReport={() => openReport("post", String(post.id))}
           />
           <PostCardContent
             postId={post.id}
@@ -108,12 +106,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
           />
         </div>
       </Card>
-      <ReportDialog
-        targetType="post"
-        targetId={String(post.id)}
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-      />
     </article>
   )
 })

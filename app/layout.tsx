@@ -12,6 +12,7 @@ import { FloatingWriteButton } from "@/components/floating-write-button"
 import { SITE_CONFIG, jsonLd } from "@/lib/seo"
 import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
+import { GlobalReportDialog } from "@/components/global-report-dialog"
 import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
 
@@ -173,6 +174,7 @@ export default function RootLayout({
             <FloatingWriteButton />
             <MobileTabBar />
             <Toaster />
+            <GlobalReportDialog />
             <PWARegister />
             <Analytics />
             {process.env.NEXT_PUBLIC_GA_ID && (

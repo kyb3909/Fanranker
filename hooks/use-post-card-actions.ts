@@ -23,7 +23,6 @@ export function usePostCardActions({
   const [myVote, setMyVote] = useState<"up" | "down" | null>(isUpvoted ? "up" : null)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkChecked, setBookmarkChecked] = useState(false)
-  const [reportOpen, setReportOpen] = useState(false)
 
   const handleEditPost = () => {
     router.push(`/write?edit=${postId}`)
@@ -135,8 +134,6 @@ export function usePostCardActions({
     voteCount,
     myVote,
     isBookmarked,
-    reportOpen,
-    setReportOpen,
     handleEditPost,
     handleDeletePost,
     handleSearchByAuthor,

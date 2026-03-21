@@ -7,7 +7,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
 import type { Comment } from "./post-detail-types"
-import { ReportDialog } from "@/components/report-dialog"
+import { openReport } from "@/hooks/use-report-dialog"
 import { CommentActions } from "./comment-actions"
 import { CommentEditForm } from "./comment-edit-form"
 import { CommentReplyForm } from "./comment-reply-form"
@@ -55,7 +55,6 @@ export const CommentItem = memo(function CommentItem({
   const [voteCount, setVoteCount] = useState(comment.upvotes)
   const [myVote, setMyVote] = useState<"up" | "down" | null>(null)
   const [isVoting, setIsVoting] = useState(false)
-  const [reportOpen, setReportOpen] = useState(false)
 
   const handleEdit = async (sticker?: { id: string; name: string; image_url: string } | null) => {
     if ((!editText.trim() && !sticker) || isSavingEdit) return
@@ -247,7 +246,7 @@ export const CommentItem = memo(function CommentItem({
             currentUserId={currentUserId}
             onVote={handleVote}
             onToggleReply={() => onSetReplyingTo(isReplying ? null : comment.id)}
-            onReport={() => setReportOpen(true)}
+            onReport={() => openReport("comment", String(comment.id))}
             onBlock={
               onBlockUser && comment.userId
                 ? () => {
@@ -276,12 +275,6 @@ export const CommentItem = memo(function CommentItem({
           )}
         </div>
       </div>
-      <ReportDialog
-        targetType="comment"
-        targetId={String(comment.id)}
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-      />
       {hasReplies && (
         <div
           className={`border-border space-y-4 border-l-2 pl-4 ${depth === 0 ? "ml-12" : "ml-8"}`}

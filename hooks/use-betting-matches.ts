@@ -12,12 +12,7 @@ export function useBettingMatches() {
   const [leagueFilter, setLeagueFilter] = useState<"all" | string>("all")
   const [currentTime, setCurrentTime] = useState(() => new Date())
 
-  const [todayInfo, setTodayInfo] = useState<TodayInfo | null>(null)
-  const [groupedMatches, setGroupedMatches] = useState<GroupedMatch[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [deadlineCountdown, setDeadlineCountdown] = useState<string | null>(null)
-  const [earliestBetClose, setEarliestBetClose] = useState<string | null>(null)
 
   const setSportFilter = useCallback((filter: "all" | "축구" | "야구" | "농구" | "배구") => {
     setSportFilterRaw(filter)
@@ -38,19 +33,12 @@ export function useBettingMatches() {
     dedupingInterval: 10_000,
   })
 
-  // Sync SWR data to state
-  useEffect(() => {
-    if (!gamesData) return
-    if (gamesData.today) setTodayInfo(gamesData.today)
-    if (gamesData.groupedGames) setGroupedMatches(gamesData.groupedGames)
-    setEarliestBetClose(gamesData.earliestBetClose || null)
-    setLastUpdated(new Date())
-  }, [gamesData])
-
-  useEffect(() => {
-    if (gamesError) setError("경기 데이터를 불러오는데 실패했습니다.")
-    else setError(null)
-  }, [gamesError])
+  // Derive values directly from SWR data
+  const todayInfo: TodayInfo | null = gamesData?.today ?? null
+  const groupedMatches: GroupedMatch[] = gamesData?.groupedGames ?? []
+  const earliestBetClose: string | null = gamesData?.earliestBetClose ?? null
+  const error: string | null = gamesError ? "경기 데이터를 불러오는데 실패했습니다." : null
+  const lastUpdated: Date | null = useMemo(() => (gamesData ? new Date() : null), [gamesData])
 
   const isLoading = gamesLoading || (gamesValidating && !gamesData)
 

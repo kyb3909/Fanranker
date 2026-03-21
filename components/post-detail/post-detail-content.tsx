@@ -20,7 +20,7 @@ import { toast } from "@/hooks/use-toast"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
-import { ReportDialog } from "@/components/report-dialog"
+import { openReport } from "@/hooks/use-report-dialog"
 import type { Post } from "./post-detail-types"
 
 const TipTapContent = dynamic(
@@ -62,7 +62,6 @@ export function PostDetailContent({
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
   const [commentCount, setCommentCount] = useState(0)
-  const [reportOpen, setReportOpen] = useState(false)
 
   const handleCommentCountChange = useCallback((count: number) => {
     setCommentCount(count)
@@ -205,7 +204,7 @@ export function PostDetailContent({
                         차단하기
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => setReportOpen(true)}
+                        onClick={() => openReport("post", String(post.id))}
                         className="text-destructive cursor-pointer"
                       >
                         <Flag className="mr-2 h-4 w-4" />
@@ -264,13 +263,6 @@ export function PostDetailContent({
         postId={post.id}
         onCommentCountChange={handleCommentCountChange}
         initialData={initialCommentsData}
-      />
-
-      <ReportDialog
-        targetType="post"
-        targetId={String(post.id)}
-        open={reportOpen}
-        onOpenChange={setReportOpen}
       />
     </div>
   )

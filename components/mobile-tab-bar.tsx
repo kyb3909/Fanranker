@@ -52,12 +52,12 @@ function MobileTabBarContent() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 transition-colors ${
+              className={`flex min-h-[48px] min-w-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 transition-colors ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <tab.icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className="font-sans text-[10px] font-medium tracking-tight">{tab.label}</span>
+              <tab.icon className={`h-[22px] w-[22px] ${isActive ? "stroke-[2.5]" : ""}`} />
+              <span className="font-sans text-[11px] font-medium tracking-tight">{tab.label}</span>
             </Link>
           )
         })}
