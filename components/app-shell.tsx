@@ -9,7 +9,7 @@ interface AppShellProps {
 
 function HeaderFallback() {
   return (
-    <header className="border-border bg-card/95 sticky top-0 z-50 w-full border-b backdrop-blur-md">
+    <header className="border-border bg-card sticky top-0 z-50 w-full border-b">
       <div className="mx-auto max-w-[1280px] px-6 sm:px-10">
         <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2" />
       </div>

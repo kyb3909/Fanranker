@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
+import { Noto_Sans_KR } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -13,6 +14,13 @@ import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
 import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
+
+const notoSansKR = Noto_Sans_KR({
+  weight: ["400", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-noto-sans-kr",
+})
 
 const koLocalization = {
   signIn: {
@@ -110,7 +118,7 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
       <ClerkProvider localization={koLocalization}>
-        <html lang="ko" suppressHydrationWarning>
+        <html lang="ko" className={notoSansKR.variable} suppressHydrationWarning>
           <head>
             {/* Google AdSense 계정 메타 태그 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
@@ -120,7 +128,6 @@ export default function RootLayout({
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
             <meta name="apple-mobile-web-app-title" content="공놀이" />
-            {/* Noto Sans KR: globals.css에서 @import로 로드 */}
             {/* DNS Prefetch: 외부 리소스 사전 조회 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />
             <link rel="dns-prefetch" href="https://img.clerk.com" />

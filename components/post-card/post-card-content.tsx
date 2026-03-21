@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import useSWR from "swr"
@@ -78,7 +78,7 @@ function canUseOptimizedFeedImage(src: string): boolean {
   }
 }
 
-export function PostCardContent({
+export const PostCardContent = memo(function PostCardContent({
   postId,
   title,
   content,
@@ -138,7 +138,7 @@ export function PostCardContent({
       ) : null}
     </div>
   )
-}
+})
 
 /* ── IntersectionObserver 훅 ── */
 
@@ -197,7 +197,7 @@ function useVisibility(onHidden: () => void) {
 function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; priority: boolean }) {
   return (
     <div className="bg-muted relative w-full overflow-hidden rounded-lg">
-      <div className="flex max-h-[400px] w-full items-center justify-center transition-opacity hover:opacity-95">
+      <div className="flex max-h-[400px] min-h-[200px] w-full items-center justify-center transition-opacity hover:opacity-95">
         {canUseOptimizedFeedImage(src) ? (
           <Image
             src={src}

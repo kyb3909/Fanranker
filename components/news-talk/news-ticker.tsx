@@ -143,15 +143,15 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
     let animationId: number
     let position = 0
     const speed = 0.5
+    // Cache scrollWidth to avoid forced reflow every frame
+    let cachedHalfWidth = el.scrollWidth / 2
 
     function animate() {
       position += speed
-      if (el && position >= el.scrollWidth / 2) {
+      if (position >= cachedHalfWidth) {
         position = 0
       }
-      if (el) {
-        el.style.transform = `translateX(-${position}px)`
-      }
+      el!.style.transform = `translateX(-${position}px)`
       animationId = requestAnimationFrame(animate)
     }
 
@@ -162,13 +162,26 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
       animationId = requestAnimationFrame(animate)
     }
     const container = el.parentElement
+    // Mouse events (desktop)
     container?.addEventListener("mouseenter", pause)
     container?.addEventListener("mouseleave", resume)
+    // Touch events (mobile)
+    container?.addEventListener("touchstart", pause, { passive: true })
+    container?.addEventListener("touchend", resume, { passive: true })
+
+    // Recalculate cached width on resize
+    const onResize = () => {
+      cachedHalfWidth = el.scrollWidth / 2
+    }
+    window.addEventListener("resize", onResize)
 
     return () => {
       cancelAnimationFrame(animationId)
       container?.removeEventListener("mouseenter", pause)
       container?.removeEventListener("mouseleave", resume)
+      container?.removeEventListener("touchstart", pause)
+      container?.removeEventListener("touchend", resume)
+      window.removeEventListener("resize", onResize)
     }
   }, [tickerItems])
 
