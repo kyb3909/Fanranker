@@ -124,9 +124,9 @@ export function PostCardContent({
   )
 }
 
-/* ── IntersectionObserver 기반 lazy 로드 훅 ── */
-/* 뷰포트에 들어올 때까지 oEmbed API를 호출하지 않음 */
+/* ── IntersectionObserver 훅 ── */
 
+/** lazy 로드용: 한번 보이면 disconnect */
 function useInView(rootMargin = "200px") {
   const ref = useRef<HTMLDivElement>(null)
   const [inView, setInView] = useState(false)
@@ -150,6 +150,30 @@ function useInView(rootMargin = "200px") {
   }, [rootMargin])
 
   return { ref, inView }
+}
+
+/** 동영상 자동 정지용: 뷰포트 이탈 시 콜백 호출 */
+function useVisibility(onHidden: () => void) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          onHidden()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onHidden])
+
+  return ref
 }
 
 /* ── 통일 미디어 프레임 (이미지) ── */
@@ -277,6 +301,9 @@ function YouTubeInlinePlayer({
   const thumb =
     thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
 
+  const handleStop = useCallback(() => setPlaying(false), [])
+  const visRef = useVisibility(handleStop)
+
   const handlePlay = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -286,7 +313,7 @@ function YouTubeInlinePlayer({
   if (!videoId) return null
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+    <div ref={visRef} className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
       {playing ? (
         <iframe
           src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
@@ -440,30 +467,41 @@ function XVideoPlayer({
   media: { type: "video"; url: string; thumbnail_url?: string }
 }) {
   const [playing, setPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
-  return playing ? (
-    <video
-      src={buildTwitterVideoProxyUrl(media.url)}
-      autoPlay
-      controls
-      playsInline
-      className="h-full w-full object-contain"
-    />
-  ) : (
-    <button onClick={() => setPlaying(true)} className="group block h-full w-full">
-      {media.thumbnail_url && (
-        <img
-          src={media.thumbnail_url}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+  const handlePause = useCallback(() => {
+    videoRef.current?.pause()
+  }, [])
+  const visRef = useVisibility(handlePause)
+
+  return (
+    <div ref={visRef} className="h-full w-full">
+      {playing ? (
+        <video
+          ref={videoRef}
+          src={buildTwitterVideoProxyUrl(media.url)}
+          autoPlay
+          controls
+          playsInline
+          className="h-full w-full object-contain"
         />
+      ) : (
+        <button onClick={() => setPlaying(true)} className="group block h-full w-full">
+          {media.thumbnail_url && (
+            <img
+              src={media.thumbnail_url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+            <div className="rounded-full bg-white/90 p-3 transition-transform group-hover:scale-110">
+              <Play className="text-foreground ml-0.5 h-6 w-6" fill="currentColor" />
+            </div>
+          </div>
+        </button>
       )}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-        <div className="rounded-full bg-white/90 p-3 transition-transform group-hover:scale-110">
-          <Play className="text-foreground ml-0.5 h-6 w-6" fill="currentColor" />
-        </div>
-      </div>
-    </button>
+    </div>
   )
 }
 
@@ -482,14 +520,20 @@ function LazyInstagramPreview({ url }: { url: string }) {
 
 function InstagramInlineContent({ url }: { url: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const processedRef = useRef(false)
   const { data, isLoading } = useSWR<{ html?: string } | null>(
     `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
     oembedFetcher,
     { dedupingInterval: 60_000, revalidateOnFocus: false }
   )
 
+  /* ref 기반 DOM 주입: React가 embed.js가 변환한 DOM을 덮어쓰지 않도록 */
   useEffect(() => {
-    if (!data?.html) return
+    const container = containerRef.current
+    if (!container || !data?.html || processedRef.current) return
+
+    container.innerHTML = data.html
+    processedRef.current = true
 
     type InstgrmWindow = Window &
       typeof globalThis & {
@@ -552,7 +596,6 @@ function InstagramInlineContent({ url }: { url: string }) {
         ref={containerRef}
         className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
         style={{ minHeight: 300 }}
-        dangerouslySetInnerHTML={{ __html: data.html }}
       />
       {/* Instagram 뱃지 */}
       <div className="pointer-events-none absolute bottom-2 left-2 z-10">
