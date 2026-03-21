@@ -4,7 +4,7 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useState } from "react"
-import { ExternalLink, Loader2 } from "lucide-react"
+import { ExternalLink, Loader2, Play } from "lucide-react"
 
 export interface EmbedCardProps {
   provider: "youtube" | "instagram" | "x"
@@ -14,6 +14,14 @@ export interface EmbedCardProps {
   thumbnail_url?: string
   author_name?: string
   className?: string
+}
+
+interface XOEmbedData {
+  title?: string
+  author_name?: string
+  author_avatar?: string
+  thumbnail_url?: string
+  media?: { type: "photo" | "video"; url: string; thumbnail_url?: string }[]
 }
 
 /**
@@ -41,20 +49,27 @@ export function EmbedCard({
       : null
 
   const [fetchedHtml, setFetchedHtml] = useState<string | null>(null)
+  const [fetchedData, setFetchedData] = useState<XOEmbedData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   // YouTube가 아닌 경우: html prop이 없으면 oEmbed API에서 자동 fetch
   useEffect(() => {
-    if (youtubeVideoId || htmlProp || fetchedHtml) return
+    if (youtubeVideoId || htmlProp || fetchedHtml || fetchedData) return
     setIsLoading(true)
-    fetch(`/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`)
+    const apiUrl =
+      provider === "x"
+        ? `/api/oembed?url=${encodeURIComponent(url)}`
+        : `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
+
+    fetch(apiUrl)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
+        if (provider === "x") setFetchedData(data)
         if (data?.html) setFetchedHtml(data.html)
       })
       .catch(() => {})
       .finally(() => setIsLoading(false))
-  }, [url, htmlProp, fetchedHtml, youtubeVideoId])
+  }, [url, htmlProp, fetchedHtml, fetchedData, youtubeVideoId, provider])
 
   // YouTube: 직접 iframe
   if (youtubeVideoId && !htmlProp) {
@@ -136,7 +151,7 @@ export function EmbedCard({
   // X: blockquote + widgets.js 렌더링
   if (provider === "x") {
     return (
-      <XEmbed html={html} url={url} title={title} author_name={author_name} className={className} />
+      <XRichEmbed data={fetchedData} url={url} author_name={author_name} className={className} />
     )
   }
 
@@ -162,6 +177,10 @@ export function EmbedCard({
       </CardContent>
     </Card>
   )
+}
+
+function buildTwitterVideoProxyUrl(url: string) {
+  return `/api/media-proxy?url=${encodeURIComponent(url)}`
 }
 
 /** embed.js 로드 유틸리티 (전역 1회만 로드) */
@@ -290,34 +309,105 @@ function XFallbackCard({
 /**
  * X(Twitter) 임베드 전용 컴포넌트
  *
- * fxtwitter API에서 가져온 커스텀 카드 HTML을 렌더링.
- * HTML이 없으면 폴백 링크 카드 표시.
+ * 상세 페이지도 피드와 같은 구조화된 데이터를 사용해 안정적으로 렌더링한다.
  */
-function XEmbed({
-  html,
+function XRichEmbed({
+  data,
   url,
   author_name,
   className,
 }: {
-  html: string
+  data: XOEmbedData | null
   url: string
-  title?: string
   author_name?: string
   className?: string
 }) {
-  if (!html || html.includes("twitter-tweet")) {
-    // 기존 blockquote HTML이면 폴백 표시
+  if (!data) {
     return <XFallbackCard url={url} author_name={author_name} className={className} />
   }
+
+  const firstMedia = data.media?.[0]
 
   return (
     <Card className={cn("border-border bg-card overflow-hidden border", className)}>
       <CardContent className="p-4">
-        <div
-          className="mx-auto max-w-[550px] [&_img]:rounded-xl"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            {data.author_avatar ? (
+              <img src={data.author_avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+            ) : (
+              <div className="bg-muted-foreground/30 h-8 w-8 rounded-full" />
+            )}
+            <div className="min-w-0">
+              <p className="text-foreground truncate text-sm font-semibold">
+                {data.author_name || author_name}
+              </p>
+            </div>
+            <svg viewBox="0 0 24 24" className="fill-foreground ml-auto h-4 w-4 opacity-60">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </div>
+
+          {data.title && <p className="text-foreground/90 text-sm leading-relaxed">{data.title}</p>}
+
+          {firstMedia && <XRichMedia media={firstMedia} />}
+
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary inline-flex items-center gap-2 text-sm hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            X에서 보기
+          </a>
+        </div>
       </CardContent>
     </Card>
+  )
+}
+
+function XRichMedia({
+  media,
+}: {
+  media: { type: "photo" | "video"; url: string; thumbnail_url?: string }
+}) {
+  const [playing, setPlaying] = useState(false)
+
+  if (media.type === "photo") {
+    return (
+      <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+        <img src={media.url} alt="" className="h-full w-full object-cover" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+      {playing ? (
+        <video
+          src={buildTwitterVideoProxyUrl(media.url)}
+          autoPlay
+          controls
+          playsInline
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <button onClick={() => setPlaying(true)} className="group block h-full w-full">
+          {media.thumbnail_url && (
+            <img
+              src={media.thumbnail_url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+            <div className="rounded-full bg-white/90 p-3 transition-transform group-hover:scale-110">
+              <Play className="text-foreground ml-0.5 h-6 w-6" fill="currentColor" />
+            </div>
+          </div>
+        </button>
+      )}
+    </div>
   )
 }
