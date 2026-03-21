@@ -5,10 +5,22 @@ import Image from "next/image"
 import Link from "next/link"
 import useSWR from "swr"
 import { Play, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
+import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
 import type { TipTapNode } from "@/components/post-card"
+
+/** 임베드 URL 패턴 (YouTube, Instagram, X/Twitter) */
+const EMBED_URL_RE =
+  /(?:youtube\.com\/watch|youtu\.be\/|instagram\.com\/(?:p|reel)\/|(?:twitter|x)\.com\/\w+\/status)/i
+
+function isMediaUrl(text: string): boolean {
+  const trimmed = text.trim()
+  if (!trimmed.startsWith("http")) return false
+  return isProbablyDirectImageUrl(trimmed) || EMBED_URL_RE.test(trimmed)
+}
 
 /**
  * TipTap JSON에서 텍스트만 추출 (피드 미리보기용)
+ * 이미지/임베드 URL은 제외
  */
 function extractTextFromTipTapJSON(content: TipTapNode): string {
   if (!content || typeof content !== "object") {
@@ -16,11 +28,15 @@ function extractTextFromTipTapJSON(content: TipTapNode): string {
   }
 
   if (content.type === "text" && content.text) {
+    if (isMediaUrl(content.text)) return ""
     return content.text
   }
 
   if (Array.isArray(content.content)) {
-    return content.content.map((node) => extractTextFromTipTapJSON(node)).join(" ")
+    return content.content
+      .map((node) => extractTextFromTipTapJSON(node))
+      .filter(Boolean)
+      .join(" ")
   }
 
   return ""
