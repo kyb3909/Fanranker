@@ -4,7 +4,10 @@ import { memo } from "react"
 import { Card } from "@/components/ui/card"
 import { useUser } from "@clerk/nextjs"
 import { ReportDialog } from "@/components/report-dialog"
-import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
+import {
+  extractAllImageSrcsFromTipTapJSON,
+  extractFirstEmbedFromTipTapJSON,
+} from "@/lib/utils/tiptap-embeds"
 import { usePostCardActions } from "@/hooks/use-post-card-actions"
 import { PostCardHeader } from "@/components/post-card/post-card-header"
 import { PostCardContent } from "@/components/post-card/post-card-content"
@@ -57,7 +60,10 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   const communityLink = post.communitySlug || post.community
   const firstEmbed =
     typeof post.content === "object" ? extractFirstEmbedFromTipTapJSON(post.content) : null
-  const displayImage = post.image || firstEmbed?.attrs.thumbnail_url || null
+  const contentImages =
+    typeof post.content === "object" ? extractAllImageSrcsFromTipTapJSON(post.content) : []
+  const imageSources = contentImages.length > 0 ? contentImages : post.image ? [post.image] : []
+  const displayImage = imageSources[0] || firstEmbed?.attrs.thumbnail_url || null
 
   return (
     <article>
@@ -83,6 +89,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             title={post.title}
             content={post.content}
             displayImage={displayImage}
+            imageSources={imageSources}
             firstEmbed={firstEmbed}
             image={post.image}
             priority={priority}

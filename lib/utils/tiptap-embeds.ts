@@ -1,3 +1,5 @@
+import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
+
 /**
  * TipTap JSON에서 임베드 노드를 추출하는 유틸리티 함수
  */
@@ -118,9 +120,22 @@ export function extractFirstEmbedFromTipTapJSON(content: any): EmbedNode | null 
  */
 export function extractFirstImageSrcFromTipTapJSON(content: unknown): string | null {
   if (!content || typeof content !== "object") return null
-  const node = content as { type?: string; attrs?: { src?: string }; content?: unknown[] }
+  const node = content as {
+    type?: string
+    text?: string
+    marks?: { type?: string; attrs?: { href?: string } }[]
+    attrs?: { src?: string }
+    content?: unknown[]
+  }
   if (node.type === "image" && typeof node.attrs?.src === "string" && node.attrs.src) {
     return node.attrs.src
+  }
+  if (node.type === "text") {
+    const rawText = typeof node.text === "string" ? node.text.trim() : ""
+    if (isProbablyDirectImageUrl(rawText)) return rawText
+
+    const linkHref = node.marks?.find((mark) => mark.type === "link")?.attrs?.href?.trim()
+    if (linkHref && isProbablyDirectImageUrl(linkHref)) return linkHref
   }
   if (Array.isArray(node.content)) {
     for (const child of node.content) {
@@ -129,4 +144,45 @@ export function extractFirstImageSrcFromTipTapJSON(content: unknown): string | n
     }
   }
   return null
+}
+
+export function extractAllImageSrcsFromTipTapJSON(content: unknown): string[] {
+  const results: string[] = []
+  const seen = new Set<string>()
+
+  function visit(node: unknown) {
+    if (!node || typeof node !== "object") return
+    const current = node as {
+      type?: string
+      text?: string
+      marks?: { type?: string; attrs?: { href?: string } }[]
+      attrs?: { src?: string }
+      content?: unknown[]
+    }
+
+    const push = (src?: string) => {
+      if (!src || seen.has(src)) return
+      seen.add(src)
+      results.push(src)
+    }
+
+    if (current.type === "image" && typeof current.attrs?.src === "string" && current.attrs.src) {
+      push(current.attrs.src)
+    }
+
+    if (current.type === "text") {
+      const rawText = typeof current.text === "string" ? current.text.trim() : ""
+      if (isProbablyDirectImageUrl(rawText)) push(rawText)
+
+      const linkHref = current.marks?.find((mark) => mark.type === "link")?.attrs?.href?.trim()
+      if (linkHref && isProbablyDirectImageUrl(linkHref)) push(linkHref)
+    }
+
+    if (Array.isArray(current.content)) {
+      for (const child of current.content) visit(child)
+    }
+  }
+
+  visit(content)
+  return results
 }

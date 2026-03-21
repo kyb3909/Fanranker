@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import useSWR from "swr"
 import { EmbedPreviewCard } from "@/components/editor/embed-preview-card"
-import { Play, ExternalLink } from "lucide-react"
+import { Play, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
 import type { TipTapNode } from "@/components/post-card"
 
 /**
@@ -32,6 +32,7 @@ export interface PostCardContentProps {
   title: string
   content: string | TipTapNode
   displayImage: string | null
+  imageSources: string[]
   firstEmbed: {
     attrs: {
       provider: "youtube" | "instagram" | "x"
@@ -45,11 +46,29 @@ export interface PostCardContentProps {
   priority: boolean
 }
 
+function canUseOptimizedFeedImage(src: string): boolean {
+  try {
+    const url = new URL(src)
+    const host = url.hostname.toLowerCase()
+    return (
+      host === "i.ytimg.com" ||
+      host === "img.youtube.com" ||
+      host === "pbs.twimg.com" ||
+      host === "img.clerk.com" ||
+      host.endsWith(".supabase.co") ||
+      host.endsWith(".cdninstagram.com")
+    )
+  } catch {
+    return false
+  }
+}
+
 export function PostCardContent({
   postId,
   title,
   content,
   displayImage,
+  imageSources,
   firstEmbed,
   image,
   priority,
@@ -73,21 +92,20 @@ export function PostCardContent({
       )}
 
       {/* 이미지 또는 임베드 미리보기 (피드용) */}
-      {displayImage && !firstEmbed && (
-        <Link href={`/post/${postId}`} className="mt-2 block">
-          <div className="bg-muted flex max-h-[400px] w-full items-center justify-center overflow-hidden rounded-lg transition-opacity hover:opacity-95">
-            <Image
-              src={displayImage}
-              alt={title || "Post image"}
-              width={560}
-              height={400}
-              className="h-auto max-h-[400px] w-full object-contain"
-              priority={priority}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
-            />
-          </div>
-        </Link>
-      )}
+      {displayImage &&
+        !firstEmbed &&
+        (imageSources.length > 1 ? (
+          <FeedImageCarousel
+            postId={postId}
+            title={title}
+            imageSources={imageSources}
+            priority={priority}
+          />
+        ) : (
+          <Link href={`/post/${postId}`} className="mt-2 block">
+            <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
+          </Link>
+        ))}
 
       {/* 임베드 (피드용) */}
       {firstEmbed && !image && (
@@ -115,6 +133,99 @@ export function PostCardContent({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; priority: boolean }) {
+  return (
+    <div className="bg-muted flex max-h-[400px] w-full items-center justify-center overflow-hidden rounded-lg transition-opacity hover:opacity-95">
+      {canUseOptimizedFeedImage(src) ? (
+        <Image
+          src={src}
+          alt={alt}
+          width={560}
+          height={400}
+          className="h-auto max-h-[400px] w-full object-contain"
+          priority={priority}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
+        />
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className="h-auto max-h-[400px] w-full object-contain"
+          loading={priority ? "eager" : "lazy"}
+          referrerPolicy="no-referrer"
+        />
+      )}
+    </div>
+  )
+}
+
+function FeedImageCarousel({
+  postId,
+  title,
+  imageSources,
+  priority,
+}: {
+  postId: number | string
+  title: string
+  imageSources: string[]
+  priority: boolean
+}) {
+  const [current, setCurrent] = useState(0)
+  const total = imageSources.length
+  const currentSrc = imageSources[current]
+
+  const prev = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setCurrent((value) => (value - 1 + total) % total)
+    },
+    [total]
+  )
+
+  const next = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setCurrent((value) => (value + 1) % total)
+    },
+    [total]
+  )
+
+  return (
+    <div className="mt-2">
+      <div className="relative">
+        <Link href={`/post/${postId}`} className="block">
+          <FeedImageFrame
+            src={currentSrc}
+            alt={title || `Post image ${current + 1}`}
+            priority={priority && current === 0}
+          />
+        </Link>
+
+        <button
+          onClick={prev}
+          className="absolute top-1/2 left-2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white transition-colors hover:bg-black/75"
+          aria-label="이전 이미지"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <button
+          onClick={next}
+          className="absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white transition-colors hover:bg-black/75"
+          aria-label="다음 이미지"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+
+        <div className="absolute right-3 bottom-3 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
+          {current + 1} / {total}
+        </div>
+      </div>
     </div>
   )
 }

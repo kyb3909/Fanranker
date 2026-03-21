@@ -2,7 +2,7 @@
  * 붙여넣기 / 표시용: 이미지로 바꿀 수 있는 URL 판별
  */
 
-const IMAGE_EXT_PATH = /\.(jpe?g|png|gif|webp|avif|bmp|svg)(\?[^#]*)?(#.*)?$/i
+const IMAGE_EXT_PATH = /\.(jpe?g|png|gif|webp|avif|bmp)(\?[^#]*)?(#.*)?$/i
 
 /** 경로가 일반적인 이미지 확장자로 끝나는 http(s) URL */
 export function isProbablyDirectImageUrl(raw: string): boolean {
