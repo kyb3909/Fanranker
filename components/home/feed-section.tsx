@@ -90,7 +90,17 @@ export const FeedSection = memo(function FeedSection({
     <>
       {posts.map((post, index) => (
         <React.Fragment key={post.id}>
-          <PostCard post={post} />
+          {/* content-visibility: auto — 뷰포트 밖 카드의 렌더링을 브라우저가 스킵 */}
+          {/* 첫 3개(above-the-fold)는 즉시 렌더, 나머지는 지연 */}
+          <div
+            style={
+              index >= 3
+                ? { contentVisibility: "auto", containIntrinsicSize: "auto 400px" }
+                : undefined
+            }
+          >
+            <PostCard post={post} priority={index === 0} />
+          </div>
           {(index + 1) % 5 === 0 && <AdPlaceholder variant="banner" />}
         </React.Fragment>
       ))}
