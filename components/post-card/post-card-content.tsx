@@ -197,6 +197,10 @@ interface XOEmbedData {
   media?: { type: "photo" | "video"; url: string; thumbnail_url?: string }[]
 }
 
+function buildTwitterVideoProxyUrl(url: string) {
+  return `/api/media-proxy?url=${encodeURIComponent(url)}`
+}
+
 function XInlinePreview({ url }: { url: string }) {
   const { data, isLoading } = useSWR<XOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}`,
@@ -294,7 +298,7 @@ function XInlineMedia({
     <div className="relative aspect-video w-full overflow-hidden bg-black">
       {playing ? (
         <video
-          src={media.url}
+          src={buildTwitterVideoProxyUrl(media.url)}
           autoPlay
           controls
           playsInline
