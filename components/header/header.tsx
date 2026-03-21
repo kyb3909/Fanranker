@@ -1,134 +1,31 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import {
-  Compass,
-  LayoutGrid,
-  Bell,
-  Search,
-  Loader2,
-  Trophy,
-  Gamepad2,
-  Sparkles,
-  Radio,
-} from "lucide-react"
+import { Bell, Search } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { useState, useRef, useEffect, useCallback, useMemo, KeyboardEvent } from "react"
+import { useRouter } from "next/navigation"
 import { SignedIn, SignedOut } from "@clerk/nextjs"
 import { UserMenu } from "./user-menu"
 import { SignInMenu } from "./sign-in-menu"
 import { NotificationDropdown } from "./notification-dropdown"
 import { BallBalance } from "./ball-balance"
 import { GoldBalance } from "./gold-balance"
-import { COMMUNITY_NAMES } from "@/lib/constants/communities"
-
-interface SearchResultPost {
-  id: string
-  title: string
-  community_slug: string
-  user_id: string
-  created_at: string
-}
+import { HeaderSearch } from "./header-search"
+import { HeaderNav } from "./header-nav"
 
 export function Header() {
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const view = searchParams.get("view")
-  const isFeed = pathname === "/" && view !== "prediction"
-  const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
-  const isPrediction = pathname === "/" && view === "prediction"
-  const isGames = pathname.startsWith("/games")
-  const isLive = pathname.startsWith("/live")
-  const isShop = pathname.startsWith("/shop")
-
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<SearchResultPost[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [searchedOnce, setSearchedOnce] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const runSearch = useCallback(async (q: string) => {
-    const trimmed = q.trim()
-    if (!trimmed) {
-      setSearchResults([])
-      setDropdownOpen(false)
-      setSearchedOnce(false)
-      return
-    }
-    setSearchLoading(true)
-    setDropdownOpen(true)
-    setSearchedOnce(true)
-    try {
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(trimmed)}&type=title_content&limit=8`
-      )
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && Array.isArray(data.posts)) {
-        setSearchResults(data.posts)
-      } else {
-        setSearchResults([])
-      }
-    } catch {
-      setSearchResults([])
-    } finally {
-      setSearchLoading(false)
-    }
-  }, [])
-
-  // 디바운스: 타이핑 후 300ms 대기 후 자동 검색
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedSearch = useCallback(
-    (q: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => runSearch(q), 300)
-    },
-    [runSearch]
-  )
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
-
-  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      const q = searchQuery.trim()
-      if (q) {
-        setDropdownOpen(false)
-        router.push(`/search?q=${encodeURIComponent(q)}&type=title_content`)
-      }
-    }
-  }
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      {/* Threads 스타일: 충분한 높이, 명확한 구조 */}
       <div className="mx-auto max-w-[1280px] px-3 sm:px-10">
-        {/* 높이 56px: Threads 스타일 - 여유있는 헤더 */}
         <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2">
-          {/* Logo: 왼쪽 정렬 */}
+          {/* Logo */}
           <div className="flex min-w-0 items-center justify-start">
             <Link
               href="/"
               onClick={(e) => {
-                // 같은 페이지(홈)에서 로고 클릭 시 Next.js 소프트 내비게이션을 막아
-                // <main tabIndex={-1}> 자동 포커스로 인한 스크롤 오프셋 방지
                 if (window.location.pathname === "/" && !window.location.search) {
                   e.preventDefault()
                   window.scrollTo(0, 0)
@@ -137,7 +34,6 @@ export function Header() {
               className="relative flex items-baseline"
               aria-label="홈"
             >
-              {/* 그깟 공놀이 붓글씨 (데스크탑만) */}
               <span className="relative z-0 -ml-1 hidden h-8 w-auto shrink-0 sm:block" aria-hidden>
                 <Image
                   src="/logo-brush.webp"
@@ -148,7 +44,6 @@ export function Header() {
                   priority
                 />
               </span>
-              {/* gongnori.fan 텍스트: 모바일 20px, 데스크탑 30px */}
               <span
                 className="text-foreground relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
                 style={{ letterSpacing: "-0.02em" }}
@@ -159,87 +54,8 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Search: 헤더 중앙 고정 */}
-          <div className="relative hidden w-[min(100%,400px)] shrink-0 sm:block" ref={containerRef}>
-            <div className="relative">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="검색..."
-                aria-label="게시글 검색"
-                value={searchQuery}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setSearchQuery(val)
-                  if (!val.trim()) {
-                    if (debounceRef.current) clearTimeout(debounceRef.current)
-                    setSearchResults([])
-                    setDropdownOpen(false)
-                    setSearchedOnce(false)
-                  } else {
-                    debouncedSearch(val)
-                  }
-                }}
-                onKeyDown={handleSearchKeyDown}
-                onFocus={() => searchResults.length > 0 && setDropdownOpen(true)}
-                className="text-foreground focus:ring-primary/30 h-9 w-full rounded-full border border-transparent bg-[#F5F5F5] pr-4 pl-9 text-[14px] placeholder:text-[#999999] focus:border-[#E0E0E0] focus:ring-2 focus:outline-none"
-              />
-              {searchLoading && (
-                <Loader2 className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin" />
-              )}
-            </div>
-            {/* 검색 결과 드롭다운 */}
-            <div className="sr-only" aria-live="polite" aria-atomic="true">
-              {searchLoading
-                ? "검색 중..."
-                : searchedOnce && !searchLoading
-                  ? `${searchResults.length}개의 검색 결과`
-                  : ""}
-            </div>
-            {dropdownOpen && (searchLoading || searchResults.length > 0 || searchedOnce) && (
-              <div
-                className="bg-card border-border absolute top-full right-0 left-0 z-50 mt-1 max-h-[320px] overflow-y-auto rounded-lg border py-1 shadow-lg"
-                role="listbox"
-                aria-label="검색 결과"
-              >
-                {searchLoading ? (
-                  <div className="text-muted-foreground flex items-center justify-center py-6 text-sm">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    검색 중...
-                  </div>
-                ) : searchResults.length === 0 ? (
-                  <p className="text-muted-foreground px-4 py-6 text-center text-sm">
-                    검색 결과가 없습니다.
-                  </p>
-                ) : (
-                  <>
-                    {searchResults.map((post) => (
-                      <Link
-                        key={post.id}
-                        href={`/post/${post.id}`}
-                        onClick={() => setDropdownOpen(false)}
-                        className="hover:bg-muted/60 block px-4 py-2.5 text-left"
-                      >
-                        <p className="text-foreground line-clamp-1 text-[14px] font-medium">
-                          {post.title}
-                        </p>
-                        <p className="text-muted-foreground mt-0.5 text-[12px]">
-                          {COMMUNITY_NAMES[post.community_slug] || post.community_slug}
-                        </p>
-                      </Link>
-                    ))}
-                    <Link
-                      href={`/search?q=${encodeURIComponent(searchQuery.trim())}&type=title_content`}
-                      onClick={() => setDropdownOpen(false)}
-                      className="text-primary hover:bg-muted/60 border-border block border-t px-4 py-2.5 text-center text-[13px] font-medium"
-                    >
-                      전체 검색 결과 보기
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Search: 검색 state가 격리되어 타이핑 시 나머지 헤더 리렌더 없음 */}
+          <HeaderSearch />
 
           {/* 모바일 검색 아이콘 */}
           <Button
@@ -252,7 +68,7 @@ export function Header() {
             <Search className="h-[18px] w-[18px]" />
           </Button>
 
-          {/* Actions: 오른쪽 정렬 */}
+          {/* Actions */}
           <div className="flex min-w-0 items-center justify-end gap-1">
             <SignedIn>
               <div className="flex items-center gap-2">
@@ -272,7 +88,6 @@ export function Header() {
               </Button>
             </SignedOut>
 
-            {/* Clerk Authentication: 로그인 전에는 로그인 드롭다운, 로그인 후에는 사용자 메뉴 */}
             <SignedOut>
               <SignInMenu />
             </SignedOut>
@@ -284,95 +99,8 @@ export function Header() {
         </div>
       </div>
 
-      {/* 메뉴바: 좌우 폭 끝까지 (담벼락, 운동장, 경기 예측) */}
-      <nav className="bg-primary w-full border-t border-white/10" aria-label="주요 메뉴">
-        <div className="scrollbar-none flex items-center justify-center overflow-x-auto">
-          <Link
-            href="/"
-            scroll={false}
-            onClick={(e) => {
-              e.preventDefault()
-              if (window.location.pathname === "/" && !window.location.search) {
-                window.scrollTo({ top: 0, behavior: "auto" })
-              } else {
-                router.push("/")
-                window.scrollTo({ top: 0, behavior: "auto" })
-              }
-            }}
-          >
-            <span
-              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
-                isFeed
-                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
-              }`}
-            >
-              <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
-              담벼락
-            </span>
-          </Link>
-          <Link href="/explore" prefetch={false}>
-            <span
-              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
-                isExplore
-                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
-              }`}
-            >
-              <Compass className="h-[18px] w-[18px] shrink-0" />
-              운동장
-            </span>
-          </Link>
-          <Link href="/?view=prediction" prefetch={false}>
-            <span
-              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
-                isPrediction
-                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
-              }`}
-            >
-              <Trophy className="h-[18px] w-[18px] shrink-0" />
-              경기 예측
-            </span>
-          </Link>
-          <Link href="/live" prefetch={false}>
-            <span
-              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
-                isLive
-                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
-              }`}
-            >
-              <Radio className="h-[18px] w-[18px] shrink-0" />
-              라이브
-            </span>
-          </Link>
-          <Link href="/games" prefetch={false}>
-            <span
-              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
-                isGames
-                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
-              }`}
-            >
-              <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
-              게임
-            </span>
-          </Link>
-          <Link href="/shop" prefetch={false}>
-            <span
-              className={`relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px] ${
-                isShop
-                  ? "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-                  : "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
-              }`}
-            >
-              <Sparkles className="h-[18px] w-[18px] shrink-0" />
-              상점
-            </span>
-          </Link>
-        </div>
-      </nav>
+      {/* Nav: pathname 변경 시에만 리렌더, 검색과 무관 */}
+      <HeaderNav />
     </header>
   )
 }
