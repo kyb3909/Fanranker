@@ -47,10 +47,23 @@ export function PostCardHeader({
 }: PostCardHeaderProps) {
   return (
     <div className="mb-3 flex items-center gap-2">
-      {/* 프사 + 닉네임 */}
+      {/* 프사 + 닉네임: 모바일은 프로필 링크, 데스크톱은 드롭다운 */}
+      {/* 모바일 — 터치 시 프로필로 바로 이동 (드롭다운으로 스크롤 차단 방지) */}
+      <Link
+        href={userId ? `/profile/${userId}` : "#"}
+        className="flex shrink-0 items-center gap-2 sm:hidden"
+      >
+        <Avatar className="h-7 w-7">
+          <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
+          <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
+        </Avatar>
+        <span className="text-foreground text-[14px] font-semibold">{author}</span>
+      </Link>
+
+      {/* 데스크톱 — 기존 드롭다운 유지 */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex shrink-0 cursor-pointer items-center gap-2">
+          <button className="hidden shrink-0 cursor-pointer items-center gap-2 sm:flex">
             <Avatar className="h-7 w-7">
               <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
               <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
@@ -99,7 +112,7 @@ export function PostCardHeader({
         </span>
       </Link>
 
-      {/* 우측: 시간 + 더보기 */}
+      {/* 우측: 시간 + 더보기 (더보기는 데스크톱만, 모바일은 상세에서) */}
       <div className="ml-auto flex shrink-0 items-center gap-1">
         <span className="text-muted-foreground text-[12px]">{timestamp}</span>
         <DropdownMenu>
@@ -107,7 +120,7 @@ export function PostCardHeader({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 min-w-[28px]"
+              className="hidden h-7 w-7 min-w-[28px] sm:inline-flex"
               aria-label="더보기 메뉴"
             >
               <MoreHorizontal className="text-muted-foreground h-4 w-4" />
