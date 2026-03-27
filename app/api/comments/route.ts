@@ -11,7 +11,7 @@ const CommentCreateSchema = z
     post_id: z
       .union([z.string(), z.number()])
       .transform(String)
-      .pipe(z.string().min(1, "게시글 ID가 필요합니다.")),
+      .pipe(z.string().uuid("유효하지 않은 게시글 ID입니다.")),
     content: z.string().max(5000, "댓글은 5000자 이하여야 합니다.").optional().default(""),
     parent_id: z.union([z.string(), z.number()]).transform(String).optional(),
     sticker_id: z.string().uuid().nullable().optional(),
