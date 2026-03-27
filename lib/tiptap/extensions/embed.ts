@@ -1,13 +1,13 @@
-import { Node, mergeAttributes } from '@tiptap/core'
-import { ReactNodeViewRenderer } from '@tiptap/react'
-import { EmbedRenderer } from './embed-renderer'
+import { Node, mergeAttributes } from "@tiptap/core"
+import { ReactNodeViewRenderer } from "@tiptap/react"
+import { EmbedRenderer } from "./embed-renderer"
 
 export interface EmbedOptions {
-  HTMLAttributes: Record<string, any>
+  HTMLAttributes: Record<string, string>
 }
 
 export interface EmbedAttributes {
-  provider: 'youtube' | 'instagram' | 'x'
+  provider: "youtube" | "instagram" | "x"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요
   title?: string
@@ -15,7 +15,7 @@ export interface EmbedAttributes {
   author_name?: string
 }
 
-declare module '@tiptap/core' {
+declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     embed: {
       /**
@@ -28,12 +28,12 @@ declare module '@tiptap/core' {
 
 /**
  * TipTap Node for embedding oEmbed content (YouTube, Instagram, X)
- * 
+ *
  * This node stores normalized oEmbed metadata and renders the embed HTML
  * in a responsive container.
  */
 export const Embed = Node.create<EmbedOptions>({
-  name: 'embed',
+  name: "embed",
 
   addOptions() {
     return {
@@ -41,7 +41,7 @@ export const Embed = Node.create<EmbedOptions>({
     }
   },
 
-  group: 'block',
+  group: "block",
 
   atom: true,
 
@@ -51,73 +51,73 @@ export const Embed = Node.create<EmbedOptions>({
     return {
       provider: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-provider'),
+        parseHTML: (element) => element.getAttribute("data-provider"),
         renderHTML: (attributes) => {
           if (!attributes.provider) {
             return {}
           }
           return {
-            'data-provider': attributes.provider,
+            "data-provider": attributes.provider,
           }
         },
       },
       url: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-url'),
+        parseHTML: (element) => element.getAttribute("data-url"),
         renderHTML: (attributes) => {
           if (!attributes.url) {
             return {}
           }
           return {
-            'data-url': attributes.url,
+            "data-url": attributes.url,
           }
         },
       },
       html: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-html'),
+        parseHTML: (element) => element.getAttribute("data-html"),
         renderHTML: (attributes) => {
           if (!attributes.html) {
             return {}
           }
           return {
-            'data-html': attributes.html,
+            "data-html": attributes.html,
           }
         },
       },
       title: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-title'),
+        parseHTML: (element) => element.getAttribute("data-title"),
         renderHTML: (attributes) => {
           if (!attributes.title) {
             return {}
           }
           return {
-            'data-title': attributes.title,
+            "data-title": attributes.title,
           }
         },
       },
       thumbnail_url: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-thumbnail-url'),
+        parseHTML: (element) => element.getAttribute("data-thumbnail-url"),
         renderHTML: (attributes) => {
           if (!attributes.thumbnail_url) {
             return {}
           }
           return {
-            'data-thumbnail-url': attributes.thumbnail_url,
+            "data-thumbnail-url": attributes.thumbnail_url,
           }
         },
       },
       author_name: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-author-name'),
+        parseHTML: (element) => element.getAttribute("data-author-name"),
         renderHTML: (attributes) => {
           if (!attributes.author_name) {
             return {}
           }
           return {
-            'data-author-name': attributes.author_name,
+            "data-author-name": attributes.author_name,
           }
         },
       },
@@ -134,9 +134,9 @@ export const Embed = Node.create<EmbedOptions>({
 
   renderHTML({ HTMLAttributes }) {
     return [
-      'div',
+      "div",
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        'data-type': 'embed',
+        "data-type": "embed",
       }),
     ]
   },

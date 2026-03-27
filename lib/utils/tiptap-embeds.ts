@@ -1,5 +1,14 @@
 import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
 
+/** TipTap JSON 노드의 기본 구조 */
+interface TipTapJsonNode {
+  type: string
+  attrs?: Record<string, unknown>
+  text?: string
+  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>
+  content?: TipTapJsonNode[]
+}
+
 /**
  * TipTap JSON에서 임베드 노드를 추출하는 유틸리티 함수
  */
@@ -67,30 +76,32 @@ function detectEmbedFromUrl(url: string): EmbedNode | null {
 /**
  * TipTap JSON에서 모든 embed 노드를 재귀적으로 추출
  */
-export function extractEmbedsFromTipTapJSON(content: any): EmbedNode[] {
+export function extractEmbedsFromTipTapJSON(content: TipTapJsonNode | unknown): EmbedNode[] {
   const embeds: EmbedNode[] = []
 
   if (!content || typeof content !== "object") {
     return embeds
   }
 
+  const node = content as TipTapJsonNode
+
   // 현재 노드가 embed인 경우
-  if (content.type === "embed" && content.attrs) {
-    embeds.push(content as EmbedNode)
+  if (node.type === "embed" && node.attrs) {
+    embeds.push(node as unknown as EmbedNode)
   }
 
   // 텍스트 노드에서 임베드 URL 감지 (link mark가 있는 경우)
-  if (content.type === "text" && content.marks) {
-    const linkMark = content.marks.find((m: any) => m.type === "link")
+  if (node.type === "text" && node.marks) {
+    const linkMark = node.marks.find((m) => m.type === "link")
     if (linkMark?.attrs?.href) {
-      const embed = detectEmbedFromUrl(linkMark.attrs.href)
+      const embed = detectEmbedFromUrl(linkMark.attrs.href as string)
       if (embed) embeds.push(embed)
     }
   }
 
   // 텍스트 노드에서 URL 패턴 직접 감지 (mark 없이 URL만 붙여넣은 경우)
-  if (content.type === "text" && typeof content.text === "string" && !content.marks) {
-    const text = content.text.trim()
+  if (node.type === "text" && typeof node.text === "string" && !node.marks) {
+    const text = node.text.trim()
     if (text.match(/^https?:\/\//)) {
       const embed = detectEmbedFromUrl(text)
       if (embed) embeds.push(embed)
@@ -98,9 +109,9 @@ export function extractEmbedsFromTipTapJSON(content: any): EmbedNode[] {
   }
 
   // content 배열이 있는 경우 재귀적으로 탐색
-  if (Array.isArray(content.content)) {
-    content.content.forEach((node: any) => {
-      embeds.push(...extractEmbedsFromTipTapJSON(node))
+  if (Array.isArray(node.content)) {
+    node.content.forEach((child) => {
+      embeds.push(...extractEmbedsFromTipTapJSON(child))
     })
   }
 
@@ -110,7 +121,9 @@ export function extractEmbedsFromTipTapJSON(content: any): EmbedNode[] {
 /**
  * TipTap JSON에서 첫 번째 embed 노드만 추출 (피드 미리보기용)
  */
-export function extractFirstEmbedFromTipTapJSON(content: any): EmbedNode | null {
+export function extractFirstEmbedFromTipTapJSON(
+  content: TipTapJsonNode | unknown
+): EmbedNode | null {
   const embeds = extractEmbedsFromTipTapJSON(content)
   return embeds.length > 0 ? embeds[0] : null
 }

@@ -195,6 +195,9 @@ export async function PATCH(request: NextRequest) {
     if (mbti !== undefined) updateData.mbti = mbti
     if (onboarding_completed !== undefined) updateData.onboarding_completed = onboarding_completed
 
+    const PROFILE_SELECT =
+      "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+
     // 먼저 프로필이 존재하는지 확인
     const { data: existingProfile, error: fetchError } = await supabase
       .from("profiles")
@@ -202,11 +205,19 @@ export async function PATCH(request: NextRequest) {
       .eq("user_id", userId)
       .single()
 
-    let profile
-    let error
+    // Case 1: DB 에러 (프로필 미존재가 아닌 진짜 에러)
+    if (fetchError && fetchError.code !== "PGRST116") {
+      console.error("Failed to check profile existence:", {
+        error: fetchError,
+        code: fetchError.code,
+        message: fetchError.message,
+        userId,
+      })
+      return NextResponse.json({ error: "프로필 확인 중 오류가 발생했습니다." }, { status: 500 })
+    }
 
-    if (fetchError && fetchError.code === "PGRST116") {
-      // 프로필이 없으면 생성 (기본값 포함)
+    // Case 2: 프로필이 없으면 새로 생성
+    if (fetchError?.code === "PGRST116") {
       const defaultNickname = `User_${userId.slice(-8)}`
       const { data: newProfile, error: insertError } = await supabase
         .from("profiles")
@@ -220,32 +231,23 @@ export async function PATCH(request: NextRequest) {
           ...(mbti !== undefined ? { mbti } : {}),
           ...(onboarding_completed !== undefined ? { onboarding_completed } : {}),
         })
-        .select(
-          "id, user_id, nickname, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
-        )
+        .select(PROFILE_SELECT)
         .single()
 
-      profile = newProfile
-      error = insertError
-
-      if (error) {
-        console.error("Failed to create profile:", {
-          error,
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          userId,
-        })
+      if (insertError) {
+        console.error("Failed to create profile:", { error: insertError, userId })
         return NextResponse.json({ error: "프로필 생성 중 오류가 발생했습니다." }, { status: 500 })
       }
-    } else if (!fetchError && existingProfile && nickname !== undefined) {
-      // 닉네임 변경 쿨다운 체크 (3개월)
+      return NextResponse.json(newProfile)
+    }
+
+    // Case 3: 프로필 존재 — 닉네임 쿨다운 체크
+    if (nickname !== undefined && existingProfile) {
       const trimmedNickname = nickname.trim()
       if (trimmedNickname !== existingProfile.nickname && existingProfile.nickname_changed_at) {
-        const cooldownMs = 90 * 24 * 60 * 60 * 1000 // 90일
-        const changedAt = new Date(existingProfile.nickname_changed_at).getTime()
-        const nextChangeAt = changedAt + cooldownMs
+        const NICKNAME_COOLDOWN_MS = 90 * 24 * 60 * 60 * 1000
+        const nextChangeAt =
+          new Date(existingProfile.nickname_changed_at).getTime() + NICKNAME_COOLDOWN_MS
         if (Date.now() < nextChangeAt) {
           const nextDate = new Date(nextChangeAt).toLocaleDateString("ko-KR")
           return NextResponse.json(
@@ -256,56 +258,31 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    if (fetchError && fetchError.code !== "PGRST116" && !existingProfile) {
-      // 다른 에러
-      console.error("Failed to check profile existence:", {
-        error: fetchError,
-        code: fetchError.code,
-        message: fetchError.message,
-        userId,
-      })
-      return NextResponse.json({ error: "프로필 확인 중 오류가 발생했습니다." }, { status: 500 })
-    } else {
-      // 닉네임이 실제로 변경되면 nickname_changed_at 기록
-      if (
-        updateData.nickname &&
-        existingProfile &&
-        updateData.nickname !== existingProfile.nickname
-      ) {
-        updateData.nickname_changed_at = new Date().toISOString()
-      }
-
-      // 프로필이 존재하면 업데이트
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from("profiles")
-        .update(updateData)
-        .eq("user_id", userId)
-        .select(
-          "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
-        )
-        .single()
-
-      profile = updatedProfile
-      error = updateError
-
-      if (error) {
-        console.error("Failed to update profile:", {
-          error,
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          userId,
-          updateData,
-        })
-        return NextResponse.json(
-          { error: "프로필 업데이트 중 오류가 발생했습니다." },
-          { status: 500 }
-        )
-      }
+    // Case 4: 프로필 업데이트
+    if (
+      updateData.nickname &&
+      existingProfile &&
+      updateData.nickname !== existingProfile.nickname
+    ) {
+      updateData.nickname_changed_at = new Date().toISOString()
     }
 
-    return NextResponse.json(profile)
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from("profiles")
+      .update(updateData)
+      .eq("user_id", userId)
+      .select(PROFILE_SELECT)
+      .single()
+
+    if (updateError) {
+      console.error("Failed to update profile:", { error: updateError, userId })
+      return NextResponse.json(
+        { error: "프로필 업데이트 중 오류가 발생했습니다." },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(updatedProfile)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error("PATCH /api/profile/me error:", msg)

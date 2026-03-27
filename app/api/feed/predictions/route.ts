@@ -3,6 +3,28 @@ import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
+interface PredGame {
+  home_team_name: string
+  away_team_name: string
+  match_time: string
+  game_type: string
+  sport: string
+  result: string | null
+  league_code: string | null
+  home_win_odds: string | null
+  away_win_odds: string | null
+  draw_odds: string | null
+  over_odds: string | null
+  under_odds: string | null
+}
+
+interface PredSlip {
+  id: string
+  stake: number
+  total_odds: number
+  status: string
+}
+
 /**
  * GET /api/feed/predictions
  *
@@ -110,11 +132,27 @@ export async function GET(request: NextRequest) {
       predictionsMap.set(act.id, preds)
     }
 
+    // Supabase 조인 결과에서 단일 객체를 추출하는 헬퍼
+    const getGame = (p: NonNullable<typeof allPreds>[number]): PredGame | null => {
+      const g = p.game
+      if (!g) return null
+      return ((Array.isArray(g) ? g[0] : g) as PredGame | undefined) ?? null
+    }
+    const getSlip = (p: NonNullable<typeof allPreds>[number]): PredSlip | null => {
+      const s = (p as Record<string, unknown>).slip
+      if (!s) return null
+      return ((Array.isArray(s) ? s[0] : s) as PredSlip | undefined) ?? null
+    }
+
     // 경기 시간이 모두 지났는지 확인하는 함수
     const now = new Date()
     const isAllGamesExpired = (preds: NonNullable<typeof allPreds>) => {
       return (
-        preds.length > 0 && preds.every((p) => p.game && new Date((p.game as any).match_time) < now)
+        preds.length > 0 &&
+        preds.every((p) => {
+          const g = getGame(p)
+          return g && new Date(g.match_time) < now
+        })
       )
     }
 
@@ -123,25 +161,25 @@ export async function GET(request: NextRequest) {
       // Group by slip_id (or round_id for legacy)
       const bySlip = new Map<string, typeof preds>()
       for (const pred of preds) {
-        const key = (pred as any).slip_id || pred.round_id || "unknown"
+        const key = pred.slip_id || pred.round_id || "unknown"
         if (!bySlip.has(key)) bySlip.set(key, [])
         bySlip.get(key)!.push(pred)
       }
 
       return Array.from(bySlip.entries()).map(([slipId, slipPreds]) => {
         const first = slipPreds[0]
-        const game0 = first.game as any
-        const slip0 = (first as any).slip as any
+        const game0 = getGame(first)
+        const slip0 = getSlip(first)
         const sport = game0?.sport || "스포츠"
 
         // Determine slip status
         const allSettled = slipPreds.every((p) => p.status === "settled")
         const allCorrect = slipPreds.every((p) => {
-          const g = p.game as any
+          const g = getGame(p)
           return g?.result && g.result === p.prediction
         })
         const anyWrong = slipPreds.some((p) => {
-          const g = p.game as any
+          const g = getGame(p)
           return g?.result && g.result !== p.prediction
         })
         const slipStatus = !allSettled ? "pending" : allCorrect ? "win" : "lose"
@@ -149,18 +187,18 @@ export async function GET(request: NextRequest) {
         // Calculate total odds from slip or from individual games
         const totalOdds =
           slip0?.total_odds ||
-          slipPreds.reduce((acc: number, p: any) => {
-            const g = p.game as any
+          slipPreds.reduce((acc: number, p) => {
+            const g = getGame(p)
             let odds = 1
-            if (p.prediction === "home") odds = parseFloat(g?.home_win_odds) || 1
-            else if (p.prediction === "away") odds = parseFloat(g?.away_win_odds) || 1
-            else if (p.prediction === "draw") odds = parseFloat(g?.draw_odds) || 1
-            else if (p.prediction === "over") odds = parseFloat(g?.over_odds) || 1
-            else if (p.prediction === "under") odds = parseFloat(g?.under_odds) || 1
+            if (p.prediction === "home") odds = parseFloat(g?.home_win_odds ?? "0") || 1
+            else if (p.prediction === "away") odds = parseFloat(g?.away_win_odds ?? "0") || 1
+            else if (p.prediction === "draw") odds = parseFloat(g?.draw_odds ?? "0") || 1
+            else if (p.prediction === "over") odds = parseFloat(g?.over_odds ?? "0") || 1
+            else if (p.prediction === "under") odds = parseFloat(g?.under_odds ?? "0") || 1
             return acc * odds
           }, 1)
 
-        const stake = slip0?.stake || (first as any).stake || slipPreds.length
+        const stake = slip0?.stake || first.stake || slipPreds.length
         const profit =
           slipStatus === "win"
             ? Math.round(stake * totalOdds - stake)
@@ -185,28 +223,28 @@ export async function GET(request: NextRequest) {
         }
 
         const matches = slipPreds.map((p) => {
-          const g = p.game as any
+          const g = getGame(p)
           let odds = 1
           let selection = ""
           if (p.prediction === "home") {
-            odds = parseFloat(g?.home_win_odds) || 1
+            odds = parseFloat(g?.home_win_odds ?? "0") || 1
             selection = "홈팀"
           } else if (p.prediction === "away") {
-            odds = parseFloat(g?.away_win_odds) || 1
+            odds = parseFloat(g?.away_win_odds ?? "0") || 1
             selection = "원정팀"
           } else if (p.prediction === "draw") {
-            odds = parseFloat(g?.draw_odds) || 1
+            odds = parseFloat(g?.draw_odds ?? "0") || 1
             selection = "무"
           } else if (p.prediction === "over") {
-            odds = parseFloat(g?.over_odds) || 1
+            odds = parseFloat(g?.over_odds ?? "0") || 1
             selection = "오버"
           } else if (p.prediction === "under") {
-            odds = parseFloat(g?.under_odds) || 1
+            odds = parseFloat(g?.under_odds ?? "0") || 1
             selection = "언더"
           }
 
           // Normalize result to per-match status
-          const dbResult = g?.result as string | undefined
+          const dbResult = g?.result ?? undefined
           let matchResult = "pending"
           if (dbResult) {
             matchResult = dbResult === p.prediction ? "win" : "lose"
@@ -219,11 +257,11 @@ export async function GET(request: NextRequest) {
             away: g?.away_team_name || "",
             selection,
             odds: Math.round(odds * 100) / 100,
-            homeOdds: Math.round((parseFloat(g?.home_win_odds) || 0) * 100) / 100,
-            awayOdds: Math.round((parseFloat(g?.away_win_odds) || 0) * 100) / 100,
-            drawOdds: Math.round((parseFloat(g?.draw_odds) || 0) * 100) / 100,
-            overOdds: Math.round((parseFloat(g?.over_odds) || 0) * 100) / 100,
-            underOdds: Math.round((parseFloat(g?.under_odds) || 0) * 100) / 100,
+            homeOdds: Math.round((parseFloat(g?.home_win_odds ?? "0") || 0) * 100) / 100,
+            awayOdds: Math.round((parseFloat(g?.away_win_odds ?? "0") || 0) * 100) / 100,
+            drawOdds: Math.round((parseFloat(g?.draw_odds ?? "0") || 0) * 100) / 100,
+            overOdds: Math.round((parseFloat(g?.over_odds ?? "0") || 0) * 100) / 100,
+            underOdds: Math.round((parseFloat(g?.under_odds ?? "0") || 0) * 100) / 100,
             result: matchResult,
             correctAnswer,
             gameType: g?.game_type || "일반",

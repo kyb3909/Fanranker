@@ -12,6 +12,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ available: false, error: "닉네임은 2자 이상이어야 합니다." })
   }
 
+  if (nickname.length > 20) {
+    return NextResponse.json({ available: false, error: "닉네임은 20자 이하여야 합니다." })
+  }
+
+  const nicknameRegex = /^[\p{L}\p{N}\s\-_.]+$/u
+  if (!nicknameRegex.test(nickname)) {
+    return NextResponse.json({ available: false, error: "닉네임에 특수문자를 사용할 수 없습니다." })
+  }
+
   const supabase = createAnonClient()
   const { data } = await supabase
     .from("profiles")

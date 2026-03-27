@@ -126,8 +126,8 @@ export async function DELETE(
     // comment_count 감소
     try {
       await supabase.rpc("decrement_comment_count", { p_post_id: comment.post_id })
-    } catch {
-      // DB trigger가 있으면 불필요하지만 안전하게 시도
+    } catch (err) {
+      console.error("decrement_comment_count failed:", comment.post_id, err)
     }
 
     return NextResponse.json({ success: true, message: "댓글이 삭제되었습니다." })

@@ -36,8 +36,8 @@ import {
 } from "lucide-react"
 
 export interface TipTapEditorProps {
-  content?: string | any // string 또는 TipTap JSON
-  onChange?: (json: any) => void
+  content?: string | unknown // string 또는 TipTap JSON
+  onChange?: (json: unknown) => void
   onEmbedLoading?: (loading: boolean) => void
   placeholder?: string
   className?: string

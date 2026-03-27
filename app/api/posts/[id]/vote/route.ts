@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient, createServiceRoleClient, createAnonClient } from "@/lib/supabase/server"
+import { createServiceRoleClient, createAnonClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
