@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { apiError } from "@/lib/api-error"
+import { apiError, checkRateLimit } from "@/lib/api-error"
 
 /**
  * GET /api/live-rooms
@@ -9,6 +9,9 @@ import { apiError } from "@/lib/api-error"
  */
 export async function GET(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const supabase = createServiceRoleClient()
 
     // 1) 아직 live_room이 없는 오늘 '일반' 경기에 대해 자동 생성

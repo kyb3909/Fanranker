@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { checkRateLimit } from "@/lib/api-error"
 import { z } from "zod"
 
 // 허용된 보상 타입과 최대 금액
@@ -24,6 +25,9 @@ const rewardSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const user = await currentUser()
     if (!user) {
       return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })

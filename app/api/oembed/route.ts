@@ -279,11 +279,20 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-    const mediaHtml = mediaUrl
-      ? `<img src="${mediaUrl}" alt="${escapedDisplayName}의 게시물 이미지" style="width:100%;border-radius:12px;margin-top:12px;max-height:300px;object-fit:cover;" />`
+    const escAttr = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const escapedAuthorName = authorName
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+    const escapedMediaUrl = mediaUrl ? escAttr(mediaUrl) : ""
+    const escapedAvatarUrl = authorAvatar ? escAttr(authorAvatar) : ""
+    const escapedOriginalUrl = escAttr(originalUrl)
+    const mediaHtml = escapedMediaUrl
+      ? `<img src="${escapedMediaUrl}" alt="${escapedDisplayName}의 게시물 이미지" style="width:100%;border-radius:12px;margin-top:12px;max-height:300px;object-fit:cover;" />`
       : ""
-    const avatarHtml = authorAvatar
-      ? `<img src="${authorAvatar}" alt="${escapedDisplayName} 프로필" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
+    const avatarHtml = escapedAvatarUrl
+      ? `<img src="${escapedAvatarUrl}" alt="${escapedDisplayName} 프로필" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
       : `<div style="width:40px;height:40px;border-radius:50%;background:#2a2a2a;"></div>`
 
     cardHtml = `<div style="max-width:550px;border:1px solid #333;border-radius:16px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#e7e9ea;">
@@ -291,13 +300,13 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
     ${avatarHtml}
     <div>
       <div style="font-weight:700;font-size:15px;color:#e7e9ea;">${escapedDisplayName}</div>
-      <div style="font-size:13px;color:#71767b;">${authorName}</div>
+      <div style="font-size:13px;color:#71767b;">${escapedAuthorName}</div>
     </div>
     <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:#e7e9ea;margin-left:auto;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
   </div>
   <div style="font-size:15px;line-height:1.5;margin-bottom:4px;">${escapedText}</div>
   ${mediaHtml}
-  <a href="${originalUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:13px;color:#1d9bf0;text-decoration:none;">X에서 보기 →</a>
+  <a href="${escapedOriginalUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:13px;color:#1d9bf0;text-decoration:none;">X에서 보기 →</a>
 </div>`
   }
 

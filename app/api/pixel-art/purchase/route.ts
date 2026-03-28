@@ -67,34 +67,24 @@ export async function POST(request: NextRequest) {
       return apiBadRequest("이미 보유한 아이템입니다.")
     }
 
-    // 포인트 확인
-    const { data: points } = await supabase
-      .from("user_board_points")
-      .select("available_points")
-      .eq("user_id", userId)
-      .eq("board_slug", board_slug)
-      .single()
+    // 원자적 포인트 차감 (TOCTOU 경쟁 상태 방지)
+    const { data: updated, error: deductError } = await supabase.rpc("deduct_board_points", {
+      p_user_id: userId,
+      p_board_slug: board_slug,
+      p_amount: item.price,
+    })
 
-    if (!points || points.available_points < item.price) {
+    if (deductError || !updated?.success) {
+      const currentPoints = updated?.current_points ?? 0
       return NextResponse.json(
         {
           error: "포인트가 부족합니다.",
           required: item.price,
-          current: points?.available_points || 0,
+          current: currentPoints,
         },
         { status: 400 }
       )
     }
-
-    // 포인트 차감
-    await supabase
-      .from("user_board_points")
-      .update({
-        available_points: points.available_points - item.price,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .eq("board_slug", board_slug)
 
     // 트랜잭션 기록
     await supabase.from("point_transactions").insert({
