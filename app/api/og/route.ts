@@ -26,6 +26,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "유효하지 않은 URL입니다." }, { status: 400 })
     }
 
+    // SSRF 방지: private/reserved IP 및 localhost 차단
+    const hostname = parsedUrl.hostname.toLowerCase()
+    const BLOCKED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"]
+    if (
+      BLOCKED_HOSTS.includes(hostname) ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/.test(hostname)
+    ) {
+      return NextResponse.json({ error: "허용되지 않은 URL입니다." }, { status: 400 })
+    }
+
     // HTML 페치 (타임아웃 5초)
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)

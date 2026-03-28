@@ -3,10 +3,17 @@ import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { z } from "zod"
 
+// 허용된 보상 타입과 최대 금액
+const ALLOWED_REWARD_TYPES: Record<string, { maxAmount: number; maxPerUser: number }> = {
+  onboarding_reward: { maxAmount: 100, maxPerUser: 2 },
+  mini_game_reward: { maxAmount: 500, maxPerUser: 50 },
+  daily_check_in: { maxAmount: 50, maxPerUser: 1 },
+}
+
 const rewardSchema = z.object({
-  amount: z.number().int().positive().max(10000),
+  amount: z.number().int().positive().max(500),
   description: z.string().max(100),
-  transaction_type: z.string().max(50).default("onboarding_reward"),
+  transaction_type: z.enum(Object.keys(ALLOWED_REWARD_TYPES) as [string, ...string[]]),
 })
 
 /**
@@ -35,9 +42,29 @@ export async function POST(request: NextRequest) {
     const { amount, description, transaction_type } = parsed.data
     const userId = user.id
 
+    // 보상 타입별 최대 금액 검증
+    const typeConfig = ALLOWED_REWARD_TYPES[transaction_type]
+    if (amount > typeConfig.maxAmount) {
+      return NextResponse.json(
+        { error: `이 보상 타입의 최대 금액은 ${typeConfig.maxAmount}입니다.` },
+        { status: 400 }
+      )
+    }
+
     const supabase = createServiceRoleClient()
 
-    // Idempotency: check if this reward was already given
+    // 유저별 보상 횟수 제한 체크
+    const { count } = await supabase
+      .from("gold_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("transaction_type", transaction_type)
+
+    if ((count ?? 0) >= typeConfig.maxPerUser) {
+      return NextResponse.json({ success: true, already_rewarded: true })
+    }
+
+    // Idempotency: check if this exact reward was already given
     const { data: existing } = await supabase
       .from("gold_transactions")
       .select("id")
