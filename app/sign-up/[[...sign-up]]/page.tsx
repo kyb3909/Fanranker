@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
+import { trackEvent } from "@/lib/analytics/events"
 
 import {
   type Category,
@@ -63,6 +64,7 @@ export default function SignUpPage() {
 
   // ── Submit state ──
   const [submitting, setSubmitting] = useState(false)
+  const [signupMethod, setSignupMethod] = useState<"email" | "google">("email")
 
   // ── Clerk load timeout: if Clerk fails to init (e.g. prod keys on localhost),
   //    don't block the page forever — assume not signed in after 3s.
@@ -229,6 +231,7 @@ export default function SignUpPage() {
     if (!signUpLoaded || !signUp) return
     setAuthError("")
     setGoogleLoading(true)
+    setSignupMethod("google")
     try {
       // Save terms agreement before redirect
       sessionStorage.setItem(SS_TERMS_AGREED, "true")
@@ -395,7 +398,10 @@ export default function SignUpPage() {
         await Promise.allSettled(rewardPromises)
       }
 
-      // 4. 환영 메시지 + 홈으로 이동 (toast가 보이도록 약간 딜레이)
+      // 4. Analytics: 가입 완료 이벤트
+      trackEvent({ name: "signup_complete", params: { method: signupMethod } })
+
+      // 5. 환영 메시지 + 홈으로 이동 (toast가 보이도록 약간 딜레이)
       toast({
         title: "공놀이판에 오신 것을 환영합니다!",
         duration: 5000,

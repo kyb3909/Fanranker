@@ -3,6 +3,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useSWRConfig } from "swr"
 import type { SelectedBet, GroupedMatch } from "@/components/betting/betting-types"
 import { useAlertModal } from "./use-alert-modal"
+import { trackEvent } from "@/lib/analytics/events"
 
 export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () => void) {
   const { isSignedIn } = useAuth()
@@ -230,6 +231,10 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "예측 저장에 실패했습니다.")
 
+      trackEvent({
+        name: "prediction_submit",
+        params: { sport: selectedSport || "unknown", stake: betAmount },
+      })
       showAlert(
         "success",
         "예측 완료!",

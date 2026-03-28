@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { toast } from "@/hooks/use-toast"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
+import { trackEvent } from "@/lib/analytics/events"
 
 const MAX_IMAGES_PER_UPLOAD = 10
 
@@ -329,6 +330,9 @@ export function useWriteEditor() {
         }
 
         const result = await response.json()
+        if (!editId) {
+          trackEvent({ name: "first_post", params: { community: state.selectedCommunity } })
+        }
         router.push(editId ? `/post/${editId}` : `/post/${result.id}`)
       } catch (error) {
         toast({
