@@ -129,14 +129,14 @@ export default function RootLayout({
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
             <meta name="apple-mobile-web-app-title" content="공놀이" />
-            {/* DNS Prefetch: 외부 리소스 사전 조회 */}
-            <link rel="dns-prefetch" href="https://i.ytimg.com" />
-            <link rel="dns-prefetch" href="https://img.clerk.com" />
-            <link rel="dns-prefetch" href="https://clerk.gongnori.fan" />
-            <link rel="preconnect" href="https://img.clerk.com" crossOrigin="anonymous" />
+            {/* DNS Prefetch + Preconnect: 외부 리소스 사전 조회 */}
             <link rel="preconnect" href="https://clerk.gongnori.fan" crossOrigin="anonymous" />
-            {/* GmarketSans preconnect */}
+            <link rel="preconnect" href="https://img.clerk.com" crossOrigin="anonymous" />
             <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+            <link rel="dns-prefetch" href="https://i.ytimg.com" />
+            <link rel="dns-prefetch" href="https://ekysrlhdrapmsnrkytif.supabase.co" />
+            <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+            <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
             {/* Google AdSense: lazyOnload로 초기 렌더링에 영향 없게 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <Script
