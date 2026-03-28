@@ -36,7 +36,13 @@
       "mcp__supabase__list_tables",
       "mcp__supabase__list_migrations",
       "Bash(cat:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(while read:*)",
+      "Bash(do echo:*)",
+      "Read(//d/Projects/새 폴더/adding\\(test\\)/community/**)",
+      "Bash(done)",
+      "Bash(grep -v \":0$\")",
+      "Bash(ANALYZE=true pnpm build)"
     ]
   }
 }
