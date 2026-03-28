@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
+import { useAuth, useClerk } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 
 interface UsePostCardActionsOptions {
@@ -18,6 +18,7 @@ export function usePostCardActions({
 }: UsePostCardActionsOptions) {
   const router = useRouter()
   const { isSignedIn } = useAuth()
+  const { openSignIn } = useClerk()
 
   const [voteCount, setVoteCount] = useState(upvotes)
   const [myVote, setMyVote] = useState<"up" | "down" | null>(isUpvoted ? "up" : null)
@@ -60,7 +61,7 @@ export function usePostCardActions({
 
   const handleVote = async (type: "up" | "down") => {
     if (!isSignedIn) {
-      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
+      openSignIn()
       return
     }
     const prevVote = myVote
@@ -106,7 +107,7 @@ export function usePostCardActions({
 
   const handleBookmark = async () => {
     if (!isSignedIn) {
-      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
+      openSignIn()
       return
     }
     try {

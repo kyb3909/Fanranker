@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@clerk/nextjs"
+import { useAuth, useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { ArrowUp, ArrowDown, MessageCircle, Bookmark } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
@@ -23,6 +23,7 @@ export function PostActions({
   commentCount,
 }: PostActionsProps) {
   const { isSignedIn } = useAuth()
+  const { openSignIn } = useClerk()
   const [upvotes, setUpvotes] = useState(initialUpvotes)
   const [isUpvoted, setIsUpvoted] = useState(initialIsUpvoted)
   const [isBookmarked, setIsBookmarked] = useState(false)
@@ -67,7 +68,7 @@ export function PostActions({
 
   const handleUpvote = async () => {
     if (!isSignedIn) {
-      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
+      openSignIn()
       return
     }
 
@@ -111,7 +112,7 @@ export function PostActions({
 
   const handleBookmark = async () => {
     if (!isSignedIn) {
-      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
+      openSignIn()
       return
     }
 

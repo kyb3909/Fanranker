@@ -5,7 +5,7 @@ import { Bell, Search } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { SignedIn, SignedOut } from "@clerk/nextjs"
+import { SignedIn, SignedOut, useClerk } from "@clerk/nextjs"
 import { UserMenu } from "./user-menu"
 import { SignInMenu } from "./sign-in-menu"
 import { NotificationDropdown } from "./notification-dropdown"
@@ -16,6 +16,7 @@ import { HeaderNav } from "./header-nav"
 
 export function Header() {
   const router = useRouter()
+  const { openSignIn } = useClerk()
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
@@ -83,6 +84,7 @@ export function Header() {
                 size="icon"
                 className="h-9 w-9 rounded-full"
                 aria-label="알림"
+                onClick={() => openSignIn()}
               >
                 <Bell className="h-[18px] w-[18px]" />
               </Button>
