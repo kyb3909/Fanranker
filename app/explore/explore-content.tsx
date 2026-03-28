@@ -85,10 +85,10 @@ function ExploreInner() {
   const categories = catData?.categories || []
   const allPosts = mapPosts(postsData?.posts || [])
 
-  // 24시간 이내 + 추천 10개 이상 필터
+  // 7일 이내 + 추천 1개 이상 필터
   const hotPosts = useMemo(() => {
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    return allPosts.filter((p) => p.upvotes >= 10 && p.createdAt >= oneDayAgo)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    return allPosts.filter((p) => p.upvotes >= 1 && p.createdAt >= sevenDaysAgo)
   }, [allPosts])
 
   // 정렬
@@ -143,7 +143,7 @@ function ExploreInner() {
           <div className="bg-card border-border rounded-lg border">
             <div className="border-border flex items-center justify-between border-b px-4 py-3">
               <h2 className="text-primary text-lg font-bold">실시간 인기글</h2>
-              <span className="text-muted-foreground text-xs">추천 10+ · 최근 24시간</span>
+              <span className="text-muted-foreground text-xs">추천 1+ · 최근 7일</span>
             </div>
 
             {/* 정렬 탭 */}
@@ -202,7 +202,7 @@ function ExploreInner() {
               ) : (
                 <div className="p-8 text-center">
                   <p className="text-muted-foreground text-sm">
-                    최근 24시간 내 추천 10개 이상 게시물이 없습니다.
+                    최근 7일 내 추천받은 게시물이 없습니다.
                   </p>
                 </div>
               )}
