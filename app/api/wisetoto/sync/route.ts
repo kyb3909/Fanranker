@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError } from "@/lib/api-error"
+import { verifyCronSecret } from "@/lib/cron-auth"
 
 const WISETOTO_BASE = "https://www.wisetoto.com"
 const SPORT_CODES = ["sc", "bs", "bk", "vl"] as const
@@ -22,17 +23,17 @@ interface WiseTotoGame {
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
-  // Vercel cron 또는 브라우저 폴링 허용
-  // Origin 체크: 프로덕션 도메인 또는 Vercel cron (origin 없음)
+  // 인증: Vercel cron (CRON_SECRET) 또는 프로덕션 브라우저 폴링 (origin)
+  const cronAuthResult = verifyCronSecret(request)
+  const isCronAuthed = cronAuthResult === null
   const origin = request.headers.get("origin")
-  const isVercelCron = !origin && request.headers.get("user-agent")?.includes("vercel-cron")
   const isAllowedOrigin =
-    !origin ||
-    origin.includes("localhost") ||
-    origin.includes("community-app-brown.vercel.app") ||
-    origin.includes("fanranker")
+    !!origin &&
+    (origin.includes("gongnori.fan") ||
+      origin.includes("community-app-brown.vercel.app") ||
+      origin.includes("localhost"))
 
-  if (!isAllowedOrigin && !isVercelCron) {
+  if (!isCronAuthed && !isAllowedOrigin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
   try {

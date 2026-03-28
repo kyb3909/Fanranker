@@ -1,0 +1,6 @@
+# Protect sensitive files — require review for changes
+/.github/          @kyb3909
+package.json       @kyb3909
+pnpm-lock.yaml     @kyb3909
+next.config.mjs    @kyb3909
+middleware.ts      @kyb3909
