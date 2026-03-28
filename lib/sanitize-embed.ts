@@ -4,7 +4,7 @@
  * - Blockquote/card embeds (X/Twitter, Instagram): DOMPurify sanitization
  */
 
-import DOMPurify from "isomorphic-dompurify"
+import sanitizeHtml from "sanitize-html"
 
 const ALLOWED_IFRAME_HOSTS = [
   "www.youtube.com",
@@ -56,20 +56,16 @@ export function sanitizeEmbedHtml(html: string, provider: string): string {
  * DOMPurify로 안전하게 살균. 정규식 우회 공격 방지.
  */
 function sanitizeBlockquoteHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["blockquote", "div", "span", "p", "a", "img", "br", "strong", "em", "time"],
-    ALLOWED_ATTR: [
-      "href",
-      "src",
-      "alt",
-      "target",
-      "rel",
-      "class",
-      "style",
-      "datetime",
-      "width",
-      "height",
-    ],
-    ALLOW_DATA_ATTR: false,
+  return sanitizeHtml(html, {
+    allowedTags: ["blockquote", "div", "span", "p", "a", "img", "br", "strong", "em", "time"],
+    allowedAttributes: {
+      a: ["href", "target", "rel", "class", "style"],
+      img: ["src", "alt", "width", "height", "style"],
+      div: ["class", "style"],
+      span: ["class", "style"],
+      blockquote: ["class", "style"],
+      time: ["datetime"],
+    },
+    allowedSchemes: ["https", "http"],
   })
 }
