@@ -42,7 +42,11 @@
       "Read(//d/Projects/새 폴더/adding\\(test\\)/community/**)",
       "Bash(done)",
       "Bash(grep -v \":0$\")",
-      "Bash(ANALYZE=true pnpm build)"
+      "Bash(ANALYZE=true pnpm build)",
+      "Bash(B=~/.claude/skills/gstack/browse/dist/browse)",
+      "Bash($B click:*)",
+      "Bash($B goto:*)",
+      "Bash($B fill:*)"
     ]
   }
 }
