@@ -106,7 +106,7 @@ export function PostCardHeader({
       {/* 게시판 배지 */}
       <Link href={`/community/${communityLink}`}>
         <span
-          className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${BADGE_COLOR.bg} ${BADGE_COLOR.text} border ${BADGE_COLOR.border} transition-opacity hover:opacity-80`}
+          className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-medium ${BADGE_COLOR.bg} ${BADGE_COLOR.text} border ${BADGE_COLOR.border} transition-opacity hover:opacity-80`}
         >
           {community}
         </span>
@@ -120,7 +120,7 @@ export function PostCardHeader({
             <Button
               variant="ghost"
               size="icon"
-              className="hidden h-7 w-7 min-w-[28px] sm:inline-flex"
+              className="hidden h-8 w-8 min-w-[32px] sm:inline-flex"
               aria-label="더보기 메뉴"
             >
               <MoreHorizontal className="text-muted-foreground h-4 w-4" />

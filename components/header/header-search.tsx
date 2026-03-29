@@ -110,7 +110,7 @@ export function HeaderSearch() {
           }}
           onKeyDown={handleSearchKeyDown}
           onFocus={() => searchResults.length > 0 && setDropdownOpen(true)}
-          className="text-foreground focus:ring-primary/30 h-9 w-full rounded-full border border-transparent bg-[#F5F5F5] pr-4 pl-9 text-[14px] placeholder:text-[#999999] focus:border-[#E0E0E0] focus:ring-2 focus:outline-none"
+          className="text-foreground focus:ring-primary/30 h-10 w-full rounded-full border border-transparent bg-[#F5F5F5] pr-4 pl-9 text-[14px] placeholder:text-[#999999] focus:border-[#E0E0E0] focus:ring-2 focus:outline-none"
         />
         {searchLoading && (
           <Loader2 className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin" />

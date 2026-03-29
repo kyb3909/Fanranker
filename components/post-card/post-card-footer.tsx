@@ -45,7 +45,7 @@ export function PostCardFooter({
         <Button
           variant="ghost"
           size="sm"
-          className={`h-8 min-h-[32px] rounded-l-full rounded-r-none px-2.5 ${myVote === "up" ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+          className={`h-9 min-h-[36px] rounded-l-full rounded-r-none px-2.5 ${myVote === "up" ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
           onClick={() => onVote("up")}
           aria-label="추천"
           aria-pressed={myVote === "up"}
@@ -60,7 +60,7 @@ export function PostCardFooter({
         <Button
           variant="ghost"
           size="sm"
-          className={`h-8 min-h-[32px] rounded-l-none rounded-r-full px-2.5 ${myVote === "down" ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-foreground"}`}
+          className={`h-9 min-h-[36px] rounded-l-none rounded-r-full px-2.5 ${myVote === "down" ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-foreground"}`}
           onClick={() => onVote("down")}
           aria-label="비추천"
           aria-pressed={myVote === "down"}
@@ -74,7 +74,7 @@ export function PostCardFooter({
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-foreground h-8 min-h-[32px] gap-1.5 rounded-full px-3"
+          className="text-muted-foreground hover:text-foreground h-9 min-h-[36px] gap-1.5 rounded-full px-3"
           aria-label={`댓글 ${comments}개`}
         >
           <MessageCircle className="h-4 w-4" />
@@ -98,7 +98,7 @@ export function PostCardFooter({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-8 w-8 min-w-[32px] rounded-full ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
+          className={`h-9 w-9 min-w-[36px] rounded-full ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
           onClick={onBookmark}
           onMouseEnter={onBookmarkHover}
           onFocus={onBookmarkHover}
