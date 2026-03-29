@@ -35,10 +35,16 @@ export async function GET(request: NextRequest) {
       .eq("status", status)
       .range(offset, offset + limit - 1)
 
-    if (boardSlug) query = query.or(`board_slug.eq.${boardSlug},board_slug.is.null`)
+    if (boardSlug) {
+      const safeBoardSlug = boardSlug.replace(/[^a-zA-Z0-9_-]/g, "")
+      query = query.or(`board_slug.eq.${safeBoardSlug},board_slug.is.null`)
+    }
     if (packId) query = query.eq("pack_id", packId)
     if (creatorId) query = query.eq("creator_id", creatorId)
-    if (q) query = query.ilike("name", `%${q}%`)
+    if (q) {
+      const safeQ = q.replace(/[%_\\]/g, "\\$&").slice(0, 100)
+      query = query.ilike("name", `%${safeQ}%`)
+    }
 
     if (sort === "popular") {
       query = query.order("purchase_count", { ascending: false })

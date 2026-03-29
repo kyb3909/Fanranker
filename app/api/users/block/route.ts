@@ -78,13 +78,19 @@ export async function POST(request: NextRequest) {
         .insert({ blocker_id: user.id, blocked_id: targetId })
       if (error) return apiError("차단 실패", 500, error)
 
-      // 팔로우 관계도 해제
-      await supabase
-        .from("user_follows")
-        .delete()
-        .or(
-          `and(follower_id.eq.${user.id},followed_user_id.eq.${targetId}),and(follower_id.eq.${targetId},followed_user_id.eq.${user.id})`
-        )
+      // 팔로우 관계도 해제 (양방향)
+      await Promise.all([
+        supabase
+          .from("user_follows")
+          .delete()
+          .eq("follower_id", user.id)
+          .eq("followed_user_id", targetId),
+        supabase
+          .from("user_follows")
+          .delete()
+          .eq("follower_id", targetId)
+          .eq("followed_user_id", user.id),
+      ])
 
       return NextResponse.json({ blocked: true })
     }
