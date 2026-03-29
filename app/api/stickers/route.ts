@@ -18,7 +18,8 @@ import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
-    const status = searchParams.get("status") || "approved"
+    const statusParam = searchParams.get("status")
+    const status = statusParam === "pending" ? "pending" : "approved"
     const boardSlug = searchParams.get("board_slug")
     const packId = searchParams.get("pack_id")
     const creatorId = searchParams.get("creator_id")
