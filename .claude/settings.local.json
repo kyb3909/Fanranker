@@ -48,7 +48,8 @@
       "Bash($B goto:*)",
       "Bash($B fill:*)",
       "Bash($B js \":*)",
-      "mcp__playwright__browser_handle_dialog"
+      "mcp__playwright__browser_handle_dialog",
+      "Skill(design-review)"
     ]
   }
 }
