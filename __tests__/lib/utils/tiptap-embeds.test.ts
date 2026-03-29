@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest"
 import {
   extractEmbedsFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
+  extractFirstImageSrcFromTipTapJSON,
+  extractAllImageSrcsFromTipTapJSON,
 } from "@/lib/utils/tiptap-embeds"
 
 describe("extractEmbedsFromTipTapJSON", () => {
@@ -120,9 +122,7 @@ describe("extractEmbedsFromTipTapJSON", () => {
       content: [
         {
           type: "paragraph",
-          content: [
-            { type: "text", text: "https://youtu.be/abc123def45" },
-          ],
+          content: [{ type: "text", text: "https://youtu.be/abc123def45" }],
         },
         {
           type: "embed",
@@ -176,5 +176,88 @@ describe("extractFirstEmbedFromTipTapJSON", () => {
     const result = extractFirstEmbedFromTipTapJSON(content)
     expect(result).not.toBeNull()
     expect(result!.attrs.provider).toBe("youtube")
+  })
+})
+
+describe("extractFirstImageSrcFromTipTapJSON", () => {
+  it("returns null for null/undefined", () => {
+    expect(extractFirstImageSrcFromTipTapJSON(null)).toBeNull()
+    expect(extractFirstImageSrcFromTipTapJSON(undefined)).toBeNull()
+  })
+
+  it("extracts image node src", () => {
+    const content = { type: "image", attrs: { src: "https://example.com/img.jpg" } }
+    expect(extractFirstImageSrcFromTipTapJSON(content)).toBe("https://example.com/img.jpg")
+  })
+
+  it("extracts direct image URL from text node", () => {
+    const content = { type: "text", text: "https://example.com/photo.png" }
+    expect(extractFirstImageSrcFromTipTapJSON(content)).toBe("https://example.com/photo.png")
+  })
+
+  it("extracts image URL from link mark", () => {
+    const content = {
+      type: "text",
+      text: "click",
+      marks: [{ type: "link", attrs: { href: "https://example.com/photo.jpg" } }],
+    }
+    expect(extractFirstImageSrcFromTipTapJSON(content)).toBe("https://example.com/photo.jpg")
+  })
+
+  it("returns null for non-image text", () => {
+    expect(extractFirstImageSrcFromTipTapJSON({ type: "text", text: "hello" })).toBeNull()
+  })
+
+  it("finds image in nested content", () => {
+    const content = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "hello" }] },
+        { type: "image", attrs: { src: "https://example.com/deep.webp" } },
+      ],
+    }
+    expect(extractFirstImageSrcFromTipTapJSON(content)).toBe("https://example.com/deep.webp")
+  })
+})
+
+describe("extractAllImageSrcsFromTipTapJSON", () => {
+  it("returns empty for null", () => {
+    expect(extractAllImageSrcsFromTipTapJSON(null)).toEqual([])
+  })
+
+  it("extracts multiple images", () => {
+    const content = {
+      type: "doc",
+      content: [
+        { type: "image", attrs: { src: "https://a.com/1.jpg" } },
+        { type: "paragraph", content: [{ type: "text", text: "text" }] },
+        { type: "image", attrs: { src: "https://a.com/2.png" } },
+      ],
+    }
+    const result = extractAllImageSrcsFromTipTapJSON(content)
+    expect(result).toHaveLength(2)
+    expect(result).toContain("https://a.com/1.jpg")
+    expect(result).toContain("https://a.com/2.png")
+  })
+
+  it("deduplicates same src", () => {
+    const content = {
+      type: "doc",
+      content: [
+        { type: "image", attrs: { src: "https://a.com/same.jpg" } },
+        { type: "image", attrs: { src: "https://a.com/same.jpg" } },
+      ],
+    }
+    expect(extractAllImageSrcsFromTipTapJSON(content)).toHaveLength(1)
+  })
+
+  it("finds image URLs in text nodes", () => {
+    const content = {
+      type: "doc",
+      content: [{ type: "text", text: "https://cdn.example.com/photo.gif" }],
+    }
+    expect(extractAllImageSrcsFromTipTapJSON(content)).toContain(
+      "https://cdn.example.com/photo.gif"
+    )
   })
 })
