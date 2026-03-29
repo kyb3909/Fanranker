@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 
 /**
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100)
     const offset = parseInt(searchParams.get("offset") || "0")
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAnonClient()
 
     let query = supabase
       .from("stickers")

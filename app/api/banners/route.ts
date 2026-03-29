@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createAnonClient } from "@/lib/supabase/server"
 
 /**
  * GET /api/banners
  * 활성 배너 목록 조회 (공개)
  */
 export async function GET() {
-  const supabase = createServiceRoleClient()
+  const supabase = createAnonClient()
 
   const { data, error } = await supabase
     .from("announcement_banners")

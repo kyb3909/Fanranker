@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createAnonClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
 export const dynamic = "force-dynamic"
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return apiBadRequest("mode 파라미터가 필요합니다 (cheer | worldcup)")
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAnonClient()
 
     let query = supabase
       .from("battle_rooms")

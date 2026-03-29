@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createAnonClient } from "@/lib/supabase/server"
 import { apiError } from "@/lib/api-error"
 
 /**
@@ -8,7 +8,7 @@ import { apiError } from "@/lib/api-error"
  */
 export async function GET() {
   try {
-    const supabase = createServiceRoleClient()
+    const supabase = createAnonClient()
     const { data: packs, error } = await supabase
       .from("sticker_packs")
       .select("*")
