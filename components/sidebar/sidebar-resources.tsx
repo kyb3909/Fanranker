@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 
 export function SidebarResources() {
   return (
-    <nav className="mt-auto shrink-0">
+    <footer className="mt-auto shrink-0" role="contentinfo">
       <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
         <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
         <div className="px-4 py-3">
@@ -33,6 +33,6 @@ export function SidebarResources() {
           ))}
         </div>
       </Card>
-    </nav>
+    </footer>
   )
 }
