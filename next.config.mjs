@@ -83,6 +83,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: [
       'lucide-react',
+      '@clerk/nextjs',
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-dialog',
       '@radix-ui/react-avatar',

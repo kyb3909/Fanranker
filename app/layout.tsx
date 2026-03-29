@@ -1,4 +1,5 @@
 import type React from "react"
+import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
 import { Noto_Sans_KR } from "next/font/google"
 import Script from "next/script"
@@ -169,7 +170,9 @@ export default function RootLayout({
                 }),
               }}
             />
-            <ProfileSync />
+            <Suspense fallback={null}>
+              <ProfileSync />
+            </Suspense>
             <AppShell>{children}</AppShell>
             <FloatingWriteButton />
             <MobileTabBar />
