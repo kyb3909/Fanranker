@@ -23,15 +23,15 @@ interface WiseTotoGame {
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
-  // 인증: Vercel cron (CRON_SECRET) 또는 프로덕션 브라우저 폴링 (origin)
+  // 인증: Vercel cron (CRON_SECRET) 또는 프로덕션 브라우저 폴링 (origin/referer)
   const cronAuthResult = verifyCronSecret(request)
   const isCronAuthed = cronAuthResult === null
   const origin = request.headers.get("origin")
+  const referer = request.headers.get("referer")
+  const allowedHosts = ["gongnori.fan", "community-app-brown.vercel.app", "localhost"]
   const isAllowedOrigin =
-    !!origin &&
-    (origin.includes("gongnori.fan") ||
-      origin.includes("community-app-brown.vercel.app") ||
-      origin.includes("localhost"))
+    (!!origin && allowedHosts.some((h) => origin.includes(h))) ||
+    (!!referer && allowedHosts.some((h) => referer.includes(h)))
 
   if (!isCronAuthed && !isAllowedOrigin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
