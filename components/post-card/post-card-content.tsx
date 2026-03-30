@@ -511,12 +511,50 @@ function XVideoPlayer({
   )
 }
 
-/* ── Instagram Lazy 인라인 프리뷰 ── */
-/* 피드에서는 oEmbed 메타데이터(썸네일+작성자)만 표시, embed.js 미사용 */
+/* ── Instagram 피드 썸네일 + 클릭 시 임베드 ── */
+/* 피드에서는 썸네일만 표시, 클릭 시 embed.js 로드하여 풀 임베드 렌더링 */
+
+type InstgrmWindow = Window &
+  typeof globalThis & {
+    instgrm?: { Embeds: { process: () => void } }
+    __igEmbedLoading?: boolean
+  }
+
+function loadInstagramEmbedJs(callback: () => void) {
+  const win = window as InstgrmWindow
+  if (win.instgrm) {
+    callback()
+    return
+  }
+  if (win.__igEmbedLoading) {
+    const interval = setInterval(() => {
+      if (win.instgrm) {
+        clearInterval(interval)
+        callback()
+      }
+    }, 100)
+    return
+  }
+  win.__igEmbedLoading = true
+  const script = document.createElement("script")
+  script.src = "https://www.instagram.com/embed.js"
+  script.async = true
+  script.onload = () => {
+    win.__igEmbedLoading = false
+    callback()
+  }
+  document.body.appendChild(script)
+}
+
+interface InstagramOEmbedData {
+  thumbnail_url?: string
+  html?: string
+  title?: string
+  author_name?: string
+}
 
 function LazyInstagramPreview({ url }: { url: string }) {
   const { ref, inView } = useInView()
-
   return (
     <div ref={ref}>
       {inView ? <InstagramInlineContent url={url} /> : <EmbedSkeleton provider="instagram" />}
@@ -525,89 +563,95 @@ function LazyInstagramPreview({ url }: { url: string }) {
 }
 
 function InstagramInlineContent({ url }: { url: string }) {
+  const [expanded, setExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const processedRef = useRef(false)
-  const { data, isLoading } = useSWR<{ html?: string } | null>(
+  const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
     oembedFetcher,
     { dedupingInterval: 60_000, revalidateOnFocus: false }
   )
 
-  /* ref 기반 DOM 주입: React가 embed.js 변환 DOM을 덮어쓰지 않도록 */
   useEffect(() => {
-    const container = containerRef.current
-    if (!container || !data?.html || processedRef.current) return
-
-    container.innerHTML = data.html
-    processedRef.current = true
-
-    type InstgrmWindow = Window &
-      typeof globalThis & {
-        instgrm?: { Embeds: { process: () => void } }
-        __igEmbedLoading?: boolean
-      }
-    const win = window as InstgrmWindow
-
-    const process = () => win.instgrm?.Embeds.process()
-
+    if (!expanded || !data?.html) return
     const timer = setTimeout(() => {
-      if (win.instgrm) {
-        process()
-        return
-      }
-      if (win.__igEmbedLoading) {
-        const interval = setInterval(() => {
-          if (win.instgrm) {
-            clearInterval(interval)
-            process()
-          }
-        }, 100)
-        return
-      }
-      win.__igEmbedLoading = true
-      const script = document.createElement("script")
-      script.src = "https://www.instagram.com/embed.js"
-      script.async = true
-      script.onload = () => {
-        win.__igEmbedLoading = false
-        process()
-      }
-      document.body.appendChild(script)
+      loadInstagramEmbedJs(() => {
+        const win = window as InstgrmWindow
+        win.instgrm?.Embeds.process()
+      })
     }, 0)
-
     return () => clearTimeout(timer)
-  }, [data?.html])
+  }, [expanded, data?.html])
 
-  if (isLoading) {
-    return <EmbedSkeleton provider="instagram" />
-  }
+  if (isLoading) return <EmbedSkeleton provider="instagram" />
 
-  if (!data?.html) {
+  const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+  const isReel = normalizedUrl.includes("/reel/")
+
+  /* 확장됨: 풀 임베드 렌더링 */
+  if (expanded && data?.html) {
     return (
-      <div className="border-border bg-card overflow-hidden rounded-lg border px-3 py-3">
-        <div className="flex items-center gap-2">
-          <InstagramIcon className="text-muted-foreground h-5 w-5" />
-          <span className="text-muted-foreground text-sm">게시물을 불러올 수 없습니다</span>
-        </div>
+      <div className="border-border bg-card overflow-hidden rounded-lg border">
+        <div
+          ref={containerRef}
+          className="mx-auto max-w-[540px] p-4 [&_.instagram-media]:!mx-auto"
+          dangerouslySetInnerHTML={{ __html: data.html }}
+        />
       </div>
     )
   }
 
-  return (
-    <div className="relative overflow-hidden rounded-lg">
-      <div
-        ref={containerRef}
-        className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
-        style={{ minHeight: 300 }}
-      />
-      {/* Instagram 뱃지 */}
-      <div className="pointer-events-none absolute bottom-2 left-2 z-10">
-        <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-          <InstagramIcon className="h-3.5 w-3.5" />
-          <span>Instagram</span>
+  /* 썸네일 프리뷰 */
+  if (data?.thumbnail_url) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="group relative block w-full overflow-hidden rounded-lg bg-black"
+      >
+        <div className="flex max-h-[400px] min-h-[200px] w-full items-center justify-center">
+          <img
+            src={data.thumbnail_url}
+            alt={data.title || "Instagram"}
+            className="h-auto max-h-[400px] w-full object-cover"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
         </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+          {isReel && (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg transition-transform group-hover:scale-110">
+              <Play className="ml-0.5 h-5 w-5 text-gray-800" fill="currentColor" />
+            </div>
+          )}
+        </div>
+        {/* Instagram 뱃지 */}
+        <div className="absolute bottom-2 left-2 z-10">
+          <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            <InstagramIcon className="h-3.5 w-3.5" />
+            <span>Instagram</span>
+          </div>
+        </div>
+      </button>
+    )
+  }
+
+  /* 폴백: 썸네일 없을 때 링크 카드 */
+  return (
+    <a
+      href={normalizedUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="border-border bg-card hover:bg-muted/50 flex items-center gap-4 overflow-hidden rounded-lg border px-4 py-3.5 transition-colors"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400">
+        <InstagramIcon className="h-5 w-5 text-white" />
       </div>
-    </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-foreground text-sm font-semibold">
+          {isReel ? "Instagram Reel" : "Instagram 게시물"}
+        </p>
+        <p className="text-muted-foreground truncate text-xs">{normalizedUrl}</p>
+      </div>
+    </a>
   )
 }
 
