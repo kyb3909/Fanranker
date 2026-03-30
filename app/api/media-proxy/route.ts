@@ -4,7 +4,13 @@ import { apiBadRequest, checkRateLimit } from "@/lib/api-error"
 export const runtime = "nodejs"
 
 function isAllowedMediaHost(url: URL) {
-  return url.protocol === "https:" && url.hostname.toLowerCase() === "video.twimg.com"
+  const host = url.hostname.toLowerCase()
+  return (
+    url.protocol === "https:" &&
+    (host === "video.twimg.com" ||
+      host.endsWith(".cdninstagram.com") ||
+      host.endsWith(".fbcdn.net"))
+  )
 }
 
 async function proxyMedia(request: NextRequest, method: "GET" | "HEAD") {

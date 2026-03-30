@@ -601,6 +601,7 @@ function LazyInstagramPreview({ url }: { url: string }) {
 
 function InstagramInlineContent({ url }: { url: string }) {
   const [expanded, setExpanded] = useState(false)
+  const [thumbError, setThumbError] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
@@ -637,8 +638,9 @@ function InstagramInlineContent({ url }: { url: string }) {
     )
   }
 
-  /* 썸네일 프리뷰 */
-  if (data?.thumbnail_url) {
+  /* 썸네일 프리뷰 (프록시 경유) */
+  if (data?.thumbnail_url && !thumbError) {
+    const proxiedThumb = `/api/media-proxy?url=${encodeURIComponent(data.thumbnail_url)}`
     return (
       <button
         onClick={() => setExpanded(true)}
@@ -646,11 +648,11 @@ function InstagramInlineContent({ url }: { url: string }) {
       >
         <div className="flex max-h-[400px] min-h-[200px] w-full items-center justify-center">
           <img
-            src={data.thumbnail_url}
+            src={proxiedThumb}
             alt={data.title || "Instagram"}
             className="h-auto max-h-[400px] w-full object-cover"
             loading="lazy"
-            referrerPolicy="no-referrer"
+            onError={() => setThumbError(true)}
           />
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
