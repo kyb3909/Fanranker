@@ -600,14 +600,12 @@ function LazyInstagramPreview({ url }: { url: string }) {
 }
 
 function InstagramInlineContent({ url }: { url: string }) {
-  const [expanded, setExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
-  const isReel = normalizedUrl.includes("/reel/")
 
   // blockquote HTML: oEmbed에서 가져오거나, 실패 시 URL로 직접 생성
-  const { data } = useSWR<InstagramOEmbedData | null>(
+  const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
     oembedFetcher,
     { dedupingInterval: 60_000, revalidateOnFocus: false }
@@ -617,7 +615,7 @@ function InstagramInlineContent({ url }: { url: string }) {
     `<blockquote class="instagram-media" data-instgrm-permalink="${normalizedUrl}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
 
   useEffect(() => {
-    if (!expanded) return
+    if (isLoading) return
     const timer = setTimeout(() => {
       loadInstagramEmbedJs(() => {
         const win = window as InstgrmWindow
@@ -625,40 +623,25 @@ function InstagramInlineContent({ url }: { url: string }) {
       })
     }, 0)
     return () => clearTimeout(timer)
-  }, [expanded])
+  }, [isLoading, embedHtml])
 
-  /* 확장됨: 풀 임베드 렌더링 */
-  if (expanded) {
-    return (
-      <div className="border-border bg-card overflow-hidden rounded-lg border">
-        <div
-          ref={containerRef}
-          className="mx-auto max-w-[540px] p-4 [&_.instagram-media]:!mx-auto"
-          dangerouslySetInnerHTML={{ __html: embedHtml }}
-        />
-      </div>
-    )
-  }
+  if (isLoading) return <EmbedSkeleton provider="instagram" />
 
-  /* Instagram 브랜드 카드 — 클릭 시 embed.js로 전환 */
   return (
-    <button
-      onClick={() => setExpanded(true)}
-      className="group block w-full overflow-hidden rounded-lg bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 transition-shadow hover:shadow-lg"
-    >
-      <div className="flex items-center gap-4 px-5 py-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-          <InstagramIcon className="h-5 w-5 text-white" />
+    <div className="relative overflow-hidden rounded-lg">
+      <div
+        ref={containerRef}
+        className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
+        dangerouslySetInnerHTML={{ __html: embedHtml }}
+      />
+      {/* Instagram 뱃지 */}
+      <div className="pointer-events-none absolute bottom-2 left-2 z-10">
+        <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          <InstagramIcon className="h-3.5 w-3.5" />
+          <span>Instagram</span>
         </div>
-        <div className="min-w-0 flex-1 text-left">
-          <p className="text-[14px] font-bold text-white">
-            {isReel ? "Instagram Reel" : "Instagram 게시물"}
-          </p>
-          <p className="text-[12px] text-white/70">탭하여 보기</p>
-        </div>
-        <Play className="h-5 w-5 shrink-0 text-white/60 transition-transform group-hover:translate-x-0.5" />
       </div>
-    </button>
+    </div>
   )
 }
 

@@ -63,7 +63,7 @@ function sanitizeBlockquoteHtml(html: string): string {
       img: ["src", "alt", "width", "height", "style"],
       div: ["class", "style"],
       span: ["class", "style"],
-      blockquote: ["class", "style"],
+      blockquote: ["class", "style", "data-instgrm-permalink", "data-instgrm-version", "cite"],
       time: ["datetime"],
     },
     allowedSchemes: ["https", "http"],

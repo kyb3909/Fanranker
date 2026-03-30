@@ -221,7 +221,7 @@ function loadInstagramEmbedJs(callback: () => void) {
 
 /**
  * Instagram 임베드 전용 컴포넌트
- * embed.js 시도 → 5초 내 iframe 미생성 시 브랜드 카드 폴백
+ * blockquote를 삽입 후 embed.js를 로드하여 인터랙티브 렌더링
  */
 function InstagramEmbed({
   html,
@@ -233,7 +233,6 @@ function InstagramEmbed({
   className?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [embedFailed, setEmbedFailed] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -242,50 +241,8 @@ function InstagramEmbed({
         win.instgrm?.Embeds.process()
       })
     }, 0)
-
-    // embed.js가 5초 내 iframe을 생성하지 않으면 폴백
-    const fallbackTimer = setTimeout(() => {
-      if (!containerRef.current?.querySelector("iframe")) {
-        setEmbedFailed(true)
-      }
-    }, 5000)
-
-    return () => {
-      clearTimeout(timer)
-      clearTimeout(fallbackTimer)
-    }
+    return () => clearTimeout(timer)
   }, [html])
-
-  if (embedFailed) {
-    const isReel = url.includes("/reel/")
-    return (
-      <Card className={cn("border-border overflow-hidden border", className)}>
-        <CardContent className="p-0">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 transition-opacity hover:opacity-90"
-          >
-            <div className="flex items-center gap-4 px-5 py-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-bold text-white">
-                  {isReel ? "Instagram Reel" : "Instagram 게시물"}
-                </p>
-                <p className="text-[13px] text-white/70">Instagram에서 보기</p>
-              </div>
-              <ExternalLink className="h-5 w-5 shrink-0 text-white/60" />
-            </div>
-          </a>
-        </CardContent>
-      </Card>
-    )
-  }
 
   return (
     <Card className={cn("border-border bg-card overflow-hidden border", className)}>
