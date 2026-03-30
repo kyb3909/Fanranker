@@ -43,10 +43,8 @@ function toNum(val: string | undefined | null): number {
   return val ? Number(val) : 0
 }
 
-function changePercent(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0
-  return Math.round(((current - previous) / previous) * 1000) / 10
-}
+// changePercent는 lib/utils/math.ts에서 공용 유틸로 추출됨
+import { changePercent } from "@/lib/utils/math"
 
 export async function fetchWeeklyReport(
   periodStart: string,
@@ -258,7 +256,9 @@ function generateSummary(data: WeeklyReportData): string {
   const parts: string[] = []
 
   // 유저 요약
-  parts.push(`주간 활성 유저 ${data.users.wau.toLocaleString()}명 (DAU 평균 ${data.users.dauAvg}명)`)
+  parts.push(
+    `주간 활성 유저 ${data.users.wau.toLocaleString()}명 (DAU 평균 ${data.users.dauAvg}명)`
+  )
 
   // WoW 변화
   const userChange = data.comparison.users.changePercent
@@ -271,7 +271,9 @@ function generateSummary(data: WeeklyReportData): string {
   }
 
   // 신규 유저
-  parts.push(`신규 유저 ${data.users.newUsers.toLocaleString()}명 (${data.retention.newUserRatio}%)`)
+  parts.push(
+    `신규 유저 ${data.users.newUsers.toLocaleString()}명 (${data.retention.newUserRatio}%)`
+  )
 
   // 참여도
   const minutes = Math.round(data.engagement.avgEngagementTimeSec / 60)
@@ -280,7 +282,9 @@ function generateSummary(data: WeeklyReportData): string {
   // 인기 페이지
   if (data.topPages.length > 0) {
     const top = data.topPages[0]
-    parts.push(`가장 많이 방문한 페이지: ${top.pagePath} (${top.screenPageViews.toLocaleString()}회)`)
+    parts.push(
+      `가장 많이 방문한 페이지: ${top.pagePath} (${top.screenPageViews.toLocaleString()}회)`
+    )
   }
 
   // 주요 트래픽
@@ -291,7 +295,9 @@ function generateSummary(data: WeeklyReportData): string {
 
   // 비즈니스 지표
   const biz = data.business
-  parts.push(`승부예측 참여 ${biz.predictionUsers}명 (참여율 ${biz.predictionParticipationRate}%, 총 ${biz.predictionSlips}건)`)
+  parts.push(
+    `승부예측 참여 ${biz.predictionUsers}명 (참여율 ${biz.predictionParticipationRate}%, 총 ${biz.predictionSlips}건)`
+  )
   parts.push(`예측 정보 구매 ${biz.purchaseCount}건 (${biz.purchaseUsers}명)`)
 
   return parts.join(". ") + "."

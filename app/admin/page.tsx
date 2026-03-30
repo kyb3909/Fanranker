@@ -3,13 +3,22 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { DashboardKpiCards } from "./_components/dashboard-kpi-cards"
 import { DashboardSystemStatus } from "./_components/dashboard-system-status"
 import { DashboardNewsCrawler } from "./_components/dashboard-news-crawler"
-import { DashboardQuickLinks } from "./_components/dashboard-quick-links"
+import { DashboardAlerts } from "./_components/dashboard-alerts"
+import { DashboardHeader } from "./_components/dashboard-header"
 
 export const metadata: Metadata = { title: "관리자 대시보드" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminDashboardPage() {
   const supabase = createServiceRoleClient()
+
+  // KST 기준 오늘/어제 시작 시각
+  const KST_OFFSET = 9 * 60 * 60 * 1000
+  const nowKST = new Date(Date.now() + KST_OFFSET)
+  const todayStart = new Date(
+    Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate()) - KST_OFFSET
+  )
+  const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000)
 
   const [
     { count: totalUsers },
@@ -21,6 +30,14 @@ export default async function AdminDashboardPage() {
     { data: latestTicker },
     { count: tickerCount },
     { data: latestDailyRound },
+    // 트렌드: 오늘
+    { count: usersToday },
+    { count: postsToday },
+    { count: predictionsToday },
+    // 트렌드: 어제
+    { count: usersYesterday },
+    { count: postsYesterday },
+    { count: predictionsYesterday },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("posts").select("*", { count: "exact", head: true }),
@@ -56,6 +73,35 @@ export default async function AdminDashboardPage() {
       .order("bet_close_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // 오늘 가입/게시글/예측
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart.toISOString()),
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart.toISOString()),
+    supabase
+      .from("betman_predictions")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart.toISOString()),
+    // 어제 가입/게시글/예측
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", yesterdayStart.toISOString())
+      .lt("created_at", todayStart.toISOString()),
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", yesterdayStart.toISOString())
+      .lt("created_at", todayStart.toISOString()),
+    supabase
+      .from("betman_predictions")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", yesterdayStart.toISOString())
+      .lt("created_at", todayStart.toISOString()),
   ])
 
   let betmanStatus: "ok" | "stale" | "error" = "error"
@@ -70,10 +116,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <main id="main-content" tabIndex={-1} className="space-y-6 p-6">
-      <div>
-        <h1 className="text-foreground text-2xl font-bold">대시보드</h1>
-        <p className="text-muted-foreground text-sm">시스템 현황 요약</p>
-      </div>
+      <DashboardHeader />
 
       <DashboardKpiCards
         data={{
@@ -83,8 +126,18 @@ export default async function AdminDashboardPage() {
           activeGames: activeGames ?? 0,
           pendingReports: pendingReports ?? 0,
           systemHealthy: betmanStatus !== "error",
+          trends: {
+            usersToday: usersToday ?? 0,
+            usersYesterday: usersYesterday ?? 0,
+            postsToday: postsToday ?? 0,
+            postsYesterday: postsYesterday ?? 0,
+            predictionsToday: predictionsToday ?? 0,
+            predictionsYesterday: predictionsYesterday ?? 0,
+          },
         }}
       />
+
+      <DashboardAlerts />
 
       <DashboardSystemStatus
         data={{
@@ -104,8 +157,6 @@ export default async function AdminDashboardPage() {
       />
 
       <DashboardNewsCrawler />
-
-      <DashboardQuickLinks />
     </main>
   )
 }

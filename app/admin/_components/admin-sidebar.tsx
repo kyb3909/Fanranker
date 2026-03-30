@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import useSWR from "swr"
+import { fetcher } from "@/lib/swr"
 import {
   BarChart3,
   LayoutDashboard,
@@ -39,7 +41,22 @@ import {
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
-const navGroups = [
+interface NavItem {
+  title: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: boolean
+}
+
+interface NavGroup {
+  label: string
+  collapsible?: boolean
+  collapsibleLabel?: string
+  icon?: React.ComponentType<{ className?: string }>
+  items: NavItem[]
+}
+
+const navGroups: NavGroup[] = [
   {
     label: "개요",
     items: [
@@ -56,6 +73,7 @@ const navGroups = [
   {
     label: "Content Ops",
     collapsible: true,
+    collapsibleLabel: "콘텐츠 관리",
     icon: FileText,
     items: [
       { title: "게시글", href: "/admin/content/posts", icon: FileText },
@@ -63,12 +81,13 @@ const navGroups = [
       { title: "뉴스 티커", href: "/admin/content/ticker", icon: Newspaper },
       { title: "카테고리", href: "/admin/content/boards", icon: FolderOpen },
       { title: "배너 관리", href: "/admin/content/banners", icon: Image },
-      { title: "신고 관리", href: "/admin/content/reports", icon: Flag },
+      { title: "신고 관리", href: "/admin/content/reports", icon: Flag, badge: true },
     ],
   },
   {
     label: "Game Economy",
     collapsible: true,
+    collapsibleLabel: "게임 경제",
     icon: Trophy,
     items: [
       { title: "경기 관리", href: "/admin/matches", icon: Trophy },
@@ -88,6 +107,12 @@ const navGroups = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const { data } = useSWR<{ alerts: { pendingReports: number } }>(
+    "/api/admin/operations/dashboard",
+    fetcher,
+    { refreshInterval: 60_000, revalidateOnFocus: false }
+  )
+  const pendingReports = data?.alerts?.pendingReports ?? 0
 
   return (
     <Sidebar>
@@ -103,7 +128,13 @@ export function AdminSidebar() {
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               {group.collapsible ? (
-                <CollapsibleNavGroup items={group.items} pathname={pathname} />
+                <CollapsibleNavGroup
+                  items={group.items}
+                  pathname={pathname}
+                  label={group.collapsibleLabel ?? group.label}
+                  icon={group.icon}
+                  pendingReports={pendingReports}
+                />
               ) : (
                 <SidebarMenu>
                   {group.items.map((item) => (
@@ -135,15 +166,21 @@ export function AdminSidebar() {
   )
 }
 
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-}
-
-function CollapsibleNavGroup({ items, pathname }: { items: NavItem[]; pathname: string }) {
+function CollapsibleNavGroup({
+  items,
+  pathname,
+  label,
+  icon: GroupIcon,
+  pendingReports,
+}: {
+  items: NavItem[]
+  pathname: string
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  pendingReports: number
+}) {
   const isAnyActive = items.some((item) => pathname.startsWith(item.href))
-  const FirstIcon = items[0]?.icon
+  const TriggerIcon = GroupIcon ?? items[0]?.icon
 
   return (
     <SidebarMenu>
@@ -151,8 +188,8 @@ function CollapsibleNavGroup({ items, pathname }: { items: NavItem[]; pathname: 
         <SidebarMenuItem>
           <CollapsibleTrigger asChild>
             <SidebarMenuButton>
-              {FirstIcon && <FirstIcon className="h-4 w-4" />}
-              <span>전체 보기</span>
+              {TriggerIcon && <TriggerIcon className="h-4 w-4" />}
+              <span>{label}</span>
               <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
             </SidebarMenuButton>
           </CollapsibleTrigger>
@@ -164,6 +201,11 @@ function CollapsibleNavGroup({ items, pathname }: { items: NavItem[]; pathname: 
                     <Link href={item.href}>
                       <item.icon className="h-3.5 w-3.5" />
                       <span>{item.title}</span>
+                      {item.badge && pendingReports > 0 && (
+                        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                          {pendingReports > 99 ? "99+" : pendingReports}
+                        </span>
+                      )}
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
