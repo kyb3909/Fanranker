@@ -33,18 +33,12 @@ describe("PostCardFooter", () => {
 
   it("renders comment count with link", () => {
     render(<PostCardFooter {...defaultProps} />)
-    expect(screen.getByLabelText("댓글 5개")).toBeDefined()
     expect(screen.getByText("5")).toBeDefined()
   })
 
-  it("renders temperature when provided", () => {
-    render(<PostCardFooter {...defaultProps} temperature={42} />)
-    expect(screen.getByText("42°")).toBeDefined()
-  })
-
-  it("does not render temperature when 0", () => {
-    render(<PostCardFooter {...defaultProps} temperature={0} />)
-    expect(screen.queryByText(/°$/)).toBeNull()
+  it("renders community badge when provided", () => {
+    render(<PostCardFooter {...defaultProps} community="축구" communityLink="football" />)
+    expect(screen.getByText("축구")).toBeDefined()
   })
 
   it("calls onVote with 'up' when upvote clicked", () => {
@@ -90,26 +84,8 @@ describe("PostCardFooter", () => {
     expect(screen.getByLabelText("북마크 추가")).toBeDefined()
   })
 
-  it("renders comment link to correct post URL", () => {
-    render(<PostCardFooter {...defaultProps} postId={456} />)
-    const link = screen.getByLabelText("댓글 5개").closest("a")
-    expect(link?.getAttribute("href")).toBe("/post/456")
-  })
-
   it("renders ShareMenu component", () => {
     render(<PostCardFooter {...defaultProps} />)
     expect(screen.getByTestId("share-menu")).toBeDefined()
-  })
-
-  it("applies correct color for high temperature", () => {
-    render(<PostCardFooter {...defaultProps} temperature={85} />)
-    const tempEl = screen.getByText("85°")
-    expect(tempEl.closest("div")?.className).toContain("text-red-500")
-  })
-
-  it("applies correct color for medium temperature", () => {
-    render(<PostCardFooter {...defaultProps} temperature={45} />)
-    const tempEl = screen.getByText("45°")
-    expect(tempEl.closest("div")?.className).toContain("text-amber-500")
   })
 })

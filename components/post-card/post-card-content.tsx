@@ -88,27 +88,62 @@ export const PostCardContent = memo(function PostCardContent({
   image,
   priority,
 }: PostCardContentProps) {
+  const hasSingleImage = !!displayImage && !firstEmbed && imageSources.length <= 1
+
   return (
-    <div className="space-y-2.5">
-      {/* 제목 */}
-      <Link href={`/post/${postId}`} className="group block">
-        <h2 className="text-foreground group-hover:text-primary line-clamp-2 text-[16px] leading-[1.4] font-semibold transition-colors sm:text-[17px]">
-          {title}
-        </h2>
-      </Link>
+    <div>
+      {/* 제목 + 본문 + 사이드 썸네일 */}
+      <div className={hasSingleImage ? "flex gap-4" : undefined}>
+        <div className={hasSingleImage ? "min-w-0 flex-1" : undefined}>
+          {/* 제목 */}
+          <Link href={`/post/${postId}`} className="group block">
+            <h2 className="text-foreground group-hover:text-primary line-clamp-2 text-[16px] leading-[1.4] font-semibold transition-colors sm:text-[17px]">
+              {title}
+            </h2>
+          </Link>
 
-      {/* 본문 */}
-      {typeof content === "string" ? (
-        <p className="text-foreground/80 line-clamp-2 text-[14px] leading-[1.6]">{content}</p>
-      ) : (
-        <p className="text-foreground/80 line-clamp-2 text-[14px] leading-[1.6]">
-          {extractTextFromTipTapJSON(content)}
-        </p>
-      )}
+          {/* 본문 */}
+          {typeof content === "string" ? (
+            <p className="text-foreground/80 mt-2 line-clamp-2 text-[14px] leading-[1.6]">
+              {content}
+            </p>
+          ) : (
+            <p className="text-foreground/80 mt-2 line-clamp-2 text-[14px] leading-[1.6]">
+              {extractTextFromTipTapJSON(content)}
+            </p>
+          )}
+        </div>
 
-      {/* 미디어 (통일 프레임) */}
+        {/* 데스크톱 사이드 썸네일 */}
+        {hasSingleImage && displayImage && (
+          <Link href={`/post/${postId}`} className="mt-0.5 hidden shrink-0 sm:block">
+            <div className="bg-muted h-[84px] w-[120px] overflow-hidden rounded-lg transition-opacity hover:opacity-90">
+              {canUseOptimizedFeedImage(displayImage) ? (
+                <Image
+                  src={displayImage}
+                  alt={title || "Post image"}
+                  width={120}
+                  height={84}
+                  className="h-full w-full object-cover"
+                  sizes="120px"
+                />
+              ) : (
+                <img
+                  src={displayImage}
+                  alt={title || "Post image"}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+            </div>
+          </Link>
+        )}
+      </div>
+
+      {/* 미디어 (임베드 · 캐러셀 · 모바일 단일이미지) */}
       {firstEmbed && !image ? (
-        <div className="mt-2">
+        <div className="mt-2.5">
           {firstEmbed.attrs.provider === "youtube" ? (
             <YouTubeInlinePlayer
               url={firstEmbed.attrs.url}
@@ -124,14 +159,16 @@ export const PostCardContent = memo(function PostCardContent({
         </div>
       ) : displayImage ? (
         imageSources.length > 1 ? (
-          <FeedImageCarousel
-            postId={postId}
-            title={title}
-            imageSources={imageSources}
-            priority={priority}
-          />
+          <div className="mt-2.5">
+            <FeedImageCarousel
+              postId={postId}
+              title={title}
+              imageSources={imageSources}
+              priority={priority}
+            />
+          </div>
         ) : (
-          <Link href={`/post/${postId}`} className="mt-2 block">
+          <Link href={`/post/${postId}`} className="mt-2.5 block sm:hidden">
             <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
           </Link>
         )

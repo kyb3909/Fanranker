@@ -68,8 +68,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
       <Card className="border-border hover:border-muted-foreground/30 overflow-hidden border transition-all duration-300 hover:shadow-md">
         <div className="relative px-4 py-3 sm:px-5">
           <PostCardHeader
-            community={post.community}
-            communityLink={communityLink}
             timestamp={post.timestamp}
             author={post.author}
             avatar={post.avatar}
@@ -98,11 +96,12 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             voteCount={voteCount}
             myVote={myVote}
             comments={post.comments}
-            temperature={post.temperature}
             isBookmarked={isBookmarked}
             onVote={handleVote}
             onBookmark={handleBookmark}
             onBookmarkHover={checkBookmarkStatus}
+            community={post.community}
+            communityLink={communityLink}
           />
         </div>
       </Card>

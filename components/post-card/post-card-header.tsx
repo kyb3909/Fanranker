@@ -12,11 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { TitleBadge, type TitleDisplay } from "@/components/profile/title-badge"
 
-const BADGE_COLOR = { bg: "bg-primary/15", text: "text-foreground", border: "border-primary/30" }
-
 export interface PostCardHeaderProps {
-  community: string
-  communityLink: string
   timestamp: string
   author: string
   avatar: string
@@ -31,8 +27,6 @@ export interface PostCardHeaderProps {
 }
 
 export function PostCardHeader({
-  community,
-  communityLink,
   timestamp,
   author,
   avatar,
@@ -45,32 +39,63 @@ export function PostCardHeader({
   onBlockUser,
   onReport,
 }: PostCardHeaderProps) {
+  const hasTitleBadge = titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle)
+
   return (
-    <div className="mb-3 flex items-center gap-2">
-      {/* 프사 + 닉네임: 모바일은 프로필 링크, 데스크톱은 드롭다운 */}
-      {/* 모바일 — 터치 시 프로필로 바로 이동 (드롭다운으로 스크롤 차단 방지) */}
+    <div className="mb-3 flex items-center gap-3">
+      {/* 모바일 — 프로필 링크 */}
       <Link
         href={userId ? `/profile/${userId}` : "#"}
-        className="flex shrink-0 items-center gap-2 sm:hidden"
+        className="flex shrink-0 items-center gap-3 sm:hidden"
       >
-        <Avatar className="h-7 w-7">
+        <Avatar className="h-9 w-9">
           <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
           <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
         </Avatar>
-        <span className="text-foreground text-[14px] font-semibold">{author}</span>
+        <div>
+          <p className="text-foreground text-[14px] font-bold">{author}</p>
+          <div className="flex items-center gap-1.5">
+            {hasTitleBadge && (
+              <>
+                <TitleBadge
+                  adjTitle={titleDisplay.adjTitle}
+                  nounTitle={titleDisplay.nounTitle}
+                  rarity={titleDisplay.rarity}
+                  size="sm"
+                />
+                <span className="text-muted-foreground text-[11px]">·</span>
+              </>
+            )}
+            <span className="text-muted-foreground text-[11px]">{timestamp}</span>
+          </div>
+        </div>
       </Link>
 
-      {/* 데스크톱 — 기존 드롭다운 유지 */}
+      {/* 데스크톱 — 드롭다운 */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="hidden shrink-0 cursor-pointer items-center gap-2 sm:flex">
-            <Avatar className="h-7 w-7">
+          <button className="hidden shrink-0 cursor-pointer items-center gap-3 sm:flex">
+            <Avatar className="h-9 w-9">
               <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
               <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
             </Avatar>
-            <span className="text-foreground text-[14px] font-semibold hover:underline">
-              {author}
-            </span>
+            <div className="text-left">
+              <p className="text-foreground text-[14px] font-bold hover:underline">{author}</p>
+              <div className="flex items-center gap-1.5">
+                {hasTitleBadge && (
+                  <>
+                    <TitleBadge
+                      adjTitle={titleDisplay.adjTitle}
+                      nounTitle={titleDisplay.nounTitle}
+                      rarity={titleDisplay.rarity}
+                      size="sm"
+                    />
+                    <span className="text-muted-foreground text-[11px]">·</span>
+                  </>
+                )}
+                <span className="text-muted-foreground text-[11px]">{timestamp}</span>
+              </div>
+            </div>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
@@ -93,28 +118,8 @@ export function PostCardHeader({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* 칭호 */}
-      {titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle) && (
-        <TitleBadge
-          adjTitle={titleDisplay.adjTitle}
-          nounTitle={titleDisplay.nounTitle}
-          rarity={titleDisplay.rarity}
-          size="sm"
-        />
-      )}
-
-      {/* 게시판 배지 */}
-      <Link href={`/community/${communityLink}`}>
-        <span
-          className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-medium ${BADGE_COLOR.bg} ${BADGE_COLOR.text} border ${BADGE_COLOR.border} transition-opacity hover:opacity-80`}
-        >
-          {community}
-        </span>
-      </Link>
-
-      {/* 우측: 시간 + 더보기 (더보기는 데스크톱만, 모바일은 상세에서) */}
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        <span className="text-muted-foreground text-[12px]">{timestamp}</span>
+      {/* 더보기 메뉴 (데스크톱) */}
+      <div className="ml-auto shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
