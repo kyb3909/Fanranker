@@ -234,6 +234,16 @@ function InstagramEmbed({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // 기존 DB 게시물: sanitize가 data-instgrm-permalink를 제거한 상태일 수 있음 → URL로 재생성
+  const safeHtml = html.includes("data-instgrm-permalink")
+    ? html
+    : (() => {
+        const m = url.match(/(?:p|reel)\/([a-zA-Z0-9_-]+)/)
+        const isReel = url.includes("/reel/")
+        const permalink = m ? `https://www.instagram.com/${isReel ? "reel" : "p"}/${m[1]}/` : url
+        return `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
+      })()
+
   useEffect(() => {
     const timer = setTimeout(() => {
       loadInstagramEmbedJs(() => {
@@ -242,7 +252,7 @@ function InstagramEmbed({
       })
     }, 0)
     return () => clearTimeout(timer)
-  }, [html])
+  }, [safeHtml])
 
   return (
     <Card className={cn("border-border bg-card overflow-hidden border", className)}>
@@ -250,7 +260,7 @@ function InstagramEmbed({
         <div
           ref={containerRef}
           className="mx-auto max-w-[540px] [&_.instagram-media]:!mx-auto"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
         />
         <a
           href={url}
