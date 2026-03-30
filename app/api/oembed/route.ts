@@ -120,9 +120,14 @@ async function fetchYouTubeOEmbed(
 /**
  * Fetch oEmbed data from Instagram
  *
- * Instagram은 서버 측 og:image 스크래핑을 차단하고,
- * Meta도 2025.11 공식 oEmbed에서 thumbnail_url을 제거함.
- * → blockquote HTML만 반환하고, 클라이언트에서 embed.js로 렌더링.
+ * 1순위: FACEBOOK_ACCESS_TOKEN 존재 시 Meta 공식 oEmbed API 호출
+ *        → thumbnail_url, title, author_name + blockquote html 반환
+ * 2순위: 토큰 없거나 API 실패 시 로컬 blockquote 생성
+ *        → embed.js가 클라이언트에서 iframe 렌더링
+ *
+ * Meta oEmbed API 사용 조건:
+ * - Facebook App 생성 + oEmbed Read Advanced Access + App Review 필요
+ * - 환경변수 FACEBOOK_ACCESS_TOKEN 에 앱 액세스 토큰 설정
  */
 async function fetchInstagramOEmbed(
   url: string,
@@ -139,16 +144,43 @@ async function fetchInstagramOEmbed(
   const isReel = normalizedUrl.includes("/reel/")
   const permalink = `https://www.instagram.com/${isReel ? "reel" : "p"}/${shortcode}/`
 
+  // Meta oEmbed API 시도 (토큰 존재 시)
+  const fbToken = process.env.FACEBOOK_ACCESS_TOKEN
+  if (fbToken) {
+    try {
+      const oembedUrl = `https://graph.facebook.com/v25.0/instagram_oembed?url=${encodeURIComponent(permalink)}&access_token=${fbToken}&maxwidth=540`
+      const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(5000) })
+      if (res.ok) {
+        const data = await res.json()
+        return {
+          provider: "instagram",
+          url: normalizedUrl,
+          html: includeHtml ? data.html || buildInstagramBlockquote(permalink) : undefined,
+          thumbnail_url: data.thumbnail_url || undefined,
+          title: data.title || undefined,
+          author_name: data.author_name || undefined,
+        }
+      }
+      // API 실패 시 아래 fallback으로 진행
+      console.warn(`Instagram oEmbed API failed: ${res.status} ${res.statusText}`)
+    } catch (e) {
+      console.warn("Instagram oEmbed API error:", e)
+    }
+  }
+
+  // Fallback: 로컬 blockquote 생성 (토큰 없거나 API 실패)
   return {
     provider: "instagram",
     url: normalizedUrl,
-    html: includeHtml
-      ? `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
-      : undefined,
+    html: includeHtml ? buildInstagramBlockquote(permalink) : undefined,
     thumbnail_url: undefined,
     title: undefined,
     author_name: undefined,
   }
+}
+
+function buildInstagramBlockquote(permalink: string): string {
+  return `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
 }
 
 /**
