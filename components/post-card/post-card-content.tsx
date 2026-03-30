@@ -601,16 +601,23 @@ function LazyInstagramPreview({ url }: { url: string }) {
 
 function InstagramInlineContent({ url }: { url: string }) {
   const [expanded, setExpanded] = useState(false)
-  const [thumbError, setThumbError] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
+
+  const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+  const isReel = normalizedUrl.includes("/reel/")
+
+  // blockquote HTML: oEmbed에서 가져오거나, 실패 시 URL로 직접 생성
+  const { data } = useSWR<InstagramOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
     oembedFetcher,
     { dedupingInterval: 60_000, revalidateOnFocus: false }
   )
+  const embedHtml =
+    data?.html ||
+    `<blockquote class="instagram-media" data-instgrm-permalink="${normalizedUrl}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
 
   useEffect(() => {
-    if (!expanded || !data?.html) return
+    if (!expanded) return
     const timer = setTimeout(() => {
       loadInstagramEmbedJs(() => {
         const win = window as InstgrmWindow
@@ -618,79 +625,40 @@ function InstagramInlineContent({ url }: { url: string }) {
       })
     }, 0)
     return () => clearTimeout(timer)
-  }, [expanded, data?.html])
-
-  if (isLoading) return <EmbedSkeleton provider="instagram" />
-
-  const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
-  const isReel = normalizedUrl.includes("/reel/")
+  }, [expanded])
 
   /* 확장됨: 풀 임베드 렌더링 */
-  if (expanded && data?.html) {
+  if (expanded) {
     return (
       <div className="border-border bg-card overflow-hidden rounded-lg border">
         <div
           ref={containerRef}
           className="mx-auto max-w-[540px] p-4 [&_.instagram-media]:!mx-auto"
-          dangerouslySetInnerHTML={{ __html: data.html }}
+          dangerouslySetInnerHTML={{ __html: embedHtml }}
         />
       </div>
     )
   }
 
-  /* 썸네일 프리뷰 (프록시 경유) */
-  if (data?.thumbnail_url && !thumbError) {
-    const proxiedThumb = `/api/media-proxy?url=${encodeURIComponent(data.thumbnail_url)}`
-    return (
-      <button
-        onClick={() => setExpanded(true)}
-        className="group relative block w-full overflow-hidden rounded-lg bg-black"
-      >
-        <div className="flex max-h-[400px] min-h-[200px] w-full items-center justify-center">
-          <img
-            src={proxiedThumb}
-            alt={data.title || "Instagram"}
-            className="h-auto max-h-[400px] w-full object-cover"
-            loading="lazy"
-            onError={() => setThumbError(true)}
-          />
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
-          {isReel && (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg transition-transform group-hover:scale-110">
-              <Play className="ml-0.5 h-5 w-5 text-gray-800" fill="currentColor" />
-            </div>
-          )}
-        </div>
-        {/* Instagram 뱃지 */}
-        <div className="absolute bottom-2 left-2 z-10">
-          <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-            <InstagramIcon className="h-3.5 w-3.5" />
-            <span>Instagram</span>
-          </div>
-        </div>
-      </button>
-    )
-  }
-
-  /* 폴백: 썸네일 없을 때 링크 카드 */
+  /* Instagram 브랜드 카드 — 클릭 시 embed.js로 전환 */
   return (
-    <a
-      href={normalizedUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="border-border bg-card hover:bg-muted/50 flex items-center gap-4 overflow-hidden rounded-lg border px-4 py-3.5 transition-colors"
+    <button
+      onClick={() => setExpanded(true)}
+      className="group block w-full overflow-hidden rounded-lg bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 transition-shadow hover:shadow-lg"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400">
-        <InstagramIcon className="h-5 w-5 text-white" />
+      <div className="flex items-center gap-4 px-5 py-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+          <InstagramIcon className="h-5 w-5 text-white" />
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <p className="text-[14px] font-bold text-white">
+            {isReel ? "Instagram Reel" : "Instagram 게시물"}
+          </p>
+          <p className="text-[12px] text-white/70">탭하여 보기</p>
+        </div>
+        <Play className="h-5 w-5 shrink-0 text-white/60 transition-transform group-hover:translate-x-0.5" />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-foreground text-sm font-semibold">
-          {isReel ? "Instagram Reel" : "Instagram 게시물"}
-        </p>
-        <p className="text-muted-foreground truncate text-xs">{normalizedUrl}</p>
-      </div>
-    </a>
+    </button>
   )
 }
 
