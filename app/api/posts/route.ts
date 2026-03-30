@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
-import { computeTemperature, type TemperatureInput } from "@/lib/temperature"
+
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
@@ -75,10 +75,7 @@ export async function GET(request: NextRequest) {
       }
 
       const result = data || { posts: [], profiles: [] }
-      const posts = (result.posts || []).map((post: Record<string, unknown>) => ({
-        ...post,
-        temperature: computeTemperature(post as unknown as TemperatureInput),
-      }))
+      const posts = result.posts || []
 
       const res = NextResponse.json({ posts, profiles: result.profiles || [] })
       res.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300")

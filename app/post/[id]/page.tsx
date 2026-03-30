@@ -267,11 +267,13 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     image: postData.image,
     upvotes: postData.vote_count || 0,
     comments: postData.comment_count || 0,
-    temperature: computeTemperature({
-      vote_count: postData.vote_count || 0,
-      comment_count: postData.comment_count || 0,
-      created_at: postData.created_at,
-    }),
+    temperature:
+      postData.temperature ||
+      computeTemperature({
+        vote_count: postData.vote_count || 0,
+        comment_count: postData.comment_count || 0,
+        created_at: postData.created_at,
+      }),
     isUpvoted: false,
     createdAt: new Date(postData.created_at),
     titleDisplay: postData.titleDisplay || null,
