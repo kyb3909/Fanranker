@@ -1,5 +1,5 @@
 // Service Worker for 공놀이 PWA
-const CACHE_NAME = "gongnori-v1"
+const CACHE_NAME = "gongnori-v2"
 
 // 오프라인 시 캐시할 핵심 리소스
 const PRECACHE_URLS = [
@@ -46,7 +46,9 @@ self.addEventListener("fetch", (event) => {
   // 네비게이션 요청 (HTML 페이지)
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/"))
+      fetch(request).catch(() =>
+        caches.match("/").then((cached) => cached || new Response("Offline", { status: 503 }))
+      )
     )
     return
   }
@@ -81,6 +83,8 @@ self.addEventListener("fetch", (event) => {
         }
         return response
       })
-      .catch(() => caches.match(request))
+      .catch(() =>
+        caches.match(request).then((cached) => cached || new Response("Offline", { status: 503 }))
+      )
   )
 })
