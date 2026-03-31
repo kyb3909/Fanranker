@@ -277,13 +277,18 @@
   margin: 1rem 0;
 }
 
-/* TipTap 이미지 스타일 */
+/* TipTap 이미지 스타일 — 본문 이미지는 60% 너비, 클릭 시 라이트박스 확대 */
 .tiptap-image {
-  max-width: 100%;
+  max-width: 60%;
   height: auto;
   border-radius: 0.5rem;
   margin: 1rem 0;
-  cursor: default;
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+
+.tiptap-image:hover {
+  opacity: 0.9;
 }
 
 .tiptap-editor .tiptap-image {

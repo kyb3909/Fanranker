@@ -18,6 +18,7 @@ import {
 import { useUser } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import { TitleBadge } from "@/components/profile/title-badge"
+import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import { openReport } from "@/hooks/use-report-dialog"
@@ -103,6 +104,7 @@ export function PostDetailContent({
 
   return (
     <div className="space-y-4">
+      <ImageLightbox />
       {/* Post Detail Card */}
       <Card className="border-border bg-card overflow-hidden border">
         <div className="p-5 sm:p-6">
@@ -243,23 +245,16 @@ export function PostDetailContent({
                   }
                 }
                 return (
-                  <a
-                    href={post.image}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 block"
-                  >
-                    <div className="overflow-hidden rounded-lg">
-                      <Image
-                        src={post.image}
-                        alt={`${post.title} 첨부 이미지`}
-                        width={700}
-                        height={700}
-                        className="h-auto max-h-[600px] max-w-full object-contain"
-                        sizes="(max-width: 640px) 100vw, 700px"
-                      />
-                    </div>
-                  </a>
+                  <div className="post-body-image mt-2 inline-block max-w-[60%] cursor-zoom-in overflow-hidden rounded-lg transition-opacity hover:opacity-90">
+                    <Image
+                      src={post.image}
+                      alt={`${post.title} 첨부 이미지`}
+                      width={700}
+                      height={700}
+                      className="h-auto w-full object-contain"
+                      sizes="(max-width: 640px) 60vw, 420px"
+                    />
+                  </div>
                 )
               })()}
           </div>
