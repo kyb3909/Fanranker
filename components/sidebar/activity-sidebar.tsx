@@ -1,12 +1,21 @@
 "use client"
 
 import { useState, useEffect, memo, Fragment } from "react"
+import dynamic from "next/dynamic"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
-import { StandingsWidget } from "@/components/sidebar/standings-widget"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
+
+const StandingsWidget = dynamic(
+  () =>
+    import("@/components/sidebar/standings-widget").then((m) => ({ default: m.StandingsWidget })),
+  {
+    ssr: false,
+    loading: () => <div className="bg-card border-border h-64 animate-pulse rounded-xl border" />,
+  }
+)
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"

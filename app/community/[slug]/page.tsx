@@ -1,8 +1,14 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import dynamic from "next/dynamic"
 import { notFound } from "next/navigation"
-import { NewsTicker } from "@/components/news-talk/news-ticker"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
+
+const NewsTicker = dynamic(
+  () => import("@/components/news-talk/news-ticker").then((m) => ({ default: m.NewsTicker })),
+  { loading: () => <div className="bg-card border-border h-16 animate-pulse rounded-xl border" /> }
+)
 import { createServerAnonClient } from "@/lib/supabase"
 import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
