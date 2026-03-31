@@ -223,7 +223,7 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
         if (analysisTitle.trim()) payload.analysis_title = analysisTitle.trim()
         payload.analysis_text = analysisText.trim()
       }
-      const res = await fetch("/api/betman/prediction", {
+      const res = await fetch("/api/sports/prediction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -32,7 +32,7 @@ interface LiveRoom {
   status: string
   created_at: string
   game_id: string | null
-  betman_games: {
+  game_info: {
     id: string
     home_team_name: string
     away_team_name: string
@@ -56,7 +56,7 @@ export default function LiveRoomsPage() {
   const hasActiveRooms = (data?.rooms ?? []).some(
     (r: { status: string }) => r.status === "live" || r.status === "waiting"
   )
-  useSWR(hasActiveRooms ? "/api/wisetoto/sync" : null, fetcher, {
+  useSWR(hasActiveRooms ? "/api/live-scores/sync" : null, fetcher, {
     refreshInterval: 30_000,
     revalidateOnFocus: false,
     onSuccess: () => mutateRooms(),
@@ -92,7 +92,7 @@ export default function LiveRoomsPage() {
       ) : (
         <div className="space-y-3">
           {sorted.map((room) => {
-            const game = room.betman_games
+            const game = room.game_info
             const statusCfg = STATUS_CONFIG[room.status] ?? STATUS_CONFIG.waiting
             const emoji = SPORT_EMOJI[room.sport] || SPORT_EMOJI[game?.sport ?? ""] || "🏟️"
             const matchTime = game?.match_time

@@ -86,6 +86,15 @@ const nextConfig = {
         source: '/storage/:path*',
         destination: `https://ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/:path*`,
       },
+      {
+        // 크롤링 출처 은닉: 클라이언트는 /api/sports/, /api/live-scores/ 만 노출
+        source: '/api/sports/:path*',
+        destination: '/api/betman/:path*',
+      },
+      {
+        source: '/api/live-scores/:path*',
+        destination: '/api/wisetoto/:path*',
+      },
     ]
   },
   // 실험적 기능: 패키지 최적화

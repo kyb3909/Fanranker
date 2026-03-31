@@ -40,7 +40,7 @@ export function useBettingCommunityStats(enabled: boolean) {
     let cancelled = false
     setIsLoading(true)
 
-    fetch("/api/betman/community-stats")
+    fetch("/api/sports/community-stats")
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) setStats(data)

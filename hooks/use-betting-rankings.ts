@@ -24,7 +24,7 @@ export function useBettingRankings(active: boolean) {
       }
       const sortParam = sortMap[rankingFilter] || "profit_rate"
       const response = await fetch(
-        `/api/betman/rankings?sport=${encodeURIComponent(rankingSportFilter)}&sort=${sortParam}&limit=50`
+        `/api/sports/rankings?sport=${encodeURIComponent(rankingSportFilter)}&sort=${sortParam}&limit=50`
       )
       if (!response.ok) {
         setRankings([])

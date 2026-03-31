@@ -20,7 +20,7 @@ export function useBettingMatches() {
   }, [])
 
   // SWR for games data
-  const gamesKey = `/api/betman/games?${sportFilter !== "all" ? `sport=${sportFilter}` : ""}`
+  const gamesKey = `/api/sports/games?${sportFilter !== "all" ? `sport=${sportFilter}` : ""}`
   const {
     data: gamesData,
     error: gamesError,

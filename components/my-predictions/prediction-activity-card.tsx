@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Lock, Unlock, TrendingUp, Target, Flame, Loader2, Clock } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { BettingSlipCard } from "@/components/my-predictions/prediction-slip-card"
-import type { BetmanSlip, BetmanGame } from "@/components/my-predictions/prediction-types"
+import type { SportsSlip, SportsGame } from "@/components/my-predictions/prediction-types"
 import type { PredictionMatch } from "@/components/betting/betting-types"
 import { gameTypeLabels } from "@/components/betting/betting-types"
 
@@ -73,8 +73,8 @@ const SPORT_LABELS: Record<string, string> = {
   배구: "배구",
 }
 
-/** SlipGroup → BetmanSlip 변환 어댑터 */
-function slipGroupToBetmanSlip(group: SlipGroup): BetmanSlip {
+/** SlipGroup → SportsSlip 변환 어댑터 */
+function slipGroupToSportsSlip(group: SlipGroup): SportsSlip {
   const PREDICTION_KEY_MAP: Record<string, string> = {
     홈팀: "home",
     원정팀: "away",
@@ -90,7 +90,7 @@ function slipGroupToBetmanSlip(group: SlipGroup): BetmanSlip {
     언더: "under",
   }
 
-  const games: BetmanGame[] = group.matches.map((m, idx) => {
+  const games: SportsGame[] = group.matches.map((m, idx) => {
     const predKey = PREDICTION_KEY_MAP[m.selection] || m.selection
     const resultKey = m.correctAnswer ? RESULT_KEY_MAP[m.correctAnswer] || m.correctAnswer : null
     const isCorrect = m.result === "win" ? true : m.result === "lose" ? false : null
@@ -126,8 +126,8 @@ function slipGroupToBetmanSlip(group: SlipGroup): BetmanSlip {
 
   return {
     id: group.slipId,
-    type: "betman_slip",
-    source: "betman",
+    type: "sports_slip",
+    source: "sports",
     sport: group.sport,
     roundInfo: null,
     gameCount: group.matches.length,
@@ -140,12 +140,12 @@ function slipGroupToBetmanSlip(group: SlipGroup): BetmanSlip {
   }
 }
 
-/** locked 상태에서 사용할 최소 BetmanSlip 생성 */
-function createLockedSlip(sport: string, matchCount: number): BetmanSlip {
+/** locked 상태에서 사용할 최소 SportsSlip 생성 */
+function createLockedSlip(sport: string, matchCount: number): SportsSlip {
   return {
     id: "locked",
-    type: "betman_slip",
-    source: "betman",
+    type: "sports_slip",
+    source: "sports",
     sport,
     roundInfo: null,
     gameCount: matchCount,
@@ -307,11 +307,11 @@ export function PredictionActivityCard({
           {hasSlipGroups ? (
             <div className="space-y-2">
               {localSlipGroups!.map((group) => {
-                const betmanSlip = slipGroupToBetmanSlip(group)
+                const sportsSlip = slipGroupToSportsSlip(group)
                 return (
                   <BettingSlipCard
                     key={group.slipId}
-                    slip={betmanSlip}
+                    slip={sportsSlip}
                     isExpanded={expandedSlips.has(group.slipId)}
                     onToggle={() => toggleSlip(group.slipId)}
                   />

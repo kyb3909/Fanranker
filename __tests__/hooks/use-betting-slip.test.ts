@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import type { SelectedBet, GroupedMatch, BetmanGame } from "@/components/betting/betting-types"
+import type { SelectedBet, GroupedMatch, SportsGame } from "@/components/betting/betting-types"
 
 // ============================================================
 // Pure logic extracted from use-betting-slip.ts for testing
@@ -133,7 +133,7 @@ function makeMatch(overrides: Partial<GroupedMatch> = {}): GroupedMatch {
   }
 }
 
-function makeGame(overrides: Partial<BetmanGame> = {}): BetmanGame {
+function makeGame(overrides: Partial<SportsGame> = {}): SportsGame {
   return {
     id: "g1",
     round_id: "r1",

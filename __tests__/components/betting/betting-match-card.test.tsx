@@ -2,9 +2,9 @@ import React from "react"
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { BettingMatchCard } from "@/components/betting/betting-match-card"
-import type { GroupedMatch, SelectedBet, BetmanGame } from "@/components/betting/betting-types"
+import type { GroupedMatch, SelectedBet, SportsGame } from "@/components/betting/betting-types"
 
-function makeGame(overrides: Partial<BetmanGame> = {}): BetmanGame {
+function makeGame(overrides: Partial<SportsGame> = {}): SportsGame {
   return {
     id: "game-1",
     round_id: "round-1",

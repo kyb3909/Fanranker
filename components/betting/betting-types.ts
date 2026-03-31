@@ -24,7 +24,7 @@ export interface BettingWindowInfo {
   nextOpenAt?: string
 }
 
-export interface BetmanGame {
+export interface SportsGame {
   id: string
   round_id: string
   daily_round_id?: string
@@ -58,7 +58,7 @@ export interface GroupedMatch {
   awayTeam: string
   matchTime: string
   venue: string
-  games: BetmanGame[]
+  games: SportsGame[]
 }
 
 export interface WindowInfo {

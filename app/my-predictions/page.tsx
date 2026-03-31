@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation"
 
 import {
   type PredictionItem,
-  type BetmanSlip,
+  type SportsSlip,
   type RegularPrediction,
   type Stats,
 } from "@/components/my-predictions/prediction-types"
@@ -143,11 +143,11 @@ export default function MyPredictionsPage() {
           ) : filteredPredictions.length > 0 ? (
             <div className="space-y-3">
               {filteredPredictions.map((pred) => {
-                if ("type" in pred && pred.type === "betman_slip") {
+                if ("type" in pred && pred.type === "sports_slip") {
                   return (
                     <BettingSlipCard
                       key={pred.id}
-                      slip={pred as BetmanSlip}
+                      slip={pred as SportsSlip}
                       isExpanded={expandedSlips.has(pred.id)}
                       onToggle={() => toggleSlip(pred.id)}
                     />

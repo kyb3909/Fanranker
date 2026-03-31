@@ -4,8 +4,8 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Circle, Lock } from "lucide-react"
 import {
-  type BetmanSlip,
-  type BetmanGame,
+  type SportsSlip,
+  type SportsGame,
   gameTypeLabels,
   SPORT_ICONS,
   sportColorFill,
@@ -24,7 +24,7 @@ import {
  */
 function getOddsCellStyle(
   optionKey: string,
-  game: BetmanGame,
+  game: SportsGame,
   sportColor: { bg: string; text: string; border: string }
 ) {
   const isSelected = game.prediction === optionKey
@@ -89,7 +89,7 @@ function getOddsCellStyle(
 }
 
 /** 옵션별 배당률 가져오기 */
-function getOddsForOption(optionKey: string, game: BetmanGame): number | null {
+function getOddsForOption(optionKey: string, game: SportsGame): number | null {
   switch (optionKey) {
     case "home":
       return game.homeOdds
@@ -115,7 +115,7 @@ export function BettingSlipCard({
   lockedContent,
   matchCount,
 }: {
-  slip: BetmanSlip
+  slip: SportsSlip
   isExpanded: boolean
   onToggle: () => void
   locked?: boolean

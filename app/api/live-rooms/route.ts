@@ -116,15 +116,20 @@ export async function GET(request: NextRequest) {
     // 같은 매치(이름+시간) 중복 룸 제거 (먼저 생성된 것만 유지)
     const seenRoomKeys = new Set<string>()
     const dedupedRooms = (data ?? []).filter((r: any) => {
-      const key = r.betman_games
-        ? `${r.betman_games.home_team_name}_${r.betman_games.away_team_name}_${r.betman_games.match_time}`
-        : r.id
+      const g = r.betman_games
+      const key = g ? `${g.home_team_name}_${g.away_team_name}_${g.match_time}` : r.id
       if (seenRoomKeys.has(key)) return false
       seenRoomKeys.add(key)
       return true
     })
 
-    return NextResponse.json({ rooms: dedupedRooms })
+    // 응답에서 betman_games → game_info로 매핑 (출처 은닉)
+    const rooms = dedupedRooms.map(({ betman_games, ...rest }: any) => ({
+      ...rest,
+      game_info: betman_games,
+    }))
+
+    return NextResponse.json({ rooms })
   } catch (error) {
     return apiError("서버 오류", 500, error)
   }

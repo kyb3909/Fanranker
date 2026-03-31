@@ -6,7 +6,7 @@ export {
   formatMatchTime,
 } from "@/components/betting/betting-types"
 
-export interface BetmanGame {
+export interface SportsGame {
   id: string
   gameId: string
   prediction: string
@@ -32,10 +32,10 @@ export interface BetmanGame {
   }
 }
 
-export interface BetmanSlip {
+export interface SportsSlip {
   id: string
-  type: "betman_slip"
-  source: "betman"
+  type: "sports_slip"
+  source: "sports"
   sport: string
   roundInfo: {
     year: number
@@ -49,7 +49,7 @@ export interface BetmanSlip {
   isCorrect: boolean | null
   pointsEarned: number | null
   createdAt: string
-  games: BetmanGame[]
+  games: SportsGame[]
 }
 
 export interface RegularPrediction {
@@ -75,7 +75,7 @@ export interface RegularPrediction {
   }
 }
 
-export type PredictionItem = BetmanSlip | RegularPrediction
+export type PredictionItem = SportsSlip | RegularPrediction
 
 export interface Stats {
   totalPredictions: number

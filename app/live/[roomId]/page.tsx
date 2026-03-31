@@ -49,7 +49,7 @@ export default function LiveRoomPage() {
 
   // WiseToto 30초 폴링: live/waiting 상태일 때 점수 동기화 트리거
   useSWR(
-    room?.status === "live" || room?.status === "waiting" ? "/api/wisetoto/sync" : null,
+    room?.status === "live" || room?.status === "waiting" ? "/api/live-scores/sync" : null,
     fetcher,
     {
       refreshInterval: 30_000,
@@ -226,7 +226,7 @@ export default function LiveRoomPage() {
     )
   }
 
-  const game = room.betman_games
+  const game = room.game_info
   const sportKey = SPORT_MAP[room.sport] || SPORT_MAP[game?.sport ?? ""] || "football"
   const isRoomClosed = room.status === "closed"
 

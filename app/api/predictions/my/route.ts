@@ -301,8 +301,8 @@ export async function GET(request: NextRequest) {
 
       return {
         id: groupKey,
-        type: "betman_slip" as const,
-        source: "betman" as const,
+        type: "sports_slip" as const,
+        source: "sports" as const,
         sport: sport,
         roundInfo: round
           ? {

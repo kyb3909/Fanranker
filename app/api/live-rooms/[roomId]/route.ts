@@ -58,7 +58,9 @@ export async function GET(
       return apiError("채팅방 조회 실패", 500, error)
     }
 
-    return NextResponse.json({ room: data })
+    // betman_games → game_info로 매핑 (출처 은닉)
+    const { betman_games, ...rest } = data as any
+    return NextResponse.json({ room: { ...rest, game_info: betman_games } })
   } catch (error) {
     return apiError("서버 오류", 500, error)
   }

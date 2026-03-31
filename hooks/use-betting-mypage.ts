@@ -25,7 +25,7 @@ export function useBettingMyPage(
     if (!isSignedIn) return
     setIsLoadingMyStats(true)
     try {
-      const res = await fetch("/api/betman/my-stats")
+      const res = await fetch("/api/sports/my-stats")
       if (res.ok) {
         const data = await res.json()
         setMyStats(data)
@@ -41,7 +41,7 @@ export function useBettingMyPage(
     if (!isSignedIn) return
     setIsLoadingHistory(true)
     try {
-      const response = await fetch("/api/betman/prediction?status=all")
+      const response = await fetch("/api/sports/prediction?status=all")
       if (!response.ok) throw new Error("Failed to load prediction history")
       const data = await response.json()
       const slips = data.slips || []
