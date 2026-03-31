@@ -16,6 +16,9 @@ import { formatMemberCount } from "@/lib/utils/format"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import Link from "@/components/ui/app-link"
 
+// ISR: 30초 캐시 + stale-while-revalidate
+export const revalidate = 30
+
 /** slug → community info lookup (from centralized constants) */
 const COMMUNITY_MAP = Object.fromEntries(ALL_COMMUNITIES.map((c) => [c.slug, c]))
 
@@ -276,23 +279,25 @@ export default async function CommunityPage({
     members: formatMemberCount(MEMBER_COUNTS[slug] || 0),
     banner: "/placeholder.jpg",
   }
-  const [{ data: channels }, { data: flairs }] = await Promise.all([
-    supabaseForMeta
-      .from("categories")
-      .select("slug, name, icon, description")
-      .eq("parent_slug", slug)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabaseForMeta
-      .from("post_flairs")
-      .select("id, name, color, sort_order")
-      .eq("community_slug", slug)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-  ])
 
-  // Supabase에서 실제 데이터 가져오기
-  const { posts: rawPosts, totalCount } = await fetchPosts(slug, currentPage, flairId)
+  // 모든 데이터를 병렬로 가져오기 (SSR waterfall 제거)
+  const [{ data: channels }, { data: flairs }, { posts: rawPosts, totalCount }] = await Promise.all(
+    [
+      supabaseForMeta
+        .from("categories")
+        .select("slug, name, icon, description")
+        .eq("parent_slug", slug)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      supabaseForMeta
+        .from("post_flairs")
+        .select("id, name, color, sort_order")
+        .eq("community_slug", slug)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      fetchPosts(slug, currentPage, flairId),
+    ]
+  )
   const communityPosts = transformPosts(rawPosts)
   const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
 
