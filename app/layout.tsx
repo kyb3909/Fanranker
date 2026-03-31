@@ -139,13 +139,14 @@ export default function RootLayout({
             <link rel="dns-prefetch" href="https://ekysrlhdrapmsnrkytif.supabase.co" />
             <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
             <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
-            {/* Google AdSense: lazyOnload로 초기 렌더링에 영향 없게 */}
+            {/* Google AdSense: 5초 후 로드 (초기 렌더 성능 보호) */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <Script
-                async
-                src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-                crossOrigin="anonymous"
+                id="adsense-delayed"
                 strategy="lazyOnload"
+                dangerouslySetInnerHTML={{
+                  __html: `setTimeout(function(){var s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}';document.head.appendChild(s)},5000)`,
+                }}
               />
             )}
           </head>

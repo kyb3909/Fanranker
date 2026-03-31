@@ -12,7 +12,7 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from "@/components/ui/pagination"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { useAuth } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 

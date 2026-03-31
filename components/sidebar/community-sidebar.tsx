@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useState, useMemo, memo } from "react"
 import { useAuth } from "@clerk/nextjs"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
 import { Star, Search, Loader2, LayoutGrid, ChevronRight } from "lucide-react"
 import type { CommunityInfo } from "@/lib/constants/communities"
@@ -183,7 +183,6 @@ export const CommunitySidebar = memo(function CommunitySidebar({
     >
       <Link
         href={`/community/${community.slug}`}
-        prefetch={false}
         className="flex min-w-0 flex-1 items-center gap-3"
       >
         <span
@@ -249,11 +248,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
                 />
               </button>
             ) : (
-              <Link
-                href={`/community/${community.slug}`}
-                prefetch={false}
-                className="flex items-center gap-3"
-              >
+              <Link href={`/community/${community.slug}`} className="flex items-center gap-3">
                 <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
                   {community.emoji}
                 </span>
@@ -289,7 +284,6 @@ export const CommunitySidebar = memo(function CommunitySidebar({
             <div className="hover:bg-muted/40 group flex items-center justify-between py-2 pr-4 pl-10 transition-colors">
               <Link
                 href={`/community/${community.slug}`}
-                prefetch={false}
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
                 <span className="bg-secondary flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm">

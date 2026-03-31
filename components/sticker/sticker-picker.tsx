@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Sparkles, X, ShoppingBag } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 
 interface OwnedSticker {
   id: string

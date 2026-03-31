@@ -4,7 +4,7 @@ import { useState, useEffect, memo, Fragment } from "react"
 import dynamic from "next/dynamic"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
 
@@ -125,7 +125,6 @@ export const ActivitySidebar = memo(function ActivitySidebar({
                 {idx > 0 && <div className="mx-4 border-t" />}
                 <Link
                   href={`/post/${post.id}`}
-                  prefetch={false}
                   className="hover:bg-muted/40 flex items-center gap-2 px-4 py-2.5 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">

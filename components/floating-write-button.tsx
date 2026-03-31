@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
 import { Pencil } from "lucide-react"
 import { SignedIn } from "@clerk/nextjs"
@@ -17,10 +17,10 @@ export function FloatingWriteButton() {
     <SignedIn>
       <Link
         href="/write"
-        className="fixed right-4 bottom-[4.5rem] sm:bottom-6 z-40 flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 fixed right-4 bottom-[4.5rem] z-40 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-colors sm:bottom-6"
         aria-label="글쓰기"
       >
-        <Pencil className="w-5 h-5" />
+        <Pencil className="h-5 w-5" />
       </Link>
     </SignedIn>
   )

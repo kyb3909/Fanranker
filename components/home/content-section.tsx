@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import { PredictionActivityCard } from "@/components/my-predictions/prediction-activity-card"
 import { Loader2, Trophy } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 
 interface Activity {
   id: string

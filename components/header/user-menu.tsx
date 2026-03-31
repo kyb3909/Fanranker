@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User as UserIcon, FileText, Trophy, Coins, Settings, LogOut } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 
 export function UserMenu() {
   const { user, isLoaded } = useUser()

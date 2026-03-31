@@ -14,7 +14,7 @@ import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatMemberCount } from "@/lib/utils/format"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 
 /** slug → community info lookup (from centralized constants) */
 const COMMUNITY_MAP = Object.fromEntries(ALL_COMMUNITIES.map((c) => [c.slug, c]))

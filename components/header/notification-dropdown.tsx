@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Loader2 } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { formatRelativeTime } from "@/lib/utils/date"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"

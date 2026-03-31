@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "react"
 import { Search, Loader2 } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { useRouter } from "next/navigation"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 

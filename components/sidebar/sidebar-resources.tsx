@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { BookOpen } from "lucide-react"
 import { Card } from "@/components/ui/card"
 
@@ -25,7 +25,6 @@ export function SidebarResources() {
             <Link
               key={href}
               href={href}
-              prefetch={false}
               className="hover:bg-muted/40 group text-foreground group-hover:text-primary flex items-center gap-2.5 px-4 py-2.5 text-[14px] font-medium transition-colors"
             >
               {label}

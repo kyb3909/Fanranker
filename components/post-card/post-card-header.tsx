@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MoreHorizontal, Search, Ban, Pencil, Trash2, Flag, User } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import {
   DropdownMenu,
   DropdownMenuContent,

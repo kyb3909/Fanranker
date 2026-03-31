@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { ChevronLeft, Loader2 } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { GoogleIcon } from "./sign-up-shared"
 
 interface AuthStepProps {

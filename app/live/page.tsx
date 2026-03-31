@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Radio, Users, Clock } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 

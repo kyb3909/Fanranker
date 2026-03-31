@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 

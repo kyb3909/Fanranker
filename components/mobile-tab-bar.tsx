@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense } from "react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { Compass, LayoutGrid, Trophy, User } from "lucide-react"
 

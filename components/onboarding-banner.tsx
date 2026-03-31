@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { X, Star, Loader2, Trophy, Pencil, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { ALL_COMMUNITIES, type CommunityInfo } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
 

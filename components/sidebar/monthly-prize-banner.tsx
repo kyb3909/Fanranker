@@ -4,7 +4,7 @@ import { useState } from "react"
 import { ArrowRight, Gift, Lock, Crown, Trophy } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 
 interface PrizeHint {
   week: number

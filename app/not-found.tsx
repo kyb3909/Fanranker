@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 
 export const metadata: Metadata = {
   title: "페이지를 찾을 수 없습니다",

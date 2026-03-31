@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ArrowUp, ArrowDown, MessageCircle, Bookmark } from "lucide-react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { ShareMenu } from "@/components/share-menu"
 
 export interface PostCardFooterProps {

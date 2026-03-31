@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { MessageSquare, ThumbsUp } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { formatRelativeTime } from "@/lib/utils/date"
@@ -45,7 +45,6 @@ export function BoardRecentPosts({
             <Link
               key={post.id}
               href={`/post/${post.id}`}
-              prefetch={false}
               className={`hover:bg-muted/50 flex items-center gap-3 px-4 py-2.5 transition-colors ${
                 isCurrent ? "bg-primary/5" : ""
               }`}

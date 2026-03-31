@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import Link from "next/link"
+import Link from "@/components/ui/app-link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Compass, LayoutGrid, Trophy, Gamepad2, Sparkles, Radio } from "lucide-react"
 
@@ -45,31 +45,31 @@ export const HeaderNav = memo(function HeaderNav() {
             담벼락
           </span>
         </Link>
-        <Link href="/explore" prefetch={false}>
+        <Link href="/explore">
           <span className={`${baseClass} ${isExplore ? activeClass : inactiveClass}`}>
             <Compass className="h-[18px] w-[18px] shrink-0" />
             운동장
           </span>
         </Link>
-        <Link href="/?view=prediction" prefetch={false}>
+        <Link href="/?view=prediction">
           <span className={`${baseClass} ${isPrediction ? activeClass : inactiveClass}`}>
             <Trophy className="h-[18px] w-[18px] shrink-0" />
             경기 예측
           </span>
         </Link>
-        <Link href="/live" prefetch={false}>
+        <Link href="/live">
           <span className={`${baseClass} ${isLive ? activeClass : inactiveClass}`}>
             <Radio className="h-[18px] w-[18px] shrink-0" />
             라이브
           </span>
         </Link>
-        <Link href="/games" prefetch={false}>
+        <Link href="/games">
           <span className={`${baseClass} ${isGames ? activeClass : inactiveClass}`}>
             <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
             게임
           </span>
         </Link>
-        <Link href="/shop" prefetch={false}>
+        <Link href="/shop">
           <span className={`${baseClass} ${isShop ? activeClass : inactiveClass}`}>
             <Sparkles className="h-[18px] w-[18px] shrink-0" />
             상점
