@@ -131,8 +131,9 @@ export function useFeed(
     {
       fallbackData: initialData ? [initialData] : undefined,
       revalidateOnFocus: false,
+      revalidateIfStale: !initialData,
       revalidateFirstPage: false,
-      dedupingInterval: 5000,
+      dedupingInterval: 10000,
     }
   )
 

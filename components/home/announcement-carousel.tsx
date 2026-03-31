@@ -26,6 +26,7 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
 
   const { data } = useSWR<{ banners: Banner[] }>("/api/banners", fetcher, {
     revalidateOnFocus: false,
+    revalidateIfStale: !initialBanners,
     dedupingInterval: 60000,
     fallbackData: initialBanners ? { banners: initialBanners as Banner[] } : undefined,
   })

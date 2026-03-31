@@ -3,7 +3,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError } from "@/lib/api-error"
 import { getLeagueById } from "@/lib/standings/naver-leagues"
 
-export const dynamic = "force-dynamic"
+// 순위표는 자주 변경되지 않음 — ISR 5분 캐시
+export const revalidate = 300
 
 /**
  * GET /api/standings?league=xxx
@@ -37,12 +38,10 @@ export async function GET(request: NextRequest) {
     const data = row?.data ?? null
     const fetchedAt = row?.fetched_at ?? null
 
-    return NextResponse.json({
-      leagueId,
-      leagueName: league.name,
-      data: Array.isArray(data) ? data : [],
-      fetchedAt,
-    })
+    return NextResponse.json(
+      { leagueId, leagueName: league.name, data: Array.isArray(data) ? data : [], fetchedAt },
+      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+    )
   } catch (error) {
     return apiError("순위표 조회 실패", 500, error)
   }

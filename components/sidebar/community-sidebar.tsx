@@ -42,7 +42,8 @@ export const CommunitySidebar = memo(function CommunitySidebar({
   // DB categories 기반 게시판 목록
   const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 30000,
+    revalidateIfStale: !initialCategories,
+    dedupingInterval: 60000,
     fallbackData: initialCategories ? { categories: initialCategories as Category[] } : undefined,
   })
 
