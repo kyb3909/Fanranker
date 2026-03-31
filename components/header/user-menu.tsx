@@ -18,6 +18,7 @@ export function UserMenu() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null)
+  const [profileNickname, setProfileNickname] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoaded || !user) return
@@ -25,6 +26,7 @@ export function UserMenu() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.avatar_url) setProfileAvatarUrl(data.avatar_url)
+        if (data?.nickname) setProfileNickname(data.nickname)
       })
       .catch(() => {})
   }, [isLoaded, user])
@@ -37,9 +39,12 @@ export function UserMenu() {
     )
   }
 
-  const userInitials = user.firstName
-    ? `${user.firstName[0]}${user.lastName?.[0] || ""}`
-    : user.emailAddresses[0]?.emailAddress[0].toUpperCase() || "U"
+  const displayName = profileNickname || user.fullName || "사용자"
+  const userInitials = profileNickname
+    ? profileNickname[0]
+    : user.firstName
+      ? `${user.firstName[0]}${user.lastName?.[0] || ""}`
+      : user.emailAddresses[0]?.emailAddress[0].toUpperCase() || "U"
 
   return (
     <DropdownMenu>
@@ -51,7 +56,7 @@ export function UserMenu() {
           aria-label="사용자 메뉴"
         >
           <Avatar className="h-9 w-9">
-            <AvatarImage src={profileAvatarUrl || user.imageUrl} alt={user.fullName || "사용자"} />
+            <AvatarImage src={profileAvatarUrl || user.imageUrl} alt={displayName} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
               {userInitials}
             </AvatarFallback>
@@ -67,20 +72,15 @@ export function UserMenu() {
         <div className="mb-1 px-3 py-3">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
-              <AvatarImage
-                src={profileAvatarUrl || user.imageUrl}
-                alt={user.fullName || "사용자"}
-              />
+              <AvatarImage src={profileAvatarUrl || user.imageUrl} alt={displayName} />
               <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
                 {userInitials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="text-foreground truncate text-sm font-semibold">
-                {user.fullName || "사용자"}
-              </p>
+              <p className="text-foreground truncate text-sm font-semibold">{displayName}</p>
               <p className="text-muted-foreground truncate text-xs">
-                {user.emailAddresses[0]?.emailAddress}
+                {user.username || user.emailAddresses[0]?.emailAddress}
               </p>
             </div>
           </div>
