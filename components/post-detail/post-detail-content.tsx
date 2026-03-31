@@ -21,6 +21,7 @@ import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import { openReport } from "@/hooks/use-report-dialog"
+import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import type { Post } from "./post-detail-types"
 
 const TipTapContent = dynamic(
@@ -230,21 +231,34 @@ export function PostDetailContent({
                 <TipTapContent content={post.content} />
               )}
             </div>
-            {/* Image — 클릭하면 원본 보기 */}
-            {post.image && (
-              <a href={post.image} target="_blank" rel="noopener noreferrer" className="mt-2 block">
-                <div className="bg-muted flex w-full items-center justify-center overflow-hidden rounded-lg">
-                  <Image
-                    src={post.image}
-                    alt={`${post.title} 첨부 이미지`}
-                    width={700}
-                    height={700}
-                    className="h-auto max-h-[600px] w-full object-contain"
-                    sizes="(max-width: 640px) 100vw, 700px"
-                  />
-                </div>
-              </a>
-            )}
+            {/* Image — 본문에 이미 포함된 이미지는 중복 표시하지 않음 */}
+            {post.image &&
+              (() => {
+                const bodyFirstImage =
+                  typeof post.content !== "string"
+                    ? extractFirstImageSrcFromTipTapJSON(post.content)
+                    : null
+                if (bodyFirstImage && post.image === bodyFirstImage) return null
+                return (
+                  <a
+                    href={post.image}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 block"
+                  >
+                    <div className="overflow-hidden rounded-lg">
+                      <Image
+                        src={post.image}
+                        alt={`${post.title} 첨부 이미지`}
+                        width={700}
+                        height={700}
+                        className="h-auto max-h-[600px] max-w-full object-contain"
+                        sizes="(max-width: 640px) 100vw, 700px"
+                      />
+                    </div>
+                  </a>
+                )
+              })()}
           </div>
 
           {/* Actions */}

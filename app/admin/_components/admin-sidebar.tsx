@@ -46,7 +46,7 @@ interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  badge?: boolean
+  badge?: "reports" | "stickers" | "matches"
 }
 
 interface NavGroup {
@@ -82,8 +82,8 @@ const navGroups: NavGroup[] = [
       { title: "뉴스 티커", href: "/admin/content/ticker", icon: Newspaper },
       { title: "카테고리", href: "/admin/content/boards", icon: FolderOpen },
       { title: "배너 관리", href: "/admin/content/banners", icon: Image },
-      { title: "스티커 승인", href: "/admin/content/stickers", icon: Smile },
-      { title: "신고 관리", href: "/admin/content/reports", icon: Flag, badge: true },
+      { title: "스티커 승인", href: "/admin/content/stickers", icon: Smile, badge: "stickers" },
+      { title: "신고 관리", href: "/admin/content/reports", icon: Flag, badge: "reports" },
     ],
   },
   {
@@ -92,7 +92,7 @@ const navGroups: NavGroup[] = [
     collapsibleLabel: "게임 경제",
     icon: Trophy,
     items: [
-      { title: "경기 관리", href: "/admin/matches", icon: Trophy },
+      { title: "경기 관리", href: "/admin/matches", icon: Trophy, badge: "matches" },
       { title: "전문가 승인", href: "/admin/experts", icon: Shield },
       { title: "정산 처리", href: "/admin/settlements", icon: Coins },
       { title: "토큰 모니터링", href: "/admin/tokens", icon: Target },
@@ -109,12 +109,17 @@ const navGroups: NavGroup[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const { data } = useSWR<{ alerts: { pendingReports: number } }>(
-    "/api/admin/operations/dashboard",
-    fetcher,
-    { refreshInterval: 60_000, revalidateOnFocus: false }
-  )
-  const pendingReports = data?.alerts?.pendingReports ?? 0
+  const { data } = useSWR<{
+    alerts: { pendingReports: number; pendingStickers: number; unsettledGames: number }
+  }>("/api/admin/operations/dashboard", fetcher, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: false,
+  })
+  const badgeCounts: Record<string, number> = {
+    reports: data?.alerts?.pendingReports ?? 0,
+    stickers: data?.alerts?.pendingStickers ?? 0,
+    matches: data?.alerts?.unsettledGames ?? 0,
+  }
 
   return (
     <Sidebar>
@@ -135,7 +140,7 @@ export function AdminSidebar() {
                   pathname={pathname}
                   label={group.collapsibleLabel ?? group.label}
                   icon={group.icon}
-                  pendingReports={pendingReports}
+                  badgeCounts={badgeCounts}
                 />
               ) : (
                 <SidebarMenu>
@@ -173,13 +178,13 @@ function CollapsibleNavGroup({
   pathname,
   label,
   icon: GroupIcon,
-  pendingReports,
+  badgeCounts,
 }: {
   items: NavItem[]
   pathname: string
   label: string
   icon?: React.ComponentType<{ className?: string }>
-  pendingReports: number
+  badgeCounts: Record<string, number>
 }) {
   const isAnyActive = items.some((item) => pathname.startsWith(item.href))
   const TriggerIcon = GroupIcon ?? items[0]?.icon
@@ -203,9 +208,9 @@ function CollapsibleNavGroup({
                     <Link href={item.href}>
                       <item.icon className="h-3.5 w-3.5" />
                       <span>{item.title}</span>
-                      {item.badge && pendingReports > 0 && (
+                      {item.badge && (badgeCounts[item.badge] ?? 0) > 0 && (
                         <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                          {pendingReports > 99 ? "99+" : pendingReports}
+                          {badgeCounts[item.badge] > 99 ? "99+" : badgeCounts[item.badge]}
                         </span>
                       )}
                     </Link>

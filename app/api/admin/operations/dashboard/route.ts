@@ -27,6 +27,7 @@ export async function GET() {
 
     const [
       { count: pendingReports },
+      { count: pendingStickers },
       { data: syncState },
       { count: unsettledGames },
       { data: recentCrawlerFails },
@@ -43,6 +44,7 @@ export async function GET() {
         .from("content_reports")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending"),
+      supabase.from("stickers").select("*", { count: "exact", head: true }).eq("status", "pending"),
       supabase
         .from("betman_sync_state")
         .select("last_checked_at")
@@ -101,7 +103,8 @@ export async function GET() {
     let betmanLastSync: string | null = null
     if (syncState?.last_checked_at) {
       betmanLastSync = syncState.last_checked_at
-      const hoursSince = (Date.now() - new Date(syncState.last_checked_at).getTime()) / (1000 * 60 * 60)
+      const hoursSince =
+        (Date.now() - new Date(syncState.last_checked_at).getTime()) / (1000 * 60 * 60)
       betmanSyncStale = hoursSince > 3
     } else {
       betmanSyncStale = true
@@ -110,6 +113,7 @@ export async function GET() {
     return NextResponse.json({
       alerts: {
         pendingReports: pendingReports ?? 0,
+        pendingStickers: pendingStickers ?? 0,
         betmanSyncStale,
         betmanLastSync,
         unsettledGames: unsettledGames ?? 0,
