@@ -209,27 +209,15 @@ export async function POST(request: NextRequest) {
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const supabase = createServiceRoleClient()
 
-    // 등급 체크: newcomer는 글쓰기 불가
+    // 등급 체크: newcomer → regular 자동 승급 (제한 없이 즉시 승급)
     const { data: profile } = await supabase
       .from("profiles")
       .select("grade, created_at, is_journalist")
       .eq("user_id", userId)
       .single()
 
-    if (profile && profile.grade === "newcomer" && !profile.is_journalist) {
-      // 24시간 경과 시 자동 승급
-      const createdAt = new Date(profile.created_at)
-      if (Date.now() - createdAt.getTime() > 24 * 60 * 60 * 1000) {
-        await supabase.from("profiles").update({ grade: "regular" }).eq("user_id", userId)
-      } else {
-        return NextResponse.json(
-          {
-            error:
-              "뉴비 등급은 글쓰기가 제한됩니다. 가입 후 24시간이 지나면 자동으로 레귤러 등급이 되어 글을 작성할 수 있습니다.",
-          },
-          { status: 403 }
-        )
-      }
+    if (profile && profile.grade === "newcomer") {
+      await supabase.from("profiles").update({ grade: "regular" }).eq("user_id", userId)
     }
     let body: unknown
     try {
