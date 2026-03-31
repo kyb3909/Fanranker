@@ -129,10 +129,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Public URL 가져오기
-    const { data: publicUrlData } = supabase.storage.from("posts").getPublicUrl(uploadData.path)
+    // 프록시 URL 반환 (Supabase 도메인 노출 방지)
+    const proxyUrl = `/storage/posts/${uploadData.path}`
 
-    return NextResponse.json({ url: publicUrlData.publicUrl }, { status: 200 })
+    return NextResponse.json({ url: proxyUrl }, { status: 200 })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

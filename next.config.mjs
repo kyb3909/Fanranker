@@ -79,6 +79,15 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  // Supabase Storage URL을 자체 도메인으로 프록시 (도메인 노출 방지)
+  async rewrites() {
+    return [
+      {
+        source: '/storage/:path*',
+        destination: `https://ekysrlhdrapmsnrkytif.supabase.co/storage/v1/object/public/:path*`,
+      },
+    ]
+  },
   // 실험적 기능: 패키지 최적화
   experimental: {
     optimizePackageImports: [
