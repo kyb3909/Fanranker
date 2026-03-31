@@ -21,7 +21,6 @@ import { TitleBadge } from "@/components/profile/title-badge"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import { openReport } from "@/hooks/use-report-dialog"
-import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import type { Post } from "./post-detail-types"
 
 const TipTapContent = dynamic(
@@ -234,11 +233,15 @@ export function PostDetailContent({
             {/* Image — 본문에 이미 포함된 이미지는 중복 표시하지 않음 */}
             {post.image &&
               (() => {
-                const bodyFirstImage =
-                  typeof post.content !== "string"
-                    ? extractFirstImageSrcFromTipTapJSON(post.content)
-                    : null
-                if (bodyFirstImage && post.image === bodyFirstImage) return null
+                // 본문 JSON을 문자열화하여 이미지 URL이 포함되어 있는지 확인
+                if (typeof post.content !== "string") {
+                  try {
+                    const bodyStr = JSON.stringify(post.content)
+                    if (bodyStr.includes(post.image)) return null
+                  } catch {
+                    // ignore
+                  }
+                }
                 return (
                   <a
                     href={post.image}
