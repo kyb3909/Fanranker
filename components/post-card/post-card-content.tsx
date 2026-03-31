@@ -96,7 +96,7 @@ export const PostCardContent = memo(function PostCardContent({
       <div className={hasSingleImage ? "flex gap-4" : undefined}>
         <div className={hasSingleImage ? "min-w-0 flex-1" : undefined}>
           {/* 제목 */}
-          <Link href={`/post/${postId}`} className="group block">
+          <Link href={`/post/${postId}`} prefetch={false} className="group block">
             <h2 className="text-foreground group-hover:text-primary line-clamp-2 text-[16px] leading-[1.4] font-semibold transition-colors sm:text-[17px]">
               {title}
             </h2>
@@ -116,7 +116,11 @@ export const PostCardContent = memo(function PostCardContent({
 
         {/* 데스크톱 사이드 썸네일 */}
         {hasSingleImage && displayImage && (
-          <Link href={`/post/${postId}`} className="mt-0.5 hidden shrink-0 sm:block">
+          <Link
+            href={`/post/${postId}`}
+            prefetch={false}
+            className="mt-0.5 hidden shrink-0 sm:block"
+          >
             <div className="bg-muted h-[84px] w-[120px] overflow-hidden rounded-lg transition-opacity hover:opacity-90">
               {canUseOptimizedFeedImage(displayImage) ? (
                 <Image
@@ -168,7 +172,7 @@ export const PostCardContent = memo(function PostCardContent({
             />
           </div>
         ) : (
-          <Link href={`/post/${postId}`} className="mt-2.5 block sm:hidden">
+          <Link href={`/post/${postId}`} prefetch={false} className="mt-2.5 block sm:hidden">
             <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
           </Link>
         )
@@ -297,7 +301,7 @@ function FeedImageCarousel({
   return (
     <div className="mt-2">
       <div className="relative">
-        <Link href={`/post/${postId}`} className="block">
+        <Link href={`/post/${postId}`} prefetch={false} className="block">
           <FeedImageFrame
             src={currentSrc}
             alt={title || `Post image ${current + 1}`}

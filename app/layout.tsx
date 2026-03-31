@@ -18,10 +18,11 @@ import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
 
 const notoSansKR = Noto_Sans_KR({
-  weight: ["400", "600", "700"],
+  weight: "variable",
   subsets: ["latin"],
   display: "swap",
   variable: "--font-noto-sans-kr",
+  preload: true,
 })
 
 const koLocalization = {
