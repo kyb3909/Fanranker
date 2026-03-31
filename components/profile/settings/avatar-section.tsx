@@ -23,6 +23,36 @@ export function AvatarSection({
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const compressImage = async (file: File, maxSize: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        let { width, height } = img
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width)
+            width = maxSize
+          } else {
+            width = Math.round((width * maxSize) / height)
+            height = maxSize
+          }
+        }
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")!
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("압축 실패"))),
+          "image/webp",
+          0.85
+        )
+      }
+      img.onerror = () => reject(new Error("이미지를 읽을 수 없습니다."))
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -36,8 +66,9 @@ export function AvatarSection({
     }
     setUploading(true)
     try {
+      const compressed = await compressImage(file, 512)
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", new File([compressed], "avatar.webp", { type: "image/webp" }))
       const res = await fetch("/api/upload/image?type=avatar", { method: "POST", body: formData })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))

@@ -178,7 +178,37 @@ export default function SignUpPage() {
   const nicknameError =
     nicknameFormatError || (nicknameTaken ? "이미 사용 중인 닉네임입니다." : null)
 
-  // ── Avatar upload ──
+  // ── Avatar upload (client-side compression) ──
+  const compressImage = useCallback(async (file: File, maxSize: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        let { width, height } = img
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width)
+            width = maxSize
+          } else {
+            width = Math.round((width * maxSize) / height)
+            height = maxSize
+          }
+        }
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")!
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("압축 실패"))),
+          "image/webp",
+          0.85
+        )
+      }
+      img.onerror = () => reject(new Error("이미지를 읽을 수 없습니다."))
+      img.src = URL.createObjectURL(file)
+    })
+  }, [])
+
   const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -190,8 +220,10 @@ export default function SignUpPage() {
 
     setAvatarUploading(true)
     try {
+      // 아바타는 512px로 클라이언트에서 미리 압축 (413 방지)
+      const compressed = await compressImage(file, 512)
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", new File([compressed], "avatar.webp", { type: "image/webp" }))
 
       const res = await fetch("/api/upload/image?type=avatar", {
         method: "POST",
@@ -451,7 +483,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h1 className="text-foreground text-2xl font-bold">팬랭커에 오신 걸 환영합니다!</h1>
+          <h1 className="text-foreground text-2xl font-bold">공놀이판에 오신 걸 환영합니다!</h1>
           <p className="text-muted-foreground mt-2 text-sm">
             간단한 설정으로 나만의 커뮤니티를 시작하세요.
           </p>
