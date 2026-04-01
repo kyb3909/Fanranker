@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Gamepad2, Sparkles, Radio } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, Gamepad2, Sparkles, Landmark } from "lucide-react"
 
 const activeClass =
   "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
@@ -21,7 +21,7 @@ export const HeaderNav = memo(function HeaderNav() {
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname === "/" && view === "prediction"
   const isGames = pathname.startsWith("/games")
-  const isLive = pathname.startsWith("/live")
+  const isStadium = pathname.startsWith("/stadium")
   const isShop = pathname.startsWith("/shop")
 
   return (
@@ -57,10 +57,10 @@ export const HeaderNav = memo(function HeaderNav() {
             경기 예측
           </span>
         </Link>
-        <Link href="/live">
-          <span className={`${baseClass} ${isLive ? activeClass : inactiveClass}`}>
-            <Radio className="h-[18px] w-[18px] shrink-0" />
-            라이브
+        <Link href="/stadium">
+          <span className={`${baseClass} ${isStadium ? activeClass : inactiveClass}`}>
+            <Landmark className="h-[18px] w-[18px] shrink-0" />
+            스타디움
           </span>
         </Link>
         <Link href="/games">
