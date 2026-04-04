@@ -3,12 +3,12 @@
 import { useRef, useEffect, useState, useCallback } from "react"
 
 // ─── Config ───
-const GRID = 204 // 204×204 grid cells (2x detail)
 const SRC_SIZE = 2048 // Source image size
-const CELL_SRC = SRC_SIZE / GRID // ~10px per cell in source
-const TILE_PX = 10 // Rendered tile size (smaller = more detail)
-const MAP_PX = GRID * TILE_PX // 2040px rendered map
-const CHAR_SPEED = 3
+const MAP_PX = 640 // 렌더 맵 크기 (캐릭터 32px = 맵의 5%)
+const GRID = 128 // 충돌 체크용 그리드
+const CELL_SRC = SRC_SIZE / GRID
+const TILE_PX = MAP_PX / GRID
+const CHAR_SPEED = 2
 
 // Terrain types
 const T = {
@@ -183,17 +183,23 @@ function classifyColor(r: number, g: number, b: number): number {
   if (g > 50 && g > r && g > b && r < 70 && g < 110) return T.FOREST
   if (g > 40 && g > r && r < 50 && b < 50) return T.CONIFER
 
-  // Medium green → dark grass or regular grass
+  // Green → 밝기에 따라 3단계 잔디
   if (g > 100 && g > r && g > b) {
-    if (r < 80) return g > 140 ? T.GRASS : T.DARK_GRASS
-    return T.GRASS
+    if (g > 160) return T.GRASS // 밝은 잔디
+    if (g > 130) return T.DARK_GRASS // 중간 잔디
+    if (r < 80) return T.CONIFER // 짙은 녹색 → 침엽수림
+    return T.DARK_GRASS
   }
 
   // Yellow-green → farmland
   if (r > 100 && g > 100 && b < 80 && g > b) return T.FARM
 
-  // Default: if greenish, grass; if bluish, ocean
-  if (g > r && g > b) return T.GRASS
+  // Default: if greenish, 밝기로 분류
+  if (g > r && g > b) {
+    if (g > 120) return T.GRASS
+    if (g > 80) return T.DARK_GRASS
+    return T.FOREST
+  }
   if (b > r) return T.DEEP
   return T.GRASS
 }
@@ -214,12 +220,25 @@ function buildGridFromImage(imgData: ImageData): number[][] {
       const i = (sy * SRC_SIZE + sx) * 4
       let terrain = classifyColor(imgData.data[i], imgData.data[i + 1], imgData.data[i + 2])
 
-      // Add variety to plain grass — ~40% becomes DARK_GRASS for texture
-      if (terrain === T.GRASS) {
-        const h = hash(row, col)
-        if (h < 0.25) terrain = T.DARK_GRASS
-        else if (h < 0.32) terrain = T.FARM
-        else if (h < 0.37) terrain = T.HILL
+      // 주변 픽셀 샘플링으로 더 정확한 분류 (5px 영역 평균)
+      if (terrain === T.GRASS || terrain === T.DARK_GRASS) {
+        let avgG = 0,
+          samples = 0
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const px = Math.min(SRC_SIZE - 1, Math.max(0, sx + dx * 2))
+            const py = Math.min(SRC_SIZE - 1, Math.max(0, sy + dy * 2))
+            avgG += imgData.data[(py * SRC_SIZE + px) * 4 + 1]
+            samples++
+          }
+        }
+        avgG /= samples
+        // 밝기 기반 3톤 잔디
+        if (avgG > 155)
+          terrain = T.GRASS // 밝은 잔디
+        else if (avgG > 120)
+          terrain = T.DARK_GRASS // 중간
+        else terrain = T.FOREST // 짙은
       }
 
       grid[row][col] = terrain
@@ -305,219 +324,27 @@ function wangIdx(vg: number[][], r: number, c: number): number {
   return vg[r][c] * 8 + vg[r][c + 1] * 4 + vg[r + 1][c] * 2 + vg[r + 1][c + 1]
 }
 
-// ─── Craftpix tile coordinates (16x16 tiles in spritesheets) ───
-// ground_grasss.png (336x256): row/col in 16px grid
-const CX = {
-  // 잔디 바닥 타일 (ground_grasss.png 우하단 영역)
-  grass: [
-    { x: 0, y: 192 }, // 잔디 변형 1
-    { x: 16, y: 192 }, // 잔디 변형 2
-    { x: 32, y: 192 }, // 잔디 변형 3
-    { x: 0, y: 208 }, // 잔디 변형 4
-  ],
-  // 흙 바닥 (ground_grasss.png 상단)
-  dirt: { x: 80, y: 0 },
-  // 밝은 잔디
-  lightGrass: { x: 0, y: 128 },
-}
+// ─── 렌더링: uk-base.png를 그대로 배경으로 사용 ───
 
-// Water_coasts.png (272x576): 물/해안 타일
-const WX = {
-  // 깊은 바다 (단색 물 타일)
-  deepWater: { x: 0, y: 0 },
-  // 얕은 바다
-  shallowWater: { x: 16, y: 0 },
-}
-
-// 해시 기반 타일 변형 선택 (같은 지형이라도 약간씩 다른 타일)
-function tileVariant(r: number, c: number, count: number): number {
-  return (r * 73 + c * 137 + 7919) % count
-}
-
-// ─── Render terrain (3-pass: craftpix base → Wang transitions → object overlays) ───
 function renderTerrain(
-  grid: number[][],
-  layers: {
-    def: TsDef
-    img: HTMLImageElement
-    lookup: Map<number, { x: number; y: number }>
-    vg: number[][]
-  }[],
-  craftpixImgs?: {
-    ground?: HTMLImageElement
-    water?: HTMLImageElement
-    trees?: HTMLImageElement
-    details?: HTMLImageElement
-  }
+  _grid: number[][],
+  _layers: unknown,
+  _craftpixImgs: unknown,
+  sourceImg?: HTMLImageElement
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas")
   canvas.width = MAP_PX
   canvas.height = MAP_PX
   const ctx = canvas.getContext("2d")!
-  ctx.imageSmoothingEnabled = false
-  ctx.fillStyle = "#0c1e3a"
+
+  // 바다 배경
+  ctx.fillStyle = "#1a3a5c"
   ctx.fillRect(0, 0, MAP_PX, MAP_PX)
 
-  // PASS 0: Craftpix base textures (바닥 채우기)
-  if (craftpixImgs) {
-    for (let r = 0; r < GRID; r++) {
-      for (let c = 0; c < GRID; c++) {
-        const terrain = grid[r][c]
-        const dx = c * TILE_PX
-        const dy = r * TILE_PX
-
-        if (terrain === T.DEEP || terrain === T.SHALLOW) {
-          // 바다: craftpix 물 타일
-          if (craftpixImgs.water) {
-            const src = terrain === T.DEEP ? WX.deepWater : WX.shallowWater
-            ctx.drawImage(craftpixImgs.water, src.x, src.y, 16, 16, dx, dy, TILE_PX, TILE_PX)
-          }
-        } else if (terrain === T.RIVER) {
-          // 강: 얕은 물
-          if (craftpixImgs.water) {
-            ctx.drawImage(
-              craftpixImgs.water,
-              WX.shallowWater.x,
-              WX.shallowWater.y,
-              16,
-              16,
-              dx,
-              dy,
-              TILE_PX,
-              TILE_PX
-            )
-          }
-        } else {
-          // 육지: craftpix 잔디 타일 (변형 적용)
-          if (craftpixImgs.ground) {
-            if (terrain === T.FARM || terrain === T.MOOR) {
-              // 농지/황무지: 흙 타일
-              ctx.drawImage(
-                craftpixImgs.ground,
-                CX.dirt.x,
-                CX.dirt.y,
-                16,
-                16,
-                dx,
-                dy,
-                TILE_PX,
-                TILE_PX
-              )
-            } else {
-              // 일반 잔디 (변형)
-              const v = tileVariant(r, c, CX.grass.length)
-              const src = CX.grass[v]
-              ctx.drawImage(craftpixImgs.ground, src.x, src.y, 16, 16, dx, dy, TILE_PX, TILE_PX)
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // PASS 1: Wang base layers (ocean depth + coastline transitions)
-  for (const layer of layers) {
-    if (!layer.def.isBase) continue
-    for (let r = 0; r < GRID; r++) {
-      for (let c = 0; c < GRID; c++) {
-        const idx = wangIdx(layer.vg, r, c)
-        if (craftpixImgs && idx === 0) continue // craftpix가 바닥을 채웠으면 빈 타일 스킵
-        if (craftpixImgs && idx === 15) continue // 완전 내부 타일도 스킵 (craftpix가 처리)
-        const src = layer.lookup.get(idx)
-        if (!src) continue
-        ctx.drawImage(layer.img, src.x, src.y, 32, 32, c * TILE_PX, r * TILE_PX, TILE_PX, TILE_PX)
-      }
-    }
-  }
-
-  // PASS 2: Wang feature overlays (forest, mountain textures at edges)
-  for (const layer of layers) {
-    if (layer.def.isBase) continue
-    const fullTile = layer.lookup.get(15)
-    if (!fullTile) continue
-    for (let r = 0; r < GRID; r++) {
-      for (let c = 0; c < GRID; c++) {
-        const cellTerrain = grid[r][c]
-        if (!layer.def.targets.has(cellTerrain)) continue
-        ctx.drawImage(
-          layer.img,
-          fullTile.x,
-          fullTile.y,
-          32,
-          32,
-          c * TILE_PX,
-          r * TILE_PX,
-          TILE_PX,
-          TILE_PX
-        )
-      }
-    }
-  }
-
-  // PASS 3: Craftpix object overlays (나무, 바위)
-  if (craftpixImgs?.trees) {
-    for (let r = 0; r < GRID; r++) {
-      for (let c = 0; c < GRID; c++) {
-        const terrain = grid[r][c]
-        const dx = c * TILE_PX
-        const dy = r * TILE_PX
-
-        if (terrain === T.FOREST || terrain === T.CONIFER) {
-          // 숲: 나무 스프라이트 (Trees_rocks.png에서 작은 나무)
-          // 나무는 크므로 일부 셀에만 배치 (밀도 조절)
-          if (tileVariant(r, c, 4) === 0) {
-            // 작은 나무 (Trees_rocks.png 상단, ~32x32 영역)
-            const treeX = tileVariant(r, c, 3) * 64
-            ctx.drawImage(
-              craftpixImgs.trees,
-              treeX,
-              0,
-              64,
-              64,
-              dx - TILE_PX,
-              dy - TILE_PX * 2,
-              TILE_PX * 3,
-              TILE_PX * 3
-            )
-          }
-        } else if (terrain === T.MOUNTAIN || terrain === T.HILL) {
-          // 산/언덕: 바위 스프라이트
-          if (tileVariant(r, c, 5) === 0) {
-            const rockX = 0
-            const rockY = 256 + tileVariant(r, c, 2) * 64
-            ctx.drawImage(
-              craftpixImgs.trees,
-              rockX,
-              rockY,
-              64,
-              64,
-              dx - TILE_PX / 2,
-              dy - TILE_PX,
-              TILE_PX * 2,
-              TILE_PX * 2
-            )
-          }
-        }
-      }
-    }
-  }
-
-  // PASS 4: Craftpix detail overlays (꽃, 풀)
-  if (craftpixImgs?.details) {
-    for (let r = 0; r < GRID; r++) {
-      for (let c = 0; c < GRID; c++) {
-        const terrain = grid[r][c]
-        if (terrain !== T.GRASS && terrain !== T.DARK_GRASS) continue
-        // 드물게 꽃/풀 배치
-        if (tileVariant(r, c, 12) !== 0) continue
-        const dx = c * TILE_PX
-        const dy = r * TILE_PX
-        const detailIdx = tileVariant(r + 1, c + 1, 6)
-        const detailX = (detailIdx % 6) * 32
-        const detailY = 0
-        ctx.drawImage(craftpixImgs.details, detailX, detailY, 32, 32, dx, dy, TILE_PX, TILE_PX)
-      }
-    }
+  // uk-base.png를 그대로 그리기
+  if (sourceImg) {
+    ctx.imageSmoothingEnabled = true
+    ctx.drawImage(sourceImg, 0, 0, MAP_PX, MAP_PX)
   }
 
   return canvas
@@ -603,10 +430,10 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
     mappedRef.current = mapStadiums(stadiums)
   }, [stadiums])
 
-  // 첫 번째 OPEN 경기장 위치로 초기 카메라, 없으면 맵 중앙
+  // 웸블리(런던) 근처 육지에서 시작
   const firstOpen = stadiums.find((s) => s.is_open)
-  const startX = firstOpen ? (firstOpen.pin_x / 100) * MAP_PX : MAP_PX / 2
-  const startY = firstOpen ? (firstOpen.pin_y / 100) * MAP_PX : MAP_PX / 2
+  const startX = firstOpen ? (firstOpen.pin_x / 100) * MAP_PX : MAP_PX * 0.52
+  const startY = firstOpen ? (firstOpen.pin_y / 100) * MAP_PX : MAP_PX * 0.7
 
   const gs = useRef<GS>({
     px: startX,
@@ -615,7 +442,7 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
     camX: startX,
     camY: startY,
     keys: new Set(),
-    zoom: 1.8,
+    zoom: 1.0,
   })
 
   const isLand = useCallback((px: number, py: number): boolean => {
@@ -674,21 +501,15 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
         layers.push({ def, img, lookup: buildLookup(meta), vg: buildVertexGrid(grid, def.targets) })
       }
 
-      // Craftpix 이미지를 renderTerrain에 전달
-      const craftpixImgs = {
-        ground: cxImgs["cx-ground"],
-        water: cxImgs["cx-water"],
-        trees: cxImgs["cx-trees"],
-        details: cxImgs["cx-details"],
-      }
-
-      terrainRef.current = renderTerrain(grid, layers, craftpixImgs)
+      terrainRef.current = renderTerrain(grid, layers, null, srcImgRef)
       setLoaded(true)
     }
 
     // Load source image → build terrain grid
+    let srcImgRef: HTMLImageElement | undefined
     const srcImg = new Image()
     srcImg.onload = () => {
+      srcImgRef = srcImg
       const c = document.createElement("canvas")
       c.width = SRC_SIZE
       c.height = SRC_SIZE
@@ -767,6 +588,12 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
     const kd = (e: KeyboardEvent) => {
       gs.current.keys.add(e.key)
       if (e.key.startsWith("Arrow")) e.preventDefault()
+      // Enter키: 근처 경기장 입장
+      if (e.key === "Enter") {
+        const nearbyEl = document.querySelector("[data-nearby-stadium]") as HTMLButtonElement
+        if (nearbyEl) nearbyEl.click()
+        return
+      }
       mv(gs.current)
     }
     const ku = (e: KeyboardEvent) => gs.current.keys.delete(e.key)
@@ -824,7 +651,7 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
       if (++tick > 15) {
         tick = 0
         let cl: MappedStadium | null = null,
-          md = 60
+          md = 50
         for (const st of mappedRef.current) {
           const d = Math.sqrt((st.x - s.px) ** 2 + (st.y - s.py) ** 2)
           if (d < md) {
@@ -894,16 +721,19 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
         ctx.imageSmoothingEnabled = false
       }
 
-      // Character
+      ctx.restore()
+
+      // Character (화면 좌표 기준 — 줌에 영향 안 받음, 항상 32px)
+      const screenX = W / 2 + (s.px - s.camX) * s.zoom
+      const screenY = H / 2 + (s.py - s.camY) * s.zoom
       const ci = imgs.current[`c-${s.dir}`]
-      if (ci) ctx.drawImage(ci, s.px - 16, s.py - 28, 32, 32)
+      if (ci) ctx.drawImage(ci, screenX - 16, screenY - 28, 32, 32)
       else {
         ctx.fillStyle = "#f44"
         ctx.beginPath()
-        ctx.arc(s.px, s.py - 4, 5, 0, Math.PI * 2)
+        ctx.arc(screenX, screenY - 4, 5, 0, Math.PI * 2)
         ctx.fill()
       }
-      ctx.restore()
 
       // Minimap
       const mw = 110,
@@ -954,12 +784,11 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
         <h2 className="flex items-center gap-2 text-lg font-bold">
           <span>🏴󠁧󠁢󠁥󠁮󠁧󠁿</span> England
         </h2>
-        <p className="mt-1 text-xs opacity-60">
-          WASD / Arrows · Scroll to zoom · Click stadium to enter
-        </p>
+        <p className="mt-1 text-xs opacity-60">WASD · Scroll to zoom · Enter to join stadium</p>
       </div>
       {nearby && (
         <button
+          data-nearby-stadium
           onClick={() => onStadiumClick?.(nearby.team_id, nearby.is_open)}
           className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-xl border border-yellow-500/50 bg-black/80 px-6 py-4 text-center text-white backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
         >
