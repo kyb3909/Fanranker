@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
+import { apiError } from "@/lib/api-error"
 
 export async function GET(
   request: NextRequest,
@@ -22,18 +22,48 @@ export async function GET(
       { data: sanctions },
       { data: recentPosts },
     ] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).single(),
-      supabase.from('user_tokens').select('token_balance, total_tokens_earned').eq('user_id', userId).maybeSingle(),
-      supabase.from('user_gold').select('gold_balance').eq('user_id', userId).maybeSingle(),
-      supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', userId).is('deleted_at', null),
-      supabase.from('comments').select('*', { count: 'exact', head: true }).eq('user_id', userId).is('deleted_at', null),
-      supabase.from('predictions').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-      supabase.from('user_sanctions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10),
-      supabase.from('posts').select('id, title, community_slug, created_at').eq('user_id', userId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
+      supabase
+        .from("profiles")
+        .select("user_id, nickname, avatar_url, role, is_expert, is_artist, created_at")
+        .eq("user_id", userId)
+        .single(),
+      supabase
+        .from("user_tokens")
+        .select("token_balance, total_tokens_earned")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase.from("user_gold").select("gold_balance").eq("user_id", userId).maybeSingle(),
+      supabase
+        .from("posts")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .is("deleted_at", null),
+      supabase
+        .from("comments")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .is("deleted_at", null),
+      supabase
+        .from("predictions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabase
+        .from("user_sanctions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("posts")
+        .select("id, title, community_slug, created_at")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(5),
     ])
 
     if (!profile) {
-      return NextResponse.json({ error: '사용자를 찾을 수 없습니다.' }, { status: 404 })
+      return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -52,6 +82,6 @@ export async function GET(
       recentPosts: recentPosts ?? [],
     })
   } catch (error) {
-    return apiError('서버 오류', 500, error)
+    return apiError("서버 오류", 500, error)
   }
 }

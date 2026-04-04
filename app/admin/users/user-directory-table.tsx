@@ -21,7 +21,6 @@ interface User {
   nickname: string
   avatar_url: string | null
   role: string
-  temperature: number
   is_expert: boolean
   is_artist: boolean
   created_at: string
@@ -84,7 +83,6 @@ export function UserDirectoryTable({
             <TableRow>
               <TableHead>사용자</TableHead>
               <TableHead>역할</TableHead>
-              <TableHead>온도</TableHead>
               <TableHead>태그</TableHead>
               <TableHead>가입일</TableHead>
               <TableHead className="text-right">상세</TableHead>
@@ -93,7 +91,7 @@ export function UserDirectoryTable({
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
+                <TableCell colSpan={5} className="text-muted-foreground h-24 text-center">
                   사용자가 없습니다.
                 </TableCell>
               </TableRow>
@@ -114,7 +112,6 @@ export function UserDirectoryTable({
                   <TableCell>
                     <Badge className={`text-xs ${roleColors[user.role] || ""}`}>{user.role}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{user.temperature?.toFixed(1) ?? "-"}°</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {user.is_expert && (

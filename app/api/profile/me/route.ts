@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+        "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, role, is_journalist, onboarding_completed, created_at, updated_at"
       )
       .eq("user_id", userId)
       .single()
@@ -196,7 +196,7 @@ export async function PATCH(request: NextRequest) {
     if (onboarding_completed !== undefined) updateData.onboarding_completed = onboarding_completed
 
     const PROFILE_SELECT =
-      "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, temperature, role, is_journalist, onboarding_completed, created_at, updated_at"
+      "id, user_id, nickname, nickname_changed_at, avatar_url, bio, favorite_team, favorite_player, mbti, role, is_journalist, onboarding_completed, created_at, updated_at"
 
     // 먼저 프로필이 존재하는지 확인
     const { data: existingProfile, error: fetchError } = await supabase

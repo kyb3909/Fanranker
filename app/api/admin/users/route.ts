@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { requireAdminApi, isErrorResponse } from '@/lib/admin/require-admin-api'
-import { apiError } from '@/lib/api-error'
+import { NextRequest, NextResponse } from "next/server"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
+import { apiError } from "@/lib/api-error"
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,26 +9,28 @@ export async function GET(request: NextRequest) {
     const { supabase } = auth
 
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '30')
-    const search = searchParams.get('search') || ''
-    const role = searchParams.get('role') || ''
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "30")
+    const search = searchParams.get("search") || ""
+    const role = searchParams.get("role") || ""
     const offset = (page - 1) * limit
 
     let query = supabase
-      .from('profiles')
-      .select('user_id, nickname, avatar_url, role, temperature, is_expert, is_artist, created_at, updated_at', { count: 'exact' })
+      .from("profiles")
+      .select("user_id, nickname, avatar_url, role, is_expert, is_artist, created_at, updated_at", {
+        count: "exact",
+      })
 
-    if (search) query = query.ilike('nickname', `%${search}%`)
-    if (role) query = query.eq('role', role)
+    if (search) query = query.ilike("nickname", `%${search}%`)
+    if (role) query = query.eq("role", role)
 
     const { data, count, error } = await query
-      .order('created_at', { ascending: false })
+      .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (error) return apiError(error.message, 500, error)
     return NextResponse.json({ users: data ?? [], total: count ?? 0, page, limit })
   } catch (error) {
-    return apiError('서버 오류', 500, error)
+    return apiError("서버 오류", 500, error)
   }
 }

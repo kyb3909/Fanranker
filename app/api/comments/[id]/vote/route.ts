@@ -80,15 +80,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .eq("id", commentId)
       .single()
 
-    // 댓글 작성자 + 투표한 사람의 유저 온도 갱신
+    // 추천(up) 시 작성자에게 포인트 적립 (자추 방지, 새 투표일 때만)
     if (commentData?.user_id) {
-      Promise.resolve(
-        supabase.rpc("update_user_temperature", { p_user_id: commentData.user_id })
-      ).catch((e: unknown) => {
-        console.error("Failed to update comment author temperature:", e)
-      })
-
-      // 추천(up) 시 작성자에게 포인트 적립 (자추 방지, 새 투표일 때만)
       if (
         voteType === "up" &&
         action === "created" &&
@@ -115,11 +108,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           .catch(console.error)
       }
     }
-    Promise.resolve(supabase.rpc("update_user_temperature", { p_user_id: user.id })).catch(
-      (e: unknown) => {
-        console.error("Failed to update voter temperature:", e)
-      }
-    )
 
     return NextResponse.json({
       success: true,

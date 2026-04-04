@@ -35,10 +35,7 @@ async function fetchAllHomeData() {
 
         const userIds = [...new Set(posts.map((p) => p.user_id))]
         const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("user_id, nickname, avatar_url, temperature")
-            .in("user_id", userIds),
+          supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
           supabase
             .from("user_equipped_titles")
             .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")

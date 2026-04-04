@@ -28,7 +28,6 @@ interface PublicProfile {
   nickname: string
   avatar_url: string | null
   bio: string | null
-  temperature: number
   is_journalist: boolean
   is_expert: boolean
   created_at: string
@@ -119,138 +118,143 @@ export function PublicProfileView({ userId }: { userId: string }) {
         <h1 className="text-xl font-bold">프로필</h1>
       </div>
 
-      {/* 프로필 헤더 */}
-      <Card className="mb-4 overflow-hidden">
-        <UserProfileHeader
-          userId={publicProfile.user_id}
-          nickname={publicProfile.nickname}
-          avatarUrl={publicProfile.avatar_url}
-          isExpert={publicProfile.is_expert}
-          isJournalist={publicProfile.is_journalist}
-          temperature={publicProfile.temperature}
-          currentUserId={user?.id || null}
-        />
-        {publicProfile.bio && (
-          <p className="text-muted-foreground px-4 pb-4 text-sm sm:px-6">{publicProfile.bio}</p>
-        )}
-        <div className="text-muted-foreground flex items-center gap-1.5 px-4 pb-4 text-xs sm:px-6">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>
-            {new Date(publicProfile.created_at).toLocaleDateString("ko-KR", {
-              year: "numeric",
-              month: "long",
-            })}
-            {" 가입"}
-          </span>
-        </div>
-      </Card>
-
-      {/* 게시판별 칭호 & 레벨 */}
-      {boardPoints.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="border-border border-b px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber-500" />
-              <h3 className="text-sm font-semibold">활동 & 칭호</h3>
-            </div>
+      <div className="space-y-5">
+        {/* 프로필 헤더 */}
+        <Card className="gap-0 overflow-hidden py-0">
+          <UserProfileHeader
+            userId={publicProfile.user_id}
+            nickname={publicProfile.nickname}
+            avatarUrl={publicProfile.avatar_url}
+            isExpert={publicProfile.is_expert}
+            isJournalist={publicProfile.is_journalist}
+            currentUserId={user?.id || null}
+          />
+          {publicProfile.bio && (
+            <p className="text-muted-foreground px-4 pb-4 text-sm sm:px-6">{publicProfile.bio}</p>
+          )}
+          <div className="text-muted-foreground flex items-center gap-1.5 px-4 pb-4 text-xs sm:px-6">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>
+              {new Date(publicProfile.created_at).toLocaleDateString("ko-KR", {
+                year: "numeric",
+                month: "long",
+              })}
+              {" 가입"}
+            </span>
           </div>
-          <div className="divide-border divide-y">
-            {boardPoints.map((bp) => {
-              const equipped = equippedTitles.find((t) => t.board_slug === bp.board_slug)
-              return (
-                <div key={bp.board_slug} className="flex items-center justify-between px-4 py-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium">
-                      {COMMUNITY_NAMES[bp.board_slug] || bp.board_slug}
+        </Card>
+
+        {/* 게시판별 칭호 & 레벨 */}
+        {boardPoints.length > 0 && (
+          <Card className="gap-0 overflow-hidden py-0">
+            <div className="border-border border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                <h3 className="text-sm font-semibold">활동 & 칭호</h3>
+              </div>
+            </div>
+            <div className="divide-border divide-y">
+              {boardPoints.map((bp) => {
+                const equipped = equippedTitles.find((t) => t.board_slug === bp.board_slug)
+                return (
+                  <div key={bp.board_slug} className="flex items-center justify-between px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium">
+                        {COMMUNITY_NAMES[bp.board_slug] || bp.board_slug}
+                      </span>
+                      {equipped && (equipped.adj_title || equipped.noun_title) && (
+                        <TitleBadge
+                          adjTitle={equipped.adj_title}
+                          nounTitle={equipped.noun_title}
+                          rarity={
+                            equipped.rarity as "common" | "rare" | "epic" | "legendary" | null
+                          }
+                          size="sm"
+                        />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-amber-600 tabular-nums dark:text-amber-400">
+                      {bp.total_points.toLocaleString()}P
                     </span>
-                    {equipped && (equipped.adj_title || equipped.noun_title) && (
-                      <TitleBadge
-                        adjTitle={equipped.adj_title}
-                        nounTitle={equipped.noun_title}
-                        rarity={equipped.rarity as "common" | "rare" | "epic" | "legendary" | null}
-                        size="sm"
-                      />
-                    )}
                   </div>
-                  <span className="text-xs font-medium text-amber-600 tabular-nums dark:text-amber-400">
-                    {bp.total_points.toLocaleString()}P
+                )
+              })}
+            </div>
+          </Card>
+        )}
+
+        {/* 보유 픽셀아트 */}
+        {pixelArts.length > 0 && (
+          <Card className="gap-0 overflow-hidden py-0">
+            <div className="border-border border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="text-primary h-4 w-4" />
+                <h3 className="text-sm font-semibold">픽셀아트 컬렉션</h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 md:grid-cols-5">
+              {pixelArts.map((pa) => (
+                <div key={pa.pixel_art_id} className="flex flex-col items-center gap-1">
+                  <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg">
+                    <Image
+                      src={pa.pixel_art_items.image_url}
+                      alt={pa.pixel_art_items.name}
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                      style={{ imageRendering: "pixelated" }}
+                      unoptimized
+                    />
+                  </div>
+                  <span className="text-muted-foreground text-[10px]">
+                    {pa.pixel_art_items.name}
                   </span>
                 </div>
-              )
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* 보유 픽셀아트 */}
-      {pixelArts.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="border-border border-b px-4 py-3">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="text-primary h-4 w-4" />
-              <h3 className="text-sm font-semibold">픽셀아트 컬렉션</h3>
+              ))}
             </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 md:grid-cols-5">
-            {pixelArts.map((pa) => (
-              <div key={pa.pixel_art_id} className="flex flex-col items-center gap-1">
-                <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg">
-                  <Image
-                    src={pa.pixel_art_items.image_url}
-                    alt={pa.pixel_art_items.name}
-                    width={48}
-                    height={48}
-                    className="object-contain"
-                    style={{ imageRendering: "pixelated" }}
-                    unoptimized
-                  />
-                </div>
-                <span className="text-muted-foreground text-[10px]">{pa.pixel_art_items.name}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+          </Card>
+        )}
 
-      {/* 최근 작성글 */}
-      <Card className="overflow-hidden">
-        <div className="border-border border-b px-4 py-3">
-          <h3 className="text-sm font-semibold">최근 작성글</h3>
-        </div>
-        {publicPosts.length === 0 ? (
-          <p className="text-muted-foreground py-8 text-center text-sm">작성한 글이 없습니다.</p>
-        ) : (
-          <div className="divide-border divide-y">
-            {publicPosts.map((post) => (
-              <Link
-                key={post.id}
-                href={`/post/${post.id}`}
-                className="hover:bg-muted/50 block px-4 py-3 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-foreground truncate text-sm font-medium">{post.title}</p>
-                    <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
-                      <span>{COMMUNITY_NAMES[post.community_slug] || post.community_slug}</span>
-                      <span>{formatRelativeTime(new Date(post.created_at))}</span>
+        {/* 최근 작성글 */}
+        <Card className="gap-0 overflow-hidden py-0">
+          <div className="border-border border-b px-4 py-3">
+            <h3 className="text-sm font-semibold">최근 작성글</h3>
+          </div>
+          {publicPosts.length === 0 ? (
+            <p className="text-muted-foreground py-8 text-center text-sm">작성한 글이 없습니다.</p>
+          ) : (
+            <div className="divide-border divide-y">
+              {publicPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/post/${post.id}`}
+                  className="hover:bg-muted/50 block px-4 py-3 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-foreground truncate text-sm font-medium">{post.title}</p>
+                      <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
+                        <span>{COMMUNITY_NAMES[post.community_slug] || post.community_slug}</span>
+                        <span>{formatRelativeTime(new Date(post.created_at))}</span>
+                      </div>
+                    </div>
+                    <div className="text-muted-foreground flex shrink-0 items-center gap-2.5 text-xs">
+                      <span className="flex items-center gap-0.5">
+                        <ThumbsUp className="h-3 w-3" />
+                        {post.vote_count || 0}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <MessageSquare className="h-3 w-3" />
+                        {post.comment_count || 0}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-muted-foreground flex shrink-0 items-center gap-2.5 text-xs">
-                    <span className="flex items-center gap-0.5">
-                      <ThumbsUp className="h-3 w-3" />
-                      {post.vote_count || 0}
-                    </span>
-                    <span className="flex items-center gap-0.5">
-                      <MessageSquare className="h-3 w-3" />
-                      {post.comment_count || 0}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
     </main>
   )
 }

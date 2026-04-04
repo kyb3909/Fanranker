@@ -31,7 +31,6 @@ interface RawProfile {
   user_id: string
   nickname: string
   avatar_url: string | null
-  temperature?: number
 }
 
 interface RawEquippedTitle {
@@ -80,7 +79,6 @@ function transformPosts(
       communitySlug: post.community_slug,
       author: profile?.nickname || "익명",
       avatar: profile?.avatar_url || "/placeholder-user.jpg",
-      authorTemperature: profile?.temperature ?? 0,
       userId: post.user_id,
       timestamp: formatRelativeTime(new Date(post.created_at)),
       title: post.title,

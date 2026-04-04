@@ -32,7 +32,6 @@ import { FollowedCommunitiesSection } from "./settings/followed-communities-sect
 import { DeleteAccountSection } from "./settings/delete-account-section"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { UserProfileBadge } from "@/components/profile/user-profile-badge"
-import { getTemperatureStyle } from "@/lib/temperature"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 import Link from "@/components/ui/app-link"
@@ -68,7 +67,6 @@ interface Profile {
   favorite_team: string | null
   favorite_player: string | null
   mbti: string | null
-  temperature?: number
   is_journalist?: boolean
   is_expert?: boolean
   created_at?: string
@@ -140,7 +138,6 @@ export function MyProfileSettings() {
   const equippedTitles: EquippedTitleInfo[] = dashboardData?.equipped_titles ?? []
   const pixelArts: PixelArtInfo[] = dashboardData?.pixel_arts ?? []
   const recentPosts: PublicPost[] = dashboardData?.recent_posts ?? []
-  const temperature: number = dashboardData?.profile?.temperature ?? profile?.temperature ?? 36.5
 
   const totalPoints = boardPoints.reduce((sum, bp) => sum + bp.total_points, 0)
 
@@ -339,7 +336,7 @@ export function MyProfileSettings() {
           {/* ── 왼쪽 컬럼: 프로필 + 활동 포인트 ── */}
           <div className="space-y-4 lg:col-span-4">
             {/* 프로필 카드 */}
-            <Card className="overflow-hidden">
+            <Card className="gap-0 overflow-hidden py-0">
               <div className="from-primary/5 to-primary/10 bg-gradient-to-br p-6">
                 <div className="flex flex-col items-center text-center">
                   <Avatar className="ring-background mb-3 h-20 w-20 ring-2">
@@ -365,13 +362,7 @@ export function MyProfileSettings() {
                   )}
                 </div>
               </div>
-              <div className="border-border divide-border grid grid-cols-2 divide-x border-t">
-                <div className="flex flex-col items-center py-3">
-                  <span className="text-lg font-bold" style={getTemperatureStyle(temperature)}>
-                    {temperature.toFixed(1)}°
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">온도</span>
-                </div>
+              <div className="border-border border-t">
                 <div className="flex flex-col items-center py-3">
                   <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
                     {totalPoints.toLocaleString()}
@@ -395,7 +386,7 @@ export function MyProfileSettings() {
 
             {/* 활동 포인트 & 레벨 카드 */}
             {boardPoints.length > 0 && (
-              <Card className="overflow-hidden">
+              <Card className="gap-0 overflow-hidden py-0">
                 <div className="border-border flex items-center gap-2 border-b px-4 py-3">
                   <Trophy className="h-4 w-4 text-amber-500" />
                   <h3 className="text-sm font-semibold">활동 포인트 & 칭호</h3>
@@ -443,7 +434,7 @@ export function MyProfileSettings() {
 
             {/* 픽셀아트 컬렉션 카드 */}
             {pixelArts.length > 0 && (
-              <Card className="overflow-hidden">
+              <Card className="gap-0 overflow-hidden py-0">
                 <div className="border-border flex items-center gap-2 border-b px-4 py-3">
                   <ImageIcon className="text-primary h-4 w-4" />
                   <h3 className="text-sm font-semibold">픽셀아트 컬렉션</h3>
@@ -477,7 +468,7 @@ export function MyProfileSettings() {
 
           {/* ── 가운데 컬럼: 최근 작성글 ── */}
           <div className="space-y-4 lg:col-span-4">
-            <Card className="overflow-hidden">
+            <Card className="gap-0 overflow-hidden py-0">
               <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <div className="flex items-center gap-2">
                   <FileText className="text-primary h-4 w-4" />
@@ -528,7 +519,7 @@ export function MyProfileSettings() {
 
           {/* ── 오른쪽 컬럼: 계정 설정 ── */}
           <div className="space-y-4 lg:col-span-4">
-            <Card className="overflow-hidden">
+            <Card className="gap-0 overflow-hidden py-0">
               <div className="border-border flex items-center gap-2 border-b px-4 py-3">
                 <Settings className="text-primary h-4 w-4" />
                 <h3 className="text-sm font-semibold">계정 설정</h3>

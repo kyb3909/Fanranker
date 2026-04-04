@@ -6,7 +6,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
  * GET /api/profile/[userId]
  *
  * 공개 프로필 조회 - 비로그인도 접근 가능
- * 닉네임, 아바타, 온도, 기자/전문가 여부, 최근 작성글, 포인트/칭호/픽셀아트 반환
+ * 닉네임, 아바타, 기자/전문가 여부, 최근 작성글, 포인트/칭호/픽셀아트 반환
  */
 export async function GET(
   request: NextRequest,
@@ -20,9 +20,7 @@ export async function GET(
     // 프로필 기본 정보
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select(
-        "user_id, nickname, avatar_url, bio, temperature, is_journalist, is_expert, created_at"
-      )
+      .select("user_id, nickname, avatar_url, bio, is_journalist, is_expert, created_at")
       .eq("user_id", userId)
       .single()
 
@@ -102,7 +100,6 @@ export async function GET(
         nickname: profile.nickname,
         avatar_url: profile.avatar_url,
         bio: profile.bio,
-        temperature: profile.temperature,
         is_journalist: profile.is_journalist,
         is_expert: profile.is_expert ?? false,
         created_at: profile.created_at,

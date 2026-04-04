@@ -33,7 +33,6 @@ interface UserDetail {
     nickname: string
     avatar_url: string | null
     role: string
-    temperature: number
     is_expert: boolean
     is_artist: boolean
     created_at: string
@@ -132,6 +131,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
           type: adjustType,
           amount: parseInt(adjustAmount),
           reason: adjustReason,
+          idempotency_key: crypto.randomUUID(),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
@@ -201,8 +201,7 @@ export function UserDetailTabs({ userId }: { userId: string }) {
               </div>
               <p className="text-muted-foreground mt-1 text-sm">
                 ID: <code className="text-xs">{profile.user_id}</code>
-                {" · "}온도: {profile.temperature?.toFixed(1)}°{" · "}가입:{" "}
-                {new Date(profile.created_at).toLocaleDateString("ko-KR")}
+                {" · "}가입: {new Date(profile.created_at).toLocaleDateString("ko-KR")}
               </p>
             </div>
             <div className="flex items-center gap-2">

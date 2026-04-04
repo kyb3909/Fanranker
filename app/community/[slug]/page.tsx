@@ -92,10 +92,7 @@ async function fetchPosts(communitySlug: string, page: number = 1, flairId?: str
   // 2. 작성자 프로필 + 장착 칭호 조회
   const userIds = [...new Set(posts.map((p) => p.user_id))]
   const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("user_id, nickname, avatar_url, temperature")
-      .in("user_id", userIds),
+    supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
     supabase
       .from("user_equipped_titles")
       .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
@@ -130,7 +127,6 @@ async function fetchPosts(communitySlug: string, page: number = 1, flairId?: str
         profile: profile || null,
         author: profile?.nickname || "익명",
         avatar: profile?.avatar_url || "/placeholder-user.jpg",
-        authorTemperature: profile?.temperature ?? 0,
         userId: post.user_id,
         titleDisplay: equipped
           ? {

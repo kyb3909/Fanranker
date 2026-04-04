@@ -16,7 +16,6 @@ export interface Post {
   communitySlug?: string
   author: string
   avatar: string
-  authorTemperature?: number
   userId?: string
   timestamp: string
   title: string
