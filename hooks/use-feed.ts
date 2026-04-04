@@ -47,6 +47,12 @@ export interface PostsResponse {
   hasMore?: boolean
 }
 
+function createdAtToMs(value: Post["createdAt"]): number {
+  if (value == null) return 0
+  if (value instanceof Date) return value.getTime()
+  return new Date(value).getTime()
+}
+
 function transformPosts(
   fetchedPosts: RawPost[],
   profiles: RawProfile[],
@@ -104,6 +110,12 @@ export function useFeed(
 
   const slugsArray = useMemo(() => Array.from(followedCommunities), [followedCommunities])
 
+  // 홈 SSR initialFeed는 항상 온도순(hot) + 전체 게시판(또는 비로그인/팔로우 0과 동일한 쿼리)만 의미가 있다.
+  // 그 외(최신순·랜덤·팔로우 필터)에 동일 fallback을 쓰면 SWR이 재검증 없이 잘못된 순서를 유지한다.
+  const useServerHydratedFallback = Boolean(
+    initialData && sortBy === "hot" && (!isSignedIn || slugsArray.length === 0)
+  )
+
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PostsResponse | null) => {
       if (!followsLoaded) return null
@@ -127,9 +139,9 @@ export function useFeed(
     getKey,
     fetcher,
     {
-      fallbackData: initialData ? [initialData] : undefined,
+      fallbackData: useServerHydratedFallback && initialData ? [initialData] : undefined,
       revalidateOnFocus: false,
-      revalidateIfStale: !initialData,
+      revalidateIfStale: !useServerHydratedFallback,
       revalidateFirstPage: false,
       dedupingInterval: 10000,
     }
@@ -163,6 +175,11 @@ export function useFeed(
 
     if (sortBy === "random") {
       return [...dedupedPosts].sort(() => Math.random() - 0.5)
+    }
+    if (sortBy === "new") {
+      return [...dedupedPosts].sort(
+        (a, b) => createdAtToMs(b.createdAt) - createdAtToMs(a.createdAt)
+      )
     }
     return dedupedPosts
   }, [data, sortBy])

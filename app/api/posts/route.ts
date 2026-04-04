@@ -103,7 +103,6 @@ export async function GET(request: NextRequest) {
         `
         )
         .is("deleted_at", null)
-        .range(offset, offset + limit - 1)
 
       // 커뮤니티 필터링
       if (communitySlug) {
@@ -117,19 +116,25 @@ export async function GET(request: NextRequest) {
         q = q.eq("flair_id", flairId)
       }
 
-      // 정렬
+      // 정렬 (range 전에 order — postgrest-js 권장, 동일 created_at 시 id로 안정화)
       switch (sort) {
         case "hot":
-          q = q.order("temperature", { ascending: false, nullsFirst: false })
+          q = q
+            .order("temperature", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false })
           break
         case "comments":
-          q = q.order("comment_count", { ascending: false })
+          q = q
+            .order("comment_count", { ascending: false })
+            .order("created_at", { ascending: false })
           break
         case "new":
         default:
-          q = q.order("created_at", { ascending: false })
+          q = q.order("created_at", { ascending: false }).order("id", { ascending: false })
           break
       }
+
+      q = q.range(offset, offset + limit - 1)
 
       return q
     }
