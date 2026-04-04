@@ -11,6 +11,9 @@ const inactiveClass = "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
 const baseClass =
   "relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px]"
 
+/** 헤더 주요 메뉴에 게임 노출 여부 (미사용 시 false) */
+const SHOW_HEADER_GAME = false
+
 export const HeaderNav = memo(function HeaderNav() {
   const router = useRouter()
   const pathname = usePathname()
@@ -20,7 +23,6 @@ export const HeaderNav = memo(function HeaderNav() {
   const isFeed = pathname === "/" && view !== "prediction"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname === "/" && view === "prediction"
-  const isGames = pathname.startsWith("/games")
   const isStadium = pathname.startsWith("/stadium")
   const isShop = pathname.startsWith("/shop")
 
@@ -63,12 +65,16 @@ export const HeaderNav = memo(function HeaderNav() {
             스타디움
           </span>
         </Link>
-        <Link href="/games">
-          <span className={`${baseClass} ${isGames ? activeClass : inactiveClass}`}>
-            <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
-            게임
-          </span>
-        </Link>
+        {SHOW_HEADER_GAME && (
+          <Link href="/games">
+            <span
+              className={`${baseClass} ${pathname.startsWith("/games") ? activeClass : inactiveClass}`}
+            >
+              <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
+              게임
+            </span>
+          </Link>
+        )}
         <Link href="/shop">
           <span className={`${baseClass} ${isShop ? activeClass : inactiveClass}`}>
             <Sparkles className="h-[18px] w-[18px] shrink-0" />

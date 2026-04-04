@@ -4,16 +4,16 @@ import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
-const MAX_GRANT = 10000
-const MAX_DEDUCT = -1000
+const MAX_GRANT = 100000
+const MAX_DEDUCT = -100000
 
 const AdjustEconomySchema = z.object({
   type: z.enum(["token", "gold"]),
   amount: z
-    .number()
-    .max(MAX_GRANT, `1회 최대 지급 금액은 ${MAX_GRANT}입니다.`)
-    .min(MAX_DEDUCT, `1회 최대 차감 금액은 ${Math.abs(MAX_DEDUCT)}입니다.`),
-  reason: z.string().min(1),
+    .number({ invalid_type_error: "amount는 숫자여야 합니다." })
+    .max(MAX_GRANT, `1회 최대 지급 금액은 ${MAX_GRANT.toLocaleString()}입니다.`)
+    .min(MAX_DEDUCT, `1회 최대 차감 금액은 ${Math.abs(MAX_DEDUCT).toLocaleString()}입니다.`),
+  reason: z.string().min(1, "사유를 입력해주세요."),
   idempotency_key: z.string().uuid("멱등성 키는 UUID여야 합니다."),
 })
 
@@ -34,7 +34,11 @@ export async function POST(
       return apiBadRequest("잘못된 요청 본문입니다.")
     }
     const parsed = AdjustEconomySchema.safeParse(body)
-    if (!parsed.success) return apiBadRequest("type(token|gold), amount, reason이 필요합니다.")
+    if (!parsed.success) {
+      const firstIssue =
+        parsed.error.issues[0]?.message || "type(token|gold), amount, reason이 필요합니다."
+      return apiBadRequest(firstIssue)
+    }
     const { type, amount, reason, idempotency_key } = parsed.data
 
     // Idempotency check
@@ -57,11 +61,13 @@ export async function POST(
         .eq("user_id", userId)
         .maybeSingle()
 
+      const newBalance = (current?.token_balance ?? 0) + amount
+
       if (current) {
         const { error: updateErr } = await supabase
           .from("user_tokens")
           .update({
-            token_balance: current.token_balance + amount,
+            token_balance: newBalance,
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", userId)
@@ -79,7 +85,8 @@ export async function POST(
       const { error: txErr } = await supabase.from("token_transactions").insert({
         user_id: userId,
         amount,
-        type: amount > 0 ? "admin_grant" : "admin_deduct",
+        transaction_type: "admin_adjustment",
+        balance_after: Math.max(0, newBalance),
         description: reason,
         idempotency_key,
       })
@@ -91,11 +98,13 @@ export async function POST(
         .eq("user_id", userId)
         .maybeSingle()
 
+      const newBalance = (current?.gold_balance ?? 0) + amount
+
       if (current) {
         const { error: updateErr } = await supabase
           .from("user_gold")
           .update({
-            gold_balance: current.gold_balance + amount,
+            gold_balance: newBalance,
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", userId)
@@ -111,7 +120,8 @@ export async function POST(
       const { error: txErr } = await supabase.from("gold_transactions").insert({
         user_id: userId,
         amount,
-        type: amount > 0 ? "admin_grant" : "admin_deduct",
+        transaction_type: "admin_adjustment",
+        balance_after: Math.max(0, newBalance),
         description: reason,
         idempotency_key,
       })
