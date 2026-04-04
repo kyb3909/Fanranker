@@ -2,6 +2,16 @@
 
 import { useState } from "react"
 import { Check, ShoppingCart, Sparkles } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Sticker {
   id: string
@@ -24,13 +34,15 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
   const [buying, setBuying] = useState(false)
   const [justBought, setJustBought] = useState(false)
   const [error, setError] = useState("")
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const handleBuy = async () => {
+  const handleConfirmPurchase = async () => {
     if (isOwned || buying) return
     setBuying(true)
     setError("")
     const result = await onPurchase(sticker.id)
     setBuying(false)
+    setConfirmOpen(false)
     if (result.success) {
       setJustBought(true)
     } else if (result.error === "insufficient_points") {
@@ -82,7 +94,7 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
             </span>
           ) : (
             <button
-              onClick={handleBuy}
+              onClick={() => setConfirmOpen(true)}
               disabled={buying}
               className="flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white transition-all hover:shadow-sm disabled:opacity-50"
             >
@@ -99,6 +111,24 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
         </div>
         {error && <p className="mt-0.5 text-[10px] text-red-500">{error}</p>}
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스티커를 구매할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="text-foreground font-medium">{sticker.name}</span> 스티커를{" "}
+              {sticker.price}P에 구매합니다. 구매 후 포인트가 차감되며 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={buying}>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPurchase} disabled={buying}>
+              {buying ? "구매 중..." : `${sticker.price}P로 구매`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

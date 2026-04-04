@@ -59,9 +59,10 @@ async function fetchAllHomeData() {
     // 2) 카테고리 (CommunitySidebar용)
     Promise.resolve(
       supabase
-        .from("communities")
-        .select("slug, name, category, icon, post_count")
-        .order("post_count", { ascending: false })
+        .from("categories")
+        .select("id, slug, name, icon, sort_order, description, parent_slug")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
     )
       .then(({ data }) => data ?? [])
       .catch(() => [] as unknown[]),
