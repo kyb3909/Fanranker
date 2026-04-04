@@ -37,6 +37,20 @@ const nextConfig = {
         ],
       },
       {
+        // Cache feed/prediction APIs (short TTL, stale-while-revalidate)
+        source: '/api/feed/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=15, stale-while-revalidate=60' },
+        ],
+      },
+      {
+        // Cache standings/ranking APIs
+        source: '/api/(standings|ranking|betman/games)/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
+        ],
+      },
+      {
         // No cache for mutation/auth APIs
         source: '/api/(upload|payments|tokens|admin|cron|auth)/:path*',
         headers: [
@@ -102,19 +116,31 @@ const nextConfig = {
     optimizePackageImports: [
       'lucide-react',
       '@clerk/nextjs',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-dialog',
+      '@radix-ui/react-alert-dialog',
       '@radix-ui/react-avatar',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-tooltip',
-      '@radix-ui/react-slot',
       '@radix-ui/react-collapsible',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-label',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-toggle',
+      '@radix-ui/react-tooltip',
       'date-fns',
       'swr',
+      'recharts',
       '@tiptap/core',
       '@tiptap/react',
       '@tiptap/starter-kit',
+      '@tiptap/pm',
+      '@tiptap/extension-image',
+      '@tiptap/extension-placeholder',
+      '@tiptap/extension-text-align',
+      '@tiptap/extension-underline',
+      '@next/third-parties',
     ],
   },
 }

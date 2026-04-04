@@ -120,7 +120,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkErrorBoundary>
-      <ClerkProvider localization={koLocalization}>
+      <ClerkProvider localization={koLocalization} dynamic>
         <html lang="ko" className={notoSansKR.variable} suppressHydrationWarning>
           <head>
             {/* Google AdSense 계정 메타 태그 */}
@@ -131,21 +131,26 @@ export default function RootLayout({
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
             <meta name="apple-mobile-web-app-title" content="공놀이" />
-            {/* DNS Prefetch + Preconnect: 외부 리소스 사전 조회 */}
+            {/* Preconnect: 크리티컬 외부 리소스 (DNS+TCP+TLS 선연결) */}
+            <link
+              rel="preconnect"
+              href="https://ekysrlhdrapmsnrkytif.supabase.co"
+              crossOrigin="anonymous"
+            />
             <link rel="preconnect" href="https://clerk.gongnori.fan" crossOrigin="anonymous" />
             <link rel="preconnect" href="https://img.clerk.com" crossOrigin="anonymous" />
             <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+            {/* DNS Prefetch: 비크리티컬 외부 리소스 */}
             <link rel="dns-prefetch" href="https://i.ytimg.com" />
-            <link rel="dns-prefetch" href="https://ekysrlhdrapmsnrkytif.supabase.co" />
             <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
             <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
-            {/* Google AdSense: 5초 후 로드 (초기 렌더 성능 보호) */}
+            {/* Google AdSense: 유휴 시점 + 최소 5초 후 로드 (LCP 보호) */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
               <Script
                 id="adsense-delayed"
                 strategy="lazyOnload"
                 dangerouslySetInnerHTML={{
-                  __html: `setTimeout(function(){var s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}';document.head.appendChild(s)},5000)`,
+                  __html: `(function(){var l=false;function g(){if(l)return;l=true;var s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}';document.head.appendChild(s)}var t=setTimeout(g,8000);if('requestIdleCallback' in window){requestIdleCallback(function(){if(performance.now()>5000)g();else setTimeout(g,5000-performance.now())},{timeout:10000})}})()`,
                 }}
               />
             )}

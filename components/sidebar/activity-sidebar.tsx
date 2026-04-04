@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, memo, Fragment } from "react"
+import { useState, useEffect, useRef, memo, Fragment } from "react"
 import dynamic from "next/dynamic"
 import { MessageSquare, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
@@ -61,6 +61,25 @@ export const ActivitySidebar = memo(function ActivitySidebar({
   const { ref: stickyRef, stickyTop } = useStickySidebar()
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
+  const [standingsVisible, setStandingsVisible] = useState(false)
+  const standingsRef = useRef<HTMLDivElement>(null)
+
+  // 순위표 위젯: 뷰포트에 들어올 때만 로드 (초기 로드 부하 감소)
+  useEffect(() => {
+    const el = standingsRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStandingsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: "200px" }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // 최근 댓글이 달린 글 가져오기 (서버 프리페치 데이터 우선 사용, 60초 캐시)
   useEffect(() => {
@@ -152,8 +171,14 @@ export const ActivitySidebar = memo(function ActivitySidebar({
       {/* ===== 광고 플레이스홀더 ===== */}
       <AdPlaceholder variant="sidebar" />
 
-      {/* ===== 리그 순위표 위젯 ===== */}
-      <StandingsWidget />
+      {/* ===== 리그 순위표 위젯 (뷰포트 진입 시 로드) ===== */}
+      <div ref={standingsRef}>
+        {standingsVisible ? (
+          <StandingsWidget />
+        ) : (
+          <div className="bg-card border-border h-64 animate-pulse rounded-xl border" />
+        )}
+      </div>
     </div>
   )
 })
