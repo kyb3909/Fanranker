@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAnonClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { apiError } from "@/lib/api-error"
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const authError = verifyCronSecret(request)
     if (authError) return authError
 
-    const supabase = createAnonClient()
+    const supabase = createServiceRoleClient()
 
     // Get all user_ids that have token records
     const { data: users, error: fetchError } = await supabase.from("user_tokens").select("user_id")
