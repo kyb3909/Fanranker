@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         pin_x,
         pin_y,
         color,
+        stadium_name,
         team_stadiums (
           level,
           total_points,
