@@ -305,7 +305,36 @@ function wangIdx(vg: number[][], r: number, c: number): number {
   return vg[r][c] * 8 + vg[r][c + 1] * 4 + vg[r + 1][c] * 2 + vg[r + 1][c + 1]
 }
 
-// ─── Render terrain (2-pass: base then overlays) ───
+// ─── Craftpix tile coordinates (16x16 tiles in spritesheets) ───
+// ground_grasss.png (336x256): row/col in 16px grid
+const CX = {
+  // 잔디 바닥 타일 (ground_grasss.png 우하단 영역)
+  grass: [
+    { x: 0, y: 192 }, // 잔디 변형 1
+    { x: 16, y: 192 }, // 잔디 변형 2
+    { x: 32, y: 192 }, // 잔디 변형 3
+    { x: 0, y: 208 }, // 잔디 변형 4
+  ],
+  // 흙 바닥 (ground_grasss.png 상단)
+  dirt: { x: 80, y: 0 },
+  // 밝은 잔디
+  lightGrass: { x: 0, y: 128 },
+}
+
+// Water_coasts.png (272x576): 물/해안 타일
+const WX = {
+  // 깊은 바다 (단색 물 타일)
+  deepWater: { x: 0, y: 0 },
+  // 얕은 바다
+  shallowWater: { x: 16, y: 0 },
+}
+
+// 해시 기반 타일 변형 선택 (같은 지형이라도 약간씩 다른 타일)
+function tileVariant(r: number, c: number, count: number): number {
+  return (r * 73 + c * 137 + 7919) % count
+}
+
+// ─── Render terrain (3-pass: craftpix base → Wang transitions → object overlays) ───
 function renderTerrain(
   grid: number[][],
   layers: {
@@ -313,7 +342,13 @@ function renderTerrain(
     img: HTMLImageElement
     lookup: Map<number, { x: number; y: number }>
     vg: number[][]
-  }[]
+  }[],
+  craftpixImgs?: {
+    ground?: HTMLImageElement
+    water?: HTMLImageElement
+    trees?: HTMLImageElement
+    details?: HTMLImageElement
+  }
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas")
   canvas.width = MAP_PX
@@ -323,13 +358,71 @@ function renderTerrain(
   ctx.fillStyle = "#0c1e3a"
   ctx.fillRect(0, 0, MAP_PX, MAP_PX)
 
-  // PASS 1: Base layers (ocean depth + coastline + grass)
-  // These draw ALL cells including idx=0
+  // PASS 0: Craftpix base textures (바닥 채우기)
+  if (craftpixImgs) {
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID; c++) {
+        const terrain = grid[r][c]
+        const dx = c * TILE_PX
+        const dy = r * TILE_PX
+
+        if (terrain === T.DEEP || terrain === T.SHALLOW) {
+          // 바다: craftpix 물 타일
+          if (craftpixImgs.water) {
+            const src = terrain === T.DEEP ? WX.deepWater : WX.shallowWater
+            ctx.drawImage(craftpixImgs.water, src.x, src.y, 16, 16, dx, dy, TILE_PX, TILE_PX)
+          }
+        } else if (terrain === T.RIVER) {
+          // 강: 얕은 물
+          if (craftpixImgs.water) {
+            ctx.drawImage(
+              craftpixImgs.water,
+              WX.shallowWater.x,
+              WX.shallowWater.y,
+              16,
+              16,
+              dx,
+              dy,
+              TILE_PX,
+              TILE_PX
+            )
+          }
+        } else {
+          // 육지: craftpix 잔디 타일 (변형 적용)
+          if (craftpixImgs.ground) {
+            if (terrain === T.FARM || terrain === T.MOOR) {
+              // 농지/황무지: 흙 타일
+              ctx.drawImage(
+                craftpixImgs.ground,
+                CX.dirt.x,
+                CX.dirt.y,
+                16,
+                16,
+                dx,
+                dy,
+                TILE_PX,
+                TILE_PX
+              )
+            } else {
+              // 일반 잔디 (변형)
+              const v = tileVariant(r, c, CX.grass.length)
+              const src = CX.grass[v]
+              ctx.drawImage(craftpixImgs.ground, src.x, src.y, 16, 16, dx, dy, TILE_PX, TILE_PX)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // PASS 1: Wang base layers (ocean depth + coastline transitions)
   for (const layer of layers) {
     if (!layer.def.isBase) continue
     for (let r = 0; r < GRID; r++) {
       for (let c = 0; c < GRID; c++) {
         const idx = wangIdx(layer.vg, r, c)
+        if (craftpixImgs && idx === 0) continue // craftpix가 바닥을 채웠으면 빈 타일 스킵
+        if (craftpixImgs && idx === 15) continue // 완전 내부 타일도 스킵 (craftpix가 처리)
         const src = layer.lookup.get(idx)
         if (!src) continue
         ctx.drawImage(layer.img, src.x, src.y, 32, 32, c * TILE_PX, r * TILE_PX, TILE_PX, TILE_PX)
@@ -337,17 +430,13 @@ function renderTerrain(
     }
   }
 
-  // PASS 2: Feature overlays — ONLY draw pure feature tiles (no border transitions)
-  // Wang idx 15 = all 4 corners are "upper" = fully inside the feature
-  // This avoids mismatched border colors between tilesets
-  // The grass base underneath shows through naturally at edges
+  // PASS 2: Wang feature overlays (forest, mountain textures at edges)
   for (const layer of layers) {
     if (layer.def.isBase) continue
-    const fullTile = layer.lookup.get(15) // Pure feature tile (no grass border)
+    const fullTile = layer.lookup.get(15)
     if (!fullTile) continue
     for (let r = 0; r < GRID; r++) {
       for (let c = 0; c < GRID; c++) {
-        // Only draw if this cell IS the target terrain
         const cellTerrain = grid[r][c]
         if (!layer.def.targets.has(cellTerrain)) continue
         ctx.drawImage(
@@ -361,6 +450,72 @@ function renderTerrain(
           TILE_PX,
           TILE_PX
         )
+      }
+    }
+  }
+
+  // PASS 3: Craftpix object overlays (나무, 바위)
+  if (craftpixImgs?.trees) {
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID; c++) {
+        const terrain = grid[r][c]
+        const dx = c * TILE_PX
+        const dy = r * TILE_PX
+
+        if (terrain === T.FOREST || terrain === T.CONIFER) {
+          // 숲: 나무 스프라이트 (Trees_rocks.png에서 작은 나무)
+          // 나무는 크므로 일부 셀에만 배치 (밀도 조절)
+          if (tileVariant(r, c, 4) === 0) {
+            // 작은 나무 (Trees_rocks.png 상단, ~32x32 영역)
+            const treeX = tileVariant(r, c, 3) * 64
+            ctx.drawImage(
+              craftpixImgs.trees,
+              treeX,
+              0,
+              64,
+              64,
+              dx - TILE_PX,
+              dy - TILE_PX * 2,
+              TILE_PX * 3,
+              TILE_PX * 3
+            )
+          }
+        } else if (terrain === T.MOUNTAIN || terrain === T.HILL) {
+          // 산/언덕: 바위 스프라이트
+          if (tileVariant(r, c, 5) === 0) {
+            const rockX = 0
+            const rockY = 256 + tileVariant(r, c, 2) * 64
+            ctx.drawImage(
+              craftpixImgs.trees,
+              rockX,
+              rockY,
+              64,
+              64,
+              dx - TILE_PX / 2,
+              dy - TILE_PX,
+              TILE_PX * 2,
+              TILE_PX * 2
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // PASS 4: Craftpix detail overlays (꽃, 풀)
+  if (craftpixImgs?.details) {
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID; c++) {
+        const terrain = grid[r][c]
+        if (terrain !== T.GRASS && terrain !== T.DARK_GRASS) continue
+        // 드물게 꽃/풀 배치
+        if (tileVariant(r, c, 12) !== 0) continue
+        const dx = c * TILE_PX
+        const dy = r * TILE_PX
+        const detailIdx = tileVariant(r + 1, c + 1, 6)
+        const detailX = (detailIdx % 6) * 32
+        const detailY = 0
+        ctx.drawImage(craftpixImgs.details, detailX, detailY, 32, 32, dx, dy, TILE_PX, TILE_PX)
       }
     }
   }
@@ -482,10 +637,20 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
     }
     for (const d of DIRS) spriteKeys[`c-${d}`] = `/map/character/${d}.png`
 
+    // Craftpix 스프라이트시트 추가 로드
+    const craftpixKeys: Record<string, string> = {
+      "cx-ground": "/map/craftpix/PNG/ground_grasss.png",
+      "cx-water": "/map/craftpix/PNG/Water_coasts.png",
+      "cx-trees": "/map/craftpix/PNG/Trees_rocks.png",
+      "cx-details": "/map/craftpix/PNG/Details.png",
+    }
+
     let count = 0
     const tsImgs: Record<string, HTMLImageElement> = {}
     const tsMetas: Record<string, TsMeta> = {}
-    const total = 1 + TILESETS.length * 2 + Object.keys(spriteKeys).length
+    const cxImgs: Record<string, HTMLImageElement> = {}
+    const total =
+      1 + TILESETS.length * 2 + Object.keys(spriteKeys).length + Object.keys(craftpixKeys).length
 
     const checkDone = () => {
       if (++count < total) return
@@ -509,7 +674,15 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
         layers.push({ def, img, lookup: buildLookup(meta), vg: buildVertexGrid(grid, def.targets) })
       }
 
-      terrainRef.current = renderTerrain(grid, layers)
+      // Craftpix 이미지를 renderTerrain에 전달
+      const craftpixImgs = {
+        ground: cxImgs["cx-ground"],
+        water: cxImgs["cx-water"],
+        trees: cxImgs["cx-trees"],
+        details: cxImgs["cx-details"],
+      }
+
+      terrainRef.current = renderTerrain(grid, layers, craftpixImgs)
       setLoaded(true)
     }
 
@@ -553,6 +726,16 @@ export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
       const img = new Image()
       img.onload = img.onerror = () => {
         if (img.complete && img.naturalWidth > 0) imgs.current[key] = img
+        checkDone()
+      }
+      img.src = src
+    }
+
+    // Load craftpix spritesheets
+    for (const [key, src] of Object.entries(craftpixKeys)) {
+      const img = new Image()
+      img.onload = img.onerror = () => {
+        if (img.complete && img.naturalWidth > 0) cxImgs[key] = img
         checkDone()
       }
       img.src = src
