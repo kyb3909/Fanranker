@@ -368,113 +368,30 @@ function renderTerrain(
   return canvas
 }
 
-// ─── Stadiums ───
-interface Stadium {
+// ─── Stadiums (props 기반) ───
+export interface StadiumPin {
+  team_id: string
   name: string
-  team: string
+  team_name: string
+  pin_x: number // 0~100%
+  pin_y: number // 0~100%
+  color: string
+  level: number
+  is_open: boolean
+}
+
+interface MappedStadium extends StadiumPin {
   x: number
   y: number
-  size: "large" | "medium"
-  capacity: string
 }
-const STADIUMS_RAW = [
-  {
-    name: "Celtic Park",
-    team: "Celtic",
-    x: 670,
-    y: 550,
-    size: "large" as const,
-    capacity: "60,411",
-  },
-  { name: "Ibrox", team: "Rangers", x: 620, y: 570, size: "medium" as const, capacity: "50,817" },
-  {
-    name: "St James' Park",
-    team: "Newcastle",
-    x: 830,
-    y: 780,
-    size: "large" as const,
-    capacity: "52,305",
-  },
-  {
-    name: "Anfield",
-    team: "Liverpool",
-    x: 680,
-    y: 930,
-    size: "large" as const,
-    capacity: "61,276",
-  },
-  {
-    name: "Old Trafford",
-    team: "Man United",
-    x: 730,
-    y: 920,
-    size: "large" as const,
-    capacity: "74,310",
-  },
-  { name: "Etihad", team: "Man City", x: 760, y: 940, size: "large" as const, capacity: "53,400" },
-  {
-    name: "Elland Road",
-    team: "Leeds",
-    x: 820,
-    y: 910,
-    size: "medium" as const,
-    capacity: "37,890",
-  },
-  {
-    name: "Villa Park",
-    team: "Aston Villa",
-    x: 770,
-    y: 1060,
-    size: "medium" as const,
-    capacity: "42,640",
-  },
-  {
-    name: "Principality Stadium",
-    team: "Wales",
-    x: 600,
-    y: 1130,
-    size: "large" as const,
-    capacity: "73,931",
-  },
-  { name: "Wembley", team: "England", x: 870, y: 1210, size: "large" as const, capacity: "90,000" },
-  {
-    name: "Emirates",
-    team: "Arsenal",
-    x: 900,
-    y: 1230,
-    size: "large" as const,
-    capacity: "60,704",
-  },
-  {
-    name: "Stamford Bridge",
-    team: "Chelsea",
-    x: 880,
-    y: 1260,
-    size: "medium" as const,
-    capacity: "40,341",
-  },
-  {
-    name: "Tottenham Stadium",
-    team: "Spurs",
-    x: 920,
-    y: 1200,
-    size: "large" as const,
-    capacity: "62,850",
-  },
-  {
-    name: "St Mary's",
-    team: "Southampton",
-    x: 790,
-    y: 1340,
-    size: "medium" as const,
-    capacity: "32,384",
-  },
-]
-const STADIUMS: Stadium[] = STADIUMS_RAW.map((s) => ({
-  ...s,
-  x: (s.x / SRC_SIZE) * MAP_PX,
-  y: (s.y / SRC_SIZE) * MAP_PX,
-}))
+
+function mapStadiums(pins: StadiumPin[]): MappedStadium[] {
+  return pins.map((p) => ({
+    ...p,
+    x: (p.pin_x / 100) * MAP_PX,
+    y: (p.pin_y / 100) * MAP_PX,
+  }))
+}
 
 // ─── Directions ───
 const DIRS = [
@@ -512,19 +429,36 @@ interface GS {
 // ═══════════════════════════════
 // Component
 // ═══════════════════════════════
-export function ImageMap() {
+interface ImageMapProps {
+  stadiums: StadiumPin[]
+  onStadiumClick?: (teamId: string, isOpen: boolean) => void
+}
+
+export function ImageMap({ stadiums, onStadiumClick }: ImageMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [loaded, setLoaded] = useState(false)
-  const [nearby, setNearby] = useState<Stadium | null>(null)
+  const [nearby, setNearby] = useState<MappedStadium | null>(null)
   const terrainRef = useRef<HTMLCanvasElement | null>(null)
   const gridRef = useRef<number[][] | null>(null)
   const imgs = useRef<Record<string, HTMLImageElement>>({})
+  const mappedRef = useRef<MappedStadium[]>([])
+
+  // 경기장 매핑 (props 변경 시 갱신)
+  useEffect(() => {
+    mappedRef.current = mapStadiums(stadiums)
+  }, [stadiums])
+
+  // 첫 번째 OPEN 경기장 위치로 초기 카메라, 없으면 맵 중앙
+  const firstOpen = stadiums.find((s) => s.is_open)
+  const startX = firstOpen ? (firstOpen.pin_x / 100) * MAP_PX : MAP_PX / 2
+  const startY = firstOpen ? (firstOpen.pin_y / 100) * MAP_PX : MAP_PX / 2
+
   const gs = useRef<GS>({
-    px: (870 / SRC_SIZE) * MAP_PX,
-    py: (1210 / SRC_SIZE) * MAP_PX,
+    px: startX,
+    py: startY,
     dir: "south",
-    camX: (870 / SRC_SIZE) * MAP_PX,
-    camY: (1210 / SRC_SIZE) * MAP_PX,
+    camX: startX,
+    camY: startY,
     keys: new Set(),
     zoom: 1.8,
   })
@@ -706,9 +640,9 @@ export function ImageMap() {
       s.camY += (s.py - s.camY) * 0.08
       if (++tick > 15) {
         tick = 0
-        let cl: Stadium | null = null,
+        let cl: MappedStadium | null = null,
           md = 60
-        for (const st of STADIUMS) {
+        for (const st of mappedRef.current) {
           const d = Math.sqrt((st.x - s.px) ** 2 + (st.y - s.py) ** 2)
           if (d < md) {
             md = d
@@ -729,36 +663,51 @@ export function ImageMap() {
       ctx.imageSmoothingEnabled = false
       if (terrainRef.current) ctx.drawImage(terrainRef.current, 0, 0)
 
-      // Stadiums
-      for (const st of STADIUMS) {
-        const ik =
-          st.name === "Wembley"
-            ? "stadium-wembley"
-            : [
-                  "Anfield",
-                  "Old Trafford",
-                  "St James' Park",
-                  "Villa Park",
-                  "Emirates",
-                  "Principality Stadium",
-                ].includes(st.name)
-              ? "stadium-red"
-              : "stadium-blue"
-        const img = imgs.current[ik]
-        const sz = st.size === "large" ? 36 : 28
-        if (img) ctx.drawImage(img, st.x - sz / 2, st.y - sz + 6, sz, sz)
+      // Stadiums (DB 기반)
+      for (const st of mappedRef.current) {
+        const sz = st.is_open ? 36 : 28
+
+        if (st.is_open) {
+          // OPEN 경기장: 빛나는 효과 + 아이콘
+          const pulse = 0.15 * Math.sin(Date.now() / 400)
+          ctx.globalAlpha = 0.3 + pulse
+          ctx.fillStyle = st.color === "#FFFFFF" ? "#FFD700" : st.color
+          ctx.beginPath()
+          ctx.arc(st.x, st.y - sz / 2, sz * 0.8, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.globalAlpha = 1
+
+          const img = imgs.current["stadium-wembley"] || imgs.current["stadium-red"]
+          if (img) ctx.drawImage(img, st.x - sz / 2, st.y - sz + 6, sz, sz)
+        } else {
+          // 부지: 회색 반투명
+          ctx.globalAlpha = 0.5
+          ctx.fillStyle = "#666"
+          ctx.beginPath()
+          ctx.arc(st.x, st.y - 8, 10, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = "#8B7355"
+          ctx.fillRect(st.x - 8, st.y - 6, 16, 12)
+          ctx.globalAlpha = 1
+        }
+
+        // 라벨
         ctx.imageSmoothingEnabled = true
         ctx.font = "bold 8px sans-serif"
         ctx.textAlign = "center"
         ctx.strokeStyle = "#000"
         ctx.lineWidth = 2.5
-        ctx.strokeText(st.name, st.x, st.y - sz)
-        ctx.fillStyle = "#fff"
-        ctx.fillText(st.name, st.x, st.y - sz)
+        const label = st.name
+        ctx.strokeText(label, st.x, st.y - sz - 2)
+        ctx.fillStyle = st.is_open ? "#fff" : "#aaa"
+        ctx.fillText(label, st.x, st.y - sz - 2)
+
+        // 팀명 / 상태
         ctx.font = "7px sans-serif"
-        ctx.fillStyle = "#ffd700"
-        ctx.strokeText(st.team, st.x, st.y - sz + 10)
-        ctx.fillText(st.team, st.x, st.y - sz + 10)
+        ctx.fillStyle = st.is_open ? "#ffd700" : "#888"
+        const sub = st.is_open ? st.team_name : "부지"
+        ctx.strokeText(sub, st.x, st.y - sz + 8)
+        ctx.fillText(sub, st.x, st.y - sz + 8)
         ctx.imageSmoothingEnabled = false
       }
 
@@ -787,10 +736,16 @@ export function ImageMap() {
       ctx.beginPath()
       ctx.arc(mx + (s.px / MAP_PX) * mw, my + (s.py / MAP_PX) * mh, 3, 0, Math.PI * 2)
       ctx.fill()
-      ctx.fillStyle = "#f44"
-      for (const st of STADIUMS) {
+      for (const st of mappedRef.current) {
+        ctx.fillStyle = st.is_open ? "#ffd700" : "#888"
         ctx.beginPath()
-        ctx.arc(mx + (st.x / MAP_PX) * mw, my + (st.y / MAP_PX) * mh, 1.5, 0, Math.PI * 2)
+        ctx.arc(
+          mx + (st.x / MAP_PX) * mw,
+          my + (st.y / MAP_PX) * mh,
+          st.is_open ? 2.5 : 1.5,
+          0,
+          Math.PI * 2
+        )
         ctx.fill()
       }
 
@@ -813,19 +768,28 @@ export function ImageMap() {
       )}
       <canvas ref={canvasRef} className="block" />
       <div className="absolute top-4 left-4 rounded-xl bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
-        <h2 className="text-lg font-bold">UK Stadium Explorer</h2>
-        <p className="mt-1 text-xs opacity-60">WASD / Arrows · Scroll to zoom</p>
+        <h2 className="flex items-center gap-2 text-lg font-bold">
+          <span>🏴󠁧󠁢󠁥󠁮󠁧󠁿</span> England
+        </h2>
+        <p className="mt-1 text-xs opacity-60">
+          WASD / Arrows · Scroll to zoom · Click stadium to enter
+        </p>
       </div>
       {nearby && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-xl border border-yellow-500/50 bg-black/80 px-6 py-4 text-center text-white backdrop-blur-sm">
-          <div className="text-xs font-semibold tracking-wider text-yellow-400 uppercase">
-            Stadium Nearby
+        <button
+          onClick={() => onStadiumClick?.(nearby.team_id, nearby.is_open)}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-xl border border-yellow-500/50 bg-black/80 px-6 py-4 text-center text-white backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
+        >
+          <div
+            className={`text-xs font-semibold tracking-wider uppercase ${nearby.is_open ? "text-yellow-400" : "text-gray-400"}`}
+          >
+            {nearby.is_open ? "Stadium Nearby — Enter" : "Construction Site"}
           </div>
           <div className="mt-1 text-xl font-bold">{nearby.name}</div>
           <div className="text-sm opacity-80">
-            {nearby.team} — Capacity: {nearby.capacity}
+            {nearby.team_name} {nearby.is_open ? "" : "· 건설 대기 중"}
           </div>
-        </div>
+        </button>
       )}
     </div>
   )
