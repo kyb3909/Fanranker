@@ -146,9 +146,7 @@ export function BettingSlipCard({
             <span className="text-lg">{SPORT_ICONS[slip.sport] || "🎯"}</span>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-semibold ${sportColor.text}`}>
-                  베트맨 {slip.sport}
-                </span>
+                <span className={`text-sm font-semibold ${sportColor.text}`}>{slip.sport}</span>
                 {slip.roundInfo && (
                   <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
                     {slip.roundInfo.year}년 {slip.roundInfo.round}회차
@@ -162,7 +160,7 @@ export function BettingSlipCard({
                     <span>·</span>
                     <span>{slip.ballsUsed}볼 사용</span>
                     <span>·</span>
-                    <span>배당 {slip.totalOdds.toFixed(2)}배</span>
+                    <span>배점 {slip.totalOdds.toFixed(2)}배</span>
                   </>
                 )}
               </div>
@@ -220,7 +218,7 @@ export function BettingSlipCard({
           <Lock className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
           <p className="text-muted-foreground text-sm font-medium">구매 후 확인 가능</p>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            배당률, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
+            배점, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
           </p>
           {lockedContent && <div className="mt-3">{lockedContent}</div>}
         </div>
@@ -352,7 +350,7 @@ export function BettingSlipCard({
               </div>
               <div className="text-right">
                 <div className="text-muted-foreground mb-0.5 text-xs">
-                  총 배당 {slip.totalOdds.toFixed(2)}배
+                  총 배점 {slip.totalOdds.toFixed(2)}배
                 </div>
                 <div
                   className={`text-sm font-bold ${

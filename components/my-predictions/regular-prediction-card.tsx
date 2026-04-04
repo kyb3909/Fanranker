@@ -47,7 +47,7 @@ export function RegularPredictionCard({ prediction }: { prediction: RegularPredi
                         : prediction.predictedValue}
             </span>
             <span className="text-muted-foreground text-xs">
-              배당 {prediction.oddsAtPrediction.toFixed(2)}
+              배점 {prediction.oddsAtPrediction.toFixed(2)}
             </span>
             <span className="text-muted-foreground text-xs">{prediction.amount}볼 사용</span>
           </div>
@@ -71,7 +71,7 @@ export function RegularPredictionCard({ prediction }: { prediction: RegularPredi
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-primary">
+            <div className="text-primary flex items-center gap-1">
               <XCircle className="h-4 w-4" />
               <span className="text-xs font-medium">미적중</span>
             </div>

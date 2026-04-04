@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       const batch = users.slice(i, i + BATCH_SIZE)
       const results = await Promise.allSettled(
         batch.map((user) =>
-          supabase.rpc("ensure_daily_token_reset", {
+          supabase.rpc("reset_user_daily_tokens", {
             target_user_id: user.user_id,
           })
         )

@@ -275,12 +275,15 @@ export function PredictionActivityCard({
             )}
           </div>
           <p className="text-muted-foreground mt-0.5 text-[13px]">
-            {sportLabel} {activity.prediction_count}경기 예측 등록
-            {activity.round && (
-              <span className="ml-1">
-                ({activity.round.year}년 {activity.round.round}회차)
-              </span>
-            )}
+            {sportLabel} {activity.prediction_count}경기 조합
+            <span className="ml-1">
+              (
+              {new Date(activity.created_at).toLocaleDateString("ko-KR", {
+                month: "long",
+                day: "numeric",
+              })}
+              )
+            </span>
           </p>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
             {formatRelativeTime(new Date(activity.created_at))}

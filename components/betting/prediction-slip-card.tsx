@@ -205,7 +205,7 @@ export function PredictionSlipCard({
             <Lock className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
             <p className="text-muted-foreground text-sm font-medium">구매 후 확인 가능</p>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              배당률, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
+              배점, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
             </p>
             {lockedContent && <div className="mt-3">{lockedContent}</div>}
           </div>
@@ -291,7 +291,7 @@ export function PredictionSlipCard({
 
             <div className="mt-3 flex items-center justify-between border-t pt-3">
               <div className="text-muted-foreground text-xs">
-                배팅금: {stake.toLocaleString()}볼 | 총배당: {totalOdds}배
+                배팅금: {stake.toLocaleString()}볼 | 총배점: {totalOdds}배
               </div>
               <div
                 className={`text-sm font-semibold ${

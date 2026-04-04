@@ -55,7 +55,7 @@ export function BallBalance() {
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-center">
           <p className="font-medium">오늘 사용 가능한 볼</p>
-          <p className="text-background mt-0.5 text-xs">매일 23:00 10볼 충전</p>
+          <p className="text-background mt-0.5 text-xs">매일 23:00 10볼로 리셋</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

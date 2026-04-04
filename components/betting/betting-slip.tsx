@@ -271,7 +271,7 @@ export function BettingSlip({
                 {/* Odds & expected return */}
                 <div className="bg-muted/30 space-y-2 rounded-lg p-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">총 배당률</span>
+                    <span className="text-muted-foreground">총 배점</span>
                     <span className="text-primary font-bold">{totalOdds.toFixed(2)}배</span>
                   </div>
                   <div className="flex items-center justify-between">

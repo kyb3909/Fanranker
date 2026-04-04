@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js"
 import * as Sentry from "@sentry/nextjs"
 import { batchUpdateUserStats } from "./stats"
+import { syncStadiumContributions } from "@/lib/stadium/contribution-sync"
 
 /**
  * 환불 재시도 (3회) + 실패 시 pending_refunds 기록
@@ -278,6 +279,13 @@ export async function settlePredictions(
   const statsResult = await batchUpdateUserStats(supabase, affectedUserIds, 10)
   result.statsUpdated = statsResult.updated
   result.errors.push(...statsResult.errors)
+
+  // 4. 경기장 기여 동기화 (stats 갱신 후 실행, 실패해도 정산 결과에 영향 없음)
+  try {
+    await syncStadiumContributions(supabase, affectedUserIds)
+  } catch (err) {
+    Sentry.captureException(err, { extra: { context: "stadium_contribution_sync" } })
+  }
 
   return result
 }

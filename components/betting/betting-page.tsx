@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useBettingMatches } from "@/hooks/use-betting-matches"
 import { useBettingSlip } from "@/hooks/use-betting-slip"
 import { useBettingRankings } from "@/hooks/use-betting-rankings"
@@ -14,8 +15,17 @@ import { MypageTab } from "./mypage-tab"
 import { BettingSlip } from "./betting-slip"
 import { BettingAlertDialog } from "./betting-alert-dialog"
 
+const VALID_TABS = new Set(["betting", "ranking", "stats", "mypage"] as const)
+type BettingTabType = "betting" | "ranking" | "stats" | "mypage"
+
 export default function BettingPage() {
-  const [activeTab, setActiveTab] = useState<"betting" | "ranking" | "stats" | "mypage">("betting")
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState<BettingTabType>(
+    initialTab && VALID_TABS.has(initialTab as BettingTabType)
+      ? (initialTab as BettingTabType)
+      : "betting"
+  )
   const [myPageTab, setMyPageTab] = useState<"predictions" | "stats" | "gold" | "profile">(
     "predictions"
   )
