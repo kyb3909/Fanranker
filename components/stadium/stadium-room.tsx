@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
-import { ArrowLeft, Users, Hammer, Trophy } from "lucide-react"
+import { ArrowLeft, Users, Hammer, Trophy, LogIn } from "lucide-react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Link from "@/components/ui/app-link"
 import { fetcher } from "@/lib/swr"
-import { StadiumBackground } from "@/components/stadium/stadium-background"
+import { useStadiumChat } from "@/hooks/use-stadium-chat"
+import { StadiumCanvas } from "@/components/stadium/stadium-canvas"
+import { ChatOverlay } from "@/components/stadium/chat-overlay"
 import { ConstructionGauge } from "@/components/stadium/construction-gauge"
 import { InvestDialog } from "@/components/stadium/invest-dialog"
 
@@ -51,6 +53,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
   const [investOpen, setInvestOpen] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
 
   const { data, mutate } = useSWR<StadiumData>(`/api/stadiums/${teamId}`, fetcher, {
     fallbackData: initialData,
@@ -60,13 +63,52 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
   const stadiumData = data ?? initialData
   const { team, stadium, level_info, recent_contributors } = stadiumData
 
-  // 승부예측 수익 잔액 (투자 가능 포인트) 조회
+  // 실시간 채팅 (로그인 시에만 연결)
+  const chat = useStadiumChat(isSignedIn ? teamId : "")
+
+  // 승부예측 수익 잔액
   const { data: earningsData, mutate: mutateEarnings } = useSWR(
     isSignedIn ? "/api/stadiums/my-earnings" : null,
     fetcher,
     { revalidateOnFocus: false }
   )
   const availablePoints = earningsData?.available ?? 0
+
+  // 키보드 이동
+  useEffect(() => {
+    if (!isSignedIn) return
+    const keys = new Set<string>()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      keys.add(e.key)
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keys.delete(e.key)
+    }
+
+    let raf: number
+    const tick = () => {
+      let dx = 0
+      let dy = 0
+      if (keys.has("ArrowLeft") || keys.has("a")) dx -= 1
+      if (keys.has("ArrowRight") || keys.has("d")) dx += 1
+      if (keys.has("ArrowUp") || keys.has("w")) dy -= 1
+      if (keys.has("ArrowDown") || keys.has("s")) dy += 1
+      if (dx !== 0 || dy !== 0) chat.moveByKeyboard(dx, dy)
+      raf = requestAnimationFrame(tick)
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    raf = requestAnimationFrame(tick)
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+      cancelAnimationFrame(raf)
+    }
+  }, [isSignedIn, chat.moveByKeyboard])
 
   const handleInvestClick = () => {
     if (!isSignedIn) {
@@ -77,112 +119,122 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
   }
 
   const handleInvestSuccess = () => {
-    mutate() // 경기장 데이터 새로고침
-    mutateEarnings() // 수익 잔액 갱신
+    mutate()
+    mutateEarnings()
   }
 
-  return (
-    <main id="main-content" className="mx-auto max-w-[600px] px-4 py-6" tabIndex={-1}>
-      {/* 뒤로가기 */}
-      <Link
-        href="/stadium"
-        className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        스타디움
-      </Link>
+  const handleClickMove = useCallback(
+    (x: number, y: number) => {
+      if (isSignedIn) chat.moveToPosition(x, y)
+    },
+    [isSignedIn, chat.moveToPosition]
+  )
 
-      {/* 팀 헤더 */}
-      <div className="mb-4 flex items-center gap-3">
+  return (
+    <main id="main-content" className="flex h-[100dvh] flex-col" tabIndex={-1}>
+      {/* 상단 바 */}
+      <div className="bg-background/80 z-10 flex items-center gap-2 border-b px-3 py-2 backdrop-blur-sm">
+        <Link href="/stadium" className="text-muted-foreground hover:text-foreground p-1">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-lg"
-          style={{
-            backgroundColor: team.color + "20",
-            borderColor: team.color + "40",
-            borderWidth: 1,
-          }}
+          className="flex h-7 w-7 items-center justify-center rounded text-sm"
+          style={{ backgroundColor: team.color + "20" }}
         >
-          <Trophy className="h-5 w-5" style={{ color: team.color }} />
+          <Trophy className="h-3.5 w-3.5" style={{ color: team.color }} />
         </div>
-        <div>
-          <h1 className="text-lg font-bold">{team.team_name}</h1>
-          <p className="text-muted-foreground text-xs">{team.city}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold">{team.team_name}</p>
+          <p className="text-muted-foreground text-[10px]">
+            Lv.{stadium.level} {level_info.name}
+          </p>
         </div>
+        <button
+          onClick={() => setShowInfo(!showInfo)}
+          className="text-muted-foreground hover:text-foreground rounded-full p-1.5 text-xs"
+        >
+          <Hammer className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* 경기장 배경 */}
-      <StadiumBackground level={stadium.level} teamColor={team.color} />
-
-      {/* 건설 게이지 */}
-      <Card className="mt-3 p-4">
-        <ConstructionGauge
-          level={stadium.level}
-          levelName={level_info.name}
-          totalPoints={stadium.total_points}
-          currentRequired={level_info.current_required}
-          nextLevelPoints={level_info.next_level_points}
-          progressPct={level_info.progress_pct}
-          color={team.color}
-        />
-
-        {/* 투자 버튼 */}
-        <div className="mt-4 flex items-center gap-3">
-          <Button onClick={handleInvestClick} className="flex-1" size="lg">
-            <Hammer className="mr-2 h-4 w-4" />
-            벽돌 투자하기
-          </Button>
-          {isSignedIn && (
-            <div className="text-right text-xs">
-              <p className="text-muted-foreground">투자 가능</p>
-              <p className="font-bold tabular-nums">{availablePoints.toLocaleString()} pt</p>
+      {/* 건설 정보 패널 (토글) */}
+      {showInfo && (
+        <div className="bg-background space-y-3 border-b px-4 py-3">
+          <ConstructionGauge
+            level={stadium.level}
+            levelName={level_info.name}
+            totalPoints={stadium.total_points}
+            currentRequired={level_info.current_required}
+            nextLevelPoints={level_info.next_level_points}
+            progressPct={level_info.progress_pct}
+            color={team.color}
+          />
+          <div className="flex items-center gap-2">
+            <Button onClick={handleInvestClick} size="sm" className="flex-1">
+              <Hammer className="mr-1.5 h-3.5 w-3.5" />
+              투자하기
+            </Button>
+            {isSignedIn && (
+              <span className="text-muted-foreground text-[11px] tabular-nums">
+                가용 {availablePoints.toLocaleString()}pt
+              </span>
+            )}
+          </div>
+          {/* 기여자 Top 5 */}
+          {recent_contributors.length > 0 && (
+            <div className="flex items-center gap-1 text-[11px]">
+              <Users className="text-muted-foreground h-3 w-3" />
+              <span className="text-muted-foreground">{stadium.fan_count}명 참여 ·</span>
+              {recent_contributors.slice(0, 3).map((c, i) => (
+                <span key={c.user_id} className="text-muted-foreground">
+                  {i > 0 && ", "}
+                  {c.nickname}
+                </span>
+              ))}
             </div>
           )}
         </div>
-      </Card>
+      )}
 
-      {/* 팬/기여자 정보 */}
-      <Card className="mt-3 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-sm font-bold">
-            <Users className="h-4 w-4" />
-            건설 기여자
-          </h2>
-          <span className="text-muted-foreground text-xs">총 {stadium.fan_count}명 참여</span>
-        </div>
+      {/* 메인: 경기장 Canvas + 채팅 오버레이 */}
+      <div className="relative flex-1 overflow-hidden">
+        <StadiumCanvas
+          level={stadium.level}
+          teamColor={team.color}
+          sport={team.sport}
+          occupants={chat.occupants}
+          myUserId={chat.userId}
+          onClickMove={handleClickMove}
+        />
 
-        {recent_contributors.length > 0 ? (
-          <div className="space-y-2">
-            {recent_contributors.map((contributor, idx) => (
-              <div key={contributor.user_id} className="flex items-center gap-2.5">
-                <span className="text-muted-foreground w-5 text-center text-xs font-bold">
-                  {idx + 1}
-                </span>
-                <div className="bg-muted flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full">
-                  {contributor.avatar_url ? (
-                    <img
-                      src={contributor.avatar_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-muted-foreground text-[10px] font-bold">
-                      {contributor.nickname.charAt(0)}
-                    </span>
-                  )}
-                </div>
-                <span className="min-w-0 flex-1 truncate text-sm">{contributor.nickname}</span>
-                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                  {contributor.points.toLocaleString()} pt
-                </span>
-              </div>
-            ))}
+        {/* 비로그인 시 입장 안내 */}
+        {!isSignedIn && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <Card className="mx-4 max-w-sm p-6 text-center">
+              <Trophy className="text-primary mx-auto mb-3 h-10 w-10" />
+              <h2 className="mb-1 text-lg font-bold">{team.team_name} 경기장</h2>
+              <p className="text-muted-foreground mb-4 text-sm">
+                로그인하면 채팅에 참여하고 경기장 건설에 투자할 수 있습니다.
+              </p>
+              <Button onClick={() => openSignIn()} className="w-full">
+                <LogIn className="mr-2 h-4 w-4" />
+                로그인하고 입장하기
+              </Button>
+            </Card>
           </div>
-        ) : (
-          <p className="text-muted-foreground py-4 text-center text-sm">
-            아직 기여자가 없습니다. 첫 번째 투자자가 되어보세요!
-          </p>
         )}
-      </Card>
+
+        {/* 채팅 오버레이 (로그인 시) */}
+        {isSignedIn && (
+          <ChatOverlay
+            messages={chat.messages}
+            onlineCount={chat.onlineCount}
+            isConnected={chat.isConnected}
+            onSend={chat.sendMessage}
+            myUserId={chat.userId}
+          />
+        )}
+      </div>
 
       {/* 투자 다이얼로그 */}
       <InvestDialog
