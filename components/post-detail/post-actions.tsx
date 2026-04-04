@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
-import { ArrowUp, ArrowDown, MessageCircle, Bookmark } from "lucide-react"
+import { MessageCircle, Bookmark } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { ShareMenu } from "@/components/share-menu"
+import { VoteButtons } from "@/components/vote-buttons"
 
 interface PostActionsProps {
   postId: string | number
@@ -24,8 +25,8 @@ export function PostActions({
 }: PostActionsProps) {
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
-  const [upvotes, setUpvotes] = useState(initialUpvotes)
-  const [isUpvoted, setIsUpvoted] = useState(initialIsUpvoted)
+  const [voteCount, setVoteCount] = useState(initialUpvotes)
+  const [myVote, setMyVote] = useState<"up" | "down" | null>(initialIsUpvoted ? "up" : null)
   const [isBookmarked, setIsBookmarked] = useState(false)
 
   // 사용자의 투표 상태 확인 (로그인 시에만)
@@ -37,7 +38,7 @@ export function PostActions({
         const response = await fetch(`/api/posts/${postId}/vote`)
         if (response.ok) {
           const { voted, voteType } = await response.json()
-          setIsUpvoted(voted && voteType === "up")
+          setMyVote(voted ? voteType : null)
         }
       } catch {
         // Silent fail - vote status check is non-critical
@@ -66,46 +67,43 @@ export function PostActions({
     checkBookmarkStatus()
   }, [postId, isSignedIn])
 
-  const handleUpvote = async () => {
+  const handleVote = async (type: "up" | "down") => {
     if (!isSignedIn) {
       openSignIn()
       return
     }
 
+    const prevVote = myVote
+    const prevCount = voteCount
+
+    // 낙관적 업데이트
+    if (myVote === type) {
+      setMyVote(null)
+      setVoteCount((prev) => (type === "up" ? prev - 1 : prev + 1))
+    } else {
+      const delta = type === "up" ? 1 : -1
+      const reverseDelta = prevVote ? (prevVote === "up" ? -1 : 1) : 0
+      setMyVote(type)
+      setVoteCount((prev) => prev + delta + reverseDelta)
+    }
+
     try {
       const response = await fetch(`/api/posts/${postId}/vote`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ type: "up" }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "투표 처리에 실패했습니다.")
-      }
-
-      const { action, voteType, voteCount } = await response.json()
-
-      // 로컬 상태 업데이트 (서버에서 받은 정확한 vote_count 사용)
-      if (voteCount !== undefined) {
-        setUpvotes(voteCount)
-      } else {
-        // fallback: 로컬 계산
-        if (action === "deleted") {
-          setUpvotes(Math.max(0, upvotes - 1))
-        } else {
-          setUpvotes(isUpvoted ? upvotes : upvotes + 1)
-        }
-      }
-
-      setIsUpvoted(action !== "deleted" && voteType === "up")
-    } catch (error) {
+      if (!response.ok) throw new Error()
+      const data = await response.json()
+      setVoteCount(data.voteCount)
+      setMyVote(data.voteType)
+    } catch {
+      setMyVote(prevVote)
+      setVoteCount(prevCount)
       toast({
         variant: "destructive",
         title: "오류",
-        description: error instanceof Error ? error.message : "투표 처리에 실패했습니다.",
+        description: "투표 처리에 실패했습니다.",
       })
     }
   }
@@ -143,28 +141,7 @@ export function PostActions({
   return (
     <div className="mt-4 flex items-center gap-2">
       {/* Upvote/Downvote */}
-      <div className="bg-secondary flex items-center gap-1 rounded-full px-1 py-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-8 w-8 rounded-full ${isUpvoted ? "text-primary" : "text-muted-foreground"}`}
-          onClick={handleUpvote}
-          aria-label="추천"
-        >
-          <ArrowUp className="h-5 w-5" />
-        </Button>
-        <span className="text-foreground min-w-[2rem] text-center text-sm font-semibold">
-          {upvotes}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground h-8 w-8 rounded-full"
-          aria-label="비추천"
-        >
-          <ArrowDown className="h-5 w-5" />
-        </Button>
-      </div>
+      <VoteButtons voteCount={voteCount} myVote={myVote} onVote={handleVote} size="md" />
 
       {/* Comments */}
       <Button

@@ -1,9 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ArrowUp, ArrowDown, MessageCircle, Bookmark } from "lucide-react"
+import { MessageCircle, Bookmark } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { ShareMenu } from "@/components/share-menu"
+import { VoteButtons } from "@/components/vote-buttons"
 
 export interface PostCardFooterProps {
   postId: number | string
@@ -35,29 +36,7 @@ export function PostCardFooter({
   return (
     <div className="border-border/40 mt-3 flex items-center gap-4 border-t pt-3">
       {/* 투표 */}
-      <div className="flex items-center gap-0.5">
-        <button
-          className={`hover:bg-muted rounded-full p-1.5 transition-colors ${myVote === "up" ? "text-primary" : "text-muted-foreground"}`}
-          onClick={() => onVote("up")}
-          aria-label="추천"
-          aria-pressed={myVote === "up"}
-        >
-          <ArrowUp className="h-4 w-4" />
-        </button>
-        <span
-          className={`min-w-[20px] text-center text-[12px] font-semibold tabular-nums ${voteCount > 0 ? "text-primary" : voteCount < 0 ? "text-destructive" : "text-muted-foreground"}`}
-        >
-          {voteCount}
-        </span>
-        <button
-          className={`hover:bg-muted rounded-full p-1.5 transition-colors ${myVote === "down" ? "text-destructive" : "text-muted-foreground"}`}
-          onClick={() => onVote("down")}
-          aria-label="비추천"
-          aria-pressed={myVote === "down"}
-        >
-          <ArrowDown className="h-4 w-4" />
-        </button>
-      </div>
+      <VoteButtons voteCount={voteCount} myVote={myVote} onVote={onVote} size="sm" />
 
       {/* 댓글 */}
       <Link
