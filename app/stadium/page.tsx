@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Landmark, Users, ChevronRight } from "lucide-react"
+import Link from "@/components/ui/app-link"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import {
@@ -147,64 +148,63 @@ export default function StadiumPage() {
                 : 100
 
             return (
-              <Card
-                key={team.team_id}
-                className="group hover:bg-muted/50 cursor-pointer p-3.5 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  {/* 팀 컬러 + 이모지 */}
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
-                    style={{
-                      backgroundColor: team.color + "20",
-                      borderColor: team.color + "40",
-                      borderWidth: 1,
-                    }}
-                  >
-                    {levelInfo.emoji}
-                  </div>
-
-                  {/* 팀 정보 */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-bold">{team.team_name}</span>
-                      <Badge variant="outline" className="shrink-0 text-[10px]">
-                        Lv.{team.stadium.level}
-                      </Badge>
+              <Link key={team.team_id} href={`/stadium/${team.team_id}`}>
+                <Card className="group hover:bg-muted/50 cursor-pointer p-3.5 transition-colors">
+                  <div className="flex items-center gap-3">
+                    {/* 팀 컬러 + 이모지 */}
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
+                      style={{
+                        backgroundColor: team.color + "20",
+                        borderColor: team.color + "40",
+                        borderWidth: 1,
+                      }}
+                    >
+                      {levelInfo.emoji}
                     </div>
-                    <p className="text-muted-foreground text-xs">
-                      {levelInfo.nameKo} · {team.city}
-                    </p>
 
-                    {/* 프로그레스 바 */}
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${progressPct}%`,
-                            backgroundColor: team.color || "hsl(var(--primary))",
-                          }}
-                        />
+                    {/* 팀 정보 */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-bold">{team.team_name}</span>
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          Lv.{team.stadium.level}
+                        </Badge>
                       </div>
-                      <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
-                        {progressPct}%
-                      </span>
-                    </div>
-                  </div>
+                      <p className="text-muted-foreground text-xs">
+                        {levelInfo.nameKo} · {team.city}
+                      </p>
 
-                  {/* 팬 수 */}
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                      <Users className="h-3 w-3" />
-                      <span className="tabular-nums">
-                        {team.stadium.fan_count.toLocaleString()}
-                      </span>
+                      {/* 프로그레스 바 */}
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${progressPct}%`,
+                              backgroundColor: team.color || "hsl(var(--primary))",
+                            }}
+                          />
+                        </div>
+                        <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
+                          {progressPct}%
+                        </span>
+                      </div>
                     </div>
-                    <ChevronRight className="text-muted-foreground/40 group-hover:text-foreground h-4 w-4 transition-colors" />
+
+                    {/* 팬 수 */}
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                        <Users className="h-3 w-3" />
+                        <span className="tabular-nums">
+                          {team.stadium.fan_count.toLocaleString()}
+                        </span>
+                      </div>
+                      <ChevronRight className="text-muted-foreground/40 group-hover:text-foreground h-4 w-4 transition-colors" />
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             )
           })}
         </div>
