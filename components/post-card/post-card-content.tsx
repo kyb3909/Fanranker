@@ -10,7 +10,7 @@ import type { TipTapNode } from "@/components/post-card"
 
 /** 임베드 URL 패턴 (YouTube, Instagram, X/Twitter) */
 const EMBED_URL_RE =
-  /(?:youtube\.com\/watch|youtu\.be\/|instagram\.com\/(?:p|reel)\/|(?:twitter|x)\.com\/\w+\/status)/i
+  /(?:youtube\.com\/(?:watch|shorts\/|embed\/)|youtu\.be\/|instagram\.com\/(?:p|reel)\/|(?:twitter|x)\.com\/\w+\/status)/i
 
 function isMediaUrl(text: string): boolean {
   const trimmed = text.trim()
