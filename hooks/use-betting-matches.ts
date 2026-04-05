@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import useSWR from "swr"
 import { getMsUntilReset } from "@/lib/betman/daily-round"
 import type { TodayInfo, GroupedMatch } from "@/components/betting/betting-types"
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+import { fetcher } from "@/lib/swr"
 
 export function useBettingMatches() {
   const [sportFilter, setSportFilterRaw] = useState<"all" | "축구" | "야구" | "농구" | "배구">(
