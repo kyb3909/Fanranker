@@ -483,7 +483,7 @@ function XInlineContent({ url }: { url: string }) {
   const { data, isLoading } = useSWR<XOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}`,
     oembedFetcher,
-    { dedupingInterval: 60_000, revalidateOnFocus: false }
+    { dedupingInterval: 600_000, revalidateOnFocus: false }
   )
 
   if (isLoading) {
@@ -686,7 +686,7 @@ function InstagramInlineContent({ url }: { url: string }) {
   const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
     oembedFetcher,
-    { dedupingInterval: 60_000, revalidateOnFocus: false }
+    { dedupingInterval: 600_000, revalidateOnFocus: false }
   )
   const safeUrl = normalizedUrl.replace(/["<>]/g, "")
   const embedHtml =

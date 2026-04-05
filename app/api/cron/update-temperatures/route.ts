@@ -22,8 +22,8 @@ export async function POST(request: Request) {
   const { data, error } = await supabase.rpc("update_active_post_temperatures")
 
   if (error) {
-    console.error("Temperature update failed:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Temperature update failed:", error.message)
+    return NextResponse.json({ error: "온도 업데이트에 실패했습니다." }, { status: 500 })
   }
 
   return NextResponse.json({ updated: data, timestamp: new Date().toISOString() })

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createServerAnonClient } from "@/lib/supabase"
+import { apiError } from "@/lib/api-error"
 
 export async function GET() {
   const supabase = createServerAnonClient()
@@ -11,7 +12,7 @@ export async function GET() {
     .order("sort_order", { ascending: true })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return apiError("카테고리를 불러오지 못했습니다.", 500, error)
   }
 
   const res = NextResponse.json({ categories: data })

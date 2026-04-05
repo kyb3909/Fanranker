@@ -123,7 +123,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return apiError("게시글 수정에 실패했습니다.", 500, error)
     }
     return NextResponse.json(data)
   } catch (error) {
@@ -159,7 +159,7 @@ export async function DELETE(
       .eq("id", id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return apiError("게시글 삭제에 실패했습니다.", 500, error)
     }
     return NextResponse.json({ success: true })
   } catch (error) {
