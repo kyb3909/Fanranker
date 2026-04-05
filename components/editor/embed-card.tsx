@@ -55,21 +55,25 @@ export function EmbedCard({
   // YouTube가 아닌 경우: html prop이 없으면 oEmbed API에서 자동 fetch
   useEffect(() => {
     if (youtubeVideoId || htmlProp || fetchedHtml || fetchedData) return
+    const abortController = new AbortController()
     setIsLoading(true)
     const apiUrl =
       provider === "x"
         ? `/api/oembed?url=${encodeURIComponent(url)}`
         : `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
 
-    fetch(apiUrl)
+    fetch(apiUrl, { signal: abortController.signal })
       .then((r) => (r.ok ? r.json().catch(() => null) : null))
       .then((data) => {
-        if (!data) return
+        if (abortController.signal.aborted || !data) return
         if (provider === "x") setFetchedData(data)
         if (data.html) setFetchedHtml(data.html)
       })
       .catch(() => {})
-      .finally(() => setIsLoading(false))
+      .finally(() => {
+        if (!abortController.signal.aborted) setIsLoading(false)
+      })
+    return () => abortController.abort()
   }, [url, htmlProp, fetchedHtml, fetchedData, youtubeVideoId, provider])
 
   // YouTube: 직접 iframe
@@ -80,6 +84,7 @@ export function EmbedCard({
           <div className="relative aspect-video w-full bg-black">
             <iframe
               src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
+              title={title || "YouTube video"}
               className="h-full w-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen

@@ -39,7 +39,14 @@ async function proxyMedia(request: NextRequest, method: "GET" | "HEAD") {
         "User-Agent": "Mozilla/5.0 (compatible; CommunityMediaProxy/1.0)",
       },
       redirect: "follow",
+      signal: AbortSignal.timeout(15000),
     })
+
+    // 50MB 초과 응답 차단
+    const contentLength = upstream.headers.get("content-length")
+    if (contentLength && parseInt(contentLength, 10) > 50 * 1024 * 1024) {
+      return NextResponse.json({ error: "파일이 너무 큽니다." }, { status: 413 })
+    }
 
     const headers = new Headers()
     const passHeaders = [

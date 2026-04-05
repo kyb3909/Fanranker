@@ -306,7 +306,9 @@ function FeedImageCarousel({
 }) {
   const [current, setCurrent] = useState(0)
   const total = imageSources.length
-  const currentSrc = imageSources[current]
+  // imageSources 변경 시 인덱스 보정
+  const safeIndex = current >= total ? 0 : current
+  const currentSrc = imageSources[safeIndex]
 
   const prev = useCallback(
     (e: React.MouseEvent) => {
@@ -332,8 +334,8 @@ function FeedImageCarousel({
         <Link href={`/post/${postId}`} className="block">
           <FeedImageFrame
             src={currentSrc}
-            alt={title || `Post image ${current + 1}`}
-            priority={priority && current === 0}
+            alt={title || `Post image ${safeIndex + 1}`}
+            priority={priority && safeIndex === 0}
           />
         </Link>
 
@@ -353,7 +355,7 @@ function FeedImageCarousel({
         </button>
 
         <div className="absolute right-3 bottom-3 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
-          {current + 1} / {total}
+          {safeIndex + 1} / {total}
         </div>
       </div>
     </div>
@@ -403,6 +405,7 @@ function YouTubeInlinePlayer({
         {playing ? (
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+            title={title || "YouTube video"}
             className="absolute inset-0 h-full w-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -546,7 +549,7 @@ function XInlineContent({ url }: { url: string }) {
           ) : (
             <div className="bg-muted-foreground/30 h-5 w-5 rounded-full" />
           )}
-          <span className="text-foreground text-sm font-medium">{data.author_name}</span>
+          <span className="text-foreground text-sm font-medium">{data.author_name || "X"}</span>
           <XIcon className="fill-foreground ml-auto h-4 w-4 opacity-30" />
         </div>
         {data.title && (
@@ -565,12 +568,21 @@ function XVideoPlayer({
   media: { type: "video"; url: string; thumbnail_url?: string }
 }) {
   const [playing, setPlaying] = useState(false)
+  const [videoError, setVideoError] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const handlePause = useCallback(() => {
     videoRef.current?.pause()
   }, [])
   const visRef = useVisibility(handlePause)
+
+  if (videoError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-black/90 text-sm text-white/60">
+        동영상을 재생할 수 없습니다
+      </div>
+    )
+  }
 
   return (
     <div ref={visRef} className="h-full w-full">
@@ -582,6 +594,7 @@ function XVideoPlayer({
           controls
           playsInline
           className="h-full w-full object-contain"
+          onError={() => setVideoError(true)}
         />
       ) : (
         <button onClick={() => setPlaying(true)} className="group block h-full w-full">
@@ -667,9 +680,7 @@ function LazyInstagramPreview({ url }: { url: string }) {
 }
 
 function InstagramInlineContent({ url }: { url: string }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+  const normalizedUrl = url.startsWith("https") ? url : `https://${url.replace(/^http:\/\//, "")}`
 
   // blockquote HTML: oEmbed에서 가져오거나, 실패 시 URL로 직접 생성
   const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
@@ -698,7 +709,6 @@ function InstagramInlineContent({ url }: { url: string }) {
   return (
     <div className="relative overflow-hidden rounded-lg">
       <div
-        ref={containerRef}
         className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
         dangerouslySetInnerHTML={{ __html: embedHtml }}
       />

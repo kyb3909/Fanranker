@@ -100,12 +100,13 @@ async function fetchYouTubeOEmbed(
   const normalizedUrl = normalizeYouTubeUrl(url)
   const oembedUrl = `${OEMBED_ENDPOINTS.youtube}?url=${encodeURIComponent(normalizedUrl)}&format=json`
 
-  const response = await fetch(oembedUrl)
+  const response = await fetch(oembedUrl, { signal: AbortSignal.timeout(5000) })
   if (!response.ok) {
     throw new Error(`YouTube oEmbed failed: ${response.statusText}`)
   }
 
-  const data = await response.json()
+  const data = await response.json().catch(() => null)
+  if (!data) throw new Error("YouTube oEmbed returned invalid JSON")
 
   return {
     provider: "youtube",
@@ -209,6 +210,7 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
   try {
     const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
       headers: { "User-Agent": "FanRanker/1.0" },
+      signal: AbortSignal.timeout(5000),
     })
     if (res.ok) {
       const data = await res.json()
