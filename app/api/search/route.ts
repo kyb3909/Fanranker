@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
       return apiBadRequest("검색어는 100자 이하여야 합니다.")
     }
 
-    const searchQuery = query.trim()
+    // ilike 와일드카드 문자 이스케이프 (%와 _는 SQL LIKE의 특수문자)
+    const searchQuery = query.trim().replace(/[%_\\]/g, "\\$&")
 
     let postsQuery = supabase
       .from("posts")
