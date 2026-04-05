@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef, memo } from "react"
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import useSWR from "swr"
-import { Play, ChevronLeft, ChevronRight } from "lucide-react"
+import { Play, ChevronLeft, ChevronRight, ImageOff } from "lucide-react"
 import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
 import type { TipTapNode } from "@/components/post-card"
 
@@ -118,24 +118,7 @@ export const PostCardContent = memo(function PostCardContent({
         {hasSingleImage && displayImage && (
           <Link href={`/post/${postId}`} className="mt-0.5 hidden shrink-0 sm:block">
             <div className="bg-muted h-[84px] w-[120px] overflow-hidden rounded-lg transition-opacity hover:opacity-90">
-              {canUseOptimizedFeedImage(displayImage) ? (
-                <Image
-                  src={displayImage}
-                  alt={title || "Post image"}
-                  width={120}
-                  height={84}
-                  className="h-full w-full object-cover"
-                  sizes="120px"
-                />
-              ) : (
-                <img
-                  src={displayImage}
-                  alt={title || "Post image"}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              )}
+              <FeedSideThumbnail src={displayImage} alt={title || "Post image"} />
             </div>
           </Link>
         )}
@@ -229,9 +212,56 @@ function useVisibility(onHidden: () => void) {
   return ref
 }
 
+/* ── 사이드 썸네일 (데스크톱) ── */
+
+function FeedSideThumbnail({ src, alt }: { src: string; alt: string }) {
+  const [error, setError] = useState(false)
+
+  if (error) {
+    return (
+      <div className="bg-muted flex h-full w-full items-center justify-center">
+        <ImageOff className="text-muted-foreground/40 h-5 w-5" />
+      </div>
+    )
+  }
+
+  return canUseOptimizedFeedImage(src) ? (
+    <Image
+      src={src}
+      alt={alt}
+      width={120}
+      height={84}
+      className="h-full w-full object-cover"
+      sizes="120px"
+      onError={() => setError(true)}
+    />
+  ) : (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full object-cover"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setError(true)}
+    />
+  )
+}
+
 /* ── 통일 미디어 프레임 (이미지) ── */
 
 function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; priority: boolean }) {
+  const [error, setError] = useState(false)
+
+  if (error) {
+    return (
+      <div className="bg-muted relative w-full overflow-hidden rounded-lg">
+        <div className="text-muted-foreground/50 flex min-h-[120px] w-full items-center justify-center">
+          <ImageOff className="h-8 w-8" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-muted relative w-full overflow-hidden rounded-lg">
       <div className="flex max-h-[400px] min-h-[200px] w-full items-center justify-center transition-opacity hover:opacity-95">
@@ -244,6 +274,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
             className="h-auto max-h-[400px] w-full object-contain"
             priority={priority}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
+            onError={() => setError(true)}
           />
         ) : (
           <img
@@ -252,6 +283,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
             className="h-auto max-h-[400px] w-full object-contain"
             loading={priority ? "eager" : "lazy"}
             referrerPolicy="no-referrer"
+            onError={() => setError(true)}
           />
         )}
       </div>
