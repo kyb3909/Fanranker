@@ -9,9 +9,8 @@ import { Card } from "@/components/ui/card"
 import Link from "@/components/ui/app-link"
 import { fetcher } from "@/lib/swr"
 import { useStadiumChat } from "@/hooks/use-stadium-chat"
-import { StadiumCanvas } from "@/components/stadium/stadium-canvas"
+import { StadiumView } from "@/components/stadium/stadium-view"
 import { ChatOverlay } from "@/components/stadium/chat-overlay"
-import { ConstructionGauge } from "@/components/stadium/construction-gauge"
 import { InvestDialog } from "@/components/stadium/invest-dialog"
 
 interface StadiumData {
@@ -53,7 +52,6 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
   const [investOpen, setInvestOpen] = useState(false)
-  const [showInfo, setShowInfo] = useState(false)
 
   const { data, mutate } = useSWR<StadiumData>(`/api/stadiums/${teamId}`, fetcher, {
     fallbackData: initialData,
@@ -132,76 +130,58 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
 
   return (
     <main id="main-content" className="flex h-[100dvh] flex-col" tabIndex={-1}>
-      {/* 상단 바 */}
-      <div className="bg-background/80 z-10 flex items-center gap-2 border-b px-3 py-2 backdrop-blur-sm">
-        <Link href="/stadium" className="text-muted-foreground hover:text-foreground p-1">
-          <ArrowLeft className="h-5 w-5" />
+      {/* 상단 바 — 컴팩트 1줄 */}
+      <div className="bg-background/80 z-10 flex items-center gap-2 border-b px-3 py-1.5 backdrop-blur-sm">
+        <Link href="/stadium" className="text-muted-foreground hover:text-foreground shrink-0 p-1">
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div
-          className="flex h-7 w-7 items-center justify-center rounded text-sm"
-          style={{ backgroundColor: team.color + "20" }}
-        >
-          <Trophy className="h-3.5 w-3.5" style={{ color: team.color }} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{team.team_name}</p>
-          <p className="text-muted-foreground text-[10px]">
-            Lv.{stadium.level} {level_info.name}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowInfo(!showInfo)}
-          className="text-muted-foreground hover:text-foreground rounded-full p-1.5 text-xs"
-        >
-          <Hammer className="h-4 w-4" />
-        </button>
-      </div>
 
-      {/* 건설 정보 패널 (토글) */}
-      {showInfo && (
-        <div className="bg-background space-y-3 border-b px-4 py-3">
-          <ConstructionGauge
-            level={stadium.level}
-            levelName={level_info.name}
-            totalPoints={stadium.total_points}
-            currentRequired={level_info.current_required}
-            nextLevelPoints={level_info.next_level_points}
-            progressPct={level_info.progress_pct}
-            color={team.color}
-          />
-          <div className="flex items-center gap-2">
-            <Button onClick={handleInvestClick} size="sm" className="flex-1">
-              <Hammer className="mr-1.5 h-3.5 w-3.5" />
-              투자하기
-            </Button>
-            {isSignedIn && (
-              <span className="text-muted-foreground text-[11px] tabular-nums">
-                가용 {availablePoints.toLocaleString()}pt
-              </span>
-            )}
+        {/* 팀 + 레벨 */}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <div
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded"
+            style={{ backgroundColor: team.color + "20" }}
+          >
+            <Trophy className="h-3 w-3" style={{ color: team.color }} />
           </div>
-          {/* 기여자 Top 5 */}
-          {recent_contributors.length > 0 && (
-            <div className="flex items-center gap-1 text-[11px]">
-              <Users className="text-muted-foreground h-3 w-3" />
-              <span className="text-muted-foreground">{stadium.fan_count}명 참여 ·</span>
-              {recent_contributors.slice(0, 3).map((c, i) => (
-                <span key={c.user_id} className="text-muted-foreground">
-                  {i > 0 && ", "}
-                  {c.nickname}
-                </span>
-              ))}
-            </div>
-          )}
+          <span className="truncate text-sm font-bold">{team.team_short_name}</span>
+          <span className="text-muted-foreground shrink-0 text-[10px]">Lv.{stadium.level}</span>
         </div>
-      )}
+
+        {/* 게이지 바 (인라인) */}
+        <div className="mx-1 h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${level_info.progress_pct}%`,
+              backgroundColor: team.color,
+            }}
+          />
+        </div>
+
+        {/* 참여자 수 + 투자 버튼 */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-muted-foreground text-[10px] tabular-nums">
+            <Users className="mr-0.5 inline h-3 w-3" />
+            {stadium.fan_count}
+          </span>
+          <Button
+            onClick={handleInvestClick}
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+          >
+            <Hammer className="mr-1 h-3 w-3" />
+            투자
+          </Button>
+        </div>
+      </div>
 
       {/* 메인: 경기장 Canvas + 채팅 오버레이 */}
       <div className="relative flex-1 overflow-hidden">
-        <StadiumCanvas
+        <StadiumView
           level={stadium.level}
           teamColor={team.color}
-          sport={team.sport}
           occupants={chat.occupants}
           myUserId={chat.userId}
           onClickMove={handleClickMove}

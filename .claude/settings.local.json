@@ -77,7 +77,9 @@
       "Bash(taskkill //F //IM node.exe)",
       "WebFetch(domain:assetstore.unity.com)",
       "Bash(cp \"D:/Projects/새 폴더/adding\\(test\\)/community/Gemini_Generated_Image_9zed7o9zed7o9zed.png\" \"D:/Projects/새 폴더/adding\\(test\\)/community/public/map/uk-base.png\")",
-      "Bash(identify \"D:/Projects/새 폴더/adding\\(test\\)/community/public/map/uk-base.png\")"
+      "Bash(identify \"D:/Projects/새 폴더/adding\\(test\\)/community/public/map/uk-base.png\")",
+      "Bash(rm:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

@@ -185,8 +185,10 @@ export function StadiumCanvas({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const w = canvas.width
-    const h = canvas.height
+    // ctx.scale(2,2)가 적용되어 있으므로 논리적 크기(CSS 픽셀) 사용
+    const dpr = window.devicePixelRatio || 2
+    const w = canvas.width / dpr
+    const h = canvas.height / dpr
     const colors = LEVEL_COLORS[level] || LEVEL_COLORS[1]
 
     // 배경: 하늘
@@ -230,12 +232,13 @@ export function StadiumCanvas({
 
     const observer = new ResizeObserver(() => {
       const rect = container.getBoundingClientRect()
-      canvas.width = rect.width * 2 // 2x for retina
-      canvas.height = rect.height * 2
+      const dpr = window.devicePixelRatio || 2
+      canvas.width = rect.width * dpr
+      canvas.height = rect.height * dpr
       canvas.style.width = `${rect.width}px`
       canvas.style.height = `${rect.height}px`
       const ctx = canvas.getContext("2d")
-      if (ctx) ctx.scale(2, 2)
+      if (ctx) ctx.scale(dpr, dpr)
       render()
     })
 
