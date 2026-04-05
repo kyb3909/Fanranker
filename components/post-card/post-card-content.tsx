@@ -398,39 +398,47 @@ function YouTubeInlinePlayer({
   if (!videoId) return null
 
   return (
-    <div ref={visRef} className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-      {playing ? (
-        <iframe
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
-          className="absolute inset-0 h-full w-full border-0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      ) : (
-        <button onClick={handlePlay} className="group block h-full w-full">
-          {thumb && (
-            <Image
-              src={thumb}
-              alt={title || "YouTube"}
-              fill
-              className="object-cover"
-              priority={priority}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
-            />
-          )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
-            <div className="flex h-[48px] w-[68px] items-center justify-center rounded-xl bg-red-600/90 shadow-lg transition-opacity group-hover:bg-red-600">
-              <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
+    <div className="border-border overflow-hidden rounded-lg border">
+      <div ref={visRef} className="relative aspect-video w-full bg-black">
+        {playing ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+            className="absolute inset-0 h-full w-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <button onClick={handlePlay} className="group block h-full w-full">
+            {thumb && (
+              <Image
+                src={thumb}
+                alt={title || "YouTube"}
+                fill
+                className="object-cover"
+                priority={priority}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
+              />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600/90 shadow-lg transition-transform group-hover:scale-110">
+                <Play className="ml-0.5 h-5 w-5 text-white" fill="white" />
+              </div>
             </div>
-          </div>
-          {/* YouTube 뱃지 */}
-          <div className="absolute bottom-2 left-2 z-10">
-            <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-              <YoutubeIcon className="h-3.5 w-3.5" />
-              <span>YouTube</span>
+            {/* YouTube 뱃지 */}
+            <div className="absolute bottom-2 left-2 z-10">
+              <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                <YoutubeIcon className="h-3.5 w-3.5" />
+                <span>YouTube</span>
+              </div>
             </div>
-          </div>
-        </button>
+          </button>
+        )}
+      </div>
+      {/* 타이틀 영역 — X 임베드와 동일한 하단 구조 */}
+      {title && (
+        <div className="bg-card px-3 py-2.5">
+          <p className="text-foreground line-clamp-2 text-sm leading-snug font-medium">{title}</p>
+        </div>
       )}
     </div>
   )
@@ -508,7 +516,9 @@ function XInlineContent({ url }: { url: string }) {
       )}
 
       {/* 텍스트 영역 */}
-      <div className="bg-card px-3 py-2.5">
+      <div
+        className={`bg-card px-3 py-2.5 ${!firstMedia ? "border-l-foreground/20 border-l-[3px]" : ""}`}
+      >
         <div className="flex items-center gap-2">
           {data.author_avatar ? (
             <img src={data.author_avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
@@ -516,20 +526,12 @@ function XInlineContent({ url }: { url: string }) {
             <div className="bg-muted-foreground/30 h-5 w-5 rounded-full" />
           )}
           <span className="text-foreground text-sm font-medium">{data.author_name}</span>
-          {!firstMedia && <XIcon className="fill-foreground ml-auto h-4 w-4 opacity-40" />}
+          <XIcon className="fill-foreground ml-auto h-4 w-4 opacity-30" />
         </div>
         {data.title && (
-          <p className="text-foreground/80 mt-1.5 line-clamp-3 text-sm leading-relaxed">
+          <p className="text-foreground/80 mt-1.5 line-clamp-4 text-sm leading-relaxed">
             {data.title}
           </p>
-        )}
-
-        {/* 미디어 없는 텍스트 트윗: X 아이콘 표시 */}
-        {!firstMedia && (
-          <div className="mt-1.5 flex items-center gap-1">
-            <XIcon className="text-muted-foreground/50 h-3.5 w-3.5" />
-            <span className="text-muted-foreground/50 text-xs">X</span>
-          </div>
         )}
       </div>
     </div>
@@ -569,9 +571,9 @@ function XVideoPlayer({
               className="absolute inset-0 h-full w-full object-cover"
             />
           )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-            <div className="rounded-full bg-white/90 p-3 transition-transform group-hover:scale-110">
-              <Play className="text-foreground ml-0.5 h-6 w-6" fill="currentColor" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 shadow-lg transition-transform group-hover:scale-110">
+              <Play className="ml-0.5 h-5 w-5 text-white" fill="white" />
             </div>
           </div>
         </button>

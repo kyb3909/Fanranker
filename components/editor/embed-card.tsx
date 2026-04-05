@@ -74,9 +74,9 @@ export function EmbedCard({
   // YouTube: 직접 iframe
   if (youtubeVideoId && !htmlProp) {
     return (
-      <Card className={cn("border-border bg-card overflow-hidden border", className)}>
+      <Card className={cn("border-border overflow-hidden border", className)}>
         <CardContent className="p-0">
-          <div className="relative aspect-video w-full">
+          <div className="relative aspect-video w-full bg-black">
             <iframe
               src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
               className="h-full w-full border-0"
@@ -85,9 +85,11 @@ export function EmbedCard({
             />
           </div>
           {(title || author_name) && (
-            <div className="border-border bg-muted/30 border-t p-4">
+            <div className="bg-card px-3 py-2.5">
               {title && (
-                <h3 className="text-foreground line-clamp-2 text-sm font-semibold">{title}</h3>
+                <h3 className="text-foreground line-clamp-2 text-sm leading-snug font-medium">
+                  {title}
+                </h3>
               )}
               {author_name && <p className="text-muted-foreground mt-1 text-xs">{author_name}</p>}
             </div>
@@ -157,9 +159,9 @@ export function EmbedCard({
 
   // Render embed HTML with responsive wrapper (YouTube)
   return (
-    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
+    <Card className={cn("border-border overflow-hidden border", className)}>
       <CardContent className="p-0">
-        <div className="relative aspect-video w-full">
+        <div className="relative aspect-video w-full bg-black">
           <div
             className="h-full w-full [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
             dangerouslySetInnerHTML={{ __html: html }}
@@ -167,9 +169,11 @@ export function EmbedCard({
         </div>
 
         {(title || author_name) && (
-          <div className="border-border bg-muted/30 border-t p-4">
+          <div className="bg-card px-3 py-2.5">
             {title && (
-              <h3 className="text-foreground line-clamp-2 text-sm font-semibold">{title}</h3>
+              <h3 className="text-foreground line-clamp-2 text-sm leading-snug font-medium">
+                {title}
+              </h3>
             )}
             {author_name && <p className="text-muted-foreground mt-1 text-xs">{author_name}</p>}
           </div>
@@ -338,36 +342,52 @@ function XRichEmbed({
   const firstMedia = data.media?.[0]
 
   return (
-    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
-      <CardContent className="p-4">
-        <div className="space-y-3">
+    <Card className={cn("border-border overflow-hidden border", className)}>
+      <CardContent className="p-0">
+        {/* 미디어 영역 — 피드와 동일 프레임 */}
+        {firstMedia && (
+          <div className="relative aspect-video w-full overflow-hidden bg-black">
+            <XRichMedia media={firstMedia} />
+            <div className="absolute bottom-2 left-2 z-10">
+              <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                <span>X</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 텍스트 영역 — 피드와 동일 구조 */}
+        <div
+          className={`bg-card px-3 py-2.5 ${!firstMedia ? "border-l-foreground/20 border-l-[3px]" : ""}`}
+        >
           <div className="flex items-center gap-2">
             {data.author_avatar ? (
-              <img src={data.author_avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+              <img src={data.author_avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
             ) : (
-              <div className="bg-muted-foreground/30 h-8 w-8 rounded-full" />
+              <div className="bg-muted-foreground/30 h-5 w-5 rounded-full" />
             )}
-            <div className="min-w-0">
-              <p className="text-foreground truncate text-sm font-semibold">
-                {data.author_name || author_name}
-              </p>
-            </div>
-            <svg viewBox="0 0 24 24" className="fill-foreground ml-auto h-4 w-4 opacity-60">
+            <span className="text-foreground text-sm font-medium">
+              {data.author_name || author_name}
+            </span>
+            <svg viewBox="0 0 24 24" className="fill-foreground ml-auto h-4 w-4 opacity-30">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </div>
 
-          {data.title && <p className="text-foreground/90 text-sm leading-relaxed">{data.title}</p>}
-
-          {firstMedia && <XRichMedia media={firstMedia} />}
+          {data.title && (
+            <p className="text-foreground/80 mt-1.5 text-sm leading-relaxed">{data.title}</p>
+          )}
 
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary inline-flex items-center gap-2 text-sm hover:underline"
+            className="text-primary mt-2 inline-flex items-center gap-1.5 text-xs hover:underline"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-3.5 w-3.5" />
             X에서 보기
           </a>
         </div>
@@ -384,39 +404,31 @@ function XRichMedia({
   const [playing, setPlaying] = useState(false)
 
   if (media.type === "photo") {
-    return (
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-        <img src={media.url} alt="" className="h-full w-full object-cover" />
-      </div>
-    )
+    return <img src={media.url} alt="" className="h-full w-full object-cover" />
   }
 
-  return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
-      {playing ? (
-        <video
-          src={buildTwitterVideoProxyUrl(media.url)}
-          autoPlay
-          controls
-          playsInline
-          className="h-full w-full object-contain"
+  return playing ? (
+    <video
+      src={buildTwitterVideoProxyUrl(media.url)}
+      autoPlay
+      controls
+      playsInline
+      className="h-full w-full object-contain"
+    />
+  ) : (
+    <button onClick={() => setPlaying(true)} className="group block h-full w-full">
+      {media.thumbnail_url && (
+        <img
+          src={media.thumbnail_url}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
         />
-      ) : (
-        <button onClick={() => setPlaying(true)} className="group block h-full w-full">
-          {media.thumbnail_url && (
-            <img
-              src={media.thumbnail_url}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-            <div className="rounded-full bg-white/90 p-3 transition-transform group-hover:scale-110">
-              <Play className="text-foreground ml-0.5 h-6 w-6" fill="currentColor" />
-            </div>
-          </div>
-        </button>
       )}
-    </div>
+      <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 shadow-lg transition-transform group-hover:scale-110">
+          <Play className="ml-0.5 h-5 w-5 text-white" fill="white" />
+        </div>
+      </div>
+    </button>
   )
 }
