@@ -62,10 +62,11 @@ export function EmbedCard({
         : `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
 
     fetch(apiUrl)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? r.json().catch(() => null) : null))
       .then((data) => {
+        if (!data) return
         if (provider === "x") setFetchedData(data)
-        if (data?.html) setFetchedHtml(data.html)
+        if (data.html) setFetchedHtml(data.html)
       })
       .catch(() => {})
       .finally(() => setIsLoading(false))
@@ -365,7 +366,14 @@ function XRichEmbed({
         >
           <div className="flex items-center gap-2">
             {data.author_avatar ? (
-              <img src={data.author_avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
+              <img
+                src={data.author_avatar}
+                alt=""
+                className="h-5 w-5 rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none"
+                }}
+              />
             ) : (
               <div className="bg-muted-foreground/30 h-5 w-5 rounded-full" />
             )}
@@ -404,7 +412,16 @@ function XRichMedia({
   const [playing, setPlaying] = useState(false)
 
   if (media.type === "photo") {
-    return <img src={media.url} alt="" className="h-full w-full object-cover" />
+    return (
+      <img
+        src={media.url}
+        alt=""
+        className="h-full w-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = "none"
+        }}
+      />
+    )
   }
 
   return playing ? (
@@ -422,6 +439,9 @@ function XRichMedia({
           src={media.thumbnail_url}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none"
+          }}
         />
       )}
       <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">

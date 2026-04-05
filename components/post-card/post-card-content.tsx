@@ -417,6 +417,9 @@ function YouTubeInlinePlayer({
                 className="object-cover"
                 priority={priority}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none"
+                }}
               />
             )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
@@ -447,7 +450,11 @@ function YouTubeInlinePlayer({
 /* ── X (Twitter) Lazy 인라인 프리뷰 ── */
 /* 뷰포트에 진입해야 oEmbed 호출 → 스크롤 성능 대폭 개선 */
 
-const oembedFetcher = (url: string) => fetch(url).then((r) => (r.ok ? r.json() : null))
+const oembedFetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) return null
+    return r.json().catch(() => null)
+  })
 
 interface XOEmbedData {
   title?: string
@@ -499,7 +506,14 @@ function XInlineContent({ url }: { url: string }) {
       {firstMedia && (
         <div className="relative aspect-video w-full overflow-hidden bg-black">
           {firstMedia.type === "photo" ? (
-            <img src={firstMedia.url} alt="" className="h-full w-full object-cover" />
+            <img
+              src={firstMedia.url}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none"
+              }}
+            />
           ) : (
             <XVideoPlayer
               media={firstMedia as { type: "video"; url: string; thumbnail_url?: string }}
@@ -521,7 +535,14 @@ function XInlineContent({ url }: { url: string }) {
       >
         <div className="flex items-center gap-2">
           {data.author_avatar ? (
-            <img src={data.author_avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
+            <img
+              src={data.author_avatar}
+              alt=""
+              className="h-5 w-5 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none"
+              }}
+            />
           ) : (
             <div className="bg-muted-foreground/30 h-5 w-5 rounded-full" />
           )}
@@ -569,6 +590,9 @@ function XVideoPlayer({
               src={media.thumbnail_url}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none"
+              }}
             />
           )}
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
@@ -598,10 +622,16 @@ function loadInstagramEmbedJs(callback: () => void) {
     return
   }
   if (win.__igEmbedLoading) {
+    let attempts = 0
     const interval = setInterval(() => {
+      attempts++
       if (win.instgrm) {
         clearInterval(interval)
         callback()
+      } else if (attempts > 100) {
+        // 10초 후 포기 — 무한 polling 방지
+        clearInterval(interval)
+        win.__igEmbedLoading = false
       }
     }, 100)
     return
@@ -613,6 +643,9 @@ function loadInstagramEmbedJs(callback: () => void) {
   script.onload = () => {
     win.__igEmbedLoading = false
     callback()
+  }
+  script.onerror = () => {
+    win.__igEmbedLoading = false
   }
   document.body.appendChild(script)
 }
@@ -644,9 +677,10 @@ function InstagramInlineContent({ url }: { url: string }) {
     oembedFetcher,
     { dedupingInterval: 60_000, revalidateOnFocus: false }
   )
+  const safeUrl = normalizedUrl.replace(/["<>]/g, "")
   const embedHtml =
     data?.html ||
-    `<blockquote class="instagram-media" data-instgrm-permalink="${normalizedUrl}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
+    `<blockquote class="instagram-media" data-instgrm-permalink="${safeUrl}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
 
   useEffect(() => {
     if (isLoading) return
