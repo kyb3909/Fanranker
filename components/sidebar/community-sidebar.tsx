@@ -206,7 +206,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
           toggleFollow(community.slug)
         }}
         disabled={togglingSlug === community.slug}
-        className="hover:bg-muted flex-shrink-0 rounded-lg p-1.5 disabled:opacity-50"
+        className="hover:bg-muted flex-shrink-0 rounded-lg p-2 disabled:opacity-50"
         aria-label={isFollowed ? "즐겨찾기 해제" : "즐겨찾기 추가"}
       >
         {togglingSlug === community.slug ? (
@@ -264,7 +264,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
               toggleFollow(community.slug)
             }}
             disabled={togglingSlug === community.slug}
-            className="hover:bg-muted flex-shrink-0 rounded-lg p-1.5 disabled:opacity-50"
+            className="hover:bg-muted flex-shrink-0 rounded-lg p-2 disabled:opacity-50"
             aria-label={followedCommunities.has(community.slug) ? "즐겨찾기 해제" : "즐겨찾기 추가"}
           >
             {togglingSlug === community.slug ? (
