@@ -80,6 +80,36 @@ function roundRect(
   ctx.closePath()
 }
 
+// ─── Cloud Generator ─────────────────────────────────────
+function createCloudTexture(w: number, h: number): HTMLCanvasElement {
+  const c = document.createElement("canvas")
+  c.width = w
+  c.height = h
+  const ctx = c.getContext("2d")!
+
+  // Seed random blobs as soft clouds
+  const blobs = Array.from({ length: 18 }, () => ({
+    x: Math.random() * w,
+    y: Math.random() * h * 0.7,
+    rx: 40 + Math.random() * 80,
+    ry: 20 + Math.random() * 35,
+    alpha: 0.03 + Math.random() * 0.06,
+  }))
+
+  for (const b of blobs) {
+    const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.rx)
+    grad.addColorStop(0, `rgba(255,255,255,${b.alpha})`)
+    grad.addColorStop(0.6, `rgba(255,255,255,${b.alpha * 0.4})`)
+    grad.addColorStop(1, "rgba(255,255,255,0)")
+    ctx.fillStyle = grad
+    ctx.beginPath()
+    ctx.ellipse(b.x, b.y, b.rx, b.ry, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  return c
+}
+
 // ─── Component ───────────────────────────────────────────
 export function RegionMap({
   regionName,
@@ -92,6 +122,7 @@ export function RegionMap({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const cloudRef = useRef<HTMLCanvasElement | null>(null)
   const rafRef = useRef(0)
 
   // Camera (refs for perf — no re-renders)
@@ -115,6 +146,7 @@ export function RegionMap({
   // Animation
   const startTimeRef = useRef(0)
   const hoveredRef = useRef<string | null>(null)
+  const hoverProgressRef = useRef<Record<string, number>>({})
 
   // React state
   const [selected, setSelected] = useState<MapPin | null>(null)
@@ -180,6 +212,7 @@ export function RegionMap({
     img.src = mapImage
     img.onload = () => {
       imgRef.current = img
+      cloudRef.current = createCloudTexture(img.naturalWidth, img.naturalHeight)
       initCamera()
       startTimeRef.current = performance.now()
       setLoaded(true)
@@ -250,6 +283,28 @@ export function RegionMap({
       ctx.imageSmoothingEnabled = true
       ctx.imageSmoothingQuality = "high"
       ctx.drawImage(img, 0, 0)
+
+      // ── Clouds (scrolling overlay) ──
+      const cloud = cloudRef.current
+      if (cloud) {
+        const cw = cloud.width
+        const speed1 = 0.008 // px per ms — slow drift
+        const speed2 = 0.005
+        const ox1 = (time * speed1) % cw
+        const ox2 = (time * speed2) % cw
+
+        // Two passes for seamless tiling
+        ctx.globalAlpha = 0.6
+        ctx.drawImage(cloud, -ox1, 0)
+        ctx.drawImage(cloud, cw - ox1, 0)
+
+        ctx.globalAlpha = 0.4
+        ctx.drawImage(cloud, -ox2 - cw * 0.3, -20)
+        ctx.drawImage(cloud, cw - ox2 - cw * 0.3, -20)
+
+        ctx.globalAlpha = 1
+      }
+
       ctx.restore()
 
       // ── Pins ──
@@ -262,19 +317,26 @@ export function RegionMap({
         if (enterProgress <= 0) return
 
         const eased = easeOutCubic(enterProgress)
+        const isHovered = hovered === pin.team_id
 
-        // Screen position
+        // Screen position (no float when idle)
         const screen = worldToScreen(pin.pin_x, pin.pin_y)
 
-        // Floating offset
+        // Floating + scale only when hovered (smooth transition via lerp)
+        const hoverKey = pin.team_id
+        if (!hoverProgressRef.current[hoverKey]) hoverProgressRef.current[hoverKey] = 0
+        const hTarget = isHovered ? 1 : 0
+        hoverProgressRef.current[hoverKey] += (hTarget - hoverProgressRef.current[hoverKey]) * 0.08
+        const hp = hoverProgressRef.current[hoverKey]
+
         const floatPhase = (time / FLOAT_PERIOD + i * 0.15) * Math.PI * 2
-        const floatY = Math.sin(floatPhase) * FLOAT_AMPLITUDE
+        const floatY = Math.sin(floatPhase) * FLOAT_AMPLITUDE * hp // float only when hovered
 
         const sx = screen.x
         const sy = screen.y + floatY
 
-        const isHovered = hovered === pin.team_id
-        const entryScale = 0.5 + 0.5 * eased
+        const hoverScale = 1 + hp * 0.35 // 1.0 → 1.35x on hover
+        const entryScale = (0.5 + 0.5 * eased) * hoverScale
         const entryAlpha = eased
 
         ctx.save()
@@ -282,16 +344,20 @@ export function RegionMap({
         ctx.scale(entryScale, entryScale)
         ctx.globalAlpha = entryAlpha
 
-        // ── Aura rings ──
-        for (let ring = 0; ring < 2; ring++) {
-          const phase = (time / AURA_DURATION + ring * 0.35) % 1
-          const auraScale = 1 + phase * 1.5
-          const auraAlpha = 0.5 * (1 - phase)
+        // ── Aura rings (only when hovered) ──
+        if (hp > 0.01) {
+          ctx.globalAlpha = entryAlpha * hp
+          for (let ring = 0; ring < 2; ring++) {
+            const phase = (time / AURA_DURATION + ring * 0.35) % 1
+            const auraScale = 1 + phase * 1.5
+            const auraAlpha = 0.5 * (1 - phase)
 
-          ctx.beginPath()
-          ctx.arc(0, 0, PIN_RADIUS * auraScale, 0, Math.PI * 2)
-          ctx.fillStyle = hexToRgba(pin.color, auraAlpha)
-          ctx.fill()
+            ctx.beginPath()
+            ctx.arc(0, 0, PIN_RADIUS * auraScale, 0, Math.PI * 2)
+            ctx.fillStyle = hexToRgba(pin.color, auraAlpha)
+            ctx.fill()
+          }
+          ctx.globalAlpha = entryAlpha
         }
 
         // ── Pin border ──
