@@ -3,16 +3,13 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Gamepad2, Sparkles, Landmark } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, Sparkles, Landmark } from "lucide-react"
 
 const activeClass =
   "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
 const inactiveClass = "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
 const baseClass =
   "relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px]"
-
-/** 헤더 주요 메뉴에 게임 노출 여부 (미사용 시 false) */
-const SHOW_HEADER_GAME = false
 
 export const HeaderNav = memo(function HeaderNav() {
   const router = useRouter()
@@ -65,16 +62,6 @@ export const HeaderNav = memo(function HeaderNav() {
             스타디움
           </span>
         </Link>
-        {SHOW_HEADER_GAME && (
-          <Link href="/games">
-            <span
-              className={`${baseClass} ${pathname.startsWith("/games") ? activeClass : inactiveClass}`}
-            >
-              <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
-              게임
-            </span>
-          </Link>
-        )}
         <Link href="/shop">
           <span className={`${baseClass} ${isShop ? activeClass : inactiveClass}`}>
             <Sparkles className="h-[18px] w-[18px] shrink-0" />
