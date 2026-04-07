@@ -379,7 +379,7 @@ export function RegionMap({
           // Custom image pin (2x size)
           const pw = pinImg.naturalWidth
           const ph = pinImg.naturalHeight
-          const drawH = PIN_RADIUS * 12
+          const drawH = PIN_RADIUS * 20
           const drawW = (pw / ph) * drawH
           // Pass 1: glow outline (follows alpha contour)
           ctx.shadowColor = "rgba(255,255,255,0.95)"
