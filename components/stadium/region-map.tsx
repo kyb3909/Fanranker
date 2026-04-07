@@ -376,14 +376,19 @@ export function RegionMap({
         // ── Pin visual ──
         const pinImg = pinImagesRef.current[pin.team_id]
         if (pinImg?.complete && pinImg.naturalWidth > 0) {
-          // Custom image pin (2x size) — shadow follows image contour
+          // Custom image pin (2x size)
           const pw = pinImg.naturalWidth
           const ph = pinImg.naturalHeight
           const drawH = PIN_RADIUS * 8
           const drawW = (pw / ph) * drawH
-          // White glow outline that follows the stadium shape
-          ctx.shadowColor = "rgba(255,255,255,0.9)"
-          ctx.shadowBlur = 8
+          // Pass 1: glow outline (follows alpha contour)
+          ctx.shadowColor = "rgba(255,255,255,0.95)"
+          ctx.shadowBlur = 5
+          ctx.globalAlpha = 0 // invisible — only shadow renders
+          ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
+          // Pass 2: crisp image on top
+          ctx.shadowColor = "transparent"
+          ctx.globalAlpha = entryAlpha
           ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
           ctx.shadowColor = "transparent"
         } else {
