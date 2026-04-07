@@ -40,6 +40,11 @@ const ANIM_DURATION = 400
 const MODAL_MARGIN = 16
 const IMG_ASPECT = 2528 / 1684 // england.png aspect ratio
 
+// 핀별 커스텀 이미지 (경기장 일러스트)
+const PIN_IMAGES: Record<string, string> = {
+  epl_wembley: "/map/pins/wembley.webp",
+}
+
 // ─── Region Card (Game Item Style) ──────────────────
 function RegionCard({
   region,
@@ -119,6 +124,7 @@ function useMapPins(leagueId: string | null) {
       total_points: t.stadium.total_points,
       fan_count: t.stadium.fan_count,
       progress_pct: calcProgressPct(t.stadium.level, t.stadium.total_points),
+      pinImage: PIN_IMAGES[t.team_id],
     })
   )
 }

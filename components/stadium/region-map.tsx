@@ -18,6 +18,7 @@ export interface MapPin {
   total_points: number
   fan_count: number
   progress_pct: number
+  pinImage?: string // optional custom pin image URL
 }
 
 interface RegionMapProps {
@@ -147,6 +148,7 @@ export function RegionMap({
   const startTimeRef = useRef(0)
   const hoveredRef = useRef<string | null>(null)
   const hoverProgressRef = useRef<Record<string, number>>({})
+  const pinImagesRef = useRef<Record<string, HTMLImageElement>>({})
 
   // React state
   const [selected, setSelected] = useState<MapPin | null>(null)
@@ -218,6 +220,17 @@ export function RegionMap({
       setLoaded(true)
     }
   }, [mapImage, initCamera])
+
+  // ─── Preload pin images ──────────────────────
+  useEffect(() => {
+    pins.forEach((pin) => {
+      if (pin.pinImage && !pinImagesRef.current[pin.team_id]) {
+        const img = new Image()
+        img.src = pin.pinImage
+        pinImagesRef.current[pin.team_id] = img
+      }
+    })
+  }, [pins])
 
   // ─── Resize Observer ─────────────────────────
   useEffect(() => {
@@ -360,17 +373,27 @@ export function RegionMap({
           ctx.globalAlpha = entryAlpha
         }
 
-        // ── Pin border ──
-        ctx.beginPath()
-        ctx.arc(0, 0, PIN_RADIUS + PIN_BORDER, 0, Math.PI * 2)
-        ctx.fillStyle = isHovered ? pin.color : "#FFFFFF"
-        ctx.fill()
+        // ── Pin visual ──
+        const pinImg = pinImagesRef.current[pin.team_id]
+        if (pinImg?.complete && pinImg.naturalWidth > 0) {
+          // Custom image pin
+          const pw = pinImg.naturalWidth
+          const ph = pinImg.naturalHeight
+          const drawH = PIN_RADIUS * 4
+          const drawW = (pw / ph) * drawH
+          ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
+        } else {
+          // Default circle pin
+          ctx.beginPath()
+          ctx.arc(0, 0, PIN_RADIUS + PIN_BORDER, 0, Math.PI * 2)
+          ctx.fillStyle = isHovered ? pin.color : "#FFFFFF"
+          ctx.fill()
 
-        // ── Pin core ──
-        ctx.beginPath()
-        ctx.arc(0, 0, PIN_RADIUS, 0, Math.PI * 2)
-        ctx.fillStyle = isHovered ? "#FFFFFF" : pin.color
-        ctx.fill()
+          ctx.beginPath()
+          ctx.arc(0, 0, PIN_RADIUS, 0, Math.PI * 2)
+          ctx.fillStyle = isHovered ? "#FFFFFF" : pin.color
+          ctx.fill()
+        }
 
         ctx.restore()
 
