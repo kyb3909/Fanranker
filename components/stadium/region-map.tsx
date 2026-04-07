@@ -376,19 +376,15 @@ export function RegionMap({
         // ── Pin visual ──
         const pinImg = pinImagesRef.current[pin.team_id]
         if (pinImg?.complete && pinImg.naturalWidth > 0) {
-          // Custom image pin (2x size)
+          // Custom image pin
           const pw = pinImg.naturalWidth
           const ph = pinImg.naturalHeight
-          const drawH = PIN_RADIUS * 20
+          const drawH = PIN_RADIUS * 14
           const drawW = (pw / ph) * drawH
-          // Pass 1: glow outline (follows alpha contour)
-          ctx.shadowColor = "rgba(255,255,255,0.95)"
-          ctx.shadowBlur = 5
-          ctx.globalAlpha = 0 // invisible — only shadow renders
-          ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
-          // Pass 2: crisp image on top
-          ctx.shadowColor = "transparent"
-          ctx.globalAlpha = entryAlpha
+          // Drop shadow only
+          ctx.shadowColor = "rgba(0,0,0,0.4)"
+          ctx.shadowBlur = 4
+          ctx.shadowOffsetY = 2
           ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
           ctx.shadowColor = "transparent"
         } else {
