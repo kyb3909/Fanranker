@@ -376,11 +376,21 @@ export function RegionMap({
         // ── Pin visual ──
         const pinImg = pinImagesRef.current[pin.team_id]
         if (pinImg?.complete && pinImg.naturalWidth > 0) {
-          // Custom image pin
+          // Custom image pin (2x size)
           const pw = pinImg.naturalWidth
           const ph = pinImg.naturalHeight
-          const drawH = PIN_RADIUS * 4
+          const drawH = PIN_RADIUS * 8
           const drawW = (pw / ph) * drawH
+          const pad = 3
+          // White border/background
+          ctx.fillStyle = "#ffffff"
+          ctx.shadowColor = "rgba(0,0,0,0.3)"
+          ctx.shadowBlur = 6
+          ctx.shadowOffsetY = 2
+          roundRect(ctx, -drawW / 2 - pad, -drawH / 2 - pad, drawW + pad * 2, drawH + pad * 2, 4)
+          ctx.fill()
+          ctx.shadowColor = "transparent"
+          // Image
           ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
         } else {
           // Default circle pin
