@@ -376,22 +376,16 @@ export function RegionMap({
         // ── Pin visual ──
         const pinImg = pinImagesRef.current[pin.team_id]
         if (pinImg?.complete && pinImg.naturalWidth > 0) {
-          // Custom image pin (2x size)
+          // Custom image pin (2x size) — shadow follows image contour
           const pw = pinImg.naturalWidth
           const ph = pinImg.naturalHeight
           const drawH = PIN_RADIUS * 8
           const drawW = (pw / ph) * drawH
-          const pad = 3
-          // White border/background
-          ctx.fillStyle = "#ffffff"
-          ctx.shadowColor = "rgba(0,0,0,0.3)"
-          ctx.shadowBlur = 6
-          ctx.shadowOffsetY = 2
-          roundRect(ctx, -drawW / 2 - pad, -drawH / 2 - pad, drawW + pad * 2, drawH + pad * 2, 4)
-          ctx.fill()
-          ctx.shadowColor = "transparent"
-          // Image
+          // White glow outline that follows the stadium shape
+          ctx.shadowColor = "rgba(255,255,255,0.9)"
+          ctx.shadowBlur = 8
           ctx.drawImage(pinImg, -drawW / 2, -drawH / 2, drawW, drawH)
+          ctx.shadowColor = "transparent"
         } else {
           // Default circle pin
           ctx.beginPath()
