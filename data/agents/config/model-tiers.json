@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "note": "Phase A: OpenAI 단일 벤더. 기존 OPENAI_API_KEY 재사용. T3 Korean writing은 gpt-4.1로 시작하고 gpt-5 가용성 확인되면 바꿔도 됨 (동일 API 호환).",
+  "tiers": {
+    "T0": { "description": "Deterministic code, no LLM" },
+    "T1": {
+      "description": "Cheap fast classifier/extractor",
+      "default": { "vendor": "openai", "id": "gpt-4.1-mini" }
+    },
+    "T2": {
+      "description": "Balanced general reasoning",
+      "default": { "vendor": "openai", "id": "gpt-4.1" }
+    },
+    "T3": {
+      "description": "Heavy reasoning / Korean writing",
+      "default": { "vendor": "openai", "id": "gpt-4.1" },
+      "upgradeHint": "품질 이슈 발생 시 gpt-5 또는 o4 계열로 교체. responses API 사용 권장."
+    }
+  },
+  "pools": {
+    "openai": {
+      "envKey": "OPENAI_API_KEY",
+      "rpm": 500,
+      "dailyPublishCap": 30,
+      "note": "발행 cap은 USD가 아니라 건수 기준 (Phase A 안전장치). 비용 모니터링은 OpenAI 대시보드 usage에서."
+    }
+  },
+  "agentMapping": {
+    "reddit_scout": { "tier": "T0" },
+    "credibility_filter": { "tier": "T1", "batchSize": 15, "responseFormat": "json_object" },
+    "news_normalizer": { "tier": "T1", "batchSize": 10, "responseFormat": "json_object" },
+    "tagging": { "tier": "T1", "batchSize": 15, "responseFormat": "json_object" },
+    "naming_resolver": { "tier": "T2", "batchSize": 1, "responseFormat": "json_object" },
+    "link_collector": { "tier": "T0", "fallback": "T1" },
+    "deduplication": { "tier": "T0", "fallback": "T1" },
+    "desk_reviewer": {
+      "tier": "T2",
+      "batchSize": 1,
+      "maxOutputTokens": 300,
+      "responseFormat": "json_object"
+    },
+    "assignment": { "tier": "T0" },
+    "summary_writer": {
+      "tier": "T3",
+      "batchSize": 1,
+      "maxOutputTokens": 1500,
+      "responseFormat": "json_object"
+    },
+    "seo_formatter": { "tier": "T1", "batchSize": 5, "responseFormat": "json_object" },
+    "final_publisher": { "tier": "T0" }
+  }
+}

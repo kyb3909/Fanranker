@@ -1,0 +1,10 @@
+{
+  "name": "fanranker-news-agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Newsroom-style multi-agent pipeline for football news (Phase A). See README.md.",
+  "scripts": {
+    "seed:aliases": "node scripts/seed-aliases.js"
+  }
+}

@@ -1,0 +1,428 @@
+{
+  "version": 1,
+  "note": "Phase A 시드: 축구 빅네임 ~58개. 운영 중 admin이 hold 큐 기반으로 확장. Naming Resolver는 READ ONLY.",
+  "players": [
+    {
+      "id": "player_salah_mo",
+      "preferred_ko": "모하메드 살라",
+      "romanized": "Mohamed Salah",
+      "surfaces": ["mohamed salah", "mo salah", "salah"],
+      "confidence": 0.97
+    },
+    {
+      "id": "player_haaland_e",
+      "preferred_ko": "엘링 홀란드",
+      "romanized": "Erling Haaland",
+      "surfaces": ["erling haaland", "haaland"],
+      "confidence": 0.97
+    },
+    {
+      "id": "player_mbappe_k",
+      "preferred_ko": "킬리안 음바페",
+      "romanized": "Kylian Mbappé",
+      "surfaces": ["kylian mbappe", "kylian mbappé", "mbappe", "mbappé"],
+      "confidence": 0.97
+    },
+    {
+      "id": "player_bellingham_j",
+      "preferred_ko": "주드 벨링엄",
+      "romanized": "Jude Bellingham",
+      "surfaces": ["jude bellingham", "bellingham"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_son_h",
+      "preferred_ko": "손흥민",
+      "romanized": "Son Heung-min",
+      "surfaces": ["son heung-min", "heung-min son", "son"],
+      "confidence": 0.99
+    },
+    {
+      "id": "player_kim_m",
+      "preferred_ko": "김민재",
+      "romanized": "Kim Min-jae",
+      "surfaces": ["kim min-jae", "min-jae kim"],
+      "confidence": 0.99
+    },
+    {
+      "id": "player_lee_k",
+      "preferred_ko": "이강인",
+      "romanized": "Lee Kang-in",
+      "surfaces": ["lee kang-in", "kang-in lee"],
+      "confidence": 0.99
+    },
+    {
+      "id": "player_vinicius_jr",
+      "preferred_ko": "비니시우스 주니오르",
+      "romanized": "Vinicius Junior",
+      "surfaces": ["vinicius junior", "vinicius jr", "vini jr", "vinicius"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_yamal_l",
+      "preferred_ko": "라민 야말",
+      "romanized": "Lamine Yamal",
+      "surfaces": ["lamine yamal", "yamal"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_pedri",
+      "preferred_ko": "페드리",
+      "romanized": "Pedri",
+      "surfaces": ["pedri"],
+      "confidence": 0.96
+    },
+    {
+      "id": "player_gavi",
+      "preferred_ko": "가비",
+      "romanized": "Gavi",
+      "surfaces": ["gavi"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_lewandowski_r",
+      "preferred_ko": "로베르트 레반도프스키",
+      "romanized": "Robert Lewandowski",
+      "surfaces": ["robert lewandowski", "lewandowski", "lewy"],
+      "confidence": 0.96
+    },
+    {
+      "id": "player_kane_h",
+      "preferred_ko": "해리 케인",
+      "romanized": "Harry Kane",
+      "surfaces": ["harry kane", "kane"],
+      "confidence": 0.97
+    },
+    {
+      "id": "player_fernandes_b",
+      "preferred_ko": "브루누 페르난드스",
+      "romanized": "Bruno Fernandes",
+      "surfaces": ["bruno fernandes", "fernandes"],
+      "confidence": 0.93
+    },
+    {
+      "id": "player_rashford_m",
+      "preferred_ko": "마커스 래시퍼드",
+      "romanized": "Marcus Rashford",
+      "surfaces": ["marcus rashford", "rashford"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_saka_b",
+      "preferred_ko": "부카요 사카",
+      "romanized": "Bukayo Saka",
+      "surfaces": ["bukayo saka", "saka"],
+      "confidence": 0.96
+    },
+    {
+      "id": "player_odegaard_m",
+      "preferred_ko": "마르틴 외데고르",
+      "romanized": "Martin Ødegaard",
+      "surfaces": ["martin odegaard", "martin ødegaard", "odegaard", "ødegaard"],
+      "confidence": 0.93
+    },
+    {
+      "id": "player_rice_d",
+      "preferred_ko": "데클란 라이스",
+      "romanized": "Declan Rice",
+      "surfaces": ["declan rice", "rice"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_palmer_c",
+      "preferred_ko": "콜 파머",
+      "romanized": "Cole Palmer",
+      "surfaces": ["cole palmer", "palmer"],
+      "confidence": 0.94
+    },
+    {
+      "id": "player_foden_p",
+      "preferred_ko": "필 포든",
+      "romanized": "Phil Foden",
+      "surfaces": ["phil foden", "foden"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_rodri",
+      "preferred_ko": "로드리",
+      "romanized": "Rodri",
+      "surfaces": ["rodri"],
+      "confidence": 0.95
+    },
+    {
+      "id": "player_de_bruyne_k",
+      "preferred_ko": "케빈 더 브라위너",
+      "romanized": "Kevin De Bruyne",
+      "surfaces": ["kevin de bruyne", "de bruyne", "kdb"],
+      "confidence": 0.93
+    },
+    {
+      "id": "player_wirtz_f",
+      "preferred_ko": "플로리안 비르츠",
+      "romanized": "Florian Wirtz",
+      "surfaces": ["florian wirtz", "wirtz"],
+      "confidence": 0.94
+    },
+    {
+      "id": "player_musiala_j",
+      "preferred_ko": "자말 무시알라",
+      "romanized": "Jamal Musiala",
+      "surfaces": ["jamal musiala", "musiala"],
+      "confidence": 0.94
+    },
+    {
+      "id": "player_griezmann_a",
+      "preferred_ko": "앙투안 그리즈만",
+      "romanized": "Antoine Griezmann",
+      "surfaces": ["antoine griezmann", "griezmann"],
+      "confidence": 0.95
+    }
+  ],
+  "teams": [
+    {
+      "id": "team_liverpool",
+      "preferred_ko": "리버풀",
+      "romanized": "Liverpool FC",
+      "surfaces": ["liverpool fc", "liverpool", "lfc"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_arsenal",
+      "preferred_ko": "아스널",
+      "romanized": "Arsenal FC",
+      "surfaces": ["arsenal fc", "arsenal", "afc"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_man_utd",
+      "preferred_ko": "맨체스터 유나이티드",
+      "romanized": "Manchester United",
+      "surfaces": [
+        "manchester united",
+        "man utd",
+        "man united",
+        "manchester utd",
+        "mufc",
+        "united"
+      ],
+      "confidence": 0.97,
+      "disambiguation": "Newcastle United와 surface 'united' 충돌 주의"
+    },
+    {
+      "id": "team_man_city",
+      "preferred_ko": "맨체스터 시티",
+      "romanized": "Manchester City",
+      "surfaces": ["manchester city", "man city", "mcfc"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_chelsea",
+      "preferred_ko": "첼시",
+      "romanized": "Chelsea FC",
+      "surfaces": ["chelsea fc", "chelsea", "cfc"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_tottenham",
+      "preferred_ko": "토트넘",
+      "romanized": "Tottenham Hotspur",
+      "surfaces": ["tottenham hotspur", "tottenham", "spurs", "thfc"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_newcastle",
+      "preferred_ko": "뉴캐슬",
+      "romanized": "Newcastle United",
+      "surfaces": ["newcastle united", "newcastle", "nufc"],
+      "confidence": 0.98
+    },
+    {
+      "id": "team_aston_villa",
+      "preferred_ko": "애스턴 빌라",
+      "romanized": "Aston Villa",
+      "surfaces": ["aston villa", "villa", "avfc"],
+      "confidence": 0.97
+    },
+    {
+      "id": "team_real_madrid",
+      "preferred_ko": "레알 마드리드",
+      "romanized": "Real Madrid",
+      "surfaces": ["real madrid", "real madrid cf"],
+      "confidence": 0.98
+    },
+    {
+      "id": "team_barcelona",
+      "preferred_ko": "바르셀로나",
+      "romanized": "FC Barcelona",
+      "surfaces": ["fc barcelona", "barcelona", "barca", "barça"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_atletico",
+      "preferred_ko": "아틀레티코 마드리드",
+      "romanized": "Atlético Madrid",
+      "surfaces": ["atletico madrid", "atlético madrid", "atletico", "atleti"],
+      "confidence": 0.97
+    },
+    {
+      "id": "team_bayern",
+      "preferred_ko": "바이에른 뮌헨",
+      "romanized": "Bayern Munich",
+      "surfaces": ["bayern munich", "bayern münchen", "fc bayern", "bayern"],
+      "confidence": 0.98
+    },
+    {
+      "id": "team_dortmund",
+      "preferred_ko": "도르트문트",
+      "romanized": "Borussia Dortmund",
+      "surfaces": ["borussia dortmund", "dortmund", "bvb"],
+      "confidence": 0.98
+    },
+    {
+      "id": "team_leverkusen",
+      "preferred_ko": "레버쿠젠",
+      "romanized": "Bayer Leverkusen",
+      "surfaces": ["bayer leverkusen", "bayer 04 leverkusen", "leverkusen"],
+      "confidence": 0.97
+    },
+    {
+      "id": "team_inter",
+      "preferred_ko": "인터 밀란",
+      "romanized": "Inter Milan",
+      "surfaces": ["inter milan", "internazionale", "inter"],
+      "confidence": 0.97,
+      "disambiguation": "AC Milan과 구분 주의"
+    },
+    {
+      "id": "team_ac_milan",
+      "preferred_ko": "AC 밀란",
+      "romanized": "AC Milan",
+      "surfaces": ["ac milan", "a.c. milan"],
+      "confidence": 0.95,
+      "disambiguation": "Inter Milan과 구분 주의. 'milan' 단독 surface는 의도적 제외"
+    },
+    {
+      "id": "team_juventus",
+      "preferred_ko": "유벤투스",
+      "romanized": "Juventus",
+      "surfaces": ["juventus", "juve"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_napoli",
+      "preferred_ko": "나폴리",
+      "romanized": "Napoli",
+      "surfaces": ["napoli", "ssc napoli"],
+      "confidence": 0.98
+    },
+    {
+      "id": "team_psg",
+      "preferred_ko": "파리 생제르맹",
+      "romanized": "Paris Saint-Germain",
+      "surfaces": ["paris saint-germain", "paris saint germain", "psg"],
+      "confidence": 0.99
+    },
+    {
+      "id": "team_marseille",
+      "preferred_ko": "마르세유",
+      "romanized": "Olympique Marseille",
+      "surfaces": ["olympique marseille", "marseille", "om"],
+      "confidence": 0.96
+    }
+  ],
+  "coaches": [
+    {
+      "id": "coach_guardiola_p",
+      "preferred_ko": "펩 과르디올라",
+      "romanized": "Pep Guardiola",
+      "surfaces": ["pep guardiola", "guardiola"],
+      "confidence": 0.97
+    },
+    {
+      "id": "coach_klopp_j",
+      "preferred_ko": "위르겐 클롭",
+      "romanized": "Jürgen Klopp",
+      "surfaces": ["jurgen klopp", "jürgen klopp", "klopp"],
+      "confidence": 0.97
+    },
+    {
+      "id": "coach_ancelotti_c",
+      "preferred_ko": "카를로 안첼로티",
+      "romanized": "Carlo Ancelotti",
+      "surfaces": ["carlo ancelotti", "ancelotti"],
+      "confidence": 0.97
+    },
+    {
+      "id": "coach_arteta_m",
+      "preferred_ko": "미켈 아르테타",
+      "romanized": "Mikel Arteta",
+      "surfaces": ["mikel arteta", "arteta"],
+      "confidence": 0.97
+    },
+    {
+      "id": "coach_slot_a",
+      "preferred_ko": "아르네 슬롯",
+      "romanized": "Arne Slot",
+      "surfaces": ["arne slot", "slot"],
+      "confidence": 0.95
+    }
+  ],
+  "competitions": [
+    {
+      "id": "comp_pl",
+      "preferred_ko": "프리미어리그",
+      "romanized": "Premier League",
+      "surfaces": ["premier league", "epl", "english premier league"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_laliga",
+      "preferred_ko": "라리가",
+      "romanized": "La Liga",
+      "surfaces": ["la liga", "laliga"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_bundes",
+      "preferred_ko": "분데스리가",
+      "romanized": "Bundesliga",
+      "surfaces": ["bundesliga"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_seriea",
+      "preferred_ko": "세리에 A",
+      "romanized": "Serie A",
+      "surfaces": ["serie a"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_ligue1",
+      "preferred_ko": "리그 1",
+      "romanized": "Ligue 1",
+      "surfaces": ["ligue 1", "ligue1"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_ucl",
+      "preferred_ko": "챔피언스리그",
+      "romanized": "UEFA Champions League",
+      "surfaces": ["champions league", "ucl", "uefa champions league"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_uel",
+      "preferred_ko": "유로파리그",
+      "romanized": "UEFA Europa League",
+      "surfaces": ["europa league", "uel", "uefa europa league"],
+      "confidence": 0.99
+    },
+    {
+      "id": "comp_wc",
+      "preferred_ko": "월드컵",
+      "romanized": "FIFA World Cup",
+      "surfaces": ["world cup", "fifa world cup"],
+      "confidence": 0.99
+    }
+  ]
+}

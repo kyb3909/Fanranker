@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "note": "Phase A 슬라이스: r/soccer 1곳만. 안정화 후 PremierLeague, LaLiga, Bundesliga, seriea, ligue1, Gunners, LiverpoolFC, reddevils, chelseafc, MCFC, realmadrid, Barca, FCBayern 등 추가.",
+  "scout": {
+    "lookback_hours": 24,
+    "max_per_subreddit": 25
+  },
+  "subreddits": [
+    {
+      "name": "soccer",
+      "min_score": 200,
+      "weight": 1.0,
+      "tier1_flairs": ["Tier 1", "Tier 2", "Official Source"]
+    }
+  ],
+  "title_drop_patterns": [
+    "(?i)\\bmeme\\b",
+    "(?i)\\bjoke\\b",
+    "(?i)shitpost",
+    "(?i)circlejerk",
+    "(?i)\\blmao\\b",
+    "(?i)funny moment",
+    "(?i)reaction thread",
+    "(?i)post[- ]match thread",
+    "(?i)pre[- ]match thread"
+  ],
+  "author_ban_list": []
+}

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "domains": {
+    "bbc.co.uk": { "score": 0.98, "tier": 1 },
+    "bbc.com": { "score": 0.98, "tier": 1 },
+    "theathletic.com": { "score": 0.98, "tier": 1 },
+    "nytimes.com": { "score": 0.97, "tier": 1 },
+    "skysports.com": { "score": 0.95, "tier": 1 },
+    "guardian.com": { "score": 0.95, "tier": 1 },
+    "theguardian.com": { "score": 0.95, "tier": 1 },
+    "reuters.com": { "score": 0.97, "tier": 1 },
+    "espn.com": { "score": 0.88, "tier": 2 },
+    "espnfc.com": { "score": 0.88, "tier": 2 },
+    "goal.com": { "score": 0.82, "tier": 2 },
+    "marca.com": { "score": 0.85, "tier": 2 },
+    "as.com": { "score": 0.85, "tier": 2 },
+    "mundodeportivo.com": { "score": 0.78, "tier": 2 },
+    "lequipe.fr": { "score": 0.88, "tier": 2 },
+    "bild.de": { "score": 0.82, "tier": 2 },
+    "kicker.de": { "score": 0.88, "tier": 2 },
+    "footballitalia.net": { "score": 0.78, "tier": 2 },
+    "gazzetta.it": { "score": 0.85, "tier": 2 },
+    "transfermarkt.com": { "score": 0.75, "tier": 2 },
+    "transfermarkt.co.uk": { "score": 0.75, "tier": 2 },
+    "givemesport.com": { "score": 0.55, "tier": 3 },
+    "tribuna.com": { "score": 0.5, "tier": 3 },
+    "caughtoffside.com": { "score": 0.5, "tier": 3 },
+    "sportbible.com": { "score": 0.45, "tier": 3 },
+    "footballfancast.com": { "score": 0.45, "tier": 3 },
+    "talksport.com": { "score": 0.65, "tier": 3 }
+  },
+  "social": {
+    "x.com_verified": 0.6,
+    "x.com_unverified": 0.3,
+    "instagram.com_official_club": 0.85
+  },
+  "no_source_self_post": 0.2,
+  "tier1_flair_bonus": 0.05,
+  "credibility_floor": 0.55,
+  "newsworthiness_floor": 0.4
+}
