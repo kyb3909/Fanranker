@@ -18,7 +18,8 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import supabase from '../../crawlers/core/db.js'
-import openai from '../../crawlers/core/openai-client.js'
+import { chatWithRetry } from '../../crawlers/core/openai-client.js'
+import { validateCredibilityBatch } from '../core/validators.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROMPT_PATH = join(__dirname, '..', 'prompts', 'credibility-filter.md')
@@ -93,7 +94,7 @@ async function main() {
 
     let response
     try {
-      response = await openai.chat.completions.create({
+      response = await chatWithRetry({
         model: modelId,
         messages: [
           { role: 'system', content: prompt },
@@ -116,6 +117,13 @@ async function main() {
       parsed = JSON.parse(response.choices[0].message.content)
     } catch (e) {
       log(`  JSON parse error: ${e.message}`)
+      totals.errors += batch.length
+      continue
+    }
+
+    const bv = validateCredibilityBatch(parsed)
+    if (!bv.ok) {
+      log(`  [VALIDATE] ${bv.reason}`)
       totals.errors += batch.length
       continue
     }

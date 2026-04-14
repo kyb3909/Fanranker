@@ -11,7 +11,8 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import supabase from '../../crawlers/core/db.js'
-import openai from '../../crawlers/core/openai-client.js'
+import { chatWithRetry } from '../../crawlers/core/openai-client.js'
+import { validateDeskResult } from '../core/validators.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROMPT_PATH = join(__dirname, '..', 'prompts', 'desk-reviewer.md')
@@ -101,7 +102,7 @@ async function main() {
 
     let response
     try {
-      response = await openai.chat.completions.create({
+      response = await chatWithRetry({
         model: modelId,
         messages: [
           { role: 'system', content: prompt },
@@ -125,6 +126,13 @@ async function main() {
       parsed = JSON.parse(response.choices[0].message.content)
     } catch (e) {
       log(`  [ERR] JSON parse: ${e.message}`)
+      totals.errors++
+      continue
+    }
+
+    const dv = validateDeskResult(parsed)
+    if (!dv.ok) {
+      log(`  [VALIDATE] ${dv.reason}`)
       totals.errors++
       continue
     }

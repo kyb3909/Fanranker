@@ -15,7 +15,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 import supabase from '../../crawlers/core/db.js'
-import openai from '../../crawlers/core/openai-client.js'
+import { chatWithRetry } from '../../crawlers/core/openai-client.js'
+import { validateWriterResult } from '../core/validators.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROMPT_PATH = join(__dirname, '..', 'prompts', 'summary-writer.md')
@@ -122,7 +123,7 @@ async function main() {
 
     let response
     try {
-      response = await openai.chat.completions.create({
+      response = await chatWithRetry({
         model: modelId,
         messages: [
           { role: 'system', content: prompt },
