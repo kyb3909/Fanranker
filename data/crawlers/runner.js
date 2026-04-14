@@ -102,6 +102,31 @@ function categoryToTag(category, importance) {
   return 'breaking'
 }
 
+/** 같은 community_slug에 최근 48h 내 올라간 ticker 항목 조회.
+ *  summarizer가 cross-source dedupe에 사용. */
+async function fetchRecentTickerItems(communitySlug) {
+  if (!communitySlug) return []
+  const cutoff = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('news_ticker_items')
+    .select('headline_kr, original_title, importance, posted_at')
+    .eq('community_slug', communitySlug)
+    .gte('posted_at', cutoff)
+    .order('posted_at', { ascending: false })
+    .limit(50)
+  if (error) {
+    // 조회 실패해도 파이프라인은 계속. 빈 배열 반환.
+    return []
+  }
+  const now = Date.now()
+  return (data || []).map((r) => ({
+    headline_kr: r.headline_kr,
+    original_title: r.original_title,
+    importance: r.importance,
+    hoursAgo: Math.max(0, Math.round((now - new Date(r.posted_at).getTime()) / 3600000)),
+  }))
+}
+
 // --------------- Source processors ---------------
 
 async function processRedditSource(source) {
@@ -134,8 +159,12 @@ async function processRedditSource(source) {
     return { fetched: posts.length, saved: 0 }
   }
 
+  // Cross-source dedupe 컨텍스트: 같은 community_slug 최근 48h ticker 조회
+  const recentItems = await fetchRecentTickerItems(source.community_slug)
+  log(source.id, `Recent ticker context: ${recentItems.length} items in last 48h`)
+
   // GPT summarization
-  const summaries = await summarizePosts(newPosts, source)
+  const summaries = await summarizePosts(newPosts, source, recentItems)
   log(source.id, `GPT returned ${summaries.length} news items`)
 
   if (summaries.length === 0) return { fetched: posts.length, saved: 0 }
@@ -204,8 +233,12 @@ async function processNaverNewsSource(source) {
     return { fetched: posts.length, saved: 0 }
   }
 
+  // Cross-source dedupe 컨텍스트: 같은 community_slug 최근 48h ticker 조회
+  const recentItems = await fetchRecentTickerItems(source.community_slug)
+  log(source.id, `Recent ticker context: ${recentItems.length} items in last 48h`)
+
   // GPT summarization
-  const summaries = await summarizePosts(newPosts, source)
+  const summaries = await summarizePosts(newPosts, source, recentItems)
   log(source.id, `GPT returned ${summaries.length} news items`)
 
   if (summaries.length === 0) return { fetched: posts.length, saved: 0 }

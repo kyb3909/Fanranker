@@ -76,20 +76,46 @@ function getCategoryHints(promptCategory) {
  *
  * @param {object[]} posts - Posts from fetcher (reddit or naver-news)
  * @param {object} source - Source config from sources.json
+ * @param {object[]} [recentItems=[]] - 최근 48h 내 같은 community_slug에 이미 올라간 ticker 항목들
+ *                                     ({ headline_kr, original_title, importance, hoursAgo })
+ *                                     summarizer가 cross-source dedupe에 사용
  * @returns {Promise<object[]>} Filtered & summarized items with their original post data
  */
-export async function summarizePosts(posts, source) {
+export async function summarizePosts(posts, source, recentItems = []) {
   if (source.type === 'naver-news') {
-    return summarizeNaverPosts(posts, source)
+    return summarizeNaverPosts(posts, source, recentItems)
   }
-  return summarizeRedditPosts(posts, source)
+  return summarizeRedditPosts(posts, source, recentItems)
+}
+
+/** 최근 ticker 항목들을 프롬프트용 블록으로 포맷.
+ *  비어있으면 빈 문자열 반환 (섹션 자체가 빠짐). */
+function formatRecentContext(recentItems) {
+  if (!recentItems || recentItems.length === 0) return ''
+  const lines = recentItems
+    .slice(0, 50)
+    .map((r, i) => {
+      const hours = typeof r.hoursAgo === 'number' ? `${r.hoursAgo}시간 전` : '최근'
+      const importance = r.importance ? `중요도 ${r.importance}` : '-'
+      return `${i + 1}. [${importance}] ${r.headline_kr} (${hours})`
+    })
+    .join('\n')
+  return `\n═══ 이미 다룬 뉴스 (최근 48시간, 같은 게시판) ═══
+다음 목록은 이미 서비스에 노출된 뉴스들이다.
+아래 중 하나라도 **같은 사건/같은 주제**를 다루는 기사라면 무조건 is_news=false로 한다.
+후속 보도라 해도 새로운 팩트(새 수치, 새 인용, 새 결정)가 **없으면** REJECT.
+동일 인물/팀의 비슷한 상태 업데이트(예: "계속 협상 중", "여전히 관심")도 REJECT.
+
+${lines}
+═════════════════════════════════════════════\n`
 }
 
 /** Summarize Naver news articles (already in Korean, need headline + 3-line summary) */
-async function summarizeNaverPosts(posts, source) {
+async function summarizeNaverPosts(posts, source, recentItems = []) {
   if (posts.length === 0) return []
 
   const categoryHints = getCategoryHints(source.prompt_category)
+  const recentContext = formatRecentContext(recentItems)
 
   const postsText = posts
     .map(
@@ -120,18 +146,30 @@ Your readers are passionate fans who want REAL news fast — not filler or rehas
    - 같은 경기 결과를 다른 각도로 쓴 기사들 → 1개만
    - 같은 이적 루머의 후속 기사 → 새로운 팩트가 있을 때만
    - 비슷한 주제의 기사가 3개 이상이면 반드시 1개로 압축
+   - **이미 다룬 뉴스 섹션(아래)에 같은 사건이 있으면 무조건 REJECT**
 
+4. importance 하한선 강제 + **공신력 예외 규칙**:
+   - 기본: importance 1, 2는 is_news=false (3 이상만 통과)
+   - **예외 (매우 중요)**: 출처가 아래 "공신력 있는 ITK/기자" 카테고리면 루머여도 is_news=true, importance는 최소 **4**로 올려라.
+     공신력 있는 ITK/기자 예시:
+       - 축구: Fabrizio Romano, David Ornstein, Gianluca Di Marzio, Ben Jacobs, Matt Law, Paul Joyce, James Pearce
+       - 야구: Ken Rosenthal, Jon Heyman, Bob Nightengale, Jeff Passan, 류현진 관련 한국 기자 공식 보도
+       - 농구: Shams Charania, Adrian Wojnarowski(Woj), Marc Stein
+       - 한국 언론: 연합뉴스, 뉴시스, KBS, SBS, MBC, 조선일보, 중앙일보, 동아일보의 해당 분야 전담 기자 실명 기사
+     이들이 낸 루머/이적설/계약 협상 근황은 **화제성·클릭율이 높음** → 우선순위로 통과.
+   - 무명/익명 루머, 팬 추측, 트위터 미확인 계정 → 기존 reject 규칙 유지
+${recentContext}
 ═══ 판단 기준 ═══
 
 For each article, determine:
 1. is_news: true ONLY for stories that Korean general public would actually care about. Be EXTREMELY STRICT.
 2. category: one of [${categoryHints.categories}]
-3. importance: 1-5 scale:
+3. importance: 1-5 scale (기본 1, 2는 is_news=false. 공신력 ITK 루머는 4로 승격):
    - 5: 속보급 (긴급 이적, 큰 부상, 대형 사건, 기록 경신, 충격적 결과)
-   - 4: 화제성 높음 (확정 발표, 공식 계약, 수상, 논란)
-   - 3: 주요 뉴스 (일반 경기 결과, 선수 근황, 업데이트)
-   - 2: 관심 뉴스 (루머, 전망, 분석)
-   - 1: 마이너 (사소한 소식)
+   - 4: 화제성 높음 (확정 발표, 공식 계약, 수상, 논란, **공신력 ITK 루머**)
+   - 3: 주요 뉴스 (일반 경기 결과, 선수 근황, 업데이트) — **통과 최저 기준**
+   - 2: 관심 뉴스 (무명 출처 루머, 일반 전망/분석) → is_news=false
+   - 1: 마이너 (사소한 소식) → is_news=false
 4. headline_kr: 15-25자, 커뮤니티 게시판 제목 스타일 (언론체 금지, 팬이 쓴 것처럼)
 5. summary_lines: 정확히 3문장, 핵심 팩트 위주, 각 문장은 마침표로 끝남
 
@@ -201,7 +239,7 @@ Include ALL articles in the response (non-newsworthy = is_news=false).`
 }
 
 /** Summarize Reddit posts (English → Korean translation + summary) */
-async function summarizeRedditPosts(posts, source) {
+async function summarizeRedditPosts(posts, source, recentItems = []) {
   if (posts.length === 0) return []
 
   const postsText = posts
@@ -212,6 +250,7 @@ async function summarizeRedditPosts(posts, source) {
     .join('\n')
 
   const categoryHints = getCategoryHints(source.prompt_category)
+  const recentContext = formatRecentContext(recentItems)
 
   const systemPrompt = `You are a ${source.prompt_category} news editor for a Korean community (FanRanker).
 Analyze Reddit posts and create Korean news summaries.
@@ -229,13 +268,25 @@ Analyze Reddit posts and create Korean news summaries.
    - 사회적 진영 논쟁 → REJECT
 
 3. 주제 중복 방지: 같은 사건/주제의 포스트가 여러 개면 가장 정보가 풍부한 1개만 is_news=true.
+   - **이미 다룬 뉴스 섹션(아래)에 같은 사건이 있으면 무조건 REJECT**
 
+4. importance 하한선 + **공신력 예외**:
+   - 기본: importance 1, 2는 is_news=false (3 이상만 통과)
+   - **예외**: Reddit post의 flair가 "Tier 1", "Tier 2", "Official Source", "Official", "Transfer" 계열이거나
+     제목에 공신력 ITK/기자 이름이 명시되면 루머여도 is_news=true, importance 최소 **4** 승격.
+     공신력 ITK/기자 예시:
+       - 축구: Fabrizio Romano, David Ornstein, Gianluca Di Marzio, Ben Jacobs, Matt Law, Paul Joyce, James Pearce
+       - 야구: Ken Rosenthal, Jon Heyman, Jeff Passan, Bob Nightengale
+       - 농구: Shams Charania, Adrian Wojnarowski, Woj, Marc Stein
+     이들 루머는 **화제성·클릭율이 높음** → 우선순위로 통과.
+   - 익명/무명 루머, 팬 추측, 미확인 트위터 계정은 기존 reject 규칙 유지.
+${recentContext}
 ═══ 판단 기준 ═══
 
 For each post, determine:
 1. is_news: true ONLY for stories Korean general public would care about. Be EXTREMELY STRICT.
 2. category: one of [${categoryHints.categories}]
-3. importance: 1-5 (5 = major breaking news, 3 = standard news, 1 = minor update)
+3. importance: 1-5 (기본 1, 2는 is_news=false. 공신력 ITK 루머는 4로 승격. 3=standard, 4=hot, 5=major breaking)
 4. headline_kr: Korean headline, 15-25 characters, concise and impactful
 5. summary_lines: array of exactly 3 Korean sentences summarizing the news
 
