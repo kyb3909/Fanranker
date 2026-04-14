@@ -131,6 +131,7 @@ function toReservoirRow(entry, post) {
       reddit: post.external_url,
       article: post.link_url || null,
       socials,
+      og_image: post.og_image || null, // oEmbed 감지 실패 시 fallback 이미지
     },
     raw: {
       title: post.original_title,

@@ -71,21 +71,30 @@ function buildMediaNode(url) {
 }
 
 /** reservoir item의 urls를 보고 대표 미디어 노드 하나 추출.
- *  우선순위: socials[youtube/x/instagram] > article URL(embed 가능하면) > image */
+ *  우선순위:
+ *    1. socials의 youtube/x/instagram embed
+ *    2. article URL 자체가 embed 가능한 경우 (youtube.com 직링 등)
+ *    3. socials의 image
+ *    4. og:image fallback (article 소스에서 긁은 대표 이미지) */
 function pickMediaNode(item) {
   const socials = item.urls?.socials || []
-  // socials에서 youtube/twitter/instagram 우선
+  // 1) socials에서 youtube/twitter/instagram 우선
   for (const s of socials) {
     const node = buildMediaNode(s.url)
     if (node && node.type === 'embed') return node
   }
-  // article URL이 youtube/twitter 같은 것일 수도
+  // 2) article URL이 youtube/twitter 같은 것일 수도
   const articleNode = buildMediaNode(item.urls?.article)
   if (articleNode) return articleNode
-  // image type socials
+  // 3) image type socials (i.redd.it, imgur 등)
   for (const s of socials) {
     const node = buildMediaNode(s.url)
     if (node) return node
+  }
+  // 4) og:image fallback — 기사 원본의 대표 이미지
+  const ogImage = item.urls?.og_image
+  if (ogImage && /^https?:\/\//i.test(ogImage)) {
+    return { type: 'image', attrs: { src: ogImage } }
   }
   return null
 }

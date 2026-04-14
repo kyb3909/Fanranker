@@ -89,6 +89,7 @@ export async function fetchRedditViaRSS(
     num_comments: 0,
     flair: null,
     description: e.description || null,
+    og_image: e.ogImage || null,
   }));
 }
 
@@ -137,22 +138,40 @@ async function enrichWithDescription(entries) {
           );
         if (ogDesc) {
           entry.description = decodeHTML(ogDesc[1]).slice(0, 400);
-          return;
+        } else {
+          // fallback: meta name="description"
+          const metaDesc =
+            html.match(
+              /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i
+            ) ||
+            html.match(
+              /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i
+            );
+          if (metaDesc) {
+            entry.description = decodeHTML(metaDesc[1]).slice(0, 400);
+          }
         }
 
-        // fallback: meta name="description"
-        const metaDesc =
+        // og:image 추출 — embed(youtube/twitter) 감지 실패 시 fallback 이미지로 사용
+        const ogImage =
           html.match(
-            /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i
+            /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i
           ) ||
           html.match(
-            /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i
+            /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i
+          ) ||
+          html.match(
+            /<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i
           );
-        if (metaDesc) {
-          entry.description = decodeHTML(metaDesc[1]).slice(0, 400);
+        if (ogImage) {
+          const raw = decodeHTML(ogImage[1]).trim();
+          // 절대 URL만 채택. 상대 경로는 drop.
+          if (/^https?:\/\//i.test(raw)) {
+            entry.ogImage = raw;
+          }
         }
       } catch {
-        // timeout or network error — skip, description stays null
+        // timeout or network error — skip, description/ogImage stays null
       }
     })
   );
