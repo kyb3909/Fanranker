@@ -46,7 +46,12 @@
       "maxOutputTokens": 1500,
       "responseFormat": "json_object"
     },
-    "seo_formatter": { "tier": "T1", "batchSize": 5, "responseFormat": "json_object" },
+    "seo_formatter": {
+      "tier": "T1",
+      "batchSize": 1,
+      "maxOutputTokens": 1200,
+      "responseFormat": "json_object"
+    },
     "final_publisher": { "tier": "T0" }
   }
 }

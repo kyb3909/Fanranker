@@ -2,7 +2,7 @@
 # data/agents/scripts/run-cycle.sh
 #
 # 뉴스 에이전트 파이프라인 1 cycle.
-# 8단계 chain + 오래된 항목 정리.
+# 10단계 chain + 오래된 항목 정리.
 # cron에서 이 파일 하나만 부르면 됨.
 #
 # 사용:
@@ -56,7 +56,7 @@ else
   log "=== Cycle started ==="
 fi
 
-# ---- 8 stages ----
+# ---- 10 stages ----
 run_stage() {
   local name="$1"
   local script="$2"
@@ -74,7 +74,9 @@ run_stage "enrich"      "data/agents/scripts/enrich-run.js"             && \
 run_stage "dedupe"      "data/agents/scripts/dedupe-run.js"             && \
 run_stage "desk"        "data/agents/scripts/desk-review-run.js"        && \
 run_stage "assign"      "data/agents/scripts/assign-run.js"             && \
-run_stage "write"       "data/agents/scripts/write-run.js"
+run_stage "write"       "data/agents/scripts/write-run.js"              && \
+run_stage "format"      "data/agents/scripts/seo-format-run.js"         && \
+run_stage "publish"     "data/agents/scripts/publish-run.js"
 
 PIPELINE_EXIT=$?
 
