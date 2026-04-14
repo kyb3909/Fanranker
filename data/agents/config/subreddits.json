@@ -1,17 +1,71 @@
 {
-  "version": 1,
-  "note": "Phase A 슬라이스: r/soccer 1곳만. 안정화 후 PremierLeague, LaLiga, Bundesliga, seriea, ligue1, Gunners, LiverpoolFC, reddevils, chelseafc, MCFC, realmadrid, Barca, FCBayern 등 추가.",
+  "version": 2,
+  "note": "Phase C: football + NBA + MLB 확장. 서브 많아졌으니 scout.max_per_subreddit 낮춤. min_score는 서브 활성도에 맞게 조정. 한국 관심 선수 있는 팀(Padres 김하성, SFGiants 이정후, Dodgers 오타니)은 min_score 낮춰 폭넓게 수집.",
   "scout": {
     "lookback_hours": 24,
-    "max_per_subreddit": 25
+    "max_per_subreddit": 10
   },
   "subreddits": [
     {
       "name": "soccer",
+      "community_slug": "football",
       "min_score": 200,
       "weight": 1.0,
       "tier1_flairs": ["Tier 1", "Tier 2", "Official Source"]
-    }
+    },
+
+    {
+      "name": "PremierLeague",
+      "community_slug": "football",
+      "min_score": 80,
+      "weight": 0.95,
+      "tier1_flairs": ["News"]
+    },
+    { "name": "LaLiga", "community_slug": "football", "min_score": 50, "weight": 0.9 },
+    { "name": "Bundesliga", "community_slug": "football", "min_score": 50, "weight": 0.9 },
+    { "name": "seriea", "community_slug": "football", "min_score": 50, "weight": 0.9 },
+    { "name": "ligue1", "community_slug": "football", "min_score": 30, "weight": 0.85 },
+
+    { "name": "Gunners", "community_slug": "football", "min_score": 100, "weight": 0.9 },
+    { "name": "LiverpoolFC", "community_slug": "football", "min_score": 100, "weight": 0.9 },
+    { "name": "reddevils", "community_slug": "football", "min_score": 100, "weight": 0.9 },
+    { "name": "chelseafc", "community_slug": "football", "min_score": 80, "weight": 0.9 },
+    { "name": "MCFC", "community_slug": "football", "min_score": 80, "weight": 0.9 },
+    { "name": "realmadrid", "community_slug": "football", "min_score": 80, "weight": 0.9 },
+    { "name": "Barca", "community_slug": "football", "min_score": 80, "weight": 0.9 },
+    { "name": "FCBayern", "community_slug": "football", "min_score": 50, "weight": 0.9 },
+
+    { "name": "nba", "community_slug": "basketball", "min_score": 300, "weight": 1.0 },
+    { "name": "lakers", "community_slug": "basketball", "min_score": 100, "weight": 0.9 },
+    { "name": "bostonceltics", "community_slug": "basketball", "min_score": 80, "weight": 0.9 },
+    { "name": "warriors", "community_slug": "basketball", "min_score": 100, "weight": 0.9 },
+    { "name": "denvernuggets", "community_slug": "basketball", "min_score": 50, "weight": 0.9 },
+    { "name": "Mavericks", "community_slug": "basketball", "min_score": 80, "weight": 0.9 },
+
+    { "name": "baseball", "community_slug": "baseball", "min_score": 150, "weight": 1.0 },
+    {
+      "name": "Padres",
+      "community_slug": "baseball",
+      "min_score": 30,
+      "weight": 0.95,
+      "note": "김하성 있던 팀, 한국 팬 관심"
+    },
+    {
+      "name": "SFGiants",
+      "community_slug": "baseball",
+      "min_score": 30,
+      "weight": 0.95,
+      "note": "이정후 소속"
+    },
+    {
+      "name": "Dodgers",
+      "community_slug": "baseball",
+      "min_score": 80,
+      "weight": 0.95,
+      "note": "오타니 — 한국 관심 높음"
+    },
+    { "name": "NYYankees", "community_slug": "baseball", "min_score": 80, "weight": 0.85 },
+    { "name": "redsox", "community_slug": "baseball", "min_score": 50, "weight": 0.85 }
   ],
   "title_drop_patterns": [
     "(?i)\\bmeme\\b",
@@ -22,7 +76,11 @@
     "(?i)funny moment",
     "(?i)reaction thread",
     "(?i)post[- ]match thread",
-    "(?i)pre[- ]match thread"
+    "(?i)pre[- ]match thread",
+    "(?i)game thread",
+    "(?i)daily discussion",
+    "(?i)free talk thread",
+    "(?i)off topic thread"
   ],
   "author_ban_list": []
 }

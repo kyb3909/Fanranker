@@ -26,7 +26,8 @@ const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : null
 const BOT_BY_COMMUNITY = {
   football: 'user_bot_soccer_kr',
   basketball: 'user_bot_nba_kr',
-  // baseball, volleyball, game, movies 등은 봇 계정 추가 후 여기 등록
+  baseball: 'user_bot_mlb_kr',
+  // volleyball, game, movies 등은 봇 계정 추가 후 여기 등록
 }
 
 function log(msg) {

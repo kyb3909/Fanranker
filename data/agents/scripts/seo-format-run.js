@@ -31,20 +31,40 @@ function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [formatter] ${msg}\n`)
 }
 
-// community_slug는 source.subreddit에서 매핑. Phase A는 soccer만.
+// community_slug는 scout가 config 기반으로 item.source.community_slug에 이미 저장함.
+// 혹시 legacy 항목이면 subreddit 이름으로 fallback 매핑.
 function resolveCommunitySlug(item) {
+  if (item.source?.community_slug) return item.source.community_slug
   const sub = (item.source?.subreddit || '').toLowerCase()
-  const map = {
+  const fallback = {
     soccer: 'football',
     premierleague: 'football',
-    football: 'football',
-    baseball: 'baseball',
-    mlb: 'baseball',
-    kbo: 'baseball',
+    laliga: 'football',
+    bundesliga: 'football',
+    seriea: 'football',
+    ligue1: 'football',
+    gunners: 'football',
+    liverpoolfc: 'football',
+    reddevils: 'football',
+    chelseafc: 'football',
+    mcfc: 'football',
+    realmadrid: 'football',
+    barca: 'football',
+    fcbayern: 'football',
     nba: 'basketball',
-    basketball: 'basketball',
+    lakers: 'basketball',
+    bostonceltics: 'basketball',
+    warriors: 'basketball',
+    denvernuggets: 'basketball',
+    mavericks: 'basketball',
+    baseball: 'baseball',
+    padres: 'baseball',
+    sfgiants: 'baseball',
+    dodgers: 'baseball',
+    nyyankees: 'baseball',
+    redsox: 'baseball',
   }
-  return map[sub] || null
+  return fallback[sub] || null
 }
 
 // 게시판별 flair 목록 캐시 (cycle 1회 실행에서 재사용)

@@ -114,6 +114,7 @@ function toReservoirRow(entry, post) {
     source: {
       platform: 'reddit',
       subreddit: entry.name,
+      community_slug: entry.community_slug || null,
       postId: post.external_id,
       author: post.author,
       createdUtc,
@@ -129,9 +130,8 @@ function toReservoirRow(entry, post) {
     },
     raw: {
       title: post.original_title,
-      // Phase A: body fetch 안 함 → title을 excerpt로 재사용
-      // credibility filter는 title + domain + flair 조합으로도 충분히 판단 가능
-      excerpt: post.original_title,
+      // og:description 있으면 사용, 없으면 title fallback
+      excerpt: post.description || post.original_title,
       lang: 'en',
     },
     scores: {
@@ -157,6 +157,7 @@ async function main() {
     fetched: 0,
     dropped_banned_author: 0,
     dropped_title_pattern: 0,
+    dropped_low_score: 0,
     already_in_reservoir: 0,
     would_insert: 0,
     inserted: 0,
@@ -178,7 +179,8 @@ async function main() {
     totals.fetched += posts.length
     log(`r/${entry.name}: fetched ${posts.length}`)
 
-    // 룰 기반 드롭 (ban list + title patterns)
+    // 룰 기반 드롭 (ban list + title patterns + min_score)
+    const minScore = typeof entry.min_score === 'number' ? entry.min_score : 0
     const kept = []
     for (const p of posts) {
       if (bans.has(p.author)) {
@@ -187,6 +189,10 @@ async function main() {
       }
       if (shouldDropTitle(p.original_title, compiled)) {
         totals.dropped_title_pattern++
+        continue
+      }
+      if ((p.score ?? 0) < minScore) {
+        totals.dropped_low_score = (totals.dropped_low_score || 0) + 1
         continue
       }
       kept.push(p)
