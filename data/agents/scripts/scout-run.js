@@ -94,8 +94,12 @@ function toReservoirRow(entry, post) {
       socials.push({ type: 'article', url: post.link_url })
     } else if (post.media_type === 'youtube') {
       socials.push({ type: 'youtube', url: post.link_url, oembedSupported: true })
+    } else if (post.media_type === 'twitter') {
+      socials.push({ type: 'twitter', url: post.link_url, oembedSupported: true })
+    } else if (post.media_type === 'instagram') {
+      socials.push({ type: 'instagram', url: post.link_url, oembedSupported: true })
     } else if (post.media_type === 'image') {
-      socials.push({ type: 'other', url: post.link_url })
+      socials.push({ type: 'image', url: post.link_url })
     }
   }
 

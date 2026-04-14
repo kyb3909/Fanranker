@@ -194,6 +194,10 @@ function parseAtomFeed(xml) {
     const checkUrl = contentLink || "";
     if (/youtu\.?be(\.com)?/i.test(checkUrl)) {
       mediaType = "youtube";
+    } else if (/(?:twitter\.com|x\.com)\/[\w]+\/status/i.test(checkUrl)) {
+      mediaType = "twitter";
+    } else if (/instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\//i.test(checkUrl)) {
+      mediaType = "instagram";
     } else if (
       /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(checkUrl) ||
       /i\.redd\.it|imgur\.com/i.test(checkUrl)

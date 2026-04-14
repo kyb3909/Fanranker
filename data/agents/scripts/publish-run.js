@@ -34,15 +34,74 @@ function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [publisher] ${msg}\n`)
 }
 
-// paragraphs[] → TipTap doc JSON
-function paragraphsToTipTap(paragraphs) {
-  return {
-    type: 'doc',
-    content: paragraphs.map((text) => ({
+// URL 패턴 감지 — lib/utils/tiptap-embeds.ts와 동기화 유지
+const EMBED_PATTERNS = {
+  youtube:
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/,
+  x: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/,
+  image: /\.(jpg|jpeg|png|gif|webp)(\?|#|$)/i,
+  redditImage: /i\.redd\.it|imgur\.com\/[a-zA-Z0-9]+(?:\.[a-z]+)?(?:\?|#|$)/i,
+}
+
+/** URL로부터 TipTap embed/image 노드 생성. 감지 실패 시 null. */
+function buildMediaNode(url) {
+  if (!url) return null
+  const yt = url.match(EMBED_PATTERNS.youtube)
+  if (yt) {
+    return {
+      type: 'embed',
+      attrs: {
+        provider: 'youtube',
+        url: `https://www.youtube.com/watch?v=${yt[1]}`,
+        thumbnail_url: `https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg`,
+      },
+    }
+  }
+  if (EMBED_PATTERNS.instagram.test(url)) {
+    return { type: 'embed', attrs: { provider: 'instagram', url } }
+  }
+  if (EMBED_PATTERNS.x.test(url)) {
+    return { type: 'embed', attrs: { provider: 'x', url } }
+  }
+  if (EMBED_PATTERNS.image.test(url) || EMBED_PATTERNS.redditImage.test(url)) {
+    return { type: 'image', attrs: { src: url } }
+  }
+  return null
+}
+
+/** reservoir item의 urls를 보고 대표 미디어 노드 하나 추출.
+ *  우선순위: socials[youtube/x/instagram] > article URL(embed 가능하면) > image */
+function pickMediaNode(item) {
+  const socials = item.urls?.socials || []
+  // socials에서 youtube/twitter/instagram 우선
+  for (const s of socials) {
+    const node = buildMediaNode(s.url)
+    if (node && node.type === 'embed') return node
+  }
+  // article URL이 youtube/twitter 같은 것일 수도
+  const articleNode = buildMediaNode(item.urls?.article)
+  if (articleNode) return articleNode
+  // image type socials
+  for (const s of socials) {
+    const node = buildMediaNode(s.url)
+    if (node) return node
+  }
+  return null
+}
+
+/** paragraphs + optional media → TipTap doc.
+ *  media는 맨 위에 배치. 텍스트만 있으면 fallback. */
+function buildTipTapDoc(paragraphs, mediaNode) {
+  const content = []
+  if (mediaNode) content.push(mediaNode)
+  for (const text of paragraphs) {
+    content.push({
       type: 'paragraph',
       content: [{ type: 'text', text: String(text).slice(0, 5000) }],
-    })),
+    })
   }
+  return { type: 'doc', content }
 }
 
 async function main() {
@@ -101,10 +160,16 @@ async function main() {
       continue
     }
 
-    const content = paragraphsToTipTap(paragraphs)
+    const mediaNode = pickMediaNode(item)
+    const content = buildTipTapDoc(paragraphs, mediaNode)
     const externalKey = `news_agent:${item.id}`
 
-    log(`  PUBLISH — [${communitySlug}] ${title.slice(0, 60)}`)
+    const mediaLabel = mediaNode
+      ? mediaNode.type === 'embed'
+        ? `embed:${mediaNode.attrs.provider}`
+        : mediaNode.type
+      : 'text-only'
+    log(`  PUBLISH — [${communitySlug}] (${mediaLabel}) ${title.slice(0, 60)}`)
 
     if (dryRun) {
       totals.published++
