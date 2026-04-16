@@ -4,12 +4,12 @@ export const metadata: Metadata = {
   title: "탐색",
   description: "다양한 스포츠 커뮤니티를 탐색하세요",
   openGraph: {
-    title: "탐색 - FanRanker",
+    title: "탐색 - gongnori.fan",
     description: "다양한 스포츠 커뮤니티를 탐색하세요",
   },
   twitter: {
     card: "summary",
-    title: "탐색 - FanRanker",
+    title: "탐색 - gongnori.fan",
     description: "다양한 스포츠 커뮤니티를 탐색하세요",
   },
   alternates: { canonical: "/explore" },

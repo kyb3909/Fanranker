@@ -207,7 +207,7 @@ export async function generateMetadata({
   const info = COMMUNITY_MAP[slug]
   let name = info?.name || slug
   let description =
-    info?.metaDescription || info?.description || `${name} 게시판 - FanRanker 커뮤니티`
+    info?.metaDescription || info?.description || `${name} 게시판 - gongnori.fan 커뮤니티`
 
   // DB fallback for dynamic categories (하위 채널 등)
   if (!info) {
@@ -219,7 +219,7 @@ export async function generateMetadata({
       .single()
     if (cat) {
       name = cat.name
-      description = cat.description || `${name} 게시판 - FanRanker 커뮤니티`
+      description = cat.description || `${name} 게시판 - gongnori.fan 커뮤니티`
     }
   }
   return {
@@ -227,12 +227,12 @@ export async function generateMetadata({
     description,
     keywords: info?.keywords,
     openGraph: {
-      title: `${name} - FanRanker`,
+      title: `${name} - gongnori.fan`,
       description,
     },
     twitter: {
       card: "summary",
-      title: `${name} - FanRanker`,
+      title: `${name} - gongnori.fan`,
       description,
     },
     alternates: { canonical: `/community/${slug}` },
