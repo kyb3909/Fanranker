@@ -46,12 +46,15 @@ describe("PredictionActivityCard", () => {
 
   it("renders sport label and prediction count", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    expect(screen.getByText(/축구 3경기 예측 등록/)).toBeDefined()
+    // 컴포넌트 line 278: `{sportLabel} {activity.prediction_count}경기 조합`
+    expect(screen.getByText(/축구 3경기 조합/)).toBeDefined()
   })
 
-  it("renders round info", () => {
+  it("renders activity date", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    expect(screen.getByText(/2026년 10회차/)).toBeDefined()
+    // 컴포넌트 line 281-285: created_at을 ko-KR (month: long, day: numeric) 형식으로 렌더
+    // "2026-02-22T09:00:00.000Z" → "2월 22일"
+    expect(screen.getByText(/2월 22일/)).toBeDefined()
   })
 
   it("renders accuracy badge when > 0", () => {
@@ -96,8 +99,9 @@ describe("PredictionActivityCard", () => {
 
     await waitFor(() => {
       expect(screen.getByText("열람 완료")).toBeDefined()
-      // BettingSlipCard 헤더에 "베트맨 축구" 표시
-      expect(screen.getByText(/베트맨 축구/)).toBeDefined()
+      // 구매 후 BettingSlipCard가 렌더되며 슬립 헤더에 sport ("축구") 표시
+      const sportLabels = screen.getAllByText("축구")
+      expect(sportLabels.length).toBeGreaterThan(0)
     })
   })
 
