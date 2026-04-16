@@ -40,7 +40,14 @@ export function StickerUploadDialog({ onClose, onCreated }: StickerUploadDialogP
     setError("")
     setFile(f)
     setPreview(URL.createObjectURL(f))
-    if (!name) setName(f.name.replace(/\.[^.]+$/, ""))
+    if (!name) {
+      const stem = f.name.replace(/\.[^.]+$/, "")
+      // UUID/hash/스크린샷 자동 파일명은 의미 없는 이름이라 그대로 채우면 상점에 노이즈가 됨.
+      const isAutoName =
+        /^[a-f0-9]{8,}$/i.test(stem.replace(/[-_]/g, "")) ||
+        /^(img|image|photo|pasted[\s_-]?image|screenshot|capture|스크린샷|사진|이미지)/i.test(stem)
+      if (!isAutoName) setName(stem)
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
