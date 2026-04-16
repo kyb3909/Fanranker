@@ -46,6 +46,7 @@ export function ImageLightbox() {
       >
         <X className="h-6 w-6" />
       </button>
+      {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user content URL, dimensions unknown */}
       <img
         src={src}
         alt=""

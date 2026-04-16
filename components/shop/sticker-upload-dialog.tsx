@@ -113,6 +113,7 @@ export function StickerUploadDialog({ onClose, onCreated }: StickerUploadDialogP
             }`}
           >
             {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element -- blob URL preview, not optimizable
               <img src={preview} alt="미리보기" className="h-32 w-32 rounded-lg object-contain" />
             ) : (
               <>

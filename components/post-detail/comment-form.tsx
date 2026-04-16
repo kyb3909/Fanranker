@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
+import Image from "next/image"
 import { Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -105,9 +106,11 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
       {/* 선택된 스티커 미리보기 */}
       {selectedSticker && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-          <img
+          <Image
             src={selectedSticker.image_url}
             alt={selectedSticker.name}
+            width={48}
+            height={48}
             className="h-12 w-12 object-contain"
           />
           <span className="text-foreground text-xs font-medium">{selectedSticker.name}</span>

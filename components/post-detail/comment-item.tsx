@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, memo } from "react"
+import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
@@ -225,12 +226,13 @@ export const CommentItem = memo(function CommentItem({
               )}
               {comment.sticker && (
                 <div className="mt-1">
-                  <img
+                  <Image
                     src={comment.sticker.image_url}
                     alt={comment.sticker.name}
+                    width={160}
+                    height={160}
                     className="h-40 w-40 object-contain"
                     title={comment.sticker.name}
-                    loading="lazy"
                   />
                 </div>
               )}

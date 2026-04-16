@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import Image from "next/image"
 import { Sparkles, X, ShoppingBag } from "lucide-react"
 import Link from "@/components/ui/app-link"
 
@@ -92,11 +93,12 @@ export function StickerPicker({ onSelect, onClose }: StickerPickerProps) {
                 className="group bg-muted/30 relative aspect-square overflow-hidden rounded-lg border border-transparent p-1.5 transition-all hover:border-amber-500/50 hover:bg-amber-500/5"
                 title={s.name}
               >
-                <img
+                <Image
                   src={s.image_url}
                   alt={s.name}
-                  className="h-full w-full object-contain transition-transform group-hover:scale-110"
-                  loading="lazy"
+                  fill
+                  className="object-contain transition-transform group-hover:scale-110"
+                  sizes="48px"
                 />
               </button>
             ))}

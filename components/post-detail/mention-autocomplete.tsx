@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
+import Image from "next/image"
 
 interface Sticker {
   id: string
@@ -161,9 +162,11 @@ export function MentionDropdown({
               i === mentionIndex ? "bg-amber-500/10" : "hover:bg-muted/60"
             }`}
           >
-            <img
+            <Image
               src={sticker.image_url}
               alt={sticker.name}
+              width={40}
+              height={40}
               className="h-10 w-10 rounded object-contain"
             />
             <span className="text-foreground text-sm font-medium">{sticker.name}</span>

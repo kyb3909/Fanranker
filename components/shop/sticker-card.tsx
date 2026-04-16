@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Check, ShoppingCart, Sparkles } from "lucide-react"
 import {
   AlertDialog,
@@ -66,11 +67,12 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
     >
       {/* 이미지 */}
       <div className="bg-muted/30 relative aspect-square p-3">
-        <img
+        <Image
           src={sticker.image_url}
           alt={sticker.name}
-          className="h-full w-full object-contain transition-transform group-hover:scale-110"
-          loading="lazy"
+          fill
+          className="object-contain transition-transform group-hover:scale-110"
+          sizes="(max-width: 640px) 25vw, 120px"
         />
         {owned && (
           <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">

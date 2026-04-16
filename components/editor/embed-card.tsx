@@ -380,9 +380,11 @@ function XRichEmbed({
         >
           <div className="flex items-center gap-2">
             {data.author_avatar ? (
-              <img
+              <Image
                 src={data.author_avatar}
                 alt=""
+                width={20}
+                height={20}
                 className="h-5 w-5 rounded-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = "none"
@@ -427,10 +429,12 @@ function XRichMedia({
 
   if (media.type === "photo") {
     return (
-      <img
+      <Image
         src={media.url}
         alt=""
-        className="h-full w-full object-cover"
+        fill
+        className="object-cover"
+        sizes="(max-width: 640px) 100vw, 560px"
         onError={(e) => {
           e.currentTarget.style.display = "none"
         }}
@@ -449,10 +453,12 @@ function XRichMedia({
   ) : (
     <button onClick={() => setPlaying(true)} className="group block h-full w-full">
       {media.thumbnail_url && (
-        <img
+        <Image
           src={media.thumbnail_url}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          className="object-cover"
+          sizes="(max-width: 640px) 100vw, 560px"
           onError={(e) => {
             e.currentTarget.style.display = "none"
           }}
