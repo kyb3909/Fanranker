@@ -4,6 +4,7 @@ import { settlePredictions } from "@/lib/betman/settle"
 // Mock Sentry to avoid initialization errors
 vi.mock("@sentry/nextjs", () => ({
   captureMessage: vi.fn(),
+  captureException: vi.fn(),
 }))
 
 // Mock batchUpdateUserStats
