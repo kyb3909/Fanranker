@@ -1,7 +1,7 @@
 import useSWR from "swr"
 import { useAuth } from "@clerk/nextjs"
 import { fetcher } from "@/lib/swr"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 
 export function useBlockedUsers() {
   const { isSignedIn } = useAuth()
@@ -14,7 +14,7 @@ export function useBlockedUsers() {
     dedupingInterval: 60000,
   })
 
-  const blockedIds = new Set((data?.blocks || []).map((b) => b.blocked_id))
+  const blockedIds = useMemo(() => new Set((data?.blocks || []).map((b) => b.blocked_id)), [data])
 
   const toggleBlock = useCallback(
     async (userId: string) => {

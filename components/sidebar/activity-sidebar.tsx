@@ -118,6 +118,9 @@ export const ActivitySidebar = memo(function ActivitySidebar({
     }
 
     fetchRecentPosts()
+    // recentPosts.length는 의도적으로 dep에서 제외 — setRecentPosts가 이 effect를 재실행시키는 무한 루프 방지.
+    // 마운트 시 한 번 prefetch 데이터 체크 → 없으면 fetch 하는 패턴.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecentComments])
 
   return (

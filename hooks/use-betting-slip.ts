@@ -260,11 +260,13 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
     }
   }, [
     selectedBets,
+    selectedSport,
     betAmount,
     userBalls,
     showAlert,
     loadMatches,
     loadUserBalls,
+    globalMutate,
     isJournalist,
     analysisTitle,
     analysisText,

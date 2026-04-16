@@ -209,44 +209,47 @@ export default function SignUpPage() {
     })
   }, [])
 
-  const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleAvatarUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "파일 크기는 10MB 이하여야 합니다." })
-      return
-    }
-
-    setAvatarUploading(true)
-    try {
-      // 아바타는 512px로 클라이언트에서 미리 압축 (413 방지)
-      const compressed = await compressImage(file, 512)
-      const formData = new FormData()
-      formData.append("file", new File([compressed], "avatar.webp", { type: "image/webp" }))
-
-      const res = await fetch("/api/upload/image?type=avatar", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || "업로드 실패")
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "파일 크기는 10MB 이하여야 합니다." })
+        return
       }
 
-      const { url } = await res.json()
-      setAvatarUrl(url)
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "업로드 실패",
-        description: err instanceof Error ? err.message : "다시 시도해주세요.",
-      })
-    } finally {
-      setAvatarUploading(false)
-    }
-  }, [])
+      setAvatarUploading(true)
+      try {
+        // 아바타는 512px로 클라이언트에서 미리 압축 (413 방지)
+        const compressed = await compressImage(file, 512)
+        const formData = new FormData()
+        formData.append("file", new File([compressed], "avatar.webp", { type: "image/webp" }))
+
+        const res = await fetch("/api/upload/image?type=avatar", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || "업로드 실패")
+        }
+
+        const { url } = await res.json()
+        setAvatarUrl(url)
+      } catch (err) {
+        toast({
+          variant: "destructive",
+          title: "업로드 실패",
+          description: err instanceof Error ? err.message : "다시 시도해주세요.",
+        })
+      } finally {
+        setAvatarUploading(false)
+      }
+    },
+    [compressImage]
+  )
 
   // ── Toggle community selection ──
   const toggleCommunity = useCallback((slug: string) => {
@@ -457,6 +460,7 @@ export default function SignUpPage() {
     favoritePlayer,
     mbti,
     selectedSlugs,
+    signupMethod,
     router,
   ])
 

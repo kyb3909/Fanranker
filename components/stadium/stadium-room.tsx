@@ -63,6 +63,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
 
   // 실시간 채팅 (로그인 시에만 연결)
   const chat = useStadiumChat(isSignedIn ? teamId : "")
+  const { moveByKeyboard, moveToPosition } = chat
 
   // 승부예측 수익 잔액
   const { data: earningsData, mutate: mutateEarnings } = useSWR(
@@ -93,7 +94,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
       if (keys.has("ArrowRight") || keys.has("d")) dx += 1
       if (keys.has("ArrowUp") || keys.has("w")) dy -= 1
       if (keys.has("ArrowDown") || keys.has("s")) dy += 1
-      if (dx !== 0 || dy !== 0) chat.moveByKeyboard(dx, dy)
+      if (dx !== 0 || dy !== 0) moveByKeyboard(dx, dy)
       raf = requestAnimationFrame(tick)
     }
 
@@ -106,7 +107,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
       window.removeEventListener("keyup", handleKeyUp)
       cancelAnimationFrame(raf)
     }
-  }, [isSignedIn, chat.moveByKeyboard])
+  }, [isSignedIn, moveByKeyboard])
 
   const handleInvestClick = () => {
     if (!isSignedIn) {
@@ -123,9 +124,9 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
 
   const handleClickMove = useCallback(
     (x: number, y: number) => {
-      if (isSignedIn) chat.moveToPosition(x, y)
+      if (isSignedIn) moveToPosition(x, y)
     },
-    [isSignedIn, chat.moveToPosition]
+    [isSignedIn, moveToPosition]
   )
 
   return (

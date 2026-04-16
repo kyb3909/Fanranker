@@ -34,7 +34,9 @@ export function useBettingMatches() {
 
   // Derive values directly from SWR data
   const todayInfo: TodayInfo | null = gamesData?.today ?? null
-  const groupedMatches: GroupedMatch[] = gamesData?.groupedGames ?? []
+  // useMemo로 안정 reference — `?? []` fallback이 매 렌더마다 새 배열 만들면
+  // 아래 useMemo들의 deps가 항상 변경된 것으로 평가됨.
+  const groupedMatches = useMemo<GroupedMatch[]>(() => gamesData?.groupedGames ?? [], [gamesData])
   const earliestBetClose: string | null = gamesData?.earliestBetClose ?? null
   const error: string | null = gamesError ? "경기 데이터를 불러오는데 실패했습니다." : null
   const lastUpdated: Date | null = useMemo(() => (gamesData ? new Date() : null), [gamesData])

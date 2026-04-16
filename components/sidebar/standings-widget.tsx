@@ -68,7 +68,10 @@ export function StandingsWidget() {
   )
 
   const hasData = data?.data && Array.isArray(data.data) && data.data.length > 0
-  const allRows = hasData ? mapRowsToStandings(data!.data) : []
+  const allRows = useMemo<StandingsRow[]>(
+    () => (hasData ? mapRowsToStandings(data!.data) : []),
+    [hasData, data]
+  )
   const groups = getLeagueGroups(leagueId)
   const activeGroupKey = groupKey ?? groups?.[0]?.key ?? null
   const activeGroup = groups?.find((g) => g.key === activeGroupKey) ?? null

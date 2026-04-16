@@ -84,7 +84,7 @@ export function useCheerBattle(battleId: string | null) {
         setIsCommenting(false)
       }
     },
-    [battleId, myParticipant, mutate, data]
+    [battleId, myParticipant, mutate]
   )
 
   return {

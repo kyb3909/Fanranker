@@ -58,7 +58,7 @@ export function PlayerPool({ state, myTurn, mySeat, onPick }: PlayerPoolProps) {
     )
 
     return list as Player[]
-  }, [posFilter, search, sortDesc, state])
+  }, [posFilter, search, sortDesc])
 
   const budget = state.budget[mySeat] ?? 0
   const myLimits = getSeatLimits(state, mySeat)
