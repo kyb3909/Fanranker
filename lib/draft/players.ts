@@ -11,12 +11,24 @@ export interface Player {
 }
 
 let _players: Player[] | null = null
+let _loadingPromise: Promise<Player[]> | null = null
 
 export async function loadPlayers(): Promise<Player[]> {
   if (_players) return _players
-  const data = await import("@/data/fpl-players.json")
-  _players = (data.default ?? data) as Player[]
-  return _players
+  if (_loadingPromise) return _loadingPromise
+  _loadingPromise = fetch("/data/fpl-players.json")
+    .then((r) => {
+      if (!r.ok) throw new Error(`fpl-players load failed: ${r.status}`)
+      return r.json() as Promise<Player[]>
+    })
+    .then((data) => {
+      _players = data
+      return data
+    })
+    .finally(() => {
+      _loadingPromise = null
+    })
+  return _loadingPromise
 }
 
 /** Sync access — only works after loadPlayers() has been called */

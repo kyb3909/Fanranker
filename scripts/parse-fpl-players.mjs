@@ -42,7 +42,7 @@ for (const line of lines) {
 }
 
 const output = JSON.stringify(players, null, 2)
-fs.writeFileSync(path.join(__dirname, "../data/fpl-players.json"), output)
+fs.writeFileSync(path.join(__dirname, "../public/data/fpl-players.json"), output)
 
 console.log(`Parsed ${players.length} players`)
 console.log(`  GK: ${players.filter((p) => p.position === "GK").length}`)
