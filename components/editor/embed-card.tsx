@@ -107,7 +107,23 @@ export function EmbedCard({
 
   const html = htmlProp || fetchedHtml
 
-  // 로딩 중
+  // X: oEmbed API에서 구조화된 data를 받아 자체 카드로 렌더 (html 불필요)
+  if (provider === "x") {
+    if (isLoading && !fetchedData) {
+      return (
+        <Card className={cn("border-border bg-card border", className)}>
+          <CardContent className="flex aspect-video items-center justify-center p-4">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+          </CardContent>
+        </Card>
+      )
+    }
+    return (
+      <XRichEmbed data={fetchedData} url={url} author_name={author_name} className={className} />
+    )
+  }
+
+  // 로딩 중 (YouTube/Instagram)
   if (!html && isLoading) {
     return (
       <Card className={cn("border-border bg-card border", className)}>
@@ -118,7 +134,7 @@ export function EmbedCard({
     )
   }
 
-  // HTML 없으면 fallback
+  // HTML 없으면 generic fallback (YouTube oEmbed 실패 등)
   if (!html) {
     return (
       <Card className={cn("border-border bg-card border", className)}>
@@ -154,13 +170,6 @@ export function EmbedCard({
   // Instagram: blockquote + embed.js 렌더링
   if (provider === "instagram") {
     return <InstagramEmbed html={html} url={url} className={className} />
-  }
-
-  // X: blockquote + widgets.js 렌더링
-  if (provider === "x") {
-    return (
-      <XRichEmbed data={fetchedData} url={url} author_name={author_name} className={className} />
-    )
   }
 
   // Render embed HTML with responsive wrapper (YouTube)
