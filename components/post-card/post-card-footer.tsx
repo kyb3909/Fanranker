@@ -34,7 +34,7 @@ export function PostCardFooter({
   communityLink,
 }: PostCardFooterProps) {
   return (
-    <div className="border-border/40 mt-3 flex items-center gap-4 border-t pt-3">
+    <div className="border-border mt-3 flex items-center gap-4 border-t pt-3">
       {/* 투표 */}
       <VoteButtons voteCount={voteCount} myVote={myVote} onVote={onVote} size="sm" />
 
@@ -44,7 +44,7 @@ export function PostCardFooter({
         className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
       >
         <MessageCircle className="h-4 w-4" />
-        <span className="text-[12px] font-semibold tabular-nums">{comments}</span>
+        <span className="text-[12px] font-medium tabular-nums">{comments}</span>
       </Link>
 
       {/* 우측: 북마크 + 공유 + 게시판 배지 */}
@@ -64,7 +64,7 @@ export function PostCardFooter({
         <ShareMenu postId={postId} postTitle={postTitle} />
         {community && communityLink && (
           <Link href={`/community/${communityLink}`} className="ml-1">
-            <span className="bg-muted text-muted-foreground hover:text-foreground inline-flex items-center rounded px-2 py-1 text-[10px] font-bold transition-colors">
+            <span className="bg-muted text-muted-foreground hover:text-foreground inline-flex items-center rounded px-2 py-1 text-[10px] font-medium transition-colors">
               {community}
             </span>
           </Link>

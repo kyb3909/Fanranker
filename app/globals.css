@@ -20,7 +20,7 @@
 :root {
   /* ===== KT BizMeka-inspired Clean Design System ===== */
   /* Background: 아주 살짝 회색 톤 - 카드와 구분 */
-  --background: #f7f7f8;
+  --background: #f9fafb;
   /* Primary Text: #111111 - 주요 텍스트 */
   --foreground: #111111;
 
@@ -36,23 +36,23 @@
   --primary-foreground: #ffffff;
 
   /* Secondary: Light gray for secondary elements */
-  --secondary: #f5f5f5;
+  --secondary: #f8f8f8;
   --secondary-foreground: #222222;
 
   /* Muted: For muted backgrounds */
-  --muted: #f5f5f5;
-  /* Secondary Text: #777777 - 메타 정보, 라벨, 설명 */
-  --muted-foreground: #777777;
+  --muted: #f7f8f9;
+  /* Secondary Text: #999 - 메타 정보, 라벨, 설명 */
+  --muted-foreground: #999999;
 
-  --accent: #f7f7f7;
+  --accent: #f8f9fa;
   --accent-foreground: #222222;
 
   --destructive: oklch(0.45 0.18 15);
   --destructive-foreground: #ffffff;
 
   /* Border: Clean border color */
-  --border: #e5e5e5;
-  --input: #e0e0e0;
+  --border: #ebebeb;
+  --input: #e5e5e5;
 
   /* Ring: Burgundy for focus states */
   --ring: oklch(0.45 0.18 15);

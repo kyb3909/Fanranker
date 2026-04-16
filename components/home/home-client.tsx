@@ -13,14 +13,14 @@ const CommunitySidebar = dynamic(
   () =>
     import("@/components/sidebar/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
   {
-    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
+    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-lg border" />,
   }
 )
 const ActivitySidebar = dynamic(
   () =>
     import("@/components/sidebar/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
   {
-    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-xl border" />,
+    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-lg border" />,
   }
 )
 const OnboardingBanner = dynamic(
@@ -39,7 +39,7 @@ const ContentSection = dynamic(
   {
     loading: () => (
       <div className="min-h-[400px]">
-        <div className="bg-card border-border animate-pulse rounded-xl border p-6">
+        <div className="bg-card border-border animate-pulse rounded-lg border p-6">
           <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -55,7 +55,7 @@ const ContentSection = dynamic(
 const BettingPage = dynamic(() => import("@/components/betting/betting-page"), {
   loading: () => (
     <div className="min-h-[600px]">
-      <div className="bg-card border-border rounded-xl border p-4">
+      <div className="bg-card border-border rounded-lg border p-4">
         <div className="flex gap-2">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-muted h-10 w-24 animate-pulse rounded-lg" />
@@ -69,7 +69,7 @@ const BettingPage = dynamic(() => import("@/components/betting/betting-page"), {
       </div>
       <div className="mt-2 space-y-2 sm:mt-4 sm:space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-card border-border animate-pulse rounded-xl border p-4">
+          <div key={i} className="bg-card border-border animate-pulse rounded-lg border p-4">
             <div className="bg-muted mb-2 h-4 w-1/4 rounded" />
             <div className="flex items-center justify-between">
               <div className="bg-muted h-6 w-1/3 rounded" />
@@ -169,7 +169,7 @@ export function HomeClient({
           ) : (
             <>
               {/* 탭 네비게이션 */}
-              <div className="bg-card border-border overflow-hidden rounded-xl border">
+              <div className="bg-card border-border overflow-hidden rounded-lg border">
                 <div className="flex" role="tablist" aria-label="홈 탭">
                   <button
                     role="tab"

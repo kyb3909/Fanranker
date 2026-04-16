@@ -6,8 +6,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Compass, LayoutGrid, Trophy, Sparkles, Landmark } from "lucide-react"
 
 const activeClass =
-  "font-semibold text-[#f8f8f8] after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-[#f8f8f8]/70"
-const inactiveClass = "text-[#f8f8f8]/60 hover:text-[#f8f8f8]/80"
+  "font-semibold text-primary after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-primary"
+const inactiveClass = "text-foreground/50 hover:text-foreground/80"
 const baseClass =
   "relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px]"
 
@@ -24,7 +24,7 @@ export const HeaderNav = memo(function HeaderNav() {
   const isShop = pathname.startsWith("/shop")
 
   return (
-    <nav className="bg-primary w-full border-t border-white/10" aria-label="주요 메뉴">
+    <nav className="border-border w-full border-t bg-white" aria-label="주요 메뉴">
       <div className="scrollbar-none flex items-center justify-center overflow-x-auto">
         <Link
           href="/"

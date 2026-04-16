@@ -7,8 +7,7 @@ import { Card } from "@/components/ui/card"
 export function SidebarResources() {
   return (
     <footer className="mt-auto shrink-0" role="contentinfo">
-      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-        <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+      <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
         <div className="px-4 py-3">
           <h3 className="text-primary flex items-center gap-2 text-[14px] font-bold">
             <BookOpen className="h-3.5 w-3.5" />

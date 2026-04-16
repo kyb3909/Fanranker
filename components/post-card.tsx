@@ -65,7 +65,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
 
   return (
     <article>
-      <Card className="border-border hover:border-muted-foreground/30 overflow-hidden border transition-all duration-300 hover:shadow-md">
+      <Card className="border-border hover:bg-muted/30 overflow-hidden border transition-colors">
         <div className="relative px-4 py-3 sm:px-5">
           <PostCardHeader
             timestamp={post.timestamp}

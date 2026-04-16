@@ -31,7 +31,7 @@ export const FeedSection = memo(function FeedSection({
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="bg-card border-border animate-pulse rounded-xl border px-4 py-3 sm:px-5"
+            className="bg-card border-border animate-pulse rounded-lg border px-4 py-3 sm:px-5"
             style={{ minHeight: 220 }}
           >
             {/* Header skeleton */}

@@ -124,7 +124,7 @@ export const CommunityContent = memo(function CommunityContent({
           {/* 커뮤니티 헤더: 간격 축소 */}
           <div className="mb-4 flex items-start justify-between">
             <div className="space-y-1">
-              <h1 className="text-foreground text-2xl font-bold">{community.name}</h1>
+              <h1 className="text-foreground text-xl font-semibold">{community.name}</h1>
               <p className="text-muted-foreground text-sm">{community.description}</p>
               <div className="text-muted-foreground flex items-center gap-3 pt-1 text-xs">
                 <div className="flex items-center gap-1">
@@ -194,8 +194,8 @@ export const CommunityContent = memo(function CommunityContent({
               )}
             </div>
 
-            {/* 테이블 헤더: 컴팩트한 패딩 */}
-            <div className="border-border bg-muted/30 text-muted-foreground hidden grid-cols-10 gap-2 border-b px-3 py-2 text-xs font-medium sm:grid">
+            {/* 테이블 헤더 */}
+            <div className="border-border bg-muted/30 text-muted-foreground hidden grid-cols-10 gap-2 border-b px-3 py-2.5 text-xs font-medium sm:grid">
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-5">제목</div>
               <div className="col-span-2 text-center">글쓴이</div>
@@ -203,7 +203,7 @@ export const CommunityContent = memo(function CommunityContent({
               <div className="col-span-1 text-center">추천</div>
             </div>
             {/* 모바일 헤더 */}
-            <div className="border-border bg-muted/30 text-muted-foreground grid grid-cols-12 gap-1 border-b px-3 py-2 text-xs font-medium sm:hidden">
+            <div className="border-border bg-muted/30 text-muted-foreground grid grid-cols-12 gap-1 border-b px-3 py-2.5 text-xs font-medium sm:hidden">
               <div className="col-span-8">제목</div>
               <div className="col-span-4 text-right">글쓴이</div>
             </div>
@@ -214,7 +214,7 @@ export const CommunityContent = memo(function CommunityContent({
                 <Link
                   key={post.id}
                   href={`/post/${post.id}`}
-                  className="border-border/50 hover:bg-muted/50 block gap-2 border-b px-3 py-2 text-xs transition-colors last:border-0 sm:grid sm:grid-cols-10"
+                  className={`border-border hover:bg-muted/50 block gap-2 border-b px-3 py-2.5 text-xs transition-colors last:border-0 sm:grid sm:grid-cols-10 ${post.isNotice ? "bg-muted/30" : ""}`}
                 >
                   {/* 데스크탑 레이아웃 */}
                   <div className="text-muted-foreground col-span-1 hidden text-center sm:block">

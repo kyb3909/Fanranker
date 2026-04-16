@@ -48,9 +48,7 @@ export function MonthlyPrizeBanner() {
   const revealedWeeks = getRevealedWeeks(CURRENT_PRIZE.startDate)
 
   return (
-    <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-      <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
-
+    <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
       {/* 헤더 */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">

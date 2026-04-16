@@ -13,7 +13,7 @@ const StandingsWidget = dynamic(
     import("@/components/sidebar/standings-widget").then((m) => ({ default: m.StandingsWidget })),
   {
     ssr: false,
-    loading: () => <div className="bg-card border-border h-64 animate-pulse rounded-xl border" />,
+    loading: () => <div className="bg-card border-border h-64 animate-pulse rounded-lg border" />,
   }
 )
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
@@ -126,11 +126,10 @@ export const ActivitySidebar = memo(function ActivitySidebar({
       {showPrize && <MonthlyPrizeBanner />}
 
       {/* ===== 최근 댓글 섹션 ===== */}
-      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-        <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+      <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
         <div className="flex items-center gap-2 px-4 py-3">
           <MessageSquare className="text-primary h-3.5 w-3.5" />
-          <h3 className="text-primary text-[14px] font-bold">최근 댓글 달린 게시물</h3>
+          <h3 className="text-primary text-[13px] font-semibold">최근 댓글 달린 게시물</h3>
         </div>
 
         <div className="py-1">
@@ -147,9 +146,9 @@ export const ActivitySidebar = memo(function ActivitySidebar({
                   className="hover:bg-muted/40 flex items-center gap-2 px-4 py-2.5 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <p className="text-foreground truncate text-[14px] font-medium">{post.title}</p>
+                    <p className="text-foreground truncate text-[13px] font-medium">{post.title}</p>
                     {post.comments > 0 && (
-                      <span className="text-primary shrink-0 text-[12px] font-semibold">
+                      <span className="text-primary shrink-0 text-[11px] font-medium">
                         [{post.comments}]
                       </span>
                     )}
@@ -176,7 +175,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
         {standingsVisible ? (
           <StandingsWidget />
         ) : (
-          <div className="bg-card border-border h-64 animate-pulse rounded-xl border" />
+          <div className="bg-card border-border h-64 animate-pulse rounded-lg border" />
         )}
       </div>
     </div>

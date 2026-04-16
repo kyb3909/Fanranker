@@ -323,10 +323,9 @@ export const CommunitySidebar = memo(function CommunitySidebar({
 
   return (
     <div ref={stickyRef} className="sticky flex flex-col gap-4" style={{ top: `${stickyTop}px` }}>
-      <Card className="border-border relative gap-0 overflow-hidden rounded-xl border py-0 shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-        <div className="via-primary/60 absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
+      <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-primary flex items-center gap-2 text-[14px] font-bold">
+          <h3 className="text-primary flex items-center gap-2 text-[13px] font-semibold">
             <LayoutGrid className="h-3.5 w-3.5" />
             게시판
           </h3>
