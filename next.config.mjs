@@ -1,4 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs"
+import bundleAnalyzer from "@next/bundle-analyzer"
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+})
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -145,7 +150,8 @@ const nextConfig = {
   },
 }
 
-export default withSentryConfig(nextConfig, {
+export default withBundleAnalyzer(
+  withSentryConfig(nextConfig, {
   // Sentry 빌드 옵션
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
@@ -161,4 +167,5 @@ export default withSentryConfig(nextConfig, {
 
   // SENTRY_AUTH_TOKEN 없으면 빌드 실패하지 않게
   authToken: process.env.SENTRY_AUTH_TOKEN,
-})
+  })
+)
