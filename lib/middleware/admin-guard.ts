@@ -16,7 +16,11 @@ export async function adminGuard(
   const { userId } = await auth()
   if (!userId) {
     const signInUrl = new URL("/sign-up", req.url)
-    signInUrl.searchParams.set("redirect_url", req.url)
+    // Open redirect 방지: 내부 /admin 경로만 허용. 외부 URL / 외부 path는 기본값으로 대체.
+    const pathname = req.nextUrl.pathname
+    const search = req.nextUrl.search
+    const safeRedirect = pathname.startsWith("/admin") ? `${pathname}${search}` : "/admin"
+    signInUrl.searchParams.set("redirect_url", safeRedirect)
     return NextResponse.redirect(signInUrl)
   }
 
