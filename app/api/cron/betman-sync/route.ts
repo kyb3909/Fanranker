@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { apiError } from "@/lib/api-error"
+import { deriveResultFromScore, mapGameResult, parseScore } from "@/lib/betman/result-mapper"
 
 /**
  * GET /api/cron/betman-sync
@@ -207,71 +208,6 @@ const RESULT_HANDI_MAP: Record<number, string> = {
   7: "S언더오버",
   9: "언더오버",
   14: "일반",
-}
-
-function mapGameResult(
-  rawGameResult: string | number,
-  gameType: string
-): { result: string; status: string } {
-  const gameResult = String(rawGameResult)
-
-  if (gameResult === "4") return { result: "cancelled", status: "cancelled" }
-
-  if (gameType === "일반" || gameType === "핸디캡" || gameType === "S핸디캡") {
-    if (gameResult === "0") return { result: "home", status: "completed" }
-    if (gameResult === "1") return { result: "draw", status: "completed" }
-    if (gameResult === "2") return { result: "away", status: "completed" }
-  } else if (gameType === "언더오버" || gameType === "S언더오버") {
-    if (gameResult === "0") return { result: "under", status: "completed" }
-    if (gameResult === "2") return { result: "over", status: "completed" }
-  } else if (gameType === "SUM") {
-    if (gameResult === "0") return { result: "odd", status: "completed" }
-    if (gameResult === "2") return { result: "even", status: "completed" }
-  }
-  return { result: "", status: "completed" }
-}
-
-/**
- * 스코어 기반 결과 추론 (크롤러가 GAME_RESULT를 주지 않을 때 fallback)
- * 핸디캡/언더오버/SUM 게임에서 실제 스코어와 게임 조건으로 결과를 계산
- */
-function deriveResultFromScore(
-  homeScore: number,
-  awayScore: number,
-  gameType: string,
-  handicap: number | null,
-  overUnderLine: number | null
-): string {
-  if (gameType === "핸디캡" || gameType === "S핸디캡") {
-    const h = handicap ?? 0
-    const adjusted = homeScore + h
-    if (adjusted > awayScore) return "home"
-    if (adjusted < awayScore) return "away"
-    return "draw"
-  }
-  if (gameType === "언더오버" || gameType === "S언더오버") {
-    const total = homeScore + awayScore
-    const line = overUnderLine ?? 0
-    if (line === 0) return ""
-    if (total > line) return "over"
-    if (total < line) return "under"
-    return ""
-  }
-  if (gameType === "SUM") {
-    const total = homeScore + awayScore
-    return total % 2 === 0 ? "even" : "odd"
-  }
-  if (homeScore > awayScore) return "home"
-  if (homeScore < awayScore) return "away"
-  return "draw"
-}
-
-function parseScore(mchScore: string): { home: number; away: number } | null {
-  if (!mchScore || !mchScore.includes(":")) return null
-  const [h, a] = mchScore.split(":").map(Number)
-  if (isNaN(h) || isNaN(a)) return null
-  if (!Number.isInteger(h) || !Number.isInteger(a)) return null
-  return { home: h, away: a }
 }
 
 interface ResultItem {

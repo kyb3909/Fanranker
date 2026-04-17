@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { settlePredictions } from "@/lib/betman/settle"
+import { deriveResultFromScore } from "@/lib/betman/result-mapper"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { z } from "zod"
@@ -17,39 +18,6 @@ const resultsPostSchema = z.object({
   gmTs: z.union([z.string(), z.number()]).transform(String),
   results: z.array(resultItemSchema).min(1, "results 배열이 비어 있습니다."),
 })
-
-function deriveResultFromScore(
-  homeScore: number,
-  awayScore: number,
-  gameType: string,
-  handicap: number | null,
-  overUnderLine: number | null
-): string {
-  if (gameType === "핸디캡" || gameType === "S핸디캡") {
-    const adjusted = homeScore + (handicap ?? 0)
-    if (adjusted > awayScore) return "home"
-    if (adjusted < awayScore) return "away"
-    return "draw"
-  }
-
-  if (gameType === "언더오버" || gameType === "S언더오버") {
-    const line = overUnderLine ?? 0
-    if (line === 0) return ""
-    const total = homeScore + awayScore
-    if (total > line) return "over"
-    if (total < line) return "under"
-    return ""
-  }
-
-  if (gameType === "SUM") {
-    const total = homeScore + awayScore
-    return total % 2 === 0 ? "even" : "odd"
-  }
-
-  if (homeScore > awayScore) return "home"
-  if (homeScore < awayScore) return "away"
-  return "draw"
-}
 
 /**
  * POST /api/betman/results
