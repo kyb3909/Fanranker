@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
+import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { z } from "zod"
 
 /**
@@ -44,6 +44,9 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    const limited = checkRateLimit(request, "STRICT")
+    if (limited) return limited
+
     const user = await currentUser()
     if (!user) {
       return apiUnauthorized()
