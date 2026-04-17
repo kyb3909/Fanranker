@@ -37,7 +37,7 @@ export function CommentActions({
       <Button
         variant="ghost"
         size="sm"
-        className={`h-7 gap-0.5 px-1.5 ${myVote === "up" ? "text-primary" : "text-muted-foreground"}`}
+        className={`h-9 gap-0.5 px-1.5 ${myVote === "up" ? "text-primary" : "text-muted-foreground"}`}
         onClick={() => onVote("up")}
         aria-label="추천"
       >
@@ -51,7 +51,7 @@ export function CommentActions({
       <Button
         variant="ghost"
         size="sm"
-        className={`h-7 gap-0.5 px-1.5 ${myVote === "down" ? "text-destructive" : "text-muted-foreground"}`}
+        className={`h-9 gap-0.5 px-1.5 ${myVote === "down" ? "text-destructive" : "text-muted-foreground"}`}
         onClick={() => onVote("down")}
         aria-label="비추천"
       >
@@ -62,7 +62,7 @@ export function CommentActions({
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground ml-1 h-7 gap-1"
+          className="text-muted-foreground ml-1 h-9 gap-1"
           onClick={onToggleReply}
         >
           <MessageCircle className={iconSize} />
@@ -76,7 +76,7 @@ export function CommentActions({
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-destructive h-7 gap-1"
+              className="text-muted-foreground hover:text-destructive h-9 gap-1"
               onClick={onBlock}
               title="차단하기"
               aria-label="차단하기"
@@ -87,7 +87,7 @@ export function CommentActions({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground h-7 gap-1"
+            className="text-muted-foreground h-9 gap-1"
             onClick={onReport}
             title="신고하기"
             aria-label="신고하기"
