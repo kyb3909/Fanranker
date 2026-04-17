@@ -28,6 +28,14 @@ export async function PATCH(
     if (!parsed.success) return apiBadRequest("유효한 role이 필요합니다: user, moderator, admin")
     const { role } = parsed.data
 
+    // Self-demote 방지: admin이 자기 자신을 admin 외로 강등하면 어드민 패널 접근권 상실 →
+    // UI에서 잘못 누른 footgun 방지. admin 권한 이양은 다른 admin이 수행하도록 강제.
+    if (adminId === userId && role !== "admin") {
+      return apiBadRequest(
+        "자기 자신의 admin 권한을 강등할 수 없습니다. 다른 관리자에게 요청하세요."
+      )
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({ role, updated_at: new Date().toISOString() })
