@@ -4,6 +4,7 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useState } from "react"
+import useSWR from "swr"
 import { ExternalLink, Loader2, Play } from "lucide-react"
 
 export interface EmbedCardProps {
@@ -48,33 +49,23 @@ export function EmbedCard({
         )?.[1]
       : null
 
-  const [fetchedHtml, setFetchedHtml] = useState<string | null>(null)
-  const [fetchedData, setFetchedData] = useState<XOEmbedData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  // SWR: YouTube가 아니면서 html prop이 없을 때만 fetch.
+  // SWR dedup/cache로 같은 URL 다중 embed-card가 있어도 1회만 호출하고 재렌더 시에도 재fetch 안 함.
+  const shouldFetch = !youtubeVideoId && !htmlProp
+  const apiUrl = shouldFetch
+    ? provider === "x"
+      ? `/api/oembed?url=${encodeURIComponent(url)}`
+      : `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
+    : null
 
-  // YouTube가 아닌 경우: html prop이 없으면 oEmbed API에서 자동 fetch
-  useEffect(() => {
-    if (youtubeVideoId || htmlProp || fetchedHtml || fetchedData) return
-    const abortController = new AbortController()
-    setIsLoading(true)
-    const apiUrl =
-      provider === "x"
-        ? `/api/oembed?url=${encodeURIComponent(url)}`
-        : `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`
+  const { data: swrData, isLoading } = useSWR<(XOEmbedData & { html?: string }) | null>(
+    apiUrl,
+    (u: string) => fetch(u).then((r) => (r.ok ? r.json().catch(() => null) : null)),
+    { dedupingInterval: 600_000, revalidateOnFocus: false, revalidateIfStale: false }
+  )
 
-    fetch(apiUrl, { signal: abortController.signal })
-      .then((r) => (r.ok ? r.json().catch(() => null) : null))
-      .then((data) => {
-        if (abortController.signal.aborted || !data) return
-        if (provider === "x") setFetchedData(data)
-        if (data.html) setFetchedHtml(data.html)
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!abortController.signal.aborted) setIsLoading(false)
-      })
-    return () => abortController.abort()
-  }, [url, htmlProp, fetchedHtml, fetchedData, youtubeVideoId, provider])
+  const fetchedHtml = swrData?.html ?? null
+  const fetchedData = provider === "x" ? (swrData as XOEmbedData | null) : null
 
   // YouTube: 직접 iframe
   if (youtubeVideoId && !htmlProp) {
