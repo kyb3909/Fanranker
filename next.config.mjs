@@ -5,6 +5,23 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 })
 
+// 현재 enforcing CSP와 동일한 외부 호스트 whitelist. `'unsafe-inline'` / `'unsafe-eval'`만 제거.
+// Report-Only로 위반을 수집하며 점진적으로 enforce 전환 준비.
+// 전환 체크리스트: `app/api/security/csp-report`로 들어온 위반을 1~2주 관측 →
+// nonce/hash 필요한 인라인 스크립트를 식별 → `Content-Security-Policy`도 동일 정책으로 교체.
+const STRICT_CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.cdninstagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.sentry.io https://va.vercel-scripts.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
+  "worker-src 'self' blob:",
+  "style-src 'self' https://cdn.jsdelivr.net https://clerk.gongnori.fan",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' blob: https://video.twimg.com https://*.cdninstagram.com https://scontent.cdninstagram.com https://*.fbcdn.net",
+  "font-src 'self' data: https://cdn.jsdelivr.net",
+  "frame-src https://www.youtube.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://clerk.gongnori.fan https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://cdn.jsdelivr.net https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net",
+  "report-uri /api/security/csp-report",
+].join('; ')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Lighthouse Best Practices: 소스맵은 개발환경에서만 사용
@@ -32,6 +49,12 @@ const nextConfig = {
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://clerk.gongnori.fan https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://cdn.jsdelivr.net https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net",
             ].join('; '),
           },
+          // 관측용 strict 정책 — 차단하지 않고 위반만 report-uri로 수집.
+          // 운영에서 1~2주 clean하면 위 Content-Security-Policy도 동일 내용으로 교체.
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: STRICT_CSP_REPORT_ONLY,
+          },
         ],
       },
       {
@@ -58,6 +81,13 @@ const nextConfig = {
       {
         // No cache for mutation/auth APIs
         source: '/api/(upload|payments|tokens|admin|cron|auth)/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
+        // CSP 위반 보고: 캐시 금지
+        source: '/api/security/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store' },
         ],
