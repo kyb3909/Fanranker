@@ -206,6 +206,9 @@ export function BettingSlip({
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
+                        inputMode="numeric"
+                        enterKeyHint="done"
+                        pattern="[0-9]*"
                         value={betAmount}
                         onChange={(e) =>
                           setBetAmount(

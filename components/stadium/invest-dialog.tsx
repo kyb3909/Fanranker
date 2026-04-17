@@ -127,6 +127,9 @@ export function InvestDialog({
             <p className="mb-2 text-sm font-medium">투자할 포인트</p>
             <input
               type="number"
+              inputMode="numeric"
+              enterKeyHint="done"
+              pattern="[0-9]*"
               min={1}
               max={availablePoints}
               value={amount}
