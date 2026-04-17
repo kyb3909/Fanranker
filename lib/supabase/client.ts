@@ -14,7 +14,8 @@
  * @see https://clerk.com/docs/guides/development/integrations/databases/supabase
  */
 
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { env } from "@/lib/env"
 
 /**
  * Creates an anonymous Supabase client (no authentication)
@@ -22,8 +23,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  */
 export function createAnonClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   )
 }
 
@@ -42,8 +43,8 @@ export function createAnonClient() {
  */
 export function createAuthClient(getToken: () => Promise<string | null> | string | null) {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       accessToken: async () => {
         const token = await getToken()

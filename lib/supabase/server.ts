@@ -15,6 +15,7 @@
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { auth, currentUser } from "@clerk/nextjs/server"
+import { env } from "@/lib/env"
 
 /**
  * Creates an anonymous Supabase server client (no authentication)
@@ -22,8 +23,8 @@ import { auth, currentUser } from "@clerk/nextjs/server"
  */
 export function createAnonClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   )
 }
 
