@@ -54,13 +54,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Check if target user is a journalist (only journalists can be followed)
     if (action !== "unfollow") {
-      const { data: targetProfile } = await supabase
+      const { data: targetProfile, error: targetError } = await supabase
         .from("profiles")
         .select("is_journalist")
         .eq("user_id", followedUserId)
         .single()
 
-      if (!targetProfile?.is_journalist) {
+      // "존재하지 않는 사용자"(404)와 "기자 아님"(403)을 명확히 구분 — silent 403으로 묶이면 오해 소지.
+      if (targetError || !targetProfile) {
+        return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 })
+      }
+      if (!targetProfile.is_journalist) {
         return NextResponse.json({ error: "기자만 팔로우할 수 있습니다." }, { status: 403 })
       }
     }
