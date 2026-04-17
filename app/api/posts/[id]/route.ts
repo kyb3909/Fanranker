@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
+import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { z } from "zod"
 
 const patchPostSchema = z.object({
@@ -105,13 +106,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (community_slug != null) updates.community_slug = community_slug
     if (title != null) updates.title = title
-    if (content != null) updates.content = content
+
+    // TipTap JSON sanitization — 수정 경로에도 동일하게 적용 (저장형 XSS 방지)
+    let sanitizedContent: unknown = null
+    if (content != null) {
+      sanitizedContent = sanitizeTipTapJSON(content)
+      if (!sanitizedContent) {
+        return apiBadRequest("본문 형식이 올바르지 않습니다.")
+      }
+      updates.content = sanitizedContent
+    }
     if (image !== undefined) updates.image = image
     if (flair_id !== undefined) updates.flair_id = flair_id
 
-    if (updates.image === undefined && content != null) {
+    if (updates.image === undefined && sanitizedContent != null) {
       const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
-      const thumb = extractFirstImageSrcFromTipTapJSON(content)
+      const thumb = extractFirstImageSrcFromTipTapJSON(sanitizedContent)
       if (thumb) updates.image = thumb
     }
 

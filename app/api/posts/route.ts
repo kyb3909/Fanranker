@@ -6,6 +6,7 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { isAllowedImageUrl } from "@/lib/validate-image-url"
+import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { z } from "zod"
 
 const MAX_CONTENT_SIZE = 100_000 // 100KB
@@ -231,7 +232,13 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return apiBadRequest(result.error.issues[0]?.message || "잘못된 입력입니다.")
     }
-    const { community_slug, title, content, image, flair_id } = result.data
+    const { community_slug, title, content: rawContent, image, flair_id } = result.data
+
+    // TipTap JSON sanitization — 저장 전 노드/속성 whitelist (저장형 XSS 방지)
+    const content = sanitizeTipTapJSON(rawContent)
+    if (!content) {
+      return apiBadRequest("본문 형식이 올바르지 않습니다.")
+    }
 
     // 이미지 URL 유효성 검사 (허용된 도메인만)
     let imageUrl = null
