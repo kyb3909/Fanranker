@@ -75,15 +75,19 @@ export async function PATCH(request: NextRequest) {
         updateData = { deleted_at: null }
         auditAction = "restore_post"
         break
-      case "toggle_notice":
-        const { data: post } = await supabase
+      case "toggle_notice": {
+        const { data: post, error: fetchError } = await supabase
           .from("posts")
           .select("is_notice")
           .eq("id", postId)
           .single()
-        updateData = { is_notice: !post?.is_notice }
-        auditAction = post?.is_notice ? "unpin_post" : "pin_post"
+        if (fetchError || !post) {
+          return apiBadRequest("해당 게시글을 찾을 수 없습니다.")
+        }
+        updateData = { is_notice: !post.is_notice }
+        auditAction = post.is_notice ? "unpin_post" : "pin_post"
         break
+      }
     }
 
     const { error } = await supabase.from("posts").update(updateData).eq("id", postId)
