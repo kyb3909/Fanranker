@@ -107,6 +107,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
@@ -155,7 +156,10 @@ export default function RootLayout({
               />
             )}
           </head>
-          <body className={`pb-14 font-sans antialiased sm:pb-0`} suppressHydrationWarning>
+          <body
+            className={`pb-[calc(3.5rem+env(safe-area-inset-bottom))] font-sans antialiased sm:pb-0`}
+            suppressHydrationWarning
+          >
             <script
               type="application/ld+json"
               dangerouslySetInnerHTML={{

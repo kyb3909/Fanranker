@@ -19,7 +19,7 @@ export function Header() {
   const { openSignIn } = useClerk()
 
   return (
-    <header className="border-border sticky top-0 z-50 w-full border-b bg-white/85 shadow-sm backdrop-blur-xl">
+    <header className="border-border sticky top-0 z-50 w-full border-b bg-white/85 pt-[env(safe-area-inset-top)] shadow-sm backdrop-blur-xl">
       <div className="mx-auto max-w-[1280px] px-3 sm:px-10">
         <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2">
           {/* Logo */}
