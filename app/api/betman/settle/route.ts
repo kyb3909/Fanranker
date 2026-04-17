@@ -19,12 +19,12 @@ const settlePostSchema = z
 /**
  * POST /api/betman/settle
  *
- * ?꾨즺??寃쎄린???덉륫???뺤궛?쒕떎.
- * - ?덉륫 vs ?ㅼ젣 寃곌낵 鍮꾧탳 ??is_correct ?먯젙
- * - ?곸쨷 ??points_earned = ?대떦 諛곕떦瑜?(locked_odds ?곗꽑)
- * - 誘몄쟻以???points_earned = 0
- * - 痍⑥냼 寃쎄린 ?덉륫 ??status='cancelled', is_correct=null
- * - ?뺤궛 ???좎?蹂?醫낅ぉ ?듦퀎 ?먮룞 媛깆떊
+ * 완료된 경기의 예측을 정산한다.
+ * - 예측 vs 실제 결과 비교 → is_correct 판정
+ * - 적중 시 points_earned = 해당 배당률 (locked_odds 우선)
+ * - 미적중 시 points_earned = 0
+ * - 취소 경기 예측 → status='cancelled', is_correct=null
+ * - 정산 후 유저별 종목 통계 자동 갱신
  *
  * Body: { round_id?: string, gm_ts?: string, daily_round_id?: string, daily_id?: string }
  */
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       return apiBadRequest("daily_round_id, daily_id, round_id, or gm_ts is required.")
     }
 
-    // 0. 吏??scheduled 寃뚯엫 ?먮룞 留뚮즺
+    // 0. 지난 scheduled 게임 자동 만료
     const { error: expireError } = await supabase
       .from("betman_games")
       .update({ status: "in_progress", updated_at: new Date().toISOString() })
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       .lt("match_time", new Date().toISOString())
     if (expireError) console.error("Failed to expire scheduled games:", expireError)
 
-    // 1. ?꾨즺/痍⑥냼??寃쎄린 議고쉶
+    // 1. 완료/취소된 경기 조회
     const { data: games, error: gamesError } = await supabase
       .from("betman_games")
       .select(
@@ -131,10 +131,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 3. 怨듯넻 ?뺤궛 濡쒖쭅 ?ㅽ뻾
+    // 3. 공통 정산 로직 실행
     const settleResult = await settlePredictions(supabase, settleableGames, predictions)
 
-    // 4. daily round ?곹깭 ?낅뜲?댄듃
+    // 4. daily round 상태 업데이트
     const dailyRoundIds = [...new Set(settleableGames.map((g) => g.daily_round_id).filter(Boolean))]
     for (const drId of dailyRoundIds) {
       const { data: remainingGames } = await supabase
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4b. proto round ?곹깭 (backward compat)
+    // 4b. proto round 상태 (backward compat)
     if (gameFilter.column === "round_id") {
       const { data: remainingGames } = await supabase
         .from("betman_games")
