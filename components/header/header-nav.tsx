@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Sparkles, Landmark } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, Sparkles } from "lucide-react"
 
 const activeClass =
   "font-semibold text-white after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-white"
@@ -20,7 +20,6 @@ export const HeaderNav = memo(function HeaderNav() {
   const isFeed = pathname === "/" && view !== "prediction"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname === "/" && view === "prediction"
-  const isStadium = pathname.startsWith("/stadium")
   const isShop = pathname.startsWith("/shop")
 
   return (
@@ -56,12 +55,10 @@ export const HeaderNav = memo(function HeaderNav() {
             경기 예측
           </span>
         </Link>
-        <Link href="/stadium">
-          <span className={`${baseClass} ${isStadium ? activeClass : inactiveClass}`}>
-            <Landmark className="h-[18px] w-[18px] shrink-0" />
-            스타디움
-          </span>
-        </Link>
+        {/*
+          스타디움 메뉴는 가오픈에서 제외 (스프라이트 외주 + Phaser 작업 완료 후 노출).
+          라우트(/stadium/*)는 유지 — 직접 URL로만 접근 가능.
+        */}
         <Link href="/shop">
           <span className={`${baseClass} ${isShop ? activeClass : inactiveClass}`}>
             <Sparkles className="h-[18px] w-[18px] shrink-0" />
