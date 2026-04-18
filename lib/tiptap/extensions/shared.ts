@@ -5,13 +5,13 @@
  * EmbedPaste)을 덧붙인다. 뷰어(tiptap-content.tsx)는 이 배열만 사용.
  *
  * 중요: 에디터가 생성할 수 있는 모든 노드/마크를 뷰어가 렌더할 수 있어야 한다.
- * Underline과 TextAlign을 여기에 두는 이유: 이전에 뷰어가 두 extension 없이
- * StarterKit만 써서 밑줄/정렬 서식이 읽기 시점에 사라졌음.
+ * StarterKit 3.15+는 Underline을 기본 포함하므로 별도 Underline extension을
+ * 추가하지 않는다(중복 시 tiptap warn: "Duplicate extension names: ['underline']").
+ * TextAlign은 StarterKit에 포함되지 않으므로 별도 추가.
  */
 
 import StarterKit from "@tiptap/starter-kit"
 import TextAlign from "@tiptap/extension-text-align"
-import Underline from "@tiptap/extension-underline"
 import TiptapImage from "@tiptap/extension-image"
 import { Embed } from "./embed"
 
@@ -24,7 +24,6 @@ export function createSharedTipTapExtensions(options: SharedExtensionsOptions = 
   return [
     StarterKit,
     TextAlign.configure({ types: ["heading", "paragraph"] }),
-    Underline,
     TiptapImage.configure({
       HTMLAttributes: { class: "tiptap-image" },
       allowBase64: options.imageAllowBase64 ?? false,
