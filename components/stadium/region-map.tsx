@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { StadiumInfoCard } from "./stadium-info-card"
+import { easeOutCubic, clamp, hexToRgba } from "@/lib/stadium/map-utils"
 
 // ─── Types ───────────────────────────────────────────────
 export interface MapPin {
@@ -44,22 +45,7 @@ const ZOOM_SENSITIVITY = 0.001
 const MIN_ZOOM_FACTOR = 1.0
 const MAX_ZOOM_FACTOR = 3.0
 
-// ─── Helpers ─────────────────────────────────────────────
-function easeOutCubic(t: number): number {
-  return 1 - (1 - t) ** 3
-}
-
-function clamp(val: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, val))
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r},${g},${b},${alpha})`
-}
-
+// ─── Canvas Helpers ──────────────────────────────────────
 function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
