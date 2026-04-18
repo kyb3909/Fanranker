@@ -310,7 +310,7 @@ function YouTubeInlinePlayer({
             allowFullScreen
           />
         ) : (
-          <button onClick={handlePlay} className="group block h-full w-full">
+          <button onClick={handlePlay} className="group relative block h-full w-full">
             {thumb && (
               <Image
                 src={thumb}
@@ -500,7 +500,7 @@ function XVideoPlayer({
           onError={() => setVideoError(true)}
         />
       ) : (
-        <button onClick={() => setPlaying(true)} className="group block h-full w-full">
+        <button onClick={() => setPlaying(true)} className="group relative block h-full w-full">
           {media.thumbnail_url && (
             <Image
               src={media.thumbnail_url}

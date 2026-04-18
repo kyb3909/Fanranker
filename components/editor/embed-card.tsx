@@ -404,7 +404,7 @@ function XRichMedia({
       className="h-full w-full object-contain"
     />
   ) : (
-    <button onClick={() => setPlaying(true)} className="group block h-full w-full">
+    <button onClick={() => setPlaying(true)} className="group relative block h-full w-full">
       {media.thumbnail_url && (
         <Image
           src={media.thumbnail_url}
