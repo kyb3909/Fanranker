@@ -1,97 +1,80 @@
-import { useState, useEffect, useCallback } from "react"
+import { useMemo } from "react"
+import useSWR from "swr"
 import { useAuth } from "@clerk/nextjs"
-import type { MyStatsData, PredictionHistoryItem } from "@/components/betting/betting-types"
+import { fetcher } from "@/lib/swr"
+import type {
+  MyStatsData,
+  PredictionHistoryItem,
+  PredictionMatch,
+} from "@/components/betting/betting-types"
 
-interface PredictionMatch {
-  match_time?: string
-  sport_type?: string
-  league?: { name_ko?: string; name?: string }
-  home_team?: { name_ko?: string; name?: string }
-  away_team?: { name_ko?: string; name?: string }
+interface RawSlip {
+  id: string
+  date: string
+  sport: string
+  stake: number
+  totalOdds: number
+  status: string
+  profit: number
+  matches: PredictionMatch[]
 }
 
+function formatSlipDate(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function toHistoryItem(slip: RawSlip): PredictionHistoryItem {
+  return {
+    id: slip.id,
+    date: formatSlipDate(slip.date),
+    sport: slip.sport,
+    matches: slip.matches,
+    totalOdds: slip.totalOdds,
+    stake: slip.stake,
+    status: slip.status,
+    profit: slip.profit,
+  }
+}
+
+/**
+ * 마이페이지 탭별 데이터 로드 (SWR 기반).
+ *
+ * 탭이 활성화되면 SWR이 해당 키로 fetch; 비활성화 시 key = null 로 요청 차단.
+ * SWR 캐싱(dedupingInterval 30s)으로 탭 전환 왕복 시 중복 fetch 방지.
+ */
 export function useBettingMyPage(
   active: boolean,
   myPageTab: "predictions" | "stats" | "gold" | "profile"
 ) {
   const { isSignedIn } = useAuth()
 
-  const [myStats, setMyStats] = useState<MyStatsData | null>(null)
-  const [isLoadingMyStats, setIsLoadingMyStats] = useState(false)
-  const [predictionHistory, setPredictionHistory] = useState<PredictionHistoryItem[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const statsKey = isSignedIn && active && myPageTab === "stats" ? "/api/sports/my-stats" : null
+  const historyKey =
+    isSignedIn && active && myPageTab === "predictions" ? "/api/sports/prediction?status=all" : null
 
-  const loadMyStats = useCallback(async () => {
-    if (!isSignedIn) return
-    setIsLoadingMyStats(true)
-    try {
-      const res = await fetch("/api/sports/my-stats")
-      if (res.ok) {
-        const data = await res.json()
-        setMyStats(data)
-      }
-    } catch (err) {
-      console.error("Failed to load my stats:", err)
-    } finally {
-      setIsLoadingMyStats(false)
+  const { data: statsData, isLoading: isLoadingMyStats } = useSWR<MyStatsData>(statsKey, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  })
+
+  const { data: historyData, isLoading: isLoadingHistory } = useSWR<{ slips: RawSlip[] }>(
+    historyKey,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30_000,
     }
-  }, [isSignedIn])
+  )
 
-  const loadPredictionHistory = useCallback(async () => {
-    if (!isSignedIn) return
-    setIsLoadingHistory(true)
-    try {
-      const response = await fetch("/api/sports/prediction?status=all")
-      if (!response.ok) throw new Error("Failed to load prediction history")
-      const data = await response.json()
-      const slips = data.slips || []
-
-      const transformed: PredictionHistoryItem[] = slips.map(
-        (slip: {
-          id: string
-          date: string
-          sport: string
-          stake: number
-          totalOdds: number
-          status: string
-          profit: number
-          matches: PredictionMatch[]
-        }) => {
-          const dateObj = new Date(slip.date)
-          const dateStr = `${String(dateObj.getMonth() + 1).padStart(2, "0")}/${String(dateObj.getDate()).padStart(2, "0")} ${String(dateObj.getHours()).padStart(2, "0")}:${String(dateObj.getMinutes()).padStart(2, "0")}`
-
-          return {
-            id: slip.id,
-            date: dateStr,
-            sport: slip.sport,
-            matches: slip.matches,
-            totalOdds: slip.totalOdds,
-            stake: slip.stake,
-            status: slip.status,
-            profit: slip.profit,
-          }
-        }
-      )
-
-      setPredictionHistory(transformed)
-    } catch (err) {
-      console.error("Failed to load prediction history:", err)
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }, [isSignedIn])
-
-  // Load data when tab becomes active
-  useEffect(() => {
-    if (active && myPageTab === "predictions") loadPredictionHistory()
-  }, [active, myPageTab, loadPredictionHistory])
-
-  useEffect(() => {
-    if (active && myPageTab === "stats") loadMyStats()
-  }, [active, myPageTab, loadMyStats])
+  const predictionHistory = useMemo(
+    () => (historyData?.slips ?? []).map(toHistoryItem),
+    [historyData]
+  )
 
   return {
-    myStats,
+    myStats: statsData ?? null,
     isLoadingMyStats,
     predictionHistory,
     isLoadingHistory,
