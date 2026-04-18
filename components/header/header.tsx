@@ -35,15 +35,8 @@ export function Header() {
               className="relative flex items-baseline"
               aria-label="홈"
             >
-              <span className="relative z-0 -ml-1 hidden h-8 w-auto shrink-0 sm:block" aria-hidden>
-                <Image
-                  src="/logo-brush.webp"
-                  alt=""
-                  width={120}
-                  height={32}
-                  className="h-8 w-auto object-contain object-left"
-                  priority
-                />
+              <span className="relative z-0 -ml-1 hidden shrink-0 sm:block" aria-hidden>
+                <Image src="/logo-brush.webp" alt="" width={128} height={38} priority />
               </span>
               <span
                 className="text-foreground relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
