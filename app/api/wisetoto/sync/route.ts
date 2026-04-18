@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     (!!referer && allowedHosts.some((h) => referer.includes(h)))
 
   if (!isCronAuthed && !isAllowedOrigin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 })
   }
   try {
     const supabase = createServiceRoleClient()

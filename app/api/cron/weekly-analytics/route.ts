@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      return apiError("Failed to save report", 500, insertError)
+      return apiError("리포트 저장에 실패했습니다.", 500, insertError)
     }
 
     return NextResponse.json({

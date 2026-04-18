@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { data: users, error: fetchError } = await supabase.from("user_tokens").select("user_id")
 
     if (fetchError) {
-      return apiError("Failed to fetch users", 500, fetchError)
+      return apiError("사용자 목록을 가져오지 못했습니다.", 500, fetchError)
     }
 
     if (!users || users.length === 0) {

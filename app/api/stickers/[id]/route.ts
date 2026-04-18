@@ -39,7 +39,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json(data)
     }
 
-    return NextResponse.json({ error: "invalid action" }, { status: 400 })
+    return NextResponse.json({ error: "유효하지 않은 action 입니다." }, { status: 400 })
   } catch (error) {
     return apiError("서버 오류", 500, error)
   }

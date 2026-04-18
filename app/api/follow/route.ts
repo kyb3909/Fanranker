@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return apiBadRequest("Invalid request body")
+      return apiBadRequest("잘못된 요청 본문입니다.")
     }
     const FollowSchema = z.object({ user_id: z.string().min(1) })
     const parsed = FollowSchema.safeParse(body)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { settlePredictions } from "@/lib/betman/settle"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
+import { ERR } from "@/lib/error-messages"
 
 export const dynamic = "force-dynamic"
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
       if (pendingError) {
         console.error("[settle GET] pending predictions query error:", pendingError)
-        return NextResponse.json({ error: "Failed to fetch pending predictions." }, { status: 500 })
+        return apiError(ERR.FETCH_PREDICTIONS_FAILED, 500, pendingError)
       }
 
       const pendingGameIds = Array.from(
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         console.error("[settle GET] game query error:", error)
-        return NextResponse.json({ error: "Failed to fetch games." }, { status: 500 })
+        return apiError(ERR.FETCH_GAMES_FAILED, 500, error)
       }
 
       const pendingCountByGameId = new Map<string, number>()
@@ -95,15 +96,15 @@ export async function GET(request: NextRequest) {
         .order("game_no")
 
       if (error) {
-        return NextResponse.json({ error: "Failed to fetch games." }, { status: 500 })
+        return apiError(ERR.FETCH_GAMES_FAILED, 500, error)
       }
 
       return NextResponse.json({ matches: games || [] })
     }
 
-    return apiBadRequest("unsettled_only or daily_round_id is required.")
+    return apiBadRequest("unsettled_only 또는 daily_round_id 가 필요합니다.")
   } catch (error) {
-    return apiError("Server error occurred.", 500, error)
+    return apiError(ERR.SERVER_ERROR, 500, error)
   }
 }
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!daily_round_id && (!game_ids || game_ids.length === 0)) {
-      return apiBadRequest("daily_round_id or game_ids is required.")
+      return apiBadRequest("daily_round_id 또는 game_ids 가 필요합니다.")
     }
 
     const gameSelect =
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
         .in("id", game_ids)
         .in("status", ["completed", "cancelled"])
 
-      if (error) return apiError("Failed to fetch games", 500, error)
+      if (error) return apiError(ERR.FETCH_GAMES_FAILED, 500, error)
       games = (data || []).filter((g) => g.status === "cancelled" || g.result !== null)
     } else if (daily_round_id) {
       const { data, error } = await supabase
@@ -151,12 +152,12 @@ export async function POST(request: NextRequest) {
         .eq("daily_round_id", daily_round_id)
         .in("status", ["completed", "cancelled"])
 
-      if (error) return apiError("Failed to fetch games", 500, error)
+      if (error) return apiError(ERR.FETCH_GAMES_FAILED, 500, error)
       games = (data || []).filter((g) => g.status === "cancelled" || g.result !== null)
     }
 
     if (!games || games.length === 0) {
-      return NextResponse.json({ error: "No settleable games with results." }, { status: 404 })
+      return NextResponse.json({ error: ERR.NO_SETTLEABLE_GAMES }, { status: 404 })
     }
 
     const gameIds = games.map((g) => g.id)
@@ -166,12 +167,12 @@ export async function POST(request: NextRequest) {
       .in("game_id", gameIds)
       .eq("status", "pending")
 
-    if (predError) return apiError("Failed to fetch predictions", 500, predError)
+    if (predError) return apiError(ERR.FETCH_PREDICTIONS_FAILED, 500, predError)
 
     if (!predictions || predictions.length === 0) {
       return NextResponse.json({
         success: true,
-        message: "No pending predictions to settle.",
+        message: "정산할 pending 예측이 없습니다.",
         settled: 0,
       })
     }

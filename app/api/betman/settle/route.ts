@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { settlePredictions } from "@/lib/betman/settle"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { apiError, apiBadRequest } from "@/lib/api-error"
+import { ERR } from "@/lib/error-messages"
 import { z } from "zod"
 
 const settlePostSchema = z
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
     } catch {
-      return apiBadRequest("Invalid request body.")
+      return apiBadRequest(ERR.INVALID_BODY)
     }
     const parsed = settlePostSchema.safeParse(body)
     if (!parsed.success) {
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       .in("status", ["completed", "cancelled"])
 
     if (gamesError) {
-      return NextResponse.json({ error: "Failed to fetch games" }, { status: 500 })
+      return apiError(ERR.FETCH_GAMES_FAILED, 500, gamesError)
     }
 
     const settleableGames = (games || []).filter(
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
     )
 
     if (settleableGames.length === 0) {
-      return NextResponse.json({ error: "No settleable finished games found." }, { status: 404 })
+      return NextResponse.json({ error: ERR.NO_SETTLEABLE_GAMES }, { status: 404 })
     }
 
     // 2. pending predictions
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
       .eq("status", "pending")
 
     if (predError) {
-      return NextResponse.json({ error: "Failed to fetch predictions" }, { status: 500 })
+      return apiError(ERR.FETCH_PREDICTIONS_FAILED, 500, predError)
     }
 
     if (!predictions || predictions.length === 0) {
