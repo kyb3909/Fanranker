@@ -52,7 +52,7 @@ export function UserMenu() {
         <Button
           variant="ghost"
           size="icon"
-          className="hover:bg-muted/50 h-9 w-9 rounded-full transition-colors"
+          className="hover:bg-muted/50 h-10 w-10 rounded-full transition-colors"
           aria-label="사용자 메뉴"
         >
           <Avatar className="h-9 w-9">
