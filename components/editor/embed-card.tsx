@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
 import { ExternalLink, Loader2, Play } from "lucide-react"
+import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 
 export interface EmbedCardProps {
   provider: "youtube" | "instagram" | "x"
@@ -193,42 +194,6 @@ function buildTwitterVideoProxyUrl(url: string) {
   return `/api/media-proxy?url=${encodeURIComponent(url)}`
 }
 
-/** embed.js 로드 유틸리티 (전역 1회만 로드) */
-type InstgrmWindow = Window &
-  typeof globalThis & {
-    instgrm?: { Embeds: { process: () => void } }
-    __igEmbedLoading?: boolean
-  }
-
-function loadInstagramEmbedJs(callback: () => void) {
-  const win = window as InstgrmWindow
-  // 이미 로드 완료된 경우
-  if (win.instgrm) {
-    callback()
-    return
-  }
-  // 이미 로드 중인 경우 — 로드 완료까지 polling
-  if (win.__igEmbedLoading) {
-    const interval = setInterval(() => {
-      if (win.instgrm) {
-        clearInterval(interval)
-        callback()
-      }
-    }, 100)
-    return
-  }
-  // 최초 로드
-  win.__igEmbedLoading = true
-  const script = document.createElement("script")
-  script.src = "https://www.instagram.com/embed.js"
-  script.async = true
-  script.onload = () => {
-    win.__igEmbedLoading = false
-    callback()
-  }
-  document.body.appendChild(script)
-}
-
 /**
  * Instagram 임베드 전용 컴포넌트
  * blockquote를 삽입 후 embed.js를 로드하여 인터랙티브 렌더링
@@ -256,10 +221,7 @@ function InstagramEmbed({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadInstagramEmbedJs(() => {
-        const win = window as InstgrmWindow
-        win.instgrm?.Embeds.process()
-      })
+      loadInstagramEmbedJs(() => processInstagramEmbeds())
     }, 0)
     return () => clearTimeout(timer)
   }, [safeHtml])

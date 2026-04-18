@@ -6,6 +6,7 @@ import Link from "@/components/ui/app-link"
 import useSWR from "swr"
 import { Play, ChevronLeft, ChevronRight, ImageOff } from "lucide-react"
 import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
+import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 import type { TipTapNode } from "@/components/post-card"
 
 /** 임베드 URL 패턴 (YouTube, Instagram, X/Twitter) */
@@ -630,47 +631,6 @@ function XVideoPlayer({
 /* ── Instagram 피드 썸네일 + 클릭 시 임베드 ── */
 /* 피드에서는 썸네일만 표시, 클릭 시 embed.js 로드하여 풀 임베드 렌더링 */
 
-type InstgrmWindow = Window &
-  typeof globalThis & {
-    instgrm?: { Embeds: { process: () => void } }
-    __igEmbedLoading?: boolean
-  }
-
-function loadInstagramEmbedJs(callback: () => void) {
-  const win = window as InstgrmWindow
-  if (win.instgrm) {
-    callback()
-    return
-  }
-  if (win.__igEmbedLoading) {
-    let attempts = 0
-    const interval = setInterval(() => {
-      attempts++
-      if (win.instgrm) {
-        clearInterval(interval)
-        callback()
-      } else if (attempts > 100) {
-        // 10초 후 포기 — 무한 polling 방지
-        clearInterval(interval)
-        win.__igEmbedLoading = false
-      }
-    }, 100)
-    return
-  }
-  win.__igEmbedLoading = true
-  const script = document.createElement("script")
-  script.src = "https://www.instagram.com/embed.js"
-  script.async = true
-  script.onload = () => {
-    win.__igEmbedLoading = false
-    callback()
-  }
-  script.onerror = () => {
-    win.__igEmbedLoading = false
-  }
-  document.body.appendChild(script)
-}
-
 interface InstagramOEmbedData {
   thumbnail_url?: string
   html?: string
@@ -704,10 +664,7 @@ function InstagramInlineContent({ url }: { url: string }) {
   useEffect(() => {
     if (isLoading) return
     const timer = setTimeout(() => {
-      loadInstagramEmbedJs(() => {
-        const win = window as InstgrmWindow
-        win.instgrm?.Embeds.process()
-      })
+      loadInstagramEmbedJs(() => processInstagramEmbeds())
     }, 0)
     return () => clearTimeout(timer)
   }, [isLoading, embedHtml])

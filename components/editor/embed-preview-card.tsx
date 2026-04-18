@@ -6,6 +6,7 @@ import useSWR from "swr"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { ExternalLink, Play, Image as ImageIcon, X } from "lucide-react"
+import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 
 export interface EmbedPreviewCardProps {
   provider: "youtube" | "instagram" | "x"
@@ -316,38 +317,8 @@ function InstagramPreviewEmbed({ html }: { html: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    type InstgrmWindow = Window &
-      typeof globalThis & {
-        instgrm?: { Embeds: { process: () => void } }
-        __igEmbedLoading?: boolean
-      }
-    const win = window as InstgrmWindow
-
-    const process = () => win.instgrm?.Embeds.process()
-
     const timer = setTimeout(() => {
-      if (win.instgrm) {
-        process()
-        return
-      }
-      if (win.__igEmbedLoading) {
-        const interval = setInterval(() => {
-          if (win.instgrm) {
-            clearInterval(interval)
-            process()
-          }
-        }, 100)
-        return
-      }
-      win.__igEmbedLoading = true
-      const script = document.createElement("script")
-      script.src = "https://www.instagram.com/embed.js"
-      script.async = true
-      script.onload = () => {
-        win.__igEmbedLoading = false
-        process()
-      }
-      document.body.appendChild(script)
+      loadInstagramEmbedJs(() => processInstagramEmbeds())
     }, 0)
 
     return () => clearTimeout(timer)
