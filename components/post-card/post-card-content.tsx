@@ -169,14 +169,17 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
 
   return (
     <div className="bg-muted relative w-full overflow-hidden rounded-lg">
-      <div className="flex max-h-[400px] min-h-[200px] w-full items-center justify-center transition-opacity hover:opacity-95">
+      {/*
+        사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-contain.
+        width/height prop 기반으로는 Next.js가 자연 비율 불일치 경고(지속 발생)를 피할 수 없음.
+      */}
+      <div className="relative flex aspect-video max-h-[400px] w-full items-center justify-center transition-opacity hover:opacity-95">
         {canUseOptimizedFeedImage(src) ? (
           <Image
             src={src}
             alt={alt}
-            width={560}
-            height={400}
-            className="h-auto max-h-[400px] w-full object-contain"
+            fill
+            className="object-contain"
             priority={priority}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
             onError={() => setError(true)}
