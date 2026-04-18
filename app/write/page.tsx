@@ -18,12 +18,17 @@ import {
 import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
 import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
-import { SignIn } from "@clerk/nextjs"
 
 const TipTapEditor = dynamic(
   () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
   { ssr: false, loading: () => <div className="bg-muted h-64 animate-pulse rounded-lg" /> }
 )
+
+// SignIn form은 비로그인 분기에서만 필요 — 로그인한 일반 사용자는 로드하지 않음.
+const SignIn = dynamic(() => import("@clerk/nextjs").then((m) => ({ default: m.SignIn })), {
+  ssr: false,
+  loading: () => <div className="bg-muted h-96 w-full max-w-md animate-pulse rounded-lg" />,
+})
 
 function WriteContent() {
   const editor = useWriteEditor()
