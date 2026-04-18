@@ -6,7 +6,7 @@
  * 전환하기 위한 간이 진입 화면으로만 사용.
  */
 
-import Phaser from "phaser"
+import * as Phaser from "phaser"
 import { STADIUM_CHAT_SCENE_KEY } from "./stadium-chat-scene"
 
 export const WORLD_MAP_SCENE_KEY = "WorldMap"

@@ -10,7 +10,13 @@ import { test, expect } from "@playwright/test"
  * 이 스위트가 깨지면 "뭔가 배포가 잘못됨" — 가장 먼저 쳐다볼 경보.
  */
 
-const PUBLIC_ENDPOINTS = [
+interface PublicEndpoint {
+  path: string
+  label: string
+  contentType?: "json" | "xml" | "text"
+}
+
+const PUBLIC_ENDPOINTS: readonly PublicEndpoint[] = [
   { path: "/api/posts", label: "피드 목록" },
   { path: "/api/posts?community_slug=football&limit=10", label: "축구 보드 피드" },
   { path: "/api/categories", label: "카테고리 목록" },
@@ -25,7 +31,7 @@ const PUBLIC_ENDPOINTS = [
   { path: "/api/search?q=축구&limit=5", label: "검색" },
   { path: "/sitemap.xml", label: "sitemap (SEO)", contentType: "xml" },
   { path: "/robots.txt", label: "robots.txt (SEO)", contentType: "text" },
-] as const
+]
 
 const AUTH_REQUIRED_ENDPOINTS = [
   { path: "/api/notifications", label: "알림" },

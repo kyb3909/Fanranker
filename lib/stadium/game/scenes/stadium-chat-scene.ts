@@ -6,7 +6,7 @@
  * Supabase Realtime 동기화.
  */
 
-import Phaser from "phaser"
+import * as Phaser from "phaser"
 
 export const STADIUM_CHAT_SCENE_KEY = "StadiumChat"
 

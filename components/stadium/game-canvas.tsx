@@ -34,8 +34,9 @@ export function GameCanvas({
     let cancelled = false
 
     // Phaser + 씬을 동적 import (SSR 회피 + 초기 번들 분리)
+    // Phaser 4는 named exports만 제공 (v3의 default export 폐기)
     const loadGame = async () => {
-      const [{ default: Phaser }, scenesModule] = await Promise.all([
+      const [Phaser, scenesModule] = await Promise.all([
         import("phaser"),
         import("@/lib/stadium/game/scenes"),
       ])
