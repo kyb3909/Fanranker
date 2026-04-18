@@ -1,61 +1,58 @@
 /**
- * WorldMapScene (Phase 1)
+ * WorldMapScene — Phaser 게임 내 진입점 (preview 전용)
  *
- * 세계 지도 + 경기장 핀. 핀 클릭 시 StadiumChatScene 전환.
- *
- * 주의: 이 모듈은 Phaser에 의존하므로 클라이언트 전용 경로에서만 import되어야 한다.
- * GameCanvas.tsx의 dynamic import 체인을 통해서만 로드됨.
+ * 실제 World Map UI는 기존 Canvas 기반 components/stadium/region-map.tsx가 담당.
+ * 이 씬은 Phaser 단독 preview 라우트(/stadium/chat-preview 등)에서 Chat Room으로
+ * 전환하기 위한 간이 진입 화면으로만 사용.
  */
 
 import Phaser from "phaser"
+import { STADIUM_CHAT_SCENE_KEY } from "./stadium-chat-scene"
 
 export const WORLD_MAP_SCENE_KEY = "WorldMap"
 
-interface StadiumPinData {
-  id: string
-  name: string
-  x: number
-  y: number
-}
-
-/**
- * Phase 1 skeleton — 실제 핀/에셋 데이터는 Phase 1 본작업에서 주입.
- * 현재는 빈 씬 뼈대만 export.
- */
 export class WorldMapScene extends Phaser.Scene {
-  private pins: StadiumPinData[] = []
-
   constructor() {
     super(WORLD_MAP_SCENE_KEY)
   }
 
-  init(data: { pins?: StadiumPinData[] }) {
-    this.pins = data.pins ?? []
-  }
-
-  preload() {
-    // Phase 1 본작업에서 world-map.png / pin.png 로드
-  }
-
   create() {
-    // Phase 1 본작업에서 배경 + 핀 + 카메라 드래그 구현
+    this.cameras.main.setBackgroundColor("#1a1a2e")
+
     this.add
-      .text(400, 300, "WorldMapScene (Phase 1 pending)", {
+      .text(400, 220, "FanRanker Stadium — Phaser Preview", {
         fontFamily: "monospace",
-        fontSize: "14px",
+        fontSize: "16px",
         color: "#ffffff",
       })
       .setOrigin(0.5)
 
-    // 핀 수 표시만 (데이터 주입 확인용)
-    if (this.pins.length > 0) {
-      this.add
-        .text(400, 330, `pins: ${this.pins.length}`, {
-          fontFamily: "monospace",
-          fontSize: "10px",
-          color: "#aaaaaa",
-        })
-        .setOrigin(0.5)
-    }
+    this.add
+      .text(400, 260, "World Map은 기존 region-map.tsx에서 담당", {
+        fontFamily: "monospace",
+        fontSize: "10px",
+        color: "#aaaaaa",
+      })
+      .setOrigin(0.5)
+
+    const btn = this.add
+      .text(400, 340, "[ 경기장 채팅방 입장 ]", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#ffffff",
+        backgroundColor: "#2962ff",
+        padding: { x: 12, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+
+    btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#1e52e6" }))
+    btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#2962ff" }))
+    btn.on("pointerdown", () => {
+      this.scene.start(STADIUM_CHAT_SCENE_KEY, {
+        stadiumId: "preview",
+        stadiumName: "프리뷰 경기장",
+      })
+    })
   }
 }
