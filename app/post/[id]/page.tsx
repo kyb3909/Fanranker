@@ -217,21 +217,28 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params
   const post = await fetchPost(id)
-  const description = extractDescription(post?.content)
+
+  // 글이 없으면 metadata 시점에 notFound() — title이 "게시글 | gongnori.fan"로
+  // 엉뚱하게 노출되는 SEO 문제 방지. not-found.tsx 메타데이터가 적용됨.
+  if (!post) {
+    notFound()
+  }
+
+  const description = extractDescription(post.content)
   return {
-    title: post?.title || "게시글",
+    title: post.title || "게시글",
     description,
     openGraph: {
       type: "article",
-      title: post?.title,
+      title: post.title,
       description,
-      images: post?.image ? [post.image] : undefined,
+      images: post.image ? [post.image] : undefined,
     },
     twitter: {
-      card: post?.image ? "summary_large_image" : "summary",
-      title: post?.title || "게시글",
+      card: post.image ? "summary_large_image" : "summary",
+      title: post.title || "게시글",
       description,
-      images: post?.image ? [post.image] : undefined,
+      images: post.image ? [post.image] : undefined,
     },
     alternates: { canonical: `/post/${id}` },
   }

@@ -205,9 +205,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const info = COMMUNITY_MAP[slug]
-  let name = info?.name || slug
-  let description =
-    info?.metaDescription || info?.description || `${name} 게시판 - gongnori.fan 커뮤니티`
+  let name = info?.name
+  let description: string | undefined =
+    info?.metaDescription ||
+    info?.description ||
+    (name ? `${name} 게시판 - gongnori.fan 커뮤니티` : undefined)
 
   // DB fallback for dynamic categories (하위 채널 등)
   if (!info) {
@@ -220,6 +222,10 @@ export async function generateMetadata({
     if (cat) {
       name = cat.name
       description = cat.description || `${name} 게시판 - gongnori.fan 커뮤니티`
+    } else {
+      // COMMUNITY_MAP + DB 모두 없음 → notFound()로 not-found.tsx 메타데이터 사용
+      // (이전 동작: title에 slug가 그대로 노출되어 SEO 오염)
+      notFound()
     }
   }
   return {
