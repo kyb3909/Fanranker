@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
-import { requireAdmin } from "@/lib/supabase/admin"
-import { apiError } from "@/lib/api-error"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
+import { apiError, apiBadRequest } from "@/lib/api-error"
 import { getDailyWindow, formatDailyIdLabel } from "@/lib/betman/daily-round"
 
 export const dynamic = "force-dynamic"
@@ -41,21 +40,18 @@ function getPhase(
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin()
+    const auth = await requireAdminApi()
+    if (isErrorResponse(auth)) return auth
+    const { supabase } = auth
 
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get("date") // YYYY-MM-DD
     if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-      return NextResponse.json(
-        { error: "날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)" },
-        { status: 400 }
-      )
+      return apiBadRequest("날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)")
     }
 
     const { start, end, dailyId } = getDailyWindow(dateParam || undefined)
     const now = new Date()
-
-    const supabase = createServiceRoleClient()
 
     const { data: games, error } = await supabase
       .from("betman_games")

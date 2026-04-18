@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
-import { requireAdmin } from "@/lib/supabase/admin"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { apiError } from "@/lib/api-error"
 
 export const dynamic = "force-dynamic"
@@ -12,9 +11,10 @@ export const dynamic = "force-dynamic"
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin()
+    const auth = await requireAdminApi()
+    if (isErrorResponse(auth)) return auth
+    const { supabase } = auth
 
-    const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status") || "all"
     const sport = searchParams.get("sport") || "all"

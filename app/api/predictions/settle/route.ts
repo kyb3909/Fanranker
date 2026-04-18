@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
-import { isAdmin } from "@/lib/supabase/admin"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { settlePredictions } from "@/lib/betman/settle"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 
@@ -12,12 +11,10 @@ export const dynamic = "force-dynamic"
  * ?온?귐딆쁽 ?類ㅺ텦 ?遺얇늺?癒?퐣 pending ??됰?????λ툡??덈뮉 野껋럡由?筌뤴뫖以?鈺곌퀬?? */
 export async function GET(request: NextRequest) {
   try {
-    const admin = await isAdmin()
-    if (!admin) {
-      return NextResponse.json({ error: "Admin privileges required." }, { status: 403 })
-    }
+    const auth = await requireAdminApi()
+    if (isErrorResponse(auth)) return auth
+    const { supabase } = auth
 
-    const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
     const unsettledOnly = searchParams.get("unsettled_only") === "true"
     const dailyRoundId = searchParams.get("daily_round_id")
@@ -120,12 +117,10 @@ export async function POST(request: NextRequest) {
     const limited = checkRateLimit(request, "STRICT")
     if (limited) return limited
 
-    const admin = await isAdmin()
-    if (!admin) {
-      return NextResponse.json({ error: "Admin privileges required." }, { status: 403 })
-    }
+    const auth = await requireAdminApi()
+    if (isErrorResponse(auth)) return auth
+    const { supabase } = auth
 
-    const supabase = createServiceRoleClient()
     const body = await request.json().catch(() => ({}))
     const { daily_round_id, game_ids } = body as {
       daily_round_id?: string

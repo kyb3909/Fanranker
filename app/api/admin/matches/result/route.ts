@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
-import { isAdmin } from "@/lib/supabase/admin"
+import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { z } from "zod"
 
@@ -28,12 +27,9 @@ export async function POST(request: NextRequest) {
     const limited = checkRateLimit(request, "STRICT")
     if (limited) return limited
 
-    const admin = await isAdmin()
-    if (!admin) {
-      return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
-    }
-
-    const supabase = createServiceRoleClient()
+    const auth = await requireAdminApi()
+    if (isErrorResponse(auth)) return auth
+    const { supabase } = auth
 
     let body: Record<string, unknown>
     try {
