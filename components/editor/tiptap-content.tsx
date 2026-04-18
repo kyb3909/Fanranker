@@ -2,9 +2,7 @@
 
 import { useMemo } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import TiptapImage from "@tiptap/extension-image"
-import { Embed } from "@/lib/tiptap/extensions/embed"
+import { createSharedTipTapExtensions } from "@/lib/tiptap/extensions/shared"
 import { cn } from "@/lib/utils"
 import { transformBareImageUrlsInTipTapJSON } from "@/lib/tiptap/transform-bare-image-urls"
 
@@ -23,19 +21,7 @@ export function TipTapContent({ content, className }: TipTapContentProps) {
   const displayContent = useMemo(() => transformBareImageUrlsInTipTapJSON(content), [content])
 
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TiptapImage.configure({
-        HTMLAttributes: {
-          class: "tiptap-image",
-        },
-      }),
-      Embed.configure({
-        HTMLAttributes: {
-          class: "embed-node",
-        },
-      }),
-    ],
+    extensions: createSharedTipTapExtensions(),
     content: displayContent || content || "",
     editable: false,
     immediatelyRender: false, // SSR hydration mismatch 방지

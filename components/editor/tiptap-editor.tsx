@@ -2,12 +2,8 @@
 
 import React, { forwardRef, useImperativeHandle } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
-import TextAlign from "@tiptap/extension-text-align"
-import Underline from "@tiptap/extension-underline"
-import TiptapImage from "@tiptap/extension-image"
-import { Embed } from "@/lib/tiptap/extensions/embed"
+import { createSharedTipTapExtensions } from "@/lib/tiptap/extensions/shared"
 import { EmbedPaste } from "@/lib/tiptap/extensions/embed-paste"
 import { cn } from "@/lib/utils"
 import { Toggle } from "@/components/ui/toggle"
@@ -74,25 +70,10 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      ...createSharedTipTapExtensions(),
       Placeholder.configure({
         placeholder,
         emptyEditorClass: "is-editor-empty",
-      }),
-      TextAlign.configure({
-        types: ["heading", "paragraph"],
-      }),
-      Underline,
-      TiptapImage.configure({
-        HTMLAttributes: {
-          class: "tiptap-image",
-        },
-        allowBase64: false,
-      }),
-      Embed.configure({
-        HTMLAttributes: {
-          class: "embed-node",
-        },
       }),
       EmbedPaste.configure({
         onEmbedLoading,
