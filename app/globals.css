@@ -393,8 +393,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-pulse-glow,
-  .animate-vote-bump {
-    animation: none !important;
+  /*
+   * 사용자가 모션 축소를 선호하는 경우 모든 장식적 애니메이션과 전환을
+   * 즉시 완료시키는 전역 규칙. Tailwind 기본 유틸(animate-pulse 등)도
+   * 자동 대응하도록 전체 셀렉터 사용.
+   *
+   * 단순 opacity/transform 전환은 UX에 거의 영향 없으나 진동/스케일/
+   * 회전 애니메이션이 일부 사용자에게 멀미/편두통을 유발할 수 있음.
+   */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
