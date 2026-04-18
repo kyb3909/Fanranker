@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 
@@ -305,6 +306,13 @@ export async function POST(request: NextRequest) {
       .catch((err: unknown) => {
         console.error("Failed to create notifications for followers:", err)
       })
+
+    // 홈 피드 ISR on-demand revalidate (새 글이 즉시 노출되도록)
+    try {
+      revalidatePath("/")
+    } catch {
+      // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
+    }
 
     return NextResponse.json(data, { status: 201 })
   } catch (error) {

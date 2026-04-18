@@ -3,8 +3,9 @@ import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
 import type { PostsResponse } from "@/hooks/use-feed"
 
-// 홈페이지 ISR: 30초 캐시 + stale-while-revalidate
-export const revalidate = 30
+// 홈페이지 ISR: 5분 캐시 + stale-while-revalidate.
+// 새 글 작성 시 /api/posts POST가 revalidatePath("/")로 즉시 갱신.
+export const revalidate = 300
 
 /**
  * 홈 페이지 (Server Component)
