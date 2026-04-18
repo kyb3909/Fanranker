@@ -87,9 +87,9 @@ export function BettingMatchCard({
             ]
           } else {
             options = [
-              { value: "home", label: groupedMatch.homeTeam.slice(0, 4), odds: game.home_odds },
+              { value: "home", label: groupedMatch.homeTeam, odds: game.home_odds },
               ...(!isBasketball ? [{ value: "draw", label: "무", odds: game.draw_odds }] : []),
-              { value: "away", label: groupedMatch.awayTeam.slice(0, 4), odds: game.away_odds },
+              { value: "away", label: groupedMatch.awayTeam, odds: game.away_odds },
             ]
           }
 
