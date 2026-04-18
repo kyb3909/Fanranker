@@ -5,43 +5,13 @@ import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import useSWR from "swr"
 import { Play, ChevronLeft, ChevronRight, ImageOff } from "lucide-react"
-import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
 import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
+import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import { canUseOptimizedFeedImage } from "@/lib/image/feed-selector"
+import { extractYouTubeId } from "@/lib/embed/youtube"
+import { useInView } from "@/hooks/use-in-view"
+import { useVisibility } from "@/hooks/use-visibility"
 import type { TipTapNode } from "@/components/post-card"
-
-/** 임베드 URL 패턴 (YouTube, Instagram, X/Twitter) */
-const EMBED_URL_RE =
-  /(?:youtube\.com\/(?:watch|shorts\/|embed\/)|youtu\.be\/|instagram\.com\/(?:p|reel)\/|(?:twitter|x)\.com\/\w+\/status)/i
-
-function isMediaUrl(text: string): boolean {
-  const trimmed = text.trim()
-  if (!trimmed.startsWith("http")) return false
-  return isProbablyDirectImageUrl(trimmed) || EMBED_URL_RE.test(trimmed)
-}
-
-/**
- * TipTap JSON에서 텍스트만 추출 (피드 미리보기용)
- * 이미지/임베드 URL은 제외
- */
-function extractTextFromTipTapJSON(content: TipTapNode): string {
-  if (!content || typeof content !== "object") {
-    return ""
-  }
-
-  if (content.type === "text" && content.text) {
-    if (isMediaUrl(content.text)) return ""
-    return content.text
-  }
-
-  if (Array.isArray(content.content)) {
-    return content.content
-      .map((node) => extractTextFromTipTapJSON(node))
-      .filter(Boolean)
-      .join(" ")
-  }
-
-  return ""
-}
 
 export interface PostCardContentProps {
   postId: number | string
@@ -60,23 +30,6 @@ export interface PostCardContentProps {
   } | null
   image?: string
   priority: boolean
-}
-
-function canUseOptimizedFeedImage(src: string): boolean {
-  try {
-    const url = new URL(src)
-    const host = url.hostname.toLowerCase()
-    return (
-      host === "i.ytimg.com" ||
-      host === "img.youtube.com" ||
-      host === "pbs.twimg.com" ||
-      host === "img.clerk.com" ||
-      host.endsWith(".supabase.co") ||
-      host.endsWith(".cdninstagram.com")
-    )
-  } catch {
-    return false
-  }
 }
 
 export const PostCardContent = memo(function PostCardContent({
@@ -162,56 +115,6 @@ export const PostCardContent = memo(function PostCardContent({
 })
 
 /* ── IntersectionObserver 훅 ── */
-
-/** lazy 로드용: 한번 보이면 disconnect */
-function useInView(rootMargin = "200px") {
-  const ref = useRef<HTMLDivElement>(null)
-  const [inView, setInView] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true)
-          observer.disconnect()
-        }
-      },
-      { rootMargin }
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [rootMargin])
-
-  return { ref, inView }
-}
-
-/** 동영상 자동 정지용: 뷰포트 이탈 시 콜백 호출 */
-function useVisibility(onHidden: () => void) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) {
-          onHidden()
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [onHidden])
-
-  return ref
-}
 
 /* ── 사이드 썸네일 (데스크톱) ── */
 
@@ -366,13 +269,6 @@ function FeedImageCarousel({
 }
 
 /* ── YouTube 인라인 플레이어 ── */
-
-function extractYouTubeId(url: string): string | null {
-  const m = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
-  )
-  return m ? m[1] : null
-}
 
 function YouTubeInlinePlayer({
   url,
