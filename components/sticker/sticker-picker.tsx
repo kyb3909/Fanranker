@@ -39,15 +39,15 @@ export function StickerPicker({ onSelect, onClose }: StickerPickerProps) {
     loadMyStickers()
   }, [loadMyStickers])
 
-  // 바깥 클릭 닫기
+  // 바깥 클릭 닫기 (pointerdown: 마우스/터치/펜 통합, 터치 지연 회피)
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         onClose()
       }
     }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
+    document.addEventListener("pointerdown", handler)
+    return () => document.removeEventListener("pointerdown", handler)
   }, [onClose])
 
   return (
