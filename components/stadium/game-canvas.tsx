@@ -60,11 +60,7 @@ export function GameCanvas({
             debug: false,
           },
         },
-        scene: [
-          scenesModule.WorldMapScene,
-          scenesModule.StadiumChatScene,
-          scenesModule.TetrisScene,
-        ],
+        scene: [scenesModule.WorldMapScene, scenesModule.StadiumChatScene],
       })
 
       gameRef.current = game
