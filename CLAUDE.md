@@ -47,7 +47,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `data/agents/` — newsroom 멀티 에이전트 파이프라인 (자체 `package.json`)
 - `supabase/migrations/` — 86+ SQL 마이그레이션. 추가 시 기존 번호 규칙(`NNN_…` 또는 `YYYYMMDD_…`) 따를 것
 - `scripts/` — `tsx`로 실행되는 CLI (betman, standings, seed, parse 등)
-- `docs/` — 운영/PRD/아키텍처 (`PROJECT.md`, `BETMAN_SYSTEM.md`, `OPERATIONS.md`, `TEMPERATURE_FORMULA.md` 등)
+- `docs/` — 운영/PRD/아키텍처 (`PROJECT.md`, `BETMAN_SYSTEM.md`, `OPERATIONS.md`, `TEMPERATURE_FORMULA.md`, `CLERK_INTEGRATION.md` 등)
 - `__tests__/`, `e2e/` — 단위 / E2E
 - `public/map/` — 픽셀아트 지도 (경기장 건설 시스템)
 
@@ -94,6 +94,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Sentry / 환경
 - `next.config.mjs`가 `withSentryConfig`로 감싸져 있음. `SENTRY_*` env가 없으면 빌드는 통과하지만 소스맵 업로드는 스킵.
 - env 검증은 `lib/env.ts`. 새 env 추가 시 거기서 zod 스키마 갱신.
+
+### 배포 / CI
+- **Canonical 도메인**: `gongnori.fan`. `*.vercel.app`은 deploy artifact — QA·벤치마크는 항상 `gongnori.fan` 기준으로 수행.
+- Vercel이 PR마다 preview 배포 생성. GitHub Actions가 lint/test 실행.
 
 ## Skill 라우팅 (요약)
 사용자 요청이 다음과 매치되면 **다른 도구보다 먼저** Skill 도구로 호출:
