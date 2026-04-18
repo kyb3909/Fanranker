@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { createClient } from "@supabase/supabase-js"
-import { fetchAndApplyResults } from "../app/api/cron/betman-sync/route"
+import { fetchAndApplyResults } from "../lib/betman/result-fetcher"
 import { settlePredictions } from "../lib/betman/settle"
 
 type MissingGameRow = {

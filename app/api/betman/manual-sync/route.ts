@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
-import { syncSingleGmTs } from "@/app/api/cron/betman-sync/route"
+import { syncSingleGmTs } from "@/lib/betman/sync-orchestrator"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { z } from "zod"
 
