@@ -19,7 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - DB: Supabase (PostgreSQL, `@supabase/ssr`)
 - UI: Radix UI + Tailwind CSS 4 + shadcn 패턴
 - Editor: TipTap 3
-- Test: Vitest (unit) + Playwright (e2e, ko-KR / Asia/Seoul)
+- Game engine: **Phaser 4** (stadium 픽셀아트 지도 — named import 주의)
+- Test: Vitest (unit) + Playwright (e2e, ko-KR / Asia/Seoul, 5 projects: chromium/firefox/webkit/Mobile Chrome/Mobile Safari/Tablet)
 - Monitoring: Sentry + Vercel Analytics
 - Package manager: **pnpm 10** (single package, no monorepo)
 
@@ -29,9 +30,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm lint` / `pnpm format` / `pnpm format:check`
 - `pnpm test` / `pnpm test:watch` / `pnpm test:coverage`
 - 단일 unit 테스트: `pnpm vitest run __tests__/lib/foo.test.ts` (또는 `-t "test name"`)
-- E2E 전체: `pnpm playwright test` (서버 자동 기동)
-- 단일 E2E: `pnpm playwright test e2e/home.spec.ts --project=chromium`
-- 외부 URL 대상 E2E: `BASE_URL=https://... pnpm playwright test`
+- E2E 전체: `pnpm exec playwright test` (서버 자동 기동 — `BASE_URL` 미설정 시 `pnpm dev`로 localhost:3000 띄움)
+- 단일 E2E: `pnpm exec playwright test e2e/home.spec.ts --project=chromium`
+- 외부 URL 대상 E2E: `BASE_URL=https://gongnori.fan pnpm exec playwright test` (webServer 스킵)
 - `pnpm reddit-seed` — Reddit 시딩 (`scripts/reddit-seed-bot.ts`)
 - `pnpm betman-fetch` — betman 경기/배당 동기화 (`scripts/betman-fetch-games.ts`)
 - `pnpm standings-scrape` — 리그 순위 크롤링
@@ -79,7 +80,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 서버 컴포넌트/route handler: `import { createClient } from "@/lib/supabase/server"`
 - 클라이언트 컴포넌트: `import { createClient } from "@/lib/supabase/client"`
 - service role 필요 시: `lib/supabase/admin.ts` (절대 클라이언트로 새지 않게)
-- Supabase Management API로 직접 SQL 실행 가능 (`POST https://api.supabase.com/v1/projects/{ref}/database/query`).
+- 새 마이그레이션: `supabase/migrations/`에 기존 번호 규칙(`NNN_…` 또는 `YYYYMMDD_…`)으로 파일 추가 후, Supabase MCP(`mcp__supabase__apply_migration`) 또는 Management API(`POST https://api.supabase.com/v1/projects/ekysrlhdrapmsnrkytif/database/query`)로 적용.
+- `lib/supabase/database.types.ts`는 스키마 변경 후 갱신 필요 (RPC/테이블 추가 시).
 
 ### 주요 서브시스템
 - **News Agents** (`data/agents/`) — fetch → credibility → korean naming → desk review → summary → reservoir. Phase A: r/soccer만, drafted 정지, 수동 검수, 한국어만.
