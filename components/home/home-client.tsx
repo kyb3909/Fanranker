@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Dices, Flame, Clock, FileText, Trophy } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
@@ -109,6 +109,7 @@ export function HomeClient({
   initialTab = "feed",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<TabType>(initialTab)
 
@@ -154,6 +155,10 @@ export function HomeClient({
 
   const handleTabClick = (tab: TabType) => {
     setActiveTab(tab)
+    // URL 쿼리 동기화 — 새로고침해도 현재 탭 유지.
+    // 기본값(feed)은 쿼리 제거, content는 ?tab=content로.
+    const nextUrl = tab === "content" ? "/?tab=content" : "/"
+    router.replace(nextUrl, { scroll: false })
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "auto" })
     }
