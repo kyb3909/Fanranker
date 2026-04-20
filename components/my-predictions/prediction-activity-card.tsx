@@ -83,6 +83,18 @@ const SPORT_EMOJI: Record<string, string> = {
   배구: "🏐",
 }
 
+/** 종목별 액센트 컬러 — 상단 스트라이프 + 이모지 칩 배경. */
+const SPORT_COLOR: Record<string, { chip: string; stripe: string }> = {
+  축구: { chip: "bg-emerald-500", stripe: "bg-gradient-to-r from-emerald-400 to-teal-500" },
+  야구: { chip: "bg-sky-500", stripe: "bg-gradient-to-r from-sky-400 to-blue-500" },
+  농구: { chip: "bg-orange-500", stripe: "bg-gradient-to-r from-orange-400 to-amber-500" },
+  배구: { chip: "bg-purple-500", stripe: "bg-gradient-to-r from-purple-400 to-fuchsia-500" },
+}
+const SPORT_COLOR_DEFAULT = {
+  chip: "bg-slate-500",
+  stripe: "bg-gradient-to-r from-slate-400 to-slate-500",
+}
+
 function formatActivityDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
 }
@@ -137,6 +149,7 @@ export function PredictionActivityCard({
 
   const sportLabel = SPORT_LABELS[activity.sport] || activity.sport
   const sportEmoji = SPORT_EMOJI[activity.sport] || "🎯"
+  const sportColor = SPORT_COLOR[activity.sport] || SPORT_COLOR_DEFAULT
   const contentUnlocked = isPurchased || isFree
 
   // slipGroups가 없고 unlocked predictions만 있는 경우 자동 변환 → 렌더 일관성 유지.
@@ -150,6 +163,9 @@ export function PredictionActivityCard({
 
   return (
     <div className="bg-card border-border overflow-hidden rounded-xl border">
+      {/* 종목 accent stripe — 멀리서도 종목 구분 */}
+      <div className={`h-1 ${sportColor.stripe}`} aria-hidden="true" />
+
       {/* Header: 프로필 + 스탯 (1줄 meta bar) */}
       <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
         <Avatar className="h-9 w-9 flex-shrink-0">
@@ -186,7 +202,10 @@ export function PredictionActivityCard({
               </Button>
             )}
             {activity.stats && activity.stats.accuracy > 0 && (
-              <Badge variant="secondary" className="h-4 gap-0.5 px-1.5 py-0 text-[10px]">
+              <Badge
+                variant="secondary"
+                className="h-4 gap-0.5 bg-indigo-50 px-1.5 py-0 text-[10px] text-indigo-600 hover:bg-indigo-50"
+              >
                 <Target className="h-2.5 w-2.5" />
                 {activity.stats.accuracy.toFixed(1)}%
               </Badge>
@@ -194,7 +213,7 @@ export function PredictionActivityCard({
             {activity.stats && activity.stats.current_streak > 0 && (
               <Badge
                 variant="secondary"
-                className="text-primary h-4 gap-0.5 px-1.5 py-0 text-[10px]"
+                className="h-4 gap-0.5 bg-orange-50 px-1.5 py-0 text-[10px] text-orange-600 hover:bg-orange-50"
               >
                 <Flame className="h-2.5 w-2.5" />
                 {activity.stats.current_streak}연승
@@ -203,7 +222,7 @@ export function PredictionActivityCard({
             {activity.stats && activity.stats.net_profit > 0 && (
               <Badge
                 variant="secondary"
-                className="text-primary h-4 gap-0.5 px-1.5 py-0 text-[10px]"
+                className="h-4 gap-0.5 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-600 hover:bg-emerald-50"
               >
                 <TrendingUp className="h-2.5 w-2.5" />+{activity.stats.net_profit.toFixed(0)}
               </Badge>
@@ -235,7 +254,12 @@ export function PredictionActivityCard({
 
                 {/* Meta: 종목 · 경기수 · 배당 · 상태 */}
                 <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-[12px]">
-                  <span aria-hidden="true">{sportEmoji}</span>
+                  <span
+                    className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] text-[11px] leading-none ${sportColor.chip}`}
+                    aria-hidden="true"
+                  >
+                    {sportEmoji}
+                  </span>
                   <span>
                     {sportLabel} {group.matchCount}경기
                   </span>
@@ -323,7 +347,7 @@ export function PredictionActivityCard({
   )
 }
 
-/** 상태 → 도트 색 + 라벨. 도박 신호(빨강) 피하기 위해 lose는 중성 회색. */
+/** 상태 → 도트 색 + 라벨. 도박 신호(빨강) 피하기 위해 lose는 중성 slate. */
 function getStatusDot(
   status: string
 ): { label: string; dotClass: string; textClass: string } | null {
@@ -331,26 +355,26 @@ function getStatusDot(
     case "win":
       return {
         label: "적중",
-        dotClass: "bg-primary",
-        textClass: "text-primary font-medium",
+        dotClass: "bg-emerald-500 ring-2 ring-emerald-500/20",
+        textClass: "text-emerald-600 font-medium",
       }
     case "lose":
       return {
         label: "미적중",
-        dotClass: "bg-muted-foreground/40",
-        textClass: "text-muted-foreground",
+        dotClass: "bg-slate-400",
+        textClass: "text-slate-500",
       }
     case "pending":
       return {
         label: "진행중",
-        dotClass: "bg-amber-500",
-        textClass: "text-muted-foreground",
+        dotClass: "bg-amber-500 ring-2 ring-amber-500/20",
+        textClass: "text-amber-600 font-medium",
       }
     case "cancelled":
       return {
         label: "취소",
-        dotClass: "bg-muted-foreground/30",
-        textClass: "text-muted-foreground",
+        dotClass: "bg-slate-300",
+        textClass: "text-slate-400",
       }
     default:
       return null
