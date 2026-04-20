@@ -41,6 +41,9 @@ interface Activity {
         sport: string
         date: string
         status: string
+        matchCount: number
+        analysisTitle: string | null
+        totalOddsRange: string
         stake: number
         totalOdds: number
         profit: number
@@ -53,6 +56,7 @@ interface Activity {
           result: string
           gameType?: string
         }[]
+        analysisText: string | null
       }[]
     | null
 }

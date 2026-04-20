@@ -195,7 +195,7 @@ export function NotificationDropdown() {
       case "new_post_by_followed":
         return notification.related_post_id ? `/post/${notification.related_post_id}` : "/"
       case "expert_prediction":
-        return "/?view=prediction"
+        return "/?tab=content"
       case "settlement_result":
         return "/my-predictions"
       default:

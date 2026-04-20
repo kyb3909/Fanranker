@@ -1,15 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Lock, Unlock, TrendingUp, Target, Flame, Loader2, Clock } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
-import { BettingSlipCard } from "@/components/my-predictions/prediction-slip-card"
-import type { SportsSlip, SportsGame } from "@/components/my-predictions/prediction-types"
 import type { PredictionMatch } from "@/components/betting/betting-types"
-import { gameTypeLabels } from "@/components/betting/betting-types"
 
 interface PredictionGame {
   home_team_name: string
@@ -33,10 +30,16 @@ interface SlipGroup {
   sport: string
   date: string
   status: string
+  matchCount: number
+  // 항상 공개 (locked/unlocked 공통)
+  analysisTitle: string | null
+  totalOddsRange: string
+  // Unlocked에서만 유의미한 값 (locked일 때 0/null/[])
   stake: number
   totalOdds: number
   profit: number
   matches: PredictionMatch[]
+  analysisText: string | null
 }
 
 interface ActivityData {
@@ -73,89 +76,15 @@ const SPORT_LABELS: Record<string, string> = {
   배구: "배구",
 }
 
-/** SlipGroup → SportsSlip 변환 어댑터 */
-function slipGroupToSportsSlip(group: SlipGroup): SportsSlip {
-  const PREDICTION_KEY_MAP: Record<string, string> = {
-    홈팀: "home",
-    원정팀: "away",
-    무: "draw",
-    오버: "over",
-    언더: "under",
-  }
-  const RESULT_KEY_MAP: Record<string, string> = {
-    홈팀: "home",
-    원정팀: "away",
-    무: "draw",
-    오버: "over",
-    언더: "under",
-  }
-
-  const games: SportsGame[] = group.matches.map((m, idx) => {
-    const predKey = PREDICTION_KEY_MAP[m.selection] || m.selection
-    const resultKey = m.correctAnswer ? RESULT_KEY_MAP[m.correctAnswer] || m.correctAnswer : null
-    const isCorrect = m.result === "win" ? true : m.result === "lose" ? false : null
-
-    return {
-      id: `${group.slipId}-${idx}`,
-      gameId: `${group.slipId}-game-${idx}`,
-      prediction: predKey,
-      isCorrect,
-      odds: m.odds,
-      gameType: m.gameType || "일반",
-      handicap: null,
-      overUnderLine: null,
-      result: resultKey,
-      homeOdds: m.homeOdds ?? null,
-      awayOdds: m.awayOdds ?? null,
-      drawOdds: m.drawOdds ?? null,
-      overOdds: m.overOdds ?? null,
-      underOdds: m.underOdds ?? null,
-      match: {
-        homeTeam: m.home,
-        awayTeam: m.away,
-        league: m.league,
-        matchTime: new Date().toISOString(),
-        status: m.result === "pending" ? "scheduled" : "finished",
-      },
-    }
-  })
-
-  const allSettled = games.every((g) => g.isCorrect !== null)
-  const allCorrect = games.every((g) => g.isCorrect === true)
-  const slipIsCorrect = !allSettled ? null : allCorrect
-
-  return {
-    id: group.slipId,
-    type: "sports_slip",
-    source: "sports",
-    sport: group.sport,
-    roundInfo: null,
-    gameCount: group.matches.length,
-    totalOdds: group.totalOdds,
-    ballsUsed: group.stake,
-    isCorrect: slipIsCorrect,
-    pointsEarned: group.profit > 0 ? group.profit : null,
-    createdAt: new Date().toISOString(),
-    games,
-  }
+const SPORT_EMOJI: Record<string, string> = {
+  축구: "⚽",
+  야구: "⚾",
+  농구: "🏀",
+  배구: "🏐",
 }
 
-/** locked 상태에서 사용할 최소 SportsSlip 생성 */
-function createLockedSlip(sport: string, matchCount: number): SportsSlip {
-  return {
-    id: "locked",
-    type: "sports_slip",
-    source: "sports",
-    sport,
-    roundInfo: null,
-    gameCount: matchCount,
-    totalOdds: 0,
-    ballsUsed: 0,
-    isCorrect: null,
-    pointsEarned: null,
-    createdAt: new Date().toISOString(),
-    games: [],
-  }
+function formatActivityDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
 }
 
 export function PredictionActivityCard({
@@ -180,7 +109,6 @@ export function PredictionActivityCard({
   )
   const [isPurchased, setIsPurchased] = useState(activity.is_purchased)
   const [isFree, setIsFree] = useState(activity.is_free || false)
-  const [expandedSlips, setExpandedSlips] = useState<Set<string>>(new Set())
 
   const handlePurchase = async () => {
     setIsPurchasing(true)
@@ -196,24 +124,24 @@ export function PredictionActivityCard({
     }
   }
 
-  const toggleSlip = (slipId: string) => {
-    setExpandedSlips((prev) => {
-      const next = new Set(prev)
-      if (next.has(slipId)) next.delete(slipId)
-      else next.add(slipId)
-      return next
-    })
-  }
-
   const sportLabel = SPORT_LABELS[activity.sport] || activity.sport
-  const showContent = (isPurchased || isFree) && (localSlipGroups || localPredictions)
-  const hasSlipGroups = localSlipGroups && localSlipGroups.length > 0
+  const sportEmoji = SPORT_EMOJI[activity.sport] || "🎯"
+  const contentUnlocked = isPurchased || isFree
+
+  // slipGroups가 없고 unlocked predictions만 있는 경우 자동 변환 → 렌더 일관성 유지.
+  const effectiveSlipGroups = useMemo<SlipGroup[] | null>(() => {
+    if (localSlipGroups && localSlipGroups.length > 0) return localSlipGroups
+    if (localPredictions && localPredictions.length > 0 && contentUnlocked) {
+      return buildSlipGroupsFromPredictions(localPredictions, activity.sport)
+    }
+    return null
+  }, [localSlipGroups, localPredictions, contentUnlocked, activity.sport])
 
   return (
     <div className="bg-card border-border overflow-hidden rounded-xl border">
-      {/* 상단: 프로필 + 스탯 */}
-      <div className="flex items-start gap-3 p-4">
-        <Avatar className="h-10 w-10 flex-shrink-0">
+      {/* Header: 프로필 + 스탯 (1줄 meta bar) */}
+      <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
+        <Avatar className="h-9 w-9 flex-shrink-0">
           <AvatarImage
             src={activity.profile.avatar_url || "/placeholder-user.jpg"}
             alt={activity.profile.nickname}
@@ -221,8 +149,8 @@ export function PredictionActivityCard({
           <AvatarFallback>{activity.profile.nickname?.[0] || "?"}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-foreground text-sm font-semibold">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-foreground text-[13px] font-semibold">
               {activity.profile.nickname}
             </span>
             {onFollow && (
@@ -231,14 +159,14 @@ export function PredictionActivityCard({
                 variant={isFollowed ? "outline" : "default"}
                 onClick={onFollow}
                 disabled={isFollowLoading}
-                className={`h-6 rounded-full px-2.5 text-[11px] ${
+                className={`h-5 rounded-full px-2 text-[10px] ${
                   isFollowed
                     ? "text-muted-foreground hover:border-primary/50 hover:text-primary"
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
                 }`}
               >
                 {isFollowLoading ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
                 ) : isFollowed ? (
                   "팔로잉"
                 ) : (
@@ -246,152 +174,181 @@ export function PredictionActivityCard({
                 )}
               </Button>
             )}
-            {activity.stats && (
-              <div className="flex items-center gap-1.5">
-                {activity.stats.accuracy > 0 && (
-                  <Badge variant="secondary" className="h-5 gap-0.5 px-1.5 py-0 text-[11px]">
-                    <Target className="h-3 w-3" />
-                    {activity.stats.accuracy.toFixed(1)}%
-                  </Badge>
-                )}
-                {activity.stats.current_streak > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="text-primary h-5 gap-0.5 px-1.5 py-0 text-[11px]"
-                  >
-                    <Flame className="h-3 w-3" />
-                    {activity.stats.current_streak}연승
-                  </Badge>
-                )}
-                {activity.stats.net_profit > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="text-primary h-5 gap-0.5 px-1.5 py-0 text-[11px]"
-                  >
-                    <TrendingUp className="h-3 w-3" />+{activity.stats.net_profit.toFixed(0)}
-                  </Badge>
-                )}
-              </div>
+            {activity.stats && activity.stats.accuracy > 0 && (
+              <Badge variant="secondary" className="h-4 gap-0.5 px-1.5 py-0 text-[10px]">
+                <Target className="h-2.5 w-2.5" />
+                {activity.stats.accuracy.toFixed(1)}%
+              </Badge>
+            )}
+            {activity.stats && activity.stats.current_streak > 0 && (
+              <Badge
+                variant="secondary"
+                className="text-primary h-4 gap-0.5 px-1.5 py-0 text-[10px]"
+              >
+                <Flame className="h-2.5 w-2.5" />
+                {activity.stats.current_streak}연승
+              </Badge>
+            )}
+            {activity.stats && activity.stats.net_profit > 0 && (
+              <Badge
+                variant="secondary"
+                className="text-primary h-4 gap-0.5 px-1.5 py-0 text-[10px]"
+              >
+                <TrendingUp className="h-2.5 w-2.5" />+{activity.stats.net_profit.toFixed(0)}
+              </Badge>
             )}
           </div>
-          <p className="text-muted-foreground mt-0.5 text-[13px]">
-            {sportLabel} {activity.prediction_count}경기 조합
-            <span className="ml-1">
-              (
-              {new Date(activity.created_at).toLocaleDateString("ko-KR", {
-                month: "long",
-                day: "numeric",
-              })}
-              )
-            </span>
-          </p>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
+            {formatActivityDate(activity.created_at)} ·{" "}
             {formatRelativeTime(new Date(activity.created_at))}
           </p>
         </div>
       </div>
 
-      {/* 하단: 잠금/열람 */}
-      {showContent ? (
-        <div className="border-border border-t px-4 py-3">
-          <div className="mb-2 flex items-center gap-1.5">
-            {isFree && !isPurchased ? (
-              <>
-                <Clock className="text-primary h-3.5 w-3.5" />
-                <span className="text-primary text-[12px] font-medium">경기 종료 - 무료 공개</span>
-              </>
-            ) : (
-              <>
-                <Unlock className="text-primary h-3.5 w-3.5" />
-                <span className="text-primary text-[12px] font-medium">열람 완료</span>
-              </>
-            )}
-          </div>
-          {hasSlipGroups ? (
-            <div className="space-y-2">
-              {localSlipGroups!.map((group) => {
-                const sportsSlip = slipGroupToSportsSlip(group)
-                return (
-                  <BettingSlipCard
-                    key={group.slipId}
-                    slip={sportsSlip}
-                    isExpanded={expandedSlips.has(group.slipId)}
-                    onToggle={() => toggleSlip(group.slipId)}
-                  />
-                )
-              })}
-            </div>
-          ) : localPredictions ? (
-            <FallbackPredictionList predictions={localPredictions} />
-          ) : null}
-        </div>
-      ) : (
-        <div className="border-border border-t px-4 py-3">
-          <BettingSlipCard
-            slip={createLockedSlip(activity.sport, activity.prediction_count)}
-            isExpanded={expandedSlips.has("locked")}
-            onToggle={() => toggleSlip("locked")}
-            locked
-            matchCount={activity.prediction_count}
-            lockedContent={
-              <Button
-                onClick={handlePurchase}
-                disabled={isPurchasing}
-                variant="outline"
-                className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary w-full gap-2"
-              >
-                {isPurchasing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    구매 중...
-                  </>
+      {/* 슬립 섹션 루프 — 각 슬립이 인스타 카드 본체 */}
+      {effectiveSlipGroups && effectiveSlipGroups.length > 0
+        ? effectiveSlipGroups.map((group) => {
+            const slipLocked = !contentUnlocked
+            const title = group.analysisTitle || `${sportLabel} ${group.matchCount}경기 조합`
+            const oddsText = slipLocked
+              ? `배당 ${group.totalOddsRange}`
+              : `배당 ${group.totalOdds.toFixed(2)}배`
+            const statusMeta = !slipLocked ? getStatusMeta(group.status) : null
+
+            return (
+              <div key={group.slipId} className="border-border border-t px-3.5 py-3.5">
+                {/* slip meta (종목 · 경기수 · 배당 · 상태) */}
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
+                    <span aria-hidden="true">{sportEmoji}</span>
+                    <span>
+                      {sportLabel} {group.matchCount}경기
+                    </span>
+                    <span className="text-muted-foreground/60">·</span>
+                    <span className={slipLocked ? "" : "text-foreground font-medium"}>
+                      {oddsText}
+                    </span>
+                  </span>
+                  {statusMeta && (
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusMeta.className}`}
+                    >
+                      {statusMeta.label}
+                    </span>
+                  )}
+                </div>
+
+                {/* HERO: 분석글 제목 */}
+                <h3 className="text-foreground text-[15px] leading-snug font-semibold">{title}</h3>
+
+                {/* Locked: 잠금 안내 / Unlocked: 본문 */}
+                {slipLocked ? (
+                  <div className="bg-muted/40 text-muted-foreground mt-3 flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[12px]">
+                    <Lock className="h-3 w-3 flex-shrink-0" />
+                    <span>본문과 예측 내역은 구매 후 열람할 수 있어요</span>
+                  </div>
                 ) : (
                   <>
-                    <Lock className="h-4 w-4" />
-                    500G로 열람
+                    {group.analysisText && (
+                      <p className="text-muted-foreground mt-2 text-[13px] leading-relaxed whitespace-pre-line">
+                        {group.analysisText}
+                      </p>
+                    )}
+                    {/* 경기 압축 라인 */}
+                    {group.matches.length > 0 && (
+                      <div className="bg-muted/30 mt-3 space-y-1.5 rounded-md px-3 py-2.5">
+                        {group.matches.map((m, i) => (
+                          <PredictionMatchLine key={`${group.slipId}-match-${i}`} match={m} />
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
-              </Button>
-            }
-          />
-        </div>
-      )}
+
+                {/* Footer: CTA (locked) / 상태 표시 (unlocked) */}
+                <div className="mt-3">
+                  {slipLocked ? (
+                    <Button
+                      onClick={handlePurchase}
+                      disabled={isPurchasing}
+                      variant="outline"
+                      className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary w-full gap-2"
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          구매 중...
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-4 w-4" />
+                          500G로 열람
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="text-primary flex items-center gap-1.5 text-[11px] font-medium">
+                      {isFree && !isPurchased ? (
+                        <>
+                          <Clock className="h-3 w-3" />
+                          경기 종료 - 무료 공개
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="h-3 w-3" />
+                          열람 완료
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        : null}
     </div>
   )
 }
 
-// Fallback: purchase API가 slipGroups 없이 predictions만 반환할 때의 간단 리스트
-function FallbackPredictionList({ predictions }: { predictions: Prediction[] }) {
-  const PREDICTION_LABELS: Record<string, string> = {
-    home: "홈",
-    draw: "무",
-    away: "원정",
-    over: "오버",
-    under: "언더",
+function getStatusMeta(status: string): { label: string; className: string } | null {
+  switch (status) {
+    case "win":
+      return { label: "적중", className: "bg-primary/10 text-primary" }
+    case "lose":
+      return { label: "미적중", className: "bg-muted text-muted-foreground" }
+    case "pending":
+      return { label: "진행중", className: "bg-muted text-muted-foreground" }
+    case "cancelled":
+      return { label: "취소", className: "bg-muted text-muted-foreground" }
+    default:
+      return null
   }
+}
 
+function PredictionMatchLine({ match }: { match: PredictionMatch }) {
+  const resultIcon =
+    match.result === "win"
+      ? "✓"
+      : match.result === "lose"
+        ? "✗"
+        : match.result === "pending"
+          ? "·"
+          : "·"
+  const resultClass =
+    match.result === "win"
+      ? "text-primary"
+      : match.result === "lose"
+        ? "text-muted-foreground/70"
+        : "text-muted-foreground/50"
   return (
-    <div className="space-y-1.5">
-      {predictions.map((pred) => (
-        <div
-          key={pred.id}
-          className="bg-muted/50 flex items-center justify-between rounded px-2 py-1 text-[13px]"
-        >
-          <span className="text-foreground flex-1 truncate">
-            {pred.game?.home_team_name} vs {pred.game?.away_team_name}
-          </span>
-          <Badge
-            variant={
-              pred.status === "settled" && pred.game?.result === pred.prediction
-                ? "default"
-                : "secondary"
-            }
-            className="ml-2 h-5 shrink-0 px-1.5 py-0 text-[11px]"
-          >
-            {PREDICTION_LABELS[pred.prediction] || pred.prediction}
-          </Badge>
-        </div>
-      ))}
+    <div className="flex items-center justify-between gap-2 text-[12px]">
+      <span className="text-foreground flex-1 truncate">
+        {match.home} vs {match.away}
+      </span>
+      <span className="text-muted-foreground shrink-0">{match.selection}</span>
+      <span className={`shrink-0 font-semibold ${resultClass}`} aria-hidden="true">
+        {resultIcon}
+      </span>
     </div>
   )
 }
@@ -441,10 +398,14 @@ function buildSlipGroupsFromPredictions(
       sport,
       date,
       status,
+      matchCount: predictions.length,
+      analysisTitle: null,
+      totalOddsRange: "—",
       stake: 0,
       totalOdds: 0,
       profit: 0,
       matches,
+      analysisText: null,
     },
   ]
 }

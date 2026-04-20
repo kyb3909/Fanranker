@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Dices, Flame, Clock, FileText, Trophy } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
@@ -96,6 +97,7 @@ interface HomeClientProps {
   initialRecentComments?: unknown[]
   initialBanners?: unknown[]
   isPredictionView: boolean
+  initialTab?: TabType
 }
 
 export function HomeClient({
@@ -104,9 +106,19 @@ export function HomeClient({
   initialRecentComments,
   initialBanners,
   isPredictionView,
+  initialTab = "feed",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
-  const [activeTab, setActiveTab] = useState<TabType>("feed")
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+
+  // soft navigation 대응: URL ?tab=content 변경 시 activeTab 동기화
+  useEffect(() => {
+    const urlTab = searchParams.get("tab")
+    if (urlTab === "content" || urlTab === "feed") {
+      setActiveTab(urlTab)
+    }
+  }, [searchParams])
   const [sortBy, setSortBy] = useState<SortType>("hot")
 
   // SWR로 팔로우 커뮤니티 로드 (community-sidebar와 캐시 공유)

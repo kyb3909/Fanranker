@@ -114,6 +114,7 @@ export default async function Home({
         initialRecentComments={homeData.initialRecentComments}
         initialBanners={homeData.initialBanners}
         isPredictionView={params.view === "prediction"}
+        initialTab={params.tab === "content" ? "content" : "feed"}
       />
     </Suspense>
   )

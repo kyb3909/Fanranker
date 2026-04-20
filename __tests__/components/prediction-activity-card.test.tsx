@@ -23,6 +23,21 @@ const mockPrediction = {
   },
 }
 
+const lockedSlipGroup = {
+  slipId: "slip-1",
+  sport: "축구",
+  date: "02/22",
+  status: "pending",
+  matchCount: 3,
+  analysisTitle: null,
+  totalOddsRange: "3배대",
+  stake: 0,
+  totalOdds: 0,
+  profit: 0,
+  matches: [],
+  analysisText: null,
+}
+
 const baseActivity = {
   id: "act-1",
   user_id: "user-1",
@@ -36,6 +51,7 @@ const baseActivity = {
   is_purchased: false,
   is_free: false,
   predictions: null,
+  slipGroups: [lockedSlipGroup],
 }
 
 describe("PredictionActivityCard", () => {
@@ -46,8 +62,25 @@ describe("PredictionActivityCard", () => {
 
   it("renders sport label and prediction count", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    // 컴포넌트 line 278: `{sportLabel} {activity.prediction_count}경기 조합`
+    // analysisTitle이 null이면 `{sportLabel} {matchCount}경기 조합` fallback이 Hero로 렌더됨.
     expect(screen.getByText(/축구 3경기 조합/)).toBeDefined()
+    // 슬립 메타 라인에도 "축구 3경기"가 표시됨 (여러 노드 매치 허용).
+    expect(screen.getAllByText(/축구 3경기/).length).toBeGreaterThan(0)
+  })
+
+  it("renders odds range in locked state", () => {
+    render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
+    // Locked일 때 정확값 대신 "배당 3배대" 범위 표시.
+    expect(screen.getByText(/배당 3배대/)).toBeDefined()
+  })
+
+  it("renders analysis title when provided", () => {
+    const activity = {
+      ...baseActivity,
+      slipGroups: [{ ...lockedSlipGroup, analysisTitle: "손흥민 오늘은 확정" }],
+    }
+    render(<PredictionActivityCard activity={activity} onPurchase={vi.fn()} />)
+    expect(screen.getByText("손흥민 오늘은 확정")).toBeDefined()
   })
 
   it("renders activity date", () => {
@@ -81,27 +114,23 @@ describe("PredictionActivityCard", () => {
 
   it("shows locked purchase button when not purchased", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    // BettingSlipCard는 접힌 상태이므로 잠금 배지가 보여야 함
-    expect(screen.getByText("잠금")).toBeDefined()
-    // 헤더를 클릭하여 확장
-    fireEvent.click(screen.getByText("잠금"))
+    // 새 구조에선 "500G로 열람" 버튼이 바로 노출됨 (펼침 단계 없음).
     expect(screen.getByText("500G로 열람")).toBeDefined()
+    // 잠금 안내 문구도 함께 노출.
+    expect(screen.getByText(/본문과 예측 내역은 구매 후 열람/)).toBeDefined()
   })
 
   it("calls onPurchase and shows predictions on success", async () => {
     const onPurchase = vi.fn().mockResolvedValue([mockPrediction])
     render(<PredictionActivityCard activity={baseActivity} onPurchase={onPurchase} />)
 
-    // 먼저 카드를 확장
-    fireEvent.click(screen.getByText("잠금"))
     fireEvent.click(screen.getByText("500G로 열람"))
     expect(onPurchase).toHaveBeenCalledWith("act-1")
 
     await waitFor(() => {
       expect(screen.getByText("열람 완료")).toBeDefined()
-      // 구매 후 BettingSlipCard가 렌더되며 슬립 헤더에 sport ("축구") 표시
-      const sportLabels = screen.getAllByText("축구")
-      expect(sportLabels.length).toBeGreaterThan(0)
+      // 구매 후 slipGroups로 변환되어 경기 라인에 "서울 vs 수원" 노출
+      expect(screen.getByText(/서울 vs 수원/)).toBeDefined()
     })
   })
 
@@ -114,12 +143,9 @@ describe("PredictionActivityCard", () => {
 
     render(<PredictionActivityCard activity={baseActivity} onPurchase={onPurchase} />)
 
-    // 먼저 카드를 확장
-    fireEvent.click(screen.getByText("잠금"))
     fireEvent.click(screen.getByText("500G로 열람"))
     expect(screen.getByText("구매 중...")).toBeDefined()
 
-    // Resolve and check loading disappears
     resolvePromise!(null)
     await waitFor(() => {
       expect(screen.queryByText("구매 중...")).toBeNull()
@@ -131,6 +157,7 @@ describe("PredictionActivityCard", () => {
       ...baseActivity,
       is_purchased: true,
       predictions: [mockPrediction],
+      slipGroups: null,
     }
     render(<PredictionActivityCard activity={activity} onPurchase={vi.fn()} />)
     expect(screen.getByText("열람 완료")).toBeDefined()
@@ -142,6 +169,7 @@ describe("PredictionActivityCard", () => {
       ...baseActivity,
       is_free: true,
       predictions: [mockPrediction],
+      slipGroups: null,
     }
     render(<PredictionActivityCard activity={activity} onPurchase={vi.fn()} />)
     expect(screen.getByText("경기 종료 - 무료 공개")).toBeDefined()
@@ -154,6 +182,7 @@ describe("PredictionActivityCard", () => {
 
   it("renders relative time", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    expect(screen.getByText("1시간 전")).toBeDefined()
+    // 새 구조에선 날짜+상대시간이 한 노드로 합쳐짐("2월 22일 · 1시간 전")
+    expect(screen.getByText(/1시간 전/)).toBeDefined()
   })
 })

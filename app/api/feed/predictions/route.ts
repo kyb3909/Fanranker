@@ -23,6 +23,24 @@ interface PredSlip {
   stake: number
   total_odds: number
   status: string
+  analysis_title: string | null
+  analysis_text: string | null
+}
+
+/**
+ * 총 배당률 → 공개용 범위 버킷.
+ * 역산 방지를 위해 구매 전 carousel에 정확값 대신 버킷만 노출한다.
+ */
+function bucketTotalOdds(odds: number): string {
+  if (!odds || odds <= 0) return "—"
+  if (odds < 2) return "2배 미만"
+  if (odds < 3) return "2배대"
+  if (odds < 4) return "3배대"
+  if (odds < 5) return "4배대"
+  if (odds < 10) return "5~9배"
+  if (odds < 50) return "10~49배"
+  if (odds < 100) return "50~99배"
+  return "100배 이상"
 }
 
 /**
@@ -112,7 +130,7 @@ export async function GET(request: NextRequest) {
           id, user_id, round_id, game_id, prediction, status, slip_id, stake,
           game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result,
             league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds),
-          slip:prediction_slips(id, stake, total_odds, status)
+          slip:prediction_slips(id, stake, total_odds, status, analysis_title, analysis_text)
         `
         )
         .in("user_id", userIds)
@@ -157,7 +175,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Helper: build slipGroups from predictions
-    const buildSlipGroups = (preds: NonNullable<typeof allPreds>) => {
+    // isLocked=true일 때 정확한 배당·본문·슬립 상세를 서버 단에서 마스킹.
+    const buildSlipGroups = (preds: NonNullable<typeof allPreds>, isLocked: boolean) => {
       // Group by slip_id (or round_id for legacy)
       const bySlip = new Map<string, typeof preds>()
       for (const pred of preds) {
@@ -268,15 +287,39 @@ export async function GET(request: NextRequest) {
           }
         })
 
-        return {
+        const totalOddsRounded = Math.round(totalOdds * 100) / 100
+        const totalOddsRange = bucketTotalOdds(totalOddsRounded)
+
+        // 공통(공개 허용): slipId, sport, date, status, 경기 수, 제목, 배당 범위
+        const publicFields = {
           slipId,
           sport,
           date: matchDate,
           status: slipStatus,
+          matchCount: slipPreds.length,
+          analysisTitle: slip0?.analysis_title ?? null,
+          totalOddsRange,
+        }
+
+        // Locked: 정확한 배당·본문·슬립 내역·stake·profit 모두 마스킹
+        if (isLocked) {
+          return {
+            ...publicFields,
+            stake: 0,
+            totalOdds: 0,
+            profit: 0,
+            matches: [] as typeof matches,
+            analysisText: null as string | null,
+          }
+        }
+
+        return {
+          ...publicFields,
           stake,
-          totalOdds: Math.round(totalOdds * 100) / 100,
+          totalOdds: totalOddsRounded,
           profit,
           matches,
+          analysisText: slip0?.analysis_text ?? null,
         }
       })
     }
@@ -321,7 +364,9 @@ export async function GET(request: NextRequest) {
         is_purchased: isPurchased,
         is_free: isFree,
         predictions: showPredictions ? preds : null,
-        slipGroups: showPredictions ? buildSlipGroups(preds) : null,
+        // Locked 상태에서도 slipGroups는 마스킹된 공개 필드(제목/배당 범위/경기 수)만 포함.
+        // Unlocked 상태에서는 full 데이터.
+        slipGroups: buildSlipGroups(preds, !showPredictions),
       }
     })
 
