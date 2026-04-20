@@ -156,10 +156,7 @@ export default function RootLayout({
               />
             )}
           </head>
-          <body
-            className={`pb-[calc(3.5rem+env(safe-area-inset-bottom))] font-sans antialiased sm:pb-0`}
-            suppressHydrationWarning
-          >
+          <body className="safe-area-pb-tabbar font-sans antialiased" suppressHydrationWarning>
             <script
               type="application/ld+json"
               dangerouslySetInnerHTML={{

@@ -1,90 +1,34 @@
-// Service Worker for 공놀이 PWA
-const CACHE_NAME = "gongnori-v2"
+// Self-destructing Service Worker
+// Dev 환경에서 /_next/static/* Cache-first 전략이 Turbopack HMR과 충돌해
+// "module factory not available" 에러를 유발. 기존 SW를 안전하게 제거하기 위해
+// install → activate 시 모든 캐시 삭제 + 자기 자신 unregister + 열린 탭 리로드.
+//
+// 이 파일이 한 번 브라우저에 전파되면 SW는 영구 제거됨.
+// 추후 PWA를 다시 도입할 경우 다른 이름(예: sw-v2.js)으로 새로 등록하는 걸 권장.
 
-// 오프라인 시 캐시할 핵심 리소스
-const PRECACHE_URLS = [
-  "/",
-  "/icon.svg",
-  "/icon-light-32x32.png",
-  "/apple-icon.png",
-]
-
-// 설치: 핵심 리소스 프리캐시
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
-  )
+self.addEventListener("install", () => {
   self.skipWaiting()
 })
 
-// 활성화: 이전 캐시 정리
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(
-        names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
-      )
-    )
-  )
-  self.clients.claim()
-})
+    (async () => {
+      // 1) 이 origin의 모든 캐시 삭제
+      const names = await caches.keys()
+      await Promise.all(names.map((name) => caches.delete(name)))
 
-// Fetch: Network-first 전략 (API/외부 도메인 제외)
-self.addEventListener("fetch", (event) => {
-  const { request } = event
-  const url = new URL(request.url)
+      // 2) 자기 자신 unregister
+      await self.registration.unregister()
 
-  // 외부 도메인 요청은 SW가 가로채지 않음 (Clerk, Cloudflare 등)
-  if (url.origin !== self.location.origin) return
-
-  // API 요청은 캐시하지 않음
-  if (url.pathname.startsWith("/api/")) return
-
-  // POST 등 비-GET 요청은 캐시하지 않음
-  if (request.method !== "GET") return
-
-  // 네비게이션 요청 (HTML 페이지)
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request).catch(() =>
-        caches.match("/").then((cached) => cached || new Response("Offline", { status: 503 }))
-      )
-    )
-    return
-  }
-
-  // 정적 리소스: Cache-first
-  if (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.match(/\.(png|jpg|jpeg|webp|svg|gif|ico|woff2?)$/)
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
-          }
-          return response
-        })
-      })
-    )
-    return
-  }
-
-  // 기타: Network-first with cache fallback
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok) {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
-        }
-        return response
-      })
-      .catch(() =>
-        caches.match(request).then((cached) => cached || new Response("Offline", { status: 503 }))
-      )
+      // 3) 열린 모든 탭을 강제 새로고침하여 깨끗한 상태로 진입
+      const clients = await self.clients.matchAll({ type: "window" })
+      for (const client of clients) {
+        client.navigate(client.url)
+      }
+    })()
   )
 })
+
+// Fetch 핸들러 없음 → 이 SW는 어떤 요청도 가로채지 않음.
+// 만약 기존 SW가 이미 활성 상태라면 24시간 내 브라우저가 이 파일을 재검증하면서
+// 업데이트 감지 → activate 단계에서 자기 제거 실행.

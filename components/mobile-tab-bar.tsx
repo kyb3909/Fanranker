@@ -42,7 +42,7 @@ function MobileTabBarContent() {
 
   return (
     <nav
-      className="fixed right-0 bottom-0 left-0 z-50 border-t border-[#EEEEEE] bg-white/85 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] backdrop-blur-xl sm:hidden"
+      className="safe-area-pb fixed right-0 bottom-0 left-0 z-50 border-t border-[#EEEEEE] bg-white/85 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] backdrop-blur-xl sm:hidden"
       aria-label="모바일 메뉴"
     >
       <div className="flex h-14 items-center justify-around px-2">
