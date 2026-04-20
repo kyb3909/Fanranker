@@ -140,9 +140,11 @@ describe("PredictionActivityCard", () => {
     fireEvent.click(screen.getByText("500G로 열람"))
     await waitFor(() => expect(screen.getByText("내용 보기")).toBeDefined())
 
-    // "내용 보기" 토글 클릭 → 경기 라인 노출 + "접기"로 버튼 전환
+    // "내용 보기" 토글 클릭 → 경기 카드 노출 + "접기"로 버튼 전환
     fireEvent.click(screen.getByText("내용 보기"))
-    expect(screen.getByText(/서울 vs 수원/)).toBeDefined()
+    // 팀 이름은 경기 카드 헤더 + OddsCell label로 반복 등장 가능
+    expect(screen.getAllByText("서울").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("수원").length).toBeGreaterThan(0)
     expect(screen.getByText("접기")).toBeDefined()
   })
 

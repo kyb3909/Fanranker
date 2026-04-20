@@ -308,20 +308,37 @@ export function PredictionActivityCard({
                   {title}
                 </h3>
 
-                {/* Expanded 상세 — 본문 + 경기 라인 (unlocked + 토글 시에만) */}
+                {/* Expanded 상세 — 📝 분석 / 🎯 예측 섹션 분리 */}
                 {!slipLocked && isExpanded && (
-                  <div className="border-border/60 mt-4 space-y-3 border-t pt-3.5">
+                  <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+                    {/* 📝 분석 섹션 */}
                     {group.analysisText && (
-                      <p className="text-foreground/85 text-[13.5px] leading-relaxed whitespace-pre-line">
-                        {group.analysisText}
-                      </p>
+                      <section>
+                        <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase">
+                          <span aria-hidden="true">📝</span>
+                          <span>분석</span>
+                        </h4>
+                        <div className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
+                          <p className="text-[13.5px] leading-relaxed whitespace-pre-line text-gray-800">
+                            {group.analysisText}
+                          </p>
+                        </div>
+                      </section>
                     )}
+
+                    {/* 🎯 예측 섹션 */}
                     {group.matches.length > 0 && (
-                      <div className="space-y-1.5">
-                        {group.matches.map((m, i) => (
-                          <PredictionMatchLine key={`${group.slipId}-match-${i}`} match={m} />
-                        ))}
-                      </div>
+                      <section>
+                        <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase">
+                          <span aria-hidden="true">🎯</span>
+                          <span>예측 {group.matches.length}경기</span>
+                        </h4>
+                        <div className="space-y-2">
+                          {group.matches.map((m, i) => (
+                            <PredictionMatchCard key={`${group.slipId}-match-${i}`} match={m} />
+                          ))}
+                        </div>
+                      </section>
                     )}
                   </div>
                 )}
@@ -409,31 +426,157 @@ function getStatusDot(
   }
 }
 
-function PredictionMatchLine({ match }: { match: PredictionMatch }) {
-  const resultIcon =
-    match.result === "win"
-      ? "✓"
-      : match.result === "lose"
-        ? "✗"
-        : match.result === "pending"
-          ? "·"
-          : "·"
-  const resultClass =
-    match.result === "win"
-      ? "text-primary"
-      : match.result === "lose"
-        ? "text-muted-foreground/70"
-        : "text-muted-foreground/50"
+/** selection 한글 라벨 → 내부 키 매핑 */
+function selectionToKey(selection?: string): string | null {
+  if (!selection) return null
+  const map: Record<string, string> = {
+    홈팀: "home",
+    원정팀: "away",
+    무: "draw",
+    오버: "over",
+    언더: "under",
+  }
+  return map[selection] || null
+}
+
+/** 경기별 결과 pill */
+function getMatchResultPill(result: string): { label: string; className: string } | null {
+  switch (result) {
+    case "win":
+      return { label: "적중", className: "bg-emerald-500 text-white" }
+    case "lose":
+      return { label: "미적중", className: "bg-slate-200 text-slate-600" }
+    case "pending":
+      return { label: "진행중", className: "bg-amber-500 text-white" }
+    default:
+      return null
+  }
+}
+
+/** 배당률 셀 — 내 선택/정답 여부에 따라 하이라이트 */
+function OddsCell({
+  label,
+  subLabel,
+  odds,
+  isSelected,
+  isCorrect,
+}: {
+  label: string
+  subLabel?: string
+  odds: number | undefined | null
+  isSelected: boolean
+  isCorrect: boolean
+}) {
+  const oddsValue = odds && odds > 0 ? odds.toFixed(2) : "-"
+  const base = "rounded-md border px-2 py-1.5 text-center transition-colors"
+  const stateClass = isSelected
+    ? isCorrect
+      ? "border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40"
+      : "border-gray-900 bg-gray-900 text-white"
+    : isCorrect
+      ? "border-emerald-300 bg-emerald-50/60 text-emerald-600"
+      : "border-gray-200 bg-white text-gray-500"
   return (
-    <div className="flex items-center justify-between gap-2 text-[12px]">
-      <span className="text-foreground flex-1 truncate">
-        {match.home} vs {match.away}
-      </span>
-      <span className="text-muted-foreground shrink-0">{match.selection}</span>
-      <span className={`shrink-0 font-semibold ${resultClass}`} aria-hidden="true">
-        {resultIcon}
-      </span>
+    <div className={`${base} ${stateClass}`}>
+      <div className="truncate text-[11px] font-semibold">{label}</div>
+      {subLabel && <div className="text-[9px] opacity-70">{subLabel}</div>}
+      <div className="mt-0.5 text-[13px] font-bold tabular-nums">{oddsValue}</div>
     </div>
+  )
+}
+
+/** 경기 상세 카드 — 리그/유형 뱃지 + 배당 테이블 + 내 선택 + 결과 */
+function PredictionMatchCard({ match }: { match: PredictionMatch }) {
+  const gameType = match.gameType || "일반"
+  const isUnderOver = gameType === "언더오버"
+  const selectionKey = selectionToKey(match.selection)
+  const correctKey = selectionToKey(match.correctAnswer)
+  const resultPill = getMatchResultPill(match.result)
+
+  return (
+    <article className="rounded-lg border border-gray-200 bg-white p-3">
+      {/* Top: 리그 + 경기유형 + 결과 */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          {match.league && (
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-700">
+              {match.league}
+            </span>
+          )}
+          <span className="rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-bold text-white">
+            {gameType}
+          </span>
+        </div>
+        {resultPill && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${resultPill.className}`}
+          >
+            {resultPill.label}
+          </span>
+        )}
+      </div>
+
+      {/* 경기 (팀 vs 팀) */}
+      <div className="text-[14px] font-semibold text-gray-900">
+        <span className="truncate">{match.home}</span>
+        <span className="mx-1.5 text-gray-400">vs</span>
+        <span className="truncate">{match.away}</span>
+      </div>
+
+      {/* 배당 테이블 */}
+      {isUnderOver ? (
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+          <OddsCell
+            label="오버"
+            odds={match.overOdds}
+            isSelected={selectionKey === "over"}
+            isCorrect={correctKey === "over"}
+          />
+          <OddsCell
+            label="언더"
+            odds={match.underOdds}
+            isSelected={selectionKey === "under"}
+            isCorrect={correctKey === "under"}
+          />
+        </div>
+      ) : (
+        <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+          <OddsCell
+            label={match.home}
+            subLabel="홈"
+            odds={match.homeOdds}
+            isSelected={selectionKey === "home"}
+            isCorrect={correctKey === "home"}
+          />
+          <OddsCell
+            label="무"
+            odds={match.drawOdds}
+            isSelected={selectionKey === "draw"}
+            isCorrect={correctKey === "draw"}
+          />
+          <OddsCell
+            label={match.away}
+            subLabel="원정"
+            odds={match.awayOdds}
+            isSelected={selectionKey === "away"}
+            isCorrect={correctKey === "away"}
+          />
+        </div>
+      )}
+
+      {/* 내 선택 요약 + 정답 비교 */}
+      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 text-[11px]">
+        <span className="text-gray-500">
+          내 선택: <span className="font-bold text-gray-900">{match.selection}</span>
+          {match.odds > 0 && <span className="text-gray-500"> · {match.odds.toFixed(2)}배</span>}
+        </span>
+        {match.correctAnswer && match.correctAnswer !== match.selection && (
+          <span className="text-gray-500">
+            정답: <span className="font-bold text-emerald-600">{match.correctAnswer}</span>
+          </span>
+        )}
+      </div>
+    </article>
   )
 }
 
