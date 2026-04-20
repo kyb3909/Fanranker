@@ -55,6 +55,12 @@ interface Activity {
           odds: number
           result: string
           gameType?: string
+          matchTime?: string | null
+          homeScore?: number | null
+          awayScore?: number | null
+          venue?: string | null
+          handicap?: number | null
+          overUnderLine?: number | null
         }[]
         analysisText: string | null
       }[]

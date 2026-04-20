@@ -97,28 +97,28 @@ const SPORT_COLOR: Record<
   }
 > = {
   축구: {
-    header: "bg-emerald-500",
+    header: "bg-emerald-500/85",
     text: "text-emerald-700",
     toggle: "text-emerald-600 hover:text-emerald-700",
     cardShadow: "shadow-lg shadow-emerald-500/20",
     border: "border-emerald-100",
   },
   야구: {
-    header: "bg-sky-500",
+    header: "bg-sky-500/85",
     text: "text-sky-700",
     toggle: "text-sky-600 hover:text-sky-700",
     cardShadow: "shadow-lg shadow-sky-500/20",
     border: "border-sky-100",
   },
   농구: {
-    header: "bg-orange-500",
+    header: "bg-orange-500/85",
     text: "text-orange-700",
     toggle: "text-orange-600 hover:text-orange-700",
     cardShadow: "shadow-lg shadow-orange-500/20",
     border: "border-orange-100",
   },
   배구: {
-    header: "bg-purple-500",
+    header: "bg-purple-500/85",
     text: "text-purple-700",
     toggle: "text-purple-600 hover:text-purple-700",
     cardShadow: "shadow-lg shadow-purple-500/20",
@@ -126,7 +126,7 @@ const SPORT_COLOR: Record<
   },
 }
 const SPORT_COLOR_DEFAULT: (typeof SPORT_COLOR)[string] = {
-  header: "bg-slate-500",
+  header: "bg-slate-500/85",
   text: "text-slate-700",
   toggle: "text-slate-600 hover:text-slate-700",
   cardShadow: "shadow-lg shadow-slate-500/20",
@@ -135,6 +135,23 @@ const SPORT_COLOR_DEFAULT: (typeof SPORT_COLOR)[string] = {
 
 function formatActivityDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
+}
+
+/** 경기 시간 라벨: "4/4 (토) 19:30" */
+function formatMatchTimeLabel(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleString("ko-KR", {
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  } catch {
+    return ""
+  }
 }
 
 export function PredictionActivityCard({
@@ -247,13 +264,13 @@ export function PredictionActivityCard({
                 </span>
               )}
               {activity.stats && activity.stats.current_streak > 0 && (
-                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-orange-400 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[10px] font-bold text-orange-600 shadow-sm">
                   <Flame className="h-2.5 w-2.5" />
                   {activity.stats.current_streak}연승
                 </span>
               )}
               {activity.stats && activity.stats.net_profit > 0 && (
-                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-emerald-400 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[10px] font-bold text-emerald-600 shadow-sm">
                   <TrendingUp className="h-2.5 w-2.5" />+{activity.stats.net_profit.toFixed(0)}
                 </span>
               )}
@@ -285,7 +302,7 @@ export function PredictionActivityCard({
                   </span>
                   <span
                     className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
-                      slipLocked ? "bg-gray-100 text-gray-600" : "bg-gray-900 text-white"
+                      slipLocked ? "bg-gray-100 text-gray-600" : "bg-primary/90 text-white"
                     }`}
                   >
                     {oddsText}
@@ -401,7 +418,7 @@ function getStatusDot(
       return {
         label: "적중",
         dotClass: "bg-white",
-        pillClass: "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30",
+        pillClass: "bg-emerald-500/85 text-white shadow-sm shadow-emerald-500/30",
       }
     case "lose":
       return {
@@ -443,7 +460,7 @@ function selectionToKey(selection?: string): string | null {
 function getMatchResultPill(result: string): { label: string; className: string } | null {
   switch (result) {
     case "win":
-      return { label: "적중", className: "bg-emerald-500 text-white" }
+      return { label: "적중", className: "bg-emerald-500/85 text-white" }
     case "lose":
       return { label: "미적중", className: "bg-slate-200 text-slate-600" }
     case "pending":
@@ -471,10 +488,10 @@ function OddsCell({
   const base = "rounded-md border px-2 py-1.5 text-center transition-colors"
   const stateClass = isSelected
     ? isCorrect
-      ? "border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40"
-      : "border-gray-900 bg-gray-900 text-white"
+      ? "border-emerald-500/70 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/30"
+      : "border-primary bg-primary/90 text-white"
     : isCorrect
-      ? "border-emerald-300 bg-emerald-50/60 text-emerald-600"
+      ? "border-emerald-300/60 bg-emerald-50/60 text-emerald-600"
       : "border-gray-200 bg-white text-gray-500"
   return (
     <div className={`${base} ${stateClass}`}>
@@ -485,26 +502,35 @@ function OddsCell({
   )
 }
 
-/** 경기 상세 카드 — 리그/유형 뱃지 + 배당 테이블 + 내 선택 + 결과 */
+/** 경기 상세 카드 — 리그/유형/시간/경기장/스코어/핸디캡/언오버 기준 + 배당 테이블 + 내 선택 + 결과 */
 function PredictionMatchCard({ match }: { match: PredictionMatch }) {
   const gameType = match.gameType || "일반"
   const isUnderOver = gameType === "언더오버"
+  const isHandicap = gameType === "핸디캡"
   const selectionKey = selectionToKey(match.selection)
   const correctKey = selectionToKey(match.correctAnswer)
   const resultPill = getMatchResultPill(match.result)
+  const hasScore = match.homeScore != null && match.awayScore != null
+  const matchTimeText = match.matchTime ? formatMatchTimeLabel(match.matchTime) : null
+  const lineValue = isUnderOver ? match.overUnderLine : isHandicap ? match.handicap : null
 
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-3">
-      {/* Top: 리그 + 경기유형 + 결과 */}
+      {/* Top: 리그 + 경기유형(+라인값) + 결과 */}
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {match.league && (
             <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-700">
               {match.league}
             </span>
           )}
-          <span className="rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          <span className="bg-primary/90 rounded px-1.5 py-0.5 text-[10px] font-bold text-white">
             {gameType}
+            {lineValue != null && (
+              <span className="ml-0.5 tabular-nums">
+                {lineValue > 0 ? ` +${lineValue}` : ` ${lineValue}`}
+              </span>
+            )}
           </span>
         </div>
         {resultPill && (
@@ -516,10 +542,24 @@ function PredictionMatchCard({ match }: { match: PredictionMatch }) {
         )}
       </div>
 
-      {/* 경기 (팀 vs 팀) */}
-      <div className="text-[14px] font-semibold text-gray-900">
+      {/* 경기 시간 + 경기장 */}
+      {(matchTimeText || match.venue) && (
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
+          {matchTimeText && <span className="tabular-nums">🕒 {matchTimeText}</span>}
+          {match.venue && <span className="truncate">🏟 {match.venue}</span>}
+        </div>
+      )}
+
+      {/* 경기 (팀 vs 팀 + 스코어) */}
+      <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-900">
         <span className="truncate">{match.home}</span>
-        <span className="mx-1.5 text-gray-400">vs</span>
+        {hasScore ? (
+          <span className="rounded-md bg-gray-900 px-2 py-0.5 text-[13px] font-bold tracking-wide text-white tabular-nums">
+            {match.homeScore} - {match.awayScore}
+          </span>
+        ) : (
+          <span className="text-gray-400">vs</span>
+        )}
         <span className="truncate">{match.away}</span>
       </div>
 

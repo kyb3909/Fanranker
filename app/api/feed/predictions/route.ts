@@ -16,6 +16,11 @@ interface PredGame {
   draw_odds: string | null
   over_odds: string | null
   under_odds: string | null
+  home_score: number | null
+  away_score: number | null
+  venue: string | null
+  handicap: number | null
+  over_under_line: number | null
 }
 
 interface PredSlip {
@@ -129,7 +134,8 @@ export async function GET(request: NextRequest) {
           `
           id, user_id, round_id, game_id, prediction, status, slip_id, stake,
           game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result,
-            league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds),
+            league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds,
+            home_score, away_score, venue, handicap, over_under_line),
           slip:prediction_slips(id, stake, total_odds, status, analysis_title, analysis_text)
         `
         )
@@ -284,6 +290,12 @@ export async function GET(request: NextRequest) {
             result: matchResult,
             correctAnswer,
             gameType: g?.game_type || "일반",
+            matchTime: g?.match_time || null,
+            homeScore: g?.home_score ?? null,
+            awayScore: g?.away_score ?? null,
+            venue: g?.venue || null,
+            handicap: g?.handicap ?? null,
+            overUnderLine: g?.over_under_line ?? null,
           }
         })
 

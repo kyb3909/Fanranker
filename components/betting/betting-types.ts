@@ -162,6 +162,12 @@ export interface PredictionMatch {
   result: string // 개별 경기 결과: "win" | "lose" | "pending"
   correctAnswer?: string // 정답 선택지 라벨 (Korean: "홈팀" | "원정팀" | "무" | "오버" | "언더")
   gameType?: string // 게임 유형: "일반" | "핸디캡" | "언더오버" 등
+  matchTime?: string | null // ISO 경기 시간
+  homeScore?: number | null // 완료된 경기의 홈 점수
+  awayScore?: number | null // 완료된 경기의 원정 점수
+  venue?: string | null // 경기장
+  handicap?: number | null // 핸디캡 값 (핸디캡 경기일 때)
+  overUnderLine?: number | null // 언더오버 기준선
 }
 
 export interface PredictionHistoryItem {
