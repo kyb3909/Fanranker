@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Lock, TrendingUp, Target, Flame, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
@@ -83,33 +82,55 @@ const SPORT_EMOJI: Record<string, string> = {
   배구: "🏐",
 }
 
-/** 종목별 액센트 컬러 — 상단 스트라이프 + 이모지 칩 + 카드 단색 배경 + 컬러 섀도. */
-const SPORT_COLOR: Record<string, { chip: string; stripe: string; cardBg: string }> = {
+/**
+ * 종목별 액센트 컬러 — 헤더 solid 블록 + 배지 텍스트 컬러 + 카드 섀도.
+ * FIFA/NBA 카드 스타일: 헤더는 진한 종목 컬러, 본문은 흰색, 배지는 solid pill.
+ */
+const SPORT_COLOR: Record<
+  string,
+  {
+    header: string // 헤더 블록 배경 (진한 solid)
+    text: string // 흰 배지 위 종목 텍스트 컬러
+    toggle: string // "내용 보기" 토글 텍스트
+    cardShadow: string // 카드 외곽 컬러 섀도
+    border: string // 카드 테두리 톤
+  }
+> = {
   축구: {
-    chip: "bg-emerald-500",
-    stripe: "bg-gradient-to-r from-emerald-400 to-teal-500",
-    cardBg: "bg-emerald-50/80 border-emerald-200/60 shadow-md shadow-emerald-500/10",
+    header: "bg-emerald-500",
+    text: "text-emerald-700",
+    toggle: "text-emerald-600 hover:text-emerald-700",
+    cardShadow: "shadow-lg shadow-emerald-500/20",
+    border: "border-emerald-100",
   },
   야구: {
-    chip: "bg-sky-500",
-    stripe: "bg-gradient-to-r from-sky-400 to-blue-500",
-    cardBg: "bg-sky-50/80 border-sky-200/60 shadow-md shadow-sky-500/10",
+    header: "bg-sky-500",
+    text: "text-sky-700",
+    toggle: "text-sky-600 hover:text-sky-700",
+    cardShadow: "shadow-lg shadow-sky-500/20",
+    border: "border-sky-100",
   },
   농구: {
-    chip: "bg-orange-500",
-    stripe: "bg-gradient-to-r from-orange-400 to-amber-500",
-    cardBg: "bg-orange-50/80 border-orange-200/60 shadow-md shadow-orange-500/10",
+    header: "bg-orange-500",
+    text: "text-orange-700",
+    toggle: "text-orange-600 hover:text-orange-700",
+    cardShadow: "shadow-lg shadow-orange-500/20",
+    border: "border-orange-100",
   },
   배구: {
-    chip: "bg-purple-500",
-    stripe: "bg-gradient-to-r from-purple-400 to-fuchsia-500",
-    cardBg: "bg-purple-50/80 border-purple-200/60 shadow-md shadow-purple-500/10",
+    header: "bg-purple-500",
+    text: "text-purple-700",
+    toggle: "text-purple-600 hover:text-purple-700",
+    cardShadow: "shadow-lg shadow-purple-500/20",
+    border: "border-purple-100",
   },
 }
-const SPORT_COLOR_DEFAULT = {
-  chip: "bg-slate-500",
-  stripe: "bg-gradient-to-r from-slate-400 to-slate-500",
-  cardBg: "bg-slate-50/80 border-slate-200/60 shadow-md shadow-slate-500/10",
+const SPORT_COLOR_DEFAULT: (typeof SPORT_COLOR)[string] = {
+  header: "bg-slate-500",
+  text: "text-slate-700",
+  toggle: "text-slate-600 hover:text-slate-700",
+  cardShadow: "shadow-lg shadow-slate-500/20",
+  border: "border-slate-100",
 }
 
 function formatActivityDate(iso: string): string {
@@ -179,76 +200,69 @@ export function PredictionActivityCard({
   }, [localSlipGroups, localPredictions, contentUnlocked, activity.sport])
 
   return (
-    <div className={`overflow-hidden rounded-xl border ${sportColor.cardBg}`}>
-      {/* 종목 accent stripe — 멀리서도 종목 구분 */}
-      <div className={`h-1 ${sportColor.stripe}`} aria-hidden="true" />
-
-      {/* Header: 프로필 + 스탯 (1줄 meta bar) */}
-      <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
-        <Avatar className="h-9 w-9 flex-shrink-0">
-          <AvatarImage
-            src={activity.profile.avatar_url || "/placeholder-user.jpg"}
-            alt={activity.profile.nickname}
-          />
-          <AvatarFallback>{activity.profile.nickname?.[0] || "?"}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-foreground text-[13px] font-semibold">
-              {activity.profile.nickname}
-            </span>
-            {onFollow && (
-              <Button
-                size="sm"
-                variant={isFollowed ? "outline" : "default"}
-                onClick={onFollow}
-                disabled={isFollowLoading}
-                className={`h-5 rounded-full px-2 text-[10px] ${
-                  isFollowed
-                    ? "text-muted-foreground hover:border-primary/50 hover:text-primary"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                }`}
-              >
-                {isFollowLoading ? (
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                ) : isFollowed ? (
-                  "팔로잉"
-                ) : (
-                  "팔로우"
-                )}
-              </Button>
-            )}
-            {activity.stats && activity.stats.accuracy > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-4 gap-0.5 bg-indigo-50 px-1.5 py-0 text-[10px] text-indigo-600 hover:bg-indigo-50"
-              >
-                <Target className="h-2.5 w-2.5" />
-                {activity.stats.accuracy.toFixed(1)}%
-              </Badge>
-            )}
-            {activity.stats && activity.stats.current_streak > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-4 gap-0.5 bg-orange-50 px-1.5 py-0 text-[10px] text-orange-600 hover:bg-orange-50"
-              >
-                <Flame className="h-2.5 w-2.5" />
-                {activity.stats.current_streak}연승
-              </Badge>
-            )}
-            {activity.stats && activity.stats.net_profit > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-4 gap-0.5 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-600 hover:bg-emerald-50"
-              >
-                <TrendingUp className="h-2.5 w-2.5" />+{activity.stats.net_profit.toFixed(0)}
-              </Badge>
-            )}
+    <div
+      className={`overflow-hidden rounded-2xl border bg-white ${sportColor.border} ${sportColor.cardShadow}`}
+    >
+      {/* Header: 종목 컬러 solid 블록 + 흰 텍스트/배지 */}
+      <div className={`${sportColor.header} px-4 py-4`}>
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-white/70">
+            <AvatarImage
+              src={activity.profile.avatar_url || "/placeholder-user.jpg"}
+              alt={activity.profile.nickname}
+            />
+            <AvatarFallback className={`text-sm font-bold ${sportColor.text} bg-white`}>
+              {activity.profile.nickname?.[0] || "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[14px] font-bold text-white">{activity.profile.nickname}</span>
+              {onFollow && (
+                <button
+                  type="button"
+                  onClick={onFollow}
+                  disabled={isFollowLoading}
+                  className={`h-5 rounded-full px-2 text-[10px] font-semibold transition-colors ${
+                    isFollowed
+                      ? "bg-white/20 text-white/90 hover:bg-white/30"
+                      : "bg-white text-gray-800 shadow-sm hover:bg-white/90"
+                  }`}
+                >
+                  {isFollowLoading ? (
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  ) : isFollowed ? (
+                    "팔로잉"
+                  ) : (
+                    "팔로우"
+                  )}
+                </button>
+              )}
+              {activity.stats && activity.stats.accuracy > 0 && (
+                <span
+                  className={`inline-flex h-5 items-center gap-0.5 rounded-full bg-white px-1.5 text-[10px] font-bold shadow-sm ${sportColor.text}`}
+                >
+                  <Target className="h-2.5 w-2.5" />
+                  {activity.stats.accuracy.toFixed(1)}%
+                </span>
+              )}
+              {activity.stats && activity.stats.current_streak > 0 && (
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-orange-400 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                  <Flame className="h-2.5 w-2.5" />
+                  {activity.stats.current_streak}연승
+                </span>
+              )}
+              {activity.stats && activity.stats.net_profit > 0 && (
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-emerald-400 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                  <TrendingUp className="h-2.5 w-2.5" />+{activity.stats.net_profit.toFixed(0)}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-[11px] font-medium text-white/80">
+              {formatActivityDate(activity.created_at)} ·{" "}
+              {formatRelativeTime(new Date(activity.created_at))}
+            </p>
           </div>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {formatActivityDate(activity.created_at)} ·{" "}
-            {formatRelativeTime(new Date(activity.created_at))}
-          </p>
         </div>
       </div>
 
@@ -263,38 +277,36 @@ export function PredictionActivityCard({
             const canExpand = !slipLocked && (!!group.analysisText || group.matches.length > 0)
 
             return (
-              <div key={group.slipId} className="border-border border-t px-4 pt-4 pb-3">
-                {/* HERO: 분석글 제목 */}
-                <h3 className="text-foreground text-[16px] leading-snug font-semibold tracking-tight">
-                  {title}
-                </h3>
-
-                {/* Meta: 종목 · 경기수 · 배당 · 상태 */}
-                <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-[12px]">
+              <div key={group.slipId} className="border-t border-gray-100 px-4 pt-4 pb-3">
+                {/* Meta + 상태 pill */}
+                <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-semibold text-gray-500">
+                    {sportEmoji} {sportLabel} {group.matchCount}경기
+                  </span>
                   <span
-                    className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] text-[11px] leading-none ${sportColor.chip}`}
-                    aria-hidden="true"
+                    className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
+                      slipLocked ? "bg-gray-100 text-gray-600" : "bg-gray-900 text-white"
+                    }`}
                   >
-                    {sportEmoji}
+                    {oddsText}
                   </span>
-                  <span>
-                    {sportLabel} {group.matchCount}경기
-                  </span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className={slipLocked ? "" : "text-foreground"}>{oddsText}</span>
                   {statusDot && (
-                    <>
-                      <span className="text-muted-foreground/40">·</span>
-                      <span className="flex items-center gap-1">
-                        <span
-                          className={`inline-block h-1.5 w-1.5 rounded-full ${statusDot.dotClass}`}
-                          aria-hidden="true"
-                        />
-                        <span className={statusDot.textClass}>{statusDot.label}</span>
-                      </span>
-                    </>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${statusDot.pillClass}`}
+                    >
+                      <span
+                        className={`inline-block h-1.5 w-1.5 rounded-full ${statusDot.dotClass}`}
+                        aria-hidden="true"
+                      />
+                      {statusDot.label}
+                    </span>
                   )}
                 </div>
+
+                {/* HERO: 분석글 제목 */}
+                <h3 className="text-[16px] leading-snug font-bold tracking-tight text-gray-900">
+                  {title}
+                </h3>
 
                 {/* Expanded 상세 — 본문 + 경기 라인 (unlocked + 토글 시에만) */}
                 {!slipLocked && isExpanded && (
@@ -320,17 +332,16 @@ export function PredictionActivityCard({
                     <Button
                       onClick={handlePurchase}
                       disabled={isPurchasing}
-                      variant="outline"
-                      className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary h-10 w-full gap-2 text-[13px] font-medium"
+                      className="bg-primary hover:bg-primary/90 shadow-primary/30 h-11 w-full gap-2 text-[14px] font-bold text-white shadow-md"
                     >
                       {isPurchasing ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           구매 중...
                         </>
                       ) : (
                         <>
-                          <Lock className="h-3.5 w-3.5" />
+                          <Lock className="h-4 w-4" />
                           500G로 열람
                         </>
                       )}
@@ -339,18 +350,18 @@ export function PredictionActivityCard({
                     <button
                       type="button"
                       onClick={() => toggleSlip(group.slipId)}
-                      className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 py-1 text-[12px] font-medium transition-colors"
+                      className={`flex w-full items-center justify-center gap-1 rounded-lg py-2 text-[13px] font-bold transition-colors ${sportColor.toggle} hover:bg-gray-50`}
                       aria-expanded={isExpanded}
                     >
                       {isExpanded ? (
                         <>
                           접기
-                          <ChevronUp className="h-3.5 w-3.5" />
+                          <ChevronUp className="h-4 w-4" />
                         </>
                       ) : (
                         <>
                           내용 보기
-                          <ChevronDown className="h-3.5 w-3.5" />
+                          <ChevronDown className="h-4 w-4" />
                         </>
                       )}
                     </button>
@@ -364,34 +375,34 @@ export function PredictionActivityCard({
   )
 }
 
-/** 상태 → 도트 색 + 라벨. 도박 신호(빨강) 피하기 위해 lose는 중성 slate. */
+/** 상태 → pill/도트 컬러 + 라벨. 도박 신호(빨강) 피하기 위해 lose는 중성 slate. */
 function getStatusDot(
   status: string
-): { label: string; dotClass: string; textClass: string } | null {
+): { label: string; dotClass: string; pillClass: string } | null {
   switch (status) {
     case "win":
       return {
         label: "적중",
-        dotClass: "bg-emerald-500 ring-2 ring-emerald-500/20",
-        textClass: "text-emerald-600 font-medium",
+        dotClass: "bg-white",
+        pillClass: "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30",
       }
     case "lose":
       return {
         label: "미적중",
         dotClass: "bg-slate-400",
-        textClass: "text-slate-500",
+        pillClass: "bg-slate-100 text-slate-600",
       }
     case "pending":
       return {
         label: "진행중",
-        dotClass: "bg-amber-500 ring-2 ring-amber-500/20",
-        textClass: "text-amber-600 font-medium",
+        dotClass: "bg-white",
+        pillClass: "bg-amber-500 text-white shadow-sm shadow-amber-500/30",
       }
     case "cancelled":
       return {
         label: "취소",
-        dotClass: "bg-slate-300",
-        textClass: "text-slate-400",
+        dotClass: "bg-slate-400",
+        pillClass: "bg-slate-100 text-slate-500",
       }
     default:
       return null
