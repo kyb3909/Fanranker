@@ -83,33 +83,33 @@ const SPORT_EMOJI: Record<string, string> = {
   배구: "🏐",
 }
 
-/** 종목별 액센트 컬러 — 상단 스트라이프 + 이모지 칩 + 카드 전체 그라디언트. */
+/** 종목별 액센트 컬러 — 상단 스트라이프 + 이모지 칩 + 카드 단색 배경 + 컬러 섀도. */
 const SPORT_COLOR: Record<string, { chip: string; stripe: string; cardBg: string }> = {
   축구: {
     chip: "bg-emerald-500",
     stripe: "bg-gradient-to-r from-emerald-400 to-teal-500",
-    cardBg: "bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40",
+    cardBg: "bg-emerald-50/80 border-emerald-200/60 shadow-md shadow-emerald-500/10",
   },
   야구: {
     chip: "bg-sky-500",
     stripe: "bg-gradient-to-r from-sky-400 to-blue-500",
-    cardBg: "bg-gradient-to-br from-sky-50/70 via-white to-blue-50/40",
+    cardBg: "bg-sky-50/80 border-sky-200/60 shadow-md shadow-sky-500/10",
   },
   농구: {
     chip: "bg-orange-500",
     stripe: "bg-gradient-to-r from-orange-400 to-amber-500",
-    cardBg: "bg-gradient-to-br from-orange-50/70 via-white to-amber-50/40",
+    cardBg: "bg-orange-50/80 border-orange-200/60 shadow-md shadow-orange-500/10",
   },
   배구: {
     chip: "bg-purple-500",
     stripe: "bg-gradient-to-r from-purple-400 to-fuchsia-500",
-    cardBg: "bg-gradient-to-br from-purple-50/70 via-white to-fuchsia-50/40",
+    cardBg: "bg-purple-50/80 border-purple-200/60 shadow-md shadow-purple-500/10",
   },
 }
 const SPORT_COLOR_DEFAULT = {
   chip: "bg-slate-500",
   stripe: "bg-gradient-to-r from-slate-400 to-slate-500",
-  cardBg: "bg-gradient-to-br from-slate-50/70 via-white to-slate-50/40",
+  cardBg: "bg-slate-50/80 border-slate-200/60 shadow-md shadow-slate-500/10",
 }
 
 function formatActivityDate(iso: string): string {
@@ -179,9 +179,7 @@ export function PredictionActivityCard({
   }, [localSlipGroups, localPredictions, contentUnlocked, activity.sport])
 
   return (
-    <div
-      className={`border-border overflow-hidden rounded-xl border shadow-sm ${sportColor.cardBg}`}
-    >
+    <div className={`overflow-hidden rounded-xl border ${sportColor.cardBg}`}>
       {/* 종목 accent stripe — 멀리서도 종목 구분 */}
       <div className={`h-1 ${sportColor.stripe}`} aria-hidden="true" />
 
