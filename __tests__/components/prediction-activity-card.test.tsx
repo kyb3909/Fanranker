@@ -70,8 +70,8 @@ describe("PredictionActivityCard", () => {
 
   it("renders odds range in locked state", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    // Locked일 때 정확값 대신 "배당 3배대" 범위 표시.
-    expect(screen.getByText(/배당 3배대/)).toBeDefined()
+    // Locked일 때 정확값 대신 "3배대" 범위 표시.
+    expect(screen.getByText(/3배대/)).toBeDefined()
   })
 
   it("renders analysis title when provided", () => {
@@ -114,24 +114,36 @@ describe("PredictionActivityCard", () => {
 
   it("shows locked purchase button when not purchased", () => {
     render(<PredictionActivityCard activity={baseActivity} onPurchase={vi.fn()} />)
-    // 새 구조에선 "500G로 열람" 버튼이 바로 노출됨 (펼침 단계 없음).
+    // locked 카드는 "500G로 열람" CTA가 바로 노출됨 (접힘 상태).
     expect(screen.getByText("500G로 열람")).toBeDefined()
-    // 잠금 안내 문구도 함께 노출.
-    expect(screen.getByText(/본문과 예측 내역은 구매 후 열람/)).toBeDefined()
   })
 
-  it("calls onPurchase and shows predictions on success", async () => {
+  it("calls onPurchase and shows expand toggle on success", async () => {
     const onPurchase = vi.fn().mockResolvedValue([mockPrediction])
     render(<PredictionActivityCard activity={baseActivity} onPurchase={onPurchase} />)
 
     fireEvent.click(screen.getByText("500G로 열람"))
     expect(onPurchase).toHaveBeenCalledWith("act-1")
 
+    // 구매 후 카드는 기본 접힘 → "내용 보기" 토글이 나타나야 함
     await waitFor(() => {
-      expect(screen.getByText("열람 완료")).toBeDefined()
-      // 구매 후 slipGroups로 변환되어 경기 라인에 "서울 vs 수원" 노출
-      expect(screen.getByText(/서울 vs 수원/)).toBeDefined()
+      expect(screen.getByText("내용 보기")).toBeDefined()
     })
+    // 접힌 상태이므로 경기 라인은 아직 안 보임
+    expect(screen.queryByText(/서울 vs 수원/)).toBeNull()
+  })
+
+  it("expands to show match lines when 내용 보기 is clicked", async () => {
+    const onPurchase = vi.fn().mockResolvedValue([mockPrediction])
+    render(<PredictionActivityCard activity={baseActivity} onPurchase={onPurchase} />)
+
+    fireEvent.click(screen.getByText("500G로 열람"))
+    await waitFor(() => expect(screen.getByText("내용 보기")).toBeDefined())
+
+    // "내용 보기" 토글 클릭 → 경기 라인 노출 + "접기"로 버튼 전환
+    fireEvent.click(screen.getByText("내용 보기"))
+    expect(screen.getByText(/서울 vs 수원/)).toBeDefined()
+    expect(screen.getByText("접기")).toBeDefined()
   })
 
   it("shows loading state during purchase", async () => {
@@ -152,7 +164,7 @@ describe("PredictionActivityCard", () => {
     })
   })
 
-  it("shows predictions immediately when already purchased", () => {
+  it("shows expand toggle when already purchased", () => {
     const activity = {
       ...baseActivity,
       is_purchased: true,
@@ -160,11 +172,12 @@ describe("PredictionActivityCard", () => {
       slipGroups: null,
     }
     render(<PredictionActivityCard activity={activity} onPurchase={vi.fn()} />)
-    expect(screen.getByText("열람 완료")).toBeDefined()
-    expect(screen.getByText(/서울 vs 수원/)).toBeDefined()
+    // 기본 접힘 → "내용 보기" 토글 노출, 경기 라인은 숨김
+    expect(screen.getByText("내용 보기")).toBeDefined()
+    expect(screen.queryByText(/서울 vs 수원/)).toBeNull()
   })
 
-  it("shows free label when is_free and not purchased", () => {
+  it("shows expand toggle when is_free and not purchased", () => {
     const activity = {
       ...baseActivity,
       is_free: true,
@@ -172,7 +185,8 @@ describe("PredictionActivityCard", () => {
       slipGroups: null,
     }
     render(<PredictionActivityCard activity={activity} onPurchase={vi.fn()} />)
-    expect(screen.getByText("경기 종료 - 무료 공개")).toBeDefined()
+    // 무료 공개 상태도 기본 접힘 → 토글로만 본문/경기 노출
+    expect(screen.getByText("내용 보기")).toBeDefined()
   })
 
   it("renders avatar fallback with first character", () => {

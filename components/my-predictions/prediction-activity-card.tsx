@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Lock, Unlock, TrendingUp, Target, Flame, Loader2, Clock } from "lucide-react"
+import { Lock, TrendingUp, Target, Flame, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
 import type { PredictionMatch } from "@/components/betting/betting-types"
 
@@ -109,6 +109,17 @@ export function PredictionActivityCard({
   )
   const [isPurchased, setIsPurchased] = useState(activity.is_purchased)
   const [isFree, setIsFree] = useState(activity.is_free || false)
+  // 기본은 모든 슬립 접힘 — 사용자가 "내용 보기" 토글로만 본문/경기 펼침.
+  const [expandedSlips, setExpandedSlips] = useState<Set<string>>(new Set())
+
+  const toggleSlip = (slipId: string) => {
+    setExpandedSlips((prev) => {
+      const next = new Set(prev)
+      if (next.has(slipId)) next.delete(slipId)
+      else next.add(slipId)
+      return next
+    })
+  }
 
   const handlePurchase = async () => {
     setIsPurchasing(true)
@@ -205,102 +216,104 @@ export function PredictionActivityCard({
         </div>
       </div>
 
-      {/* 슬립 섹션 루프 — 각 슬립이 인스타 카드 본체 */}
+      {/* 슬립 섹션 루프 — 기본 collapsed, "내용 보기" 토글로 펼침 */}
       {effectiveSlipGroups && effectiveSlipGroups.length > 0
         ? effectiveSlipGroups.map((group) => {
             const slipLocked = !contentUnlocked
             const title = group.analysisTitle || `${sportLabel} ${group.matchCount}경기 조합`
-            const oddsText = slipLocked
-              ? `배당 ${group.totalOddsRange}`
-              : `배당 ${group.totalOdds.toFixed(2)}배`
-            const statusMeta = !slipLocked ? getStatusMeta(group.status) : null
+            const oddsText = slipLocked ? group.totalOddsRange : `${group.totalOdds.toFixed(2)}배`
+            const statusDot = !slipLocked ? getStatusDot(group.status) : null
+            const isExpanded = expandedSlips.has(group.slipId)
+            const canExpand = !slipLocked && (!!group.analysisText || group.matches.length > 0)
 
             return (
-              <div key={group.slipId} className="border-border border-t px-3.5 py-3.5">
-                {/* slip meta (종목 · 경기수 · 배당 · 상태) */}
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
-                    <span aria-hidden="true">{sportEmoji}</span>
-                    <span>
-                      {sportLabel} {group.matchCount}경기
-                    </span>
-                    <span className="text-muted-foreground/60">·</span>
-                    <span className={slipLocked ? "" : "text-foreground font-medium"}>
-                      {oddsText}
-                    </span>
+              <div key={group.slipId} className="border-border border-t px-4 pt-4 pb-3">
+                {/* HERO: 분석글 제목 */}
+                <h3 className="text-foreground text-[16px] leading-snug font-semibold tracking-tight">
+                  {title}
+                </h3>
+
+                {/* Meta: 종목 · 경기수 · 배당 · 상태 */}
+                <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-[12px]">
+                  <span aria-hidden="true">{sportEmoji}</span>
+                  <span>
+                    {sportLabel} {group.matchCount}경기
                   </span>
-                  {statusMeta && (
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusMeta.className}`}
-                    >
-                      {statusMeta.label}
-                    </span>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className={slipLocked ? "" : "text-foreground"}>{oddsText}</span>
+                  {statusDot && (
+                    <>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="flex items-center gap-1">
+                        <span
+                          className={`inline-block h-1.5 w-1.5 rounded-full ${statusDot.dotClass}`}
+                          aria-hidden="true"
+                        />
+                        <span className={statusDot.textClass}>{statusDot.label}</span>
+                      </span>
+                    </>
                   )}
                 </div>
 
-                {/* HERO: 분석글 제목 */}
-                <h3 className="text-foreground text-[15px] leading-snug font-semibold">{title}</h3>
-
-                {/* Locked: 잠금 안내 / Unlocked: 본문 */}
-                {slipLocked ? (
-                  <div className="bg-muted/40 text-muted-foreground mt-3 flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[12px]">
-                    <Lock className="h-3 w-3 flex-shrink-0" />
-                    <span>본문과 예측 내역은 구매 후 열람할 수 있어요</span>
-                  </div>
-                ) : (
-                  <>
+                {/* Expanded 상세 — 본문 + 경기 라인 (unlocked + 토글 시에만) */}
+                {!slipLocked && isExpanded && (
+                  <div className="border-border/60 mt-4 space-y-3 border-t pt-3.5">
                     {group.analysisText && (
-                      <p className="text-muted-foreground mt-2 text-[13px] leading-relaxed whitespace-pre-line">
+                      <p className="text-foreground/85 text-[13.5px] leading-relaxed whitespace-pre-line">
                         {group.analysisText}
                       </p>
                     )}
-                    {/* 경기 압축 라인 */}
                     {group.matches.length > 0 && (
-                      <div className="bg-muted/30 mt-3 space-y-1.5 rounded-md px-3 py-2.5">
+                      <div className="space-y-1.5">
                         {group.matches.map((m, i) => (
                           <PredictionMatchLine key={`${group.slipId}-match-${i}`} match={m} />
                         ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
 
-                {/* Footer: CTA (locked) / 상태 표시 (unlocked) */}
-                <div className="mt-3">
+                {/* Action: locked CTA / unlocked 토글 */}
+                <div className="mt-3.5">
                   {slipLocked ? (
                     <Button
                       onClick={handlePurchase}
                       disabled={isPurchasing}
                       variant="outline"
-                      className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary w-full gap-2"
+                      className="border-primary/30 text-primary hover:bg-primary/5 hover:text-primary h-10 w-full gap-2 text-[13px] font-medium"
                     >
                       {isPurchasing ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           구매 중...
                         </>
                       ) : (
                         <>
-                          <Lock className="h-4 w-4" />
+                          <Lock className="h-3.5 w-3.5" />
                           500G로 열람
                         </>
                       )}
                     </Button>
-                  ) : (
-                    <div className="text-primary flex items-center gap-1.5 text-[11px] font-medium">
-                      {isFree && !isPurchased ? (
+                  ) : canExpand ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSlip(group.slipId)}
+                      className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 py-1 text-[12px] font-medium transition-colors"
+                      aria-expanded={isExpanded}
+                    >
+                      {isExpanded ? (
                         <>
-                          <Clock className="h-3 w-3" />
-                          경기 종료 - 무료 공개
+                          접기
+                          <ChevronUp className="h-3.5 w-3.5" />
                         </>
                       ) : (
                         <>
-                          <Unlock className="h-3 w-3" />
-                          열람 완료
+                          내용 보기
+                          <ChevronDown className="h-3.5 w-3.5" />
                         </>
                       )}
-                    </div>
-                  )}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )
@@ -310,16 +323,35 @@ export function PredictionActivityCard({
   )
 }
 
-function getStatusMeta(status: string): { label: string; className: string } | null {
+/** 상태 → 도트 색 + 라벨. 도박 신호(빨강) 피하기 위해 lose는 중성 회색. */
+function getStatusDot(
+  status: string
+): { label: string; dotClass: string; textClass: string } | null {
   switch (status) {
     case "win":
-      return { label: "적중", className: "bg-primary/10 text-primary" }
+      return {
+        label: "적중",
+        dotClass: "bg-primary",
+        textClass: "text-primary font-medium",
+      }
     case "lose":
-      return { label: "미적중", className: "bg-muted text-muted-foreground" }
+      return {
+        label: "미적중",
+        dotClass: "bg-muted-foreground/40",
+        textClass: "text-muted-foreground",
+      }
     case "pending":
-      return { label: "진행중", className: "bg-muted text-muted-foreground" }
+      return {
+        label: "진행중",
+        dotClass: "bg-amber-500",
+        textClass: "text-muted-foreground",
+      }
     case "cancelled":
-      return { label: "취소", className: "bg-muted text-muted-foreground" }
+      return {
+        label: "취소",
+        dotClass: "bg-muted-foreground/30",
+        textClass: "text-muted-foreground",
+      }
     default:
       return null
   }
