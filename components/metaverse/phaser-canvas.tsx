@@ -14,8 +14,10 @@ import { createAnonClient } from "@/lib/supabase/client"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 import { ChatOverlay } from "./chat-overlay"
-import { ActivityBalanceHud } from "./activity-balance-hud"
+import { ActivityBalanceHud, refreshActivityBalance } from "./activity-balance-hud"
 import { PlotActionOverlay } from "./plot-action-overlay"
+import { CreateRoomModal, type CreateRoomContext } from "./create-room-modal"
+import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 
 export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }) {
   const parentRef = useRef<HTMLDivElement>(null)
@@ -24,6 +26,7 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
   const [channel, setChannel] = useState<WorldChannel | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<"loading" | "ready">("loading")
+  const [createRoomCtx, setCreateRoomCtx] = useState<CreateRoomContext | null>(null)
 
   useEffect(() => {
     if (!parentRef.current) return
@@ -110,12 +113,27 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       <ActivityBalanceHud identity={identity} />
       {/* Plot 진입 시 컨텍스트 버튼 */}
       <PlotActionOverlay
-        onCreateRoom={(ctx) => {
-          // Phase 3.3에서 모달 트리거. 현재는 console 확인용
-          console.log("[metaverse] create-room request", ctx)
-        }}
+        onCreateRoom={(ctx) =>
+          setCreateRoomCtx({
+            plotId: ctx.plotId,
+            plotCode: ctx.plotCode,
+            plazaName: ctx.plazaName,
+          })
+        }
         onEnterRoom={(ctx) => {
+          // Phase 3.4에서 방 채널 subscribe — 현재는 로그
           console.log("[metaverse] enter-room request", ctx)
+        }}
+      />
+      {/* 방 개설 모달 */}
+      <CreateRoomModal
+        context={createRoomCtx}
+        identity={identity}
+        onClose={() => setCreateRoomCtx(null)}
+        onCreated={(room) => {
+          sceneBridge.emit("room:created", room)
+          refreshActivityBalance()
+          setCreateRoomCtx(null)
         }}
       />
       {/* 하단 채팅 오버레이 */}

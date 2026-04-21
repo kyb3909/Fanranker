@@ -15,6 +15,17 @@ type BridgeEventMap = {
   "plot:enter": { plotId: string; plotCode: string; plazaName: string; roomId?: string }
   /** 내 아바타가 Plot 경계 밖으로 이탈 */
   "plot:leave": undefined
+  /** 방 개설 성공 → Phaser 씬이 수신해서 Signboard 추가 */
+  "room:created": {
+    id: string
+    plotId: string
+    ownerUserId: string
+    signText: string
+    createdAt: string
+    lastActivityAt: string
+  }
+  /** 방 닫힘 → Signboard 제거 (Phase 3.4+) */
+  "room:closed": { plotId: string }
 }
 
 class MetaverseSceneBridge extends EventTarget {

@@ -51,6 +51,8 @@ export class WorldMapScene extends Phaser.Scene {
   private unsubChat: (() => void) | null = null
   private unsubBridgeOpen: (() => void) | null = null
   private unsubBridgeClose: (() => void) | null = null
+  private unsubBridgeRoomCreated: (() => void) | null = null
+  private unsubBridgeRoomClosed: (() => void) | null = null
 
   // Plot + Signboard (Phase 3)
   private plots: WorldPlot[] = []
@@ -146,6 +148,22 @@ export class WorldMapScene extends Phaser.Scene {
     })
     this.unsubBridgeClose = sceneBridge.on("chat:input:close", () => {
       this.isChatInputOpen = false
+    })
+
+    // 방 개설/종료 브로드캐스트 → Signboard 동기화
+    this.unsubBridgeRoomCreated = sceneBridge.on("room:created", (room) => {
+      if (!room) return
+      this.addSignboard({
+        id: room.id,
+        plotId: room.plotId,
+        ownerUserId: room.ownerUserId,
+        signText: room.signText,
+        createdAt: room.createdAt,
+        lastActivityAt: room.lastActivityAt,
+      })
+    })
+    this.unsubBridgeRoomClosed = sceneBridge.on("room:closed", (payload) => {
+      if (payload) this.removeSignboard(payload.plotId)
     })
 
     // 씬 종료 시 정리
@@ -273,10 +291,14 @@ export class WorldMapScene extends Phaser.Scene {
     this.unsubChat?.()
     this.unsubBridgeOpen?.()
     this.unsubBridgeClose?.()
+    this.unsubBridgeRoomCreated?.()
+    this.unsubBridgeRoomClosed?.()
     this.unsubRemote = null
     this.unsubChat = null
     this.unsubBridgeOpen = null
     this.unsubBridgeClose = null
+    this.unsubBridgeRoomCreated = null
+    this.unsubBridgeRoomClosed = null
     for (const avatar of this.remotePlayers.values()) avatar.destroy()
     this.remotePlayers.clear()
     for (const bubble of this.chatBubbles.values()) bubble.destroy()
