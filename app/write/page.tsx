@@ -213,6 +213,44 @@ function WriteContent() {
                 </div>
               )}
 
+              {/* 팀 플레어 선택 — 스포츠 커뮤니티에만 표시. 선택 시 해당 팀 카르마 적립. */}
+              {editor.teamFlairs.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-foreground text-sm font-semibold">
+                    팀 플레어 <span className="text-muted-foreground font-normal">(선택)</span>
+                    <span className="text-muted-foreground ml-2 text-[11px] font-normal">
+                      달고 쓰면 해당 팀 카르마 +10
+                    </span>
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {editor.teamFlairs.map((t) => {
+                      const selected = editor.selectedTeamFlair === t.teamId
+                      const color = t.color || "#666666"
+                      return (
+                        <button
+                          key={t.teamId}
+                          type="button"
+                          onClick={() => editor.setSelectedTeamFlair(selected ? null : t.teamId)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                            selected ? "text-white shadow-sm" : "hover:opacity-80"
+                          }`}
+                          style={{
+                            backgroundColor: selected ? color : `${color}15`,
+                            color: selected ? "white" : color,
+                            borderWidth: 1,
+                            borderStyle: "solid",
+                            borderColor: selected ? color : `${color}40`,
+                          }}
+                          title={t.teamName}
+                        >
+                          {t.teamShortName || t.teamName}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* 소스 URL */}
               <div className="space-y-2">
                 <Label htmlFor="source-url" className="text-foreground text-sm font-semibold">

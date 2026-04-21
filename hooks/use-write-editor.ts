@@ -25,6 +25,14 @@ interface Flair {
   color: string
 }
 
+interface TeamFlair {
+  teamId: string
+  teamName: string
+  teamShortName: string
+  color: string | null
+  leagueId: string
+}
+
 interface OgData {
   title?: string
   description?: string
@@ -43,6 +51,8 @@ interface EditorState {
   ogData: OgData | null
   flairs: Flair[]
   selectedFlair: string | null
+  teamFlairs: TeamFlair[]
+  selectedTeamFlair: string | null
   isSubmitting: boolean
   isUploadingImage: boolean
   isEmbedLoading: boolean
@@ -63,6 +73,7 @@ type EditorAction =
     }
   | { type: "LOAD_EDIT_ERROR"; error: string }
   | { type: "SET_FLAIRS"; flairs: Flair[] }
+  | { type: "SET_TEAM_FLAIRS"; teamFlairs: TeamFlair[] }
   | { type: "RESET_OG" }
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
@@ -85,6 +96,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, isLoadingEdit: false, editLoadError: action.error }
     case "SET_FLAIRS":
       return { ...state, flairs: action.flairs, selectedFlair: null }
+    case "SET_TEAM_FLAIRS":
+      return { ...state, teamFlairs: action.teamFlairs, selectedTeamFlair: null }
     case "RESET_OG":
       return { ...state, ogData: null, isFetchingOg: false }
     default:
@@ -117,6 +130,8 @@ export function useWriteEditor() {
     ogData: null,
     flairs: [],
     selectedFlair: null,
+    teamFlairs: [],
+    selectedTeamFlair: null,
     isSubmitting: false,
     isUploadingImage: false,
     isEmbedLoading: false,
@@ -130,16 +145,23 @@ export function useWriteEditor() {
       dispatch({ type: "SET_FIELD", field: "selectedCommunity", value: communitySlug })
   }, [communitySlug])
 
-  // 게시판 변경 시 말머리 목록 로드
+  // 게시판 변경 시 말머리 + 팀 플레어 목록 병렬 로드
   useEffect(() => {
     if (!state.selectedCommunity) {
       dispatch({ type: "SET_FLAIRS", flairs: [] })
+      dispatch({ type: "SET_TEAM_FLAIRS", teamFlairs: [] })
       return
     }
     fetch(`/api/flairs?community_slug=${state.selectedCommunity}`)
       .then((res) => res.json())
       .then((data) => dispatch({ type: "SET_FLAIRS", flairs: data.flairs || [] }))
       .catch(() => dispatch({ type: "SET_FLAIRS", flairs: [] }))
+
+    // 팀 플레어 — 스포츠 커뮤니티만 대응 (API가 빈 배열 반환 시 드롭다운 숨김)
+    fetch(`/api/metaverse/teams?community_slug=${state.selectedCommunity}`)
+      .then((res) => res.json())
+      .then((data) => dispatch({ type: "SET_TEAM_FLAIRS", teamFlairs: data.teams || [] }))
+      .catch(() => dispatch({ type: "SET_TEAM_FLAIRS", teamFlairs: [] }))
   }, [state.selectedCommunity])
 
   // 수정 모드: 기존 글 로드
@@ -319,6 +341,7 @@ export function useWriteEditor() {
             content: state.content,
             image: imageUrl,
             flair_id: state.selectedFlair || null,
+            flair_team_id: state.selectedTeamFlair || null,
           }),
         })
 
@@ -369,6 +392,8 @@ export function useWriteEditor() {
   const setSourceUrl = (v: string) => dispatch({ type: "SET_FIELD", field: "sourceUrl", value: v })
   const setSelectedFlair = (v: string | null) =>
     dispatch({ type: "SET_FIELD", field: "selectedFlair", value: v })
+  const setSelectedTeamFlair = (v: string | null) =>
+    dispatch({ type: "SET_FIELD", field: "selectedTeamFlair", value: v })
   const setIsEmbedLoading = (v: boolean) =>
     dispatch({ type: "SET_FIELD", field: "isEmbedLoading", value: v })
 
@@ -390,6 +415,9 @@ export function useWriteEditor() {
     flairs: state.flairs,
     selectedFlair: state.selectedFlair,
     setSelectedFlair,
+    teamFlairs: state.teamFlairs,
+    selectedTeamFlair: state.selectedTeamFlair,
+    setSelectedTeamFlair,
     isSubmitting: state.isSubmitting,
     isUploadingImage: state.isUploadingImage,
     isEmbedLoading: state.isEmbedLoading,
