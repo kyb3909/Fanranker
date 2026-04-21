@@ -19,7 +19,7 @@ import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 
 const PhaserCanvas = dynamic(
   () => import("./phaser-canvas").then((m) => ({ default: m.PhaserCanvas })),
-  { ssr: false, loading: () => <LoadingScreen /> }
+  { ssr: false, loading: () => <LoadingScreen stage="Phaser 번들 로드 중…" /> }
 )
 
 // dev에서만 활성. 프로덕션 번들에선 tree-shake 기대.
@@ -42,10 +42,8 @@ export function MetaverseStage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoaded) return
-
-    // 로그인된 경우 → 프로필 fetch
-    if (isSignedIn && user) {
+    // 1) Clerk 로드 완료 + 로그인 → 프로필 기반 identity로 업그레이드
+    if (isLoaded && isSignedIn && user) {
       let cancelled = false
       ;(async () => {
         try {
@@ -66,14 +64,15 @@ export function MetaverseStage() {
       }
     }
 
-    // 비로그인 + dev → guest로 바로 진입
+    // 2) dev 모드: Clerk 상태와 무관하게 guest로 즉시 진입.
+    //    localhost에서 Clerk 프로덕션 키가 init 실패하면 isLoaded가 영원히 false일 수 있음 —
+    //    이 경로가 그 락을 우회.
     if (DEV_GUEST_MODE && guestIdentity) {
       setIdentity(guestIdentity)
-      return
     }
   }, [isLoaded, isSignedIn, user, guestIdentity])
 
-  if (!isLoaded && !DEV_GUEST_MODE) return <LoadingScreen />
+  if (!isLoaded && !DEV_GUEST_MODE) return <LoadingScreen stage="Clerk 인증 초기화 중…" />
 
   // 비로그인 + 프로덕션 → 로그인 유도
   if (!isSignedIn && !DEV_GUEST_MODE) {
@@ -97,19 +96,19 @@ export function MetaverseStage() {
     )
   }
 
-  if (!identity) return <LoadingScreen />
+  if (!identity) return <LoadingScreen stage="identity 설정 중…" />
 
   return <PhaserCanvas identity={identity} />
 }
 
-function LoadingScreen() {
+function LoadingScreen({ stage }: { stage?: string }) {
   return (
     <div className="flex min-h-[100svh] items-center justify-center bg-neutral-950">
       <div className="text-center text-white/70">
         <p className="text-[11px] font-semibold tracking-[0.2em] text-white/40 uppercase">
           Stadium Metaverse
         </p>
-        <p className="mt-2 text-sm">월드맵 로딩 중…</p>
+        <p className="mt-2 text-sm">{stage ?? "월드맵 로딩 중…"}</p>
       </div>
     </div>
   )
