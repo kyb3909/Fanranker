@@ -35,6 +35,10 @@ const AnnouncementCarousel = dynamic(
     })),
   { ssr: false }
 )
+const HotPostToast = dynamic(
+  () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
+  { ssr: false }
+)
 const ContentSection = dynamic(
   () => import("@/components/home/content-section").then((m) => ({ default: m.ContentSection })),
   {
@@ -279,6 +283,11 @@ export function HomeClient({
           <ActivitySidebar showPrize initialRecentComments={initialRecentComments} />
         </aside>
       </div>
+
+      {/* 실시간 인기글 토스트 — feed 탭 + 로그인 + BettingPage 아닐 때만 */}
+      {!isPredictionView && activeTab === "feed" && isSignedIn && (
+        <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />
+      )}
     </main>
   )
 }
