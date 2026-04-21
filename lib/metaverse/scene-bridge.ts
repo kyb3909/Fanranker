@@ -11,6 +11,10 @@
 type BridgeEventMap = {
   "chat:input:open": undefined
   "chat:input:close": undefined
+  /** 내 아바타가 Plot 경계 안으로 진입. roomId가 있으면 이미 방이 세워진 Plot */
+  "plot:enter": { plotId: string; plotCode: string; plazaName: string; roomId?: string }
+  /** 내 아바타가 Plot 경계 밖으로 이탈 */
+  "plot:leave": undefined
 }
 
 class MetaverseSceneBridge extends EventTarget {

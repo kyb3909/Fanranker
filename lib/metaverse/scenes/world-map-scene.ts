@@ -342,9 +342,23 @@ export class WorldMapScene extends Phaser.Scene {
       }
     }
     if (insideId === this.currentPlotId) return
+
     this.currentPlotId = insideId
-    // Phase 3.2에서 sceneBridge emit — 지금은 로그만
-    // sceneBridge.emit("plot:enter" | "plot:leave", { plotId })
+
+    if (!insideId) {
+      sceneBridge.emit("plot:leave")
+      return
+    }
+
+    const plot = this.plots.find((p) => p.id === insideId)
+    if (!plot) return
+    const sign = this.signboards.get(insideId)
+    sceneBridge.emit("plot:enter", {
+      plotId: plot.id,
+      plotCode: plot.plotCode,
+      plazaName: plot.plazaName,
+      roomId: sign?.roomId,
+    })
   }
 
   // ============================================================

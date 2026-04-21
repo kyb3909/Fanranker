@@ -14,6 +14,8 @@ import { createAnonClient } from "@/lib/supabase/client"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 import { ChatOverlay } from "./chat-overlay"
+import { ActivityBalanceHud } from "./activity-balance-hud"
+import { PlotActionOverlay } from "./plot-action-overlay"
 
 export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }) {
   const parentRef = useRef<HTMLDivElement>(null)
@@ -104,6 +106,18 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       <div className="pointer-events-none absolute top-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] text-white/70">
         {identity.nickname} · {identity.userId.startsWith("guest-") ? "🧪 guest" : "signed in"}
       </div>
+      {/* 우상단 활동 포인트 HUD */}
+      <ActivityBalanceHud identity={identity} />
+      {/* Plot 진입 시 컨텍스트 버튼 */}
+      <PlotActionOverlay
+        onCreateRoom={(ctx) => {
+          // Phase 3.3에서 모달 트리거. 현재는 console 확인용
+          console.log("[metaverse] create-room request", ctx)
+        }}
+        onEnterRoom={(ctx) => {
+          console.log("[metaverse] enter-room request", ctx)
+        }}
+      />
       {/* 하단 채팅 오버레이 */}
       <ChatOverlay channel={channel} />
     </div>
