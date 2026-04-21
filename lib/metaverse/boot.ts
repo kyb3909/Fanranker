@@ -8,16 +8,24 @@
 import * as Phaser from "phaser"
 import { WorldMapScene, WORLD_MAP_SCENE_KEY } from "./scenes"
 import { METAVERSE } from "./constants"
-import type { MetaversePlayerIdentity } from "./types"
+import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "./types"
 import type { WorldChannel } from "./realtime/world-channel"
 
 export interface BootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
   channel?: WorldChannel | null
+  plots?: WorldPlot[]
+  rooms?: ChatRoomMeta[]
 }
 
-export function bootMetaverseGame({ parent, identity, channel = null }: BootOptions): Phaser.Game {
+export function bootMetaverseGame({
+  parent,
+  identity,
+  channel = null,
+  plots = [],
+  rooms = [],
+}: BootOptions): Phaser.Game {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -43,8 +51,8 @@ export function bootMetaverseGame({ parent, identity, channel = null }: BootOpti
     dom: { createContainer: false },
   })
 
-  // 씬 시작 — identity + realtime 채널 전달
-  game.scene.start(WORLD_MAP_SCENE_KEY, { identity, channel })
+  // 씬 시작 — identity + realtime 채널 + Plot/Room 초기 데이터 전달
+  game.scene.start(WORLD_MAP_SCENE_KEY, { identity, channel, plots, rooms })
   return game
 }
 

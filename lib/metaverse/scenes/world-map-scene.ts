@@ -19,10 +19,13 @@ import type {
   RemotePlayerState,
   Direction,
   WorldChatMessage,
+  WorldPlot,
+  ChatRoomMeta,
 } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { ChatBubble } from "./chat-bubble"
+import { PlotMarker, Signboard } from "./plot-marker"
 
 export const WORLD_MAP_SCENE_KEY = "MetaverseWorldMap"
 
@@ -49,13 +52,28 @@ export class WorldMapScene extends Phaser.Scene {
   private unsubBridgeOpen: (() => void) | null = null
   private unsubBridgeClose: (() => void) | null = null
 
+  // Plot + Signboard (Phase 3)
+  private plots: WorldPlot[] = []
+  private initialRooms: ChatRoomMeta[] = []
+  private plotMarkers = new Map<string, PlotMarker>() // plotId → marker
+  private signboards = new Map<string, Signboard>() // plotId → signboard
+  /** 현재 내 아바타가 서있는 plotId (없으면 null). 진입/이탈 이벤트 디듀프용 */
+  private currentPlotId: string | null = null
+
   constructor() {
     super(WORLD_MAP_SCENE_KEY)
   }
 
-  init(data: { identity: MetaversePlayerIdentity; channel?: WorldChannel | null }) {
+  init(data: {
+    identity: MetaversePlayerIdentity
+    channel?: WorldChannel | null
+    plots?: WorldPlot[]
+    rooms?: ChatRoomMeta[]
+  }) {
     this.identity = data.identity
     this.channel = data.channel ?? null
+    this.plots = data.plots ?? []
+    this.initialRooms = data.rooms ?? []
   }
 
   create() {
@@ -71,6 +89,9 @@ export class WorldMapScene extends Phaser.Scene {
     this.drawPlazaMarker("맨체스터 광장", 41, 42)
     this.drawPlazaMarker("리버풀 광장", 38, 46)
     this.drawPlazaMarker("뉴캐슬 광장", 52, 30)
+
+    // 광장 Plot 마커 + 기존 Signboard (Phase 3)
+    this.renderPlots()
 
     // 아바타 텍스처 (placeholder — 나중에 스프라이트시트로 교체)
     this.createPlayerTexture(SELF_TEXTURE, METAVERSE.COLOR_PLAYER_SELF)
@@ -176,6 +197,9 @@ export class WorldMapScene extends Phaser.Scene {
 
     // 말풍선 위치 — 대응되는 아바타 머리 위로 고정
     this.updateChatBubblePositions()
+
+    // Plot 진입/이탈 감지 (내 아바타 위치 기준)
+    this.updatePlotOccupancy()
   }
 
   // ============================================================
@@ -257,6 +281,70 @@ export class WorldMapScene extends Phaser.Scene {
     this.remotePlayers.clear()
     for (const bubble of this.chatBubbles.values()) bubble.destroy()
     this.chatBubbles.clear()
+    for (const marker of this.plotMarkers.values()) marker.destroy()
+    this.plotMarkers.clear()
+    for (const sign of this.signboards.values()) sign.destroy()
+    this.signboards.clear()
+    this.currentPlotId = null
+  }
+
+  // ============================================================
+  // Plot + Signboard (Phase 3)
+  // ============================================================
+
+  private renderPlots() {
+    // 빈 Plot 마커
+    for (const plot of this.plots) {
+      const marker = new PlotMarker(this, {
+        id: plot.id,
+        centerX: pinToWorldX(plot.pinX),
+        centerY: pinToWorldY(plot.pinY),
+        widthUnits: plot.widthUnits,
+        heightUnits: plot.heightUnits,
+      })
+      this.plotMarkers.set(plot.id, marker)
+    }
+    // 점유 상태 + Signboard
+    for (const room of this.initialRooms) {
+      this.addSignboard(room)
+    }
+  }
+
+  /** 새로 개설된 방 또는 초기 로딩 시 Signboard 추가 */
+  addSignboard(room: ChatRoomMeta) {
+    const marker = this.plotMarkers.get(room.plotId)
+    if (!marker) return
+    marker.setOccupied(true)
+    const existing = this.signboards.get(room.plotId)
+    if (existing) existing.destroy()
+    const sign = new Signboard(this, marker.x, marker.y, room.id, room.signText)
+    this.signboards.set(room.plotId, sign)
+  }
+
+  /** 방이 닫히거나 제거될 때 Signboard 제거 */
+  removeSignboard(plotId: string) {
+    const marker = this.plotMarkers.get(plotId)
+    marker?.setOccupied(false)
+    const sign = this.signboards.get(plotId)
+    if (sign) {
+      sign.destroy()
+      this.signboards.delete(plotId)
+    }
+  }
+
+  private updatePlotOccupancy() {
+    if (this.plotMarkers.size === 0) return
+    let insideId: string | null = null
+    for (const [plotId, marker] of this.plotMarkers) {
+      if (marker.contains(this.player.x, this.player.y)) {
+        insideId = plotId
+        break
+      }
+    }
+    if (insideId === this.currentPlotId) return
+    this.currentPlotId = insideId
+    // Phase 3.2에서 sceneBridge emit — 지금은 로그만
+    // sceneBridge.emit("plot:enter" | "plot:leave", { plotId })
   }
 
   // ============================================================

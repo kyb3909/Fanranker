@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createAnonClient } from "@/lib/supabase/client"
-import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 import { ChatOverlay } from "./chat-overlay"
 
@@ -29,13 +29,18 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
 
     ;(async () => {
       try {
-        // 1) Realtime 채널 먼저 연결 (boot 전에 준비)
-        const [{ WorldChannel }, { bootMetaverseGame }] = await Promise.all([
+        // 1) 병렬: Phaser/Channel 모듈 로드 + Plot/Room 초기 데이터 fetch
+        const [{ WorldChannel }, { bootMetaverseGame }, plotsRes] = await Promise.all([
           import("@/lib/metaverse/realtime/world-channel"),
           import("@/lib/metaverse/boot"),
+          fetch("/api/metaverse/plots").then((r) => (r.ok ? r.json() : null)),
         ])
         if (cancelled) return
 
+        const plots: WorldPlot[] = plotsRes?.plots ?? []
+        const rooms: ChatRoomMeta[] = plotsRes?.rooms ?? []
+
+        // 2) Realtime 월드 채널 연결
         const supabase = createAnonClient()
         const newChannel = new WorldChannel(supabase, identity)
         try {
@@ -51,12 +56,14 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
         channelRef.current = newChannel
         setChannel(newChannel)
 
-        // 2) Phaser 게임 부팅 — 채널 주입
+        // 3) Phaser 게임 부팅 — 채널 + plot/room 초기 데이터 주입
         if (!parentRef.current) return
         gameRef.current = bootMetaverseGame({
           parent: parentRef.current,
           identity,
           channel: newChannel,
+          plots,
+          rooms,
         })
         setStatus("ready")
       } catch (err) {
