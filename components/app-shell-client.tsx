@@ -29,12 +29,18 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     <div className="bg-background min-h-screen">
       {/* admin 페이지는 자체 레이아웃 사용 — 메인 헤더/배너 숨김 */}
       {!isAdmin && header}
-      {!isAdmin && (
-        <div className="mx-auto w-full max-w-[1280px] px-4 pt-3 sm:px-6">
-          <AnnouncementCarousel />
-        </div>
-      )}
-      {children}
+      {/* 배너 = 피드 위 오버레이 레이어. 같은 relative 컨테이너 안에서
+          배너는 absolute로 상단 고정, children은 정상 플로우 → 배너가 피드 상단을 덮는다. */}
+      <div className="relative">
+        {!isAdmin && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
+            <div className="pointer-events-auto mx-auto w-full max-w-[1280px] px-4 sm:px-6">
+              <AnnouncementCarousel />
+            </div>
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   )
 }

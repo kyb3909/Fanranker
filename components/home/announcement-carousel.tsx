@@ -74,16 +74,10 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
       }`}
     >
       <div className="min-h-0">
-        <div className="flex items-stretch overflow-hidden rounded-lg bg-neutral-950 shadow-md">
-          {/* 좌측 안내 라벨 */}
-          <div className="hidden items-center px-3 text-[10px] leading-tight text-white/40 sm:flex">
-            오늘의
-            <br />
-            공지
-          </div>
-
-          {/* 중앙 슬립 — 세로형 썸네일 가로 슬라이드 */}
-          <div className="flex-1 overflow-x-auto py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* 네모난 배너 (rounded 없음) — nav에 딱 붙는 직각 레이어 */}
+        <div className="overflow-hidden bg-neutral-950 shadow-[0_6px_16px_-4px_rgba(0,0,0,0.35)]">
+          {/* 썸네일 스트립 */}
+          <div className="overflow-x-auto pt-2.5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <ul className="mx-auto flex w-fit snap-x snap-mandatory gap-1.5 px-2">
               {banners.map((b, i) => (
                 <li
@@ -96,15 +90,13 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
             </ul>
           </div>
 
-          {/* 우측 컨트롤 패널 — 메인보다 한 톤 밝은 회색으로 레이어 구분 */}
-          <div className="flex flex-col items-stretch justify-center gap-1.5 border-l border-white/10 bg-neutral-800/70 px-2 py-2 sm:px-2.5">
+          {/* 하단 컨트롤 바 — 진한 회색 레이어로 구분, 우측 정렬 입체 버튼 2개 */}
+          <div className="flex items-center justify-end gap-2 border-t border-white/10 bg-neutral-800/80 px-3 py-1.5 sm:px-4">
             <ControlButton onClick={() => close(false)} ariaLabel="닫기">
               닫기 <span aria-hidden>×</span>
             </ControlButton>
             <ControlButton onClick={() => close(true)} ariaLabel="오늘 하루 보지 않기">
-              오늘 하루
-              <br />
-              보지 않기
+              오늘 하루 보지 않기
             </ControlButton>
           </div>
         </div>
@@ -129,7 +121,7 @@ function ControlButton({
       aria-label={ariaLabel}
       className={[
         "rounded-md border border-white/15 bg-gradient-to-b from-neutral-600 to-neutral-700",
-        "px-2.5 py-1 text-center text-[10px] leading-tight font-semibold text-white",
+        "px-3 py-1 text-center text-[11px] leading-tight font-semibold whitespace-nowrap text-white",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_1px_2px_rgba(0,0,0,0.5)]",
         "transition-all hover:from-neutral-500 hover:to-neutral-600",
         "active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]",
