@@ -142,6 +142,7 @@ function BannerCard({ banner, priority }: { banner: Banner; priority: boolean })
         banner.image_url ? "bg-neutral-800" : `bg-gradient-to-br ${gradient}`
       }`}
     >
+      {/* 배경 레이어 — 이미지 또는 이모지 그라데이션 */}
       {banner.image_url ? (
         <Image
           src={banner.image_url}
@@ -152,17 +153,19 @@ function BannerCard({ banner, priority }: { banner: Banner; priority: boolean })
           priority={priority}
         />
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-between p-2 text-center text-white">
-          <div className="flex flex-1 items-center justify-center">
-            <span className="text-3xl leading-none sm:text-4xl" aria-hidden="true">
-              {emoji || "📢"}
-            </span>
-          </div>
-          <span className="line-clamp-2 text-[10px] leading-tight font-extrabold tracking-tight sm:text-[11px]">
-            {rest || banner.title}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-4xl leading-none drop-shadow-md sm:text-5xl" aria-hidden="true">
+            {emoji || "📢"}
           </span>
         </div>
       )}
+
+      {/* 제목 오버레이 — 하단 반투명 그라데이션 + 흰 굵은 텍스트 (실제 광고 캡션 스타일) */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-1.5 pt-4 pb-1.5 sm:px-2 sm:pt-5 sm:pb-2">
+        <p className="line-clamp-2 text-[10px] leading-[1.2] font-extrabold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] sm:text-[11px]">
+          {rest || banner.title}
+        </p>
+      </div>
     </article>
   )
 
