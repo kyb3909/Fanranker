@@ -67,13 +67,16 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
         </button>
       </div>
 
-      <ul className="grid grid-cols-3 gap-2 sm:gap-3 md:grid-cols-6">
-        {banners.map((b, i) => (
-          <li key={b.id}>
-            <BannerCard banner={b} priority={i === 0} />
-          </li>
-        ))}
-      </ul>
+      {/* 중앙 정렬 + 가로 스크롤 슬립. 컨텐츠가 넘치면 슬라이드, 모자라면 중앙 정렬. */}
+      <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ul className="mx-auto flex w-fit snap-x snap-mandatory gap-2 pb-1 sm:gap-3">
+          {banners.map((b, i) => (
+            <li key={b.id} className="w-[108px] flex-shrink-0 snap-start sm:w-[140px] md:w-[168px]">
+              <BannerCard banner={b} priority={i === 0} />
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   )
 }
@@ -95,7 +98,7 @@ function BannerCard({ banner, priority }: { banner: Banner; priority: boolean })
             alt={banner.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(min-width: 768px) 200px, 33vw"
+            sizes="(min-width: 768px) 168px, 108px"
             priority={priority}
           />
         ) : (
