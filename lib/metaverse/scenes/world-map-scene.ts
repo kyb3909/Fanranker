@@ -14,8 +14,15 @@
 
 import * as Phaser from "phaser"
 import { METAVERSE, pinToWorldX, pinToWorldY } from "@/lib/metaverse/constants"
-import type { MetaversePlayerIdentity, RemotePlayerState, Direction } from "@/lib/metaverse/types"
+import type {
+  MetaversePlayerIdentity,
+  RemotePlayerState,
+  Direction,
+  WorldChatMessage,
+} from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
+import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { ChatBubble } from "./chat-bubble"
 
 export const WORLD_MAP_SCENE_KEY = "MetaverseWorldMap"
 
@@ -35,7 +42,12 @@ export class WorldMapScene extends Phaser.Scene {
 
   private lastDirection: Direction = "down"
   private remotePlayers = new Map<string, RemoteAvatar>()
+  private chatBubbles = new Map<string, ChatBubble>()
+  private isChatInputOpen = false
   private unsubRemote: (() => void) | null = null
+  private unsubChat: (() => void) | null = null
+  private unsubBridgeOpen: (() => void) | null = null
+  private unsubBridgeClose: (() => void) | null = null
 
   constructor() {
     super(WORLD_MAP_SCENE_KEY)
@@ -104,7 +116,16 @@ export class WorldMapScene extends Phaser.Scene {
       this.unsubRemote = this.channel.onRemotePlayersChange((remote) =>
         this.syncRemotePlayers(remote)
       )
+      this.unsubChat = this.channel.onChatMessage((msg) => this.handleChatMessage(msg))
     }
+
+    // React UI로부터 chat 입력 open/close 상태 받기
+    this.unsubBridgeOpen = sceneBridge.on("chat:input:open", () => {
+      this.isChatInputOpen = true
+    })
+    this.unsubBridgeClose = sceneBridge.on("chat:input:close", () => {
+      this.isChatInputOpen = false
+    })
 
     // 씬 종료 시 정리
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown())
@@ -118,23 +139,25 @@ export class WorldMapScene extends Phaser.Scene {
     const body = this.player.body as Phaser.Physics.Arcade.Body
     body.setVelocity(0)
 
-    const left = this.cursors.left?.isDown || this.wasd.A.isDown
-    const right = this.cursors.right?.isDown || this.wasd.D.isDown
-    const up = this.cursors.up?.isDown || this.wasd.W.isDown
-    const down = this.cursors.down?.isDown || this.wasd.S.isDown
+    // 채팅 입력창 열려있을 때는 이동 차단 — 타이핑 중 월드가 움직이면 곤란
+    if (!this.isChatInputOpen) {
+      const left = this.cursors.left?.isDown || this.wasd.A.isDown
+      const right = this.cursors.right?.isDown || this.wasd.D.isDown
+      const up = this.cursors.up?.isDown || this.wasd.W.isDown
+      const down = this.cursors.down?.isDown || this.wasd.S.isDown
 
-    if (left) body.setVelocityX(-PLAYER_SPEED)
-    else if (right) body.setVelocityX(PLAYER_SPEED)
-    if (up) body.setVelocityY(-PLAYER_SPEED)
-    else if (down) body.setVelocityY(PLAYER_SPEED)
+      if (left) body.setVelocityX(-PLAYER_SPEED)
+      else if (right) body.setVelocityX(PLAYER_SPEED)
+      if (up) body.setVelocityY(-PLAYER_SPEED)
+      else if (down) body.setVelocityY(PLAYER_SPEED)
 
-    body.velocity.normalize().scale(PLAYER_SPEED)
+      body.velocity.normalize().scale(PLAYER_SPEED)
 
-    // 방향 업데이트 (마지막으로 눌린 수평 > 수직 우선. 정지 시 lastDirection 유지)
-    if (left) this.lastDirection = "left"
-    else if (right) this.lastDirection = "right"
-    else if (up) this.lastDirection = "up"
-    else if (down) this.lastDirection = "down"
+      if (left) this.lastDirection = "left"
+      else if (right) this.lastDirection = "right"
+      else if (up) this.lastDirection = "up"
+      else if (down) this.lastDirection = "down"
+    }
 
     const isMoving = body.velocity.length() > 1
 
@@ -150,6 +173,9 @@ export class WorldMapScene extends Phaser.Scene {
     for (const avatar of this.remotePlayers.values()) {
       avatar.update(deltaMs)
     }
+
+    // 말풍선 위치 — 대응되는 아바타 머리 위로 고정
+    this.updateChatBubblePositions()
   }
 
   // ============================================================
@@ -176,11 +202,61 @@ export class WorldMapScene extends Phaser.Scene {
     }
   }
 
+  // ============================================================
+  // Chat (proximity 말풍선)
+  // ============================================================
+
+  private handleChatMessage(msg: WorldChatMessage) {
+    const isSelf = msg.userId === this.identity.userId
+    if (!isSelf) {
+      // Proximity 필터 — 반경 밖이면 무시
+      const dx = msg.x - this.player.x
+      const dy = msg.y - this.player.y
+      if (dx * dx + dy * dy > METAVERSE.BUBBLE_PROXIMITY_PX ** 2) return
+    }
+    this.showChatBubble(msg.userId, msg.text)
+  }
+
+  private showChatBubble(userId: string, text: string) {
+    // 유저당 말풍선 1개만 유지
+    this.chatBubbles.get(userId)?.destroy()
+
+    const bubble = new ChatBubble(this, text)
+    bubble.setAutoExpire(METAVERSE.BUBBLE_DURATION_MS)
+    this.chatBubbles.set(userId, bubble)
+
+    bubble.on(Phaser.GameObjects.Events.DESTROY, () => {
+      if (this.chatBubbles.get(userId) === bubble) {
+        this.chatBubbles.delete(userId)
+      }
+    })
+  }
+
+  private updateChatBubblePositions() {
+    const OFFSET_Y = METAVERSE.PLAYER_NAMETAG_OFFSET_Y - 14
+    for (const [userId, bubble] of this.chatBubbles) {
+      if (userId === this.identity.userId) {
+        bubble.setPosition(this.player.x, this.player.y + OFFSET_Y)
+      } else {
+        const avatar = this.remotePlayers.get(userId)
+        if (avatar) bubble.setPosition(avatar.getX(), avatar.getY() + OFFSET_Y)
+      }
+    }
+  }
+
   private teardown() {
     this.unsubRemote?.()
+    this.unsubChat?.()
+    this.unsubBridgeOpen?.()
+    this.unsubBridgeClose?.()
     this.unsubRemote = null
+    this.unsubChat = null
+    this.unsubBridgeOpen = null
+    this.unsubBridgeClose = null
     for (const avatar of this.remotePlayers.values()) avatar.destroy()
     this.remotePlayers.clear()
+    for (const bubble of this.chatBubbles.values()) bubble.destroy()
+    this.chatBubbles.clear()
   }
 
   // ============================================================
@@ -254,6 +330,13 @@ class RemoteAvatar {
       .setDepth(11)
     this.targetX = state.x
     this.targetY = state.y
+  }
+
+  getX(): number {
+    return this.sprite.x
+  }
+  getY(): number {
+    return this.sprite.y
   }
 
   setTarget(x: number, y: number, _direction: Direction, nickname: string) {

@@ -12,11 +12,14 @@
 import { useEffect, useRef, useState } from "react"
 import { createAnonClient } from "@/lib/supabase/client"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
+import { ChatOverlay } from "./chat-overlay"
 
 export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
-  const channelRef = useRef<{ disconnect: () => Promise<void> } | null>(null)
+  const channelRef = useRef<WorldChannel | null>(null)
+  const [channel, setChannel] = useState<WorldChannel | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<"loading" | "ready">("loading")
 
@@ -34,25 +37,26 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
         if (cancelled) return
 
         const supabase = createAnonClient()
-        const channel = new WorldChannel(supabase, identity)
+        const newChannel = new WorldChannel(supabase, identity)
         try {
-          await channel.connect()
+          await newChannel.connect()
         } catch (err) {
           // Realtime 실패해도 싱글플레이어로는 동작 가능 — 경고만 남기고 진행
           console.warn("[metaverse] realtime connect failed (offline mode)", err)
         }
         if (cancelled) {
-          await channel.disconnect().catch(() => {})
+          await newChannel.disconnect().catch(() => {})
           return
         }
-        channelRef.current = channel
+        channelRef.current = newChannel
+        setChannel(newChannel)
 
         // 2) Phaser 게임 부팅 — 채널 주입
         if (!parentRef.current) return
         gameRef.current = bootMetaverseGame({
           parent: parentRef.current,
           identity,
-          channel,
+          channel: newChannel,
         })
         setStatus("ready")
       } catch (err) {
@@ -93,6 +97,8 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       <div className="pointer-events-none absolute top-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] text-white/70">
         {identity.nickname} · {identity.userId.startsWith("guest-") ? "🧪 guest" : "signed in"}
       </div>
+      {/* 하단 채팅 오버레이 */}
+      <ChatOverlay channel={channel} />
     </div>
   )
 }
