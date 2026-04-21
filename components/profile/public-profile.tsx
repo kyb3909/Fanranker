@@ -67,6 +67,15 @@ interface PixelArtInfo {
   }
 }
 
+interface TeamKarmaInfo {
+  team_id: string
+  team_name: string
+  team_short_name: string
+  sport: string
+  color: string | null
+  points: number
+}
+
 export function PublicProfileView({ userId }: { userId: string }) {
   const router = useRouter()
   const { user } = useUser()
@@ -80,6 +89,8 @@ export function PublicProfileView({ userId }: { userId: string }) {
   const boardPoints: BoardPointInfo[] = data?.board_points ?? []
   const equippedTitles: EquippedTitleInfo[] = data?.equipped_titles ?? []
   const pixelArts: PixelArtInfo[] = data?.pixel_arts ?? []
+  const teamKarma: TeamKarmaInfo[] = data?.team_karma ?? []
+  const totalKarma: number = data?.total_karma ?? 0
   const profileNotFound = !!error || (data && !data.profile)
 
   if (profileNotFound) {
@@ -179,6 +190,67 @@ export function PublicProfileView({ userId }: { userId: string }) {
                   </div>
                 )
               })}
+            </div>
+          </Card>
+        )}
+
+        {/* 팀 카르마 breakdown — 메타버스 팬 활동으로 누적된 팀별 점수 */}
+        {teamKarma.length > 0 && (
+          <Card className="gap-0 overflow-hidden py-0">
+            <div className="border-border flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span aria-hidden className="text-base">
+                  🏟️
+                </span>
+                <h3 className="text-sm font-semibold">팀 카르마</h3>
+              </div>
+              <div className="text-muted-foreground text-[11px]">
+                총{" "}
+                <span className="text-primary font-bold tabular-nums">
+                  {totalKarma.toLocaleString()}
+                </span>
+                <span className="ml-0.5">점</span>
+              </div>
+            </div>
+            <div className="divide-border divide-y">
+              {teamKarma.slice(0, 8).map((tk) => {
+                const pct = totalKarma > 0 ? (tk.points / totalKarma) * 100 : 0
+                const color = tk.color || "#888"
+                return (
+                  <div
+                    key={tk.team_id}
+                    className="relative flex items-center justify-between px-4 py-2.5"
+                  >
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 left-0"
+                      style={{
+                        width: `${Math.min(100, Math.max(2, pct))}%`,
+                        background: `${color}18`,
+                      }}
+                    />
+                    <div className="relative flex items-center gap-2">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ background: color }}
+                        aria-hidden
+                      />
+                      <span className="text-sm font-medium">
+                        {tk.team_short_name || tk.team_name}
+                      </span>
+                      <span className="text-muted-foreground text-[10px]">{tk.sport}</span>
+                    </div>
+                    <span className="relative text-xs font-semibold tabular-nums">
+                      {tk.points.toLocaleString()}
+                    </span>
+                  </div>
+                )
+              })}
+              {teamKarma.length > 8 && (
+                <div className="text-muted-foreground px-4 py-2 text-center text-[11px]">
+                  외 {teamKarma.length - 8}개 팀
+                </div>
+              )}
             </div>
           </Card>
         )}

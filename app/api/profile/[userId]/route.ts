@@ -94,6 +94,52 @@ export async function GET(
       /* table may not exist yet */
     }
 
+    // 메타버스 팀 카르마 (stadium_contributions 기반 breakdown)
+    let teamKarma: {
+      team_id: string
+      team_name: string
+      team_short_name: string
+      sport: string
+      color: string | null
+      points: number
+    }[] = []
+    let totalKarma = 0
+    try {
+      const res = await supabase
+        .from("stadium_contributions")
+        .select(
+          "team_id, points_contributed, team_map_pins!inner(team_name, team_short_name, sport, color, is_active)"
+        )
+        .eq("user_id", userId)
+        .gt("points_contributed", 0)
+        .order("points_contributed", { ascending: false })
+
+      const rows = (res.data ?? []) as unknown as {
+        team_id: string
+        points_contributed: number
+        team_map_pins: {
+          team_name: string
+          team_short_name: string
+          sport: string
+          color: string | null
+          is_active: boolean
+        }
+      }[]
+      teamKarma = rows
+        .filter((r) => r.team_map_pins?.is_active)
+        .map((r) => ({
+          team_id: r.team_id,
+          team_name: r.team_map_pins.team_name,
+          team_short_name: r.team_map_pins.team_short_name,
+          sport: r.team_map_pins.sport,
+          color: r.team_map_pins.color,
+          points: Number(r.points_contributed),
+        }))
+      totalKarma = teamKarma.reduce((sum, r) => sum + r.points, 0)
+    } catch {
+      /* table may not exist yet */
+    }
+
     return NextResponse.json({
       profile: {
         user_id: profile.user_id,
@@ -117,6 +163,8 @@ export async function GET(
         }
       }),
       pixel_arts: pixelArts,
+      team_karma: teamKarma,
+      total_karma: totalKarma,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
