@@ -39,6 +39,7 @@ function MobileTabBarContent() {
   const view = searchParams.get("view")
 
   if (pathname.startsWith("/admin")) return null
+  if (pathname.startsWith("/metaverse")) return null
 
   return (
     <nav
