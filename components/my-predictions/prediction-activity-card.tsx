@@ -83,55 +83,24 @@ const SPORT_EMOJI: Record<string, string> = {
 }
 
 /**
- * 종목별 액센트 컬러 — 헤더 solid 블록 + 배지 텍스트 컬러 + 카드 섀도.
- * FIFA/NBA 카드 스타일: 헤더는 진한 종목 컬러, 본문은 흰색, 배지는 solid pill.
+ * 카드 액센트 컬러 — 사이트 브랜드(버건디/와인레드) 기반.
+ * 종목 구분은 이모지(⚽⚾🏀🏐) + "축구 N경기" 라벨로 이미 충분.
+ * 과거 종목별 형광색(emerald/sky/orange/purple)은 브랜드 아이덴티티와 충돌 → 단일 브랜드 톤으로 통일.
  */
-const SPORT_COLOR: Record<
-  string,
-  {
-    header: string // 헤더 블록 배경 (진한 solid)
-    text: string // 흰 배지 위 종목 텍스트 컬러
-    toggle: string // "내용 보기" 토글 텍스트
-    cardShadow: string // 카드 외곽 컬러 섀도
-    border: string // 카드 테두리 톤
-  }
-> = {
-  축구: {
-    header: "bg-emerald-500/85",
-    text: "text-emerald-700",
-    toggle: "text-emerald-600 hover:text-emerald-700",
-    cardShadow: "shadow-lg shadow-emerald-500/20",
-    border: "border-emerald-100",
-  },
-  야구: {
-    header: "bg-sky-500/85",
-    text: "text-sky-700",
-    toggle: "text-sky-600 hover:text-sky-700",
-    cardShadow: "shadow-lg shadow-sky-500/20",
-    border: "border-sky-100",
-  },
-  농구: {
-    header: "bg-orange-500/85",
-    text: "text-orange-700",
-    toggle: "text-orange-600 hover:text-orange-700",
-    cardShadow: "shadow-lg shadow-orange-500/20",
-    border: "border-orange-100",
-  },
-  배구: {
-    header: "bg-purple-500/85",
-    text: "text-purple-700",
-    toggle: "text-purple-600 hover:text-purple-700",
-    cardShadow: "shadow-lg shadow-purple-500/20",
-    border: "border-purple-100",
-  },
+const BRAND_CARD_COLOR = {
+  header: "bg-primary/90", // 버건디 헤더
+  text: "text-primary", // 흰 배지 위 액센트
+  toggle: "text-primary hover:text-primary/80",
+  cardShadow: "shadow-md shadow-primary/10",
+  border: "border-primary/10",
+} as const
+const SPORT_COLOR: Record<string, typeof BRAND_CARD_COLOR> = {
+  축구: BRAND_CARD_COLOR,
+  야구: BRAND_CARD_COLOR,
+  농구: BRAND_CARD_COLOR,
+  배구: BRAND_CARD_COLOR,
 }
-const SPORT_COLOR_DEFAULT: (typeof SPORT_COLOR)[string] = {
-  header: "bg-slate-500/85",
-  text: "text-slate-700",
-  toggle: "text-slate-600 hover:text-slate-700",
-  cardShadow: "shadow-lg shadow-slate-500/20",
-  border: "border-slate-100",
-}
+const SPORT_COLOR_DEFAULT = BRAND_CARD_COLOR
 
 function formatActivityDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
