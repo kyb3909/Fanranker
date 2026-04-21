@@ -53,14 +53,14 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
 
   return (
     <section aria-label="공지 · 광고 배너" className="relative">
-      {/* 검은 컨테이너로 감싸고, 오른쪽에 닫기 컨트롤. 컨텐츠가 넘치면 슬라이드. */}
-      <div className="flex items-stretch overflow-hidden rounded-xl bg-neutral-900 shadow-sm">
-        <div className="flex-1 overflow-x-auto px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-3 sm:py-3 [&::-webkit-scrollbar]:hidden">
-          <ul className="mx-auto flex w-fit snap-x snap-mandatory gap-2 sm:gap-3">
+      {/* 검은 컨테이너 + 상단 헤어라인 + inset highlight로 레이어감. */}
+      <div className="relative flex items-stretch overflow-hidden rounded-xl bg-gradient-to-b from-neutral-800 to-neutral-950 shadow-inner ring-1 ring-white/5">
+        <div className="flex-1 overflow-x-auto px-2.5 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <ul className="mx-auto flex w-fit snap-x snap-mandatory gap-2 sm:gap-2.5">
             {banners.map((b, i) => (
               <li
                 key={b.id}
-                className="w-[108px] flex-shrink-0 snap-start sm:w-[140px] md:w-[168px]"
+                className="w-[104px] flex-shrink-0 snap-start sm:w-[132px] md:w-[156px]"
               >
                 <BannerCard banner={b} priority={i === 0} />
               </li>
@@ -70,7 +70,7 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
 
         <button
           onClick={dismiss}
-          className="flex flex-col items-center justify-center gap-1 border-l border-white/10 px-2.5 text-white/60 transition-colors hover:bg-white/5 hover:text-white sm:px-3.5"
+          className="flex flex-col items-center justify-center gap-1 border-l border-white/10 bg-black/20 px-2.5 text-white/55 transition-colors hover:bg-white/10 hover:text-white sm:px-3.5"
           aria-label="오늘 하루 보지 않기"
         >
           <X className="h-4 w-4" />
@@ -90,13 +90,13 @@ function BannerCard({ banner, priority }: { banner: Banner; priority: boolean })
   const gradient = banner.gradient || "from-slate-600 to-slate-800"
 
   const card = (
-    <article className="group">
-      <div
-        className={`relative aspect-[4/3] overflow-hidden rounded-lg ${
-          banner.image_url ? "bg-muted" : `bg-gradient-to-br ${gradient}`
-        }`}
-      >
-        {banner.image_url ? (
+    <article
+      className={`group relative aspect-[4/3] overflow-hidden rounded-md shadow-lg ring-1 shadow-black/40 ring-white/10 transition-all hover:ring-white/25 ${
+        banner.image_url ? "bg-neutral-800" : `bg-gradient-to-br ${gradient}`
+      }`}
+    >
+      {banner.image_url ? (
+        <>
           <Image
             src={banner.image_url}
             alt={banner.title}
@@ -105,20 +105,33 @@ function BannerCard({ banner, priority }: { banner: Banner; priority: boolean })
             sizes="(min-width: 768px) 168px, 108px"
             priority={priority}
           />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center text-white">
-            <span className="text-2xl leading-none sm:text-3xl" aria-hidden="true">
-              {emoji || "📢"}
-            </span>
-            <span className="line-clamp-2 text-[10px] leading-tight font-bold sm:text-[11px]">
+          {/* 하단 그라데이션 — 이미지 위 텍스트 가독성 */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/40 to-transparent"
+            aria-hidden="true"
+          />
+          <div className="absolute inset-x-0 bottom-0 p-1.5 sm:p-2">
+            <p className="line-clamp-2 text-[10px] leading-tight font-bold text-white drop-shadow sm:text-[11px]">
               {rest || banner.title}
-            </span>
+            </p>
           </div>
-        )}
-      </div>
-      <p className="mt-1.5 line-clamp-2 text-[11px] leading-tight font-semibold text-white/90 sm:text-[12px]">
-        {rest || banner.title}
-      </p>
+        </>
+      ) : (
+        /* 플레이스홀더 — 이모지 + 제목을 카드 안에 통합 */
+        <div className="relative flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center text-white">
+          <span className="text-2xl leading-none drop-shadow-sm sm:text-3xl" aria-hidden="true">
+            {emoji || "📢"}
+          </span>
+          <span className="line-clamp-2 text-[10px] leading-tight font-bold drop-shadow sm:text-[11px]">
+            {rest || banner.title}
+          </span>
+        </div>
+      )}
+      {/* 상단 하이라이트 — 레이어 깊이감 */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/15 to-transparent"
+        aria-hidden="true"
+      />
     </article>
   )
 
