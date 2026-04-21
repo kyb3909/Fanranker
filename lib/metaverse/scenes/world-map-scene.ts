@@ -402,8 +402,22 @@ export class WorldMapScene extends Phaser.Scene {
     marker.setOccupied(true)
     const existing = this.signboards.get(room.plotId)
     if (existing) existing.destroy()
-    const sign = new Signboard(this, marker.x, marker.y, room.id, room.signText)
+    const sign = new Signboard(this, marker.x, marker.y, room.id, room.ownerUserId, room.signText)
     this.signboards.set(room.plotId, sign)
+
+    // 내가 지금 이 Plot 위에 있으면 plot:enter 재방출해서 roomId/ownerUserId 반영
+    if (this.currentPlotId === room.plotId) {
+      const plot = this.plots.find((p) => p.id === room.plotId)
+      if (plot) {
+        sceneBridge.emit("plot:enter", {
+          plotId: plot.id,
+          plotCode: plot.plotCode,
+          plazaName: plot.plazaName,
+          roomId: room.id,
+          ownerUserId: room.ownerUserId,
+        })
+      }
+    }
   }
 
   /** 방이 닫히거나 제거될 때 Signboard 제거 */
@@ -457,6 +471,7 @@ export class WorldMapScene extends Phaser.Scene {
       plotCode: plot.plotCode,
       plazaName: plot.plazaName,
       roomId: sign?.roomId,
+      ownerUserId: sign?.ownerUserId,
     })
   }
 

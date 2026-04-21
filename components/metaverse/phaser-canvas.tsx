@@ -171,6 +171,7 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       <ActivityBalanceHud identity={identity} />
       {/* Plot 진입 시 컨텍스트 버튼 */}
       <PlotActionOverlay
+        identity={identity}
         onCreateRoom={(ctx) =>
           setCreateRoomCtx({
             plotId: ctx.plotId,
@@ -179,8 +180,8 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           })
         }
         onEnterRoom={(ctx) => {
-          // Phase 3.4에서 방 채널 subscribe — 현재는 로그
-          console.log("[metaverse] enter-room request", ctx)
+          // 방 채널 구독은 이미 plot:enter에서 자동 (Phase 3.4) — "자세히" 버튼은 향후 방 정보 모달용 placeholder
+          console.log("[metaverse] room detail requested", ctx)
         }}
       />
       {/* 방 개설 모달 */}

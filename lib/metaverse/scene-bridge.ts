@@ -13,8 +13,14 @@ import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 type BridgeEventMap = {
   "chat:input:open": undefined
   "chat:input:close": undefined
-  /** 내 아바타가 Plot 경계 안으로 진입. roomId가 있으면 이미 방이 세워진 Plot */
-  "plot:enter": { plotId: string; plotCode: string; plazaName: string; roomId?: string }
+  /** 내 아바타가 Plot 경계 안으로 진입. roomId/ownerUserId 는 방이 있을 때만 세팅 */
+  "plot:enter": {
+    plotId: string
+    plotCode: string
+    plazaName: string
+    roomId?: string
+    ownerUserId?: string
+  }
   /** 내 아바타가 Plot 경계 밖으로 이탈 */
   "plot:leave": undefined
   /** 방 개설 성공 → Phaser 씬이 수신해서 Signboard 추가 */

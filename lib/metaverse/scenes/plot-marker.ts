@@ -110,11 +110,20 @@ export class PlotMarker extends Phaser.GameObjects.Container {
  */
 export class Signboard extends Phaser.GameObjects.Container {
   readonly roomId: string
+  readonly ownerUserId: string
   private readonly textObj: Phaser.GameObjects.Text
 
-  constructor(scene: Phaser.Scene, centerX: number, centerY: number, roomId: string, text: string) {
+  constructor(
+    scene: Phaser.Scene,
+    centerX: number,
+    centerY: number,
+    roomId: string,
+    ownerUserId: string,
+    text: string
+  ) {
     super(scene, centerX, centerY)
     this.roomId = roomId
+    this.ownerUserId = ownerUserId
 
     // 기둥 (아바타보다 낮게)
     const post = scene.add.rectangle(0, -8, 3, 26, 0x6d4c41)
