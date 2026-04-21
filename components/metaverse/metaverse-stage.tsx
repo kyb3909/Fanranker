@@ -3,55 +3,80 @@
 /**
  * MetaverseStage — 메타버스 최상위 React 래퍼.
  *
- * Phase 1a (현재): Clerk 인증 게이트 → PhaserCanvas 동적 로드 → 단일 플레이어 월드맵.
- * Phase 1b 계획: Realtime Presence + proximity 채팅.
+ * 동작 모드:
+ *  1. 로그인 완료 → 실제 Clerk user.id + 프로필 닉네임으로 진입
+ *  2. 비로그인 + **dev 환경** → 랜덤 guest 식별자로 바로 진입 (로컬 테스트용)
+ *  3. 비로그인 + 프로덕션 → 로그인 유도 CTA
  *
- * 원칙: 이 컴포넌트는 /metaverse 라우트 전용. 기존 사이트 페이지에서 import 금지.
+ * guest 모드는 `process.env.NODE_ENV === "development"` 에서만 활성화됨.
+ * 프로덕션 빌드엔 dead code로 제거될 수 있게 설계.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useUser } from "@clerk/nextjs"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 
-// Phaser는 SSR 불가 — 반드시 동적 로드
 const PhaserCanvas = dynamic(
   () => import("./phaser-canvas").then((m) => ({ default: m.PhaserCanvas })),
   { ssr: false, loading: () => <LoadingScreen /> }
 )
 
+// dev에서만 활성. 프로덕션 번들에선 tree-shake 기대.
+const DEV_GUEST_MODE = process.env.NODE_ENV === "development"
+
 export function MetaverseStage() {
   const { user, isLoaded, isSignedIn } = useUser()
   const [identity, setIdentity] = useState<MetaversePlayerIdentity | null>(null)
 
-  // 프로필 닉네임 (server profile 우선, 없으면 Clerk fullName)
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || !user) return
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch("/api/profile/me")
-        const data = res.ok ? await res.json() : null
-        const nickname = data?.nickname || user.fullName || user.username || "플레이어"
-        if (!cancelled) setIdentity({ userId: user.id, nickname })
-      } catch {
-        if (!cancelled)
-          setIdentity({
-            userId: user.id,
-            nickname: user.fullName || user.username || "플레이어",
-          })
-      }
-    })()
-
-    return () => {
-      cancelled = true
+  // 세션 수명 guest identity — 탭 유지되는 동안 동일
+  const guestIdentity = useMemo<MetaversePlayerIdentity | null>(() => {
+    if (!DEV_GUEST_MODE) return null
+    const rand = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0")
+    return {
+      userId: `guest-${typeof crypto !== "undefined" ? crypto.randomUUID().slice(0, 8) : rand}`,
+      nickname: `게스트-${rand}`,
     }
-  }, [isLoaded, isSignedIn, user])
+  }, [])
 
-  if (!isLoaded) return <LoadingScreen />
+  useEffect(() => {
+    if (!isLoaded) return
 
-  if (!isSignedIn) {
+    // 로그인된 경우 → 프로필 fetch
+    if (isSignedIn && user) {
+      let cancelled = false
+      ;(async () => {
+        try {
+          const res = await fetch("/api/profile/me")
+          const data = res.ok ? await res.json() : null
+          const nickname = data?.nickname || user.fullName || user.username || "플레이어"
+          if (!cancelled) setIdentity({ userId: user.id, nickname })
+        } catch {
+          if (!cancelled)
+            setIdentity({
+              userId: user.id,
+              nickname: user.fullName || user.username || "플레이어",
+            })
+        }
+      })()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    // 비로그인 + dev → guest로 바로 진입
+    if (DEV_GUEST_MODE && guestIdentity) {
+      setIdentity(guestIdentity)
+      return
+    }
+  }, [isLoaded, isSignedIn, user, guestIdentity])
+
+  if (!isLoaded && !DEV_GUEST_MODE) return <LoadingScreen />
+
+  // 비로그인 + 프로덕션 → 로그인 유도
+  if (!isSignedIn && !DEV_GUEST_MODE) {
     return (
       <div className="flex min-h-[100svh] flex-col items-center justify-center bg-neutral-950 px-6 text-center text-white">
         <div className="max-w-sm">

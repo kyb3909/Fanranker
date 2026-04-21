@@ -3,45 +3,70 @@
 /**
  * PhaserCanvas — Phaser Game 인스턴스를 React 라이프사이클에 물린 마운트 컴포넌트.
  *
- * Phaser는 SSR 불가능하므로 `next/dynamic` + `ssr: false`로 import 해야 한다.
- * (상위 `metaverse-stage.tsx`에서 처리)
+ * 책임:
+ *  - Phaser 동적 로드 (SSR 방지 + 초기 번들 분리)
+ *  - Supabase Realtime WorldChannel 생성/연결/해제
+ *  - 게임 인스턴스 lifecycle 관리
  */
 
 import { useEffect, useRef, useState } from "react"
+import { createAnonClient } from "@/lib/supabase/client"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 
 export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }) {
   const parentRef = useRef<HTMLDivElement>(null)
-  // Phaser.Game 전체 타입을 여기서 import 하면 Phaser가 초기 번들에 들어가므로
-  // destroy 시그니처만 최소 타입으로 선언 (dynamic import 유지).
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
+  const channelRef = useRef<{ disconnect: () => Promise<void> } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<"loading" | "ready">("loading")
 
   useEffect(() => {
     if (!parentRef.current) return
-
     let cancelled = false
 
-    // boot.ts는 Phaser를 import하므로 반드시 dynamic import (번들 분리 + SSR 방지)
-    import("@/lib/metaverse/boot")
-      .then(({ bootMetaverseGame }) => {
-        if (cancelled || !parentRef.current) return
+    ;(async () => {
+      try {
+        // 1) Realtime 채널 먼저 연결 (boot 전에 준비)
+        const [{ WorldChannel }, { bootMetaverseGame }] = await Promise.all([
+          import("@/lib/metaverse/realtime/world-channel"),
+          import("@/lib/metaverse/boot"),
+        ])
+        if (cancelled) return
+
+        const supabase = createAnonClient()
+        const channel = new WorldChannel(supabase, identity)
         try {
-          gameRef.current = bootMetaverseGame({ parent: parentRef.current, identity })
+          await channel.connect()
         } catch (err) {
-          console.error("[metaverse] boot failed", err)
-          setError(err instanceof Error ? err.message : String(err))
+          // Realtime 실패해도 싱글플레이어로는 동작 가능 — 경고만 남기고 진행
+          console.warn("[metaverse] realtime connect failed (offline mode)", err)
         }
-      })
-      .catch((err) => {
-        console.error("[metaverse] dynamic import failed", err)
+        if (cancelled) {
+          await channel.disconnect().catch(() => {})
+          return
+        }
+        channelRef.current = channel
+
+        // 2) Phaser 게임 부팅 — 채널 주입
+        if (!parentRef.current) return
+        gameRef.current = bootMetaverseGame({
+          parent: parentRef.current,
+          identity,
+          channel,
+        })
+        setStatus("ready")
+      } catch (err) {
+        console.error("[metaverse] boot failed", err)
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
-      })
+      }
+    })()
 
     return () => {
       cancelled = true
       gameRef.current?.destroy(true)
       gameRef.current = null
+      channelRef.current?.disconnect().catch(() => {})
+      channelRef.current = null
     }
   }, [identity])
 
@@ -57,10 +82,17 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
   }
 
   return (
-    <div
-      ref={parentRef}
-      className="h-[100svh] w-screen bg-neutral-950"
-      aria-label="경기장 메타버스 월드맵"
-    />
+    <div className="relative h-[100svh] w-screen bg-neutral-950">
+      <div ref={parentRef} className="h-full w-full" aria-label="경기장 메타버스 월드맵" />
+      {status === "loading" && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-white/60">
+          <span className="text-sm">월드맵 로딩 중…</span>
+        </div>
+      )}
+      {/* 좌상단 데브 정보 */}
+      <div className="pointer-events-none absolute top-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] text-white/70">
+        {identity.nickname} · {identity.userId.startsWith("guest-") ? "🧪 guest" : "signed in"}
+      </div>
+    </div>
   )
 }

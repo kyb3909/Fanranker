@@ -9,13 +9,15 @@ import * as Phaser from "phaser"
 import { WorldMapScene, WORLD_MAP_SCENE_KEY } from "./scenes"
 import { METAVERSE } from "./constants"
 import type { MetaversePlayerIdentity } from "./types"
+import type { WorldChannel } from "./realtime/world-channel"
 
 export interface BootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
+  channel?: WorldChannel | null
 }
 
-export function bootMetaverseGame({ parent, identity }: BootOptions): Phaser.Game {
+export function bootMetaverseGame({ parent, identity, channel = null }: BootOptions): Phaser.Game {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -41,8 +43,8 @@ export function bootMetaverseGame({ parent, identity }: BootOptions): Phaser.Gam
     dom: { createContainer: false },
   })
 
-  // 씬 시작 — identity 전달
-  game.scene.start(WORLD_MAP_SCENE_KEY, { identity })
+  // 씬 시작 — identity + realtime 채널 전달
+  game.scene.start(WORLD_MAP_SCENE_KEY, { identity, channel })
   return game
 }
 

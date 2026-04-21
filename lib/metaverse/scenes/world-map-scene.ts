@@ -1,82 +1,75 @@
 /**
- * WorldMapScene — 메타버스 Phase 1 월드맵 씬.
+ * WorldMapScene — 메타버스 Phase 1b 월드맵 씬.
  *
- * 현재 범위 (Phase 1a — 단일 플레이어):
- *  - 플레이스홀더 배경 (단색 + 간단 지형 rect)
- *  - 플레이어 아바타 (플레이스홀더 rect)
- *  - WASD / 화살표 이동 + 카메라 follow
- *  - 닉네임 태그
+ * Phase 1b (현재):
+ *  - 플레이스홀더 지형 (UK 실루엣 rect)
+ *  - 내 아바타 (WASD/화살표 이동, 카메라 follow)
+ *  - Supabase Realtime Presence로 원격 유저 실시간 표시 (보간 이동)
+ *  - 월드 채팅 broadcast (proximity 말풍선은 UI 오버레이 담당 예정)
  *
- * Phase 1b 계획 (다음 커밋):
- *  - Supabase Realtime Presence (원격 유저 표시)
- *  - Broadcast 채팅 + proximity 말풍선
- *
- * 향후 에셋 교체 지점:
- *  - this.add.rectangle(..., COLOR_LAND) → tilemap 로드
- *  - COLOR_PLAYER_SELF rect → sprite atlas
+ * Phase 2+ 에셋 교체 지점:
+ *  - drawLandPlaceholder → tilemap
+ *  - createPlayerTexture → 스프라이트시트 + 방향별 애니메이션
  */
 
 import * as Phaser from "phaser"
 import { METAVERSE, pinToWorldX, pinToWorldY } from "@/lib/metaverse/constants"
-import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import type { MetaversePlayerIdentity, RemotePlayerState, Direction } from "@/lib/metaverse/types"
+import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 
 export const WORLD_MAP_SCENE_KEY = "MetaverseWorldMap"
 
+const SELF_TEXTURE = "mv-player-self"
+const OTHER_TEXTURE = "mv-player-other"
+// 원격 유저 보간: 새 target 받으면 200ms 안에 따라잡도록 지수 smoothing
+const REMOTE_LERP_HALF_LIFE_MS = 80
+
 export class WorldMapScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
+  private channel: WorldChannel | null = null
+
   private player!: Phaser.Physics.Arcade.Sprite
+  private nameTag!: Phaser.GameObjects.Text
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
-  private nameTag!: Phaser.GameObjects.Text
+
+  private lastDirection: Direction = "down"
+  private remotePlayers = new Map<string, RemoteAvatar>()
+  private unsubRemote: (() => void) | null = null
 
   constructor() {
     super(WORLD_MAP_SCENE_KEY)
   }
 
-  init(data: { identity: MetaversePlayerIdentity }) {
+  init(data: { identity: MetaversePlayerIdentity; channel?: WorldChannel | null }) {
     this.identity = data.identity
+    this.channel = data.channel ?? null
   }
 
   create() {
-    const { WORLD_WIDTH, WORLD_HEIGHT, PLAYER_SIZE, COLOR_BG, COLOR_LAND, COLOR_WATER } = METAVERSE
+    const { WORLD_WIDTH, WORLD_HEIGHT, COLOR_BG, COLOR_LAND, COLOR_WATER } = METAVERSE
 
-    // 카메라 + 월드 경계
     this.cameras.main.setBackgroundColor(COLOR_BG)
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
 
-    // 플레이스홀더 지형 — UK 지도 실루엣을 단순한 rect로 대체 (에셋 나오면 tilemap으로 교체)
-    // 배경 전체: 바다
+    // 플레이스홀더 지형
     this.add.rectangle(0, 0, WORLD_WIDTH, WORLD_HEIGHT, COLOR_WATER).setOrigin(0, 0)
-
-    // 내륙 덩어리 (대략 UK 모양의 rect 3~4개로 실루엣)
     this.drawLandPlaceholder(COLOR_LAND)
-
-    // 광장 영역 placeholder (런던, 맨체스터, 리버풀, 뉴캐슬)
-    // DB seed와 좌표 일치 (constants.ts의 pinToWorldX/Y로 변환)
     this.drawPlazaMarker("런던 광장", 51, 70)
     this.drawPlazaMarker("맨체스터 광장", 41, 42)
     this.drawPlazaMarker("리버풀 광장", 38, 46)
     this.drawPlazaMarker("뉴캐슬 광장", 52, 30)
 
-    // 플레이어 아바타 (placeholder)
-    const textureKey = "metaverse-player-placeholder"
-    if (!this.textures.exists(textureKey)) {
-      const g = this.add.graphics()
-      g.fillStyle(METAVERSE.COLOR_PLAYER_SELF, 1)
-      g.fillRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
-      g.lineStyle(2, 0xffffff, 1)
-      g.strokeRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
-      g.generateTexture(textureKey, PLAYER_SIZE, PLAYER_SIZE)
-      g.destroy()
-    }
+    // 아바타 텍스처 (placeholder — 나중에 스프라이트시트로 교체)
+    this.createPlayerTexture(SELF_TEXTURE, METAVERSE.COLOR_PLAYER_SELF)
+    this.createPlayerTexture(OTHER_TEXTURE, METAVERSE.COLOR_PLAYER_OTHER)
 
     // 스폰: 런던 중앙 광장 (Wembley 앞)
     const spawnX = pinToWorldX(51)
     const spawnY = pinToWorldY(70)
-    this.player = this.physics.add.sprite(spawnX, spawnY, textureKey)
+    this.player = this.physics.add.sprite(spawnX, spawnY, SELF_TEXTURE)
     this.player.setCollideWorldBounds(true)
 
-    // 닉네임 태그
     this.nameTag = this.add
       .text(
         this.player.x,
@@ -91,7 +84,7 @@ export class WorldMapScene extends Phaser.Scene {
         }
       )
       .setOrigin(0.5, 1)
-      .setDepth(10)
+      .setDepth(20)
 
     // 입력
     this.cursors = this.input.keyboard!.createCursorKeys()
@@ -100,13 +93,25 @@ export class WorldMapScene extends Phaser.Scene {
       Phaser.Input.Keyboard.Key
     >
 
-    // 카메라 follow
+    // 카메라
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
     this.cameras.main.setZoom(1)
+
+    // Realtime 구독
+    if (this.channel) {
+      this.channel.setInitialPosition(this.player.x, this.player.y)
+      this.unsubRemote = this.channel.onRemotePlayersChange((remote) =>
+        this.syncRemotePlayers(remote)
+      )
+    }
+
+    // 씬 종료 시 정리
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown())
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown())
   }
 
-  update() {
+  update(_time: number, deltaMs: number) {
     if (!this.player) return
 
     const { PLAYER_SPEED } = METAVERSE
@@ -123,20 +128,78 @@ export class WorldMapScene extends Phaser.Scene {
     if (up) body.setVelocityY(-PLAYER_SPEED)
     else if (down) body.setVelocityY(PLAYER_SPEED)
 
-    // 대각선 속도 정규화
     body.velocity.normalize().scale(PLAYER_SPEED)
 
-    // 닉네임 태그 따라다니기
+    // 방향 업데이트 (마지막으로 눌린 수평 > 수직 우선. 정지 시 lastDirection 유지)
+    if (left) this.lastDirection = "left"
+    else if (right) this.lastDirection = "right"
+    else if (up) this.lastDirection = "up"
+    else if (down) this.lastDirection = "down"
+
+    const isMoving = body.velocity.length() > 1
+
+    // 닉네임 태그 follow
     this.nameTag.setPosition(this.player.x, this.player.y + METAVERSE.PLAYER_NAMETAG_OFFSET_Y)
+
+    // Realtime publish (throttle는 채널 내부에서 처리)
+    if (this.channel) {
+      this.channel.publishPosition(this.player.x, this.player.y, this.lastDirection, isMoving)
+    }
+
+    // 원격 플레이어 보간
+    for (const avatar of this.remotePlayers.values()) {
+      avatar.update(deltaMs)
+    }
   }
 
   // ============================================================
-  // Placeholder 지형/광장 그리기 — 실제 에셋 나오면 제거/대체
+  // Realtime sync
   // ============================================================
 
+  private syncRemotePlayers(remote: Map<string, RemotePlayerState>) {
+    // 추가/업데이트
+    for (const [userId, state] of remote) {
+      let avatar = this.remotePlayers.get(userId)
+      if (!avatar) {
+        avatar = new RemoteAvatar(this, state, OTHER_TEXTURE)
+        this.remotePlayers.set(userId, avatar)
+      } else {
+        avatar.setTarget(state.x, state.y, state.direction, state.nickname)
+      }
+    }
+    // 떠난 유저 제거
+    for (const [userId, avatar] of this.remotePlayers) {
+      if (!remote.has(userId)) {
+        avatar.destroy()
+        this.remotePlayers.delete(userId)
+      }
+    }
+  }
+
+  private teardown() {
+    this.unsubRemote?.()
+    this.unsubRemote = null
+    for (const avatar of this.remotePlayers.values()) avatar.destroy()
+    this.remotePlayers.clear()
+  }
+
+  // ============================================================
+  // Placeholder rendering helpers
+  // ============================================================
+
+  private createPlayerTexture(key: string, color: number) {
+    if (this.textures.exists(key)) return
+    const { PLAYER_SIZE } = METAVERSE
+    const g = this.add.graphics()
+    g.fillStyle(color, 1)
+    g.fillRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
+    g.lineStyle(2, 0xffffff, 1)
+    g.strokeRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
+    g.generateTexture(key, PLAYER_SIZE, PLAYER_SIZE)
+    g.destroy()
+  }
+
   private drawLandPlaceholder(color: number) {
-    // UK 대략 실루엣: 본섬 (남동~북서) + 스코틀랜드 + 웨일스 돌출
-    // pin 좌표계 (0~100) 기준, 실제 UK 지리와 대강 일치
     const shapes = [
       { x: 32, y: 20, w: 26, h: 40 }, // 스코틀랜드
       { x: 28, y: 35, w: 32, h: 30 }, // 잉글랜드 북부~중부
@@ -153,11 +216,7 @@ export class WorldMapScene extends Phaser.Scene {
   private drawPlazaMarker(name: string, pinX: number, pinY: number) {
     const x = pinToWorldX(pinX)
     const y = pinToWorldY(pinY)
-
-    // 광장 영역 표시 (반투명 원)
     this.add.circle(x, y, 80, 0xffd54f, 0.15).setStrokeStyle(2, 0xffd54f, 0.5)
-
-    // 라벨
     this.add
       .text(x, y - 90, name, {
         fontFamily: "sans-serif",
@@ -168,5 +227,51 @@ export class WorldMapScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0.5)
       .setDepth(5)
+  }
+}
+
+// ============================================================
+// RemoteAvatar — 원격 유저 한 명 (스프라이트 + 닉네임) + 타겟 보간
+// ============================================================
+
+class RemoteAvatar {
+  private readonly sprite: Phaser.GameObjects.Image
+  private readonly nameTag: Phaser.GameObjects.Text
+  private targetX: number
+  private targetY: number
+
+  constructor(scene: Phaser.Scene, state: RemotePlayerState, textureKey: string) {
+    this.sprite = scene.add.image(state.x, state.y, textureKey).setDepth(10)
+    this.nameTag = scene.add
+      .text(state.x, state.y + METAVERSE.PLAYER_NAMETAG_OFFSET_Y, state.nickname, {
+        fontFamily: "sans-serif",
+        fontSize: "12px",
+        color: "#ffffff",
+        backgroundColor: "#00000088",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(11)
+    this.targetX = state.x
+    this.targetY = state.y
+  }
+
+  setTarget(x: number, y: number, _direction: Direction, nickname: string) {
+    this.targetX = x
+    this.targetY = y
+    if (this.nameTag.text !== nickname) this.nameTag.setText(nickname)
+  }
+
+  update(deltaMs: number) {
+    // 지수 smoothing — half-life 기반, 프레임 속도 독립
+    const alpha = 1 - Math.pow(0.5, deltaMs / REMOTE_LERP_HALF_LIFE_MS)
+    this.sprite.x += (this.targetX - this.sprite.x) * alpha
+    this.sprite.y += (this.targetY - this.sprite.y) * alpha
+    this.nameTag.setPosition(this.sprite.x, this.sprite.y + METAVERSE.PLAYER_NAMETAG_OFFSET_Y)
+  }
+
+  destroy() {
+    this.sprite.destroy()
+    this.nameTag.destroy()
   }
 }
