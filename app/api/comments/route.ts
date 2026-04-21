@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
+import { awardFlairKarma } from "@/lib/metaverse/karma-award"
 import { z } from "zod"
 
 const CommentCreateSchema = z
@@ -167,11 +168,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 포인트 적립 (비동기, 실패 무시) — 게시글의 community_slug를 조회해서 적립
-    Promise.resolve(supabase.from("posts").select("community_slug").eq("id", post_id).single())
+    // 포인트 적립 (비동기, 실패 무시) — 게시글의 community_slug + 팀 플레어 조회해서
+    // 보드 포인트와 팀 카르마를 한 번의 lookup 으로 둘 다 적립.
+    Promise.resolve(
+      supabase
+        .from("posts")
+        .select("community_slug, flair_team_id, user_id")
+        .eq("id", post_id)
+        .single()
+    )
       .then(({ data: postForPoints }) => {
-        if (postForPoints?.community_slug) {
-          return awardPoints(
+        if (!postForPoints) return
+        // 보드 포인트
+        if (postForPoints.community_slug) {
+          awardPoints(
             supabase,
             userId,
             postForPoints.community_slug,
@@ -179,10 +189,16 @@ export async function POST(request: NextRequest) {
             "comment",
             "댓글 작성",
             String(comment.id)
+          ).catch((err: unknown) => console.error("Failed to award points for comment:", err))
+        }
+        // 팀 카르마 — 부모 글이 팀 플레어 달려있고, 자신의 글에 본인이 단 댓글이 아닐 때만
+        if (postForPoints.flair_team_id && postForPoints.user_id !== userId) {
+          awardFlairKarma(supabase, userId, postForPoints.flair_team_id, "comment").catch((err) =>
+            console.error("Failed to award flair karma for comment:", err)
           )
         }
       })
-      .catch((err: unknown) => console.error("Failed to award points for comment:", err))
+      .catch((err: unknown) => console.error("Failed to lookup post for points/karma:", err))
 
     // 알림 생성 (비동기로 처리, 실패해도 무시)
     Promise.resolve(supabase.from("posts").select("user_id").eq("id", post_id).single())

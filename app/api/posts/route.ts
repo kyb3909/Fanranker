@@ -6,6 +6,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
+import { awardFlairKarma } from "@/lib/metaverse/karma-award"
 import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { z } from "zod"
@@ -32,6 +33,8 @@ const PostCreateSchema = z.object({
     ),
   image: z.string().nullable().optional(),
   flair_id: z.string().uuid().nullable().optional(),
+  // 팀 플레어 (선택) — 메타버스 카르마 적립 대상. team_map_pins.team_id 참조.
+  flair_team_id: z.string().min(1).max(64).nullable().optional(),
 })
 
 /**
@@ -233,7 +236,14 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return apiBadRequest(result.error.issues[0]?.message || "잘못된 입력입니다.")
     }
-    const { community_slug, title, content: rawContent, image, flair_id } = result.data
+    const {
+      community_slug,
+      title,
+      content: rawContent,
+      image,
+      flair_id,
+      flair_team_id,
+    } = result.data
 
     // TipTap JSON sanitization — 저장 전 노드/속성 whitelist (저장형 XSS 방지)
     const content = sanitizeTipTapJSON(rawContent)
@@ -264,6 +274,7 @@ export async function POST(request: NextRequest) {
         content, // TipTap JSON
         image: imageUrl,
         flair_id: flair_id || null,
+        flair_team_id: flair_team_id || null,
       })
       .select()
       .single()
@@ -283,6 +294,13 @@ export async function POST(request: NextRequest) {
       "글 작성",
       String(data.id)
     ).catch((err: unknown) => console.error("Failed to award points for post:", err))
+
+    // 팀 플레어 카르마 적립 (메타버스) — 팀이 지정된 글만. 비동기, 실패 무시.
+    if (flair_team_id) {
+      awardFlairKarma(supabase, userId, flair_team_id, "post").catch((err) =>
+        console.error("Failed to award flair karma for post:", err)
+      )
+    }
 
     // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
     Promise.resolve(
