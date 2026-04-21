@@ -11,6 +11,9 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity, RoomChatMessage } from "@/lib/metaverse/types"
+import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/auth"
+
+const TOUCH_THROTTLE_MS = 60_000 // 방 last_activity_at 서버 갱신 1분 throttle
 
 interface RoomPresencePayload {
   userId: string
@@ -27,6 +30,7 @@ export class RoomChannel {
   readonly roomId: string
   private readonly presenceListeners = new Set<PresenceChangeCallback>()
   private readonly chatListeners = new Set<ChatCallback>()
+  private lastTouchAt = 0
 
   constructor(supabase: SupabaseClient, identity: MetaversePlayerIdentity, roomId: string) {
     this.supabase = supabase
@@ -90,6 +94,26 @@ export class RoomChannel {
     }
     void this.channel.send({ type: "broadcast", event: "chat:room", payload: msg })
     for (const cb of this.chatListeners) cb(msg) // self dispatch
+    void this.touchIfNeeded()
+  }
+
+  /** 방 수명 연장 — chat 전송 시 서버에 last_activity_at 갱신 신호. 1분 throttle. */
+  private async touchIfNeeded(): Promise<void> {
+    const now = Date.now()
+    if (now - this.lastTouchAt < TOUCH_THROTTLE_MS) return
+    this.lastTouchAt = now
+    try {
+      const headers: HeadersInit = {}
+      if (this.identity.userId.startsWith("guest-")) {
+        headers[METAVERSE_GUEST_HEADER] = this.identity.userId
+      }
+      await fetch(`/api/metaverse/chat-rooms/${this.roomId}/touch`, {
+        method: "POST",
+        headers,
+      })
+    } catch {
+      /* 네트워크 실패 무시 — 다음 throttle 창에서 재시도 */
+    }
   }
 
   onChatMessage(cb: ChatCallback): () => void {
