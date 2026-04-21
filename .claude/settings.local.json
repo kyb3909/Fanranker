@@ -82,7 +82,28 @@
       "Bash(npx next:*)",
       "Bash(xargs basename:*)",
       "Bash(rm -rf public/map/craftpix/PSD/)",
-      "Bash(rm -f \"public/map/craftpix/Free Assets Craftpix!.url\")"
+      "Bash(rm -f \"public/map/craftpix/Free Assets Craftpix!.url\")",
+      "Bash(pnpm lint *)",
+      "Read(//c/Users/user/AppData/Local/Temp/claude/D--Projects------adding-test--community/45c03840-0ecf-4f34-befe-9982276e7004/tasks/**)",
+      "Bash(sort -k5 -n -r)",
+      "Bash(/c/Users/user/AppData/Local/Programs/Python/Python313/python .gstack/benchmark-reports/analyze-dups.py)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm vitest *)",
+      "Bash(pnpm test *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(pnpm tsc *)",
+      "Bash(git reset *)",
+      "Bash(pnpm add *)",
+      "Bash(gzip -c .next/static/css/bd71cad2a204c27c.css)",
+      "Bash(git push *)",
+      "Bash(pnpm playwright *)",
+      "Bash(BASE_URL=http://localhost:3000 pnpm playwright test e2e/api-smoke.spec.ts --project=chromium --reporter=line --grep \"/api/posts\")",
+      "Bash(BASE_URL=http://localhost:3000 pnpm playwright test e2e/api-smoke.spec.ts --project=chromium --reporter=line -g \"피드 목록\")",
+      "Bash(BASE_URL=http://localhost:3000 pnpm playwright test e2e/api-smoke.spec.ts --project=chromium --reporter=line)",
+      "Bash(timeout 5 openssl s_client -servername gongnori.fan -connect gongnori.fan:443)",
+      "Bash(openssl x509 *)",
+      "Skill(investigate)",
+      "Bash(pnpm exec *)"
     ]
   }
 }
