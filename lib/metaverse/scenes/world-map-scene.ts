@@ -23,6 +23,7 @@ import type {
   ChatRoomMeta,
 } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
+import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { ChatBubble } from "./chat-bubble"
 import { PlotMarker, Signboard } from "./plot-marker"
@@ -53,6 +54,13 @@ export class WorldMapScene extends Phaser.Scene {
   private unsubBridgeClose: (() => void) | null = null
   private unsubBridgeRoomCreated: (() => void) | null = null
   private unsubBridgeRoomClosed: (() => void) | null = null
+  private unsubBridgeRoomAttach: (() => void) | null = null
+  private unsubBridgeRoomDetach: (() => void) | null = null
+  private unsubBridgeChatSend: (() => void) | null = null
+  private unsubRoomChat: (() => void) | null = null
+
+  /** 활성 방 채널 (Plot 진입 시 attach, 이탈 시 detach) */
+  private currentRoomChannel: RoomChannel | null = null
 
   // Plot + Signboard (Phase 3)
   private plots: WorldPlot[] = []
@@ -164,6 +172,22 @@ export class WorldMapScene extends Phaser.Scene {
     })
     this.unsubBridgeRoomClosed = sceneBridge.on("room:closed", (payload) => {
       if (payload) this.removeSignboard(payload.plotId)
+    })
+
+    // 방 채널 attach/detach — Plot 진입 시 PhaserCanvas가 생성 후 알림
+    this.unsubBridgeRoomAttach = sceneBridge.on("room:channel:attach", (payload) => {
+      if (!payload) return
+      this.attachRoomChannel(payload.channel)
+    })
+    this.unsubBridgeRoomDetach = sceneBridge.on("room:channel:detach", () => {
+      this.detachRoomChannel()
+    })
+
+    // UI → scene: 채팅 전송 요청을 받아 적절한 채널로 라우팅
+    this.unsubBridgeChatSend = sceneBridge.on("chat:send", (payload) => {
+      if (!payload?.text) return
+      const target: WorldChannel | RoomChannel | null = this.currentRoomChannel ?? this.channel
+      target?.publishChat(payload.text)
     })
 
     // 씬 종료 시 정리
@@ -286,6 +310,22 @@ export class WorldMapScene extends Phaser.Scene {
     }
   }
 
+  private attachRoomChannel(channel: RoomChannel) {
+    // 기존 room 있으면 정리 후 교체
+    this.detachRoomChannel()
+    this.currentRoomChannel = channel
+    this.unsubRoomChat = channel.onChatMessage((msg) => {
+      // 방 메시지는 proximity 필터 없이 sender 아바타 위에 바로 표시
+      this.showChatBubble(msg.userId, msg.text)
+    })
+  }
+
+  private detachRoomChannel() {
+    this.unsubRoomChat?.()
+    this.unsubRoomChat = null
+    this.currentRoomChannel = null
+  }
+
   private teardown() {
     this.unsubRemote?.()
     this.unsubChat?.()
@@ -293,12 +333,21 @@ export class WorldMapScene extends Phaser.Scene {
     this.unsubBridgeClose?.()
     this.unsubBridgeRoomCreated?.()
     this.unsubBridgeRoomClosed?.()
+    this.unsubBridgeRoomAttach?.()
+    this.unsubBridgeRoomDetach?.()
+    this.unsubBridgeChatSend?.()
+    this.unsubRoomChat?.()
     this.unsubRemote = null
     this.unsubChat = null
     this.unsubBridgeOpen = null
     this.unsubBridgeClose = null
     this.unsubBridgeRoomCreated = null
     this.unsubBridgeRoomClosed = null
+    this.unsubBridgeRoomAttach = null
+    this.unsubBridgeRoomDetach = null
+    this.unsubBridgeChatSend = null
+    this.unsubRoomChat = null
+    this.currentRoomChannel = null
     for (const avatar of this.remotePlayers.values()) avatar.destroy()
     this.remotePlayers.clear()
     for (const bubble of this.chatBubbles.values()) bubble.destroy()

@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react"
 import { createAnonClient } from "@/lib/supabase/client"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
+import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 import { ChatOverlay } from "./chat-overlay"
 import { ActivityBalanceHud, refreshActivityBalance } from "./activity-balance-hud"
 import { PlotActionOverlay } from "./plot-action-overlay"
@@ -23,6 +24,7 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
   const parentRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
   const channelRef = useRef<WorldChannel | null>(null)
+  const roomChannelRef = useRef<RoomChannel | null>(null)
   const [channel, setChannel] = useState<WorldChannel | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<"loading" | "ready">("loading")
@@ -83,6 +85,62 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       gameRef.current = null
       channelRef.current?.disconnect().catch(() => {})
       channelRef.current = null
+      roomChannelRef.current?.disconnect().catch(() => {})
+      roomChannelRef.current = null
+    }
+  }, [identity])
+
+  // Plot 진입/이탈에 따라 방 채널 자동 연결/해제.
+  // 씬은 sceneBridge room:channel:attach/detach 이벤트로 상태 동기화.
+  useEffect(() => {
+    let cancelled = false
+
+    const detachIfAny = async () => {
+      const prev = roomChannelRef.current
+      if (prev) {
+        roomChannelRef.current = null
+        sceneBridge.emit("room:channel:detach")
+        await prev.disconnect().catch(() => {})
+      }
+    }
+
+    const unsubEnter = sceneBridge.on("plot:enter", (detail) => {
+      if (!detail?.roomId) {
+        void detachIfAny()
+        return
+      }
+      // 이미 동일 room에 연결되어있으면 스킵
+      if (roomChannelRef.current?.roomId === detail.roomId) return
+
+      void (async () => {
+        await detachIfAny()
+        if (cancelled) return
+        try {
+          const { RoomChannel } = await import("@/lib/metaverse/realtime/room-channel")
+          const supabase = createAnonClient()
+          const rc = new RoomChannel(supabase, identity, detail.roomId!)
+          await rc.connect()
+          if (cancelled) {
+            await rc.disconnect().catch(() => {})
+            return
+          }
+          roomChannelRef.current = rc
+          sceneBridge.emit("room:channel:attach", { channel: rc })
+        } catch (err) {
+          console.warn("[metaverse] room channel connect failed", err)
+        }
+      })()
+    })
+
+    const unsubLeave = sceneBridge.on("plot:leave", () => {
+      void detachIfAny()
+    })
+
+    return () => {
+      cancelled = true
+      unsubEnter()
+      unsubLeave()
+      void detachIfAny()
     }
   }, [identity])
 
@@ -136,8 +194,8 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           setCreateRoomCtx(null)
         }}
       />
-      {/* 하단 채팅 오버레이 */}
-      <ChatOverlay channel={channel} />
+      {/* 하단 채팅 오버레이 — 씬이 world/room 채널 라우팅 */}
+      <ChatOverlay canSend={!!channel} />
     </div>
   )
 }

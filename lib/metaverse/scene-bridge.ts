@@ -4,9 +4,11 @@
  * Phaser 씬은 global EventTarget을 통해 React UI 상태 변화를 구독.
  * (React → Phaser: chat 입력창 open/close 등)
  *
- * 역방향은 이 브리지를 쓰지 않음 — Phaser가 이벤트 발생시킬 필요 있으면
- * WorldChannel 콜백 또는 props/ref로 충분.
+ * 역방향은 Phaser → React: Plot 진입/이탈 같은 반응성 이벤트.
+ * 클래스 인스턴스(RoomChannel)도 detail에 담아 전달 가능.
  */
+
+import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 
 type BridgeEventMap = {
   "chat:input:open": undefined
@@ -26,6 +28,12 @@ type BridgeEventMap = {
   }
   /** 방 닫힘 → Signboard 제거 (Phase 3.4+) */
   "room:closed": { plotId: string }
+  /** Plot 진입으로 방 채널이 활성화됨 → 씬은 publish 타겟을 전환 + 방 메시지 구독 */
+  "room:channel:attach": { channel: RoomChannel }
+  /** Plot 이탈 → 방 채널 해제 */
+  "room:channel:detach": undefined
+  /** UI가 채팅 전송 요청. 씬이 라우팅 (room 있으면 room, 없으면 world) */
+  "chat:send": { text: string }
 }
 
 class MetaverseSceneBridge extends EventTarget {

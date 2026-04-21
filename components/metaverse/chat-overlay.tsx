@@ -15,11 +15,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
-import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 
 const COOLDOWN_MS = METAVERSE.BUBBLE_COOLDOWN_MS
 
-export function ChatOverlay({ channel }: { channel: WorldChannel | null }) {
+/**
+ * 전송 버튼이 비활성화되려면 채널이 하나도 없는 경우인데, 현재 연결 상태는
+ * 씬이 판정하므로 UI는 단순히 텍스트만 bridge로 보낸다.
+ * 씬에서 room > world 순으로 라우팅.
+ */
+export function ChatOverlay({ canSend = true }: { canSend?: boolean }) {
   const [isOpen, setIsOpen] = useState(false)
   const [text, setText] = useState("")
   const [cooldownUntil, setCooldownUntil] = useState(0)
@@ -45,15 +49,17 @@ export function ChatOverlay({ channel }: { channel: WorldChannel | null }) {
     }
     const now = Date.now()
     if (now < cooldownUntil) return
-    if (!channel) {
+    if (!canSend) {
       close()
       return
     }
-    channel.publishChat(trimmed.slice(0, METAVERSE.BUBBLE_MAX_CHARS))
+    sceneBridge.emit("chat:send", {
+      text: trimmed.slice(0, METAVERSE.BUBBLE_MAX_CHARS),
+    })
     setCooldownUntil(now + COOLDOWN_MS)
     setText("")
     close()
-  }, [text, cooldownUntil, channel, close])
+  }, [text, cooldownUntil, canSend, close])
 
   // 전역 Enter/Escape 리스너 — 입력창 닫혀있을 때만
   useEffect(() => {
