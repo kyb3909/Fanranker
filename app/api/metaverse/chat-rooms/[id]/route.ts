@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { resolveMetaverseUser } from "@/lib/metaverse/auth"
+import { broadcastRoomClosed } from "@/lib/metaverse/realtime/server-broadcast"
 
 /**
  * DELETE /api/metaverse/chat-rooms/[id]
@@ -33,6 +34,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     // 없거나, 본인 방이 아니거나, 이미 닫힌 방
     return NextResponse.json({ error: "not_found_or_forbidden" }, { status: 404 })
   }
+
+  // 다른 접속자에게 실시간 알림 (best-effort)
+  void broadcastRoomClosed(data.plot_id)
 
   return NextResponse.json({ success: true, plotId: data.plot_id })
 }

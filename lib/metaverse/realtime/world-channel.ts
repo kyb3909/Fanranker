@@ -12,6 +12,7 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type {
+  ChatRoomMeta,
   MetaversePlayerIdentity,
   RemotePlayerState,
   Direction,
@@ -30,6 +31,8 @@ interface PresencePayload {
 
 type RemoteChangeCallback = (remotePlayers: Map<string, RemotePlayerState>) => void
 type ChatCallback = (msg: WorldChatMessage) => void
+type RoomCreatedCallback = (room: ChatRoomMeta) => void
+type RoomClosedCallback = (payload: { plotId: string }) => void
 
 export class WorldChannel {
   private channel: RealtimeChannel | null = null
@@ -45,6 +48,8 @@ export class WorldChannel {
   }
   private readonly remoteListeners = new Set<RemoteChangeCallback>()
   private readonly chatListeners = new Set<ChatCallback>()
+  private readonly roomCreatedListeners = new Set<RoomCreatedCallback>()
+  private readonly roomClosedListeners = new Set<RoomClosedCallback>()
 
   constructor(supabase: SupabaseClient, identity: MetaversePlayerIdentity) {
     this.supabase = supabase
@@ -71,6 +76,16 @@ export class WorldChannel {
     this.channel.on("broadcast", { event: "chat:world" }, ({ payload }) => {
       const msg = payload as WorldChatMessage
       for (const cb of this.chatListeners) cb(msg)
+    })
+
+    // 서버측 방 생성/닫힘 이벤트 수신 → 씬이 Signboard 동기화
+    this.channel.on("broadcast", { event: "room:created" }, ({ payload }) => {
+      const room = payload as ChatRoomMeta
+      for (const cb of this.roomCreatedListeners) cb(room)
+    })
+    this.channel.on("broadcast", { event: "room:closed" }, ({ payload }) => {
+      const p = payload as { plotId: string }
+      for (const cb of this.roomClosedListeners) cb(p)
     })
 
     await new Promise<void>((resolve, reject) => {
@@ -100,6 +115,8 @@ export class WorldChannel {
     this.channel = null
     this.remoteListeners.clear()
     this.chatListeners.clear()
+    this.roomCreatedListeners.clear()
+    this.roomClosedListeners.clear()
   }
 
   /** 내 위치 업데이트 — throttle 적용. Phaser update()에서 매 프레임 호출해도 안전. */
@@ -161,6 +178,20 @@ export class WorldChannel {
     this.chatListeners.add(cb)
     return () => {
       this.chatListeners.delete(cb)
+    }
+  }
+
+  onRoomCreated(cb: RoomCreatedCallback): () => void {
+    this.roomCreatedListeners.add(cb)
+    return () => {
+      this.roomCreatedListeners.delete(cb)
+    }
+  }
+
+  onRoomClosed(cb: RoomClosedCallback): () => void {
+    this.roomClosedListeners.add(cb)
+    return () => {
+      this.roomClosedListeners.delete(cb)
     }
   }
 

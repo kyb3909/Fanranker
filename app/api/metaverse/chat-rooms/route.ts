@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { resolveMetaverseUser } from "@/lib/metaverse/auth"
+import { broadcastRoomCreated } from "@/lib/metaverse/realtime/server-broadcast"
 
 const SIGN_TEXT_MAX = 20
 const DEFAULT_COST = 100
@@ -74,18 +75,25 @@ export async function POST(req: Request) {
     .eq("id", result.room_id!)
     .maybeSingle()
 
+  const roomMeta = room
+    ? {
+        id: room.id,
+        plotId: room.plot_id,
+        ownerUserId: room.owner_user_id,
+        signText: room.sign_text,
+        createdAt: room.created_at,
+        lastActivityAt: room.last_activity_at,
+      }
+    : undefined
+
+  // 다른 접속자에게 실시간 알림 (best-effort)
+  if (roomMeta) {
+    void broadcastRoomCreated(roomMeta)
+  }
+
   return NextResponse.json({
     success: true,
     newBalance: result.new_balance,
-    room: room
-      ? {
-          id: room.id,
-          plotId: room.plot_id,
-          ownerUserId: room.owner_user_id,
-          signText: room.sign_text,
-          createdAt: room.created_at,
-          lastActivityAt: room.last_activity_at,
-        }
-      : undefined,
+    room: roomMeta,
   })
 }

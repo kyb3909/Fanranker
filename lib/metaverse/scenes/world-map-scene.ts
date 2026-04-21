@@ -50,6 +50,8 @@ export class WorldMapScene extends Phaser.Scene {
   private isChatInputOpen = false
   private unsubRemote: (() => void) | null = null
   private unsubChat: (() => void) | null = null
+  private unsubWorldRoomCreated: (() => void) | null = null
+  private unsubWorldRoomClosed: (() => void) | null = null
   private unsubBridgeOpen: (() => void) | null = null
   private unsubBridgeClose: (() => void) | null = null
   private unsubBridgeRoomCreated: (() => void) | null = null
@@ -148,6 +150,14 @@ export class WorldMapScene extends Phaser.Scene {
         this.syncRemotePlayers(remote)
       )
       this.unsubChat = this.channel.onChatMessage((msg) => this.handleChatMessage(msg))
+
+      // 다른 유저가 방 개설/close 시 Signboard 실시간 동기화
+      this.unsubWorldRoomCreated = this.channel.onRoomCreated((room) => {
+        this.addSignboard(room)
+      })
+      this.unsubWorldRoomClosed = this.channel.onRoomClosed(({ plotId }) => {
+        this.removeSignboard(plotId)
+      })
     }
 
     // React UI로부터 chat 입력 open/close 상태 받기
@@ -329,6 +339,8 @@ export class WorldMapScene extends Phaser.Scene {
   private teardown() {
     this.unsubRemote?.()
     this.unsubChat?.()
+    this.unsubWorldRoomCreated?.()
+    this.unsubWorldRoomClosed?.()
     this.unsubBridgeOpen?.()
     this.unsubBridgeClose?.()
     this.unsubBridgeRoomCreated?.()
@@ -339,6 +351,8 @@ export class WorldMapScene extends Phaser.Scene {
     this.unsubRoomChat?.()
     this.unsubRemote = null
     this.unsubChat = null
+    this.unsubWorldRoomCreated = null
+    this.unsubWorldRoomClosed = null
     this.unsubBridgeOpen = null
     this.unsubBridgeClose = null
     this.unsubBridgeRoomCreated = null
@@ -400,6 +414,20 @@ export class WorldMapScene extends Phaser.Scene {
     if (sign) {
       sign.destroy()
       this.signboards.delete(plotId)
+    }
+
+    // 지금 내가 이 Plot 위에 서있는데 방이 사라진 경우 → plot:enter 를 roomId 없이
+    // 재방출해서 방 채널을 detach 하도록 강제.
+    if (this.currentPlotId === plotId) {
+      const plot = this.plots.find((p) => p.id === plotId)
+      if (plot) {
+        sceneBridge.emit("plot:enter", {
+          plotId: plot.id,
+          plotCode: plot.plotCode,
+          plazaName: plot.plazaName,
+          roomId: undefined,
+        })
+      }
     }
   }
 
