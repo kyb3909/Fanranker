@@ -1,0 +1,65 @@
+/**
+ * 메타버스 공용 상수.
+ *
+ * 좌표계 주의:
+ * - DB(team_map_pins, metaverse_world_plots)는 0~100 정규화 좌표
+ * - Phaser 월드는 픽셀 좌표 (WORLD_WIDTH × WORLD_HEIGHT)
+ * - 변환: pxX = pinX * (WORLD_WIDTH / 100)
+ */
+
+export const METAVERSE = {
+  // Phaser 월드 사이즈 — UK 맵 비율 대략 3:4 (남북으로 길쭉)
+  WORLD_WIDTH: 1920,
+  WORLD_HEIGHT: 2560,
+
+  // 타일
+  TILE_SIZE: 16,
+
+  // 플레이어
+  PLAYER_SIZE: 32,
+  PLAYER_SPEED: 180, // px/s
+  PLAYER_NAMETAG_OFFSET_Y: -26,
+
+  // 말풍선
+  BUBBLE_MAX_CHARS: 40,
+  BUBBLE_DURATION_MS: 5000,
+  BUBBLE_COOLDOWN_MS: 2000,
+  BUBBLE_PROXIMITY_PX: 400,
+
+  // 위치 동기화
+  POSITION_THROTTLE_MS: 200,
+
+  // 광장 Plot 타일 기반 크기 (DB width_units × TILE_SIZE)
+  DEFAULT_PLOT_WIDTH_PX: 6 * 16, // 96
+  DEFAULT_PLOT_HEIGHT_PX: 6 * 16,
+
+  // Realtime 채널 prefix
+  CHANNEL_WORLD: "metaverse:world",
+  CHANNEL_CHAT_ROOM_PREFIX: "metaverse:chat:",
+  CHANNEL_STADIUM_PREFIX: "metaverse:stadium:",
+
+  // 색상 (placeholder — 에셋 교체 시 제거)
+  COLOR_BG: 0x1a1f2e, // 야간 다크 블루 (placeholder UK 맵 배경)
+  COLOR_LAND: 0x2e3a2a, // 녹지 placeholder
+  COLOR_WATER: 0x15243a, // 바다 placeholder
+  COLOR_PLAYER_SELF: 0x6cabdd, // 자신
+  COLOR_PLAYER_OTHER: 0xaaaaaa, // 원격 유저
+} as const
+
+/** 0~100 정규화 → 월드 픽셀 변환 */
+export function pinToWorldX(pinX: number): number {
+  return (pinX / 100) * METAVERSE.WORLD_WIDTH
+}
+
+export function pinToWorldY(pinY: number): number {
+  return (pinY / 100) * METAVERSE.WORLD_HEIGHT
+}
+
+/** 월드 픽셀 → 0~100 정규화 변환 (디버그/저장용) */
+export function worldToPinX(worldX: number): number {
+  return (worldX / METAVERSE.WORLD_WIDTH) * 100
+}
+
+export function worldToPinY(worldY: number): number {
+  return (worldY / METAVERSE.WORLD_HEIGHT) * 100
+}
