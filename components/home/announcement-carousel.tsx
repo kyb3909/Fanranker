@@ -31,7 +31,8 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
     fallbackData: initialBanners ? { banners: initialBanners as Banner[] } : undefined,
   })
 
-  const banners = data?.banners ?? []
+  // 최대 3개까지만 노출 (운영 정책 — API도 같은 제한을 걸지만 이중 방어).
+  const banners = (data?.banners ?? []).slice(0, 3)
 
   useEffect(() => {
     const until = localStorage.getItem(STORAGE_KEY)
@@ -73,8 +74,10 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
   const next = () => goTo((current + 1) % banners.length)
 
   const dismiss = () => {
-    const oneWeek = 7 * 24 * 60 * 60 * 1000
-    localStorage.setItem(STORAGE_KEY, String(Date.now() + oneWeek))
+    // 당일 자정(익일 00:00 KST — 클라이언트 로컬 타임존 상정)까지 숨김.
+    const midnight = new Date()
+    midnight.setHours(24, 0, 0, 0)
+    localStorage.setItem(STORAGE_KEY, String(midnight.getTime()))
     setDismissed(true)
   }
 
@@ -136,10 +139,10 @@ export function AnnouncementCarousel({ initialBanners }: { initialBanners?: unkn
           dismiss()
         }}
         className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1.5 text-[12px] text-white/90 backdrop-blur-sm transition-colors hover:bg-black/50"
-        aria-label="일주일간 안보기"
+        aria-label="오늘 하루 보지 않기"
       >
         <X className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">일주일간 안보기</span>
+        <span className="hidden sm:inline">오늘 하루 보지 않기</span>
       </button>
 
       {/* 네비게이션 (2개 이상일 때만) */}

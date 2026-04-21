@@ -17,7 +17,7 @@ async function fetchAllHomeData() {
   const supabase = createAnonClient()
 
   // 모든 데이터를 병렬로 가져오기
-  const [feedResult, categoriesResult, recentCommentsResult, bannersResult] = await Promise.all([
+  const [feedResult, categoriesResult, recentCommentsResult] = await Promise.all([
     // 1) 메인 피드
     (async (): Promise<PostsResponse> => {
       try {
@@ -77,25 +77,12 @@ async function fetchAllHomeData() {
     )
       .then(({ data }) => data ?? [])
       .catch(() => [] as unknown[]),
-
-    // 4) 배너
-    Promise.resolve(
-      supabase
-        .from("banners")
-        .select("id, title, description, link_url, image_url, is_active, priority")
-        .eq("is_active", true)
-        .order("priority", { ascending: false })
-        .limit(5)
-    )
-      .then(({ data }) => data ?? [])
-      .catch(() => [] as unknown[]),
   ])
 
   return {
     initialFeed: feedResult,
     initialCategories: categoriesResult,
     initialRecentComments: recentCommentsResult,
-    initialBanners: bannersResult,
   }
 }
 
@@ -112,7 +99,6 @@ export default async function Home({
         initialFeed={homeData.initialFeed}
         initialCategories={homeData.initialCategories}
         initialRecentComments={homeData.initialRecentComments}
-        initialBanners={homeData.initialBanners}
         isPredictionView={params.view === "prediction"}
         initialTab={params.tab === "content" ? "content" : "feed"}
       />

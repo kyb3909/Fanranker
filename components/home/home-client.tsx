@@ -28,13 +28,6 @@ const OnboardingBanner = dynamic(
   () => import("@/components/onboarding-banner").then((m) => ({ default: m.OnboardingBanner })),
   { ssr: false }
 )
-const AnnouncementCarousel = dynamic(
-  () =>
-    import("@/components/home/announcement-carousel").then((m) => ({
-      default: m.AnnouncementCarousel,
-    })),
-  { ssr: false }
-)
 const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
@@ -99,7 +92,6 @@ interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
-  initialBanners?: unknown[]
   isPredictionView: boolean
   initialTab?: TabType
 }
@@ -108,7 +100,6 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
-  initialBanners,
   isPredictionView,
   initialTab = "feed",
 }: HomeClientProps) {
@@ -183,8 +174,7 @@ export function HomeClient({
 
         {/* Main Content */}
         <div className="col-span-12 space-y-4 lg:col-span-6">
-          <AnnouncementCarousel initialBanners={initialBanners} />
-
+          {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
           {isPredictionView ? (
             <BettingPage />
           ) : (

@@ -13,6 +13,7 @@ export async function GET() {
     .select("id, title, description, image_url, link_url, gradient")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
+    .limit(3)
 
   if (error) {
     return NextResponse.json({ error: "배너를 불러올 수 없습니다." }, { status: 500 })
