@@ -103,7 +103,11 @@
       "Bash(timeout 5 openssl s_client -servername gongnori.fan -connect gongnori.fan:443)",
       "Bash(openssl x509 *)",
       "Skill(investigate)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "mcp__pixellab__list_characters",
+      "Bash(command -v supabase)",
+      "Bash(supabase --version)",
+      "Bash(pnpm ls *)"
     ]
   }
 }
