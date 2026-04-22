@@ -18,6 +18,7 @@ import { ChatOverlay } from "./chat-overlay"
 import { ActivityBalanceHud, refreshActivityBalance } from "./activity-balance-hud"
 import { PlotActionOverlay } from "./plot-action-overlay"
 import { CreateRoomModal, type CreateRoomContext } from "./create-room-modal"
+import { RoomDetailModal, type RoomDetailContext } from "./room-detail-modal"
 import { OnboardingHint } from "./onboarding-hint"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
@@ -31,6 +32,20 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<"loading" | "ready">("loading")
   const [createRoomCtx, setCreateRoomCtx] = useState<CreateRoomContext | null>(null)
+  const [roomDetailCtx, setRoomDetailCtx] = useState<RoomDetailContext | null>(null)
+  const [roomOccupantCount, setRoomOccupantCount] = useState(0)
+
+  // 방 접속자 수 추적 — RoomDetailModal 및 향후 HUD 확장 공용
+  useEffect(() => {
+    const unsub = sceneBridge.on("room:presence", (payload) => {
+      if (payload) setRoomOccupantCount(payload.count)
+    })
+    const unsubLeave = sceneBridge.on("plot:leave", () => setRoomOccupantCount(0))
+    return () => {
+      unsub()
+      unsubLeave()
+    }
+  }, [])
 
   useEffect(() => {
     if (!parentRef.current) return
@@ -195,8 +210,14 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           })
         }
         onEnterRoom={(ctx) => {
-          // 방 채널 구독은 이미 plot:enter에서 자동 (Phase 3.4) — "자세히" 버튼은 향후 방 정보 모달용 placeholder
-          console.log("[metaverse] room detail requested", ctx)
+          if (!ctx.roomId || !ctx.ownerUserId) return
+          setRoomDetailCtx({
+            roomId: ctx.roomId,
+            plotId: ctx.plotId,
+            plotCode: ctx.plotCode,
+            plazaName: ctx.plazaName,
+            ownerUserId: ctx.ownerUserId,
+          })
         }}
       />
       {/* 방 개설 모달 */}
@@ -209,6 +230,13 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           refreshActivityBalance()
           setCreateRoomCtx(null)
         }}
+      />
+      {/* 방 상세 모달 */}
+      <RoomDetailModal
+        context={roomDetailCtx}
+        identity={identity}
+        occupantCount={roomOccupantCount}
+        onClose={() => setRoomDetailCtx(null)}
       />
       {/* 하단 채팅 오버레이 — 씬이 world/room 채널 라우팅 */}
       <ChatOverlay canSend={!!channel} />
