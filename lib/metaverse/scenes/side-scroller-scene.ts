@@ -56,16 +56,33 @@ const SCENE_HEIGHT = 821
 const FLOOR_TOP_Y = 640
 const FLOOR_HEIGHT = SCENE_HEIGHT - FLOOR_TOP_Y
 
-// PixelLab 208×208 XL 프레임 → 0.5 스케일 = 104×104 디스플레이 (캐릭터 확대로
-// 사이드스크롤 에서 더 잘 보이게). 캐릭터 픽셀은 중앙 약 60×150 영역, 그 외는 투명.
+// PixelLab 208×208 XL 프레임 → 0.5 스케일 = 104×104 디스플레이.
+// PIL 로 실제 픽셀 bbox 측정한 값: 캐릭터는 x=86-120 (34 wide), y=60-158 (98 tall)
+// 에 그려져 있고 y=158 아래로 50px 투명 패딩이 있어 예전 offset 은 캐릭터가
+// floor 위 ~50px 떠있는 느낌이었음. 지금은 발끝이 body 바닥과 정확히 일치.
 const AVATAR_SCALE = 0.5
-const AVATAR_BODY_W = 60
-const AVATAR_BODY_H = 150
-// 208×208 프레임 내 body 좌상단 offset — 캐릭터 발끝이 프레임 하단에 닿도록
-const AVATAR_BODY_OFFSET_X = 74
-const AVATAR_BODY_OFFSET_Y = 54
+const AVATAR_BODY_W = 34
+const AVATAR_BODY_H = 98
+const AVATAR_BODY_OFFSET_X = 86
+const AVATAR_BODY_OFFSET_Y = 60
 // 시각 높이 (스케일 적용) — 닉네임/말풍선 오프셋 계산용
 const AVATAR_VISUAL_H = AVATAR_BODY_H * AVATAR_SCALE
+
+// 축구공 — 땅에 멈춰있다가 킥 입력 시 충전된 강도로 날아감.
+const BALL_TEXTURE = "ss-soccer-ball"
+const BALL_RADIUS = 10 // 디스플레이 반지름 (픽셀)
+const BALL_GRAVITY = 900 // 플레이어와 동일
+const BALL_BOUNCE = 0.35
+const BALL_DRAG_X = 180 // 지상 구름 마찰
+const BALL_KICK_RANGE = 60 // 플레이어 발끝 ~ 공 거리가 이 이내일 때만 실제 킥 속도 인가
+const BALL_RESPAWN_X = SCENE_WIDTH / 2
+const BALL_RESPAWN_Y = FLOOR_TOP_Y - 40
+
+// 충전 게이지 — X 키 홀드 시간 → 킥 속도.
+const KICK_ANGLE_DEG = 30 // 수평 대비 발사각 (고정)
+const KICK_MIN_SPEED = 400 // 탭 최소 속도 (px/s) → 거리 ~154px
+const KICK_MAX_SPEED = 900 // 풀차지 최대 속도 (px/s) → 거리 ~779px
+const KICK_CHARGE_MAX_MS = 1200 // 이 시간 이상 홀드해도 더 안 세짐
 
 const BG_TEXTURE = "ss-bg-stadium"
 const BG_URL = "/metaverse/bg-stadium.png"
@@ -84,6 +101,15 @@ export class SideScrollerScene extends Phaser.Scene {
   /** 방향은 east/west (XL 스프라이트가 두 방향 독립 생성 — flipX 대신 정방향 사용). */
   private facing: Facing = "east"
   private state: PlayerState = "idle"
+
+  // 축구공 + 충전 게이지
+  private ball!: Phaser.Physics.Arcade.Sprite
+  private resetKey!: Phaser.Input.Keyboard.Key
+  private chargeStartedAt: number | null = null // X 키 누른 시각 (ms). null 이면 충전 안 중.
+  private chargeBarBg!: Phaser.GameObjects.Rectangle
+  private chargeBarFill!: Phaser.GameObjects.Rectangle
+  /** 다음 kick anim 완료 시 공에 적용할 속도 (facing + charge 로 계산). */
+  private pendingKickSpeed: number | null = null
 
   // 채팅 — 데모 모드 (로컬 bubble 만, 서버 없음)
   private chatBubble: ChatBubble | null = null
@@ -142,15 +168,29 @@ export class SideScrollerScene extends Phaser.Scene {
     // 드래그는 update()에서 지면/공중 상황에 따라 갱신
     this.physics.add.collider(this.player, this.platforms)
 
-    // kick 완료 → state 복귀. jump 완료는 착지 감지로 처리.
+    // kick 완료 → state 복귀 + 대기 중이던 공 속도 인가
     this.player.on(
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
         if (anim.key === animKey("kick", "east") || anim.key === animKey("kick", "west")) {
+          this.applyPendingKickToBall()
           this.state = "idle"
         }
       }
     )
+
+    // 축구공 — 항상 땅에 존재, 킥 입력 시에만 속도 인가.
+    this.createBallTexture()
+    this.ball = this.physics.add.sprite(BALL_RESPAWN_X, BALL_RESPAWN_Y, BALL_TEXTURE)
+    this.ball.setDepth(9)
+    this.ball.setCollideWorldBounds(true)
+    this.ball.setBounce(BALL_BOUNCE)
+    this.ball.setDragX(BALL_DRAG_X)
+    const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
+    ballBody.setCircle(BALL_RADIUS)
+    ballBody.setGravityY(BALL_GRAVITY - GRAVITY_Y) // 월드 중력 위에 공 전용 추가 (동일하게 유지)
+    this.physics.add.collider(this.ball, this.platforms)
+    // 플레이어 ↔ 공 콜리전은 없음 — "공은 킥 입력 때만 날아감" 스펙대로 접촉만으로는 안 밀림.
 
     // 닉네임 태그
     this.nameTag = this.add
@@ -172,6 +212,7 @@ export class SideScrollerScene extends Phaser.Scene {
     >
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.kickKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X)
+    this.resetKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
 
     // 카메라 follow + 월드 경계
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
@@ -179,7 +220,7 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // 안내 (UI 오버레이)
     this.add
-      .text(16, 16, "← → 이동 · Space 점프 · X 킥 · Enter 채팅", {
+      .text(16, 16, "← → 이동 · Space 점프 · X 킥 (홀드로 충전) · R 공 리셋 · Enter 채팅", {
         fontFamily: "sans-serif",
         fontSize: "13px",
         color: "#ffffff",
@@ -188,6 +229,25 @@ export class SideScrollerScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(100)
+
+    // 충전 게이지 — X 키 홀드 중에만 표시. 카메라 따라가지 않음 (화면 고정 UI).
+    const barW = 240
+    const barH = 14
+    const barX = this.scale.width / 2 - barW / 2
+    const barY = 50
+    this.chargeBarBg = this.add
+      .rectangle(barX, barY, barW, barH, 0x000000, 0.5)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0xffffff, 0.6)
+      .setScrollFactor(0)
+      .setDepth(101)
+      .setVisible(false)
+    this.chargeBarFill = this.add
+      .rectangle(barX + 1, barY + 1, 0, barH - 2, 0x4ade80, 1)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(102)
+      .setVisible(false)
 
     // 채팅 브리지 구독 — React ChatOverlay 가 이벤트 보냄
     this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
@@ -220,6 +280,11 @@ export class SideScrollerScene extends Phaser.Scene {
     const body = this.player.body as Phaser.Physics.Arcade.Body
     const onGround = body.blocked.down
 
+    // R 키 — 공 리셋 (어느 상태에서든 먼저 체크)
+    if (Phaser.Input.Keyboard.JustDown(this.resetKey)) {
+      this.resetBall()
+    }
+
     // 킥 중에는 입력·이동 차단 — 발 심고 동작 완료까지 기다림
     if (this.state === "kicking") {
       body.setAccelerationX(0)
@@ -237,6 +302,7 @@ export class SideScrollerScene extends Phaser.Scene {
       body.setDragX(GROUND_DRAG)
       this.syncIdleOrWalkAnim(onGround, body.velocity.x)
       this.updateNameTag()
+      this.updateChargeBar()
       return
     }
 
@@ -246,17 +312,31 @@ export class SideScrollerScene extends Phaser.Scene {
       Phaser.Input.Keyboard.JustDown(this.cursors.up!) ||
       Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
       Phaser.Input.Keyboard.JustDown(this.spaceKey)
-    const kickPressed = Phaser.Input.Keyboard.JustDown(this.kickKey)
+    const kickJustDown = Phaser.Input.Keyboard.JustDown(this.kickKey)
+    const kickJustUp = Phaser.Input.Keyboard.JustUp(this.kickKey)
 
-    // 킥 시작 — 지상에서만, 현재 facing 방향으로
-    if (kickPressed && onGround) {
-      this.state = "kicking"
-      body.setAccelerationX(0)
-      body.setVelocityX(0)
-      body.setDragX(GROUND_DRAG)
-      this.player.play(animKey("kick", this.facing), true)
-      this.updateNameTag()
-      return
+    // 충전 시작 — X 눌리는 순간 (지상에서만)
+    if (kickJustDown && onGround && this.chargeStartedAt === null) {
+      this.chargeStartedAt = this.time.now
+    }
+
+    // 충전 릴리즈 — X 놓는 순간 → 실제 킥 발사
+    if (kickJustUp && this.chargeStartedAt !== null) {
+      const heldMs = this.time.now - this.chargeStartedAt
+      this.chargeStartedAt = null
+      if (onGround) {
+        const t = Math.min(heldMs / KICK_CHARGE_MAX_MS, 1)
+        const speed = KICK_MIN_SPEED + (KICK_MAX_SPEED - KICK_MIN_SPEED) * t
+        this.state = "kicking"
+        body.setAccelerationX(0)
+        body.setVelocityX(0)
+        body.setDragX(GROUND_DRAG)
+        this.player.play(animKey("kick", this.facing), true)
+        this.pendingKickSpeed = speed
+        this.updateNameTag()
+        this.updateChargeBar()
+        return
+      }
     }
 
     // 좌우 입력 → facing 갱신 + 가속
@@ -290,6 +370,7 @@ export class SideScrollerScene extends Phaser.Scene {
     }
 
     this.updateNameTag()
+    this.updateChargeBar()
   }
 
   /** facing 변경 시 현재 재생 중 anim 도 같은 종류의 반대 방향 키로 교체. */
@@ -325,6 +406,75 @@ export class SideScrollerScene extends Phaser.Scene {
     if (this.chatBubble && this.chatBubble.active) {
       this.chatBubble.setPosition(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 22)
     }
+  }
+
+  // ============================================================
+  // 축구공 + 킥 충전
+  // ============================================================
+
+  /** 8×8 흑백 격자 패턴의 간단한 축구공 텍스처. 추후 PixelLab 스프라이트로 교체 가능. */
+  private createBallTexture() {
+    if (this.textures.exists(BALL_TEXTURE)) return
+    const g = this.add.graphics()
+    const r = BALL_RADIUS
+    // 흰 바디
+    g.fillStyle(0xffffff, 1)
+    g.fillCircle(r, r, r)
+    // 검은 오각형 패턴 (상하좌우 4개)
+    g.fillStyle(0x111111, 1)
+    g.fillRect(r - 2, 1, 4, 4)
+    g.fillRect(r - 2, r * 2 - 5, 4, 4)
+    g.fillRect(1, r - 2, 4, 4)
+    g.fillRect(r * 2 - 5, r - 2, 4, 4)
+    // 외곽선
+    g.lineStyle(1, 0x000000, 1)
+    g.strokeCircle(r, r, r)
+    g.generateTexture(BALL_TEXTURE, r * 2, r * 2)
+    g.destroy()
+  }
+
+  /** 킥 anim 완료 시 호출 — 플레이어가 공 근처면 저장된 speed 로 공 발사. */
+  private applyPendingKickToBall() {
+    const speed = this.pendingKickSpeed
+    this.pendingKickSpeed = null
+    if (speed === null) return
+    const dx = this.ball.x - this.player.x
+    const dy = this.ball.y - this.player.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist > BALL_KICK_RANGE) return // 공에서 너무 멀면 anim 만 재생하고 공은 그대로
+    // facing 반대쪽으로는 차지 않음 — 방향 일치 요구
+    const sign = this.facing === "east" ? 1 : -1
+    if (Math.sign(dx) !== sign && Math.abs(dx) > 5) return
+    const angleRad = (KICK_ANGLE_DEG * Math.PI) / 180
+    const vx = sign * speed * Math.cos(angleRad)
+    const vy = -speed * Math.sin(angleRad)
+    const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
+    ballBody.setVelocity(vx, vy)
+  }
+
+  private updateChargeBar() {
+    if (this.chargeStartedAt === null) {
+      if (this.chargeBarBg.visible) {
+        this.chargeBarBg.setVisible(false)
+        this.chargeBarFill.setVisible(false)
+      }
+      return
+    }
+    const held = this.time.now - this.chargeStartedAt
+    const t = Math.min(held / KICK_CHARGE_MAX_MS, 1)
+    const maxFillW = this.chargeBarBg.width - 2
+    this.chargeBarFill.width = maxFillW * t
+    // 색상: 녹색(약) → 노랑(중) → 빨강(강)
+    const color = t < 0.4 ? 0x4ade80 : t < 0.75 ? 0xfacc15 : 0xef4444
+    this.chargeBarFill.setFillStyle(color, 1)
+    this.chargeBarBg.setVisible(true)
+    this.chargeBarFill.setVisible(true)
+  }
+
+  private resetBall() {
+    const body = this.ball.body as Phaser.Physics.Arcade.Body
+    body.setVelocity(0, 0)
+    this.ball.setPosition(BALL_RESPAWN_X, BALL_RESPAWN_Y)
   }
 
   private showChatBubble(text: string) {
