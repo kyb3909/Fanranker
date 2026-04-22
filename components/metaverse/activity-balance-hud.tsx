@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
-import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/auth"
+import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 
 interface BalanceResponse {

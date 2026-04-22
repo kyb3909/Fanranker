@@ -11,7 +11,7 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity, RoomChatMessage } from "@/lib/metaverse/types"
-import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/auth"
+import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 
 const TOUCH_THROTTLE_MS = 60_000 // 방 last_activity_at 서버 갱신 1분 throttle
 

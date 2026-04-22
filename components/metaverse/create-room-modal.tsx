@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react"
-import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/auth"
+import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 import type { ChatRoomMeta, MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"

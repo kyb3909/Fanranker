@@ -46,6 +46,16 @@ export const METAVERSE = {
   COLOR_PLAYER_OTHER: 0xaaaaaa, // 원격 유저
 } as const
 
+/**
+ * dev 게스트 진입에 쓰이는 커스텀 HTTP 헤더 키.
+ *
+ * `lib/metaverse/auth.ts` 는 `@clerk/nextjs/server` 를 import 하는 server-only
+ * 모듈이라, 클라이언트 컴포넌트에서 이 헤더 키만 필요할 때 auth.ts 를 통으로
+ * import 하면 번들러가 server-only 를 끌고 와서 빌드 실패. 이 상수를 쓰면
+ * 피함.
+ */
+export const METAVERSE_GUEST_HEADER = "x-metaverse-guest-id"
+
 /** 0~100 정규화 → 월드 픽셀 변환 */
 export function pinToWorldX(pinX: number): number {
   return (pinX / 100) * METAVERSE.WORLD_WIDTH
