@@ -22,6 +22,7 @@ import { RoomDetailModal, type RoomDetailContext } from "./room-detail-modal"
 import { OnboardingHint } from "./onboarding-hint"
 import { ChatLogPanel } from "./chat-log-panel"
 import { UserActionPopover } from "./user-action-popover"
+import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
 
@@ -42,6 +43,7 @@ export function PhaserCanvas({
   const [createRoomCtx, setCreateRoomCtx] = useState<CreateRoomContext | null>(null)
   const [roomDetailCtx, setRoomDetailCtx] = useState<RoomDetailContext | null>(null)
   const [roomOccupantCount, setRoomOccupantCount] = useState(0)
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
 
   // 방 접속자 수 추적 — RoomDetailModal 및 향후 HUD 확장 공용
   useEffect(() => {
@@ -49,9 +51,13 @@ export function PhaserCanvas({
       if (payload) setRoomOccupantCount(payload.count)
     })
     const unsubLeave = sceneBridge.on("plot:leave", () => setRoomOccupantCount(0))
+    const unsubReport = sceneBridge.on("user:report", (payload) => {
+      if (payload) setReportTarget({ userId: payload.userId, nickname: payload.nickname })
+    })
     return () => {
       unsub()
       unsubLeave()
+      unsubReport()
     }
   }, [])
 
@@ -251,10 +257,16 @@ export function PhaserCanvas({
       />
       {/* 하단 채팅 오버레이 — 씬이 world/room 채널 라우팅 */}
       <ChatOverlay canSend={!!channel} />
-      {/* 채팅 히스토리 패널 (우하단, 접을 수 있음) */}
-      <ChatLogPanel />
-      {/* 원격 아바타 클릭 시 뮤트 팝오버 */}
+      {/* 채팅 히스토리 패널 (드래그/리사이즈, 닉네임 클릭) */}
+      <ChatLogPanel identity={identity} />
+      {/* 원격 아바타/닉네임 클릭 시 뮤트/신고 팝오버 */}
       <UserActionPopover identity={identity} />
+      {/* 신고 다이얼로그 */}
+      <ReportUserDialog
+        target={reportTarget}
+        identity={identity}
+        onClose={() => setReportTarget(null)}
+      />
       {/* 최초 진입 안내 (1회) */}
       {status === "ready" && <OnboardingHint />}
     </div>

@@ -80,6 +80,12 @@ export function UserActionPopover({ identity }: { identity: MetaversePlayerIdent
     close()
   }
 
+  const onReport = () => {
+    if (!ctx) return
+    sceneBridge.emit("user:report", { userId: ctx.userId, nickname: ctx.nickname })
+    close()
+  }
+
   // 화면 경계 밖으로 나가지 않게 대충 clamp (margin 40)
   const left = Math.min(Math.max(ctx.screenX - 80, 8), window.innerWidth - 168)
   const top = Math.max(ctx.screenY - 100, 8)
@@ -97,11 +103,17 @@ export function UserActionPopover({ identity }: { identity: MetaversePlayerIdent
       </div>
       <button
         onClick={onToggleMute}
-        className={`mt-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-[11px] transition-colors ${
-          muted ? "text-white/80 hover:bg-white/10" : "text-red-200 hover:bg-red-500/20"
+        className={`mt-1 flex w-full items-center rounded px-2 py-1.5 text-[11px] transition-colors ${
+          muted ? "text-white/80 hover:bg-white/10" : "text-amber-200 hover:bg-amber-500/15"
         }`}
       >
         <span>{muted ? "🔔 뮤트 해제" : "🔇 뮤트"}</span>
+      </button>
+      <button
+        onClick={onReport}
+        className="mt-0.5 flex w-full items-center rounded px-2 py-1.5 text-[11px] text-red-200 transition-colors hover:bg-red-500/20"
+      >
+        <span>🚩 신고</span>
       </button>
       <button
         onClick={close}

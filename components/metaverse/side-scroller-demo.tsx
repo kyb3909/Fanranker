@@ -14,11 +14,22 @@ import Link from "next/link"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { ChatOverlay } from "./chat-overlay"
 import { ChatLogPanel } from "./chat-log-panel"
+import { UserActionPopover } from "./user-action-popover"
+import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
+import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 
 export function SideScrollerDemo() {
   const parentRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
+
+  useEffect(() => {
+    const unsub = sceneBridge.on("user:report", (payload) => {
+      if (payload) setReportTarget({ userId: payload.userId, nickname: payload.nickname })
+    })
+    return () => unsub()
+  }, [])
 
   // 간단 데모 identity — Clerk 우회 (demo 라우트 전용)
   const identity = useMemo<MetaversePlayerIdentity>(() => {
@@ -75,8 +86,15 @@ export function SideScrollerDemo() {
       </div>
       {/* 채팅 — 데모 모드는 로컬 bubble 만. Enter 로 입력 → 내 머리 위 말풍선 5초 */}
       <ChatOverlay canSend={true} />
-      {/* 우하단 채팅 로그 — 혼자 보낸 것도 기록 (데모에선 리모트 없음) */}
-      <ChatLogPanel />
+      {/* 채팅 로그 — 혼자 보낸 것도 기록 (데모에선 리모트 없음) */}
+      <ChatLogPanel identity={identity} />
+      {/* 닉네임 클릭 시 뮤트/신고 팝오버 — 데모에선 본인만 있어서 발동 X, 일관성 위해 마운트 */}
+      <UserActionPopover identity={identity} />
+      <ReportUserDialog
+        target={reportTarget}
+        identity={identity}
+        onClose={() => setReportTarget(null)}
+      />
     </div>
   )
 }

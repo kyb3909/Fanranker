@@ -58,6 +58,11 @@ type BridgeEventMap = {
     screenX: number
     screenY: number
   }
+  /** 신고 다이얼로그 오픈 요청 — UserActionPopover 에서 발사, 상위 래퍼가 수신. */
+  "user:report": {
+    userId: string
+    nickname: string
+  }
 }
 
 class MetaverseSceneBridge extends EventTarget {
