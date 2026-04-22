@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Circle, Lock } fr
 import {
   type SportsSlip,
   type SportsGame,
-  gameTypeLabels,
+  getGameTypeLabel,
   SPORT_ICONS,
   sportColorFill,
   formatMatchTime,
@@ -247,7 +247,7 @@ export function BettingSlipCard({
                   {/* Game Type Badge with Handicap/Line Info */}
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">
-                      {gameTypeLabels[game.gameType] || game.gameType}
+                      {getGameTypeLabel(game.gameType, slip.sport)}
                     </Badge>
                     {/* 핸디캡 정보 표시 */}
                     {game.gameType.includes("핸디캡") && game.handicap !== null && (

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, CheckCircle2 } from "lucide-react"
 import type { GroupedMatch, SelectedBet } from "./betting-types"
-import { sportColorFill, SPORT_ICONS, gameTypeLabels, formatMatchTime } from "./betting-types"
+import { sportColorFill, SPORT_ICONS, getGameTypeLabel, formatMatchTime } from "./betting-types"
 
 interface BettingMatchCardProps {
   groupedMatch: GroupedMatch
@@ -66,7 +66,7 @@ export function BettingMatchCard({
           const isSUM = game.game_type === "SUM" || game.game_type === "SSUM"
           const isOverUnder = game.game_type.includes("언더오버")
           const isBasketball = game.sport === "농구"
-          const gameTypeLabel = gameTypeLabels[game.game_type] || game.game_type
+          const gameTypeLabel = getGameTypeLabel(game.game_type, game.sport)
           const selectedBet = selectedBets.find((b) => b.gameId === game.id)
           const sportMismatch = selectedSport !== null && selectedSport !== game.sport
           const gameBetClosed = game.is_bettable === false

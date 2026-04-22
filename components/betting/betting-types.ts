@@ -195,6 +195,23 @@ export const gameTypeLabels: Record<string, string> = {
   SUM: "합계",
 }
 
+/**
+ * game_type + sport 조합 → UI 라벨.
+ * 축구만 무승부가 있어 "일반" = 승무패 (3선택). 농구/야구/배구는 무승부 없어 승패 (2선택).
+ * 핸디캡은 betTypId=4(승무패 핸디, 축구만) 와 5(승패 핸디, 나머지) 가 섞여 저장돼있어
+ * 동일 로직으로 라벨만 분기.
+ */
+export function getGameTypeLabel(gameType: string, sport?: string): string {
+  const noDraw = sport === "농구" || sport === "야구" || sport === "배구"
+  if (gameType === "일반" || gameType === "S일반") {
+    return noDraw ? "승패" : "승무패"
+  }
+  if (gameType === "핸디캡" || gameType === "S핸디캡") {
+    return noDraw ? "핸디캡" : "핸디캡"
+  }
+  return gameTypeLabels[gameType] || gameType
+}
+
 export const sportColors: Record<string, { bg: string; text: string; border: string }> = {
   soccer: {
     bg: "bg-gradient-to-r from-rose-50 to-pink-50",

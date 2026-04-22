@@ -1,6 +1,7 @@
 // Re-export shared constants from betting-types (single source of truth)
 export {
   gameTypeLabels,
+  getGameTypeLabel,
   SPORT_ICONS,
   sportColorFill,
   formatMatchTime,

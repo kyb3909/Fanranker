@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronDown, ChevronUp, Target, Circle, Loader2, X, Newspaper } from "lucide-react"
 import type { SelectedBet, GroupedMatch } from "./betting-types"
-import { gameTypeLabels, formatMatchTime, SPORT_ICONS } from "./betting-types"
+import { getGameTypeLabel, formatMatchTime, SPORT_ICONS } from "./betting-types"
 
 interface BettingSlipProps {
   selectedBets: SelectedBet[]
@@ -135,7 +135,7 @@ export function BettingSlip({
                         <span>{formatMatchTime(groupedMatch.matchTime)}</span>
                         <span className="text-border">|</span>
                         <span className="text-primary">
-                          {gameTypeLabels[bet.gameType] || bet.gameType}
+                          {getGameTypeLabel(bet.gameType, bet.sport)}
                         </span>
                         {/* Handicap info */}
                         {bet.gameType.includes("핸디캡") && bet.handicap !== null && (
