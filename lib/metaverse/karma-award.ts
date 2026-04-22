@@ -30,7 +30,7 @@ export async function awardFlairKarma(
   const delta = POINTS_BY_SOURCE[source]
   if (!delta) return
 
-  const { error } = await supabase.rpc("metaverse_award_flair_karma", {
+  const { data, error } = await supabase.rpc("metaverse_award_flair_karma", {
     p_user_id: userId,
     p_team_id: teamId,
     p_delta: delta,
@@ -43,6 +43,19 @@ export async function awardFlairKarma(
       teamId,
       source,
       message: error.message,
+    })
+    return
+  }
+
+  // 일일 cap 초과로 점수가 제한된 경우 진단용 로그 (정상 동작)
+  const result = data as { capped?: boolean; delta?: number; today_total?: number } | null
+  if (result?.capped) {
+    console.info("[metaverse] flair karma capped", {
+      userId,
+      teamId,
+      source,
+      awarded: result.delta,
+      todayTotal: result.today_total,
     })
   }
 }
