@@ -19,6 +19,7 @@ import { ActivityBalanceHud, refreshActivityBalance } from "./activity-balance-h
 import { PlotActionOverlay } from "./plot-action-overlay"
 import { CreateRoomModal, type CreateRoomContext } from "./create-room-modal"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { trackEvent } from "@/lib/analytics/events"
 
 export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }) {
   const parentRef = useRef<HTMLDivElement>(null)
@@ -62,6 +63,10 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
         }
         channelRef.current = newChannel
         setChannel(newChannel)
+        trackEvent({
+          name: "metaverse_enter",
+          params: { is_guest: identity.userId.startsWith("guest-") },
+        })
 
         // 3) Phaser 게임 부팅 — 채널 + plot/room 초기 데이터 주입
         if (!parentRef.current) return
@@ -105,7 +110,12 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
     }
 
     const unsubEnter = sceneBridge.on("plot:enter", (detail) => {
-      if (!detail?.roomId) {
+      if (!detail) return
+      trackEvent({
+        name: "metaverse_plot_enter",
+        params: { plot_code: detail.plotCode, has_room: !!detail.roomId },
+      })
+      if (!detail.roomId) {
         void detachIfAny()
         return
       }

@@ -14,6 +14,7 @@ import { useEffect, useState } from "react"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/auth"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import { trackEvent } from "@/lib/analytics/events"
 
 interface PlotContext {
   plotId: string
@@ -76,6 +77,8 @@ export function PlotActionOverlay({
         })
         if (!res.ok) {
           console.warn("[metaverse] delete room failed", await res.text().catch(() => ""))
+        } else {
+          trackEvent({ name: "metaverse_room_close", params: { by: "owner" } })
         }
         // 성공 시 서버 broadcast 에서 room:closed 수신 → Signboard/PlotActionOverlay 자동 업데이트
       } catch (err) {

@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react"
 import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/auth"
 import type { ChatRoomMeta, MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { trackEvent } from "@/lib/analytics/events"
 
 const SIGN_TEXT_MAX = 20
 const COST = 100
@@ -91,6 +92,14 @@ export function CreateRoomModal({
         return
       }
       if (data.room) onCreated(data.room as ChatRoomMeta)
+      trackEvent({
+        name: "metaverse_room_create",
+        params: {
+          plot_code: context.plotCode,
+          sign_length: trimmed.length,
+          cost: COST,
+        },
+      })
       onClose()
     } catch (err) {
       console.error("[metaverse] create room failed", err)

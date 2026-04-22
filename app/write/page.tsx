@@ -18,6 +18,7 @@ import {
 import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
 import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
+import { trackEvent } from "@/lib/analytics/events"
 
 const TipTapEditor = dynamic(
   () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
@@ -230,7 +231,19 @@ function WriteContent() {
                         <button
                           key={t.teamId}
                           type="button"
-                          onClick={() => editor.setSelectedTeamFlair(selected ? null : t.teamId)}
+                          onClick={() => {
+                            const next = selected ? null : t.teamId
+                            editor.setSelectedTeamFlair(next)
+                            if (next) {
+                              trackEvent({
+                                name: "flair_team_selected",
+                                params: {
+                                  community: editor.selectedCommunity,
+                                  team_id: next,
+                                },
+                              })
+                            }
+                          }}
                           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                             selected ? "text-white shadow-sm" : "hover:opacity-80"
                           }`}

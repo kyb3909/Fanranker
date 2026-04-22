@@ -25,6 +25,7 @@ import type {
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { trackEvent } from "@/lib/analytics/events"
 import { ChatBubble } from "./chat-bubble"
 import { PlotMarker, Signboard } from "./plot-marker"
 
@@ -196,8 +197,13 @@ export class WorldMapScene extends Phaser.Scene {
     // UI → scene: 채팅 전송 요청을 받아 적절한 채널로 라우팅
     this.unsubBridgeChatSend = sceneBridge.on("chat:send", (payload) => {
       if (!payload?.text) return
+      const scope: "world" | "room" = this.currentRoomChannel ? "room" : "world"
       const target: WorldChannel | RoomChannel | null = this.currentRoomChannel ?? this.channel
       target?.publishChat(payload.text)
+      trackEvent({
+        name: "metaverse_chat_send",
+        params: { scope, length: payload.text.length },
+      })
     })
 
     // 씬 종료 시 정리
