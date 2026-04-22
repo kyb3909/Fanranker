@@ -2,18 +2,21 @@
  * SideScrollerScene — 메이플스토리 스타일 실내 프로토타입 (Phase 4 선행).
  *
  * 검증 목표:
- *  - 중력 + 플랫폼 콜리전
+ *  - 중력 + 바닥 콜리전
  *  - 좌/우 이동 + 점프 (방향 flip)
- *  - 카메라 좌우 스크롤
+ *  - 카메라 좌우 스크롤 (배경 이미지 따라 팬)
  *  - 닉네임 태그 follow
  *
  * 현재는 단독 scene. world-map-scene 과 별개 게임 인스턴스로 부트.
  * Phase 4 에서 월드맵 ↔ 실내 씬 전환 추가 예정.
  *
+ * 배경: `public/metaverse/bg-stadium.png` (1916×821) — 경기장 전면부
+ * 일러스트를 한 장짜리 이미지로 사용. 장기적으론 여러 배경(카페/펍/
+ * 경기장/광장) 을 SceneType 으로 선택해서 동일 로직 재사용 예정.
+ *
  * 에셋 교체 지점:
- *  - 바닥/플랫폼 단색 rect → 실제 타일맵(Tiled) 또는 배경 PNG
  *  - 플레이어 rect → 사이드뷰 스프라이트시트 (PixelLab view: "side")
- *  - NPC rect → 같은 스프라이트 + 애니메이션
+ *  - 배경 이미지 → 테마별 스와프
  */
 
 import * as Phaser from "phaser"
@@ -27,16 +30,20 @@ const GRAVITY_Y = 900
 const JUMP_VELOCITY = -420
 const WALK_SPEED = 200
 
-// 씬 크기 — 가로로 긴 실내. 카메라가 좌우 팬.
-const SCENE_WIDTH = 1920
-const SCENE_HEIGHT = 720
-const FLOOR_TOP_Y = 620
+// 씬 크기 — 배경 이미지(bg-stadium.png 1916×821)와 정확히 일치.
+const SCENE_WIDTH = 1916
+const SCENE_HEIGHT = 821
+// 바닥선 — 배경 이미지의 전면 잔디/돌벽 foreground 가 시작되는 y.
+// 이미지 보면서 대략 잡은 값 — PixelLab 지형 나오면 다시 튜닝.
+const FLOOR_TOP_Y = 740
 const FLOOR_HEIGHT = SCENE_HEIGHT - FLOOR_TOP_Y
 
-const PLAYER_W = 24
-const PLAYER_H = 40
+const PLAYER_W = 28
+const PLAYER_H = 52
 
 const SELF_TEXTURE = "ss-player-self"
+const BG_TEXTURE = "ss-bg-stadium"
+const BG_URL = "/metaverse/bg-stadium.png"
 
 export class SideScrollerScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -56,33 +63,34 @@ export class SideScrollerScene extends Phaser.Scene {
     this.identity = data.identity
   }
 
+  preload() {
+    if (!this.textures.exists(BG_TEXTURE)) {
+      this.load.image(BG_TEXTURE, BG_URL)
+    }
+  }
+
   create() {
     // 월드 경계 + 중력 (이 씬 로컬 중력 — 월드맵 씬에 영향 없음)
     this.physics.world.setBounds(0, 0, SCENE_WIDTH, SCENE_HEIGHT)
     this.physics.world.gravity.y = GRAVITY_Y
 
-    // 배경 — 그라데이션 느낌 2단 단색 (placeholder)
-    this.cameras.main.setBackgroundColor("#1a1f2e")
-    this.add.rectangle(0, 0, SCENE_WIDTH, FLOOR_TOP_Y, 0x2a3144).setOrigin(0, 0)
+    // 배경 이미지 — 하늘/경기장/전경 모두 포함한 단일 일러스트.
+    // scrollFactor 1 (디폴트) 로 카메라 팬 그대로 따라감.
+    this.cameras.main.setBackgroundColor("#87ceeb") // 로드 실패 시 하늘색 fallback
+    this.add.image(0, 0, BG_TEXTURE).setOrigin(0, 0).setDepth(0)
 
-    // 원근감 (먼 배경) — 차후 병렬 스크롤 레이어로 교체 가능
-    this.drawBackdropDecor()
-
-    // 플랫폼 그룹 — 바닥 + 중간 플랫폼 3개
+    // 보이지 않는 바닥 콜리전 — 배경 이미지의 전경(잔디·돌벽) 위에 캐릭터가 서도록.
+    // 디버그 하고 싶을 땐 fillColor 를 0x00ff00, alpha 0.3 으로 일시 변경.
     this.platforms = this.physics.add.staticGroup()
-    this.addPlatformRect(0, FLOOR_TOP_Y, SCENE_WIDTH, FLOOR_HEIGHT, 0x5d4e37) // 바닥
-    this.addPlatformRect(400, 480, 200, 20, 0x8b7355) // 중간 1
-    this.addPlatformRect(800, 380, 200, 20, 0x8b7355) // 중간 2 (더 높음)
-    this.addPlatformRect(1200, 480, 200, 20, 0x8b7355) // 중간 3
+    const invisibleFloor = this.add
+      .rectangle(0, FLOOR_TOP_Y, SCENE_WIDTH, FLOOR_HEIGHT, 0x000000, 0)
+      .setOrigin(0, 0)
+    this.platforms.add(invisibleFloor)
 
-    // NPC placeholder — 바닥에 서있는 색깔 사각형
-    this.drawNpcPlaceholder(200, 0xff6b6b, "NPC A")
-    this.drawNpcPlaceholder(700, 0x4dabf7, "NPC B")
-    this.drawNpcPlaceholder(1500, 0x51cf66, "NPC C")
-
-    // 플레이어 텍스처 & 스프라이트
+    // 플레이어 텍스처 & 스프라이트 — 배경보다 위 (depth 10)
     this.createPlayerTexture()
     this.player = this.physics.add.sprite(100, FLOOR_TOP_Y - PLAYER_H - 20, SELF_TEXTURE)
+    this.player.setDepth(10)
     this.player.setCollideWorldBounds(true)
     this.player.setBounce(0) // 바닥에 떨어졌을 때 튕기지 않음
     this.physics.add.collider(this.player, this.platforms)
@@ -165,47 +173,20 @@ export class SideScrollerScene extends Phaser.Scene {
   private createPlayerTexture() {
     if (this.textures.exists(SELF_TEXTURE)) return
     const g = this.add.graphics()
+    // 몸통 (하단 2/3)
     g.fillStyle(METAVERSE.COLOR_PLAYER_SELF, 1)
-    g.fillRect(0, 0, PLAYER_W, PLAYER_H)
-    g.lineStyle(2, 0xffffff, 1)
-    g.strokeRect(0, 0, PLAYER_W, PLAYER_H)
-    // 머리 표시 (상단 1/3)
-    g.fillStyle(0xffffff, 0.3)
-    g.fillRect(2, 2, PLAYER_W - 4, PLAYER_H / 3)
-    // 방향 시각 표시용 눈
-    g.fillStyle(0xffffff, 0.9)
-    g.fillRect(PLAYER_W - 8, 8, 3, 3)
+    g.fillRect(0, PLAYER_H / 3, PLAYER_W, (PLAYER_H * 2) / 3)
+    // 머리 (상단 1/3, 살구색)
+    g.fillStyle(0xffd8a8, 1)
+    g.fillRect(4, 0, PLAYER_W - 8, PLAYER_H / 3)
+    // 외곽선
+    g.lineStyle(2, 0x000000, 0.7)
+    g.strokeRect(0, PLAYER_H / 3, PLAYER_W, (PLAYER_H * 2) / 3)
+    g.strokeRect(4, 0, PLAYER_W - 8, PLAYER_H / 3)
+    // 방향 눈 (오른쪽 바라봄)
+    g.fillStyle(0x111111, 1)
+    g.fillRect(PLAYER_W - 10, 6, 3, 3)
     g.generateTexture(SELF_TEXTURE, PLAYER_W, PLAYER_H)
     g.destroy()
-  }
-
-  private addPlatformRect(x: number, y: number, w: number, h: number, color: number) {
-    const rect = this.add.rectangle(x, y, w, h, color).setOrigin(0, 0)
-    this.platforms.add(rect)
-  }
-
-  private drawNpcPlaceholder(x: number, color: number, label: string) {
-    this.add.rectangle(x, FLOOR_TOP_Y, 24, 40, color).setOrigin(0.5, 1)
-    this.add
-      .text(x, FLOOR_TOP_Y - 44, label, {
-        fontFamily: "sans-serif",
-        fontSize: "10px",
-        color: "#ffffff",
-        backgroundColor: "#00000088",
-        padding: { x: 3, y: 1 },
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(10)
-  }
-
-  private drawBackdropDecor() {
-    // 원경 산맥/건물 실루엣 — 스크롤 속도 느리게 해서 원근감
-    const bg = this.add.graphics()
-    bg.fillStyle(0x1f2938, 1)
-    // 삼각형 시리즈 (산맥 느낌)
-    for (let x = 0; x < SCENE_WIDTH; x += 220) {
-      bg.fillTriangle(x, FLOOR_TOP_Y, x + 140, FLOOR_TOP_Y - 160, x + 280, FLOOR_TOP_Y)
-    }
-    bg.setScrollFactor(0.4) // 병렬 스크롤
   }
 }
