@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { ChatOverlay } from "./chat-overlay"
+import { ChatLogPanel } from "./chat-log-panel"
 
 export function SideScrollerDemo() {
   const parentRef = useRef<HTMLDivElement>(null)
@@ -74,6 +75,8 @@ export function SideScrollerDemo() {
       </div>
       {/* 채팅 — 데모 모드는 로컬 bubble 만. Enter 로 입력 → 내 머리 위 말풍선 5초 */}
       <ChatOverlay canSend={true} />
+      {/* 우하단 채팅 로그 — 혼자 보낸 것도 기록 (데모에선 리모트 없음) */}
+      <ChatLogPanel />
     </div>
   )
 }

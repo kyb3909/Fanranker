@@ -158,6 +158,14 @@ export class SideScrollerScene extends Phaser.Scene {
     })
     this.unsubChatSend = sceneBridge.on("chat:send", (payload) => {
       if (!payload?.text) return
+      // 데모는 서버 없음 — 자기 자신 메시지를 로그에도 직접 넣음
+      sceneBridge.emit("chat:log:append", {
+        userId: this.identity.userId,
+        nickname: this.identity.nickname,
+        text: payload.text,
+        timestamp: Date.now(),
+        scope: "local",
+      })
       this.showChatBubble(payload.text)
     })
 

@@ -42,6 +42,22 @@ type BridgeEventMap = {
   "chat:send": { text: string }
   /** 현재 방 접속자 수 갱신 (RoomChannel presence). room 없을 때는 0 또는 이벤트 없음. */
   "room:presence": { count: number }
+  /** 씬 → React: 채팅 로그 패널에 메시지 추가. 뮤트 필터는 패널 쪽에서 처리. */
+  "chat:log:append": {
+    userId: string
+    nickname: string
+    text: string
+    timestamp: number
+    scope: "world" | "room" | "local"
+  }
+  /** 유저가 다른 아바타를 클릭 — 뮤트 등 컨텍스트 메뉴 띄우기.
+   * 좌표는 화면(viewport) 기준 — popover 띄울 위치. */
+  "user:clicked": {
+    userId: string
+    nickname: string
+    screenX: number
+    screenY: number
+  }
 }
 
 class MetaverseSceneBridge extends EventTarget {

@@ -26,6 +26,7 @@ import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
 import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
+import { isMuted } from "@/lib/metaverse/mute-list"
 import { ChatBubble } from "./chat-bubble"
 import { PlotMarker, Signboard } from "./plot-marker"
 
@@ -302,7 +303,17 @@ export class WorldMapScene extends Phaser.Scene {
       const dx = msg.x - this.player.x
       const dy = msg.y - this.player.y
       if (dx * dx + dy * dy > METAVERSE.BUBBLE_PROXIMITY_PX ** 2) return
+      // 뮤트 필터 — 자기 자신은 뮤트 적용 안 함
+      if (isMuted(msg.userId)) return
     }
+    // 채팅 로그 패널로 emit (뮤트/proximity 통과한 것만)
+    sceneBridge.emit("chat:log:append", {
+      userId: msg.userId,
+      nickname: msg.nickname,
+      text: msg.text,
+      timestamp: msg.timestamp,
+      scope: "world",
+    })
     this.showChatBubble(msg.userId, msg.text)
   }
 
@@ -338,6 +349,15 @@ export class WorldMapScene extends Phaser.Scene {
     this.detachRoomChannel()
     this.currentRoomChannel = channel
     this.unsubRoomChat = channel.onChatMessage((msg) => {
+      const isSelf = msg.userId === this.identity.userId
+      if (!isSelf && isMuted(msg.userId)) return
+      sceneBridge.emit("chat:log:append", {
+        userId: msg.userId,
+        nickname: msg.nickname,
+        text: msg.text,
+        timestamp: msg.timestamp,
+        scope: "room",
+      })
       // 방 메시지는 proximity 필터 없이 sender 아바타 위에 바로 표시
       this.showChatBubble(msg.userId, msg.text)
     })
@@ -542,11 +562,30 @@ export class WorldMapScene extends Phaser.Scene {
 class RemoteAvatar {
   private readonly sprite: Phaser.GameObjects.Image
   private readonly nameTag: Phaser.GameObjects.Text
+  private readonly userId: string
+  private nickname: string
   private targetX: number
   private targetY: number
 
   constructor(scene: Phaser.Scene, state: RemotePlayerState, textureKey: string) {
-    this.sprite = scene.add.image(state.x, state.y, textureKey).setDepth(10)
+    this.userId = state.userId
+    this.nickname = state.nickname
+    this.sprite = scene.add
+      .image(state.x, state.y, textureKey)
+      .setDepth(10)
+      .setInteractive({ useHandCursor: true })
+    this.sprite.on("pointerdown", () => {
+      // 카메라 변환된 월드 좌표 → 화면 좌표 (popover 위치용)
+      const cam = scene.cameras.main
+      const screenX = (this.sprite.x - cam.worldView.x) * cam.zoom
+      const screenY = (this.sprite.y - cam.worldView.y) * cam.zoom
+      sceneBridge.emit("user:clicked", {
+        userId: this.userId,
+        nickname: this.nickname,
+        screenX,
+        screenY,
+      })
+    })
     this.nameTag = scene.add
       .text(state.x, state.y + METAVERSE.PLAYER_NAMETAG_OFFSET_Y, state.nickname, {
         fontFamily: "sans-serif",
@@ -571,7 +610,10 @@ class RemoteAvatar {
   setTarget(x: number, y: number, _direction: Direction, nickname: string) {
     this.targetX = x
     this.targetY = y
-    if (this.nameTag.text !== nickname) this.nameTag.setText(nickname)
+    if (this.nickname !== nickname) {
+      this.nickname = nickname
+      this.nameTag.setText(nickname)
+    }
   }
 
   update(deltaMs: number) {

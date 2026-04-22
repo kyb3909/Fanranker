@@ -20,6 +20,8 @@ import { PlotActionOverlay } from "./plot-action-overlay"
 import { CreateRoomModal, type CreateRoomContext } from "./create-room-modal"
 import { RoomDetailModal, type RoomDetailContext } from "./room-detail-modal"
 import { OnboardingHint } from "./onboarding-hint"
+import { ChatLogPanel } from "./chat-log-panel"
+import { UserActionPopover } from "./user-action-popover"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
 
@@ -249,6 +251,10 @@ export function PhaserCanvas({
       />
       {/* 하단 채팅 오버레이 — 씬이 world/room 채널 라우팅 */}
       <ChatOverlay canSend={!!channel} />
+      {/* 채팅 히스토리 패널 (우하단, 접을 수 있음) */}
+      <ChatLogPanel />
+      {/* 원격 아바타 클릭 시 뮤트 팝오버 */}
+      <UserActionPopover identity={identity} />
       {/* 최초 진입 안내 (1회) */}
       {status === "ready" && <OnboardingHint />}
     </div>
