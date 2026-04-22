@@ -135,6 +135,7 @@ function buildIndexMap(keys: string[]): Record<string, number> | null {
     "itemCode",
     "gameDate",
     "leagueCode",
+    "leagueShortName",
     "meetStadiumFullName",
     "matchSeq",
     "homeName",
@@ -192,7 +193,9 @@ export function parseGames(data: BetmanGameData, roundId: string): BetmanGame[] 
       game_no: (d[idx.matchSeq] as number) || 0,
       match_time: matchTime,
       sport,
-      league_code: (d[idx.leagueCode] as string) || "",
+      // UI 에 보여지는 값 — NBA / KBO / EPL / 라리가 / K리그1 스타일.
+      // 내부 ID (BK002 등) 는 leagueCode 에 있지만 DB 는 display name 을 저장.
+      league_code: (d[idx.leagueShortName] as string) || (d[idx.leagueCode] as string) || "",
       game_type: gameType,
       home_team_name: (d[idx.homeName] as string) || "",
       away_team_name: (d[idx.awayName] as string) || "",

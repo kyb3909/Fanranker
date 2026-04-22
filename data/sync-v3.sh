@@ -261,7 +261,7 @@ sync_one_gmts() {
     game_no: ($d[$idx.matchSeq] // 0),
     match_time: (if $d[$idx.gameDate] then (($d[$idx.gameDate] / 1000 + 32400) | strftime("%Y-%m-%dT%H:%M:%S+09:00")) else null end),
     sport: $sp,
-    league_code: ($d[$idx.leagueCode] // ""),
+    league_code: ($d[$idx.leagueShortName] // $d[$idx.leagueCode] // ""),
     game_type: $gt,
     home_team_name: ($d[$idx.homeName] // ""),
     away_team_name: ($d[$idx.awayName] // ""),
