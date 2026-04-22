@@ -7,9 +7,10 @@
  *  - Supabase Realtime Presence로 원격 유저 실시간 표시 (보간 이동)
  *  - 월드 채팅 broadcast (proximity 말풍선은 UI 오버레이 담당 예정)
  *
+ * 아바타: `lib/metaverse/avatar/pro-avatar.ts` (PixelLab 8방향 × 4프레임).
+ *
  * Phase 2+ 에셋 교체 지점:
  *  - drawLandPlaceholder → tilemap
- *  - createPlayerTexture → 스프라이트시트 + 방향별 애니메이션
  */
 
 import * as Phaser from "phaser"
@@ -27,15 +28,24 @@ import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
 import { isMuted } from "@/lib/metaverse/mute-list"
+import {
+  preloadProAvatar,
+  createProAvatarAnimations,
+  textureKeyIdle,
+  animKeyWalk,
+  direction8FromVelocity,
+  direction4To8,
+  type Direction8,
+} from "@/lib/metaverse/avatar/pro-avatar"
 import { ChatBubble } from "./chat-bubble"
 import { PlotMarker, Signboard } from "./plot-marker"
 
 export const WORLD_MAP_SCENE_KEY = "MetaverseWorldMap"
 
-const SELF_TEXTURE = "mv-player-self"
-const OTHER_TEXTURE = "mv-player-other"
 // 원격 유저 보간: 새 target 받으면 200ms 안에 따라잡도록 지수 smoothing
 const REMOTE_LERP_HALF_LIFE_MS = 80
+// 124×124 PixelLab 캔버스 → 월드에서 실제 보이는 크기로 축소
+const AVATAR_SCALE = 0.4
 
 export class WorldMapScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -47,6 +57,7 @@ export class WorldMapScene extends Phaser.Scene {
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
 
   private lastDirection: Direction = "down"
+  private lastDir8: Direction8 = "south"
   private remotePlayers = new Map<string, RemoteAvatar>()
   private chatBubbles = new Map<string, ChatBubble>()
   private isChatInputOpen = false
@@ -94,6 +105,10 @@ export class WorldMapScene extends Phaser.Scene {
     this.initialPlotCode = data.initialPlotCode
   }
 
+  preload() {
+    preloadProAvatar(this)
+  }
+
   create() {
     const { WORLD_WIDTH, WORLD_HEIGHT, COLOR_BG, COLOR_LAND, COLOR_WATER } = METAVERSE
 
@@ -111,9 +126,8 @@ export class WorldMapScene extends Phaser.Scene {
     // 광장 Plot 마커 + 기존 Signboard (Phase 3)
     this.renderPlots()
 
-    // 아바타 텍스처 (placeholder — 나중에 스프라이트시트로 교체)
-    this.createPlayerTexture(SELF_TEXTURE, METAVERSE.COLOR_PLAYER_SELF)
-    this.createPlayerTexture(OTHER_TEXTURE, METAVERSE.COLOR_PLAYER_OTHER)
+    // 8방향 walk anim 등록 (self + remote 공용)
+    createProAvatarAnimations(this)
 
     // 스폰 좌표 결정 — deep-link plot_code 가 있으면 해당 Plot, 아니면 런던 중앙 광장
     const spawnPlot = this.initialPlotCode
@@ -121,7 +135,9 @@ export class WorldMapScene extends Phaser.Scene {
       : null
     const spawnX = spawnPlot ? pinToWorldX(spawnPlot.pinX) : pinToWorldX(51)
     const spawnY = spawnPlot ? pinToWorldY(spawnPlot.pinY) : pinToWorldY(70)
-    this.player = this.physics.add.sprite(spawnX, spawnY, SELF_TEXTURE)
+    this.player = this.physics.add.sprite(spawnX, spawnY, textureKeyIdle("south"))
+    this.player.setScale(AVATAR_SCALE)
+    this.player.setDepth(10)
     this.player.setCollideWorldBounds(true)
 
     this.nameTag = this.add
@@ -248,6 +264,18 @@ export class WorldMapScene extends Phaser.Scene {
 
     const isMoving = body.velocity.length() > 1
 
+    // 8방향 walk anim — 속도 벡터 기준. 정지 시엔 lastDir8 방향 idle 텍스처
+    const dir8 = direction8FromVelocity(body.velocity.x, body.velocity.y)
+    if (dir8) {
+      if (this.lastDir8 !== dir8 || this.player.anims.currentAnim?.key !== animKeyWalk(dir8)) {
+        this.lastDir8 = dir8
+        this.player.play(animKeyWalk(dir8), true)
+      }
+    } else if (this.player.anims.isPlaying) {
+      this.player.anims.stop()
+      this.player.setTexture(textureKeyIdle(this.lastDir8))
+    }
+
     // 닉네임 태그 follow
     this.nameTag.setPosition(this.player.x, this.player.y + METAVERSE.PLAYER_NAMETAG_OFFSET_Y)
 
@@ -277,10 +305,10 @@ export class WorldMapScene extends Phaser.Scene {
     for (const [userId, state] of remote) {
       let avatar = this.remotePlayers.get(userId)
       if (!avatar) {
-        avatar = new RemoteAvatar(this, state, OTHER_TEXTURE)
+        avatar = new RemoteAvatar(this, state)
         this.remotePlayers.set(userId, avatar)
       } else {
-        avatar.setTarget(state.x, state.y, state.direction, state.nickname)
+        avatar.setTarget(state.x, state.y, state.direction, state.isMoving, state.nickname)
       }
     }
     // 떠난 유저 제거
@@ -512,18 +540,6 @@ export class WorldMapScene extends Phaser.Scene {
   // Placeholder rendering helpers
   // ============================================================
 
-  private createPlayerTexture(key: string, color: number) {
-    if (this.textures.exists(key)) return
-    const { PLAYER_SIZE } = METAVERSE
-    const g = this.add.graphics()
-    g.fillStyle(color, 1)
-    g.fillRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
-    g.lineStyle(2, 0xffffff, 1)
-    g.strokeRect(0, 0, PLAYER_SIZE, PLAYER_SIZE)
-    g.generateTexture(key, PLAYER_SIZE, PLAYER_SIZE)
-    g.destroy()
-  }
-
   private drawLandPlaceholder(color: number) {
     const shapes = [
       { x: 32, y: 20, w: 26, h: 40 }, // 스코틀랜드
@@ -560,20 +576,28 @@ export class WorldMapScene extends Phaser.Scene {
 // ============================================================
 
 class RemoteAvatar {
-  private readonly sprite: Phaser.GameObjects.Image
+  private readonly sprite: Phaser.GameObjects.Sprite
   private readonly nameTag: Phaser.GameObjects.Text
   private readonly userId: string
   private nickname: string
   private targetX: number
   private targetY: number
+  private dir8: Direction8
+  private isMoving: boolean
 
-  constructor(scene: Phaser.Scene, state: RemotePlayerState, textureKey: string) {
+  constructor(scene: Phaser.Scene, state: RemotePlayerState) {
     this.userId = state.userId
     this.nickname = state.nickname
+    this.dir8 = direction4To8(state.direction)
+    this.isMoving = state.isMoving
     this.sprite = scene.add
-      .image(state.x, state.y, textureKey)
+      .sprite(state.x, state.y, textureKeyIdle(this.dir8))
+      .setScale(AVATAR_SCALE)
       .setDepth(10)
       .setInteractive({ useHandCursor: true })
+    if (state.isMoving) {
+      this.sprite.play(animKeyWalk(this.dir8))
+    }
     this.sprite.on("pointerdown", () => {
       // 카메라 변환된 월드 좌표 → 화면 좌표 (popover 위치용)
       const cam = scene.cameras.main
@@ -607,13 +631,29 @@ class RemoteAvatar {
     return this.sprite.y
   }
 
-  setTarget(x: number, y: number, _direction: Direction, nickname: string) {
+  setTarget(x: number, y: number, direction: Direction, isMoving: boolean, nickname: string) {
     this.targetX = x
     this.targetY = y
     if (this.nickname !== nickname) {
       this.nickname = nickname
       this.nameTag.setText(nickname)
     }
+    const nextDir = direction4To8(direction)
+    if (isMoving) {
+      // 같은 방향·같은 anim 재생 중이면 play 재호출 안 함 — 프레임 리셋 방지
+      if (
+        nextDir !== this.dir8 ||
+        this.sprite.anims.currentAnim?.key !== animKeyWalk(nextDir) ||
+        !this.sprite.anims.isPlaying
+      ) {
+        this.sprite.play(animKeyWalk(nextDir), true)
+      }
+    } else if (this.isMoving || nextDir !== this.dir8) {
+      this.sprite.anims.stop()
+      this.sprite.setTexture(textureKeyIdle(nextDir))
+    }
+    this.dir8 = nextDir
+    this.isMoving = isMoving
   }
 
   update(deltaMs: number) {

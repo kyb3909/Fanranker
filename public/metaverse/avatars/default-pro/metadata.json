@@ -1,0 +1,81 @@
+{
+  "character": {
+    "id": "2c7435cf-a808-462c-885a-2eeae4e947d5",
+    "name": "Default Avatar Pro",
+    "prompt": "cute bald young boy with light skin, big friendly eyes, wearing a clean white sleeveless tank top and white shorts, cheerful expression, crisp pixel art game character",
+    "size": {
+      "width": 124,
+      "height": 124
+    },
+    "template_id": "mannequin",
+    "directions": 8,
+    "view": "side",
+    "created_at": "2026-04-22T15:31:54.062275+00:00"
+  },
+  "frames": {
+    "rotations": {
+      "south": "rotations/south.png",
+      "south-east": "rotations/south-east.png",
+      "east": "rotations/east.png",
+      "north-east": "rotations/north-east.png",
+      "north": "rotations/north.png",
+      "north-west": "rotations/north-west.png",
+      "west": "rotations/west.png",
+      "south-west": "rotations/south-west.png"
+    },
+    "animations": {
+      "animating-6a015032": {
+        "north": [
+          "animations/animating-6a015032/north/frame_000.png",
+          "animations/animating-6a015032/north/frame_001.png",
+          "animations/animating-6a015032/north/frame_002.png",
+          "animations/animating-6a015032/north/frame_003.png"
+        ],
+        "south": [
+          "animations/animating-6a015032/south/frame_000.png",
+          "animations/animating-6a015032/south/frame_001.png",
+          "animations/animating-6a015032/south/frame_002.png",
+          "animations/animating-6a015032/south/frame_003.png"
+        ],
+        "south-east": [
+          "animations/animating-6a015032/south-east/frame_000.png",
+          "animations/animating-6a015032/south-east/frame_001.png",
+          "animations/animating-6a015032/south-east/frame_002.png",
+          "animations/animating-6a015032/south-east/frame_003.png"
+        ],
+        "north-east": [
+          "animations/animating-6a015032/north-east/frame_000.png",
+          "animations/animating-6a015032/north-east/frame_001.png",
+          "animations/animating-6a015032/north-east/frame_002.png",
+          "animations/animating-6a015032/north-east/frame_003.png"
+        ],
+        "south-west": [
+          "animations/animating-6a015032/south-west/frame_000.png",
+          "animations/animating-6a015032/south-west/frame_001.png",
+          "animations/animating-6a015032/south-west/frame_002.png",
+          "animations/animating-6a015032/south-west/frame_003.png"
+        ],
+        "west": [
+          "animations/animating-6a015032/west/frame_000.png",
+          "animations/animating-6a015032/west/frame_001.png",
+          "animations/animating-6a015032/west/frame_002.png",
+          "animations/animating-6a015032/west/frame_003.png"
+        ],
+        "east": [
+          "animations/animating-6a015032/east/frame_000.png",
+          "animations/animating-6a015032/east/frame_001.png",
+          "animations/animating-6a015032/east/frame_002.png",
+          "animations/animating-6a015032/east/frame_003.png"
+        ],
+        "north-west": [
+          "animations/animating-6a015032/north-west/frame_000.png",
+          "animations/animating-6a015032/north-west/frame_001.png",
+          "animations/animating-6a015032/north-west/frame_002.png",
+          "animations/animating-6a015032/north-west/frame_003.png"
+        ]
+      }
+    }
+  },
+  "export_version": "2.0",
+  "export_date": "2026-04-22T15:45:50.503280"
+}

@@ -23,6 +23,12 @@ import * as Phaser from "phaser"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import {
+  preloadProAvatar,
+  createProAvatarAnimations,
+  textureKeyIdle,
+  animKeyWalk,
+} from "@/lib/metaverse/avatar/pro-avatar"
 import { ChatBubble } from "./chat-bubble"
 
 export const SIDE_SCROLLER_SCENE_KEY = "MetaverseSideScroller"
@@ -47,10 +53,18 @@ const SCENE_HEIGHT = 821
 const FLOOR_TOP_Y = 640
 const FLOOR_HEIGHT = SCENE_HEIGHT - FLOOR_TOP_Y
 
-const PLAYER_W = 28
-const PLAYER_H = 52
+// PixelLab 124×124 프레임 → 0.5 스케일 = 62×62 디스플레이.
+// 실제 캐릭터 픽셀은 프레임 중앙에 몰려있어 hitbox 는 좁게 잡아야 벽에
+// 꽂히거나 공중에 뜨는 느낌 없음.
+const AVATAR_SCALE = 0.5
+const AVATAR_BODY_W = 40
+const AVATAR_BODY_H = 96
+// 124×124 프레임 내 body 좌상단 offset — 캐릭터가 중앙(약 42,12 ~ 82,108)
+const AVATAR_BODY_OFFSET_X = 42
+const AVATAR_BODY_OFFSET_Y = 12
+// 시각 높이 (스케일 적용) — 닉네임/말풍선 오프셋 계산용
+const AVATAR_VISUAL_H = AVATAR_BODY_H * AVATAR_SCALE
 
-const SELF_TEXTURE = "ss-player-self"
 const BG_TEXTURE = "ss-bg-stadium"
 const BG_URL = "/metaverse/bg-stadium.png"
 
@@ -83,6 +97,7 @@ export class SideScrollerScene extends Phaser.Scene {
     if (!this.textures.exists(BG_TEXTURE)) {
       this.load.image(BG_TEXTURE, BG_URL)
     }
+    preloadProAvatar(this)
   }
 
   create() {
@@ -103,19 +118,26 @@ export class SideScrollerScene extends Phaser.Scene {
       .setOrigin(0, 0)
     this.platforms.add(invisibleFloor)
 
-    // 플레이어 텍스처 & 스프라이트 — 배경보다 위 (depth 10)
-    this.createPlayerTexture()
-    this.player = this.physics.add.sprite(100, FLOOR_TOP_Y - PLAYER_H - 20, SELF_TEXTURE)
+    // 8방향 walk anim 등록 (east 만 쓰지만 전체 등록해 월드맵과 동일)
+    createProAvatarAnimations(this)
+
+    // 플레이어 스프라이트 — 초기 east idle. 좌우 이동은 flipX 로 표현.
+    this.player = this.physics.add.sprite(100, FLOOR_TOP_Y - 100, textureKeyIdle("east"))
+    this.player.setScale(AVATAR_SCALE)
     this.player.setDepth(10)
     this.player.setCollideWorldBounds(true)
     this.player.setBounce(0)
     this.player.setMaxVelocity(WALK_SPEED, MAX_FALL_SPEED)
+    // hitbox 는 124×124 프레임 중앙 근처만 — 투명 패딩이 벽에 걸리는 느낌 방지
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body
+    playerBody.setSize(AVATAR_BODY_W, AVATAR_BODY_H)
+    playerBody.setOffset(AVATAR_BODY_OFFSET_X, AVATAR_BODY_OFFSET_Y)
     // 드래그는 update()에서 지면/공중 상황에 따라 갱신
     this.physics.add.collider(this.player, this.platforms)
 
     // 닉네임 태그
     this.nameTag = this.add
-      .text(this.player.x, this.player.y - PLAYER_H, this.identity.nickname, {
+      .text(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 6, this.identity.nickname, {
         fontFamily: "sans-serif",
         fontSize: "12px",
         color: "#ffffff",
@@ -215,10 +237,22 @@ export class SideScrollerScene extends Phaser.Scene {
       }
     }
 
+    // walk anim — 지상에서 수평 속도 있을 때만. 공중/정지 시엔 idle 텍스처로 리셋.
+    const walkingOnGround = onGround && Math.abs(body.velocity.x) > 10
+    const walkKey = animKeyWalk("east")
+    if (walkingOnGround) {
+      if (this.player.anims.currentAnim?.key !== walkKey || !this.player.anims.isPlaying) {
+        this.player.play(walkKey, true)
+      }
+    } else if (this.player.anims.isPlaying) {
+      this.player.anims.stop()
+      this.player.setTexture(textureKeyIdle("east"))
+    }
+
     // 닉네임 태그 + 말풍선 follow
-    this.nameTag.setPosition(this.player.x, this.player.y - PLAYER_H / 2 - 6)
+    this.nameTag.setPosition(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 6)
     if (this.chatBubble && this.chatBubble.active) {
-      this.chatBubble.setPosition(this.player.x, this.player.y - PLAYER_H / 2 - 22)
+      this.chatBubble.setPosition(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 22)
     }
   }
 
@@ -242,29 +276,5 @@ export class SideScrollerScene extends Phaser.Scene {
     this.unsubChatClose = null
     this.chatBubble?.destroy()
     this.chatBubble = null
-  }
-
-  // ============================================================
-  // Placeholder 그래픽 — 실제 에셋 들어오면 전부 교체
-  // ============================================================
-
-  private createPlayerTexture() {
-    if (this.textures.exists(SELF_TEXTURE)) return
-    const g = this.add.graphics()
-    // 몸통 (하단 2/3)
-    g.fillStyle(METAVERSE.COLOR_PLAYER_SELF, 1)
-    g.fillRect(0, PLAYER_H / 3, PLAYER_W, (PLAYER_H * 2) / 3)
-    // 머리 (상단 1/3, 살구색)
-    g.fillStyle(0xffd8a8, 1)
-    g.fillRect(4, 0, PLAYER_W - 8, PLAYER_H / 3)
-    // 외곽선
-    g.lineStyle(2, 0x000000, 0.7)
-    g.strokeRect(0, PLAYER_H / 3, PLAYER_W, (PLAYER_H * 2) / 3)
-    g.strokeRect(4, 0, PLAYER_W - 8, PLAYER_H / 3)
-    // 방향 눈 (오른쪽 바라봄)
-    g.fillStyle(0x111111, 1)
-    g.fillRect(PLAYER_W - 10, 6, 3, 3)
-    g.generateTexture(SELF_TEXTURE, PLAYER_W, PLAYER_H)
-    g.destroy()
   }
 }
