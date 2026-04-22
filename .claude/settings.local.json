@@ -107,7 +107,10 @@
       "mcp__pixellab__list_characters",
       "Bash(command -v supabase)",
       "Bash(supabase --version)",
-      "Bash(pnpm ls *)"
+      "Bash(pnpm ls *)",
+      "Bash(mkdir -p public/metaverse)",
+      "Bash(cp \"ChatGPT Image 2026년 4월 22일 오후 12_41_38.png\" public/metaverse/bg-stadium.png)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
