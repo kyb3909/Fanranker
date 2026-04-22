@@ -22,6 +22,8 @@
 import * as Phaser from "phaser"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { ChatBubble } from "./chat-bubble"
 
 export const SIDE_SCROLLER_SCENE_KEY = "MetaverseSideScroller"
 
@@ -33,9 +35,10 @@ const WALK_SPEED = 200
 // 씬 크기 — 배경 이미지(bg-stadium.png 1916×821)와 정확히 일치.
 const SCENE_WIDTH = 1916
 const SCENE_HEIGHT = 821
-// 바닥선 — 배경 이미지의 전면 잔디/돌벽 foreground 가 시작되는 y.
-// 이미지 보면서 대략 잡은 값 — PixelLab 지형 나오면 다시 튜닝.
-const FLOOR_TOP_Y = 740
+// 바닥선 — 배경 이미지의 전면 잔디(꽃 있는 라인) 가 시작되는 y.
+// 이 y 부터 캐릭터가 "서있는" 면. 아래쪽 돌벽/아치 영역은 보이지만
+// 캐릭터는 그 위 잔디에서 좌우 이동.
+const FLOOR_TOP_Y = 640
 const FLOOR_HEIGHT = SCENE_HEIGHT - FLOOR_TOP_Y
 
 const PLAYER_W = 28
@@ -54,6 +57,13 @@ export class SideScrollerScene extends Phaser.Scene {
   private spaceKey!: Phaser.Input.Keyboard.Key
   private platforms!: Phaser.Physics.Arcade.StaticGroup
   private facing: "left" | "right" = "right"
+
+  // 채팅 — 데모 모드 (로컬 bubble 만, 서버 없음)
+  private chatBubble: ChatBubble | null = null
+  private isChatInputOpen = false
+  private unsubChatSend: (() => void) | null = null
+  private unsubChatOpen: (() => void) | null = null
+  private unsubChatClose: (() => void) | null = null
 
   constructor() {
     super(SIDE_SCROLLER_SCENE_KEY)
@@ -121,7 +131,7 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // 안내 (UI 오버레이)
     this.add
-      .text(16, 16, "← → 이동 · Space 점프", {
+      .text(16, 16, "← → 이동 · Space 점프 · Enter 채팅", {
         fontFamily: "sans-serif",
         fontSize: "13px",
         color: "#ffffff",
@@ -130,40 +140,85 @@ export class SideScrollerScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(100)
+
+    // 채팅 브리지 구독 — React ChatOverlay 가 이벤트 보냄
+    this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
+      this.isChatInputOpen = true
+    })
+    this.unsubChatClose = sceneBridge.on("chat:input:close", () => {
+      this.isChatInputOpen = false
+    })
+    this.unsubChatSend = sceneBridge.on("chat:send", (payload) => {
+      if (!payload?.text) return
+      this.showChatBubble(payload.text)
+    })
+
+    // 씬 종료 시 정리
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown())
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown())
   }
 
   update() {
     if (!this.player) return
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
-    const left = this.cursors.left?.isDown || this.wasd.A.isDown
-    const right = this.cursors.right?.isDown || this.wasd.D.isDown
-    const jump = this.cursors.up?.isDown || this.wasd.W.isDown || this.spaceKey.isDown
 
-    // 수평 이동 + 방향
-    if (left) {
-      body.setVelocityX(-WALK_SPEED)
-      if (this.facing !== "left") {
-        this.facing = "left"
-        this.player.setFlipX(true)
-      }
-    } else if (right) {
-      body.setVelocityX(WALK_SPEED)
-      if (this.facing !== "right") {
-        this.facing = "right"
-        this.player.setFlipX(false)
-      }
-    } else {
+    // 채팅 입력창 열려있을 때는 키보드 이동 무시 — 타이핑 중 움직임 방지
+    if (this.isChatInputOpen) {
       body.setVelocityX(0)
+    } else {
+      const left = this.cursors.left?.isDown || this.wasd.A.isDown
+      const right = this.cursors.right?.isDown || this.wasd.D.isDown
+      const jump = this.cursors.up?.isDown || this.wasd.W.isDown || this.spaceKey.isDown
+
+      if (left) {
+        body.setVelocityX(-WALK_SPEED)
+        if (this.facing !== "left") {
+          this.facing = "left"
+          this.player.setFlipX(true)
+        }
+      } else if (right) {
+        body.setVelocityX(WALK_SPEED)
+        if (this.facing !== "right") {
+          this.facing = "right"
+          this.player.setFlipX(false)
+        }
+      } else {
+        body.setVelocityX(0)
+      }
+
+      if (jump && body.blocked.down) {
+        body.setVelocityY(JUMP_VELOCITY)
+      }
     }
 
-    // 점프 — 바닥/플랫폼 위에 있을 때만 (이중 점프 없음)
-    if (jump && body.blocked.down) {
-      body.setVelocityY(JUMP_VELOCITY)
-    }
-
-    // 닉네임 태그 follow
+    // 닉네임 태그 + 말풍선 follow
     this.nameTag.setPosition(this.player.x, this.player.y - PLAYER_H / 2 - 6)
+    if (this.chatBubble && this.chatBubble.active) {
+      this.chatBubble.setPosition(this.player.x, this.player.y - PLAYER_H / 2 - 22)
+    }
+  }
+
+  private showChatBubble(text: string) {
+    // 이전 말풍선 제거 — 유저당 1개만 유지
+    this.chatBubble?.destroy()
+    const bubble = new ChatBubble(this, text)
+    bubble.setAutoExpire(METAVERSE.BUBBLE_DURATION_MS)
+    bubble.on(Phaser.GameObjects.Events.DESTROY, () => {
+      if (this.chatBubble === bubble) this.chatBubble = null
+    })
+    this.chatBubble = bubble
+  }
+
+  private teardown() {
+    this.unsubChatSend?.()
+    this.unsubChatOpen?.()
+    this.unsubChatClose?.()
+    this.unsubChatSend = null
+    this.unsubChatOpen = null
+    this.unsubChatClose = null
+    this.chatBubble?.destroy()
+    this.chatBubble = null
   }
 
   // ============================================================
