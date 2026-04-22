@@ -17,6 +17,8 @@ export interface BootOptions {
   channel?: WorldChannel | null
   plots?: WorldPlot[]
   rooms?: ChatRoomMeta[]
+  /** Deep-link: /metaverse?plot=london-03 로 진입 시 해당 Plot 에 스폰 */
+  initialPlotCode?: string
 }
 
 export function bootMetaverseGame({
@@ -25,6 +27,7 @@ export function bootMetaverseGame({
   channel = null,
   plots = [],
   rooms = [],
+  initialPlotCode,
 }: BootOptions): Phaser.Game {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -51,8 +54,14 @@ export function bootMetaverseGame({
     dom: { createContainer: false },
   })
 
-  // 씬 시작 — identity + realtime 채널 + Plot/Room 초기 데이터 전달
-  game.scene.start(WORLD_MAP_SCENE_KEY, { identity, channel, plots, rooms })
+  // 씬 시작 — identity + realtime 채널 + Plot/Room 초기 데이터 + deep-link 전달
+  game.scene.start(WORLD_MAP_SCENE_KEY, {
+    identity,
+    channel,
+    plots,
+    rooms,
+    initialPlotCode,
+  })
   return game
 }
 

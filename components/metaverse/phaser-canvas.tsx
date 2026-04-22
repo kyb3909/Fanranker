@@ -23,7 +23,13 @@ import { OnboardingHint } from "./onboarding-hint"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
 
-export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }) {
+export function PhaserCanvas({
+  identity,
+  initialPlotCode,
+}: {
+  identity: MetaversePlayerIdentity
+  initialPlotCode?: string | null
+}) {
   const parentRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
   const channelRef = useRef<WorldChannel | null>(null)
@@ -84,7 +90,7 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           params: { is_guest: identity.userId.startsWith("guest-") },
         })
 
-        // 3) Phaser 게임 부팅 — 채널 + plot/room 초기 데이터 주입
+        // 3) Phaser 게임 부팅 — 채널 + plot/room + 선택 initial plot 주입
         if (!parentRef.current) return
         gameRef.current = bootMetaverseGame({
           parent: parentRef.current,
@@ -92,6 +98,7 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           channel: newChannel,
           plots,
           rooms,
+          initialPlotCode: initialPlotCode ?? undefined,
         })
         setStatus("ready")
       } catch (err) {
@@ -109,7 +116,9 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       roomChannelRef.current?.disconnect().catch(() => {})
       roomChannelRef.current = null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity])
+  // initialPlotCode 변경은 재마운트 유도 안 함 — 페이지 재방문 시만 스폰 위치 변경
 
   // Plot 진입/이탈에 따라 방 채널 자동 연결/해제.
   // 씬은 sceneBridge room:channel:attach/detach 이벤트로 상태 동기화.

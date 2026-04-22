@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
+import { useSearchParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 
@@ -28,6 +29,13 @@ const DEV_GUEST_MODE = process.env.NODE_ENV === "development"
 export function MetaverseStage() {
   const { user, isLoaded, isSignedIn } = useUser()
   const [identity, setIdentity] = useState<MetaversePlayerIdentity | null>(null)
+  const searchParams = useSearchParams()
+  // Deep-link: /metaverse?plot=london-03 진입 시 해당 Plot 에 스폰
+  const initialPlotCode =
+    searchParams
+      ?.get("plot")
+      ?.toLowerCase()
+      .replace(/[^a-z0-9-]/g, "") ?? null
 
   // 세션 수명 guest identity — 탭 유지되는 동안 동일
   const guestIdentity = useMemo<MetaversePlayerIdentity | null>(() => {
@@ -98,7 +106,7 @@ export function MetaverseStage() {
 
   if (!identity) return <LoadingScreen stage="identity 설정 중…" />
 
-  return <PhaserCanvas identity={identity} />
+  return <PhaserCanvas identity={identity} initialPlotCode={initialPlotCode} />
 }
 
 function LoadingScreen({ stage }: { stage?: string }) {

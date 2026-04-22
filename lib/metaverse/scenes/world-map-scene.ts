@@ -77,16 +77,20 @@ export class WorldMapScene extends Phaser.Scene {
     super(WORLD_MAP_SCENE_KEY)
   }
 
+  private initialPlotCode?: string
+
   init(data: {
     identity: MetaversePlayerIdentity
     channel?: WorldChannel | null
     plots?: WorldPlot[]
     rooms?: ChatRoomMeta[]
+    initialPlotCode?: string
   }) {
     this.identity = data.identity
     this.channel = data.channel ?? null
     this.plots = data.plots ?? []
     this.initialRooms = data.rooms ?? []
+    this.initialPlotCode = data.initialPlotCode
   }
 
   create() {
@@ -110,9 +114,12 @@ export class WorldMapScene extends Phaser.Scene {
     this.createPlayerTexture(SELF_TEXTURE, METAVERSE.COLOR_PLAYER_SELF)
     this.createPlayerTexture(OTHER_TEXTURE, METAVERSE.COLOR_PLAYER_OTHER)
 
-    // 스폰: 런던 중앙 광장 (Wembley 앞)
-    const spawnX = pinToWorldX(51)
-    const spawnY = pinToWorldY(70)
+    // 스폰 좌표 결정 — deep-link plot_code 가 있으면 해당 Plot, 아니면 런던 중앙 광장
+    const spawnPlot = this.initialPlotCode
+      ? this.plots.find((p) => p.plotCode === this.initialPlotCode)
+      : null
+    const spawnX = spawnPlot ? pinToWorldX(spawnPlot.pinX) : pinToWorldX(51)
+    const spawnY = spawnPlot ? pinToWorldY(spawnPlot.pinY) : pinToWorldY(70)
     this.player = this.physics.add.sprite(spawnX, spawnY, SELF_TEXTURE)
     this.player.setCollideWorldBounds(true)
 
