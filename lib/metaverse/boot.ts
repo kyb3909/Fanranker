@@ -6,7 +6,12 @@
  */
 
 import * as Phaser from "phaser"
-import { WorldMapScene, WORLD_MAP_SCENE_KEY } from "./scenes"
+import {
+  WorldMapScene,
+  WORLD_MAP_SCENE_KEY,
+  SideScrollerScene,
+  SIDE_SCROLLER_SCENE_KEY,
+} from "./scenes"
 import { METAVERSE } from "./constants"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "./types"
 import type { WorldChannel } from "./realtime/world-channel"
@@ -62,6 +67,42 @@ export function bootMetaverseGame({
     rooms,
     initialPlotCode,
   })
+  return game
+}
+
+/**
+ * 사이드스크롤러 프로토타입 부팅 (Phase 4 선행 데모).
+ * 월드맵 씬과 다른 게임 인스턴스 — 중력/씬 구성 독립.
+ */
+export interface SideScrollerBootOptions {
+  parent: HTMLElement
+  identity: MetaversePlayerIdentity
+}
+
+export function bootSideScrollerDemo({ parent, identity }: SideScrollerBootOptions): Phaser.Game {
+  const game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent,
+    width: parent.clientWidth,
+    height: parent.clientHeight,
+    backgroundColor: "#1a1f2e",
+    physics: {
+      default: "arcade",
+      arcade: {
+        gravity: { x: 0, y: 0 }, // 씬 내부에서 per-scene 지정
+        debug: false,
+      },
+    },
+    scale: {
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    pixelArt: true,
+    render: { antialias: false },
+    scene: [SideScrollerScene],
+    dom: { createContainer: false },
+  })
+  game.scene.start(SIDE_SCROLLER_SCENE_KEY, { identity })
   return game
 }
 
