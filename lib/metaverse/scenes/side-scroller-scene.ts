@@ -35,7 +35,9 @@ export const SIDE_SCROLLER_SCENE_KEY = "MetaverseSideScroller"
 
 // 물리 상수 — 메이플/플랫포머 느낌 튜닝용. 숫자 바꾸면 감각 즉시 달라짐.
 const GRAVITY_Y = 900
-const JUMP_VELOCITY = -440
+// 점프 최대 높이 ≈ v²/(2g) = 320²/1800 ≈ 57px (캐릭터 display 높이의 ~1배).
+// 이전 -440 은 107px (~1.7배) 이라 둥둥 뜨는 느낌이었음.
+const JUMP_VELOCITY = -320
 const WALK_SPEED = 240 // 최대 수평 속도 (px/s)
 // 가속/감속 — 지면 vs 공중 분리. 공중은 조작 덜 되고 관성 유지.
 const GROUND_ACCEL = 2200 // 정지→최대 약 0.11s
