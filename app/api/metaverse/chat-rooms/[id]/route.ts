@@ -1,14 +1,18 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { resolveMetaverseUser } from "@/lib/metaverse/auth"
 import { broadcastRoomClosed } from "@/lib/metaverse/realtime/server-broadcast"
+import { checkRateLimit } from "@/lib/api-error"
 
 /**
  * DELETE /api/metaverse/chat-rooms/[id]
  * 방장이 본인 방을 수동 close. 차감된 100P 는 반환하지 않음 (정책).
  * closed_at 을 채워 soft close — 실제 row는 남겨서 감사 가능.
  */
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const limited = checkRateLimit(req, "STANDARD")
+  if (limited) return limited
+
   const { id } = await params
   if (!id) return NextResponse.json({ error: "id_required" }, { status: 400 })
 

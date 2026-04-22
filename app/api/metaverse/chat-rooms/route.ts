@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { resolveMetaverseUser } from "@/lib/metaverse/auth"
 import { broadcastRoomCreated } from "@/lib/metaverse/realtime/server-broadcast"
+import { checkRateLimit } from "@/lib/api-error"
 
 const SIGN_TEXT_MAX = 20
 const DEFAULT_COST = 100
@@ -15,7 +16,11 @@ const DEFAULT_COST = 100
  *
  * body: { plotId: string, signText: string, cost?: number (default 100) }
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // 방 개설은 100P 차감되는 민감 작업 → STRICT (10/min)
+  const limited = checkRateLimit(req, "STRICT")
+  if (limited) return limited
+
   const me = await resolveMetaverseUser(req)
   if (!me) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
 

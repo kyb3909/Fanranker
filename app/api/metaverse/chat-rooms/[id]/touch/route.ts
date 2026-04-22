@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { resolveMetaverseUser } from "@/lib/metaverse/auth"
+import { checkRateLimit } from "@/lib/api-error"
 
 /**
  * POST /api/metaverse/chat-rooms/[id]/touch
@@ -9,7 +10,11 @@ import { resolveMetaverseUser } from "@/lib/metaverse/auth"
  * 모든 인증 유저 허용 (본인이 방 안에 있다는 증명은 안 하지만, 악용해도 방 수명만
  * 연장되므로 남용 영향 낮음). 과도 호출 방지는 클라이언트 쪽에서 throttle.
  */
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // touch는 1분 throttle 이미 클라 적용 — 서버는 보수적 STANDARD
+  const limited = checkRateLimit(req, "STANDARD")
+  if (limited) return limited
+
   const { id } = await params
   if (!id) return NextResponse.json({ error: "id_required" }, { status: 400 })
 
