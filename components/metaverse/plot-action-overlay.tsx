@@ -34,6 +34,7 @@ export function PlotActionOverlay({
 }) {
   const [ctx, setCtx] = useState<PlotContext | null>(null)
   const [closing, setClosing] = useState(false)
+  const [occupantCount, setOccupantCount] = useState(0)
 
   useEffect(() => {
     const unsubEnter = sceneBridge.on("plot:enter", (detail) => {
@@ -42,10 +43,15 @@ export function PlotActionOverlay({
     const unsubLeave = sceneBridge.on("plot:leave", () => {
       setCtx(null)
       setClosing(false)
+      setOccupantCount(0)
+    })
+    const unsubPresence = sceneBridge.on("room:presence", (payload) => {
+      if (payload) setOccupantCount(payload.count)
     })
     return () => {
       unsubEnter()
       unsubLeave()
+      unsubPresence()
     }
   }, [])
 
@@ -84,6 +90,12 @@ export function PlotActionOverlay({
         <span aria-hidden>🪧</span>
         <span className="text-white/60">{ctx.plazaName} ·</span>
         <span className="font-semibold">입장 중</span>
+        {occupantCount > 0 && (
+          <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+            <span className="tabular-nums">{occupantCount}명</span>
+          </span>
+        )}
         <button
           onClick={() => onEnterRoom?.(ctx)}
           className="ml-1 rounded bg-white/10 px-2 py-0.5 text-[11px] text-white/80 transition-colors hover:bg-white/20 hover:text-white"

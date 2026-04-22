@@ -119,6 +119,10 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
           const { RoomChannel } = await import("@/lib/metaverse/realtime/room-channel")
           const supabase = createAnonClient()
           const rc = new RoomChannel(supabase, identity, detail.roomId!)
+          // presence count → React UI 로 전파
+          rc.onPresenceChange((count) => {
+            sceneBridge.emit("room:presence", { count })
+          })
           await rc.connect()
           if (cancelled) {
             await rc.disconnect().catch(() => {})

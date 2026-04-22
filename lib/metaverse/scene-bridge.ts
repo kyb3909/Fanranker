@@ -40,6 +40,8 @@ type BridgeEventMap = {
   "room:channel:detach": undefined
   /** UI가 채팅 전송 요청. 씬이 라우팅 (room 있으면 room, 없으면 world) */
   "chat:send": { text: string }
+  /** 현재 방 접속자 수 갱신 (RoomChannel presence). room 없을 때는 0 또는 이벤트 없음. */
+  "room:presence": { count: number }
 }
 
 class MetaverseSceneBridge extends EventTarget {
