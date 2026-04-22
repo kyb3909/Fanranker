@@ -78,10 +78,12 @@ const BALL_KICK_RANGE = 60 // 플레이어 발끝 ~ 공 거리가 이 이내일 
 const BALL_RESPAWN_X = SCENE_WIDTH / 2
 const BALL_RESPAWN_Y = FLOOR_TOP_Y - 40
 
-// 충전 게이지 — X 키 홀드 시간 → 킥 속도.
-const KICK_ANGLE_DEG = 30 // 수평 대비 발사각 (고정)
-const KICK_MIN_SPEED = 400 // 탭 최소 속도 (px/s) → 거리 ~154px
-const KICK_MAX_SPEED = 900 // 풀차지 최대 속도 (px/s) → 거리 ~779px
+// 충전 게이지 — X 키 홀드 시간 → 킥 속도 + 각도.
+// 옵션 B: 각도도 함께 lerp. 탭=땅볼슛(낮은 각), 풀차지=로빙샷(높은 각).
+const KICK_MIN_ANGLE_DEG = 10 // 탭 최소 발사각 — 거의 땅에 깔린 그라운드볼
+const KICK_MAX_ANGLE_DEG = 45 // 풀차지 최대 발사각 — 포물선 로빙
+const KICK_MIN_SPEED = 400 // 탭 최소 속도 (px/s)
+const KICK_MAX_SPEED = 900 // 풀차지 최대 속도 (px/s)
 const KICK_CHARGE_MAX_MS = 1200 // 이 시간 이상 홀드해도 더 안 세짐
 
 const BG_TEXTURE = "ss-bg-stadium"
@@ -110,6 +112,8 @@ export class SideScrollerScene extends Phaser.Scene {
   private chargeBarFill!: Phaser.GameObjects.Rectangle
   /** 다음 kick anim 완료 시 공에 적용할 속도 (facing + charge 로 계산). */
   private pendingKickSpeed: number | null = null
+  /** 다음 kick anim 완료 시 공에 적용할 발사각 (deg, 수평 대비 상향). */
+  private pendingKickAngleDeg: number | null = null
 
   // 채팅 — 데모 모드 (로컬 bubble 만, 서버 없음)
   private chatBubble: ChatBubble | null = null
@@ -327,12 +331,14 @@ export class SideScrollerScene extends Phaser.Scene {
       if (onGround) {
         const t = Math.min(heldMs / KICK_CHARGE_MAX_MS, 1)
         const speed = KICK_MIN_SPEED + (KICK_MAX_SPEED - KICK_MIN_SPEED) * t
+        const angle = KICK_MIN_ANGLE_DEG + (KICK_MAX_ANGLE_DEG - KICK_MIN_ANGLE_DEG) * t
         this.state = "kicking"
         body.setAccelerationX(0)
         body.setVelocityX(0)
         body.setDragX(GROUND_DRAG)
         this.player.play(animKey("kick", this.facing), true)
         this.pendingKickSpeed = speed
+        this.pendingKickAngleDeg = angle
         this.updateNameTag()
         this.updateChargeBar()
         return
@@ -433,19 +439,20 @@ export class SideScrollerScene extends Phaser.Scene {
     g.destroy()
   }
 
-  /** 킥 anim 완료 시 호출 — 플레이어가 공 근처면 저장된 speed 로 공 발사. */
+  /** 킥 anim 완료 시 호출 — 플레이어가 공 근처면 저장된 속도·각도로 공 발사. */
   private applyPendingKickToBall() {
     const speed = this.pendingKickSpeed
+    const angleDeg = this.pendingKickAngleDeg
     this.pendingKickSpeed = null
-    if (speed === null) return
+    this.pendingKickAngleDeg = null
+    if (speed === null || angleDeg === null) return
     const dx = this.ball.x - this.player.x
-    const dy = this.ball.y - this.player.y
-    const dist = Math.sqrt(dx * dx + dy * dy)
+    const dist = Math.sqrt(dx * dx + (this.ball.y - this.player.y) ** 2)
     if (dist > BALL_KICK_RANGE) return // 공에서 너무 멀면 anim 만 재생하고 공은 그대로
     // facing 반대쪽으로는 차지 않음 — 방향 일치 요구
     const sign = this.facing === "east" ? 1 : -1
     if (Math.sign(dx) !== sign && Math.abs(dx) > 5) return
-    const angleRad = (KICK_ANGLE_DEG * Math.PI) / 180
+    const angleRad = (angleDeg * Math.PI) / 180
     const vx = sign * speed * Math.cos(angleRad)
     const vy = -speed * Math.sin(angleRad)
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
