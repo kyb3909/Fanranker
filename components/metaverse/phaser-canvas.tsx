@@ -18,6 +18,7 @@ import { ChatOverlay } from "./chat-overlay"
 import { ActivityBalanceHud, refreshActivityBalance } from "./activity-balance-hud"
 import { PlotActionOverlay } from "./plot-action-overlay"
 import { CreateRoomModal, type CreateRoomContext } from "./create-room-modal"
+import { OnboardingHint } from "./onboarding-hint"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { trackEvent } from "@/lib/analytics/events"
 
@@ -211,6 +212,8 @@ export function PhaserCanvas({ identity }: { identity: MetaversePlayerIdentity }
       />
       {/* 하단 채팅 오버레이 — 씬이 world/room 채널 라우팅 */}
       <ChatOverlay canSend={!!channel} />
+      {/* 최초 진입 안내 (1회) */}
+      {status === "ready" && <OnboardingHint />}
     </div>
   )
 }
