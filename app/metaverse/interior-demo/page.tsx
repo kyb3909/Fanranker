@@ -1,9 +1,8 @@
-import dynamic from "next/dynamic"
+import { SideScrollerDemo } from "@/components/metaverse/side-scroller-demo"
 
-const SideScrollerDemo = dynamic(
-  () => import("@/components/metaverse/side-scroller-demo").then((m) => m.SideScrollerDemo),
-  { ssr: false }
-)
+// SideScrollerDemo 는 "use client" + useEffect 내부에서 Phaser 를 await import 하므로
+// page 에서 dynamic({ ssr: false }) 래핑 불필요. Next.js 15 는 서버 컴포넌트에서
+// dynamic ssr:false 를 거부하므로 오히려 그 패턴이 빌드 에러.
 
 export const metadata = {
   title: "사이드스크롤러 프로토타입 — 메타버스",
