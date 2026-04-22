@@ -79,7 +79,8 @@ const BALL_GRAVITY = 900 // 플레이어와 동일
 const BALL_BOUNCE = 0.35
 const BALL_DRAG_X = 180 // 지상 구름 마찰
 const BALL_KICK_RANGE = 60 // 플레이어 발끝 ~ 공 거리가 이 이내일 때만 실제 킥 속도 인가
-const BALL_RESPAWN_X = SCENE_WIDTH / 2
+// 공 스폰 — 플레이어 초기 위치 (x=100) 바로 앞에 두어 처음부터 킥 체험 가능.
+const BALL_RESPAWN_X = 160
 const BALL_RESPAWN_Y = FLOOR_TOP_Y - 40
 
 // 충전 게이지 — X 키 홀드 시간 → 킥 속도 + 각도.
@@ -118,6 +119,11 @@ export class SideScrollerScene extends Phaser.Scene {
   private pendingKickSpeed: number | null = null
   /** 다음 kick anim 완료 시 공에 적용할 발사각 (deg, 수평 대비 상향). */
   private pendingKickAngleDeg: number | null = null
+  /** 킥 시작 시점의 공 좌표 — anim 완료 시 여기서 velocity 인가해 끊김 방지. */
+  private pendingBallX: number | null = null
+  private pendingBallY: number | null = null
+  /** 충전 중이지만 공이 범위 밖이면 "조준 필요" 토스트만 표시. */
+  private missHintText: Phaser.GameObjects.Text | null = null
 
   // 채팅 — 데모 모드 (로컬 bubble 만, 서버 없음)
   private chatBubble: ChatBubble | null = null
@@ -331,11 +337,16 @@ export class SideScrollerScene extends Phaser.Scene {
       this.chargeStartedAt = this.time.now
     }
 
-    // 충전 릴리즈 — X 놓는 순간 → 실제 킥 발사
+    // 충전 릴리즈 — X 놓는 순간 → 실제 킥 발사 (공이 사거리 + facing 방향에 있을 때만)
     if (kickJustUp && this.chargeStartedAt !== null) {
       const heldMs = this.time.now - this.chargeStartedAt
       this.chargeStartedAt = null
-      if (onGround) {
+      if (!onGround) {
+        // 공중에서 뗀 거면 조용히 취소
+      } else if (!this.ballInKickReach()) {
+        // 공이 없으면 킥 anim 자체를 재생 안 함 — 그려진 공이 뿅 하고 튀어나오는 문제 방지.
+        this.showMissHint()
+      } else {
         const t = Math.min(heldMs / KICK_CHARGE_MAX_MS, 1)
         const speed = KICK_MIN_SPEED + (KICK_MAX_SPEED - KICK_MIN_SPEED) * t
         const angle = KICK_MIN_ANGLE_DEG + (KICK_MAX_ANGLE_DEG - KICK_MIN_ANGLE_DEG) * t
@@ -343,7 +354,13 @@ export class SideScrollerScene extends Phaser.Scene {
         body.setAccelerationX(0)
         body.setVelocityX(0)
         body.setDragX(GROUND_DRAG)
-        this.player.play(animKey("kick", this.facing), true)
+        // kick anim 은 east 원본만 — west 쪽은 동일한 east 방향 그림이라 flipX 로 반전.
+        this.player.play(animKey("kick", "east"), true)
+        this.player.setFlipX(this.facing === "west")
+        // 킥 중엔 physics 공 숨김 — 그려진 공과 이중 표시 방지
+        this.ball.setVisible(false)
+        this.pendingBallX = this.ball.x
+        this.pendingBallY = this.ball.y
         this.pendingKickSpeed = speed
         this.pendingKickAngleDeg = angle
         this.updateNameTag()
@@ -390,8 +407,9 @@ export class SideScrollerScene extends Phaser.Scene {
   private setFacing(next: Facing) {
     if (this.facing === next) return
     this.facing = next
+    // kicking 상태에서는 방향 전환 안 일어남 (state-lock), 그래도 방어적으로 flip 리셋.
+    this.player.setFlipX(false)
     const cur = this.player.anims.currentAnim?.key ?? ""
-    // cur 은 "avatar-pro-xl-{kind}:{east|west}" 포맷
     const m = cur.match(/(walk|jump|kick):(east|west)$/)
     if (m && this.state !== "idle") {
       const kind = m[1] as "walk" | "jump" | "kick"
@@ -425,24 +443,64 @@ export class SideScrollerScene extends Phaser.Scene {
   // 축구공 + 킥 충전
   // ============================================================
 
-  /** 킥 anim 완료 시 호출 — 플레이어가 공 근처면 저장된 속도·각도로 공 발사. */
+  /** 플레이어 기준 공이 사거리 + facing 방향에 있는지. */
+  private ballInKickReach(): boolean {
+    const dx = this.ball.x - this.player.x
+    const dist = Math.sqrt(dx * dx + (this.ball.y - this.player.y) ** 2)
+    if (dist > BALL_KICK_RANGE) return false
+    const sign = this.facing === "east" ? 1 : -1
+    if (Math.sign(dx) !== sign && Math.abs(dx) > 5) return false
+    return true
+  }
+
+  /** kick anim 완료 시 호출 — 숨겨뒀던 공을 원래 위치에서 속도·각도로 발사. */
   private applyPendingKickToBall() {
     const speed = this.pendingKickSpeed
     const angleDeg = this.pendingKickAngleDeg
+    const x = this.pendingBallX
+    const y = this.pendingBallY
     this.pendingKickSpeed = null
     this.pendingKickAngleDeg = null
-    if (speed === null || angleDeg === null) return
-    const dx = this.ball.x - this.player.x
-    const dist = Math.sqrt(dx * dx + (this.ball.y - this.player.y) ** 2)
-    if (dist > BALL_KICK_RANGE) return // 공에서 너무 멀면 anim 만 재생하고 공은 그대로
-    // facing 반대쪽으로는 차지 않음 — 방향 일치 요구
+    this.pendingBallX = null
+    this.pendingBallY = null
+    // 상태 복원: flipX 해제, 공 재표시
+    this.player.setFlipX(false)
+    this.ball.setVisible(true)
+    if (speed === null || angleDeg === null || x === null || y === null) return
+    // 킥 시작 시점 좌표로 복귀 (킥 중 frozen 이었으니 동일 위치). 속도 인가.
+    this.ball.setPosition(x, y)
     const sign = this.facing === "east" ? 1 : -1
-    if (Math.sign(dx) !== sign && Math.abs(dx) > 5) return
     const angleRad = (angleDeg * Math.PI) / 180
     const vx = sign * speed * Math.cos(angleRad)
     const vy = -speed * Math.sin(angleRad)
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
     ballBody.setVelocity(vx, vy)
+  }
+
+  /** 공 없이 X 놓을 때 "앞에 공이 없어요" 짧은 토스트 (2초 페이드). */
+  private showMissHint() {
+    this.missHintText?.destroy()
+    this.missHintText = this.add
+      .text(this.scale.width / 2, 90, "앞에 공이 없어요 — 공 앞에서 차세요", {
+        fontFamily: "sans-serif",
+        fontSize: "14px",
+        color: "#ffffff",
+        backgroundColor: "#000000aa",
+        padding: { x: 10, y: 4 },
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(103)
+    this.tweens.add({
+      targets: this.missHintText,
+      alpha: 0,
+      duration: 1500,
+      delay: 500,
+      onComplete: () => {
+        this.missHintText?.destroy()
+        this.missHintText = null
+      },
+    })
   }
 
   private updateChargeBar() {
@@ -467,7 +525,10 @@ export class SideScrollerScene extends Phaser.Scene {
   private resetBall() {
     const body = this.ball.body as Phaser.Physics.Arcade.Body
     body.setVelocity(0, 0)
-    this.ball.setPosition(BALL_RESPAWN_X, BALL_RESPAWN_Y)
+    // 플레이어 정면 40px 앞에 스폰 — 리셋 직후 바로 차기 편함
+    const sign = this.facing === "east" ? 1 : -1
+    this.ball.setPosition(this.player.x + 40 * sign, BALL_RESPAWN_Y)
+    this.ball.setVisible(true)
   }
 
   private showChatBubble(text: string) {
