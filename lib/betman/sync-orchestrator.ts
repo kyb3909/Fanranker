@@ -19,8 +19,8 @@ export async function syncSingleGmTs(
   supabase: ReturnType<typeof createServiceRoleClient>,
   gmTs: string
 ): Promise<SyncResult> {
-  const rawDatas = await fetchGameData(gmTs)
-  if (!rawDatas || rawDatas.length === 0) {
+  const raw = await fetchGameData(gmTs)
+  if (!raw || raw.datas.length === 0) {
     return { action: "checked", roundId: "", games: 0, errors: 0 }
   }
 
@@ -68,7 +68,7 @@ export async function syncSingleGmTs(
     isNew = true
   }
 
-  const games = parseGames(rawDatas, roundId)
+  const games = parseGames(raw, roundId)
 
   // 이미 종료된 game_no는 건드리지 않음
   const { data: finishedGames } = await supabase
