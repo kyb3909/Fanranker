@@ -69,8 +69,12 @@ const AVATAR_BODY_OFFSET_Y = 60
 const AVATAR_VISUAL_H = AVATAR_BODY_H * AVATAR_SCALE
 
 // 축구공 — 땅에 멈춰있다가 킥 입력 시 충전된 강도로 날아감.
+// PixelLab 생성 32×32 PNG, 실제 공은 bbox (4,4)-(28,28) = 중앙 24×24.
 const BALL_TEXTURE = "ss-soccer-ball"
-const BALL_RADIUS = 10 // 디스플레이 반지름 (픽셀)
+const BALL_URL = "/metaverse/soccer-ball.png"
+const BALL_FRAME = 32
+const BALL_RADIUS_PX = 12 // 실제 공 반지름 (body 용)
+const BALL_CIRCLE_OFFSET = BALL_FRAME / 2 - BALL_RADIUS_PX // = 4, bbox padding
 const BALL_GRAVITY = 900 // 플레이어와 동일
 const BALL_BOUNCE = 0.35
 const BALL_DRAG_X = 180 // 지상 구름 마찰
@@ -134,6 +138,9 @@ export class SideScrollerScene extends Phaser.Scene {
     if (!this.textures.exists(BG_TEXTURE)) {
       this.load.image(BG_TEXTURE, BG_URL)
     }
+    if (!this.textures.exists(BALL_TEXTURE)) {
+      this.load.image(BALL_TEXTURE, BALL_URL)
+    }
     preloadProAvatarXl(this)
   }
 
@@ -184,14 +191,14 @@ export class SideScrollerScene extends Phaser.Scene {
     )
 
     // 축구공 — 항상 땅에 존재, 킥 입력 시에만 속도 인가.
-    this.createBallTexture()
     this.ball = this.physics.add.sprite(BALL_RESPAWN_X, BALL_RESPAWN_Y, BALL_TEXTURE)
     this.ball.setDepth(9)
     this.ball.setCollideWorldBounds(true)
     this.ball.setBounce(BALL_BOUNCE)
     this.ball.setDragX(BALL_DRAG_X)
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
-    ballBody.setCircle(BALL_RADIUS)
+    // 32×32 PNG 중앙 24×24 가 실제 공 — body 원형 + offset 으로 투명 테두리 배제
+    ballBody.setCircle(BALL_RADIUS_PX, BALL_CIRCLE_OFFSET, BALL_CIRCLE_OFFSET)
     ballBody.setGravityY(BALL_GRAVITY - GRAVITY_Y) // 월드 중력 위에 공 전용 추가 (동일하게 유지)
     this.physics.add.collider(this.ball, this.platforms)
     // 플레이어 ↔ 공 콜리전은 없음 — "공은 킥 입력 때만 날아감" 스펙대로 접촉만으로는 안 밀림.
@@ -417,27 +424,6 @@ export class SideScrollerScene extends Phaser.Scene {
   // ============================================================
   // 축구공 + 킥 충전
   // ============================================================
-
-  /** 8×8 흑백 격자 패턴의 간단한 축구공 텍스처. 추후 PixelLab 스프라이트로 교체 가능. */
-  private createBallTexture() {
-    if (this.textures.exists(BALL_TEXTURE)) return
-    const g = this.add.graphics()
-    const r = BALL_RADIUS
-    // 흰 바디
-    g.fillStyle(0xffffff, 1)
-    g.fillCircle(r, r, r)
-    // 검은 오각형 패턴 (상하좌우 4개)
-    g.fillStyle(0x111111, 1)
-    g.fillRect(r - 2, 1, 4, 4)
-    g.fillRect(r - 2, r * 2 - 5, 4, 4)
-    g.fillRect(1, r - 2, 4, 4)
-    g.fillRect(r * 2 - 5, r - 2, 4, 4)
-    // 외곽선
-    g.lineStyle(1, 0x000000, 1)
-    g.strokeCircle(r, r, r)
-    g.generateTexture(BALL_TEXTURE, r * 2, r * 2)
-    g.destroy()
-  }
 
   /** 킥 anim 완료 시 호출 — 플레이어가 공 근처면 저장된 속도·각도로 공 발사. */
   private applyPendingKickToBall() {
