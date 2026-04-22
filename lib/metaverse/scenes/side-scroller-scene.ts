@@ -27,10 +27,16 @@ import { ChatBubble } from "./chat-bubble"
 
 export const SIDE_SCROLLER_SCENE_KEY = "MetaverseSideScroller"
 
-// 물리 상수 — 메이플 느낌 튜닝용. 필요시 조정.
+// 물리 상수 — 메이플/플랫포머 느낌 튜닝용. 숫자 바꾸면 감각 즉시 달라짐.
 const GRAVITY_Y = 900
-const JUMP_VELOCITY = -420
-const WALK_SPEED = 200
+const JUMP_VELOCITY = -440
+const WALK_SPEED = 240 // 최대 수평 속도 (px/s)
+// 가속/감속 — 지면 vs 공중 분리. 공중은 조작 덜 되고 관성 유지.
+const GROUND_ACCEL = 2200 // 정지→최대 약 0.11s
+const GROUND_DRAG = 1500 // 최대→정지 약 0.16s (짧은 슬라이드)
+const AIR_ACCEL = 900 // 공중 좌우 조작 — 땅보다 둔함
+const AIR_DRAG = 50 // 공중에선 거의 관성 유지
+const MAX_FALL_SPEED = 1200
 
 // 씬 크기 — 배경 이미지(bg-stadium.png 1916×821)와 정확히 일치.
 const SCENE_WIDTH = 1916
@@ -102,7 +108,9 @@ export class SideScrollerScene extends Phaser.Scene {
     this.player = this.physics.add.sprite(100, FLOOR_TOP_Y - PLAYER_H - 20, SELF_TEXTURE)
     this.player.setDepth(10)
     this.player.setCollideWorldBounds(true)
-    this.player.setBounce(0) // 바닥에 떨어졌을 때 튕기지 않음
+    this.player.setBounce(0)
+    this.player.setMaxVelocity(WALK_SPEED, MAX_FALL_SPEED)
+    // 드래그는 update()에서 지면/공중 상황에 따라 갱신
     this.physics.add.collider(this.player, this.platforms)
 
     // 닉네임 태그
@@ -162,32 +170,39 @@ export class SideScrollerScene extends Phaser.Scene {
     if (!this.player) return
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
+    const onGround = body.blocked.down
+    // 가속/드래그는 지면 vs 공중에 따라 분기 — 공중은 관성 유지
+    const accelValue = onGround ? GROUND_ACCEL : AIR_ACCEL
+    const dragValue = onGround ? GROUND_DRAG : AIR_DRAG
 
-    // 채팅 입력창 열려있을 때는 키보드 이동 무시 — 타이핑 중 움직임 방지
     if (this.isChatInputOpen) {
-      body.setVelocityX(0)
+      // 입력창 열려있을 땐 가속 0 + 지상 드래그로 부드럽게 정지
+      body.setAccelerationX(0)
+      body.setDragX(GROUND_DRAG)
     } else {
       const left = this.cursors.left?.isDown || this.wasd.A.isDown
       const right = this.cursors.right?.isDown || this.wasd.D.isDown
       const jump = this.cursors.up?.isDown || this.wasd.W.isDown || this.spaceKey.isDown
 
       if (left) {
-        body.setVelocityX(-WALK_SPEED)
+        body.setAccelerationX(-accelValue)
         if (this.facing !== "left") {
           this.facing = "left"
           this.player.setFlipX(true)
         }
       } else if (right) {
-        body.setVelocityX(WALK_SPEED)
+        body.setAccelerationX(accelValue)
         if (this.facing !== "right") {
           this.facing = "right"
           this.player.setFlipX(false)
         }
       } else {
-        body.setVelocityX(0)
+        body.setAccelerationX(0)
       }
 
-      if (jump && body.blocked.down) {
+      body.setDragX(dragValue)
+
+      if (jump && onGround) {
         body.setVelocityY(JUMP_VELOCITY)
       }
     }
