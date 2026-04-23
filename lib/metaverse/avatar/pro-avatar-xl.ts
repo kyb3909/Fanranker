@@ -141,12 +141,17 @@ export function createProAvatarXlAnimations(scene: Phaser.Scene): void {
     for (const { kind, fps, repeat } of defs) {
       const key = animKey(kind, f)
       if (scene.anims.exists(key)) continue
-      // 모든 프레임 텍스처가 로드됐는지 확인 — 아직 에셋 없으면 anim 생성 skip (console warn 방지)
+      // 프레임 로드 상태 관계없이 anim 생성 — 누락된 프레임은 Phaser 가 skip 하고 경고만.
+      // 엄격 체크 (allLoaded) 하면 일부 프레임 로드 실패 시 anim 전체가 누락돼 기능 불가.
       const frames = Array.from({ length: KIND_FRAMES[kind] }, (_, i) => ({
         key: texKeyAnim(kind, f, i),
       }))
-      const allLoaded = frames.every((f) => scene.textures.exists(f.key))
-      if (!allLoaded) continue
+      const missing = frames.filter((ff) => !scene.textures.exists(ff.key))
+      if (missing.length > 0) {
+        console.warn(
+          `[avatar-pro-xl] anim ${key}: ${missing.length}/${frames.length} 프레임 누락 — 생성은 계속`
+        )
+      }
       scene.anims.create({ key, frames, frameRate: fps, repeat })
     }
   }

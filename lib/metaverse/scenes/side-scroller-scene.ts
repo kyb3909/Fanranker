@@ -908,13 +908,15 @@ export class SideScrollerScene extends Phaser.Scene {
     ballBody.setVelocity(state.vx, state.vy)
   }
 
-  /** 공이 움직이고 있으면 200ms 마다 broadcast. 마지막으로 찬 사람이 authority. */
+  /** 공이 움직이고 있으면 200ms 마다 broadcast. 지면 안착 + 수평 속도 미미하면 중단. */
   private publishBallStateIfAuthority() {
     if (!this.channel) return
     if (!this.ball.visible) return
     const body = this.ball.body as Phaser.Physics.Arcade.Body
-    // velocity 가 유의미 할 때만. 멈춰있으면 더 이상 안 보냄.
-    if (Math.abs(body.velocity.x) < 2 && Math.abs(body.velocity.y) < 2) return
+    // 지면에 안착했고 수평 드리프트도 미미하면 broadcast 중단.
+    // 수직은 중력 vs 콜리더로 미세 진동 남아있어 체크 제외 (blocked.down 으로 판정).
+    const isAtRest = body.blocked.down && Math.abs(body.velocity.x) < 5
+    if (isAtRest) return
     this.channel.publishBallState({
       x: this.ball.x,
       y: this.ball.y,
