@@ -185,13 +185,19 @@ export class SideScrollerScene extends Phaser.Scene {
     // 드래그는 update()에서 지면/공중 상황에 따라 갱신
     this.physics.add.collider(this.player, this.platforms)
 
-    // kick 완료 → state 복귀 + 대기 중이던 공 속도 인가
+    // kick 완료 → state 복귀 + 대기 중이던 공 속도 인가.
+    // 중요: anim 완료 시 Phaser 는 last frame 에 머무름 (kick frame_003 에 공이
+    // 그려져있으면 그대로 stuck). `syncIdleOrWalkAnim` 은 `anims.isPlaying` 이
+    // true 일 때만 idle 텍스처 세팅 → complete 후엔 발동 X. 직접 idle texture 로
+    // 리셋해 그려진 공이 남는 문제 방지.
     this.player.on(
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
         if (anim.key === animKey("kick", "east") || anim.key === animKey("kick", "west")) {
           this.applyPendingKickToBall()
           this.state = "idle"
+          this.player.setTexture(texKeyIdle(this.facing))
+          this.player.setFlipX(false)
         }
       }
     )
@@ -291,7 +297,7 @@ export class SideScrollerScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown())
   }
 
-  update() {
+  update(_time: number, deltaMs: number) {
     if (!this.player) return
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
@@ -300,6 +306,17 @@ export class SideScrollerScene extends Phaser.Scene {
     // R 키 — 공 리셋 (어느 상태에서든 먼저 체크)
     if (Phaser.Input.Keyboard.JustDown(this.resetKey)) {
       this.resetBall()
+    }
+
+    // 공 회전 — 수평 속도 기준. 원주 = 2πr, r = BALL_RADIUS_PX (12).
+    // 구르는 거리 ÷ 원주 = 한 바퀴. rad 로 환산: vx * dt / r (부호 그대로).
+    if (this.ball.visible) {
+      const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
+      const vx = ballBody.velocity.x
+      if (Math.abs(vx) > 1) {
+        // 각속도 = vx / r (rad/s), frame 증가 = 각속도 * dt(초)
+        this.ball.rotation += (vx / BALL_RADIUS_PX) * (deltaMs / 1000)
+      }
     }
 
     // 킥 중에는 입력·이동 차단 — 발 심고 동작 완료까지 기다림
