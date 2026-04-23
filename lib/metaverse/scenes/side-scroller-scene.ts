@@ -36,9 +36,9 @@ export const SIDE_SCROLLER_SCENE_KEY = "MetaverseSideScroller"
 
 // 물리 상수 — 메이플/플랫포머 느낌 튜닝용. 숫자 바꾸면 감각 즉시 달라짐.
 const GRAVITY_Y = 900
-// 점프 최대 높이 ≈ v²/(2g) = 320²/1800 ≈ 57px (캐릭터 display 높이의 ~1배).
-// 이전 -440 은 107px (~1.7배) 이라 둥둥 뜨는 느낌이었음.
-const JUMP_VELOCITY = -320
+// 점프 최대 높이 ≈ v²/(2g) = 380²/1800 ≈ 80px (캐릭터 display 높이 98px 의 ~82%).
+// 메이플 스타일 springy 한 느낌 — 캐릭터가 커져서 상대 점프도 비례 조정.
+const JUMP_VELOCITY = -380
 const WALK_SPEED = 240 // 최대 수평 속도 (px/s)
 // 가속/감속 — 지면 vs 공중 분리. 공중은 조작 덜 되고 관성 유지.
 const GROUND_ACCEL = 2200 // 정지→최대 약 0.11s
@@ -56,11 +56,11 @@ const SCENE_HEIGHT = 821
 const FLOOR_TOP_Y = 640
 const FLOOR_HEIGHT = SCENE_HEIGHT - FLOOR_TOP_Y
 
-// PixelLab 208×208 XL 프레임 → 0.5 스케일 = 104×104 디스플레이.
-// PIL 로 실제 픽셀 bbox 측정한 값: 캐릭터는 x=86-120 (34 wide), y=60-158 (98 tall)
-// 에 그려져 있고 y=158 아래로 50px 투명 패딩이 있어 예전 offset 은 캐릭터가
-// floor 위 ~50px 떠있는 느낌이었음. 지금은 발끝이 body 바닥과 정확히 일치.
-const AVATAR_SCALE = 0.5
+// PixelLab 208×208 XL 프레임 → 1.0 스케일 (정수배, pixelArt 에서 가장 크리스프).
+// 실제 캐릭터 픽셀은 x=86-120 (34 wide), y=60-158 (98 tall). 메이플 스타일
+// 기준 화면 대비 ~20% 비중이 되도록 scale 0.5 → 1.0 으로 2배 확대.
+// 프레임 외곽 50px 하단 패딩은 투명이라 floor 아래로 삐져나가도 무해.
+const AVATAR_SCALE = 1.0
 const AVATAR_BODY_W = 34
 const AVATAR_BODY_H = 98
 const AVATAR_BODY_OFFSET_X = 86
