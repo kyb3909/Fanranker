@@ -936,14 +936,12 @@ export class SideScrollerScene extends Phaser.Scene {
   }
 
   /**
-   * 박치기 시퀀스 — setTexture 기반 수동 프레임 재생 + 효과 중첩:
-   *  - 프레임 0,1: 로드 (고개 젖히기), 프레임 후반: 임팩트 (앞으로 돌진 + 화면 쉐이크 + 플래시)
-   *  - 임팩트 순간 캐릭터를 facing 방향으로 살짝 전진 (body velocity)
-   *  - 카메라 shake + 빨간 플래시 overlay 로 "팍!" 강조
+   * 박치기 시퀀스 — 머리 숙이고 그대로 돌진 (박치기 공룡 스타일).
+   * 쉐이크·플래시 등 화려한 효과 제거, "앞으로 빠르게 달려가며 머리로 들이받기"
+   * 에 집중. 프레임 재생 중 facing 방향으로 body velocity 유지해 실제 전진.
    */
   private playHeadbuttFrames() {
-    // 프레임별 지속 시간 — 임팩트 프레임(2)에서 살짝 머무름
-    const FRAME_TIMING_MS = [90, 90, 160, 110] // 총 450ms
+    const FRAME_TIMING_MS = 100 // 프레임당 100ms × 4 = 400ms
     const prefix = "avatar-pro-xl-headbutt-east-"
     const available: number[] = []
     for (let i = 0; i < 4; i++) {
@@ -961,51 +959,27 @@ export class SideScrollerScene extends Phaser.Scene {
       return
     }
 
-    // 첫 프레임 즉시
+    // 첫 프레임 즉시 + 앞으로 돌진 시작 (전체 시퀀스 동안 유지)
     this.player.setTexture(prefix + available[0])
-    // 나머지 프레임 누적 delay 로 교체
-    let accMs = 0
+    const sign = this.facing === "east" ? 1 : -1
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    body.setVelocityX(sign * 220)
+
+    // 나머지 프레임 순차 교체
     for (let i = 1; i < available.length; i++) {
-      accMs += FRAME_TIMING_MS[Math.min(i - 1, FRAME_TIMING_MS.length - 1)]
       const fIdx = available[i]
-      this.time.delayedCall(accMs, () => {
+      this.time.delayedCall(FRAME_TIMING_MS * i, () => {
         if (this.state === "headbutt") this.player.setTexture(prefix + fIdx)
       })
     }
-    const totalMs = accMs + FRAME_TIMING_MS[available.length - 1]
-
-    // 임팩트 효과 — 2번째~3번째 프레임 사이 (돌진 모션 시점) 에 쉐이크 + 플래시 + 전진 dash
-    const impactDelay = FRAME_TIMING_MS[0] + FRAME_TIMING_MS[1] // ~180ms
-    this.time.delayedCall(impactDelay, () => {
-      if (this.state !== "headbutt") return
-      // 카메라 쉐이크 — 200ms, intensity 0.01
-      this.cameras.main.shake(200, 0.012)
-      // 캐릭터 앞으로 짧은 dash (물리 velocity)
-      const sign = this.facing === "east" ? 1 : -1
-      const body = this.player.body as Phaser.Physics.Arcade.Body
-      body.setVelocityX(sign * 180)
-      // 빨간 플래시 오버레이 — 씬 전체 120ms
-      const flash = this.add
-        .rectangle(0, 0, this.scale.width, this.scale.height, 0xff3b30, 0.25)
-        .setOrigin(0, 0)
-        .setScrollFactor(0)
-        .setDepth(200)
-      this.tweens.add({
-        targets: flash,
-        alpha: 0,
-        duration: 200,
-        onComplete: () => flash.destroy(),
-      })
-    })
 
     // 완료 → idle 복귀
+    const totalMs = FRAME_TIMING_MS * available.length
     this.time.delayedCall(totalMs, () => {
       if (this.state === "headbutt") {
         this.state = "idle"
         this.player.setFlipX(false)
         this.player.setTexture(texKeyRotation(this.facing))
-        // dash 속도 남아있으면 정리
-        const body = this.player.body as Phaser.Physics.Arcade.Body
         body.setVelocityX(0)
       }
     })
