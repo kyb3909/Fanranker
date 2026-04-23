@@ -28,38 +28,56 @@ interface LogEntry {
   scope: "world" | "room" | "local"
 }
 
+/**
+ * 반응형 앵커 방식 — 좌상단 (x,y) 고정 좌표 대신 우하단 (right,bottom) offset
+ * 으로 저장. window resize 시 패널이 자동으로 viewport 우하단 쪽에 붙어있음.
+ * 드래그 시엔 새 right/bottom 값을 계산해 저장.
+ */
 interface PanelLayout {
-  x: number
-  y: number
+  right: number // 화면 우측에서 offset (px)
+  bottom: number // 화면 하단에서 offset (px)
   w: number
   h: number
   collapsed: boolean
 }
 
 const MAX_ENTRIES = 50
-const STORAGE_KEY = "metaverse:chatlog:layout"
+const STORAGE_KEY = "metaverse:chatlog:layout-v2" // v2 — 앵커 방식으로 스키마 변경
 const MIN_W = 240
 const MIN_H = 180
 const MAX_W = 600
 const MAX_H = 600
+const DEFAULT_RIGHT = 16
+// 모바일 탭바 (h-14 = 56px + safe-area) + 채팅 입력창 여유. 데스크톱에서는 탭바
+// 없지만 과하지 않은 여백. 패널은 상대 포지션 (position: absolute) 이므로
+// 실제 viewport 기준이 아니라 /metaverse 페이지 래퍼(=100svh - 56px) 기준.
+const DEFAULT_BOTTOM = 80
 
 function clamp(value: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, value))
 }
 
 function getDefaultLayout(): PanelLayout {
-  if (typeof window === "undefined") {
-    return { x: 0, y: 0, w: 288, h: 240, collapsed: false }
-  }
-  // 우하단 기본 배치 — 하단 80px (ChatOverlay/PlotActionOverlay 위)
-  const w = 288
-  const h = 240
   return {
-    x: clamp(window.innerWidth - w - 16, 0, Math.max(0, window.innerWidth - w)),
-    y: clamp(window.innerHeight - h - 80, 0, Math.max(0, window.innerHeight - h)),
-    w,
-    h,
+    right: DEFAULT_RIGHT,
+    bottom: DEFAULT_BOTTOM,
+    w: 288,
+    h: 240,
     collapsed: false,
+  }
+}
+
+/** viewport 밖으로 삐져나가지 않도록 right/bottom 을 clamp. */
+function clampLayout(l: PanelLayout): PanelLayout {
+  if (typeof window === "undefined") return l
+  const maxRight = Math.max(0, window.innerWidth - l.w)
+  const maxBottom = Math.max(0, window.innerHeight - l.h)
+  return {
+    ...l,
+    w: clamp(l.w, MIN_W, MAX_W),
+    h: clamp(l.h, MIN_H, MAX_H),
+    right: clamp(l.right, 0, maxRight),
+    bottom: clamp(l.bottom, 0, maxBottom),
   }
 }
 
@@ -70,21 +88,13 @@ function loadLayout(): PanelLayout {
     if (!raw) return getDefaultLayout()
     const parsed = JSON.parse(raw) as Partial<PanelLayout>
     const fallback = getDefaultLayout()
-    return {
-      x: clamp(
-        typeof parsed.x === "number" ? parsed.x : fallback.x,
-        0,
-        Math.max(0, window.innerWidth - (parsed.w ?? fallback.w))
-      ),
-      y: clamp(
-        typeof parsed.y === "number" ? parsed.y : fallback.y,
-        0,
-        Math.max(0, window.innerHeight - (parsed.h ?? fallback.h))
-      ),
-      w: clamp(parsed.w ?? fallback.w, MIN_W, MAX_W),
-      h: clamp(parsed.h ?? fallback.h, MIN_H, MAX_H),
+    return clampLayout({
+      right: typeof parsed.right === "number" ? parsed.right : fallback.right,
+      bottom: typeof parsed.bottom === "number" ? parsed.bottom : fallback.bottom,
+      w: parsed.w ?? fallback.w,
+      h: parsed.h ?? fallback.h,
       collapsed: !!parsed.collapsed,
-    }
+    })
   } catch {
     return getDefaultLayout()
   }
@@ -166,16 +176,15 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
     setUnread(0)
   }, [])
 
-  // 뷰포트 리사이즈 시 clamp — 패널이 밖으로 나가지 않게
+  // 뷰포트 리사이즈 시 clamp — 패널이 밖으로 나가지 않게.
+  // 우하단 앵커 방식이라 resize 자체로는 패널이 자연스럽게 viewport 를 따라감
+  // (CSS right/bottom). 다만 새 viewport 가 너무 작으면 right/bottom 이 음수가
+  // 될 수 있어 clamp 만 수행.
   useEffect(() => {
     const onResize = () => {
       setLayout((prev) => {
-        const clamped = {
-          ...prev,
-          x: clamp(prev.x, 0, Math.max(0, window.innerWidth - prev.w)),
-          y: clamp(prev.y, 0, Math.max(0, window.innerHeight - prev.h)),
-        }
-        if (clamped.x !== prev.x || clamped.y !== prev.y) saveLayout(clamped)
+        const clamped = clampLayout(prev)
+        if (clamped.right !== prev.right || clamped.bottom !== prev.bottom) saveLayout(clamped)
         return clamped
       })
     }
@@ -183,18 +192,30 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
     return () => window.removeEventListener("resize", onResize)
   }, [])
 
-  // 드래그 핸들러 — 헤더에서 시작
+  // 드래그 핸들러 — 헤더에서 시작. 우하단 기준 offset (right/bottom) 으로 저장.
   const startDrag = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       // 헤더 내부 버튼 클릭은 드래그 아님
       if ((e.target as HTMLElement).closest("button")) return
       e.preventDefault()
-      const startX = e.clientX - layout.x
-      const startY = e.clientY - layout.y
+      // 현재 패널의 좌상단 viewport 좌표
+      const startLeft = window.innerWidth - layout.right - layout.w
+      const startTop = window.innerHeight - layout.bottom - layout.h
+      const offsetMouseX = e.clientX - startLeft
+      const offsetMouseY = e.clientY - startTop
       const onMove = (ev: MouseEvent) => {
-        const nx = clamp(ev.clientX - startX, 0, window.innerWidth - layout.w)
-        const ny = clamp(ev.clientY - startY, 0, window.innerHeight - layout.h)
-        setLayout((prev) => ({ ...prev, x: nx, y: ny }))
+        const newLeft = ev.clientX - offsetMouseX
+        const newTop = ev.clientY - offsetMouseY
+        // left/top → right/bottom 로 변환
+        const newRight = window.innerWidth - newLeft - layout.w
+        const newBottom = window.innerHeight - newTop - layout.h
+        setLayout((prev) =>
+          clampLayout({
+            ...prev,
+            right: newRight,
+            bottom: newBottom,
+          })
+        )
       }
       const onUp = () => {
         window.removeEventListener("mousemove", onMove)
@@ -207,10 +228,11 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
       window.addEventListener("mousemove", onMove)
       window.addEventListener("mouseup", onUp)
     },
-    [layout.x, layout.y, layout.w, layout.h]
+    [layout.right, layout.bottom, layout.w, layout.h]
   )
 
-  // 리사이즈 핸들러 — 우하단 코너
+  // 리사이즈 핸들러 — 우하단 코너. 우측·하단 앵커를 유지하면서 크기만 바꾸면 자연스럽게
+  // 좌상단으로 확장됨.
   const startResize = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault()
@@ -222,13 +244,7 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
       const onMove = (ev: MouseEvent) => {
         const nw = clamp(startW + (ev.clientX - startX), MIN_W, MAX_W)
         const nh = clamp(startH + (ev.clientY - startY), MIN_H, MAX_H)
-        setLayout((prev) => ({
-          ...prev,
-          w: nw,
-          h: nh,
-          x: clamp(prev.x, 0, Math.max(0, window.innerWidth - nw)),
-          y: clamp(prev.y, 0, Math.max(0, window.innerHeight - nh)),
-        }))
+        setLayout((prev) => clampLayout({ ...prev, w: nw, h: nh }))
       }
       const onUp = () => {
         window.removeEventListener("mousemove", onMove)
@@ -261,12 +277,12 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
     [selfUserId]
   )
 
-  // 접힌 상태 — 작은 FAB 버튼만
+  // 접힌 상태 — 작은 FAB 버튼만. 앵커 그대로 우하단 기준.
   if (layout.collapsed) {
     return (
       <button
         onClick={toggleCollapsed}
-        style={{ left: layout.x, top: layout.y, position: "absolute", zIndex: 20 }}
+        style={{ right: layout.right, bottom: layout.bottom, position: "absolute", zIndex: 20 }}
         className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[11px] font-semibold text-white/80 backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-white"
         aria-label="채팅 로그 열기"
       >
@@ -284,8 +300,8 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
   return (
     <div
       style={{
-        left: layout.x,
-        top: layout.y,
+        right: layout.right,
+        bottom: layout.bottom,
         width: layout.w,
         height: layout.h,
         position: "absolute",

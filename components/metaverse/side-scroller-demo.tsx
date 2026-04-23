@@ -73,7 +73,9 @@ export function SideScrollerDemo() {
   }
 
   return (
-    <div className="relative h-[100svh] w-screen bg-neutral-950">
+    // 전역 헤더 (h-14 = 56px) + 모바일 탭바 (h-14 = 56px, sm 이상에선 숨김) 이
+    // 각각 자리를 차지하므로 Phaser 씬 컨테이너는 그만큼 뺀 viewport 사용.
+    <div className="relative h-[calc(100svh-3.5rem)] w-full bg-neutral-950 sm:h-[calc(100svh-3.5rem)]">
       <div ref={parentRef} className="h-full w-full" aria-label="사이드스크롤러 프로토타입" />
       <Link
         href="/metaverse"

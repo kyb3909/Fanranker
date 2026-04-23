@@ -203,7 +203,8 @@ export function PhaserCanvas({
   }
 
   return (
-    <div className="relative h-[100svh] w-screen bg-neutral-950">
+    // 전역 헤더 (h-14 = 56px) 가 상단에 자리 — Phaser 씬은 그만큼 뺀 viewport 사용.
+    <div className="relative h-[calc(100svh-3.5rem)] w-full bg-neutral-950">
       <div ref={parentRef} className="h-full w-full" aria-label="경기장 메타버스 월드맵" />
       {status === "loading" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-white/60">

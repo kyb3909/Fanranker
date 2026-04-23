@@ -39,7 +39,9 @@ function MobileTabBarContent() {
   const view = searchParams.get("view")
 
   if (pathname.startsWith("/admin")) return null
-  if (pathname.startsWith("/metaverse")) return null
+  // 메타버스는 홈페이지 서비스의 일부 — 모바일 탭바 유지해 다른 섹션 이동 가능.
+  // Phaser canvas 는 /metaverse 페이지 내부에서 safe-area + tab bar 높이만큼 뺀
+  // viewport 사용 (아래 app/metaverse/*/page 참고).
 
   return (
     <nav
