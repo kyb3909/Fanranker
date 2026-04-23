@@ -492,15 +492,15 @@ export class SideScrollerScene extends Phaser.Scene {
     // R = 박치기
     const headbuttJustDown = Phaser.Input.Keyboard.JustDown(this.headbuttKey)
 
-    // 디버그: R 눌렀지만 onGround 아니거나 chat open 으로 막히면 이유 표시
+    // 디버그: R 눌렀을 때 조건 값 풀어서 표시 (Object collapsed 방지)
     if (headbuttJustDown) {
       const animExists = this.player.anims.exists(animKey("headbutt", "east"))
-      console.log("[sidescroll] R pressed", {
-        onGround,
-        state: this.state,
-        isChatInputOpen: this.isChatInputOpen,
-        headbuttAnimExists: animExists,
-      })
+      const tex000Exists = this.textures.exists(
+        `${"avatar-pro-xl"}-headbutt-east-0` // texKeyAnim pattern
+      )
+      console.log(
+        `[sidescroll] R pressed — state=${this.state} onGround=${onGround} chatOpen=${this.isChatInputOpen} animExists=${animExists} tex000Exists=${tex000Exists}`
+      )
     }
 
     // 박치기 트리거 — 지상에서만. 이 지점의 state ∈ {idle, walking, jumping} 이므로
