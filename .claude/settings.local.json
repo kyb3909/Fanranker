@@ -110,7 +110,23 @@
       "Bash(pnpm ls *)",
       "Bash(mkdir -p public/metaverse)",
       "Bash(cp \"ChatGPT Image 2026년 4월 22일 오후 12_41_38.png\" public/metaverse/bg-stadium.png)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(mkdir -p \"public/metaverse/avatars/default-pro/rotations\" \"public/metaverse/avatars/default-pro/walk\")",
+      "Bash(cp avatar-pro/rotations/*.png \"public/metaverse/avatars/default-pro/rotations/\")",
+      "Bash(mkdir -p public/metaverse/avatars/default-pro/walk/__TRACKED_VAR__)",
+      "Bash(cp 'avatar-pro/animations/animating-6a015032/__TRACKED_VAR__/*.png' public/metaverse/avatars/default-pro/walk/__TRACKED_VAR__/)",
+      "Bash(cp avatar-pro/metadata.json \"public/metaverse/avatars/default-pro/\")",
+      "Bash(echo \"EXIT=$?\")",
+      "WebFetch(domain:www.betman.co.kr)",
+      "Read(//tmp/**)",
+      "Read(//d/tmp/**)",
+      "Bash(VPS_PASS='Mi,9*kZYM%6fg6H@' python *)",
+      "Bash(git status *)",
+      "Bash(echo \"tsc=$?\")",
+      "Bash(mkdir -p D:/tmp/avatar-xl-extract)",
+      "Bash(unzip -o D:/tmp/avatar-xl-full.zip)",
+      "Bash(mkdir -p D:/tmp/avatar-xl-v2)",
+      "Bash(unzip -o D:/tmp/avatar-xl-v2.zip)"
     ]
   }
 }
