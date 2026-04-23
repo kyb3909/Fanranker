@@ -132,7 +132,6 @@ export class SideScrollerScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
-  private kickKey!: Phaser.Input.Keyboard.Key
   private headbuttKey!: Phaser.Input.Keyboard.Key
   private platforms!: Phaser.Physics.Arcade.StaticGroup
 
@@ -171,8 +170,7 @@ export class SideScrollerScene extends Phaser.Scene {
 
   // 축구공 + 충전 게이지
   private ball!: Phaser.Physics.Arcade.Sprite
-  private resetKey!: Phaser.Input.Keyboard.Key
-  private chargeStartedAt: number | null = null // X 키 누른 시각 (ms). null 이면 충전 안 중.
+  private chargeStartedAt: number | null = null // Space 키 누른 시각 (ms). null 이면 충전 안 중.
   private chargeBarBg!: Phaser.GameObjects.Rectangle
   private chargeBarFill!: Phaser.GameObjects.Rectangle
   /** 다음 kick anim 완료 시 공에 적용할 속도 (facing + charge 로 계산). */
@@ -303,10 +301,9 @@ export class SideScrollerScene extends Phaser.Scene {
       "W" | "A" | "S" | "D",
       Phaser.Input.Keyboard.Key
     >
+    // 액션 키: Space = 킥 (홀드 충전), R = 박치기, W = 점프 (wasd 에서 이미 가져옴)
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-    this.kickKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X)
-    this.headbuttKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.H)
-    this.resetKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
+    this.headbuttKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
 
     // 카메라 follow + 월드 경계
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
@@ -317,7 +314,7 @@ export class SideScrollerScene extends Phaser.Scene {
       .text(
         16,
         16,
-        "← → 이동 · ↑ 뒤보기 · ↓ 앞보기 · Space 점프 · X 킥(충전) · H 박치기 · R 공 리셋 · Enter 채팅",
+        "← → 이동 · ↑ 뒤보기 · ↓ 앞보기 · W 점프 · Space 킥(충전) · R 박치기 · Enter 채팅",
         {
           fontFamily: "sans-serif",
           fontSize: "13px",
@@ -390,11 +387,6 @@ export class SideScrollerScene extends Phaser.Scene {
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
     const onGround = body.blocked.down
-
-    // R 키 — 공 리셋 (어느 상태에서든 먼저 체크)
-    if (Phaser.Input.Keyboard.JustDown(this.resetKey)) {
-      this.resetBall()
-    }
 
     // 공 회전 — 수평 속도 기준. 원주 = 2πr, r = BALL_RADIUS_PX (12).
     // 구르는 거리 ÷ 원주 = 한 바퀴. rad 로 환산: vx * dt / r (부호 그대로).
@@ -490,13 +482,14 @@ export class SideScrollerScene extends Phaser.Scene {
 
     const left = this.cursors.left?.isDown || this.wasd.A.isDown
     const right = this.cursors.right?.isDown || this.wasd.D.isDown
-    // Space / W = 점프 (up 화살표는 "뒤보기" 로 용도 변경)
-    const jumpPressed =
-      Phaser.Input.Keyboard.JustDown(this.wasd.W) || Phaser.Input.Keyboard.JustDown(this.spaceKey)
+    // W = 점프 (↑ 화살표는 뒤보기, Space 는 킥 충전)
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.wasd.W)
     const lookUpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up!)
     const lookDownPressed = Phaser.Input.Keyboard.JustDown(this.cursors.down!)
-    const kickJustDown = Phaser.Input.Keyboard.JustDown(this.kickKey)
-    const kickJustUp = Phaser.Input.Keyboard.JustUp(this.kickKey)
+    // Space = 킥 (hold 충전, release 발사)
+    const kickJustDown = Phaser.Input.Keyboard.JustDown(this.spaceKey)
+    const kickJustUp = Phaser.Input.Keyboard.JustUp(this.spaceKey)
+    // R = 박치기
     const headbuttJustDown = Phaser.Input.Keyboard.JustDown(this.headbuttKey)
 
     // 박치기 트리거 — 지상에서만. 이 지점의 state ∈ {idle, walking, jumping} 이므로
@@ -787,15 +780,6 @@ export class SideScrollerScene extends Phaser.Scene {
     this.chargeBarFill.setFillStyle(color, 1)
     this.chargeBarBg.setVisible(true)
     this.chargeBarFill.setVisible(true)
-  }
-
-  private resetBall() {
-    const body = this.ball.body as Phaser.Physics.Arcade.Body
-    body.setVelocity(0, 0)
-    // 플레이어 정면 40px 앞에 스폰 — 리셋 직후 바로 차기 편함
-    const sign = this.facing === "east" ? 1 : -1
-    this.ball.setPosition(this.player.x + 40 * sign, BALL_RESPAWN_Y)
-    this.ball.setVisible(true)
   }
 
   private showChatBubble(text: string) {
