@@ -203,8 +203,9 @@ export function PhaserCanvas({
   }
 
   return (
-    // 전역 헤더 (h-14 = 56px) 가 상단에 자리 — Phaser 씬은 그만큼 뺀 viewport 사용.
-    <div className="relative h-[calc(100svh-3.5rem)] w-full bg-neutral-950">
+    // 헤더 (h-14 = 56px) 아래, 서비스 콘텐츠 폭 (max-w-[1280px]) 에 맞춰 중앙 정렬.
+    // 전 viewport 로 뻗으면 좌·우에 scene backgroundColor (#87ceeb) 가 삐져나와 보기 싫음.
+    <div className="relative mx-auto h-[calc(100svh-3.5rem)] w-full max-w-[1280px] bg-neutral-950">
       <div ref={parentRef} className="h-full w-full" aria-label="경기장 메타버스 월드맵" />
       {status === "loading" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-white/60">

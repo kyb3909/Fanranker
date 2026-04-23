@@ -231,20 +231,60 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
     [layout.right, layout.bottom, layout.w, layout.h]
   )
 
-  // 리사이즈 핸들러 — 우하단 코너. 우측·하단 앵커를 유지하면서 크기만 바꾸면 자연스럽게
-  // 좌상단으로 확장됨.
+  /**
+   * 4 꼭지 모두 리사이즈 가능.
+   *
+   * 앵커 규칙 (드래그한 코너의 대각 반대 코너가 고정):
+   *   TL: 대각 BR 고정 → w/h 증가 시 right/bottom 유지
+   *   TR: 대각 BL 고정 → w 증가는 right 감소, h 증가는 bottom 유지
+   *   BL: 대각 TR 고정 → w 증가는 right 유지, h 증가는 bottom 감소
+   *   BR: 대각 TL 고정 → w/h 증가 시 right/bottom 둘 다 감소
+   */
   const startResize = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (corner: "tl" | "tr" | "bl" | "br") => (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault()
       e.stopPropagation()
       const startW = layout.w
       const startH = layout.h
+      const startRight = layout.right
+      const startBottom = layout.bottom
       const startX = e.clientX
       const startY = e.clientY
       const onMove = (ev: MouseEvent) => {
-        const nw = clamp(startW + (ev.clientX - startX), MIN_W, MAX_W)
-        const nh = clamp(startH + (ev.clientY - startY), MIN_H, MAX_H)
-        setLayout((prev) => clampLayout({ ...prev, w: nw, h: nh }))
+        const dx = ev.clientX - startX
+        const dy = ev.clientY - startY
+        // 각 코너별로 부호 결정 (mw/mh = w/h 증감, mr/mb = right/bottom 증감)
+        let mw = 0,
+          mh = 0,
+          mr = 0,
+          mb = 0
+        if (corner === "tl") {
+          mw = -dx
+          mh = -dy
+        } else if (corner === "tr") {
+          mw = dx
+          mh = -dy
+          mr = -dx
+        } else if (corner === "bl") {
+          mw = -dx
+          mh = dy
+          mb = -dy
+        } else {
+          // br
+          mw = dx
+          mh = dy
+          mr = -dx
+          mb = -dy
+        }
+        setLayout((prev) =>
+          clampLayout({
+            ...prev,
+            w: startW + mw,
+            h: startH + mh,
+            right: startRight + mr,
+            bottom: startBottom + mb,
+          })
+        )
       }
       const onUp = () => {
         window.removeEventListener("mousemove", onMove)
@@ -257,7 +297,7 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
       window.addEventListener("mousemove", onMove)
       window.addEventListener("mouseup", onUp)
     },
-    [layout.w, layout.h]
+    [layout.w, layout.h, layout.right, layout.bottom]
   )
 
   const visible = useMemo(() => entries.filter((e) => !muted.has(e.userId)), [entries, muted])
@@ -364,16 +404,36 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
         </div>
       )}
 
-      {/* 리사이즈 핸들 — 우하단 코너 */}
+      {/* 4 꼭지 리사이즈 핸들 — 각 코너 16×16 투명 hotspot.
+          대각선 커서 (nwse/nesw) 로 어느 꼭지인지 시각 힌트. */}
       <div
-        onMouseDown={startResize}
-        className="absolute right-0 bottom-0 h-4 w-4 cursor-nwse-resize"
-        aria-label="크기 조절"
-        title="드래그해서 크기 조절"
+        onMouseDown={startResize("tl")}
+        className="absolute top-0 left-0 h-4 w-4 cursor-nwse-resize"
+        aria-label="좌상단 크기 조절"
+        title="크기 조절"
+      />
+      <div
+        onMouseDown={startResize("tr")}
+        className="absolute top-0 right-0 h-4 w-4 cursor-nesw-resize"
+        aria-label="우상단 크기 조절"
+        title="크기 조절"
+      />
+      <div
+        onMouseDown={startResize("bl")}
+        className="absolute bottom-0 left-0 h-4 w-4 cursor-nesw-resize"
+        aria-label="좌하단 크기 조절"
+        title="크기 조절"
+      />
+      <div
+        onMouseDown={startResize("br")}
+        className="group absolute right-0 bottom-0 h-4 w-4 cursor-nwse-resize"
+        aria-label="우하단 크기 조절"
+        title="크기 조절"
       >
+        {/* BR 에만 시각 힌트 아이콘 — 다른 코너는 커서로 판단 */}
         <svg
           viewBox="0 0 16 16"
-          className="h-full w-full text-white/30 hover:text-white/70"
+          className="h-full w-full text-white/30 group-hover:text-white/70"
           aria-hidden
         >
           <path
