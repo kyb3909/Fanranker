@@ -39,7 +39,7 @@ const GRAVITY_Y = 900
 // 점프 최대 높이 ≈ v²/(2g) = 380²/1800 ≈ 80px (캐릭터 display 높이 98px 의 ~82%).
 // 메이플 스타일 springy 한 느낌 — 캐릭터가 커져서 상대 점프도 비례 조정.
 const JUMP_VELOCITY = -380
-const WALK_SPEED = 240 // 최대 수평 속도 (px/s)
+const WALK_SPEED = 300 // 최대 수평 속도 (px/s) — 240 → 300 (25% 빨라짐)
 // 가속/감속 — 지면 vs 공중 분리. 공중은 조작 덜 되고 관성 유지.
 const GROUND_ACCEL = 2200 // 정지→최대 약 0.11s
 const GROUND_DRAG = 1500 // 최대→정지 약 0.16s (짧은 슬라이드)

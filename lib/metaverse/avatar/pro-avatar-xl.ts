@@ -22,7 +22,7 @@ export const AVATAR_PRO_XL = {
   WALK_FRAMES: 4,
   JUMP_FRAMES: 7,
   KICK_FRAMES: 4,
-  WALK_FPS: 8,
+  WALK_FPS: 10, // 8 → 10 — WALK_SPEED 상승 (240→300) 에 맞춰 발놀림도 비례 상향해 슬라이딩 방지
   JUMP_FPS: 10, // 7프레임 × 100ms = 700ms (v=-320, g=900 에서 airtime ≈ 710ms 와 자연스레 매칭)
   KICK_FPS: 12, // 4프레임 × ~83ms = 333ms — 짧고 단호한 액션
   TEXTURE_PREFIX: "avatar-pro-xl",
