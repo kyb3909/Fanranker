@@ -129,6 +129,7 @@ export function preloadProAvatarXl(scene: Phaser.Scene): void {
 }
 
 export function createProAvatarXlAnimations(scene: Phaser.Scene): void {
+  console.log("[avatar-pro-xl] createProAvatarXlAnimations 호출 v2")
   const defs: Array<{ kind: Kind; fps: number; repeat: number }> = [
     { kind: "walk", fps: AVATAR_PRO_XL.WALK_FPS, repeat: -1 },
     { kind: "jump", fps: AVATAR_PRO_XL.JUMP_FPS, repeat: 0 },
@@ -140,19 +141,27 @@ export function createProAvatarXlAnimations(scene: Phaser.Scene): void {
   for (const f of FACINGS) {
     for (const { kind, fps, repeat } of defs) {
       const key = animKey(kind, f)
-      if (scene.anims.exists(key)) continue
-      // 프레임 로드 상태 관계없이 anim 생성 — 누락된 프레임은 Phaser 가 skip 하고 경고만.
-      // 엄격 체크 (allLoaded) 하면 일부 프레임 로드 실패 시 anim 전체가 누락돼 기능 불가.
-      const frames = Array.from({ length: KIND_FRAMES[kind] }, (_, i) => ({
+      if (scene.anims.exists(key)) {
+        console.log(`[avatar-pro-xl] skip ${key} — 이미 존재`)
+        continue
+      }
+      const frameDefs = Array.from({ length: KIND_FRAMES[kind] }, (_, i) => ({
         key: texKeyAnim(kind, f, i),
       }))
-      const missing = frames.filter((ff) => !scene.textures.exists(ff.key))
+      const missing = frameDefs.filter((ff) => !scene.textures.exists(ff.key))
+      const existing = frameDefs.filter((ff) => scene.textures.exists(ff.key))
+      if (existing.length === 0) {
+        console.warn(`[avatar-pro-xl] anim ${key}: ALL 프레임 누락 — skip`)
+        continue
+      }
       if (missing.length > 0) {
         console.warn(
-          `[avatar-pro-xl] anim ${key}: ${missing.length}/${frames.length} 프레임 누락 — 생성은 계속`
+          `[avatar-pro-xl] anim ${key}: ${missing.length}/${frameDefs.length} 누락, 있는 거만 생성`
         )
       }
-      scene.anims.create({ key, frames, frameRate: fps, repeat })
+      // 존재하는 프레임만 사용 — Phaser anims.create 는 유효 프레임만 있으면 OK
+      const result = scene.anims.create({ key, frames: existing, frameRate: fps, repeat })
+      console.log(`[avatar-pro-xl] created ${key}:`, result ? "OK" : "FAIL", existing.length)
     }
   }
 }
