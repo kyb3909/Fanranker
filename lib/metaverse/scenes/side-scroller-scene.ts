@@ -512,14 +512,8 @@ export class SideScrollerScene extends Phaser.Scene {
       body.setDragX(GROUND_DRAG)
       this.orientation = this.facing
       this.player.setFlipX(this.facing === "west")
-      if (this.player.anims.exists(animKey("headbutt", "east"))) {
-        this.player.play(animKey("headbutt", "east"), true)
-      } else {
-        // anim 미생성 상태에서도 동작은 트리거 — 잠시 정지 후 idle 복귀 타이머
-        this.time.delayedCall(HEADBUTT_LOCK_MS, () => {
-          if (this.state === "headbutt") this.state = "idle"
-        })
-      }
+      // Phaser anims 레지스트리 문제 우회 — setTexture 로 수동 프레임 교체
+      this.playHeadbuttFrames()
       // 앞쪽 remote player 검출 → hit broadcast
       const sign = this.facing === "east" ? 1 : -1
       for (const [uid, av] of this.remoteAvatars) {
@@ -939,6 +933,51 @@ export class SideScrollerScene extends Phaser.Scene {
       this.player.play(animKey("stumble", "east"), true)
       this.player.setFlipX(this.facing === "east") // 맞고 쓰러질 때 반대 방향 보임
     }
+  }
+
+  /**
+   * 박치기 4프레임을 Phaser anims 시스템 거치지 않고 setTexture + delayedCall 로
+   * 수동 재생. Phaser 의 anims.create 가 환경 따라 안 잡히는 경우에도 확실히 동작.
+   * 완료 후 idle 텍스처로 복귀.
+   */
+  private playHeadbuttFrames() {
+    const HEADBUTT_FRAME_MS = 100 // 4 × 100 = 400ms 전체
+    const prefix = "avatar-pro-xl-headbutt-east-"
+    // Phaser 텍스처에 로드된 프레임 번호 수집
+    const available: number[] = []
+    for (let i = 0; i < 4; i++) {
+      if (this.textures.exists(prefix + i)) available.push(i)
+    }
+    if (available.length === 0) {
+      // 에셋 전혀 없으면 타이머로 상태 락만
+      console.warn("[headbutt] 프레임 0장 — 락만 걸고 복귀")
+      this.time.delayedCall(400, () => {
+        if (this.state === "headbutt") {
+          this.state = "idle"
+          this.player.setTexture(texKeyRotation(this.facing))
+          this.player.setFlipX(false)
+        }
+      })
+      return
+    }
+    // 첫 프레임 즉시
+    this.player.setTexture(prefix + available[0])
+    // 나머지 프레임 순차 교체
+    for (let i = 1; i < available.length; i++) {
+      this.time.delayedCall(HEADBUTT_FRAME_MS * i, () => {
+        if (this.state === "headbutt") {
+          this.player.setTexture(prefix + available[i])
+        }
+      })
+    }
+    // 마지막 프레임 후 idle 복귀
+    this.time.delayedCall(HEADBUTT_FRAME_MS * available.length, () => {
+      if (this.state === "headbutt") {
+        this.state = "idle"
+        this.player.setFlipX(false)
+        this.player.setTexture(texKeyRotation(this.facing))
+      }
+    })
   }
 
   private teardown() {
