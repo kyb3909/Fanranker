@@ -40,6 +40,51 @@ export interface RoomChatMessage {
   timestamp: number
 }
 
+/**
+ * 사이드스크롤러 Presence 페이로드 — 월드맵 (Direction 4방향) 과 달리 2방향 facing.
+ * 추가로 action state 공유해 원격에서도 점프/킥/박치기 anim 동기.
+ */
+export type SideScrollerFacing = "east" | "west"
+export type SideScrollerActionState =
+  | "idle"
+  | "walking"
+  | "jumping"
+  | "kicking"
+  | "headbutt"
+  | "turning"
+  | "stumbled" // 박치기 맞고 뒤로 넘어진 상태 (falling + getting-up 합쳐서 표현)
+
+export interface SideScrollerPresence {
+  userId: string
+  nickname: string
+  x: number
+  y: number
+  facing: SideScrollerFacing
+  action: SideScrollerActionState
+  updatedAt: number
+}
+
+/**
+ * 공유 공 상태 — peer ownership. 마지막으로 찬 사람이 authority.
+ * 주기적으로 (200ms) broadcast, 수신자는 최신 ts 만 받아들여 덮어씀.
+ */
+export interface SharedBallState {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  ownerId: string // 마지막 킥 유저
+  ts: number
+}
+
+/** 박치기 hit 이벤트 — 누가 누구를 박치기했는지 브로드캐스트. 타겟 측에서 knock-back. */
+export interface HeadbuttHitEvent {
+  fromUserId: string
+  targetUserId: string
+  knockbackVx: number
+  ts: number
+}
+
 /** 월드 Plot (DB → 클라이언트) */
 export interface WorldPlot {
   id: string

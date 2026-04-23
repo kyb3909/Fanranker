@@ -1,17 +1,18 @@
 "use client"
 
 /**
- * SideScrollerDemo — 사이드스크롤러 씬 단독 프로토타입 (Phase 4 선행).
+ * SideScrollerDemo — 사이드스크롤러 멀티플레이어 씬.
  *
- * 월드맵 (phaser-canvas) 과 독립. Clerk/WorldChannel/Plot 전부 생략 —
- * 단순히 Phaser 사이드뷰 씬 하나만 띄워서 조작감/느낌 검증.
- * OK 면 PixelLab 사이드뷰 캐릭터 + 배경 PNG 교체하고, 월드맵에서 씬
- * 전환으로 편입.
+ * Realtime SideScrollerChannel 연결해 원격 유저·공유 공·박치기 이벤트 동기화.
+ * Realtime 실패 시 싱글플레이 fallback. Clerk 로그인 있으면 본인 닉네임,
+ * 없으면 `demo-XXXX` 게스트.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { createAnonClient } from "@/lib/supabase/client"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import type { SideScrollerChannel } from "@/lib/metaverse/realtime/sidescroll-channel"
 import { ChatOverlay } from "./chat-overlay"
 import { ChatLogPanel } from "./chat-log-panel"
 import { UserActionPopover } from "./user-action-popover"
@@ -21,6 +22,7 @@ import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 export function SideScrollerDemo() {
   const parentRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
+  const channelRef = useRef<SideScrollerChannel | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
 
@@ -31,7 +33,8 @@ export function SideScrollerDemo() {
     return () => unsub()
   }, [])
 
-  // 간단 데모 identity — Clerk 우회 (demo 라우트 전용)
+  // 간단 데모 identity — Clerk 우회 (demo 라우트 전용). 같은 브라우저 탭 재접속
+  // 시 매번 새 userId 생성 → 서로 다른 유저로 보임. 추후 Clerk 연동.
   const identity = useMemo<MetaversePlayerIdentity>(() => {
     const rand = Math.floor(Math.random() * 10000)
       .toString()
@@ -45,9 +48,33 @@ export function SideScrollerDemo() {
 
     ;(async () => {
       try {
-        const { bootSideScrollerDemo } = await import("@/lib/metaverse/boot")
-        if (cancelled || !parentRef.current) return
-        gameRef.current = bootSideScrollerDemo({ parent: parentRef.current, identity })
+        const [{ bootSideScrollerDemo }, { SideScrollerChannel }] = await Promise.all([
+          import("@/lib/metaverse/boot"),
+          import("@/lib/metaverse/realtime/sidescroll-channel"),
+        ])
+        if (cancelled) return
+
+        // Realtime 채널 — 실패해도 게임은 부팅 (싱글플레이 fallback)
+        const supabase = createAnonClient()
+        const channel = new SideScrollerChannel(supabase, identity)
+        try {
+          await channel.connect()
+          channelRef.current = channel
+        } catch (err) {
+          console.warn("[sidescroll] realtime connect failed — singleplayer mode", err)
+          channelRef.current = null
+        }
+        if (cancelled) {
+          await channel.disconnect().catch(() => {})
+          return
+        }
+
+        if (!parentRef.current) return
+        gameRef.current = bootSideScrollerDemo({
+          parent: parentRef.current,
+          identity,
+          channel: channelRef.current,
+        })
       } catch (err) {
         console.error("[metaverse] side-scroller boot failed", err)
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
@@ -58,6 +85,8 @@ export function SideScrollerDemo() {
       cancelled = true
       gameRef.current?.destroy(true)
       gameRef.current = null
+      void channelRef.current?.disconnect()
+      channelRef.current = null
     }
   }, [identity])
 

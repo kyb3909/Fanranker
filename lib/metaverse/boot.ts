@@ -15,6 +15,7 @@ import {
 import { METAVERSE } from "./constants"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "./types"
 import type { WorldChannel } from "./realtime/world-channel"
+import type { SideScrollerChannel } from "./realtime/sidescroll-channel"
 
 export interface BootOptions {
   parent: HTMLElement
@@ -77,9 +78,15 @@ export function bootMetaverseGame({
 export interface SideScrollerBootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
+  /** 옵셔널 — Realtime 채널. null/undefined 면 싱글플레이 fallback. */
+  channel?: SideScrollerChannel | null
 }
 
-export function bootSideScrollerDemo({ parent, identity }: SideScrollerBootOptions): Phaser.Game {
+export function bootSideScrollerDemo({
+  parent,
+  identity,
+  channel = null,
+}: SideScrollerBootOptions): Phaser.Game {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -102,7 +109,7 @@ export function bootSideScrollerDemo({ parent, identity }: SideScrollerBootOptio
     scene: [SideScrollerScene],
     dom: { createContainer: false },
   })
-  game.scene.start(SIDE_SCROLLER_SCENE_KEY, { identity })
+  game.scene.start(SIDE_SCROLLER_SCENE_KEY, { identity, channel })
   return game
 }
 

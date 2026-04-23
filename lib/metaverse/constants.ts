@@ -37,6 +37,8 @@ export const METAVERSE = {
   CHANNEL_WORLD: "metaverse:world",
   CHANNEL_CHAT_ROOM_PREFIX: "metaverse:chat:",
   CHANNEL_STADIUM_PREFIX: "metaverse:stadium:",
+  // 사이드스크롤러 글로벌 방 — 누구나 들어가면 같이 보임. 추후 실제 방별로 확장 가능.
+  CHANNEL_SIDESCROLL: "metaverse:sidescroll:default",
 
   // 색상 (placeholder — 에셋 교체 시 제거)
   COLOR_BG: 0x1a1f2e, // 야간 다크 블루 (placeholder UK 맵 배경)

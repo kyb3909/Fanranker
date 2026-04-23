@@ -43,9 +43,15 @@ export const AVATAR_PRO_XL = {
   WALK_FRAMES: 4,
   JUMP_FRAMES: 7,
   KICK_FRAMES: 4,
+  HEADBUTT_FRAMES: 4, // PixelLab 커스텀 예상 프레임 수
+  STUMBLE_FRAMES: 7, // falling-back-death 템플릿 (실측 7프레임)
+  GETUP_FRAMES: 5, // getting-up 템플릿 (실측 5프레임)
   WALK_FPS: 10, // 8 → 10 — WALK_SPEED 상승 (240→300) 에 맞춰 발놀림도 비례 상향해 슬라이딩 방지
   JUMP_FPS: 10, // 7프레임 × 100ms = 700ms (v=-320, g=900 에서 airtime ≈ 710ms 와 자연스레 매칭)
   KICK_FPS: 12, // 4프레임 × ~83ms = 333ms — 짧고 단호한 액션
+  HEADBUTT_FPS: 10, // 4프레임 × 100ms = 400ms
+  STUMBLE_FPS: 8, // 넘어지는 건 약간 느릿 (~875ms)
+  GETUP_FPS: 8,
   TEXTURE_PREFIX: "avatar-pro-xl",
   ASSET_BASE: "/metaverse/avatars/default-pro-xl",
 } as const
@@ -54,6 +60,9 @@ const KIND_FRAMES = {
   walk: AVATAR_PRO_XL.WALK_FRAMES,
   jump: AVATAR_PRO_XL.JUMP_FRAMES,
   kick: AVATAR_PRO_XL.KICK_FRAMES,
+  headbutt: AVATAR_PRO_XL.HEADBUTT_FRAMES,
+  stumble: AVATAR_PRO_XL.STUMBLE_FRAMES,
+  getup: AVATAR_PRO_XL.GETUP_FRAMES,
 } as const
 
 type Kind = keyof typeof KIND_FRAMES
@@ -124,19 +133,21 @@ export function createProAvatarXlAnimations(scene: Phaser.Scene): void {
     { kind: "walk", fps: AVATAR_PRO_XL.WALK_FPS, repeat: -1 },
     { kind: "jump", fps: AVATAR_PRO_XL.JUMP_FPS, repeat: 0 },
     { kind: "kick", fps: AVATAR_PRO_XL.KICK_FPS, repeat: 0 },
+    { kind: "headbutt", fps: AVATAR_PRO_XL.HEADBUTT_FPS, repeat: 0 },
+    { kind: "stumble", fps: AVATAR_PRO_XL.STUMBLE_FPS, repeat: 0 },
+    { kind: "getup", fps: AVATAR_PRO_XL.GETUP_FPS, repeat: 0 },
   ]
   for (const f of FACINGS) {
     for (const { kind, fps, repeat } of defs) {
       const key = animKey(kind, f)
       if (scene.anims.exists(key)) continue
-      scene.anims.create({
-        key,
-        frames: Array.from({ length: KIND_FRAMES[kind] }, (_, i) => ({
-          key: texKeyAnim(kind, f, i),
-        })),
-        frameRate: fps,
-        repeat,
-      })
+      // 모든 프레임 텍스처가 로드됐는지 확인 — 아직 에셋 없으면 anim 생성 skip (console warn 방지)
+      const frames = Array.from({ length: KIND_FRAMES[kind] }, (_, i) => ({
+        key: texKeyAnim(kind, f, i),
+      }))
+      const allLoaded = frames.every((f) => scene.textures.exists(f.key))
+      if (!allLoaded) continue
+      scene.anims.create({ key, frames, frameRate: fps, repeat })
     }
   }
 }
