@@ -27,8 +27,12 @@ import {
   preloadProAvatarXl,
   createProAvatarXlAnimations,
   texKeyIdle,
+  texKeyRotation,
+  rotationPath,
   animKey,
+  TURN_FRAME_MS,
   type Facing,
+  type RotationDir,
 } from "@/lib/metaverse/avatar/pro-avatar-xl"
 import { ChatBubble } from "./chat-bubble"
 
@@ -94,7 +98,7 @@ const KICK_CHARGE_MAX_MS = 1200 // 이 시간 이상 홀드해도 더 안 세짐
 const BG_TEXTURE = "ss-bg-stadium"
 const BG_URL = "/metaverse/bg-stadium.png"
 
-type PlayerState = "idle" | "walking" | "jumping" | "kicking"
+type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
 
 export class SideScrollerScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -105,9 +109,22 @@ export class SideScrollerScene extends Phaser.Scene {
   private spaceKey!: Phaser.Input.Keyboard.Key
   private kickKey!: Phaser.Input.Keyboard.Key
   private platforms!: Phaser.Physics.Arcade.StaticGroup
-  /** 방향은 east/west (XL 스프라이트가 두 방향 독립 생성 — flipX 대신 정방향 사용). */
+  /**
+   * 가로 이동·점프·킥 애니용 방향 (east/west 만). 걷기·점프·킥 스프라이트는
+   * 두 방향만 생성돼있어 사이드스크롤 gameplay 에 부합.
+   */
   private facing: Facing = "east"
+  /**
+   * 현재 캐릭터가 바라보는 8방향 orientation. idle 표시 + turn 애니 대상.
+   * 기본은 east (움직임과 동기). 사용자가 up/down 눌러 north/south 로도 전환.
+   */
+  private orientation: RotationDir = "east"
   private state: PlayerState = "idle"
+
+  // 턴 애니메이션 — 8 rotation 이미지를 프레임 단위로 플립.
+  private turnPath: RotationDir[] = []
+  private turnFrameIdx = 0
+  private turnFrameTimer = 0
 
   // 축구공 + 충전 게이지
   private ball!: Phaser.Physics.Arcade.Sprite
@@ -196,7 +213,9 @@ export class SideScrollerScene extends Phaser.Scene {
         if (anim.key === animKey("kick", "east") || anim.key === animKey("kick", "west")) {
           this.applyPendingKickToBall()
           this.state = "idle"
-          this.player.setTexture(texKeyIdle(this.facing))
+          // kick 후 orientation 은 facing 으로 sync (east/west), 즉시 idle texture
+          this.orientation = this.facing
+          this.player.setTexture(texKeyRotation(this.facing))
           this.player.setFlipX(false)
         }
       }
@@ -243,13 +262,18 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // 안내 (UI 오버레이)
     this.add
-      .text(16, 16, "← → 이동 · Space 점프 · X 킥 (홀드로 충전) · R 공 리셋 · Enter 채팅", {
-        fontFamily: "sans-serif",
-        fontSize: "13px",
-        color: "#ffffff",
-        backgroundColor: "#000000aa",
-        padding: { x: 8, y: 4 },
-      })
+      .text(
+        16,
+        16,
+        "← → 이동 · ↑ 뒤보기 · ↓ 앞보기 · Space 점프 · X 킥 (홀드로 충전) · R 공 리셋 · Enter 채팅",
+        {
+          fontFamily: "sans-serif",
+          fontSize: "13px",
+          color: "#ffffff",
+          backgroundColor: "#000000aa",
+          padding: { x: 8, y: 4 },
+        }
+      )
       .setScrollFactor(0)
       .setDepth(100)
 
@@ -319,6 +343,24 @@ export class SideScrollerScene extends Phaser.Scene {
       }
     }
 
+    // 턴 애니메이션 — 8방향 rotation 프레임 순차 재생.
+    // 좌우 입력 들어오면 즉시 중단하고 walking 으로 진입 (응답성 우선).
+    if (this.state === "turning") {
+      const leftDown = this.cursors.left?.isDown || this.wasd.A.isDown
+      const rightDown = this.cursors.right?.isDown || this.wasd.D.isDown
+      if (leftDown || rightDown) {
+        this.cancelTurn()
+        // fall through — 아래 일반 로직에서 walking 처리
+      } else {
+        this.advanceTurn(deltaMs)
+        body.setAccelerationX(0)
+        body.setDragX(GROUND_DRAG)
+        this.updateNameTag()
+        this.updateChargeBar()
+        return
+      }
+    }
+
     // 킥 중에는 입력·이동 차단 — 발 심고 동작 완료까지 기다림
     if (this.state === "kicking") {
       body.setAccelerationX(0)
@@ -342,10 +384,11 @@ export class SideScrollerScene extends Phaser.Scene {
 
     const left = this.cursors.left?.isDown || this.wasd.A.isDown
     const right = this.cursors.right?.isDown || this.wasd.D.isDown
+    // Space / W = 점프 (up 화살표는 "뒤보기" 로 용도 변경)
     const jumpPressed =
-      Phaser.Input.Keyboard.JustDown(this.cursors.up!) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
-      Phaser.Input.Keyboard.JustDown(this.spaceKey)
+      Phaser.Input.Keyboard.JustDown(this.wasd.W) || Phaser.Input.Keyboard.JustDown(this.spaceKey)
+    const lookUpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up!)
+    const lookDownPressed = Phaser.Input.Keyboard.JustDown(this.cursors.down!)
     const kickJustDown = Phaser.Input.Keyboard.JustDown(this.kickKey)
     const kickJustUp = Phaser.Input.Keyboard.JustUp(this.kickKey)
 
@@ -386,7 +429,7 @@ export class SideScrollerScene extends Phaser.Scene {
       }
     }
 
-    // 좌우 입력 → facing 갱신 + 가속
+    // 좌우 입력 → facing 갱신 + 가속 (walking 중엔 instant flip, 턴 애니 X — 응답성 우선)
     if (left) {
       body.setAccelerationX(-accelValue)
       this.setFacing("west")
@@ -398,10 +441,22 @@ export class SideScrollerScene extends Phaser.Scene {
     }
     body.setDragX(dragValue)
 
+    // 위/아래 화살표 — idle 상태 + 지상 + 수평 정지 시에만 정면/후면 전환 (턴 애니 포함).
+    // 걷는 도중엔 무시 (방향이 이미 east/west 로 잠겨있어야 자연스러움).
+    // 이 지점에선 state ∈ {idle, walking, jumping} (kicking/turning 은 이미 early return)
+    const isStationary = onGround && !left && !right && Math.abs(body.velocity.x) < 20
+    if (isStationary && this.state !== "jumping") {
+      if (lookUpPressed) this.requestOrientation("north")
+      else if (lookDownPressed) this.requestOrientation("south")
+    }
+
     // 점프 — 지상에서 JustDown 만 (홀드로 연속 점프 방지)
     if (jumpPressed && onGround) {
       body.setVelocityY(JUMP_VELOCITY)
       this.state = "jumping"
+      // 점프할 때 orientation 을 facing 으로 sync (north/south 보고 있다가 점프하면 east/west 로)
+      this.orientation = this.facing
+      this.player.setFlipX(false)
       this.player.play(animKey("jump", this.facing), true)
     }
 
@@ -410,8 +465,8 @@ export class SideScrollerScene extends Phaser.Scene {
       this.state = "idle"
     }
 
-    // 공중이 아닌데 jumping 이 아니면 walking/idle 판정
-    if (this.state !== "jumping") {
+    // 공중이 아닌데 jumping / turning 이 아니면 walking/idle 판정
+    if (this.state !== "jumping" && this.state !== "turning") {
       this.state = onGround && Math.abs(body.velocity.x) > 10 ? "walking" : "idle"
       this.syncIdleOrWalkAnim(onGround, body.velocity.x)
     }
@@ -420,11 +475,11 @@ export class SideScrollerScene extends Phaser.Scene {
     this.updateChargeBar()
   }
 
-  /** facing 변경 시 현재 재생 중 anim 도 같은 종류의 반대 방향 키로 교체. */
+  /** facing (east/west) 변경 — walking 중엔 instant flip, orientation 도 같이 east/west 로 sync. */
   private setFacing(next: Facing) {
     if (this.facing === next) return
     this.facing = next
-    // kicking 상태에서는 방향 전환 안 일어남 (state-lock), 그래도 방어적으로 flip 리셋.
+    this.orientation = next // 걷기 중엔 orientation 도 east/west 와 동일
     this.player.setFlipX(false)
     const cur = this.player.anims.currentAnim?.key ?? ""
     const m = cur.match(/(walk|jump|kick):(east|west)$/)
@@ -432,21 +487,71 @@ export class SideScrollerScene extends Phaser.Scene {
       const kind = m[1] as "walk" | "jump" | "kick"
       this.player.play(animKey(kind, next), true)
     } else if (this.state === "idle") {
-      this.player.setTexture(texKeyIdle(next))
+      this.player.setTexture(texKeyRotation(next))
     }
   }
 
-  /** state === idle | walking 일 때 anim 동기화. jump/kick 은 별도 분기에서 처리. */
+  /**
+   * state === idle | walking 일 때 anim 동기화. jump/kick/turning 은 별도 분기.
+   * idle 에선 orientation (8방향 중 하나) 의 rotation 텍스처를 보여줌 — 정면/후면
+   * 포함 north/south 도 정상 표시.
+   */
   private syncIdleOrWalkAnim(onGround: boolean, vx: number) {
     if (onGround && Math.abs(vx) > 10) {
       const walkKey = animKey("walk", this.facing)
       if (this.player.anims.currentAnim?.key !== walkKey || !this.player.anims.isPlaying) {
         this.player.play(walkKey, true)
       }
-    } else if (this.player.anims.isPlaying) {
-      this.player.anims.stop()
-      this.player.setTexture(texKeyIdle(this.facing))
+    } else {
+      // idle — anim 중지 + orientation rotation 텍스처
+      if (this.player.anims.isPlaying) this.player.anims.stop()
+      const idleKey = texKeyRotation(this.orientation)
+      if (this.player.texture.key !== idleKey) {
+        this.player.setTexture(idleKey)
+      }
     }
+  }
+
+  /** 정면/후면 등 orientation 변경 요청 — 이미 같거나 turning 중이면 무시. */
+  private requestOrientation(target: RotationDir) {
+    if (this.state === "turning") return
+    if (this.orientation === target) return
+    const path = rotationPath(this.orientation, target)
+    if (path.length === 0) return
+    this.turnPath = path
+    this.turnFrameIdx = 0
+    this.turnFrameTimer = 0
+    this.orientation = target
+    this.state = "turning"
+    this.player.anims.stop()
+    this.player.setFlipX(false)
+    // 즉시 첫 프레임 세팅 (체감 응답성)
+    this.player.setTexture(texKeyRotation(path[0]))
+    this.turnFrameIdx = 1
+  }
+
+  /** 매 프레임 turn 진행 — TURN_FRAME_MS 마다 다음 rotation 으로. */
+  private advanceTurn(deltaMs: number) {
+    this.turnFrameTimer += deltaMs
+    while (this.turnFrameTimer >= TURN_FRAME_MS && this.turnFrameIdx < this.turnPath.length) {
+      this.player.setTexture(texKeyRotation(this.turnPath[this.turnFrameIdx]))
+      this.turnFrameIdx++
+      this.turnFrameTimer -= TURN_FRAME_MS
+    }
+    if (this.turnFrameIdx >= this.turnPath.length) {
+      // 완료 — idle 로 복귀 (orientation 은 이미 target 에 세팅됨)
+      this.state = "idle"
+      this.turnPath = []
+      this.turnFrameIdx = 0
+    }
+  }
+
+  /** 걷기 입력이 들어와 turning 중단해야 할 때. */
+  private cancelTurn() {
+    this.turnPath = []
+    this.turnFrameIdx = 0
+    this.turnFrameTimer = 0
+    this.state = "idle"
   }
 
   private updateNameTag() {

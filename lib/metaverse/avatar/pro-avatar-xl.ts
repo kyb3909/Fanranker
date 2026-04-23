@@ -16,6 +16,27 @@ import type * as Phaser from "phaser"
 export type Facing = "east" | "west"
 export const FACINGS: readonly Facing[] = ["east", "west"] as const
 
+/**
+ * 8방향 정적 rotation. idle 상태에서 캐릭터가 바라보는 방향을 표현할 때 사용.
+ * 걷기/점프/킥 애니메이션은 여전히 east/west 2방향만 생성돼있어 가로 이동에만 유효.
+ *
+ * 배열 순서는 시계방향 (south 부터) — `rotationPath` 에서 최단 경로 계산에 쓰임.
+ */
+export const ROTATIONS = [
+  "south",
+  "south-east",
+  "east",
+  "north-east",
+  "north",
+  "north-west",
+  "west",
+  "south-west",
+] as const
+export type RotationDir = (typeof ROTATIONS)[number]
+
+/** 한 프레임 당 렌더 지속 시간 — 150ms 전체 turn 을 위해 짧게. */
+export const TURN_FRAME_MS = 30
+
 export const AVATAR_PRO_XL = {
   FRAME_WIDTH: 208,
   FRAME_HEIGHT: 208,
@@ -37,8 +58,34 @@ const KIND_FRAMES = {
 
 type Kind = keyof typeof KIND_FRAMES
 
+/** 모든 8방향 rotation 에 공용. east/west 는 기존 idle 키와 동일 이미지 공유. */
+export function texKeyRotation(dir: RotationDir): string {
+  return `${AVATAR_PRO_XL.TEXTURE_PREFIX}-rot-${dir}`
+}
+
+/** 하위 호환 — 기존 호출자들이 idle east/west 만 쓸 때. 내부는 rotation 키로 통합. */
 export function texKeyIdle(f: Facing): string {
-  return `${AVATAR_PRO_XL.TEXTURE_PREFIX}-idle-${f}`
+  return texKeyRotation(f)
+}
+
+/**
+ * from → to 까지 최단 cyclic path (to 포함, from 제외). 같으면 빈 배열.
+ * 시계/반시계 중 짧은 쪽 선택. tie 시 시계 방향.
+ */
+export function rotationPath(from: RotationDir, to: RotationDir): RotationDir[] {
+  if (from === to) return []
+  const fromIdx = ROTATIONS.indexOf(from)
+  const toIdx = ROTATIONS.indexOf(to)
+  const cwDelta = (toIdx - fromIdx + 8) % 8
+  const ccwDelta = (fromIdx - toIdx + 8) % 8
+  const useCw = cwDelta <= ccwDelta
+  const delta = useCw ? cwDelta : ccwDelta
+  const path: RotationDir[] = []
+  for (let i = 1; i <= delta; i++) {
+    const idx = useCw ? (fromIdx + i) % 8 : (fromIdx - i + 8) % 8
+    path.push(ROTATIONS[idx])
+  }
+  return path
 }
 
 export function texKeyAnim(kind: Kind, f: Facing, frame: number): string {
@@ -51,11 +98,15 @@ export function animKey(kind: Kind, f: Facing): string {
 
 export function preloadProAvatarXl(scene: Phaser.Scene): void {
   const base = AVATAR_PRO_XL.ASSET_BASE
-  for (const f of FACINGS) {
-    const idleKey = texKeyIdle(f)
-    if (!scene.textures.exists(idleKey)) {
-      scene.load.image(idleKey, `${base}/rotations/${f}.png`)
+  // 8방향 rotation — 정면/후면 포함 (턴 애니에 필수)
+  for (const dir of ROTATIONS) {
+    const key = texKeyRotation(dir)
+    if (!scene.textures.exists(key)) {
+      scene.load.image(key, `${base}/rotations/${dir}.png`)
     }
+  }
+  // walk/jump/kick — east/west 만 (2방향 애니만 생성돼있음)
+  for (const f of FACINGS) {
     for (const kind of Object.keys(KIND_FRAMES) as Kind[]) {
       for (let i = 0; i < KIND_FRAMES[kind]; i++) {
         const key = texKeyAnim(kind, f, i)
