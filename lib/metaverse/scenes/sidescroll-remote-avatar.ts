@@ -118,20 +118,6 @@ export class SideScrollerRemoteAvatar {
         this.sprite.play(animKey("kick", "east"), true)
         return
       }
-      case "headbutt": {
-        this.sprite.setFlipX(needFlip)
-        if (this.sprite.anims.exists(animKey("headbutt", "east"))) {
-          this.sprite.play(animKey("headbutt", "east"), true)
-        }
-        return
-      }
-      case "stumbled": {
-        this.sprite.setFlipX(needFlip)
-        if (this.sprite.anims.exists(animKey("stumble", "east"))) {
-          this.sprite.play(animKey("stumble", "east"), true)
-        }
-        return
-      }
       case "idle":
       case "turning":
       default: {

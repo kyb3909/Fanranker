@@ -13,7 +13,6 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type {
-  HeadbuttHitEvent,
   MetaversePlayerIdentity,
   RoomChatMessage,
   SharedBallState,
@@ -25,7 +24,6 @@ import type {
 type RemoteChangeCb = (remote: Map<string, SideScrollerPresence>) => void
 type ChatCb = (msg: RoomChatMessage) => void
 type BallStateCb = (state: SharedBallState) => void
-type HeadbuttHitCb = (evt: HeadbuttHitEvent) => void
 
 const BALL_SYNC_THROTTLE_MS = 200
 
@@ -45,7 +43,6 @@ export class SideScrollerChannel {
   private readonly remoteListeners = new Set<RemoteChangeCb>()
   private readonly chatListeners = new Set<ChatCb>()
   private readonly ballListeners = new Set<BallStateCb>()
-  private readonly headbuttListeners = new Set<HeadbuttHitCb>()
 
   constructor(supabase: SupabaseClient, identity: MetaversePlayerIdentity) {
     this.supabase = supabase
@@ -79,11 +76,6 @@ export class SideScrollerChannel {
       for (const cb of this.ballListeners) cb(state)
     })
 
-    this.channel.on("broadcast", { event: "headbutt:hit" }, ({ payload }) => {
-      const evt = payload as HeadbuttHitEvent
-      for (const cb of this.headbuttListeners) cb(evt)
-    })
-
     await new Promise<void>((resolve, reject) => {
       this.channel!.subscribe((status, err) => {
         if (status === "SUBSCRIBED") {
@@ -112,7 +104,6 @@ export class SideScrollerChannel {
     this.remoteListeners.clear()
     this.chatListeners.clear()
     this.ballListeners.clear()
-    this.headbuttListeners.clear()
   }
 
   publishPresence(
@@ -177,17 +168,6 @@ export class SideScrollerChannel {
     void this.channel.send({ type: "broadcast", event: "ball:state", payload })
   }
 
-  publishHeadbuttHit(targetUserId: string, knockbackVx: number): void {
-    if (!this.channel) return
-    const evt: HeadbuttHitEvent = {
-      fromUserId: this.identity.userId,
-      targetUserId,
-      knockbackVx,
-      ts: Date.now(),
-    }
-    void this.channel.send({ type: "broadcast", event: "headbutt:hit", payload: evt })
-  }
-
   onRemoteChange(cb: RemoteChangeCb): () => void {
     this.remoteListeners.add(cb)
     return () => {
@@ -206,13 +186,6 @@ export class SideScrollerChannel {
     this.ballListeners.add(cb)
     return () => {
       this.ballListeners.delete(cb)
-    }
-  }
-
-  onHeadbuttHit(cb: HeadbuttHitCb): () => void {
-    this.headbuttListeners.add(cb)
-    return () => {
-      this.headbuttListeners.delete(cb)
     }
   }
 

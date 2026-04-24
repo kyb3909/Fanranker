@@ -25,7 +25,6 @@ import type {
   MetaversePlayerIdentity,
   SideScrollerActionState,
   SharedBallState,
-  HeadbuttHitEvent,
   RoomChatMessage,
   SideScrollerPresence,
 } from "@/lib/metaverse/types"
@@ -107,23 +106,7 @@ const KICK_CHARGE_MAX_MS = 1200 // 이 시간 이상 홀드해도 더 안 세짐
 const BG_TEXTURE = "ss-bg-stadium"
 const BG_URL = "/metaverse/bg-stadium.png"
 
-// 박치기 관련 상수
-const HEADBUTT_ANIM_MS = 400 // anim 전체 길이 (대략)
-const HEADBUTT_LOCK_MS = 450 // 입력 잠금 (anim 완료까지 약간 버퍼)
-const HEADBUTT_RANGE_PX = 60 // 앞쪽 이 거리 내에 상대 있으면 knock-back
-const HEADBUTT_KNOCKBACK_VX = 260 // 박치기 맞은 쪽에 가해지는 수평 속도
-const STUMBLE_DURATION_MS = 1200 // 넘어져있는 시간 (stumble anim + pause)
-const GETUP_DURATION_MS = 700 // 일어나는 anim 시간
-
-type PlayerState =
-  | "idle"
-  | "walking"
-  | "jumping"
-  | "kicking"
-  | "turning"
-  | "headbutt"
-  | "stumbled"
-  | "gettingUp"
+type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
 
 export class SideScrollerScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -132,7 +115,6 @@ export class SideScrollerScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
-  private headbuttKey!: Phaser.Input.Keyboard.Key
   private platforms!: Phaser.Physics.Arcade.StaticGroup
 
   /** Realtime 채널 — 없으면 (데모 스탠드얼론) 싱글플레이 fallback */
@@ -141,14 +123,10 @@ export class SideScrollerScene extends Phaser.Scene {
   private remoteAvatars: Map<string, SideScrollerRemoteAvatar> = new Map()
   /** 원격 유저 말풍선 — userId 키 (공간이 좁아 proximity 필터 X, 전부 보여줌) */
   private remoteChatBubbles: Map<string, ChatBubble> = new Map()
-  /** 박치기 맞아 넘어진 타이머 — 0 초과면 stumbled/gettingUp 상태 유지 */
-  private stumbleEndsAt = 0
-  private getupEndsAt = 0
   /** 채널 구독 해제 함수들 */
   private unsubRemote: (() => void) | null = null
   private unsubRemoteChat: (() => void) | null = null
   private unsubBallState: (() => void) | null = null
-  private unsubHeadbuttHit: (() => void) | null = null
   /** 내가 공 authority 인가 — 내가 마지막으로 찬 경우 true, 원격 수신 받으면 false. */
   private ballLastPublishAt = 0
   /**
@@ -259,14 +237,7 @@ export class SideScrollerScene extends Phaser.Scene {
           this.orientation = this.facing
           this.player.setTexture(texKeyRotation(this.facing))
           this.player.setFlipX(false)
-        } else if (key === animKey("headbutt", "east")) {
-          // 박치기 anim 완료 → idle 복귀 (knock-back 은 이미 트리거 됐음)
-          this.state = "idle"
-          this.orientation = this.facing
-          this.player.setTexture(texKeyRotation(this.facing))
-          this.player.setFlipX(false)
         }
-        // stumble/getup 완료는 시간 기반 처리 (update 에서), anim 복귀는 별도 텍스처 세팅 안 함
       }
     )
 
@@ -301,9 +272,8 @@ export class SideScrollerScene extends Phaser.Scene {
       "W" | "A" | "S" | "D",
       Phaser.Input.Keyboard.Key
     >
-    // 액션 키: Space = 킥 (홀드 충전), R = 박치기, W = 점프 (wasd 에서 이미 가져옴)
+    // 액션 키: Space = 킥 (홀드 충전), W = 점프 (wasd 에서 이미 가져옴)
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-    this.headbuttKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
 
     // 카메라 follow + 월드 경계
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
@@ -311,18 +281,13 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // 안내 (UI 오버레이)
     this.add
-      .text(
-        16,
-        16,
-        "← → 이동 · ↑ 뒤보기 · ↓ 앞보기 · W 점프 · Space 킥(충전) · R 박치기 · Enter 채팅",
-        {
-          fontFamily: "sans-serif",
-          fontSize: "13px",
-          color: "#ffffff",
-          backgroundColor: "#000000aa",
-          padding: { x: 8, y: 4 },
-        }
-      )
+      .text(16, 16, "← → 이동 · ↑ 뒤보기 · ↓ 앞보기 · W 점프 · Space 킥(충전) · Enter 채팅", {
+        fontFamily: "sans-serif",
+        fontSize: "13px",
+        color: "#ffffff",
+        backgroundColor: "#000000aa",
+        padding: { x: 8, y: 4 },
+      })
       .setScrollFactor(0)
       .setDepth(100)
 
@@ -345,13 +310,12 @@ export class SideScrollerScene extends Phaser.Scene {
       .setDepth(102)
       .setVisible(false)
 
-    // Realtime 채널 구독 — 원격 유저·공·박치기 이벤트
+    // Realtime 채널 구독 — 원격 유저·공 이벤트
     if (this.channel) {
       this.channel.setInitialPosition(this.player.x, this.player.y)
       this.unsubRemote = this.channel.onRemoteChange((remote) => this.syncRemoteAvatars(remote))
       this.unsubRemoteChat = this.channel.onChatMessage((msg) => this.handleRemoteChat(msg))
       this.unsubBallState = this.channel.onBallState((state) => this.handleRemoteBallState(state))
-      this.unsubHeadbuttHit = this.channel.onHeadbuttHit((evt) => this.handleHeadbuttHit(evt))
     }
 
     // 채팅 브리지 구독 — React ChatOverlay 가 이벤트 보냄
@@ -397,48 +361,6 @@ export class SideScrollerScene extends Phaser.Scene {
         // 각속도 = vx / r (rad/s), frame 증가 = 각속도 * dt(초)
         this.ball.rotation += (vx / BALL_RADIUS_PX) * (deltaMs / 1000)
       }
-    }
-
-    // stumbled / gettingUp — 시간 기반 자동 전환. 입력 전부 잠김.
-    if (this.state === "stumbled") {
-      body.setAccelerationX(0)
-      body.setVelocityX(0)
-      body.setDragX(GROUND_DRAG)
-      if (this.time.now >= this.stumbleEndsAt) {
-        // stumble → gettingUp 전환
-        this.state = "gettingUp"
-        this.getupEndsAt = this.time.now + GETUP_DURATION_MS
-        if (this.player.anims.exists(animKey("getup", "east"))) {
-          this.player.play(animKey("getup", "east"), true)
-          this.player.setFlipX(this.facing === "west")
-        }
-      }
-      this.updateNameTag()
-      this.publishPresenceIfChannel()
-      return
-    }
-    if (this.state === "gettingUp") {
-      body.setAccelerationX(0)
-      body.setVelocityX(0)
-      body.setDragX(GROUND_DRAG)
-      if (this.time.now >= this.getupEndsAt) {
-        this.state = "idle"
-        this.player.setFlipX(false)
-        this.player.setTexture(texKeyRotation(this.facing))
-      }
-      this.updateNameTag()
-      this.publishPresenceIfChannel()
-      return
-    }
-
-    // 박치기 — anim 재생 동안 락. 시작 시점에 hit 판정·broadcast 이미 완료.
-    if (this.state === "headbutt") {
-      body.setAccelerationX(0)
-      body.setVelocityX(0)
-      body.setDragX(GROUND_DRAG)
-      this.updateNameTag()
-      this.publishPresenceIfChannel()
-      return
     }
 
     // 턴 애니메이션 — 8방향 rotation 프레임 순차 재생.
@@ -489,46 +411,6 @@ export class SideScrollerScene extends Phaser.Scene {
     // Space = 킥 (hold 충전, release 발사)
     const kickJustDown = Phaser.Input.Keyboard.JustDown(this.spaceKey)
     const kickJustUp = Phaser.Input.Keyboard.JustUp(this.spaceKey)
-    // R = 박치기
-    const headbuttJustDown = Phaser.Input.Keyboard.JustDown(this.headbuttKey)
-
-    // 디버그: R 눌렀을 때 조건 값 풀어서 표시 (Object collapsed 방지)
-    if (headbuttJustDown) {
-      const animExists = this.player.anims.exists(animKey("headbutt", "east"))
-      const tex000Exists = this.textures.exists(
-        `${"avatar-pro-xl"}-headbutt-east-0` // texKeyAnim pattern
-      )
-      console.log(
-        `[sidescroll] R pressed — state=${this.state} onGround=${onGround} chatOpen=${this.isChatInputOpen} animExists=${animExists} tex000Exists=${tex000Exists}`
-      )
-    }
-
-    // 박치기 트리거 — 지상에서만. 이 지점의 state ∈ {idle, walking, jumping} 이므로
-    // 추가 방어 체크 불필요 (kicking/turning/stumbled/gettingUp/headbutt 은 이미 early return).
-    if (headbuttJustDown && onGround) {
-      this.state = "headbutt"
-      body.setAccelerationX(0)
-      body.setVelocityX(0)
-      body.setDragX(GROUND_DRAG)
-      this.orientation = this.facing
-      this.player.setFlipX(this.facing === "west")
-      // Phaser anims 레지스트리 문제 우회 — setTexture 로 수동 프레임 교체
-      this.playHeadbuttFrames()
-      // 앞쪽 remote player 검출 → hit broadcast
-      const sign = this.facing === "east" ? 1 : -1
-      for (const [uid, av] of this.remoteAvatars) {
-        const dx = av.getX() - this.player.x
-        if (Math.sign(dx) === sign && Math.abs(dx) < HEADBUTT_RANGE_PX) {
-          // Y 차이 적은 경우만 (같은 높이)
-          if (Math.abs(av.getY() - this.player.y) < 60) {
-            this.channel?.publishHeadbuttHit(uid, sign * HEADBUTT_KNOCKBACK_VX)
-          }
-        }
-      }
-      this.updateNameTag()
-      this.publishPresenceIfChannel()
-      return
-    }
 
     // 충전 시작 — X 눌리는 순간 (지상에서만)
     if (kickJustDown && onGround && this.chargeStartedAt === null) {
@@ -813,11 +695,6 @@ export class SideScrollerScene extends Phaser.Scene {
         return "kicking"
       case "turning":
         return "turning"
-      case "headbutt":
-        return "headbutt"
-      case "stumbled":
-      case "gettingUp":
-        return "stumbled"
       case "idle":
       default:
         return "idle"
@@ -920,71 +797,6 @@ export class SideScrollerScene extends Phaser.Scene {
     this.ballLastPublishAt = this.time.now
   }
 
-  /** 박치기 맞음 — knock-back + stumble 상태로 진입. */
-  private handleHeadbuttHit(evt: HeadbuttHitEvent) {
-    if (evt.targetUserId !== this.identity.userId) return // 나 아님
-    const body = this.player.body as Phaser.Physics.Arcade.Body
-    body.setVelocityX(evt.knockbackVx)
-    body.setVelocityY(-200) // 살짝 뜸
-    this.state = "stumbled"
-    this.stumbleEndsAt = this.time.now + STUMBLE_DURATION_MS
-    // stumble anim 재생 (있으면)
-    if (this.player.anims.exists(animKey("stumble", "east"))) {
-      this.player.play(animKey("stumble", "east"), true)
-      this.player.setFlipX(this.facing === "east") // 맞고 쓰러질 때 반대 방향 보임
-    }
-  }
-
-  /**
-   * 박치기 시퀀스 — 머리 숙이고 그대로 돌진 (박치기 공룡 스타일).
-   * 쉐이크·플래시 등 화려한 효과 제거, "앞으로 빠르게 달려가며 머리로 들이받기"
-   * 에 집중. 프레임 재생 중 facing 방향으로 body velocity 유지해 실제 전진.
-   */
-  private playHeadbuttFrames() {
-    const FRAME_TIMING_MS = 100 // 프레임당 100ms × 4 = 400ms
-    const prefix = "avatar-pro-xl-headbutt-east-"
-    const available: number[] = []
-    for (let i = 0; i < 4; i++) {
-      if (this.textures.exists(prefix + i)) available.push(i)
-    }
-    if (available.length === 0) {
-      console.warn("[headbutt] 프레임 0장 — 락만 걸고 복귀")
-      this.time.delayedCall(400, () => {
-        if (this.state === "headbutt") {
-          this.state = "idle"
-          this.player.setTexture(texKeyRotation(this.facing))
-          this.player.setFlipX(false)
-        }
-      })
-      return
-    }
-
-    // 첫 프레임 즉시 + 앞으로 돌진 시작 (전체 시퀀스 동안 유지)
-    this.player.setTexture(prefix + available[0])
-    const sign = this.facing === "east" ? 1 : -1
-    const body = this.player.body as Phaser.Physics.Arcade.Body
-    body.setVelocityX(sign * 220)
-
-    // 나머지 프레임 순차 교체
-    for (let i = 1; i < available.length; i++) {
-      const fIdx = available[i]
-      this.time.delayedCall(FRAME_TIMING_MS * i, () => {
-        if (this.state === "headbutt") this.player.setTexture(prefix + fIdx)
-      })
-    }
-
-    // 완료 → idle 복귀
-    const totalMs = FRAME_TIMING_MS * available.length
-    this.time.delayedCall(totalMs, () => {
-      if (this.state === "headbutt") {
-        this.state = "idle"
-        this.player.setFlipX(false)
-        this.player.setTexture(texKeyRotation(this.facing))
-        body.setVelocityX(0)
-      }
-    })
-  }
-
   private teardown() {
     this.unsubChatSend?.()
     this.unsubChatOpen?.()
@@ -995,11 +807,9 @@ export class SideScrollerScene extends Phaser.Scene {
     this.unsubRemote?.()
     this.unsubRemoteChat?.()
     this.unsubBallState?.()
-    this.unsubHeadbuttHit?.()
     this.unsubRemote = null
     this.unsubRemoteChat = null
     this.unsubBallState = null
-    this.unsubHeadbuttHit = null
     this.chatBubble?.destroy()
     this.chatBubble = null
     for (const av of this.remoteAvatars.values()) av.destroy()
