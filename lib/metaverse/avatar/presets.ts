@@ -37,6 +37,12 @@ export interface AvatarPreset {
   bodyHeight: number
   bodyOffsetX: number
   bodyOffsetY: number
+  /**
+   * Kick 애니 재생 중에만 곱해지는 보조 스케일. PixelLab 커스텀 킥 애니가 idle 대비 과하게
+   * 크게 그려지는 경우 (Arsenal 처럼) 에 1 미만으로 설정해 시각적 "갑자기 커짐" 을 보정.
+   * 기본은 1.0 (보정 없음). 해당 프리셋 kick 프레임의 실제 최대 height / idle height 비율로 역산.
+   */
+  kickScale?: number
 }
 
 export const DEFAULT_AVATAR_KEY = "default-pro-xl" as const
@@ -81,6 +87,9 @@ export const AVATAR_PRESETS: Record<string, AvatarPreset> = {
     bodyHeight: 99,
     bodyOffsetX: 87,
     bodyOffsetY: 61,
+    // 커스텀 kick 애니 실측: max frame height 156px (idle 99px 대비 +57%).
+    // 0.65 로 스케일 다운 시 kick feet y 가 idle 과 거의 일치 + 크기도 비슷해져 전환이 자연스러움.
+    kickScale: 0.65,
   },
 }
 

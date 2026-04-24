@@ -110,6 +110,8 @@ export class SideScrollerScene extends Phaser.Scene {
   private presetKey: string = DEFAULT_AVATAR_KEY
   /** 로컬 플레이어 아바타 시각 높이 (스케일 적용) — 닉네임/말풍선 오프셋 계산용. */
   private avatarVisualH: number = 98
+  /** 로컬 플레이어 프리셋의 kick 재생 중 임시 스케일 배수. 1.0 이면 무보정. */
+  private presetKickScale: number = 1
   private player!: Phaser.Physics.Arcade.Sprite
   private nameTag!: Phaser.GameObjects.Text
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -253,6 +255,8 @@ export class SideScrollerScene extends Phaser.Scene {
           this.orientation = this.facing
           this.player.setTexture(texKeyRotation(this.facing, this.presetKey))
           this.player.setFlipX(false)
+          // kick 중 적용한 임시 스케일 복원
+          this.player.setScale(AVATAR_SCALE)
         }
       }
     )
@@ -272,6 +276,7 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // 닉네임 태그 — 프리셋 높이 기준 (frameHeight 가 아니라 실제 bodyHeight 로 계산)
     this.avatarVisualH = preset.bodyHeight * AVATAR_SCALE
+    this.presetKickScale = preset.kickScale ?? 1
     this.nameTag = this.add
       .text(this.player.x, this.player.y - this.avatarVisualH / 2 - 6, this.identity.nickname, {
         fontFamily: "sans-serif",
@@ -459,6 +464,8 @@ export class SideScrollerScene extends Phaser.Scene {
         // kick anim 은 east 원본만 — west 쪽은 동일한 east 방향 그림이라 flipX 로 반전.
         this.player.play(animKey("kick", "east", this.presetKey), true)
         this.player.setFlipX(this.facing === "west")
+        // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 idle 대비 과하게 큰 경우 스케일 다운.
+        this.player.setScale(AVATAR_SCALE * this.presetKickScale)
         // 킥 중엔 physics 공 숨김 — 그려진 공과 이중 표시 방지
         this.ball.setVisible(false)
         this.pendingBallX = this.ball.x

@@ -104,14 +104,19 @@ export class SideScrollerRemoteAvatar {
 
   private applyActionAnim() {
     const needFlip = this.facing === "west"
+    const preset = getAvatarPreset(this.avatarKey)
+    // 비-kick 상태로 진입하면 기본 스케일 복원 (kick 에서 나올 때 필요).
+    const nonKickScale = AVATAR_SCALE
     switch (this.action) {
       case "walking": {
         this.sprite.setFlipX(false)
+        this.sprite.setScale(nonKickScale)
         this.sprite.play(animKey("walk", this.facing, this.avatarKey), true)
         return
       }
       case "jumping": {
         this.sprite.setFlipX(false)
+        this.sprite.setScale(nonKickScale)
         // 원격 점프는 완료 감지 불가 → 한 번 재생 후 idle 로 fallback
         const jumpKey = animKey("jump", this.facing, this.avatarKey)
         if (this.sprite.anims.currentAnim?.key !== jumpKey) {
@@ -121,6 +126,8 @@ export class SideScrollerRemoteAvatar {
       }
       case "kicking": {
         this.sprite.setFlipX(needFlip)
+        // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 과하게 큰 경우 스케일 다운.
+        this.sprite.setScale(AVATAR_SCALE * (preset.kickScale ?? 1))
         // kick 은 east 원본, west 는 flipX
         this.sprite.play(animKey("kick", "east", this.avatarKey), true)
         return
@@ -129,6 +136,7 @@ export class SideScrollerRemoteAvatar {
       case "turning":
       default: {
         this.sprite.setFlipX(false)
+        this.sprite.setScale(nonKickScale)
         this.sprite.anims.stop()
         this.sprite.setTexture(texKeyRotation(this.facing, this.avatarKey))
       }
