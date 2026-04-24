@@ -21,6 +21,7 @@ type AnalyticsEvent =
       params: { plot_code: string; sign_length: number; cost: number }
     }
   | { name: "metaverse_room_close"; params: { by: "owner" | "admin" | "cron" } }
+  | { name: "metaverse_wembley_enter"; params: { is_guest: boolean } }
   | { name: "flair_team_selected"; params: { community: string; team_id: string } }
 
 export function trackEvent(event: AnalyticsEvent) {

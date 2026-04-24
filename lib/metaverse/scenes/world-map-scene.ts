@@ -107,6 +107,9 @@ export class WorldMapScene extends Phaser.Scene {
 
   preload() {
     preloadProAvatar(this)
+    if (!this.textures.exists("wembley-hex")) {
+      this.load.image("wembley-hex", "/map/objects/hex-stadium-wembley.png")
+    }
   }
 
   create() {
@@ -122,6 +125,7 @@ export class WorldMapScene extends Phaser.Scene {
     this.drawPlazaMarker("맨체스터 광장", 41, 42)
     this.drawPlazaMarker("리버풀 광장", 38, 46)
     this.drawPlazaMarker("뉴캐슬 광장", 52, 30)
+    this.drawWembleyEntrance(51, 67)
 
     // 광장 Plot 마커 + 기존 Signboard (Phase 3)
     this.renderPlots()
@@ -552,6 +556,49 @@ export class WorldMapScene extends Phaser.Scene {
         .rectangle(pinToWorldX(s.x), pinToWorldY(s.y), pinToWorldX(s.w), pinToWorldY(s.h), color)
         .setOrigin(0, 0)
     }
+  }
+
+  /**
+   * 웸블리 경기장 입구 — 월드맵 상의 클릭 가능한 hex 스타디움 아이콘.
+   * 클릭 시 `wembley:enter` bridge 이벤트 발사 → 상위 React 래퍼가 /metaverse/interior-demo 로 라우팅.
+   * 호버 시 살짝 뜨고 배너 표시 (진입 CTA 명확화).
+   */
+  private drawWembleyEntrance(pinX: number, pinY: number) {
+    const x = pinToWorldX(pinX)
+    const y = pinToWorldY(pinY)
+
+    // hex-stadium-wembley PNG 는 192×192 — 씬 WORLD 에 비례해 적당히 축소 (scale 0.5 = 96×96)
+    const icon = this.add
+      .image(x, y, "wembley-hex")
+      .setScale(0.5)
+      .setDepth(6)
+      .setInteractive({ useHandCursor: true })
+
+    // "Wembley · 입장" 배지 — 아이콘 위쪽에 상시 표시
+    const label = this.add
+      .text(x, y - 60, "🏟️  웸블리 · 클릭해 입장", {
+        fontFamily: "sans-serif",
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        backgroundColor: "#c62828",
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5, 0.5)
+      .setDepth(7)
+
+    // 호버 피드백 — 아이콘 살짝 띄우기
+    icon.on("pointerover", () => {
+      this.tweens.add({ targets: icon, y: y - 6, scale: 0.55, duration: 150 })
+      this.tweens.add({ targets: label, scale: 1.05, duration: 150 })
+    })
+    icon.on("pointerout", () => {
+      this.tweens.add({ targets: icon, y, scale: 0.5, duration: 150 })
+      this.tweens.add({ targets: label, scale: 1.0, duration: 150 })
+    })
+    icon.on("pointerdown", () => {
+      sceneBridge.emit("wembley:enter")
+    })
   }
 
   private drawPlazaMarker(name: string, pinX: number, pinY: number) {

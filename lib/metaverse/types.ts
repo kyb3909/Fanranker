@@ -55,6 +55,8 @@ export interface SideScrollerPresence {
   facing: SideScrollerFacing
   action: SideScrollerActionState
   updatedAt: number
+  /** 아바타 프리셋 키 — `lib/metaverse/avatar/presets.ts` 참조. 없으면 기본 프리셋. */
+  avatarKey?: string
 }
 
 /**

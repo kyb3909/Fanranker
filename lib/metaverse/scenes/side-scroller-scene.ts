@@ -31,8 +31,8 @@ import type {
 import type { SideScrollerChannel } from "@/lib/metaverse/realtime/sidescroll-channel"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import {
-  preloadProAvatarXl,
-  createProAvatarXlAnimations,
+  preloadAllAvatarPresets,
+  createAllAvatarAnimations,
   texKeyIdle,
   texKeyRotation,
   rotationPath,
@@ -41,6 +41,7 @@ import {
   type Facing,
   type RotationDir,
 } from "@/lib/metaverse/avatar/pro-avatar-xl"
+import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
 import { ChatBubble } from "./chat-bubble"
 import { SideScrollerRemoteAvatar } from "./sidescroll-remote-avatar"
 
@@ -68,17 +69,10 @@ const SCENE_HEIGHT = 821
 const FLOOR_TOP_Y = 640
 const FLOOR_HEIGHT = SCENE_HEIGHT - FLOOR_TOP_Y
 
-// PixelLab 208×208 XL 프레임 → 1.0 스케일 (정수배, pixelArt 에서 가장 크리스프).
-// 실제 캐릭터 픽셀은 x=86-120 (34 wide), y=60-158 (98 tall). 메이플 스타일
-// 기준 화면 대비 ~20% 비중이 되도록 scale 0.5 → 1.0 으로 2배 확대.
-// 프레임 외곽 50px 하단 패딩은 투명이라 floor 아래로 삐져나가도 무해.
+// PixelLab pro frame → 1.0 scale (정수배, pixelArt 에서 가장 크리스프).
+// 기본 프리셋(default-pro-xl) 208×208, 캐릭터 픽셀 34×98. 다른 프리셋도 canvas 폭만 다르지
+// 픽셀아트 느낌 유지 위해 공통 정수 배율 유지. 프리셋별 hitbox 는 presets.ts 에서 참조.
 const AVATAR_SCALE = 1.0
-const AVATAR_BODY_W = 34
-const AVATAR_BODY_H = 98
-const AVATAR_BODY_OFFSET_X = 86
-const AVATAR_BODY_OFFSET_Y = 60
-// 시각 높이 (스케일 적용) — 닉네임/말풍선 오프셋 계산용
-const AVATAR_VISUAL_H = AVATAR_BODY_H * AVATAR_SCALE
 
 // 축구공 — 땅에 멈춰있다가 킥 입력 시 충전된 강도로 날아감.
 // PixelLab 생성 32×32 PNG, 실제 공은 bbox (4,4)-(28,28) = 중앙 24×24.
@@ -90,7 +84,9 @@ const BALL_CIRCLE_OFFSET = BALL_FRAME / 2 - BALL_RADIUS_PX // = 4, bbox padding
 const BALL_GRAVITY = 900 // 플레이어와 동일
 const BALL_BOUNCE = 0.35
 const BALL_DRAG_X = 180 // 지상 구름 마찰
-const BALL_KICK_RANGE = 60 // 플레이어 발끝 ~ 공 거리가 이 이내일 때만 실제 킥 속도 인가
+// 공이 이 반경 안에 있으면 킥 가능. 넉넉하게 120px — 플레이어 어깨/몸통 근처만 가도 찰 수 있음.
+// facing 방향 엄격 체크는 제거됨 (뒤에 있는 공도 찰 수 있고, 킥 방향은 무조건 facing).
+const BALL_KICK_RANGE = 120
 // 공 스폰 — 플레이어 초기 위치 (x=100) 바로 앞에 두어 처음부터 킥 체험 가능.
 const BALL_RESPAWN_X = 160
 const BALL_RESPAWN_Y = FLOOR_TOP_Y - 40
@@ -110,11 +106,16 @@ type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
 
 export class SideScrollerScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
+  /** 로컬 플레이어가 쓰는 아바타 프리셋 키. 원격은 각자의 presence.avatarKey 를 씀. */
+  private presetKey: string = DEFAULT_AVATAR_KEY
+  /** 로컬 플레이어 아바타 시각 높이 (스케일 적용) — 닉네임/말풍선 오프셋 계산용. */
+  private avatarVisualH: number = 98
   private player!: Phaser.Physics.Arcade.Sprite
   private nameTag!: Phaser.GameObjects.Text
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
+  private rKey!: Phaser.Input.Keyboard.Key
   private platforms!: Phaser.Physics.Arcade.StaticGroup
 
   /** Realtime 채널 — 없으면 (데모 스탠드얼론) 싱글플레이 fallback */
@@ -175,6 +176,7 @@ export class SideScrollerScene extends Phaser.Scene {
   init(data: { identity: MetaversePlayerIdentity; channel?: SideScrollerChannel | null }) {
     this.identity = data.identity
     this.channel = data.channel ?? null
+    this.presetKey = data.identity.avatarKey ?? DEFAULT_AVATAR_KEY
   }
 
   preload() {
@@ -184,7 +186,8 @@ export class SideScrollerScene extends Phaser.Scene {
     if (!this.textures.exists(BALL_TEXTURE)) {
       this.load.image(BALL_TEXTURE, BALL_URL)
     }
-    preloadProAvatarXl(this)
+    // 원격 유저의 다양한 프리셋 지원 위해 전체 프리셋 선로딩.
+    preloadAllAvatarPresets(this)
   }
 
   create() {
@@ -205,20 +208,30 @@ export class SideScrollerScene extends Phaser.Scene {
       .setOrigin(0, 0)
     this.platforms.add(invisibleFloor)
 
-    // walk / jump / kick anim 등록 (east + west 독립)
-    createProAvatarXlAnimations(this)
+    // walk / jump / kick anim 등록 — 모든 프리셋에 대해 (원격 유저들의 다양한 외형 대응)
+    createAllAvatarAnimations(this)
 
-    // 플레이어 스프라이트 — 초기 east idle. XL 은 east/west 별도 스프라이트 사용.
-    this.player = this.physics.add.sprite(100, FLOOR_TOP_Y - 100, texKeyIdle("east"))
+    const preset = getAvatarPreset(this.presetKey)
+    // 플레이어 스프라이트 — 초기 east idle. 프리셋별 스프라이트.
+    this.player = this.physics.add.sprite(
+      100,
+      FLOOR_TOP_Y - 100,
+      texKeyIdle("east", this.presetKey)
+    )
     this.player.setScale(AVATAR_SCALE)
     this.player.setDepth(10)
+    // 아웃라인 glow — 배경과 캐릭터 분리를 위한 다크 할로.
+    // Phaser 4: `enableFilters()` 먼저 호출 → `filters.internal.addGlow(...)`.
+    // color=검정, outerStrength=4 (두께), innerStrength=0, scale=1, knockout=false, quality=0.1, distance=8.
+    this.player.enableFilters()
+    this.player.filters?.internal.addGlow(0x000000, 4, 0, 1, false, 0.1, 8)
     this.player.setCollideWorldBounds(true)
     this.player.setBounce(0)
     this.player.setMaxVelocity(WALK_SPEED, MAX_FALL_SPEED)
     // hitbox 는 캐릭터 몸통 근처만 — 투명 패딩 영역이 벽에 걸리는 느낌 방지
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body
-    playerBody.setSize(AVATAR_BODY_W, AVATAR_BODY_H)
-    playerBody.setOffset(AVATAR_BODY_OFFSET_X, AVATAR_BODY_OFFSET_Y)
+    playerBody.setSize(preset.bodyWidth, preset.bodyHeight)
+    playerBody.setOffset(preset.bodyOffsetX, preset.bodyOffsetY)
     // 드래그는 update()에서 지면/공중 상황에 따라 갱신
     this.physics.add.collider(this.player, this.platforms)
 
@@ -231,11 +244,14 @@ export class SideScrollerScene extends Phaser.Scene {
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
         const key = anim.key
-        if (key === animKey("kick", "east") || key === animKey("kick", "west")) {
+        if (
+          key === animKey("kick", "east", this.presetKey) ||
+          key === animKey("kick", "west", this.presetKey)
+        ) {
           this.applyPendingKickToBall()
           this.state = "idle"
           this.orientation = this.facing
-          this.player.setTexture(texKeyRotation(this.facing))
+          this.player.setTexture(texKeyRotation(this.facing, this.presetKey))
           this.player.setFlipX(false)
         }
       }
@@ -254,9 +270,10 @@ export class SideScrollerScene extends Phaser.Scene {
     this.physics.add.collider(this.ball, this.platforms)
     // 플레이어 ↔ 공 콜리전은 없음 — "공은 킥 입력 때만 날아감" 스펙대로 접촉만으로는 안 밀림.
 
-    // 닉네임 태그
+    // 닉네임 태그 — 프리셋 높이 기준 (frameHeight 가 아니라 실제 bodyHeight 로 계산)
+    this.avatarVisualH = preset.bodyHeight * AVATAR_SCALE
     this.nameTag = this.add
-      .text(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 6, this.identity.nickname, {
+      .text(this.player.x, this.player.y - this.avatarVisualH / 2 - 6, this.identity.nickname, {
         fontFamily: "sans-serif",
         fontSize: "12px",
         color: "#ffffff",
@@ -272,8 +289,9 @@ export class SideScrollerScene extends Phaser.Scene {
       "W" | "A" | "S" | "D",
       Phaser.Input.Keyboard.Key
     >
-    // 액션 키: Space = 킥 (홀드 충전), W = 점프 (wasd 에서 이미 가져옴)
+    // 액션 키: Space = 점프, R = 킥 (홀드 충전)
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+    this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
 
     // 카메라 follow + 월드 경계
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
@@ -281,7 +299,7 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // 안내 (UI 오버레이)
     this.add
-      .text(16, 16, "← → 이동 · ↑ 뒤보기 · ↓ 앞보기 · W 점프 · Space 킥(충전) · Enter 채팅", {
+      .text(16, 16, "← → 이동 · ↑/W 뒤보기 · ↓/S 앞보기 · Space 점프 · R 킥(충전) · Enter 채팅", {
         fontFamily: "sans-serif",
         fontSize: "13px",
         color: "#ffffff",
@@ -404,13 +422,17 @@ export class SideScrollerScene extends Phaser.Scene {
 
     const left = this.cursors.left?.isDown || this.wasd.A.isDown
     const right = this.cursors.right?.isDown || this.wasd.D.isDown
-    // W = 점프 (↑ 화살표는 뒤보기, Space 는 킥 충전)
-    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.wasd.W)
-    const lookUpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up!)
-    const lookDownPressed = Phaser.Input.Keyboard.JustDown(this.cursors.down!)
-    // Space = 킥 (hold 충전, release 발사)
-    const kickJustDown = Phaser.Input.Keyboard.JustDown(this.spaceKey)
-    const kickJustUp = Phaser.Input.Keyboard.JustUp(this.spaceKey)
+    // Space = 점프. ↑/W = 뒤보기, ↓/S = 앞보기. R 은 킥 충전.
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey)
+    const lookUpPressed =
+      Phaser.Input.Keyboard.JustDown(this.cursors.up!) ||
+      Phaser.Input.Keyboard.JustDown(this.wasd.W)
+    const lookDownPressed =
+      Phaser.Input.Keyboard.JustDown(this.cursors.down!) ||
+      Phaser.Input.Keyboard.JustDown(this.wasd.S)
+    // R = 킥 (hold 충전, release 발사)
+    const kickJustDown = Phaser.Input.Keyboard.JustDown(this.rKey)
+    const kickJustUp = Phaser.Input.Keyboard.JustUp(this.rKey)
 
     // 충전 시작 — X 눌리는 순간 (지상에서만)
     if (kickJustDown && onGround && this.chargeStartedAt === null) {
@@ -435,7 +457,7 @@ export class SideScrollerScene extends Phaser.Scene {
         body.setVelocityX(0)
         body.setDragX(GROUND_DRAG)
         // kick anim 은 east 원본만 — west 쪽은 동일한 east 방향 그림이라 flipX 로 반전.
-        this.player.play(animKey("kick", "east"), true)
+        this.player.play(animKey("kick", "east", this.presetKey), true)
         this.player.setFlipX(this.facing === "west")
         // 킥 중엔 physics 공 숨김 — 그려진 공과 이중 표시 방지
         this.ball.setVisible(false)
@@ -477,7 +499,7 @@ export class SideScrollerScene extends Phaser.Scene {
       // 점프할 때 orientation 을 facing 으로 sync (north/south 보고 있다가 점프하면 east/west 로)
       this.orientation = this.facing
       this.player.setFlipX(false)
-      this.player.play(animKey("jump", this.facing), true)
+      this.player.play(animKey("jump", this.facing, this.presetKey), true)
     }
 
     // 착지 감지: 점프 상태였는데 지상이면 idle/walk 로 복귀
@@ -508,9 +530,9 @@ export class SideScrollerScene extends Phaser.Scene {
     const m = cur.match(/(walk|jump|kick):(east|west)$/)
     if (m && this.state !== "idle") {
       const kind = m[1] as "walk" | "jump" | "kick"
-      this.player.play(animKey(kind, next), true)
+      this.player.play(animKey(kind, next, this.presetKey), true)
     } else if (this.state === "idle") {
-      this.player.setTexture(texKeyRotation(next))
+      this.player.setTexture(texKeyRotation(next, this.presetKey))
     }
   }
 
@@ -521,14 +543,14 @@ export class SideScrollerScene extends Phaser.Scene {
    */
   private syncIdleOrWalkAnim(onGround: boolean, vx: number) {
     if (onGround && Math.abs(vx) > 10) {
-      const walkKey = animKey("walk", this.facing)
+      const walkKey = animKey("walk", this.facing, this.presetKey)
       if (this.player.anims.currentAnim?.key !== walkKey || !this.player.anims.isPlaying) {
         this.player.play(walkKey, true)
       }
     } else {
       // idle — anim 중지 + orientation rotation 텍스처
       if (this.player.anims.isPlaying) this.player.anims.stop()
-      const idleKey = texKeyRotation(this.orientation)
+      const idleKey = texKeyRotation(this.orientation, this.presetKey)
       if (this.player.texture.key !== idleKey) {
         this.player.setTexture(idleKey)
       }
@@ -549,7 +571,7 @@ export class SideScrollerScene extends Phaser.Scene {
     this.player.anims.stop()
     this.player.setFlipX(false)
     // 즉시 첫 프레임 세팅 (체감 응답성)
-    this.player.setTexture(texKeyRotation(path[0]))
+    this.player.setTexture(texKeyRotation(path[0], this.presetKey))
     this.turnFrameIdx = 1
   }
 
@@ -557,7 +579,7 @@ export class SideScrollerScene extends Phaser.Scene {
   private advanceTurn(deltaMs: number) {
     this.turnFrameTimer += deltaMs
     while (this.turnFrameTimer >= TURN_FRAME_MS && this.turnFrameIdx < this.turnPath.length) {
-      this.player.setTexture(texKeyRotation(this.turnPath[this.turnFrameIdx]))
+      this.player.setTexture(texKeyRotation(this.turnPath[this.turnFrameIdx], this.presetKey))
       this.turnFrameIdx++
       this.turnFrameTimer -= TURN_FRAME_MS
     }
@@ -578,9 +600,9 @@ export class SideScrollerScene extends Phaser.Scene {
   }
 
   private updateNameTag() {
-    this.nameTag.setPosition(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 6)
+    this.nameTag.setPosition(this.player.x, this.player.y - this.avatarVisualH / 2 - 6)
     if (this.chatBubble && this.chatBubble.active) {
-      this.chatBubble.setPosition(this.player.x, this.player.y - AVATAR_VISUAL_H / 2 - 22)
+      this.chatBubble.setPosition(this.player.x, this.player.y - this.avatarVisualH / 2 - 22)
     }
   }
 
@@ -588,14 +610,13 @@ export class SideScrollerScene extends Phaser.Scene {
   // 축구공 + 킥 충전
   // ============================================================
 
-  /** 플레이어 기준 공이 사거리 + facing 방향에 있는지. */
+  /** 플레이어 기준 공이 `BALL_KICK_RANGE` 반경 안에 있는지.
+   * facing 방향 엄격 체크는 제거됨 — 뒤에 있는 공도 찰 수 있고 킥 방향은 무조건 facing. */
   private ballInKickReach(): boolean {
     const dx = this.ball.x - this.player.x
-    const dist = Math.sqrt(dx * dx + (this.ball.y - this.player.y) ** 2)
-    if (dist > BALL_KICK_RANGE) return false
-    const sign = this.facing === "east" ? 1 : -1
-    if (Math.sign(dx) !== sign && Math.abs(dx) > 5) return false
-    return true
+    const dy = this.ball.y - this.player.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    return dist <= BALL_KICK_RANGE
   }
 
   /** kick anim 완료 시 호출 — 숨겨뒀던 공을 원래 위치에서 속도·각도로 발사. */
@@ -624,11 +645,11 @@ export class SideScrollerScene extends Phaser.Scene {
     this.channel?.publishBallState({ x: this.ball.x, y: this.ball.y, vx, vy }, true)
   }
 
-  /** 공 없이 X 놓을 때 "앞에 공이 없어요" 짧은 토스트 (2초 페이드). */
+  /** 공이 사거리 밖일 때 R 놓으면 뜨는 짧은 토스트 (2초 페이드). */
   private showMissHint() {
     this.missHintText?.destroy()
     this.missHintText = this.add
-      .text(this.scale.width / 2, 90, "앞에 공이 없어요 — 공 앞에서 차세요", {
+      .text(this.scale.width / 2, 90, "공이 너무 멀어요 — 가까이 가서 차세요", {
         fontFamily: "sans-serif",
         fontSize: "14px",
         color: "#ffffff",
@@ -739,7 +760,7 @@ export class SideScrollerScene extends Phaser.Scene {
       if (!bubble.active) continue
       const av = this.remoteAvatars.get(uid)
       if (!av) continue
-      bubble.setPosition(av.getX(), av.getY() - AVATAR_VISUAL_H / 2 - 22)
+      bubble.setPosition(av.getX(), av.getY() - this.avatarVisualH / 2 - 22)
     }
   }
 

@@ -63,6 +63,8 @@ type BridgeEventMap = {
     userId: string
     nickname: string
   }
+  /** 월드맵에서 웸블리 아이콘 클릭 — 상위 래퍼가 사이드스크롤러 씬으로 라우팅. */
+  "wembley:enter": undefined
 }
 
 class MetaverseSceneBridge extends EventTarget {

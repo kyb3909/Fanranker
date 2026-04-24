@@ -2,17 +2,16 @@
  * SideScrollerRemoteAvatar — 사이드스크롤러 원격 유저 1명을 씬에 렌더.
  *
  * 월드맵의 RemoteAvatar 와 달리 2방향 (east/west) 만 쓰고 XL 에셋 사용.
- * Presence payload (SideScrollerPresence) 의 action 상태를 읽어 walk/jump/
- * kick/headbutt 애니 동기화. 위치는 half-life 기반 exponential lerp.
+ * Presence payload (SideScrollerPresence) 의 action 상태를 읽어 walk/jump/kick
+ * 애니 동기화. 위치는 half-life 기반 exponential lerp.
+ *
+ * 각 원격 유저는 자기만의 `avatarKey` 프리셋을 사용할 수 있음 — 쇼핑/인벤토리로
+ * 다른 유니폼을 입은 상태가 그대로 렌더링됨.
  */
 
 import type * as Phaser from "phaser"
-import {
-  AVATAR_PRO_XL,
-  texKeyIdle,
-  texKeyRotation,
-  animKey,
-} from "@/lib/metaverse/avatar/pro-avatar-xl"
+import { texKeyIdle, texKeyRotation, animKey } from "@/lib/metaverse/avatar/pro-avatar-xl"
+import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
 import type { SideScrollerPresence, SideScrollerActionState } from "@/lib/metaverse/types"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 
@@ -28,6 +27,7 @@ export class SideScrollerRemoteAvatar {
   private targetY: number
   private facing: "east" | "west"
   private action: SideScrollerActionState
+  private avatarKey: string
 
   constructor(scene: Phaser.Scene, state: SideScrollerPresence) {
     this.userId = state.userId
@@ -36,12 +36,17 @@ export class SideScrollerRemoteAvatar {
     this.targetY = state.y
     this.facing = state.facing
     this.action = state.action
+    this.avatarKey = state.avatarKey ?? DEFAULT_AVATAR_KEY
+    const preset = getAvatarPreset(this.avatarKey)
 
     this.sprite = scene.add
-      .sprite(state.x, state.y, texKeyIdle(state.facing))
+      .sprite(state.x, state.y, texKeyIdle(state.facing, this.avatarKey))
       .setScale(AVATAR_SCALE)
       .setDepth(10)
       .setInteractive({ useHandCursor: true })
+    // 아웃라인 glow — 로컬 플레이어와 동일한 다크 할로로 배경 분리.
+    this.sprite.enableFilters()
+    this.sprite.filters?.internal.addGlow(0x000000, 4, 0, 1, false, 0.1, 8)
 
     this.sprite.on("pointerdown", () => {
       const cam = scene.cameras.main
@@ -56,7 +61,7 @@ export class SideScrollerRemoteAvatar {
     })
 
     this.nameTag = scene.add
-      .text(state.x, state.y - AVATAR_PRO_XL.FRAME_HEIGHT * 0.4, state.nickname, {
+      .text(state.x, state.y - preset.bodyHeight * 0.5 - 6, state.nickname, {
         fontFamily: "sans-serif",
         fontSize: "12px",
         color: "#ffffff",
@@ -89,33 +94,35 @@ export class SideScrollerRemoteAvatar {
     }
     const facingChanged = this.facing !== next.facing
     const actionChanged = this.action !== next.action
+    const incomingAvatarKey = next.avatarKey ?? DEFAULT_AVATAR_KEY
+    const avatarChanged = this.avatarKey !== incomingAvatarKey
     this.facing = next.facing
     this.action = next.action
-    if (facingChanged || actionChanged) this.applyActionAnim()
+    this.avatarKey = incomingAvatarKey
+    if (facingChanged || actionChanged || avatarChanged) this.applyActionAnim()
   }
 
   private applyActionAnim() {
-    // facing 에 따라 flipX — east 원본, west 는 수평 반전 (kick·headbutt·stumble)
-    // 단 walk/jump 는 east/west 전용 스프라이트 생성돼있어 flipX 불필요
     const needFlip = this.facing === "west"
     switch (this.action) {
       case "walking": {
         this.sprite.setFlipX(false)
-        this.sprite.play(animKey("walk", this.facing), true)
+        this.sprite.play(animKey("walk", this.facing, this.avatarKey), true)
         return
       }
       case "jumping": {
         this.sprite.setFlipX(false)
         // 원격 점프는 완료 감지 불가 → 한 번 재생 후 idle 로 fallback
-        if (this.sprite.anims.currentAnim?.key !== animKey("jump", this.facing)) {
-          this.sprite.play(animKey("jump", this.facing), true)
+        const jumpKey = animKey("jump", this.facing, this.avatarKey)
+        if (this.sprite.anims.currentAnim?.key !== jumpKey) {
+          this.sprite.play(jumpKey, true)
         }
         return
       }
       case "kicking": {
         this.sprite.setFlipX(needFlip)
         // kick 은 east 원본, west 는 flipX
-        this.sprite.play(animKey("kick", "east"), true)
+        this.sprite.play(animKey("kick", "east", this.avatarKey), true)
         return
       }
       case "idle":
@@ -123,7 +130,7 @@ export class SideScrollerRemoteAvatar {
       default: {
         this.sprite.setFlipX(false)
         this.sprite.anims.stop()
-        this.sprite.setTexture(texKeyRotation(this.facing))
+        this.sprite.setTexture(texKeyRotation(this.facing, this.avatarKey))
       }
     }
   }
@@ -132,7 +139,8 @@ export class SideScrollerRemoteAvatar {
     const alpha = 1 - Math.pow(0.5, deltaMs / REMOTE_LERP_HALF_LIFE_MS)
     this.sprite.x += (this.targetX - this.sprite.x) * alpha
     this.sprite.y += (this.targetY - this.sprite.y) * alpha
-    this.nameTag.setPosition(this.sprite.x, this.sprite.y - AVATAR_PRO_XL.FRAME_HEIGHT * 0.4)
+    const preset = getAvatarPreset(this.avatarKey)
+    this.nameTag.setPosition(this.sprite.x, this.sprite.y - preset.bodyHeight * 0.5 - 6)
   }
 
   destroy() {

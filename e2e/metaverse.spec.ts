@@ -14,23 +14,24 @@ import { test, expect } from "@playwright/test"
  */
 
 test.describe("메타버스 (smoke)", () => {
-  test("/metaverse 페이지가 정상 로드된다", async ({ page }) => {
+  test("/metaverse 랜딩 (국가 선택) 페이지가 정상 로드된다", async ({ page }) => {
     const response = await page.goto("/metaverse")
     expect(response?.status()).toBeLessThan(500)
 
-    // 제목은 하위 노드로 넘어가지 않을 수 있으므로 root title 기반 체크
-    await expect(page).toHaveTitle(/메타버스|Metaverse|공놀이/)
+    // 국가 선택 랜딩이 노출되어야 함
+    await expect(page.getByRole("heading", { name: /어느 나라/ })).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole("link", { name: /영국 월드맵 입장/ })).toBeVisible()
   })
 
-  test("metaverse 루트 DOM 에 canvas parent 가 존재한다", async ({ page }) => {
-    await page.goto("/metaverse")
+  test("/metaverse/uk 월드맵 DOM 에 canvas parent 가 존재한다", async ({ page }) => {
+    await page.goto("/metaverse/uk")
     // 로그인 요구 CTA 또는 phaser canvas 컨테이너 중 하나가 뜸 (dev 환경에선 후자)
     const candidates = page.locator("[aria-label='경기장 메타버스 월드맵'], a[href^='/sign-in']")
     await expect(candidates.first()).toBeVisible({ timeout: 10_000 })
   })
 
-  test("deep-link ?plot=london-01 파라미터가 500 내지 않는다", async ({ page }) => {
-    const response = await page.goto("/metaverse?plot=london-01")
+  test("deep-link /metaverse/uk?plot=london-01 파라미터가 500 내지 않는다", async ({ page }) => {
+    const response = await page.goto("/metaverse/uk?plot=london-01")
     expect(response?.status()).toBeLessThan(500)
   })
 

@@ -132,6 +132,7 @@ export class SideScrollerChannel {
       nickname: this.identity.nickname,
       ...this.currentPresence,
       updatedAt: Date.now(),
+      avatarKey: this.identity.avatarKey,
     }
     try {
       await this.channel.track(payload)

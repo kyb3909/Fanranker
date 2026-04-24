@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/client"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "@/lib/metaverse/types"
 import type { WorldChannel } from "@/lib/metaverse/realtime/world-channel"
@@ -44,6 +45,7 @@ export function PhaserCanvas({
   const [roomDetailCtx, setRoomDetailCtx] = useState<RoomDetailContext | null>(null)
   const [roomOccupantCount, setRoomOccupantCount] = useState(0)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
+  const router = useRouter()
 
   // 방 접속자 수 추적 — RoomDetailModal 및 향후 HUD 확장 공용
   useEffect(() => {
@@ -54,12 +56,19 @@ export function PhaserCanvas({
     const unsubReport = sceneBridge.on("user:report", (payload) => {
       if (payload) setReportTarget({ userId: payload.userId, nickname: payload.nickname })
     })
+    // 웸블리 아이콘 클릭 → 사이드스크롤러 씬으로 라우팅
+    const isGuest = identity.userId.startsWith("guest-")
+    const unsubWembley = sceneBridge.on("wembley:enter", () => {
+      trackEvent({ name: "metaverse_wembley_enter", params: { is_guest: isGuest } })
+      router.push("/metaverse/interior-demo")
+    })
     return () => {
       unsub()
       unsubLeave()
       unsubReport()
+      unsubWembley()
     }
-  }, [])
+  }, [router, identity.userId])
 
   useEffect(() => {
     if (!parentRef.current) return

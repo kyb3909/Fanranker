@@ -3,12 +3,14 @@
 /**
  * SideScrollerDemo — 사이드스크롤러 멀티플레이어 씬.
  *
- * Realtime SideScrollerChannel 연결해 원격 유저·공유 공·박치기 이벤트 동기화.
- * Realtime 실패 시 싱글플레이 fallback. Clerk 로그인 있으면 본인 닉네임,
- * 없으면 `demo-XXXX` 게스트.
+ * Realtime SideScrollerChannel 연결해 원격 유저·공유 공·채팅 이벤트 동기화.
+ * 실패 시 싱글플레이 fallback. Clerk 로그인 있으면 본인 닉네임, 없으면 `demo-XXXX` 게스트.
+ *
+ * 유니폼(아바타 프리셋) 은 /api/metaverse/avatar/me 에서 본인 장착 키를 받아 identity 에 얹음.
+ * 상점에서 장착 변경 시 equippedAvatarKey state 가 바뀌면 useEffect 재실행으로 씬 재부팅.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { createAnonClient } from "@/lib/supabase/client"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
@@ -18,6 +20,11 @@ import { ChatLogPanel } from "./chat-log-panel"
 import { UserActionPopover } from "./user-action-popover"
 import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { AvatarShopModal, AVATAR_EQUIP_LOCAL_KEY } from "./avatar-shop-modal"
+import { ARSENAL_HOME_AVATAR_KEY, DEFAULT_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
+
+/** 데모·게스트 기본 유니폼 — 마이그레이션 전 테스트용으로 아스날 홈킷 고정. */
+const DEMO_FALLBACK_AVATAR_KEY = ARSENAL_HOME_AVATAR_KEY
 
 export function SideScrollerDemo() {
   const parentRef = useRef<HTMLDivElement>(null)
@@ -25,6 +32,38 @@ export function SideScrollerDemo() {
   const channelRef = useRef<SideScrollerChannel | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
+  const [shopOpen, setShopOpen] = useState(false)
+  const [equippedAvatarKey, setEquippedAvatarKey] = useState<string>(DEMO_FALLBACK_AVATAR_KEY)
+
+  // 초기 장착 아바타 로드 — 서버 우선, 실패 시 localStorage (게스트), 둘 다 없으면 데모 기본.
+  // 서버가 DEFAULT 를 반환했는데 localStorage 에도 없으면 "명시적으로 default 선택" vs "아직 선택 안 함"
+  // 구분 못 함 → 데모 편의상 아스날을 기본으로 띄우고, 상점 통해 default 로 바꿀 수 있게 함.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/metaverse/avatar/me", { cache: "no-store" })
+        if (!res.ok) throw new Error("me_failed")
+        const data = (await res.json()) as { equippedAvatarKey: string; isGuest: boolean }
+        if (cancelled) return
+        const ls =
+          typeof window !== "undefined" ? window.localStorage.getItem(AVATAR_EQUIP_LOCAL_KEY) : null
+        if (data.isGuest) {
+          setEquippedAvatarKey(ls || data.equippedAvatarKey || DEMO_FALLBACK_AVATAR_KEY)
+        } else {
+          // 로그인 유저: 서버가 명시적 선택값이 있으면 사용, 없으면(기본) 데모 기본값.
+          const serverKey = data.equippedAvatarKey
+          const hasExplicitSelection = !!serverKey && serverKey !== DEFAULT_AVATAR_KEY
+          setEquippedAvatarKey(hasExplicitSelection ? serverKey : DEMO_FALLBACK_AVATAR_KEY)
+        }
+      } catch {
+        // 조용히 데모 기본값 유지
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const unsub = sceneBridge.on("user:report", (payload) => {
@@ -39,8 +78,12 @@ export function SideScrollerDemo() {
     const rand = Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, "0")
-    return { userId: `demo-${rand}`, nickname: `데모-${rand}` }
-  }, [])
+    return {
+      userId: `demo-${rand}`,
+      nickname: `데모-${rand}`,
+      avatarKey: equippedAvatarKey,
+    }
+  }, [equippedAvatarKey])
 
   useEffect(() => {
     if (!parentRef.current) return
@@ -90,6 +133,11 @@ export function SideScrollerDemo() {
     }
   }, [identity])
 
+  const handleEquipped = useCallback((avatarKey: string) => {
+    // 상점에서 장착 성공 → state 갱신 시 identity memo 재계산 → 씬 useEffect 가 cleanup + 재부팅
+    setEquippedAvatarKey(avatarKey)
+  }, [])
+
   if (error) {
     return (
       <div className="flex min-h-[100svh] items-center justify-center bg-neutral-950 p-6 text-center text-white">
@@ -106,12 +154,20 @@ export function SideScrollerDemo() {
     // 좌우 여백에 scene backgroundColor 가 보이지 않도록 폭 제한.
     <div className="relative mx-auto h-[calc(100svh-3.5rem)] w-full max-w-[1280px] bg-neutral-950">
       <div ref={parentRef} className="h-full w-full" aria-label="사이드스크롤러 프로토타입" />
-      <Link
-        href="/metaverse"
-        className="absolute top-2 right-2 rounded bg-black/60 px-3 py-1.5 text-[11px] text-white/70 backdrop-blur-sm transition-colors hover:text-white"
-      >
-        ← 월드맵으로
-      </Link>
+      <div className="absolute top-2 right-2 flex items-center gap-2">
+        <button
+          onClick={() => setShopOpen(true)}
+          className="rounded bg-black/60 px-3 py-1.5 text-[11px] text-white/80 backdrop-blur-sm transition-colors hover:text-white"
+        >
+          👕 유니폼 상점
+        </button>
+        <Link
+          href="/metaverse/uk"
+          className="rounded bg-black/60 px-3 py-1.5 text-[11px] text-white/70 backdrop-blur-sm transition-colors hover:text-white"
+        >
+          ← 월드맵으로
+        </Link>
+      </div>
       <div className="pointer-events-none absolute top-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] text-white/60">
         Phase 4 프로토타입 · 단독 씬
       </div>
@@ -125,6 +181,11 @@ export function SideScrollerDemo() {
         target={reportTarget}
         identity={identity}
         onClose={() => setReportTarget(null)}
+      />
+      <AvatarShopModal
+        open={shopOpen}
+        onClose={() => setShopOpen(false)}
+        onEquipped={handleEquipped}
       />
     </div>
   )
