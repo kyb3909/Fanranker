@@ -22,6 +22,7 @@ import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { AvatarShopModal, AVATAR_EQUIP_LOCAL_KEY } from "./avatar-shop-modal"
 import { ARSENAL_HOME_AVATAR_KEY, DEFAULT_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
+import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 
 /** 데모·게스트 기본 유니폼 — 마이그레이션 전 테스트용으로 아스날 홈킷 고정. */
 const DEMO_FALLBACK_AVATAR_KEY = ARSENAL_HOME_AVATAR_KEY
@@ -36,20 +37,30 @@ export function SideScrollerDemo() {
   const [equippedAvatarKey, setEquippedAvatarKey] = useState<string>(DEMO_FALLBACK_AVATAR_KEY)
 
   // 초기 장착 아바타 로드 — 서버 우선, 실패 시 localStorage (게스트), 둘 다 없으면 데모 기본.
-  // 서버가 DEFAULT 를 반환했는데 localStorage 에도 없으면 "명시적으로 default 선택" vs "아직 선택 안 함"
-  // 구분 못 함 → 데모 편의상 아스날을 기본으로 띄우고, 상점 통해 default 로 바꿀 수 있게 함.
+  // guestUserId 는 identity 와 동기화: useMemo 결과를 기다릴 수 없으니 로컬에서 같은 규칙으로 생성.
+  const guestUserIdRef = useRef<string | null>(null)
+  if (!guestUserIdRef.current && typeof window !== "undefined") {
+    const rand = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0")
+    guestUserIdRef.current = `guest-demo-${rand}`
+  }
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch("/api/metaverse/avatar/me", { cache: "no-store" })
+        const headers: Record<string, string> = {}
+        if (guestUserIdRef.current) headers[METAVERSE_GUEST_HEADER] = guestUserIdRef.current
+        const res = await fetch("/api/metaverse/avatar/me", { cache: "no-store", headers })
         if (!res.ok) throw new Error("me_failed")
         const data = (await res.json()) as { equippedAvatarKey: string; isGuest: boolean }
         if (cancelled) return
         const ls =
           typeof window !== "undefined" ? window.localStorage.getItem(AVATAR_EQUIP_LOCAL_KEY) : null
         if (data.isGuest) {
-          setEquippedAvatarKey(ls || data.equippedAvatarKey || DEMO_FALLBACK_AVATAR_KEY)
+          // 게스트는 서버가 명시적 저장을 못 하니 localStorage 만 신뢰. 그것도 없으면 데모 기본.
+          setEquippedAvatarKey(ls || DEMO_FALLBACK_AVATAR_KEY)
         } else {
           // 로그인 유저: 서버가 명시적 선택값이 있으면 사용, 없으면(기본) 데모 기본값.
           const serverKey = data.equippedAvatarKey
@@ -72,17 +83,12 @@ export function SideScrollerDemo() {
     return () => unsub()
   }, [])
 
-  // 간단 데모 identity — Clerk 우회 (demo 라우트 전용). 같은 브라우저 탭 재접속
-  // 시 매번 새 userId 생성 → 서로 다른 유저로 보임. 추후 Clerk 연동.
+  // 간단 데모 identity — Clerk 우회 (demo 라우트 전용). guestUserIdRef 와 공유해
+  // 서버 /api/metaverse/avatar/me 호출 시 보내는 guest 헤더와 identity.userId 가 일치.
   const identity = useMemo<MetaversePlayerIdentity>(() => {
-    const rand = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0")
-    return {
-      userId: `demo-${rand}`,
-      nickname: `데모-${rand}`,
-      avatarKey: equippedAvatarKey,
-    }
+    const uid = guestUserIdRef.current || `guest-demo-0000`
+    const nickname = `데모-${uid.slice(-4)}`
+    return { userId: uid, nickname, avatarKey: equippedAvatarKey }
   }, [equippedAvatarKey])
 
   useEffect(() => {
@@ -186,6 +192,8 @@ export function SideScrollerDemo() {
         open={shopOpen}
         onClose={() => setShopOpen(false)}
         onEquipped={handleEquipped}
+        guestUserId={guestUserIdRef.current}
+        currentAvatarKey={equippedAvatarKey}
       />
     </div>
   )

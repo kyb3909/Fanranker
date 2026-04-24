@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
+import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 
 export interface AvatarShopItem {
   avatarKey: string
@@ -31,16 +32,32 @@ interface Props {
   onClose: () => void
   /** 장착 변경 성공 시 호출 — 씬 재부팅 트리거용 */
   onEquipped?: (avatarKey: string) => void
+  /** 게스트 userId — 있으면 dev 환경 guest 헤더로 API 호출. Clerk 로그인 유저는 비워둠. */
+  guestUserId?: string | null
+  /** 실제 씬에서 지금 렌더되고 있는 프리셋 키 — 서버 /me 응답을 override 해 UI 싱크 유지용. */
+  currentAvatarKey?: string
 }
 
 const LOCAL_STORAGE_KEY = "metaverse:avatar:equipped"
 
-export function AvatarShopModal({ open, onClose, onEquipped }: Props) {
+export function AvatarShopModal({
+  open,
+  onClose,
+  onEquipped,
+  guestUserId,
+  currentAvatarKey,
+}: Props) {
   const [catalog, setCatalog] = useState<AvatarShopItem[]>([])
   const [me, setMe] = useState<AvatarMeState | null>(null)
   const [loading, setLoading] = useState(false)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const authHeaders = useMemo<Record<string, string>>(() => {
+    const h: Record<string, string> = {}
+    if (guestUserId) h[METAVERSE_GUEST_HEADER] = guestUserId
+    return h
+  }, [guestUserId])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -48,14 +65,16 @@ export function AvatarShopModal({ open, onClose, onEquipped }: Props) {
     try {
       const [shopRes, meRes] = await Promise.all([
         fetch("/api/metaverse/avatar/shop", { cache: "no-store" }),
-        fetch("/api/metaverse/avatar/me", { cache: "no-store" }),
+        fetch("/api/metaverse/avatar/me", { cache: "no-store", headers: authHeaders }),
       ])
       if (!shopRes.ok) throw new Error("카탈로그 로드 실패")
       if (!meRes.ok) throw new Error("내 정보 로드 실패")
       const shop = (await shopRes.json()) as { items: AvatarShopItem[] }
       const meData = (await meRes.json()) as AvatarMeState
-      // 게스트는 localStorage 의 선택을 서버값보다 우선
-      if (meData.isGuest) {
+      // 우선순위: 1) 부모가 넘겨준 currentAvatarKey (실제 씬 상태) 2) localStorage (게스트) 3) 서버값
+      if (currentAvatarKey && shop.items.some((it) => it.avatarKey === currentAvatarKey)) {
+        meData.equippedAvatarKey = currentAvatarKey
+      } else if (meData.isGuest) {
         const ls =
           typeof window !== "undefined" ? window.localStorage.getItem(LOCAL_STORAGE_KEY) : null
         if (ls && shop.items.some((it) => it.avatarKey === ls)) {
@@ -69,12 +88,17 @@ export function AvatarShopModal({ open, onClose, onEquipped }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authHeaders, currentAvatarKey])
 
   useEffect(() => {
     if (!open) return
     void refresh()
   }, [open, refresh])
+
+  const jsonHeaders = useMemo<Record<string, string>>(
+    () => ({ "content-type": "application/json", ...authHeaders }),
+    [authHeaders]
+  )
 
   const handlePurchase = async (avatarKey: string) => {
     setBusyKey(avatarKey)
@@ -82,7 +106,7 @@ export function AvatarShopModal({ open, onClose, onEquipped }: Props) {
     try {
       const res = await fetch("/api/metaverse/avatar/purchase", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: jsonHeaders,
         body: JSON.stringify({ avatarKey }),
       })
       const data = await res.json()
@@ -105,7 +129,7 @@ export function AvatarShopModal({ open, onClose, onEquipped }: Props) {
     try {
       const res = await fetch("/api/metaverse/avatar/equip", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: jsonHeaders,
         body: JSON.stringify({ avatarKey }),
       })
       const data = await res.json()
