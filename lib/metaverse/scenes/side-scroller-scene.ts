@@ -10,7 +10,7 @@
  * 현재는 단독 scene. world-map-scene 과 별개 게임 인스턴스로 부트.
  * Phase 4 에서 월드맵 ↔ 실내 씬 전환 추가 예정.
  *
- * 배경: `public/metaverse/bg-stadium.png` (1916×821) — 경기장 전면부
+ * 배경: `public/metaverse/bg-stadium.webp` (1916×821) — 경기장 전면부
  * 일러스트를 한 장짜리 이미지로 사용. 장기적으론 여러 배경(카페/펍/
  * 경기장/광장) 을 SceneType 으로 선택해서 동일 로직 재사용 예정.
  *
@@ -60,7 +60,7 @@ const AIR_ACCEL = 900 // 공중 좌우 조작 — 땅보다 둔함
 const AIR_DRAG = 50 // 공중에선 거의 관성 유지
 const MAX_FALL_SPEED = 1200
 
-// 씬 크기 — 배경 이미지(bg-stadium.png 1916×821)와 정확히 일치.
+// 씬 크기 — 배경 이미지(bg-stadium.webp 1916×821)와 정확히 일치.
 const SCENE_WIDTH = 1916
 const SCENE_HEIGHT = 821
 // 바닥선 — 배경 이미지의 전면 잔디(꽃 있는 라인) 가 시작되는 y.
@@ -100,7 +100,8 @@ const KICK_MAX_SPEED = 900 // 풀차지 최대 속도 (px/s)
 const KICK_CHARGE_MAX_MS = 1200 // 이 시간 이상 홀드해도 더 안 세짐
 
 const BG_TEXTURE = "ss-bg-stadium"
-const BG_URL = "/metaverse/bg-stadium.png"
+// 1916×821 stadium 일러스트 — webp q=80 으로 압축 (PNG 2.2MB → webp 221KB, 시각 거의 동일).
+const BG_URL = "/metaverse/bg-stadium.webp"
 
 type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
 
