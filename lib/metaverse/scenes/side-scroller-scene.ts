@@ -367,6 +367,13 @@ export class SideScrollerScene extends Phaser.Scene {
         // 각속도 = vx / r (rad/s), frame 증가 = 각속도 * dt(초)
         this.ball.rotation += (vx / BALL_RADIUS_PX) * (deltaMs / 1000)
       }
+      // 안전장치: 어떤 이유로든 공이 floor 보다 아래로 가면 (tunneling·collider miss·etc)
+      // 강제로 floor 안착 위치로 끌어올림. 사용자에게 공이 사라지는 일은 없음.
+      const ballRestY = FLOOR_TOP_Y - BALL_RADIUS_PX
+      if (this.ball.y > ballRestY + 4) {
+        this.ball.setPosition(this.ball.x, ballRestY)
+        ballBody.setVelocity(ballBody.velocity.x * 0.5, 0)
+      }
     }
 
     // 턴 애니메이션 — 8방향 rotation 프레임 순차 재생.
@@ -449,15 +456,11 @@ export class SideScrollerScene extends Phaser.Scene {
         this.player.setFlipX(this.facing === "west")
         // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 idle 대비 과하게 큰 경우 스케일 다운.
         this.player.setScale(AVATAR_SCALE * this.presetKickScale)
-        // 킥 중엔 공 시각 숨김 + 중력/속도 동결. body.enable = false 는 reset 후에
-        // 재활성이 까다로워 ball 이 air-stuck 되는 부작용 → allowGravity / velocity 만
-        // 임시로 끔. body 자체는 enabled 유지해 collider 동작.
+        // 킥 중엔 공 시각만 숨김. body 는 그대로 두고 floor collider 가 알아서 처리.
+        // (이전 body.enable / allowGravity 토글 시도들은 모두 부작용 발생.)
         this.pendingBallX = this.ball.x
         this.pendingBallY = this.ball.y
         this.ball.setVisible(false)
-        const ballBodyKick = this.ball.body as Phaser.Physics.Arcade.Body
-        ballBodyKick.setVelocity(0, 0)
-        ballBodyKick.allowGravity = false
         this.pendingKickSpeed = speed
         this.pendingKickAngleDeg = angle
         this.updateNameTag()
@@ -643,19 +646,20 @@ export class SideScrollerScene extends Phaser.Scene {
     this.pendingKickAngleDeg = null
     this.pendingBallX = null
     this.pendingBallY = null
-    // 상태 복원: flipX 해제, 공 gravity 재활성 + 재표시
+    // 상태 복원: flipX 해제, 공 재표시
     this.player.setFlipX(false)
-    const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
-    ballBody.allowGravity = true
     this.ball.setVisible(true)
     if (speed === null || angleDeg === null || x === null || y === null) return
-    // 위치 동기화 + 속도 인가. body.reset 대신 명시적 setPosition 사용 (allowGravity flag 보존).
-    this.ball.setPosition(x, y)
-    ballBody.position.set(x - ballBody.halfWidth, y - ballBody.halfHeight)
+    // 안전장치: pendingBallY 가 floor 안쪽 또는 아래쪽이면 floor 위 휴지 위치로 클램프.
+    // 이전 kick 사이에 floor 와 어긋난 상태에서 다시 kick 하면 누적되는 침투 문제 차단.
+    const ballRestY = FLOOR_TOP_Y - BALL_RADIUS_PX
+    const safeY = y > ballRestY ? ballRestY : y
+    this.ball.setPosition(x, safeY)
     const sign = this.facing === "east" ? 1 : -1
     const angleRad = (angleDeg * Math.PI) / 180
     const vx = sign * speed * Math.cos(angleRad)
     const vy = -speed * Math.sin(angleRad)
+    const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
     ballBody.setVelocity(vx, vy)
     // juice: 임팩트 라인 burst at 공 출발점
     this.playKickImpact(x, y, sign as 1 | -1)
