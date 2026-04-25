@@ -449,13 +449,15 @@ export class SideScrollerScene extends Phaser.Scene {
         this.player.setFlipX(this.facing === "west")
         // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 idle 대비 과하게 큰 경우 스케일 다운.
         this.player.setScale(AVATAR_SCALE * this.presetKickScale)
-        // 킥 중엔 physics 공 시각 + 물리 모두 정지. setVisible 만 끄면 body 는 계속
-        // 처리돼 (gravity·collider) 333ms 사이에 floor 와 미묘하게 어긋난 상태로
-        // 들어가 공이 땅속으로 빠지는 부작용이 생김. body.enable = false 로 완전 동결.
+        // 킥 중엔 공 시각 숨김 + 중력/속도 동결. body.enable = false 는 reset 후에
+        // 재활성이 까다로워 ball 이 air-stuck 되는 부작용 → allowGravity / velocity 만
+        // 임시로 끔. body 자체는 enabled 유지해 collider 동작.
         this.pendingBallX = this.ball.x
         this.pendingBallY = this.ball.y
         this.ball.setVisible(false)
-        ;(this.ball.body as Phaser.Physics.Arcade.Body).enable = false
+        const ballBodyKick = this.ball.body as Phaser.Physics.Arcade.Body
+        ballBodyKick.setVelocity(0, 0)
+        ballBodyKick.allowGravity = false
         this.pendingKickSpeed = speed
         this.pendingKickAngleDeg = angle
         this.updateNameTag()
@@ -641,14 +643,15 @@ export class SideScrollerScene extends Phaser.Scene {
     this.pendingKickAngleDeg = null
     this.pendingBallX = null
     this.pendingBallY = null
-    // 상태 복원: flipX 해제, 공 physics 재활성 + 재표시
+    // 상태 복원: flipX 해제, 공 gravity 재활성 + 재표시
     this.player.setFlipX(false)
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
-    ballBody.enable = true
+    ballBody.allowGravity = true
     this.ball.setVisible(true)
     if (speed === null || angleDeg === null || x === null || y === null) return
-    // body.reset(x, y) — sprite 위치 + body 위치 동기 + 속도 0 으로 초기화 (정확한 텔레포트).
-    ballBody.reset(x, y)
+    // 위치 동기화 + 속도 인가. body.reset 대신 명시적 setPosition 사용 (allowGravity flag 보존).
+    this.ball.setPosition(x, y)
+    ballBody.position.set(x - ballBody.halfWidth, y - ballBody.halfHeight)
     const sign = this.facing === "east" ? 1 : -1
     const angleRad = (angleDeg * Math.PI) / 180
     const vx = sign * speed * Math.cos(angleRad)
