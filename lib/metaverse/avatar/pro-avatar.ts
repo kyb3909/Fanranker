@@ -2,8 +2,8 @@
  * Default "Avatar Pro" 스프라이트 로더 + 애니메이션 헬퍼.
  *
  * 에셋: public/metaverse/avatars/default-pro/
- *   - rotations/{8방향}.png           — idle 정지 포즈
- *   - walk/{8방향}/frame_{000-003}.png — 4프레임 walk cycle × 8방향
+ *   - rotations/{8방향}.webp           — idle 정지 포즈
+ *   - walk/{8방향}/frame_{000-003}.webp — 4프레임 walk cycle × 8방향
  *   - metadata.json                    — 원본 (참고용, 런타임은 로드 X)
  *
  * 캔버스 124×124 (투명 배경), PixelLab mannequin 템플릿 기반.
@@ -55,13 +55,13 @@ export function preloadProAvatar(scene: Phaser.Scene): void {
   for (const dir of DIRECTIONS_8) {
     const idleKey = textureKeyIdle(dir)
     if (!scene.textures.exists(idleKey)) {
-      scene.load.image(idleKey, `${AVATAR_PRO.ASSET_BASE}/rotations/${dir}.png`)
+      scene.load.image(idleKey, `${AVATAR_PRO.ASSET_BASE}/rotations/${dir}.webp`)
     }
     for (let i = 0; i < AVATAR_PRO.WALK_FRAMES; i++) {
       const walkKey = textureKeyWalk(dir, i)
       if (!scene.textures.exists(walkKey)) {
         const padded = String(i).padStart(3, "0")
-        scene.load.image(walkKey, `${AVATAR_PRO.ASSET_BASE}/walk/${dir}/frame_${padded}.png`)
+        scene.load.image(walkKey, `${AVATAR_PRO.ASSET_BASE}/walk/${dir}/frame_${padded}.webp`)
       }
     }
   }
