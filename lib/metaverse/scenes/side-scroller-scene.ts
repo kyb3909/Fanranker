@@ -159,8 +159,8 @@ export class SideScrollerScene extends Phaser.Scene {
   private footDust!: Phaser.GameObjects.Particles.ParticleEmitter
   /** 마지막 onGround 상태 — 착지 임팩트 트리거용 */
   private wasOnGround = true
-  /** 충전 시 좌우 떨림 보정값 — update 매 프레임 player.x 에 추가 */
-  private chargeShakeOffset = 0
+  /** 공중에 뜬 시각 — 착지 시 airborne 시간이 충분(>80ms) 해야 임팩트 발사. blocked.down flicker 무시. */
+  private airborneStartedAt: number | null = null
   /** 다음 kick anim 완료 시 공에 적용할 속도 (facing + charge 로 계산). */
   private pendingKickSpeed: number | null = null
   /** 다음 kick anim 완료 시 공에 적용할 발사각 (deg, 수평 대비 상향). */
@@ -499,15 +499,21 @@ export class SideScrollerScene extends Phaser.Scene {
       this.playJumpSquash()
     }
 
-    // 착지 감지: 점프 상태였는데 지상이면 idle/walk 로 복귀 + 임팩트 효과
-    if (this.state === "jumping" && onGround && body.velocity.y >= 0) {
-      this.state = "idle"
+    // 공중 시간 트래킹 — Arcade physics 에서 blocked.down 이 매 프레임 flicker 하므로
+    // "공중에 80ms 이상 있다가 지면 접촉" 일 때만 진짜 착지로 간주.
+    if (!onGround && this.airborneStartedAt === null) {
+      this.airborneStartedAt = this.time.now
+    }
+    const justLanded = !this.wasOnGround && onGround
+    const airborneMs = this.airborneStartedAt !== null ? this.time.now - this.airborneStartedAt : 0
+    if (justLanded && airborneMs > 80) {
+      // 진짜 착지 — 임팩트 효과 발사
       this.playLandingImpact()
     }
-    // 공중→지상 transition 전체 감지 (점프 외 추락 포함)
-    if (!this.wasOnGround && onGround) {
-      // 이미 위 분기에서 jumping 케이스는 처리됨 — 추락만 추가 임팩트
-      if (this.state !== "jumping") this.playLandingImpact()
+    if (onGround) this.airborneStartedAt = null
+    // 점프 상태 종료 (시각 효과는 위에서 처리)
+    if (this.state === "jumping" && onGround && body.velocity.y >= 0) {
+      this.state = "idle"
     }
     this.wasOnGround = onGround
 
@@ -517,9 +523,9 @@ export class SideScrollerScene extends Phaser.Scene {
       this.syncIdleOrWalkAnim(onGround, body.velocity.x)
     }
 
-    // juice: 걸을 때 발먼지 + 충전 시 떨림
+    // juice: 걸을 때 발먼지만. 충전 떨림은 player.x 직접 수정이 physics 와 충돌해
+    // 부들거림 부작용 → 제거. 차후 child sprite container 로 visual-only 떨림 재구현 가능.
     this.updateFootDust(onGround, body.velocity.x)
-    this.updateChargeShake()
 
     this.updateNameTag()
     this.updateChargeBar()
@@ -1020,26 +1026,6 @@ export class SideScrollerScene extends Phaser.Scene {
     for (let i = 0; i < 5; i++) {
       this.footDust.emitParticle(1, px + (Math.random() - 0.5) * 30, py)
     }
-  }
-
-  /** 충전 중 좌우 작은 떨림 — 매 update 호출 */
-  private updateChargeShake() {
-    const charging = this.chargeStartedAt !== null
-    if (!charging) {
-      if (this.chargeShakeOffset !== 0) {
-        // 떨림 끝나면 원위치 복귀 (sprite 위치 직접 보정 X — 다음 프레임에 자연 복귀)
-        this.chargeShakeOffset = 0
-      }
-      return
-    }
-    // 충전 진행도에 비례해 떨림 진폭 증가 (0 → 2px)
-    const t = Math.min((this.time.now - this.chargeStartedAt!) / KICK_CHARGE_MAX_MS, 1)
-    const amp = 0.5 + t * 1.5
-    const newOffset = (Math.random() - 0.5) * amp * 2
-    // 이전 offset 차분만큼 sprite 이동 — physics body 와 분리하기 위해 visual offset 만 누적
-    const delta = newOffset - this.chargeShakeOffset
-    this.player.x += delta
-    this.chargeShakeOffset = newOffset
   }
 
   /** 킥 임팩트 — 공이 발사될 때 임팩트 라인 + flash */
