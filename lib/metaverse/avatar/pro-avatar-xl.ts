@@ -2,10 +2,10 @@
  * Pro Avatar XL — 사이드뷰 전용 8방향 rotation + east/west 2방향 idle/walk/jump/kick.
  *
  * 에셋 레이아웃 (프리셋별로 `/metaverse/avatars/<preset-id>/` 아래에 동일 구조):
- *   - rotations/{south|...|north-west}.png   — 8방향 idle
- *   - walk/{east|west}/frame_{000-NNN}.png   — 걷기 프레임
- *   - jump/{east|west}/frame_{000-NNN}.png   — 점프 원샷
- *   - kick/{east|west}/frame_{000-NNN}.png   — 축구 킥 원샷
+ *   - rotations/{south|...|north-west}.webp   — 8방향 idle
+ *   - walk/{east|west}/frame_{000-NNN}.webp   — 걷기 프레임
+ *   - jump/{east|west}/frame_{000-NNN}.webp   — 점프 원샷
+ *   - kick/{east|west}/frame_{000-NNN}.webp   — 축구 킥 원샷
  *
  * side-scroller 는 가로 이동만 하므로 walk/jump/kick 는 east/west 만 생성 (north/south 는 flip
  * 대상이 없음 — turn 전용 정면/후면은 rotations 이미지로 idle 표시).
@@ -114,7 +114,7 @@ export function preloadAvatarPreset(scene: Phaser.Scene, presetKey: string): voi
   for (const dir of ROTATIONS) {
     const key = texKeyRotation(dir, preset.id)
     if (!scene.textures.exists(key)) {
-      scene.load.image(key, `${preset.assetBase}/rotations/${dir}.png`)
+      scene.load.image(key, `${preset.assetBase}/rotations/${dir}.webp`)
     }
   }
   for (const f of FACINGS) {
@@ -124,7 +124,7 @@ export function preloadAvatarPreset(scene: Phaser.Scene, presetKey: string): voi
         const key = texKeyAnim(kind, f, i, preset.id)
         if (!scene.textures.exists(key)) {
           const padded = String(i).padStart(3, "0")
-          scene.load.image(key, `${preset.assetBase}/${kind}/${f}/frame_${padded}.png`)
+          scene.load.image(key, `${preset.assetBase}/${kind}/${f}/frame_${padded}.webp`)
         }
       }
     }
