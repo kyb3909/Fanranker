@@ -155,6 +155,12 @@ export class SideScrollerScene extends Phaser.Scene {
   private chargeStartedAt: number | null = null // Space 키 누른 시각 (ms). null 이면 충전 안 중.
   /** 마지막으로 sceneBridge 에 emit 한 charge state — React HUD spam 방지용 */
   private lastChargeEmitted: { active: boolean; progress: number } = { active: false, progress: 0 }
+  /** 발먼지 파티클 — 걷기 시 발 아래에 작은 puff 발사 */
+  private footDust!: Phaser.GameObjects.Particles.ParticleEmitter
+  /** 마지막 onGround 상태 — 착지 임팩트 트리거용 */
+  private wasOnGround = true
+  /** 충전 시 좌우 떨림 보정값 — update 매 프레임 player.x 에 추가 */
+  private chargeShakeOffset = 0
   /** 다음 kick anim 완료 시 공에 적용할 속도 (facing + charge 로 계산). */
   private pendingKickSpeed: number | null = null
   /** 다음 kick anim 완료 시 공에 적용할 발사각 (deg, 수평 대비 상향). */
@@ -203,6 +209,9 @@ export class SideScrollerScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#87ceeb") // 로드 실패 시 하늘색 fallback
     this.add.image(0, 0, BG_TEXTURE).setOrigin(0, 0).setDepth(0)
 
+    // 분위기 레이어 — 구름·스타디움 라이트·전경 잔디. 새 에셋 0, 모두 Phaser graphics.
+    this.createAtmosphereLayers()
+
     // 보이지 않는 바닥 콜리전 — 배경 이미지의 전경(잔디·돌벽) 위에 캐릭터가 서도록.
     // 디버그 하고 싶을 땐 fillColor 를 0x00ff00, alpha 0.3 으로 일시 변경.
     this.platforms = this.physics.add.staticGroup()
@@ -237,6 +246,9 @@ export class SideScrollerScene extends Phaser.Scene {
     playerBody.setOffset(preset.bodyOffsetX, preset.bodyOffsetY)
     // 드래그는 update()에서 지면/공중 상황에 따라 갱신
     this.physics.add.collider(this.player, this.platforms)
+
+    // 발먼지 파티클 — 걷기 시 follow, on()/off() 로 토글
+    this.footDust = this.createFootDustEmitter()
 
     // kick 완료 → state 복귀 + 대기 중이던 공 속도 인가.
     // 중요: anim 완료 시 Phaser 는 last frame 에 머무름 (kick frame_003 에 공이
@@ -483,18 +495,31 @@ export class SideScrollerScene extends Phaser.Scene {
       this.orientation = this.facing
       this.player.setFlipX(false)
       this.player.play(animKey("jump", this.facing, this.presetKey), true)
+      // juice: squash & stretch
+      this.playJumpSquash()
     }
 
-    // 착지 감지: 점프 상태였는데 지상이면 idle/walk 로 복귀
+    // 착지 감지: 점프 상태였는데 지상이면 idle/walk 로 복귀 + 임팩트 효과
     if (this.state === "jumping" && onGround && body.velocity.y >= 0) {
       this.state = "idle"
+      this.playLandingImpact()
     }
+    // 공중→지상 transition 전체 감지 (점프 외 추락 포함)
+    if (!this.wasOnGround && onGround) {
+      // 이미 위 분기에서 jumping 케이스는 처리됨 — 추락만 추가 임팩트
+      if (this.state !== "jumping") this.playLandingImpact()
+    }
+    this.wasOnGround = onGround
 
     // 공중이 아닌데 jumping / turning 이 아니면 walking/idle 판정
     if (this.state !== "jumping" && this.state !== "turning") {
       this.state = onGround && Math.abs(body.velocity.x) > 10 ? "walking" : "idle"
       this.syncIdleOrWalkAnim(onGround, body.velocity.x)
     }
+
+    // juice: 걸을 때 발먼지 + 충전 시 떨림
+    this.updateFootDust(onGround, body.velocity.x)
+    this.updateChargeShake()
 
     this.updateNameTag()
     this.updateChargeBar()
@@ -624,6 +649,8 @@ export class SideScrollerScene extends Phaser.Scene {
     const vy = -speed * Math.sin(angleRad)
     const ballBody = this.ball.body as Phaser.Physics.Arcade.Body
     ballBody.setVelocity(vx, vy)
+    // juice: 임팩트 라인 burst at 공 출발점
+    this.playKickImpact(x, y, sign as 1 | -1)
     // 즉시 원격에 broadcast — 내가 authority 가 됨
     this.channel?.publishBallState({ x: this.ball.x, y: this.ball.y, vx, vy }, true)
   }
@@ -815,5 +842,223 @@ export class SideScrollerScene extends Phaser.Scene {
     this.remoteAvatars.clear()
     for (const b of this.remoteChatBubbles.values()) b.destroy()
     this.remoteChatBubbles.clear()
+  }
+
+  // ============================================================
+  // 분위기 레이어 — 구름·라이트·잔디. 모두 Phaser graphics, 새 에셋 0.
+  // depth 정렬: bg(0) → 구름(1) → 스타디움 라이트(2) → 전경 잔디(15) → 캐릭터(10)
+  // ============================================================
+
+  /** 분위기 레이어 한 번에 생성 — 구름 5개 (drift), 스타디움 라이트 4개 (pulse), 전경 잔디 산재 */
+  private createAtmosphereLayers() {
+    // 1) 구름 5개 — 화면 상단 sky 영역에 흰색 둥근 사각형, 좌→우 슬로 드리프트
+    const cloudConfigs = [
+      { x: 200, y: 80, w: 110, h: 32, dur: 60000 },
+      { x: 600, y: 130, w: 90, h: 26, dur: 75000 },
+      { x: 1100, y: 60, w: 140, h: 38, dur: 55000 },
+      { x: 1500, y: 110, w: 80, h: 24, dur: 70000 },
+      { x: 1800, y: 90, w: 120, h: 30, dur: 65000 },
+    ]
+    for (const c of cloudConfigs) {
+      const cloud = this.add
+        .rectangle(c.x, c.y, c.w, c.h, 0xffffff, 0.55)
+        .setOrigin(0.5, 0.5)
+        .setDepth(1)
+        .setScrollFactor(0.4) // 카메라보다 천천히 = 멀리 있는 느낌
+      // 둥근 모서리 시뮬레이션 — 양 끝에 작은 원 추가
+      const leftCap = this.add
+        .circle(c.x - c.w / 2, c.y, c.h / 2, 0xffffff, 0.55)
+        .setDepth(1)
+        .setScrollFactor(0.4)
+      const rightCap = this.add
+        .circle(c.x + c.w / 2, c.y, c.h / 2, 0xffffff, 0.55)
+        .setDepth(1)
+        .setScrollFactor(0.4)
+      // 드리프트 애니
+      this.tweens.add({
+        targets: [cloud, leftCap, rightCap],
+        x: `+=${SCENE_WIDTH + c.w + 200}`,
+        duration: c.dur,
+        repeat: -1,
+        ease: "Linear",
+        onRepeat: () => {
+          cloud.x = -c.w
+          leftCap.x = cloud.x - c.w / 2
+          rightCap.x = cloud.x + c.w / 2
+        },
+      })
+    }
+
+    // 2) 스타디움 라이트 4개 — 상단 양쪽에 노란 glow 펄스
+    const lightConfigs = [
+      { x: 250, y: 50 },
+      { x: 750, y: 50 },
+      { x: 1250, y: 50 },
+      { x: 1700, y: 50 },
+    ]
+    for (const l of lightConfigs) {
+      const glow = this.add.circle(l.x, l.y, 28, 0xfff0a0, 0.35).setDepth(2).setScrollFactor(0.7) // 약간 깊이감
+      const inner = this.add.circle(l.x, l.y, 12, 0xffffff, 0.85).setDepth(2).setScrollFactor(0.7)
+      // 펄스 — 알파가 천천히 호흡 (sin wave 효과)
+      this.tweens.add({
+        targets: glow,
+        alpha: 0.2,
+        duration: 1800 + Math.random() * 600, // 살짝 어긋나게
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      })
+      this.tweens.add({
+        targets: inner,
+        scale: 0.85,
+        duration: 1800 + Math.random() * 600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      })
+    }
+
+    // 3) 전경 잔디 — 바닥 라인 따라 작은 녹색 삼각형 산재. 캐릭터 발 근처 디테일.
+    const grassY = FLOOR_TOP_Y + 6
+    for (let x = 0; x < SCENE_WIDTH; x += 35 + Math.random() * 25) {
+      const w = 4 + Math.random() * 3
+      const h = 8 + Math.random() * 6
+      const g = this.add.triangle(x, grassY, 0, 0, w, -h, w * 2, 0, 0x4ade80, 0.85)
+      g.setDepth(15) // 캐릭터(10) 보다 위 — 전경 디테일
+      g.setOrigin(0, 1)
+      // 살짝 흔들림 (바람 효과)
+      this.tweens.add({
+        targets: g,
+        scaleX: { from: 1, to: 1.05 },
+        scaleY: { from: 1, to: 0.95 },
+        duration: 2200 + Math.random() * 800,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      })
+    }
+  }
+
+  // ============================================================
+  // 캐릭터 juice — 발먼지·점프 squash·착지 임팩트·충전 떨림
+  // ============================================================
+
+  private createFootDustEmitter(): Phaser.GameObjects.Particles.ParticleEmitter {
+    // 작은 흰색/회색 원 텍스처가 없으니 1×1 화이트 픽셀을 동적으로 만들어 사용
+    const key = "ss-dust-particle"
+    if (!this.textures.exists(key)) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false)
+      g.fillStyle(0xffffff, 1)
+      g.fillCircle(4, 4, 4)
+      g.generateTexture(key, 8, 8)
+      g.destroy()
+    }
+    const emitter = this.add.particles(0, 0, key, {
+      lifespan: 450,
+      speedY: { min: -30, max: -10 },
+      speedX: { min: -25, max: 25 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.5, end: 0 },
+      tint: 0xc8b88a, // 모래 색
+      frequency: -1, // 수동 emit
+      gravityY: 60,
+      blendMode: "NORMAL",
+    })
+    emitter.setDepth(8) // 캐릭터(10) 뒤
+    return emitter
+  }
+
+  /** 매 update 호출 — 걸을 때 발 밑에 dust spawn */
+  private updateFootDust(onGround: boolean, vx: number) {
+    if (!onGround || Math.abs(vx) < 50 || this.state === "kicking") return
+    // 약 80ms 마다 1개 puff
+    if ((this.time.now | 0) % 80 < 20) {
+      const px = this.player.x + (vx > 0 ? -8 : 8)
+      const py = this.player.y + this.avatarVisualH / 2 - 2
+      this.footDust.emitParticle(1, px, py)
+    }
+  }
+
+  /** 점프 시작 시 squash → stretch */
+  private playJumpSquash() {
+    this.tweens.killTweensOf(this.player)
+    this.player.scaleX = AVATAR_SCALE * 1.15
+    this.player.scaleY = AVATAR_SCALE * 0.85
+    this.tweens.add({
+      targets: this.player,
+      scaleX: AVATAR_SCALE * 0.9,
+      scaleY: AVATAR_SCALE * 1.1,
+      duration: 120,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: this.player,
+          scaleX: AVATAR_SCALE,
+          scaleY: AVATAR_SCALE,
+          duration: 200,
+          ease: "Sine.easeInOut",
+        })
+      },
+    })
+  }
+
+  /** 착지 임팩트 — squish + 먼지 burst */
+  private playLandingImpact() {
+    this.tweens.killTweensOf(this.player)
+    this.player.scaleX = AVATAR_SCALE * 1.2
+    this.player.scaleY = AVATAR_SCALE * 0.8
+    this.tweens.add({
+      targets: this.player,
+      scaleX: AVATAR_SCALE,
+      scaleY: AVATAR_SCALE,
+      duration: 180,
+      ease: "Back.easeOut",
+    })
+    // 좌우로 dust burst 3-4개
+    const px = this.player.x
+    const py = this.player.y + this.avatarVisualH / 2 - 2
+    for (let i = 0; i < 5; i++) {
+      this.footDust.emitParticle(1, px + (Math.random() - 0.5) * 30, py)
+    }
+  }
+
+  /** 충전 중 좌우 작은 떨림 — 매 update 호출 */
+  private updateChargeShake() {
+    const charging = this.chargeStartedAt !== null
+    if (!charging) {
+      if (this.chargeShakeOffset !== 0) {
+        // 떨림 끝나면 원위치 복귀 (sprite 위치 직접 보정 X — 다음 프레임에 자연 복귀)
+        this.chargeShakeOffset = 0
+      }
+      return
+    }
+    // 충전 진행도에 비례해 떨림 진폭 증가 (0 → 2px)
+    const t = Math.min((this.time.now - this.chargeStartedAt!) / KICK_CHARGE_MAX_MS, 1)
+    const amp = 0.5 + t * 1.5
+    const newOffset = (Math.random() - 0.5) * amp * 2
+    // 이전 offset 차분만큼 sprite 이동 — physics body 와 분리하기 위해 visual offset 만 누적
+    const delta = newOffset - this.chargeShakeOffset
+    this.player.x += delta
+    this.chargeShakeOffset = newOffset
+  }
+
+  /** 킥 임팩트 — 공이 발사될 때 임팩트 라인 + flash */
+  private playKickImpact(x: number, y: number, sign: 1 | -1) {
+    // 짧은 흰색 line burst — graphics 로 그렸다 fade
+    const g = this.add.graphics()
+    g.lineStyle(2, 0xffffff, 0.9)
+    for (let i = 0; i < 4; i++) {
+      const angle = (-25 + i * 17) * (Math.PI / 180)
+      const len = 24 + Math.random() * 8
+      g.lineBetween(x, y, x + Math.cos(angle) * len * sign, y + Math.sin(angle) * len)
+    }
+    g.setDepth(11)
+    this.tweens.add({
+      targets: g,
+      alpha: 0,
+      duration: 220,
+      ease: "Cubic.easeOut",
+      onComplete: () => g.destroy(),
+    })
   }
 }
