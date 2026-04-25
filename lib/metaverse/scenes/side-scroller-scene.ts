@@ -44,7 +44,6 @@ import {
 import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
 import { ChatBubble } from "./chat-bubble"
 import { SideScrollerRemoteAvatar } from "./sidescroll-remote-avatar"
-import { createSpriteOutline, type SpriteOutline } from "./sprite-outline"
 
 export const SIDE_SCROLLER_SCENE_KEY = "MetaverseSideScroller"
 
@@ -158,8 +157,6 @@ export class SideScrollerScene extends Phaser.Scene {
   private lastChargeEmitted: { active: boolean; progress: number } = { active: false, progress: 0 }
   /** 발먼지 파티클 — 걷기 시 발 아래에 작은 puff 발사 */
   private footDust!: Phaser.GameObjects.Particles.ParticleEmitter
-  /** 픽셀아트용 4방향 sprite 복제 outline (캐릭터 윤곽선) */
-  private playerOutline: SpriteOutline | null = null
   /** 마지막 onGround 상태 — 착지 임팩트 트리거용 */
   private wasOnGround = true
   /** 공중에 뜬 시각 — 착지 시 airborne 시간이 충분(>80ms) 해야 임팩트 발사. blocked.down flicker 무시. */
@@ -235,8 +232,6 @@ export class SideScrollerScene extends Phaser.Scene {
     )
     this.player.setScale(AVATAR_SCALE)
     this.player.setDepth(10)
-    // 4방향 sprite 복제 outline — 픽셀아트용 깔끔한 검정 윤곽 (Glow filter 의 fuzzy 할로 대체)
-    this.playerOutline = createSpriteOutline(this, this.player)
     this.player.setCollideWorldBounds(true)
     this.player.setBounce(0)
     this.player.setMaxVelocity(WALK_SPEED, MAX_FALL_SPEED)
@@ -529,9 +524,6 @@ export class SideScrollerScene extends Phaser.Scene {
     // juice: 걸을 때 발먼지만. 충전 떨림은 player.x 직접 수정이 physics 와 충돌해
     // 부들거림 부작용 → 제거. 차후 child sprite container 로 visual-only 떨림 재구현 가능.
     this.updateFootDust(onGround, body.velocity.x)
-
-    // 4방향 outline 동기화 (텍스처·위치·scale·flipX)
-    this.playerOutline?.sync()
 
     this.updateNameTag()
     this.updateChargeBar()
@@ -851,8 +843,6 @@ export class SideScrollerScene extends Phaser.Scene {
     this.unsubBallState = null
     this.chatBubble?.destroy()
     this.chatBubble = null
-    this.playerOutline?.destroy()
-    this.playerOutline = null
     for (const av of this.remoteAvatars.values()) av.destroy()
     this.remoteAvatars.clear()
     for (const b of this.remoteChatBubbles.values()) b.destroy()

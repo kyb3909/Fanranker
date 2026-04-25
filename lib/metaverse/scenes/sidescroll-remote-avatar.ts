@@ -14,14 +14,12 @@ import { texKeyIdle, texKeyRotation, animKey } from "@/lib/metaverse/avatar/pro-
 import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
 import type { SideScrollerPresence, SideScrollerActionState } from "@/lib/metaverse/types"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
-import { createSpriteOutline, type SpriteOutline } from "./sprite-outline"
 
 const REMOTE_LERP_HALF_LIFE_MS = 80
 const AVATAR_SCALE = 1.0 // side-scroller 와 동일
 
 export class SideScrollerRemoteAvatar {
   private readonly sprite: Phaser.GameObjects.Sprite
-  private readonly outline: SpriteOutline
   private readonly nameTag: Phaser.GameObjects.Text
   private readonly userId: string
   private nickname: string
@@ -46,8 +44,6 @@ export class SideScrollerRemoteAvatar {
       .setScale(AVATAR_SCALE)
       .setDepth(10)
       .setInteractive({ useHandCursor: true })
-    // 4방향 sprite 복제 outline — 픽셀아트용 깔끔한 검정 윤곽 (로컬 플레이어와 동일)
-    this.outline = createSpriteOutline(scene, this.sprite)
 
     this.sprite.on("pointerdown", () => {
       const cam = scene.cameras.main
@@ -150,12 +146,9 @@ export class SideScrollerRemoteAvatar {
     this.sprite.y += (this.targetY - this.sprite.y) * alpha
     const preset = getAvatarPreset(this.avatarKey)
     this.nameTag.setPosition(this.sprite.x, this.sprite.y - preset.bodyHeight * 0.5 - 6)
-    // 4방향 outline 동기화
-    this.outline.sync()
   }
 
   destroy() {
-    this.outline.destroy()
     this.sprite.destroy()
     this.nameTag.destroy()
   }
