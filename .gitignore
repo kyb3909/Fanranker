@@ -102,3 +102,10 @@ data/crawlers/logs/
 
 # Claude Code 런타임 락 파일
 .claude/scheduled_tasks.lock
+
+# Supabase CLI 임시 파일 (auto-generated)
+supabase/.temp/
+
+# PixelLab ZIP 추출 잔재 (이전 세션에서 root 에 풀린 임시물 — 실제 에셋은 public/metaverse/avatars/)
+/avatar-pro/
+/avatar-pro-xl/
