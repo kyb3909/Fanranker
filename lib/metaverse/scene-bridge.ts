@@ -65,6 +65,8 @@ type BridgeEventMap = {
   }
   /** 월드맵에서 웸블리 아이콘 클릭 — 상위 래퍼가 사이드스크롤러 씬으로 라우팅. */
   "wembley:enter": undefined
+  /** 킥 충전 게이지 진행도 — React HUD 가 받아 시각화. progress=0..1, active=홀드 중 */
+  "charge:progress": { active: boolean; progress: number }
 }
 
 class MetaverseSceneBridge extends EventTarget {

@@ -153,8 +153,8 @@ export class SideScrollerScene extends Phaser.Scene {
   // 축구공 + 충전 게이지
   private ball!: Phaser.Physics.Arcade.Sprite
   private chargeStartedAt: number | null = null // Space 키 누른 시각 (ms). null 이면 충전 안 중.
-  private chargeBarBg!: Phaser.GameObjects.Rectangle
-  private chargeBarFill!: Phaser.GameObjects.Rectangle
+  /** 마지막으로 sceneBridge 에 emit 한 charge state — React HUD spam 방지용 */
+  private lastChargeEmitted: { active: boolean; progress: number } = { active: false, progress: 0 }
   /** 다음 kick anim 완료 시 공에 적용할 속도 (facing + charge 로 계산). */
   private pendingKickSpeed: number | null = null
   /** 다음 kick anim 완료 시 공에 적용할 발사각 (deg, 수평 대비 상향). */
@@ -303,36 +303,11 @@ export class SideScrollerScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
     this.cameras.main.setBounds(0, 0, SCENE_WIDTH, SCENE_HEIGHT)
 
-    // 안내 (UI 오버레이)
-    this.add
-      .text(16, 16, "← → 이동 · ↑/W 뒤보기 · ↓/S 앞보기 · Space 점프 · R 킥(충전) · Enter 채팅", {
-        fontFamily: "sans-serif",
-        fontSize: "13px",
-        color: "#ffffff",
-        backgroundColor: "#000000aa",
-        padding: { x: 8, y: 4 },
-      })
-      .setScrollFactor(0)
-      .setDepth(100)
+    // 안내·HUD 는 React `<MetaverseHud>` 가 캔버스 위에 오버레이로 그림.
+    // Phaser 안에서는 게임 월드 (캐릭터·공·배경) 만 다룬다.
 
-    // 충전 게이지 — X 키 홀드 중에만 표시. 카메라 따라가지 않음 (화면 고정 UI).
-    const barW = 240
-    const barH = 14
-    const barX = this.scale.width / 2 - barW / 2
-    const barY = 50
-    this.chargeBarBg = this.add
-      .rectangle(barX, barY, barW, barH, 0x000000, 0.5)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, 0xffffff, 0.6)
-      .setScrollFactor(0)
-      .setDepth(101)
-      .setVisible(false)
-    this.chargeBarFill = this.add
-      .rectangle(barX + 1, barY + 1, 0, barH - 2, 0x4ade80, 1)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(102)
-      .setVisible(false)
+    // 충전 게이지 시각화는 React HUD `<HudChargeBar>` 가 sceneBridge "charge:progress"
+    // 이벤트를 받아 그림. 여기선 게임 로직만 (chargeStartedAt 상태).
 
     // Realtime 채널 구독 — 원격 유저·공 이벤트
     if (this.channel) {
@@ -679,23 +654,18 @@ export class SideScrollerScene extends Phaser.Scene {
     })
   }
 
+  /** 충전 진행도를 React HUD 로 emit. 매 프레임 호출되지만 값이 바뀐 경우만 dispatch. */
   private updateChargeBar() {
-    if (this.chargeStartedAt === null) {
-      if (this.chargeBarBg.visible) {
-        this.chargeBarBg.setVisible(false)
-        this.chargeBarFill.setVisible(false)
-      }
-      return
+    const active = this.chargeStartedAt !== null
+    const progress = active
+      ? Math.min((this.time.now - this.chargeStartedAt!) / KICK_CHARGE_MAX_MS, 1)
+      : 0
+    const last = this.lastChargeEmitted
+    // 활성 상태 변화 OR 진행도 4% 이상 변화 시에만 emit (React re-render 절약)
+    if (last.active !== active || Math.abs(last.progress - progress) > 0.04) {
+      this.lastChargeEmitted = { active, progress }
+      sceneBridge.emit("charge:progress", { active, progress })
     }
-    const held = this.time.now - this.chargeStartedAt
-    const t = Math.min(held / KICK_CHARGE_MAX_MS, 1)
-    const maxFillW = this.chargeBarBg.width - 2
-    this.chargeBarFill.width = maxFillW * t
-    // 색상: 녹색(약) → 노랑(중) → 빨강(강)
-    const color = t < 0.4 ? 0x4ade80 : t < 0.75 ? 0xfacc15 : 0xef4444
-    this.chargeBarFill.setFillStyle(color, 1)
-    this.chargeBarBg.setVisible(true)
-    this.chargeBarFill.setVisible(true)
   }
 
   private showChatBubble(text: string) {

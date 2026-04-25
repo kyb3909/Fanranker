@@ -23,6 +23,7 @@ import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { AvatarShopModal, AVATAR_EQUIP_LOCAL_KEY } from "./avatar-shop-modal"
 import { ARSENAL_HOME_AVATAR_KEY, DEFAULT_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
+import { MetaverseHud } from "./metaverse-hud"
 
 /** 데모·게스트 기본 유니폼 — 마이그레이션 전 테스트용으로 아스날 홈킷 고정. */
 const DEMO_FALLBACK_AVATAR_KEY = ARSENAL_HOME_AVATAR_KEY
@@ -160,23 +161,25 @@ export function SideScrollerDemo() {
     // 좌우 여백에 scene backgroundColor 가 보이지 않도록 폭 제한.
     <div className="relative mx-auto h-[calc(100svh-3.5rem)] w-full max-w-[1280px] bg-neutral-950">
       <div ref={parentRef} className="h-full w-full" aria-label="사이드스크롤러 프로토타입" />
-      <div className="absolute top-2 right-2 flex items-center gap-2">
-        <button
-          onClick={() => setShopOpen(true)}
-          className="rounded bg-black/60 px-3 py-1.5 text-[11px] text-white/80 backdrop-blur-sm transition-colors hover:text-white"
-        >
-          👕 유니폼 상점
-        </button>
-        <Link
-          href="/metaverse/uk"
-          className="rounded bg-black/60 px-3 py-1.5 text-[11px] text-white/70 backdrop-blur-sm transition-colors hover:text-white"
-        >
-          ← 월드맵으로
-        </Link>
-      </div>
-      <div className="pointer-events-none absolute top-2 left-2 rounded bg-black/60 px-2 py-1 text-[10px] text-white/60">
-        Phase 4 프로토타입 · 단독 씬
-      </div>
+      <MetaverseHud
+        locationLabel="🏟️ 웸블리 광장"
+        actions={
+          <>
+            <button
+              onClick={() => setShopOpen(true)}
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+            >
+              👕 유니폼 상점
+            </button>
+            <Link
+              href="/metaverse/uk"
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/80 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80 hover:text-white"
+            >
+              ← 월드맵
+            </Link>
+          </>
+        }
+      />
       {/* 채팅 — 데모 모드는 로컬 bubble 만. Enter 로 입력 → 내 머리 위 말풍선 5초 */}
       <ChatOverlay canSend={true} />
       {/* 채팅 로그 — 혼자 보낸 것도 기록 (데모에선 리모트 없음) */}
