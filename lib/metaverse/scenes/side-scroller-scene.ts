@@ -212,7 +212,7 @@ export class SideScrollerScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#87ceeb") // 로드 실패 시 하늘색 fallback
     this.add.image(0, 0, BG_TEXTURE).setOrigin(0, 0).setDepth(0)
 
-    // 분위기 레이어 — 구름·스타디움 라이트·전경 잔디. 새 에셋 0, 모두 Phaser graphics.
+    // 분위기 레이어 — 구름·스타디움 라이트. 새 에셋 0, 모두 Phaser graphics.
     this.createAtmosphereLayers()
 
     // 보이지 않는 바닥 콜리전 — 배경 이미지의 전경(잔디·돌벽) 위에 캐릭터가 서도록.
@@ -861,10 +861,10 @@ export class SideScrollerScene extends Phaser.Scene {
 
   // ============================================================
   // 분위기 레이어 — 구름·라이트·잔디. 모두 Phaser graphics, 새 에셋 0.
-  // depth 정렬: bg(0) → 구름(1) → 스타디움 라이트(2) → 전경 잔디(15) → 캐릭터(10)
+  // depth 정렬: bg(0) → 구름(1) → 스타디움 라이트(2) → 캐릭터(10)
   // ============================================================
 
-  /** 분위기 레이어 한 번에 생성 — 구름 5개 (drift), 스타디움 라이트 4개 (pulse), 전경 잔디 산재 */
+  /** 분위기 레이어 한 번에 생성 — 구름 5개 (drift), 스타디움 라이트 4개 (pulse) */
   private createAtmosphereLayers() {
     // 1) 구름 5개 — 화면 상단 sky 영역에 흰색 둥근 사각형, 좌→우 슬로 드리프트
     const cloudConfigs = [
@@ -933,25 +933,8 @@ export class SideScrollerScene extends Phaser.Scene {
       })
     }
 
-    // 3) 전경 잔디 — 바닥 라인 따라 작은 녹색 삼각형 산재. 캐릭터 발 근처 디테일.
-    const grassY = FLOOR_TOP_Y + 6
-    for (let x = 0; x < SCENE_WIDTH; x += 35 + Math.random() * 25) {
-      const w = 4 + Math.random() * 3
-      const h = 8 + Math.random() * 6
-      const g = this.add.triangle(x, grassY, 0, 0, w, -h, w * 2, 0, 0x4ade80, 0.85)
-      g.setDepth(15) // 캐릭터(10) 보다 위 — 전경 디테일
-      g.setOrigin(0, 1)
-      // 살짝 흔들림 (바람 효과)
-      this.tweens.add({
-        targets: g,
-        scaleX: { from: 1, to: 1.05 },
-        scaleY: { from: 1, to: 0.95 },
-        duration: 2200 + Math.random() * 800,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      })
-    }
+    // 전경 잔디 삼각형은 의도적으로 미사용 — 배경 일러스트에 이미 잔디가 그려져있어서
+    // 위에 도형으로 덧그리면 추상 삼각형 아티팩트로만 보임.
   }
 
   // ============================================================
