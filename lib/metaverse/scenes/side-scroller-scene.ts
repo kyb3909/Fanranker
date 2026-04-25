@@ -974,42 +974,57 @@ export class SideScrollerScene extends Phaser.Scene {
     }
   }
 
-  /** 점프 시작 시 squash → stretch */
+  /**
+   * 점프 시작 시 squash → stretch.
+   * 즉시 snap 없이 두 단계 트윈으로 부드럽게: idle → squash → idle (Sine ease).
+   * 진폭은 강조용 (1.08 / 0.92) — 더 키우면 "튕긴다" 느낌 강해지지만 글리치 같아 보임.
+   */
   private playJumpSquash() {
     this.tweens.killTweensOf(this.player)
-    this.player.scaleX = AVATAR_SCALE * 1.15
-    this.player.scaleY = AVATAR_SCALE * 0.85
-    this.tweens.add({
+    this.tweens.chain({
       targets: this.player,
-      scaleX: AVATAR_SCALE * 0.9,
-      scaleY: AVATAR_SCALE * 1.1,
-      duration: 120,
-      ease: "Sine.easeOut",
-      onComplete: () => {
-        this.tweens.add({
-          targets: this.player,
+      tweens: [
+        {
+          scaleX: AVATAR_SCALE * 1.08,
+          scaleY: AVATAR_SCALE * 0.92,
+          duration: 80,
+          ease: "Sine.easeOut",
+        },
+        {
           scaleX: AVATAR_SCALE,
           scaleY: AVATAR_SCALE,
-          duration: 200,
-          ease: "Sine.easeInOut",
-        })
-      },
+          duration: 180,
+          ease: "Sine.easeIn",
+        },
+      ],
     })
   }
 
-  /** 착지 임팩트 — squish + 먼지 burst */
+  /**
+   * 착지 임팩트 — squish + 먼지 burst.
+   * 이전 버전: 즉시 (1.2, 0.8) snap + Back.easeOut 오버슈트 → 글리치처럼 보임.
+   * 개선: idle → squish → idle 두 단계 트윈, 진폭 약하게, 부드러운 ease.
+   */
   private playLandingImpact() {
     this.tweens.killTweensOf(this.player)
-    this.player.scaleX = AVATAR_SCALE * 1.2
-    this.player.scaleY = AVATAR_SCALE * 0.8
-    this.tweens.add({
+    this.tweens.chain({
       targets: this.player,
-      scaleX: AVATAR_SCALE,
-      scaleY: AVATAR_SCALE,
-      duration: 180,
-      ease: "Back.easeOut",
+      tweens: [
+        {
+          scaleX: AVATAR_SCALE * 1.1,
+          scaleY: AVATAR_SCALE * 0.9,
+          duration: 60,
+          ease: "Quad.easeOut",
+        },
+        {
+          scaleX: AVATAR_SCALE,
+          scaleY: AVATAR_SCALE,
+          duration: 220,
+          ease: "Sine.easeOut",
+        },
+      ],
     })
-    // 좌우로 dust burst 3-4개
+    // 좌우로 dust burst 5개
     const px = this.player.x
     const py = this.player.y + this.avatarVisualH / 2 - 2
     for (let i = 0; i < 5; i++) {
