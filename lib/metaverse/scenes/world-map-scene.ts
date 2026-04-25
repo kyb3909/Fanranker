@@ -108,7 +108,7 @@ export class WorldMapScene extends Phaser.Scene {
   preload() {
     preloadProAvatar(this)
     if (!this.textures.exists("wembley-hex")) {
-      this.load.image("wembley-hex", "/map/objects/hex-stadium-wembley.png")
+      this.load.image("wembley-hex", "/map/objects/hex-stadium-wembley.webp")
     }
   }
 
@@ -567,7 +567,7 @@ export class WorldMapScene extends Phaser.Scene {
     const x = pinToWorldX(pinX)
     const y = pinToWorldY(pinY)
 
-    // hex-stadium-wembley PNG 는 192×192 — 씬 WORLD 에 비례해 적당히 축소 (scale 0.5 = 96×96)
+    // hex-stadium-wembley webp 는 192×192 — 씬 WORLD 에 비례해 적당히 축소 (scale 0.5 = 96×96)
     const icon = this.add
       .image(x, y, "wembley-hex")
       .setScale(0.5)
