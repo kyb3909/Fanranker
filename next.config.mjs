@@ -146,6 +146,26 @@ const nextConfig = {
       },
     ]
   },
+  // Webpack splitChunks 튜닝: @sentry/* 가 두 chunk 에 중복 부킹 (60KB × 2)되는 문제 해결.
+  // 모든 Sentry 모듈을 단일 'sentry' chunk 로 강제해 페이지 로드 시 한 번만 다운로드.
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization = config.optimization || {}
+      config.optimization.splitChunks = config.optimization.splitChunks || {}
+      config.optimization.splitChunks.cacheGroups = {
+        ...(config.optimization.splitChunks.cacheGroups || {}),
+        sentry: {
+          test: /[\\/]node_modules[\\/]@sentry[\\/]/,
+          name: "sentry",
+          chunks: "all",
+          priority: 30,
+          enforce: true,
+          reuseExistingChunk: true,
+        },
+      }
+    }
+    return config
+  },
   // 실험적 기능: 패키지 최적화
   experimental: {
     optimizePackageImports: [

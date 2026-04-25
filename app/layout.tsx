@@ -1,7 +1,7 @@
 import type React from "react"
 import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
-import { Noto_Sans_KR } from "next/font/google"
+import { Noto_Sans } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -17,11 +17,14 @@ import { GlobalReportDialog } from "@/components/global-report-dialog"
 import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
 
-const notoSansKR = Noto_Sans_KR({
+// Latin 글리프만 next/font 로 로드. 한글은 시스템 폰트(Apple SD Gothic Neo / Malgun
+// Gothic — globals.css 의 font-stack fallback) 가 처리. Noto_Sans_KR 는 latin subset
+// 으로도 18개 woff2 (~314 KB) 를 생성해 비효율 → Noto_Sans 로 교체.
+const notoSans = Noto_Sans({
   weight: "variable",
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-noto-sans-kr",
+  variable: "--font-noto-sans-kr", // CSS 변수명은 globals.css 와 호환 위해 유지
   preload: true,
 })
 
@@ -122,7 +125,7 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
       <ClerkProvider localization={koLocalization} dynamic>
-        <html lang="ko" className={notoSansKR.variable} suppressHydrationWarning>
+        <html lang="ko" className={notoSans.variable} suppressHydrationWarning>
           <head>
             {/* Google AdSense 계정 메타 태그 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
