@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const admin = createServiceRoleClient()
   const [{ data: profile, error: pe }, { data: inv, error: ie }, { data: gold, error: ge }] =
     await Promise.all([
-      admin.from("profiles").select("metaverse_avatar_key").eq("id", me.userId).maybeSingle(),
+      admin.from("profiles").select("metaverse_avatar_key").eq("user_id", me.userId).maybeSingle(),
       admin.from("metaverse_avatar_inventory").select("avatar_key").eq("user_id", me.userId),
       admin.from("user_gold").select("gold_balance").eq("user_id", me.userId).maybeSingle(),
     ])
