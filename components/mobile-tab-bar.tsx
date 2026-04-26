@@ -2,7 +2,7 @@
 
 import { Suspense } from "react"
 import Link from "@/components/ui/app-link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Compass, LayoutGrid, Trophy, User } from "lucide-react"
 
 const tabs = [
@@ -10,7 +10,7 @@ const tabs = [
     href: "/",
     icon: LayoutGrid,
     label: "담벼락",
-    match: (p: string, view?: string | null) => p === "/" && view !== "prediction",
+    match: (p: string) => p === "/",
   },
   {
     href: "/explore",
@@ -19,10 +19,10 @@ const tabs = [
     match: (p: string) => p.startsWith("/explore") || p.startsWith("/community"),
   },
   {
-    href: "/?view=prediction",
+    href: "/prediction",
     icon: Trophy,
     label: "경기 예측",
-    match: (p: string, view?: string | null) => p === "/" && view === "prediction",
+    match: (p: string) => p.startsWith("/prediction"),
   },
   {
     href: "/settings",
@@ -35,8 +35,6 @@ const tabs = [
 
 function MobileTabBarContent() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const view = searchParams.get("view")
 
   if (pathname.startsWith("/admin")) return null
   // 메타버스는 홈페이지 서비스의 일부 — 모바일 탭바 유지해 다른 섹션 이동 가능.
@@ -50,7 +48,7 @@ function MobileTabBarContent() {
     >
       <div className="flex h-14 items-center justify-around px-2">
         {tabs.map((tab) => {
-          const isActive = tab.match(pathname, view)
+          const isActive = tab.match(pathname)
           return (
             <Link
               key={tab.href}

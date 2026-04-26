@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
 import type { PostsResponse } from "@/hooks/use-feed"
@@ -91,7 +92,14 @@ export default async function Home({
 }: {
   searchParams: Promise<Record<string, string | undefined>>
 }) {
-  const [params, homeData] = await Promise.all([searchParams, fetchAllHomeData()])
+  const params = await searchParams
+
+  // 옛 ?view=prediction 링크는 /prediction 1급 라우트로 영구 이동.
+  if (params.view === "prediction") {
+    redirect(params.tab ? `/prediction?tab=${params.tab}` : "/prediction")
+  }
+
+  const homeData = await fetchAllHomeData()
 
   return (
     <Suspense>
@@ -99,7 +107,6 @@ export default async function Home({
         initialFeed={homeData.initialFeed}
         initialCategories={homeData.initialCategories}
         initialRecentComments={homeData.initialRecentComments}
-        isPredictionView={params.view === "prediction"}
         initialTab={params.tab === "content" ? "content" : "feed"}
       />
     </Suspense>

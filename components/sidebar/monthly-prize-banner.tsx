@@ -133,7 +133,7 @@ export function MonthlyPrizeBanner() {
             <p className="text-muted-foreground mt-0.5 text-[11px]">{CURRENT_PRIZE.description}</p>
 
             <Link
-              href="/?view=prediction"
+              href="/prediction"
               className="bg-primary mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-[13px] font-bold text-white transition-all hover:opacity-90"
             >
               승부예측 참여하기

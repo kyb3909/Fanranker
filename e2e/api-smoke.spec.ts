@@ -97,7 +97,7 @@ test.describe("API smoke — rate-limit 반응", () => {
 test.describe("페이지 2xx 회귀", () => {
   const PAGES = [
     "/",
-    "/?view=prediction",
+    "/prediction",
     "/explore",
     "/community/football",
     "/community/baseball",

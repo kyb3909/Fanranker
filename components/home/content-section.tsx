@@ -191,7 +191,7 @@ export function ContentSection() {
             승부예측 랭킹에서 랭커를 팔로우해보세요.
           </p>
           <Link
-            href="/?view=prediction&tab=ranking"
+            href="/prediction?tab=ranking"
             className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
           >
             <Trophy className="h-4 w-4" />

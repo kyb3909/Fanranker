@@ -50,41 +50,6 @@ const ContentSection = dynamic(
     ssr: false,
   }
 )
-const BettingPage = dynamic(() => import("@/components/betting/betting-page"), {
-  loading: () => (
-    <div className="min-h-[600px]">
-      <div className="bg-card border-border rounded-lg border p-4">
-        <div className="flex gap-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-muted h-10 w-24 animate-pulse rounded-lg" />
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-muted h-8 w-16 animate-pulse rounded-full" />
-          ))}
-        </div>
-      </div>
-      <div className="mt-2 space-y-2 sm:mt-4 sm:space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-card border-border animate-pulse rounded-lg border p-4">
-            <div className="bg-muted mb-2 h-4 w-1/4 rounded" />
-            <div className="flex items-center justify-between">
-              <div className="bg-muted h-6 w-1/3 rounded" />
-              <div className="bg-muted h-8 w-12 rounded" />
-              <div className="bg-muted h-6 w-1/3 rounded" />
-            </div>
-            <div className="mt-2 flex gap-2">
-              <div className="bg-muted h-10 flex-1 rounded-lg" />
-              <div className="bg-muted h-10 flex-1 rounded-lg" />
-              <div className="bg-muted h-10 flex-1 rounded-lg" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  ),
-})
 
 type TabType = "feed" | "content"
 
@@ -92,7 +57,6 @@ interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
-  isPredictionView: boolean
   initialTab?: TabType
 }
 
@@ -100,7 +64,6 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
-  isPredictionView,
   initialTab = "feed",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
@@ -175,97 +138,91 @@ export function HomeClient({
         {/* Main Content */}
         <div className="col-span-12 space-y-4 lg:col-span-6">
           {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
-          {isPredictionView ? (
-            <BettingPage />
-          ) : (
-            <>
-              {/* 탭 네비게이션 */}
-              <div className="bg-card border-border overflow-hidden rounded-lg border">
-                <div className="flex" role="tablist" aria-label="홈 탭">
-                  <button
-                    role="tab"
-                    aria-selected={activeTab === "feed"}
-                    onClick={() => handleTabClick("feed")}
-                    className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
-                      activeTab === "feed"
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <FileText className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                    게시물
-                    {activeTab === "feed" && (
-                      <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
-                    )}
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={activeTab === "content"}
-                    onClick={() => handleTabClick("content")}
-                    className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
-                      activeTab === "content"
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Trophy className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                    경기 분석글
-                    {activeTab === "content" && (
-                      <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
-                    )}
-                  </button>
-                </div>
-
+          {/* 탭 네비게이션 */}
+          <div className="bg-card border-border overflow-hidden rounded-lg border">
+            <div className="flex" role="tablist" aria-label="홈 탭">
+              <button
+                role="tab"
+                aria-selected={activeTab === "feed"}
+                onClick={() => handleTabClick("feed")}
+                className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
+                  activeTab === "feed"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <FileText className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                게시물
                 {activeTab === "feed" && (
-                  <div className="border-border bg-muted/20 flex items-center justify-center border-t px-4 py-2.5">
-                    <div
-                      className="flex items-center gap-1.5 sm:gap-2"
-                      role="group"
-                      aria-label="게시물 정렬"
-                    >
-                      {[
-                        { key: "random" as const, icon: Dices, label: "랜덤" },
-                        { key: "hot" as const, icon: Flame, label: "온도순" },
-                        { key: "new" as const, icon: Clock, label: "최신순" },
-                      ].map(({ key, icon: Icon, label }) => (
-                        <button
-                          key={key}
-                          onClick={() => setSortBy(key)}
-                          aria-pressed={sortBy === key}
-                          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-all sm:gap-2 sm:px-5 sm:text-[14px] ${
-                            sortBy === key
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
                 )}
-              </div>
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeTab === "content"}
+                onClick={() => handleTabClick("content")}
+                className={`relative flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
+                  activeTab === "content"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Trophy className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                경기 분석글
+                {activeTab === "content" && (
+                  <span className="bg-primary absolute bottom-0 left-1/2 h-[3px] w-12 -translate-x-1/2 rounded-full" />
+                )}
+              </button>
+            </div>
 
-              {activeTab === "feed" &&
-                isSignedIn &&
-                followedCommunities.size === 0 &&
-                followsLoaded && <OnboardingBanner />}
-
-              {activeTab === "feed" && (
-                <div className="space-y-4">
-                  <FeedSection
-                    posts={posts}
-                    isLoading={isLoading}
-                    isLoadingMore={isLoadingMore}
-                    loadMore={loadMore}
-                  />
+            {activeTab === "feed" && (
+              <div className="border-border bg-muted/20 flex items-center justify-center border-t px-4 py-2.5">
+                <div
+                  className="flex items-center gap-1.5 sm:gap-2"
+                  role="group"
+                  aria-label="게시물 정렬"
+                >
+                  {[
+                    { key: "random" as const, icon: Dices, label: "랜덤" },
+                    { key: "hot" as const, icon: Flame, label: "온도순" },
+                    { key: "new" as const, icon: Clock, label: "최신순" },
+                  ].map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setSortBy(key)}
+                      aria-pressed={sortBy === key}
+                      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-all sm:gap-2 sm:px-5 sm:text-[14px] ${
+                        sortBy === key
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
+          </div>
 
-              {activeTab === "content" && <ContentSection />}
-            </>
+          {activeTab === "feed" &&
+            isSignedIn &&
+            followedCommunities.size === 0 &&
+            followsLoaded && <OnboardingBanner />}
+
+          {activeTab === "feed" && (
+            <div className="space-y-4">
+              <FeedSection
+                posts={posts}
+                isLoading={isLoading}
+                isLoadingMore={isLoadingMore}
+                loadMore={loadMore}
+              />
+            </div>
           )}
+
+          {activeTab === "content" && <ContentSection />}
         </div>
 
         {/* Right Sidebar */}
@@ -274,8 +231,8 @@ export function HomeClient({
         </aside>
       </div>
 
-      {/* 실시간 인기글 토스트 — feed 탭 + 로그인 + BettingPage 아닐 때만 */}
-      {!isPredictionView && activeTab === "feed" && isSignedIn && (
+      {/* 실시간 인기글 토스트 — feed 탭 + 로그인 시 */}
+      {activeTab === "feed" && isSignedIn && (
         <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />
       )}
     </main>

@@ -2,7 +2,7 @@
 
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { Compass, LayoutGrid, Trophy, Sparkles } from "lucide-react"
 
 const activeClass =
@@ -14,12 +14,10 @@ const baseClass =
 export const HeaderNav = memo(function HeaderNav() {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const view = searchParams.get("view")
 
-  const isFeed = pathname === "/" && view !== "prediction"
+  const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
-  const isPrediction = pathname === "/" && view === "prediction"
+  const isPrediction = pathname.startsWith("/prediction")
   const isShop = pathname.startsWith("/shop")
 
   return (
@@ -49,7 +47,7 @@ export const HeaderNav = memo(function HeaderNav() {
             운동장
           </span>
         </Link>
-        <Link href="/?view=prediction">
+        <Link href="/prediction">
           <span className={`${baseClass} ${isPrediction ? activeClass : inactiveClass}`}>
             <Trophy className="h-[18px] w-[18px] shrink-0" />
             경기 예측
