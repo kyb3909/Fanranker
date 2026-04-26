@@ -14,15 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Search as SearchIcon, User, Hash, FileText, FileTextIcon } from "lucide-react"
+import { Loader2, Search as SearchIcon, User, Hash, FileText } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 
 type SearchType = "nickname" | "id" | "title" | "title_content"
 
 const SEARCH_TYPE_OPTIONS = [
-  { value: "title_content", label: "제목 + 내용", icon: FileTextIcon },
-  { value: "title", label: "제목", icon: FileText },
+  { value: "title_content", label: "제목", icon: FileText },
   { value: "nickname", label: "닉네임", icon: User },
   { value: "id", label: "ID", icon: Hash },
 ] as const
