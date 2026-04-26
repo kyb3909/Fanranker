@@ -48,36 +48,6 @@ export async function POST(request: NextRequest) {
 
     if (error) return apiError("투표 실패", 500, error)
 
-    // MBTI 통계 기록 (비동기, 실패해도 투표는 성공)
-    try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("mbti")
-        .eq("user_id", user.id)
-        .single()
-
-      if (profile?.mbti) {
-        // 세션에서 battle_id 가져오기
-        const { data: sess } = await supabase
-          .from("worldcup_sessions")
-          .select("battle_id")
-          .eq("id", session_id)
-          .single()
-
-        if (sess?.battle_id) {
-          // 선택된 후보에 대한 MBTI 투표 기록
-          await supabase.rpc("record_mbti_vote", {
-            p_battle_id: sess.battle_id,
-            p_candidate_id: winner_id,
-            p_mbti: profile.mbti,
-            p_is_winner: false,
-          })
-        }
-      }
-    } catch {
-      // MBTI 통계 실패는 무시
-    }
-
     return NextResponse.json({ success: true })
   } catch (error) {
     return apiError("투표 실패", 500, error)

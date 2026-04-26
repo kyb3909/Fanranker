@@ -39,25 +39,6 @@ import Image from "next/image"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 
-const MBTI_TYPES = [
-  "INTJ",
-  "INTP",
-  "ENTJ",
-  "ENTP",
-  "INFJ",
-  "INFP",
-  "ENFJ",
-  "ENFP",
-  "ISTJ",
-  "ISFJ",
-  "ESTJ",
-  "ESFJ",
-  "ISTP",
-  "ISFP",
-  "ESTP",
-  "ESFP",
-] as const
-
 interface Profile {
   user_id: string
   nickname: string
@@ -66,7 +47,6 @@ interface Profile {
   bio: string | null
   favorite_team: string | null
   favorite_player: string | null
-  mbti: string | null
   is_journalist?: boolean
   is_expert?: boolean
   created_at?: string
@@ -126,7 +106,6 @@ export function MyProfileSettings() {
   const [bio, setBio] = useState("")
   const [favoriteTeam, setFavoriteTeam] = useState("")
   const [favoritePlayer, setFavoritePlayer] = useState("")
-  const [mbti, setMbti] = useState("")
   const [followedCommunities, setFollowedCommunities] = useState<FollowedCommunity[]>([])
 
   // Dashboard data from public profile API
@@ -152,7 +131,6 @@ export function MyProfileSettings() {
         setBio(data.bio || "")
         setFavoriteTeam(data.favorite_team || "")
         setFavoritePlayer(data.favorite_player || "")
-        setMbti(data.mbti || "")
       }
     } catch (err) {
       console.error("Failed to load profile:", err)
@@ -214,7 +192,6 @@ export function MyProfileSettings() {
           bio: bio.trim() || null,
           favorite_team: favoriteTeam.trim() || null,
           favorite_player: favoritePlayer.trim() || null,
-          mbti: mbti || null,
         }),
       })
 
@@ -235,19 +212,6 @@ export function MyProfileSettings() {
               body: JSON.stringify({
                 amount: 200,
                 description: "최애 팀/선수 첫 설정 보상",
-                transaction_type: "onboarding_reward",
-              }),
-            })
-          )
-        }
-        if (mbti && !profile?.mbti) {
-          rewards.push(
-            fetch("/api/gold/reward", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                amount: 100,
-                description: "MBTI 첫 설정 보상",
                 transaction_type: "onboarding_reward",
               }),
             })
@@ -631,37 +595,6 @@ export function MyProfileSettings() {
                     placeholder="최애 선수 (예: 손흥민, 페이커)"
                     maxLength={30}
                   />
-                </div>
-
-                <Separator />
-
-                {/* MBTI */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs font-semibold">MBTI</Label>
-                    {!profile?.mbti && (
-                      <span className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">
-                        <Coins className="h-2.5 w-2.5" />
-                        +100G
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-4 gap-1">
-                    {MBTI_TYPES.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setMbti(mbti === type ? "" : type)}
-                        className={`rounded-md py-1.5 text-[10px] font-bold transition-all ${
-                          mbti === type
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <Separator />

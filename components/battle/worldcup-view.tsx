@@ -93,7 +93,7 @@ export function WorldcupView({ room, onBack }: WorldcupViewProps) {
           </button>
         </div>
 
-        <WinnerStatsSection battleId={room.id} stats={wc.stats} />
+        <WinnerStatsSection stats={wc.stats} />
       </div>
     )
   }

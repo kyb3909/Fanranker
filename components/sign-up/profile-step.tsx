@@ -4,25 +4,6 @@ import { Input } from "@/components/ui/input"
 import { ChevronRight, User, Camera, Loader2, Coins } from "lucide-react"
 import Image from "next/image"
 
-const MBTI_TYPES = [
-  "INTJ",
-  "INTP",
-  "ENTJ",
-  "ENTP",
-  "INFJ",
-  "INFP",
-  "ENFJ",
-  "ENFP",
-  "ISTJ",
-  "ISFJ",
-  "ESTJ",
-  "ESFJ",
-  "ISTP",
-  "ISFP",
-  "ESTP",
-  "ESFP",
-] as const
-
 interface ProfileStepProps {
   nickname: string
   setNickname: (v: string) => void
@@ -37,8 +18,6 @@ interface ProfileStepProps {
   setFavoriteTeam: (v: string) => void
   favoritePlayer: string
   setFavoritePlayer: (v: string) => void
-  mbti: string
-  setMbti: (v: string) => void
   onNext: () => void
   onBack: () => void
 }
@@ -57,8 +36,6 @@ export function ProfileStep({
   setFavoriteTeam,
   favoritePlayer,
   setFavoritePlayer,
-  mbti,
-  setMbti,
   onNext,
   onBack,
 }: ProfileStepProps) {
@@ -181,36 +158,6 @@ export function ProfileStep({
         </div>
         <p className="text-muted-foreground mt-2 text-[11px]">
           하나라도 입력하면 100 골드를 드려요!
-        </p>
-      </div>
-
-      {/* MBTI */}
-      <div className="border-border bg-muted/30 mb-4 rounded-lg border p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Coins className="h-4 w-4 text-amber-500" />
-          <p className="text-foreground text-sm font-medium">MBTI</p>
-          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
-            +100 골드
-          </span>
-        </div>
-        <div className="grid grid-cols-4 gap-1.5">
-          {MBTI_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setMbti(mbti === type ? "" : type)}
-              className={`rounded-lg py-2 text-xs font-bold transition-all ${
-                mbti === type
-                  ? "bg-primary text-white shadow-sm"
-                  : "bg-background border-border text-foreground hover:bg-muted border"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-        <p className="text-muted-foreground mt-2 text-[11px]">
-          MBTI를 선택하면 100 골드 + 게임에서 MBTI별 통계를 볼 수 있어요!
         </p>
       </div>
 

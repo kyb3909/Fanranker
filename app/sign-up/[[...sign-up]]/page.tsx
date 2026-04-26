@@ -57,7 +57,6 @@ export default function SignUpPage() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [favoriteTeam, setFavoriteTeam] = useState("")
   const [favoritePlayer, setFavoritePlayer] = useState("")
-  const [mbti, setMbti] = useState("")
 
   // ── Step 4: Communities ──
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set())
@@ -376,7 +375,6 @@ export default function SignUpPage() {
           bio: bio.trim() || null,
           favorite_team: favoriteTeam.trim() || null,
           favorite_player: favoritePlayer.trim() || null,
-          mbti: mbti || null,
           onboarding_completed: true,
         }),
       })
@@ -413,21 +411,6 @@ export default function SignUpPage() {
         )
       }
 
-      // MBTI 설정 보상: +100 골드
-      if (mbti) {
-        rewardPromises.push(
-          fetch("/api/gold/reward", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              amount: 100,
-              description: "온보딩 MBTI 설정 보상",
-              transaction_type: "onboarding_reward",
-            }),
-          })
-        )
-      }
-
       // 보상 지급 완료 후 리다이렉트 (fetch 취소 방지)
       if (rewardPromises.length > 0) {
         await Promise.allSettled(rewardPromises)
@@ -458,7 +441,6 @@ export default function SignUpPage() {
     bio,
     favoriteTeam,
     favoritePlayer,
-    mbti,
     selectedSlugs,
     signupMethod,
     router,
@@ -556,8 +538,6 @@ export default function SignUpPage() {
               setFavoriteTeam={setFavoriteTeam}
               favoritePlayer={favoritePlayer}
               setFavoritePlayer={setFavoritePlayer}
-              mbti={mbti}
-              setMbti={setMbti}
               onNext={() => setStep(4)}
               onBack={() => setStep(isAlreadySignedIn ? 1 : 2)}
             />

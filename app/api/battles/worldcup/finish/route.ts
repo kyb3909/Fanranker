@@ -38,41 +38,6 @@ export async function POST(request: NextRequest) {
     // 우승 횟수 증가
     await supabase.rpc("increment_worldcup_win", { p_candidate_id: winner_id })
 
-    // MBTI 우승 통계 + 참여자 기록 (비동기)
-    try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("mbti")
-        .eq("user_id", user.id)
-        .single()
-
-      if (profile?.mbti) {
-        const { data: sess } = await supabase
-          .from("worldcup_sessions")
-          .select("battle_id")
-          .eq("id", session_id)
-          .single()
-
-        if (sess?.battle_id) {
-          // 우승자에 대한 MBTI 우승 기록
-          await supabase.rpc("record_mbti_vote", {
-            p_battle_id: sess.battle_id,
-            p_candidate_id: winner_id,
-            p_mbti: profile.mbti,
-            p_is_winner: true,
-          })
-
-          // MBTI 참여자 수 기록
-          await supabase.rpc("record_mbti_participant", {
-            p_battle_id: sess.battle_id,
-            p_mbti: profile.mbti,
-          })
-        }
-      }
-    } catch {
-      // MBTI 통계 실패는 무시
-    }
-
     return NextResponse.json({ success: true })
   } catch (error) {
     return apiError("월드컵 완료 처리 실패", 500, error)
