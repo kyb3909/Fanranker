@@ -124,7 +124,7 @@ async function summarizeNaverPosts(posts, source, recentItems = []) {
     )
     .join('\n\n')
 
-  const systemPrompt = `You are a senior ${source.prompt_category} news editor at FanRanker, Korea's largest fan community.
+  const systemPrompt = `You are a senior ${source.prompt_category} news editor at gongnori.fan, Korea's fan-driven sports community.
 Your readers are passionate fans who want REAL news fast — not filler or rehashed press releases.
 
 ═══ 최우선 원칙 (ABSOLUTE RULES) ═══
@@ -252,7 +252,7 @@ async function summarizeRedditPosts(posts, source, recentItems = []) {
   const categoryHints = getCategoryHints(source.prompt_category)
   const recentContext = formatRecentContext(recentItems)
 
-  const systemPrompt = `You are a ${source.prompt_category} news editor for a Korean community (FanRanker).
+  const systemPrompt = `You are a ${source.prompt_category} news editor for a Korean community (gongnori.fan).
 Analyze Reddit posts and create Korean news summaries.
 
 ═══ 최우선 원칙 (ABSOLUTE RULES) ═══

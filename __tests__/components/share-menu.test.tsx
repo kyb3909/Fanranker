@@ -6,7 +6,7 @@ import { ShareMenu } from "@/components/share-menu"
 describe("ShareMenu", () => {
   beforeEach(() => {
     Object.defineProperty(window, "location", {
-      value: { origin: "https://fanranker.com" },
+      value: { origin: "https://gongnori.fan" },
       writable: true,
       configurable: true,
     })

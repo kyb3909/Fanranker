@@ -20,7 +20,7 @@ config({ path: resolve(process.cwd(), ".env.local") })
 config({ path: resolve(process.cwd(), ".env") })
 
 const BOT_USER_ID = "user_reddit_seed_bot"
-const USER_AGENT = "RedditSeedBot/1.0 (by /u/FanRanker)"
+const USER_AGENT = "RedditSeedBot/1.0 (by /u/gongnori)"
 
 // 서브레딧 → community_slug 매핑
 const SUBREDDIT_TO_COMMUNITY: Record<string, string> = {

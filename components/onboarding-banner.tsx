@@ -96,7 +96,7 @@ export function OnboardingBanner({ onFollowChange }: { onFollowChange?: () => vo
 
       <div className="p-4">
         <p className="text-foreground mb-3 pr-6 text-[15px] font-bold">
-          FanRanker에서 이런 걸 할 수 있어요
+          공놀이에서 이런 걸 할 수 있어요
         </p>
 
         {/* 3가지 핵심 기능 카드 */}

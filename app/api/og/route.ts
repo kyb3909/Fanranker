@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(parsedUrl.toString(), {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; FanRankerBot/1.0; +https://gongnori.fan)",
+        "User-Agent": "Mozilla/5.0 (compatible; GongnoriBot/1.0; +https://gongnori.fan)",
         Accept: "text/html",
       },
       redirect: "follow",

@@ -20,7 +20,7 @@ export class WorldMapScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#1a1a2e")
 
     this.add
-      .text(400, 220, "FanRanker Stadium — Phaser Preview", {
+      .text(400, 220, "Gongnori Stadium — Phaser Preview", {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",

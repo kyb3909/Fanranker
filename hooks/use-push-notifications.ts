@@ -65,7 +65,7 @@ export function usePushNotifications({
         const diff = newCount - prevCountRef.current
         showNotification("새 알림", {
           body: `새로운 알림이 ${diff}개 도착했습니다.`,
-          tag: "fanranker-notification",
+          tag: "gongnori-notification",
         })
         onNewNotification?.(newCount)
       }

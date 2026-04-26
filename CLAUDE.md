@@ -2,13 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# FanRanker Community
+# gongnori.fan Community
 
 스포츠 + 컬처 통합 커뮤니티 + 승부예측 플랫폼 (Next.js 15 / Supabase / Clerk).
 
 ## Supabase MCP
-- **프로젝트**: FanRanker (`ekysrlhdrapmsnrkytif.supabase.co`)
-- 세션 시작 시 사용자에게 알릴 것: "현재 Supabase MCP는 **FanRanker (ekysrlhdrapmsnrkytif)** 프로젝트에 연결되어 있습니다."
+- **프로젝트**: gongnori.fan (`ekysrlhdrapmsnrkytif.supabase.co`)
+- 세션 시작 시 사용자에게 알릴 것: "현재 Supabase MCP는 **gongnori.fan (ekysrlhdrapmsnrkytif)** 프로젝트에 연결되어 있습니다."
 
 ## Git
 - **`git push` 금지**. 사용자가 직접 push함. 커밋까지만.

@@ -8,7 +8,7 @@
 | 버전 | v0.1 (초안) |
 | 상태 | Draft — 리뷰 대기 |
 | 작성일 | 2026-04-22 |
-| 서비스 | gongnori.fan (FanRanker) |
+| 서비스 | gongnori.fan |
 | 대상 플랫폼 | Web (모바일 반응형 Phase 2+) |
 | 대체 문서 | `docs/PRD-live-room.md` — 본 문서에 흡수됨 (경기 중계는 Phase 5에서 재편입) |
 

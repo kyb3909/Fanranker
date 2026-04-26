@@ -23,7 +23,7 @@
 ## ADMIN-IA (Information Architecture)
 
 ```
-Admin Console (admin.fanranker.com)
+Admin Console (admin.gongnori.fan)
 ├── 🏠 Dashboard (Single Pane of Glass)
 │   ├── KPI Cards (DAU, Revenue, Predictions, Content)
 │   ├── Live Activity Feed

@@ -11,12 +11,12 @@ describe("PLANS", () => {
     expect(PLANS.premium.id).toBe("premium")
   })
 
-  it("premium plan name is FanRanker premium", () => {
-    expect(PLANS.premium.name).toBe("FanRanker 프리미엄")
+  it("premium plan name is 공놀이 premium", () => {
+    expect(PLANS.premium.name).toBe("공놀이 프리미엄")
   })
 
   it("premium plan order name describes monthly subscription", () => {
-    expect(PLANS.premium.orderName).toBe("FanRanker 프리미엄 월간 구독")
+    expect(PLANS.premium.orderName).toBe("공놀이 프리미엄 월간 구독")
   })
 
   it("premium plan costs 9900 KRW", () => {

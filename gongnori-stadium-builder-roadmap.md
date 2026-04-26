@@ -1,4 +1,4 @@
-# FanRanker 경기장 건설 시스템 — 구현 로드맵
+# 공놀이 경기장 건설 시스템 — 구현 로드맵
 
 ## 전체 구조 요약
 
@@ -661,7 +661,7 @@ window.dispatchEvent(new CustomEvent('event-name', { detail: data }));
 // game.scene.getScene('StadiumChat').events.emit('send-chat', message);
 ```
 
-### 6-3. FanRanker 기존 포인트 시스템 연동
+### 6-3. 공놀이 기존 포인트 시스템 연동
 
 미니게임 점수를 기존 activity_points에도 반영:
 

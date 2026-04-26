@@ -8,7 +8,7 @@
 | 버전 | v1.0 |
 | 상태 | Draft |
 | 작성일 | 2026-03-15 |
-| 서비스 | gongnori.fan (FanRanker) |
+| 서비스 | gongnori.fan |
 | 대상 플랫폼 | Web (모바일 반응형 포함) |
 
 ---

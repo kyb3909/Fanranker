@@ -5,8 +5,8 @@
 export const PLANS = {
   premium: {
     id: "premium",
-    name: "FanRanker 프리미엄",
-    orderName: "FanRanker 프리미엄 월간 구독",
+    name: "공놀이 프리미엄",
+    orderName: "공놀이 프리미엄 월간 구독",
     amount: 9900,
     currency: "KRW" as const,
     intervalDays: 30,

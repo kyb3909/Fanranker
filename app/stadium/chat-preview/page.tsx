@@ -1,7 +1,7 @@
 import { GameCanvasDynamic } from "@/components/stadium/game-canvas-dynamic"
 
 export const metadata = {
-  title: "경기장 채팅방 프리뷰 | FanRanker",
+  title: "경기장 채팅방 프리뷰 | gongnori.fan",
 }
 
 /**

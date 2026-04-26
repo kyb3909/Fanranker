@@ -210,7 +210,7 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
 
   try {
     const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
-      headers: { "User-Agent": "FanRanker/1.0" },
+      headers: { "User-Agent": "gongnori.fan/1.0" },
       signal: AbortSignal.timeout(5000),
     })
     if (res.ok) {

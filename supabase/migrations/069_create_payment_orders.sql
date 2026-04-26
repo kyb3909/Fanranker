@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS payment_orders (
 
     -- Order details
     order_type text NOT NULL CHECK (order_type IN ('subscription', 'content_purchase')),
-    order_name text NOT NULL,              -- Display name: "FanRanker 프리미엄 구독" etc.
+    order_name text NOT NULL,              -- Display name: "공놀이 프리미엄 구독" etc.
     amount integer NOT NULL,               -- KRW amount
     currency text DEFAULT 'KRW',
 

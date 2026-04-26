@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og"
 
-export const alt = "FanRanker - 스포츠 예측 커뮤니티"
+export const alt = "공놀이 - 스포츠 예측 커뮤니티"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -34,7 +34,7 @@ export default function OgImage() {
             letterSpacing: "-2px",
           }}
         >
-          FanRanker
+          gongnori.fan
         </div>
       </div>
       <div
