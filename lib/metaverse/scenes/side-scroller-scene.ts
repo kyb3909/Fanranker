@@ -263,8 +263,8 @@ export class SideScrollerScene extends Phaser.Scene {
           this.orientation = this.facing
           this.player.setTexture(texKeyRotation(this.facing, this.presetKey))
           this.player.setFlipX(false)
-          // kick 중 적용한 임시 스케일 복원
-          this.player.setScale(AVATAR_SCALE)
+          // kick 중 적용한 임시 스케일 복원 — body.bottom 고정으로 자유낙하 방지
+          this.setScaleKeepingFeet(AVATAR_SCALE)
         }
       }
     )
@@ -455,7 +455,8 @@ export class SideScrollerScene extends Phaser.Scene {
         this.player.play(animKey("kick", "east", this.presetKey), true)
         this.player.setFlipX(this.facing === "west")
         // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 idle 대비 과하게 큰 경우 스케일 다운.
-        this.player.setScale(AVATAR_SCALE * this.presetKickScale)
+        // body.bottom 유지로 발 위치 고정 (스케일 변화에 따른 body world-Y drift 차단).
+        this.setScaleKeepingFeet(AVATAR_SCALE * this.presetKickScale)
         // 킥 중엔 공 시각만 숨김. body 는 그대로 두고 floor collider 가 알아서 처리.
         // (이전 body.enable / allowGravity 토글 시도들은 모두 부작용 발생.)
         this.pendingBallX = this.ball.x
@@ -634,6 +635,29 @@ export class SideScrollerScene extends Phaser.Scene {
     const dy = this.ball.y - this.player.y
     const dist = Math.sqrt(dx * dx + dy * dy)
     return dist <= BALL_KICK_RANGE
+  }
+
+  /**
+   * sprite scale 을 변경하되 body.bottom 의 world Y 는 유지.
+   *
+   * Phaser arcade body 의 world position 은 `sprite.y − displayOriginY * scale + offset.y`
+   * 로 계산되어 sprite.scale 을 바꾸면 body 도 함께 이동함. kick 에서 0.65 → 1.0 으로
+   * 복원할 때 displayOriginY * scale 이 67.6 → 104 로 커지면서 body 가 ~36px 위로 떠
+   * 다음 프레임부터 중력으로 자유낙하했음. 이 helper 는 변경 전 body.bottom 을 기억했다가
+   * 변경 후 sprite.y 를 같은 양만큼 보정해 발이 항상 같은 자리에 머물게 함.
+   */
+  private setScaleKeepingFeet(targetScale: number) {
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    body.updateFromGameObject()
+    const bottomBefore = body.bottom
+    this.player.setScale(targetScale)
+    body.updateFromGameObject()
+    const delta = bottomBefore - body.bottom
+    if (Math.abs(delta) > 0.5) {
+      this.player.y += delta
+      body.updateFromGameObject()
+      body.setVelocityY(0)
+    }
   }
 
   /** kick anim 완료 시 호출 — 숨겨뒀던 공을 원래 위치에서 속도·각도로 발사. */
