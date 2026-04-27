@@ -56,17 +56,17 @@ export function PhaserCanvas({
     const unsubReport = sceneBridge.on("user:report", (payload) => {
       if (payload) setReportTarget({ userId: payload.userId, nickname: payload.nickname })
     })
-    // 웸블리 아이콘 클릭 → 사이드스크롤러 씬으로 라우팅
+    // 스타디움 아이콘 클릭 → Highbury 인도어 맵으로 라우팅
     const isGuest = identity.userId.startsWith("guest-")
-    const unsubWembley = sceneBridge.on("wembley:enter", () => {
-      trackEvent({ name: "metaverse_wembley_enter", params: { is_guest: isGuest } })
-      router.push("/metaverse/interior-demo")
+    const unsubHighbury = sceneBridge.on("highbury:enter", () => {
+      trackEvent({ name: "metaverse_highbury_enter", params: { is_guest: isGuest } })
+      router.push("/metaverse/highbury")
     })
     return () => {
       unsub()
       unsubLeave()
       unsubReport()
-      unsubWembley()
+      unsubHighbury()
     }
   }, [router, identity.userId])
 

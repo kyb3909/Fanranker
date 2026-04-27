@@ -559,8 +559,8 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   /**
-   * 웸블리 경기장 입구 — 월드맵 상의 클릭 가능한 hex 스타디움 아이콘.
-   * 클릭 시 `wembley:enter` bridge 이벤트 발사 → 상위 React 래퍼가 /metaverse/interior-demo 로 라우팅.
+   * 하이버리 경기장 입구 — 월드맵 상의 클릭 가능한 hex 스타디움 아이콘.
+   * 클릭 시 `highbury:enter` bridge 이벤트 발사 → 상위 React 래퍼가 /metaverse/highbury 로 라우팅.
    * 호버 시 살짝 뜨고 배너 표시 (진입 CTA 명확화).
    */
   private drawWembleyEntrance(pinX: number, pinY: number) {
@@ -574,9 +574,9 @@ export class WorldMapScene extends Phaser.Scene {
       .setDepth(6)
       .setInteractive({ useHandCursor: true })
 
-    // "Wembley · 입장" 배지 — 아이콘 위쪽에 상시 표시
+    // "Highbury · 입장" 배지 — 아이콘 위쪽에 상시 표시
     const label = this.add
-      .text(x, y - 60, "🏟️  웸블리 · 클릭해 입장", {
+      .text(x, y - 60, "🏟️  하이버리 · 클릭해 입장", {
         fontFamily: "sans-serif",
         fontSize: "13px",
         fontStyle: "bold",
@@ -597,7 +597,7 @@ export class WorldMapScene extends Phaser.Scene {
       this.tweens.add({ targets: label, scale: 1.0, duration: 150 })
     })
     icon.on("pointerdown", () => {
-      sceneBridge.emit("wembley:enter")
+      sceneBridge.emit("highbury:enter")
     })
   }
 

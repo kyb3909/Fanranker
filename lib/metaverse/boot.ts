@@ -11,11 +11,14 @@ import {
   WORLD_MAP_SCENE_KEY,
   SideScrollerScene,
   SIDE_SCROLLER_SCENE_KEY,
+  IndoorMapScene,
+  INDOOR_MAP_SCENE_KEY,
 } from "./scenes"
 import { METAVERSE } from "./constants"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "./types"
 import type { WorldChannel } from "./realtime/world-channel"
 import type { SideScrollerChannel } from "./realtime/sidescroll-channel"
+import type { MapId } from "./maps/map-config"
 
 export interface BootOptions {
   parent: HTMLElement
@@ -110,6 +113,43 @@ export function bootSideScrollerDemo({
     dom: { createContainer: false },
   })
   game.scene.start(SIDE_SCROLLER_SCENE_KEY, { identity, channel })
+  return game
+}
+
+/**
+ * Indoor map (Highbury / Clockend 등) 부팅. 데이터 기반 사이드뷰 씬으로,
+ * mapId 만 바꾸면 동일 씬이 재시작되며 페이드 전환됨.
+ */
+export interface IndoorMapBootOptions {
+  parent: HTMLElement
+  identity: MetaversePlayerIdentity
+  mapId: MapId
+}
+
+export function bootIndoorMap({ parent, identity, mapId }: IndoorMapBootOptions): Phaser.Game {
+  const game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent,
+    width: parent.clientWidth,
+    height: parent.clientHeight,
+    backgroundColor: "#000",
+    physics: {
+      default: "arcade",
+      arcade: {
+        gravity: { x: 0, y: 0 }, // 씬 내부에서 per-scene 지정
+        debug: false,
+      },
+    },
+    scale: {
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    pixelArt: true,
+    render: { antialias: false },
+    scene: [IndoorMapScene],
+    dom: { createContainer: false },
+  })
+  game.scene.start(INDOOR_MAP_SCENE_KEY, { identity, mapId })
   return game
 }
 
