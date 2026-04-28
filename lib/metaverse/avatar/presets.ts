@@ -73,23 +73,21 @@ export const AVATAR_PRESETS: Record<string, AvatarPreset> = {
     label: "빨강 유니폼 (홈)",
     texturePrefix: "avatar-arsenal-home",
     assetBase: "/metaverse/avatars/arsenal-home",
-    // PixelLab pro size=128 → canvas 208×208 (기본과 동일).
-    frameWidth: 208,
-    frameHeight: 208,
-    walkFrames: 4,
-    jumpFrames: 7,
-    kickFrames: 4,
+    // v3: PixelLab pro size=128 → canvas 192×192 (chibi + brown hair + white short-sleeves + polo collar).
+    frameWidth: 192,
+    frameHeight: 192,
+    walkFrames: 4, // walking-4-frames template
+    jumpFrames: 9, // jumping-1 template
+    kickFrames: 6, // flying-kick template
     walkFps: 10,
-    jumpFps: 10,
+    jumpFps: 12, // 9프레임 × 83ms ≈ 750ms airtime
     kickFps: 12,
-    // 실측 east.png: bbox (87, 61) - (119, 160). 기본 프리셋과 ±2px 내 거의 동일.
-    bodyWidth: 32,
-    bodyHeight: 99,
-    bodyOffsetX: 87,
-    bodyOffsetY: 61,
-    // 커스텀 kick 애니 실측: max frame height 156px (idle 99px 대비 +57%).
-    // 0.65 로 스케일 다운 시 kick feet y 가 idle 과 거의 일치 + 크기도 비슷해져 전환이 자연스러움.
-    kickScale: 0.65,
+    // 실측 east.webp: bbox (76, 48) - (116, 142). 캐릭터 41×95 픽셀.
+    bodyWidth: 41,
+    bodyHeight: 95,
+    bodyOffsetX: 76,
+    bodyOffsetY: 48,
+    // kickScale 제거 — flying-kick 템플릿이 idle 과 같은 사이즈로 생성돼서 보정 불필요
   },
 }
 

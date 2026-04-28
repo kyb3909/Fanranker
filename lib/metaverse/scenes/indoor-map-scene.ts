@@ -23,6 +23,8 @@ import {
   texKeyIdle,
   texKeyRotation,
   animKey,
+  rotationPath,
+  TURN_FRAME_MS,
   type Facing,
   type RotationDir,
 } from "@/lib/metaverse/avatar/pro-avatar-xl"
@@ -75,7 +77,7 @@ interface DoorHandle {
   prompt: Phaser.GameObjects.Text
 }
 
-type PlayerState = "idle" | "walking" | "jumping" | "kicking"
+type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
 
 export class IndoorMapScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -109,6 +111,11 @@ export class IndoorMapScene extends Phaser.Scene {
   private facing: Facing = "east"
   private orientation: RotationDir = "east"
   private state: PlayerState = "idle"
+
+  // 8방향 turn 애니 — ↑/↓ 로 정면(south)/뒤통수(north) 등 회전 시 프레임 시퀀스
+  private turnPath: RotationDir[] = []
+  private turnFrameIdx = 0
+  private turnFrameTimer = 0
   /** 페이드 전환 중에는 입력·도어 트리거 무시 — 중복 트리거 방지 */
   private isTransitioning = false
 
@@ -135,6 +142,9 @@ export class IndoorMapScene extends Phaser.Scene {
     this.pendingBallY = null
     this.kickLockY = null
     this.ball = null
+    this.turnPath = []
+    this.turnFrameIdx = 0
+    this.turnFrameTimer = 0
   }
 
   preload() {
@@ -304,6 +314,22 @@ export class IndoorMapScene extends Phaser.Scene {
       return
     }
 
+    // 회전 중 — 좌우 입력 들어오면 즉시 취소하고 walking 으로, 아니면 프레임 진행
+    if (this.state === "turning") {
+      const leftDown = this.cursors.left?.isDown || this.wasd.A.isDown
+      const rightDown = this.cursors.right?.isDown || this.wasd.D.isDown
+      if (leftDown || rightDown) {
+        this.cancelTurn()
+        // fall through — 일반 입력 처리
+      } else {
+        this.advanceTurn(deltaMs)
+        body.setAccelerationX(0)
+        body.setDragX(GROUND_DRAG)
+        this.updateNameTag()
+        return
+      }
+    }
+
     const left = this.cursors.left?.isDown || this.wasd.A.isDown
     const right = this.cursors.right?.isDown || this.wasd.D.isDown
     const upPressed =
@@ -402,14 +428,68 @@ export class IndoorMapScene extends Phaser.Scene {
     this.updateChargeBar()
 
     // 도어 검사 — 위 입력 시 페이드 전환
+    let insideAnyDoor = false
     for (const handle of this.doorHandles) {
       const inside = handle.rect.contains(this.player.x, this.player.y)
       handle.prompt.setVisible(inside)
+      if (inside) insideAnyDoor = true
       if (inside && upPressed) {
         this.transitionToMap(handle.door.targetMapId, handle.door.targetSpawnX)
         return
       }
     }
+
+    // 정면(앞)/뒤통수 회전 — 정지 상태 + 도어 밖에서만. ↑ 도어 트리거 우선이므로
+    // 도어 안에선 ↑ 안 받음, ↓ 는 어디서든 가능.
+    const lookDownPressed =
+      Phaser.Input.Keyboard.JustDown(this.cursors.down!) ||
+      Phaser.Input.Keyboard.JustDown(this.wasd.S)
+    const isStationary = onGround && !left && !right && Math.abs(body.velocity.x) < 20
+    if (isStationary && this.state === "idle") {
+      if (upPressed && !insideAnyDoor) this.requestOrientation("north")
+      else if (lookDownPressed) this.requestOrientation("south")
+    }
+  }
+
+  // ============================================================
+  // 8방향 turn 애니 — ↑ 뒤통수, ↓ 앞면 회전
+  // ============================================================
+
+  private requestOrientation(target: RotationDir) {
+    if (this.state === "turning") return
+    if (this.orientation === target) return
+    const path = rotationPath(this.orientation, target)
+    if (path.length === 0) return
+    this.turnPath = path
+    this.turnFrameIdx = 0
+    this.turnFrameTimer = 0
+    this.orientation = target
+    this.state = "turning"
+    this.player.anims.stop()
+    this.player.setFlipX(false)
+    this.player.setTexture(texKeyRotation(path[0], this.presetKey))
+    this.turnFrameIdx = 1
+  }
+
+  private advanceTurn(deltaMs: number) {
+    this.turnFrameTimer += deltaMs
+    while (this.turnFrameTimer >= TURN_FRAME_MS && this.turnFrameIdx < this.turnPath.length) {
+      this.player.setTexture(texKeyRotation(this.turnPath[this.turnFrameIdx], this.presetKey))
+      this.turnFrameIdx++
+      this.turnFrameTimer -= TURN_FRAME_MS
+    }
+    if (this.turnFrameIdx >= this.turnPath.length) {
+      this.state = "idle"
+      this.turnPath = []
+      this.turnFrameIdx = 0
+    }
+  }
+
+  private cancelTurn() {
+    this.turnPath = []
+    this.turnFrameIdx = 0
+    this.turnFrameTimer = 0
+    this.state = "idle"
   }
 
   // ============================================================
