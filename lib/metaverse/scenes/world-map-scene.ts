@@ -107,25 +107,34 @@ export class WorldMapScene extends Phaser.Scene {
 
   preload() {
     preloadProAvatar(this)
+    if (!this.textures.exists("england-map")) {
+      this.load.image("england-map", "/map/regions/england-map.webp")
+    }
     if (!this.textures.exists("wembley-hex")) {
       this.load.image("wembley-hex", "/map/objects/hex-stadium-wembley.webp")
+    }
+    if (!this.textures.exists("highbury-icon")) {
+      this.load.image("highbury-icon", "/map/objects/highbury-icon.webp")
     }
   }
 
   create() {
-    const { WORLD_WIDTH, WORLD_HEIGHT, COLOR_BG, COLOR_LAND, COLOR_WATER } = METAVERSE
+    const { WORLD_WIDTH, WORLD_HEIGHT, COLOR_BG } = METAVERSE
 
     this.cameras.main.setBackgroundColor(COLOR_BG)
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
 
-    // 플레이스홀더 지형
-    this.add.rectangle(0, 0, WORLD_WIDTH, WORLD_HEIGHT, COLOR_WATER).setOrigin(0, 0)
-    this.drawLandPlaceholder(COLOR_LAND)
-    this.drawPlazaMarker("런던 광장", 51, 70)
-    this.drawPlazaMarker("맨체스터 광장", 41, 42)
-    this.drawPlazaMarker("리버풀 광장", 38, 46)
-    this.drawPlazaMarker("뉴캐슬 광장", 52, 30)
-    this.drawWembleyEntrance(51, 67)
+    // 영국 픽셀아트 지도 — 1600×1066 캔버스 가득 채움
+    this.add.image(0, 0, "england-map").setOrigin(0, 0).setDepth(0)
+
+    // 광장 마커 + 스타디움 입구 — 실제 영국 지리 기준 percent 좌표
+    this.drawPlazaMarker("런던 광장", 72, 80)
+    this.drawPlazaMarker("맨체스터 광장", 58, 56)
+    this.drawPlazaMarker("리버풀 광장", 53, 58)
+    this.drawPlazaMarker("뉴캐슬 광장", 66, 39)
+    this.drawWembleyEntrance(71, 79)
+    // 실제 영국 Highbury 위치 — Wembley 동쪽 ~11km, 거의 같은 위도 (살짝 북)
+    this.drawHighburyEntrance(73, 78)
 
     // 광장 Plot 마커 + 기존 Signboard (Phase 3)
     this.renderPlots()
@@ -544,39 +553,46 @@ export class WorldMapScene extends Phaser.Scene {
   // Placeholder rendering helpers
   // ============================================================
 
-  private drawLandPlaceholder(color: number) {
-    const shapes = [
-      { x: 32, y: 20, w: 26, h: 40 }, // 스코틀랜드
-      { x: 28, y: 35, w: 32, h: 30 }, // 잉글랜드 북부~중부
-      { x: 34, y: 50, w: 30, h: 30 }, // 잉글랜드 남부
-      { x: 26, y: 50, w: 12, h: 16 }, // 웨일스
-    ]
-    for (const s of shapes) {
-      this.add
-        .rectangle(pinToWorldX(s.x), pinToWorldY(s.y), pinToWorldX(s.w), pinToWorldY(s.h), color)
-        .setOrigin(0, 0)
-    }
-  }
-
   /**
-   * 하이버리 경기장 입구 — 월드맵 상의 클릭 가능한 hex 스타디움 아이콘.
-   * 클릭 시 `highbury:enter` bridge 이벤트 발사 → 상위 React 래퍼가 /metaverse/highbury 로 라우팅.
-   * 호버 시 살짝 뜨고 배너 표시 (진입 CTA 명확화).
+   * 웸블리 경기장 — 데코레이션 (현재 클릭 비활성, 향후 Wembley 맵 추가 시 클릭 핸들러 연결).
+   * 라벨로 위치만 표시.
    */
   private drawWembleyEntrance(pinX: number, pinY: number) {
     const x = pinToWorldX(pinX)
     const y = pinToWorldY(pinY)
 
-    // hex-stadium-wembley webp 는 192×192 — 씬 WORLD 에 비례해 적당히 축소 (scale 0.5 = 96×96)
+    this.add.image(x, y, "wembley-hex").setScale(0.5).setDepth(6)
+
+    this.add
+      .text(x, y - 60, "🏟️  웸블리 구장", {
+        fontFamily: "sans-serif",
+        fontSize: "12px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        backgroundColor: "#37474f",
+        padding: { x: 6, y: 3 },
+      })
+      .setOrigin(0.5, 0.5)
+      .setDepth(7)
+  }
+
+  /**
+   * 하이버리 경기장 입구 — 클릭 가능한 isometric 픽셀아트 아이콘.
+   * 클릭 시 `highbury:enter` bridge 이벤트 → 상위 래퍼가 /metaverse/highbury 로 라우팅.
+   */
+  private drawHighburyEntrance(pinX: number, pinY: number) {
+    const x = pinToWorldX(pinX)
+    const y = pinToWorldY(pinY)
+
+    // highbury-icon.webp 는 384×384 — 월드맵 비율 맞춰 0.4 = 154×154 정도
     const icon = this.add
-      .image(x, y, "wembley-hex")
-      .setScale(0.5)
+      .image(x, y, "highbury-icon")
+      .setScale(0.4)
       .setDepth(6)
       .setInteractive({ useHandCursor: true })
 
-    // "Highbury · 입장" 배지 — 아이콘 위쪽에 상시 표시
     const label = this.add
-      .text(x, y - 60, "🏟️  하이버리 · 클릭해 입장", {
+      .text(x, y - 90, "🏟️  하이버리 · 클릭해 입장", {
         fontFamily: "sans-serif",
         fontSize: "13px",
         fontStyle: "bold",
@@ -587,13 +603,13 @@ export class WorldMapScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setDepth(7)
 
-    // 호버 피드백 — 아이콘 살짝 띄우기
+    // 호버 피드백 — 살짝 떠오르고 라벨 강조
     icon.on("pointerover", () => {
-      this.tweens.add({ targets: icon, y: y - 6, scale: 0.55, duration: 150 })
+      this.tweens.add({ targets: icon, y: y - 6, scale: 0.44, duration: 150 })
       this.tweens.add({ targets: label, scale: 1.05, duration: 150 })
     })
     icon.on("pointerout", () => {
-      this.tweens.add({ targets: icon, y, scale: 0.5, duration: 150 })
+      this.tweens.add({ targets: icon, y, scale: 0.4, duration: 150 })
       this.tweens.add({ targets: label, scale: 1.0, duration: 150 })
     })
     icon.on("pointerdown", () => {
