@@ -169,7 +169,7 @@ export function HomeClient({
       )}
       <main
         id="main-content"
-        className="mx-auto min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:hidden lg:max-w-[1280px]"
+        className="mx-auto hidden min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
         tabIndex={-1}
       >
         <h1 className="sr-only">gongnori.fan — 스포츠 팬 커뮤니티</h1>

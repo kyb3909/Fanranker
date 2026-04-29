@@ -371,14 +371,12 @@ export default async function CommunityPage({
         }))}
       />
 
-      {/* 모바일/태블릿: 기존 layout — NewsTicker는 페이지 상단 그대로 */}
-      <div className="lg:hidden">
-        <NewsTicker communitySlug={slug} />
-      </div>
+      {/* 모바일/태블릿: 기존 main 영역 — Minimal 셸이 모든 viewport 처리하므로 hidden 처리.
+          NewsTicker는 MinimalShell ticker slot에서 표시. */}
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
       <main
         id="main-content"
-        className="container mx-auto max-w-[1280px] px-4 py-6 lg:hidden"
+        className="container mx-auto hidden max-w-[1280px] px-4 py-6"
         tabIndex={-1}
       >
         {/* 12컬럼 그리드: 조밀한 간격 */}

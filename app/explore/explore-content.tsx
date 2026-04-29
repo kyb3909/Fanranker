@@ -166,7 +166,7 @@ function ExploreInner({ recentComments }: ExploreInnerProps) {
       {/* 모바일/태블릿: 기존 디자인 */}
       <main
         id="main-content"
-        className="container mx-auto max-w-[1280px] px-4 py-6 lg:hidden"
+        className="container mx-auto hidden max-w-[1280px] px-4 py-6"
         tabIndex={-1}
       >
         <div className="grid grid-cols-12 gap-6">

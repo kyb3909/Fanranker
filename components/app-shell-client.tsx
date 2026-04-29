@@ -24,8 +24,8 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   // 서비스의 일부라 헤더·탭바 유지 — 단 배너는 메인 피드에서만.
   const hideChrome = pathname.startsWith("/admin")
   const isHome = pathname === "/"
-  // Minimal Sport 디자인 페이지(담벼락/경기 예측): 데스크톱(lg+)에서는 자체 Topbar
-  // 사용 — 기존 Header 충돌 회피. 모바일/태블릿은 기존 셸 유지 (핸드오프 모바일 미정).
+  // Minimal Sport 디자인 페이지: 자체 Topbar가 모든 viewport에서 표시 →
+  // 기존 Header를 항상 숨김 (충돌 회피). 5 페이지 + 게시판 전부.
   const isMinimalSportPage =
     pathname === "/" ||
     pathname === "/prediction" ||
@@ -39,7 +39,7 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
 
   return (
     <div className="bg-background min-h-screen">
-      {!hideChrome && <div className={isMinimalSportPage ? "lg:hidden" : undefined}>{header}</div>}
+      {!hideChrome && !isMinimalSportPage && header}
       {/* 배너 = 피드 위 오버레이 레이어. 홈에서만 절대 위치로 상단 덮개. */}
       <div className="relative">
         {showBanner && (

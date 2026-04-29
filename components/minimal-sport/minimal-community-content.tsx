@@ -105,6 +105,7 @@ export function MinimalCommunityContent({
   totalCount,
   categories,
   recentComments,
+  ticker,
 }: MinimalCommunityContentProps) {
   const { sports, life } = useMemo(() => groupCategories(categories), [categories])
 
@@ -118,6 +119,7 @@ export function MinimalCommunityContent({
   return (
     <MinimalShell
       topbar={<MinimalTopbar active="운동장" />}
+      ticker={ticker}
       sidebar={<MinimalSidebar sports={sports} life={life} activeSlug={community.slug} />}
       aside={
         <MinimalRightAside>
@@ -134,14 +136,14 @@ export function MinimalCommunityContent({
             {community.name}
           </b>
         </div>
-        <div className="mt-1 flex items-end justify-between gap-3">
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
           <h1
-            className="text-[28px] leading-[1.15] font-extrabold"
+            className="text-[24px] leading-[1.15] font-extrabold sm:text-[28px]"
             style={{ color: "var(--ms-ink)", letterSpacing: "-0.035em" }}
           >
             {community.name}
           </h1>
-          <div className="flex items-center gap-2 pb-1">
+          <div className="flex flex-wrap items-center gap-2 pb-1">
             {community.members && (
               <span
                 className="font-archivo text-[12px] font-bold tabular-nums"
@@ -227,14 +229,14 @@ export function MinimalCommunityContent({
         </div>
       )}
 
-      {/* 게시판 테이블 — 번호/제목/글쓴이/시간/추천 */}
+      {/* 게시판 테이블 — 모바일은 2-row 간략, sm+ 5컬럼 */}
       <section
         className="overflow-hidden rounded-2xl border bg-[var(--ms-surface)]"
         style={{ borderColor: "var(--ms-line)" }}
       >
-        {/* 헤더 */}
+        {/* 헤더 — sm+에서만 (모바일은 헤더 없이 list) */}
         <div
-          className="grid grid-cols-[60px_1fr_120px_80px_60px] items-center gap-2 border-b px-4 py-2.5 text-[11px] font-bold"
+          className="hidden items-center gap-2 border-b px-4 py-2.5 text-[11px] font-bold sm:grid sm:grid-cols-[50px_1fr_90px_80px_50px]"
           style={{
             borderColor: "var(--ms-line)",
             backgroundColor: "var(--ms-bg)",
@@ -262,21 +264,22 @@ export function MinimalCommunityContent({
               <Link
                 key={post.id}
                 href={`/post/${post.id}`}
-                className="grid grid-cols-[60px_1fr_120px_80px_60px] items-center gap-2 border-b px-4 py-2.5 text-[12.5px] transition-colors last:border-b-0 hover:bg-[var(--ms-bg)]"
+                className="block border-b px-4 py-2.5 text-[12.5px] transition-colors last:border-b-0 hover:bg-[var(--ms-bg)] sm:grid sm:grid-cols-[50px_1fr_90px_80px_50px] sm:items-center sm:gap-2"
                 style={{
                   borderColor: "var(--ms-line)",
                   backgroundColor: post.isNotice ? "var(--ms-brand-soft)" : undefined,
                 }}
               >
-                <div
-                  className="font-archivo text-center text-[11px] font-bold tabular-nums"
-                  style={{
-                    color: post.isNotice ? "var(--ms-brand)" : "var(--ms-ink-3)",
-                  }}
-                >
-                  {rowNumber}
-                </div>
-                <div className="flex min-w-0 items-center gap-1.5">
+                {/* 모바일: 2-row layout (제목 + 메타) */}
+                <div className="flex min-w-0 items-center gap-1.5 sm:hidden">
+                  {post.isNotice && (
+                    <span
+                      className="font-archivo shrink-0 text-[11px] font-extrabold"
+                      style={{ color: "var(--ms-brand)" }}
+                    >
+                      공지
+                    </span>
+                  )}
                   {post.flair && (
                     <span
                       className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
@@ -301,16 +304,68 @@ export function MinimalCommunityContent({
                   )}
                 </div>
                 <div
-                  className="truncate text-center text-[11.5px]"
+                  className="mt-1 flex items-center gap-2 text-[11px] sm:hidden"
+                  style={{ color: "var(--ms-ink-3)" }}
+                >
+                  <span className="truncate">{post.author ?? "익명"}</span>
+                  <span>·</span>
+                  <span className="shrink-0">{ts}</span>
+                  <span>·</span>
+                  <span
+                    className="font-archivo shrink-0 font-bold tabular-nums"
+                    style={{ color: "var(--ms-ink)" }}
+                  >
+                    추천 {post.upvotes ?? 0}
+                  </span>
+                </div>
+
+                {/* sm+: 5컬럼 grid */}
+                <div
+                  className="font-archivo hidden text-center text-[11px] font-bold tabular-nums sm:block"
+                  style={{
+                    color: post.isNotice ? "var(--ms-brand)" : "var(--ms-ink-3)",
+                  }}
+                >
+                  {rowNumber}
+                </div>
+                <div className="hidden min-w-0 items-center gap-1.5 sm:flex">
+                  {post.flair && (
+                    <span
+                      className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{
+                        backgroundColor: `${post.flair.color}20`,
+                        color: post.flair.color,
+                      }}
+                    >
+                      {post.flair.name}
+                    </span>
+                  )}
+                  <span className="truncate font-medium" style={{ color: "var(--ms-ink)" }}>
+                    {post.title}
+                  </span>
+                  {(post.comments ?? 0) > 0 && (
+                    <span
+                      className="font-archivo shrink-0 text-[11px] font-bold tabular-nums"
+                      style={{ color: "var(--ms-brand)" }}
+                    >
+                      [{post.comments}]
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="hidden truncate text-center text-[11.5px] sm:block"
                   style={{ color: "var(--ms-ink-2)" }}
                 >
                   {post.author ?? "익명"}
                 </div>
-                <div className="text-center text-[11px]" style={{ color: "var(--ms-ink-3)" }}>
+                <div
+                  className="hidden text-center text-[11px] sm:block"
+                  style={{ color: "var(--ms-ink-3)" }}
+                >
                   {ts}
                 </div>
                 <div
-                  className="font-archivo text-center text-[11.5px] font-bold tabular-nums"
+                  className="font-archivo hidden text-center text-[11.5px] font-bold tabular-nums sm:block"
                   style={{ color: "var(--ms-ink)" }}
                 >
                   {post.upvotes ?? 0}

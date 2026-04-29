@@ -38,16 +38,16 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
   const { openSignIn } = useClerk()
 
   return (
-    <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-8">
+    <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-2 px-3 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
       {/* 로고 */}
       <Link href="/" className="flex items-center gap-2" aria-label="홈">
         <span
-          className="inline-block h-7 w-7 rounded-full"
+          className="inline-block h-6 w-6 rounded-full lg:h-7 lg:w-7"
           style={{ backgroundColor: "var(--ms-brand)" }}
           aria-hidden
         />
         <span
-          className="text-[18px] leading-none font-extrabold"
+          className="text-[15px] leading-none font-extrabold sm:text-[18px]"
           style={{ letterSpacing: "-0.03em" }}
         >
           gongnori
@@ -56,8 +56,8 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         </span>
       </Link>
 
-      {/* Nav */}
-      <nav className="flex items-center gap-1">
+      {/* Nav — 데스크톱(lg+)만. 모바일은 mobile-tab-bar로 nav. */}
+      <nav className="hidden items-center gap-1 lg:flex">
         {NAV_ITEMS.map((item) => {
           const isActive = item.label === active
           return (
@@ -75,14 +75,24 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
           )
         })}
       </nav>
+      {/* 모바일: nav 자리 채움 */}
+      <div className="lg:hidden" />
 
       {/* 우측 actions — 기존 Header 컴포넌트 재사용 (실데이터 자동 연결) */}
-      <div className="flex items-center justify-end gap-2">
-        {/* 검색 pill */}
+      <div className="flex items-center justify-end gap-1 sm:gap-2">
+        {/* 검색 — 모바일은 아이콘만, 데스크톱은 pill */}
         <button
           type="button"
           onClick={() => router.push("/search")}
-          className="flex h-9 w-[220px] items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg)] px-4 text-[12px] text-[var(--ms-ink-3)] transition-colors hover:border-[var(--ms-line-hover)]"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ms-ink-3)] transition-colors hover:bg-[var(--ms-bg)] lg:hidden"
+          aria-label="검색"
+        >
+          <Search className="h-[18px] w-[18px]" />
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/search")}
+          className="hidden h-9 w-[220px] items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg)] px-4 text-[12px] text-[var(--ms-ink-3)] transition-colors hover:border-[var(--ms-line-hover)] lg:flex"
           aria-label="검색"
         >
           <Search className="h-4 w-4" />
@@ -90,7 +100,8 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         </button>
 
         <SignedIn>
-          <div className="flex items-center gap-2">
+          {/* 잔액은 데스크톱에서만 — 모바일은 user menu에서 확인. */}
+          <div className="hidden items-center gap-2 sm:flex">
             <GoldBalance />
             <BallBalance />
           </div>

@@ -20,9 +20,9 @@ interface MinimalShellProps {
  */
 export function MinimalShell({ topbar, sidebar, aside, ticker, children }: MinimalShellProps) {
   return (
-    <div className="theme-minimal-sport hidden min-h-screen lg:block">
+    <div className="theme-minimal-sport min-h-screen">
       <div className="mx-auto w-full max-w-[1280px]">
-        <header className="sticky top-0 z-40 h-16 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl">
+        <header className="sticky top-0 z-40 h-14 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl lg:h-16">
           {topbar}
         </header>
         {ticker && (
@@ -30,10 +30,16 @@ export function MinimalShell({ topbar, sidebar, aside, ticker, children }: Minim
             {ticker}
           </div>
         )}
-        <div className="grid grid-cols-[220px_1fr_300px] gap-0">
-          <aside className="border-r border-[var(--ms-line)] px-4 py-6">{sidebar}</aside>
-          <main className="min-w-0 px-8 py-7">{children}</main>
-          <aside className="border-l border-[var(--ms-line)] px-4 py-6">{aside}</aside>
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_300px]">
+          <aside className="hidden border-r border-[var(--ms-line)] px-4 py-6 lg:block">
+            {sidebar}
+          </aside>
+          <main className="safe-area-pb-tabbar min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+            {children}
+          </main>
+          <aside className="hidden border-l border-[var(--ms-line)] px-4 py-6 lg:block">
+            {aside}
+          </aside>
         </div>
       </div>
     </div>

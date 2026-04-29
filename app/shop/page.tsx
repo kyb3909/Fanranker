@@ -36,7 +36,7 @@ export default function ShopRoute() {
       {/* 모바일/태블릿: 기존 layout */}
       <main
         id="main-content"
-        className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6 lg:hidden"
+        className="mx-auto hidden max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6"
         tabIndex={-1}
       >
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
