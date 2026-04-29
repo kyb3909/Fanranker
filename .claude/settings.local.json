@@ -126,7 +126,26 @@
       "Bash(mkdir -p D:/tmp/avatar-xl-extract)",
       "Bash(unzip -o D:/tmp/avatar-xl-full.zip)",
       "Bash(mkdir -p D:/tmp/avatar-xl-v2)",
-      "Bash(unzip -o D:/tmp/avatar-xl-v2.zip)"
+      "Bash(unzip -o D:/tmp/avatar-xl-v2.zip)",
+      "Bash(git mv *)",
+      "Bash(node scripts/avatar-defringe.mjs --dry-run)",
+      "Bash(cp image.png /tmp/before.png)",
+      "Bash(cp image.png /tmp/after.png)",
+      "Bash(node scripts/avatar-defringe.mjs /tmp/after.png)",
+      "mcp__pixellab__delete_character",
+      "Bash(unzip -o /tmp/arsenal-v3.zip)",
+      "Bash(node scripts/avatar-defringe.mjs public/metaverse/avatars/arsenal-home)",
+      "Bash(bash /tmp/check_apis.sh)",
+      "Bash(bash /tmp/find_dead_routes.sh)",
+      "Bash(bash /tmp/check_imports.sh)",
+      "Bash(bash /tmp/check_all_comps.sh)",
+      "Bash(bash /tmp/check_links.sh)",
+      "Bash(bash /tmp/check_missing_routes.sh)",
+      "Bash(bash /tmp/api_mismatch.sh)",
+      "Bash(bash /tmp/unused_apis.sh)",
+      "Bash(bash /tmp/final_audit.sh)",
+      "Bash(bash /tmp/true_dead_routes.sh)",
+      "Bash(taskkill //PID 71380 //F)"
     ]
   }
 }
