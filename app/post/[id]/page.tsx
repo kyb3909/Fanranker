@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { PostDetailContent } from "@/components/post-detail/post-detail-content"
+import { PostDetailShell } from "@/components/post-detail/post-detail-shell"
 import { BoardRecentPosts } from "@/components/board-recent-posts"
-import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
@@ -303,30 +302,17 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         }}
       />
 
-      <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
-        <div className="grid grid-cols-12 gap-6">
-          {/* Main Content - 9 columns */}
-          <div className="col-span-12 space-y-4 lg:col-span-9">
-            <BackButton />
-
-            {/* Post Detail Content */}
-            <PostDetailContent post={post} initialCommentsData={commentsData} />
-
-            {/* Board Recent Posts */}
-            <BoardRecentPosts
-              posts={recentPosts}
-              boardName={boardName}
-              boardSlug={postData.community_slug}
-              currentPostId={id}
-            />
-          </div>
-
-          {/* Right Sidebar - 3 columns - Only recent comments */}
-          <aside className="col-span-3 hidden lg:block">
-            <ActivitySidebar />
-          </aside>
+      <PostDetailShell activeSlug={postData.community_slug}>
+        <PostDetailContent post={post} initialCommentsData={commentsData} />
+        <div className="mt-4">
+          <BoardRecentPosts
+            posts={recentPosts}
+            boardName={boardName}
+            boardSlug={postData.community_slug}
+            currentPostId={id}
+          />
         </div>
-      </main>
+      </PostDetailShell>
     </>
   )
 }

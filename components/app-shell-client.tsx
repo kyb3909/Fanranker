@@ -29,7 +29,8 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     pathname === "/explore" ||
     pathname === "/shop" ||
     pathname === "/search" ||
-    pathname.startsWith("/community/")
+    pathname.startsWith("/community/") ||
+    pathname.startsWith("/post/")
 
   // 홈인데 Minimal이 아닌 곳(=구 디자인 페이지에서 홈으로 라우팅 — 사실상 없음)에서는
   // 기존 sticky Header 아래 절대 오버레이로 배너 노출. Minimal 페이지의 배너는
