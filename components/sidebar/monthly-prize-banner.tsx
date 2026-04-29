@@ -5,43 +5,7 @@ import { ArrowRight, Gift, Lock, Crown, Trophy } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
-
-interface PrizeHint {
-  week: number
-  label: string
-  emoji: string
-}
-
-interface PrizeConfig {
-  title: string
-  description: string
-  imageUrl: string
-  month: string
-  startDate: string
-  hints: PrizeHint[]
-}
-
-const CURRENT_PRIZE: PrizeConfig = {
-  title: "사비 알론소 사인 유니폼",
-  description: "사비 알론소 친필 사인 액자 유니폼 (2005 챔피언스리그 우승)",
-  imageUrl: "/images/prizes/xabi-alonso-jersey.webp",
-  month: "3월",
-  startDate: "2026-03-01",
-  hints: [
-    { week: 1, label: "축구", emoji: "⚽" },
-    { week: 2, label: "스페인", emoji: "🇪🇸" },
-    { week: 3, label: "MF", emoji: "🎯" },
-    { week: 4, label: "뮌헨", emoji: "🏟️" },
-  ],
-}
-
-function getRevealedWeeks(startDate: string): number {
-  const start = new Date(startDate)
-  const now = new Date()
-  const diffMs = now.getTime() - start.getTime()
-  const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000))
-  return Math.max(0, Math.min(diffWeeks + 1, 4))
-}
+import { CURRENT_PRIZE, getRevealedWeeks } from "@/lib/prize/current"
 
 export function MonthlyPrizeBanner() {
   const [revealed, setRevealed] = useState(false)
