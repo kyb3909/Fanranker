@@ -33,6 +33,13 @@ export function MinimalShell({
         {topbar}
       </header>
 
+      {/* 라이브 트래커 — 풀폭 (배경이 좌우 끝까지). 컴포넌트 내부에서 max-w-1280로 콘텐츠 정렬. */}
+      {ticker && (
+        <div className="border-b border-[var(--ms-line)]" aria-label="라이브 트래커">
+          {ticker}
+        </div>
+      )}
+
       {/* 본문 영역 — banner는 풀폭 absolute overlay. 본문은 max-w-1280로 다시 제한. */}
       <div className="relative">
         {banner && (
@@ -41,11 +48,6 @@ export function MinimalShell({
           </div>
         )}
         <div className="mx-auto w-full max-w-[1280px]">
-          {ticker && (
-            <div className="border-b border-[var(--ms-line)]" aria-label="라이브 트래커">
-              {ticker}
-            </div>
-          )}
           <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_300px]">
             <aside className="hidden border-r border-[var(--ms-line)] px-4 py-6 lg:block">
               {sidebar}
