@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { type ReactNode, useMemo } from "react"
 import type { Post } from "@/types/post"
 import type { SortType } from "@/hooks/use-feed"
 import { MinimalShell } from "./minimal-shell"
@@ -27,6 +27,8 @@ interface MinimalHomeContentProps {
   categories: RawCategory[]
   recentComments: TalkItem[]
   isLoading?: boolean
+  /** 피드 위에 표시할 배너 (예: 0-follow 유저 OnboardingBanner) */
+  banner?: ReactNode
 }
 
 const SORT_OPTIONS: { key: SortType; label: string }[] = [
@@ -79,6 +81,7 @@ export function MinimalHomeContent({
   categories,
   recentComments,
   isLoading,
+  banner,
 }: MinimalHomeContentProps) {
   const { sports, life } = useMemo(() => groupCategories(categories), [categories])
 
@@ -110,6 +113,9 @@ export function MinimalHomeContent({
           오늘 가장 뜨거운 글
         </h1>
       </div>
+
+      {/* 배너 슬롯 — 0-follow 유저 OnboardingBanner 등 */}
+      {banner && <div className="mb-4">{banner}</div>}
 
       {/* Sort chips */}
       <div className="mb-4 flex items-center gap-1.5">

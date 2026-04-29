@@ -1,9 +1,6 @@
 import type { Metadata } from "next"
-import { Suspense } from "react"
 import dynamic from "next/dynamic"
 import { notFound } from "next/navigation"
-import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
-import { CommunityContent } from "@/components/community-content"
 import { MinimalCommunityContent } from "@/components/minimal-sport/minimal-community-content"
 
 const NewsTicker = dynamic(
@@ -15,7 +12,6 @@ import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatMemberCount } from "@/lib/utils/format"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
-import Link from "@/components/ui/app-link"
 
 // ISR: 30초 캐시 + stale-while-revalidate
 export const revalidate = 30
@@ -370,62 +366,6 @@ export default async function CommunityPage({
           comment_count: t.comment_count,
         }))}
       />
-
-      {/* 모바일/태블릿: 기존 main 영역 — Minimal 셸이 모든 viewport 처리하므로 hidden 처리.
-          NewsTicker는 MinimalShell ticker slot에서 표시. */}
-      {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
-      <main
-        id="main-content"
-        className="container mx-auto hidden max-w-[1280px] px-4 py-6"
-        tabIndex={-1}
-      >
-        {/* 12컬럼 그리드: 조밀한 간격 */}
-        <div className="grid grid-cols-12 gap-4 lg:gap-5">
-          <div className="col-span-12 lg:col-span-9">
-            {/* 하위 채널 목록 */}
-            {channels && channels.length > 0 && (
-              <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {channels.map((ch) => (
-                  <Link
-                    key={ch.slug}
-                    href={`/community/${ch.slug}`}
-                    className="bg-card border-border hover:border-primary/50 hover:bg-muted/50 flex items-center gap-2.5 rounded-lg border px-3 py-2.5 transition-colors"
-                  >
-                    <span className="bg-secondary flex h-8 w-8 shrink-0 items-center justify-center rounded text-base">
-                      {ch.icon || "📺"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-foreground truncate text-[13px] font-semibold">
-                        {ch.name}
-                      </p>
-                      {ch.description && (
-                        <p className="text-muted-foreground truncate text-[11px]">
-                          {ch.description}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            <CommunityContent
-              community={community}
-              posts={communityPosts}
-              communitySlug={slug}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              flairs={flairs || []}
-              activeFlairId={flairId}
-            />
-          </div>
-
-          <aside className="hidden lg:col-span-3 lg:block">
-            <ActivitySidebar />
-          </aside>
-        </div>
-      </main>
     </>
   )
 }
