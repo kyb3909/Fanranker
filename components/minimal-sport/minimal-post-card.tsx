@@ -14,9 +14,24 @@ import {
   BookmarkCheck,
   ArrowBigUp,
   ArrowBigDown,
+  MoreHorizontal,
+  User,
+  Search as SearchIcon,
+  Ban,
+  Flag,
+  Pencil,
+  Trash2,
   X as CloseIcon,
 } from "lucide-react"
 import useSWR from "swr"
+import { useAuth } from "@clerk/nextjs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ReportDialog } from "@/components/report-dialog"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatCount } from "@/lib/utils/format"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
@@ -115,26 +130,44 @@ function getInstagramUser(url: string): string | null {
  */
 export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
   const router = useRouter()
+  const { userId: currentUserId } = useAuth()
   const excerpt = buildExcerpt(post.content)
   const time = formatRelativeTime(new Date(post.created_at))
   const author = post.author_nickname ?? "익명"
   const authorUserId = post.author_user_id ?? null
+  const isAuthor = !!currentUserId && currentUserId === authorUserId
   const slug = post.community_slug
   const tagLabel = getCommunityName(slug)
   const comments = post.comment_count ?? 0
+  const [reportOpen, setReportOpen] = useState(false)
   const embed =
     typeof post.content === "object" && post.content
       ? extractFirstEmbedFromTipTapJSON(post.content)
       : null
 
-  const { voteCount, myVote, isBookmarked, handleVote, handleBookmark } = usePostCardActions({
+  const {
+    voteCount,
+    myVote,
+    isBookmarked,
+    handleVote,
+    handleBookmark,
+    handleEditPost,
+    handleDeletePost,
+    handleSearchByAuthor,
+    handleBlockUser,
+  } = usePostCardActions({
     postId: post.id,
     author,
     upvotes: post.vote_count ?? 0,
     isUpvoted: post.is_upvoted ?? false,
   })
 
-  const handleClick = () => router.push(`/post/${post.id}`)
+  // 카드 안의 인터랙티브 요소(버튼/링크/dropdown 메뉴) 클릭 시 카드 navigation 차단.
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement
+    if (target.closest("button, a, [role=menu], [role=menuitem], [role=dialog]")) return
+    router.push(`/post/${post.id}`)
+  }
   const stop = (e: React.MouseEvent) => e.stopPropagation()
 
   const onShare = async (e: React.MouseEvent) => {
@@ -177,23 +210,87 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
             {tagLabel}
           </Link>
         )}
-        {authorUserId ? (
-          <Link
-            href={`/profile/${authorUserId}`}
-            onClick={stop}
-            className="font-semibold transition-colors hover:underline"
-            style={{ color: "var(--ms-ink-2)" }}
-          >
-            @{author}
-          </Link>
-        ) : (
-          <span className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
-            @{author}
-          </span>
-        )}
+
+        {/* 작성자 드롭다운 — 프로필 보기 / 검색 / 차단 */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="font-semibold transition-colors hover:underline"
+              style={{ color: "var(--ms-ink-2)" }}
+            >
+              @{author}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-44" onClick={stop}>
+            {authorUserId && (
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href={`/profile/${authorUserId}`}>
+                  <User className="mr-2 h-4 w-4" />
+                  프로필 보기
+                </Link>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={handleSearchByAuthor} className="cursor-pointer">
+              <SearchIcon className="mr-2 h-4 w-4" />
+              해당 아이디로 검색
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleBlockUser} className="text-destructive cursor-pointer">
+              <Ban className="mr-2 h-4 w-4" />
+              차단하기
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <span aria-hidden>·</span>
         <span>{time}</span>
+
+        {/* 더보기 — 신고 / (작성자 본인이면 수정·삭제) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="ml-auto flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-[var(--ms-bg-hover)]"
+              aria-label="더보기 메뉴"
+              style={{ color: "var(--ms-ink-3)" }}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40" onClick={stop}>
+            {isAuthor ? (
+              <>
+                <DropdownMenuItem onClick={handleEditPost} className="cursor-pointer">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  수정
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDeletePost}
+                  className="text-destructive cursor-pointer"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  삭제
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem
+                onClick={() => setReportOpen(true)}
+                className="text-destructive cursor-pointer"
+              >
+                <Flag className="mr-2 h-4 w-4" />
+                신고하기
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <ReportDialog
+        targetType="post"
+        targetId={post.id}
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+      />
 
       {/* 2행 — 제목 */}
       <h3
