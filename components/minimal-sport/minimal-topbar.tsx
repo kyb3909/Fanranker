@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { useRouter } from "next/navigation"
 import { Bell, Search } from "lucide-react"
@@ -23,15 +24,15 @@ interface MinimalTopbarProps {
 }
 
 /**
- * Minimal Sport Topbar — 64px 높이, 1280px 그리드.
+ * Minimal Sport Topbar — 56px(mobile) / 64px(lg+) 높이, 1280px 그리드.
  *
- * 좌: 28px 원형 마크 + "gongnori.fan" (점만 brand)
- * 중: 4 nav pill (활성 검정 배경 + 흰 텍스트)
- * 우(SignedIn): 검색 pill / GoldBalance / BallBalance / NotificationDropdown / UserMenu
- * 우(SignedOut): 검색 pill / Bell(클릭 시 sign-in) / SignInMenu
+ * 좌(로고): "그깟 공놀이" 브러시 캘리그래피(sm+) 위로 baseline 정렬된 "gongnori.fan" 텍스트.
+ *           gongnori = font-bold ink, .fan = font-normal brand. 모바일은 텍스트만.
+ * 중: 4 nav pill (활성 검정 배경 + 흰 텍스트). 모바일은 mobile-tab-bar로 nav.
+ * 우(SignedIn): 검색 / GoldBalance / BallBalance / NotificationDropdown / UserMenu
+ * 우(SignedOut): 검색 / Bell(→ sign-in) / SignInMenu
  *
- * 모든 우측 컴포넌트는 기존 Header에서 사용하던 client component 그대로 재사용 —
- * 실데이터(Clerk 세션, 골드/볼 SWR fetch, 알림 list)에 자동 연결됨.
+ * 우측 컴포넌트는 기존 Header에서 그대로 재사용 (실데이터 자동 연결).
  */
 export function MinimalTopbar({ active }: MinimalTopbarProps) {
   const router = useRouter()
@@ -39,20 +40,29 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
 
   return (
     <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-2 px-3 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
-      {/* 로고 */}
-      <Link href="/" className="flex items-center gap-2" aria-label="홈">
+      {/* 로고 — 원본 디자인 톤 보존 (캘리그래피 + .fan 포인트색) */}
+      <Link
+        href="/"
+        onClick={(e) => {
+          if (window.location.pathname === "/" && !window.location.search) {
+            e.preventDefault()
+            window.scrollTo(0, 0)
+          }
+        }}
+        className="relative flex items-baseline"
+        aria-label="홈"
+      >
+        <span className="relative z-0 -ml-1 hidden shrink-0 sm:block" aria-hidden>
+          <Image src="/logo-brush.webp" alt="" width={128} height={38} priority />
+        </span>
         <span
-          className="inline-block h-6 w-6 rounded-full lg:h-7 lg:w-7"
-          style={{ backgroundColor: "var(--ms-brand)" }}
-          aria-hidden
-        />
-        <span
-          className="text-[15px] leading-none font-extrabold sm:text-[18px]"
-          style={{ letterSpacing: "-0.03em" }}
+          className="relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
+          style={{ letterSpacing: "-0.02em", color: "var(--ms-ink)" }}
         >
-          gongnori
-          <span style={{ color: "var(--ms-brand)" }}>.</span>
-          fan
+          <span className="font-bold">gongnori</span>
+          <span className="font-normal" style={{ color: "var(--ms-brand)" }}>
+            .fan
+          </span>
         </span>
       </Link>
 
