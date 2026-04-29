@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
+import { z } from "zod"
+
+const VoteSchema = z.object({
+  session_id: z.string().uuid(),
+  round: z.number().int().nonnegative(),
+  match_index: z.number().int().nonnegative(),
+  candidate_a_id: z.string().min(1),
+  candidate_b_id: z.string().min(1),
+  winner_id: z.string().min(1),
+})
 
 // POST: 이상형 월드컵 투표
 export async function POST(request: NextRequest) {
@@ -9,19 +19,16 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
     if (!user) return apiUnauthorized()
 
-    const { session_id, round, match_index, candidate_a_id, candidate_b_id, winner_id } =
-      await request.json()
-
-    if (
-      !session_id ||
-      round == null ||
-      match_index == null ||
-      !candidate_a_id ||
-      !candidate_b_id ||
-      !winner_id
-    ) {
-      return apiBadRequest("모든 필드가 필요합니다")
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
     }
+    const parsed = VoteSchema.safeParse(body)
+    if (!parsed.success) return apiBadRequest("모든 필드가 필요합니다")
+    const { session_id, round, match_index, candidate_a_id, candidate_b_id, winner_id } =
+      parsed.data
 
     const supabase = createServiceRoleClient()
 

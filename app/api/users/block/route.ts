@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { apiError, apiUnauthorized } from "@/lib/api-error"
+import { apiBadRequest, apiError, apiUnauthorized } from "@/lib/api-error"
+import { z } from "zod"
+
+const BlockSchema = z.object({ user_id: z.string().min(1) })
 
 /**
  * GET /api/users/block
@@ -48,11 +51,15 @@ export async function POST(request: NextRequest) {
     const user = await currentUser()
     if (!user) return apiUnauthorized()
 
-    const body = await request.json()
-    const targetId = body.user_id as string
-    if (!targetId) {
-      return NextResponse.json({ error: "user_id가 필요합니다." }, { status: 400 })
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return apiBadRequest("잘못된 요청 본문입니다.")
     }
+    const parsed = BlockSchema.safeParse(body)
+    if (!parsed.success) return apiBadRequest("user_id가 필요합니다.")
+    const targetId = parsed.data.user_id
     if (targetId === user.id) {
       return NextResponse.json({ error: "자기 자신을 차단할 수 없습니다." }, { status: 400 })
     }
