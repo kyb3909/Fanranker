@@ -30,6 +30,7 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     pathname === "/" ||
     pathname === "/prediction" ||
     pathname === "/explore" ||
+    pathname === "/shop" ||
     pathname.startsWith("/community/")
   const showBanner = isHome && !hideChrome && !isMinimalSportPage
 
