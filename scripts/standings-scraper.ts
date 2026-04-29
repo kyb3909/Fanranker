@@ -12,7 +12,12 @@
 import "dotenv/config"
 import { STANDINGS_LEAGUES } from "../lib/standings/naver-leagues"
 
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:3000"
+const API_BASE_URL = process.env.API_BASE_URL
+if (!API_BASE_URL) {
+  throw new Error(
+    "API_BASE_URL이 설정되지 않았습니다. 로컬 dev 실행 시 .env에 API_BASE_URL=http://localhost:3000 추가하세요."
+  )
+}
 const CRON_SECRET = process.env.CRON_SECRET
 const LEAGUE_IDS_ENV = process.env.LEAGUE_IDS
 

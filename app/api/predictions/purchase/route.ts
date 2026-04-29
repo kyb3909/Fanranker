@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { retrySellerReward } from "@/lib/predictions/retry-seller-reward"
 import { z } from "zod"
 
 const GOLD_COST = 500
@@ -132,12 +133,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. prediction_purchases INSERT
-    const { error: purchaseError } = await supabase.from("prediction_purchases").insert({
-      buyer_id: user.id,
-      seller_id: activity.user_id,
-      activity_id: activity_id,
-      gold_spent: GOLD_COST,
-    })
+    const { data: purchaseRow, error: purchaseError } = await supabase
+      .from("prediction_purchases")
+      .insert({
+        buyer_id: user.id,
+        seller_id: activity.user_id,
+        activity_id: activity_id,
+        gold_spent: GOLD_COST,
+      })
+      .select("id")
+      .single()
 
     if (purchaseError) {
       console.error("Failed to record purchase:", purchaseError)
@@ -159,22 +164,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. 판매자에게 골드 정산 (90% = 450골드)
-    try {
-      const { error: rewardError } = await supabase.rpc("reward_gold", {
-        p_user_id: activity.user_id,
-        p_amount: SELLER_SHARE,
-        p_description: `분석글 판매 수익 (${activity.sport})`,
-        p_transaction_type: "analysis_sale_revenue",
-      })
-
-      if (rewardError) {
-        console.error("Failed to reward seller:", rewardError)
-        // 판매자 정산 실패 시 로그만 남기고 구매는 유지
-        // TODO: 실패 시 재시도 큐 또는 관리자 알림 추가
-      }
-    } catch (e) {
-      console.error("Seller reward error:", e)
-    }
+    //    inline 3회 retry → 모두 실패 시 pending_seller_rewards에 기록 (admin 수동 처리)
+    await retrySellerReward(supabase, {
+      sellerId: activity.user_id,
+      buyerId: user.id,
+      activityId: activity_id,
+      purchaseId: purchaseRow?.id ?? null,
+      amount: SELLER_SHARE,
+      description: `분석글 판매 수익 (${activity.sport})`,
+    })
 
     // 7. 판매자에게 알림 전송
     try {

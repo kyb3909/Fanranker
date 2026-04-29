@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
@@ -93,12 +94,12 @@ export function MetaverseStage() {
             <br />
             <span className="text-white/50">내부 테스트 중인 기능입니다.</span>
           </p>
-          <a
-            href="/sign-in"
+          <Link
+            href="/sign-up"
             className="bg-primary mt-6 inline-block rounded-md px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             로그인
-          </a>
+          </Link>
         </div>
       </div>
     )

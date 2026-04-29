@@ -106,11 +106,15 @@ interface ResultItem {
 }
 
 function getApiBase(): string {
-  return (
+  const url =
     process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ??
-    "http://localhost:3000"
-  )
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_APP_URL이 설정되지 않았습니다. 로컬 dev 실행 시 .env에 NEXT_PUBLIC_APP_URL=http://localhost:3000 추가하세요."
+    )
+  }
+  return url
 }
 
 function getAuthHeaders(): Record<string, string> {

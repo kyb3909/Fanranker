@@ -28,8 +28,8 @@ const clientSchema = z.object({
     .min(1, "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required"),
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
-  NEXT_PUBLIC_ADSENSE_CLIENT_ID: z.string().optional(),
-  NEXT_PUBLIC_ADSENSE_SLOT_ID: z.string().optional(),
+  NEXT_PUBLIC_ADSENSE_ID: z.string().optional(),
+  NEXT_PUBLIC_GA_ID: z.string().optional(),
 })
 
 // Next.js inlines NEXT_PUBLIC_ vars at build time — must reference explicitly
@@ -39,8 +39,8 @@ const clientEnv = {
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  NEXT_PUBLIC_ADSENSE_CLIENT_ID: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
-  NEXT_PUBLIC_ADSENSE_SLOT_ID: process.env.NEXT_PUBLIC_ADSENSE_SLOT_ID,
+  NEXT_PUBLIC_ADSENSE_ID: process.env.NEXT_PUBLIC_ADSENSE_ID,
+  NEXT_PUBLIC_GA_ID: process.env.NEXT_PUBLIC_GA_ID,
 }
 
 /**
