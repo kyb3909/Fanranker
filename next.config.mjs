@@ -194,7 +194,6 @@ const nextConfig = {
       '@tiptap/extension-image',
       '@tiptap/extension-placeholder',
       '@tiptap/extension-text-align',
-      '@tiptap/extension-underline',
       '@next/third-parties',
     ],
   },
