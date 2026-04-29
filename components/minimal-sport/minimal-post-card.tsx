@@ -1,10 +1,11 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "@/components/ui/app-link"
-import { ExternalLink, Play } from "lucide-react"
+import { ExternalLink, Play, X as CloseIcon } from "lucide-react"
 import useSWR from "swr"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatCount } from "@/lib/utils/format"
@@ -12,6 +13,7 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { extractFirstEmbedFromTipTapJSON, type EmbedNode } from "@/lib/utils/tiptap-embeds"
 import type { TipTapNode } from "@/types/post"
 import { extractYouTubeId } from "@/lib/embed/youtube"
+import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 import { useVisibility } from "@/hooks/use-visibility"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
@@ -272,7 +274,7 @@ function EmbedBox({
       {provider === "x" ? (
         <XEmbedBody url={url} author_name={author_name} handle={handle} />
       ) : (
-        <InstagramEmbedBody url={url} author_name={author_name} thumbnail_url={thumbnail_url} />
+        <InstagramEmbedBody url={url} />
       )}
     </div>
   )
@@ -384,21 +386,14 @@ function XEmbedBody({
         </p>
       )}
 
-      {/* 미디어 — 사진은 정적 이미지, 영상은 클릭하면 인라인 재생 */}
+      {/* 미디어 — 사진은 클릭 시 라이트박스 확대, 영상은 인라인 재생 */}
       {firstMedia && (
         <div
           className="relative aspect-video w-full overflow-hidden bg-black"
           style={{ borderRadius: 12 }}
         >
           {firstMedia.type === "photo" ? (
-            <Image
-              src={firstMedia.url}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, 560px"
-              unoptimized
-            />
+            <PhotoLightboxTrigger src={firstMedia.url} />
           ) : (
             <XVideoPlayer
               media={firstMedia as { type: "video"; url: string; thumbnail_url?: string }}
@@ -407,6 +402,85 @@ function XEmbedBody({
         </div>
       )}
     </div>
+  )
+}
+
+function PhotoLightboxTrigger({ src }: { src: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen(true)
+        }}
+        className="group relative block h-full w-full"
+        aria-label="사진 확대 보기"
+      >
+        <Image
+          src={src}
+          alt=""
+          fill
+          className="object-cover transition-transform group-hover:scale-[1.02]"
+          sizes="(max-width: 640px) 100vw, 560px"
+          unoptimized
+        />
+      </button>
+      {open && <Lightbox src={src} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  if (!mounted || typeof document === "undefined") return null
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClose()
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="사진 확대"
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onClose()
+        }}
+        className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+        aria-label="닫기"
+      >
+        <CloseIcon className="h-5 w-5" />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-full max-w-full object-contain"
+      />
+    </div>,
+    document.body
   )
 }
 
@@ -478,80 +552,25 @@ function XVideoPlayer({
   )
 }
 
-function InstagramEmbedBody({
-  url,
-  author_name: nameFromAttrs,
-  thumbnail_url: thumbFromAttrs,
-}: {
-  url: string
-  author_name?: string
-  thumbnail_url?: string
-}) {
-  const { data, isLoading } = useSWR<XOEmbedData | null>(
-    `/api/oembed?url=${encodeURIComponent(url)}`,
-    oembedFetcher,
-    { dedupingInterval: 600_000, revalidateOnFocus: false, revalidateIfStale: false }
-  )
-  const igUser = getInstagramUser(url)
-  const displayName =
-    data?.author_name?.trim() ||
-    nameFromAttrs?.trim() ||
-    (igUser ? `@${igUser}` : "Instagram 게시물")
-  const thumb = data?.thumbnail_url || data?.media?.[0]?.url || thumbFromAttrs
-  const caption = data?.title?.trim()
+function InstagramEmbedBody({ url }: { url: string }) {
+  // Instagram 공식 embeds.js로 실제 게시물 렌더 — FACEBOOK_ACCESS_TOKEN 없이도 동작.
+  const normalizedUrl = url.startsWith("https") ? url : `https://${url.replace(/^http:\/\//, "")}`
+  const safeUrl = normalizedUrl.replace(/["<>]/g, "")
+  const blockquoteHtml = `<blockquote class="instagram-media" data-instgrm-permalink="${safeUrl}" data-instgrm-version="14" style="margin:0 !important;max-width:540px;min-width:0;width:100%;border:none !important;box-shadow:none !important;"></blockquote>`
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      loadInstagramEmbedJs(() => processInstagramEmbeds())
+    }, 0)
+    return () => clearTimeout(t)
+  }, [normalizedUrl])
 
   return (
-    <div className="flex flex-col gap-2.5 py-3.5 pr-4 pl-[18px]">
-      <div className="flex items-center gap-2.5">
-        <div
-          aria-hidden
-          className="h-9 w-9 shrink-0 rounded-full"
-          style={{
-            background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)",
-          }}
-        />
-        <span className="truncate text-[14px] font-extrabold" style={{ color: "var(--ms-ink)" }}>
-          {displayName}
-        </span>
-      </div>
-
-      {isLoading && !thumb ? (
-        <div
-          className="h-[200px] w-full animate-pulse"
-          style={{ borderRadius: 12, backgroundColor: "var(--ms-bg-hover)" }}
-        />
-      ) : thumb ? (
-        <div className="relative overflow-hidden" style={{ borderRadius: 12 }}>
-          <Image
-            src={thumb}
-            alt=""
-            width={600}
-            height={600}
-            className="h-auto w-full"
-            unoptimized
-          />
-        </div>
-      ) : (
-        <div
-          aria-hidden
-          className="flex h-[180px] items-center justify-center text-3xl text-white/70"
-          style={{
-            borderRadius: 12,
-            background: "linear-gradient(135deg, #1f2937, #4b5563)",
-          }}
-        >
-          📷
-        </div>
-      )}
-
-      {caption && (
-        <p
-          className="line-clamp-3 text-[13.5px] leading-[1.5]"
-          style={{ color: "var(--ms-ink-2)" }}
-        >
-          {caption}
-        </p>
-      )}
+    <div className="px-[18px] py-3.5">
+      <div
+        className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
+        dangerouslySetInnerHTML={{ __html: blockquoteHtml }}
+      />
     </div>
   )
 }
