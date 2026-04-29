@@ -1,8 +1,8 @@
 "use client"
 
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
-import { useRouter } from "next/navigation"
 import { Bell, Search } from "lucide-react"
 import { SignedIn, SignedOut, useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -35,7 +35,6 @@ interface MinimalTopbarProps {
  * 우측 컴포넌트는 기존 Header에서 그대로 재사용 (실데이터 자동 연결).
  */
 export function MinimalTopbar({ active }: MinimalTopbarProps) {
-  const router = useRouter()
   const { openSignIn } = useClerk()
 
   return (
@@ -90,24 +89,7 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
 
       {/* 우측 actions — 기존 Header 컴포넌트 재사용 (실데이터 자동 연결) */}
       <div className="flex items-center justify-end gap-1 sm:gap-2">
-        {/* 검색 — 모바일은 아이콘만, 데스크톱은 pill */}
-        <button
-          type="button"
-          onClick={() => router.push("/search")}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ms-ink-3)] transition-colors hover:bg-[var(--ms-bg-hover)] lg:hidden"
-          aria-label="검색"
-        >
-          <Search className="h-[18px] w-[18px]" />
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/search")}
-          className="hidden h-9 w-[220px] items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg-hover)] px-4 text-[12px] text-[var(--ms-ink-3)] transition-colors hover:border-[var(--ms-line-hover)] lg:flex"
-          aria-label="검색"
-        >
-          <Search className="h-4 w-4" />
-          검색하기
-        </button>
+        <TopbarSearch />
 
         <SignedIn>
           {/* 잔액은 데스크톱에서만 — 모바일은 user menu에서 확인. */}
@@ -133,5 +115,91 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         </SignedOut>
       </div>
     </div>
+  )
+}
+
+/**
+ * 검색 — 데스크톱은 inline pill input, 모바일은 아이콘 → 풀폭 input 토글.
+ * 둘 다 native form submit으로 /search?q=... 이동. JS 비활성화돼도 동작.
+ */
+function TopbarSearch() {
+  const [query, setQuery] = useState("")
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const mobileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (mobileOpen) mobileInputRef.current?.focus()
+  }, [mobileOpen])
+
+  const handleSubmit = (e: FormEvent) => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      e.preventDefault()
+      return
+    }
+    // form action="/search" + method="get" → 자동 query string 생성. 추가 처리 불필요.
+  }
+
+  return (
+    <>
+      {/* 데스크톱(lg+): 항상 보이는 pill input */}
+      <form
+        action="/search"
+        method="get"
+        onSubmit={handleSubmit}
+        role="search"
+        className="hidden lg:block"
+      >
+        <label className="flex h-9 w-[220px] items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg-hover)] px-4 text-[12px] transition-colors focus-within:border-[var(--ms-line-hover)]">
+          <Search className="h-4 w-4 shrink-0" style={{ color: "var(--ms-ink-3)" }} />
+          <input
+            type="text"
+            name="q"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="검색하기"
+            className="min-w-0 flex-1 bg-transparent text-[var(--ms-ink)] placeholder:text-[var(--ms-ink-3)] focus:outline-none"
+            aria-label="검색"
+          />
+        </label>
+      </form>
+
+      {/* 모바일(<lg): 아이콘 → 클릭 시 input 확장 */}
+      {!mobileOpen ? (
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ms-ink-3)] transition-colors hover:bg-[var(--ms-bg-hover)] lg:hidden"
+          aria-label="검색"
+        >
+          <Search className="h-[18px] w-[18px]" />
+        </button>
+      ) : (
+        <form
+          action="/search"
+          method="get"
+          onSubmit={handleSubmit}
+          role="search"
+          className="flex flex-1 lg:hidden"
+        >
+          <label className="flex h-9 flex-1 items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg-hover)] px-3 text-[13px] focus-within:border-[var(--ms-line-hover)]">
+            <Search className="h-4 w-4 shrink-0" style={{ color: "var(--ms-ink-3)" }} />
+            <input
+              ref={mobileInputRef}
+              type="text"
+              name="q"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onBlur={() => {
+                if (!query.trim()) setMobileOpen(false)
+              }}
+              placeholder="검색하기"
+              className="min-w-0 flex-1 bg-transparent text-[var(--ms-ink)] placeholder:text-[var(--ms-ink-3)] focus:outline-none"
+              aria-label="검색"
+            />
+          </label>
+        </form>
+      )}
+    </>
   )
 }
