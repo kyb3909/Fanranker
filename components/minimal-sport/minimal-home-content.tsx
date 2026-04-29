@@ -60,7 +60,8 @@ function postToMinimalInput(p: Post): MinimalPostInput {
     id: String(p.id),
     community_slug: p.communitySlug ?? null,
     title: p.title,
-    content: typeof p.content === "string" ? p.content : null,
+    // TipTap JSON 그대로 전달 → MinimalPostCard에서 embed 추출 + excerpt 생성.
+    content: p.content ?? null,
     vote_count: p.upvotes,
     comment_count: p.comments,
     created_at: created.toISOString(),

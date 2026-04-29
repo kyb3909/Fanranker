@@ -1,23 +1,32 @@
 "use client"
 
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "@/components/ui/app-link"
+import { ExternalLink } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatCount } from "@/lib/utils/format"
+import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import { extractFirstEmbedFromTipTapJSON, type EmbedNode } from "@/lib/utils/tiptap-embeds"
+import type { TipTapNode } from "@/types/post"
+import { extractYouTubeId } from "@/lib/embed/youtube"
+import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 export interface MinimalPostInput {
   id: string
   community_slug: string | null
   title: string
-  content: string | null
+  /** HTML 문자열 (legacy) 또는 TipTap JSON (현재). embed 추출은 JSON 형식에서만 동작. */
+  content: string | TipTapNode | null
   vote_count: number | null
   comment_count: number | null
   created_at: string
   author_nickname?: string | null
 }
 
-function htmlToExcerpt(html: string | null, max = 140): string {
-  if (!html) return ""
+const TRANSITION = "transition-colors duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]"
+
+function htmlToExcerpt(html: string, max = 160): string {
   const stripped = html
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<script[\s\S]*?<\/script>/gi, "")
@@ -33,76 +42,111 @@ function htmlToExcerpt(html: string | null, max = 140): string {
   return stripped.slice(0, max) + "…"
 }
 
+function buildExcerpt(content: string | TipTapNode | null): string {
+  if (!content) return ""
+  if (typeof content === "string") return htmlToExcerpt(content)
+  const text = extractTextFromTipTapJSON(content).trim()
+  // 본문이 사실상 URL만 있는 경우(임베드만 붙여넣은 글) excerpt 생략 → embed 박스가 대신 표시.
+  if (/^https?:\/\/\S+$/.test(text)) return ""
+  return text.slice(0, 160).trim()
+}
+
+function getCommunityName(slug: string | null): string {
+  if (!slug) return "general"
+  return COMMUNITY_NAMES[slug] ?? slug
+}
+
+function getXHandle(url: string): string | null {
+  const m = url.match(/(?:twitter\.com|x\.com)\/(\w+)\/status/i)
+  return m ? m[1] : null
+}
+
+function getInstagramId(url: string): string | null {
+  const m = url.match(/instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/)
+  return m ? m[1] : null
+}
+
 /**
- * Minimal Sport PostCard.
+ * Minimal Sport PostCard — 담벼락 피드 카드.
  *
- * Spec (핸드오프):
- * - card: surface, 1px line, 16px radius, 18×20 padding
- * - head: tag · @author · 시간 (12px ink-3)
- * - title: 17px/700
- * - excerpt: 13.5px ink-2, line-clamp-2
- * - actions: vote pill / comments / share / save
- * - hover: border-color line-hover
+ * Spec:
+ * - white bg, 1px #ECECEC border, 16px radius, 18px 20px padding
+ * - hover border #DBD8CF, transition 150ms
+ * - meta(12 ink-3) → title(17 700 ink) → excerpt(13.5 ink-2 line-clamp-2)
+ * - oEmbed 박스(X/Instagram/YouTube)는 본문에 임베드가 있을 때만
+ * - vote pill + 댓글/공유/저장 액션 행
  */
 export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
   const router = useRouter()
-  const excerpt = htmlToExcerpt(post.content)
+  const excerpt = buildExcerpt(post.content)
   const time = formatRelativeTime(new Date(post.created_at))
   const author = post.author_nickname ?? "익명"
-  const tag = post.community_slug ?? "general"
+  const slug = post.community_slug
+  const tagLabel = getCommunityName(slug)
   const score = post.vote_count ?? 0
   const comments = post.comment_count ?? 0
+  const embed =
+    typeof post.content === "object" && post.content
+      ? extractFirstEmbedFromTipTapJSON(post.content)
+      : null
 
   const handleClick = () => router.push(`/post/${post.id}`)
 
   return (
     <article
-      className="group flex cursor-pointer flex-col gap-2.5 rounded-2xl border bg-[var(--ms-surface)] px-5 py-4.5 transition-colors hover:border-[var(--ms-line-hover)]"
+      className={`group flex cursor-pointer flex-col gap-2.5 rounded-2xl border bg-[var(--ms-surface)] px-5 py-4.5 ${TRANSITION} hover:border-[var(--ms-line-hover)]`}
       style={{ borderColor: "var(--ms-line)" }}
       onClick={handleClick}
     >
-      {/* Head: tag · author · time */}
+      {/* 1행 — 메타 */}
       <div
         className="flex items-center gap-2 text-[12px] font-medium"
         style={{ color: "var(--ms-ink-3)" }}
       >
-        <Link
-          href={`/community/${tag}`}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded-full px-2 py-0.5 text-[11px] font-bold"
-          style={{
-            backgroundColor: "var(--ms-brand-soft)",
-            color: "var(--ms-brand)",
-          }}
-        >
-          {tag}
-        </Link>
-        <span>@{author}</span>
-        <span>·</span>
+        {slug && (
+          <Link
+            href={`/community/${slug}`}
+            onClick={(e) => e.stopPropagation()}
+            className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+            style={{
+              backgroundColor: "var(--ms-brand-soft)",
+              color: "var(--ms-brand)",
+            }}
+          >
+            {tagLabel}
+          </Link>
+        )}
+        <span className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
+          @{author}
+        </span>
+        <span aria-hidden>·</span>
         <span>{time}</span>
       </div>
 
-      {/* Title */}
+      {/* 2행 — 제목 */}
       <h3
-        className="text-[17px] leading-tight font-bold"
+        className="text-[17px] leading-[1.35] font-bold"
         style={{ color: "var(--ms-ink)", letterSpacing: "-0.02em" }}
       >
         {post.title}
       </h3>
 
-      {/* Excerpt */}
+      {/* 3행 — 본문 미리보기 */}
       {excerpt && (
         <p
-          className="line-clamp-2 text-[13.5px] leading-relaxed"
+          className="line-clamp-2 text-[13.5px] leading-[1.5]"
           style={{ color: "var(--ms-ink-2)" }}
         >
           {excerpt}
         </p>
       )}
 
-      {/* Actions */}
+      {/* 4행 — oEmbed 박스 (X / Instagram / YouTube) */}
+      {embed && <EmbedBox embed={embed} onCardClick={(e) => e.stopPropagation()} />}
+
+      {/* 5행 — 액션 */}
       <div
-        className="mt-1 flex items-center gap-3 text-[12px] font-medium"
+        className="mt-1 flex items-center gap-3.5 text-[12px] font-semibold"
         style={{ color: "var(--ms-ink-3)" }}
       >
         <span
@@ -118,5 +162,277 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
         <span>☆ 저장</span>
       </div>
     </article>
+  )
+}
+
+/* ===== oEmbed 박스 ===== */
+
+function EmbedBox({
+  embed,
+  onCardClick,
+}: {
+  embed: EmbedNode
+  onCardClick: (e: React.MouseEvent) => void
+}) {
+  const { provider, url, author_name, thumbnail_url, title } = embed.attrs
+
+  if (provider === "youtube") {
+    return <YouTubeEmbedBox url={url} thumbnail_url={thumbnail_url} title={title} />
+  }
+
+  const handle = provider === "x" ? getXHandle(url) : null
+  const igId = provider === "instagram" ? getInstagramId(url) : null
+
+  return (
+    <div
+      onClick={onCardClick}
+      className="relative overflow-hidden"
+      style={{
+        borderRadius: 14,
+        border: "1.5px solid var(--ms-line)",
+        backgroundColor: "var(--ms-surface)",
+      }}
+    >
+      {/* 좌측 액센트 바 */}
+      <span
+        aria-hidden
+        className="absolute top-0 bottom-0 left-0 w-[4px]"
+        style={{
+          background:
+            provider === "instagram"
+              ? "linear-gradient(180deg, #f09433, #dc2743, #bc1888)"
+              : "#000000",
+        }}
+      />
+
+      {/* 출처 헤더 */}
+      <header
+        className="flex items-center gap-2 border-b py-2 pr-4 pl-[18px] text-[11px] font-bold"
+        style={{
+          borderColor: "var(--ms-line)",
+          backgroundColor: "#FAFAF7",
+          color: "var(--ms-ink-2)",
+        }}
+      >
+        <ProviderBadge provider={provider} />
+        <span>
+          {provider === "x" ? "X (Twitter)에서 퍼온 게시물" : "Instagram에서 퍼온 게시물"}
+        </span>
+        {handle && (
+          <>
+            <span aria-hidden style={{ color: "var(--ms-ink-3)" }}>
+              ·
+            </span>
+            <span style={{ color: "var(--ms-ink-3)", fontWeight: 600 }}>x.com/{handle}</span>
+          </>
+        )}
+        {!handle && igId && (
+          <>
+            <span aria-hidden style={{ color: "var(--ms-ink-3)" }}>
+              ·
+            </span>
+            <span style={{ color: "var(--ms-ink-3)", fontWeight: 600 }}>
+              instagram.com/p/{igId}
+            </span>
+          </>
+        )}
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={`ml-auto inline-flex items-center gap-1 ${TRANSITION} hover:opacity-70`}
+          style={{ color: "var(--ms-ink-2)" }}
+        >
+          원본 보기
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </header>
+
+      {/* 본문 */}
+      {provider === "x" ? (
+        <XEmbedBody author_name={author_name} handle={handle} />
+      ) : (
+        <InstagramEmbedBody author_name={author_name} thumbnail_url={thumbnail_url} />
+      )}
+    </div>
+  )
+}
+
+function ProviderBadge({ provider }: { provider: "x" | "instagram" }) {
+  if (provider === "x") {
+    return (
+      <span
+        aria-hidden
+        className="font-archivo inline-flex h-4 w-4 shrink-0 items-center justify-center text-[11px] font-black text-white"
+        style={{ backgroundColor: "#000000", borderRadius: 3 }}
+      >
+        𝕏
+      </span>
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-4 w-4 shrink-0"
+      style={{
+        background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)",
+        borderRadius: 3,
+      }}
+    />
+  )
+}
+
+function XEmbedBody({ author_name, handle }: { author_name?: string; handle: string | null }) {
+  const displayName = author_name?.trim() || (handle ? `@${handle}` : "X 사용자")
+  return (
+    <div className="flex flex-col gap-2.5 py-3.5 pr-4 pl-[18px]">
+      {/* 헤더: 아바타 + 이름 + verify + 핸들 + 𝕏 로고 */}
+      <div className="flex items-center gap-2.5">
+        <div
+          aria-hidden
+          className="h-9 w-9 shrink-0 rounded-full"
+          style={{
+            background: "linear-gradient(135deg, #1f2937, #4b5563)",
+          }}
+        />
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <span className="truncate text-[14px] font-extrabold" style={{ color: "var(--ms-ink)" }}>
+            {displayName}
+          </span>
+          <VerifyBadge />
+          {handle && (
+            <span className="ml-1 truncate text-[12px]" style={{ color: "var(--ms-ink-3)" }}>
+              @{handle}
+            </span>
+          )}
+        </div>
+        <span
+          aria-hidden
+          className="font-archivo text-[18px] font-black"
+          style={{ color: "var(--ms-ink)" }}
+        >
+          𝕏
+        </span>
+      </div>
+      {/* 트윗 텍스트 placeholder */}
+      <p className="text-[14px] leading-[1.5]" style={{ color: "var(--ms-ink-2)" }}>
+        클릭하여 원본 트윗을 확인하세요.
+      </p>
+    </div>
+  )
+}
+
+function InstagramEmbedBody({
+  author_name,
+  thumbnail_url,
+}: {
+  author_name?: string
+  thumbnail_url?: string
+}) {
+  const displayName = author_name?.trim() || "Instagram 게시물"
+  return (
+    <div className="flex flex-col gap-2.5 py-3.5 pr-4 pl-[18px]">
+      <div className="flex items-center gap-2.5">
+        <div
+          aria-hidden
+          className="h-9 w-9 shrink-0 rounded-full"
+          style={{
+            background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)",
+          }}
+        />
+        <span className="truncate text-[14px] font-extrabold" style={{ color: "var(--ms-ink)" }}>
+          {displayName}
+        </span>
+      </div>
+      {thumbnail_url ? (
+        <div className="relative overflow-hidden" style={{ borderRadius: 12 }}>
+          <Image
+            src={thumbnail_url}
+            alt=""
+            width={600}
+            height={400}
+            className="h-auto w-full"
+            unoptimized
+          />
+        </div>
+      ) : (
+        <div
+          aria-hidden
+          className="flex h-[180px] items-center justify-center text-3xl text-white/70"
+          style={{
+            borderRadius: 12,
+            background: "linear-gradient(135deg, #1f2937, #4b5563)",
+          }}
+        >
+          📷
+        </div>
+      )}
+    </div>
+  )
+}
+
+function YouTubeEmbedBox({
+  url,
+  thumbnail_url,
+  title,
+}: {
+  url: string
+  thumbnail_url?: string
+  title?: string
+}) {
+  const videoId = extractYouTubeId(url)
+  const thumb =
+    thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+  return (
+    <div
+      className="relative overflow-hidden"
+      style={{
+        borderRadius: 14,
+        border: "1.5px solid var(--ms-line)",
+        backgroundColor: "#000",
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute top-0 bottom-0 left-0 z-10 w-[4px]"
+        style={{ backgroundColor: "#FF0000" }}
+      />
+      {thumb ? (
+        <div className="relative aspect-video w-full">
+          <Image src={thumb} alt={title || ""} fill className="object-cover" unoptimized />
+          <span
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center bg-black/30"
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg">
+              <svg viewBox="0 0 24 24" className="h-6 w-6 translate-x-[1px] fill-white">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+          </span>
+        </div>
+      ) : (
+        <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-white/70">
+          YouTube 영상
+        </div>
+      )}
+    </div>
+  )
+}
+
+function VerifyBadge() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5 shrink-0"
+      style={{ color: "#1d9bf0" }}
+    >
+      <path
+        fill="currentColor"
+        d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334-4.334 6.5c-.144.216-.382.348-.638.355h-.018c-.25 0-.485-.115-.64-.314l-2.156-2.785c-.272-.351-.21-.857.14-1.128.354-.272.86-.21 1.128.141l1.49 1.928 3.815-5.92c.255-.376.755-.473 1.13-.218.378.255.474.755.218 1.13z"
+      />
+    </svg>
   )
 }
