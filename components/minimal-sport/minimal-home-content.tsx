@@ -20,6 +20,8 @@ interface RawCategory {
   parent_slug?: string | null
 }
 
+export type HomeTab = "feed" | "content"
+
 interface MinimalHomeContentProps {
   posts: Post[]
   sortBy: SortType
@@ -27,6 +29,11 @@ interface MinimalHomeContentProps {
   categories: RawCategory[]
   recentComments: TalkItem[]
   isLoading?: boolean
+  /** 활성 탭 — feed(게시물) 또는 content(경기 분석글) */
+  activeTab: HomeTab
+  onTabChange: (tab: HomeTab) => void
+  /** content 탭 본문 — 부모에서 ContentSection을 직접 주입. */
+  contentTabSlot?: ReactNode
   /** Topbar 바로 아래 등장하는 배너 (공지·광고 AnnouncementCarousel). */
   topBanner?: ReactNode
   /** 피드 위에 표시할 배너 (예: 0-follow 유저 OnboardingBanner) */
@@ -77,6 +84,11 @@ function postToMinimalInput(p: Post): MinimalPostInput {
  * 내부 state(sortBy 등)는 부모 HomeClient에서 관리하고 prop으로 받음 →
  * 모바일·데스크톱 두 디자인이 같은 state 공유.
  */
+const TABS: { key: HomeTab; label: string }[] = [
+  { key: "feed", label: "게시물" },
+  { key: "content", label: "경기 분석글" },
+]
+
 export function MinimalHomeContent({
   posts,
   sortBy,
@@ -84,12 +96,16 @@ export function MinimalHomeContent({
   categories,
   recentComments,
   isLoading,
+  activeTab,
+  onTabChange,
+  contentTabSlot,
   topBanner,
   feedBanner,
 }: MinimalHomeContentProps) {
   const { sports, life } = useMemo(() => groupCategories(categories), [categories])
-
   const minimalPosts = useMemo(() => posts.map(postToMinimalInput), [posts])
+
+  const isFeed = activeTab === "feed"
 
   return (
     <MinimalShell
@@ -103,77 +119,104 @@ export function MinimalHomeContent({
         </MinimalRightAside>
       }
     >
-      {/* Crumb + Heading */}
-      <div className="mb-5">
-        <div className="text-[13px]" style={{ color: "var(--ms-ink-3)" }}>
-          담벼락 ·{" "}
-          <b className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
-            전체
-          </b>
+      {/* 탭 네비게이션 — 게시물 / 경기 분석글 */}
+      <div
+        className="-mx-4 mb-5 flex border-b sm:-mx-6 lg:-mx-8"
+        style={{ borderColor: "var(--ms-line)" }}
+        role="tablist"
+        aria-label="홈 탭"
+      >
+        <div className="flex gap-1 px-4 sm:px-6 lg:px-8">
+          {TABS.map((t) => {
+            const isActive = t.key === activeTab
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onTabChange(t.key)}
+                className="relative h-12 px-4 text-[15px] transition-colors"
+                style={{
+                  color: isActive ? "var(--ms-ink)" : "var(--ms-ink-3)",
+                  fontWeight: isActive ? 800 : 600,
+                }}
+              >
+                {t.label}
+                {isActive && (
+                  <span
+                    aria-hidden
+                    className="absolute right-3 -bottom-px left-3 h-[3px] rounded-full"
+                    style={{ backgroundColor: "var(--ms-brand)" }}
+                  />
+                )}
+              </button>
+            )
+          })}
         </div>
-        <h1
-          className="mt-1 text-[28px] leading-[1.15] font-extrabold"
-          style={{ color: "var(--ms-ink)", letterSpacing: "-0.035em" }}
-        >
-          오늘 가장 뜨거운 글
-        </h1>
       </div>
 
-      {/* 피드 위 배너 슬롯 — 0-follow 유저 OnboardingBanner 등 */}
-      {feedBanner && <div className="mb-4">{feedBanner}</div>}
+      {isFeed ? (
+        <>
+          {/* 피드 위 배너 슬롯 — 0-follow 유저 OnboardingBanner 등 */}
+          {feedBanner && <div className="mb-4">{feedBanner}</div>}
 
-      {/* Sort chips */}
-      <div className="mb-4 flex items-center gap-1.5">
-        {SORT_OPTIONS.map((s) => {
-          const isActive = sortBy === s.key
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setSortBy(s.key)}
-              aria-pressed={isActive}
-              className={`h-8 rounded-full border px-4 text-[12px] font-semibold transition-colors ${
-                isActive ? "text-white shadow-sm" : "hover:border-[var(--ms-line-hover)]"
-              }`}
-              style={{
-                backgroundColor: isActive ? "var(--ms-brand)" : "var(--ms-surface)",
-                borderColor: isActive ? "var(--ms-brand)" : "var(--ms-line)",
-                color: isActive ? "#ffffff" : "var(--ms-ink-2)",
-              }}
-            >
-              {s.label}
-            </button>
-          )
-        })}
-      </div>
+          {/* Sort chips */}
+          <div className="mb-4 flex items-center gap-1.5">
+            {SORT_OPTIONS.map((s) => {
+              const isActive = sortBy === s.key
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setSortBy(s.key)}
+                  aria-pressed={isActive}
+                  className={`h-8 rounded-full border px-4 text-[12px] font-semibold transition-colors ${
+                    isActive ? "text-white shadow-sm" : "hover:border-[var(--ms-line-hover)]"
+                  }`}
+                  style={{
+                    backgroundColor: isActive ? "var(--ms-brand)" : "var(--ms-surface)",
+                    borderColor: isActive ? "var(--ms-brand)" : "var(--ms-line)",
+                    color: isActive ? "#ffffff" : "var(--ms-ink-2)",
+                  }}
+                >
+                  {s.label}
+                </button>
+              )
+            })}
+          </div>
 
-      {/* Post list */}
-      {isLoading && posts.length === 0 ? (
-        <div className="flex flex-col gap-3">
-          {[0, 1, 2, 3].map((i) => (
+          {/* Post list */}
+          {isLoading && posts.length === 0 ? (
+            <div className="flex flex-col gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-32 animate-pulse rounded-2xl border"
+                  style={{
+                    backgroundColor: "var(--ms-surface)",
+                    borderColor: "var(--ms-line)",
+                  }}
+                />
+              ))}
+            </div>
+          ) : minimalPosts.length === 0 ? (
             <div
-              key={i}
-              className="h-32 animate-pulse rounded-2xl border"
-              style={{
-                backgroundColor: "var(--ms-surface)",
-                borderColor: "var(--ms-line)",
-              }}
-            />
-          ))}
-        </div>
-      ) : minimalPosts.length === 0 ? (
-        <div
-          className="rounded-2xl border bg-[var(--ms-surface)] py-10 text-center text-[13px]"
-          style={{ borderColor: "var(--ms-line)", color: "var(--ms-ink-3)" }}
-        >
-          아직 게시물이 없어요.
-        </div>
+              className="rounded-2xl border bg-[var(--ms-surface)] py-10 text-center text-[13px]"
+              style={{ borderColor: "var(--ms-line)", color: "var(--ms-ink-3)" }}
+            >
+              아직 게시물이 없어요.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {minimalPosts.map((p) => (
+                <MinimalPostCard key={p.id} post={p} />
+              ))}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="flex flex-col gap-3">
-          {minimalPosts.map((p) => (
-            <MinimalPostCard key={p.id} post={p} />
-          ))}
-        </div>
+        contentTabSlot
       )}
     </MinimalShell>
   )

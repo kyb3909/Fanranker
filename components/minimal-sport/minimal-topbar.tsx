@@ -65,21 +65,29 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         </span>
       </Link>
 
-      {/* Nav — 데스크톱(lg+)만. 모바일은 mobile-tab-bar로 nav. */}
-      <nav className="hidden items-center gap-1 lg:flex">
+      {/* Nav — 데스크톱(lg+)만. 모바일은 mobile-tab-bar로 nav.
+          탭 스타일: 활성 텍스트 ink + 하단 brand underline (홈 탭과 통일). */}
+      <nav className="hidden h-full items-stretch gap-1 lg:flex">
         {NAV_ITEMS.map((item) => {
           const isActive = item.label === active
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-full px-[14px] py-2 text-[13px] font-semibold transition-colors ${
-                isActive
-                  ? "bg-[var(--ms-brand)] text-white shadow-sm"
-                  : "text-[var(--ms-ink)] hover:bg-[var(--ms-bg-hover)]"
-              }`}
+              className="relative flex items-center px-[14px] text-[13px] transition-colors"
+              style={{
+                color: isActive ? "var(--ms-ink)" : "var(--ms-ink-3)",
+                fontWeight: isActive ? 800 : 600,
+              }}
             >
               {item.label}
+              {isActive && (
+                <span
+                  aria-hidden
+                  className="absolute right-3 -bottom-px left-3 h-[3px] rounded-full"
+                  style={{ backgroundColor: "var(--ms-brand)" }}
+                />
+              )}
             </Link>
           )
         })}

@@ -7,13 +7,8 @@ import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
-import { MinimalHomeContent } from "@/components/minimal-sport/minimal-home-content"
-import { MinimalShell } from "@/components/minimal-sport/minimal-shell"
-import { MinimalTopbar } from "@/components/minimal-sport/minimal-topbar"
-import { MinimalSidebar } from "@/components/minimal-sport/minimal-sidebar"
-import { MinimalRightAside } from "@/components/minimal-sport/minimal-right-aside"
-import { MinimalPrizeCard } from "@/components/minimal-sport/minimal-prize-card"
-import { MinimalTalkList, type TalkItem } from "@/components/minimal-sport/minimal-talk-list"
+import { MinimalHomeContent, type HomeTab } from "@/components/minimal-sport/minimal-home-content"
+import type { TalkItem } from "@/components/minimal-sport/minimal-talk-list"
 
 const OnboardingBanner = dynamic(
   () => import("@/components/onboarding-banner").then((m) => ({ default: m.OnboardingBanner })),
@@ -35,11 +30,14 @@ const ContentSection = dynamic(
   {
     loading: () => (
       <div className="min-h-[400px]">
-        <div className="bg-card border-border animate-pulse rounded-lg border p-6">
-          <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
+        <div
+          className="animate-pulse rounded-2xl border bg-[var(--ms-surface)] p-6"
+          style={{ borderColor: "var(--ms-line)" }}
+        >
+          <div className="mb-4 h-6 w-1/3 rounded bg-[var(--ms-bg-hover)]" />
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-muted h-20 rounded" />
+              <div key={i} className="h-20 rounded bg-[var(--ms-bg-hover)]" />
             ))}
           </div>
         </div>
@@ -49,32 +47,11 @@ const ContentSection = dynamic(
   }
 )
 
-type TabType = "feed" | "content"
-
 interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
-  initialTab?: TabType
-}
-
-function groupCategoriesForSidebar(
-  cats: Array<{
-    slug: string
-    name: string
-    icon: string | null
-    sort_order: number
-    parent_slug: string | null
-  }>
-) {
-  const parents = cats.filter((c) => !c.parent_slug)
-  const sports = parents
-    .filter((c) => c.sort_order <= 4)
-    .map((c) => ({ slug: c.slug, name: c.name, icon: c.icon }))
-  const life = parents
-    .filter((c) => c.sort_order > 4)
-    .map((c) => ({ slug: c.slug, name: c.name, icon: c.icon }))
-  return { sports, life }
+  initialTab?: HomeTab
 }
 
 export function HomeClient({
@@ -86,7 +63,7 @@ export function HomeClient({
   const { isSignedIn } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+  const [activeTab, setActiveTab] = useState<HomeTab>(initialTab)
 
   useEffect(() => {
     const urlTab = searchParams.get("tab")
@@ -120,10 +97,10 @@ export function HomeClient({
 
   const { posts, isLoading } = useFeed(sortBy, followedCommunities, followsLoaded, initialFeed)
 
-  // ?tab=content 핸들러는 ContentTab 영역 내 탭 swap에서만 사용
-  const handleSwitchToFeed = () => {
-    setActiveTab("feed")
-    router.replace("/", { scroll: false })
+  const handleTabChange = (tab: HomeTab) => {
+    setActiveTab(tab)
+    const nextUrl = tab === "content" ? "/?tab=content" : "/"
+    router.replace(nextUrl, { scroll: false })
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" })
   }
 
@@ -158,44 +135,6 @@ export function HomeClient({
   const showOnboarding =
     isSignedIn && followedCommunities.size === 0 && followsLoaded && activeTab === "feed"
 
-  // ?tab=content: 경기 분석글 — Minimal 셸 + 기존 ContentSection
-  if (activeTab === "content") {
-    const sidebarCats = groupCategories(groupedCategories)
-    return (
-      <>
-        <MinimalShell
-          topbar={<MinimalTopbar active="담벼락" />}
-          sidebar={<MinimalSidebar sports={sidebarCats.sports} life={sidebarCats.life} />}
-          aside={
-            <MinimalRightAside>
-              <MinimalPrizeCard />
-              <MinimalTalkList items={talkItems} />
-            </MinimalRightAside>
-          }
-        >
-          <div className="mb-4 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleSwitchToFeed}
-              className="text-[13px] font-semibold underline-offset-2 hover:underline"
-              style={{ color: "var(--ms-ink-3)" }}
-            >
-              ← 담벼락
-            </button>
-            <h1
-              className="text-[24px] font-extrabold sm:text-[28px]"
-              style={{ color: "var(--ms-ink)", letterSpacing: "-0.035em" }}
-            >
-              경기 분석글
-            </h1>
-          </div>
-          <ContentSection />
-        </MinimalShell>
-      </>
-    )
-  }
-
-  // 기본: feed 탭
   return (
     <>
       <MinimalHomeContent
@@ -205,25 +144,16 @@ export function HomeClient({
         categories={groupedCategories}
         recentComments={talkItems}
         isLoading={isLoading}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        contentTabSlot={<ContentSection />}
         topBanner={<AnnouncementCarousel />}
         feedBanner={showOnboarding ? <OnboardingBanner /> : undefined}
       />
       {/* 실시간 인기글 토스트 — 로그인 + feed 탭. fixed positioning이라 셸 외부 렌더 OK */}
-      {isSignedIn && <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />}
+      {isSignedIn && activeTab === "feed" && (
+        <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />
+      )}
     </>
   )
-}
-
-// 작은 헬퍼 — content 탭에서 사이드바 그룹화에 사용
-function groupCategories(
-  cats: Array<{
-    id: number | string
-    slug: string
-    name: string
-    icon: string | null
-    sort_order: number
-    parent_slug: string | null
-  }>
-) {
-  return groupCategoriesForSidebar(cats)
 }
