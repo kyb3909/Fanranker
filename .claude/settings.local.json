@@ -150,7 +150,9 @@
       "Bash(BASE_URL=http://localhost:3000 pnpm exec playwright test e2e/stadium.spec.ts --project=chromium --reporter=line)",
       "Bash(pnpm remove *)",
       "Bash(echo \"tsc: $?\")",
-      "Bash(echo \"eslint: $?\")"
+      "Bash(echo \"eslint: $?\")",
+      "Read(//d/Projects/새 폴더/adding\\(test\\)/**)",
+      "Read(//d/Projects/새 폴더/**)"
     ]
   }
 }
