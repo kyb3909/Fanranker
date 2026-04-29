@@ -32,7 +32,7 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     pathname === "/explore" ||
     pathname === "/shop" ||
     pathname.startsWith("/community/")
-  const showBanner = isHome && !hideChrome && !isMinimalSportPage
+  const showBanner = isHome && !hideChrome
 
   // 로그인됐지만 온보딩 미완료 유저 → /sign-up으로 리다이렉트
   useOnboardingGuard()
@@ -40,9 +40,17 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   return (
     <div className="bg-background min-h-screen">
       {!hideChrome && !isMinimalSportPage && header}
-      {/* 배너 = 피드 위 오버레이 레이어. 홈에서만 절대 위치로 상단 덮개. */}
+      {/*
+        배너 = 홈에서만. Minimal 페이지에선 inline(피드 위 정상 흐름),
+        구 디자인 페이지에선 절대 오버레이(기존 sticky Header 아래 z-30).
+      */}
       <div className="relative">
-        {showBanner && (
+        {showBanner && isMinimalSportPage && (
+          <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6">
+            <AnnouncementCarousel />
+          </div>
+        )}
+        {showBanner && !isMinimalSportPage && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
             <div className="pointer-events-auto mx-auto w-full max-w-[1280px] px-4 sm:px-6">
               <AnnouncementCarousel />
