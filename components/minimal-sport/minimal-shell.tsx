@@ -4,7 +4,7 @@ interface MinimalShellProps {
   topbar: ReactNode
   sidebar: ReactNode
   aside: ReactNode
-  /** Topbar 바로 아래 1280px 폭으로 등장하는 공지/광고 배너 (홈에서만). */
+  /** Topbar 아래 풀폭으로 등장하는 공지/광고 배너 (홈에서만). 좌우 끝까지 차지. */
   banner?: ReactNode
   /** banner 아래(또는 banner가 없으면 topbar 바로 아래) 깔리는 라이브 뉴스 티커. */
   ticker?: ReactNode
@@ -14,11 +14,9 @@ interface MinimalShellProps {
 /**
  * Minimal Sport 디자인 전용 레이아웃 셸.
  *
- * - 그리드: 64px topbar + (220px sidebar + 1fr feed + 300px right aside)
- * - 1280px max-width
- * - 데스크톱(lg+) 전용. 모바일은 부모 AppShell의 기존 헤더 + children 직접 노출.
- *
- * 두 페이지(/, /prediction)에서 사용. 다른 페이지는 영향 없음.
+ * - Topbar는 풀폭 sticky, 내부에 max-w-1280 콘텐츠 정렬.
+ * - 배너는 풀폭 absolute overlay (좌우 끝까지). 본문은 max-w-1280.
+ * - 1280px 기준 그리드: 220px sidebar + 1fr feed + 300px aside.
  */
 export function MinimalShell({
   topbar,
@@ -30,17 +28,19 @@ export function MinimalShell({
 }: MinimalShellProps) {
   return (
     <div className="theme-minimal-sport min-h-screen">
-      <div className="mx-auto w-full max-w-[1280px]">
-        <header className="sticky top-0 z-40 h-14 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl lg:h-16">
-          {topbar}
-        </header>
-        {/* 본문 영역 — banner가 있으면 absolute overlay로 위에 떠 있다가 접힘. */}
-        <div className="relative">
-          {banner && (
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
-              <div className="pointer-events-auto">{banner}</div>
-            </div>
-          )}
+      {/* Topbar — 풀폭 sticky. 안의 max-w로 콘텐츠만 1280으로 제한. */}
+      <header className="sticky top-0 z-40 h-14 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl lg:h-16">
+        <div className="mx-auto h-full w-full max-w-[1280px]">{topbar}</div>
+      </header>
+
+      {/* 본문 영역 — banner는 풀폭 absolute overlay. 본문은 max-w-1280로 다시 제한. */}
+      <div className="relative">
+        {banner && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
+            <div className="pointer-events-auto">{banner}</div>
+          </div>
+        )}
+        <div className="mx-auto w-full max-w-[1280px]">
           {ticker && (
             <div className="border-b border-[var(--ms-line)]" aria-label="라이브 트래커">
               {ticker}

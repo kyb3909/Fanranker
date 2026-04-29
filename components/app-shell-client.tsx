@@ -28,6 +28,7 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     pathname === "/prediction" ||
     pathname === "/explore" ||
     pathname === "/shop" ||
+    pathname === "/search" ||
     pathname.startsWith("/community/")
 
   // 홈인데 Minimal이 아닌 곳(=구 디자인 페이지에서 홈으로 라우팅 — 사실상 없음)에서는

@@ -1,366 +1,490 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useMemo, useCallback, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import useSWR from "swr"
 import Link from "@/components/ui/app-link"
-import { CommunitySidebar } from "@/components/sidebar/community-sidebar"
-import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Loader2, Search as SearchIcon, User, Hash, FileText } from "lucide-react"
+import { Loader2, Search as SearchIcon, ChevronDown, FileText, User, Hash } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
+import { fetcher } from "@/lib/swr"
+import { MinimalShell } from "@/components/minimal-sport/minimal-shell"
+import { MinimalTopbar } from "@/components/minimal-sport/minimal-topbar"
+import { MinimalSidebar } from "@/components/minimal-sport/minimal-sidebar"
+import { MinimalRightAside } from "@/components/minimal-sport/minimal-right-aside"
+import { MinimalPrizeCard } from "@/components/minimal-sport/minimal-prize-card"
+import { MinimalTalkList, type TalkItem } from "@/components/minimal-sport/minimal-talk-list"
 
 type SearchType = "nickname" | "id" | "title" | "title_content"
 
-const SEARCH_TYPE_OPTIONS = [
-  { value: "title_content", label: "제목", icon: FileText },
+const SEARCH_TYPE_OPTIONS: { value: SearchType; label: string; icon: typeof FileText }[] = [
+  { value: "title_content", label: "제목·내용", icon: FileText },
+  { value: "title", label: "제목만", icon: FileText },
   { value: "nickname", label: "닉네임", icon: User },
-  { value: "id", label: "ID", icon: Hash },
-] as const
+  { value: "id", label: "글 ID", icon: Hash },
+]
 
-interface Post {
+interface SearchResultPost {
   id: string
-  community: string
-  communitySlug?: string
-  author: string
-  avatar: string
-  timestamp: string
   title: string
-  content: string | Record<string, unknown> // TipTap JSON or string
-  image?: string
-  upvotes: number
-  comments: number
-  isUpvoted: boolean
-  createdAt: Date
+  community_slug: string
+  user_id: string
+  vote_count?: number
+  comment_count?: number
+  created_at: string
+}
+
+interface SearchResultProfile {
+  user_id: string
+  nickname: string
+  avatar_url: string | null
+}
+
+interface RawCategory {
+  id: number | string
+  slug: string
+  name: string
+  icon: string | null
+  sort_order: number
+  parent_slug?: string | null
+}
+
+const PAGE_SIZE = 20
+
+function groupCategories(cats: RawCategory[]) {
+  const parents = cats.filter((c) => !c.parent_slug)
+  const sports = parents
+    .filter((c) => c.sort_order <= 4)
+    .map((c) => ({ slug: c.slug, name: c.name, icon: c.icon }))
+  const life = parents
+    .filter((c) => c.sort_order > 4)
+    .map((c) => ({ slug: c.slug, name: c.name, icon: c.icon }))
+  return { sports, life }
 }
 
 function SearchContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
-  const [searchType, setSearchType] = useState<SearchType>(
-    (searchParams.get("type") as SearchType) || "title_content"
-  )
-  const [posts, setPosts] = useState<Post[]>([])
+  // 초기 state는 빈 값으로 — SSR과 hydration mismatch 방지. 마운트 후 useEffect에서 URL 동기화.
+  const [query, setQuery] = useState("")
+  const [type, setType] = useState<SearchType>("title_content")
+  const [posts, setPosts] = useState<SearchResultPost[]>([])
+  const [profiles, setProfiles] = useState<Record<string, SearchResultProfile>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false)
+  const typeMenuRef = useRef<HTMLDivElement>(null)
 
-  const PAGE_SIZE = 20
+  // 사이드바/우측 위젯용 데이터 (다른 페이지와 SWR 캐시 공유)
+  const { data: catData } = useSWR<{ categories: RawCategory[] }>("/api/categories", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  })
+  const { data: talkData } = useSWR<{ posts: TalkItem[] }>(
+    "/api/posts?sort=recent_comment&limit=10",
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  )
+  const categories = useMemo(() => catData?.categories ?? [], [catData])
+  const { sports, life } = useMemo(() => groupCategories(categories), [categories])
+  const recentComments: TalkItem[] = useMemo(
+    () =>
+      (talkData?.posts ?? []).map((t) => ({
+        id: t.id,
+        title: t.title,
+        community_slug: t.community_slug,
+        comment_count: t.comment_count,
+      })),
+    [talkData]
+  )
 
-  // URL에서 검색어가 있으면 자동 검색 (초기 진입 시에만)
-  const initialSearchDone = useState(false)
+  const performSearch = useCallback(
+    async (q: string, t: SearchType, loadMore = false) => {
+      const trimmed = q.trim()
+      if (!trimmed) return
+      if (loadMore) setIsLoadingMore(true)
+      else {
+        setIsLoading(true)
+        setHasSearched(true)
+      }
+      setErrorMessage(null)
+      const offset = loadMore ? posts.length : 0
+      try {
+        const res = await fetch(
+          `/api/search?q=${encodeURIComponent(trimmed)}&type=${t}&limit=${PAGE_SIZE}&offset=${offset}`
+        )
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || `검색 실패 (${res.status})`)
+        }
+        const data = await res.json()
+        const fetchedPosts: SearchResultPost[] = data.posts ?? []
+        const fetchedProfiles: SearchResultProfile[] = data.profiles ?? []
+        const profileMap = Object.fromEntries(fetchedProfiles.map((p) => [p.user_id, p]))
+        setProfiles((prev) => (loadMore ? { ...prev, ...profileMap } : profileMap))
+        setPosts((prev) => (loadMore ? [...prev, ...fetchedPosts] : fetchedPosts))
+        setHasMore(fetchedPosts.length >= PAGE_SIZE)
+      } catch (e) {
+        if (!loadMore) setPosts([])
+        setErrorMessage(e instanceof Error ? e.message : "검색 중 오류가 발생했습니다.")
+      } finally {
+        setIsLoading(false)
+        setIsLoadingMore(false)
+      }
+    },
+    [posts.length]
+  )
+
+  // URL ?q= 변경 시 자동 검색
   useEffect(() => {
-    if (initialSearchDone[0]) return
-    const q = searchParams.get("q")
-    const type = (searchParams.get("type") as SearchType) || "title_content"
-    if (q && q.trim().length > 0) {
-      setSearchQuery(q)
-      setSearchType(type)
-      initialSearchDone[1](true)
-      performSearch(q, type)
+    const q = searchParams.get("q")?.trim()
+    const t = (searchParams.get("type") as SearchType) || "title_content"
+    if (q) {
+      setQuery(q)
+      setType(t)
+      performSearch(q, t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  const performSearch = async (query: string, type: SearchType, loadMore = false) => {
-    if (loadMore) {
-      setIsLoadingMore(true)
-    } else {
-      setIsLoading(true)
-      setHasSearched(true)
+  // 외부 클릭 시 type menu 닫기
+  useEffect(() => {
+    if (!typeMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (typeMenuRef.current && !typeMenuRef.current.contains(e.target as Node)) {
+        setTypeMenuOpen(false)
+      }
     }
-    setErrorMessage(null)
-
-    const offset = loadMore ? posts.length : 0
-
-    try {
-      // API 호출
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query.trim())}&type=${type}&limit=${PAGE_SIZE}&offset=${offset}`
-      )
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "알 수 없는 오류가 발생했습니다." }))
-        throw new Error(errorData.error || `검색에 실패했습니다. (${response.status})`)
-      }
-
-      const data = await response.json()
-      const { posts: fetchedPosts, profiles } = data || { posts: [], profiles: [] }
-
-      // 프로필 매핑
-      const profileMap = new Map<
-        string,
-        { user_id: string; nickname: string; avatar_url: string | null }
-      >(
-        profiles?.map((p: { user_id: string; nickname: string; avatar_url: string | null }) => [
-          p.user_id,
-          p,
-        ]) || []
-      )
-
-      // 데이터 변환
-      const transformedPosts: Post[] = (fetchedPosts || []).map(
-        (post: {
-          id: string
-          user_id: string
-          community_slug: string
-          title: string
-          content: string | Record<string, unknown>
-          image?: string
-          vote_count?: number
-          comment_count?: number
-          created_at: string
-        }) => {
-          const profile = profileMap.get(post.user_id)
-          return {
-            id: post.id,
-            community: COMMUNITY_NAMES[post.community_slug] || post.community_slug,
-            communitySlug: post.community_slug,
-            author: profile?.nickname || "익명",
-            avatar: profile?.avatar_url || "/placeholder-user.jpg",
-            timestamp: formatRelativeTime(new Date(post.created_at)),
-            title: post.title,
-            content: post.content,
-            image: post.image,
-            upvotes: post.vote_count || 0,
-            comments: post.comment_count || 0,
-            isUpvoted: false,
-            createdAt: new Date(post.created_at),
-          }
-        }
-      )
-
-      if (loadMore) {
-        setPosts((prev) => [...prev, ...transformedPosts])
-      } else {
-        setPosts(transformedPosts)
-      }
-      setHasMore(transformedPosts.length >= PAGE_SIZE)
-    } catch (error) {
-      if (!loadMore) setPosts([])
-      if (error instanceof Error) {
-        setErrorMessage(error.message || "검색 중 오류가 발생했습니다.")
-      } else {
-        setErrorMessage("검색 중 오류가 발생했습니다.")
-      }
-    } finally {
-      setIsLoading(false)
-      setIsLoadingMore(false)
-    }
-  }
-
-  const handleSearch = (query?: string, type?: SearchType) => {
-    const finalQuery = (query || searchQuery).trim()
-    const finalType = type || searchType
-
-    if (!finalQuery) return
-
-    // URL 업데이트
-    const params = new URLSearchParams()
-    params.set("q", finalQuery)
-    params.set("type", finalType)
-    router.push(`/search?${params.toString()}`, { scroll: false })
-
-    // API 호출
-    performSearch(finalQuery, finalType)
-  }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [typeMenuOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    handleSearch()
+    const trimmed = query.trim()
+    if (!trimmed) return
+    const params = new URLSearchParams()
+    params.set("q", trimmed)
+    params.set("type", type)
+    router.push(`/search?${params.toString()}`, { scroll: false })
+    performSearch(trimmed, type)
   }
 
-  const selectedTypeOption = SEARCH_TYPE_OPTIONS.find((opt) => opt.value === searchType)
+  const selectedType = SEARCH_TYPE_OPTIONS.find((o) => o.value === type) ?? SEARCH_TYPE_OPTIONS[0]
+  const SelectedTypeIcon = selectedType.icon
 
   return (
-    <main
-      id="main-content"
-      className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-      tabIndex={-1}
+    <MinimalShell
+      topbar={<MinimalTopbar active="담벼락" />}
+      sidebar={<MinimalSidebar sports={sports} life={life} />}
+      aside={
+        <MinimalRightAside>
+          <MinimalPrizeCard />
+          <MinimalTalkList items={recentComments} />
+        </MinimalRightAside>
+      }
     >
-      <div className="grid grid-cols-12 gap-5 lg:gap-6">
-        <aside className="col-span-3 hidden lg:block">
-          <CommunitySidebar />
-        </aside>
-        <div className="col-span-12 space-y-4 lg:col-span-6">
-          {/* 검색 헤더 */}
-          <div className="space-y-4">
-            <h1 className="text-foreground text-2xl font-bold">검색</h1>
+      {/* Crumb + Heading */}
+      <div className="mb-5">
+        <div className="text-[13px]" style={{ color: "var(--ms-ink-3)" }}>
+          전체 ·{" "}
+          <b className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
+            검색
+          </b>
+        </div>
+        <h1
+          className="mt-1 text-[24px] leading-[1.15] font-extrabold sm:text-[28px]"
+          style={{ color: "var(--ms-ink)", letterSpacing: "-0.035em" }}
+        >
+          검색
+        </h1>
+      </div>
 
-            {/* 검색 폼 */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex gap-2">
-                {/* 검색 타입 선택 */}
-                <Select
-                  value={searchType}
-                  onValueChange={(value) => setSearchType(value as SearchType)}
+      {/* 검색 폼 */}
+      <form onSubmit={handleSubmit} role="search" className="mb-5 flex flex-col gap-2 sm:flex-row">
+        {/* type select dropdown */}
+        <div ref={typeMenuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setTypeMenuOpen((v) => !v)}
+            className="flex h-10 w-full items-center justify-between gap-2 rounded-xl border bg-[var(--ms-surface)] px-3.5 text-[13px] font-semibold sm:w-[150px]"
+            style={{ borderColor: "var(--ms-line)", color: "var(--ms-ink)" }}
+            aria-haspopup="listbox"
+            aria-expanded={typeMenuOpen}
+          >
+            <span className="flex items-center gap-2">
+              <SelectedTypeIcon className="h-4 w-4" style={{ color: "var(--ms-ink-3)" }} />
+              {selectedType.label}
+            </span>
+            <ChevronDown className="h-4 w-4" style={{ color: "var(--ms-ink-3)" }} />
+          </button>
+          {typeMenuOpen && (
+            <ul
+              role="listbox"
+              className="absolute top-full left-0 z-20 mt-1 w-[180px] overflow-hidden rounded-xl border bg-[var(--ms-surface)] shadow-md"
+              style={{ borderColor: "var(--ms-line)" }}
+            >
+              {SEARCH_TYPE_OPTIONS.map((opt) => {
+                const Icon = opt.icon
+                const isActive = opt.value === type
+                return (
+                  <li key={opt.value}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => {
+                        setType(opt.value)
+                        setTypeMenuOpen(false)
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-semibold transition-colors hover:bg-[var(--ms-bg-hover)]"
+                      style={{
+                        color: isActive ? "var(--ms-brand)" : "var(--ms-ink)",
+                        backgroundColor: isActive ? "var(--ms-brand-soft)" : undefined,
+                      }}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {opt.label}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* 입력 */}
+        <label
+          className="flex h-10 flex-1 items-center gap-2 rounded-xl border bg-[var(--ms-surface)] px-3.5 text-[13px] focus-within:border-[var(--ms-line-hover)]"
+          style={{ borderColor: "var(--ms-line)" }}
+        >
+          <SearchIcon className="h-4 w-4 shrink-0" style={{ color: "var(--ms-ink-3)" }} />
+          <input
+            type="text"
+            name="q"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              type === "nickname"
+                ? "닉네임을 입력하세요"
+                : type === "id"
+                  ? "글 ID를 입력하세요"
+                  : "검색어를 입력하세요"
+            }
+            className="min-w-0 flex-1 bg-transparent text-[var(--ms-ink)] placeholder:text-[var(--ms-ink-3)] focus:outline-none"
+            aria-label="검색어"
+          />
+        </label>
+
+        {/* 제출 */}
+        <button
+          type="submit"
+          disabled={isLoading || !query.trim()}
+          className="flex h-10 items-center justify-center gap-1.5 rounded-xl px-5 text-[13px] font-bold text-white shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          style={{ backgroundColor: "var(--ms-brand)" }}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              검색 중
+            </>
+          ) : (
+            <>
+              <SearchIcon className="h-4 w-4" />
+              검색
+            </>
+          )}
+        </button>
+      </form>
+
+      {/* 결과 영역 */}
+      <SearchResults
+        errorMessage={errorMessage}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        hasSearched={hasSearched}
+        hasMore={hasMore}
+        posts={posts}
+        profiles={profiles}
+        onLoadMore={() => performSearch(query, type, true)}
+      />
+    </MinimalShell>
+  )
+}
+
+function SearchResults({
+  errorMessage,
+  isLoading,
+  isLoadingMore,
+  hasSearched,
+  hasMore,
+  posts,
+  profiles,
+  onLoadMore,
+}: {
+  errorMessage: string | null
+  isLoading: boolean
+  isLoadingMore: boolean
+  hasSearched: boolean
+  hasMore: boolean
+  posts: SearchResultPost[]
+  profiles: Record<string, SearchResultProfile>
+  onLoadMore: () => void
+}) {
+  if (errorMessage) {
+    return (
+      <Card>
+        <p className="text-[13px] font-semibold" style={{ color: "var(--ms-brand)" }}>
+          {errorMessage}
+        </p>
+        <p className="mt-1 text-[12px]" style={{ color: "var(--ms-ink-3)" }}>
+          잠시 후 다시 시도해주세요.
+        </p>
+      </Card>
+    )
+  }
+  if (isLoading) {
+    return (
+      <Card center>
+        <Loader2
+          className="mx-auto mb-2 h-6 w-6 animate-spin"
+          style={{ color: "var(--ms-ink-3)" }}
+        />
+        <p className="text-[13px]" style={{ color: "var(--ms-ink-3)" }}>
+          검색 중...
+        </p>
+      </Card>
+    )
+  }
+  if (!hasSearched) {
+    return (
+      <Card center>
+        <SearchIcon
+          className="mx-auto mb-3 h-9 w-9 opacity-40"
+          style={{ color: "var(--ms-ink-3)" }}
+        />
+        <p className="text-[13px]" style={{ color: "var(--ms-ink-2)" }}>
+          검색어를 입력하고 검색을 누르세요.
+        </p>
+      </Card>
+    )
+  }
+  if (posts.length === 0) {
+    return (
+      <Card center>
+        <p className="text-[13px]" style={{ color: "var(--ms-ink-2)" }}>
+          검색 결과가 없습니다.
+        </p>
+        <p className="mt-1 text-[12px]" style={{ color: "var(--ms-ink-3)" }}>
+          다른 검색어나 검색 타입을 시도해보세요.
+        </p>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[12px] font-semibold" style={{ color: "var(--ms-ink-3)" }}>
+        검색 결과{" "}
+        <b className="font-archivo font-extrabold tabular-nums" style={{ color: "var(--ms-ink)" }}>
+          {posts.length}
+        </b>
+        개
+      </p>
+      <ul
+        className="overflow-hidden rounded-2xl border bg-[var(--ms-surface)]"
+        style={{ borderColor: "var(--ms-line)" }}
+      >
+        {posts.map((post) => {
+          const profile = profiles[post.user_id]
+          const community = COMMUNITY_NAMES[post.community_slug] || post.community_slug
+          const time = formatRelativeTime(new Date(post.created_at))
+          return (
+            <li key={post.id}>
+              <Link
+                href={`/post/${post.id}`}
+                className="block border-b px-4 py-3 transition-colors last:border-b-0 hover:bg-[var(--ms-bg-hover)]"
+                style={{ borderColor: "var(--ms-line)" }}
+              >
+                <div
+                  className="flex items-center gap-2 text-[11px]"
+                  style={{ color: "var(--ms-ink-3)" }}
                 >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue>
-                      {selectedTypeOption && (
-                        <div className="flex items-center gap-2">
-                          <selectedTypeOption.icon className="h-4 w-4" />
-                          <span>{selectedTypeOption.label}</span>
-                        </div>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SEARCH_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <option.icon className="h-4 w-4" />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* 검색 입력 */}
-                <div className="relative flex-1">
-                  <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2" />
-                  <Input
-                    type="text"
-                    placeholder={
-                      searchType === "nickname"
-                        ? "닉네임을 입력하세요..."
-                        : searchType === "id"
-                          ? "글 ID를 입력하세요..."
-                          : searchType === "title"
-                            ? "제목을 입력하세요..."
-                            : "제목 또는 내용을 입력하세요..."
-                    }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSubmit(e)
-                      }
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                    style={{
+                      backgroundColor: "var(--ms-brand-soft)",
+                      color: "var(--ms-brand)",
                     }}
-                    className="h-10 pl-10"
-                  />
+                  >
+                    {community}
+                  </span>
+                  <span style={{ color: "var(--ms-ink-2)", fontWeight: 600 }}>
+                    @{profile?.nickname || "익명"}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <span>{time}</span>
                 </div>
-
-                {/* 검색 버튼 */}
-                <Button type="submit" disabled={isLoading || !searchQuery.trim()}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      검색 중...
-                    </>
-                  ) : (
-                    <>
-                      <SearchIcon className="mr-2 h-4 w-4" />
-                      검색
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-
-          {/* 검색 결과 */}
-          <div className="space-y-3">
-            {errorMessage ? (
-              <div className="bg-destructive/10 border-destructive/20 rounded-lg border p-6 text-center">
-                <p className="text-destructive mb-2 text-sm font-medium">{errorMessage}</p>
-                <p className="text-muted-foreground text-xs">잠시 후 다시 시도해주세요.</p>
-              </div>
-            ) : isLoading ? (
-              <div className="bg-card border-border rounded-lg border p-8 text-center">
-                <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground text-sm">검색 중...</p>
-              </div>
-            ) : hasSearched && posts.length === 0 ? (
-              <div className="bg-card border-border rounded-lg border p-8 text-center">
-                <p className="text-muted-foreground mb-2 text-sm">검색 결과가 없습니다.</p>
-                <p className="text-muted-foreground text-xs">
-                  다른 검색어나 검색 타입을 시도해보세요.
+                <p
+                  className="mt-1 text-[14px] leading-tight font-bold"
+                  style={{ color: "var(--ms-ink)", letterSpacing: "-0.01em" }}
+                >
+                  {post.title}
                 </p>
-              </div>
-            ) : hasSearched && posts.length > 0 ? (
-              <>
-                <div className="text-muted-foreground mb-2 text-sm">
-                  검색 결과: <span className="text-foreground font-semibold">{posts.length}개</span>
-                </div>
-                <div className="bg-card border-border overflow-hidden rounded-lg border">
-                  {/* 게시판 목록 헤더 */}
-                  <div className="bg-muted/40 border-border text-muted-foreground grid grid-cols-12 gap-2 border-b px-4 py-2.5 text-[12px] font-semibold">
-                    <div className="col-span-6 sm:col-span-7">제목</div>
-                    <div className="col-span-3 sm:col-span-2">게시판</div>
-                    <div className="col-span-3 text-right sm:col-span-3">작성일</div>
-                  </div>
-                  {/* 목록 행 */}
-                  {posts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/post/${post.id}`}
-                      className="border-border hover:bg-muted/40 grid grid-cols-12 items-center gap-2 border-b px-4 py-2.5 transition-colors last:border-b-0"
-                    >
-                      <div className="text-foreground col-span-6 truncate pr-2 text-[14px] font-medium sm:col-span-7">
-                        {post.title}
-                      </div>
-                      <div className="text-muted-foreground col-span-3 truncate text-[13px] sm:col-span-2">
-                        {post.community}
-                      </div>
-                      <div className="text-muted-foreground col-span-3 shrink-0 text-right text-[12px] sm:col-span-3">
-                        {post.timestamp}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-                {hasMore && (
-                  <div className="py-4 text-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => performSearch(searchQuery, searchType, true)}
-                      disabled={isLoadingMore}
-                    >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          불러오는 중...
-                        </>
-                      ) : (
-                        "더 보기"
-                      )}
-                    </Button>
+                {(post.vote_count != null || post.comment_count != null) && (
+                  <div
+                    className="mt-1.5 flex items-center gap-3 text-[11px] font-semibold"
+                    style={{ color: "var(--ms-ink-3)" }}
+                  >
+                    {post.vote_count != null && <span>▲ {post.vote_count}</span>}
+                    {post.comment_count != null && <span>💬 {post.comment_count}</span>}
                   </div>
                 )}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+      {hasMore && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="flex h-9 items-center gap-1.5 rounded-full border px-5 text-[12px] font-bold transition-colors hover:border-[var(--ms-ink)] disabled:opacity-50"
+            style={{
+              borderColor: "var(--ms-line)",
+              backgroundColor: "var(--ms-surface)",
+              color: "var(--ms-ink)",
+            }}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                불러오는 중
               </>
             ) : (
-              <div className="bg-card border-border rounded-lg border p-8 text-center">
-                <SearchIcon className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-50" />
-                <p className="text-muted-foreground mb-2 text-sm">
-                  검색어를 입력하고 검색 버튼을 누르세요.
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  검색 타입을 선택하여 원하는 방식으로 검색할 수 있습니다.
-                </p>
-              </div>
+              "더 보기"
             )}
-          </div>
+          </button>
         </div>
-        <aside className="col-span-3 hidden lg:block">
-          <ActivitySidebar />
-        </aside>
-      </div>
-    </main>
+      )}
+    </div>
+  )
+}
+
+function Card({ children, center }: { children: React.ReactNode; center?: boolean }) {
+  return (
+    <div
+      className={`rounded-2xl border bg-[var(--ms-surface)] p-8 ${center ? "text-center" : ""}`}
+      style={{ borderColor: "var(--ms-line)" }}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -368,16 +492,9 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <main
-          id="main-content"
-          className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-          tabIndex={-1}
-        >
-          <div className="bg-card border-border rounded-lg border p-8 text-center">
-            <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground text-sm">로딩 중...</p>
-          </div>
-        </main>
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--ms-ink-3)" }} />
+        </div>
       }
     >
       <SearchContent />
