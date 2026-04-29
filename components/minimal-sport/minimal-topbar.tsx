@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
-import { Bell, Search } from "lucide-react"
+import { Bell, Compass, LayoutGrid, Search, Sparkles, Trophy, type LucideIcon } from "lucide-react"
 import { SignedIn, SignedOut, useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { GoldBalance } from "@/components/header/gold-balance"
@@ -12,12 +12,12 @@ import { NotificationDropdown } from "@/components/header/notification-dropdown"
 import { UserMenu } from "@/components/header/user-menu"
 import { SignInMenu } from "@/components/header/sign-in-menu"
 
-const NAV_ITEMS = [
-  { label: "담벼락", href: "/" },
-  { label: "운동장", href: "/explore" },
-  { label: "경기 예측", href: "/prediction" },
-  { label: "상점", href: "/shop" },
-] as const
+const NAV_ITEMS: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: "담벼락", href: "/", icon: LayoutGrid },
+  { label: "운동장", href: "/explore", icon: Compass },
+  { label: "경기 예측", href: "/prediction", icon: Trophy },
+  { label: "상점", href: "/shop", icon: Sparkles },
+]
 
 interface MinimalTopbarProps {
   active: "담벼락" | "운동장" | "경기 예측" | "상점"
@@ -71,16 +71,18 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
       <nav className="hidden h-full items-stretch gap-2 lg:flex">
         {NAV_ITEMS.map((item) => {
           const isActive = item.label === active
+          const Icon = item.icon
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex items-center px-4 text-[15px] tracking-tight transition-colors hover:bg-[var(--ms-bg-hover)]"
+              className="relative flex items-center gap-1.5 px-4 text-[15px] tracking-tight transition-colors hover:bg-[var(--ms-bg-hover)]"
               style={{
                 color: isActive ? "var(--ms-ink)" : "var(--ms-ink-3)",
                 fontWeight: isActive ? 800 : 600,
               }}
             >
+              <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
               {item.label}
               {isActive && (
                 <span
