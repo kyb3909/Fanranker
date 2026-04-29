@@ -73,6 +73,8 @@ function postToMinimalInput(p: Post): MinimalPostInput {
     comment_count: p.comments,
     created_at: created.toISOString(),
     author_nickname: p.author,
+    author_user_id: p.userId ?? null,
+    is_upvoted: p.isUpvoted,
   }
 }
 

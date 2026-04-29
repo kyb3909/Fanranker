@@ -5,7 +5,17 @@ import { createPortal } from "react-dom"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "@/components/ui/app-link"
-import { ExternalLink, Play, X as CloseIcon } from "lucide-react"
+import {
+  ExternalLink,
+  MessageSquare,
+  Play,
+  Share2,
+  Bookmark,
+  BookmarkCheck,
+  ArrowBigUp,
+  ArrowBigDown,
+  X as CloseIcon,
+} from "lucide-react"
 import useSWR from "swr"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatCount } from "@/lib/utils/format"
@@ -15,6 +25,8 @@ import type { TipTapNode } from "@/types/post"
 import { extractYouTubeId } from "@/lib/embed/youtube"
 import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 import { useVisibility } from "@/hooks/use-visibility"
+import { usePostCardActions } from "@/hooks/use-post-card-actions"
+import { toast } from "@/hooks/use-toast"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 interface XOEmbedData {
@@ -38,6 +50,10 @@ export interface MinimalPostInput {
   comment_count: number | null
   created_at: string
   author_nickname?: string | null
+  /** Clerk user_id — @작성자 클릭 시 /profile/{userId}로 이동 */
+  author_user_id?: string | null
+  /** 현재 사용자가 추천한 글이면 true (서버에서 join해서 내려줄 때만) */
+  is_upvoted?: boolean
 }
 
 const TRANSITION = "transition-colors duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -102,16 +118,40 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
   const excerpt = buildExcerpt(post.content)
   const time = formatRelativeTime(new Date(post.created_at))
   const author = post.author_nickname ?? "익명"
+  const authorUserId = post.author_user_id ?? null
   const slug = post.community_slug
   const tagLabel = getCommunityName(slug)
-  const score = post.vote_count ?? 0
   const comments = post.comment_count ?? 0
   const embed =
     typeof post.content === "object" && post.content
       ? extractFirstEmbedFromTipTapJSON(post.content)
       : null
 
+  const { voteCount, myVote, isBookmarked, handleVote, handleBookmark } = usePostCardActions({
+    postId: post.id,
+    author,
+    upvotes: post.vote_count ?? 0,
+    isUpvoted: post.is_upvoted ?? false,
+  })
+
   const handleClick = () => router.push(`/post/${post.id}`)
+  const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+  const onShare = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const url = `${window.location.origin}/post/${post.id}`
+    const data = { title: post.title, url }
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share(data)
+      } else {
+        await navigator.clipboard.writeText(url)
+        toast({ title: "링크 복사됨", description: "공유 링크가 클립보드에 복사되었습니다." })
+      }
+    } catch {
+      // 사용자 취소 등은 silent
+    }
+  }
 
   return (
     <article
@@ -127,7 +167,7 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
         {slug && (
           <Link
             href={`/community/${slug}`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={stop}
             className="rounded-full px-2 py-0.5 text-[11px] font-bold"
             style={{
               backgroundColor: "var(--ms-brand-soft)",
@@ -137,9 +177,20 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
             {tagLabel}
           </Link>
         )}
-        <span className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
-          @{author}
-        </span>
+        {authorUserId ? (
+          <Link
+            href={`/profile/${authorUserId}`}
+            onClick={stop}
+            className="font-semibold transition-colors hover:underline"
+            style={{ color: "var(--ms-ink-2)" }}
+          >
+            @{author}
+          </Link>
+        ) : (
+          <span className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
+            @{author}
+          </span>
+        )}
         <span aria-hidden>·</span>
         <span>{time}</span>
       </div>
@@ -163,24 +214,93 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
       )}
 
       {/* 4행 — oEmbed 박스 (X / Instagram / YouTube) */}
-      {embed && <EmbedBox embed={embed} onCardClick={(e) => e.stopPropagation()} />}
+      {embed && <EmbedBox embed={embed} onCardClick={stop} />}
 
       {/* 5행 — 액션 */}
       <div
-        className="mt-1 flex items-center gap-3.5 text-[12px] font-semibold"
+        className="mt-1 flex items-center gap-3 text-[12px] font-semibold"
         style={{ color: "var(--ms-ink-3)" }}
       >
+        {/* 추천/비추천 pill */}
         <span
-          className="font-archivo inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 tabular-nums"
+          className="inline-flex items-center gap-0.5 rounded-full px-1 py-0.5"
           style={{ backgroundColor: "var(--ms-bg-hover)" }}
+          onClick={stop}
         >
-          <span aria-hidden>▲</span>
-          <b style={{ color: "var(--ms-ink)" }}>{formatCount(score)}</b>
-          <span aria-hidden>▼</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleVote("up")
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[var(--ms-surface)]"
+            aria-label="추천"
+            aria-pressed={myVote === "up"}
+            style={{ color: myVote === "up" ? "var(--ms-brand)" : "var(--ms-ink-3)" }}
+          >
+            <ArrowBigUp className="h-4 w-4" fill={myVote === "up" ? "currentColor" : "none"} />
+          </button>
+          <b
+            className="font-archivo min-w-[14px] text-center tabular-nums"
+            style={{ color: "var(--ms-ink)" }}
+          >
+            {formatCount(voteCount)}
+          </b>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleVote("down")
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[var(--ms-surface)]"
+            aria-label="비추천"
+            aria-pressed={myVote === "down"}
+            style={{ color: myVote === "down" ? "var(--ms-brand)" : "var(--ms-ink-3)" }}
+          >
+            <ArrowBigDown className="h-4 w-4" fill={myVote === "down" ? "currentColor" : "none"} />
+          </button>
         </span>
-        <span>💬 {formatCount(comments)}</span>
-        <span>↗ 공유</span>
-        <span>☆ 저장</span>
+
+        {/* 댓글 — 카드 클릭과 동일하게 /post/[id] 이동 */}
+        <Link
+          href={`/post/${post.id}#comments`}
+          onClick={stop}
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--ms-ink)]"
+        >
+          <MessageSquare className="h-4 w-4" />
+          {formatCount(comments)}
+        </Link>
+
+        {/* 공유 */}
+        <button
+          type="button"
+          onClick={onShare}
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--ms-ink)]"
+          aria-label="공유"
+        >
+          <Share2 className="h-4 w-4" />
+          공유
+        </button>
+
+        {/* 저장(북마크) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleBookmark()
+          }}
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--ms-ink)]"
+          aria-label={isBookmarked ? "저장됨" : "저장"}
+          aria-pressed={isBookmarked}
+          style={isBookmarked ? { color: "var(--ms-brand)" } : undefined}
+        >
+          {isBookmarked ? (
+            <BookmarkCheck className="h-4 w-4" fill="currentColor" />
+          ) : (
+            <Bookmark className="h-4 w-4" />
+          )}
+          저장
+        </button>
       </div>
     </article>
   )
