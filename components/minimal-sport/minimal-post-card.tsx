@@ -1,9 +1,10 @@
 "use client"
 
+import { useCallback, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "@/components/ui/app-link"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Play } from "lucide-react"
 import useSWR from "swr"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatCount } from "@/lib/utils/format"
@@ -11,6 +12,7 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { extractFirstEmbedFromTipTapJSON, type EmbedNode } from "@/lib/utils/tiptap-embeds"
 import type { TipTapNode } from "@/types/post"
 import { extractYouTubeId } from "@/lib/embed/youtube"
+import { useVisibility } from "@/hooks/use-visibility"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
 interface XOEmbedData {
@@ -382,25 +384,95 @@ function XEmbedBody({
         </p>
       )}
 
-      {/* 미디어 */}
+      {/* 미디어 — 사진은 정적 이미지, 영상은 클릭하면 인라인 재생 */}
       {firstMedia && (
         <div
           className="relative aspect-video w-full overflow-hidden bg-black"
           style={{ borderRadius: 12 }}
         >
-          <Image
-            src={
-              firstMedia.type === "photo"
-                ? firstMedia.url
-                : firstMedia.thumbnail_url || firstMedia.url
-            }
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 560px"
-            unoptimized
-          />
+          {firstMedia.type === "photo" ? (
+            <Image
+              src={firstMedia.url}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 560px"
+              unoptimized
+            />
+          ) : (
+            <XVideoPlayer
+              media={firstMedia as { type: "video"; url: string; thumbnail_url?: string }}
+            />
+          )}
         </div>
+      )}
+    </div>
+  )
+}
+
+function XVideoPlayer({
+  media,
+}: {
+  media: { type: "video"; url: string; thumbnail_url?: string }
+}) {
+  const [playing, setPlaying] = useState(false)
+  const [videoError, setVideoError] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const handlePause = useCallback(() => {
+    videoRef.current?.pause()
+  }, [])
+  const visRef = useVisibility(handlePause)
+
+  if (videoError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-black/90 text-sm text-white/60">
+        동영상을 재생할 수 없습니다
+      </div>
+    )
+  }
+
+  return (
+    <div ref={visRef} className="h-full w-full">
+      {playing ? (
+        <video
+          ref={videoRef}
+          src={`/api/media-proxy?url=${encodeURIComponent(media.url)}`}
+          autoPlay
+          controls
+          playsInline
+          className="h-full w-full object-contain"
+          onError={() => setVideoError(true)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setPlaying(true)
+          }}
+          className="group relative block h-full w-full"
+          aria-label="동영상 재생"
+        >
+          {media.thumbnail_url && (
+            <Image
+              src={media.thumbnail_url}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 560px"
+              unoptimized
+              onError={(e) => {
+                ;(e.currentTarget as HTMLImageElement).style.display = "none"
+              }}
+            />
+          )}
+          <span className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/80 shadow-lg transition-transform group-hover:scale-110">
+              <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+            </span>
+          </span>
+        </button>
       )}
     </div>
   )
@@ -518,6 +590,8 @@ function YouTubeEmbedBox({
   const videoId = extractYouTubeId(url)
   const thumb =
     thumbnail_url || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
+  const [playing, setPlaying] = useState(false)
+
   return (
     <div
       className="relative overflow-hidden"
@@ -532,20 +606,39 @@ function YouTubeEmbedBox({
         className="absolute top-0 bottom-0 left-0 z-10 w-[4px]"
         style={{ backgroundColor: "#FF0000" }}
       />
-      {thumb ? (
+      {playing && videoId ? (
         <div className="relative aspect-video w-full">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+            title={title || "YouTube video"}
+            className="absolute inset-0 h-full w-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : thumb ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (videoId) setPlaying(true)
+            else window.open(url, "_blank", "noopener,noreferrer")
+          }}
+          className="group relative block aspect-video w-full"
+          aria-label="YouTube 영상 재생"
+        >
           <Image src={thumb} alt={title || ""} fill className="object-cover" unoptimized />
           <span
             aria-hidden
-            className="absolute inset-0 flex items-center justify-center bg-black/30"
+            className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/40"
           >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg transition-transform group-hover:scale-110">
               <svg viewBox="0 0 24 24" className="h-6 w-6 translate-x-[1px] fill-white">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </span>
           </span>
-        </div>
+        </button>
       ) : (
         <div className="flex aspect-video w-full items-center justify-center bg-neutral-900 text-sm text-white/70">
           YouTube 영상
