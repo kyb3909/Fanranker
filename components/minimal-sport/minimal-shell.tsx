@@ -28,9 +28,9 @@ export function MinimalShell({
 }: MinimalShellProps) {
   return (
     <div className="theme-minimal-sport min-h-screen">
-      {/* Topbar — 풀폭 sticky. 안의 max-w로 콘텐츠만 1280으로 제한. */}
-      <header className="sticky top-0 z-40 h-14 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl lg:h-16">
-        <div className="mx-auto h-full w-full max-w-[1280px]">{topbar}</div>
+      {/* Topbar — 풀폭 sticky. 내부 layout(2-row)는 MinimalTopbar가 직접 처리. */}
+      <header className="sticky top-0 z-40 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl">
+        {topbar}
       </header>
 
       {/* 본문 영역 — banner는 풀폭 absolute overlay. 본문은 max-w-1280로 다시 제한. */}
