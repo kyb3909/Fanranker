@@ -1,11 +1,18 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef, memo } from "react"
+import { useState, useCallback, useEffect, useRef, memo, type ReactNode } from "react"
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import useSWR from "swr"
-import { Play, ChevronLeft, ChevronRight, ImageOff } from "lucide-react"
-import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
+import {
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  ImageOff,
+  ExternalLink,
+  MoreHorizontal,
+  X as CloseIcon,
+} from "lucide-react"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { canUseOptimizedFeedImage } from "@/lib/image/feed-selector"
 import { extractYouTubeId } from "@/lib/embed/youtube"
@@ -86,6 +93,7 @@ export const PostCardContent = memo(function PostCardContent({
               url={firstEmbed.attrs.url}
               thumbnail_url={firstEmbed.attrs.thumbnail_url}
               title={firstEmbed.attrs.title}
+              author_name={firstEmbed.attrs.author_name}
               priority={priority}
             />
           ) : firstEmbed.attrs.provider === "x" ? (
@@ -159,8 +167,8 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
 
   if (error) {
     return (
-      <div className="bg-muted relative w-full overflow-hidden rounded-lg">
-        <div className="text-muted-foreground/50 flex min-h-[120px] w-full items-center justify-center">
+      <div className="border-border bg-card overflow-hidden rounded-xl border">
+        <div className="bg-muted text-muted-foreground/50 flex min-h-[120px] w-full items-center justify-center">
           <ImageOff className="h-8 w-8" />
         </div>
       </div>
@@ -168,12 +176,12 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
   }
 
   return (
-    <div className="bg-muted relative w-full overflow-hidden rounded-lg">
+    <div className="border-border bg-card overflow-hidden rounded-xl border">
       {/*
         사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-contain.
         width/height prop 기반으로는 Next.js가 자연 비율 불일치 경고(지속 발생)를 피할 수 없음.
       */}
-      <div className="relative flex aspect-video max-h-[400px] w-full items-center justify-center transition-opacity hover:opacity-95">
+      <div className="bg-muted relative flex aspect-video max-h-[400px] w-full items-center justify-center transition-opacity hover:opacity-95">
         {canUseOptimizedFeedImage(src) ? (
           <Image
             src={src}
@@ -277,11 +285,13 @@ function YouTubeInlinePlayer({
   url,
   thumbnail_url,
   title,
+  author_name,
   priority,
 }: {
   url: string
   thumbnail_url?: string
   title?: string
+  author_name?: string
   priority: boolean
 }) {
   const [playing, setPlaying] = useState(false)
@@ -301,9 +311,20 @@ function YouTubeInlinePlayer({
 
   if (!videoId) return null
 
+  const sourcePath = author_name ? `youtube.com · ${author_name}` : "youtube.com"
+
   return (
-    <div className="border-border overflow-hidden rounded-lg border">
-      <div ref={visRef} className="relative aspect-video w-full bg-black">
+    <ProviderCard
+      accent="#FF0000"
+      provider="youtube"
+      sourceLabel="YouTube에서 퍼온 동영상"
+      sourcePath={sourcePath}
+      url={url}
+    >
+      <div
+        ref={visRef}
+        className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
+      >
         {playing ? (
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
@@ -327,28 +348,21 @@ function YouTubeInlinePlayer({
                 }}
               />
             )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/20">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600/90 shadow-lg transition-transform group-hover:scale-110">
-                <Play className="ml-0.5 h-5 w-5 text-white" fill="white" />
-              </div>
-            </div>
-            {/* YouTube 뱃지 */}
-            <div className="absolute bottom-2 left-2 z-10">
-              <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                <YoutubeIcon className="h-3.5 w-3.5" />
-                <span>YouTube</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/15 transition-colors group-hover:bg-black/30">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FF0000] shadow-lg transition-transform group-hover:scale-110">
+                <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
               </div>
             </div>
           </button>
         )}
       </div>
-      {/* 타이틀 영역 — X 임베드와 동일한 하단 구조 */}
       {title && (
-        <div className="bg-card px-3 py-2.5">
-          <p className="text-foreground line-clamp-2 text-sm leading-snug font-medium">{title}</p>
-        </div>
+        <p className="text-foreground mt-2.5 line-clamp-2 text-[14px] leading-snug font-bold">
+          {title}
+        </p>
       )}
-    </div>
+      {author_name && <p className="text-muted-foreground mt-1 text-[12px]">{author_name}</p>}
+    </ProviderCard>
   )
 }
 
@@ -387,85 +401,278 @@ function XInlineContent({ url }: { url: string }) {
     oembedFetcher,
     { dedupingInterval: 600_000, revalidateOnFocus: false }
   )
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
   if (isLoading) {
     return <EmbedSkeleton provider="x" />
   }
 
+  const handle = url.match(/(?:twitter\.com|x\.com)\/(\w+)\/status/i)?.[1] ?? null
+
   if (!data) {
     return (
-      <div className="border-border bg-card overflow-hidden rounded-lg border px-3 py-3">
-        <div className="flex items-center gap-2">
-          <XIcon className="text-muted-foreground h-5 w-5" />
-          <span className="text-muted-foreground text-sm">트윗을 불러올 수 없습니다</span>
-        </div>
-      </div>
+      <ProviderCard
+        accent="#000000"
+        provider="x"
+        sourceLabel="X (Twitter)에서 퍼온 게시물"
+        sourcePath={handle ? `x.com/${handle}` : null}
+        url={url}
+      >
+        <p className="text-muted-foreground text-sm">트윗을 불러올 수 없습니다.</p>
+      </ProviderCard>
     )
   }
 
   const firstMedia = data.media?.[0]
+  // oembed.author_name 형태 예: "Erling Haaland (@ErlingHaaland)" → 이름만 추출
+  const displayName =
+    data.author_name?.replace(/\s*\(@.*\)\s*$/, "").trim() || (handle ? `@${handle}` : "X 사용자")
 
   return (
-    <div className="border-border overflow-hidden rounded-lg border">
-      {/* 미디어 (상단, 통일 프레임) */}
+    <ProviderCard
+      accent="#000000"
+      provider="x"
+      sourceLabel="X (Twitter)에서 퍼온 게시물"
+      sourcePath={handle ? `x.com/${handle}` : null}
+      url={url}
+    >
+      {/* 작성자 행 */}
+      <div className="flex items-center gap-2.5">
+        {data.author_avatar ? (
+          <Image
+            src={data.author_avatar}
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 shrink-0 rounded-full object-cover"
+            unoptimized
+            onError={(e) => {
+              ;(e.currentTarget as HTMLImageElement).style.display = "none"
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-900"
+          />
+        )}
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <span className="text-foreground truncate text-[14px] font-extrabold">{displayName}</span>
+          <VerifyBadge />
+          {handle && (
+            <span className="text-muted-foreground ml-0.5 truncate text-[12px]">@{handle}</span>
+          )}
+        </div>
+        <XIcon className="text-foreground h-[18px] w-[18px] shrink-0" />
+      </div>
+
+      {/* 트윗 텍스트 — 해시태그/멘션/링크 #1d9bf0 컬러 */}
+      {data.title && (
+        <p className="text-foreground mt-2.5 text-[14px] leading-[1.5] whitespace-pre-wrap">
+          {renderTweetText(data.title)}
+        </p>
+      )}
+
+      {/* 미디어 */}
       {firstMedia && (
-        <div className="relative aspect-video w-full overflow-hidden bg-black">
+        <div className="bg-muted relative mt-2.5 aspect-video w-full overflow-hidden rounded-xl">
           {firstMedia.type === "photo" ? (
-            <Image
-              src={firstMedia.url}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, 560px"
-              onError={(e) => {
-                e.currentTarget.style.display = "none"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setLightboxSrc(firstMedia.url)
               }}
-            />
+              className="group block h-full w-full cursor-zoom-in"
+              aria-label="이미지 크게 보기"
+            >
+              <Image
+                src={firstMedia.url}
+                alt=""
+                fill
+                className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                sizes="(max-width: 640px) 100vw, 560px"
+                unoptimized
+                onError={(e) => {
+                  ;(e.currentTarget as HTMLImageElement).style.display = "none"
+                }}
+              />
+            </button>
           ) : (
             <XVideoPlayer
               media={firstMedia as { type: "video"; url: string; thumbnail_url?: string }}
             />
           )}
-          {/* X 뱃지 */}
-          <div className="absolute bottom-2 left-2 z-10">
-            <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-              <XIcon className="h-3.5 w-3.5" />
-              <span>X</span>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* 텍스트 영역 */}
-      <div
-        className={`bg-card px-3 py-2.5 ${!firstMedia ? "border-l-foreground/20 border-l-[3px]" : ""}`}
+      {lightboxSrc && <EmbedImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+    </ProviderCard>
+  )
+}
+
+function EmbedImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+    }
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClose()
+      }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onClose()
+        }}
+        aria-label="닫기"
+        className="absolute top-4 right-4 rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"
       >
-        <div className="flex items-center gap-2">
-          {data.author_avatar ? (
-            <Image
-              src={data.author_avatar}
-              alt=""
-              width={20}
-              height={20}
-              className="h-5 w-5 rounded-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = "none"
-              }}
-            />
-          ) : (
-            <div className="bg-muted-foreground/30 h-5 w-5 rounded-full" />
-          )}
-          <span className="text-foreground text-sm font-medium">{data.author_name || "X"}</span>
-          <XIcon className="fill-foreground ml-auto h-4 w-4 opacity-30" />
-        </div>
-        {data.title && (
-          <p className="text-foreground/80 mt-1.5 line-clamp-4 text-sm leading-relaxed">
-            {data.title}
-          </p>
-        )}
-      </div>
+        <CloseIcon className="h-5 w-5" />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Twitter CDN URL, dimensions unknown */}
+      <img
+        src={src}
+        alt=""
+        className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+        onClick={(e) => e.stopPropagation()}
+        referrerPolicy="no-referrer"
+      />
     </div>
   )
+}
+
+/* 공통 ProviderCard — X / Instagram / YouTube 임베드 카드의 outer 프레임. */
+function ProviderCard({
+  accent,
+  provider,
+  sourceLabel,
+  sourcePath,
+  url,
+  children,
+}: {
+  accent: string
+  provider: "x" | "instagram" | "youtube"
+  sourceLabel: string
+  sourcePath: string | null
+  url: string
+  children: ReactNode
+}) {
+  return (
+    <div className="border-border bg-card relative overflow-hidden rounded-xl border">
+      {/* 좌측 4px 액센트 바 */}
+      <span
+        aria-hidden
+        className="absolute top-0 bottom-0 left-0 w-[4px]"
+        style={{ background: accent }}
+      />
+      {/* 출처 헤더 */}
+      <header className="border-border bg-muted/40 text-foreground flex items-center gap-2 border-b py-2 pr-3 pl-4 text-[11px] font-bold">
+        <ProviderBadge provider={provider} />
+        <span>{sourceLabel}</span>
+        {sourcePath && (
+          <>
+            <span aria-hidden className="text-muted-foreground font-normal">
+              ·
+            </span>
+            <span className="text-muted-foreground font-semibold">{sourcePath}</span>
+          </>
+        )}
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-muted-foreground hover:text-foreground ml-auto inline-flex items-center gap-0.5 transition-colors"
+        >
+          원본 보기
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </header>
+      {/* 본문 */}
+      <div className="px-4 py-3.5">{children}</div>
+    </div>
+  )
+}
+
+function ProviderBadge({ provider }: { provider: "x" | "instagram" | "youtube" }) {
+  if (provider === "x") {
+    return (
+      <span
+        aria-hidden
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-black"
+      >
+        <XIcon className="h-[10px] w-[10px] text-white" />
+      </span>
+    )
+  }
+  if (provider === "instagram") {
+    return (
+      <span
+        aria-hidden
+        className="inline-block h-4 w-4 shrink-0 rounded-sm"
+        style={{ background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)" }}
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-[#FF0000]"
+    >
+      <Play className="ml-[1px] h-[8px] w-[8px] fill-white text-white" />
+    </span>
+  )
+}
+
+function VerifyBadge() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-[#1d9bf0]">
+      <path
+        fill="currentColor"
+        d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334-4.334 6.5c-.144.216-.382.348-.638.355h-.018c-.25 0-.485-.115-.64-.314l-2.156-2.785c-.272-.351-.21-.857.14-1.128.354-.272.86-.21 1.128.141l1.49 1.928 3.815-5.92c.255-.376.755-.473 1.13-.218.378.255.474.755.218 1.13z"
+      />
+    </svg>
+  )
+}
+
+/** 트윗 텍스트의 해시태그/멘션/링크를 #1d9bf0으로 inline 컬러링. */
+function renderTweetText(text: string) {
+  const parts = text.split(/(\s+)/)
+  return parts.map((p, i) => {
+    if (/^[#@][\w가-힣]+/.test(p)) {
+      return (
+        <span key={i} className="text-[#1d9bf0]" style={{ fontWeight: 600 }}>
+          {p}
+        </span>
+      )
+    }
+    if (/^https?:\/\/\S+/.test(p)) {
+      return (
+        <span key={i} className="text-[#1d9bf0]">
+          {p}
+        </span>
+      )
+    }
+    return <span key={i}>{p}</span>
+  })
 }
 
 function XVideoPlayer({
@@ -547,43 +754,100 @@ function LazyInstagramPreview({ url }: { url: string }) {
 }
 
 function InstagramInlineContent({ url }: { url: string }) {
-  const normalizedUrl = url.startsWith("https") ? url : `https://${url.replace(/^http:\/\//, "")}`
-
-  // blockquote HTML: oEmbed에서 가져오거나, 실패 시 URL로 직접 생성
   const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
-    `/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`,
+    `/api/oembed?url=${encodeURIComponent(url)}`,
     oembedFetcher,
     { dedupingInterval: 600_000, revalidateOnFocus: false }
   )
-  const safeUrl = normalizedUrl.replace(/["<>]/g, "")
-  const embedHtml =
-    data?.html ||
-    `<blockquote class="instagram-media" data-instgrm-permalink="${safeUrl}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
-
-  useEffect(() => {
-    if (isLoading) return
-    const timer = setTimeout(() => {
-      loadInstagramEmbedJs(() => processInstagramEmbeds())
-    }, 0)
-    return () => clearTimeout(timer)
-  }, [isLoading, embedHtml])
 
   if (isLoading) return <EmbedSkeleton provider="instagram" />
 
+  const handle = url.match(/instagram\.com\/(?:p|reel|tv)\/([\w-]+)/i)?.[1] ?? null
+  const author = data?.author_name?.replace(/^@/, "").trim() ?? null
+  const sourcePath = author
+    ? `instagram.com/${author}`
+    : handle
+      ? `instagram.com/p/${handle}`
+      : null
+
+  if (!data) {
+    return (
+      <ProviderCard
+        accent="#dc2743"
+        provider="instagram"
+        sourceLabel="Instagram에서 퍼온 게시물"
+        sourcePath={sourcePath}
+        url={url}
+      >
+        <p className="text-muted-foreground text-sm">게시물을 불러올 수 없습니다.</p>
+      </ProviderCard>
+    )
+  }
+
   return (
-    <div className="relative overflow-hidden rounded-lg">
-      <div
-        className="[&_.instagram-media]:!mx-0 [&_.instagram-media]:!w-full [&_.instagram-media]:!max-w-full [&_.instagram-media]:!min-w-0"
-        dangerouslySetInnerHTML={{ __html: embedHtml }}
-      />
-      {/* Instagram 뱃지 */}
-      <div className="pointer-events-none absolute bottom-2 left-2 z-10">
-        <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-          <InstagramIcon className="h-3.5 w-3.5" />
-          <span>Instagram</span>
+    <ProviderCard
+      accent="#dc2743"
+      provider="instagram"
+      sourceLabel="Instagram에서 퍼온 게시물"
+      sourcePath={sourcePath}
+      url={url}
+    >
+      {/* 작성자 행 — 그라데이션 링 아바타 + 닉네임 + 옵션 버튼 */}
+      <div className="flex items-center gap-2.5">
+        <div
+          aria-hidden
+          className="h-9 w-9 shrink-0 rounded-full p-[2px]"
+          style={{ background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)" }}
+        >
+          <div className="bg-card flex h-full w-full items-center justify-center rounded-full">
+            <InstagramIcon className="h-4 w-4 text-[#dc2743]" />
+          </div>
         </div>
+        <span className="text-foreground min-w-0 flex-1 truncate text-[13px] font-bold">
+          {author || "instagram_user"}
+        </span>
+        <MoreHorizontal className="text-muted-foreground h-5 w-5 shrink-0" />
       </div>
-    </div>
+
+      {/* 미디어 — 클릭 시 원본 IG로 이동 */}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-muted relative mt-2.5 block aspect-square w-full overflow-hidden rounded-xl"
+      >
+        {data.thumbnail_url ? (
+          <Image
+            src={data.thumbnail_url}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 560px"
+            unoptimized
+            onError={(e) => {
+              ;(e.currentTarget as HTMLImageElement).style.display = "none"
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #2a1a2e, #4a1a3a)" }}
+          >
+            <InstagramIcon className="h-12 w-12 text-white/30" />
+          </div>
+        )}
+      </a>
+
+      {/* 캡션 */}
+      {data.title && (
+        <p className="text-foreground mt-2.5 line-clamp-3 text-[13px] leading-[1.5]">
+          {author && <span className="font-bold">{author} </span>}
+          {data.title}
+        </p>
+      )}
+    </ProviderCard>
   )
 }
 
@@ -618,14 +882,6 @@ function InstagramIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
       <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-    </svg>
-  )
-}
-
-function YoutubeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-      <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
     </svg>
   )
 }

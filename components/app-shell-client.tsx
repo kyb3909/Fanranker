@@ -36,7 +36,7 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
       <div className="relative">
         {showBanner && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
-            <div className="pointer-events-auto mx-auto w-full max-w-[1280px] px-4 sm:px-6">
+            <div className="pointer-events-auto w-full">
               <AnnouncementCarousel />
             </div>
           </div>
