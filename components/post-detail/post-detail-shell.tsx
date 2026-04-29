@@ -73,7 +73,7 @@ export function PostDetailShell({ activeSlug, children }: PostDetailShellProps) 
 
   return (
     <MinimalShell
-      topbar={<MinimalTopbar active="담벼락" />}
+      topbar={<MinimalTopbar active="운동장" />}
       sidebar={<MinimalSidebar sports={sports} life={life} activeSlug={activeSlug} />}
       aside={
         <MinimalRightAside>
