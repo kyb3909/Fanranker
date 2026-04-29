@@ -147,7 +147,10 @@
       "Bash(bash /tmp/true_dead_routes.sh)",
       "Bash(taskkill //PID 71380 //F)",
       "Bash(echo \"---exit:$?---\")",
-      "Bash(BASE_URL=http://localhost:3000 pnpm exec playwright test e2e/stadium.spec.ts --project=chromium --reporter=line)"
+      "Bash(BASE_URL=http://localhost:3000 pnpm exec playwright test e2e/stadium.spec.ts --project=chromium --reporter=line)",
+      "Bash(pnpm remove *)",
+      "Bash(echo \"tsc: $?\")",
+      "Bash(echo \"eslint: $?\")"
     ]
   }
 }
