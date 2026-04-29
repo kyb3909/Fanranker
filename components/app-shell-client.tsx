@@ -20,37 +20,28 @@ interface AppShellClientProps {
 
 export function AppShellClient({ header, children }: AppShellClientProps) {
   const pathname = usePathname()
-  // admin 은 완전히 자체 레이아웃 (헤더·탭바 전부 제거). 메타버스는 홈페이지
-  // 서비스의 일부라 헤더·탭바 유지 — 단 배너는 메인 피드에서만.
+  // admin 은 완전히 자체 레이아웃. Minimal 페이지는 자체 Topbar — 기존 Header 숨김.
   const hideChrome = pathname.startsWith("/admin")
   const isHome = pathname === "/"
-  // Minimal Sport 디자인 페이지: 자체 Topbar가 모든 viewport에서 표시 →
-  // 기존 Header를 항상 숨김 (충돌 회피). 5 페이지 + 게시판 전부.
   const isMinimalSportPage =
     pathname === "/" ||
     pathname === "/prediction" ||
     pathname === "/explore" ||
     pathname === "/shop" ||
     pathname.startsWith("/community/")
-  const showBanner = isHome && !hideChrome
 
-  // 로그인됐지만 온보딩 미완료 유저 → /sign-up으로 리다이렉트
+  // 홈인데 Minimal이 아닌 곳(=구 디자인 페이지에서 홈으로 라우팅 — 사실상 없음)에서는
+  // 기존 sticky Header 아래 절대 오버레이로 배너 노출. Minimal 페이지의 배너는
+  // home-client에서 MinimalShell.banner 슬롯으로 직접 주입 — 헤더 바로 아래 등장.
+  const showLegacyOverlayBanner = isHome && !hideChrome && !isMinimalSportPage
+
   useOnboardingGuard()
 
   return (
     <div className="bg-background min-h-screen">
       {!hideChrome && !isMinimalSportPage && header}
-      {/*
-        배너 = 홈에서만. Minimal 페이지에선 inline(피드 위 정상 흐름),
-        구 디자인 페이지에선 절대 오버레이(기존 sticky Header 아래 z-30).
-      */}
       <div className="relative">
-        {showBanner && isMinimalSportPage && (
-          <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6">
-            <AnnouncementCarousel />
-          </div>
-        )}
-        {showBanner && !isMinimalSportPage && (
+        {showLegacyOverlayBanner && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
             <div className="pointer-events-auto mx-auto w-full max-w-[1280px] px-4 sm:px-6">
               <AnnouncementCarousel />

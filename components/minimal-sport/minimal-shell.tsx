@@ -4,7 +4,9 @@ interface MinimalShellProps {
   topbar: ReactNode
   sidebar: ReactNode
   aside: ReactNode
-  /** Topbar 바로 아래 사이트 폭으로 깔리는 영역 (예: 라이브 뉴스 티커). 옵션. */
+  /** Topbar 바로 아래 1280px 폭으로 등장하는 공지/광고 배너 (홈에서만). */
+  banner?: ReactNode
+  /** banner 아래(또는 banner가 없으면 topbar 바로 아래) 깔리는 라이브 뉴스 티커. */
   ticker?: ReactNode
   children: ReactNode
 }
@@ -18,28 +20,43 @@ interface MinimalShellProps {
  *
  * 두 페이지(/, /prediction)에서 사용. 다른 페이지는 영향 없음.
  */
-export function MinimalShell({ topbar, sidebar, aside, ticker, children }: MinimalShellProps) {
+export function MinimalShell({
+  topbar,
+  sidebar,
+  aside,
+  banner,
+  ticker,
+  children,
+}: MinimalShellProps) {
   return (
     <div className="theme-minimal-sport min-h-screen">
       <div className="mx-auto w-full max-w-[1280px]">
         <header className="sticky top-0 z-40 h-14 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl lg:h-16">
           {topbar}
         </header>
-        {ticker && (
-          <div className="border-b border-[var(--ms-line)]" aria-label="라이브 트래커">
-            {ticker}
+        {/* 본문 영역 — banner가 있으면 absolute overlay로 위에 떠 있다가 접힘. */}
+        <div className="relative">
+          {banner && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
+              <div className="pointer-events-auto">{banner}</div>
+            </div>
+          )}
+          {ticker && (
+            <div className="border-b border-[var(--ms-line)]" aria-label="라이브 트래커">
+              {ticker}
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_300px]">
+            <aside className="hidden border-r border-[var(--ms-line)] px-4 py-6 lg:block">
+              {sidebar}
+            </aside>
+            <main className="safe-area-pb-tabbar min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+              {children}
+            </main>
+            <aside className="hidden border-l border-[var(--ms-line)] px-4 py-6 lg:block">
+              {aside}
+            </aside>
           </div>
-        )}
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_300px]">
-          <aside className="hidden border-r border-[var(--ms-line)] px-4 py-6 lg:block">
-            {sidebar}
-          </aside>
-          <main className="safe-area-pb-tabbar min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-            {children}
-          </main>
-          <aside className="hidden border-l border-[var(--ms-line)] px-4 py-6 lg:block">
-            {aside}
-          </aside>
         </div>
       </div>
     </div>

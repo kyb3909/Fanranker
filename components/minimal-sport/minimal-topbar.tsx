@@ -40,8 +40,7 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
 
   return (
     <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-2 px-3 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
-      {/* 로고 — 원본 디자인 톤 보존 (캘리그래피 + .fan 포인트색).
-          브러시는 sm+에서 약간 기울인 채 텍스트 좌측 끝에 살짝 걸쳐 배경 액센트로 동작. */}
+      {/* 로고 — 원본 디자인 그대로 (브러시 좌측 + .fan 포인트색). */}
       <Link
         href="/"
         onClick={(e) => {
@@ -50,20 +49,14 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
             window.scrollTo(0, 0)
           }
         }}
-        className="relative inline-flex items-baseline"
+        className="relative flex items-baseline"
         aria-label="홈"
       >
-        <Image
-          src="/logo-brush.webp"
-          alt=""
-          width={128}
-          height={38}
-          priority
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-[-14px] hidden h-[34px] w-auto -translate-y-1/2 -rotate-[10deg] opacity-90 sm:block"
-        />
+        <span className="relative z-0 -ml-1 hidden shrink-0 sm:block" aria-hidden>
+          <Image src="/logo-brush.webp" alt="" width={128} height={38} priority />
+        </span>
         <span
-          className="relative z-10 text-[20px] leading-none sm:text-[30px]"
+          className="relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
           style={{ letterSpacing: "-0.02em", color: "var(--ms-ink)" }}
         >
           <span className="font-bold">gongnori</span>

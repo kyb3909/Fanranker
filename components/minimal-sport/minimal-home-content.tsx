@@ -27,8 +27,10 @@ interface MinimalHomeContentProps {
   categories: RawCategory[]
   recentComments: TalkItem[]
   isLoading?: boolean
+  /** Topbar 바로 아래 등장하는 배너 (공지·광고 AnnouncementCarousel). */
+  topBanner?: ReactNode
   /** 피드 위에 표시할 배너 (예: 0-follow 유저 OnboardingBanner) */
-  banner?: ReactNode
+  feedBanner?: ReactNode
 }
 
 const SORT_OPTIONS: { key: SortType; label: string }[] = [
@@ -81,7 +83,8 @@ export function MinimalHomeContent({
   categories,
   recentComments,
   isLoading,
-  banner,
+  topBanner,
+  feedBanner,
 }: MinimalHomeContentProps) {
   const { sports, life } = useMemo(() => groupCategories(categories), [categories])
 
@@ -90,6 +93,7 @@ export function MinimalHomeContent({
   return (
     <MinimalShell
       topbar={<MinimalTopbar active="담벼락" />}
+      banner={topBanner}
       sidebar={<MinimalSidebar sports={sports} life={life} />}
       aside={
         <MinimalRightAside>
@@ -114,8 +118,8 @@ export function MinimalHomeContent({
         </h1>
       </div>
 
-      {/* 배너 슬롯 — 0-follow 유저 OnboardingBanner 등 */}
-      {banner && <div className="mb-4">{banner}</div>}
+      {/* 피드 위 배너 슬롯 — 0-follow 유저 OnboardingBanner 등 */}
+      {feedBanner && <div className="mb-4">{feedBanner}</div>}
 
       {/* Sort chips */}
       <div className="mb-4 flex items-center gap-1.5">

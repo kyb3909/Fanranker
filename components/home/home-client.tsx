@@ -23,6 +23,13 @@ const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
 )
+const AnnouncementCarousel = dynamic(
+  () =>
+    import("@/components/home/announcement-carousel").then((m) => ({
+      default: m.AnnouncementCarousel,
+    })),
+  { ssr: false }
+)
 const ContentSection = dynamic(
   () => import("@/components/home/content-section").then((m) => ({ default: m.ContentSection })),
   {
@@ -198,7 +205,8 @@ export function HomeClient({
         categories={groupedCategories}
         recentComments={talkItems}
         isLoading={isLoading}
-        banner={showOnboarding ? <OnboardingBanner /> : undefined}
+        topBanner={<AnnouncementCarousel />}
+        feedBanner={showOnboarding ? <OnboardingBanner /> : undefined}
       />
       {/* 실시간 인기글 토스트 — 로그인 + feed 탭. fixed positioning이라 셸 외부 렌더 OK */}
       {isSignedIn && <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />}
