@@ -71,6 +71,7 @@ export function WorldcupView({ room, onBack }: WorldcupViewProps) {
           </p>
 
           {wc.winner.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- 동적 user URL, 소형 아바타라 Image remotePatterns 추가 가치 < 비용
             <img
               src={wc.winner.image_url}
               alt={wc.winner.name}
@@ -198,6 +199,7 @@ function CandidateButton({
       className="hover:bg-muted/40 group relative flex flex-1 flex-col items-center justify-center p-6 transition-all active:scale-[0.98]"
     >
       {candidate?.image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- 동적 user URL, 소형 아바타라 Image remotePatterns 추가 가치 < 비용
         <img
           src={candidate.image_url}
           alt={candidate.name}

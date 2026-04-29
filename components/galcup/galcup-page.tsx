@@ -151,6 +151,7 @@ function GalcupCard({ room, onSelect }: { room: BattleRoom; onSelect: () => void
           <div className="flex items-center gap-4">
             <div className="flex-1 text-right">
               {sideA.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- 동적 user URL, 소형 아바타라 Image remotePatterns 추가 가치 < 비용
                 <img
                   src={sideA.image_url}
                   alt={sideA.name}
@@ -175,6 +176,7 @@ function GalcupCard({ room, onSelect }: { room: BattleRoom; onSelect: () => void
             </div>
             <div className="flex-1 text-left">
               {sideB.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- 동적 user URL, 소형 아바타라 Image remotePatterns 추가 가치 < 비용
                 <img
                   src={sideB.image_url}
                   alt={sideB.name}
