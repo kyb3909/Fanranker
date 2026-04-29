@@ -7,9 +7,9 @@ import { MinimalShell } from "./minimal-shell"
 import { MinimalTopbar } from "./minimal-topbar"
 import { MinimalSidebar } from "./minimal-sidebar"
 import { MinimalRightAside } from "./minimal-right-aside"
-import { MinimalPostCard, type MinimalPostInput } from "./minimal-post-card"
 import { MinimalPrizeCard } from "./minimal-prize-card"
 import { MinimalTalkList, type TalkItem } from "./minimal-talk-list"
+import { formatRelativeTime } from "@/lib/utils/date"
 
 interface RawCategory {
   id: number | string
@@ -39,19 +39,22 @@ interface FlairInfo {
   color: string
 }
 
+interface BoardPost {
+  id: string
+  title: string
+  author?: string
+  upvotes?: number
+  comments?: number
+  views?: number
+  createdAt?: Date | string
+  isNotice?: boolean
+  flair?: { id: string; name: string; color: string } | null
+}
+
 export interface MinimalCommunityContentProps {
   community: CommunityHeader
-  /** transformPosts 결과 — 새 PostCard에 매핑 */
-  posts: Array<{
-    id: string
-    title: string
-    content: unknown
-    communitySlug?: string
-    author?: string
-    upvotes?: number
-    comments?: number
-    createdAt?: Date | string
-  }>
+  /** transformPosts 결과 — 게시판 테이블 행으로 표시 */
+  posts: BoardPost[]
   channels?: ChannelLink[]
   flairs?: FlairInfo[]
   activeFlairId?: string | null
@@ -73,28 +76,12 @@ function groupCategories(cats: RawCategory[]) {
   return { sports, life }
 }
 
-function postToMinimalInput(p: {
-  id: string
-  title: string
-  content: unknown
-  communitySlug?: string
-  author?: string
-  upvotes?: number
-  comments?: number
-  createdAt?: Date | string
-}): MinimalPostInput {
-  const created =
-    p.createdAt instanceof Date ? p.createdAt : p.createdAt ? new Date(p.createdAt) : new Date()
-  return {
-    id: String(p.id),
-    community_slug: p.communitySlug ?? null,
-    title: p.title,
-    content: typeof p.content === "string" ? p.content : null,
-    vote_count: p.upvotes ?? 0,
-    comment_count: p.comments ?? 0,
-    created_at: created.toISOString(),
-    author_nickname: p.author ?? "익명",
-  }
+function postCreated(p: BoardPost): Date {
+  return p.createdAt instanceof Date
+    ? p.createdAt
+    : p.createdAt
+      ? new Date(p.createdAt)
+      : new Date()
 }
 
 /**
@@ -117,17 +104,17 @@ export function MinimalCommunityContent({
   recentComments,
 }: MinimalCommunityContentProps) {
   const { sports, life } = useMemo(() => groupCategories(categories), [categories])
-  const minimalPosts = useMemo(() => posts.map(postToMinimalInput), [posts])
 
   const hasPrev = currentPage > 1
   const hasNext = currentPage < totalPages
+  const startIndex = (currentPage - 1) * 25
 
   const baseHref = `/community/${community.slug}`
   const flairParam = activeFlairId ? `&flair=${activeFlairId}` : ""
 
   return (
     <MinimalShell
-      topbar={<MinimalTopbar active="담벼락" />}
+      topbar={<MinimalTopbar active="운동장" />}
       sidebar={<MinimalSidebar sports={sports} life={life} activeSlug={community.slug} />}
       aside={
         <MinimalRightAside>
@@ -139,7 +126,7 @@ export function MinimalCommunityContent({
       {/* Crumb + Heading */}
       <div className="mb-5">
         <div className="text-[13px]" style={{ color: "var(--ms-ink-3)" }}>
-          담벼락 ·{" "}
+          운동장 ·{" "}
           <b className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
             {community.name}
           </b>
@@ -222,21 +209,99 @@ export function MinimalCommunityContent({
         </div>
       )}
 
-      {/* Post list */}
-      {minimalPosts.length === 0 ? (
+      {/* 게시판 테이블 — 번호/제목/글쓴이/시간/추천 */}
+      <section
+        className="overflow-hidden rounded-2xl border bg-[var(--ms-surface)]"
+        style={{ borderColor: "var(--ms-line)" }}
+      >
+        {/* 헤더 */}
         <div
-          className="rounded-2xl border bg-[var(--ms-surface)] py-10 text-center text-[13px]"
-          style={{ borderColor: "var(--ms-line)", color: "var(--ms-ink-3)" }}
+          className="grid grid-cols-[60px_1fr_120px_80px_60px] items-center gap-2 border-b px-4 py-2.5 text-[11px] font-bold"
+          style={{
+            borderColor: "var(--ms-line)",
+            backgroundColor: "var(--ms-bg)",
+            color: "var(--ms-ink-3)",
+          }}
         >
-          아직 게시물이 없어요.
+          <div className="text-center">번호</div>
+          <div>제목</div>
+          <div className="text-center">글쓴이</div>
+          <div className="text-center">시간</div>
+          <div className="text-center">추천</div>
         </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {minimalPosts.map((p) => (
-            <MinimalPostCard key={p.id} post={p} />
-          ))}
-        </div>
-      )}
+
+        {/* 행 */}
+        {posts.length === 0 ? (
+          <div className="py-10 text-center text-[13px]" style={{ color: "var(--ms-ink-3)" }}>
+            아직 게시물이 없어요.
+          </div>
+        ) : (
+          posts.map((post, index) => {
+            const created = postCreated(post)
+            const ts = formatRelativeTime(created)
+            const rowNumber = post.isNotice ? "공지" : totalCount - startIndex - index
+            return (
+              <Link
+                key={post.id}
+                href={`/post/${post.id}`}
+                className="grid grid-cols-[60px_1fr_120px_80px_60px] items-center gap-2 border-b px-4 py-2.5 text-[12.5px] transition-colors last:border-b-0 hover:bg-[var(--ms-bg)]"
+                style={{
+                  borderColor: "var(--ms-line)",
+                  backgroundColor: post.isNotice ? "var(--ms-brand-soft)" : undefined,
+                }}
+              >
+                <div
+                  className="font-archivo text-center text-[11px] font-bold tabular-nums"
+                  style={{
+                    color: post.isNotice ? "var(--ms-brand)" : "var(--ms-ink-3)",
+                  }}
+                >
+                  {rowNumber}
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  {post.flair && (
+                    <span
+                      className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{
+                        backgroundColor: `${post.flair.color}20`,
+                        color: post.flair.color,
+                      }}
+                    >
+                      {post.flair.name}
+                    </span>
+                  )}
+                  <span className="truncate font-medium" style={{ color: "var(--ms-ink)" }}>
+                    {post.title}
+                  </span>
+                  {(post.comments ?? 0) > 0 && (
+                    <span
+                      className="font-archivo shrink-0 text-[11px] font-bold tabular-nums"
+                      style={{ color: "var(--ms-brand)" }}
+                    >
+                      [{post.comments}]
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="truncate text-center text-[11.5px]"
+                  style={{ color: "var(--ms-ink-2)" }}
+                >
+                  {post.author ?? "익명"}
+                </div>
+                <div className="text-center text-[11px]" style={{ color: "var(--ms-ink-3)" }}>
+                  {ts}
+                </div>
+                <div
+                  className="font-archivo text-center text-[11.5px] font-bold tabular-nums"
+                  style={{ color: "var(--ms-ink)" }}
+                >
+                  {post.upvotes ?? 0}
+                </div>
+              </Link>
+            )
+          })
+        )}
+      </section>
 
       {/* Pagination */}
       {totalPages > 1 && (
