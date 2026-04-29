@@ -2,13 +2,14 @@
 
 import { useMemo } from "react"
 import Link from "@/components/ui/app-link"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import { MinimalShell } from "./minimal-shell"
 import { MinimalTopbar } from "./minimal-topbar"
 import { MinimalSidebar } from "./minimal-sidebar"
 import { MinimalRightAside } from "./minimal-right-aside"
 import { MinimalPrizeCard } from "./minimal-prize-card"
 import { MinimalTalkList, type TalkItem } from "./minimal-talk-list"
+import { MinimalFollowButton } from "./minimal-follow-button"
 import { formatRelativeTime } from "@/lib/utils/date"
 
 interface RawCategory {
@@ -140,14 +141,29 @@ export function MinimalCommunityContent({
           >
             {community.name}
           </h1>
-          {community.members && (
-            <span
-              className="font-archivo pb-1 text-[12px] font-bold tabular-nums"
-              style={{ color: "var(--ms-ink-3)" }}
+          <div className="flex items-center gap-2 pb-1">
+            {community.members && (
+              <span
+                className="font-archivo text-[12px] font-bold tabular-nums"
+                style={{ color: "var(--ms-ink-3)" }}
+              >
+                👥 {community.members}
+              </span>
+            )}
+            <MinimalFollowButton communitySlug={community.slug} />
+            <Link
+              href={`/write?community=${community.slug}`}
+              className="flex h-9 items-center gap-1.5 rounded-full border px-4 text-[12px] font-bold transition-colors hover:border-[var(--ms-ink)]"
+              style={{
+                backgroundColor: "var(--ms-surface)",
+                borderColor: "var(--ms-line)",
+                color: "var(--ms-ink)",
+              }}
             >
-              👥 {community.members}
-            </span>
-          )}
+              <Pencil className="h-3.5 w-3.5" />
+              글쓰기
+            </Link>
+          </div>
         </div>
         {community.description && (
           <p className="mt-1.5 text-[13px]" style={{ color: "var(--ms-ink-2)" }}>
