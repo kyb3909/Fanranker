@@ -28,14 +28,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm dev` — Turbopack 로컬 개발
 - `pnpm build` / `pnpm start` — 프로덕션 빌드/실행
 - `pnpm lint` / `pnpm format` / `pnpm format:check`
+- 타입 체크: `pnpm exec tsc --noEmit` (별도 script 없음 — strict 모드)
 - `pnpm test` / `pnpm test:watch` / `pnpm test:coverage`
 - 단일 unit 테스트: `pnpm vitest run __tests__/lib/foo.test.ts` (또는 `-t "test name"`)
 - E2E 전체: `pnpm exec playwright test` (서버 자동 기동 — `BASE_URL` 미설정 시 `pnpm dev`로 localhost:3000 띄움)
 - 단일 E2E: `pnpm exec playwright test e2e/home.spec.ts --project=chromium`
 - 외부 URL 대상 E2E: `BASE_URL=https://gongnori.fan pnpm exec playwright test` (webServer 스킵)
+- 임의 스크립트: `pnpm exec tsx scripts/<name>.ts` (env는 `dotenv`로 자동 로드)
 - `pnpm reddit-seed` — Reddit 시딩 (`scripts/reddit-seed-bot.ts`)
 - `pnpm betman-fetch` — betman 경기/배당 동기화 (`scripts/betman-fetch-games.ts`)
 - `pnpm standings-scrape` — 리그 순위 크롤링
+- 서브 패키지: `data/agents/`, `data/crawlers/`는 자체 `package.json` 보유 — 해당 디렉토리에서 별도 `pnpm install` 필요 (메인 워크스페이스에 포함되지 않음)
 
 ## 디렉토리
 - `app/` — App Router 페이지 + API 라우트 (admin, api, community, explore, games, my-posts, my-predictions, onboarding, post, prediction, stadium, write …)
@@ -88,7 +91,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **News Crawlers** (`data/crawlers/`) — Reddit 44 + Naver News 11 = 55개 소스, 하루 1회. Vultr VPS에서 cron. Agents 안정화 후 deprecate.
 - **Betman Sync** (`lib/betman/`, `scripts/betman-*.ts`) — Vultr 서울 VPS cron (`/opt/betman/sync.sh`, 2시간 간격). Vercel은 해외 IP라 betman.co.kr 직접 접근 불가.
 - **Stadium** (`lib/stadium/`, `app/stadium/`, `public/map/`) — 팀 경기장 10단계 + 토사장 게이지 이벤트.
-- **Metaverse** (`app/metaverse/`, `lib/metaverse/`, `components/metaverse/`) — Phaser 4 월드맵 + Supabase Realtime Presence/Broadcast + 팀 플레어 → 카르마 루프. 격리 원칙 (단방향 의존), DB는 `metaverse_*` 접두사 + `posts.flair_team_id` 하나만 기존 확장. GNB에서 숨김 — `/metaverse` 직접 URL 접근. dev 에서만 guest 자동 진입. 상세는 `docs/PRD-stadium-metaverse.md` + `lib/metaverse/README.md`. 스프라이트/지형은 작업 예정 (placeholder 중).
+- **Metaverse** (`app/metaverse/`, `lib/metaverse/`, `components/metaverse/`) — Phaser 4 월드맵 + Supabase Realtime Presence/Broadcast + 팀 플레어 → 카르마 루프. 격리 원칙 (단방향 의존), DB는 `metaverse_*` 접두사 + `posts.flair_team_id` 하나만 기존 확장. GNB에서 숨김 — `/metaverse` 직접 URL 접근. dev 에서만 guest 자동 진입. 데이터 기반 인도어 맵(`lib/metaverse/scenes/indoor-map-scene.ts` + `lib/metaverse/maps/map-config.ts`)으로 경기장 내부 씬 생성, 페이드 전환. 상세는 `docs/PRD-stadium-metaverse.md` + `lib/metaverse/README.md`.
 - **Draft Game** (`lib/draft/`, `app/games/draft/`) — 팬타지 드래프트, 다종목 확장 예정.
 - **Betting** (`components/betting/`, `lib/betman/`, `hooks/use-betting.ts`) — 토큰/골드 경제, pending refund, 정산. 토큰 차감은 `spend_tokens` RPC (반환 키 `remaining_balance`), 골드는 `spend_gold` RPC (반환 키 `remaining`).
 - **Battle** (migrations 056–057) — 유저 대 유저 대결.
