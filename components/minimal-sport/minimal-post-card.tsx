@@ -4,6 +4,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "@/components/ui/app-link"
 import { ExternalLink } from "lucide-react"
+import useSWR from "swr"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { formatCount } from "@/lib/utils/format"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
@@ -11,6 +12,17 @@ import { extractFirstEmbedFromTipTapJSON, type EmbedNode } from "@/lib/utils/tip
 import type { TipTapNode } from "@/types/post"
 import { extractYouTubeId } from "@/lib/embed/youtube"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
+
+interface XOEmbedData {
+  title?: string
+  author_name?: string
+  author_avatar?: string
+  thumbnail_url?: string
+  media?: { type: "photo" | "video"; url: string; thumbnail_url?: string }[]
+}
+
+const oembedFetcher = (u: string): Promise<XOEmbedData | null> =>
+  fetch(u).then((r) => (r.ok ? r.json().catch(() => null) : null))
 
 export interface MinimalPostInput {
   id: string
@@ -63,6 +75,11 @@ function getXHandle(url: string): string | null {
 
 function getInstagramId(url: string): string | null {
   const m = url.match(/instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/)
+  return m ? m[1] : null
+}
+
+function getInstagramUser(url: string): string | null {
+  const m = url.match(/instagram\.com\/([\w.]+)\/(?:p|reel)\//)
   return m ? m[1] : null
 }
 
@@ -251,9 +268,9 @@ function EmbedBox({
 
       {/* 본문 */}
       {provider === "x" ? (
-        <XEmbedBody author_name={author_name} handle={handle} />
+        <XEmbedBody url={url} author_name={author_name} handle={handle} />
       ) : (
-        <InstagramEmbedBody author_name={author_name} thumbnail_url={thumbnail_url} />
+        <InstagramEmbedBody url={url} author_name={author_name} thumbnail_url={thumbnail_url} />
       )}
     </div>
   )
@@ -283,19 +300,49 @@ function ProviderBadge({ provider }: { provider: "x" | "instagram" }) {
   )
 }
 
-function XEmbedBody({ author_name, handle }: { author_name?: string; handle: string | null }) {
-  const displayName = author_name?.trim() || (handle ? `@${handle}` : "X 사용자")
+function XEmbedBody({
+  url,
+  author_name: nameFromAttrs,
+  handle,
+}: {
+  url: string
+  author_name?: string
+  handle: string | null
+}) {
+  const { data, isLoading } = useSWR<XOEmbedData | null>(
+    `/api/oembed?url=${encodeURIComponent(url)}`,
+    oembedFetcher,
+    { dedupingInterval: 600_000, revalidateOnFocus: false, revalidateIfStale: false }
+  )
+  const displayName =
+    data?.author_name?.trim() || nameFromAttrs?.trim() || (handle ? `@${handle}` : "X 사용자")
+  const tweetText = data?.title?.trim() || ""
+  const avatar = data?.author_avatar
+  const firstMedia = data?.media?.[0]
+
   return (
     <div className="flex flex-col gap-2.5 py-3.5 pr-4 pl-[18px]">
       {/* 헤더: 아바타 + 이름 + verify + 핸들 + 𝕏 로고 */}
       <div className="flex items-center gap-2.5">
-        <div
-          aria-hidden
-          className="h-9 w-9 shrink-0 rounded-full"
-          style={{
-            background: "linear-gradient(135deg, #1f2937, #4b5563)",
-          }}
-        />
+        {avatar ? (
+          <Image
+            src={avatar}
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 shrink-0 rounded-full object-cover"
+            unoptimized
+            onError={(e) => {
+              ;(e.currentTarget as HTMLImageElement).style.display = "none"
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="h-9 w-9 shrink-0 rounded-full"
+            style={{ background: "linear-gradient(135deg, #1f2937, #4b5563)" }}
+          />
+        )}
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <span className="truncate text-[14px] font-extrabold" style={{ color: "var(--ms-ink)" }}>
             {displayName}
@@ -315,22 +362,72 @@ function XEmbedBody({ author_name, handle }: { author_name?: string; handle: str
           𝕏
         </span>
       </div>
-      {/* 트윗 텍스트 placeholder */}
-      <p className="text-[14px] leading-[1.5]" style={{ color: "var(--ms-ink-2)" }}>
-        클릭하여 원본 트윗을 확인하세요.
-      </p>
+
+      {/* 트윗 본문 텍스트 (해시태그/링크 컬러링) */}
+      {isLoading ? (
+        <div
+          className="h-[1.05rem] w-3/4 animate-pulse rounded"
+          style={{ backgroundColor: "var(--ms-bg-hover)" }}
+        />
+      ) : tweetText ? (
+        <p
+          className="text-[14px] leading-[1.5] whitespace-pre-wrap"
+          style={{ color: "var(--ms-ink)" }}
+        >
+          {renderTweetText(tweetText)}
+        </p>
+      ) : (
+        <p className="text-[14px]" style={{ color: "var(--ms-ink-3)" }}>
+          트윗을 불러올 수 없습니다.
+        </p>
+      )}
+
+      {/* 미디어 */}
+      {firstMedia && (
+        <div
+          className="relative aspect-video w-full overflow-hidden bg-black"
+          style={{ borderRadius: 12 }}
+        >
+          <Image
+            src={
+              firstMedia.type === "photo"
+                ? firstMedia.url
+                : firstMedia.thumbnail_url || firstMedia.url
+            }
+            alt=""
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 560px"
+            unoptimized
+          />
+        </div>
+      )}
     </div>
   )
 }
 
 function InstagramEmbedBody({
-  author_name,
-  thumbnail_url,
+  url,
+  author_name: nameFromAttrs,
+  thumbnail_url: thumbFromAttrs,
 }: {
+  url: string
   author_name?: string
   thumbnail_url?: string
 }) {
-  const displayName = author_name?.trim() || "Instagram 게시물"
+  const { data, isLoading } = useSWR<XOEmbedData | null>(
+    `/api/oembed?url=${encodeURIComponent(url)}`,
+    oembedFetcher,
+    { dedupingInterval: 600_000, revalidateOnFocus: false, revalidateIfStale: false }
+  )
+  const igUser = getInstagramUser(url)
+  const displayName =
+    data?.author_name?.trim() ||
+    nameFromAttrs?.trim() ||
+    (igUser ? `@${igUser}` : "Instagram 게시물")
+  const thumb = data?.thumbnail_url || data?.media?.[0]?.url || thumbFromAttrs
+  const caption = data?.title?.trim()
+
   return (
     <div className="flex flex-col gap-2.5 py-3.5 pr-4 pl-[18px]">
       <div className="flex items-center gap-2.5">
@@ -345,13 +442,19 @@ function InstagramEmbedBody({
           {displayName}
         </span>
       </div>
-      {thumbnail_url ? (
+
+      {isLoading && !thumb ? (
+        <div
+          className="h-[200px] w-full animate-pulse"
+          style={{ borderRadius: 12, backgroundColor: "var(--ms-bg-hover)" }}
+        />
+      ) : thumb ? (
         <div className="relative overflow-hidden" style={{ borderRadius: 12 }}>
           <Image
-            src={thumbnail_url}
+            src={thumb}
             alt=""
             width={600}
-            height={400}
+            height={600}
             className="h-auto w-full"
             unoptimized
           />
@@ -368,8 +471,39 @@ function InstagramEmbedBody({
           📷
         </div>
       )}
+
+      {caption && (
+        <p
+          className="line-clamp-3 text-[13.5px] leading-[1.5]"
+          style={{ color: "var(--ms-ink-2)" }}
+        >
+          {caption}
+        </p>
+      )}
     </div>
   )
+}
+
+/** 트윗 텍스트에서 해시태그/멘션/링크를 #1d9bf0 컬러로 inline 처리. */
+function renderTweetText(text: string) {
+  const parts = text.split(/(\s+)/)
+  return parts.map((p, i) => {
+    if (/^[#@][\w가-힣]+/.test(p)) {
+      return (
+        <span key={i} style={{ color: "#1d9bf0", fontWeight: 600 }}>
+          {p}
+        </span>
+      )
+    }
+    if (/^https?:\/\/\S+/.test(p)) {
+      return (
+        <span key={i} style={{ color: "#1d9bf0" }}>
+          {p}
+        </span>
+      )
+    }
+    return <span key={i}>{p}</span>
+  })
 }
 
 function YouTubeEmbedBox({
