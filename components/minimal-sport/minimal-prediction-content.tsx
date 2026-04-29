@@ -133,9 +133,9 @@ export function MinimalPredictionContent({
         </MinimalRightAside>
       }
     >
-      {/* PredTabs */}
+      {/* PredTabs — 모바일은 가로 스크롤, sm+ 일반 row */}
       <div
-        className="mb-4 flex gap-1 rounded-t-xl border-b bg-[var(--ms-surface)] p-2"
+        className="mb-4 flex gap-1 overflow-x-auto rounded-t-xl border-b bg-[var(--ms-surface)] p-2"
         style={{ borderColor: "var(--ms-line)" }}
       >
         {PRED_TABS.map((t) => {
@@ -145,7 +145,7 @@ export function MinimalPredictionContent({
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className="relative h-10 rounded-md px-4 text-[14px] transition-colors"
+              className="relative h-10 shrink-0 rounded-md px-3 text-[13px] whitespace-nowrap transition-colors sm:px-4 sm:text-[14px]"
               style={{
                 color: isActive ? "var(--ms-ink)" : "var(--ms-ink-3)",
                 fontWeight: isActive ? 800 : 600,
@@ -165,8 +165,8 @@ export function MinimalPredictionContent({
       </div>
 
       {/* Page header — Crumb + Heading + Streak */}
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <div>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <div className="text-[13px]" style={{ color: "var(--ms-ink-3)" }}>
             경기 예측 ·{" "}
             <b className="font-semibold" style={{ color: "var(--ms-ink-2)" }}>
@@ -174,7 +174,7 @@ export function MinimalPredictionContent({
             </b>
           </div>
           <h1
-            className="mt-1 text-[28px] leading-[1.15] font-extrabold"
+            className="mt-1 text-[24px] leading-[1.15] font-extrabold sm:text-[28px]"
             style={{ color: "var(--ms-ink)", letterSpacing: "-0.04em" }}
           >
             맞히고 코인 받자
@@ -182,7 +182,7 @@ export function MinimalPredictionContent({
         </div>
         {/* Streak — /api/sports/my-stats current_streak 기반 */}
         <div
-          className="flex flex-col items-end rounded-r-xl border-l-[3px] px-4 py-2"
+          className="flex shrink-0 flex-col items-end self-start rounded-r-xl border-l-[3px] px-3 py-1.5 sm:self-auto sm:px-4 sm:py-2"
           style={{
             borderColor: "var(--ms-brand)",
             backgroundColor: "var(--ms-brand-soft)",
@@ -190,12 +190,15 @@ export function MinimalPredictionContent({
         >
           <div className="flex items-baseline gap-1">
             <span
-              className="font-archivo text-[32px] font-black tabular-nums"
+              className="font-archivo text-[26px] font-black tabular-nums sm:text-[32px]"
               style={{ color: "var(--ms-brand)" }}
             >
               {streakAbs}
             </span>
-            <span className="text-[14px] font-extrabold" style={{ color: "var(--ms-brand)" }}>
+            <span
+              className="text-[13px] font-extrabold sm:text-[14px]"
+              style={{ color: "var(--ms-brand)" }}
+            >
               {streakAbs > 0 ? streakLabel : "—"}
             </span>
           </div>
@@ -211,44 +214,46 @@ export function MinimalPredictionContent({
         </div>
       </div>
 
-      {/* Sport pills + updated row */}
-      <div className="mb-4 flex items-center gap-1.5">
-        {SPORT_PILLS.map((p) => {
-          const isActive = sportFilter === p.value
-          return (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => setSportFilter(p.value)}
-              aria-pressed={isActive}
-              className={`h-8 rounded-full border px-3.5 text-[12px] font-semibold transition-colors ${
-                isActive ? "text-white" : "hover:border-[var(--ms-line-hover)]"
-              }`}
-              style={{
-                backgroundColor: isActive ? "var(--ms-ink)" : "var(--ms-surface)",
-                borderColor: isActive ? "var(--ms-ink)" : "var(--ms-line)",
-                color: isActive ? "#ffffff" : "var(--ms-ink-2)",
-              }}
-            >
-              {p.emoji && <span className="mr-1">{p.emoji}</span>}
-              {p.value}
-            </button>
-          )
-        })}
+      {/* Sport pills + updated row — 모바일은 두 줄(스포츠 / 업데이트), sm+ 한 줄 */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {SPORT_PILLS.map((p) => {
+            const isActive = sportFilter === p.value
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setSportFilter(p.value)}
+                aria-pressed={isActive}
+                className={`h-8 shrink-0 rounded-full border px-3.5 text-[12px] font-semibold whitespace-nowrap transition-colors ${
+                  isActive ? "text-white" : "hover:border-[var(--ms-line-hover)]"
+                }`}
+                style={{
+                  backgroundColor: isActive ? "var(--ms-ink)" : "var(--ms-surface)",
+                  borderColor: isActive ? "var(--ms-ink)" : "var(--ms-line)",
+                  color: isActive ? "#ffffff" : "var(--ms-ink-2)",
+                }}
+              >
+                {p.emoji && <span className="mr-1">{p.emoji}</span>}
+                {p.value}
+              </button>
+            )
+          })}
+        </div>
         <div
-          className="ml-auto flex items-center gap-2 text-[11px] font-medium"
+          className="flex items-center gap-2 text-[11px] font-medium sm:ml-auto"
           style={{ color: "var(--ms-ink-3)" }}
         >
           <span
-            className="inline-block h-1.5 w-1.5 rounded-full"
+            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
             style={{ backgroundColor: "var(--ms-success)" }}
             aria-hidden
           />
-          마지막 업데이트 {updatedLabel}
+          <span className="truncate">마지막 업데이트 {updatedLabel}</span>
           <button
             type="button"
             onClick={() => loadMatches()}
-            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold transition-colors hover:border-[var(--ms-ink)]"
+            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold transition-colors hover:border-[var(--ms-ink)] sm:ml-0"
             style={{
               borderColor: "var(--ms-line)",
               color: "var(--ms-ink-2)",
