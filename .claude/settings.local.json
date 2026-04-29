@@ -145,7 +145,9 @@
       "Bash(bash /tmp/unused_apis.sh)",
       "Bash(bash /tmp/final_audit.sh)",
       "Bash(bash /tmp/true_dead_routes.sh)",
-      "Bash(taskkill //PID 71380 //F)"
+      "Bash(taskkill //PID 71380 //F)",
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(BASE_URL=http://localhost:3000 pnpm exec playwright test e2e/stadium.spec.ts --project=chromium --reporter=line)"
     ]
   }
 }
