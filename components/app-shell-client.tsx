@@ -26,7 +26,11 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   const isHome = pathname === "/"
   // Minimal Sport 디자인 페이지(담벼락/경기 예측): 데스크톱(lg+)에서는 자체 Topbar
   // 사용 — 기존 Header 충돌 회피. 모바일/태블릿은 기존 셸 유지 (핸드오프 모바일 미정).
-  const isMinimalSportPage = pathname === "/" || pathname === "/prediction"
+  const isMinimalSportPage =
+    pathname === "/" ||
+    pathname === "/prediction" ||
+    pathname === "/explore" ||
+    pathname.startsWith("/community/")
   const showBanner = isHome && !hideChrome && !isMinimalSportPage
 
   // 로그인됐지만 온보딩 미완료 유저 → /sign-up으로 리다이렉트

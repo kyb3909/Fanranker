@@ -7,6 +7,8 @@ import { Eye, MessageSquare, Loader2, ThumbsUp, LayoutGrid } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { fetcher } from "@/lib/swr"
+import { MinimalExploreContent } from "@/components/minimal-sport/minimal-explore-content"
+import type { TalkItem } from "@/components/minimal-sport/minimal-talk-list"
 
 interface Category {
   id: string
@@ -57,17 +59,32 @@ type SortTab = "upvotes" | "comments" | "views"
 
 interface ExploreContentProps {
   fallback: Record<string, unknown>
+  recentComments?: Array<{
+    id: string
+    title: string
+    community_slug: string | null
+    comment_count: number | null
+  }>
 }
 
-export function ExploreContent({ fallback }: ExploreContentProps) {
+export function ExploreContent({ fallback, recentComments }: ExploreContentProps) {
   return (
     <SWRConfig value={{ fallback }}>
-      <ExploreInner />
+      <ExploreInner recentComments={recentComments} />
     </SWRConfig>
   )
 }
 
-function ExploreInner() {
+interface ExploreInnerProps {
+  recentComments?: Array<{
+    id: string
+    title: string
+    community_slug: string | null
+    comment_count: number | null
+  }>
+}
+
+function ExploreInner({ recentComments }: ExploreInnerProps) {
   const [sortTab, setSortTab] = useState<SortTab>("upvotes")
 
   const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
@@ -112,109 +129,148 @@ function ExploreInner() {
     { key: "views", label: "조회순", icon: Eye },
   ]
 
+  // Minimal Sport용 데이터 어댑터 — 동일 SWR 데이터를 새 디자인이 그대로 사용
+  const minimalCategories = (catData?.categories ?? []) as Array<{
+    id: number | string
+    slug: string
+    name: string
+    icon: string | null
+    sort_order: number
+    parent_slug?: string | null
+  }>
+  const minimalPosts = sortedPosts.map((p) => ({
+    id: p.id,
+    title: p.title,
+    community_slug: p.communitySlug,
+    upvotes: p.upvotes,
+    comments: p.comments,
+    views: p.views,
+  }))
+  const minimalTalk: TalkItem[] = (recentComments ?? []).map((t) => ({
+    id: t.id,
+    title: t.title,
+    community_slug: t.community_slug,
+    comment_count: t.comment_count,
+  }))
+
   return (
-    <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
-      <div className="grid grid-cols-12 gap-6">
-        {/* Main Content */}
-        <div className="col-span-12 space-y-6 xl:col-span-9">
-          {/* 게시판 둘러보기 */}
-          {categories.length > 0 && (
-            <div className="bg-card border-border overflow-hidden rounded-xl border shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-              <div className="flex items-center gap-2 px-4 py-3">
-                <LayoutGrid className="text-primary h-3.5 w-3.5" />
-                <h2 className="text-primary text-[14px] font-bold">게시판 둘러보기</h2>
+    <>
+      {/* 데스크톱(lg+): Minimal Sport 디자인 */}
+      <MinimalExploreContent
+        categories={minimalCategories}
+        posts={minimalPosts}
+        recentComments={minimalTalk}
+        isLoading={isContentLoading}
+      />
+
+      {/* 모바일/태블릿: 기존 디자인 */}
+      <main
+        id="main-content"
+        className="container mx-auto max-w-[1280px] px-4 py-6 lg:hidden"
+        tabIndex={-1}
+      >
+        <div className="grid grid-cols-12 gap-6">
+          {/* Main Content */}
+          <div className="col-span-12 space-y-6 xl:col-span-9">
+            {/* 게시판 둘러보기 */}
+            {categories.length > 0 && (
+              <div className="bg-card border-border overflow-hidden rounded-xl border shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
+                <div className="flex items-center gap-2 px-4 py-3">
+                  <LayoutGrid className="text-primary h-3.5 w-3.5" />
+                  <h2 className="text-primary text-[14px] font-bold">게시판 둘러보기</h2>
+                </div>
+                <div className="divide-border grid grid-cols-5 gap-0 divide-x">
+                  {categories.map((cat) => (
+                    <Link
+                      key={cat.slug}
+                      href={`/community/${cat.slug}`}
+                      className="hover:bg-muted/40 flex flex-col items-center gap-1.5 py-4 text-center transition-colors"
+                    >
+                      <span className="text-2xl">{cat.icon || "📋"}</span>
+                      <span className="text-foreground text-[13px] font-semibold">{cat.name}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-              <div className="divide-border grid grid-cols-5 gap-0 divide-x">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    href={`/community/${cat.slug}`}
-                    className="hover:bg-muted/40 flex flex-col items-center gap-1.5 py-4 text-center transition-colors"
+            )}
+
+            {/* 실시간 인기글 */}
+            <div className="bg-card border-border rounded-lg border">
+              <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                <h2 className="text-primary text-lg font-bold">실시간 인기글</h2>
+                <span className="text-muted-foreground text-xs">추천 1+ · 최근 7일</span>
+              </div>
+
+              {/* 정렬 탭 */}
+              <div className="border-border flex border-b">
+                {SORT_TABS.map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setSortTab(key)}
+                    className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
+                      sortTab === key
+                        ? "text-primary border-primary border-b-2 font-semibold"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <span className="text-2xl">{cat.icon || "📋"}</span>
-                    <span className="text-foreground text-[13px] font-semibold">{cat.name}</span>
-                  </Link>
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* 실시간 인기글 */}
-          <div className="bg-card border-border rounded-lg border">
-            <div className="border-border flex items-center justify-between border-b px-4 py-3">
-              <h2 className="text-primary text-lg font-bold">실시간 인기글</h2>
-              <span className="text-muted-foreground text-xs">추천 1+ · 최근 7일</span>
-            </div>
-
-            {/* 정렬 탭 */}
-            <div className="border-border flex border-b">
-              {SORT_TABS.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setSortTab(key)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
-                    sortTab === key
-                      ? "text-primary border-primary border-b-2 font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="divide-border divide-y">
-              {isContentLoading ? (
-                <div className="p-8 text-center">
-                  <Loader2 className="text-muted-foreground mx-auto mb-2 h-6 w-6 animate-spin" />
-                  <p className="text-muted-foreground text-sm">글 목록을 불러오는 중...</p>
-                </div>
-              ) : sortedPosts.length > 0 ? (
-                sortedPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/post/${post.id}`}
-                    className="hover:bg-secondary/30 flex items-center justify-between p-3 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-foreground truncate text-sm">{post.title}</p>
-                      <span className="text-muted-foreground mt-1 block text-xs">
-                        {post.community}
-                      </span>
-                    </div>
-                    <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs">
-                      <span className="text-primary flex items-center gap-1 font-medium">
-                        <ThumbsUp className="h-3 w-3" />
-                        {post.upvotes}
-                      </span>
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        {post.comments}
-                      </span>
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {post.views}
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="p-8 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    최근 7일 내 추천받은 게시물이 없습니다.
-                  </p>
-                </div>
-              )}
+              <div className="divide-border divide-y">
+                {isContentLoading ? (
+                  <div className="p-8 text-center">
+                    <Loader2 className="text-muted-foreground mx-auto mb-2 h-6 w-6 animate-spin" />
+                    <p className="text-muted-foreground text-sm">글 목록을 불러오는 중...</p>
+                  </div>
+                ) : sortedPosts.length > 0 ? (
+                  sortedPosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/post/${post.id}`}
+                      className="hover:bg-secondary/30 flex items-center justify-between p-3 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground truncate text-sm">{post.title}</p>
+                        <span className="text-muted-foreground mt-1 block text-xs">
+                          {post.community}
+                        </span>
+                      </div>
+                      <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs">
+                        <span className="text-primary flex items-center gap-1 font-medium">
+                          <ThumbsUp className="h-3 w-3" />
+                          {post.upvotes}
+                        </span>
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3" />
+                          {post.comments}
+                        </span>
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {post.views}
+                        </span>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm">
+                      최근 7일 내 추천받은 게시물이 없습니다.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Sidebar */}
-        <aside className="col-span-3 hidden xl:block">
-          <ActivitySidebar />
-        </aside>
-      </div>
-    </main>
+          {/* Right Sidebar */}
+          <aside className="col-span-3 hidden xl:block">
+            <ActivitySidebar />
+          </aside>
+        </div>
+      </main>
+    </>
   )
 }
