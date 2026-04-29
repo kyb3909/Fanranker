@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { notFound } from "next/navigation"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { CommunityContent } from "@/components/community-content"
+import { MinimalCommunityContent } from "@/components/minimal-sport/minimal-community-content"
 
 const NewsTicker = dynamic(
   () => import("@/components/news-talk/news-ticker").then((m) => ({ default: m.NewsTicker })),
@@ -283,23 +284,42 @@ export default async function CommunityPage({
   }
 
   // 모든 데이터를 병렬로 가져오기 (SSR waterfall 제거)
-  const [{ data: channels }, { data: flairs }, { posts: rawPosts, totalCount }] = await Promise.all(
-    [
-      supabaseForMeta
-        .from("categories")
-        .select("slug, name, icon, description")
-        .eq("parent_slug", slug)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
-      supabaseForMeta
-        .from("post_flairs")
-        .select("id, name, color, sort_order")
-        .eq("community_slug", slug)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
-      fetchPosts(slug, currentPage, flairId),
-    ]
-  )
+  const [
+    { data: channels },
+    { data: flairs },
+    { posts: rawPosts, totalCount },
+    { data: allCategories },
+    { data: recentCommentsData },
+  ] = await Promise.all([
+    supabaseForMeta
+      .from("categories")
+      .select("slug, name, icon, description")
+      .eq("parent_slug", slug)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabaseForMeta
+      .from("post_flairs")
+      .select("id, name, color, sort_order")
+      .eq("community_slug", slug)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    fetchPosts(slug, currentPage, flairId),
+    // Minimal Sport sidebar용 — 모든 부모 카테고리
+    supabaseForMeta
+      .from("categories")
+      .select("id, slug, name, icon, sort_order, parent_slug")
+      .eq("is_active", true)
+      .is("parent_slug", null)
+      .order("sort_order", { ascending: true }),
+    // Minimal Sport RightAside용 — 최근 댓글 달린 게시물
+    supabaseForMeta
+      .from("posts")
+      .select("id, title, community_slug, comment_count, latest_comment_at, created_at")
+      .is("deleted_at", null)
+      .gt("comment_count", 0)
+      .order("latest_comment_at", { ascending: false, nullsFirst: false })
+      .limit(10),
+  ])
   const communityPosts = transformPosts(rawPosts)
   const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
 
@@ -317,8 +337,46 @@ export default async function CommunityPage({
           }),
         }}
       />
+      {/* 데스크톱(lg+): Minimal Sport 디자인. NewsTicker는 위에서 별도 렌더 — 차별화 유지. */}
+      <MinimalCommunityContent
+        community={{
+          name: community.name,
+          slug,
+          members: community.members,
+          description: community.description || null,
+        }}
+        posts={communityPosts}
+        channels={(channels ?? []).map((ch) => ({ slug: ch.slug, name: ch.name, icon: ch.icon }))}
+        flairs={(flairs ?? []).map((f) => ({ id: f.id, name: f.name, color: f.color }))}
+        activeFlairId={flairId}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        categories={
+          (allCategories ?? []) as Array<{
+            id: number | string
+            slug: string
+            name: string
+            icon: string | null
+            sort_order: number
+            parent_slug: string | null
+          }>
+        }
+        recentComments={(recentCommentsData ?? []).map((t) => ({
+          id: t.id,
+          title: t.title,
+          community_slug: t.community_slug,
+          comment_count: t.comment_count,
+        }))}
+      />
+
+      {/* 모바일/태블릿: 기존 layout */}
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
-      <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
+      <main
+        id="main-content"
+        className="container mx-auto max-w-[1280px] px-4 py-6 lg:hidden"
+        tabIndex={-1}
+      >
         {/* 12컬럼 그리드: 조밀한 간격 */}
         <div className="grid grid-cols-12 gap-4 lg:gap-5">
           <div className="col-span-12 lg:col-span-9">
