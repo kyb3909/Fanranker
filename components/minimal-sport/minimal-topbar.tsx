@@ -104,10 +104,14 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         </div>
       </div>
 
-      {/* Row 2 — 풀폭 burgundy 띠 nav (lg+ 전용). 모바일은 mobile-tab-bar로 nav. */}
-      <div className="hidden lg:block" style={{ backgroundColor: "var(--ms-brand)" }}>
-        <div className="mx-auto flex h-12 w-full max-w-[1280px] items-stretch justify-center px-8">
-          <nav className="flex items-stretch gap-1" aria-label="주요 메뉴">
+      {/* Row 2 — 풀폭 burgundy 띠 nav. 모바일에서도 노출 (production과 동일).
+          모바일 tab-bar는 page 하단 fixed로 별도 작동. */}
+      <div style={{ backgroundColor: "var(--ms-brand)" }}>
+        <div className="mx-auto flex h-12 w-full max-w-[1280px] items-stretch justify-center gap-0 px-2 sm:gap-1 sm:px-6 lg:px-8">
+          <nav
+            className="flex flex-1 items-stretch justify-around sm:flex-initial sm:gap-1"
+            aria-label="주요 메뉴"
+          >
             {NAV_ITEMS.map((item) => {
               const isActive = item.label === active
               const Icon = item.icon
@@ -115,13 +119,13 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative flex items-center gap-1.5 px-5 text-[15px] tracking-tight transition-colors"
+                  className="relative flex items-center justify-center gap-1 px-2 text-[13px] tracking-tight transition-colors sm:gap-1.5 sm:px-5 sm:text-[15px]"
                   style={{
                     color: isActive ? "#ffffff" : "rgba(255,255,255,0.65)",
                     fontWeight: isActive ? 800 : 600,
                   }}
                 >
-                  <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
+                  <Icon className="h-4 w-4 shrink-0 sm:h-[18px] sm:w-[18px]" aria-hidden />
                   {item.label}
                   {isActive && (
                     <span
