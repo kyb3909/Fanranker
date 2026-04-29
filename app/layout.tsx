@@ -1,7 +1,7 @@
 import type React from "react"
 import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
-import { Noto_Sans } from "next/font/google"
+import { Noto_Sans, Archivo } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -26,6 +26,16 @@ const notoSans = Noto_Sans({
   display: "swap",
   variable: "--font-noto-sans-kr", // CSS 변수명은 globals.css 와 호환 위해 유지
   preload: true,
+})
+
+// Minimal Sport 디자인 전용. 숫자/영문 디스플레이 (배당, 코인 카운터, VS 등).
+// .theme-minimal-sport namespace 안에서만 사용 — 다른 페이지 영향 없음.
+const archivo = Archivo({
+  weight: "variable",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-archivo",
+  preload: false,
 })
 
 const koLocalization = {
@@ -125,7 +135,11 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
       <ClerkProvider localization={koLocalization} dynamic>
-        <html lang="ko" className={notoSans.variable} suppressHydrationWarning>
+        <html
+          lang="ko"
+          className={`${notoSans.variable} ${archivo.variable}`}
+          suppressHydrationWarning
+        >
           <head>
             {/* Google AdSense 계정 메타 태그 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (

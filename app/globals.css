@@ -17,6 +17,18 @@
   unicode-range: U+ACF5, U+B180, U+C774, U+D310;
 }
 
+/* Pretendard Variable — Minimal Sport 디자인 전용 한글 본문 폰트.
+ * .theme-minimal-sport namespace 안에서만 사용 (담벼락/경기 예측 페이지 한정).
+ * 다른 페이지는 기존 Noto Sans + Apple SD Gothic Neo 시스템 폰트 fallback 유지. */
+@font-face {
+  font-family: "Pretendard Variable";
+  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2")
+    format("woff2-variations");
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ===== KT BizMeka-inspired Clean Design System ===== */
   /* Background: 아주 살짝 회색 톤 - 카드와 구분 */
@@ -116,6 +128,66 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ===== Minimal Sport 디자인 namespace =====
+ * 담벼락(/)과 경기 예측(/prediction) 페이지에 wrapper 클래스로 적용.
+ * 핵심 토큰을 핸드오프 명세 그대로 덮어쓰기 + 명세 전용 신규 토큰(--ms-*).
+ * 다른 페이지는 기존 KT BizMeka burgundy 토큰 그대로 유지. */
+.theme-minimal-sport {
+  /* === Core 토큰 덮어쓰기 (기존 시스템 위) === */
+  --background: #fafaf7; /* 페이지 배경 (off-white) */
+  --foreground: #111114; /* 본문 강조, primary text */
+  --card: #ffffff; /* 카드/패널 배경 */
+  --card-foreground: #111114;
+  --popover: #ffffff;
+  --popover-foreground: #111114;
+  --primary: #8b1538; /* 버건디 — 액센트, CTA, 활성 상태 */
+  --primary-foreground: #ffffff;
+  --secondary: #fafaf7;
+  --secondary-foreground: #111114;
+  --muted: #fafaf7;
+  --muted-foreground: #9a9aa1; /* tertiary text, meta */
+  --accent: #fbe9ee; /* 버건디 톤 배경 (태그, 카드) */
+  --accent-foreground: #8b1538;
+  --destructive: #8b1538;
+  --destructive-foreground: #ffffff;
+  --border: #ecead3; /* 경계선, divider — 핸드오프 #ECEAE3 */
+  --input: #ecead3;
+  --ring: #8b1538;
+  --radius: 1rem; /* 16px (게시물·매치 카드 기본) */
+
+  /* === 신규 토큰 (기존 시스템에 매핑 어색한 값들) === */
+  --ms-bg: #fafaf7;
+  --ms-surface: #ffffff;
+  --ms-ink: #111114;
+  --ms-ink-2: #4b4b52; /* secondary text */
+  --ms-ink-3: #9a9aa1; /* tertiary text */
+  --ms-line: #ecead3;
+  --ms-line-hover: #dbd8cf; /* post hover border */
+  --ms-brand: #8b1538;
+  --ms-brand-soft: #fbe9ee;
+  --ms-success: #22c55e; /* live dot */
+
+  /* === 폰트 — Minimal Sport 전용 stack === */
+  font-family:
+    "Pretendard Variable",
+    "Pretendard",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.01em;
+  background: var(--ms-bg);
+  color: var(--ms-ink);
+}
+
+/* Archivo — 숫자/영문 디스플레이 (배당, 코인 카운터, VS 등) */
+.theme-minimal-sport .font-archivo {
+  font-family: var(--font-archivo), "Archivo", system-ui, sans-serif;
+  font-feature-settings: "tnum";
 }
 
 @layer base {
