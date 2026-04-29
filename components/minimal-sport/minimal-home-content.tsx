@@ -132,11 +132,11 @@ export function MinimalHomeContent({
               onClick={() => setSortBy(s.key)}
               aria-pressed={isActive}
               className={`h-8 rounded-full border px-4 text-[12px] font-semibold transition-colors ${
-                isActive ? "text-white" : "hover:border-[var(--ms-line-hover)]"
+                isActive ? "text-white shadow-sm" : "hover:border-[var(--ms-line-hover)]"
               }`}
               style={{
-                backgroundColor: isActive ? "var(--ms-ink)" : "var(--ms-surface)",
-                borderColor: isActive ? "var(--ms-ink)" : "var(--ms-line)",
+                backgroundColor: isActive ? "var(--ms-brand)" : "var(--ms-surface)",
+                borderColor: isActive ? "var(--ms-brand)" : "var(--ms-line)",
                 color: isActive ? "#ffffff" : "var(--ms-ink-2)",
               }}
             >

@@ -202,8 +202,8 @@ export function MinimalCommunityContent({
             href={baseHref}
             className="flex h-8 items-center rounded-full border px-3.5 text-[12px] font-semibold transition-colors hover:border-[var(--ms-line-hover)]"
             style={{
-              backgroundColor: !activeFlairId ? "var(--ms-ink)" : "var(--ms-surface)",
-              borderColor: !activeFlairId ? "var(--ms-ink)" : "var(--ms-line)",
+              backgroundColor: !activeFlairId ? "var(--ms-brand)" : "var(--ms-surface)",
+              borderColor: !activeFlairId ? "var(--ms-brand)" : "var(--ms-line)",
               color: !activeFlairId ? "#ffffff" : "var(--ms-ink-2)",
             }}
           >
@@ -217,8 +217,8 @@ export function MinimalCommunityContent({
                 href={`${baseHref}?flair=${f.id}`}
                 className="flex h-8 items-center rounded-full border px-3.5 text-[12px] font-semibold transition-colors hover:border-[var(--ms-line-hover)]"
                 style={{
-                  backgroundColor: isActive ? "var(--ms-ink)" : "var(--ms-surface)",
-                  borderColor: isActive ? "var(--ms-ink)" : "var(--ms-line)",
+                  backgroundColor: isActive ? f.color : "var(--ms-surface)",
+                  borderColor: isActive ? f.color : "var(--ms-line)",
                   color: isActive ? "#ffffff" : "var(--ms-ink-2)",
                 }}
               >

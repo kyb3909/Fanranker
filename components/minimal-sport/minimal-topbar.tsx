@@ -76,7 +76,7 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
               href={item.href}
               className={`rounded-full px-[14px] py-2 text-[13px] font-semibold transition-colors ${
                 isActive
-                  ? "bg-[var(--ms-ink)] text-white"
+                  ? "bg-[var(--ms-brand)] text-white shadow-sm"
                   : "text-[var(--ms-ink)] hover:bg-[var(--ms-bg-hover)]"
               }`}
             >

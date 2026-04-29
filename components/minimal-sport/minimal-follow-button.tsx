@@ -56,8 +56,8 @@ export function MinimalFollowButton({ communitySlug }: MinimalFollowButtonProps)
       disabled={isLoading}
       className="flex h-9 items-center gap-1.5 rounded-full border px-4 text-[12px] font-bold transition-colors disabled:opacity-50"
       style={{
-        backgroundColor: isFollowing ? "var(--ms-surface)" : "var(--ms-ink)",
-        borderColor: isFollowing ? "var(--ms-line)" : "var(--ms-ink)",
+        backgroundColor: isFollowing ? "var(--ms-surface)" : "var(--ms-brand)",
+        borderColor: isFollowing ? "var(--ms-line)" : "var(--ms-brand)",
         color: isFollowing ? "var(--ms-ink)" : "#ffffff",
       }}
       aria-pressed={isFollowing}

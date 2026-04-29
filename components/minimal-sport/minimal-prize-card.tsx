@@ -93,8 +93,8 @@ export function MinimalPrizeCard({ showSubLabel = false }: MinimalPrizeCardProps
           <button
             type="button"
             onClick={() => setRevealed(true)}
-            className="mt-3 h-9 w-full rounded-xl text-[12px] font-bold text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "var(--ms-ink)" }}
+            className="mt-3 h-9 w-full rounded-xl text-[12px] font-bold text-white shadow-sm transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--ms-brand)" }}
           >
             정답 확인하기
           </button>
