@@ -227,7 +227,7 @@ export function MinimalMatchCard({ match, picks, onPick, hot }: MinimalMatchCard
         style={{
           color: "var(--ms-ink-3)",
           borderBottom: "1px solid var(--ms-line)",
-          background: "linear-gradient(90deg, var(--ms-bg) 0%, var(--ms-surface) 100%)",
+          background: "linear-gradient(90deg, var(--ms-bg-hover) 0%, var(--ms-surface) 100%)",
         }}
       >
         <span aria-hidden>{ico}</span>

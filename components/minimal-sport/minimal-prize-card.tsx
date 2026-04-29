@@ -58,7 +58,7 @@ export function MinimalPrizeCard({ showSubLabel = false }: MinimalPrizeCardProps
                 <li
                   key={hint.week}
                   className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px]"
-                  style={{ backgroundColor: "var(--ms-bg)" }}
+                  style={{ backgroundColor: "var(--ms-bg-hover)" }}
                 >
                   <span
                     className="font-archivo w-7 shrink-0 text-[11px] font-extrabold"
@@ -105,7 +105,7 @@ export function MinimalPrizeCard({ showSubLabel = false }: MinimalPrizeCardProps
           <div
             className="relative mx-1 mb-3 aspect-square overflow-hidden rounded-xl"
             style={{
-              backgroundColor: "var(--ms-bg)",
+              backgroundColor: "var(--ms-bg-hover)",
               border: "1px solid var(--ms-line)",
             }}
           >

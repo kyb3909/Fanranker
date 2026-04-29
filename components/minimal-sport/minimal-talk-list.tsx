@@ -65,7 +65,7 @@ export function MinimalTalkList({
               <span
                 className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold"
                 style={{
-                  backgroundColor: "var(--ms-bg)",
+                  backgroundColor: "var(--ms-bg-hover)",
                   color: "var(--ms-ink-3)",
                 }}
               >

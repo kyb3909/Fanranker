@@ -239,7 +239,7 @@ export function MinimalCommunityContent({
           className="hidden items-center gap-2 border-b px-4 py-2.5 text-[11px] font-bold sm:grid sm:grid-cols-[50px_1fr_90px_80px_50px]"
           style={{
             borderColor: "var(--ms-line)",
-            backgroundColor: "var(--ms-bg)",
+            backgroundColor: "var(--ms-bg-hover)",
             color: "var(--ms-ink-3)",
           }}
         >
@@ -264,7 +264,7 @@ export function MinimalCommunityContent({
               <Link
                 key={post.id}
                 href={`/post/${post.id}`}
-                className="block border-b px-4 py-2.5 text-[12.5px] transition-colors last:border-b-0 hover:bg-[var(--ms-bg)] sm:grid sm:grid-cols-[50px_1fr_90px_80px_50px] sm:items-center sm:gap-2"
+                className="block border-b px-4 py-2.5 text-[12.5px] transition-colors last:border-b-0 hover:bg-[var(--ms-bg-hover)] sm:grid sm:grid-cols-[50px_1fr_90px_80px_50px] sm:items-center sm:gap-2"
                 style={{
                   borderColor: "var(--ms-line)",
                   backgroundColor: post.isNotice ? "var(--ms-brand-soft)" : undefined,

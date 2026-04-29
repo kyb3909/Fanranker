@@ -107,7 +107,7 @@ export function MinimalPostCard({ post }: { post: MinimalPostInput }) {
       >
         <span
           className="font-archivo inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 tabular-nums"
-          style={{ backgroundColor: "var(--ms-bg)" }}
+          style={{ backgroundColor: "var(--ms-bg-hover)" }}
         >
           <span aria-hidden>▲</span>
           <b style={{ color: "var(--ms-ink)" }}>{formatCount(score)}</b>

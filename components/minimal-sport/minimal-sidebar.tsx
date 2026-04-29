@@ -37,7 +37,7 @@ function CategoryRow({ cat, active }: { cat: SidebarCategory; active: boolean })
     "group flex h-9 items-center gap-2 rounded-[10px] px-2 text-[13px] font-medium transition-colors"
   const stateClass = active
     ? "bg-[var(--ms-brand-soft)] text-[var(--ms-brand)] font-semibold"
-    : "text-[var(--ms-ink-2)] hover:bg-[var(--ms-bg)]"
+    : "text-[var(--ms-ink-2)] hover:bg-[var(--ms-bg-hover)]"
 
   return (
     <Link href={`/community/${cat.slug}`} className={`${baseClass} ${stateClass}`}>

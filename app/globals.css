@@ -136,35 +136,36 @@
  * 다른 페이지는 기존 KT BizMeka burgundy 토큰 그대로 유지. */
 .theme-minimal-sport {
   /* === Core 토큰 덮어쓰기 (기존 시스템 위) === */
-  --background: #fafaf7; /* 페이지 배경 (off-white) */
-  --foreground: #111114; /* 본문 강조, primary text */
+  --background: #ffffff; /* 페이지 배경 — 순백 */
+  --foreground: #111114; /* 본문/제목 */
   --card: #ffffff; /* 카드/패널 배경 */
   --card-foreground: #111114;
   --popover: #ffffff;
   --popover-foreground: #111114;
   --primary: #8b1538; /* 버건디 — 액센트, CTA, 활성 상태 */
   --primary-foreground: #ffffff;
-  --secondary: #fafaf7;
+  --secondary: #f7f7f8; /* 호버/은은한 표면 */
   --secondary-foreground: #111114;
-  --muted: #fafaf7;
-  --muted-foreground: #9a9aa1; /* tertiary text, meta */
-  --accent: #fbe9ee; /* 버건디 톤 배경 (태그, 카드) */
+  --muted: #f7f7f8;
+  --muted-foreground: #9a9aa1; /* meta — 시간/카운트 */
+  --accent: #fbe9ee; /* 브랜드 소프트 — 셀렉티드 칩/배지/탭 underline 영역 */
   --accent-foreground: #8b1538;
   --destructive: #8b1538;
   --destructive-foreground: #ffffff;
-  --border: #ecead3; /* 경계선, divider — 핸드오프 #ECEAE3 */
-  --input: #ecead3;
+  --border: #ececec; /* 카드 1px 라인 + divider */
+  --input: #ececec;
   --ring: #8b1538;
   --radius: 1rem; /* 16px (게시물·매치 카드 기본) */
 
   /* === 신규 토큰 (기존 시스템에 매핑 어색한 값들) === */
-  --ms-bg: #fafaf7;
+  --ms-bg: #ffffff; /* 페이지 배경 = surface 동일 (그림자 X, 1px 라인 O) */
+  --ms-bg-hover: #f7f7f8; /* hover surface */
   --ms-surface: #ffffff;
-  --ms-ink: #111114;
-  --ms-ink-2: #4b4b52; /* secondary text */
-  --ms-ink-3: #9a9aa1; /* tertiary text */
-  --ms-line: #ecead3;
-  --ms-line-hover: #dbd8cf; /* post hover border */
+  --ms-ink: #111114; /* 본문/제목 */
+  --ms-ink-2: #4b4b52; /* 보조 텍스트 */
+  --ms-ink-3: #9a9aa1; /* 메타 — 시간/카운트 */
+  --ms-line: #ececec; /* 1px 라인 */
+  --ms-line-hover: #dcdcdc; /* hover 테두리 */
   --ms-brand: #8b1538;
   --ms-brand-soft: #fbe9ee;
   --ms-success: #22c55e; /* live dot */

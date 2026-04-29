@@ -67,7 +67,7 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
               className={`rounded-full px-[14px] py-2 text-[13px] font-semibold transition-colors ${
                 isActive
                   ? "bg-[var(--ms-ink)] text-white"
-                  : "text-[var(--ms-ink)] hover:bg-[var(--ms-bg)]"
+                  : "text-[var(--ms-ink)] hover:bg-[var(--ms-bg-hover)]"
               }`}
             >
               {item.label}
@@ -84,7 +84,7 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         <button
           type="button"
           onClick={() => router.push("/search")}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ms-ink-3)] transition-colors hover:bg-[var(--ms-bg)] lg:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ms-ink-3)] transition-colors hover:bg-[var(--ms-bg-hover)] lg:hidden"
           aria-label="검색"
         >
           <Search className="h-[18px] w-[18px]" />
@@ -92,7 +92,7 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         <button
           type="button"
           onClick={() => router.push("/search")}
-          className="hidden h-9 w-[220px] items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg)] px-4 text-[12px] text-[var(--ms-ink-3)] transition-colors hover:border-[var(--ms-line-hover)] lg:flex"
+          className="hidden h-9 w-[220px] items-center gap-2 rounded-full border border-[var(--ms-line)] bg-[var(--ms-bg-hover)] px-4 text-[12px] text-[var(--ms-ink-3)] transition-colors hover:border-[var(--ms-line-hover)] lg:flex"
           aria-label="검색"
         >
           <Search className="h-4 w-4" />

@@ -24,7 +24,7 @@ export function MinimalPostListItem({ post }: { post: MinimalPostListItemData })
   return (
     <Link
       href={`/post/${post.id}`}
-      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--ms-bg)]"
+      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--ms-bg-hover)]"
     >
       <div className="min-w-0 flex-1">
         <p

@@ -15,13 +15,13 @@ import { MinimalTalkList, type TalkItem } from "./minimal-talk-list"
 const ShopPage = dynamic(() => import("@/components/shop/shop-page"), {
   loading: () => (
     <div className="animate-pulse space-y-4">
-      <div className="h-40 rounded-2xl" style={{ backgroundColor: "var(--ms-bg)" }} />
+      <div className="h-40 rounded-2xl" style={{ backgroundColor: "var(--ms-bg-hover)" }} />
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
         {Array.from({ length: 10 }).map((_, i) => (
           <div
             key={i}
             className="aspect-square rounded-xl"
-            style={{ backgroundColor: "var(--ms-bg)" }}
+            style={{ backgroundColor: "var(--ms-bg-hover)" }}
           />
         ))}
       </div>

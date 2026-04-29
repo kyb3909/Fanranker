@@ -22,7 +22,7 @@ const COLS_CLASS: Record<number, string> = {
  * Minimal Sport 카테고리 그리드.
  * - rounded-2xl card + divide vertical lines
  * - icon(2xl) + name(13/700)
- * - hover: --ms-bg
+ * - hover: --ms-bg-hover
  */
 export function MinimalCategoryGrid({ categories, cols = 5 }: MinimalCategoryGridProps) {
   if (categories.length === 0) return null
@@ -35,7 +35,7 @@ export function MinimalCategoryGrid({ categories, cols = 5 }: MinimalCategoryGri
         <Link
           key={cat.slug}
           href={`/community/${cat.slug}`}
-          className="flex flex-col items-center gap-1.5 py-5 transition-colors hover:bg-[var(--ms-bg)]"
+          className="flex flex-col items-center gap-1.5 py-5 transition-colors hover:bg-[var(--ms-bg-hover)]"
           style={{ borderColor: "var(--ms-line)" }}
         >
           <span className="text-2xl" aria-hidden>
