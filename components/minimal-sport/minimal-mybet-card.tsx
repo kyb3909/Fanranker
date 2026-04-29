@@ -4,29 +4,61 @@ interface MinimalMyBetCardProps {
   wins?: number
   losses?: number
   weeklyCoin?: number
+  title?: string
+  isLoggedOut?: boolean
 }
 
 /**
- * 이번 주 내 예측 카드 (사이드).
+ * 내 예측 통계 카드 (사이드).
+ * /api/sports/my-stats summary (correct/wrong/net_profit/accuracy) 기반.
  *
  * Spec (핸드오프):
  *  - 헤더: "이번 주 내 예측" + 우측 "적중률 N%" (b는 Archivo 14/900 brand)
  *  - 막대 그래프: 10px height, 999px radius, brand vs ink-3 분할
  *  - 하단: "이번 주 획득 코인" + Archivo 14/900 brand "● +N"
  *
- * 데이터 wiring 미정 — 1차는 prop 기본값 (Phase 후속 hook 연결).
+ * 백엔드에 weekly endpoint 없음 → 누적 stats 표시 (title 변경으로 명확화).
+ * 비로그인 시 안내 표시.
  */
 export function MinimalMyBetCard({
-  wins = 17,
-  losses = 8,
-  weeklyCoin = 340,
+  wins = 0,
+  losses = 0,
+  weeklyCoin = 0,
+  title = "내 예측 통계",
+  isLoggedOut = false,
 }: MinimalMyBetCardProps) {
   const total = wins + losses
   const rate = total > 0 ? Math.round((wins / total) * 100) : 0
 
+  if (isLoggedOut) {
+    return (
+      <MinimalSideCard title={title}>
+        <p
+          className="py-3 text-center text-[12px] font-medium"
+          style={{ color: "var(--ms-ink-3)" }}
+        >
+          로그인하면 통계가 표시됩니다.
+        </p>
+      </MinimalSideCard>
+    )
+  }
+
+  if (total === 0) {
+    return (
+      <MinimalSideCard title={title}>
+        <p
+          className="py-3 text-center text-[12px] font-medium"
+          style={{ color: "var(--ms-ink-3)" }}
+        >
+          아직 예측 기록이 없어요.
+        </p>
+      </MinimalSideCard>
+    )
+  }
+
   return (
     <MinimalSideCard
-      title="이번 주 내 예측"
+      title={title}
       trailing={
         <span className="text-[12px] font-bold" style={{ color: "var(--ms-ink-2)" }}>
           적중률{" "}
@@ -59,7 +91,7 @@ export function MinimalMyBetCard({
           <b style={{ color: "var(--ms-ink-3)" }}>{losses}패</b>
         </span>
         <span className="flex items-center gap-1.5">
-          이번 주 획득 코인
+          순이익 코인
           <span
             className="font-archivo text-[14px] font-extrabold tabular-nums"
             style={{ color: "var(--ms-brand)" }}

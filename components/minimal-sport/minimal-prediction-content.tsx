@@ -2,7 +2,11 @@
 
 import { useState, useMemo, useCallback } from "react"
 import { RotateCcw } from "lucide-react"
+import useSWR from "swr"
+import { useAuth } from "@clerk/nextjs"
+import { fetcher } from "@/lib/swr"
 import { useBettingMatches } from "@/hooks/use-betting-matches"
+import type { MyStatsData } from "@/components/betting/betting-types"
 import { MinimalShell } from "./minimal-shell"
 import { MinimalTopbar } from "./minimal-topbar"
 import { MinimalSidebar } from "./minimal-sidebar"
@@ -71,8 +75,23 @@ export function MinimalPredictionContent({
   const [sportFilter, setSportFilter] = useState<SportFilter>("전체")
   const [picks, setPicks] = useState<Record<string, MinimalMatchCardPicks>>({})
 
+  const { isSignedIn } = useAuth()
   const { groupedMatches, isLoading, lastUpdated, loadMatches } = useBettingMatches()
   const { sports, life } = useMemo(() => groupCategories(categories), [categories])
+
+  // /api/sports/my-stats — 로그인 시 사용자 누적 통계 (Streak + 적중률 + 손익)
+  const { data: myStats } = useSWR<MyStatsData>(
+    isSignedIn ? "/api/sports/my-stats" : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60_000 }
+  )
+  const summary = myStats?.summary ?? null
+  const streakRaw = summary?.current_streak ?? 0
+  const streakLabel = streakRaw >= 0 ? "연승" : "연패"
+  const streakAbs = Math.abs(streakRaw)
+  const wins = summary?.correct_predictions ?? 0
+  const losses = summary?.wrong_predictions ?? 0
+  const profit = summary?.net_profit ?? 0
 
   const filteredMatches = useMemo(() => {
     if (sportFilter === "전체") return groupedMatches
@@ -103,7 +122,13 @@ export function MinimalPredictionContent({
       aside={
         <MinimalRightAside>
           <MinimalPrizeCard showSubLabel />
-          <MinimalMyBetCard />
+          <MinimalMyBetCard
+            wins={wins}
+            losses={losses}
+            weeklyCoin={Math.max(0, profit)}
+            title={isSignedIn ? "내 예측 통계" : "이번 주 내 예측"}
+            isLoggedOut={!isSignedIn}
+          />
           <MinimalTalkList items={recentComments} />
         </MinimalRightAside>
       }
@@ -155,7 +180,7 @@ export function MinimalPredictionContent({
             맞히고 코인 받자
           </h1>
         </div>
-        {/* Streak (1차 더미) */}
+        {/* Streak — /api/sports/my-stats current_streak 기반 */}
         <div
           className="flex flex-col items-end rounded-r-xl border-l-[3px] px-4 py-2"
           style={{
@@ -168,14 +193,20 @@ export function MinimalPredictionContent({
               className="font-archivo text-[32px] font-black tabular-nums"
               style={{ color: "var(--ms-brand)" }}
             >
-              7
+              {streakAbs}
             </span>
             <span className="text-[14px] font-extrabold" style={{ color: "var(--ms-brand)" }}>
-              연승
+              {streakAbs > 0 ? streakLabel : "—"}
             </span>
           </div>
           <span className="text-[11px] font-semibold" style={{ color: "var(--ms-ink-2)" }}>
-            현재 연속 적중
+            {!isSignedIn
+              ? "로그인하고 시작"
+              : streakAbs === 0
+                ? "예측을 시작해보세요"
+                : streakRaw > 0
+                  ? "현재 연속 적중"
+                  : "현재 연속 미적중"}
           </span>
         </div>
       </div>
