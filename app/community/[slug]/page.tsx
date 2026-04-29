@@ -325,7 +325,6 @@ export default async function CommunityPage({
 
   return (
     <>
-      <NewsTicker communitySlug={slug} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -337,8 +336,10 @@ export default async function CommunityPage({
           }),
         }}
       />
-      {/* 데스크톱(lg+): Minimal Sport 디자인. NewsTicker는 위에서 별도 렌더 — 차별화 유지. */}
+      {/* 데스크톱(lg+): Minimal Sport 디자인. NewsTicker는 셸의 ticker slot으로
+          Topbar 바로 아래 사이트 폭에 붙음 — 차별화 유지. */}
       <MinimalCommunityContent
+        ticker={<NewsTicker communitySlug={slug} />}
         community={{
           name: community.name,
           slug,
@@ -370,7 +371,10 @@ export default async function CommunityPage({
         }))}
       />
 
-      {/* 모바일/태블릿: 기존 layout */}
+      {/* 모바일/태블릿: 기존 layout — NewsTicker는 페이지 상단 그대로 */}
+      <div className="lg:hidden">
+        <NewsTicker communitySlug={slug} />
+      </div>
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
       <main
         id="main-content"

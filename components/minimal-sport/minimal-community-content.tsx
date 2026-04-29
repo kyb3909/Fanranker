@@ -63,6 +63,8 @@ export interface MinimalCommunityContentProps {
   totalCount: number
   categories: RawCategory[]
   recentComments: TalkItem[]
+  /** Topbar 아래에 깔릴 라이브 트래커 (NewsTicker 등). page.tsx에서 주입. */
+  ticker?: React.ReactNode
 }
 
 function groupCategories(cats: RawCategory[]) {

@@ -4,6 +4,8 @@ interface MinimalShellProps {
   topbar: ReactNode
   sidebar: ReactNode
   aside: ReactNode
+  /** Topbar 바로 아래 사이트 폭으로 깔리는 영역 (예: 라이브 뉴스 티커). 옵션. */
+  ticker?: ReactNode
   children: ReactNode
 }
 
@@ -16,13 +18,18 @@ interface MinimalShellProps {
  *
  * 두 페이지(/, /prediction)에서 사용. 다른 페이지는 영향 없음.
  */
-export function MinimalShell({ topbar, sidebar, aside, children }: MinimalShellProps) {
+export function MinimalShell({ topbar, sidebar, aside, ticker, children }: MinimalShellProps) {
   return (
     <div className="theme-minimal-sport hidden min-h-screen lg:block">
       <div className="mx-auto w-full max-w-[1280px]">
         <header className="sticky top-0 z-40 h-16 border-b border-[var(--ms-line)] bg-[var(--ms-bg)]/85 backdrop-blur-xl">
           {topbar}
         </header>
+        {ticker && (
+          <div className="border-b border-[var(--ms-line)]" aria-label="라이브 트래커">
+            {ticker}
+          </div>
+        )}
         <div className="grid grid-cols-[220px_1fr_300px] gap-0">
           <aside className="border-r border-[var(--ms-line)] px-4 py-6">{sidebar}</aside>
           <main className="min-w-0 px-8 py-7">{children}</main>
