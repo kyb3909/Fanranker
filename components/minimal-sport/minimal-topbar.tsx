@@ -1,9 +1,15 @@
 "use client"
 
 import Link from "@/components/ui/app-link"
-import { useUser } from "@clerk/nextjs"
-import { Search } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Bell, Search } from "lucide-react"
+import { SignedIn, SignedOut, useClerk } from "@clerk/nextjs"
+import { Button } from "@/components/ui/button"
+import { GoldBalance } from "@/components/header/gold-balance"
+import { BallBalance } from "@/components/header/ball-balance"
+import { NotificationDropdown } from "@/components/header/notification-dropdown"
+import { UserMenu } from "@/components/header/user-menu"
+import { SignInMenu } from "@/components/header/sign-in-menu"
 
 const NAV_ITEMS = [
   { label: "담벼락", href: "/" },
@@ -17,17 +23,19 @@ interface MinimalTopbarProps {
 }
 
 /**
- * Minimal Sport Topbar — 64px 높이, 1280px 그리드 안에서 좌·중·우 3분할.
+ * Minimal Sport Topbar — 64px 높이, 1280px 그리드.
  *
- * - 좌: 28px 원형 마크(버건디) + "gongnori.fan" 텍스트 (점만 버건디)
- * - 중: 4개 nav 버튼 (활성 시 검정 배경 흰 글씨, pill)
- * - 우: 검색 pill, 골드/볼 코인 pill, 32px 아바타
+ * 좌: 28px 원형 마크 + "gongnori.fan" (점만 brand)
+ * 중: 4 nav pill (활성 검정 배경 + 흰 텍스트)
+ * 우(SignedIn): 검색 pill / GoldBalance / BallBalance / NotificationDropdown / UserMenu
+ * 우(SignedOut): 검색 pill / Bell(클릭 시 sign-in) / SignInMenu
+ *
+ * 모든 우측 컴포넌트는 기존 Header에서 사용하던 client component 그대로 재사용 —
+ * 실데이터(Clerk 세션, 골드/볼 SWR fetch, 알림 list)에 자동 연결됨.
  */
 export function MinimalTopbar({ active }: MinimalTopbarProps) {
   const router = useRouter()
-  const { user, isSignedIn } = useUser()
-
-  const initial = user?.firstName?.[0] ?? user?.username?.[0] ?? "K"
+  const { openSignIn } = useClerk()
 
   return (
     <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-8">
@@ -68,8 +76,9 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
         })}
       </nav>
 
-      {/* 우측: 검색 + 코인 + 아바타 */}
+      {/* 우측 actions — 기존 Header 컴포넌트 재사용 (실데이터 자동 연결) */}
       <div className="flex items-center justify-end gap-2">
+        {/* 검색 pill */}
         <button
           type="button"
           onClick={() => router.push("/search")}
@@ -79,28 +88,28 @@ export function MinimalTopbar({ active }: MinimalTopbarProps) {
           <Search className="h-4 w-4" />
           검색하기
         </button>
-        <span
-          className="font-archivo flex h-9 items-center rounded-full px-3 text-[12px] font-bold"
-          style={{
-            background: "var(--ms-brand-soft)",
-            color: "var(--ms-brand)",
-          }}
-        >
-          ●&nbsp;0
-        </span>
-        <span
-          className="font-archivo flex h-9 items-center rounded-full px-3 text-[12px] font-bold text-white"
-          style={{ background: "var(--ms-brand)" }}
-        >
-          ●&nbsp;{isSignedIn ? "10" : "0"}
-        </span>
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold text-white"
-          style={{ background: "var(--ms-brand)" }}
-          aria-label="프로필"
-        >
-          {initial.toUpperCase()}
-        </div>
+
+        <SignedIn>
+          <div className="flex items-center gap-2">
+            <GoldBalance />
+            <BallBalance />
+          </div>
+          <NotificationDropdown />
+          <UserMenu />
+        </SignedIn>
+
+        <SignedOut>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            aria-label="알림"
+            onClick={() => openSignIn()}
+          >
+            <Bell className="h-[18px] w-[18px]" />
+          </Button>
+          <SignInMenu />
+        </SignedOut>
       </div>
     </div>
   )
