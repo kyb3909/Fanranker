@@ -4,14 +4,19 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
 import { z } from "zod"
 
-const VoteSchema = z.object({
-  session_id: z.string().uuid(),
-  round: z.number().int().nonnegative(),
-  match_index: z.number().int().nonnegative(),
-  candidate_a_id: z.string().min(1),
-  candidate_b_id: z.string().min(1),
-  winner_id: z.string().min(1),
-})
+const VoteSchema = z
+  .object({
+    session_id: z.string().uuid(),
+    round: z.number().int().nonnegative(),
+    match_index: z.number().int().nonnegative(),
+    candidate_a_id: z.string().min(1),
+    candidate_b_id: z.string().min(1),
+    winner_id: z.string().min(1),
+  })
+  .refine((v) => v.winner_id === v.candidate_a_id || v.winner_id === v.candidate_b_id, {
+    message: "winner_id는 candidate_a_id 또는 candidate_b_id 중 하나여야 합니다.",
+    path: ["winner_id"],
+  })
 
 // POST: 이상형 월드컵 투표
 export async function POST(request: NextRequest) {

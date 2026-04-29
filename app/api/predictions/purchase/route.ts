@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
+import * as Sentry from "@sentry/nextjs"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { retrySellerReward } from "@/lib/predictions/retry-seller-reward"
@@ -144,18 +145,39 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single()
 
-    if (purchaseError) {
+    if (purchaseError || !purchaseRow) {
       console.error("Failed to record purchase:", purchaseError)
-      // 구매 기록 실패 시 골드 환불
-      try {
-        await supabase.rpc("reward_gold", {
+      // 구매 기록 실패 시 골드 환불 — inline 3회 retry, 모두 실패 시 Sentry fatal
+      let refundOk = false
+      let lastRefundError: unknown = null
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { error: refundError } = await supabase.rpc("reward_gold", {
           p_user_id: user.id,
           p_amount: GOLD_COST,
           p_description: "구매 기록 실패 환불",
           p_transaction_type: "purchase_refund",
         })
-      } catch (e) {
-        console.error("Failed to refund gold:", e)
+        if (!refundError) {
+          refundOk = true
+          break
+        }
+        lastRefundError = refundError
+        console.error(`buyer refund attempt ${attempt}/3 failed:`, refundError)
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt))
+      }
+      if (!refundOk) {
+        Sentry.captureMessage(
+          `buyer refund failed after 3 retries — user is down ${GOLD_COST} gold`,
+          {
+            level: "fatal",
+            extra: {
+              userId: user.id,
+              amount: GOLD_COST,
+              activityId: activity_id,
+              lastRefundError: String(lastRefundError),
+            },
+          }
+        )
       }
       return NextResponse.json(
         { error: "구매 처리 중 오류가 발생했습니다. 골드가 환불됩니다." },
@@ -165,16 +187,16 @@ export async function POST(request: NextRequest) {
 
     // 6. 판매자에게 골드 정산 (90% = 450골드)
     //    inline 3회 retry → 모두 실패 시 pending_seller_rewards에 기록 (admin 수동 처리)
-    await retrySellerReward(supabase, {
+    const settled = await retrySellerReward(supabase, {
       sellerId: activity.user_id,
       buyerId: user.id,
       activityId: activity_id,
-      purchaseId: purchaseRow?.id ?? null,
+      purchaseId: purchaseRow.id,
       amount: SELLER_SHARE,
       description: `분석글 판매 수익 (${activity.sport})`,
     })
 
-    // 7. 판매자에게 알림 전송
+    // 7. 판매자에게 알림 전송 — 정산 성공/큐 분기로 톤 조정
     try {
       const { data: buyerProfile } = await supabase
         .from("profiles")
@@ -182,11 +204,16 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id)
         .single()
 
+      const buyerName = buyerProfile?.nickname || "누군가"
+      const message = settled
+        ? `${buyerName}님이 회원님의 분석글을 구매했습니다. (+${SELLER_SHARE}골드)`
+        : `${buyerName}님이 회원님의 분석글을 구매했습니다. ${SELLER_SHARE}골드 정산은 잠시 후 반영됩니다.`
+
       await supabase.from("notifications").insert({
         user_id: activity.user_id,
         type: "analysis_purchased",
         actor_id: user.id,
-        message: `${buyerProfile?.nickname || "누군가"}님이 회원님의 분석글을 구매했습니다. (+${SELLER_SHARE}골드)`,
+        message,
       })
     } catch (e) {
       console.error("Failed to send seller notification:", e)
