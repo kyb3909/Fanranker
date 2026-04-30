@@ -219,9 +219,10 @@ export const sportColors: Record<string, { bg: string; text: string; border: str
     border: "border-rose-200",
   },
   축구: {
-    bg: "bg-gradient-to-r from-emerald-50 to-teal-50",
-    text: "text-emerald-900",
-    border: "border-emerald-200",
+    // 프라이머리 burgundy(#8b1538) 의 연한 버전 — rose/pink 50-shade 그라데이션
+    bg: "bg-gradient-to-r from-rose-50 to-pink-50",
+    text: "text-rose-900",
+    border: "border-rose-200",
   },
   야구: {
     bg: "bg-gradient-to-r from-blue-50 to-indigo-50",

@@ -161,11 +161,15 @@ function buildIndexMap(keys: string[]): Record<string, number> | null {
 
 /**
  * 배당이 0이 아닌 경기만 추려서 BetmanGame 배열로 정규화.
- * `승N패` (betTypId=3) 는 현재 스키마 미지원으로 스킵.
+ * `승N패` (betTypId=3) 등 미지원 타입은 스킵하지만, 무엇이 들어오는지
+ * 식별하기 위해 한 번씩 sample 을 stderr 로 로깅한다 (운영자 검토 후
+ * BET_TYPE_MAP 확장을 결정).
  */
 export function parseGames(data: BetmanGameData, roundId: string): BetmanGame[] {
   const idx = buildIndexMap(data.keys)
   if (!idx) return []
+
+  const unknownStats = new Map<string, { count: number; sample?: Record<string, unknown> }>()
 
   const out: BetmanGame[] = []
   for (const d of data.datas) {
@@ -176,7 +180,16 @@ export function parseGames(data: BetmanGameData, roundId: string): BetmanGame[] 
 
     const betTypId = String(d[idx.betTypId] ?? "")
     const gameType = BET_TYPE_MAP[betTypId]
-    if (!gameType) continue // 승N패 등 미지원 타입
+    if (!gameType) {
+      // 미지원 betTypId 통계 수집 — 첫 sample 한 건만 모든 컬럼 key=value 로 보존.
+      const stat = unknownStats.get(betTypId) ?? { count: 0 }
+      stat.count++
+      if (!stat.sample) {
+        stat.sample = Object.fromEntries(data.keys.map((k, i) => [k, d[i]]))
+      }
+      unknownStats.set(betTypId, stat)
+      continue
+    }
 
     const sportCode = (d[idx.itemCode] as string) || ""
     const sport = SPORT_MAP[sportCode] || sportCode || "축구"
@@ -216,5 +229,18 @@ export function parseGames(data: BetmanGameData, roundId: string): BetmanGame[] 
       even_odds: isSum && loseAllot > 0 ? loseAllot : null,
     })
   }
+
+  // 미지원 betTypId 발견 시 운영 로그 1회 dump.
+  // 운영자가 sample 의 컬럼을 보고 신규 베팅 유형(전반전 등)을 식별 → BET_TYPE_MAP 확장.
+  if (unknownStats.size > 0) {
+    console.warn(
+      `[betman] [UNKNOWN_BET_TYPE] ⚠️ 미지원 betTypId ${unknownStats.size}종 감지 (skip 됨)`
+    )
+    for (const [code, stat] of unknownStats) {
+      console.warn(`[betman] [UNKNOWN_BET_TYPE] betTypId="${code}" count=${stat.count}`)
+      console.warn(`[betman] [UNKNOWN_BET_TYPE] sample=${JSON.stringify(stat.sample)}`)
+    }
+  }
+
   return out
 }

@@ -116,7 +116,12 @@ async function fetchAvailableGmTs(): Promise<string[]> {
 }
 
 // --- 2. 특정 gmTs의 경기 데이터 조회 ---
-async function fetchGameData(gmTs: string): Promise<unknown[] | null> {
+interface RawGameData {
+  datas: unknown[][]
+  keys: string[]
+}
+
+async function fetchGameData(gmTs: string): Promise<RawGameData | null> {
   // 쿠키 초기화 요청
   await fetch(`${BETMAN_BASE}/main/mainPage/gamebuy/gameSlip.do?gmId=${GM_ID}&gmTs=${gmTs}`, {
     headers: { "User-Agent": BROWSER_HEADERS["User-Agent"] },
@@ -139,7 +144,9 @@ async function fetchGameData(gmTs: string): Promise<unknown[] | null> {
   })
 
   const data = await resp.json()
-  return data?.compSchedules?.datas || null
+  const cs = data?.compSchedules
+  if (!cs || !Array.isArray(cs.datas) || !Array.isArray(cs.keys)) return null
+  return { datas: cs.datas as unknown[][], keys: cs.keys as string[] }
 }
 
 // --- 3. 게임 데이터 파싱 ---
@@ -164,19 +171,40 @@ interface ParsedGame {
   even_odds: number | null
 }
 
-function parseGames(datas: unknown[]): ParsedGame[] {
-  return (datas as unknown[][])
+function parseGames(datas: unknown[][], keys?: string[]): ParsedGame[] {
+  // 미지원 game type 코드 추적 — 새 베팅 유형(전반전 등)을 식별하기 위한 ops 로그.
+  // betman 이 새 betTypId / handi 코드를 추가하면 여기에 누적되어 sync.log 로 노출됨.
+  const unknownStats = new Map<string, { count: number; sample?: Record<string, unknown> }>()
+
+  const result = datas
     .filter(
       (d) =>
         ((d[16] as number) || 0) !== 0 ||
         ((d[17] as number) || 0) !== 0 ||
         ((d[18] as number) || 0) !== 0
     )
-    .map((d) => {
+    .flatMap<ParsedGame>((d) => {
       const sportCode = (d[0] as string) || ""
       const sport = SPORT_MAP[sportCode] || sportCode || "축구"
       const gameTypeCode = String(d[19] ?? "0")
-      const gameType = TYPE_MAP[gameTypeCode] || "일반"
+      const supported = TYPE_MAP[gameTypeCode]
+
+      // 미지원 코드는 main 테이블에 넣지 않음 (잘못 분류된 "일반" row 가 UI 에 떠서 정산 오류로
+      // 이어지는 것 방지). 대신 sample 한 건을 캡처해 로그에 dump → 운영자가 신규 베팅 유형
+      // (전반전 등) 식별용으로 분석.
+      if (!supported) {
+        const stat = unknownStats.get(gameTypeCode) ?? { count: 0 }
+        stat.count++
+        if (!stat.sample) {
+          stat.sample = keys
+            ? Object.fromEntries(keys.map((k, i) => [k, d[i]]))
+            : Object.fromEntries(d.map((v, i) => [`d[${i}]`, v]))
+        }
+        unknownStats.set(gameTypeCode, stat)
+        return []
+      }
+      const gameType = supported
+
       const matchTimeMs = d[3] as number | null
       const matchTime = matchTimeMs ? new Date(matchTimeMs).toISOString() : null
 
@@ -184,27 +212,41 @@ function parseGames(datas: unknown[]): ParsedGame[] {
       const isUnderOver = gameType === "언더오버"
       const isSum = gameType === "SUM"
 
-      return {
-        game_no: (d[11] as number) || 0,
-        match_time: matchTime,
-        sport,
-        league_code: (d[7] as string) || "",
-        game_type: gameType,
-        home_team_name: (d[14] as string) || "",
-        away_team_name: (d[15] as string) || "",
-        venue: (d[10] as string) || null,
-        status: "scheduled",
-        handicap: gameType === "핸디캡" && d[20] ? (d[20] as number) : null,
-        over_under_line: isUnderOver && d[20] ? (d[20] as number) : null,
-        home_win_odds: isNormalOrHandicap && (d[16] as number) > 0 ? (d[16] as number) : null,
-        draw_odds: isNormalOrHandicap && (d[17] as number) > 0 ? (d[17] as number) : null,
-        away_win_odds: isNormalOrHandicap && (d[18] as number) > 0 ? (d[18] as number) : null,
-        over_odds: isUnderOver && (d[18] as number) > 0 ? (d[18] as number) : null,
-        under_odds: isUnderOver && (d[16] as number) > 0 ? (d[16] as number) : null,
-        odd_odds: isSum && (d[16] as number) > 0 ? (d[16] as number) : null,
-        even_odds: isSum && (d[18] as number) > 0 ? (d[18] as number) : null,
-      }
+      return [
+        {
+          game_no: (d[11] as number) || 0,
+          match_time: matchTime,
+          sport,
+          league_code: (d[7] as string) || "",
+          game_type: gameType,
+          home_team_name: (d[14] as string) || "",
+          away_team_name: (d[15] as string) || "",
+          venue: (d[10] as string) || null,
+          status: "scheduled",
+          handicap: gameType === "핸디캡" && d[20] ? (d[20] as number) : null,
+          over_under_line: isUnderOver && d[20] ? (d[20] as number) : null,
+          home_win_odds: isNormalOrHandicap && (d[16] as number) > 0 ? (d[16] as number) : null,
+          draw_odds: isNormalOrHandicap && (d[17] as number) > 0 ? (d[17] as number) : null,
+          away_win_odds: isNormalOrHandicap && (d[18] as number) > 0 ? (d[18] as number) : null,
+          over_odds: isUnderOver && (d[18] as number) > 0 ? (d[18] as number) : null,
+          under_odds: isUnderOver && (d[16] as number) > 0 ? (d[16] as number) : null,
+          odd_odds: isSum && (d[16] as number) > 0 ? (d[16] as number) : null,
+          even_odds: isSum && (d[18] as number) > 0 ? (d[18] as number) : null,
+        },
+      ]
     })
+
+  // 미지원 코드 발견 시 1회 요약 + 첫 sample 풀 컬럼 dump.
+  // grep 패턴: "[UNKNOWN_GAME_TYPE]" — sync.log 에서 추적 후 BET_TYPE_MAP 확장 결정.
+  if (unknownStats.size > 0) {
+    log(`[UNKNOWN_GAME_TYPE] ⚠️ 미지원 코드 ${unknownStats.size}종 감지 (skip 됨)`)
+    for (const [code, stat] of unknownStats) {
+      log(`[UNKNOWN_GAME_TYPE] code="${code}" count=${stat.count}`)
+      log(`[UNKNOWN_GAME_TYPE] sample=${JSON.stringify(stat.sample)}`)
+    }
+  }
+
+  return result
 }
 
 // --- 4. API 호출: 라운드 생성 ---
@@ -334,10 +376,10 @@ async function probeNextGmTs(knownGmTsList: string[]): Promise<string[]> {
     if (knownGmTsList.includes(candidate)) continue
 
     try {
-      const rawDatas = await fetchGameData(candidate)
-      if (rawDatas && rawDatas.length > 0) {
+      const raw = await fetchGameData(candidate)
+      if (raw && raw.datas.length > 0) {
         discovered.push(candidate)
-        log(`  프로빙 성공: gmTs ${candidate} (${rawDatas.length}개 raw data)`)
+        log(`  프로빙 성공: gmTs ${candidate} (${raw.datas.length}개 raw data)`)
       }
     } catch {
       // 프로빙 실패 → 해당 gmTs 없음, 정상
@@ -581,8 +623,8 @@ async function main() {
           const candidate = String(i)
           if (!gmTsList.includes(candidate)) {
             try {
-              const rawDatas = await fetchGameData(candidate)
-              if (rawDatas && rawDatas.length > 0) {
+              const raw = await fetchGameData(candidate)
+              if (raw && raw.datas.length > 0) {
                 gmTsList.push(candidate)
                 log(`  resync 프로빙 성공: gmTs ${candidate}`)
               }
@@ -610,16 +652,16 @@ async function main() {
         log(`--- gmTs ${gmTs} 동기화 ---`)
 
         // 4a. 게임 데이터 크롤링
-        const rawDatas = await fetchGameData(gmTs)
-        if (!rawDatas || rawDatas.length === 0) {
+        const raw = await fetchGameData(gmTs)
+        if (!raw || raw.datas.length === 0) {
           log(`  데이터 없음, 스킵`)
           allProcessedGmTs.push(gmTs)
           continue
         }
 
         // 4b. 파싱
-        const games = parseGames(rawDatas)
-        log(`  파싱: ${games.length}건 (raw: ${rawDatas.length}건)`)
+        const games = parseGames(raw.datas, raw.keys)
+        log(`  파싱: ${games.length}건 (raw: ${raw.datas.length}건)`)
 
         if (games.length === 0) {
           log(`  유효 게임 없음 (배당률 0), 스킵`)
