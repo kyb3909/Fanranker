@@ -260,17 +260,16 @@ async function buildMenuInventory(
   inv.sidebar = await collect('aside, [role="complementary"]')
   inv.footer = await collect("footer")
 
-  // 사용자 드롭다운: aria-label="사용자 메뉴" (gongnori.fan 패턴)
-  const trigger = page
-    .locator(
-      [
-        'button[aria-label="사용자 메뉴"]',
-        'button[aria-label="로그인 메뉴"]',
-        '[aria-label*="user menu" i]',
-        "header button:has(img[alt])",
-      ].join(", ")
-    )
-    .first()
+  // 사용자 드롭다운: 로그인 후 Clerk 가 user-menu 를 렌더할 때까지 명시적 대기.
+  // 사이클 2 에선 너무 빨리 잡아서 SignInMenu 로 fallback 됐었음 — 그 회귀 방지.
+  const userTrigger = page.getByRole("button", { name: "사용자 메뉴" }).first()
+  await userTrigger.waitFor({ state: "visible", timeout: 8000 }).catch(() => {})
+
+  const trigger =
+    (await userTrigger.count().catch(() => 0)) > 0
+      ? userTrigger
+      : page.getByRole("button", { name: "로그인 메뉴" }).first()
+
   if ((await trigger.count().catch(() => 0)) > 0) {
     await trigger.click({ timeout: 3000 }).catch(() => {})
     await page.waitForTimeout(700)
@@ -394,12 +393,30 @@ async function checkPageUiHeuristics(page: Page, pathName: string): Promise<void
         })
       }
       // 작은 터치 타겟 (모바일에서만 의미 있음)
+      // false positive 줄이기:
+      //   1) 부모가 button/a/[role=button] 이면 hit area 가 부모거라 child 측정 무시
+      //   2) 자식에 absolute 로 inset 확장한 span 이 있으면 가상 hit area 확장된 것
       const smallTargets: Array<{ tag: string; text: string; w: number; h: number; cls: string }> =
         []
+      const isInteractiveAncestor = (el: Element): boolean => {
+        let p = el.parentElement
+        while (p && p !== document.body) {
+          if (p.tagName === "BUTTON" || p.tagName === "A") return true
+          if (p.getAttribute("role") === "button") return true
+          if ((p as HTMLElement).onclick) return true
+          p = p.parentElement
+        }
+        return false
+      }
+      const hasAbsoluteHitArea = (el: Element): boolean => {
+        return !!el.querySelector(":scope > span[aria-hidden].absolute")
+      }
       Array.from(document.querySelectorAll("button, a")).forEach((el) => {
         const r = el.getBoundingClientRect()
         if (r.width === 0 || r.height === 0) return
         if (r.width < 36 || r.height < 36) {
+          if (isInteractiveAncestor(el)) return
+          if (hasAbsoluteHitArea(el)) return
           const e = el as HTMLElement
           const text = (
             e.textContent ||
@@ -514,6 +531,30 @@ test("Full App Audit", async ({ browser }) => {
           }
         }
       }
+    }
+
+    // user_dropdown 캡처 실패한 경우(Clerk 비동기 로드 등) 핵심 사용자 페이지를 강제 큐에 추가.
+    // 이 페이지들은 일반 메뉴/사이드바/푸터엔 노출 안 됨.
+    const FALLBACK_USER_PATHS = [
+      "/games",
+      "/my-posts",
+      "/my-predictions",
+      "/payments",
+      "/write",
+      "/share",
+      "/search",
+      "/stadium",
+      "/metaverse",
+      "/onboarding",
+    ]
+    if (inventory.user_dropdown.length === 0 || inventory.user_dropdown.every((it) => !it.href)) {
+      appendEvent({
+        kind: "phase",
+        phase: "user_dropdown_fallback",
+        note: "user_dropdown 미캡처 — fallback 핵심 경로 큐 추가",
+        added: FALLBACK_USER_PATHS,
+      })
+      for (const p of FALLBACK_USER_PATHS) queue.push(p)
     }
 
     const visited = new Set<string>()

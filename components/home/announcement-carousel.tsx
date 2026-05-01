@@ -120,8 +120,8 @@ function ControlButton({
       onClick={onClick}
       aria-label={ariaLabel}
       className={[
-        "rounded-md border border-white/15 bg-gradient-to-b from-neutral-600 to-neutral-700",
-        "px-3 py-1 text-center text-[11px] leading-tight font-semibold whitespace-nowrap text-white",
+        "min-h-11 rounded-md border border-white/15 bg-gradient-to-b from-neutral-600 to-neutral-700",
+        "px-3 py-2 text-center text-[11px] leading-tight font-semibold whitespace-nowrap text-white",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_1px_2px_rgba(0,0,0,0.5)]",
         "transition-all hover:from-neutral-500 hover:to-neutral-600",
         "active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]",

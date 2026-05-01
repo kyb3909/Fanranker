@@ -24,7 +24,44 @@ export async function GET(
       .eq("user_id", userId)
       .single()
 
+    // profiles 에 row 가 없는 봇 작성자(시드봇 등) 처리.
+    // user_id 가 봇 패턴이면 placeholder profile 반환 — 작성 글 목록은 그대로 조회.
+    const isBotPattern = /(_bot$|seed_bot|^user_bot_|^user_reddit_)/.test(userId)
     if (profileError) {
+      if (profileError.code === "PGRST116" && isBotPattern) {
+        const { data: botPosts } = await supabase
+          .from("posts")
+          .select("id, title, vote_count, comment_count, created_at, community_slug")
+          .eq("user_id", userId)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(10)
+
+        const niceName =
+          userId
+            .replace(/^user_/, "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()) || "Bot"
+
+        return NextResponse.json({
+          profile: {
+            user_id: userId,
+            nickname: niceName,
+            avatar_url: null,
+            bio: "자동 큐레이션 봇 계정 — 외부 소스에서 가져온 게시물을 시드합니다.",
+            is_journalist: false,
+            is_expert: false,
+            is_bot: true,
+            created_at: null,
+          },
+          recent_posts: botPosts || [],
+          board_points: [],
+          equipped_titles: [],
+          pixel_arts: [],
+          team_karma: [],
+          total_karma: 0,
+        })
+      }
       if (profileError.code === "PGRST116") {
         return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 })
       }
