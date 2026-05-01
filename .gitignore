@@ -112,3 +112,7 @@ supabase/.temp/
 # PixelLab ZIP 추출 잔재 (이전 세션에서 root 에 풀린 임시물 — 실제 에셋은 public/metaverse/avatars/)
 /avatar-pro/
 /avatar-pro-xl/
+
+# Playwright audit 결과 (스크린샷, trace.zip 등)
+tests/audit/reports/
+tests/audit/last-run.log

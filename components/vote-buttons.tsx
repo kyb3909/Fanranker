@@ -22,7 +22,7 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
       {/* UP */}
       <button
         className={cn(
-          "rounded-full font-bold tracking-wide transition-all duration-150 select-none",
+          "relative rounded-full font-bold tracking-wide transition-all duration-150 select-none",
           isSmall ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs",
           myVote === "up"
             ? "bg-primary text-primary-foreground scale-[1.02]"
@@ -32,6 +32,8 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         aria-label="추천"
         aria-pressed={myVote === "up"}
       >
+        {/* 시각 박스는 유지하되 모바일 터치 영역은 44px 이상 확장 */}
+        <span aria-hidden className="absolute -inset-x-1 -inset-y-3 sm:hidden" />
         UP
       </button>
 
@@ -52,7 +54,7 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
       {/* DOWN */}
       <button
         className={cn(
-          "rounded-full font-bold tracking-wide transition-all duration-150 select-none",
+          "relative rounded-full font-bold tracking-wide transition-all duration-150 select-none",
           isSmall ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs",
           myVote === "down"
             ? "scale-[1.02] bg-blue-500 text-white"
@@ -62,6 +64,7 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         aria-label="비추천"
         aria-pressed={myVote === "down"}
       >
+        <span aria-hidden className="absolute -inset-x-1 -inset-y-3 sm:hidden" />
         DOWN
       </button>
     </div>

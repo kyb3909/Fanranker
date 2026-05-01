@@ -41,7 +41,8 @@ export function PostCardFooter({
       {/* 댓글 */}
       <Link
         href={`/post/${postId}`}
-        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+        className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1.5 transition-colors"
+        aria-label={`댓글 ${comments}개`}
       >
         <MessageCircle className="h-4 w-4" />
         <span className="text-[12px] font-medium tabular-nums">{comments}</span>
@@ -52,7 +53,7 @@ export function PostCardFooter({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-8 w-8 min-w-[32px] rounded-full ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
+          className={`h-11 w-11 min-w-[44px] rounded-full ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
           onClick={onBookmark}
           onMouseEnter={onBookmarkHover}
           onFocus={onBookmarkHover}
@@ -63,7 +64,11 @@ export function PostCardFooter({
         </Button>
         <ShareMenu postId={postId} postTitle={postTitle} />
         {community && communityLink && (
-          <Link href={`/community/${communityLink}`} className="ml-1">
+          <Link
+            href={`/community/${communityLink}`}
+            className="ml-1 inline-flex min-h-11 items-center"
+            aria-label={`${community} 게시판으로 이동`}
+          >
             <span className="bg-muted text-muted-foreground hover:text-foreground inline-flex items-center rounded px-2 py-1 text-[10px] font-medium transition-colors">
               {community}
             </span>
