@@ -171,10 +171,26 @@ interface ParsedGame {
   even_odds: number | null
 }
 
-function parseGames(datas: unknown[][], keys?: string[]): ParsedGame[] {
+interface UnknownGameSample {
+  source: "game"
+  bet_typ_id: string
+  game_no: number | null
+  sport: string | null
+  league_code: string | null
+  home_team_name: string | null
+  away_team_name: string | null
+  match_time: string | null
+  raw_data: Record<string, unknown>
+}
+
+function parseGames(
+  datas: unknown[][],
+  keys?: string[]
+): { games: ParsedGame[]; unknowns: UnknownGameSample[] } {
   // 미지원 game type 코드 추적 — 새 베팅 유형(전반전 등)을 식별하기 위한 ops 로그.
   // betman 이 새 betTypId / handi 코드를 추가하면 여기에 누적되어 sync.log 로 노출됨.
   const unknownStats = new Map<string, { count: number; sample?: Record<string, unknown> }>()
+  const unknowns: UnknownGameSample[] = []
 
   const result = datas
     .filter(
@@ -190,17 +206,29 @@ function parseGames(datas: unknown[][], keys?: string[]): ParsedGame[] {
       const supported = TYPE_MAP[gameTypeCode]
 
       // 미지원 코드는 main 테이블에 넣지 않음 (잘못 분류된 "일반" row 가 UI 에 떠서 정산 오류로
-      // 이어지는 것 방지). 대신 sample 한 건을 캡처해 로그에 dump → 운영자가 신규 베팅 유형
-      // (전반전 등) 식별용으로 분석.
+      // 이어지는 것 방지). 대신 sample 을 캡처해 로그에 dump + betman_unknown_games 테이블에
+      // 보존 → 운영자가 신규 베팅 유형(전반전 등) 식별용으로 분석.
       if (!supported) {
         const stat = unknownStats.get(gameTypeCode) ?? { count: 0 }
         stat.count++
-        if (!stat.sample) {
-          stat.sample = keys
-            ? Object.fromEntries(keys.map((k, i) => [k, d[i]]))
-            : Object.fromEntries(d.map((v, i) => [`d[${i}]`, v]))
-        }
+        const rawDump = keys
+          ? Object.fromEntries(keys.map((k, i) => [k, d[i]]))
+          : Object.fromEntries(d.map((v, i) => [`d[${i}]`, v]))
+        if (!stat.sample) stat.sample = rawDump
         unknownStats.set(gameTypeCode, stat)
+
+        const matchTimeMs = d[3] as number | null
+        unknowns.push({
+          source: "game",
+          bet_typ_id: gameTypeCode,
+          game_no: (d[11] as number) || null,
+          sport,
+          league_code: (d[7] as string) || null,
+          home_team_name: (d[14] as string) || null,
+          away_team_name: (d[15] as string) || null,
+          match_time: matchTimeMs ? new Date(matchTimeMs).toISOString() : null,
+          raw_data: rawDump,
+        })
         return []
       }
       const gameType = supported
@@ -238,15 +266,18 @@ function parseGames(datas: unknown[][], keys?: string[]): ParsedGame[] {
 
   // 미지원 코드 발견 시 1회 요약 + 첫 sample 풀 컬럼 dump.
   // grep 패턴: "[UNKNOWN_GAME_TYPE]" — sync.log 에서 추적 후 BET_TYPE_MAP 확장 결정.
+  // raw row 자체는 unknowns 배열로 caller 에 전달되어 betman_unknown_games 테이블로 적재됨.
   if (unknownStats.size > 0) {
-    log(`[UNKNOWN_GAME_TYPE] ⚠️ 미지원 코드 ${unknownStats.size}종 감지 (skip 됨)`)
+    log(
+      `[UNKNOWN_GAME_TYPE] ⚠️ 미지원 코드 ${unknownStats.size}종 감지 (raw ${unknowns.length}건 캡처)`
+    )
     for (const [code, stat] of unknownStats) {
       log(`[UNKNOWN_GAME_TYPE] code="${code}" count=${stat.count}`)
       log(`[UNKNOWN_GAME_TYPE] sample=${JSON.stringify(stat.sample)}`)
     }
   }
 
-  return result
+  return { games: result, unknowns }
 }
 
 // --- 4. API 호출: 라운드 생성 ---
@@ -475,10 +506,24 @@ async function fetchResultsForGmTs(gmTs: string): Promise<ResultItem[] | null> {
   }
 }
 
+interface UnknownResultSample {
+  source: "result"
+  handi_val: number
+  game_no: number | null
+  game_result: string | null
+  mch_score: string | null
+  home_score: number | null
+  away_score: number | null
+  home_team_name: string | null
+  away_team_name: string | null
+  match_time: string | null
+  raw_data: Record<string, unknown>
+}
+
 async function sendResultsToApi(
   gmTs: string,
   resultItems: ResultItem[]
-): Promise<{ updated: number; cancelled: number }> {
+): Promise<{ updated: number; cancelled: number; unknowns: UnknownResultSample[] }> {
   const actualScoreMap = new Map<string, { home: number; away: number }>()
   for (const item of resultItems) {
     const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? "일반"
@@ -498,7 +543,12 @@ async function sendResultsToApi(
     status: string
   }> = []
 
+  // RESULT_HANDI_MAP 에 없는 HANDI_VAL 또는 매핑 실패한 GAME_RESULT 를 raw 로 캡처.
+  // 정산엔 영향 없음 (지원되는 game_no 만 results 배열에 들어감).
+  const unknowns: UnknownResultSample[] = []
+
   for (const item of resultItems) {
+    const handiKnown = RESULT_HANDI_MAP[item.HANDI_VAL] !== undefined
     const gameType = RESULT_HANDI_MAP[item.HANDI_VAL] ?? "일반"
     let mapped = mapGameResult(item.GAME_RESULT, gameType)
 
@@ -544,6 +594,23 @@ async function sendResultsToApi(
       }
     }
 
+    // 미지원 HANDI_VAL 또는 매핑 실패한 GAME_RESULT 는 raw 보관 (정산엔 진입 안 함).
+    if (!handiKnown || (mapped.result === "" && mapped.status === "completed")) {
+      unknowns.push({
+        source: "result",
+        handi_val: item.HANDI_VAL,
+        game_no: item.GM_SEQ ?? null,
+        game_result: item.GAME_RESULT ?? null,
+        mch_score: item.MCH_SCORE ?? null,
+        home_score: homeScore,
+        away_score: awayScore,
+        home_team_name: item.HOME_TEAM ?? null,
+        away_team_name: item.AWAY_TEAM ?? null,
+        match_time: item.FIX_MCH_DTM ?? null,
+        raw_data: item as unknown as Record<string, unknown>,
+      })
+    }
+
     if (mapped.result === "" && mapped.status === "completed") continue
     results.push({
       game_no: item.GM_SEQ,
@@ -554,7 +621,7 @@ async function sendResultsToApi(
     })
   }
 
-  if (results.length === 0) return { updated: 0, cancelled: 0 }
+  if (results.length === 0) return { updated: 0, cancelled: 0, unknowns }
 
   const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/results`, {
     method: "POST",
@@ -566,7 +633,35 @@ async function sendResultsToApi(
   })
 
   const data = await resp.json()
-  return { updated: data.updated || 0, cancelled: data.cancelled || 0 }
+  return { updated: data.updated || 0, cancelled: data.cancelled || 0, unknowns }
+}
+
+/**
+ * BET_TYPE_MAP / RESULT_HANDI_MAP 에 없는 raw row 들을 betman_unknown_games 테이블에 보관.
+ * 정산/UI 와 무관 — 운영자가 신규 베팅 유형(전반전 등) 분석용.
+ */
+async function sendUnknownsToApi(
+  gmTs: string,
+  unknowns: Array<UnknownGameSample | UnknownResultSample>
+): Promise<void> {
+  if (unknowns.length === 0) return
+
+  const items = unknowns.map((u) => ({ ...u, gm_ts: gmTs }))
+
+  try {
+    const resp = await fetchWithRetry(`${API_BASE_URL}/api/betman/unknown-games`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${CRON_SECRET}`,
+      },
+      body: JSON.stringify({ items }),
+    })
+    const data = await resp.json()
+    log(`  미지원 raw 저장: ${data.message ?? `${unknowns.length}건`}`)
+  } catch (e) {
+    logError(`  미지원 raw 저장 실패 (gmTs=${gmTs}):`, e)
+  }
 }
 
 // --- 메인 실행 ---
@@ -660,8 +755,13 @@ async function main() {
         }
 
         // 4b. 파싱
-        const games = parseGames(raw.datas, raw.keys)
-        log(`  파싱: ${games.length}건 (raw: ${raw.datas.length}건)`)
+        const { games, unknowns } = parseGames(raw.datas, raw.keys)
+        log(`  파싱: ${games.length}건 (raw: ${raw.datas.length}건, 미지원 ${unknowns.length}건)`)
+
+        // 4b-1. 미지원 게임 유형 raw 보관 (정산엔 진입 안 함)
+        if (unknowns.length > 0) {
+          await sendUnknownsToApi(gmTs, unknowns)
+        }
 
         if (games.length === 0) {
           log(`  유효 게임 없음 (배당률 0), 스킵`)
@@ -701,11 +801,14 @@ async function main() {
         if (!items || items.length === 0) continue
 
         log(`결과 수집: gmTs=${gmTs} → ${items.length}건 원시 데이터`)
-        const { updated, cancelled } = await sendResultsToApi(gmTs, items)
+        const { updated, cancelled, unknowns } = await sendResultsToApi(gmTs, items)
         if (updated > 0 || cancelled > 0) {
           log(`  결과 반영: ${updated}건 업데이트, ${cancelled}건 취소`)
           totalResultsUpdated += updated
           totalResultsCancelled += cancelled
+        }
+        if (unknowns.length > 0) {
+          await sendUnknownsToApi(gmTs, unknowns)
         }
       } catch (e) {
         const errMsg = `결과 수집 gmTs=${gmTs}: ${(e as Error).message}`
