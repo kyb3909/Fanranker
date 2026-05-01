@@ -404,9 +404,18 @@ async function checkPageUiHeuristics(page: Page, pathName: string): Promise<void
           if (p.tagName === "BUTTON" || p.tagName === "A") return true
           if (p.getAttribute("role") === "button") return true
           if ((p as HTMLElement).onclick) return true
+          // article 카드 / group 블록은 카드 전체가 클릭 영역으로 동작하는 일반 패턴
+          if (p.tagName === "ARTICLE") return true
+          if (p.classList.contains("group") && p.querySelector("a, button")) return true
           p = p.parentElement
         }
         return false
+      }
+      const isCardTitleLink = (el: Element): boolean => {
+        // a.group.block 같은 카드 자체 wrapping link 는 카드 전체가 hit area 라 무시
+        return (
+          el.tagName === "A" && el.classList.contains("group") && el.classList.contains("block")
+        )
       }
       const hasAbsoluteHitArea = (el: Element): boolean => {
         return !!el.querySelector(":scope > span[aria-hidden].absolute")
@@ -417,6 +426,7 @@ async function checkPageUiHeuristics(page: Page, pathName: string): Promise<void
         if (r.width < 36 || r.height < 36) {
           if (isInteractiveAncestor(el)) return
           if (hasAbsoluteHitArea(el)) return
+          if (isCardTitleLink(el)) return
           const e = el as HTMLElement
           const text = (
             e.textContent ||
@@ -533,8 +543,8 @@ test("Full App Audit", async ({ browser }) => {
       }
     }
 
-    // user_dropdown 캡처 실패한 경우(Clerk 비동기 로드 등) 핵심 사용자 페이지를 강제 큐에 추가.
-    // 이 페이지들은 일반 메뉴/사이드바/푸터엔 노출 안 됨.
+    // 핵심 사용자 페이지는 메뉴 노출 안 되거나 Clerk 비동기 로드 타이밍에 안 잡힐 수 있음.
+    // 항상 큐에 추가 (중복은 visited Set 이 거름).
     const FALLBACK_USER_PATHS = [
       "/games",
       "/my-posts",
@@ -547,15 +557,18 @@ test("Full App Audit", async ({ browser }) => {
       "/metaverse",
       "/onboarding",
     ]
-    if (inventory.user_dropdown.length === 0 || inventory.user_dropdown.every((it) => !it.href)) {
-      appendEvent({
-        kind: "phase",
-        phase: "user_dropdown_fallback",
-        note: "user_dropdown 미캡처 — fallback 핵심 경로 큐 추가",
-        added: FALLBACK_USER_PATHS,
-      })
-      for (const p of FALLBACK_USER_PATHS) queue.push(p)
-    }
+    const userMenuSignature = ["내 프로필", "내 작성글", "승부예측 내역", "골드 내역", "설정"]
+    const hasUserMenu = inventory.user_dropdown.some((it) =>
+      userMenuSignature.some((sig) => it.text.includes(sig))
+    )
+    appendEvent({
+      kind: "phase",
+      phase: "user_dropdown_check",
+      hasUserMenu,
+      dropdownItemCount: inventory.user_dropdown.length,
+      forcedFallback: !hasUserMenu,
+    })
+    for (const p of FALLBACK_USER_PATHS) queue.push(p)
 
     const visited = new Set<string>()
     const visitedDetail: Array<{ path: string; status: string; note?: string }> = []

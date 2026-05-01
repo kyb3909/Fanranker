@@ -25,8 +25,8 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
           "rounded-full font-bold tracking-wide transition-all duration-150 select-none",
           // 모바일은 min-h-11 로 44px 보장, sm+ 에선 컴팩트 디자인 유지
           isSmall
-            ? "min-h-11 px-2.5 text-[11px] sm:min-h-0 sm:py-0.5"
-            : "min-h-11 px-3 text-xs sm:min-h-0 sm:py-1",
+            ? "min-h-11 min-w-11 px-2.5 text-[11px] sm:min-h-0 sm:min-w-0 sm:py-0.5"
+            : "min-h-11 min-w-11 px-3 text-xs sm:min-h-0 sm:min-w-0 sm:py-1",
           myVote === "up"
             ? "bg-primary text-primary-foreground scale-[1.02]"
             : "text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95"
@@ -57,8 +57,8 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         className={cn(
           "rounded-full font-bold tracking-wide transition-all duration-150 select-none",
           isSmall
-            ? "min-h-11 px-2.5 text-[11px] sm:min-h-0 sm:py-0.5"
-            : "min-h-11 px-3 text-xs sm:min-h-0 sm:py-1",
+            ? "min-h-11 min-w-11 px-2.5 text-[11px] sm:min-h-0 sm:min-w-0 sm:py-0.5"
+            : "min-h-11 min-w-11 px-3 text-xs sm:min-h-0 sm:min-w-0 sm:py-1",
           myVote === "down"
             ? "scale-[1.02] bg-blue-500 text-white"
             : "text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95"

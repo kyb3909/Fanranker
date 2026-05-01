@@ -258,14 +258,14 @@ function FeedImageCarousel({
 
         <button
           onClick={prev}
-          className="absolute top-1/2 left-2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white transition-colors hover:bg-black/75"
+          className="absolute top-1/2 left-2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
           aria-label="이전 이미지"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={next}
-          className="absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white transition-colors hover:bg-black/75"
+          className="absolute top-1/2 right-2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
           aria-label="다음 이미지"
         >
           <ChevronRight className="h-4 w-4" />

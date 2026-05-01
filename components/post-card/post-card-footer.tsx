@@ -41,7 +41,7 @@ export function PostCardFooter({
       {/* 댓글 */}
       <Link
         href={`/post/${postId}`}
-        className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1.5 transition-colors"
+        className="text-muted-foreground hover:text-foreground inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 transition-colors"
         aria-label={`댓글 ${comments}개`}
       >
         <MessageCircle className="h-4 w-4" />
@@ -66,7 +66,7 @@ export function PostCardFooter({
         {community && communityLink && (
           <Link
             href={`/community/${communityLink}`}
-            className="ml-1 inline-flex min-h-11 items-center"
+            className="ml-1 inline-flex min-h-11 min-w-11 items-center justify-center"
             aria-label={`${community} 게시판으로 이동`}
           >
             <span className="bg-muted text-muted-foreground hover:text-foreground inline-flex items-center rounded px-2 py-1 text-[10px] font-medium transition-colors">
