@@ -550,7 +550,7 @@ function EmbedImageLightbox({ src, onClose }: { src: string; onClose: () => void
       {/* eslint-disable-next-line @next/next/no-img-element -- Twitter CDN URL, dimensions unknown */}
       <img
         src={src}
-        alt=""
+        alt="확대된 트윗 이미지"
         className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
         onClick={(e) => e.stopPropagation()}
         referrerPolicy="no-referrer"

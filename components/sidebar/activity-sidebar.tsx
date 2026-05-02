@@ -18,13 +18,14 @@ const StandingsWidget = dynamic(
 )
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
-import { formatRelativeTime } from "@/lib/utils/date"
 
 interface RecentPost {
   id: string
   title: string
   community: string
   comments: number
+  // timestamp 는 raw ISO 로 보존 (필요 시 RelativeTime 컴포넌트로 client-mount 후 변환).
+  // formatRelativeTime 을 SSR 시점에 호출하면 React #418 hydration mismatch 위험.
   timestamp: string
 }
 
@@ -47,7 +48,7 @@ function mapApiPostsToRecentPosts(
     title: p.title,
     community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
     comments: p.comment_count || 0,
-    timestamp: formatRelativeTime(new Date(p.latest_comment_at || p.created_at)),
+    timestamp: p.latest_comment_at || p.created_at,
   }))
 }
 

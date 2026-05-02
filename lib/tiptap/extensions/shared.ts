@@ -24,7 +24,14 @@ export function createSharedTipTapExtensions(options: SharedExtensionsOptions = 
   return [
     StarterKit,
     TextAlign.configure({ types: ["heading", "paragraph"] }),
-    TiptapImage.configure({
+    // a11y: 사용자 입력 시 alt 빈 string 인 경우가 많음. 빈 alt 면 의미 있는 fallback
+    // ("게시물 이미지") 으로 채움. 스크린리더가 "이미지"라고만 읽지 않게.
+    TiptapImage.extend({
+      renderHTML({ HTMLAttributes, node }) {
+        const alt = (node?.attrs?.alt as string) || HTMLAttributes.alt || "게시물 이미지"
+        return ["img", { ...HTMLAttributes, alt }]
+      },
+    }).configure({
       HTMLAttributes: { class: "tiptap-image" },
       allowBase64: options.imageAllowBase64 ?? false,
     }),

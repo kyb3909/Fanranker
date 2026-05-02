@@ -49,7 +49,7 @@ export function ImageLightbox() {
       {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user content URL, dimensions unknown */}
       <img
         src={src}
-        alt=""
+        alt="확대 이미지"
         className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
         onClick={(e) => e.stopPropagation()}
       />
