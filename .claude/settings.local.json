@@ -163,7 +163,10 @@
       "Bash(pnpm audit:headless)",
       "Bash(pnpm audit:diff)",
       "Bash(pnpm audit:cwv)",
-      "Bash(tee tests/audit/last-cwv.log)"
+      "Bash(tee tests/audit/last-cwv.log)",
+      "Bash(/c/Users/user/.claude/skills/gstack/browse/dist/browse goto *)",
+      "Bash(/c/Users/user/.claude/skills/gstack/browse/dist/browse js ' *)",
+      "Bash(/c/Users/user/.claude/skills/gstack/browse/dist/browse js '\\(\\(\\) => { *)"
     ]
   }
 }
