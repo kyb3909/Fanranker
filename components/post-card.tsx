@@ -9,9 +9,8 @@ import {
   extractFirstEmbedFromTipTapJSON,
 } from "@/lib/utils/tiptap-embeds"
 import { usePostCardActions } from "@/hooks/use-post-card-actions"
-import { PostCardHeader } from "@/components/post-card/post-card-header"
 import { PostCardContent } from "@/components/post-card/post-card-content"
-import { PostCardFooter } from "@/components/post-card/post-card-footer"
+import { PostCardMeta } from "@/components/post-card/post-card-meta"
 
 export type { TipTapNode } from "@/types/post"
 import type { Post as BasePost, TipTapNode } from "@/types/post"
@@ -68,20 +67,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     <article>
       <Card className="border-border hover:bg-muted/30 overflow-hidden border transition-colors">
         <div className="relative px-4 py-3 sm:px-5">
-          <PostCardHeader
-            timestamp={post.timestamp}
-            author={post.author}
-            avatar={post.avatar}
-            userId={post.userId}
-            titleDisplay={post.titleDisplay}
-            flairTitle={post.flairTitle}
-            isAuthor={isAuthor}
-            onEdit={handleEditPost}
-            onDelete={handleDeletePost}
-            onSearchByAuthor={handleSearchByAuthor}
-            onBlockUser={handleBlockUser}
-            onReport={() => openReport("post", String(post.id))}
-          />
           <PostCardContent
             postId={post.id}
             title={post.title}
@@ -94,16 +79,28 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             category={post.community}
             categoryLink={communityLink}
           />
-          <PostCardFooter
+          <PostCardMeta
             postId={post.id}
             postTitle={post.title}
+            author={post.author}
+            avatar={post.avatar}
+            userId={post.userId}
+            titleDisplay={post.titleDisplay}
+            flairTitle={post.flairTitle}
+            timestamp={post.timestamp}
             voteCount={voteCount}
             myVote={myVote}
             comments={post.comments}
             isBookmarked={isBookmarked}
+            isAuthor={isAuthor}
             onVote={handleVote}
             onBookmark={handleBookmark}
             onBookmarkHover={checkBookmarkStatus}
+            onEdit={handleEditPost}
+            onDelete={handleDeletePost}
+            onSearchByAuthor={handleSearchByAuthor}
+            onBlockUser={handleBlockUser}
+            onReport={() => openReport("post", String(post.id))}
           />
         </div>
       </Card>
