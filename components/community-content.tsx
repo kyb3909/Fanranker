@@ -136,7 +136,7 @@ export const CommunityContent = memo(function CommunityContent({
             <Button
               variant={isFollowing ? "outline" : "default"}
               size="sm"
-              className="h-8 px-4 text-sm font-medium"
+              className="h-11 px-4 text-sm font-medium sm:h-8"
               onClick={handleFollow}
               disabled={isFollowLoading}
             >
@@ -153,7 +153,7 @@ export const CommunityContent = memo(function CommunityContent({
                   <>
                     <Link
                       href={`/community/${communitySlug}`}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      className={`inline-flex min-h-11 items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 ${
                         !activeFlairId
                           ? "bg-foreground text-background"
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -165,7 +165,7 @@ export const CommunityContent = memo(function CommunityContent({
                       <Link
                         key={f.id}
                         href={`/community/${communitySlug}?flair=${f.id}`}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                        className={`inline-flex min-h-11 items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 ${
                           activeFlairId === f.id
                             ? "text-white"
                             : "text-muted-foreground hover:opacity-80"
@@ -186,7 +186,7 @@ export const CommunityContent = memo(function CommunityContent({
               </div>
               {communitySlug && (
                 <Link href={`/write?community=${communitySlug}`} className="shrink-0">
-                  <Button size="sm" className="h-7 gap-1.5 px-3 text-xs">
+                  <Button size="sm" className="h-11 gap-1.5 px-3 text-xs sm:h-7">
                     <Pencil className="h-3.5 w-3.5" />
                     글쓰기
                   </Button>
