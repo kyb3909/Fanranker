@@ -150,7 +150,20 @@
       "Bash(BASE_URL=http://localhost:3000 pnpm exec playwright test e2e/stadium.spec.ts --project=chromium --reporter=line)",
       "Bash(pnpm remove *)",
       "Bash(echo \"tsc: $?\")",
-      "Bash(echo \"eslint: $?\")"
+      "Bash(echo \"eslint: $?\")",
+      "Bash(git fetch *)",
+      "Bash(sshpass -V)",
+      "Bash(choco --version)",
+      "Bash(SSH_PASS='Mi,9*kZYM%6fg6H@' python *)",
+      "Bash(SSHPASS='Mi,9*kZYM%6fg6H@' python *)",
+      "Bash(bash -n .tmp_vps_sync.sh)",
+      "Bash(bash -n .tmp_vps_fetch.sh)",
+      "Bash(BASE_URL=https://gongnori.fan pnpm exec playwright test --config=playwright.audit.config.ts --headed --reporter=list)",
+      "Bash(tee tests/audit/last-run.log)",
+      "Bash(pnpm audit:headless)",
+      "Bash(pnpm audit:diff)",
+      "Bash(pnpm audit:cwv)",
+      "Bash(tee tests/audit/last-cwv.log)"
     ]
   }
 }
