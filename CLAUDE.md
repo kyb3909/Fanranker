@@ -38,6 +38,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm reddit-seed` — Reddit 시딩 (`scripts/reddit-seed-bot.ts`)
 - `pnpm betman-fetch` — betman 경기/배당 동기화 (`scripts/betman-fetch-games.ts`)
 - `pnpm standings-scrape` — 리그 순위 크롤링
+- **Audit harness**:
+  - `pnpm audit` — production BFS 크롤 + UI 관찰 (headed Chromium, 30~45min)
+  - `pnpm audit:headless` — 동일하지만 headless (CI/자율)
+  - `pnpm audit:cwv` — Core Web Vitals 측정 (LCP/FCP/CLS/TTFB, 6 페이지 × 2 viewport × 3 샘플)
+  - `pnpm audit:diff` — 직전 두 run 자동 비교 + health.json 누적
+  - `pnpm audit:parse` — JSONL → 구조화된 issues
+  - 산출물: `tests/audit/reports/{ts}/` (gitignored — screenshots, trace.zip 포함)
 - 서브 패키지: `data/agents/`, `data/crawlers/`는 자체 `package.json` 보유 — 해당 디렉토리에서 별도 `pnpm install` 필요 (메인 워크스페이스에 포함되지 않음)
 
 ## 디렉토리
@@ -96,6 +103,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Betting** (`components/betting/`, `lib/betman/`, `hooks/use-betting.ts`) — 토큰/골드 경제, pending refund, 정산. 토큰 차감은 `spend_tokens` RPC (반환 키 `remaining_balance`), 골드는 `spend_gold` RPC (반환 키 `remaining`).
 - **Battle** (migrations 056–057) — 유저 대 유저 대결.
 - **Journalist System** (migrations 027–028) — `profiles.is_journalist`, `prediction_slips.analysis_text`. 기자만 팔로우 가능, 분석글은 기자만 작성.
+- **Fan Identity / 호칭 / 기부** (migrations 20260502b/c/d) — flair 활동 점수 누적 → 임계값 호칭 자동 unlock → 사용자 선택 → 닉네임 옆 뱃지 + stadium 기부.
+  - **DB**: `post_flairs.team_id` (text → `team_map_pins.team_id`, EPL 6 클럽만 매핑), `user_flair_scores (user_id, flair_id, score_total, score_balance, last_at)`, `flair_titles (flair_id, name, threshold)`, `user_unlocked_titles`, `profiles.display_title_id`.
+  - **점수 룰**: 글 +10 / 댓글 +1 / 받은 up vote +1. score_total = 호칭 평생 누적, score_balance = 기부 시 차감 (호칭은 영향 없음).
+  - **트리거**: posts/comments/post_votes INSERT/UPDATE/DELETE 시 `apply_flair_score()` 자동 호출. soft delete + flair 변경 + 복원 + vote 변경 모두 처리.
+  - **호칭 시드**: 141개 (아스날 구너/앙리/벵거 + 축구 12 클럽 × 3 + 야구 14 × 3 + 농구 8 × 3 + 아이돌 12 × 3). 패턴: 팬덤명 2K / 레전드 선수 10K / 시그니처 50K.
+  - **기부 RPC**: `donate_flair_score_to_team(user, flair, amount)` — balance 차감 + `team_stadiums.total_points` 증가 + `stadium_contributions` 누적 + 레벨 재계산. flair.team_id NULL 이면 거부 (리그 flair 비매핑).
+  - **API**: `/api/profile/me/titles` (잠금/해제 + 표시 호칭), `/api/profile/me/display-title` POST, `/api/flair/donate` POST, `/api/stadiums/[teamId]/leaderboard` GET, `/api/profile/[userId]` 응답에 display_title + flair_top 추가.
+  - **UI**: 마이페이지 "내 팬 정체성" 섹션 (`components/profile/settings/fan-identity-section.tsx`), post-card-header 작성자 옆 amber 뱃지, public profile 가입일 옆 호칭 + flair top 5 카드, stadium-room 상단 "랭킹" 버튼 + Dialog (`components/stadium/contributors-leaderboard.tsx`).
+
+### Audit Harness (`tests/audit/`)
+production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
+- **Spec**: `tests/audit/full-app-audit.spec.ts` (BFS 크롤 + 안전장치 + UI 관찰 + 모바일 패스), `tests/audit/cwv.spec.ts` (Core Web Vitals).
+- **Config**: `playwright.audit.config.ts` (e2e 와 분리, testDir 별도).
+- **Lib**: `tests/audit/lib/parse-events.ts` (JSONL → issues + severity), `tests/audit/lib/compare-runs.ts` (resolved/newly/persisting/regressed + health.json 누적).
+- **안전장치**: 삭제/탈퇴/결제/구매/로그아웃 등 키워드 차단, 외부 도메인 자동 복귀.
+- **사용자 메뉴 감지**: 로그인 후 `aria-label="사용자 메뉴"` 트리거 명시 wait. 캡처 실패 시 `FALLBACK_USER_PATHS` (/games, /my-posts, /write 등) 강제 큐 추가.
+- **False positive 가드**: `<article>` / `group block` 부모, `<span absolute>` hit area span 인식.
+- **상세**: `tests/audit/README.md` 가이드.
 
 ### Sentry / 환경
 - `next.config.mjs`가 `withSentryConfig`로 감싸져 있음. `SENTRY_*` env가 없으면 빌드는 통과하지만 소스맵 업로드는 스킵.

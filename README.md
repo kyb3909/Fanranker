@@ -67,9 +67,12 @@ e2e/                  # E2E test specs (Playwright)
 ## Key Features
 
 - **Sports Predictions**: Daily free tokens, real odds from betman.co.kr, automated settlement
-- **Community Boards**: Topic-based boards with follow system, rich text editor (TipTap)
+- **Community Boards**: Topic-based boards with team/group flair (축구 18 클럽, 야구 16팀, 농구 NBA 8, 아이돌 12 그룹 등 ~108 flair), follow system, TipTap editor
+- **Fan Identity / Titles**: 글/댓글/추천으로 flair 활동 점수 누적 → 임계값 도달 시 호칭 자동 잠금 해제 (구너/앙리/벵거 같은 클럽별 unique 호칭 141개) → 마이페이지에서 선택 → 닉네임 옆 표시
+- **Stadium Donation**: flair 활동 점수 잔액으로 같은 팀 경기장에 기부 → `team_stadiums.total_points` 누적 → 레벨업 → 기여자 랭킹 (stadium 페이지 "랭킹" Dialog)
 - **Ranking System**: Verified accuracy rankings, streaks, sport-specific stats
 - **Embed Support**: YouTube, Instagram, X (Twitter) embeds with oEmbed
+- **Audit Harness**: production 회귀 자동 감지 (`pnpm audit`) + Core Web Vitals 측정 (`pnpm audit:cwv`) + 사이클별 비교 (`pnpm audit:diff`)
 
 ## Environment Variables
 
