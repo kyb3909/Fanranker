@@ -30,6 +30,7 @@ import { AvatarSection } from "./settings/avatar-section"
 import { PasswordSection } from "./settings/password-section"
 import { FollowedCommunitiesSection } from "./settings/followed-communities-section"
 import { DeleteAccountSection } from "./settings/delete-account-section"
+import { FanIdentitySection } from "./settings/fan-identity-section"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { UserProfileBadge } from "@/components/profile/user-profile-badge"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -603,6 +604,8 @@ export function MyProfileSettings() {
                   communities={followedCommunities}
                   onUnfollow={handleUnfollowCommunity}
                 />
+
+                <FanIdentitySection />
 
                 <PasswordSection user={user} />
 

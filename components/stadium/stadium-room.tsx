@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
-import { ArrowLeft, Users, Hammer, Trophy, LogIn } from "lucide-react"
+import { ArrowLeft, Users, Hammer, Trophy, LogIn, Crown } from "lucide-react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { useStadiumChat } from "@/hooks/use-stadium-chat"
 import { StadiumView } from "@/components/stadium/stadium-view"
 import { ChatOverlay } from "@/components/stadium/chat-overlay"
 import { InvestDialog } from "@/components/stadium/invest-dialog"
+import { ContributorsLeaderboard } from "@/components/stadium/contributors-leaderboard"
 
 interface StadiumData {
   team: {
@@ -52,6 +53,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
   const [investOpen, setInvestOpen] = useState(false)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
 
   const { data, mutate } = useSWR<StadiumData>(`/api/stadiums/${teamId}`, fetcher, {
     fallbackData: initialData,
@@ -167,6 +169,16 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
             {stadium.fan_count}
           </span>
           <Button
+            onClick={() => setLeaderboardOpen(true)}
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            aria-label="기여자 랭킹"
+          >
+            <Crown className="mr-1 h-3 w-3" />
+            랭킹
+          </Button>
+          <Button
             onClick={handleInvestClick}
             size="sm"
             variant="ghost"
@@ -225,6 +237,15 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
         teamName={team.team_name}
         availablePoints={availablePoints}
         onSuccess={handleInvestSuccess}
+      />
+
+      {/* 기여자 랭킹 다이얼로그 */}
+      <ContributorsLeaderboard
+        open={leaderboardOpen}
+        onOpenChange={setLeaderboardOpen}
+        teamId={team.team_id}
+        teamName={team.team_name}
+        teamColor={team.color}
       />
     </main>
   )
