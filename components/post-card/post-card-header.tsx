@@ -103,6 +103,14 @@ export function PostCardHeader({
                     <span className="text-muted-foreground text-[11px]">·</span>
                   </>
                 )}
+                {flairTitle && (
+                  <>
+                    <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-px text-[10px] font-semibold text-amber-600">
+                      {flairTitle}
+                    </span>
+                    <span className="text-muted-foreground text-[11px]">·</span>
+                  </>
+                )}
                 <span className="text-muted-foreground text-[11px]">{timestamp}</span>
               </div>
             </div>
