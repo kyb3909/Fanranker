@@ -77,7 +77,7 @@ export function PostCardHeader({
                 <span className="text-muted-foreground text-[11px]">·</span>
               </>
             )}
-            <span className="text-muted-foreground text-[11px]">{timestamp}</span>
+            <RelativeTime date={timestamp} className="text-muted-foreground text-[11px]" />
           </div>
         </div>
       </Link>
