@@ -88,7 +88,10 @@ function transformPosts(
       author: profile?.nickname || "익명",
       avatar: profile?.avatar_url || "/placeholder-user.jpg",
       userId: post.user_id,
-      timestamp: formatRelativeTime(new Date(post.created_at)),
+      // ISO 그대로 — PostCardHeader 의 RelativeTime 컴포넌트가 client mount 후 변환.
+      // formatRelativeTime 을 SSR 시점에 호출하면 client time 과 다른 결과가 나와
+      // React #418 hydration mismatch 발생.
+      timestamp: post.created_at,
       title: post.title,
       content: post.content,
       image: post.image,

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TitleBadge, type TitleDisplay } from "@/components/profile/title-badge"
+import { RelativeTime } from "@/components/ui/relative-time"
 
 export interface PostCardHeaderProps {
   timestamp: string
@@ -111,7 +112,7 @@ export function PostCardHeader({
                     <span className="text-muted-foreground text-[11px]">·</span>
                   </>
                 )}
-                <span className="text-muted-foreground text-[11px]">{timestamp}</span>
+                <RelativeTime date={timestamp} className="text-muted-foreground text-[11px]" />
               </div>
             </div>
           </button>
