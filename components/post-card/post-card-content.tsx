@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef, memo, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import useSWR from "swr"
@@ -548,7 +549,11 @@ function EmbedImageLightbox({ src, onClose }: { src: string; onClose: () => void
     }
   }, [onClose])
 
-  return (
+  // document.body 로 portal — feed-section 의 content-visibility:auto 컨테이닝 블록 회피.
+  // 부모에 contain/transform/filter 가 있으면 fixed 가 viewport 가 아닌 그 박스에 묶임.
+  if (typeof document === "undefined") return null
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -577,7 +582,8 @@ function EmbedImageLightbox({ src, onClose }: { src: string; onClose: () => void
         onClick={(e) => e.stopPropagation()}
         referrerPolicy="no-referrer"
       />
-    </div>
+    </div>,
+    document.body
   )
 }
 

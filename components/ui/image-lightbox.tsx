@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 
 /**
@@ -33,8 +34,10 @@ export function ImageLightbox() {
   }, [close])
 
   if (!src) return null
+  if (typeof document === "undefined") return null
 
-  return (
+  // document.body 로 portal — content-visibility/contain/transform 부모의 컨테이닝 블록 회피.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       onClick={close}
@@ -53,6 +56,7 @@ export function ImageLightbox() {
         className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body
   )
 }
