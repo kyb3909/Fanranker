@@ -73,7 +73,7 @@ export function BettingTab({
       {/* Today's matches header + deadline countdown */}
 
       {/* Loading/Error/Refresh status */}
-      <div className="mb-2 flex items-center justify-between text-sm text-foreground/85">
+      <div className="text-foreground/85 mb-2 flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
           {lastUpdated && <span>마지막 업데이트: {lastUpdated.toLocaleTimeString("ko-KR")}</span>}
         </div>
@@ -82,7 +82,7 @@ export function BettingTab({
           size="sm"
           onClick={onRefresh}
           disabled={isLoading}
-          className="h-7 px-2"
+          className="h-11 px-2 sm:h-7"
         >
           <RefreshCw className={`mr-1 h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
           새로고침

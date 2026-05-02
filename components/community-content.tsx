@@ -153,7 +153,7 @@ export const CommunityContent = memo(function CommunityContent({
                   <>
                     <Link
                       href={`/community/${communitySlug}`}
-                      className={`inline-flex min-h-11 items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 ${
+                      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 sm:min-w-0 ${
                         !activeFlairId
                           ? "bg-foreground text-background"
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -165,7 +165,7 @@ export const CommunityContent = memo(function CommunityContent({
                       <Link
                         key={f.id}
                         href={`/community/${communitySlug}?flair=${f.id}`}
-                        className={`inline-flex min-h-11 items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 ${
+                        className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 sm:min-w-0 ${
                           activeFlairId === f.id
                             ? "text-white"
                             : "text-muted-foreground hover:opacity-80"

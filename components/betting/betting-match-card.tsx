@@ -217,7 +217,7 @@ export function BettingMatchCard({
                 type="button"
                 onClick={() => setExpanded(false)}
                 aria-expanded={true}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/40 flex w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/40 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors sm:min-h-0"
               >
                 옵션 접기
                 <ChevronUp className="h-3.5 w-3.5" />
@@ -228,7 +228,7 @@ export function BettingMatchCard({
               type="button"
               onClick={() => setExpanded(true)}
               aria-expanded={false}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/40 flex w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/40 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors sm:min-h-0"
             >
               다른 옵션 보기 ({otherLabels}) +{otherGames.length}
               <ChevronDown className="h-3.5 w-3.5" />
