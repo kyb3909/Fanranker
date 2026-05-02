@@ -37,6 +37,8 @@ export interface PostCardContentProps {
   } | null
   image?: string
   priority: boolean
+  category?: string
+  categoryLink?: string
 }
 
 export const PostCardContent = memo(function PostCardContent({
@@ -48,28 +50,48 @@ export const PostCardContent = memo(function PostCardContent({
   firstEmbed,
   image,
   priority,
+  category,
+  categoryLink,
 }: PostCardContentProps) {
   const hasSingleImage = !!displayImage && !firstEmbed && imageSources.length <= 1
 
   return (
     <div>
+      {/* 카테고리 라벨 — 에디토리얼 톤 */}
+      {category && (
+        <div className="mb-1.5">
+          {categoryLink ? (
+            <Link
+              href={`/community/${categoryLink}`}
+              className="font-title text-primary inline-block text-[11px] font-semibold tracking-[0.06em] uppercase hover:underline"
+            >
+              {category}
+            </Link>
+          ) : (
+            <span className="font-title text-primary text-[11px] font-semibold tracking-[0.06em] uppercase">
+              {category}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* 제목 + 본문 + 사이드 썸네일 */}
       <div className={hasSingleImage ? "flex gap-4" : undefined}>
         <div className={hasSingleImage ? "min-w-0 flex-1" : undefined}>
           {/* 제목 */}
           <Link href={`/post/${postId}`} className="group block">
-            <h2 className="text-foreground group-hover:text-primary line-clamp-2 text-[15px] leading-[1.4] font-medium transition-colors sm:text-[16px]">
+            <h2 className="font-title text-foreground group-hover:text-primary line-clamp-2 text-[16px] leading-[1.35] font-bold tracking-tight transition-colors sm:text-[17px]">
               {title}
             </h2>
           </Link>
 
           {/* 본문 */}
           {typeof content === "string" ? (
-            <p className="text-foreground/80 mt-2 line-clamp-2 text-[14px] leading-[1.6]">
+            <p className="mt-2 line-clamp-2 text-[14px] leading-[1.65] text-neutral-600 dark:text-neutral-400">
               {content}
             </p>
           ) : (
-            <p className="text-foreground/80 mt-2 line-clamp-2 text-[14px] leading-[1.6]">
+            <p className="mt-2 line-clamp-2 text-[14px] leading-[1.65] text-neutral-600 dark:text-neutral-400">
               {extractTextFromTipTapJSON(content)}
             </p>
           )}

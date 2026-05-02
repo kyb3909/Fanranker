@@ -36,11 +36,6 @@ describe("PostCardFooter", () => {
     expect(screen.getByText("5")).toBeDefined()
   })
 
-  it("renders community badge when provided", () => {
-    render(<PostCardFooter {...defaultProps} community="축구" communityLink="football" />)
-    expect(screen.getByText("축구")).toBeDefined()
-  })
-
   it("calls onVote with 'up' when upvote clicked", () => {
     const onVote = vi.fn()
     render(<PostCardFooter {...defaultProps} onVote={onVote} />)

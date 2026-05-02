@@ -16,8 +16,6 @@ export interface PostCardFooterProps {
   onVote: (type: "up" | "down") => void
   onBookmark: () => void
   onBookmarkHover: () => void
-  community?: string
-  communityLink?: string
 }
 
 export function PostCardFooter({
@@ -30,8 +28,6 @@ export function PostCardFooter({
   onVote,
   onBookmark,
   onBookmarkHover,
-  community,
-  communityLink,
 }: PostCardFooterProps) {
   return (
     <div className="border-border mt-3 flex items-center gap-4 border-t pt-3">
@@ -48,7 +44,7 @@ export function PostCardFooter({
         <span className="text-[12px] font-medium tabular-nums">{comments}</span>
       </Link>
 
-      {/* 우측: 북마크 + 공유 + 게시판 배지 */}
+      {/* 우측: 북마크 + 공유 — 게시판 배지는 상단 카테고리 라벨로 이동 */}
       <div className="ml-auto flex items-center gap-1">
         <Button
           variant="ghost"
@@ -63,17 +59,6 @@ export function PostCardFooter({
           <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`} />
         </Button>
         <ShareMenu postId={postId} postTitle={postTitle} />
-        {community && communityLink && (
-          <Link
-            href={`/community/${communityLink}`}
-            className="ml-1 inline-flex min-h-11 min-w-11 items-center justify-center"
-            aria-label={`${community} 게시판으로 이동`}
-          >
-            <span className="bg-muted text-muted-foreground hover:text-foreground inline-flex items-center rounded px-2 py-1 text-[10px] font-medium transition-colors">
-              {community}
-            </span>
-          </Link>
-        )}
       </div>
     </div>
   )

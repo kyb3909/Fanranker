@@ -56,7 +56,7 @@ export function PostCardHeader({
           <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
         </Avatar>
         <div>
-          <p className="text-foreground text-[13px] font-medium">{author}</p>
+          <p className="text-foreground text-[13px] font-semibold">{author}</p>
           <div className="flex items-center gap-1.5">
             {hasTitleBadge && (
               <>
@@ -91,7 +91,7 @@ export function PostCardHeader({
               <AvatarFallback className="text-[11px]">{author?.[0] ?? "?"}</AvatarFallback>
             </Avatar>
             <div className="text-left">
-              <p className="text-foreground text-[13px] font-medium hover:underline">{author}</p>
+              <p className="text-foreground text-[13px] font-semibold hover:underline">{author}</p>
               <div className="flex items-center gap-1.5">
                 {hasTitleBadge && (
                   <>

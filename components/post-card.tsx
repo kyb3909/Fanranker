@@ -91,6 +91,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             firstEmbed={firstEmbed}
             image={post.image}
             priority={priority}
+            category={post.community}
+            categoryLink={communityLink}
           />
           <PostCardFooter
             postId={post.id}
@@ -102,8 +104,6 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             onVote={handleVote}
             onBookmark={handleBookmark}
             onBookmarkHover={checkBookmarkStatus}
-            community={post.community}
-            communityLink={communityLink}
           />
         </div>
       </Card>

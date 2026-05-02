@@ -1,7 +1,7 @@
 import type React from "react"
 import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
-import { Noto_Sans } from "next/font/google"
+import localFont from "next/font/local"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -17,15 +17,22 @@ import { GlobalReportDialog } from "@/components/global-report-dialog"
 import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
 
-// Latin 글리프만 next/font 로 로드. 한글은 시스템 폰트(Apple SD Gothic Neo / Malgun
-// Gothic — globals.css 의 font-stack fallback) 가 처리. Noto_Sans_KR 는 latin subset
-// 으로도 18개 woff2 (~314 KB) 를 생성해 비효율 → Noto_Sans 로 교체.
-const notoSans = Noto_Sans({
-  weight: "variable",
-  subsets: ["latin"],
+// 본문/UI 한글 폰트: Pretendard Variable (한국어 모던 웹 표준 — 토스/배민/카카오 라인업).
+// 라틴 글리프도 같이 커버하므로 Noto_Sans 별도 로드 불필요.
+const pretendard = localFont({
+  src: "../public/fonts/PretendardVariable.woff2",
   display: "swap",
-  variable: "--font-noto-sans-kr", // CSS 변수명은 globals.css 와 호환 위해 유지
-  preload: true,
+  variable: "--font-pretendard",
+  weight: "45 920",
+})
+
+// 제목/디스플레이 한글 폰트: SUIT Variable — 자간이 살짝 좁아 굵은 weight에서 진중함.
+// 본문 Pretendard와 듀얼 시스템 (NYT/Verge/Pitchfork 식 에디토리얼 톤).
+const suit = localFont({
+  src: "../public/fonts/SUIT-Variable.woff2",
+  display: "swap",
+  variable: "--font-suit",
+  weight: "100 900",
 })
 
 const koLocalization = {
@@ -125,7 +132,11 @@ export default function RootLayout({
   return (
     <ClerkErrorBoundary>
       <ClerkProvider localization={koLocalization} dynamic>
-        <html lang="ko" className={notoSans.variable} suppressHydrationWarning>
+        <html
+          lang="ko"
+          className={`${pretendard.variable} ${suit.variable}`}
+          suppressHydrationWarning
+        >
           <head>
             {/* Google AdSense 계정 메타 태그 */}
             {process.env.NEXT_PUBLIC_ADSENSE_ID && (
