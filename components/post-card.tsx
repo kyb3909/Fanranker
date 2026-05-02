@@ -25,6 +25,7 @@ interface Post extends BasePost {
     nounTitle?: string | null
     rarity?: "common" | "rare" | "epic" | "legendary" | null
   } | null
+  flairTitle?: string | null
 }
 
 interface PostCardProps {
@@ -73,6 +74,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             avatar={post.avatar}
             userId={post.userId}
             titleDisplay={post.titleDisplay}
+            flairTitle={post.flairTitle}
             isAuthor={isAuthor}
             onEdit={handleEditPost}
             onDelete={handleDeletePost}

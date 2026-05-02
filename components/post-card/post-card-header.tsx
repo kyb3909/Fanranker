@@ -18,6 +18,7 @@ export interface PostCardHeaderProps {
   avatar: string
   userId?: string
   titleDisplay?: TitleDisplay | null
+  flairTitle?: string | null
   isAuthor: boolean
   onEdit: () => void
   onDelete: () => void
@@ -32,6 +33,7 @@ export function PostCardHeader({
   avatar,
   userId,
   titleDisplay,
+  flairTitle,
   isAuthor,
   onEdit,
   onDelete,
@@ -63,6 +65,14 @@ export function PostCardHeader({
                   rarity={titleDisplay.rarity}
                   size="sm"
                 />
+                <span className="text-muted-foreground text-[11px]">·</span>
+              </>
+            )}
+            {flairTitle && (
+              <>
+                <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-px text-[10px] font-semibold text-amber-600">
+                  {flairTitle}
+                </span>
                 <span className="text-muted-foreground text-[11px]">·</span>
               </>
             )}

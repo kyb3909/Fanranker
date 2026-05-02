@@ -20,7 +20,9 @@ export async function GET(
     // 프로필 기본 정보
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("user_id, nickname, avatar_url, bio, is_journalist, is_expert, created_at")
+      .select(
+        "user_id, nickname, avatar_url, bio, is_journalist, is_expert, created_at, display_title_id"
+      )
       .eq("user_id", userId)
       .single()
 
@@ -177,6 +179,52 @@ export async function GET(
       /* table may not exist yet */
     }
 
+    // 표시 호칭 + flair top 5
+    let displayTitle: { id: string; name: string; flair_name: string } | null = null
+    if (profile.display_title_id) {
+      const { data: t } = await supabase
+        .from("flair_titles")
+        .select("id, name, flair_id, post_flairs ( name )")
+        .eq("id", profile.display_title_id)
+        .maybeSingle()
+      if (t) {
+        const flairName = (t.post_flairs as unknown as { name: string } | null)?.name || ""
+        displayTitle = { id: t.id, name: t.name, flair_name: flairName }
+      }
+    }
+
+    let flairTop: Array<{
+      flair_id: string
+      flair_name: string
+      flair_color: string | null
+      community_slug: string
+      score_total: number
+    }> = []
+    try {
+      const { data: scores } = await supabase
+        .from("user_flair_scores")
+        .select("flair_id, score_total, post_flairs ( name, color, community_slug )")
+        .eq("user_id", userId)
+        .order("score_total", { ascending: false })
+        .limit(5)
+      flairTop = (scores || []).map((s) => {
+        const f = (s.post_flairs as unknown as {
+          name: string
+          color: string | null
+          community_slug: string
+        } | null) || { name: "", color: null, community_slug: "" }
+        return {
+          flair_id: s.flair_id,
+          flair_name: f.name,
+          flair_color: f.color,
+          community_slug: f.community_slug,
+          score_total: Number(s.score_total),
+        }
+      })
+    } catch {
+      /* table may not exist yet */
+    }
+
     return NextResponse.json({
       profile: {
         user_id: profile.user_id,
@@ -186,7 +234,9 @@ export async function GET(
         is_journalist: profile.is_journalist,
         is_expert: profile.is_expert ?? false,
         created_at: profile.created_at,
+        display_title: displayTitle,
       },
+      flair_top: flairTop,
       recent_posts: recentPosts || [],
       board_points: boardPoints,
       equipped_titles: equippedTitleRows.map((t) => {

@@ -44,6 +44,7 @@ export interface PostsResponse {
   posts: RawPost[]
   profiles: RawProfile[]
   equippedTitles?: RawEquippedTitle[]
+  flairTitles?: Record<string, string>
   hasMore?: boolean
 }
 
@@ -56,7 +57,8 @@ function createdAtToMs(value: Post["createdAt"]): number {
 function transformPosts(
   fetchedPosts: RawPost[],
   profiles: RawProfile[],
-  equippedTitles?: RawEquippedTitle[]
+  equippedTitles?: RawEquippedTitle[],
+  flairTitles?: Record<string, string>
 ): Post[] {
   const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
 
@@ -96,6 +98,7 @@ function transformPosts(
       isUpvoted: false,
       createdAt: new Date(post.created_at),
       titleDisplay,
+      flairTitle: flairTitles?.[post.user_id] ?? null,
     }
   })
 }
@@ -150,7 +153,7 @@ export function useFeed(
   const posts = useMemo(() => {
     if (!data) return []
     const allPosts = data.flatMap((page) =>
-      transformPosts(page.posts || [], page.profiles || [], page.equippedTitles)
+      transformPosts(page.posts || [], page.profiles || [], page.equippedTitles, page.flairTitles)
     )
 
     // ID 기반 중복 제거 (페이지 간 동일 게시글 제거)

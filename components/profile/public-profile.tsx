@@ -31,6 +31,15 @@ interface PublicProfile {
   is_journalist: boolean
   is_expert: boolean
   created_at: string
+  display_title?: { id: string; name: string; flair_name: string } | null
+}
+
+interface FlairTopEntry {
+  flair_id: string
+  flair_name: string
+  flair_color: string | null
+  community_slug: string
+  score_total: number
 }
 
 interface PublicPost {
@@ -91,6 +100,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
   const pixelArts: PixelArtInfo[] = data?.pixel_arts ?? []
   const teamKarma: TeamKarmaInfo[] = data?.team_karma ?? []
   const totalKarma: number = data?.total_karma ?? 0
+  const flairTop: FlairTopEntry[] = data?.flair_top ?? []
   const profileNotFound = !!error || (data && !data.profile)
 
   if (profileNotFound) {
@@ -152,8 +162,42 @@ export function PublicProfileView({ userId }: { userId: string }) {
               })}
               {" 가입"}
             </span>
+            {publicProfile.display_title && (
+              <>
+                <span aria-hidden>·</span>
+                <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-px text-[11px] font-semibold text-amber-600">
+                  {publicProfile.display_title.flair_name} {publicProfile.display_title.name}
+                </span>
+              </>
+            )}
           </div>
         </Card>
+
+        {/* 팬 정체성 (flair top + 표시 호칭) */}
+        {flairTop.length > 0 && (
+          <Card className="gap-0 overflow-hidden py-0">
+            <div className="border-border border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                <h3 className="text-sm font-semibold">팬 활동 점수</h3>
+              </div>
+            </div>
+            <div className="space-y-2 px-4 py-3">
+              {flairTop.map((f) => (
+                <div
+                  key={f.flair_id}
+                  className="bg-muted/40 flex items-center justify-between rounded-md px-3 py-2 text-xs"
+                  style={f.flair_color ? { borderLeft: `3px solid ${f.flair_color}` } : undefined}
+                >
+                  <span className="font-medium">{f.flair_name}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {f.score_total.toLocaleString()}p
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* 게시판별 칭호 & 레벨 */}
         {boardPoints.length > 0 && (

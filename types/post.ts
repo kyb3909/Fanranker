@@ -27,4 +27,5 @@ export interface Post {
   isUpvoted: boolean
   createdAt?: Date | string
   titleDisplay?: TitleDisplay | null
+  flairTitle?: string | null
 }

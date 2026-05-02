@@ -164,20 +164,41 @@ export async function GET(request: NextRequest) {
     // DB temperature 값 그대로 사용 (pg_cron이 매분 큐 처리)
     const postsWithAccurateCounts = posts
 
-    // 3. 작성자 프로필 + 장착 칭호 조회
+    // 3. 작성자 프로필 + 장착 칭호 + flair 호칭 조회
     const userIds = [...new Set(posts.map((p) => p.user_id))]
     const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
-      supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
+      supabase
+        .from("profiles")
+        .select("user_id, nickname, avatar_url, display_title_id")
+        .in("user_id", userIds),
       supabase
         .from("user_equipped_titles")
         .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
         .in("user_id", userIds),
     ])
 
+    // flair display title 조회 (profiles.display_title_id 가 가리키는 호칭의 name)
+    const titleIds = [
+      ...new Set((profiles ?? []).map((p) => p.display_title_id).filter(Boolean) as string[]),
+    ]
+    const { data: flairTitles } =
+      titleIds.length > 0
+        ? await supabase.from("flair_titles").select("id, name").in("id", titleIds)
+        : { data: [] }
+    const titleNameById = new Map((flairTitles ?? []).map((t) => [t.id, t.name]))
+    const flairTitleByUser: Record<string, string> = {}
+    for (const p of profiles ?? []) {
+      if (p.display_title_id) {
+        const name = titleNameById.get(p.display_title_id)
+        if (name) flairTitleByUser[p.user_id] = name
+      }
+    }
+
     const res = NextResponse.json({
       posts: postsWithAccurateCounts,
       profiles,
       equippedTitles: equippedTitles || [],
+      flairTitles: flairTitleByUser,
       hasMore: posts.length === limit,
     })
     res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=180")
