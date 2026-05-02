@@ -213,7 +213,7 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
                 <button
                   key={`${item.id}-${i}`}
                   onClick={() => setSelectedItem(item)}
-                  className="group inline-flex shrink-0 cursor-pointer items-center gap-2 border-none bg-transparent p-0"
+                  className="group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 border-none bg-transparent p-0 sm:min-h-0"
                 >
                   <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-500" />
                   <span className="text-[14px] font-medium text-neutral-300 transition-colors group-hover:text-white">

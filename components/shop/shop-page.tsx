@@ -153,7 +153,7 @@ export default function ShopPage() {
               <div className="border-border flex overflow-hidden rounded-lg border">
                 <button
                   onClick={() => setSortBy("popular")}
-                  className={`flex items-center gap-1 px-3 py-2 text-xs font-medium ${
+                  className={`flex min-h-11 items-center gap-1 px-3 py-2 text-xs font-medium sm:min-h-0 ${
                     sortBy === "popular"
                       ? "bg-primary/10 text-primary font-semibold"
                       : "bg-background text-muted-foreground hover:text-foreground"
@@ -164,7 +164,7 @@ export default function ShopPage() {
                 </button>
                 <button
                   onClick={() => setSortBy("newest")}
-                  className={`flex items-center gap-1 px-3 py-2 text-xs font-medium ${
+                  className={`flex min-h-11 items-center gap-1 px-3 py-2 text-xs font-medium sm:min-h-0 ${
                     sortBy === "newest"
                       ? "bg-primary/10 text-primary font-semibold"
                       : "bg-background text-muted-foreground hover:text-foreground"
@@ -176,7 +176,7 @@ export default function ShopPage() {
               </div>
               <button
                 onClick={() => setShowUpload(true)}
-                className="bg-primary flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90"
+                className="bg-primary flex min-h-11 items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90 sm:min-h-0"
               >
                 <Upload className="h-3.5 w-3.5" />
                 스티커 만들기
@@ -189,7 +189,7 @@ export default function ShopPage() {
             <div className="scrollbar-none flex gap-1.5 overflow-x-auto">
               <button
                 onClick={() => setSelectedPack(null)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`min-h-11 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:min-h-0 ${
                   !selectedPack
                     ? "bg-primary/10 text-primary font-semibold"
                     : "bg-muted text-muted-foreground hover:text-foreground"
@@ -201,7 +201,7 @@ export default function ShopPage() {
                 <button
                   key={pack.id}
                   onClick={() => setSelectedPack(pack.id)}
-                  className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                  className={`flex min-h-11 shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:min-h-0 ${
                     selectedPack === pack.id
                       ? "bg-primary/10 text-primary font-semibold"
                       : "bg-muted text-muted-foreground hover:text-foreground"

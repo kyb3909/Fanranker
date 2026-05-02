@@ -32,7 +32,7 @@ export function Header() {
                   window.scrollTo(0, 0)
                 }
               }}
-              className="relative flex items-baseline"
+              className="relative flex min-h-11 items-baseline"
               aria-label="홈"
             >
               <span className="relative z-0 -ml-1 hidden shrink-0 sm:block" aria-hidden>
