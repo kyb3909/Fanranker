@@ -230,16 +230,16 @@ def audit_round(round_id: str, gm_ts: str, auto_fix: bool = False) -> dict:
     matched = 0
     no_db_row = 0
     unmapped_handi = set()
-    seen_gm_seq: set = set()  # 같은 GM_SEQ 다중 핸디 라인 dedup (첫 row 만 비교/fix)
+    matched_gm_seq: set = set()  # DB 와 일치하는 row 발견된 GM_SEQ
+    candidate: dict = {}  # GM_SEQ -> (row, diffs) — 가장 적은 mismatch 후보
 
     for it in items:
         gm_seq = it.get("GM_SEQ")
         if gm_seq not in db_by_no:
             no_db_row += 1
             continue
-        if gm_seq in seen_gm_seq:
-            continue  # 다중 핸디 라인 — 첫 row 와 다른 답일 수 있어 fix 안 함
-        seen_gm_seq.add(gm_seq)
+        if gm_seq in matched_gm_seq:
+            continue  # 이미 일치하는 row 발견 — 추가 row 무시
         db_g = db_by_no[gm_seq]
 
         hv = it.get("HANDI_VAL", 0)
@@ -290,11 +290,23 @@ def audit_round(round_id: str, gm_ts: str, auto_fix: bool = False) -> dict:
                 "betman_MCH_SCORE": it.get("MCH_SCORE"),
                 "diffs": diffs,
             }
-            if auto_fix:
-                mm_row["fix"] = apply_fix(round_id, mm_row)
-            mismatches.append(mm_row)
+            # 같은 GM_SEQ 다중 row 중 가장 적은 mismatch 후보로 교체.
+            # 다른 row 가 일치하면 matched_gm_seq 에 추가되어 이 후보는 무효화됨.
+            existing = candidate.get(gm_seq)
+            if existing is None or len(diffs) < len(existing[0]["diffs"]):
+                candidate[gm_seq] = (mm_row, diffs)
         else:
             matched += 1
+            matched_gm_seq.add(gm_seq)
+            candidate.pop(gm_seq, None)
+
+    # 최종: matched 안 된 GM_SEQ 의 후보만 진짜 mismatch
+    for gm_seq, (mm_row, _diffs) in candidate.items():
+        if gm_seq in matched_gm_seq:
+            continue
+        if auto_fix:
+            mm_row["fix"] = apply_fix(round_id, mm_row)
+        mismatches.append(mm_row)
 
     db_unseen = [
         {"game_no": gn, **{k: v for k, v in g.items() if k != "game_no"}}
