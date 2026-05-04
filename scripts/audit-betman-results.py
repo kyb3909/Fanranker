@@ -29,7 +29,10 @@ import urllib.error
 import urllib.request
 from typing import Optional
 
-# fetch-results.sh 와 동일한 매핑 (Track A 2026-05-04 적용 후)
+# 신 체계 매핑 (Track A 2026-05-04 적용 후) + 옛 체계 매핑 (개편 전 코드)
+# 옛 체계 (BETTYP_NM=null, MCH_SPORT_CD 사용) — 2026-05 식별:
+#   12=축구 소수핸디캡(2-way), 13=야구 승1패(3-way), 16=야구 승무패(3-way, deprecated),
+#   18=야구 핸디캡(2-way), 19=야구 언더오버
 HANDI_TYPE_MAP = {
     0: "일반",
     14: "일반",
@@ -41,6 +44,13 @@ HANDI_TYPE_MAP = {
     21: "승패2way",
     23: "핸디캡",
     27: "SUM",
+    # 옛 체계 — MCH_SCORE 가 핸디 적용된 row 는 "핸디캡"/"언더오버" 로 매핑
+    # (자체 MCH_SCORE 를 home/away score 로 쓰지 않고 score_map fallback 사용)
+    12: "핸디캡",  # 축구 소수핸디캡 — 핸디 적용 점수, 무승부는 GAME_RESULT 에 안 옴
+    13: "일반",  # 야구 승1패 — MCH_SCORE 가 실제 점수, 1점차 무승부 가능
+    16: "일반",  # 야구 승무패 — MCH_SCORE 가 실제 점수, 실제 무승부 (KBO/NPB)
+    18: "핸디캡",  # 야구 핸디캡 — 핸디 적용 점수
+    19: "언더오버",  # 야구 언더오버 — 토탈 형식
 }
 
 BETMAN_BASE = "https://www.betman.co.kr"
@@ -71,6 +81,25 @@ def supabase_get(path: str) -> list:
     )
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read())
+
+
+def supabase_patch(path: str, data: dict) -> None:
+    body = json.dumps(data).encode()
+    req = urllib.request.Request(
+        f"{sb_url()}/rest/v1/{path}",
+        data=body,
+        headers={
+            "apikey": sb_key(),
+            "Authorization": f"Bearer {sb_key()}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        },
+        method="PATCH",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=15).read()
+    except urllib.error.HTTPError as e:
+        raise Exception(f"HTTP {e.code}: {e.read().decode('utf-8', errors='replace')[:200]}")
 
 
 def fetch_winrst(gm_ts: str) -> list:
@@ -133,12 +162,17 @@ def expected_result(handi_val: int, game_result) -> str:
 
 
 def build_score_map(items: list) -> dict:
-    """풀타임 점수 소스 (HANDI_VAL=0/14/21, '전반' 제외) 에서 score map 구축."""
+    """풀타임 점수 소스에서 score map 구축.
+    신 체계: HANDI_VAL=0/14/21 + BETTYP_NM '전반' 제외
+    옛 체계: HANDI_VAL=13/16 (야구 승1패/승무패 — MCH_SCORE 실제 점수)
+    """
     m = {}
     for it in items:
         hv = it.get("HANDI_VAL", 0)
         nm = it.get("BETTYP_NM") or ""
-        if hv not in (0, 14, 21) or "전반" in nm:
+        if hv not in (0, 14, 21, 13, 16):
+            continue
+        if "전반" in nm:
             continue
         sc = parse_score(it.get("MCH_SCORE"))
         if sc:
@@ -151,7 +185,30 @@ def build_score_map(items: list) -> dict:
     return m
 
 
-def audit_round(round_id: str, gm_ts: str) -> dict:
+def apply_fix(round_id: str, mismatch: dict) -> dict | None:
+    """mismatch row 의 result/home_score/away_score 를 betman 답으로 PATCH.
+    betman 답이 None/빈문자열인 field 는 스킵 (덮어쓰지 않음)."""
+    update = {}
+    for diff in mismatch["diffs"]:
+        f = diff["field"]
+        v = diff["betman"]
+        if f == "result" and v:
+            update["result"] = v
+        elif f in ("home_score", "away_score") and v is not None:
+            update[f] = v
+    if not update:
+        return None
+    try:
+        supabase_patch(
+            f"betman_games?round_id=eq.{round_id}&game_no=eq.{mismatch['game_no']}",
+            update,
+        )
+        return update
+    except Exception as e:
+        return {"_error": str(e)}
+
+
+def audit_round(round_id: str, gm_ts: str, auto_fix: bool = False) -> dict:
     db_games = supabase_get(
         f"betman_games?select=game_no,sport,game_type,home_team_name,away_team_name,status,result,home_score,away_score,handicap&round_id=eq.{round_id}"
     )
@@ -173,12 +230,16 @@ def audit_round(round_id: str, gm_ts: str) -> dict:
     matched = 0
     no_db_row = 0
     unmapped_handi = set()
+    seen_gm_seq: set = set()  # 같은 GM_SEQ 다중 핸디 라인 dedup (첫 row 만 비교/fix)
 
     for it in items:
         gm_seq = it.get("GM_SEQ")
         if gm_seq not in db_by_no:
             no_db_row += 1
             continue
+        if gm_seq in seen_gm_seq:
+            continue  # 다중 핸디 라인 — 첫 row 와 다른 답일 수 있어 fix 안 함
+        seen_gm_seq.add(gm_seq)
         db_g = db_by_no[gm_seq]
 
         hv = it.get("HANDI_VAL", 0)
@@ -217,20 +278,21 @@ def audit_round(round_id: str, gm_ts: str) -> dict:
             diffs.append({"field": "away_score", "db": actual_away, "betman": exp_away})
 
         if diffs:
-            mismatches.append(
-                {
-                    "game_no": gm_seq,
-                    "sport": db_g.get("sport"),
-                    "game_type": db_g.get("game_type"),
-                    "match": f"{db_g.get('home_team_name')} vs {db_g.get('away_team_name')}",
-                    "db_status": db_g.get("status"),
-                    "betman_HANDI_VAL": hv,
-                    "betman_BETTYP_NM": nm,
-                    "betman_GAME_RESULT": gr,
-                    "betman_MCH_SCORE": it.get("MCH_SCORE"),
-                    "diffs": diffs,
-                }
-            )
+            mm_row = {
+                "game_no": gm_seq,
+                "sport": db_g.get("sport"),
+                "game_type": db_g.get("game_type"),
+                "match": f"{db_g.get('home_team_name')} vs {db_g.get('away_team_name')}",
+                "db_status": db_g.get("status"),
+                "betman_HANDI_VAL": hv,
+                "betman_BETTYP_NM": nm,
+                "betman_GAME_RESULT": gr,
+                "betman_MCH_SCORE": it.get("MCH_SCORE"),
+                "diffs": diffs,
+            }
+            if auto_fix:
+                mm_row["fix"] = apply_fix(round_id, mm_row)
+            mismatches.append(mm_row)
         else:
             matched += 1
 
@@ -283,7 +345,7 @@ def main() -> int:
         gmts = r["gm_ts"]
         print(f"  [{i}/{len(rounds)}] gm_ts={gmts}", file=sys.stderr, end=" ", flush=True)
         try:
-            rep = audit_round(r["id"], gmts)
+            rep = audit_round(r["id"], gmts, args.auto_fix)
             full.append(rep)
             if rep.get("skipped"):
                 print(f"SKIPPED ({rep['skipped']})", file=sys.stderr)
