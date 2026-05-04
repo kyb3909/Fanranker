@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git
 - **`git push` 금지**. 사용자가 직접 push함. 커밋까지만.
+- **Pre-commit hook**: `.husky/pre-commit` + `lint-staged`가 staged 파일에 `eslint --fix` + `prettier --write` 자동 실행. 막히면 `--no-verify`로 우회하지 말고 lint/format 에러를 고칠 것.
 
 ## 스택
 - Next.js 15.5 (App Router, Turbopack) + React 19 + TypeScript 5 strict
@@ -23,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Test: Vitest (unit) + Playwright (e2e, ko-KR / Asia/Seoul, 5 projects: chromium/firefox/webkit/Mobile Chrome/Mobile Safari/Tablet)
 - Monitoring: Sentry + Vercel Analytics
 - Package manager: **pnpm 10** (single package, no monorepo)
+- Path alias: `@/*` → 프로젝트 루트 (`tsconfig.json`). 모든 import는 `@/lib/...`, `@/components/...` 형태.
 
 ## 명령어
 - `pnpm dev` — Turbopack 로컬 개발
@@ -46,6 +48,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `pnpm audit:parse` — JSONL → 구조화된 issues
   - 산출물: `tests/audit/reports/{ts}/` (gitignored — screenshots, trace.zip 포함)
 - 서브 패키지: `data/agents/`, `data/crawlers/`는 자체 `package.json` 보유 — 해당 디렉토리에서 별도 `pnpm install` 필요 (메인 워크스페이스에 포함되지 않음)
+- **코드 품질 도구** (script 미정의 — 직접 실행):
+  - `pnpm exec knip` — 미사용 export/dependency 검출
+  - `pnpm exec madge --circular .` — 순환 의존성 검출
+  - `ANALYZE=true pnpm build` — `@next/bundle-analyzer` (필요 시 `next.config.mjs`에 wrap 추가)
 
 ## 디렉토리
 - `app/` — App Router 페이지 + API 라우트 (admin, api, community, explore, games, my-posts, my-predictions, onboarding, post, prediction, stadium, write …)
@@ -77,6 +83,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/api/sports/*` → `/api/betman/*` (크롤링 출처 은닉)
 - `/api/live-scores/*` → `/api/wisetoto/*` (동일)
 - 클라이언트 코드는 `/api/sports`, `/api/live-scores`만 호출할 것. 외부에 betman/wisetoto 노출 금지.
+
+### Vercel Cron (`vercel.json`)
+앱 내부 작업용. **Vultr cron(betman 크롤)과 별개 레이어** — 둘이 공존하는 이중 구조.
+- `/api/cron/daily-token-reset` — 매일 14:00 UTC (KST 23:00) 토큰 리셋
+- `/api/cron/betman-sync` — 30분마다 (Vultr 2시간 sync의 보조)
+- `/api/wisetoto/sync` — 매분 라이브 스코어
+- `/api/cron/reddit-seed-posts` — 6시간마다
+- `/api/cron/weekly-analytics` — 매주 월요일 00:00 UTC
+- `/api/cron/metaverse-cleanup-rooms` — 30분마다
+
+새 cron 추가는 `vercel.json`에 path + schedule 등록. 라우트는 `app/api/cron/<name>/route.ts`에 구현하고 `CRON_SECRET` 검증 필수.
 
 ### Cache 헤더 정책 (`next.config.mjs`)
 - 읽기 API (`/api/posts|communities|profiles`): `s-maxage=30, swr=120`
@@ -124,6 +141,7 @@ production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
 
 ### Sentry / 환경
 - `next.config.mjs`가 `withSentryConfig`로 감싸져 있음. `SENTRY_*` env가 없으면 빌드는 통과하지만 소스맵 업로드는 스킵.
+- **Instrumentation 진입점**: 루트 `instrumentation.ts` — Next.js 15 표준. `register()`에서 server/edge runtime별 분기로 Sentry init. 새 모니터링/계측 추가 시 이 파일 수정.
 - env 검증은 `lib/env.ts`. 새 env 추가 시 거기서 zod 스키마 갱신.
 
 ### 배포 / CI
