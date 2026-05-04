@@ -193,21 +193,25 @@ export const gameTypeLabels: Record<string, string> = {
   언더오버: "언오버",
   S언더오버: "언오버",
   SUM: "합계",
+  // 2026-05 betman 신 매핑 (사용자 동의 design 결정)
+  승패2way: "승패",
+  승1패: "승1패",
+  승5패: "승5패",
+  소수핸디캡: "핸디캡",
 }
 
 /**
  * game_type + sport 조합 → UI 라벨.
- * 축구만 무승부가 있어 "일반" = 승무패 (3선택). 농구/야구/배구는 무승부 없어 승패 (2선택).
- * 핸디캡은 betTypId=4(승무패 핸디, 축구만) 와 5(승패 핸디, 나머지) 가 섞여 저장돼있어
- * 동일 로직으로 라벨만 분기.
+ * - 일반: 축구만 승무패(3선택), 그 외 승패(2선택). 신 매핑에선 betTypId=1만 일반.
+ * - 승패2way: 2-way 무승부 X (야구/농구 betTypId=2)
+ * - 승1패: 야구 1점차 무승부 (betTypId=3, BS)
+ * - 승5패: 농구 5점차 무승부 (betTypId=3, BK)
+ * - 소수핸디캡: 무승부 없는 핸디 (betTypId=5)
  */
 export function getGameTypeLabel(gameType: string, sport?: string): string {
   const noDraw = sport === "농구" || sport === "야구" || sport === "배구"
   if (gameType === "일반" || gameType === "S일반") {
     return noDraw ? "승패" : "승무패"
-  }
-  if (gameType === "핸디캡" || gameType === "S핸디캡") {
-    return noDraw ? "핸디캡" : "핸디캡"
   }
   return gameTypeLabels[gameType] || gameType
 }

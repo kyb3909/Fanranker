@@ -40,7 +40,13 @@ export function BettingMatchCard({
   const hasSelectionFromThisMatch = selectedBets.some((b) => b.matchKey === groupedMatch.matchKey)
 
   // 메인(승무패/승패) vs 나머지(핸디캡·언오버·합계). 메인은 항상 보이고 나머지는 토글.
-  const isMainType = (gameType: string) => gameType === "일반" || gameType === "S일반"
+  // 신 매핑(2026-05): 승패2way/승1패/승5패 도 메인 마켓 (1차 옵션).
+  const isMainType = (gameType: string) =>
+    gameType === "일반" ||
+    gameType === "S일반" ||
+    gameType === "승패2way" ||
+    gameType === "승1패" ||
+    gameType === "승5패"
   const mainGames = groupedMatch.games.filter((g) => isMainType(g.game_type))
   const otherGames = groupedMatch.games.filter((g) => !isMainType(g.game_type))
 
@@ -56,7 +62,10 @@ export function BettingMatchCard({
   const renderGameBlock = (game: SportsGame) => {
     const isSUM = game.game_type === "SUM" || game.game_type === "SSUM"
     const isOverUnder = game.game_type.includes("언더오버")
-    const isBasketball = game.sport === "농구"
+    // 3-way 여부는 draw_odds 존재로 판별 (sport 만으로는 신 매핑 KBO 승무패 못 잡음).
+    // 옛 매핑 sport=농구 → 무승부 X, 신 매핑 betTypId=2/5 → game_type 자체에 무승부 X.
+    const has3Way =
+      game.draw_odds !== null && game.draw_odds !== undefined && Number(game.draw_odds) > 0
     const gameTypeLabel = getGameTypeLabel(game.game_type, game.sport)
     const selectedBet = selectedBets.find((b) => b.gameId === game.id)
     const sportMismatch = selectedSport !== null && selectedSport !== game.sport
@@ -77,12 +86,12 @@ export function BettingMatchCard({
     } else {
       options = [
         { value: "home", label: groupedMatch.homeTeam, odds: game.home_odds },
-        ...(!isBasketball ? [{ value: "draw", label: "무", odds: game.draw_odds }] : []),
+        ...(has3Way ? [{ value: "draw", label: "무", odds: game.draw_odds }] : []),
         { value: "away", label: groupedMatch.awayTeam, odds: game.away_odds },
       ]
     }
 
-    const isTwoColumn = isSUM || isOverUnder || isBasketball
+    const isTwoColumn = isSUM || isOverUnder || !has3Way
 
     return (
       <div key={game.id} className="bg-muted/50 rounded-lg border p-2">
