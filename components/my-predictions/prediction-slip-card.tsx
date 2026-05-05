@@ -247,7 +247,11 @@ export function BettingSlipCard({
                   {/* Game Type Badge with Handicap/Line Info */}
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">
-                      {getGameTypeLabel(game.gameType, slip.sport)}
+                      {getGameTypeLabel(
+                        game.gameType ?? "일반",
+                        slip.sport,
+                        game.drawOdds != null && Number(game.drawOdds) > 0
+                      )}
                     </Badge>
                     {/* 핸디캡 정보 표시 */}
                     {game.gameType.includes("핸디캡") && game.handicap !== null && (

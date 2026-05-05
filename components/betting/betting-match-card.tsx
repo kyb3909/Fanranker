@@ -56,7 +56,11 @@ export function BettingMatchCard({
   )
 
   const otherLabels = Array.from(
-    new Set(otherGames.map((g) => getGameTypeLabel(g.game_type, g.sport)))
+    new Set(
+      otherGames.map((g) =>
+        getGameTypeLabel(g.game_type, g.sport, g.draw_odds != null && Number(g.draw_odds) > 0)
+      )
+    )
   ).join("·")
 
   const renderGameBlock = (game: SportsGame) => {
@@ -66,7 +70,7 @@ export function BettingMatchCard({
     // 옛 매핑 sport=농구 → 무승부 X, 신 매핑 betTypId=2/5 → game_type 자체에 무승부 X.
     const has3Way =
       game.draw_odds !== null && game.draw_odds !== undefined && Number(game.draw_odds) > 0
-    const gameTypeLabel = getGameTypeLabel(game.game_type, game.sport)
+    const gameTypeLabel = getGameTypeLabel(game.game_type, game.sport, has3Way)
     const selectedBet = selectedBets.find((b) => b.gameId === game.id)
     const sportMismatch = selectedSport !== null && selectedSport !== game.sport
     const gameBetClosed = game.is_bettable === false

@@ -201,19 +201,39 @@ export const gameTypeLabels: Record<string, string> = {
 }
 
 /**
- * game_type + sport 조합 → UI 라벨.
- * - 일반: 축구만 승무패(3선택), 그 외 승패(2선택). 신 매핑에선 betTypId=1만 일반.
- * - 승패2way: 2-way 무승부 X (야구/농구 betTypId=2)
- * - 승1패: 야구 1점차 무승부 (betTypId=3, BS)
- * - 승5패: 농구 5점차 무승부 (betTypId=3, BK)
- * - 소수핸디캡: 무승부 없는 핸디 (betTypId=5)
+ * game_type → UI 라벨 변환.
+ *
+ * "S" 접두사는 betman 전반전 마켓 식별자 (HANDI_VAL=6/7 등 → result-fetcher.ts).
+ * 풀타임은 일반/핸디캡/언더오버, 전반전은 S일반/S핸디캡/S언더오버로 DB 저장.
+ * betman 사이트는 "축구 전반 승무패"로 표기 — UI도 동일 의미를 ` · 전반` suffix로.
+ *
+ * - 일반/S일반 무승부 분기: hasDrawOdds 인자가 sport 가정보다 우선.
+ *   KBO 풀타임은 2-way("승패"), KBO 전반은 3-way("승무패")처럼 sport만으론
+ *   못 잡는 케이스를 draw_odds 데이터로 정확히 분기.
+ * - 승패2way/승1패/승5패: gameTypeLabels 직접 매핑.
+ * - 소수핸디캡: 무승부 없는 핸디 (betTypId=5) → "핸디캡" 라벨.
  */
-export function getGameTypeLabel(gameType: string, sport?: string): string {
-  const noDraw = sport === "농구" || sport === "야구" || sport === "배구"
-  if (gameType === "일반" || gameType === "S일반") {
-    return noDraw ? "승패" : "승무패"
+export function getGameTypeLabel(
+  rawGameType: string,
+  sport?: string,
+  hasDrawOdds?: boolean
+): string {
+  const isHalfTime = rawGameType.startsWith("S") && rawGameType !== "SUM"
+  const baseType = isHalfTime ? rawGameType.slice(1) : rawGameType
+
+  let baseLabel: string
+  if (baseType === "일반") {
+    if (hasDrawOdds !== undefined) {
+      baseLabel = hasDrawOdds ? "승무패" : "승패"
+    } else {
+      const noDraw = sport === "농구" || sport === "야구" || sport === "배구"
+      baseLabel = noDraw ? "승패" : "승무패"
+    }
+  } else {
+    baseLabel = gameTypeLabels[baseType] || baseType
   }
-  return gameTypeLabels[gameType] || gameType
+
+  return isHalfTime ? `${baseLabel} · 전반` : baseLabel
 }
 
 export const sportColors: Record<string, { bg: string; text: string; border: string }> = {
