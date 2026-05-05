@@ -181,19 +181,31 @@ export async function GET(request: NextRequest) {
     })
 
     // VPS sync.sh 가 betman 풀타임/전반전 마켓을 동일 game_type 으로 저장하는 한계
-    // 보정 — 매치 그룹 내에서 (game_type, handicap, over_under_line) 동일한 row 가
-    // 2개 이상이면 game_no asc 순서로 첫 번째는 풀타임, 두 번째 이상은 전반전으로
-    // 마킹. 라인 값이 다른 row(예: 언오버 2.5 vs 1.5)는 자연 분리되니 영향 없음.
+    // 보정 — 두 휴리스틱 OR 로 매치 그룹 내에서 전반전 row 를 추정해 마킹.
+    //
+    // [휴리스틱 1] 같은 (game_type, handicap, over_under_line) row 가 2개 이상이면
+    //   game_no asc 정렬 후 첫 번째 = 풀타임, 두 번째 이상 = 전반.
+    //   K리그(축구): 3526 일반 풀 / 3531 일반 전반 — 키 동일 → 두번째 잡힘.
+    //
+    // [휴리스틱 2] 매치 안에서 SUM 마켓 row 이후의 모든 row = 전반.
+    //   KBO(야구): 풀타임은 승패2way/승1패/소수핸디캡, 전반은 일반/소수핸디캡(라인
+    //   다름)/언더오버(라인 다름) → 키가 다 달라 휴리스틱 1 안 걸림. 하지만 SUM
+    //   (3562) 이후 row(3563~3565) 가 모두 전반이라 휴리스틱 2 가 잡음.
+    //
+    // 라인 값이 다른 row(예: 언오버 2.5 vs 1.5) 는 휴리스틱 1 키가 달라 자연 분리.
     // 단독 row 는 풀/전반 식별 불가 — 그대로 풀타임 표기 (사용자 인지 영향 최소).
     // 정공법은 sync.sh 가 betman 응답의 풀/전반 디스크리미네이터를 prefix("S") 로
     // 박는 것 — Vultr 수정 후속 작업으로.
     for (const group of Object.values(groupedGames)) {
       group.games.sort((a, b) => Number(a.game_no ?? 0) - Number(b.game_no ?? 0))
+      const sumIndex = group.games.findIndex((g) => g.game_type === "SUM")
       const seenCount = new Map<string, number>()
-      for (const g of group.games) {
+      for (let i = 0; i < group.games.length; i++) {
+        const g = group.games[i]
         const key = `${g.game_type}|${g.handicap ?? "x"}|${g.over_under_line ?? "x"}`
         const count = seenCount.get(key) ?? 0
-        if (count >= 1) {
+        const isAfterSum = sumIndex >= 0 && i > sumIndex
+        if (count >= 1 || isAfterSum) {
           ;(g as typeof g & { is_half_time?: boolean }).is_half_time = true
         }
         seenCount.set(key, count + 1)
