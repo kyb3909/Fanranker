@@ -285,11 +285,18 @@ export function BettingSlip({
                   </div>
                 </div>
 
-                {/* Submit button */}
+                {/* Submit button — 가드: 배당률 0/undefined 인 베팅이 슬립에 들어오면 차단.
+                    카드 단계에서 이미 button disable 되지만 어떤 경로로든 들어오는 것
+                    을 방어. server 단도 동일 가드(prediction/route.ts 배당 검증). */}
                 <Button
                   className="bg-primary hover:bg-primary/90 text-primary-foreground h-11 w-full"
                   onClick={onSubmit}
-                  disabled={isSubmitting || selectedBets.length === 0 || betAmount <= 0}
+                  disabled={
+                    isSubmitting ||
+                    selectedBets.length === 0 ||
+                    betAmount <= 0 ||
+                    selectedBets.some((b) => !b.odds || b.odds <= 0)
+                  }
                 >
                   {isSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

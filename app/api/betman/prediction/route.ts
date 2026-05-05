@@ -154,6 +154,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 경기 시간 미정 가드 — match_time 이 null/invalid 이면 베팅 차단.
+    // (deadline 비교가 NaN 으로 빠져서 통과되던 버그 수정)
+    const noMatchTimeGames = games.filter((g) => {
+      if (!g.match_time) return true
+      const t = new Date(g.match_time).getTime()
+      return Number.isNaN(t)
+    })
+    if (noMatchTimeGames.length > 0) {
+      const names = noMatchTimeGames
+        .map((g) => `${g.home_team_name} vs ${g.away_team_name}`)
+        .join(", ")
+      return NextResponse.json(
+        { error: `경기 시간이 미정인 경기는 베팅할 수 없습니다: ${names}` },
+        { status: 400 }
+      )
+    }
+
     // Check per-game bet deadlines (must bet before kickoff)
     const now = new Date()
     const closedGames = games.filter((g) => {
@@ -208,6 +225,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ===== 배당률 검증 (토큰 차감 전) =====
+    // 배당이 0/null 인 row 가 있으면 즉시 거부 — 토큰 차감 후에 검증하면
+    // 실패 시 토큰만 손실되고 환불 로직이 안 걸림 (환불은 슬립/예측 insert
+    // 실패만 커버). 검증은 토큰 차감 이전에 끝낸다.
+    const oddsByPrediction: Record<string, Record<string, number>> = {}
+    for (const pred of predictions) {
+      const game = games.find((g) => g.id === pred.game_id)
+      if (!game) continue
+      const oddsMap: Record<string, number> = {
+        home: parseFloat(String(game.home_win_odds)) || 0,
+        away: parseFloat(String(game.away_win_odds)) || 0,
+        draw: parseFloat(String(game.draw_odds)) || 0,
+        over: parseFloat(String(game.over_odds)) || 0,
+        under: parseFloat(String(game.under_odds)) || 0,
+      }
+      const odds = oddsMap[pred.prediction]
+      if (!odds || odds <= 0) {
+        return NextResponse.json(
+          {
+            error: `배당률이 설정되지 않은 경기가 있습니다: ${game.home_team_name} vs ${game.away_team_name}`,
+          },
+          { status: 400 }
+        )
+      }
+      oddsByPrediction[pred.game_id] = oddsMap
+    }
+
     // ===== 기자 여부 확인 (분석글 저장용) =====
     let isJournalist = false
     if (analysis_text) {
@@ -245,28 +289,11 @@ export async function POST(request: NextRequest) {
 
     const newBalance = spendResult.remaining_balance
 
-    // ===== 배당률 검증 + 슬립 생성 =====
+    // ===== 슬립 생성 (배당률은 위에서 이미 검증) =====
     // 각 베팅은 독립적인 슬립. 이전 베팅을 삭제하지 않음.
     let totalOdds = 1
     for (const pred of predictions) {
-      const game = games.find((g) => g.id === pred.game_id)
-      if (!game) continue
-      const oddsMap: Record<string, number> = {
-        home: parseFloat(game.home_win_odds) || 0,
-        away: parseFloat(game.away_win_odds) || 0,
-        draw: parseFloat(game.draw_odds) || 0,
-        over: parseFloat(game.over_odds) || 0,
-        under: parseFloat(game.under_odds) || 0,
-      }
-      const odds = oddsMap[pred.prediction]
-      if (!odds || odds <= 0) {
-        return NextResponse.json(
-          {
-            error: `배당률이 설정되지 않은 경기가 있습니다: ${game.home_team_name} vs ${game.away_team_name}`,
-          },
-          { status: 400 }
-        )
-      }
+      const odds = oddsByPrediction[pred.game_id]?.[pred.prediction] || 0
       totalOdds *= odds
     }
 
