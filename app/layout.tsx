@@ -17,8 +17,9 @@ import { GlobalReportDialog } from "@/components/global-report-dialog"
 import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
 
-// 본문/UI 한글 폰트: Pretendard Variable (한국어 모던 웹 표준 — 토스/배민/카카오 라인업).
-// 라틴 글리프도 같이 커버하므로 Noto_Sans 별도 로드 불필요.
+// 본문/UI 한글 폰트: Pretendard Std Variable (KS X 1001 subset, ~286 KB).
+// 한국어 웹 텍스트 ~98% 커버, 누락 글리프는 시스템 폰트 폴백.
+// 풀 글리프 버전은 2 MB로 FCP 차단 — std로 교체 (orioncactus/pretendard pretendard-std 패키지).
 const pretendard = localFont({
   src: "../public/fonts/PretendardVariable.woff2",
   display: "swap",
@@ -28,9 +29,10 @@ const pretendard = localFont({
 
 // 제목/디스플레이 한글 폰트: SUIT Variable — 자간이 살짝 좁아 굵은 weight에서 진중함.
 // 본문 Pretendard와 듀얼 시스템 (NYT/Verge/Pitchfork 식 에디토리얼 톤).
+// display: optional — 첫 렌더 블로킹 안 함, 캐시되면 적용 (헤딩 폰트 특성상 fallback 허용).
 const suit = localFont({
   src: "../public/fonts/SUIT-Variable.woff2",
-  display: "swap",
+  display: "optional",
   variable: "--font-suit",
   weight: "100 900",
 })
