@@ -41,6 +41,9 @@ export interface SportsGame {
   status: string
   bet_close_at?: string
   is_bettable?: boolean
+  // 매치 그룹 내 같은 (type, h, ou) 두번째 이상 row → 전반전 마켓 추정 (route.ts dedup).
+  // sync.sh 가 betman 풀/전반을 한 game_type 으로 저장해서 우리 측 휴리스틱.
+  is_half_time?: boolean
   home_odds?: number
   draw_odds?: number
   away_odds?: number

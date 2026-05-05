@@ -70,7 +70,11 @@ export function BettingMatchCard({
     // 옛 매핑 sport=농구 → 무승부 X, 신 매핑 betTypId=2/5 → game_type 자체에 무승부 X.
     const has3Way =
       game.draw_odds !== null && game.draw_odds !== undefined && Number(game.draw_odds) > 0
-    const gameTypeLabel = getGameTypeLabel(game.game_type, game.sport, has3Way)
+    const baseLabel = getGameTypeLabel(game.game_type, game.sport, has3Way)
+    // is_half_time 마킹은 route.ts 에서 매치 그룹 내 dedup 휴리스틱으로 부착.
+    // raw type 에 이미 S prefix 가 있으면 baseLabel 에 "· 전반" 이 들어있어 중복 회피.
+    const gameTypeLabel =
+      game.is_half_time && !baseLabel.includes("· 전반") ? `${baseLabel} · 전반` : baseLabel
     const selectedBet = selectedBets.find((b) => b.gameId === game.id)
     const sportMismatch = selectedSport !== null && selectedSport !== game.sport
     const gameBetClosed = game.is_bettable === false

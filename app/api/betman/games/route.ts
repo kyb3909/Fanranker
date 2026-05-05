@@ -180,6 +180,26 @@ export async function GET(request: NextRequest) {
       groupedGames[matchKey].games.push(game)
     })
 
+    // VPS sync.sh 가 betman 풀타임/전반전 마켓을 동일 game_type 으로 저장하는 한계
+    // 보정 — 매치 그룹 내에서 (game_type, handicap, over_under_line) 동일한 row 가
+    // 2개 이상이면 game_no asc 순서로 첫 번째는 풀타임, 두 번째 이상은 전반전으로
+    // 마킹. 라인 값이 다른 row(예: 언오버 2.5 vs 1.5)는 자연 분리되니 영향 없음.
+    // 단독 row 는 풀/전반 식별 불가 — 그대로 풀타임 표기 (사용자 인지 영향 최소).
+    // 정공법은 sync.sh 가 betman 응답의 풀/전반 디스크리미네이터를 prefix("S") 로
+    // 박는 것 — Vultr 수정 후속 작업으로.
+    for (const group of Object.values(groupedGames)) {
+      group.games.sort((a, b) => Number(a.game_no ?? 0) - Number(b.game_no ?? 0))
+      const seenCount = new Map<string, number>()
+      for (const g of group.games) {
+        const key = `${g.game_type}|${g.handicap ?? "x"}|${g.over_under_line ?? "x"}`
+        const count = seenCount.get(key) ?? 0
+        if (count >= 1) {
+          ;(g as typeof g & { is_half_time?: boolean }).is_half_time = true
+        }
+        seenCount.set(key, count + 1)
+      }
+    }
+
     const user = await currentUser()
     let userPredictions: unknown[] = []
     if (user && gamesWithOdds.length > 0) {
