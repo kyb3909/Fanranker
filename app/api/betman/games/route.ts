@@ -121,7 +121,17 @@ export async function GET(request: NextRequest) {
       const rawGameType = (game.game_type as string) || ""
       const gameType = rawGameType === "SUM" ? "SUM" : rawGameType.replace(/^S/, "")
       let home_odds, draw_odds, away_odds, over_odds, under_odds, odd_odds, even_odds
-      if (gameType === "일반" || gameType === "핸디캡") {
+      // 홈/원정 (+ 무) 마켓: 옛 매핑(일반/핸디캡) + 신 매핑 4종(d6de333) 모두 포함.
+      // 신 매핑이 추가됐을 때 클라이언트 옵션 결정만 갱신되고 이 분기는 누락돼 있어
+      // MLB/NBA 등 신 매핑 비중 큰 종목 home/away 배당이 응답에서 undefined 로 빠짐.
+      if (
+        gameType === "일반" ||
+        gameType === "핸디캡" ||
+        gameType === "승패2way" ||
+        gameType === "승1패" ||
+        gameType === "승5패" ||
+        gameType === "소수핸디캡"
+      ) {
         home_odds = game.home_win_odds != null ? parseFloat(String(game.home_win_odds)) : undefined
         away_odds = game.away_win_odds != null ? parseFloat(String(game.away_win_odds)) : undefined
         draw_odds = game.draw_odds != null ? parseFloat(String(game.draw_odds)) : undefined

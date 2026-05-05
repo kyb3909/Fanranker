@@ -47,8 +47,22 @@ export function BettingMatchCard({
     gameType === "승패2way" ||
     gameType === "승1패" ||
     gameType === "승5패"
-  const mainGames = groupedMatch.games.filter((g) => isMainType(g.game_type))
-  const otherGames = groupedMatch.games.filter((g) => !isMainType(g.game_type))
+
+  // 배당이 비어있는 row 제외 — betman 측 마켓 미오픈/배당 미수신 케이스.
+  // sync.sh 가 odds=0 row 도 저장하므로 UI 레벨에서 가드. row 제거 + 모든 row 가
+  // 비면 카드 자체 hide 해서 사용자가 클릭해도 진입 불가능하게.
+  const hasAnyOdds = (g: SportsGame) => {
+    if (g.game_type === "SUM" || g.game_type === "SSUM") {
+      return (Number(g.odd_odds) || 0) > 0 || (Number(g.even_odds) || 0) > 0
+    }
+    if (g.game_type.includes("언더오버")) {
+      return (Number(g.over_odds) || 0) > 0 || (Number(g.under_odds) || 0) > 0
+    }
+    return (Number(g.home_odds) || 0) > 0 || (Number(g.away_odds) || 0) > 0
+  }
+  const visibleGames = groupedMatch.games.filter(hasAnyOdds)
+  const mainGames = visibleGames.filter((g) => isMainType(g.game_type))
+  const otherGames = visibleGames.filter((g) => !isMainType(g.game_type))
 
   // 다른 옵션 영역에 이미 선택된 베팅이 있다면 펼친 상태로 시작 (예: 페이지 재방문).
   const [expanded, setExpanded] = useState(() =>
@@ -101,6 +115,10 @@ export function BettingMatchCard({
 
     const isTwoColumn = isSUM || isOverUnder || !has3Way
 
+    // 옵션별 배당 누락 시 해당 버튼만 disable — row 단위 hasAnyOdds 통과해도
+    // 일부 옵션(예: 3-way 의 무 odds 만 누락)이 비어있을 수 있는 방어.
+    const optionUnavailable = (oddsVal?: number) => !oddsVal || Number(oddsVal) <= 0
+
     return (
       <div key={game.id} className="bg-muted/50 rounded-lg border p-2">
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
@@ -150,43 +168,49 @@ export function BettingMatchCard({
           )}
         </div>
         <div className={`grid gap-1.5 ${isTwoColumn ? "grid-cols-2" : "grid-cols-3"}`}>
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              className={`odds-btn rounded-md px-2 py-2.5 text-center transition-all ${
-                selectedBet?.selection === opt.value
-                  ? `${fillColor.bg} ${fillColor.text} border ${fillColor.border}`
-                  : "bg-card hover:bg-accent border"
-              } ${isDisabled ? "cursor-not-allowed opacity-50" : ""}`}
-              onClick={() =>
-                !isDisabled &&
-                onBetSelection(
-                  game.id,
-                  groupedMatch.matchKey,
-                  opt.value,
-                  game.sport,
-                  game.game_type,
-                  game.handicap,
-                  game.over_under_line,
-                  opt.odds
-                )
-              }
-              disabled={isDisabled}
-              aria-label={`${opt.label} 선택, 배점 ${opt.odds ? opt.odds.toFixed(2) : "없음"}`}
-              aria-pressed={selectedBet?.selection === opt.value}
-            >
-              <div className="text-foreground/85 truncate text-sm">{opt.label}</div>
-              <div
-                className={`font-[family-name:var(--font-display)] text-base font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
+          {options.map((opt) => {
+            const optDisabled = isDisabled || optionUnavailable(opt.odds)
+            return (
+              <button
+                key={opt.value}
+                className={`odds-btn rounded-md px-2 py-2.5 text-center transition-all ${
+                  selectedBet?.selection === opt.value
+                    ? `${fillColor.bg} ${fillColor.text} border ${fillColor.border}`
+                    : "bg-card hover:bg-accent border"
+                } ${optDisabled ? "cursor-not-allowed opacity-50" : ""}`}
+                onClick={() =>
+                  !optDisabled &&
+                  onBetSelection(
+                    game.id,
+                    groupedMatch.matchKey,
+                    opt.value,
+                    game.sport,
+                    game.game_type,
+                    game.handicap,
+                    game.over_under_line,
+                    opt.odds
+                  )
+                }
+                disabled={optDisabled}
+                aria-label={`${opt.label} 선택, 배점 ${opt.odds ? opt.odds.toFixed(2) : "없음"}`}
+                aria-pressed={selectedBet?.selection === opt.value}
               >
-                {opt.odds ? opt.odds.toFixed(2) : "-"}
-              </div>
-            </button>
-          ))}
+                <div className="text-foreground/85 truncate text-sm">{opt.label}</div>
+                <div
+                  className={`font-[family-name:var(--font-display)] text-base font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
+                >
+                  {opt.odds ? opt.odds.toFixed(2) : "-"}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     )
   }
+
+  // 모든 row 가 odds 없으면 카드 자체 hide — 사용자에게 진입 불가능한 카드 노출 X.
+  if (visibleGames.length === 0) return null
 
   return (
     <Card
