@@ -64,7 +64,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `data/agents/` — newsroom 멀티 에이전트 파이프라인 (자체 `package.json`)
 - `supabase/migrations/` — 86+ SQL 마이그레이션. 추가 시 기존 번호 규칙(`NNN_…` 또는 `YYYYMMDD_…`) 따를 것
 - `scripts/` — `tsx`로 실행되는 CLI (betman, standings, seed, parse 등)
-- `docs/` — 운영/PRD/아키텍처 (`PROJECT.md`, `BETMAN_SYSTEM.md`, `OPERATIONS.md`, `TEMPERATURE_FORMULA.md`, `CLERK_INTEGRATION.md` 등)
+- `docs/` — 운영/PRD/아키텍처. 자주 참조: `PROJECT.md`, `BETMAN_SYSTEM.md`, `OPERATIONS.md`, `TEMPERATURE_FORMULA.md`, `PRD-stadium-metaverse.md`, `PRD-live-room.md`, `METAVERSE_ASSET_WORKFLOW.md`, `AVATAR_LAYERING.md`, `QA_STRATEGY.md`, `MANUAL_QA_CHECKLIST_2026-04-19.md`, `PRELAUNCH_CHECKLIST_2026-04-19.md`, `Admin_prd.md`
 - `__tests__/`, `e2e/` — 단위 / E2E
 - `public/map/` — 픽셀아트 지도 (경기장 건설 시스템)
 
@@ -100,7 +100,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Feed: `s-maxage=15, swr=60`
 - Standings/ranking/betman games: `s-maxage=60, swr=300`
 - Mutation/auth (`upload|payments|tokens|admin|cron|auth`): `no-store`
+- CSP report (`/api/security/*`): `no-store`
 - 새 API 추가 시 위 패턴에 맞춰 분류.
+
+### 보안 헤더 / CSP (`next.config.mjs`)
+- 전 라우트에 `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geo 차단), HSTS 2년 + preload 적용.
+- **CSP 듀얼 모드**: 운영 정책(`Content-Security-Policy`, `unsafe-inline`/`unsafe-eval` 허용 — TipTap/광고 호환) + 관측용 strict 정책(`Content-Security-Policy-Report-Only`, 인라인 차단). 위반은 `/api/security/csp-report`로 수집.
+- 외부 스크립트/iframe/connect 추가 시 두 정책 **모두** 화이트리스트 갱신 필요. 1~2주 strict가 clean하면 enforce로 교체.
+- 이미지: `next/image` `remotePatterns`에 등록된 호스트만 허용 (YouTube, Instagram, Twitter, Supabase, Clerk avatars). 새 외부 호스트 사용 시 추가.
 
 ### Auth + DB
 - 로그인은 Clerk. 백엔드에서는 Clerk JWT로 Supabase RLS 인증.
@@ -116,6 +123,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Betman Sync** (`lib/betman/`, `scripts/betman-*.ts`) — Vultr 서울 VPS cron (`/opt/betman/sync.sh`, 2시간 간격). Vercel은 해외 IP라 betman.co.kr 직접 접근 불가.
 - **Stadium** (`lib/stadium/`, `app/stadium/`, `public/map/`) — 팀 경기장 10단계 + 토사장 게이지 이벤트.
 - **Metaverse** (`app/metaverse/`, `lib/metaverse/`, `components/metaverse/`) — Phaser 4 월드맵 + Supabase Realtime Presence/Broadcast + 팀 플레어 → 카르마 루프. 격리 원칙 (단방향 의존), DB는 `metaverse_*` 접두사 + `posts.flair_team_id` 하나만 기존 확장. GNB에서 숨김 — `/metaverse` 직접 URL 접근. dev 에서만 guest 자동 진입. 데이터 기반 인도어 맵(`lib/metaverse/scenes/indoor-map-scene.ts` + `lib/metaverse/maps/map-config.ts`)으로 경기장 내부 씬 생성, 페이드 전환. 상세는 `docs/PRD-stadium-metaverse.md` + `lib/metaverse/README.md`.
+- **Live Room** (PRD draft, `docs/PRD-live-room.md`) — 진행 중 경기에 자동 생성되는 픽셀아트 응원방 (최대 20명, Supabase Realtime). Metaverse 와 인프라 공유하지만 별도 기능. 미구현 — 신규 작업 시 PRD 먼저 확인.
 - **Draft Game** (`lib/draft/`, `app/games/draft/`) — 팬타지 드래프트, 다종목 확장 예정.
 - **Betting** (`components/betting/`, `lib/betman/`, `hooks/use-betting.ts`) — 토큰/골드 경제, pending refund, 정산. 토큰 차감은 `spend_tokens` RPC (반환 키 `remaining_balance`), 골드는 `spend_gold` RPC (반환 키 `remaining`).
 - **Battle** (migrations 056–057) — 유저 대 유저 대결.
