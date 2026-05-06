@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import useSWRInfinite from "swr/infinite"
-import type { TipTapNode } from "@/types/post"
+import type { TipTapNode, PostFlair } from "@/types/post"
 import type { TitleDisplay } from "@/types/user"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
@@ -25,6 +25,9 @@ interface RawPost {
   comment_count?: number
   temperature?: number
   created_at: string
+  flair_id?: string | null
+  // postgrest nested select — fk 관계라 단일 객체 또는 null. 일부 환경에서 배열로 올 수 있어 둘 다 허용.
+  post_flairs?: PostFlair | PostFlair[] | null
 }
 
 interface RawProfile {
@@ -81,6 +84,12 @@ function transformPosts(
         }
       : null
 
+    // post_flairs 가 단일 객체일 수도, 배열일 수도 있음 (postgrest 동작 환경 차이)
+    const rawFlair = Array.isArray(post.post_flairs) ? post.post_flairs[0] : post.post_flairs
+    const flair: PostFlair | null = rawFlair?.id
+      ? { id: rawFlair.id, name: rawFlair.name, color: rawFlair.color ?? null }
+      : null
+
     return {
       id: post.id,
       community: COMMUNITY_NAMES[post.community_slug] || post.community_slug,
@@ -102,6 +111,7 @@ function transformPosts(
       createdAt: new Date(post.created_at),
       titleDisplay,
       flairTitle: flairTitles?.[post.user_id] ?? null,
+      flair,
     }
   })
 }

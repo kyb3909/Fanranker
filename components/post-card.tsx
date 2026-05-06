@@ -78,6 +78,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             priority={priority}
             category={post.community}
             categoryLink={communityLink}
+            flair={post.flair}
           />
           <PostCardMeta
             postId={post.id}

@@ -20,6 +20,7 @@ import { extractYouTubeId } from "@/lib/embed/youtube"
 import { useInView } from "@/hooks/use-in-view"
 import { useVisibility } from "@/hooks/use-visibility"
 import type { TipTapNode } from "@/components/post-card"
+import type { PostFlair } from "@/types/post"
 
 export interface PostCardContentProps {
   postId: number | string
@@ -40,6 +41,7 @@ export interface PostCardContentProps {
   priority: boolean
   category?: string
   categoryLink?: string
+  flair?: PostFlair | null
 }
 
 export const PostCardContent = memo(function PostCardContent({
@@ -53,25 +55,37 @@ export const PostCardContent = memo(function PostCardContent({
   priority,
   category,
   categoryLink,
+  flair,
 }: PostCardContentProps) {
   const hasSingleImage = !!displayImage && !firstEmbed && imageSources.length <= 1
 
   return (
     <div>
-      {/* 카테고리 라벨 — 에디토리얼 톤 */}
+      {/* 카테고리 라벨 — 에디토리얼 톤. flair 있으면 "게시판 · flair" 형태. */}
       {category && (
-        <div className="mb-1.5">
+        <div className="font-title mb-1.5 text-[11px] font-semibold tracking-[0.06em] uppercase">
           {categoryLink ? (
             <Link
               href={`/community/${categoryLink}`}
-              className="font-title text-primary inline-block text-[11px] font-semibold tracking-[0.06em] uppercase hover:underline"
+              className="text-primary inline-block hover:underline"
             >
               {category}
             </Link>
           ) : (
-            <span className="font-title text-primary text-[11px] font-semibold tracking-[0.06em] uppercase">
-              {category}
-            </span>
+            <span className="text-primary">{category}</span>
+          )}
+          {flair?.name && (
+            <>
+              <span aria-hidden className="text-muted-foreground/50 mx-1.5">
+                ·
+              </span>
+              <span
+                className={flair.color ? undefined : "text-primary"}
+                style={flair.color ? { color: flair.color } : undefined}
+              >
+                {flair.name}
+              </span>
+            </>
           )}
         </div>
       )}

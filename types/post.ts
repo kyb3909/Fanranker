@@ -9,6 +9,13 @@ export interface TipTapNode {
   marks?: { type: string; attrs?: Record<string, unknown> }[]
 }
 
+/** 게시글 분류용 flair (post_flairs 테이블 — 게시판 내 세부 카테고리, 예: "아스날", "분석") */
+export interface PostFlair {
+  id: string
+  name: string
+  color: string | null
+}
+
 /** 피드/카드에 표시되는 게시글 (변환된 형태) */
 export interface Post {
   id: string | number
@@ -28,4 +35,5 @@ export interface Post {
   createdAt?: Date | string
   titleDisplay?: TitleDisplay | null
   flairTitle?: string | null
+  flair?: PostFlair | null
 }
