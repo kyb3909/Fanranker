@@ -16,6 +16,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { GlobalReportDialog } from "@/components/global-report-dialog"
 import { PWARegister } from "@/components/pwa-register"
 import "./globals.css"
+// 월드컵에서 추출된 에디토리얼 디자인 토큰. 모든 셀렉터가 .worldcup-scope prefix 라
+// 다른 페이지엔 영향 없음 — .worldcup-scope wrapper 가 있는 트리에서만 활성화.
+import "./worldcup/wc-tokens.css"
 
 // 본문/UI 한글 폰트: Pretendard Std Variable (KS X 1001 subset, ~286 KB).
 // 한국어 웹 텍스트 ~98% 커버, 누락 글리프는 시스템 폰트 폴백.
