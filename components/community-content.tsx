@@ -273,12 +273,27 @@ export const CommunityContent = memo(function CommunityContent({
                 <Link
                   key={post.id}
                   href={`/post/${post.id}`}
-                  className={`border-border hover:bg-muted/50 block gap-2 border-b px-3 py-2.5 text-xs transition-colors last:border-0 sm:grid sm:grid-cols-10 ${post.isNotice ? "bg-muted/30" : ""}`}
+                  className="block gap-2 px-3 py-2.5 text-xs transition-colors last:border-0 sm:grid sm:grid-cols-10"
+                  style={{
+                    borderBottom: "1px solid var(--wc-line)",
+                    background: post.isNotice ? "var(--wc-soft)" : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!post.isNotice) e.currentTarget.style.background = "var(--wc-soft)"
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!post.isNotice) e.currentTarget.style.background = "transparent"
+                  }}
                 >
                   {/* 데스크탑 레이아웃 */}
-                  <div className="text-muted-foreground col-span-1 hidden text-center sm:block">
+                  <div
+                    className="col-span-1 hidden text-center tabular-nums sm:block"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     {post.isNotice ? (
-                      <span className="font-semibold text-rose-500">공지</span>
+                      <span className="font-bold" style={{ color: "var(--wc-burgundy)" }}>
+                        공지
+                      </span>
                     ) : (
                       totalCount - (currentPage - 1) * 25 - index
                     )}
@@ -295,27 +310,46 @@ export const CommunityContent = memo(function CommunityContent({
                         {post.flair.name}
                       </span>
                     )}
-                    <span className="text-foreground truncate font-medium">{post.title}</span>
+                    <span className="truncate font-semibold" style={{ color: "var(--wc-ink)" }}>
+                      {post.title}
+                    </span>
                     {post.comments > 0 && (
-                      <span className="flex-shrink-0 font-medium text-orange-500">
+                      <span
+                        className="flex-shrink-0 font-bold tabular-nums"
+                        style={{ color: "var(--wc-warn)" }}
+                      >
                         [{post.comments}]
                       </span>
                     )}
                   </div>
-                  <div className="text-muted-foreground col-span-2 hidden truncate text-center sm:block">
+                  <div
+                    className="col-span-2 hidden truncate text-center sm:block"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     {post.author}
                   </div>
-                  <div className="text-muted-foreground col-span-1 hidden text-center sm:block">
+                  <div
+                    className="col-span-1 hidden text-center sm:block"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     {post.timestamp}
                   </div>
-                  <div className="text-muted-foreground col-span-1 hidden text-center tabular-nums sm:block">
+                  <div
+                    className="col-span-1 hidden text-center tabular-nums sm:block"
+                    style={{ color: "var(--wc-ink)", fontWeight: 600 }}
+                  >
                     {post.upvotes}
                   </div>
                   {/* 모바일 레이아웃 */}
                   <div className="grid grid-cols-12 items-center gap-1 sm:hidden">
                     <div className="col-span-8 flex min-w-0 items-center gap-1.5">
                       {post.isNotice && (
-                        <span className="shrink-0 font-semibold text-rose-500">[공지]</span>
+                        <span
+                          className="shrink-0 font-bold"
+                          style={{ color: "var(--wc-burgundy)" }}
+                        >
+                          [공지]
+                        </span>
                       )}
                       {!post.isNotice && post.flair && (
                         <span
@@ -328,22 +362,30 @@ export const CommunityContent = memo(function CommunityContent({
                           {post.flair.name}
                         </span>
                       )}
-                      <span className="text-foreground truncate font-medium">{post.title}</span>
+                      <span className="truncate font-semibold" style={{ color: "var(--wc-ink)" }}>
+                        {post.title}
+                      </span>
                       {post.comments > 0 && (
-                        <span className="shrink-0 font-medium text-orange-500">
+                        <span
+                          className="shrink-0 font-bold tabular-nums"
+                          style={{ color: "var(--wc-warn)" }}
+                        >
                           [{post.comments}]
                         </span>
                       )}
                     </div>
-                    <div className="text-muted-foreground col-span-4 truncate text-right">
+                    <div
+                      className="col-span-4 truncate text-right"
+                      style={{ color: "var(--wc-mute)" }}
+                    >
                       {post.author}
                     </div>
                   </div>
                 </Link>
               ))
             ) : (
-              <div className="p-6 text-center">
-                <p className="text-muted-foreground text-sm">아직 게시물이 없습니다.</p>
+              <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
+                <p className="text-sm">아직 게시물이 없습니다.</p>
               </div>
             )}
           </div>
