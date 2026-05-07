@@ -1,6 +1,5 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useState, useMemo, memo } from "react"
 import { useAuth } from "@clerk/nextjs"
@@ -323,26 +322,54 @@ export const CommunitySidebar = memo(function CommunitySidebar({
 
   return (
     <div ref={stickyRef} className="sticky flex flex-col gap-4" style={{ top: `${stickyTop}px` }}>
-      <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-primary flex items-center gap-2 text-[13px] font-semibold">
+      <div
+        className="relative overflow-hidden rounded-lg"
+        style={{
+          background: "var(--wc-card)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{
+            background: "var(--wc-soft)",
+            borderBottom: "1px solid var(--wc-line)",
+          }}
+        >
+          <h3
+            className="flex items-center gap-2 text-[11px] font-bold uppercase"
+            style={{
+              color: "var(--wc-burgundy)",
+              letterSpacing: "0.18em",
+            }}
+          >
             <LayoutGrid className="h-3.5 w-3.5" />
             게시판
           </h3>
           <button
             onClick={toggleSearch}
-            className="hover:bg-muted rounded-lg p-1.5 transition-colors"
+            className="rounded-lg p-1.5 transition-colors"
             aria-label="게시판 검색"
+            style={{
+              color: isSearchOpen ? "var(--wc-burgundy)" : "var(--wc-mute)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--wc-card)"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent"
+            }}
           >
-            <Search
-              className={`h-4 w-4 ${isSearchOpen ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            />
+            <Search className="h-4 w-4" />
           </button>
         </div>
         {isSearchOpen && (
-          <div className="border-border border-b px-4 py-2">
+          <div className="px-4 py-2" style={{ borderBottom: "1px solid var(--wc-line)" }}>
             <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Search
+                className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                style={{ color: "var(--wc-mute)" }}
+              />
               <Input
                 type="text"
                 placeholder="게시판 검색..."
@@ -389,7 +416,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
             </>
           )}
         </div>
-      </Card>
+      </div>
 
       <AdPlaceholder variant="sidebar" />
 

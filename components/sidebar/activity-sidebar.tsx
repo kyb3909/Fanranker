@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, memo, Fragment } from "react"
 import dynamic from "next/dynamic"
 import { MessageSquare, Loader2 } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import Link from "@/components/ui/app-link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
@@ -130,34 +129,73 @@ export const ActivitySidebar = memo(function ActivitySidebar({
       {showPrize && <MonthlyPrizeBanner />}
 
       {/* ===== 최근 댓글 섹션 ===== */}
-      <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
-        <div className="flex items-center gap-2 px-4 py-3">
-          <MessageSquare className="text-primary h-3.5 w-3.5" />
-          <h3 className="text-primary text-[13px] font-semibold">최근 댓글 달린 게시물</h3>
+      <div
+        className="relative overflow-hidden rounded-lg"
+        style={{
+          background: "var(--wc-card)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
+        <div
+          className="flex items-center gap-2 px-4 py-3"
+          style={{
+            background: "var(--wc-soft)",
+            borderBottom: "1px solid var(--wc-line)",
+          }}
+        >
+          <MessageSquare className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
+          <h3
+            className="text-[11px] font-bold uppercase"
+            style={{
+              color: "var(--wc-burgundy)",
+              letterSpacing: "0.18em",
+            }}
+          >
+            최근 댓글 달린 게시물
+          </h3>
         </div>
 
         <div className="py-1">
           {isLoadingPosts ? (
             <div className="p-4 text-center">
-              <Loader2 className="text-muted-foreground mx-auto h-5 w-5 animate-spin" />
+              <Loader2
+                className="mx-auto h-5 w-5 animate-spin"
+                style={{ color: "var(--wc-mute)" }}
+              />
             </div>
           ) : recentPosts.length > 0 ? (
             recentPosts.map((post, idx) => (
               <Fragment key={post.id}>
-                {idx > 0 && <div className="mx-4 border-t" />}
+                {idx > 0 && (
+                  <div className="mx-4" style={{ borderTop: "1px solid var(--wc-line)" }} />
+                )}
                 <Link
                   href={`/post/${post.id}`}
-                  className="hover:bg-muted/40 flex items-center gap-2 px-4 py-2.5 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 transition-colors"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--wc-soft)"
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent"
+                  }}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <p className="text-foreground truncate text-[13px] font-medium">{post.title}</p>
+                    <p
+                      className="truncate text-[13px] font-semibold"
+                      style={{ color: "var(--wc-ink)" }}
+                    >
+                      {post.title}
+                    </p>
                     {post.comments > 0 && (
-                      <span className="text-primary shrink-0 text-[11px] font-medium">
+                      <span
+                        className="shrink-0 text-[11px] font-bold tabular-nums"
+                        style={{ color: "var(--wc-warn)" }}
+                      >
                         [{post.comments}]
                       </span>
                     )}
                   </div>
-                  <span className="text-muted-foreground shrink-0 text-[12px]">
+                  <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute)" }}>
                     {post.community}
                   </span>
                 </Link>
@@ -165,11 +203,13 @@ export const ActivitySidebar = memo(function ActivitySidebar({
             ))
           ) : (
             <div className="p-4 text-center">
-              <p className="text-muted-foreground text-xs">최근 댓글이 없습니다.</p>
+              <p className="text-xs" style={{ color: "var(--wc-mute)" }}>
+                최근 댓글이 없습니다.
+              </p>
             </div>
           )}
         </div>
-      </Card>
+      </div>
 
       {/* ===== 광고 플레이스홀더 ===== */}
       <AdPlaceholder variant="sidebar" />
