@@ -171,19 +171,28 @@ export const CommunityContent = memo(function CommunityContent({
           </div>
 
           <div className="bg-card border-border overflow-hidden rounded-lg border">
-            {/* 테이블 상단: 말머리 필터 + 글쓰기 */}
-            <div className="border-border bg-muted/50 flex items-center justify-between gap-2 border-b px-3 py-2">
+            {/* 테이블 상단: 말머리 필터 + 글쓰기 — wc-soft strip */}
+            <div
+              className="flex items-center justify-between gap-2 px-3 py-2"
+              style={{
+                background: "var(--wc-soft)",
+                borderBottom: "1px solid var(--wc-line)",
+              }}
+            >
               {/* 말머리 필터 */}
               <div className="flex flex-wrap items-center gap-1">
                 {flairs.length > 0 && (
                   <>
                     <Link
                       href={`/community/${communitySlug}`}
-                      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 sm:min-w-0 ${
-                        !activeFlairId
-                          ? "bg-foreground text-background"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors sm:min-h-0 sm:min-w-0"
+                      style={{
+                        background: !activeFlairId ? "var(--wc-burgundy)" : "var(--wc-card)",
+                        color: !activeFlairId ? "white" : "var(--wc-mute)",
+                        border: !activeFlairId
+                          ? "1px solid var(--wc-burgundy)"
+                          : "1px solid var(--wc-line-2)",
+                      }}
                     >
                       전체
                     </Link>
@@ -191,17 +200,14 @@ export const CommunityContent = memo(function CommunityContent({
                       <Link
                         key={f.id}
                         href={`/community/${communitySlug}?flair=${f.id}`}
-                        className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:min-h-0 sm:min-w-0 ${
-                          activeFlairId === f.id
-                            ? "text-white"
-                            : "text-muted-foreground hover:opacity-80"
-                        }`}
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors hover:opacity-90 sm:min-h-0 sm:min-w-0"
                         style={{
-                          backgroundColor: activeFlairId === f.id ? f.color : undefined,
-                          ...(activeFlairId !== f.id && {
-                            backgroundColor: `${f.color}15`,
-                            color: f.color,
-                          }),
+                          backgroundColor: activeFlairId === f.id ? f.color : `${f.color}15`,
+                          color: activeFlairId === f.id ? "white" : f.color,
+                          border:
+                            activeFlairId === f.id
+                              ? `1px solid ${f.color}`
+                              : "1px solid var(--wc-line-2)",
                         }}
                       >
                         {f.name}
@@ -211,11 +217,17 @@ export const CommunityContent = memo(function CommunityContent({
                 )}
               </div>
               {communitySlug && (
-                <Link href={`/write?community=${communitySlug}`} className="shrink-0">
-                  <Button size="sm" className="h-11 gap-1.5 px-3 text-xs sm:h-7">
-                    <Pencil className="h-3.5 w-3.5" />
-                    글쓰기
-                  </Button>
+                <Link
+                  href={`/write?community=${communitySlug}`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-[12px] font-bold transition-colors"
+                  style={{
+                    background: "var(--wc-burgundy)",
+                    color: "white",
+                    minHeight: 36,
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  글쓰기
                 </Link>
               )}
             </div>
