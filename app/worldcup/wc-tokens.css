@@ -162,6 +162,177 @@
   font-weight: 500;
 }
 
+/* ─── Match row (시안 .mrow) — 베팅 카드 ─────────────────── */
+.worldcup-scope .wc-mrow {
+  background: var(--wc-card);
+  border-radius: 10px;
+  box-shadow: var(--wc-shadow-1);
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.worldcup-scope .wc-mrow.selected {
+  box-shadow:
+    0 0 0 2px var(--wc-burgundy),
+    var(--wc-shadow-2);
+}
+.worldcup-scope .wc-mrow-head {
+  background: var(--wc-soft);
+  padding: 8px 14px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wc-mute);
+  border-bottom: 1px solid var(--wc-line);
+}
+.worldcup-scope .wc-mrow-head-lg {
+  font-weight: 700;
+  color: var(--wc-burgundy);
+  letter-spacing: 0.04em;
+}
+.worldcup-scope .wc-mrow-head-time {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--wc-mute);
+}
+.worldcup-scope .wc-mrow-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 12px 14px;
+  text-align: center;
+  gap: 10px;
+}
+.worldcup-scope .wc-mrow-team {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wc-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.worldcup-scope .wc-mrow-vs {
+  font-size: 12px;
+  color: var(--wc-mute-2);
+  font-weight: 600;
+}
+.worldcup-scope .wc-mrow-block {
+  background: var(--wc-soft);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 0 12px 8px;
+  border: 1px solid var(--wc-line);
+}
+.worldcup-scope .wc-mrow-block-h {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.worldcup-scope .wc-mrow-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 24px);
+  margin: 0 12px 12px;
+  padding: 10px;
+  background: transparent;
+  border: 1px dashed var(--wc-line-2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--wc-mute);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  min-height: 44px;
+}
+.worldcup-scope .wc-mrow-toggle:hover {
+  background: var(--wc-card);
+  color: var(--wc-ink);
+  border-style: solid;
+}
+@media (min-width: 640px) {
+  .worldcup-scope .wc-mrow-toggle {
+    min-height: 0;
+  }
+}
+.worldcup-scope .wc-mrow-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 12px 12px;
+  padding: 8px;
+  background: rgba(47, 125, 91, 0.12);
+  border-radius: 6px;
+  color: var(--wc-go);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ─── Odds button (시안 .odd) ────────────────────────────── */
+.worldcup-scope .wc-odd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--wc-card);
+  border: 1px solid var(--wc-line-2);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  min-height: 56px;
+}
+.worldcup-scope .wc-odd:hover:not(:disabled):not(.on) {
+  border-color: var(--wc-burgundy);
+  background: var(--wc-soft);
+}
+.worldcup-scope .wc-odd.on {
+  background: var(--wc-burgundy);
+  color: white;
+  border-color: var(--wc-burgundy);
+}
+.worldcup-scope .wc-odd:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.worldcup-scope .wc-odd-l {
+  color: var(--wc-mute);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.worldcup-scope .wc-odd.on .wc-odd-l {
+  color: rgba(255, 255, 255, 0.85);
+}
+.worldcup-scope .wc-odd-n {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-odd.on .wc-odd-n {
+  color: white;
+}
+
 /* ─── Z1.1 Hero ─────────────────────────────────────────────────────── */
 .worldcup-scope .wc-hero {
   background: linear-gradient(

@@ -1,17 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Clock, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import type { GroupedMatch, SelectedBet, SportsGame } from "./betting-types"
-import {
-  sportColors,
-  sportColorFill,
-  SPORT_ICONS,
-  getGameTypeLabel,
-  formatMatchTime,
-} from "./betting-types"
+import { SPORT_ICONS, getGameTypeLabel, formatMatchTime } from "./betting-types"
 
 interface BettingMatchCardProps {
   groupedMatch: GroupedMatch
@@ -35,8 +27,6 @@ export function BettingMatchCard({
   selectedSport,
   onBetSelection,
 }: BettingMatchCardProps) {
-  const fillColor = sportColorFill[groupedMatch.sport] || sportColorFill["축구"]
-  const headerColor = sportColors[groupedMatch.sport] || sportColors["축구"]
   const hasSelectionFromThisMatch = selectedBets.some((b) => b.matchKey === groupedMatch.matchKey)
 
   // 메인(승무패/승패) vs 나머지(핸디캡·언오버·합계). 메인은 항상 보이고 나머지는 토글.
@@ -119,65 +109,92 @@ export function BettingMatchCard({
     // 일부 옵션(예: 3-way 의 무 odds 만 누락)이 비어있을 수 있는 방어.
     const optionUnavailable = (oddsVal?: number) => !oddsVal || Number(oddsVal) <= 0
 
+    const badgeBase = {
+      fontSize: 11,
+      borderRadius: 4,
+    } as const
+    const badgeNeutral = {
+      ...badgeBase,
+      background: "var(--wc-card)",
+      color: "var(--wc-mute)",
+      border: "1px solid var(--wc-line-2)",
+    } as const
+    const badgeBurgundy = {
+      ...badgeBase,
+      background: "rgba(160,32,59,0.1)",
+      color: "var(--wc-burgundy)",
+      border: "1px solid rgba(160,32,59,0.4)",
+    } as const
+    const badgeBlue = {
+      ...badgeBase,
+      background: "rgba(45,91,215,0.1)",
+      color: "var(--wc-blue)",
+      border: "1px solid rgba(45,91,215,0.4)",
+    } as const
+
     return (
-      <div key={game.id} className="bg-muted/50 rounded-lg border p-2">
-        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
-          <div className="flex items-center gap-1">
-            <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-medium">
-              {gameTypeLabel}
-            </Badge>
-            {/* Handicap badge */}
-            {game.game_type.includes("핸디캡") &&
-              (game.handicap !== null && game.handicap !== 0 ? (
-                <Badge
-                  variant="outline"
-                  className="border-primary/40 bg-primary/15 text-primary px-1.5 py-0 text-[11px] font-medium"
-                >
-                  {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? "+" : ""}
-                  {game.handicap}
-                </Badge>
-              ) : (
-                <Badge
-                  variant="outline"
-                  className="bg-muted text-muted-foreground border-border px-1.5 py-0 text-[11px]"
-                >
-                  핸디캡 정보 없음
-                </Badge>
-              ))}
-            {/* Over/Under line badge */}
-            {game.game_type.includes("언더오버") &&
-              (game.over_under_line !== null && game.over_under_line !== undefined ? (
-                <Badge
-                  variant="outline"
-                  className="border-purple-300 bg-purple-100 px-1.5 py-0 text-[11px] font-medium text-purple-800"
-                >
-                  기준 {game.over_under_line}
-                </Badge>
-              ) : (
-                <Badge
-                  variant="outline"
-                  className="bg-muted text-muted-foreground border-border px-1.5 py-0 text-[11px]"
-                >
-                  기준선 정보 없음
-                </Badge>
-              ))}
+      <div key={game.id} className="wc-mrow-block">
+        <div className="wc-mrow-block-h">
+          <span className="inline-flex items-center px-2 py-0.5 font-semibold" style={badgeNeutral}>
+            {gameTypeLabel}
+          </span>
+          {/* Handicap badge */}
+          {game.game_type.includes("핸디캡") &&
+            (game.handicap !== null && game.handicap !== 0 ? (
+              <span
+                className="inline-flex items-center px-2 py-0.5 font-semibold"
+                style={badgeBurgundy}
+              >
+                {groupedMatch.homeTeam.slice(0, 3)} {game.handicap > 0 ? "+" : ""}
+                {game.handicap}
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center px-2 py-0.5 font-semibold"
+                style={badgeNeutral}
+              >
+                핸디캡 정보 없음
+              </span>
+            ))}
+          {/* Over/Under line badge */}
+          {game.game_type.includes("언더오버") &&
+            (game.over_under_line !== null && game.over_under_line !== undefined ? (
+              <span
+                className="inline-flex items-center px-2 py-0.5 font-semibold"
+                style={badgeBlue}
+              >
+                기준 {game.over_under_line}
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center px-2 py-0.5 font-semibold"
+                style={badgeNeutral}
+              >
+                기준선 정보 없음
+              </span>
+            ))}
+          <div className="ml-auto flex items-center gap-2">
+            {gameBetClosed && (
+              <span style={{ color: "var(--wc-burgundy)", fontSize: 11, fontWeight: 700 }}>
+                마감
+              </span>
+            )}
+            {sportMismatch && !gameBetClosed && (
+              <span style={{ color: "var(--wc-warn)", fontSize: 11, fontWeight: 700 }}>
+                다른 종목
+              </span>
+            )}
           </div>
-          {gameBetClosed && <span className="text-primary text-xs font-medium">마감</span>}
-          {sportMismatch && !gameBetClosed && (
-            <span className="text-xs text-orange-500">다른 종목</span>
-          )}
         </div>
         <div className={`grid gap-1.5 ${isTwoColumn ? "grid-cols-2" : "grid-cols-3"}`}>
           {options.map((opt) => {
             const optDisabled = isDisabled || optionUnavailable(opt.odds)
+            const isSelected = selectedBet?.selection === opt.value
             return (
               <button
                 key={opt.value}
-                className={`odds-btn rounded-md px-2 py-2.5 text-center transition-all ${
-                  selectedBet?.selection === opt.value
-                    ? `${fillColor.bg} ${fillColor.text} border ${fillColor.border}`
-                    : "bg-card hover:bg-accent border"
-                } ${optDisabled ? "cursor-not-allowed opacity-50" : ""}`}
+                type="button"
+                className={`wc-odd${isSelected ? "on" : ""}`}
                 onClick={() =>
                   !optDisabled &&
                   onBetSelection(
@@ -193,14 +210,10 @@ export function BettingMatchCard({
                 }
                 disabled={optDisabled}
                 aria-label={`${opt.label} 선택, 배점 ${opt.odds ? opt.odds.toFixed(2) : "없음"}`}
-                aria-pressed={selectedBet?.selection === opt.value}
+                aria-pressed={isSelected}
               >
-                <div className="text-foreground/85 truncate text-sm">{opt.label}</div>
-                <div
-                  className={`font-[family-name:var(--font-display)] text-base font-bold ${selectedBet?.selection === opt.value ? "" : "text-foreground"}`}
-                >
-                  {opt.odds ? opt.odds.toFixed(2) : "-"}
-                </div>
+                <span className="wc-odd-l">{opt.label}</span>
+                <span className="wc-odd-n">{opt.odds ? opt.odds.toFixed(2) : "-"}</span>
               </button>
             )
           })}
@@ -213,79 +226,69 @@ export function BettingMatchCard({
   if (visibleGames.length === 0) return null
 
   return (
-    <Card
-      className={`overflow-hidden border-0 shadow-sm ${hasSelectionFromThisMatch ? "ring-primary ring-2" : ""}`}
-    >
-      {/* Match Header — 종목별 파스텔 그라데이션 (축구 emerald · 야구 blue · 농구 orange · 배구 purple) */}
-      <div
-        className={`${headerColor.bg} ${headerColor.text} flex items-center justify-between px-3 py-2`}
-      >
-        <div className="flex items-center gap-1.5">
-          <span className="text-base">{SPORT_ICONS[groupedMatch.sport] || "⚽"}</span>
-          <span className="text-sm font-semibold">{groupedMatch.leagueCode}</span>
-        </div>
-        <div className="flex items-center gap-1 text-sm opacity-90">
+    <div className={`wc-mrow${hasSelectionFromThisMatch ? "selected" : ""}`}>
+      {/* Match Header — 시안 .mrow-head (단일 톤 + league 강조) */}
+      <div className="wc-mrow-head">
+        <span className="text-base" aria-hidden>
+          {SPORT_ICONS[groupedMatch.sport] || "⚽"}
+        </span>
+        <span className="wc-mrow-head-lg">{groupedMatch.leagueCode}</span>
+        <span className="wc-mrow-head-time">
           <Clock className="h-3.5 w-3.5" />
-          <span>{formatMatchTime(groupedMatch.matchTime)}</span>
-        </div>
+          {formatMatchTime(groupedMatch.matchTime)}
+        </span>
       </div>
 
       {/* Teams */}
-      <div className="px-2 pb-1.5">
-        <div className="flex items-center justify-center gap-2 py-1.5 sm:gap-3">
-          <span className="max-w-[40%] min-w-0 truncate text-base font-bold">
-            {groupedMatch.homeTeam}
-          </span>
-          <span className="text-foreground/80 shrink-0 text-sm">vs</span>
-          <span className="max-w-[40%] min-w-0 truncate text-base font-bold">
-            {groupedMatch.awayTeam}
-          </span>
-        </div>
+      <div className="wc-mrow-teams">
+        <span className="wc-mrow-team" style={{ textAlign: "right" }}>
+          {groupedMatch.homeTeam}
+        </span>
+        <span className="wc-mrow-vs">vs</span>
+        <span className="wc-mrow-team" style={{ textAlign: "left" }}>
+          {groupedMatch.awayTeam}
+        </span>
       </div>
 
       {/* Game Types — 메인(승무패)는 항상 표시, 나머지는 토글로 펼침.
           펼친 상태에선 접기 버튼이 추가 옵션 아래(맨 끝)로 이동.
           승무패 데이터 누락 시엔 전체를 인라인으로 보여 토글만 외로이 떠있는 상황 방지. */}
-      <div className="space-y-2 px-2 pb-2">
-        {mainGames.length > 0 ? mainGames.map(renderGameBlock) : otherGames.map(renderGameBlock)}
+      {mainGames.length > 0 ? mainGames.map(renderGameBlock) : otherGames.map(renderGameBlock)}
 
-        {mainGames.length > 0 &&
-          otherGames.length > 0 &&
-          (expanded ? (
-            <>
-              {otherGames.map(renderGameBlock)}
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                aria-expanded={true}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/40 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors sm:min-h-0"
-              >
-                옵션 접기
-                <ChevronUp className="h-3.5 w-3.5" />
-              </button>
-            </>
-          ) : (
+      {mainGames.length > 0 &&
+        otherGames.length > 0 &&
+        (expanded ? (
+          <>
+            {otherGames.map(renderGameBlock)}
             <button
               type="button"
-              onClick={() => setExpanded(true)}
-              aria-expanded={false}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/40 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors sm:min-h-0"
+              onClick={() => setExpanded(false)}
+              aria-expanded={true}
+              className="wc-mrow-toggle"
             >
-              다른 옵션 보기 ({otherLabels}) +{otherGames.length}
-              <ChevronDown className="h-3.5 w-3.5" />
+              옵션 접기
+              <ChevronUp className="h-3.5 w-3.5" />
             </button>
-          ))}
-      </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            aria-expanded={false}
+            className="wc-mrow-toggle"
+          >
+            다른 옵션 보기 ({otherLabels}) +{otherGames.length}
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        ))}
 
       {/* Selection Status */}
       {hasSelectionFromThisMatch && (
-        <div className="px-2 pb-2">
-          <div className="flex items-center justify-center gap-1.5 rounded bg-emerald-50 py-1.5 text-emerald-600">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">선택됨</span>
-          </div>
+        <div className="wc-mrow-status">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span>선택됨</span>
         </div>
       )}
-    </Card>
+    </div>
   )
 }
