@@ -170,7 +170,10 @@ export const CommunityContent = memo(function CommunityContent({
             </button>
           </div>
 
-          <div className="bg-card border-border overflow-hidden rounded-lg border">
+          <div
+            className="overflow-hidden rounded-lg"
+            style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+          >
             {/* 테이블 상단: 말머리 필터 + 글쓰기 — wc-soft strip */}
             <div
               className="flex items-center justify-between gap-2 px-3 py-2"
@@ -232,8 +235,17 @@ export const CommunityContent = memo(function CommunityContent({
               )}
             </div>
 
-            {/* 테이블 헤더 */}
-            <div className="border-border bg-muted/30 text-muted-foreground hidden grid-cols-10 gap-2 border-b px-3 py-2.5 text-xs font-medium sm:grid">
+            {/* 테이블 헤더 — wc-soft tone, uppercase eyebrow letter-spacing */}
+            <div
+              className="hidden grid-cols-10 gap-2 px-3 py-2.5 text-[11px] font-bold sm:grid"
+              style={{
+                background: "var(--wc-soft)",
+                color: "var(--wc-mute)",
+                borderBottom: "1px solid var(--wc-line)",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
               <div className="col-span-1 text-center">번호</div>
               <div className="col-span-5">제목</div>
               <div className="col-span-2 text-center">글쓴이</div>
@@ -241,7 +253,16 @@ export const CommunityContent = memo(function CommunityContent({
               <div className="col-span-1 text-center">추천</div>
             </div>
             {/* 모바일 헤더 */}
-            <div className="border-border bg-muted/30 text-muted-foreground grid grid-cols-12 gap-1 border-b px-3 py-2.5 text-xs font-medium sm:hidden">
+            <div
+              className="grid grid-cols-12 gap-1 px-3 py-2.5 text-[11px] font-bold sm:hidden"
+              style={{
+                background: "var(--wc-soft)",
+                color: "var(--wc-mute)",
+                borderBottom: "1px solid var(--wc-line)",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
               <div className="col-span-8">제목</div>
               <div className="col-span-4 text-right">글쓴이</div>
             </div>
