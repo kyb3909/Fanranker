@@ -19,7 +19,14 @@ export function Header() {
   const { openSignIn } = useClerk()
 
   return (
-    <header className="border-border sticky top-0 z-50 w-full border-b bg-white/85 pt-[env(safe-area-inset-top)] shadow-sm backdrop-blur-xl">
+    <header
+      className="sticky top-0 z-50 w-full pt-[env(safe-area-inset-top)] backdrop-blur-xl"
+      style={{
+        background: "rgba(255, 255, 255, 0.92)",
+        borderBottom: "4px solid var(--wc-burgundy, #A0203B)",
+        boxShadow: "0 1px 2px rgba(26, 20, 22, 0.04)",
+      }}
+    >
       <div className="mx-auto max-w-[1280px] px-3 sm:px-10">
         <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2">
           {/* Logo */}
@@ -39,11 +46,13 @@ export function Header() {
                 <Image src="/logo-brush.webp" alt="" width={128} height={38} priority />
               </span>
               <span
-                className="text-foreground relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
-                style={{ letterSpacing: "-0.02em" }}
+                className="relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
+                style={{ letterSpacing: "-0.02em", color: "var(--wc-ink, #1A1416)" }}
               >
                 <span className="font-bold">gongnori</span>
-                <span className="text-primary font-normal">.fan</span>
+                <span className="font-normal" style={{ color: "var(--wc-burgundy, #A0203B)" }}>
+                  .fan
+                </span>
               </span>
             </Link>
           </div>

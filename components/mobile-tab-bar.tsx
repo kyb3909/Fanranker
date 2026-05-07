@@ -43,8 +43,13 @@ function MobileTabBarContent() {
 
   return (
     <nav
-      className="safe-area-pb fixed right-0 bottom-0 left-0 z-50 border-t border-[#EEEEEE] bg-white/85 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] backdrop-blur-xl sm:hidden"
+      className="safe-area-pb fixed right-0 bottom-0 left-0 z-50 backdrop-blur-xl sm:hidden"
       aria-label="모바일 메뉴"
+      style={{
+        background: "rgba(255, 255, 255, 0.92)",
+        borderTop: "1px solid var(--wc-line, #efe7e0)",
+        boxShadow: "0 -4px 12px rgba(26, 20, 22, 0.05)",
+      }}
     >
       <div className="flex h-14 items-center justify-around px-2">
         {tabs.map((tab) => {
@@ -53,9 +58,10 @@ function MobileTabBarContent() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex min-h-[48px] min-w-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 transition-colors ${
-                isActive ? "text-primary" : "text-muted-foreground"
-              }`}
+              className="flex min-h-[48px] min-w-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 transition-colors"
+              style={{
+                color: isActive ? "var(--wc-burgundy, #a0203b)" : "var(--wc-mute, #7a6b65)",
+              }}
             >
               <tab.icon className={`h-[22px] w-[22px] ${isActive ? "stroke-[2.5]" : ""}`} />
               <span className="font-sans text-[11px] font-medium tracking-tight">{tab.label}</span>

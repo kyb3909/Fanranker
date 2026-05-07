@@ -5,11 +5,10 @@ import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
 import { Compass, LayoutGrid, Trophy, Sparkles, Crown } from "lucide-react"
 
-const activeClass =
-  "font-semibold text-white after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-white"
-const inactiveClass = "text-white/60 hover:text-white/90"
+// 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
+// scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
 const baseClass =
-  "relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px]"
+  "wc-hdr-link relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px]"
 
 export const HeaderNav = memo(function HeaderNav() {
   const router = useRouter()
@@ -22,7 +21,14 @@ export const HeaderNav = memo(function HeaderNav() {
   const isShop = pathname.startsWith("/shop")
 
   return (
-    <nav className="bg-primary w-full border-t border-white/10" aria-label="주요 메뉴">
+    <nav
+      className="w-full"
+      aria-label="주요 메뉴"
+      style={{
+        background: "var(--wc-card, #ffffff)",
+        borderTop: "1px solid var(--wc-line, #efe7e0)",
+      }}
+    >
       <div className="scrollbar-none flex items-center justify-center overflow-x-auto">
         <Link
           href="/"
@@ -37,30 +43,30 @@ export const HeaderNav = memo(function HeaderNav() {
             }
           }}
         >
-          <span className={`${baseClass} ${isFeed ? activeClass : inactiveClass}`}>
+          <span className={baseClass} data-on={isFeed ? "true" : undefined}>
             <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
             담벼락
           </span>
         </Link>
         <Link href="/explore">
-          <span className={`${baseClass} ${isExplore ? activeClass : inactiveClass}`}>
+          <span className={baseClass} data-on={isExplore ? "true" : undefined}>
             <Compass className="h-[18px] w-[18px] shrink-0" />
             운동장
           </span>
         </Link>
         <Link href="/prediction">
-          <span className={`${baseClass} ${isPrediction ? activeClass : inactiveClass}`}>
+          <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
             <Trophy className="h-[18px] w-[18px] shrink-0" />
             경기 예측
           </span>
         </Link>
         <Link href="/worldcup">
-          <span className={`${baseClass} ${isWorldcup ? activeClass : inactiveClass}`}>
+          <span className={baseClass} data-on={isWorldcup ? "true" : undefined}>
             <Crown className="h-[18px] w-[18px] shrink-0" />
             월드컵 이벤트
             <span
               aria-hidden
-              className="ml-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"
+              className="wc-hdr-pulse ml-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
             />
           </span>
         </Link>
@@ -69,7 +75,7 @@ export const HeaderNav = memo(function HeaderNav() {
           라우트(/stadium/*)는 유지 — 직접 URL로만 접근 가능.
         */}
         <Link href="/shop">
-          <span className={`${baseClass} ${isShop ? activeClass : inactiveClass}`}>
+          <span className={baseClass} data-on={isShop ? "true" : undefined}>
             <Sparkles className="h-[18px] w-[18px] shrink-0" />
             상점
           </span>
