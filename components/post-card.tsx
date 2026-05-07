@@ -1,7 +1,6 @@
 "use client"
 
 import { memo } from "react"
-import { Card } from "@/components/ui/card"
 import { useUser } from "@clerk/nextjs"
 import { openReport } from "@/hooks/use-report-dialog"
 import {
@@ -65,7 +64,19 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
 
   return (
     <article>
-      <Card className="border-border hover:bg-muted/30 overflow-hidden border transition-colors">
+      <div
+        className="overflow-hidden rounded-lg transition-colors"
+        style={{
+          background: "var(--wc-card)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "var(--wc-soft)"
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "var(--wc-card)"
+        }}
+      >
         <div className="relative px-4 py-3 sm:px-5">
           <PostCardContent
             postId={post.id}
@@ -104,7 +115,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             onReport={() => openReport("post", String(post.id))}
           />
         </div>
-      </Card>
+      </div>
     </article>
   )
 })
