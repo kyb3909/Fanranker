@@ -28,30 +28,34 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
       <DialogContent className="sm:max-w-[400px]" showCloseButton={false}>
         <DialogHeader className="items-center text-center">
           <div
-            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
-              alertModal.type === "error"
-                ? "bg-primary/15"
-                : alertModal.type === "warning"
-                  ? "bg-amber-100"
-                  : "bg-emerald-100"
-            }`}
+            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              background:
+                alertModal.type === "error"
+                  ? "rgba(160,32,59,0.15)"
+                  : alertModal.type === "warning"
+                    ? "rgba(200,132,42,0.15)"
+                    : "rgba(47,125,91,0.15)",
+            }}
           >
             {alertModal.type === "error" ? (
-              <AlertCircle className="h-8 w-8 text-primary" />
+              <AlertCircle className="h-8 w-8" style={{ color: "var(--wc-burgundy)" }} />
             ) : alertModal.type === "warning" ? (
-              <AlertCircle className="h-8 w-8 text-amber-600" />
+              <AlertCircle className="h-8 w-8" style={{ color: "var(--wc-warn)" }} />
             ) : (
-              <Circle className="h-8 w-8 fill-emerald-600 text-emerald-600" />
+              <Circle className="h-8 w-8" style={{ fill: "var(--wc-go)", color: "var(--wc-go)" }} />
             )}
           </div>
           <DialogTitle
-            className={`text-xl ${
-              alertModal.type === "error"
-                ? "text-primary"
-                : alertModal.type === "warning"
-                  ? "text-amber-600"
-                  : "text-emerald-600"
-            }`}
+            className="text-xl"
+            style={{
+              color:
+                alertModal.type === "error"
+                  ? "var(--wc-burgundy)"
+                  : alertModal.type === "warning"
+                    ? "var(--wc-warn)"
+                    : "var(--wc-go)",
+            }}
           >
             {alertModal.title}
           </DialogTitle>
@@ -62,13 +66,16 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
         <DialogFooter className="pt-4 sm:justify-center">
           <Button
             onClick={onClose}
-            className={`w-full px-8 sm:w-auto ${
-              alertModal.type === "error"
-                ? "bg-primary hover:bg-primary/90"
-                : alertModal.type === "warning"
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : "bg-emerald-600 hover:bg-emerald-700"
-            }`}
+            className="w-full px-8 sm:w-auto"
+            style={{
+              background:
+                alertModal.type === "error"
+                  ? "var(--wc-burgundy)"
+                  : alertModal.type === "warning"
+                    ? "var(--wc-warn)"
+                    : "var(--wc-go)",
+              color: "white",
+            }}
           >
             확인
           </Button>
