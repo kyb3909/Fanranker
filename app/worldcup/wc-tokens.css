@@ -108,6 +108,60 @@
   cursor: not-allowed;
 }
 
+/* ─── Underline tabs (sub-filter 행 — 시안 underline 패턴) ──── */
+.worldcup-scope .wc-underline-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--wc-line);
+}
+.worldcup-scope .wc-underline-tabs button {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wc-mute);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.worldcup-scope .wc-underline-tabs button:hover:not(:disabled):not(.on) {
+  color: var(--wc-ink);
+  background: var(--wc-soft);
+}
+.worldcup-scope .wc-underline-tabs button.on {
+  color: var(--wc-burgundy);
+  border-bottom-color: var(--wc-burgundy);
+}
+.worldcup-scope .wc-underline-tabs button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.worldcup-scope .wc-underline-tabs.scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.worldcup-scope .wc-underline-tabs.scroll::-webkit-scrollbar {
+  display: none;
+}
+/* scroll variant: 균등 폭이 아니라 콘텐츠 폭 유지 */
+.worldcup-scope .wc-underline-tabs.scroll button {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* ─── Z1.1 Hero ─────────────────────────────────────────────────────── */
 .worldcup-scope .wc-hero {
   background: linear-gradient(
