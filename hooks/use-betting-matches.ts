@@ -101,10 +101,14 @@ export function useBettingMatches() {
   }, [groupedMatches, sportFilter, currentTime])
 
   const filteredMatches = useMemo(() => {
-    return groupedMatches
-      .filter((m) => new Date(m.matchTime) > currentTime)
-      .filter((m) => sportFilter === "all" || m.sport === sportFilter)
-      .filter((m) => leagueFilter === "all" || m.leagueCode === leagueFilter)
+    return (
+      groupedMatches
+        .filter((m) => new Date(m.matchTime) > currentTime)
+        .filter((m) => sportFilter === "all" || m.sport === sportFilter)
+        .filter((m) => leagueFilter === "all" || m.leagueCode === leagueFilter)
+        // betman 다음 라운드 preview placeholder 숨김 (팀 미정/빈 이름)
+        .filter((m) => m.homeTeam && m.awayTeam && m.homeTeam !== "미정" && m.awayTeam !== "미정")
+    )
   }, [groupedMatches, sportFilter, leagueFilter, currentTime])
 
   return {
