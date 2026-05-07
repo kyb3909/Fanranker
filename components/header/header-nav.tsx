@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Sparkles } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, Sparkles, Crown } from "lucide-react"
 
 const activeClass =
   "font-semibold text-white after:absolute after:right-0 after:bottom-0 after:left-0 after:h-[2px] after:bg-white"
@@ -18,6 +18,7 @@ export const HeaderNav = memo(function HeaderNav() {
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname.startsWith("/prediction")
+  const isWorldcup = pathname.startsWith("/worldcup")
   const isShop = pathname.startsWith("/shop")
 
   return (
@@ -51,6 +52,16 @@ export const HeaderNav = memo(function HeaderNav() {
           <span className={`${baseClass} ${isPrediction ? activeClass : inactiveClass}`}>
             <Trophy className="h-[18px] w-[18px] shrink-0" />
             경기 예측
+          </span>
+        </Link>
+        <Link href="/worldcup">
+          <span className={`${baseClass} ${isWorldcup ? activeClass : inactiveClass}`}>
+            <Crown className="h-[18px] w-[18px] shrink-0" />
+            월드컵 이벤트
+            <span
+              aria-hidden
+              className="ml-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"
+            />
           </span>
         </Link>
         {/*
