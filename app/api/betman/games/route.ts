@@ -81,6 +81,11 @@ export async function GET(request: NextRequest) {
       )
       .gte("match_time", windowStart.toISOString())
       .lt("match_time", windowEnd.toISOString())
+      // betman 다음 라운드 preview placeholder 차단 — '미정 vs 미정' 또는 빈 팀명
+      .neq("home_team_name", "미정")
+      .neq("away_team_name", "미정")
+      .not("home_team_name", "is", null)
+      .not("away_team_name", "is", null)
       .order("match_time", { ascending: true })
       .order("game_no", { ascending: true })
 

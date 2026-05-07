@@ -174,6 +174,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 팀 미정 가드 — betman 다음 라운드 preview placeholder 차단
+    const placeholderGames = games.filter(
+      (g) =>
+        !g.home_team_name ||
+        !g.away_team_name ||
+        g.home_team_name === "미정" ||
+        g.away_team_name === "미정"
+    )
+    if (placeholderGames.length > 0) {
+      return NextResponse.json(
+        { error: "팀이 확정되지 않은 경기는 베팅할 수 없습니다." },
+        { status: 400 }
+      )
+    }
+
     // Check per-game bet deadlines (must bet before kickoff)
     const now = new Date()
     const closedGames = games.filter((g) => {
