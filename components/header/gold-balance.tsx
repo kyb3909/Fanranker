@@ -42,12 +42,24 @@ export function GoldBalance() {
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className="flex cursor-default items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1.5 transition-colors hover:bg-amber-500/25"
+            className="flex cursor-default items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors"
             role="status"
             aria-label={`보유 골드: ${balance ?? 0}G`}
+            style={{
+              background: "rgba(184, 148, 26, 0.15)",
+            }}
           >
-            <Coins className="h-4 w-4 text-amber-500" aria-hidden="true" />
-            <span className="text-foreground text-sm font-semibold">{balance ?? 0}</span>
+            <Coins
+              className="h-4 w-4"
+              aria-hidden="true"
+              style={{ color: "var(--wc-gold-deep, #b8941a)" }}
+            />
+            <span
+              className="text-sm font-bold tabular-nums"
+              style={{ color: "var(--wc-ink, #1a1416)" }}
+            >
+              {balance ?? 0}
+            </span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-center">
