@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Clock, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { GroupedMatch, SelectedBet, SportsGame } from "./betting-types"
 import { SPORT_ICONS, getGameTypeLabel, formatMatchTime } from "./betting-types"
 
@@ -194,7 +195,7 @@ export function BettingMatchCard({
               <button
                 key={opt.value}
                 type="button"
-                className={`wc-odd${isSelected ? "on" : ""}`}
+                className={cn("wc-odd", isSelected && "on")}
                 onClick={() =>
                   !optDisabled &&
                   onBetSelection(
@@ -226,7 +227,7 @@ export function BettingMatchCard({
   if (visibleGames.length === 0) return null
 
   return (
-    <div className={`wc-mrow${hasSelectionFromThisMatch ? "selected" : ""}`}>
+    <div className={cn("wc-mrow", hasSelectionFromThisMatch && "selected")}>
       {/* Match Header — 시안 .mrow-head (단일 톤 + league 강조) */}
       <div className="wc-mrow-head">
         <span className="text-base" aria-hidden>
