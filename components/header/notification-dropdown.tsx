@@ -225,8 +225,9 @@ export function NotificationDropdown() {
           )}
           {unreadCount > 0 && (
             <span
-              className="bg-primary absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
               aria-hidden="true"
+              style={{ background: "var(--wc-burgundy, #a0203b)" }}
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
@@ -238,12 +239,27 @@ export function NotificationDropdown() {
         align="end"
         className="bg-card border-border mt-2 w-80 overflow-hidden rounded-xl border p-0 shadow-lg"
       >
-        <div className="border-border flex items-center justify-between border-b p-4">
-          <h3 className="text-foreground text-base font-semibold">알림</h3>
+        <div
+          className="flex items-center justify-between p-4"
+          style={{
+            background: "var(--wc-soft, #f4ece6)",
+            borderBottom: "1px solid var(--wc-line, #efe7e0)",
+          }}
+        >
+          <h3
+            className="text-[11px] font-bold uppercase"
+            style={{
+              color: "var(--wc-burgundy, #a0203b)",
+              letterSpacing: "0.18em",
+            }}
+          >
+            알림
+          </h3>
           {notifications.some((n) => !n.is_read) && (
             <button
               onClick={markAllAsRead}
-              className="text-primary hover:text-primary/80 text-xs font-medium"
+              className="text-xs font-bold"
+              style={{ color: "var(--wc-burgundy, #a0203b)" }}
             >
               모두 읽음
             </button>

@@ -57,7 +57,13 @@ export function UserMenu() {
         >
           <Avatar className="h-9 w-9">
             <AvatarImage src={profileAvatarUrl || user.imageUrl} alt={displayName} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+            <AvatarFallback
+              className="text-sm font-bold"
+              style={{
+                background: "rgba(160, 32, 59, 0.12)",
+                color: "var(--wc-burgundy, #a0203b)",
+              }}
+            >
               {userInitials}
             </AvatarFallback>
           </Avatar>
@@ -73,13 +79,21 @@ export function UserMenu() {
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
               <AvatarImage src={profileAvatarUrl || user.imageUrl} alt={displayName} />
-              <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
+              <AvatarFallback
+                className="text-base font-bold"
+                style={{
+                  background: "rgba(160, 32, 59, 0.12)",
+                  color: "var(--wc-burgundy, #a0203b)",
+                }}
+              >
                 {userInitials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="text-foreground truncate text-sm font-semibold">{displayName}</p>
-              <p className="text-muted-foreground truncate text-xs">
+              <p className="truncate text-sm font-bold" style={{ color: "var(--wc-ink, #1a1416)" }}>
+                {displayName}
+              </p>
+              <p className="truncate text-xs" style={{ color: "var(--wc-mute, #7a6b65)" }}>
                 {user.username || user.emailAddresses[0]?.emailAddress}
               </p>
             </div>
@@ -112,7 +126,7 @@ export function UserMenu() {
 
         <Link href="/payments">
           <DropdownMenuItem className="hover:bg-muted/50 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
-            <Coins className="mr-3 h-4 w-4 text-amber-500" />
+            <Coins className="mr-3 h-4 w-4" style={{ color: "var(--wc-gold-deep, #b8941a)" }} />
             <span className="text-sm font-medium">골드 내역</span>
           </DropdownMenuItem>
         </Link>
