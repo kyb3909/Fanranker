@@ -32,21 +32,55 @@ export function BettingRankings({
     <div className="space-y-3">
       {/* 내 순위 카드 */}
       {myRank && (
-        <div className="border-border overflow-hidden rounded-xl border shadow-none">
-          <div className="border-border bg-primary/10 flex items-center gap-2 border-b px-4 py-3">
-            <Target className="text-primary h-4 w-4" />
-            <span className="text-primary text-[14px] font-bold">내 순위</span>
+        <div
+          className="overflow-hidden rounded-xl"
+          style={{
+            background: "var(--wc-card, #ffffff)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
+          <div
+            className="flex items-center gap-2 px-4 py-3"
+            style={{
+              background: "var(--wc-soft, #f4ece6)",
+              borderBottom: "1px solid var(--wc-line, #efe7e0)",
+            }}
+          >
+            <Target className="h-4 w-4" style={{ color: "var(--wc-burgundy, #a0203b)" }} />
+            <span
+              className="text-[11px] font-bold uppercase"
+              style={{
+                color: "var(--wc-burgundy, #a0203b)",
+                letterSpacing: "0.18em",
+              }}
+            >
+              내 순위
+            </span>
           </div>
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums"
+              style={{ background: "var(--wc-burgundy, #a0203b)", color: "white" }}
+            >
               {myRank.rank ?? "-"}
             </div>
-            <span className="text-sm font-semibold">{myRank.nickname || "나"}</span>
-            <div className="text-muted-foreground flex flex-1 items-center gap-3 text-xs">
+            <span className="text-sm font-bold" style={{ color: "var(--wc-ink, #1a1416)" }}>
+              {myRank.nickname || "나"}
+            </span>
+            <div
+              className="flex flex-1 items-center gap-3 text-xs"
+              style={{ color: "var(--wc-mute, #7a6b65)" }}
+            >
               <span>
                 수익률{" "}
                 <span
-                  className={`font-medium ${(myRank.profit_rate || 0) >= 0 ? "text-primary" : "text-muted-foreground"}`}
+                  className="font-bold tabular-nums"
+                  style={{
+                    color:
+                      (myRank.profit_rate || 0) >= 0
+                        ? "var(--wc-go, #2f7d5b)"
+                        : "var(--wc-down, #c03a3a)",
+                  }}
                 >
                   {(myRank.profit_rate || 0) >= 0 ? "+" : ""}
                   {(myRank.profit_rate || 0).toFixed(1)}%
@@ -54,16 +88,25 @@ export function BettingRankings({
               </span>
               <span>
                 적중률{" "}
-                <span className="text-primary font-medium">
+                <span
+                  className="font-bold tabular-nums"
+                  style={{ color: "var(--wc-burgundy, #a0203b)" }}
+                >
                   {(myRank.accuracy || 0).toFixed(1)}%
                 </span>
               </span>
-              <span>
+              <span className="tabular-nums">
                 {myRank.correct_predictions || 0}/{myRank.total_predictions || 0}
               </span>
             </div>
             <div
-              className={`text-sm font-bold ${(myRank.net_profit || 0) >= 0 ? "text-primary" : "text-muted-foreground"}`}
+              className="text-sm font-bold tabular-nums"
+              style={{
+                color:
+                  (myRank.net_profit || 0) >= 0
+                    ? "var(--wc-go, #2f7d5b)"
+                    : "var(--wc-down, #c03a3a)",
+              }}
             >
               {(myRank.net_profit || 0) >= 0 ? "+" : ""}
               {(myRank.net_profit || 0).toFixed(2)}
@@ -86,9 +129,23 @@ export function BettingRankings({
           </p>
         </div>
       ) : (
-        <div className="border-border overflow-hidden rounded-xl border shadow-none">
+        <div
+          className="overflow-hidden rounded-xl"
+          style={{
+            background: "var(--wc-card, #ffffff)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
           {/* 테이블 헤더 */}
-          <div className="border-border bg-primary/10 text-primary grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 border-b px-3 py-2.5 text-[12px] font-medium sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4">
+          <div
+            className="grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 px-3 py-2.5 text-[11px] font-bold uppercase sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4"
+            style={{
+              background: "var(--wc-soft, #f4ece6)",
+              color: "var(--wc-burgundy, #a0203b)",
+              letterSpacing: "0.06em",
+              borderBottom: "1px solid var(--wc-line, #efe7e0)",
+            }}
+          >
             <span className="text-center">#</span>
             <span>유저</span>
             <span className="text-right">수익률</span>
@@ -128,9 +185,13 @@ export function BettingRankings({
                 {/* 수익률 */}
                 <div className="text-right">
                   <span
-                    className={`text-xs font-bold ${
-                      (user.profit_rate || 0) >= 0 ? "text-primary" : "text-muted-foreground"
-                    }`}
+                    className="text-xs font-bold tabular-nums"
+                    style={{
+                      color:
+                        (user.profit_rate || 0) >= 0
+                          ? "var(--wc-go, #2f7d5b)"
+                          : "var(--wc-down, #c03a3a)",
+                    }}
                   >
                     {(user.profit_rate || 0) >= 0 ? "+" : ""}
                     {(user.profit_rate || 0).toFixed(1)}%
@@ -139,7 +200,10 @@ export function BettingRankings({
 
                 {/* 적중률 */}
                 <div className="hidden text-right sm:block">
-                  <span className="text-primary text-xs font-bold">
+                  <span
+                    className="text-xs font-bold tabular-nums"
+                    style={{ color: "var(--wc-burgundy, #a0203b)" }}
+                  >
                     {(user.accuracy || 0).toFixed(1)}%
                   </span>
                 </div>
@@ -147,9 +211,13 @@ export function BettingRankings({
                 {/* 순수익 */}
                 <div className="hidden text-right sm:block">
                   <span
-                    className={`text-xs font-bold ${
-                      (user.net_profit || 0) >= 0 ? "text-primary" : "text-muted-foreground"
-                    }`}
+                    className="text-xs font-bold tabular-nums"
+                    style={{
+                      color:
+                        (user.net_profit || 0) >= 0
+                          ? "var(--wc-go, #2f7d5b)"
+                          : "var(--wc-down, #c03a3a)",
+                    }}
                   >
                     {(user.net_profit || 0) >= 0 ? "+" : ""}
                     {(user.net_profit || 0).toFixed(2)}
