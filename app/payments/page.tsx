@@ -108,145 +108,167 @@ export default function PaymentsPage() {
   }
 
   return (
-    <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-      {/* 헤더 */}
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-2">
-          <Coins className="h-6 w-6 text-amber-500" />
-          <h1 className="text-xl font-bold">골드 내역</h1>
-        </div>
-      </div>
-
-      {/* 에러 상태 */}
-      {errorMessage && (
-        <Card className="mb-6 p-8 text-center">
-          <p className="text-primary mb-3 text-sm">{errorMessage}</p>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            다시 시도
+    <div className="worldcup-scope min-h-[100dvh]">
+      <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
+        {/* 헤더 */}
+        <div className="mb-6 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            style={{ color: "var(--wc-mute, #7a6b65)" }}
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-        </Card>
-      )}
+          <div className="min-w-0 flex-1">
+            <div className="wc-sec-eb">GOLD HISTORY</div>
+            <h1
+              className="font-black tracking-tight"
+              style={{
+                fontSize: "clamp(20px, 3vw, 26px)",
+                color: "var(--wc-ink, #1a1416)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              <Coins
+                className="mr-2 inline-block h-5 w-5 align-text-bottom"
+                style={{ color: "var(--wc-gold-deep, #b8941a)" }}
+              />
+              골드 내역
+            </h1>
+          </div>
+        </div>
 
-      {/* 현재 잔액 카드 */}
-      {goldInfo && (
-        <Card className="mb-6 border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground mb-1 text-sm">보유 골드</p>
-              <div className="flex items-center gap-2">
-                <Coins className="h-6 w-6 text-amber-500" />
-                <span className="text-3xl font-bold text-amber-600">{goldInfo.balance}</span>
+        {/* 에러 상태 */}
+        {errorMessage && (
+          <Card className="mb-6 p-8 text-center">
+            <p className="text-primary mb-3 text-sm">{errorMessage}</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              다시 시도
+            </Button>
+          </Card>
+        )}
+
+        {/* 현재 잔액 카드 */}
+        {goldInfo && (
+          <Card className="mb-6 border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground mb-1 text-sm">보유 골드</p>
+                <div className="flex items-center gap-2">
+                  <Coins className="h-6 w-6 text-amber-500" />
+                  <span className="text-3xl font-bold text-amber-600">{goldInfo.balance}</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-muted-foreground text-xs">다른 유저의 승부예측을</p>
+                <p className="text-muted-foreground text-xs">구매할 때 사용됩니다</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-muted-foreground text-xs">다른 유저의 승부예측을</p>
-              <p className="text-muted-foreground text-xs">구매할 때 사용됩니다</p>
+          </Card>
+        )}
+
+        {/* 통계 카드 */}
+        <div className="mb-6 grid grid-cols-2 gap-3">
+          <Card className="p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
+              <span className="text-muted-foreground text-sm">총 획득</span>
             </div>
-          </div>
-        </Card>
-      )}
+            <p className="text-xl font-bold text-emerald-600">+{totalEarned} 골드</p>
+          </Card>
+          <Card className="p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <ArrowUpRight className="text-primary h-4 w-4" />
+              <span className="text-muted-foreground text-sm">총 사용</span>
+            </div>
+            <p className="text-primary text-xl font-bold">-{totalSpent} 골드</p>
+          </Card>
+        </div>
 
-      {/* 통계 카드 */}
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        <Card className="p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
-            <span className="text-muted-foreground text-sm">총 획득</span>
-          </div>
-          <p className="text-xl font-bold text-emerald-600">+{totalEarned} 골드</p>
-        </Card>
-        <Card className="p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <ArrowUpRight className="text-primary h-4 w-4" />
-            <span className="text-muted-foreground text-sm">총 사용</span>
-          </div>
-          <p className="text-primary text-xl font-bold">-{totalSpent} 골드</p>
-        </Card>
-      </div>
+        {/* 탭 */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+          className="w-full"
+        >
+          <TabsList className="mb-4 grid w-full grid-cols-3">
+            <TabsTrigger value="all">전체</TabsTrigger>
+            <TabsTrigger value="earn">획득</TabsTrigger>
+            <TabsTrigger value="spend">사용</TabsTrigger>
+          </TabsList>
 
-      {/* 탭 */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-        className="w-full"
-      >
-        <TabsList className="mb-4 grid w-full grid-cols-3">
-          <TabsTrigger value="all">전체</TabsTrigger>
-          <TabsTrigger value="earn">획득</TabsTrigger>
-          <TabsTrigger value="spend">사용</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab}>
-          {isLoading ? (
-            <Card className="p-8 text-center">
-              <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground text-sm">내역을 불러오는 중...</p>
-            </Card>
-          ) : filteredTransactions.length > 0 ? (
-            <div className="space-y-2">
-              {filteredTransactions.map((tx) => (
-                <Card key={tx.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`rounded-full p-2 ${
-                          tx.type === "earn"
-                            ? "bg-emerald-100 text-emerald-600"
-                            : "bg-primary/15 text-primary"
-                        }`}
-                      >
-                        {tx.type === "earn" ? (
-                          <ArrowDownLeft className="h-4 w-4" />
-                        ) : (
-                          <ArrowUpRight className="h-4 w-4" />
-                        )}
+          <TabsContent value={activeTab}>
+            {isLoading ? (
+              <Card className="p-8 text-center">
+                <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+                <p className="text-muted-foreground text-sm">내역을 불러오는 중...</p>
+              </Card>
+            ) : filteredTransactions.length > 0 ? (
+              <div className="space-y-2">
+                {filteredTransactions.map((tx) => (
+                  <Card key={tx.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`rounded-full p-2 ${
+                            tx.type === "earn"
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-primary/15 text-primary"
+                          }`}
+                        >
+                          {tx.type === "earn" ? (
+                            <ArrowDownLeft className="h-4 w-4" />
+                          ) : (
+                            <ArrowUpRight className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{tx.description}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {new Date(tx.createdAt).toLocaleDateString("ko-KR", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{tx.description}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {new Date(tx.createdAt).toLocaleDateString("ko-KR", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                      <div className="text-right">
+                        <p
+                          className={`font-bold ${
+                            tx.type === "earn" ? "text-emerald-600" : "text-primary"
+                          }`}
+                        >
+                          {tx.type === "earn" ? "+" : ""}
+                          {tx.amount} 골드
                         </p>
+                        <p className="text-muted-foreground text-xs">잔액: {tx.balanceAfter}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p
-                        className={`font-bold ${
-                          tx.type === "earn" ? "text-emerald-600" : "text-primary"
-                        }`}
-                      >
-                        {tx.type === "earn" ? "+" : ""}
-                        {tx.amount} 골드
-                      </p>
-                      <p className="text-muted-foreground text-xs">잔액: {tx.balanceAfter}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <Coins className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-              <h3 className="mb-2 text-lg font-semibold">
-                {activeTab === "all"
-                  ? "거래 내역이 없습니다"
-                  : activeTab === "earn"
-                    ? "획득 내역이 없습니다"
-                    : "사용 내역이 없습니다"}
-              </h3>
-              <p className="text-muted-foreground text-sm">골드는 컨텐츠를 구매할 때 사용됩니다.</p>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </main>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <Coins className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                <h3 className="mb-2 text-lg font-semibold">
+                  {activeTab === "all"
+                    ? "거래 내역이 없습니다"
+                    : activeTab === "earn"
+                      ? "획득 내역이 없습니다"
+                      : "사용 내역이 없습니다"}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  골드는 컨텐츠를 구매할 때 사용됩니다.
+                </p>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
   )
 }

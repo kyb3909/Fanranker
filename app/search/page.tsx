@@ -187,180 +187,183 @@ function SearchContent() {
   const selectedTypeOption = SEARCH_TYPE_OPTIONS.find((opt) => opt.value === searchType)
 
   return (
-    <main
-      id="main-content"
-      className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
-      tabIndex={-1}
-    >
-      <div className="grid grid-cols-12 gap-5 lg:gap-6">
-        <aside className="col-span-3 hidden lg:block">
-          <CommunitySidebar />
-        </aside>
-        <div className="col-span-12 space-y-4 lg:col-span-6">
-          {/* 검색 헤더 */}
-          <div className="space-y-4">
-            <h1 className="text-foreground text-2xl font-bold">검색</h1>
+    <div className="worldcup-scope min-h-[100dvh]">
+      <main
+        id="main-content"
+        className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
+        tabIndex={-1}
+      >
+        <div className="grid grid-cols-12 gap-5 lg:gap-6">
+          <aside className="col-span-3 hidden lg:block">
+            <CommunitySidebar />
+          </aside>
+          <div className="col-span-12 space-y-4 lg:col-span-6">
+            {/* 검색 헤더 */}
+            <div className="space-y-4">
+              <h1 className="text-foreground text-2xl font-bold">검색</h1>
 
-            {/* 검색 폼 */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex gap-2">
-                {/* 검색 타입 선택 */}
-                <Select
-                  value={searchType}
-                  onValueChange={(value) => setSearchType(value as SearchType)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue>
-                      {selectedTypeOption && (
-                        <div className="flex items-center gap-2">
-                          <selectedTypeOption.icon className="h-4 w-4" />
-                          <span>{selectedTypeOption.label}</span>
-                        </div>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SEARCH_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <option.icon className="h-4 w-4" />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* 검색 폼 */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex gap-2">
+                  {/* 검색 타입 선택 */}
+                  <Select
+                    value={searchType}
+                    onValueChange={(value) => setSearchType(value as SearchType)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue>
+                        {selectedTypeOption && (
+                          <div className="flex items-center gap-2">
+                            <selectedTypeOption.icon className="h-4 w-4" />
+                            <span>{selectedTypeOption.label}</span>
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SEARCH_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center gap-2">
+                            <option.icon className="h-4 w-4" />
+                            <span>{option.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                {/* 검색 입력 */}
-                <div className="relative flex-1">
-                  <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2" />
-                  <Input
-                    type="text"
-                    placeholder={
-                      searchType === "nickname"
-                        ? "닉네임을 입력하세요..."
-                        : searchType === "id"
-                          ? "글 ID를 입력하세요..."
-                          : searchType === "title"
-                            ? "제목을 입력하세요..."
-                            : "제목 또는 내용을 입력하세요..."
-                    }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSubmit(e)
+                  {/* 검색 입력 */}
+                  <div className="relative flex-1">
+                    <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2" />
+                    <Input
+                      type="text"
+                      placeholder={
+                        searchType === "nickname"
+                          ? "닉네임을 입력하세요..."
+                          : searchType === "id"
+                            ? "글 ID를 입력하세요..."
+                            : searchType === "title"
+                              ? "제목을 입력하세요..."
+                              : "제목 또는 내용을 입력하세요..."
                       }
-                    }}
-                    className="h-10 pl-10"
-                  />
-                </div>
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSubmit(e)
+                        }
+                      }}
+                      className="h-10 pl-10"
+                    />
+                  </div>
 
-                {/* 검색 버튼 */}
-                <Button type="submit" disabled={isLoading || !searchQuery.trim()}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      검색 중...
-                    </>
-                  ) : (
-                    <>
-                      <SearchIcon className="mr-2 h-4 w-4" />
-                      검색
-                    </>
+                  {/* 검색 버튼 */}
+                  <Button type="submit" disabled={isLoading || !searchQuery.trim()}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        검색 중...
+                      </>
+                    ) : (
+                      <>
+                        <SearchIcon className="mr-2 h-4 w-4" />
+                        검색
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+
+            {/* 검색 결과 */}
+            <div className="space-y-3">
+              {errorMessage ? (
+                <div className="bg-destructive/10 border-destructive/20 rounded-lg border p-6 text-center">
+                  <p className="text-destructive mb-2 text-sm font-medium">{errorMessage}</p>
+                  <p className="text-muted-foreground text-xs">잠시 후 다시 시도해주세요.</p>
+                </div>
+              ) : isLoading ? (
+                <div className="bg-card border-border rounded-lg border p-8 text-center">
+                  <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
+                  <p className="text-muted-foreground text-sm">검색 중...</p>
+                </div>
+              ) : hasSearched && posts.length === 0 ? (
+                <div className="bg-card border-border rounded-lg border p-8 text-center">
+                  <p className="text-muted-foreground mb-2 text-sm">검색 결과가 없습니다.</p>
+                  <p className="text-muted-foreground text-xs">
+                    다른 검색어나 검색 타입을 시도해보세요.
+                  </p>
+                </div>
+              ) : hasSearched && posts.length > 0 ? (
+                <>
+                  <div className="text-muted-foreground mb-2 text-sm">
+                    검색 결과:{" "}
+                    <span className="text-foreground font-semibold">{posts.length}개</span>
+                  </div>
+                  <div className="bg-card border-border overflow-hidden rounded-lg border">
+                    {/* 게시판 목록 헤더 */}
+                    <div className="bg-muted/40 border-border text-muted-foreground grid grid-cols-12 gap-2 border-b px-4 py-2.5 text-[12px] font-semibold">
+                      <div className="col-span-6 sm:col-span-7">제목</div>
+                      <div className="col-span-3 sm:col-span-2">게시판</div>
+                      <div className="col-span-3 text-right sm:col-span-3">작성일</div>
+                    </div>
+                    {/* 목록 행 */}
+                    {posts.map((post) => (
+                      <Link
+                        key={post.id}
+                        href={`/post/${post.id}`}
+                        className="border-border hover:bg-muted/40 grid grid-cols-12 items-center gap-2 border-b px-4 py-2.5 transition-colors last:border-b-0"
+                      >
+                        <div className="text-foreground col-span-6 truncate pr-2 text-[14px] font-medium sm:col-span-7">
+                          {post.title}
+                        </div>
+                        <div className="text-muted-foreground col-span-3 truncate text-[13px] sm:col-span-2">
+                          {post.community}
+                        </div>
+                        <div className="text-muted-foreground col-span-3 shrink-0 text-right text-[12px] sm:col-span-3">
+                          {post.timestamp}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <div className="py-4 text-center">
+                      <Button
+                        variant="outline"
+                        onClick={() => performSearch(searchQuery, searchType, true)}
+                        disabled={isLoadingMore}
+                      >
+                        {isLoadingMore ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            불러오는 중...
+                          </>
+                        ) : (
+                          "더 보기"
+                        )}
+                      </Button>
+                    </div>
                   )}
-                </Button>
-              </div>
-            </form>
-          </div>
-
-          {/* 검색 결과 */}
-          <div className="space-y-3">
-            {errorMessage ? (
-              <div className="bg-destructive/10 border-destructive/20 rounded-lg border p-6 text-center">
-                <p className="text-destructive mb-2 text-sm font-medium">{errorMessage}</p>
-                <p className="text-muted-foreground text-xs">잠시 후 다시 시도해주세요.</p>
-              </div>
-            ) : isLoading ? (
-              <div className="bg-card border-border rounded-lg border p-8 text-center">
-                <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground text-sm">검색 중...</p>
-              </div>
-            ) : hasSearched && posts.length === 0 ? (
-              <div className="bg-card border-border rounded-lg border p-8 text-center">
-                <p className="text-muted-foreground mb-2 text-sm">검색 결과가 없습니다.</p>
-                <p className="text-muted-foreground text-xs">
-                  다른 검색어나 검색 타입을 시도해보세요.
-                </p>
-              </div>
-            ) : hasSearched && posts.length > 0 ? (
-              <>
-                <div className="text-muted-foreground mb-2 text-sm">
-                  검색 결과: <span className="text-foreground font-semibold">{posts.length}개</span>
+                </>
+              ) : (
+                <div className="bg-card border-border rounded-lg border p-8 text-center">
+                  <SearchIcon className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <p className="text-muted-foreground mb-2 text-sm">
+                    검색어를 입력하고 검색 버튼을 누르세요.
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    검색 타입을 선택하여 원하는 방식으로 검색할 수 있습니다.
+                  </p>
                 </div>
-                <div className="bg-card border-border overflow-hidden rounded-lg border">
-                  {/* 게시판 목록 헤더 */}
-                  <div className="bg-muted/40 border-border text-muted-foreground grid grid-cols-12 gap-2 border-b px-4 py-2.5 text-[12px] font-semibold">
-                    <div className="col-span-6 sm:col-span-7">제목</div>
-                    <div className="col-span-3 sm:col-span-2">게시판</div>
-                    <div className="col-span-3 text-right sm:col-span-3">작성일</div>
-                  </div>
-                  {/* 목록 행 */}
-                  {posts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/post/${post.id}`}
-                      className="border-border hover:bg-muted/40 grid grid-cols-12 items-center gap-2 border-b px-4 py-2.5 transition-colors last:border-b-0"
-                    >
-                      <div className="text-foreground col-span-6 truncate pr-2 text-[14px] font-medium sm:col-span-7">
-                        {post.title}
-                      </div>
-                      <div className="text-muted-foreground col-span-3 truncate text-[13px] sm:col-span-2">
-                        {post.community}
-                      </div>
-                      <div className="text-muted-foreground col-span-3 shrink-0 text-right text-[12px] sm:col-span-3">
-                        {post.timestamp}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-                {hasMore && (
-                  <div className="py-4 text-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => performSearch(searchQuery, searchType, true)}
-                      disabled={isLoadingMore}
-                    >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          불러오는 중...
-                        </>
-                      ) : (
-                        "더 보기"
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="bg-card border-border rounded-lg border p-8 text-center">
-                <SearchIcon className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-50" />
-                <p className="text-muted-foreground mb-2 text-sm">
-                  검색어를 입력하고 검색 버튼을 누르세요.
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  검색 타입을 선택하여 원하는 방식으로 검색할 수 있습니다.
-                </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+          <aside className="col-span-3 hidden lg:block">
+            <ActivitySidebar />
+          </aside>
         </div>
-        <aside className="col-span-3 hidden lg:block">
-          <ActivitySidebar />
-        </aside>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }
 

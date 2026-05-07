@@ -28,23 +28,25 @@ function ShopSkeleton() {
 
 export default function ShopRoute() {
   return (
-    <main
-      id="main-content"
-      className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6"
-      tabIndex={-1}
-    >
-      <div className="grid grid-cols-12 gap-5 lg:gap-6">
-        <div className="col-span-12 min-w-0 overflow-hidden lg:col-span-9">
-          <Suspense fallback={<ShopSkeleton />}>
-            <ShopPage />
-          </Suspense>
+    <div className="worldcup-scope min-h-[100dvh]">
+      <main
+        id="main-content"
+        className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6"
+        tabIndex={-1}
+      >
+        <div className="grid grid-cols-12 gap-5 lg:gap-6">
+          <div className="col-span-12 min-w-0 overflow-hidden lg:col-span-9">
+            <Suspense fallback={<ShopSkeleton />}>
+              <ShopPage />
+            </Suspense>
+          </div>
+          <aside className="col-span-3 hidden lg:block">
+            <Suspense fallback={<div className="bg-muted h-40 animate-pulse rounded-xl" />}>
+              <ActivitySidebar />
+            </Suspense>
+          </aside>
         </div>
-        <aside className="col-span-3 hidden lg:block">
-          <Suspense fallback={<div className="bg-muted h-40 animate-pulse rounded-xl" />}>
-            <ActivitySidebar />
-          </Suspense>
-        </aside>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

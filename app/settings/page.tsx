@@ -23,18 +23,31 @@ export default function SettingsPage() {
 
   if (isLoaded && !isSignedIn) {
     return (
-      <div className="flex items-center justify-center px-4 py-20">
-        <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
-          <User className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
-          <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
-          <p className="text-muted-foreground mb-4 text-sm">
+      <div className="worldcup-scope flex min-h-[100dvh] items-center justify-center px-4 py-20">
+        <div
+          className="max-w-sm rounded-xl p-8 text-center"
+          style={{
+            background: "var(--wc-card, #ffffff)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
+          <User className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute, #7a6b65)" }} />
+          <h2 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink, #1a1416)" }}>
+            로그인이 필요합니다
+          </h2>
+          <p className="mb-4 text-sm" style={{ color: "var(--wc-mute, #7a6b65)" }}>
             마이페이지를 이용하려면 먼저 로그인해주세요.
           </p>
           <div className="flex justify-center gap-2">
             <Button variant="outline" onClick={() => router.push("/")}>
               홈으로
             </Button>
-            <Button onClick={() => router.push("/sign-up")}>로그인 / 가입</Button>
+            <Button
+              onClick={() => router.push("/sign-up")}
+              style={{ background: "var(--wc-burgundy, #a0203b)", color: "white" }}
+            >
+              로그인 / 가입
+            </Button>
           </div>
         </div>
       </div>
@@ -42,8 +55,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+    <div className="worldcup-scope flex min-h-[100dvh] items-center justify-center py-20">
+      <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--wc-mute, #7a6b65)" }} />
     </div>
   )
 }
