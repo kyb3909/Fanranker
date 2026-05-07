@@ -31,29 +31,39 @@ export const FeedSection = memo(function FeedSection({
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="bg-card border-border animate-pulse rounded-lg border px-4 py-3 sm:px-5"
-            style={{ minHeight: 220 }}
+            className="animate-pulse rounded-lg px-4 py-3 sm:px-5"
+            style={{
+              minHeight: 220,
+              background: "var(--wc-card)",
+              boxShadow: "var(--wc-shadow-1)",
+            }}
           >
-            {/* Header skeleton */}
             <div className="mb-3 flex items-center gap-3">
-              <div className="bg-muted h-8 w-8 rounded-full" />
+              <div className="h-8 w-8 rounded-full" style={{ background: "var(--wc-soft)" }} />
               <div className="flex-1">
-                <div className="bg-muted mb-1.5 h-3.5 w-24 rounded" />
-                <div className="bg-muted h-3 w-16 rounded" />
+                <div
+                  className="mb-1.5 h-3.5 w-24 rounded"
+                  style={{ background: "var(--wc-soft)" }}
+                />
+                <div className="h-3 w-16 rounded" style={{ background: "var(--wc-soft)" }} />
               </div>
             </div>
-            {/* Title */}
-            <div className="bg-muted mb-2.5 h-5 w-3/4 rounded" />
-            {/* Body text (2 lines) */}
-            <div className="bg-muted mb-1.5 h-3.5 w-full rounded" />
-            <div className="bg-muted mb-4 h-3.5 w-2/3 rounded" />
-            {/* Image placeholder (aspect-video) */}
-            {i <= 2 && <div className="bg-muted mb-4 aspect-[16/9] w-full rounded-lg" />}
-            {/* Footer */}
-            <div className="border-border flex items-center gap-4 border-t pt-3">
-              <div className="bg-muted h-3 w-12 rounded" />
-              <div className="bg-muted h-3 w-12 rounded" />
-              <div className="bg-muted ml-auto h-3 w-16 rounded" />
+            <div className="mb-2.5 h-5 w-3/4 rounded" style={{ background: "var(--wc-soft)" }} />
+            <div className="mb-1.5 h-3.5 w-full rounded" style={{ background: "var(--wc-soft)" }} />
+            <div className="mb-4 h-3.5 w-2/3 rounded" style={{ background: "var(--wc-soft)" }} />
+            {i <= 2 && (
+              <div
+                className="mb-4 aspect-[16/9] w-full rounded-lg"
+                style={{ background: "var(--wc-soft)" }}
+              />
+            )}
+            <div
+              className="flex items-center gap-4 pt-3"
+              style={{ borderTop: "1px solid var(--wc-line)" }}
+            >
+              <div className="h-3 w-12 rounded" style={{ background: "var(--wc-soft)" }} />
+              <div className="h-3 w-12 rounded" style={{ background: "var(--wc-soft)" }} />
+              <div className="ml-auto h-3 w-16 rounded" style={{ background: "var(--wc-soft)" }} />
             </div>
           </div>
         ))}
@@ -63,21 +73,31 @@ export const FeedSection = memo(function FeedSection({
 
   if (posts.length === 0) {
     return (
-      <div className="bg-card border-border rounded-lg border p-8 text-center">
-        <Compass className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
-        <p className="text-foreground mb-2 text-sm font-medium">
+      <div
+        className="rounded-lg p-8 text-center"
+        style={{
+          background: "var(--wc-card)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
+        <Compass className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute)" }} />
+        <p className="mb-2 text-sm font-bold" style={{ color: "var(--wc-ink)" }}>
           {isSignedIn
             ? "관심 있는 게시판을 팔로우해보세요!"
             : "로그인하고 게시판을 팔로우해보세요!"}
         </p>
-        <p className="text-muted-foreground mb-4 text-xs">
+        <p className="mb-4 text-xs" style={{ color: "var(--wc-mute)" }}>
           {isSignedIn
             ? "팔로우한 게시판의 글이 담벼락에 표시됩니다."
             : "팔로우한 게시판의 최신 글을 모아볼 수 있어요."}
         </p>
         <Link
           href="/explore"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors"
+          style={{
+            background: "var(--wc-burgundy)",
+            color: "white",
+          }}
         >
           <Compass className="h-4 w-4" />
           게시판 탐색하기

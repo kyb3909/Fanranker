@@ -157,18 +157,28 @@ export function ContentSection() {
     }
   }
 
+  const stateCardStyle = {
+    background: "var(--wc-card)",
+    boxShadow: "var(--wc-shadow-1)",
+  } as const
+
   return (
     <div className="space-y-3">
       {!isSignedIn ? (
-        <div className="bg-card border-border rounded-lg border p-8 text-center">
-          <p className="text-muted-foreground text-sm">
+        <div className="rounded-lg p-8 text-center" style={stateCardStyle}>
+          <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
             로그인하면 팔로우한 랭커의 예측 콘텐츠를 확인할 수 있습니다.
           </p>
         </div>
       ) : isContentLoading ? (
-        <div className="bg-card border-border rounded-lg border p-8 text-center">
-          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">예측 콘텐츠를 불러오는 중...</p>
+        <div className="rounded-lg p-8 text-center" style={stateCardStyle}>
+          <Loader2
+            className="mx-auto mb-2 h-8 w-8 animate-spin"
+            style={{ color: "var(--wc-mute)" }}
+          />
+          <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+            예측 콘텐츠를 불러오는 중...
+          </p>
         </div>
       ) : activities.length > 0 ? (
         activities.map((activity) => (
@@ -182,17 +192,21 @@ export function ContentSection() {
           />
         ))
       ) : (
-        <div className="bg-card border-border rounded-lg border p-8 text-center">
-          <Trophy className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-          <p className="text-muted-foreground mb-2 text-sm">
+        <div className="rounded-lg p-8 text-center" style={stateCardStyle}>
+          <Trophy className="mx-auto mb-2 h-8 w-8" style={{ color: "var(--wc-mute)" }} />
+          <p className="mb-2 text-sm font-bold" style={{ color: "var(--wc-ink)" }}>
             랭커를 팔로우하면 예측 콘텐츠가 여기에 표시됩니다
           </p>
-          <p className="text-muted-foreground mb-4 text-xs">
+          <p className="mb-4 text-xs" style={{ color: "var(--wc-mute)" }}>
             승부예측 랭킹에서 랭커를 팔로우해보세요.
           </p>
           <Link
             href="/prediction?tab=ranking"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors"
+            style={{
+              background: "var(--wc-burgundy)",
+              color: "white",
+            }}
           >
             <Trophy className="h-4 w-4" />
             랭킹 보러 가기
