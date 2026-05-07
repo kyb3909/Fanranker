@@ -162,6 +162,11 @@
   font-weight: 500;
 }
 
+/* ─── Hover utilities (server component safe — no JS handler) ─── */
+.worldcup-scope .wc-recent-row:hover {
+  background: var(--wc-soft);
+}
+
 /* ─── Match row (시안 .mrow) — 베팅 카드 ─────────────────── */
 .worldcup-scope .wc-mrow {
   background: var(--wc-card);

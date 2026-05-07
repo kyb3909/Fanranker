@@ -65,16 +65,14 @@ export function BoardRecentPosts({
             <Link
               key={post.id}
               href={`/post/${post.id}`}
-              className="flex items-center gap-3 px-4 py-2.5 transition-colors"
+              className={
+                isCurrent
+                  ? "flex items-center gap-3 px-4 py-2.5 transition-colors"
+                  : "wc-recent-row flex items-center gap-3 px-4 py-2.5 transition-colors"
+              }
               style={{
                 borderBottom: "1px solid var(--wc-line)",
-                background: isCurrent ? "rgba(160,32,59,0.06)" : "transparent",
-              }}
-              onMouseEnter={(e) => {
-                if (!isCurrent) e.currentTarget.style.background = "var(--wc-soft)"
-              }}
-              onMouseLeave={(e) => {
-                if (!isCurrent) e.currentTarget.style.background = "transparent"
+                background: isCurrent ? "rgba(160,32,59,0.06)" : undefined,
               }}
             >
               <span
