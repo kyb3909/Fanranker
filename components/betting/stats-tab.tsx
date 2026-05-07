@@ -40,7 +40,13 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* 주인장 vs 유저 대결 보드 */}
-      <Card className="border-border bg-card overflow-hidden border">
+      <Card
+        className="overflow-hidden"
+        style={{
+          background: "var(--wc-card, #ffffff)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
         <div className="p-4 sm:p-5">
           <div className="mb-4 text-center">
             <h3 className="text-foreground text-lg font-bold">주인장 vs 유저</h3>
@@ -127,7 +133,13 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
       </Card>
 
       {/* 종목별 통계 */}
-      <Card className="border-border bg-card overflow-hidden border">
+      <Card
+        className="overflow-hidden"
+        style={{
+          background: "var(--wc-card, #ffffff)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
         <div className="p-4 sm:p-5">
           <h3 className="text-foreground mb-3 text-base font-bold">종목별 통계</h3>
           <div className="space-y-2">
@@ -195,7 +207,13 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
       </Card>
 
       {/* 최근 7일 전세 추이 */}
-      <Card className="border-border bg-card overflow-hidden border">
+      <Card
+        className="overflow-hidden"
+        style={{
+          background: "var(--wc-card, #ffffff)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
         <div className="p-4 sm:p-5">
           <h3 className="text-foreground mb-1 text-base font-bold">최근 7일 전세</h3>
           <p className="text-muted-foreground mb-4 text-xs">

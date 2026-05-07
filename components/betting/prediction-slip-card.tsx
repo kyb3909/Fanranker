@@ -156,7 +156,13 @@ export function PredictionSlipCard({
   const displayMatchCount = matchCount ?? matches.length
 
   return (
-    <Card className="overflow-hidden border-0 shadow-sm">
+    <Card
+      className="overflow-hidden border-0"
+      style={{
+        background: "var(--wc-card, #ffffff)",
+        boxShadow: "var(--wc-shadow-1)",
+      }}
+    >
       {/* ───── 클릭 가능한 헤더 (항상 표시) ───── */}
       <button
         type="button"
