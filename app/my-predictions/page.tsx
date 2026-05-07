@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Trophy, ArrowLeft } from "lucide-react"
@@ -105,78 +104,111 @@ export default function MyPredictionsPage() {
     )
   }
 
+  const wcCard = {
+    background: "var(--wc-card)",
+    boxShadow: "var(--wc-shadow-1)",
+  } as const
+
   return (
-    <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-2">
-          <Trophy className="text-primary h-6 w-6" />
-          <h1 className="text-xl font-bold">승부예측 내역</h1>
+    <div className="worldcup-scope min-h-[100dvh]">
+      <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            style={{ color: "var(--wc-mute)" }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <div className="wc-sec-eb">MY PREDICTIONS</div>
+            <h1
+              className="font-black tracking-tight"
+              style={{
+                fontSize: "clamp(20px, 3vw, 26px)",
+                color: "var(--wc-ink)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              승부예측 내역
+            </h1>
+          </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      {stats && <PredictionStatsSummary stats={stats} />}
+        {/* Stats Cards */}
+        {stats && <PredictionStatsSummary stats={stats} />}
 
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-        className="w-full"
-      >
-        <TabsList className="mb-4 grid w-full grid-cols-4">
-          <TabsTrigger value="all">전체</TabsTrigger>
-          <TabsTrigger value="pending">대기중</TabsTrigger>
-          <TabsTrigger value="correct">적중</TabsTrigger>
-          <TabsTrigger value="incorrect">미적중</TabsTrigger>
-        </TabsList>
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+          className="w-full"
+        >
+          <TabsList className="mb-4 grid w-full grid-cols-4">
+            <TabsTrigger value="all">전체</TabsTrigger>
+            <TabsTrigger value="pending">대기중</TabsTrigger>
+            <TabsTrigger value="correct">적중</TabsTrigger>
+            <TabsTrigger value="incorrect">미적중</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value={activeTab}>
-          {isLoading ? (
-            <Card className="p-8 text-center">
-              <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground text-sm">예측 내역을 불러오는 중...</p>
-            </Card>
-          ) : filteredPredictions.length > 0 ? (
-            <div className="space-y-3">
-              {filteredPredictions.map((pred) => {
-                if ("type" in pred && pred.type === "sports_slip") {
-                  return (
-                    <BettingSlipCard
-                      key={pred.id}
-                      slip={pred as SportsSlip}
-                      isExpanded={expandedSlips.has(pred.id)}
-                      onToggle={() => toggleSlip(pred.id)}
-                    />
-                  )
-                } else {
-                  return (
-                    <RegularPredictionCard key={pred.id} prediction={pred as RegularPrediction} />
-                  )
-                }
-              })}
-            </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <Trophy className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-              <h3 className="mb-2 text-lg font-semibold">
-                {activeTab === "all"
-                  ? "예측 내역이 없습니다"
-                  : activeTab === "pending"
-                    ? "대기중인 예측이 없습니다"
-                    : activeTab === "correct"
-                      ? "적중한 예측이 없습니다"
-                      : "미적중 예측이 없습니다"}
-              </h3>
-              <p className="text-muted-foreground mb-4 text-sm">승부예측에 참여해보세요!</p>
-              <Button onClick={() => router.push("/")}>예측하러 가기</Button>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </main>
+          <TabsContent value={activeTab}>
+            {isLoading ? (
+              <div className="rounded-lg p-8 text-center" style={wcCard}>
+                <Loader2
+                  className="mx-auto mb-2 h-8 w-8 animate-spin"
+                  style={{ color: "var(--wc-mute)" }}
+                />
+                <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+                  예측 내역을 불러오는 중...
+                </p>
+              </div>
+            ) : filteredPredictions.length > 0 ? (
+              <div className="space-y-3">
+                {filteredPredictions.map((pred) => {
+                  if ("type" in pred && pred.type === "sports_slip") {
+                    return (
+                      <BettingSlipCard
+                        key={pred.id}
+                        slip={pred as SportsSlip}
+                        isExpanded={expandedSlips.has(pred.id)}
+                        onToggle={() => toggleSlip(pred.id)}
+                      />
+                    )
+                  } else {
+                    return (
+                      <RegularPredictionCard key={pred.id} prediction={pred as RegularPrediction} />
+                    )
+                  }
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg p-12 text-center" style={wcCard}>
+                <Trophy className="mx-auto mb-4 h-12 w-12" style={{ color: "var(--wc-mute)" }} />
+                <h3 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink)" }}>
+                  {activeTab === "all"
+                    ? "예측 내역이 없습니다"
+                    : activeTab === "pending"
+                      ? "대기중인 예측이 없습니다"
+                      : activeTab === "correct"
+                        ? "적중한 예측이 없습니다"
+                        : "미적중 예측이 없습니다"}
+                </h3>
+                <p className="mb-4 text-sm" style={{ color: "var(--wc-mute)" }}>
+                  승부예측에 참여해보세요!
+                </p>
+                <Button
+                  onClick={() => router.push("/")}
+                  style={{ background: "var(--wc-burgundy)", color: "white" }}
+                >
+                  예측하러 가기
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
   )
 }

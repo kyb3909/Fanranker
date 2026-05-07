@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { PostCard, type TipTapNode } from "@/components/post-card"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, FileText, ArrowLeft, Trash2 } from "lucide-react"
+import { Loader2, FileText, ArrowLeft } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { useRouter } from "next/navigation"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -134,49 +133,90 @@ export default function MyPostsPage() {
     )
   }
 
-  return (
-    <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-      {/* 헤더 */}
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-2">
-          <FileText className="text-primary h-6 w-6" />
-          <h1 className="text-xl font-bold">내 작성글</h1>
-        </div>
-        <span className="text-muted-foreground ml-auto text-sm">총 {posts.length}개</span>
-      </div>
+  const wcCard = {
+    background: "var(--wc-card)",
+    boxShadow: "var(--wc-shadow-1)",
+  } as const
 
-      {/* 글 목록 */}
-      {errorMessage ? (
-        <Card className="p-8 text-center">
-          <p className="text-primary mb-3 text-sm">{errorMessage}</p>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            다시 시도
+  return (
+    <div className="worldcup-scope min-h-[100dvh]">
+      <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
+        {/* 헤더 */}
+        <div className="mb-6 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            style={{ color: "var(--wc-mute)" }}
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-        </Card>
-      ) : isLoading ? (
-        <Card className="p-8 text-center">
-          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">글 목록을 불러오는 중...</p>
-        </Card>
-      ) : posts.length > 0 ? (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+          <div className="min-w-0 flex-1">
+            <div className="wc-sec-eb">MY POSTS</div>
+            <h1
+              className="font-black tracking-tight"
+              style={{
+                fontSize: "clamp(20px, 3vw, 26px)",
+                color: "var(--wc-ink)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              내 작성글
+            </h1>
+          </div>
+          <span
+            className="ml-auto text-sm font-semibold tabular-nums"
+            style={{ color: "var(--wc-mute)" }}
+          >
+            총 {posts.length}개
+          </span>
         </div>
-      ) : (
-        <Card className="p-12 text-center">
-          <FileText className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-          <h3 className="mb-2 text-lg font-semibold">작성한 글이 없습니다</h3>
-          <p className="text-muted-foreground mb-4 text-sm">커뮤니티에 첫 글을 작성해보세요!</p>
-          <Link href="/write">
-            <Button>글 작성하기</Button>
-          </Link>
-        </Card>
-      )}
-    </main>
+
+        {/* 글 목록 */}
+        {errorMessage ? (
+          <div className="rounded-lg p-8 text-center" style={wcCard}>
+            <p className="mb-3 text-sm" style={{ color: "var(--wc-down)" }}>
+              {errorMessage}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              다시 시도
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <div className="rounded-lg p-8 text-center" style={wcCard}>
+            <Loader2
+              className="mx-auto mb-2 h-8 w-8 animate-spin"
+              style={{ color: "var(--wc-mute)" }}
+            />
+            <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+              글 목록을 불러오는 중...
+            </p>
+          </div>
+        ) : posts.length > 0 ? (
+          <div className="space-y-4">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg p-12 text-center" style={wcCard}>
+            <FileText className="mx-auto mb-4 h-12 w-12" style={{ color: "var(--wc-mute)" }} />
+            <h3 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink)" }}>
+              작성한 글이 없습니다
+            </h3>
+            <p className="mb-4 text-sm" style={{ color: "var(--wc-mute)" }}>
+              커뮤니티에 첫 글을 작성해보세요!
+            </p>
+            <Link
+              href="/write"
+              className="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-bold transition-colors"
+              style={{ background: "var(--wc-burgundy)", color: "white" }}
+            >
+              글 작성하기
+            </Link>
+          </div>
+        )}
+      </main>
+    </div>
   )
 }

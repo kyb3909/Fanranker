@@ -14,17 +14,17 @@ export default function ProfilePage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+      <div className="worldcup-scope flex min-h-[100dvh] items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--wc-mute)" }} />
       </div>
     )
   }
 
   const isCurrentUser = !!(isSignedIn && user?.id === userId)
 
-  if (isCurrentUser) {
-    return <MyProfileSettings />
-  }
-
-  return <PublicProfileView userId={userId} />
+  return (
+    <div className="worldcup-scope min-h-[100dvh]">
+      {isCurrentUser ? <MyProfileSettings /> : <PublicProfileView userId={userId} />}
+    </div>
+  )
 }
