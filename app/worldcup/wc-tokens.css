@@ -425,6 +425,47 @@
   transform: translateY(1px);
 }
 
+/* ─── Z1.5 Event menu action cards (Hub 동선) ────────────── */
+.worldcup-scope .wc-action-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--wc-card);
+  border-radius: 12px;
+  padding: 24px;
+  border-top: 4px solid var(--gp);
+  box-shadow: var(--wc-shadow-1);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  text-decoration: none;
+  color: inherit;
+}
+.worldcup-scope .wc-action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--wc-shadow-2);
+}
+.worldcup-scope .wc-action-card-h {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--wc-ink);
+  margin-bottom: 8px;
+}
+.worldcup-scope .wc-action-card-b {
+  font-size: 13px;
+  color: var(--wc-mute);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  flex: 1;
+}
+.worldcup-scope .wc-action-card-cta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gp);
+  letter-spacing: -0.01em;
+}
+
 /* ─── Z2.1 Register head — Q5: 중앙 정렬 ─────────────────── */
 .worldcup-scope .wc-reg-head {
   text-align: center;

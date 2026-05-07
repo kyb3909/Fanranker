@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "월드컵 이벤트 운영 — Admin",
 }
 
+// 등록자/그룹 분포 즉시 반영
+export const dynamic = "force-dynamic"
+
 const EVENT_SLUG = "worldcup-2026"
 
 interface EventRow {

@@ -1,20 +1,24 @@
 import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { Card } from "@/components/ui/card"
-import { Trophy } from "lucide-react"
+import { Trophy, Users, BarChart3, Gamepad2 } from "lucide-react"
 import { Countdown } from "@/components/worldcup/countdown"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
   title: "월드컵 승부예측 그룹 대결",
   description:
-    "응원하는 클럽 그룹에 가입해 월드컵 기간 예측 대결. 1위 100만원 상품, 그룹 평균 적중률로 축잘알 팬덤 결정.",
+    "응원하는 클럽 그룹에 가입해 월드컵 기간 예측 대결. 1위 상품 증정, 그룹 평균 적중률로 축잘알 팬덤 결정.",
   alternates: { canonical: "/worldcup" },
   openGraph: {
     title: "월드컵 승부예측 그룹 대결 | gongnori.fan",
-    description: "1위 100만원 상품. 응원 그룹에 가입해 축잘알 1위에 도전하세요.",
+    description: "1위 상품 증정. 응원 그룹에 가입해 축잘알 1위에 도전하세요.",
     url: "/worldcup",
   },
 }
+
+// 등록자 카운트 즉시 반영
+export const dynamic = "force-dynamic"
 
 const GROUPS = [
   {
@@ -57,7 +61,13 @@ const STEPS = [
   },
 ] as const
 
-export default function WorldcupPage() {
+export default async function WorldcupPage() {
+  // 등록자 카운트 — Hub 에서 노출 (소셜 증명 + 다른 페이지로 가는 동선)
+  const supabase = createServiceRoleClient()
+  const { count: totalRegistrations } = await supabase
+    .from("event_registrations")
+    .select("*", { count: "exact", head: true })
+
   return (
     <div className="bg-background min-h-screen">
       {/* Z1.1 Hero — burgundy gradient + grid + orbs + countdown + prize ribbon */}
@@ -106,7 +116,21 @@ export default function WorldcupPage() {
                 <Link href="/worldcup/register" className="wc-btn-on-hero">
                   사전 등록하기
                 </Link>
-                <span className="text-xs opacity-70">월드컵 시작 전까지 등록 가능</span>
+                <Link
+                  href="/worldcup/leaderboard"
+                  className="inline-flex items-center gap-1.5 rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors"
+                  style={{
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                  }}
+                >
+                  리더보드 보기 →
+                </Link>
+                {totalRegistrations !== null && (
+                  <span className="text-xs font-semibold opacity-80">
+                    현재 {totalRegistrations.toLocaleString()}명 등록 중
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -177,14 +201,54 @@ export default function WorldcupPage() {
         </div>
       </section>
 
-      {/* Z1.5 하단 CTA */}
-      <section className="px-4 py-16">
-        <div className="mx-auto max-w-5xl text-center">
-          <Link href="/worldcup/register" className="wc-btn-primary-big">
-            지금 사전 등록하기
-          </Link>
-          <p className="mt-4 text-[12px]" style={{ color: "var(--wc-mute)" }}>
+      {/* Z1.5 하단 액션 카드 — 등록 / 베팅 / 리더보드 동선 */}
+      <section className="px-4 py-12">
+        <div className="mx-auto max-w-5xl">
+          <header className="wc-sec-head text-center">
+            <div className="wc-sec-eb">EVENT MENU</div>
+            <h2 className="wc-sec-h2">지금 할 수 있는 것</h2>
+          </header>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Link
+              href="/worldcup/register"
+              className="wc-action-card group"
+              style={{ ["--gp" as string]: "var(--wc-burgundy)" } as React.CSSProperties}
+            >
+              <Users className="mb-3 h-6 w-6" style={{ color: "var(--wc-burgundy)" }} />
+              <div className="wc-action-card-h">사전 등록</div>
+              <p className="wc-action-card-b">
+                Gooner / Kopite / Blue 중 한 그룹에 합류. 변경 불가, 신중히 선택.
+              </p>
+              <span className="wc-action-card-cta">등록하기 →</span>
+            </Link>
+            <Link
+              href="/worldcup/games"
+              className="wc-action-card group"
+              style={{ ["--gp" as string]: "var(--wc-go)" } as React.CSSProperties}
+            >
+              <Gamepad2 className="mb-3 h-6 w-6" style={{ color: "var(--wc-go)" }} />
+              <div className="wc-action-card-h">월드컵 경기 베팅</div>
+              <p className="wc-action-card-b">
+                보유 토큰·골드로 월드컵 경기 예측. 슬립이 그룹 수익에 반영.
+              </p>
+              <span className="wc-action-card-cta">베팅하러 →</span>
+            </Link>
+            <Link
+              href="/worldcup/leaderboard"
+              className="wc-action-card group"
+              style={{ ["--gp" as string]: "var(--wc-blue)" } as React.CSSProperties}
+            >
+              <BarChart3 className="mb-3 h-6 w-6" style={{ color: "var(--wc-blue)" }} />
+              <div className="wc-action-card-h">리더보드</div>
+              <p className="wc-action-card-b">
+                그룹 내 수익 랭킹 + 그룹 평균 비교로 가리는 축잘알 팬덤.
+              </p>
+              <span className="wc-action-card-cta">순위 보기 →</span>
+            </Link>
+          </div>
+          <p className="mt-8 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
             등록은 무료. 응원 그룹은 한 번만 선택할 수 있습니다.
+            {totalRegistrations !== null && ` · 현재 ${totalRegistrations.toLocaleString()}명 등록`}
           </p>
         </div>
       </section>

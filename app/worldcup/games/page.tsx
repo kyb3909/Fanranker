@@ -1,18 +1,21 @@
 import type { Metadata } from "next"
-import dynamic from "next/dynamic"
+import nextDynamic from "next/dynamic"
 import Link from "@/components/ui/app-link"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { Countdown } from "@/components/worldcup/countdown"
 import { Lock, Users, ArrowRight } from "lucide-react"
 
 // BettingPage 는 client component (use client). dynamic import 로 lazy.
-const BettingPage = dynamic(() => import("@/components/betting/betting-page"))
+const BettingPage = nextDynamic(() => import("@/components/betting/betting-page"))
 
 export const metadata: Metadata = {
   title: "월드컵 경기 베팅",
   description: "월드컵 기간 동안 등록한 그룹 안에서 적중률·수익률로 1위에 도전하세요.",
   alternates: { canonical: "/worldcup/games" },
 }
+
+// status / league_codes / 등록자 카운트 즉시 반영
+export const dynamic = "force-dynamic"
 
 const EVENT_SLUG = "worldcup-2026"
 

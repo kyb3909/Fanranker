@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/worldcup/leaderboard" },
 }
 
+// 등록자/슬립 변동을 즉시 반영 (정적 prerender 방지)
+export const dynamic = "force-dynamic"
+
 interface RegistrationRow {
   user_id: string
   group_id: string
