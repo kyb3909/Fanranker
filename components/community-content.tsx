@@ -121,27 +121,53 @@ export const CommunityContent = memo(function CommunityContent({
       <>
         {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
         <div className="py-4">
-          {/* 커뮤니티 헤더: 간격 축소 */}
-          <div className="mb-4 flex items-start justify-between">
-            <div className="space-y-1">
-              <h1 className="text-foreground text-xl font-semibold">{community.name}</h1>
-              <p className="text-muted-foreground text-sm">{community.description}</p>
-              <div className="text-muted-foreground flex items-center gap-3 pt-1 text-xs">
-                <div className="flex items-center gap-1">
+          {/* 커뮤니티 헤더 — wc eyebrow + 큰 헤딩 + 멤버 메타 */}
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="wc-sec-eb">COMMUNITY</div>
+              <h1
+                className="font-black tracking-tight"
+                style={{
+                  fontSize: "clamp(22px, 3.5vw, 28px)",
+                  lineHeight: 1.15,
+                  color: "var(--wc-ink)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {community.name}
+              </h1>
+              {community.description && (
+                <p
+                  className="mt-1.5 text-[14px] leading-relaxed"
+                  style={{ color: "var(--wc-mute)" }}
+                >
+                  {community.description}
+                </p>
+              )}
+              <div
+                className="mt-2 flex items-center gap-3 text-[12px]"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                <div className="flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5" />
-                  <span>{community.members}</span>
+                  <span className="font-semibold tabular-nums">{community.members}</span>
                 </div>
               </div>
             </div>
-            <Button
-              variant={isFollowing ? "outline" : "default"}
-              size="sm"
-              className="h-11 px-4 text-sm font-medium sm:h-8"
+            <button
+              type="button"
               onClick={handleFollow}
               disabled={isFollowLoading}
+              className="shrink-0 rounded-md px-4 py-2 text-[13px] font-bold transition-colors disabled:opacity-60"
+              style={{
+                background: isFollowing ? "var(--wc-card)" : "var(--wc-burgundy)",
+                color: isFollowing ? "var(--wc-mute)" : "white",
+                border: isFollowing ? "1px solid var(--wc-line-2)" : "1px solid var(--wc-burgundy)",
+                minHeight: 36,
+              }}
             >
               {isFollowing ? "팔로잉" : "팔로우"}
-            </Button>
+            </button>
           </div>
 
           <div className="bg-card border-border overflow-hidden rounded-lg border">
