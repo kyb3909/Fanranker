@@ -13,8 +13,8 @@ import {
 const EVENT_SLUG = "worldcup-2026"
 
 export const metadata: Metadata = {
-  title: "월드컵 이벤트 리더보드",
-  description: "그룹 내 수익금 순위와 그룹 평균으로 가리는 축잘알 팬덤.",
+  title: "월드컵 팬덤 현황",
+  description: "그룹 평균과 축잘알 팬덤 비교. 개별 순위는 종료 후 공개.",
   alternates: { canonical: "/worldcup/leaderboard" },
 }
 
@@ -209,7 +209,7 @@ export default async function WorldcupLeaderboardPage() {
           <Link href="/worldcup" className="wc-reg-head-back">
             ← 이벤트 안내로
           </Link>
-          <div className="wc-sec-eb">LIVE LEADERBOARD</div>
+          <div className="wc-sec-eb">FANDOM STATUS</div>
           <h1
             className="font-black tracking-tight"
             style={{
@@ -219,11 +219,11 @@ export default async function WorldcupLeaderboardPage() {
               letterSpacing: "-0.02em",
             }}
           >
-            월드컵 이벤트 리더보드
+            팬덤 현황
           </h1>
           <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-            그룹 내 누적 수익금 순위와 그룹 평균으로 가리는 &ldquo;축잘알 팬덤&rdquo;. 이벤트 종료
-            시점에 그룹 1위가 결정됩니다.
+            그룹 평균과 &ldquo;축잘알 팬덤&rdquo; 비교. 개별 순위는 의욕 상실 방지를 위해 진행
+            중에는 비공개 — 종료 후 결과 발표에서 그룹 1위 공개.
           </p>
         </header>
 

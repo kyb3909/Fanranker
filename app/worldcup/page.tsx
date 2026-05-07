@@ -124,7 +124,7 @@ export default async function WorldcupPage() {
                     border: "1px solid rgba(255,255,255,0.25)",
                   }}
                 >
-                  리더보드 보기 →
+                  팬덤 현황 →
                 </Link>
                 {totalRegistrations !== null && (
                   <span className="text-xs font-semibold opacity-80">
@@ -239,11 +239,11 @@ export default async function WorldcupPage() {
               style={{ ["--gp" as string]: "var(--wc-blue)" } as React.CSSProperties}
             >
               <BarChart3 className="mb-3 h-6 w-6" style={{ color: "var(--wc-blue)" }} />
-              <div className="wc-action-card-h">리더보드</div>
+              <div className="wc-action-card-h">팬덤 현황</div>
               <p className="wc-action-card-b">
-                그룹 내 수익 랭킹 + 그룹 평균 비교로 가리는 축잘알 팬덤.
+                그룹 평균 비교 + 내 위치. 개별 순위는 종료 후 결과 발표에서 공개.
               </p>
-              <span className="wc-action-card-cta">순위 보기 →</span>
+              <span className="wc-action-card-cta">현황 보기 →</span>
             </Link>
           </div>
           <p className="mt-8 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { Crown } from "lucide-react"
 
 export interface LbGroup {
@@ -40,22 +40,24 @@ export interface LbMyInfo {
 interface LeaderboardClientProps {
   groups: LbGroup[]
   groupAvg: LbGroupAvg[]
-  rankings: Record<string, LbRanking[]>
+  /** TOP 10 list — 의욕 상실 방지 위해 client 에 노출하지 않음. 데이터는 props 로 받지만 사용 X (시그니처 호환). */
+  rankings?: Record<string, LbRanking[]>
   myInfo: LbMyInfo | null
 }
 
 const fmtProfit = (n: number) => `${n >= 0 ? "+" : ""}${n.toLocaleString()}`
 
-export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: LeaderboardClientProps) {
-  const initialTab = myInfo?.groupSlug ?? groups[0]?.slug ?? "gooner"
-  const [activeTab, setActiveTab] = useState<string>(initialTab)
-  const activeGroup = groups.find((g) => g.slug === activeTab) ?? groups[0]
-  const activeRankings = rankings[activeTab] ?? []
-  const isMyGroup = myInfo?.groupSlug === activeTab
+/** rank / totalInGroup → '상위 N%' 부드러운 표현 */
+function fmtPercentile(rank: number, total: number): string {
+  if (total <= 1) return "—"
+  const pct = Math.round((rank / total) * 100)
+  return `상위 ${Math.max(1, pct)}%`
+}
 
+export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClientProps) {
   const groupAvgBySlug = useMemo(() => new Map(groupAvg.map((g) => [g.slug, g])), [groupAvg])
 
-  // 그룹 평균 카드 정렬 — rank 순 (avgProfit 내림차순)
+  // 그룹 카드 정렬 — rank 순 (avgProfit 내림차순)
   const sortedGroups = useMemo(
     () =>
       [...groups].sort((a, b) => {
@@ -77,9 +79,39 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
     )
   }
 
+  const myGroup = myInfo ? groups.find((g) => g.slug === myInfo.groupSlug) : null
+  const myGroupAvg = myInfo ? groupAvgBySlug.get(myInfo.groupSlug) : null
+  const topFandom = groupAvg.find((g) => g.rank === 1)
+  const topFandomGroup = topFandom ? groups.find((g) => g.slug === topFandom.slug) : null
+
   return (
     <div className="wc-lb">
-      {/* Z3.2 그룹 평균 카드 (3 카드, 1/2/3위 표시, mine ring) */}
+      {/* 축잘알 팬덤 강조 (top group) */}
+      {topFandom && topFandomGroup && (
+        <div
+          className="wc-res-fandom"
+          style={
+            {
+              background: `linear-gradient(135deg, ${topFandomGroup.color}, color-mix(in srgb, ${topFandomGroup.color} 70%, black))`,
+            } as React.CSSProperties
+          }
+        >
+          <span aria-hidden className="wc-res-fandom-trophy">
+            👑
+          </span>
+          <div>
+            <div className="wc-res-fandom-eb">현재 축잘알 팬덤</div>
+            <div className="wc-res-fandom-h">
+              <em>{topFandomGroup.name}</em>
+              <span className="ml-2 text-sm font-normal opacity-80">
+                평균 수익 {fmtProfit(topFandom.avgProfit)} 볼
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 그룹 평균 비교 — 3 카드 (팀 정체성) */}
       <div className="wc-lbg-grid">
         {sortedGroups.map((g) => {
           const stats = groupAvgBySlug.get(g.slug)
@@ -114,36 +146,35 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
         })}
       </div>
 
-      {/* Z3.4 내 순위 — 활성 탭=내 그룹일 때만 (베이스라인 invariant 5 보존) */}
-      {isMyGroup && myInfo && activeGroup && (
+      {/* 내 위치 — percentile (구체 ranking 숨김, 의욕 상실 방지) */}
+      {myInfo && myGroup && myGroupAvg && (
         <div
           className="wc-lb-me"
-          style={{ ["--gp" as string]: activeGroup.color } as React.CSSProperties}
+          style={{ ["--gp" as string]: myGroup.color } as React.CSSProperties}
         >
           <div className="wc-lb-me-l">
             <Crown className="h-7 w-7 shrink-0" />
             <div>
               <div className="wc-lb-me-h">
-                내 순위 #{myInfo.rank}
-                <span className="wc-lb-me-handle"> / {myInfo.totalInGroup}명</span>
+                내 위치 — {fmtPercentile(myInfo.rank, myInfo.totalInGroup)}
               </div>
               <div className="wc-lb-me-sub">
-                {activeGroup.name} · {activeGroup.clubKor} 팬덤
+                {myGroup.name} · {myGroup.clubKor} 팬덤 · {myInfo.totalInGroup}명 중
               </div>
             </div>
           </div>
           <div className="wc-lb-me-stats">
             <div className="wc-lb-me-s">
+              <span>내 수익 (볼)</span>
+              <b className={myInfo.profit >= 0 ? "up" : ""}>{fmtProfit(myInfo.profit)}</b>
+            </div>
+            <div className="wc-lb-me-s">
               <span>적중률</span>
               <b>{myInfo.accuracy}%</b>
             </div>
             <div className="wc-lb-me-s">
-              <span>수익 (볼)</span>
-              <b className={myInfo.profit >= 0 ? "up" : ""}>{fmtProfit(myInfo.profit)}</b>
-            </div>
-            <div className="wc-lb-me-s">
               <span>그룹 평균</span>
-              <b>{fmtProfit(groupAvgBySlug.get(activeGroup.slug)?.avgProfit ?? 0)}</b>
+              <b>{fmtProfit(myGroupAvg.avgProfit)}</b>
             </div>
             <div className="wc-lb-me-s">
               <span>정산 슬립</span>
@@ -153,58 +184,25 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
         </div>
       )}
 
-      {/* Z3.3 그룹 탭 + Z3.5 TOP 10 테이블 */}
-      <div className="wc-lb-table-card">
-        <div className="wc-lb-tabs">
-          {groups.map((g) => (
-            <button
-              key={g.slug}
-              type="button"
-              className={activeTab === g.slug ? "on" : ""}
-              onClick={() => setActiveTab(g.slug)}
-              aria-pressed={activeTab === g.slug}
+      {/* 비등록자 안내 */}
+      {!myInfo && (
+        <div className="wc-reg-rules">
+          <div className="wc-reg-rules-h">아직 등록 전</div>
+          <p className="text-[13px] leading-[1.6]">
+            등록하면 내 그룹 평균과 내 위치를 볼 수 있어요.{" "}
+            <a
+              href="/worldcup/register"
+              className="underline"
+              style={{ color: "var(--wc-burgundy)" }}
             >
-              {g.name}
-            </button>
-          ))}
+              지금 등록하기 →
+            </a>
+          </p>
         </div>
+      )}
 
-        {activeRankings.length === 0 ? (
-          <div className="py-12 text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-            아직 등록자가 없습니다. 첫 번째로 합류해보세요!
-          </div>
-        ) : (
-          <>
-            <div className="wc-lb-table-h">
-              <div>RANK</div>
-              <div>NAME</div>
-              <div className="r">적중</div>
-              <div className="r">수익</div>
-            </div>
-            {activeRankings.map((r) => {
-              const isMe = isMyGroup && !!myInfo && r.user_id === myInfo.user_id
-              const rankClass =
-                r.rank === 1 ? "top1" : r.rank === 2 ? "top2" : r.rank === 3 ? "top3" : ""
-              return (
-                <div key={r.user_id} className={`wc-lb-tr ${isMe ? "you" : ""}`}>
-                  <div className={`wc-lb-rk ${rankClass}`}>{r.rank}</div>
-                  <div className="wc-lb-nm">
-                    <span className="truncate">{r.nickname}</span>
-                  </div>
-                  <div className="acc r">{r.accuracy}%</div>
-                  <div className={`roi r ${r.profit >= 0 ? "up" : "down"}`}>
-                    {fmtProfit(r.profit)}
-                  </div>
-                </div>
-              )
-            })}
-          </>
-        )}
-      </div>
-
-      {/* Z3.6 안내 푸터 */}
       <p className="text-center text-[11px]" style={{ color: "var(--wc-mute)" }}>
-        실시간 집계. 정산 완료된 슬립만 수익에 반영됩니다.
+        실시간 그룹 평균. 개별 순위는 종료 시점 결과 발표에서 공개됩니다.
       </p>
     </div>
   )

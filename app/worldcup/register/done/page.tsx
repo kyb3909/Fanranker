@@ -70,12 +70,12 @@ export default async function RegisterDonePage({ searchParams }: PageProps) {
           {/* Action cards */}
           <div className="wc-done-cards">
             <div className="wc-done-card">
-              <div className="wc-done-card-h">리더보드 미리보기</div>
+              <div className="wc-done-card-h">팬덤 현황 보기</div>
               <p className="wc-done-card-b">
-                {group.name} 그룹의 다른 멤버 적중률·수익률을 확인하세요.
+                {group.name} 그룹 평균과 다른 그룹과의 비교, 내 위치를 확인하세요.
               </p>
               <Link href="/worldcup/leaderboard" className="wc-done-card-cta">
-                리더보드로 →
+                현황 보기 →
               </Link>
             </div>
             <div className="wc-done-card">
