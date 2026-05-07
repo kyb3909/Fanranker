@@ -24,6 +24,8 @@ const predictionPostSchema = z.object({
   analysis_title: z.string().max(100).optional(),
   analysis_text: z.string().max(5000).optional(),
   idempotency_key: z.string().uuid().optional(),
+  // 이벤트 슬립 (예: 월드컵 그룹 대결) — slug 만 받아서 서버에서 검증
+  event_slug: z.string().min(1).max(64).optional(),
 })
 
 /**
@@ -53,7 +55,8 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 예측 데이터입니다.")
     }
-    const { predictions, betAmount, analysis_title, analysis_text, idempotency_key } = parsed.data
+    const { predictions, betAmount, analysis_title, analysis_text, idempotency_key, event_slug } =
+      parsed.data
 
     // Idempotency check: prevent duplicate submissions
     if (idempotency_key) {
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest) {
     const { data: games, error: gamesError } = await supabase
       .from("betman_games")
       .select(
-        "id, round_id, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds"
+        "id, round_id, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, league_code"
       )
       .in("id", gameIds)
 
@@ -252,6 +255,60 @@ export async function POST(request: NextRequest) {
       oddsByPrediction[pred.game_id] = oddsMap
     }
 
+    // ===== 이벤트 슬립 검증 (event_slug 가 있을 때만) =====
+    // 등록한 사용자만 + 게임의 league_code 가 events.league_codes 에 있어야 함
+    let eventId: string | null = null
+    if (event_slug) {
+      const { data: ev } = await supabase
+        .from("events")
+        .select("id, status, league_codes, registration_closes_at, end_at")
+        .eq("slug", event_slug)
+        .maybeSingle()
+
+      if (!ev) {
+        return NextResponse.json({ error: "이벤트를 찾을 수 없습니다." }, { status: 404 })
+      }
+      if (ev.status !== "live") {
+        return NextResponse.json({ error: "현재 이벤트가 진행 중이 아닙니다." }, { status: 400 })
+      }
+      if (new Date(ev.end_at) < new Date()) {
+        return NextResponse.json({ error: "이벤트가 종료되었습니다." }, { status: 400 })
+      }
+      const codes: string[] = Array.isArray(ev.league_codes) ? ev.league_codes : []
+      if (codes.length === 0) {
+        return NextResponse.json(
+          { error: "이벤트 경기 코드가 아직 배정되지 않았습니다." },
+          { status: 400 }
+        )
+      }
+
+      // 모든 게임의 league_code 가 이벤트 코드 안에 있어야 함
+      const offGames = games.filter((g) => !codes.includes(g.league_code as unknown as string))
+      if (offGames.length > 0) {
+        const names = offGames.map((g) => `${g.home_team_name} vs ${g.away_team_name}`).join(", ")
+        return NextResponse.json(
+          { error: `이벤트 경기가 아닌 게임이 포함되어 있습니다: ${names}` },
+          { status: 400 }
+        )
+      }
+
+      // 등록한 사용자인지
+      const { data: reg } = await supabase
+        .from("event_registrations")
+        .select("id")
+        .eq("event_id", ev.id)
+        .eq("user_id", user.id)
+        .maybeSingle()
+      if (!reg) {
+        return NextResponse.json(
+          { error: "이벤트 등록이 필요합니다.", needs_registration: true },
+          { status: 403 }
+        )
+      }
+
+      eventId = ev.id
+    }
+
     // ===== 기자 여부 확인 (분석글 저장용) =====
     let isJournalist = false
     if (analysis_text) {
@@ -309,6 +366,7 @@ export async function POST(request: NextRequest) {
       slipInsert.analysis_text = analysis_text
     }
     if (idempotency_key) slipInsert.idempotency_key = idempotency_key
+    if (eventId) slipInsert.event_id = eventId
 
     const { data: slip, error: slipError } = await supabase
       .from("prediction_slips")

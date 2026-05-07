@@ -164,3 +164,15 @@ VALUES
   ((SELECT id FROM ev), 'blues',  'Blue',   '첼시',   '#034694',
    'Pride of London',            '첼시 채널',   3)
 ON CONFLICT (event_id, slug) DO NOTHING;
+
+-- ============================================================
+-- 추가 (2026-05-07): events.league_codes
+-- 월드컵 경기 식별용 코드 (betman 이 코드 배정하면 admin 에서 입력)
+-- 빈 배열 = 코드 미배정 → /worldcup/games 는 안내 모드만 노출
+-- ============================================================
+
+ALTER TABLE events
+  ADD COLUMN IF NOT EXISTS league_codes text[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS betman_games_league_code_idx
+  ON betman_games(league_code) WHERE league_code IS NOT NULL;

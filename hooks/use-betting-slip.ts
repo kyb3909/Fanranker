@@ -5,7 +5,12 @@ import type { SelectedBet, GroupedMatch } from "@/components/betting/betting-typ
 import { useAlertModal } from "./use-alert-modal"
 import { trackEvent } from "@/lib/analytics/events"
 
-export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () => void) {
+export function useBettingSlip(
+  groupedMatches: GroupedMatch[],
+  loadMatches: () => void,
+  options?: { eventSlug?: string }
+) {
+  const eventSlug = options?.eventSlug
   const { isSignedIn } = useAuth()
   const { mutate: globalMutate } = useSWRConfig()
   const { alertModal, showAlert, closeAlert } = useAlertModal()
@@ -223,6 +228,7 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
         if (analysisTitle.trim()) payload.analysis_title = analysisTitle.trim()
         payload.analysis_text = analysisText.trim()
       }
+      if (eventSlug) payload.event_slug = eventSlug
       const res = await fetch("/api/sports/prediction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -270,6 +276,7 @@ export function useBettingSlip(groupedMatches: GroupedMatch[], loadMatches: () =
     isJournalist,
     analysisTitle,
     analysisText,
+    eventSlug,
   ])
 
   return {
