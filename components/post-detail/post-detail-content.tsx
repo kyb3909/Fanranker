@@ -2,7 +2,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { MoreHorizontal, Search, Ban, Pencil, Trash2, User, Flag } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import Image from "next/image"
@@ -106,7 +105,13 @@ export function PostDetailContent({
     <div className="space-y-4">
       <ImageLightbox />
       {/* Post Detail Card */}
-      <Card className="border-border bg-card overflow-hidden border">
+      <div
+        className="overflow-hidden rounded-lg"
+        style={{
+          background: "var(--wc-card)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
         <div className="p-5 sm:p-6">
           {/* Header */}
           <div className="mb-3 flex items-start justify-between">
@@ -221,7 +226,14 @@ export function PostDetailContent({
 
           {/* Content */}
           <div className="space-y-3">
-            <h2 className="text-foreground text-xl leading-snug font-semibold text-pretty">
+            <h2
+              className="leading-snug font-black tracking-tight text-pretty"
+              style={{
+                fontSize: "clamp(20px, 3.2vw, 26px)",
+                color: "var(--wc-ink)",
+                letterSpacing: "-0.02em",
+              }}
+            >
               {post.title}
             </h2>
             <div className="px-1 pt-3">
@@ -268,7 +280,7 @@ export function PostDetailContent({
             commentCount={commentCount}
           />
         </div>
-      </Card>
+      </div>
 
       {/* Comments Section */}
       <CommentSection

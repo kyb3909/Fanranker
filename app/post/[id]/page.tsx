@@ -303,30 +303,36 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         }}
       />
 
-      <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
-        <div className="grid grid-cols-12 gap-6">
-          {/* Main Content - 9 columns */}
-          <div className="col-span-12 space-y-4 lg:col-span-9">
-            <BackButton />
+      <div className="worldcup-scope min-h-[100dvh]">
+        <main
+          id="main-content"
+          className="container mx-auto max-w-[1280px] px-4 py-6"
+          tabIndex={-1}
+        >
+          <div className="grid grid-cols-12 gap-6">
+            {/* Main Content - 9 columns */}
+            <div className="col-span-12 space-y-4 lg:col-span-9">
+              <BackButton />
 
-            {/* Post Detail Content */}
-            <PostDetailContent post={post} initialCommentsData={commentsData} />
+              {/* Post Detail Content */}
+              <PostDetailContent post={post} initialCommentsData={commentsData} />
 
-            {/* Board Recent Posts */}
-            <BoardRecentPosts
-              posts={recentPosts}
-              boardName={boardName}
-              boardSlug={postData.community_slug}
-              currentPostId={id}
-            />
+              {/* Board Recent Posts */}
+              <BoardRecentPosts
+                posts={recentPosts}
+                boardName={boardName}
+                boardSlug={postData.community_slug}
+                currentPostId={id}
+              />
+            </div>
+
+            {/* Right Sidebar - 3 columns - Only recent comments */}
+            <aside className="col-span-3 hidden lg:block">
+              <ActivitySidebar />
+            </aside>
           </div>
-
-          {/* Right Sidebar - 3 columns - Only recent comments */}
-          <aside className="col-span-3 hidden lg:block">
-            <ActivitySidebar />
-          </aside>
-        </div>
-      </main>
+        </main>
+      </div>
     </>
   )
 }
