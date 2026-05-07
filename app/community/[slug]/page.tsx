@@ -318,54 +318,71 @@ export default async function CommunityPage({
         }}
       />
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
-      <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
-        {/* 12컬럼 그리드: 조밀한 간격 */}
-        <div className="grid grid-cols-12 gap-4 lg:gap-5">
-          <div className="col-span-12 lg:col-span-9">
-            {/* 하위 채널 목록 */}
-            {channels && channels.length > 0 && (
-              <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {channels.map((ch) => (
-                  <Link
-                    key={ch.slug}
-                    href={`/community/${ch.slug}`}
-                    className="bg-card border-border hover:border-primary/50 hover:bg-muted/50 flex items-center gap-2.5 rounded-lg border px-3 py-2.5 transition-colors"
-                  >
-                    <span className="bg-secondary flex h-8 w-8 shrink-0 items-center justify-center rounded text-base">
-                      {ch.icon || "📺"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-foreground truncate text-[13px] font-semibold">
-                        {ch.name}
-                      </p>
-                      {ch.description && (
-                        <p className="text-muted-foreground truncate text-[11px]">
-                          {ch.description}
+      <div className="worldcup-scope min-h-[100dvh]">
+        <main
+          id="main-content"
+          className="container mx-auto max-w-[1280px] px-4 py-6"
+          tabIndex={-1}
+        >
+          {/* 12컬럼 그리드: 조밀한 간격 */}
+          <div className="grid grid-cols-12 gap-4 lg:gap-5">
+            <div className="col-span-12 lg:col-span-9">
+              {/* 하위 채널 목록 — wc-action-card 응용 */}
+              {channels && channels.length > 0 && (
+                <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {channels.map((ch) => (
+                    <Link
+                      key={ch.slug}
+                      href={`/community/${ch.slug}`}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-all hover:-translate-y-0.5"
+                      style={{
+                        background: "var(--wc-card)",
+                        boxShadow: "var(--wc-shadow-1)",
+                        borderTop: "3px solid var(--wc-burgundy)",
+                      }}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-base"
+                        style={{ background: "var(--wc-soft)" }}
+                      >
+                        {ch.icon || "📺"}
+                      </span>
+                      <div className="min-w-0">
+                        <p
+                          className="truncate text-[13px] font-semibold"
+                          style={{ color: "var(--wc-ink)" }}
+                        >
+                          {ch.name}
                         </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+                        {ch.description && (
+                          <p className="truncate text-[11px]" style={{ color: "var(--wc-mute)" }}>
+                            {ch.description}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
 
-            <CommunityContent
-              community={community}
-              posts={communityPosts}
-              communitySlug={slug}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              flairs={flairs || []}
-              activeFlairId={flairId}
-            />
+              <CommunityContent
+                community={community}
+                posts={communityPosts}
+                communitySlug={slug}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                flairs={flairs || []}
+                activeFlairId={flairId}
+              />
+            </div>
+
+            <aside className="hidden lg:col-span-3 lg:block">
+              <ActivitySidebar />
+            </aside>
           </div>
-
-          <aside className="hidden lg:col-span-3 lg:block">
-            <ActivitySidebar />
-          </aside>
-        </div>
-      </main>
+        </main>
+      </div>
     </>
   )
 }
