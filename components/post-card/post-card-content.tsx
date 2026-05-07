@@ -95,7 +95,10 @@ export const PostCardContent = memo(function PostCardContent({
         <div className={hasSingleImage ? "min-w-0 flex-1" : undefined}>
           {/* 제목 */}
           <Link href={`/post/${postId}`} className="group block">
-            <h2 className="font-title text-foreground group-hover:text-primary line-clamp-2 text-[16px] leading-[1.35] font-bold tracking-tight transition-colors sm:text-[17px]">
+            <h2
+              className="font-title line-clamp-2 text-[16px] leading-[1.35] font-bold tracking-tight transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[17px]"
+              style={{ color: "var(--wc-ink)" }}
+            >
               {title}
             </h2>
           </Link>

@@ -117,7 +117,9 @@ export function PostCardMeta({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <span className="text-foreground truncate font-semibold">{author}</span>
+        <span className="truncate font-bold" style={{ color: "var(--wc-ink)" }}>
+          {author}
+        </span>
 
         {hasTitleBadge && (
           <>
