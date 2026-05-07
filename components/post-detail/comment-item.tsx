@@ -158,16 +158,23 @@ export const CommentItem = memo(function CommentItem({
                 {comment.userId ? (
                   <Link
                     href={`/profile/${comment.userId}`}
-                    className={`text-foreground hover:text-primary font-semibold transition-colors ${depth === 0 ? "" : "text-sm"}`}
+                    className={`font-bold transition-colors hover:text-[color:var(--wc-burgundy)] ${depth === 0 ? "" : "text-sm"}`}
+                    style={{ color: "var(--wc-ink)" }}
                   >
                     {comment.author}
                   </Link>
                 ) : (
-                  <span className={`text-foreground font-semibold ${depth === 0 ? "" : "text-sm"}`}>
+                  <span
+                    className={`font-bold ${depth === 0 ? "" : "text-sm"}`}
+                    style={{ color: "var(--wc-ink)" }}
+                  >
                     {comment.author}
                   </span>
                 )}
-                <span className={`text-muted-foreground ${depth === 0 ? "text-sm" : "text-xs"}`}>
+                <span
+                  className={`${depth === 0 ? "text-sm" : "text-xs"}`}
+                  style={{ color: "var(--wc-mute)" }}
+                >
                   {comment.timestamp}
                 </span>
               </div>
@@ -220,7 +227,10 @@ export const CommentItem = memo(function CommentItem({
           ) : (
             <div>
               {comment.content && (
-                <p className={`text-foreground leading-relaxed ${depth === 0 ? "" : "text-sm"}`}>
+                <p
+                  className={`leading-relaxed ${depth === 0 ? "" : "text-sm"}`}
+                  style={{ color: "var(--wc-ink)" }}
+                >
                   {comment.content}
                 </p>
               )}
@@ -279,7 +289,8 @@ export const CommentItem = memo(function CommentItem({
       </div>
       {hasReplies && (
         <div
-          className={`border-border space-y-4 border-l-2 pl-4 ${depth === 0 ? "ml-12" : "ml-8"}`}
+          className={`space-y-4 pl-4 ${depth === 0 ? "ml-12" : "ml-8"}`}
+          style={{ borderLeft: "2px solid var(--wc-line)" }}
         >
           {comment.replies!.map((reply) => (
             <CommentItem
