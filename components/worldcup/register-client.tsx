@@ -1,186 +1,161 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useUser, SignInButton } from "@clerk/nextjs"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Check, Lock } from "lucide-react"
+import { Lock } from "lucide-react"
 
 const GROUPS = [
   {
     slug: "gooner",
-    name: "구너",
+    name: "Gooner",
     clubKor: "아스날",
     color: "#EF0107",
     youtuber: "아스날 채널",
+    motto: "Victoria Concordia Crescit",
   },
   {
     slug: "kop",
-    name: "콥",
+    name: "Kopite",
     clubKor: "리버풀",
     color: "#C8102E",
     youtuber: "리버풀 채널",
+    motto: "You'll Never Walk Alone",
   },
   {
     slug: "blues",
-    name: "블루스",
+    name: "Blue",
     clubKor: "첼시",
     color: "#034694",
     youtuber: "첼시 채널",
+    motto: "Pride of London",
   },
 ] as const
 
 export function RegisterClient() {
-  const { isSignedIn, user, isLoaded } = useUser()
+  const router = useRouter()
+  const { isSignedIn, isLoaded } = useUser()
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!isLoaded) {
     return <div className="bg-muted h-64 animate-pulse rounded-lg" />
   }
 
+  /** 비로그인 분기 — 베이스라인 보존 (시안엔 없는 분기). 시안 .reg-warn 톤만 차용. */
   if (!isSignedIn) {
     return (
       <div className="space-y-6">
-        {/* 로그인 안내 배너 */}
-        <Card className="border-amber-200 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/20">
-          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <div className="flex items-start gap-3">
-              <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" />
-              <div>
-                <div className="font-title text-foreground text-[14px] font-bold">
-                  로그인 후 등록 가능
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-[12px] leading-[1.65]">
-                  gongnori.fan 계정으로 로그인하면 그룹을 선택하고 등록을 마칠 수 있어요.
-                </p>
-              </div>
+        <div className="wc-reg-signin">
+          <div className="wc-reg-signin-row">
+            <Lock className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "var(--wc-burgundy)" }} />
+            <div>
+              <div className="wc-reg-signin-h">로그인 후 등록 가능</div>
+              <p className="wc-reg-signin-b">
+                gongnori.fan 계정으로 로그인하면 그룹을 선택하고 등록을 마칠 수 있어요.
+              </p>
             </div>
-            <SignInButton mode="modal">
-              <Button size="sm" className="font-title shrink-0 font-semibold">
-                로그인하기
-              </Button>
-            </SignInButton>
           </div>
-        </Card>
+          <SignInButton mode="modal">
+            <button type="button" className="wc-btn-on-warn">
+              로그인하기
+            </button>
+          </SignInButton>
+        </div>
 
-        {/* 그룹 미리보기 (비활성) */}
-        <div className="space-y-3 opacity-70">
+        {/* 그룹 미리보기 (비활성) — 베이스라인 분기 보존 */}
+        <div className="wc-reg-grid">
           {GROUPS.map((g) => (
             <div
               key={g.slug}
-              className="border-border relative w-full overflow-hidden rounded-lg border p-5"
+              className="wc-reg-card disabled"
+              style={{ ["--gp" as string]: g.color } as React.CSSProperties}
             >
-              <div
-                aria-hidden
-                className="absolute top-0 right-0 left-0 h-1"
-                style={{ background: g.color }}
-              />
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div
-                    className="font-title text-3xl font-bold tracking-tight"
-                    style={{ color: g.color }}
-                  >
-                    {g.name}
-                  </div>
-                  <div className="text-muted-foreground mt-1.5 text-[13px] leading-[1.5]">
-                    {g.clubKor} 팬덤
-                  </div>
-                  <div className="text-muted-foreground/70 mt-2 text-[11px]">
-                    유입 채널 · {g.youtuber}
-                  </div>
+              <span aria-hidden className="wc-reg-card-bg" />
+              <div className="wc-reg-card-top">
+                <div>
+                  <div className="wc-reg-card-name">{g.name}</div>
+                  <div className="wc-reg-card-sub">{g.clubKor} 팬덤</div>
                 </div>
-                <Lock className="text-muted-foreground/50 h-5 w-5 shrink-0" />
+                <Lock className="h-5 w-5" style={{ color: "var(--wc-mute-2)" }} />
               </div>
+              <p className="wc-reg-card-motto">{g.motto}</p>
+              <p className="wc-reg-card-foot">유입 · {g.youtuber}</p>
             </div>
           ))}
         </div>
 
-        <p className="text-muted-foreground text-center text-[12px]">
+        <p className="text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
           로그인하면 그룹을 선택하고 등록을 진행할 수 있습니다.
         </p>
       </div>
     )
   }
 
-  if (done) {
-    const g = GROUPS.find((x) => x.slug === selectedGroup)
-    return (
-      <Card className="p-8 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
-          <Check className="h-6 w-6 text-emerald-700 dark:text-emerald-300" />
-        </div>
-        <h2 className="font-title mt-4 text-2xl font-bold">등록 완료</h2>
-        <p className="text-muted-foreground mt-3 text-[14px] leading-[1.65]">
-          <span className="font-semibold" style={{ color: g?.color }}>
-            {g?.name}
-          </span>
-          {g?.clubKor && <span className="text-muted-foreground/70"> ({g.clubKor})</span>} 그룹에
-          합류했습니다.
-          <br />
-          월드컵 시작일에 알림을 보내드릴게요.
-        </p>
-        <p className="font-title mt-4 text-[12px] font-bold tracking-[0.1em] text-amber-700 uppercase dark:text-amber-300">
-          변경 불가 · 끝까지 함께
-        </p>
-      </Card>
-    )
-  }
-
   const handleSubmit = async () => {
     if (!selectedGroup || !agreed) return
     setSubmitting(true)
-    // TODO: API 호출 (DB 마이그레이션 phase 에서 추가)
-    // POST /api/event/worldcup/register { group_slug }
-    await new Promise((r) => setTimeout(r, 600))
-    setSubmitting(false)
-    setDone(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/event/worldcup/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ group_slug: selectedGroup }),
+      })
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean
+        error?: string
+        already_registered?: boolean
+      }
+      if (!res.ok) {
+        // 이미 등록된 경우 done 페이지로 이동 (사용자에게 자연스러움)
+        if (json.already_registered) {
+          router.push(`/worldcup/register/done?group=${selectedGroup}`)
+          return
+        }
+        setError(json.error || "등록 중 오류가 발생했습니다.")
+        setSubmitting(false)
+        return
+      }
+      router.push(`/worldcup/register/done?group=${selectedGroup}`)
+    } catch {
+      setError("네트워크 오류가 발생했습니다. 다시 시도해주세요.")
+      setSubmitting(false)
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* 참가 규칙 */}
-      <Card className="border-amber-200 bg-amber-50/40 p-5 dark:border-amber-900/40 dark:bg-amber-950/20">
-        <h3 className="font-title text-foreground text-[14px] font-bold tracking-tight">
+      {/* Z2.4 참가 규칙 */}
+      <div className="wc-reg-rules">
+        <div className="wc-reg-rules-h">
+          <span aria-hidden>★</span>
           참가 규칙
-        </h3>
-        <ul className="mt-3 space-y-2.5 text-[13px] leading-[1.65]">
-          <li className="flex gap-2">
-            <span className="shrink-0 font-bold text-amber-700 dark:text-amber-300">⚠</span>
+        </div>
+        <ul className="wc-reg-rules-list">
+          <li className="alert">
             <span>
-              <strong className="text-foreground">
-                한 번 선택한 그룹은 절대 변경할 수 없습니다.
-              </strong>
-              <span className="text-muted-foreground"> 신중하게 골라주세요.</span>
+              <strong>한 번 선택한 그룹은 절대 변경할 수 없습니다.</strong> 신중하게 골라주세요.
             </span>
           </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 text-amber-700/60 dark:text-amber-300/60">·</span>
-            <span className="text-muted-foreground">
-              일반 베팅 시스템과 동일한 룰. 보유한 토큰·골드로 월드컵 경기에 베팅합니다.
+          <li>
+            <span>일반 베팅 시스템과 동일한 룰. 보유한 토큰·골드로 월드컵 경기에 베팅합니다.</span>
+          </li>
+          <li>
+            <span>
+              월드컵 기간 적중률·수익률로 그룹 내 1위 결정 → <strong>상품 증정</strong>.
             </span>
           </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 text-amber-700/60 dark:text-amber-300/60">·</span>
-            <span className="text-muted-foreground">
-              월드컵 기간 적중률·수익률로 그룹 내 1위 결정 →{" "}
-              <strong className="text-foreground">100만원 상당 상품</strong>.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="shrink-0 text-amber-700/60 dark:text-amber-300/60">·</span>
-            <span className="text-muted-foreground">
-              그룹 평균 적중률·수익률로 &quot;이번 시즌의 축잘알 팬덤&quot;을 선정.
-            </span>
+          <li>
+            <span>그룹 평균 적중률·수익률로 &quot;이번 시즌의 축잘알 팬덤&quot;을 선정.</span>
           </li>
         </ul>
-      </Card>
+      </div>
 
-      {/* 그룹 선택 */}
-      <div className="space-y-3">
+      {/* Z2.5 그룹 선택 카드 */}
+      <div className="wc-reg-grid">
         {GROUPS.map((g) => {
           const isSelected = selectedGroup === g.slug
           return (
@@ -188,77 +163,60 @@ export function RegisterClient() {
               key={g.slug}
               type="button"
               onClick={() => setSelectedGroup(g.slug)}
-              className={`relative w-full overflow-hidden rounded-lg border p-5 text-left transition-all ${
-                isSelected
-                  ? "border-foreground ring-foreground/10 ring-2"
-                  : "border-border hover:border-foreground/40"
-              }`}
+              className={`wc-reg-card ${isSelected ? "on" : ""}`}
+              style={{ ["--gp" as string]: g.color } as React.CSSProperties}
+              aria-pressed={isSelected}
             >
-              <div
-                aria-hidden
-                className="absolute top-0 right-0 left-0 h-1"
-                style={{ background: g.color }}
-              />
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div
-                    className="font-title text-3xl font-bold tracking-tight"
-                    style={{ color: g.color }}
-                  >
-                    {g.name}
-                  </div>
-                  <div className="text-muted-foreground mt-1.5 text-[13px] leading-[1.5]">
-                    {g.clubKor} 팬덤
-                  </div>
-                  <div className="text-muted-foreground/70 mt-2 text-[11px]">
-                    유입 채널 · {g.youtuber}
-                  </div>
+              <span aria-hidden className="wc-reg-card-bg" />
+              <div className="wc-reg-card-top">
+                <div>
+                  <div className="wc-reg-card-name">{g.name}</div>
+                  <div className="wc-reg-card-sub">{g.clubKor} 팬덤</div>
                 </div>
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${
-                    isSelected
-                      ? "bg-foreground text-background"
-                      : "border-border border bg-transparent"
-                  }`}
-                >
-                  {isSelected && <Check className="h-4 w-4" />}
-                </div>
+                <span aria-hidden className={`wc-radio ${isSelected ? "on" : ""}`}>
+                  {isSelected ? "✓" : ""}
+                </span>
               </div>
+              <p className="wc-reg-card-motto">{g.motto}</p>
+              <p className="wc-reg-card-foot">유입 · {g.youtuber}</p>
             </button>
           )
         })}
       </div>
 
-      {/* 동의 */}
-      <Card className="p-4">
-        <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-[1.65]">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
-          />
-          <span className="text-muted-foreground">
-            한 번 선택한 그룹은 변경할 수 없으며, 1위 결정은 그룹 내 적중률·수익률 기준으로 산정됨에
-            동의합니다.
-          </span>
-        </label>
-      </Card>
+      {/* Z2.6 동의 체크박스 */}
+      <label className="wc-reg-check">
+        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+        <span>
+          한 번 선택한 그룹은 변경할 수 없으며, 1위 결정은 그룹 내 적중률·수익률 기준으로 산정됨에
+          동의합니다.
+        </span>
+      </label>
 
-      {/* CTA */}
-      <Button
-        size="lg"
-        className="font-title h-12 w-full text-[15px] font-semibold"
+      {/* 에러 메시지 */}
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border p-3 text-[13px]"
+          style={{
+            background: "rgba(192, 58, 58, 0.06)",
+            borderColor: "var(--wc-down)",
+            color: "var(--wc-down)",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Z2.7 등록 CTA */}
+      <button
+        type="button"
+        className="wc-reg-cta"
         disabled={!selectedGroup || !agreed || submitting}
         onClick={handleSubmit}
       >
         {submitting ? "등록 중..." : "등록 완료"}
-      </Button>
-
-      <p className="text-muted-foreground/80 text-center text-[11px]">
-        로그인 계정 —{" "}
-        {user?.username || user?.firstName || user?.emailAddresses[0]?.emailAddress || ""}
-      </p>
+      </button>
     </div>
   )
 }

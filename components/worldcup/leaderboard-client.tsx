@@ -1,21 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Crown, TrendingUp, Target } from "lucide-react"
+import { Crown } from "lucide-react"
 
 const GROUPS = [
-  { slug: "gooner", name: "구너", clubKor: "아스날", color: "#EF0107" },
-  { slug: "kop", name: "콥", clubKor: "리버풀", color: "#C8102E" },
-  { slug: "blues", name: "블루스", clubKor: "첼시", color: "#034694" },
+  { slug: "gooner", name: "Gooner", clubKor: "아스날", color: "#EF0107" },
+  { slug: "kop", name: "Kopite", clubKor: "리버풀", color: "#C8102E" },
+  { slug: "blues", name: "Blue", clubKor: "첼시", color: "#034694" },
 ] as const
 
 type GroupSlug = (typeof GROUPS)[number]["slug"]
 
-const GROUP_AVG: Record<GroupSlug, { accuracy: number; profitRate: number; members: number }> = {
-  gooner: { accuracy: 61, profitRate: 17, members: 521 },
-  kop: { accuracy: 58, profitRate: 12, members: 432 },
-  blues: { accuracy: 64, profitRate: 21, members: 387 },
+const GROUP_AVG: Record<
+  GroupSlug,
+  { accuracy: number; profitRate: number; members: number; rank: 1 | 2 | 3 }
+> = {
+  gooner: { accuracy: 61, profitRate: 17, members: 521, rank: 2 },
+  kop: { accuracy: 58, profitRate: 12, members: 432, rank: 3 },
+  blues: { accuracy: 64, profitRate: 21, members: 387, rank: 1 },
 }
 
 const RANKINGS: Record<
@@ -69,207 +71,179 @@ const MY_INFO = {
   nickname: "(나)",
 }
 
+/** Q7 트렌드 카드 — 어제→오늘 순위 변동 mock */
+const TREND_DATA: ReadonlyArray<{
+  nickname: string
+  group: GroupSlug
+  deltaRank: number
+  prevRank: number
+  currRank: number
+}> = [
+  { nickname: "벵거유산", group: "gooner", deltaRank: 12, prevRank: 14, currRank: 2 },
+  { nickname: "코스타1", group: "blues", deltaRank: 9, prevRank: 14, currRank: 5 },
+  { nickname: "리버풀러", group: "kop", deltaRank: 7, prevRank: 12, currRank: 5 },
+  { nickname: "Highbury", group: "gooner", deltaRank: 6, prevRank: 15, currRank: 9 },
+  { nickname: "체후크", group: "blues", deltaRank: 5, prevRank: 15, currRank: 10 },
+]
+
 export function LeaderboardClient() {
   const [activeTab, setActiveTab] = useState<GroupSlug>(MY_INFO.groupSlug)
   const activeGroup = GROUPS.find((g) => g.slug === activeTab)!
   const rankings = RANKINGS[activeTab]
   const isMyGroup = activeTab === MY_INFO.groupSlug
 
-  // 그룹 평균 수익률 1위 (축잘알 팬덤)
-  const topGroup = [...GROUPS].sort(
-    (a, b) => GROUP_AVG[b.slug].profitRate - GROUP_AVG[a.slug].profitRate
-  )[0]
-  const maxProfit = Math.max(...Object.values(GROUP_AVG).map((s) => s.profitRate))
+  // 그룹 평균 카드 정렬 — rank 순
+  const sortedGroups = [...GROUPS].sort((a, b) => GROUP_AVG[a.slug].rank - GROUP_AVG[b.slug].rank)
 
   return (
-    <div className="space-y-8">
-      {/* 그룹 평균 비교 — 축잘알 팬덤 진단 */}
-      <Card className="overflow-hidden">
-        <div className="border-border border-b p-5">
-          <div className="flex items-center gap-2">
-            <Crown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <h2 className="font-title text-foreground text-base font-bold">축잘알 팬덤</h2>
-            <span className="text-muted-foreground text-[11px]">평균 수익률 기준</span>
-          </div>
-          <p className="text-muted-foreground mt-1 text-[12px] leading-[1.65]">
-            현재 1위:{" "}
-            <span className="font-semibold" style={{ color: topGroup.color }}>
-              {topGroup.name}
-            </span>
-            <span className="ml-1">+{GROUP_AVG[topGroup.slug].profitRate}%</span>
-          </p>
+    <div className="wc-lb">
+      {/* Z3.2 그룹 평균 카드 (3 카드, 1/2/3위 표시, mine ring) */}
+      <div className="wc-lbg-grid">
+        {sortedGroups.map((g) => {
+          const stats = GROUP_AVG[g.slug]
+          const isMine = g.slug === MY_INFO.groupSlug
+          return (
+            <div
+              key={g.slug}
+              className={`wc-lbg-card ${isMine ? "mine" : ""}`}
+              style={{ ["--gp" as string]: g.color } as React.CSSProperties}
+            >
+              <div aria-hidden className="wc-lbg-rank">
+                {stats.rank}
+              </div>
+              <div className="wc-lbg-name">
+                {g.name}
+                {isMine && <span className="wc-lbg-mine-tag">MINE</span>}
+              </div>
+              <div className="wc-lbg-name-sub">{g.clubKor} 팬덤</div>
+              <div className="wc-lbg-roi">
+                <b>+{stats.profitRate}%</b>
+                <span>평균 수익률</span>
+              </div>
+              <div className="wc-lbg-meta">
+                <span>
+                  적중 <b>{stats.accuracy}%</b>
+                </span>
+                <span>{stats.members}명</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Q7 트렌드 grid — 어제→오늘 큰 변동 5명 */}
+      <div>
+        <div className="wc-lb-trend-h">
+          <h3>오늘 가장 많이 오른 5명</h3>
+          <span>어제 → 오늘 순위 변동</span>
         </div>
-        <div className="space-y-4 p-5">
-          {GROUPS.map((g) => {
-            const stats = GROUP_AVG[g.slug]
-            const barW = maxProfit > 0 ? (stats.profitRate / maxProfit) * 100 : 0
+        <div className="wc-lb-trend-grid">
+          {TREND_DATA.map((t) => {
+            const g = GROUPS.find((x) => x.slug === t.group)!
+            const isUp = t.deltaRank > 0
             return (
-              <div key={g.slug} className="space-y-1.5">
-                <div className="flex items-center justify-between text-[13px]">
-                  <span
-                    className="font-title text-[15px] font-bold tracking-tight"
-                    style={{ color: g.color }}
-                  >
-                    {g.name}
-                    <span className="text-muted-foreground/70 ml-1.5 text-[11px] font-normal">
-                      {g.clubKor}
-                    </span>
-                  </span>
-                  <div className="text-muted-foreground flex gap-3 tabular-nums">
-                    <span>
-                      적중 <span className="text-foreground font-medium">{stats.accuracy}%</span>
-                    </span>
-                    <span>
-                      수익{" "}
-                      <span
-                        className={`font-medium ${
-                          stats.profitRate >= 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        +{stats.profitRate}%
-                      </span>
-                    </span>
-                    <span className="hidden sm:inline">{stats.members}명</span>
-                  </div>
+              <div
+                key={t.nickname}
+                className="wc-lbt-c"
+                style={{ ["--gp" as string]: g.color } as React.CSSProperties}
+              >
+                <div className={`wc-lbt-c-up ${isUp ? "" : "wc-lbt-c-down"}`}>
+                  {isUp ? "↑" : "↓"} {Math.abs(t.deltaRank)}계단
                 </div>
-                <div className="bg-muted h-2 overflow-hidden rounded-full">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${barW}%`, background: g.color }}
-                  />
+                <div className="wc-lbt-c-name">{t.nickname}</div>
+                <div className="wc-lbt-c-meta">
+                  {g.name} · #{t.currRank} (어제 #{t.prevRank})
                 </div>
               </div>
             )
           })}
         </div>
-      </Card>
+      </div>
 
-      {/* 그룹 탭 */}
-      <div className="border-border flex border-b">
-        {GROUPS.map((g) => {
-          const isActive = activeTab === g.slug
-          return (
+      {/* Z3.4 내 순위 — 활성 탭=내 그룹일 때만 (베이스라인 invariant 5 보존) */}
+      {isMyGroup && (
+        <div
+          className="wc-lb-me"
+          style={{ ["--gp" as string]: activeGroup.color } as React.CSSProperties}
+        >
+          <div className="wc-lb-me-l">
+            <Crown className="h-7 w-7 shrink-0" />
+            <div>
+              <div className="wc-lb-me-h">
+                내 순위 #{MY_INFO.rank}
+                <span className="wc-lb-me-handle"> / {MY_INFO.totalInGroup}명</span>
+              </div>
+              <div className="wc-lb-me-sub">
+                {activeGroup.name} · {activeGroup.clubKor} 팬덤
+              </div>
+            </div>
+          </div>
+          <div className="wc-lb-me-stats">
+            <div className="wc-lb-me-s">
+              <span>적중률</span>
+              <b>{MY_INFO.accuracy}%</b>
+            </div>
+            <div className="wc-lb-me-s">
+              <span>수익률</span>
+              <b className="up">+{MY_INFO.profitRate}%</b>
+            </div>
+            <div className="wc-lb-me-s">
+              <span>그룹 평균</span>
+              <b>+{GROUP_AVG[activeGroup.slug].profitRate}%</b>
+            </div>
+            <div className="wc-lb-me-s">
+              <span>그룹 인원</span>
+              <b>{MY_INFO.totalInGroup}</b>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Z3.3 그룹 탭 + Z3.5 TOP 10 테이블 */}
+      <div className="wc-lb-table-card">
+        <div className="wc-lb-tabs">
+          {GROUPS.map((g) => (
             <button
               key={g.slug}
               type="button"
+              className={activeTab === g.slug ? "on" : ""}
               onClick={() => setActiveTab(g.slug)}
-              className={`font-title relative flex-1 px-4 py-3 text-[14px] font-bold transition-colors ${
-                isActive ? "" : "text-muted-foreground hover:text-foreground"
-              }`}
-              style={isActive ? { color: g.color } : undefined}
+              aria-pressed={activeTab === g.slug}
             >
               {g.name}
-              {isActive && (
-                <span
-                  aria-hidden
-                  className="absolute right-0 -bottom-px left-0 h-[2px]"
-                  style={{ background: g.color }}
-                />
-              )}
             </button>
+          ))}
+        </div>
+
+        <div className="wc-lb-table-h">
+          <div>RANK</div>
+          <div>NAME</div>
+          <div className="r">적중</div>
+          <div className="r">수익</div>
+        </div>
+        {rankings.map((r) => {
+          const isMe = isMyGroup && r.rank === MY_INFO.rank
+          const rankClass =
+            r.rank === 1 ? "top1" : r.rank === 2 ? "top2" : r.rank === 3 ? "top3" : ""
+          return (
+            <div key={r.rank} className={`wc-lb-tr ${isMe ? "you" : ""}`}>
+              <div className={`wc-lb-rk ${rankClass}`}>{r.rank}</div>
+              <div className="wc-lb-nm">
+                <span className="truncate">{r.nickname}</span>
+                {isMe && <span className="wc-lb-you-tag">YOU</span>}
+              </div>
+              <div className="acc r">{r.accuracy}%</div>
+              <div className={`roi r ${r.profitRate >= 0 ? "up" : "down"}`}>
+                {r.profitRate >= 0 ? "+" : ""}
+                {r.profitRate}%
+              </div>
+            </div>
           )
         })}
       </div>
 
-      {/* 내 순위 (활성 탭이 내 그룹일 때만) */}
-      {isMyGroup && (
-        <Card className="border-amber-200 bg-amber-50/40 p-5 dark:border-amber-900/40 dark:bg-amber-950/20">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="font-title text-[11px] font-bold tracking-[0.1em] text-amber-700 uppercase dark:text-amber-300">
-                내 순위
-              </div>
-              <div className="font-title text-foreground mt-1 text-3xl font-bold tabular-nums">
-                #{MY_INFO.rank}
-                <span className="text-muted-foreground text-[14px] font-normal">
-                  {" "}
-                  / {MY_INFO.totalInGroup}
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-4 text-right">
-              <div>
-                <div className="text-muted-foreground flex items-center justify-end gap-1 text-[11px]">
-                  <Target className="h-3 w-3" />
-                  적중률
-                </div>
-                <div className="font-title text-foreground mt-1 text-xl font-bold tabular-nums">
-                  {MY_INFO.accuracy}%
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground flex items-center justify-end gap-1 text-[11px]">
-                  <TrendingUp className="h-3 w-3" />
-                  수익률
-                </div>
-                <div
-                  className={`font-title mt-1 text-xl font-bold tabular-nums ${
-                    MY_INFO.profitRate >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {MY_INFO.profitRate >= 0 ? "+" : ""}
-                  {MY_INFO.profitRate}%
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* 그룹 내 TOP 10 */}
-      <Card className="overflow-hidden">
-        <div className="border-border border-b px-5 py-3">
-          <h2 className="font-title text-foreground text-base font-bold">
-            <span style={{ color: activeGroup.color }}>{activeGroup.name}</span> 그룹 TOP 10
-          </h2>
-        </div>
-        <div className="divide-border divide-y">
-          {rankings.map((r) => (
-            <div key={r.rank} className="flex items-center justify-between px-5 py-3">
-              <div className="flex items-center gap-4">
-                <div
-                  className={`font-title w-8 text-center text-[18px] font-bold tabular-nums ${
-                    r.rank === 1
-                      ? "text-amber-500"
-                      : r.rank === 2
-                        ? "text-neutral-400"
-                        : r.rank === 3
-                          ? "text-amber-700 dark:text-amber-600"
-                          : "text-muted-foreground"
-                  }`}
-                >
-                  {r.rank}
-                </div>
-                <div className="text-foreground text-[14px] font-medium">{r.nickname}</div>
-              </div>
-              <div className="flex gap-5 text-[12px] tabular-nums">
-                <div className="text-right">
-                  <div className="text-muted-foreground text-[10px]">적중</div>
-                  <div className="text-foreground font-medium">{r.accuracy}%</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-muted-foreground text-[10px]">수익</div>
-                  <div
-                    className={`font-medium ${
-                      r.profitRate >= 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    +{r.profitRate}%
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <p className="text-muted-foreground text-center text-[11px]">
+      {/* Z3.6 mock 푸터 */}
+      <p className="text-center text-[11px]" style={{ color: "var(--wc-mute)" }}>
         * 표시된 데이터는 디자인 확인용 mock입니다. 실제 데이터는 이벤트 시작 후 갱신됩니다.
       </p>
     </div>

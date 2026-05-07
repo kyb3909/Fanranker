@@ -1,0 +1,1236 @@
+/*
+ * 월드컵 이벤트 페이지 디자인 토큰 (시안 design-references/worldcup-design-2026-05-07/ 출처)
+ *
+ * 격리 규칙:
+ * - 모든 변수에 --wc-* prefix
+ * - .worldcup-scope wrapper 안에서만 유효 (page-scope)
+ * - 글로벌 토큰 / shadcn 토큰 / 헤더 / 사이드바에 영향 없음
+ */
+
+.worldcup-scope {
+  /* Core palette */
+  --wc-burgundy: #a0203b;
+  --wc-burgundy-deep: #7e1a2f;
+  --wc-ink: #1a1416;
+  --wc-paper: #faf7f4;
+  --wc-card: #ffffff;
+  --wc-line: #efe7e0;
+  --wc-line-2: #e5dad2;
+  --wc-mute: #7a6b65;
+  --wc-mute-2: #a0938c;
+  --wc-soft: #f4ece6;
+
+  /* Semantic accents */
+  --wc-warn: #c8842a;
+  --wc-go: #2f7d5b;
+  --wc-blue: #2d5bd7;
+  --wc-down: #c03a3a;
+
+  /* Prize ribbon yellow */
+  --wc-gold: #ffd96b;
+  --wc-gold-deep: #b8941a;
+
+  /* Club colors */
+  --wc-club-gunner: #e11d2e;
+  --wc-club-kop: #c8102e;
+  --wc-club-blue: #1e3a8a;
+
+  /* Shadows */
+  --wc-shadow-1: 0 1px 2px rgba(26, 20, 22, 0.04), 0 0 0 1px var(--wc-line);
+  --wc-shadow-2: 0 4px 16px rgba(26, 20, 22, 0.06), 0 0 0 1px var(--wc-line);
+  --wc-shadow-3: 0 12px 40px rgba(126, 26, 47, 0.12), 0 0 0 1px var(--wc-line);
+
+  /* Type scale (시안 기준) */
+  --wc-fs-hero: clamp(40px, 6vw, 56px);
+  --wc-fs-h1: clamp(32px, 4.5vw, 44px);
+  --wc-fs-h2: 26px;
+  --wc-fs-eyebrow: 11px;
+
+  /* Page surface */
+  background: var(--wc-paper);
+  color: var(--wc-ink);
+}
+
+/* Pulse animation (이벤트 신호 — 시안 .evt-pulse) */
+@keyframes wc-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 46, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(225, 29, 46, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 46, 0);
+  }
+}
+
+/* ─── Z1.1 Hero ─────────────────────────────────────────────────────── */
+.worldcup-scope .wc-hero {
+  background: linear-gradient(
+    160deg,
+    var(--wc-burgundy-deep) 0%,
+    var(--wc-burgundy) 60%,
+    #c0364f 100%
+  );
+  color: white;
+}
+.worldcup-scope .wc-hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+.worldcup-scope .wc-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+.worldcup-scope .wc-orb-r {
+  width: 320px;
+  height: 320px;
+  background: #ff4d6a;
+  opacity: 0.4;
+  top: -80px;
+  right: -60px;
+}
+.worldcup-scope .wc-orb-w {
+  width: 200px;
+  height: 200px;
+  background: #ffffff;
+  opacity: 0.15;
+  bottom: 40px;
+  right: 200px;
+}
+.worldcup-scope .wc-orb-b {
+  width: 240px;
+  height: 240px;
+  background: #5b7fe8;
+  opacity: 0.25;
+  bottom: -100px;
+  left: -40px;
+}
+
+.worldcup-scope .wc-prize-ribbon {
+  position: absolute;
+  right: -20px;
+  top: 28px;
+  background: var(--wc-gold);
+  color: var(--wc-burgundy-deep);
+  padding: 14px 28px 14px 18px;
+  border-radius: 4px 0 0 4px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  transform: rotate(2deg);
+  z-index: 2;
+}
+.worldcup-scope .wc-prize-ribbon::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 100%;
+  border-style: solid;
+  border-width: 8px 12px 0 0;
+  border-color: var(--wc-gold-deep) transparent transparent transparent;
+}
+
+.worldcup-scope .wc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.worldcup-scope .wc-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--wc-gold);
+  box-shadow: 0 0 8px var(--wc-gold);
+}
+
+/* Countdown */
+.worldcup-scope .wc-cdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.worldcup-scope .wc-cdown-lbl {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.worldcup-scope .wc-cdown-cells {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.worldcup-scope .wc-cdown-cell {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 18px;
+  border-radius: 8px;
+  min-width: 76px;
+  text-align: center;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.worldcup-scope .wc-cdown-num {
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.worldcup-scope .wc-cdown-u {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+.worldcup-scope .wc-cdown-sep {
+  font-size: 28px;
+  opacity: 0.4;
+  padding-bottom: 18px;
+}
+
+/* CTA on hero (white card → gold hover) */
+.worldcup-scope .wc-btn-on-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: var(--wc-card);
+  color: var(--wc-burgundy-deep);
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  transition:
+    filter 0.15s,
+    transform 0.1s,
+    background 0.15s;
+}
+.worldcup-scope .wc-btn-on-hero:hover {
+  background: var(--wc-gold);
+}
+.worldcup-scope .wc-btn-on-hero:active {
+  transform: translateY(1px);
+}
+
+/* ─── Section heads (Z1.3 / Z1.4) ────────────────────────── */
+.worldcup-scope .wc-sec-head {
+  margin-bottom: 24px;
+}
+.worldcup-scope .wc-sec-eb {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: var(--wc-burgundy);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.worldcup-scope .wc-sec-h2 {
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  color: var(--wc-ink);
+  line-height: 1.2;
+}
+.worldcup-scope .wc-sec-sub {
+  color: var(--wc-mute);
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+/* ─── Z1.2 Fact card (축잘알 팬덤 + 상품 증정 메커니즘) ──── */
+.worldcup-scope .wc-fact-card {
+  background: linear-gradient(180deg, #fff7e5, #ffe9c4);
+  border: 2px solid var(--wc-warn);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+.worldcup-scope .wc-fact-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.worldcup-scope .wc-fact-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(200, 132, 42, 0.18);
+  color: var(--wc-burgundy-deep);
+}
+.worldcup-scope .wc-fact-h {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--wc-burgundy-deep);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.worldcup-scope .wc-fact-b {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wc-ink);
+}
+
+/* ─── Z1.3 How steps ─────────────────────────────────────── */
+.worldcup-scope .wc-how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-how-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.worldcup-scope .wc-how-step {
+  background: var(--wc-card);
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: var(--wc-shadow-1);
+}
+.worldcup-scope .wc-how-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--wc-burgundy);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.worldcup-scope .wc-how-h {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  line-height: 1.3;
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-how-b {
+  font-size: 13px;
+  color: var(--wc-mute);
+  line-height: 1.6;
+}
+
+/* ─── Z1.4 Group paths (Q4 motto + Q8 영문) ──────────────── */
+.worldcup-scope .wc-paths {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-paths {
+    grid-template-columns: 1fr;
+  }
+}
+.worldcup-scope .wc-path {
+  position: relative;
+  overflow: hidden;
+  background: var(--wc-card);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--wc-shadow-2);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  border-top: 4px solid var(--gp);
+}
+.worldcup-scope .wc-path::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: var(--gp);
+  opacity: 0.06;
+  pointer-events: none;
+}
+.worldcup-scope .wc-path:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--wc-shadow-3);
+}
+.worldcup-scope .wc-path-name {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--gp);
+  line-height: 1;
+  position: relative;
+}
+.worldcup-scope .wc-path-sub {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wc-mute);
+  font-weight: 600;
+  margin-top: 8px;
+}
+.worldcup-scope .wc-path-motto {
+  margin: 16px 0 14px;
+  padding: 12px 14px;
+  background: var(--wc-soft);
+  border-left: 3px solid var(--gp);
+  font-size: 13px;
+  font-style: italic;
+  border-radius: 0 6px 6px 0;
+  color: var(--wc-ink);
+  line-height: 1.5;
+}
+.worldcup-scope .wc-path-foot {
+  font-size: 11px;
+  color: var(--wc-mute);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Z1.5 Big CTA ───────────────────────────────────────── */
+.worldcup-scope .wc-btn-primary-big {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: var(--wc-burgundy);
+  color: white;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
+}
+.worldcup-scope .wc-btn-primary-big:hover {
+  filter: brightness(1.08);
+}
+.worldcup-scope .wc-btn-primary-big:active {
+  transform: translateY(1px);
+}
+
+/* ─── Z2.1 Register head — Q5: 중앙 정렬 ─────────────────── */
+.worldcup-scope .wc-reg-head {
+  text-align: center;
+  margin: 24px 0 32px;
+}
+.worldcup-scope .wc-reg-head-back {
+  display: inline-block;
+  text-align: left;
+  width: 100%;
+  font-size: 13px;
+  color: var(--wc-mute);
+  margin-bottom: 24px;
+  transition: color 0.15s;
+}
+.worldcup-scope .wc-reg-head-back:hover {
+  color: var(--wc-burgundy);
+}
+.worldcup-scope .wc-reg-head-eb {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  font-weight: 800;
+  color: var(--wc-burgundy);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.worldcup-scope .wc-reg-head h1 {
+  font-size: clamp(28px, 4.5vw, 36px);
+  letter-spacing: -0.02em;
+  font-weight: 900;
+  color: var(--wc-ink);
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.worldcup-scope .wc-reg-head-sub {
+  color: var(--wc-mute);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ─── Z2.2 비로그인 안내 배너 (분기 보존, 시안 .reg-warn 톤) */
+.worldcup-scope .wc-reg-signin {
+  background: linear-gradient(180deg, #fff7e5, #ffe9c4);
+  border: 2px solid var(--wc-warn);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .worldcup-scope .wc-reg-signin {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+.worldcup-scope .wc-reg-signin-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.worldcup-scope .wc-reg-signin-h {
+  font-weight: 800;
+  color: var(--wc-burgundy-deep);
+  font-size: 14px;
+}
+.worldcup-scope .wc-reg-signin-b {
+  color: var(--wc-ink);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 2px;
+}
+.worldcup-scope .wc-btn-on-warn {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  background: var(--wc-burgundy);
+  color: white;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  transition: filter 0.15s;
+}
+.worldcup-scope .wc-btn-on-warn:hover {
+  filter: brightness(1.1);
+}
+
+/* ─── Z2.4 참가 규칙 (시안 .reg-warn 톤) ─────────────────── */
+.worldcup-scope .wc-reg-rules {
+  padding: 20px 24px;
+  background: linear-gradient(180deg, #fff7e5, #ffe9c4);
+  border: 2px solid var(--wc-warn);
+  border-radius: 10px;
+}
+.worldcup-scope .wc-reg-rules-h {
+  font-weight: 800;
+  color: var(--wc-warn);
+  font-size: 15px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.worldcup-scope .wc-reg-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.worldcup-scope .wc-reg-rules-list li {
+  display: flex;
+  gap: 10px;
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-reg-rules-list li::before {
+  content: "·";
+  color: var(--wc-warn);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.worldcup-scope .wc-reg-rules-list li.alert::before {
+  content: "⚠";
+  font-size: 13px;
+}
+.worldcup-scope .wc-reg-rules-list strong {
+  color: var(--wc-burgundy-deep);
+  font-weight: 800;
+}
+
+/* ─── Z2.5 그룹 선택 카드 — 시안 .reg-grid + .reg-card ──── */
+.worldcup-scope .wc-reg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-reg-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.worldcup-scope .wc-reg-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--wc-card);
+  border-radius: 14px;
+  padding: 24px;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
+  border: 2px solid var(--wc-line);
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+.worldcup-scope .wc-reg-card-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--gp);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.worldcup-scope .wc-reg-card:hover {
+  transform: translateY(-2px);
+}
+.worldcup-scope .wc-reg-card:hover .wc-reg-card-bg {
+  opacity: 0.04;
+}
+.worldcup-scope .wc-reg-card.on {
+  border-color: var(--gp);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--gp) 20%, transparent);
+}
+.worldcup-scope .wc-reg-card.on .wc-reg-card-bg {
+  opacity: 0.08;
+}
+.worldcup-scope .wc-reg-card.disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.worldcup-scope .wc-reg-card.disabled:hover {
+  transform: none;
+}
+.worldcup-scope .wc-reg-card > * {
+  position: relative;
+  z-index: 1;
+}
+.worldcup-scope .wc-reg-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.worldcup-scope .wc-radio {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--wc-line-2);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--wc-card);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.worldcup-scope .wc-radio.on {
+  border-color: var(--gp);
+  background: var(--gp);
+  color: white;
+}
+.worldcup-scope .wc-reg-card-name {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--gp);
+  line-height: 1;
+}
+.worldcup-scope .wc-reg-card-sub {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wc-mute);
+  font-weight: 600;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+.worldcup-scope .wc-reg-card-motto {
+  font-style: italic;
+  font-size: 14px;
+  color: var(--wc-ink);
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border-left: 3px solid var(--gp);
+  border-radius: 0 6px 6px 0;
+  margin: auto 0 12px;
+  flex: 1;
+  line-height: 1.5;
+}
+.worldcup-scope .wc-reg-card-foot {
+  font-size: 11px;
+  color: var(--wc-mute);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Z2.6 동의 체크박스 (시안 .reg-check) ──────────────── */
+.worldcup-scope .wc-reg-check {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  background: var(--wc-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-reg-check input {
+  margin-top: 2px;
+  flex-shrink: 0;
+  transform: scale(1.3);
+  cursor: pointer;
+  accent-color: var(--wc-burgundy);
+}
+.worldcup-scope .wc-reg-check strong {
+  color: var(--wc-burgundy-deep);
+  font-weight: 800;
+}
+
+/* ─── Z2.7 등록 CTA (시안 .btn-primary.big) ──────────────── */
+.worldcup-scope .wc-reg-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 28px;
+  background: var(--wc-burgundy);
+  color: white;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  transition:
+    filter 0.15s,
+    transform 0.1s,
+    opacity 0.15s;
+  border: none;
+  cursor: pointer;
+}
+.worldcup-scope .wc-reg-cta:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.worldcup-scope .wc-reg-cta:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.worldcup-scope .wc-reg-cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Done 페이지 (Q6: inline state → /done 분리) ────────── */
+.worldcup-scope .wc-done {
+  position: relative;
+  padding: 0 4px 40px;
+}
+.worldcup-scope .wc-done-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.worldcup-scope .wc-done-orb {
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: var(--gp);
+  filter: blur(80px);
+  opacity: 0.2;
+}
+.worldcup-scope .wc-done-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--wc-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--wc-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse at top right, black 20%, transparent 70%);
+  mask-image: radial-gradient(ellipse at top right, black 20%, transparent 70%);
+  opacity: 0.5;
+}
+.worldcup-scope .wc-done-content {
+  position: relative;
+  z-index: 1;
+}
+.worldcup-scope .wc-done-hero {
+  text-align: center;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.worldcup-scope .wc-done-eb {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  font-weight: 800;
+  color: var(--gp);
+  text-transform: uppercase;
+}
+.worldcup-scope .wc-done-h1 {
+  font-size: clamp(32px, 5.5vw, 44px);
+  letter-spacing: -0.03em;
+  font-weight: 900;
+  color: var(--wc-ink);
+  line-height: 1.1;
+}
+.worldcup-scope .wc-done-tagline {
+  font-style: italic;
+  color: var(--wc-ink);
+  font-size: 16px;
+}
+.worldcup-scope .wc-done-sub {
+  color: var(--wc-mute);
+  max-width: 480px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.worldcup-scope .wc-done-cd-wrap {
+  margin-top: 16px;
+  padding: 20px;
+  background: var(--wc-card);
+  border-radius: 12px;
+  box-shadow: var(--wc-shadow-1);
+}
+/* Done 페이지 카운트다운 — 라이트 톤 오버라이드 */
+.worldcup-scope .wc-done-cd-wrap .wc-cdown-lbl {
+  color: var(--wc-mute);
+  opacity: 1;
+}
+.worldcup-scope .wc-done-cd-wrap .wc-cdown-cell {
+  background: var(--wc-soft);
+  border-color: var(--wc-line);
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-done-cd-wrap .wc-cdown-num {
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-done-cd-wrap .wc-cdown-u {
+  color: var(--wc-mute);
+  opacity: 1;
+}
+.worldcup-scope .wc-done-cd-wrap .wc-cdown-sep {
+  color: var(--wc-mute-2);
+  opacity: 1;
+}
+
+.worldcup-scope .wc-done-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 32px 0;
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-done-cards {
+    grid-template-columns: 1fr;
+  }
+}
+.worldcup-scope .wc-done-card {
+  background: var(--wc-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--wc-shadow-1);
+  display: flex;
+  flex-direction: column;
+}
+.worldcup-scope .wc-done-card-h {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--wc-ink);
+  font-size: 15px;
+}
+.worldcup-scope .wc-done-card-b {
+  font-size: 13px;
+  color: var(--wc-mute);
+  margin-bottom: 16px;
+  line-height: 1.5;
+  flex: 1;
+}
+.worldcup-scope .wc-done-card-cta {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: var(--wc-soft);
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  border: 1px solid var(--wc-line-2);
+  color: var(--wc-ink);
+  transition: all 0.15s;
+}
+.worldcup-scope .wc-done-card-cta:hover {
+  background: var(--gp);
+  color: white;
+  border-color: var(--gp);
+}
+
+/* ─── Leaderboard ────────────────────────────────────────── */
+.worldcup-scope .wc-lb {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Z3.2 그룹 평균 카드 (시안 .lb-groups-grid + .lbg-card) */
+.worldcup-scope .wc-lbg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-lbg-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.worldcup-scope .wc-lbg-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--wc-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--wc-shadow-1);
+  border-top: 4px solid var(--gp);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.worldcup-scope .wc-lbg-card.mine {
+  box-shadow:
+    0 0 0 2px var(--gp),
+    var(--wc-shadow-2);
+}
+.worldcup-scope .wc-lbg-rank {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--gp);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+.worldcup-scope .wc-lbg-name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-lbg-name-sub {
+  font-size: 11px;
+  color: var(--wc-mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.worldcup-scope .wc-lbg-mine-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: var(--gp);
+  color: white;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.worldcup-scope .wc-lbg-roi {
+  margin-top: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.worldcup-scope .wc-lbg-roi b {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--gp);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.worldcup-scope .wc-lbg-roi span {
+  font-size: 11px;
+  color: var(--wc-mute);
+}
+.worldcup-scope .wc-lbg-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--wc-mute);
+  margin-top: 4px;
+}
+.worldcup-scope .wc-lbg-meta b {
+  font-weight: 700;
+  color: var(--wc-ink);
+}
+
+/* Q7 트렌드 grid */
+.worldcup-scope .wc-lb-trend-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.worldcup-scope .wc-lb-trend-h h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-lb-trend-h span {
+  font-size: 11px;
+  color: var(--wc-mute);
+}
+.worldcup-scope .wc-lb-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+@media (max-width: 980px) {
+  .worldcup-scope .wc-lb-trend-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .worldcup-scope .wc-lb-trend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.worldcup-scope .wc-lbt-c {
+  background: var(--wc-card);
+  border-radius: 8px;
+  padding: 14px;
+  box-shadow: var(--wc-shadow-1);
+  border-left: 3px solid var(--gp);
+}
+.worldcup-scope .wc-lbt-c-up {
+  color: var(--wc-go);
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.worldcup-scope .wc-lbt-c-down {
+  color: var(--wc-down);
+}
+.worldcup-scope .wc-lbt-c-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--wc-ink);
+  font-size: 13px;
+}
+.worldcup-scope .wc-lbt-c-meta {
+  font-size: 11px;
+  color: var(--wc-mute);
+}
+
+/* Z3.4 내 순위 (시안 .lb-me) */
+.worldcup-scope .wc-lb-me {
+  background: linear-gradient(90deg, var(--gp) 0%, color-mix(in srgb, var(--gp) 75%, black) 100%);
+  border-radius: 12px;
+  padding: 20px 24px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: var(--wc-shadow-2);
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-lb-me {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+.worldcup-scope .wc-lb-me-l {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.worldcup-scope .wc-lb-me-h {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.worldcup-scope .wc-lb-me-handle {
+  opacity: 0.7;
+  font-size: 13px;
+  font-weight: 500;
+}
+.worldcup-scope .wc-lb-me-sub {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+.worldcup-scope .wc-lb-me-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  .worldcup-scope .wc-lb-me-stats {
+    grid-template-columns: repeat(2, 1fr);
+    margin-left: 0;
+    width: 100%;
+  }
+}
+.worldcup-scope .wc-lb-me-s {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.worldcup-scope .wc-lb-me-s span {
+  font-size: 11px;
+  opacity: 0.8;
+  letter-spacing: 0.04em;
+}
+.worldcup-scope .wc-lb-me-s b {
+  font-size: 22px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.worldcup-scope .wc-lb-me-s .up {
+  color: var(--wc-gold);
+}
+
+/* Z3.3 + Z3.5 탭 + 테이블 (시안 .lb-table 카드 안) */
+.worldcup-scope .wc-lb-table-card {
+  background: var(--wc-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--wc-shadow-1);
+}
+.worldcup-scope .wc-lb-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.worldcup-scope .wc-lb-tabs button {
+  padding: 6px 14px;
+  border: 1px solid var(--wc-line-2);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-mute);
+  background: var(--wc-card);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.worldcup-scope .wc-lb-tabs button:hover {
+  background: var(--wc-soft);
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-lb-tabs button.on {
+  background: var(--wc-burgundy);
+  color: white;
+  border-color: var(--wc-burgundy);
+}
+.worldcup-scope .wc-lb-table-h {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px 80px;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--wc-mute);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--wc-line);
+}
+.worldcup-scope .wc-lb-table-h .r,
+.worldcup-scope .wc-lb-tr .r {
+  text-align: right;
+}
+.worldcup-scope .wc-lb-tr {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px 80px;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--wc-line);
+  align-items: center;
+  font-size: 13px;
+}
+.worldcup-scope .wc-lb-tr:hover {
+  background: var(--wc-soft);
+}
+.worldcup-scope .wc-lb-tr:last-child {
+  border-bottom: 0;
+}
+.worldcup-scope .wc-lb-tr.you {
+  background: rgba(160, 32, 59, 0.04);
+}
+.worldcup-scope .wc-lb-rk {
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--wc-mute);
+}
+.worldcup-scope .wc-lb-rk.top1 {
+  color: #f1b81b;
+  font-size: 18px;
+  font-weight: 900;
+}
+.worldcup-scope .wc-lb-rk.top2 {
+  color: var(--wc-mute-2);
+  font-size: 16px;
+  font-weight: 800;
+}
+.worldcup-scope .wc-lb-rk.top3 {
+  color: #b8741a;
+  font-size: 16px;
+  font-weight: 800;
+}
+.worldcup-scope .wc-lb-nm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wc-ink);
+  font-weight: 600;
+  min-width: 0;
+}
+.worldcup-scope .wc-lb-you-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--wc-burgundy);
+  color: white;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.worldcup-scope .wc-lb-tr .acc {
+  font-variant-numeric: tabular-nums;
+  color: var(--wc-ink);
+  font-weight: 600;
+}
+.worldcup-scope .wc-lb-tr .roi {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.worldcup-scope .wc-lb-tr .roi.up {
+  color: var(--wc-go);
+}
+.worldcup-scope .wc-lb-tr .roi.down {
+  color: var(--wc-down);
+}
