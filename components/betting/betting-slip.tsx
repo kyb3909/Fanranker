@@ -60,8 +60,15 @@ export function BettingSlip({
           aria-hidden="true"
         />
       )}
-      <div className="from-background via-background sticky bottom-0 z-40 bg-gradient-to-t to-transparent pt-2 pb-2 sm:pt-4 sm:pb-3">
-        <Card className="bg-card border-primary/30 ring-primary/10 rounded-lg border-2 shadow-xl ring-1">
+      <div className="sticky bottom-0 z-40 pt-2 pb-2 sm:pt-4 sm:pb-3">
+        <Card
+          className="rounded-lg border-2"
+          style={{
+            background: "var(--wc-card)",
+            borderColor: "var(--wc-burgundy)",
+            boxShadow: "var(--wc-shadow-3)",
+          }}
+        >
           <div
             className="flex cursor-pointer items-center justify-between p-3 sm:p-4"
             onClick={() => setIsSlipExpanded(!isSlipExpanded)}
@@ -146,7 +153,7 @@ export function BettingSlip({
                         )}
                         {/* Over/Under line */}
                         {bet.gameType.includes("언더오버") && bet.overUnderLine != null && (
-                          <span className="font-medium text-purple-600">
+                          <span className="font-medium" style={{ color: "var(--wc-blue)" }}>
                             (기준 {bet.overUnderLine})
                           </span>
                         )}
@@ -178,7 +185,7 @@ export function BettingSlip({
                             ` (${bet.handicap > 0 ? "+" : ""}${bet.handicap})`}
                         </span>
                         {bet.odds && (
-                          <span className="text-sm font-bold text-emerald-600">
+                          <span className="text-sm font-bold" style={{ color: "var(--wc-go)" }}>
                             {bet.odds.toFixed(2)}배
                           </span>
                         )}
@@ -245,8 +252,8 @@ export function BettingSlip({
                 {isJournalist && setAnalysisText && setAnalysisTitle && (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Newspaper className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      <Newspaper className="h-3.5 w-3.5" style={{ color: "var(--wc-blue)" }} />
+                      <span className="text-sm font-medium" style={{ color: "var(--wc-blue)" }}>
                         분석글
                       </span>
                     </div>
@@ -279,7 +286,7 @@ export function BettingSlip({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">예상 획득 점수</span>
-                    <span className="text-lg font-bold text-emerald-600">
+                    <span className="text-lg font-bold" style={{ color: "var(--wc-go)" }}>
                       {(betAmount * totalOdds).toFixed(2)}점
                     </span>
                   </div>
