@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useUser } from "@clerk/nextjs"
 import { ArrowUpDown } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
 import { CommentItem } from "./comment-item"
@@ -174,16 +173,36 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
   }
 
   return (
-    <Card className="border-border bg-card border">
+    <div
+      className="rounded-lg"
+      style={{
+        background: "var(--wc-card)",
+        boxShadow: "var(--wc-shadow-1)",
+      }}
+    >
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-foreground text-xl font-semibold">
-            댓글 {countAllComments(comments)}개
-          </h3>
+          <div>
+            <div className="wc-sec-eb">COMMENTS</div>
+            <h3
+              className="font-black tracking-tight"
+              style={{
+                fontSize: "clamp(18px, 2.5vw, 22px)",
+                color: "var(--wc-ink)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              댓글 <span className="tabular-nums">{countAllComments(comments)}</span>개
+            </h3>
+          </div>
           {comments.length > 1 && (
             <button
               onClick={() => setCommentSort((s) => (s === "newest" ? "popular" : "newest"))}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs font-medium transition-colors"
+              className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-bold transition-colors"
+              style={{
+                color: "var(--wc-mute)",
+                background: "var(--wc-soft)",
+              }}
             >
               <ArrowUpDown className="h-3 w-3" />
               {commentSort === "newest" ? "최신순" : "인기순"}
@@ -199,11 +218,15 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
         <div className="space-y-6">
           {isLoadingComments ? (
             <div className="py-8 text-center">
-              <p className="text-muted-foreground text-sm">댓글을 불러오는 중...</p>
+              <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+                댓글을 불러오는 중...
+              </p>
             </div>
           ) : comments.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-muted-foreground text-sm">아직 댓글이 없습니다.</p>
+              <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+                아직 댓글이 없습니다.
+              </p>
             </div>
           ) : (
             [...comments]
@@ -238,6 +261,6 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
           )}
         </div>
       </div>
-    </Card>
+    </div>
   )
 }

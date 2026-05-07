@@ -147,17 +147,24 @@ export function PostActions({
       <Button
         variant="ghost"
         size="sm"
-        className="bg-secondary text-foreground hover:bg-secondary/80 gap-2 rounded-full"
+        className="gap-2 rounded-full"
+        style={{
+          background: "var(--wc-soft)",
+          color: "var(--wc-ink)",
+        }}
       >
         <MessageCircle className="h-5 w-5" />
-        <span className="text-sm font-medium">{commentCount}</span>
+        <span className="text-sm font-bold tabular-nums">{commentCount}</span>
       </Button>
 
       {/* Bookmark */}
       <Button
         variant="ghost"
         size="icon"
-        className={`h-9 w-9 rounded-full ${isBookmarked ? "text-primary fill-primary" : "text-muted-foreground hover:text-foreground"}`}
+        className="h-9 w-9 rounded-full"
+        style={{
+          color: isBookmarked ? "var(--wc-burgundy)" : "var(--wc-mute)",
+        }}
         onClick={handleBookmark}
         aria-label={isBookmarked ? "북마크 해제" : "북마크"}
       >
