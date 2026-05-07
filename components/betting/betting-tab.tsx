@@ -1,6 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCw } from "lucide-react"
@@ -73,28 +72,45 @@ export function BettingTab({
       {/* Today's matches header + deadline countdown */}
 
       {/* Loading/Error/Refresh status */}
-      <div className="text-foreground/85 mb-2 flex items-center justify-between text-sm">
+      <div
+        className="mb-2 flex items-center justify-between text-sm"
+        style={{ color: "var(--wc-mute)" }}
+      >
         <div className="flex items-center gap-2">
-          {lastUpdated && <span>마지막 업데이트: {lastUpdated.toLocaleTimeString("ko-KR")}</span>}
+          {lastUpdated && (
+            <span style={{ fontSize: 12, letterSpacing: "0.04em" }}>
+              업데이트 · {lastUpdated.toLocaleTimeString("ko-KR")}
+            </span>
+          )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={onRefresh}
           disabled={isLoading}
-          className="h-11 px-2 sm:h-7"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-[12px] font-semibold transition-colors disabled:opacity-50"
+          style={{
+            background: "var(--wc-soft)",
+            color: "var(--wc-burgundy)",
+          }}
         >
-          <RefreshCw className={`mr-1 h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
           새로고침
-        </Button>
+        </button>
       </div>
 
       {/* Loading skeleton */}
       {isLoading && filteredMatches.length === 0 && (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden border-0 shadow-sm">
-              <div className="bg-accent/30 flex items-center justify-between px-3 py-1.5">
+            <Card
+              key={i}
+              className="overflow-hidden border-0"
+              style={{ boxShadow: "var(--wc-shadow-1)", borderRadius: 8 }}
+            >
+              <div
+                className="flex items-center justify-between px-3 py-1.5"
+                style={{ background: "var(--wc-soft)" }}
+              >
                 <div className="flex items-center gap-1.5">
                   <Skeleton className="h-5 w-5 rounded-full" />
                   <Skeleton className="h-3 w-16" />
@@ -104,12 +120,20 @@ export function BettingTab({
               <div className="px-2 pb-1">
                 <div className="flex items-center justify-center gap-2 py-1">
                   <Skeleton className="h-4 w-20" />
-                  <span className="text-muted-foreground text-xs">vs</span>
+                  <span className="text-xs" style={{ color: "var(--wc-mute-2)" }}>
+                    vs
+                  </span>
                   <Skeleton className="h-4 w-20" />
                 </div>
               </div>
               <div className="space-y-1.5 px-2 pb-2">
-                <div className="bg-muted/50 rounded-lg border p-1.5">
+                <div
+                  className="rounded-lg p-1.5"
+                  style={{
+                    background: "var(--wc-soft)",
+                    border: "1px solid var(--wc-line)",
+                  }}
+                >
                   <Skeleton className="mb-1 h-4 w-12" />
                   <div className="grid grid-cols-3 gap-1">
                     {Array.from({ length: 3 }).map((_, j) => (
@@ -125,17 +149,31 @@ export function BettingTab({
 
       {/* Error state */}
       {error && (
-        <div className="text-destructive flex flex-col items-center justify-center py-8">
+        <div
+          className="flex flex-col items-center justify-center py-8"
+          style={{ color: "var(--wc-down)" }}
+        >
           <p>{error}</p>
-          <Button variant="outline" size="sm" onClick={onRefresh} className="mt-2">
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-[13px] font-semibold transition-colors"
+            style={{
+              background: "var(--wc-burgundy)",
+              color: "white",
+            }}
+          >
             다시 시도
-          </Button>
+          </button>
         </div>
       )}
 
       {/* Empty state */}
       {!isLoading && !error && filteredMatches.length === 0 && (
-        <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+        <div
+          className="flex flex-col items-center justify-center py-12"
+          style={{ color: "var(--wc-mute)" }}
+        >
           <p>베팅 가능한 경기가 없습니다.</p>
         </div>
       )}
