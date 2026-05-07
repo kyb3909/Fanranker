@@ -127,6 +127,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Draft Game** (`lib/draft/`, `app/games/draft/`) — 팬타지 드래프트, 다종목 확장 예정.
 - **Betting** (`components/betting/`, `lib/betman/`, `hooks/use-betting.ts`) — 토큰/골드 경제, pending refund, 정산. 토큰 차감은 `spend_tokens` RPC (반환 키 `remaining_balance`), 골드는 `spend_gold` RPC (반환 키 `remaining`).
 - **Battle** (migrations 056–057) — 유저 대 유저 대결.
+- **Worldcup Event** (`app/worldcup/`, `app/api/event/worldcup/`, migration `20260507_worldcup_event.sql`) — 그룹 대결 이벤트 (Gooner/Kopite/Blue 3 path). 등록 → 베팅 → 팬덤 현황 → 결과 발표. 월드컵 슬립은 `prediction_slips.event_id` 로 구분 → `/prediction` 통계 탭으로 흘러감. `events.league_codes text[]` 로 월드컵 경기 식별 (현재 NBA 임시 dummy, 시즌 시작 시 admin 에서 교체). `/admin/event` 운영 콘솔 (`requireAdmin` 가드). 의욕 상실 방지로 TOP 10 ranking 비공개, 종료 후 `result` 페이지에서 podium 1위만 발표. 메모: `project_worldcup_event.md`.
 - **Journalist System** (migrations 027–028) — `profiles.is_journalist`, `prediction_slips.analysis_text`. 기자만 팔로우 가능, 분석글은 기자만 작성.
 - **Fan Identity / 호칭 / 기부** (migrations 20260502b/c/d) — flair 활동 점수 누적 → 임계값 호칭 자동 unlock → 사용자 선택 → 닉네임 옆 뱃지 + stadium 기부.
   - **DB**: `post_flairs.team_id` (text → `team_map_pins.team_id`, EPL 6 클럽만 매핑), `user_flair_scores (user_id, flair_id, score_total, score_balance, last_at)`, `flair_titles (flair_id, name, threshold)`, `user_unlocked_titles`, `profiles.display_title_id`.
