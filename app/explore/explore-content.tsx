@@ -113,108 +113,208 @@ function ExploreInner() {
   ]
 
   return (
-    <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
-      <div className="grid grid-cols-12 gap-6">
-        {/* Main Content */}
-        <div className="col-span-12 space-y-6 xl:col-span-9">
-          {/* 게시판 둘러보기 */}
-          {categories.length > 0 && (
-            <div className="bg-card border-border overflow-hidden rounded-xl border shadow-[0_2px_12px_rgba(0,0,0,0.07)]">
-              <div className="flex items-center gap-2 px-4 py-3">
-                <LayoutGrid className="text-primary h-3.5 w-3.5" />
-                <h2 className="text-primary text-[14px] font-bold">게시판 둘러보기</h2>
-              </div>
-              <div className="divide-border grid grid-cols-5 gap-0 divide-x">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    href={`/community/${cat.slug}`}
-                    className="hover:bg-muted/40 flex flex-col items-center gap-1.5 py-4 text-center transition-colors"
+    <div className="worldcup-scope min-h-[100dvh]">
+      <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
+        {/* 페이지 헤더 */}
+        <header className="mb-6">
+          <div className="wc-sec-eb">EXPLORE</div>
+          <h1
+            className="font-black tracking-tight"
+            style={{
+              fontSize: "clamp(28px, 4.5vw, 36px)",
+              lineHeight: 1.15,
+              color: "var(--wc-ink)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            둘러보기
+          </h1>
+          <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
+            게시판을 살펴보고 실시간 인기글을 만나보세요
+          </p>
+        </header>
+
+        <div className="grid grid-cols-12 gap-6">
+          {/* Main Content */}
+          <div className="col-span-12 space-y-6 xl:col-span-9">
+            {/* 게시판 둘러보기 */}
+            {categories.length > 0 && (
+              <div
+                className="overflow-hidden rounded-xl"
+                style={{
+                  background: "var(--wc-card)",
+                  boxShadow: "var(--wc-shadow-1)",
+                }}
+              >
+                <div
+                  className="flex items-center gap-2 px-4 py-3"
+                  style={{
+                    background: "var(--wc-soft)",
+                    borderBottom: "1px solid var(--wc-line)",
+                  }}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
+                  <h2
+                    className="text-[11px] font-bold uppercase"
+                    style={{
+                      color: "var(--wc-burgundy)",
+                      letterSpacing: "0.18em",
+                    }}
                   >
-                    <span className="text-2xl">{cat.icon || "📋"}</span>
-                    <span className="text-foreground text-[13px] font-semibold">{cat.name}</span>
-                  </Link>
+                    게시판 둘러보기
+                  </h2>
+                </div>
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-5"
+                  style={{
+                    gap: 0,
+                  }}
+                >
+                  {categories.map((cat) => (
+                    <Link
+                      key={cat.slug}
+                      href={`/community/${cat.slug}`}
+                      className="flex flex-col items-center gap-1.5 py-4 text-center transition-colors"
+                      style={{
+                        borderRight: "1px solid var(--wc-line)",
+                        borderBottom: "1px solid var(--wc-line)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--wc-soft)"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent"
+                      }}
+                    >
+                      <span className="text-2xl">{cat.icon || "📋"}</span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: "var(--wc-ink)" }}
+                      >
+                        {cat.name}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 실시간 인기글 */}
+            <div
+              className="overflow-hidden rounded-xl"
+              style={{
+                background: "var(--wc-card)",
+                boxShadow: "var(--wc-shadow-1)",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-4 py-3"
+                style={{
+                  background: "var(--wc-soft)",
+                  borderBottom: "1px solid var(--wc-line)",
+                }}
+              >
+                <h2
+                  className="text-[11px] font-bold uppercase"
+                  style={{
+                    color: "var(--wc-burgundy)",
+                    letterSpacing: "0.18em",
+                  }}
+                >
+                  실시간 인기글
+                </h2>
+                <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
+                  추천 1+ · 최근 7일
+                </span>
+              </div>
+
+              {/* 정렬 탭 — wc-underline-tabs */}
+              <div className="wc-underline-tabs">
+                {SORT_TABS.map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setSortTab(key)}
+                    className={sortTab === key ? "on" : ""}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* 실시간 인기글 */}
-          <div className="bg-card border-border rounded-lg border">
-            <div className="border-border flex items-center justify-between border-b px-4 py-3">
-              <h2 className="text-primary text-lg font-bold">실시간 인기글</h2>
-              <span className="text-muted-foreground text-xs">추천 1+ · 최근 7일</span>
-            </div>
-
-            {/* 정렬 탭 */}
-            <div className="border-border flex border-b">
-              {SORT_TABS.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setSortTab(key)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
-                    sortTab === key
-                      ? "text-primary border-primary border-b-2 font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="divide-border divide-y">
-              {isContentLoading ? (
-                <div className="p-8 text-center">
-                  <Loader2 className="text-muted-foreground mx-auto mb-2 h-6 w-6 animate-spin" />
-                  <p className="text-muted-foreground text-sm">글 목록을 불러오는 중...</p>
-                </div>
-              ) : sortedPosts.length > 0 ? (
-                sortedPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/post/${post.id}`}
-                    className="hover:bg-secondary/30 flex items-center justify-between p-3 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-foreground truncate text-sm">{post.title}</p>
-                      <span className="text-muted-foreground mt-1 block text-xs">
-                        {post.community}
-                      </span>
-                    </div>
-                    <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs">
-                      <span className="text-primary flex items-center gap-1 font-medium">
-                        <ThumbsUp className="h-3 w-3" />
-                        {post.upvotes}
-                      </span>
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        {post.comments}
-                      </span>
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {post.views}
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="p-8 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    최근 7일 내 추천받은 게시물이 없습니다.
-                  </p>
-                </div>
-              )}
+              <div>
+                {isContentLoading ? (
+                  <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
+                    <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+                    <p className="text-sm">글 목록을 불러오는 중...</p>
+                  </div>
+                ) : sortedPosts.length > 0 ? (
+                  sortedPosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/post/${post.id}`}
+                      className="flex items-center justify-between p-3 transition-colors"
+                      style={{
+                        borderBottom: "1px solid var(--wc-line)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--wc-soft)"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent"
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate text-sm font-semibold"
+                          style={{ color: "var(--wc-ink)" }}
+                        >
+                          {post.title}
+                        </p>
+                        <span className="mt-1 block text-xs" style={{ color: "var(--wc-mute)" }}>
+                          {post.community}
+                        </span>
+                      </div>
+                      <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs tabular-nums">
+                        <span
+                          className="flex items-center gap-1 font-bold"
+                          style={{ color: "var(--wc-burgundy)" }}
+                        >
+                          <ThumbsUp className="h-3 w-3" />
+                          {post.upvotes}
+                        </span>
+                        <span
+                          className="flex items-center gap-1"
+                          style={{ color: "var(--wc-mute)" }}
+                        >
+                          <MessageSquare className="h-3 w-3" />
+                          {post.comments}
+                        </span>
+                        <span
+                          className="flex items-center gap-1"
+                          style={{ color: "var(--wc-mute)" }}
+                        >
+                          <Eye className="h-3 w-3" />
+                          {post.views}
+                        </span>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
+                    <p className="text-sm">최근 7일 내 추천받은 게시물이 없습니다.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Sidebar */}
-        <aside className="col-span-3 hidden xl:block">
-          <ActivitySidebar />
-        </aside>
-      </div>
-    </main>
+          {/* Right Sidebar */}
+          <aside className="col-span-3 hidden xl:block">
+            <ActivitySidebar />
+          </aside>
+        </div>
+      </main>
+    </div>
   )
 }
