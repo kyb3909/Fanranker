@@ -64,6 +64,50 @@
   }
 }
 
+/* ─── Games tabs (시안 .games-tabs) — 메인 4탭 / 베팅 페이지 ──── */
+.worldcup-scope .wc-games-tabs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: var(--wc-card);
+  border-radius: 10px;
+  padding: 6px;
+  margin-bottom: 12px;
+  box-shadow: var(--wc-shadow-1);
+}
+.worldcup-scope .wc-games-tabs button {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--wc-mute);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+}
+.worldcup-scope .wc-games-tabs button:hover:not(.on):not(:disabled) {
+  background: var(--wc-soft);
+  color: var(--wc-ink);
+}
+.worldcup-scope .wc-games-tabs button.on {
+  background: var(--wc-burgundy);
+  color: white;
+}
+.worldcup-scope .wc-games-tabs button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ─── Z1.1 Hero ─────────────────────────────────────────────────────── */
 .worldcup-scope .wc-hero {
   background: linear-gradient(
