@@ -36,11 +36,13 @@ const COUNTRIES_GEOJSON = "public/map/data/ne_countries.geojson"
 const OUTPUT_JSON = "public/map/uk-auto.json"
 
 // 타일 ID 매핑 (LimeZu Modern Exteriors 16x16, firstgid=1 기준)
-// 184 = 잔디 (검증된 값). 바다 타일은 추후 결정 — 지금은 0 (빈 타일, 검정 배경).
+// 184  = 잔디
+// 1540 = Deep_Water_1_9 (3×3 autotile 가운데 = plain water, 네이비)
+// (1_1~8은 가장자리 autotile — 해안선 처리에 사용 예정)
 const TILE_GRASS = 184
-const TILE_SEA = 0
+const TILE_SEA = 1540
 
-// EPL 11 + Wembley 경기장 (실제 lat/lon, supabase/migrations/20260401_team_stadium_system.sql 시드 기반)
+// EPL Big Six + Wembley (사용자 요청 — 11개 → 7개 축소)
 const STADIUMS: Array<{
   teamId: string
   label: string
@@ -96,34 +98,6 @@ const STADIUMS: Array<{
     stadium: "Tottenham Hotspur Stadium",
     lon: -0.0664,
     lat: 51.6043,
-  },
-  {
-    teamId: "epl_newcastle",
-    label: "뉴캐슬 (세인트 제임스)",
-    stadium: "St James' Park",
-    lon: -1.6217,
-    lat: 54.9756,
-  },
-  {
-    teamId: "epl_astonvilla",
-    label: "아스톤빌라 (빌라파크)",
-    stadium: "Villa Park",
-    lon: -1.8847,
-    lat: 52.5092,
-  },
-  {
-    teamId: "epl_brighton",
-    label: "브라이턴 (아멕스)",
-    stadium: "Amex Stadium",
-    lon: -0.0834,
-    lat: 50.8616,
-  },
-  {
-    teamId: "epl_westham",
-    label: "웨스트햄 (런던 스타디움)",
-    stadium: "London Stadium",
-    lon: -0.0166,
-    lat: 51.5386,
   },
 ]
 
@@ -322,7 +296,7 @@ function buildTiledMap(
     py: number
   }>
 ): TiledMap {
-  // background — 육지=잔디, 바다=빈
+  // background — 육지=잔디, 바다=plain water 단일
   const backgroundData: number[] = []
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {

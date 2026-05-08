@@ -28,6 +28,10 @@ export default function TestTilemapPage() {
           scene: TestTilemapScene,
           pixelArt: true,
           render: { antialias: false },
+          physics: {
+            default: "arcade",
+            arcade: { gravity: { x: 0, y: 0 }, debug: false },
+          },
         })
         setStatus("ready")
       } catch (err) {
@@ -46,8 +50,8 @@ export default function TestTilemapPage() {
     <div className="mx-auto max-w-5xl space-y-3 p-6">
       <h1 className="text-xl font-bold">UK 경기장 맵 검증</h1>
       <p className="text-sm text-neutral-600">
-        영국 자동 생성 맵 + EPL 11 경기장. <strong>WASD / 화살표</strong>로 카메라 이동. 사각형 클릭
-        → 경기장 정보 alert. 정식 통합 시 → 경기장 내부 씬 진입.
+        영국 자동 생성 맵 + EPL Big Six + 웸블리. <strong>WASD / 화살표</strong>로 캐릭터 이동.
+        경기장 사각형 클릭 → 경기장 정보 alert. Spawn = Wembley 근처. 충돌은 정식 통합에서.
       </p>
       <div className="text-sm">
         상태:{" "}

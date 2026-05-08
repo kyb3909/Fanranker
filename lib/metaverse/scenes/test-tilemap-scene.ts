@@ -1,11 +1,19 @@
 /**
  * TestTilemapScene — Tiled 미니 맵 검증용 씬.
  *
- * 목적: LimeZu 타일셋 + Tiled JSON이 Phaser에서 정상 로드되는지만 확인.
- * 캐릭터·realtime 없음. 추후 정식 world-map-scene.ts 통합의 사전 검증 단계.
+ * 목적: LimeZu 타일셋 + Tiled JSON 로드 + 캐릭터 이동 + 카메라 follow + 바다 충돌 + 경기장
+ * entrance 클릭. 추후 정식 world-map-scene.ts 통합의 사전 검증 단계.
  */
 
 import * as Phaser from "phaser"
+import {
+  preloadProAvatar,
+  createProAvatarAnimations,
+  textureKeyIdle,
+  animKeyWalk,
+  direction8FromVelocity,
+  type Direction8,
+} from "@/lib/metaverse/avatar/pro-avatar"
 
 export const TEST_TILEMAP_SCENE_KEY = "MetaverseTestTilemap"
 
@@ -15,11 +23,14 @@ interface TiledProperty {
   value: string | number | boolean
 }
 
-const CAMERA_PAN_SPEED = 8 // px per frame @60fps ≈ 480 px/s
+const PLAYER_SPEED = 200
+const AVATAR_SCALE = 0.4
 
 export class TestTilemapScene extends Phaser.Scene {
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
+  private player!: Phaser.Physics.Arcade.Sprite
+  private lastDir8: Direction8 = "south"
 
   constructor() {
     super(TEST_TILEMAP_SCENE_KEY)
@@ -28,6 +39,7 @@ export class TestTilemapScene extends Phaser.Scene {
   preload() {
     this.load.image("modern-exteriors", "/map/tilesets/modern-exteriors.png")
     this.load.tilemapTiledJSON("uk-auto", "/map/uk-auto.json")
+    preloadProAvatar(this)
   }
 
   create() {
@@ -35,17 +47,19 @@ export class TestTilemapScene extends Phaser.Scene {
     const tileset = map.addTilesetImage("Modern_Exteriors_Complete_Tileset", "modern-exteriors")
 
     if (!tileset) {
-      this.add.text(16, 16, "타일셋 로드 실패 — Tiled 'Name' 칸이 다를 수 있음", {
-        color: "#ff5555",
-        fontSize: "14px",
-      })
+      this.add.text(16, 16, "타일셋 로드 실패", { color: "#ff5555", fontSize: "14px" })
       return
     }
 
-    map.createLayer("background", tileset, 0, 0)
+    const bgLayer = map.createLayer("background", tileset, 0, 0)
     map.createLayer("decoration", tileset, 0, 0)
     map.createLayer("collision", tileset, 0, 0)?.setVisible(false)
+    void bgLayer
+    // 충돌은 정식 통합에서 hitbox 정밀 튜닝 후 활성화 — 검증 단계는 끔
 
+    // 경기장 entrance — 사각형 + 라벨 + 클릭
+    let spawnX = map.widthInPixels / 2
+    let spawnY = map.heightInPixels / 2
     const objectsLayer = map.getObjectLayer("objects")
     objectsLayer?.objects.forEach((obj) => {
       if (obj.type !== "stadium_entrance" && obj.type !== "entrance") return
@@ -76,15 +90,29 @@ export class TestTilemapScene extends Phaser.Scene {
         // eslint-disable-next-line no-alert
         window.alert(`${label}\n${stadiumName ?? ""}\ntarget_scene: ${target}`)
       })
+
+      // Wembley 위치를 spawn 으로 — 사용자가 처음 보면 런던 + Big6 가까움
+      if (obj.name === "epl_wembley") {
+        spawnX = cx
+        spawnY = cy + h * 1.5 // entrance 살짝 아래
+      }
     })
 
-    const mapPxW = map.widthInPixels
-    const mapPxH = map.heightInPixels
+    // 캐릭터
+    this.player = this.physics.add.sprite(spawnX, spawnY, textureKeyIdle("south"))
+    this.player.setScale(AVATAR_SCALE)
+    this.player.setDepth(10)
+    this.player.setCollideWorldBounds(true)
+
+    createProAvatarAnimations(this)
+
+    // 카메라
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
     this.cameras.main.setZoom(1)
-    this.cameras.main.setBounds(0, 0, mapPxW, mapPxH)
-    this.cameras.main.centerOn(mapPxW / 2, mapPxH / 2)
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
     this.cameras.main.setBackgroundColor("#0b1320")
 
+    // 입력
     this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as Record<
       "W" | "A" | "S" | "D",
       Phaser.Input.Keyboard.Key
@@ -93,15 +121,31 @@ export class TestTilemapScene extends Phaser.Scene {
   }
 
   update() {
-    if (!this.wasd) return
-    const cam = this.cameras.main
+    if (!this.player) return
+    const body = this.player.body as Phaser.Physics.Arcade.Body
+    body.setVelocity(0)
+
     const left = this.wasd.A.isDown || this.cursors.left?.isDown
     const right = this.wasd.D.isDown || this.cursors.right?.isDown
     const up = this.wasd.W.isDown || this.cursors.up?.isDown
     const down = this.wasd.S.isDown || this.cursors.down?.isDown
-    if (left) cam.scrollX -= CAMERA_PAN_SPEED
-    if (right) cam.scrollX += CAMERA_PAN_SPEED
-    if (up) cam.scrollY -= CAMERA_PAN_SPEED
-    if (down) cam.scrollY += CAMERA_PAN_SPEED
+
+    if (left) body.setVelocityX(-PLAYER_SPEED)
+    else if (right) body.setVelocityX(PLAYER_SPEED)
+    if (up) body.setVelocityY(-PLAYER_SPEED)
+    else if (down) body.setVelocityY(PLAYER_SPEED)
+
+    body.velocity.normalize().scale(PLAYER_SPEED)
+
+    const dir8 = direction8FromVelocity(body.velocity.x, body.velocity.y)
+    if (dir8) {
+      if (this.lastDir8 !== dir8 || this.player.anims.currentAnim?.key !== animKeyWalk(dir8)) {
+        this.lastDir8 = dir8
+        this.player.play(animKeyWalk(dir8), true)
+      }
+    } else if (this.player.anims.isPlaying) {
+      this.player.anims.stop()
+      this.player.setTexture(textureKeyIdle(this.lastDir8))
+    }
   }
 }
