@@ -453,8 +453,11 @@ export default function SignUpPage() {
   // ── Loading state ──
   if (!effectiveLoaded || (isSignedIn && profileLoading)) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="text-primary h-8 w-8 animate-spin" />
+      <div className="worldcup-scope flex min-h-screen items-center justify-center">
+        <Loader2
+          className="h-8 w-8 animate-spin"
+          style={{ color: "var(--wc-burgundy, #a0203b)" }}
+        />
       </div>
     )
   }
@@ -465,12 +468,22 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center px-4 py-8">
+    <div className="worldcup-scope flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h1 className="text-foreground text-2xl font-bold">공놀이판에 오신 걸 환영합니다!</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
+          <div className="wc-sec-eb">WELCOME</div>
+          <h1
+            className="font-black tracking-tight"
+            style={{
+              fontSize: "clamp(22px, 3.5vw, 28px)",
+              color: "var(--wc-ink, #1a1416)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            공놀이판에 오신 걸 환영합니다!
+          </h1>
+          <p className="mt-2 text-sm" style={{ color: "var(--wc-mute, #7a6b65)" }}>
             간단한 설정으로 나만의 커뮤니티를 시작하세요.
           </p>
         </div>
@@ -480,7 +493,13 @@ export default function SignUpPage() {
           <StepIndicator current={step} total={totalSteps} />
         </div>
 
-        <Card className="overflow-hidden border p-0 shadow-md">
+        <Card
+          className="overflow-hidden p-0"
+          style={{
+            background: "var(--wc-card, #ffffff)",
+            boxShadow: "var(--wc-shadow-2)",
+          }}
+        >
           {/* Step 1: 약관 동의 */}
           {step === 1 && (
             <TermsStep
