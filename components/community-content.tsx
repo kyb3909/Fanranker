@@ -176,46 +176,59 @@ export const CommunityContent = memo(function CommunityContent({
           >
             {/* 테이블 상단: 말머리 필터 + 글쓰기 — wc-soft strip */}
             <div
-              className="flex items-center justify-between gap-2 px-3 py-2"
+              className="flex items-center gap-2 px-3 py-2"
               style={{
                 background: "var(--wc-soft)",
                 borderBottom: "1px solid var(--wc-line)",
               }}
             >
-              {/* 말머리 필터 */}
-              <div className="flex flex-wrap items-center gap-1">
+              {/* 말머리 필터 — 가로 스크롤 (flair 많을 때 정리). flair 없으면 빈 공간 */}
+              <div className="relative min-w-0 flex-1">
                 {flairs.length > 0 && (
                   <>
-                    <Link
-                      href={`/community/${communitySlug}`}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors sm:min-h-0 sm:min-w-0"
-                      style={{
-                        background: !activeFlairId ? "var(--wc-burgundy)" : "var(--wc-card)",
-                        color: !activeFlairId ? "white" : "var(--wc-mute)",
-                        border: !activeFlairId
-                          ? "1px solid var(--wc-burgundy)"
-                          : "1px solid var(--wc-line-2)",
-                      }}
-                    >
-                      전체
-                    </Link>
-                    {flairs.map((f) => (
+                    <div className="scrollbar-none flex items-center gap-1 overflow-x-auto py-0.5">
                       <Link
-                        key={f.id}
-                        href={`/community/${communitySlug}?flair=${f.id}`}
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors hover:opacity-90 sm:min-h-0 sm:min-w-0"
+                        href={`/community/${communitySlug}`}
+                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold whitespace-nowrap transition-colors sm:min-h-0"
                         style={{
-                          backgroundColor: activeFlairId === f.id ? f.color : `${f.color}15`,
-                          color: activeFlairId === f.id ? "white" : f.color,
-                          border:
-                            activeFlairId === f.id
-                              ? `1px solid ${f.color}`
-                              : "1px solid var(--wc-line-2)",
+                          background: !activeFlairId ? "var(--wc-burgundy)" : "var(--wc-card)",
+                          color: !activeFlairId ? "white" : "var(--wc-mute)",
+                          border: !activeFlairId
+                            ? "1px solid var(--wc-burgundy)"
+                            : "1px solid var(--wc-line-2)",
                         }}
                       >
-                        {f.name}
+                        전체
                       </Link>
-                    ))}
+                      {flairs.map((f) => (
+                        <Link
+                          key={f.id}
+                          href={`/community/${communitySlug}?flair=${f.id}`}
+                          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold whitespace-nowrap transition-colors hover:opacity-90 sm:min-h-0"
+                          style={{
+                            backgroundColor: activeFlairId === f.id ? f.color : `${f.color}15`,
+                            color: activeFlairId === f.id ? "white" : f.color,
+                            border:
+                              activeFlairId === f.id
+                                ? `1px solid ${f.color}`
+                                : "1px solid var(--wc-line-2)",
+                          }}
+                        >
+                          {f.name}
+                        </Link>
+                      ))}
+                      {/* 우측 끝 padding spacer — fade 마스크와 chip 겹침 방지 */}
+                      <div className="w-6 shrink-0" aria-hidden />
+                    </div>
+                    {/* 우측 fade — "더 있음" 시각 단서 */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute top-0 right-0 bottom-0 w-10"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, transparent, var(--wc-soft, #f4ece6) 70%)",
+                      }}
+                    />
                   </>
                 )}
               </div>
