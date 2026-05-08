@@ -63,28 +63,23 @@ export const PostCardContent = memo(function PostCardContent({
     <div>
       {/* 카테고리 라벨 — 에디토리얼 톤. flair 있으면 "게시판 · flair" 형태. */}
       {category && (
-        <div className="font-title mb-1.5 text-[11px] font-semibold tracking-[0.06em] uppercase">
+        <div
+          className="font-title mb-1.5 text-[11px] font-bold tracking-[0.18em] uppercase"
+          style={{ color: "var(--wc-burgundy, #a0203b)" }}
+        >
           {categoryLink ? (
-            <Link
-              href={`/community/${categoryLink}`}
-              className="text-primary inline-block hover:underline"
-            >
+            <Link href={`/community/${categoryLink}`} className="inline-block hover:underline">
               {category}
             </Link>
           ) : (
-            <span className="text-primary">{category}</span>
+            <span>{category}</span>
           )}
           {flair?.name && (
             <>
-              <span aria-hidden className="text-muted-foreground/50 mx-1.5">
+              <span aria-hidden className="mx-1.5" style={{ color: "var(--wc-mute-2, #a0938c)" }}>
                 ·
               </span>
-              <span
-                className={flair.color ? undefined : "text-primary"}
-                style={flair.color ? { color: flair.color } : undefined}
-              >
-                {flair.name}
-              </span>
+              <span style={flair.color ? { color: flair.color } : undefined}>{flair.name}</span>
             </>
           )}
         </div>
@@ -105,11 +100,17 @@ export const PostCardContent = memo(function PostCardContent({
 
           {/* 본문 */}
           {typeof content === "string" ? (
-            <p className="mt-2 line-clamp-2 text-[14px] leading-[1.65] text-neutral-600 dark:text-neutral-400">
+            <p
+              className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
+              style={{ color: "var(--wc-mute, #7a6b65)" }}
+            >
               {content}
             </p>
           ) : (
-            <p className="mt-2 line-clamp-2 text-[14px] leading-[1.65] text-neutral-600 dark:text-neutral-400">
+            <p
+              className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
+              style={{ color: "var(--wc-mute, #7a6b65)" }}
+            >
               {extractTextFromTipTapJSON(content)}
             </p>
           )}

@@ -143,7 +143,9 @@ export function PostCardMeta({
         )}
 
         <Hairline />
-        <RelativeTime date={timestamp} className="shrink-0 text-neutral-400" />
+        <span style={{ color: "var(--wc-mute-2, #a0938c)" }}>
+          <RelativeTime date={timestamp} className="shrink-0" />
+        </span>
       </div>
 
       {/* 우측: 투표 / 댓글 / 북마크 / 공유 / 더보기 */}
