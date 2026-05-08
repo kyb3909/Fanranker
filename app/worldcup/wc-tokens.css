@@ -8,18 +8,19 @@
  */
 
 .worldcup-scope {
-  /* Core palette */
+  /* Core palette — cool gray 계열 (스포츠 커뮤니티 톤).
+   * 베이지/크림 (#f4ece6 등 따뜻한 톤) → cool gray (Mantine gray scale).
+   * 배경 (#ffffff) + 포인트 (burgundy) 유지, 중간 톤만 일관 cool 으로. */
   --wc-burgundy: #a0203b;
   --wc-burgundy-deep: #7e1a2f;
   --wc-ink: #1a1416;
-  /* 배경: 사용자 요청 — 순백 #ffffff. 카드 vs 배경 구분은 wc-shadow-1 의 1px line 으로. */
   --wc-paper: #ffffff;
   --wc-card: #ffffff;
-  --wc-line: #efe7e0;
-  --wc-line-2: #e5dad2;
-  --wc-mute: #7a6b65;
-  --wc-mute-2: #a0938c;
-  --wc-soft: #f4ece6;
+  --wc-line: #e9ecef;
+  --wc-line-2: #dee2e6;
+  --wc-mute: #6c757d;
+  --wc-mute-2: #adb5bd;
+  --wc-soft: #f1f3f5;
 
   /* Semantic accents */
   --wc-warn: #c8842a;
