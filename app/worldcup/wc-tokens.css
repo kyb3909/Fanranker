@@ -12,8 +12,8 @@
   --wc-burgundy: #a0203b;
   --wc-burgundy-deep: #7e1a2f;
   --wc-ink: #1a1416;
-  /* 배경: 크림(#faf7f4 — 따뜻/여성적) → cool gray (스포츠 커뮤니티 톤). 포인트 burgundy 유지. */
-  --wc-paper: #eef1f4;
+  /* 배경: 사용자 요청 — 순백 #ffffff. 카드 vs 배경 구분은 wc-shadow-1 의 1px line 으로. */
+  --wc-paper: #ffffff;
   --wc-card: #ffffff;
   --wc-line: #efe7e0;
   --wc-line-2: #e5dad2;
