@@ -22,8 +22,8 @@ export default function TestTilemapPage() {
         game = new Phaser.Game({
           type: Phaser.AUTO,
           parent,
-          width: 800,
-          height: 640,
+          width: 900,
+          height: 600,
           backgroundColor: "#101216",
           scene: TestTilemapScene,
           pixelArt: true,
@@ -43,11 +43,11 @@ export default function TestTilemapPage() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-3xl space-y-3 p-6">
-      <h1 className="text-xl font-bold">Tilemap 검증</h1>
+    <div className="mx-auto max-w-5xl space-y-3 p-6">
+      <h1 className="text-xl font-bold">UK 경기장 맵 검증</h1>
       <p className="text-sm text-neutral-600">
-        Tiled 50×40 맵 (uk-test.json) + LimeZu 타일셋이 Phaser에서 정상 로드되는지 확인. 잔디 배경 +
-        빨간 사각형(highbury entrance) 보이면 성공. 사각형 클릭 시 alert.
+        영국 자동 생성 맵 + EPL 11 경기장. <strong>WASD / 화살표</strong>로 카메라 이동. 사각형 클릭
+        → 경기장 정보 alert. 정식 통합 시 → 경기장 내부 씬 진입.
       </p>
       <div className="text-sm">
         상태:{" "}
@@ -62,7 +62,7 @@ export default function TestTilemapPage() {
       <div
         ref={containerRef}
         className="overflow-hidden rounded border border-neutral-300 bg-black"
-        style={{ width: 800, height: 640 }}
+        style={{ width: 900, height: 600 }}
       />
     </div>
   )
