@@ -47,10 +47,10 @@ export function Header() {
               aria-label="홈"
             >
               <span className="relative z-0 hidden shrink-0 sm:block" aria-hidden>
-                <Image src="/logo-brush.webp" alt="" width={88} height={26} priority />
+                <Image src="/logo-brush.webp" alt="" width={112} height={33} priority />
               </span>
               <span
-                className="relative z-10 ml-0.5 text-[18px] leading-none sm:-ml-[3px] sm:text-[20px] lg:text-[22px]"
+                className="relative z-10 ml-0.5 text-[19px] leading-none sm:-ml-[4px] sm:text-[24px] lg:text-[26px]"
                 style={{ letterSpacing: "-0.02em", color: "var(--wc-ink, #1A1416)" }}
               >
                 <span className="font-bold">gongnori</span>
