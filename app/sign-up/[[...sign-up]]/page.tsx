@@ -470,24 +470,6 @@ export default function SignUpPage() {
   return (
     <div className="worldcup-scope flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-6 text-center">
-          <div className="wc-sec-eb">WELCOME</div>
-          <h1
-            className="font-black tracking-tight"
-            style={{
-              fontSize: "clamp(22px, 3.5vw, 28px)",
-              color: "var(--wc-ink, #1a1416)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            공놀이판에 오신 걸 환영합니다!
-          </h1>
-          <p className="mt-2 text-sm" style={{ color: "var(--wc-mute, #7a6b65)" }}>
-            간단한 설정으로 나만의 커뮤니티를 시작하세요.
-          </p>
-        </div>
-
         {/* Step indicator */}
         <div className="mb-6 flex justify-center">
           <StepIndicator current={step} total={totalSteps} />

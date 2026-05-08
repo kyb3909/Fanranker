@@ -129,38 +129,14 @@ export const CommunityContent = memo(function CommunityContent({
       <>
         {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
         <div className="py-4">
-          {/* 커뮤니티 헤더 — wc eyebrow + 큰 헤딩 + 멤버 메타 */}
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="wc-sec-eb">COMMUNITY</div>
-              <h1
-                className="font-black tracking-tight"
-                style={{
-                  fontSize: "clamp(22px, 3.5vw, 28px)",
-                  lineHeight: 1.15,
-                  color: "var(--wc-ink)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {community.name}
-              </h1>
-              {community.description && (
-                <p
-                  className="mt-1.5 text-[14px] leading-relaxed"
-                  style={{ color: "var(--wc-mute)" }}
-                >
-                  {community.description}
-                </p>
-              )}
-              <div
-                className="mt-2 flex items-center gap-3 text-[12px]"
-                style={{ color: "var(--wc-mute)" }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  <span className="font-semibold tabular-nums">{community.members}</span>
-                </div>
-              </div>
+          {/* 미니 헤더 — 멤버 + 팔로우 (페이지 인트로 헤더 제거) */}
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div
+              className="flex items-center gap-1.5 text-[12px]"
+              style={{ color: "var(--wc-mute)" }}
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span className="font-semibold tabular-nums">{community.members}</span>
             </div>
             <button
               type="button"

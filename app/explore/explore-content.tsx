@@ -115,25 +115,6 @@ function ExploreInner() {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
-        {/* 페이지 헤더 */}
-        <header className="mb-6">
-          <div className="wc-sec-eb">EXPLORE</div>
-          <h1
-            className="font-black tracking-tight"
-            style={{
-              fontSize: "clamp(28px, 4.5vw, 36px)",
-              lineHeight: 1.15,
-              color: "var(--wc-ink)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            둘러보기
-          </h1>
-          <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-            게시판을 살펴보고 실시간 인기글을 만나보세요
-          </p>
-        </header>
-
         <div className="grid grid-cols-12 gap-6">
           {/* Main Content */}
           <div className="col-span-12 space-y-6 xl:col-span-9">

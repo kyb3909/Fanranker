@@ -145,20 +145,6 @@ function WriteContent() {
                 boxShadow: "var(--wc-shadow-1)",
               }}
             >
-              <header className="mb-6">
-                <div className="wc-sec-eb">{editor.editId ? "EDIT POST" : "NEW POST"}</div>
-                <h1
-                  className="font-black tracking-tight"
-                  style={{
-                    fontSize: "clamp(22px, 3.5vw, 28px)",
-                    color: "var(--wc-ink)",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  {editor.editId ? "글 수정" : "글쓰기"}
-                </h1>
-              </header>
-
               <form onSubmit={editor.handleSubmit} className="space-y-6">
                 {/* 게시판 선택 */}
                 <div className="space-y-2">

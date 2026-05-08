@@ -110,8 +110,8 @@ export default function PaymentsPage() {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-        {/* 헤더 */}
-        <div className="mb-6 flex items-center gap-3">
+        {/* 미니 헤더 — 뒤로가기만 */}
+        <div className="mb-4">
           <Button
             variant="ghost"
             size="icon"
@@ -120,23 +120,6 @@ export default function PaymentsPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="min-w-0 flex-1">
-            <div className="wc-sec-eb">GOLD HISTORY</div>
-            <h1
-              className="font-black tracking-tight"
-              style={{
-                fontSize: "clamp(20px, 3vw, 26px)",
-                color: "var(--wc-ink, #1a1416)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              <Coins
-                className="mr-2 inline-block h-5 w-5 align-text-bottom"
-                style={{ color: "var(--wc-gold-deep, #b8941a)" }}
-              />
-              골드 내역
-            </h1>
-          </div>
         </div>
 
         {/* 에러 상태 */}

@@ -112,8 +112,8 @@ export default function MyPredictionsPage() {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
+        {/* 미니 헤더 — 뒤로가기만 */}
+        <div className="mb-4">
           <Button
             variant="ghost"
             size="icon"
@@ -122,19 +122,6 @@ export default function MyPredictionsPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="min-w-0 flex-1">
-            <div className="wc-sec-eb">MY PREDICTIONS</div>
-            <h1
-              className="font-black tracking-tight"
-              style={{
-                fontSize: "clamp(20px, 3vw, 26px)",
-                color: "var(--wc-ink)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              승부예측 내역
-            </h1>
-          </div>
         </div>
 
         {/* Stats Cards */}
