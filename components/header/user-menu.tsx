@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User as UserIcon, FileText, Trophy, Coins, Settings, LogOut } from "lucide-react"
+import { User as UserIcon, FileText, Trophy, Coins, Settings, LogOut, Sparkles } from "lucide-react"
 import Link from "@/components/ui/app-link"
 
 export function UserMenu() {
@@ -121,6 +121,13 @@ export function UserMenu() {
           <DropdownMenuItem className="hover:bg-muted/50 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
             <Trophy className="text-muted-foreground mr-3 h-4 w-4" />
             <span className="text-sm font-medium">승부예측 내역</span>
+          </DropdownMenuItem>
+        </Link>
+
+        <Link href="/shop">
+          <DropdownMenuItem className="hover:bg-muted/50 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
+            <Sparkles className="mr-3 h-4 w-4" style={{ color: "var(--wc-burgundy, #a0203b)" }} />
+            <span className="text-sm font-medium">상점</span>
           </DropdownMenuItem>
         </Link>
 

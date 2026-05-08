@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Sparkles, Crown } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, Crown } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -26,7 +26,6 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname.startsWith("/prediction")
   const isWorldcup = pathname.startsWith("/worldcup")
-  const isShop = pathname.startsWith("/shop")
 
   return (
     <nav
@@ -91,13 +90,8 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
         {/*
           스타디움 메뉴는 가오픈에서 제외 (스프라이트 외주 + Phaser 작업 완료 후 노출).
           라우트(/stadium/*)는 유지 — 직접 URL로만 접근 가능.
+          상점은 UserMenu (프로필 드롭다운) 으로 이동 — 메뉴바 컴팩트화.
         */}
-        <Link href="/shop">
-          <span className={baseClass} data-on={isShop ? "true" : undefined}>
-            <Sparkles className="h-[18px] w-[18px] shrink-0" />
-            상점
-          </span>
-        </Link>
       </div>
     </nav>
   )
