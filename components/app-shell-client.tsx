@@ -30,7 +30,10 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   useOnboardingGuard()
 
   return (
-    <div className="bg-background min-h-screen">
+    // .worldcup-scope 글로벌 wrapper — 페이지 전환 시 흰 깜빡임 방지.
+    // 각 페이지가 자체 .worldcup-scope wrapper 추가해도 nested cascade 라 안전.
+    // /stadium 처럼 자체 dark 배경을 쓰는 페이지는 페이지 내부 div 가 덮어씀.
+    <div className="worldcup-scope min-h-screen">
       {!hideChrome && header}
       {/* 배너 = 피드 위 오버레이 레이어. 홈에서만 절대 위치로 상단 덮개. */}
       <div className="relative">
