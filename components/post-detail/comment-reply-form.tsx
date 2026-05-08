@@ -96,6 +96,10 @@ export function CommentReplyForm({
             size="sm"
             onClick={() => onSubmit(selectedSticker)}
             disabled={!canSubmit || isSubmitting}
+            style={{
+              background: "var(--wc-burgundy, #a0203b)",
+              color: "white",
+            }}
           >
             {isSubmitting ? "작성 중..." : "답글 작성"}
           </Button>

@@ -148,6 +148,10 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
         <Button
           onClick={handleSubmit}
           disabled={(!commentText.trim() && !selectedSticker) || isSubmitting}
+          style={{
+            background: "var(--wc-burgundy, #a0203b)",
+            color: "white",
+          }}
         >
           {isSubmitting ? "작성 중..." : "댓글 작성"}
         </Button>

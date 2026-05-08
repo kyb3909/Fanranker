@@ -99,6 +99,10 @@ export function CommentEditForm({
             className="h-7 px-2 text-xs"
             onClick={() => onSave(selectedSticker)}
             disabled={!canSave || isSaving}
+            style={{
+              background: "var(--wc-burgundy, #a0203b)",
+              color: "white",
+            }}
           >
             <Check className="mr-1 h-3 w-3" />
             {isSaving ? "저장 중..." : "저장"}
