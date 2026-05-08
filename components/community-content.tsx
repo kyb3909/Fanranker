@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, memo } from "react"
-import { Users, Pencil } from "lucide-react"
+import { useState, useEffect, useRef, memo } from "react"
+import { Users, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Pagination,
@@ -82,6 +82,14 @@ export const CommunityContent = memo(function CommunityContent({
   const { isSignedIn } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
+
+  // flair 가로 스크롤 ref + 화살표 핸들러
+  const flairScrollRef = useRef<HTMLDivElement>(null)
+  const scrollFlairs = (dir: "left" | "right") => {
+    const el = flairScrollRef.current
+    if (!el) return
+    el.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" })
+  }
 
   // 팔로우 상태 확인
   useEffect(() => {
@@ -186,7 +194,25 @@ export const CommunityContent = memo(function CommunityContent({
               <div className="relative min-w-0 flex-1">
                 {flairs.length > 0 && (
                   <>
-                    <div className="scrollbar-none flex items-center gap-1 overflow-x-auto py-0.5">
+                    {/* 좌 스크롤 버튼 (sm 이상 — 모바일은 swipe) */}
+                    <button
+                      type="button"
+                      onClick={() => scrollFlairs("left")}
+                      aria-label="이전 말머리"
+                      className="absolute top-1/2 left-0 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors sm:flex"
+                      style={{
+                        background: "var(--wc-card, #ffffff)",
+                        color: "var(--wc-burgundy, #a0203b)",
+                        boxShadow: "0 1px 4px rgba(26,20,22,0.12)",
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+
+                    <div
+                      ref={flairScrollRef}
+                      className="scrollbar-none flex items-center gap-1 overflow-x-auto py-0.5 sm:px-9"
+                    >
                       <Link
                         href={`/community/${communitySlug}`}
                         className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold whitespace-nowrap transition-colors sm:min-h-0"
@@ -217,18 +243,22 @@ export const CommunityContent = memo(function CommunityContent({
                           {f.name}
                         </Link>
                       ))}
-                      {/* 우측 끝 padding spacer — fade 마스크와 chip 겹침 방지 */}
-                      <div className="w-6 shrink-0" aria-hidden />
                     </div>
-                    {/* 우측 fade — "더 있음" 시각 단서 */}
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute top-0 right-0 bottom-0 w-10"
+
+                    {/* 우 스크롤 버튼 (sm 이상) */}
+                    <button
+                      type="button"
+                      onClick={() => scrollFlairs("right")}
+                      aria-label="다음 말머리"
+                      className="absolute top-1/2 right-0 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors sm:flex"
                       style={{
-                        background:
-                          "linear-gradient(90deg, transparent, var(--wc-soft, #f4ece6) 70%)",
+                        background: "var(--wc-card, #ffffff)",
+                        color: "var(--wc-burgundy, #a0203b)",
+                        boxShadow: "0 1px 4px rgba(26,20,22,0.12)",
                       }}
-                    />
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   </>
                 )}
               </div>
