@@ -12,7 +12,7 @@ const StandingsWidget = dynamic(
     import("@/components/sidebar/standings-widget").then((m) => ({ default: m.StandingsWidget })),
   {
     ssr: false,
-    loading: () => <div className="bg-card border-border h-64 animate-pulse rounded-lg border" />,
+    loading: () => <div className="wc-skeleton h-64 rounded-lg" />,
   }
 )
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"

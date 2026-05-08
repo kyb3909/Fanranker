@@ -167,6 +167,23 @@
   background: var(--wc-soft);
 }
 
+/* ─── Skeleton (dynamic import loading) — paper 톤 일관 ─── */
+/* scope-free: AppShell 어디서나 사용 가능 (paper 톤 글로벌) */
+.wc-skeleton {
+  background: linear-gradient(180deg, var(--wc-soft, #f4ece6), var(--wc-line, #efe7e0));
+  border-radius: 12px;
+  animation: wc-skeleton-pulse 1.6s ease-in-out infinite;
+}
+@keyframes wc-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* ─── Global header nav (scope-free) — 시안 .hdr-link 패턴 ─── */
 /* AppShell 헤더는 .worldcup-scope wrapper 밖에 있을 수 있어 hex fallback 포함 */
 .wc-hdr-link {

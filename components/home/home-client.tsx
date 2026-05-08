@@ -14,14 +14,14 @@ const CommunitySidebar = dynamic(
   () =>
     import("@/components/sidebar/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
   {
-    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-lg border" />,
+    loading: () => <div className="wc-skeleton h-96 rounded-lg" />,
   }
 )
 const ActivitySidebar = dynamic(
   () =>
     import("@/components/sidebar/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
   {
-    loading: () => <div className="bg-card border-border h-96 animate-pulse rounded-lg border" />,
+    loading: () => <div className="wc-skeleton h-96 rounded-lg" />,
   }
 )
 const OnboardingBanner = dynamic(

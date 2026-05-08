@@ -7,7 +7,7 @@ import { CommunityContent } from "@/components/community-content"
 
 const NewsTicker = dynamic(
   () => import("@/components/news-talk/news-ticker").then((m) => ({ default: m.NewsTicker })),
-  { loading: () => <div className="bg-card border-border h-16 animate-pulse rounded-xl border" /> }
+  { loading: () => <div className="wc-skeleton h-16 rounded-xl" /> }
 )
 import { createServerAnonClient } from "@/lib/supabase"
 import { jsonLd } from "@/lib/seo"
