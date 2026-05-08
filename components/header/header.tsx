@@ -29,14 +29,13 @@ export function Header() {
     >
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
         {/*
-          페이지 12-col grid (3-6-3) 와 align — 1번 영역(좌 사이드바 폭)에 brand,
-          2번 영역(메인 col-span-6)에 nav 중앙 정렬, 3번 영역(우 사이드바 폭)에 search + actions.
-
-          모바일/태블릿 (lg 이하): 3-col [auto 1fr auto] + nav 별도 row.
+          헤더 1행: brand · search · actions (단순 3-col).
+          nav 는 별도 row (아래) — 메뉴 늘어날 때 공간 부족 + 로그인 시 잔액/알림/프로필
+          과 겹침 방지.
         */}
-        <div className="grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 lg:grid-cols-12 lg:gap-6">
-          {/* Logo — lg 에서 col-span-3 (좌 사이드바 폭) */}
-          <div className="flex min-w-0 items-center justify-start lg:col-span-3">
+        <div className="grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4">
+          {/* Logo */}
+          <div className="flex min-w-0 items-center justify-start">
             <Link
               href="/"
               onClick={(e) => {
@@ -63,16 +62,8 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Nav — lg 에서 col-span-6 (메인 영역) 중앙 정렬 */}
-          <div className="hidden lg:col-span-6 lg:flex lg:items-center lg:justify-center">
-            <HeaderNav inline />
-          </div>
-
-          {/*
-            우측 그룹 — lg에서 col-span-3 (우 사이드바 폭) 안에 search + actions 동거.
-            lg 미만에서는 grid 3-col 의 마지막 auto cell 차지.
-          */}
-          <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2 lg:col-span-3">
+          {/* 우측 그룹 — search + actions 동거 (3-col 의 마지막 auto cell) */}
+          <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2">
             {/* 검색창 (sm 이상) — lg col-3 폭 안에 들어가도록 max-w 제한 */}
             <HeaderSearch />
 
@@ -117,14 +108,8 @@ export function Header() {
         </div>
       </div>
 
-      {/*
-        모바일/태블릿 (lg 이하) 에서는 별도 row 로 nav 노출 — 월드컵/상점 등 lg에서만
-        헤더 안 인라인 배치라 모바일에서 그 두 메뉴 접근 손실 방지. 시안 .hdr 패턴은
-        데스크탑 한 행, 모바일은 stacked.
-      */}
-      <div className="lg:hidden">
-        <HeaderNav />
-      </div>
+      {/* 헤더 2행: nav — 모든 viewport에서 별도 row (메뉴 공간 확보 + 로그인 시 우측 영역 겹침 방지) */}
+      <HeaderNav />
     </header>
   )
 }
