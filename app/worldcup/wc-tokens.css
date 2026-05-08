@@ -289,7 +289,9 @@
   font-weight: 600;
 }
 .worldcup-scope .wc-mrow-block {
-  background: var(--wc-soft);
+  /* 베팅 경기 카드 내부 게임 블록 — wc-soft (회색) 대신 흰색.
+   * 카드 안에서 보더만으로 구분. */
+  background: var(--wc-card);
   border-radius: 8px;
   padding: 10px;
   margin: 0 12px 8px;
