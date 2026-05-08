@@ -8,9 +8,17 @@ import { Compass, LayoutGrid, Trophy, Sparkles, Crown } from "lucide-react"
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
 const baseClass =
-  "wc-hdr-link relative inline-flex h-11 items-center gap-1.5 px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-2.5 sm:px-5 sm:text-[14px]"
+  "wc-hdr-link relative inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 font-sans text-[13px] font-medium tracking-tight whitespace-nowrap transition-colors sm:gap-1.5 sm:px-3 sm:text-[14px]"
 
-export const HeaderNav = memo(function HeaderNav() {
+interface HeaderNavProps {
+  /**
+   * inline=true: 헤더 한 행 안에 인라인 배치 (시안 .hdr-nav).
+   * inline=false (default): 헤더 아래 별도 row (외곽 흰 카드 + top border).
+   */
+  inline?: boolean
+}
+
+export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavProps) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -22,14 +30,24 @@ export const HeaderNav = memo(function HeaderNav() {
 
   return (
     <nav
-      className="w-full"
+      className={inline ? "flex items-center" : "w-full"}
       aria-label="주요 메뉴"
-      style={{
-        background: "var(--wc-card, #ffffff)",
-        borderTop: "1px solid var(--wc-line, #efe7e0)",
-      }}
+      style={
+        inline
+          ? undefined
+          : {
+              background: "var(--wc-card, #ffffff)",
+              borderTop: "1px solid var(--wc-line, #efe7e0)",
+            }
+      }
     >
-      <div className="scrollbar-none flex items-center justify-center overflow-x-auto">
+      <div
+        className={
+          inline
+            ? "scrollbar-none flex items-center gap-0.5 overflow-x-auto"
+            : "scrollbar-none flex items-center justify-center overflow-x-auto"
+        }
+      >
         <Link
           href="/"
           scroll={false}

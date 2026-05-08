@@ -27,8 +27,12 @@ export function Header() {
         boxShadow: "0 1px 2px rgba(26, 20, 22, 0.04)",
       }}
     >
-      <div className="mx-auto max-w-[1280px] px-3 sm:px-10">
-        <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <div className="mx-auto max-w-[1280px] px-3 sm:px-6 lg:px-10">
+        {/*
+          시안 .hdr-inner: grid-template-columns: auto auto 1fr auto (brand · nav · search · right).
+          모바일/태블릿 (lg 이하)에서는 nav 숨기고 (모바일 탭바가 대신), grid 3-col.
+        */}
+        <div className="grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 lg:grid-cols-[auto_auto_1fr_auto] lg:gap-6">
           {/* Logo */}
           <div className="flex min-w-0 items-center justify-start">
             <Link
@@ -46,7 +50,7 @@ export function Header() {
                 <Image src="/logo-brush.webp" alt="" width={128} height={38} priority />
               </span>
               <span
-                className="relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[30px]"
+                className="relative z-10 ml-1 text-[20px] leading-none sm:-ml-[4px] sm:text-[26px] lg:text-[30px]"
                 style={{ letterSpacing: "-0.02em", color: "var(--wc-ink, #1A1416)" }}
               >
                 <span className="font-bold">gongnori</span>
@@ -55,6 +59,11 @@ export function Header() {
                 </span>
               </span>
             </Link>
+          </div>
+
+          {/* Nav (데스크탑 lg 이상만 — 시안 .hdr-nav 인라인) */}
+          <div className="hidden lg:flex">
+            <HeaderNav inline />
           </div>
 
           {/* Search: 검색 state가 격리되어 타이핑 시 나머지 헤더 리렌더 없음 */}
@@ -103,8 +112,14 @@ export function Header() {
         </div>
       </div>
 
-      {/* Nav: pathname 변경 시에만 리렌더, 검색과 무관 */}
-      <HeaderNav />
+      {/*
+        모바일/태블릿 (lg 이하) 에서는 별도 row 로 nav 노출 — 월드컵/상점 등 lg에서만
+        헤더 안 인라인 배치라 모바일에서 그 두 메뉴 접근 손실 방지. 시안 .hdr 패턴은
+        데스크탑 한 행, 모바일은 stacked.
+      */}
+      <div className="lg:hidden">
+        <HeaderNav />
+      </div>
     </header>
   )
 }
