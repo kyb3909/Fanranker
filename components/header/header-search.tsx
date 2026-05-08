@@ -88,7 +88,10 @@ export function HeaderSearch() {
   }, [])
 
   return (
-    <div className="relative hidden w-[min(100%,400px)] shrink-0 sm:block" ref={containerRef}>
+    <div
+      className="relative hidden w-[min(100%,260px)] flex-1 sm:block lg:w-auto lg:max-w-[200px] lg:flex-none"
+      ref={containerRef}
+    >
       <div className="relative">
         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <input

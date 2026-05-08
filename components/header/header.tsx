@@ -27,14 +27,16 @@ export function Header() {
         boxShadow: "0 1px 2px rgba(26, 20, 22, 0.04)",
       }}
     >
-      <div className="mx-auto max-w-[1280px] px-3 sm:px-4 lg:px-6">
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
         {/*
-          시안 .hdr-inner: grid-template-columns: auto auto 1fr auto (brand · nav · search · right).
-          모바일/태블릿 (lg 이하)에서는 nav 숨기고 (모바일 탭바가 대신), grid 3-col.
+          페이지 12-col grid (3-6-3) 와 align — 1번 영역(좌 사이드바 폭)에 brand,
+          2번 영역(메인 col-span-6)에 nav 중앙 정렬, 3번 영역(우 사이드바 폭)에 search + actions.
+
+          모바일/태블릿 (lg 이하): 3-col [auto 1fr auto] + nav 별도 row.
         */}
-        <div className="grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 lg:grid-cols-[auto_auto_1fr_auto] lg:gap-6">
-          {/* Logo */}
-          <div className="flex min-w-0 items-center justify-start">
+        <div className="grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 lg:grid-cols-12 lg:gap-6">
+          {/* Logo — lg 에서 col-span-3 (좌 사이드바 폭) */}
+          <div className="flex min-w-0 items-center justify-start lg:col-span-3">
             <Link
               href="/"
               onClick={(e) => {
@@ -61,27 +63,30 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Nav (데스크탑 lg 이상만 — 시안 .hdr-nav 인라인) */}
-          <div className="hidden lg:flex">
+          {/* Nav — lg 에서 col-span-6 (메인 영역) 중앙 정렬 */}
+          <div className="hidden lg:col-span-6 lg:flex lg:items-center lg:justify-center">
             <HeaderNav inline />
           </div>
 
-          {/* Search: 검색 state가 격리되어 타이핑 시 나머지 헤더 리렌더 없음 */}
-          <HeaderSearch />
+          {/*
+            우측 그룹 — lg에서 col-span-3 (우 사이드바 폭) 안에 search + actions 동거.
+            lg 미만에서는 grid 3-col 의 마지막 auto cell 차지.
+          */}
+          <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2 lg:col-span-3">
+            {/* 검색창 (sm 이상) — lg col-3 폭 안에 들어가도록 max-w 제한 */}
+            <HeaderSearch />
 
-          {/* 모바일 검색 아이콘 */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full sm:hidden"
-            aria-label="검색"
-            onClick={() => router.push("/search")}
-          >
-            <Search className="h-[18px] w-[18px]" />
-          </Button>
+            {/* 모바일 검색 아이콘 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full sm:hidden"
+              aria-label="검색"
+              onClick={() => router.push("/search")}
+            >
+              <Search className="h-[18px] w-[18px]" />
+            </Button>
 
-          {/* Actions */}
-          <div className="flex min-w-0 items-center justify-end gap-1">
             <SignedIn>
               <div className="flex items-center gap-2">
                 <GoldBalance />
