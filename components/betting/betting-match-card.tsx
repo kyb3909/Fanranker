@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Clock, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { GroupedMatch, SelectedBet, SportsGame } from "./betting-types"
-import { SPORT_ICONS, getGameTypeLabel, formatMatchTime } from "./betting-types"
+import { SPORT_ICONS, getGameTypeLabel, formatMatchTime, sportColors } from "./betting-types"
 
 interface BettingMatchCardProps {
   groupedMatch: GroupedMatch
@@ -29,6 +29,8 @@ export function BettingMatchCard({
   onBetSelection,
 }: BettingMatchCardProps) {
   const hasSelectionFromThisMatch = selectedBets.some((b) => b.matchKey === groupedMatch.matchKey)
+  // 종목별 헤더 띠 색 — 축구 rose · 야구 blue · 농구 orange · 배구 purple
+  const headerColor = sportColors[groupedMatch.sport] || sportColors["축구"]
 
   // 메인(승무패/승패) vs 나머지(핸디캡·언오버·합계). 메인은 항상 보이고 나머지는 토글.
   // 신 매핑(2026-05): 승패2way/승1패/승5패 도 메인 마켓 (1차 옵션).
@@ -228,8 +230,8 @@ export function BettingMatchCard({
 
   return (
     <div className={cn("wc-mrow", hasSelectionFromThisMatch && "selected")}>
-      {/* Match Header — 시안 .mrow-head (단일 톤 + league 강조) */}
-      <div className="wc-mrow-head">
+      {/* Match Header — 종목별 색 띠 (축구 rose · 야구 blue · 농구 orange · 배구 purple) */}
+      <div className={`wc-mrow-head ${headerColor.bg} ${headerColor.text}`}>
         <span className="text-base" aria-hidden>
           {SPORT_ICONS[groupedMatch.sport] || "⚽"}
         </span>

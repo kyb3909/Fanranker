@@ -244,13 +244,14 @@
     var(--wc-shadow-2);
 }
 .worldcup-scope .wc-mrow-head {
-  background: var(--wc-soft);
+  /* background / color 는 sport 별로 className override 가능하도록 wc-tokens 에서는 정의 X.
+   * 각 BettingMatchCard 에서 sportColors[sport] 의 Tailwind 클래스로 종목별 그라디언트
+   * 띠 적용. */
   padding: 8px 14px;
   font-size: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--wc-mute);
   border-bottom: 1px solid var(--wc-line);
 }
 .worldcup-scope .wc-mrow-head-lg {
