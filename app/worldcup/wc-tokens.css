@@ -8,20 +8,20 @@
  */
 
 .worldcup-scope {
-  /* Core palette — 09 Sky (연한 스카이, 시원함).
+  /* Core palette — 08 Mist Blue (아주 옅은 블루 미스트).
    * 사용자 제시 팔레트 5색:
-   *   #EAF1F8 (soft sky) · #D5E2F0 · #BCD0E5 · #FFFFFF · #9B1F33 (burgundy)
+   *   #EDF1F6 (mist) · #DCE3ED · #C8D2E0 · #FFFFFF · #9B1F33 (burgundy)
    * mute (텍스트) 만 cool gray 유지 (가독성). */
   --wc-burgundy: #9b1f33;
   --wc-burgundy-deep: #7c172a;
   --wc-ink: #1a1416;
   --wc-paper: #ffffff;
   --wc-card: #ffffff;
-  --wc-line: #d5e2f0;
-  --wc-line-2: #bcd0e5;
+  --wc-line: #dce3ed;
+  --wc-line-2: #c8d2e0;
   --wc-mute: #6c757d;
   --wc-mute-2: #adb5bd;
-  --wc-soft: #eaf1f8;
+  --wc-soft: #edf1f6;
 
   /* Semantic accents */
   --wc-warn: #c8842a;
