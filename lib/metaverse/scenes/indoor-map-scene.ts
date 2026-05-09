@@ -368,6 +368,27 @@ export class IndoorMapScene extends Phaser.Scene {
       this.updateNameTag()
       return
     }
+
+    // 추가 안전망 — active element 가 form 요소 (input/textarea/button) 면 키 입력 무시 + 정지.
+    // chat:input:open 이벤트 누락된 케이스 (다른 form 포커스, dev tools 등) 모두 커버.
+    if (typeof document !== "undefined") {
+      const ae = document.activeElement as HTMLElement | null
+      if (ae) {
+        const tag = ae.tagName
+        const isFormFocused =
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          ae.isContentEditable ||
+          tag === "BUTTON"
+        if (isFormFocused) {
+          body.setAccelerationX(0)
+          body.setVelocityX(0)
+          this.updateNameTag()
+          return
+        }
+      }
+    }
     const onGround = body.blocked.down
 
     // 공 회전 + 바닥 안전 클램프 — 매 프레임
