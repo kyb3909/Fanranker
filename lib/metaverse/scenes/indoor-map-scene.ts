@@ -266,10 +266,12 @@ export class IndoorMapScene extends Phaser.Scene {
       this.showChatBubble(payload.text)
     })
 
-    // 채팅 입력창 open/close — 이동/점프 입력 차단 + Phaser 키 상태 reset(키 stuck 방지)
-    this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
-      this.isChatInputOpen = true
-      // 현재 누르고 있는 키 모두 reset — input 으로 focus 이동하면 keyup 이벤트 못 받아 stuck 됨
+    // 채팅 입력창 open/close — 이동/점프 입력 차단 + Phaser 키보드 plugin 자체 disable.
+    // 단순 isChatInputOpen flag 만으로는 부족: React event 의 stopPropagation 은 Phaser 의 native
+    // window keydown listener 를 못 막음. input 타이핑 중 Phaser 가 D 등 keydown 받고, input close
+    // 시점에 사용자가 이미 D 를 떼서 keyup 이 없어 isDown=true 로 stuck 됨.
+    // → keyboard.enabled=false 로 input 동안 keydown/keyup 자체 차단.
+    const resetAllKeys = () => {
       this.cursors.left?.reset()
       this.cursors.right?.reset()
       this.cursors.up?.reset()
@@ -280,13 +282,20 @@ export class IndoorMapScene extends Phaser.Scene {
       this.wasd.S.reset()
       this.spaceKey.reset()
       this.rKey.reset()
-      // 진행 중인 가속/속도 초기화 — 채팅 중 미끄러짐 방지
+    }
+    this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
+      this.isChatInputOpen = true
+      resetAllKeys()
+      if (this.input.keyboard) this.input.keyboard.enabled = false
       const body = this.player.body as Phaser.Physics.Arcade.Body
       body.setAccelerationX(0)
       body.setVelocityX(0)
     })
     this.unsubChatClose = sceneBridge.on("chat:input:close", () => {
       this.isChatInputOpen = false
+      // close 시점에도 reset — disable 동안 freeze 된 key state 가 stale 한 isDown 가지지 않도록.
+      resetAllKeys()
+      if (this.input.keyboard) this.input.keyboard.enabled = true
     })
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
