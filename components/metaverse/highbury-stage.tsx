@@ -23,6 +23,8 @@ import { ChatLogPanel } from "./chat-log-panel"
 import { UserActionPopover } from "./user-action-popover"
 import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
+import { createAnonClient } from "@/lib/supabase/client"
 
 export function HighburyStage() {
   const { isSignedIn, isLoaded } = useAuth()
@@ -37,14 +39,6 @@ export function HighburyStage() {
   // 비로그인 시 메시지만 표시 + 홈 버튼.
   void router
 
-  // user:report 이벤트 listen — UserActionPopover 의 신고 버튼 → ReportUserDialog open
-  useEffect(() => {
-    const unsub = sceneBridge.on("user:report", (payload) => {
-      if (payload) setReportTarget({ userId: payload.userId, nickname: payload.nickname })
-    })
-    return () => unsub()
-  }, [])
-
   // Clerk identity — userId/닉네임은 Clerk 사용자 정보 기반.
   const identity = useMemo<MetaversePlayerIdentity | null>(() => {
     if (!user) return null
@@ -55,6 +49,66 @@ export function HighburyStage() {
       avatarKey: ARSENAL_HOME_AVATAR_KEY,
     }
   }, [user])
+
+  // user:report 이벤트 listen — UserActionPopover 의 신고 버튼 → ReportUserDialog open
+  useEffect(() => {
+    const unsub = sceneBridge.on("user:report", (payload) => {
+      if (payload) setReportTarget({ userId: payload.userId, nickname: payload.nickname })
+    })
+    return () => unsub()
+  }, [])
+
+  // 멀티플레이 채팅 채널 — roomId "highbury" 글로벌 방. presence(접속자 수) + chat broadcast.
+  // 채널이 self-dispatch 까지 처리하므로 chat:log:append 는 onChatMessage 한 곳에서만 emit.
+  useEffect(() => {
+    if (!identity) return
+    let cancelled = false
+    let channel: RoomChannel | null = null
+    const supabase = createAnonClient()
+    const newChannel = new RoomChannel(supabase, identity, "highbury")
+
+    const unsubSend = sceneBridge.on("chat:send", ({ text }) => {
+      channel?.publishChat(text)
+    })
+
+    newChannel
+      .connect()
+      .then(() => {
+        if (cancelled) {
+          void newChannel.disconnect()
+          return
+        }
+        channel = newChannel
+        newChannel.onChatMessage((msg) => {
+          sceneBridge.emit("chat:log:append", {
+            userId: msg.userId,
+            nickname: msg.nickname,
+            text: msg.text,
+            timestamp: msg.timestamp,
+            scope: "room",
+          })
+        })
+      })
+      .catch((err) => {
+        console.warn("[highbury] room channel connect failed — chat broadcast 비활성", err)
+        // fallback: 자기 메시지만이라도 panel 에 표시하도록 chat:send echo
+        sceneBridge.on("chat:send", ({ text }) => {
+          sceneBridge.emit("chat:log:append", {
+            userId: identity.userId,
+            nickname: identity.nickname,
+            text,
+            timestamp: Date.now(),
+            scope: "local",
+          })
+        })
+      })
+
+    return () => {
+      cancelled = true
+      unsubSend()
+      if (channel) void channel.disconnect()
+    }
+  }, [identity])
 
   useEffect(() => {
     if (!parentRef.current || !identity) return

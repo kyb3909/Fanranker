@@ -255,18 +255,11 @@ export class IndoorMapScene extends Phaser.Scene {
       .setOrigin(0.5, 0)
       .setDepth(20)
 
-    // 채팅 — chat:send 받으면 머리 위 말풍선 갱신
+    // 채팅 — chat:send 받으면 머리 위 말풍선만 즉시 갱신 (자기 메시지 즉각 피드백).
+    // chat:log:append 는 RoomChannel.onChatMessage 가 self-dispatch 로 처리 (HighburyStage).
     this.unsubChatSend = sceneBridge.on("chat:send", (payload) => {
       if (!payload?.text) return
       this.showChatBubble(payload.text)
-      // chat-log 패널에도 자기 메시지 push
-      sceneBridge.emit("chat:log:append", {
-        userId: this.identity.userId,
-        nickname: this.identity.nickname,
-        text: payload.text,
-        timestamp: Date.now(),
-        scope: "local",
-      })
     })
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubChatSend?.()
