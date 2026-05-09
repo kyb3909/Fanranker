@@ -52,6 +52,11 @@ export class TestTilemapScene extends Phaser.Scene {
     for (let i = 1; i <= 9; i++) {
       this.load.image(`water-edge-${i}`, `/map/decoration/water-edge-${i}.png`)
     }
+    // Wang ocean-grass tiles (9 unique masks)
+    const wangMasks = ["0000", "0001", "0010", "0011", "0110", "0111", "1001", "1011", "1111"]
+    for (const m of wangMasks) {
+      this.load.image(`og-${m}`, `/map/decoration/wang/og-${m}.png`)
+    }
     preloadProAvatar(this)
   }
 
@@ -75,13 +80,20 @@ export class TestTilemapScene extends Phaser.Scene {
     let spawnY = map.heightInPixels / 2
     const objectsLayer = map.getObjectLayer("objects")
     objectsLayer?.objects.forEach((obj) => {
-      // Tree / Sprout / water-edge decoration
-      if (obj.type === "tree" || obj.type === "sprout" || obj.type === "water-edge") {
+      // Tree / Sprout / water-edge / wang decoration
+      if (
+        obj.type === "tree" ||
+        obj.type === "sprout" ||
+        obj.type === "water-edge" ||
+        obj.type === "wang"
+      ) {
         const props = (obj.properties ?? []) as TiledProperty[]
         const asset = (props.find((p) => p.name === "asset")?.value as string) ?? "tree-1"
         const w = obj.width ?? 16
         const h = obj.height ?? 16
-        const depth = obj.type === "tree" ? 5 : obj.type === "sprout" ? 4 : 3
+        // depth: wang(2) < water-edge(3) < sprout(4) < tree(5)
+        const depth =
+          obj.type === "tree" ? 5 : obj.type === "sprout" ? 4 : obj.type === "water-edge" ? 3 : 2
         this.add.image((obj.x ?? 0) + w / 2, (obj.y ?? 0) + h / 2, asset).setDepth(depth)
         return
       }

@@ -146,7 +146,7 @@ function autotileRiverCell(riverGrid: boolean[][], x: number, y: number): number
 const RIVERS: Array<{ name: string; points: [number, number][]; width: number }> = [
   {
     name: "Thames",
-    width: 2, // 폭 5 cell (굵게)
+    width: 1, // 폭 3 cell (사각 box outline 방지)
     points: [
       [-1.78, 51.69], // Source (Cotswolds)
       [-1.26, 51.75], // Oxford
@@ -168,27 +168,27 @@ const STADIUMS: Array<{
   gx: number
   gy: number
 }> = [
-  // 런던 4개: Thames row ~95 기준 (80×120 grid). 강북 = Tottenham/Wembley/Arsenal, 강남 = Chelsea.
+  // 런던 4개: Thames row ~94 기준. entrance box 4×4 cell 이라 강과 겹침 방지 위해 강북 = row 88 이하, 강남 = row 100 이상.
   {
     teamId: "epl_tottenham",
     label: "토트넘",
     stadium: "Tottenham Hotspur Stadium",
     gx: 64,
-    gy: 89,
+    gy: 84,
   },
-  { teamId: "epl_wembley", label: "잉글랜드 (웸블리)", stadium: "Wembley Stadium", gx: 47, gy: 92 },
+  { teamId: "epl_wembley", label: "잉글랜드 (웸블리)", stadium: "Wembley Stadium", gx: 47, gy: 87 },
   {
     teamId: "epl_arsenal",
     label: "아스날 (에미레이츠)",
     stadium: "Emirates Stadium",
-    gx: 57,
-    gy: 93,
+    gx: 58,
+    gy: 88,
   },
   {
     teamId: "epl_chelsea",
     label: "첼시 (스탬포드 브리지)",
     stadium: "Stamford Bridge",
-    gx: 56,
+    gx: 55,
     gy: 100,
   },
   // 북부 3개
@@ -305,6 +305,46 @@ function printGridAscii(grid: boolean[][]) {
   console.log(`\n육지 셀: ${grid.flat().filter(Boolean).length} / ${grid.length * grid[0].length}`)
 }
 
+// ---------- Wang corner-based autotile (PixelLab tileset-ocean-grass) ----------
+// 9 unique wang tiles 매핑. mask 4-bit (NW NE SE SW), 1=upper(잔디), 0=lower(바다)
+const WANG_AVAILABLE = new Set<number>([
+  0b0000, 0b0001, 0b0010, 0b0011, 0b0110, 0b0111, 0b1001, 0b1011, 0b1111,
+])
+
+interface WangSprite {
+  gx: number
+  gy: number
+  mask: number
+}
+
+function wangCornerMask(landGrid: boolean[][], gx: number, gy: number): number {
+  const get = (cx: number, cy: number): number => {
+    if (cx < 0 || cx >= GRID_W || cy < 0 || cy >= GRID_H) return 0
+    return landGrid[cy][cx] ? 1 : 0
+  }
+  // NW NE SE SW = 좌상·우상·우하·좌하 인접 cell
+  const nw = get(gx - 1, gy - 1)
+  const ne = get(gx + 1, gy - 1)
+  const se = get(gx + 1, gy + 1)
+  const sw = get(gx - 1, gy + 1)
+  return (nw << 3) | (ne << 2) | (se << 1) | sw
+}
+
+function buildCoastline(landGrid: boolean[][]): WangSprite[] {
+  const out: WangSprite[] = []
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      const mask = wangCornerMask(landGrid, gx, gy)
+      // plain cells (전부 같음) 은 sprite skip — background tile 그대로
+      if (mask === 0b1111 || mask === 0b0000) continue
+      // unavailable mask는 가장 가까운 fallback (현재는 그대로 — 일부 tile missing)
+      if (!WANG_AVAILABLE.has(mask)) continue
+      out.push({ gx, gy, mask })
+    }
+  }
+  return out
+}
+
 // ---------- 강 가장자리 sprite overlay (Grass_Water 9-tile) ----------
 // water-edge-1~8 = 가장자리, 9 = plain. river cell 4변에 잔디 인접하면 가장자리 그림.
 function buildWaterEdges(
@@ -320,23 +360,13 @@ function buildWaterEdges(
       const E = isGrass(gx + 1, gy)
       const S = isGrass(gx, gy + 1)
       const W = isGrass(gx - 1, gy)
-      const count = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (W ? 1 : 0)
-      let variant = 9 // 4변 river → plain (water-edge-9)
-      if (count === 1) {
-        if (N) variant = 2
-        else if (E) variant = 4
-        else if (S) variant = 6
-        else variant = 8
-      } else if (count === 2) {
-        if (N && W) variant = 1
-        else if (N && E) variant = 3
-        else if (S && E) variant = 5
-        else if (S && W) variant = 7
-        else variant = 9 // 좁은 해협 → plain
-      } else if (count >= 3) {
-        variant = 9 // inlet → plain
-      }
-      edges.push({ gx, gy, variant })
+      // 1_1~8 매핑이 LimeZu 23-cell blob autotile 컨벤션과 달라 모두 plain (water-edge-9 = Grass_Water_1_22 teal solid) 사용.
+      // 깔끔한 강 line 우선. 가장자리 polish 는 23-cell 정확 매핑 도출 후.
+      void N
+      void E
+      void S
+      void W
+      edges.push({ gx, gy, variant: 9 })
     }
   }
   return edges
@@ -735,7 +765,8 @@ function buildTiledMap(
   }>,
   trees: TreePlacement[],
   sprouts: Array<{ gx: number; gy: number; variant: number }>,
-  waterEdges: Array<{ gx: number; gy: number; variant: number }>
+  waterEdges: Array<{ gx: number; gy: number; variant: number }>,
+  coastline: WangSprite[]
 ): TiledMap {
   // background — 육지: 강=river, 흙=dirt autotile, 잔디 / 바다=sea autotile
   const grassRng = makeRng(2026)
@@ -823,7 +854,31 @@ function buildTiledMap(
     y: e.gy * TILE_SIZE,
   }))
 
-  const objects = [...stadiumObjects, ...treeObjects, ...sproutObjects, ...waterEdgeObjects]
+  const baseId3 = baseId2 + waterEdgeObjects.length
+  const coastlineObjects: TiledObject[] = coastline.map((c, idx) => {
+    const maskBin = c.mask.toString(2).padStart(4, "0")
+    return {
+      height: TILE_SIZE,
+      id: baseId3 + idx + 1,
+      name: `og-${maskBin}`,
+      opacity: 1,
+      properties: [{ name: "asset", type: "string", value: `og-${maskBin}` }],
+      rotation: 0,
+      type: "wang",
+      visible: true,
+      width: TILE_SIZE,
+      x: c.gx * TILE_SIZE,
+      y: c.gy * TILE_SIZE,
+    }
+  })
+
+  const objects = [
+    ...stadiumObjects,
+    ...treeObjects,
+    ...sproutObjects,
+    ...waterEdgeObjects,
+    ...coastlineObjects,
+  ]
 
   return {
     compressionlevel: -1,
@@ -980,12 +1035,26 @@ function main() {
   const sprouts = placeSprouts(grid, riverGrid, dirtGrid, treeOccupied)
   console.log(`작은 풀: ${sprouts.length} 개`)
 
-  // 강 가장자리 sprite overlay (Grass_Water 9-tile single PNG 사용)
+  // 강 sprite overlay
   const waterEdges = buildWaterEdges(riverGrid)
+  console.log(`강 cell: ${waterEdges.length}`)
+
+  // 해안선 wang autotile (PixelLab tileset-ocean-grass)
+  const coastline = buildCoastline(grid)
+  console.log(`해안선 wang: ${coastline.length}`)
   console.log(`강 가장자리: ${waterEdges.length} 개`)
 
   // .tmj 출력
-  const tmjMap = buildTiledMap(grid, riverGrid, dirtGrid, stadiumCells, trees, sprouts, waterEdges)
+  const tmjMap = buildTiledMap(
+    grid,
+    riverGrid,
+    dirtGrid,
+    stadiumCells,
+    trees,
+    sprouts,
+    waterEdges,
+    coastline
+  )
   writeFileSync(resolve(OUTPUT_JSON), JSON.stringify(tmjMap, null, 1), "utf-8")
   console.log(`\n→ ${OUTPUT_JSON} 작성 완료 (${GRID_W}×${GRID_H}, ${STADIUMS.length} 경기장)`)
 }
