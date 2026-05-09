@@ -95,6 +95,10 @@ export class IndoorMapScene extends Phaser.Scene {
   /** 로컬 채팅 말풍선 — chat:send 받으면 갱신, 5초 후 자동 destroy */
   private chatBubble: ChatBubble | null = null
   private unsubChatSend: (() => void) | null = null
+  private unsubChatOpen: (() => void) | null = null
+  private unsubChatClose: (() => void) | null = null
+  /** 채팅 입력창이 열려 있는 동안은 이동/점프/킥 입력 모두 무시. 키 stuck 방지를 위해 reset 도 호출. */
+  private isChatInputOpen = false
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
@@ -261,9 +265,37 @@ export class IndoorMapScene extends Phaser.Scene {
       if (!payload?.text) return
       this.showChatBubble(payload.text)
     })
+
+    // 채팅 입력창 open/close — 이동/점프 입력 차단 + Phaser 키 상태 reset(키 stuck 방지)
+    this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
+      this.isChatInputOpen = true
+      // 현재 누르고 있는 키 모두 reset — input 으로 focus 이동하면 keyup 이벤트 못 받아 stuck 됨
+      this.cursors.left?.reset()
+      this.cursors.right?.reset()
+      this.cursors.up?.reset()
+      this.cursors.down?.reset()
+      this.wasd.A.reset()
+      this.wasd.D.reset()
+      this.wasd.W.reset()
+      this.wasd.S.reset()
+      this.spaceKey.reset()
+      this.rKey.reset()
+      // 진행 중인 가속/속도 초기화 — 채팅 중 미끄러짐 방지
+      const body = this.player.body as Phaser.Physics.Arcade.Body
+      body.setAccelerationX(0)
+      body.setVelocityX(0)
+    })
+    this.unsubChatClose = sceneBridge.on("chat:input:close", () => {
+      this.isChatInputOpen = false
+    })
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubChatSend?.()
+      this.unsubChatOpen?.()
+      this.unsubChatClose?.()
       this.unsubChatSend = null
+      this.unsubChatOpen = null
+      this.unsubChatClose = null
       this.chatBubble?.destroy()
       this.chatBubble = null
     })
@@ -307,6 +339,14 @@ export class IndoorMapScene extends Phaser.Scene {
     if (!this.player) return
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
+
+    // 채팅 입력창이 열려있으면 모든 입력 무시 + 즉시 정지 (키 stuck 시에도 안전)
+    if (this.isChatInputOpen) {
+      body.setAccelerationX(0)
+      body.setVelocityX(0)
+      this.updateNameTag()
+      return
+    }
     const onGround = body.blocked.down
 
     // 공 회전 + 바닥 안전 클램프 — 매 프레임
