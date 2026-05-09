@@ -53,26 +53,18 @@ interface Target {
   preferSheets?: string[]
 }
 
+// Grass_3 (흙) / Grass_4 (모래) 9-tile autotile 가장자리 1~9
 const TARGETS: Target[] = [
-  // 산·숲 decoration (me-camping)
-  ...Array.from({ length: 9 }, (_, i) => ({
-    label: `Rock_${i + 1}`,
-    file: `${CAMPING}/ME_Singles_Camping_16x16_Rock_${i + 1}.png`,
-    preferSheets: ["me-camping"],
-  })),
-  // 잔디 decoration (me-garden)
-  ...Array.from({ length: 7 }, (_, i) => ({
-    label: `Big_Sprout_${i + 1}`,
-    file: `${GARDEN}/ME_Singles_Garden_16x16_Big_Sprout_${i + 1}.png`,
-    preferSheets: ["me-garden"],
-  })),
-  ...Array.from({ length: 23 }, (_, i) => ({
-    label: `Bush_${i + 1}`,
-    file: `${GARDEN}/ME_Singles_Garden_16x16_Bush_${i + 1}.png`,
-    preferSheets: ["me-garden"],
-  })),
+  ...[3, 4].flatMap((v) =>
+    [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ({
+      label: `Grass_${v}_${i}`,
+      file: `${TERRAINS}/ME_Singles_Terrains_and_Fences_16x16_Grass_${v}_${i}.png`,
+      preferSheets: ["modern-exteriors"],
+    }))
+  ),
 ]
-void TERRAINS
+void CAMPING
+void GARDEN
 
 async function loadRaw(path: string): Promise<RawImage> {
   const { data, info } = await sharp(resolve(path))
@@ -82,7 +74,7 @@ async function loadRaw(path: string): Promise<RawImage> {
   return { data, width: info.width, height: info.height, channels: 4 }
 }
 
-const PIXEL_TOL = 4 // anti-aliasing / alpha encoding 차이 허용
+const PIXEL_TOL = 4
 
 function tileMatches(main: RawImage, target: RawImage, tx: number, ty: number): boolean {
   for (let py = 0; py < TILE; py++) {

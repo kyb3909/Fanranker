@@ -29,8 +29,8 @@ interface Feature<G> {
 }
 
 // ---------- 설정 ----------
-const GRID_W = 160
-const GRID_H = 240
+const GRID_W = 80
+const GRID_H = 120
 const TILE_SIZE = 16
 const COUNTRIES_GEOJSON = "public/map/data/ne_countries.geojson"
 const OUTPUT_JSON = "public/map/uk-auto.json"
@@ -42,10 +42,9 @@ const OUTPUT_JSON = "public/map/uk-auto.json"
 // Deep_Water 3×3 autotile (가운데=plain, 가장자리 8 = 잔디↔물 경계)
 const TILE_GRASS = 184
 const TILE_RIVER = 1540
-const GRASS_TILES = [
-  228, 229, 231, 407, 583, 581, 580, 404, 232, 235, 760, 2176, 2000, 2001, 2177, 2353, 2529, 2528,
-  2352, 409, 405,
-] // 21 variants (Grass_1_11 missing)
+// Plain green 잔디 변종만 (시각 확인). Grass_3_*, 4_* 는 LimeZu 명명이 "Grass" 라도 실제 흙·모래라 제외.
+// 184 = default, 232 = Grass_1_9 (autotile center), 405 = Grass_1_22.
+const GRASS_TILES = [184, 232, 405]
 
 // Deterministic PRNG (Mulberry32) — 재실행 시 동일 패턴 보장
 function makeRng(seed: number): () => number {
@@ -72,39 +71,57 @@ const SEA = {
   plain: 1540, // 1_9
 } as const
 
-/**
- * sea cell의 4변 인접 land 패턴 → autotile ID.
- * grid[y][x] = true(land) / false(sea).
- *
- * 9-tile autotile은 4변 인접 (N/E/S/W) 으로 충분히 표현됨.
- * 3변+ 인접 = 좁은 inlet → plain 폴백 (작은 호수는 잘 안 생김).
- */
+// Grass_3 (흙·산악 갈색) 9-tile autotile — 잔디 안에 흙 영역
+const DIRT = {
+  topLeft: 8394,
+  top: 8395,
+  topRight: 8396,
+  right: 8572,
+  bottomRight: 8748,
+  bottom: 8747,
+  bottomLeft: 8746,
+  left: 8570,
+  plain: 8397,
+} as const
+
+type AutotileSet = typeof SEA
+function autotile9(
+  isOutside: (cx: number, cy: number) => boolean,
+  set: AutotileSet,
+  x: number,
+  y: number
+): number {
+  const N = isOutside(x, y - 1)
+  const E = isOutside(x + 1, y)
+  const S = isOutside(x, y + 1)
+  const W = isOutside(x - 1, y)
+  const count = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (W ? 1 : 0)
+  if (count === 0) return set.plain
+  if (count >= 3) return set.plain
+  if (count === 1) {
+    if (N) return set.top
+    if (E) return set.right
+    if (S) return set.bottom
+    return set.left
+  }
+  if (N && W) return set.topLeft
+  if (N && E) return set.topRight
+  if (S && E) return set.bottomRight
+  if (S && W) return set.bottomLeft
+  return set.plain
+}
+
 function autotileSeaCell(grid: boolean[][], x: number, y: number): number {
   const isLand = (cx: number, cy: number) =>
     cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H && grid[cy][cx]
-  const N = isLand(x, y - 1)
-  const E = isLand(x + 1, y)
-  const S = isLand(x, y + 1)
-  const W = isLand(x - 1, y)
-  const count = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (W ? 1 : 0)
+  return autotile9(isLand, SEA, x, y)
+}
 
-  if (count === 0) return SEA.plain
-  if (count >= 3) return SEA.plain // 좁은 inlet 폴백
-
-  if (count === 1) {
-    if (N) return SEA.top
-    if (E) return SEA.right
-    if (S) return SEA.bottom
-    return SEA.left
-  }
-
-  // count === 2: 두 변 인접 (코너) 또는 마주보는 변 (해협)
-  if (N && W) return SEA.topLeft
-  if (N && E) return SEA.topRight
-  if (S && E) return SEA.bottomRight
-  if (S && W) return SEA.bottomLeft
-  // N+S 또는 E+W = 좁은 해협 → plain
-  return SEA.plain
+function autotileDirtCell(dirtGrid: boolean[][], x: number, y: number): number {
+  // dirt cell 입장에서 "외부" = 잔디 (= dirt가 아닌 곳). dirt 자체와 같으면 plain.
+  const isGrass = (cx: number, cy: number) =>
+    cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H && !dirtGrid[cy][cx]
+  return autotile9(isGrass, DIRT, x, y)
 }
 
 // 영국 주요 강 — Natural Earth 데이터에 부족해서 수동 hardcode (lon, lat).
@@ -175,40 +192,33 @@ const STADIUMS: Array<{
   gx: number
   gy: number
 }> = [
-  // 런던 4개: Thames row ~190 기준. 강북 = Tottenham(가장 북) / Wembley(서북) / Arsenal(중앙).
-  // 강남 = Chelsea. Tottenham > Arsenal 더 북쪽.
+  // 런던 4개: Thames row ~95 기준 (80×120 grid). 강북 = Tottenham/Wembley/Arsenal, 강남 = Chelsea.
   {
     teamId: "epl_tottenham",
     label: "토트넘",
     stadium: "Tottenham Hotspur Stadium",
-    gx: 128,
-    gy: 178,
+    gx: 64,
+    gy: 89,
   },
-  {
-    teamId: "epl_wembley",
-    label: "잉글랜드 (웸블리)",
-    stadium: "Wembley Stadium",
-    gx: 95,
-    gy: 185,
-  },
+  { teamId: "epl_wembley", label: "잉글랜드 (웸블리)", stadium: "Wembley Stadium", gx: 47, gy: 92 },
   {
     teamId: "epl_arsenal",
     label: "아스날 (에미레이츠)",
     stadium: "Emirates Stadium",
-    gx: 115,
-    gy: 186,
+    gx: 57,
+    gy: 93,
   },
   {
     teamId: "epl_chelsea",
     label: "첼시 (스탬포드 브리지)",
     stadium: "Stamford Bridge",
-    gx: 112,
-    gy: 200,
+    gx: 56,
+    gy: 100,
   },
   // 북부 3개
-  { teamId: "epl_liverpool", label: "리버풀 (안필드)", stadium: "Anfield", gx: 65, gy: 138 },
-  { teamId: "epl_manutd", label: "맨유 (올드 트래포드)", stadium: "Old Trafford", gx: 78, gy: 125 },
-  { teamId: "epl_mancity", label: "맨시티 (에티하드)", stadium: "Etihad Stadium", gx: 95, gy: 130 },
+  { teamId: "epl_liverpool", label: "리버풀 (안필드)", stadium: "Anfield", gx: 32, gy: 69 },
+  { teamId: "epl_manutd", label: "맨유 (올드 트래포드)", stadium: "Old Trafford", gx: 39, gy: 62 },
+  { teamId: "epl_mancity", label: "맨시티 (에티하드)", stadium: "Etihad Stadium", gx: 47, gy: 65 },
 ]
 
 // ---------- 유틸 ----------
@@ -319,6 +329,131 @@ function printGridAscii(grid: boolean[][]) {
   console.log(`\n육지 셀: ${grid.flat().filter(Boolean).length} / ${grid.length * grid[0].length}`)
 }
 
+// ---------- 흙 영역 마스크 (영국 본섬 일부) ----------
+const DIRT_NOISE_SCALE = 0.08 // 작을수록 큰 cluster
+const DIRT_NOISE_THRESHOLD = 0.65 // 높을수록 흙 영역 작음
+
+function buildDirtGrid(landGrid: boolean[][], riverGrid: boolean[][]): boolean[][] {
+  const dirtGrid: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (!landGrid[gy][gx]) continue
+      if (riverGrid[gy][gx]) continue
+      const noise = valueNoise(gx * DIRT_NOISE_SCALE, gy * DIRT_NOISE_SCALE, 4242)
+      if (noise > DIRT_NOISE_THRESHOLD) dirtGrid[gy][gx] = true
+    }
+  }
+  return dirtGrid
+}
+
+// ---------- Tree decoration placement (forest cluster via value noise) ----------
+const TREE_VARIANTS = 3 // tree-1~3 (초록만)
+const TREE_TILE_W = 4 // 64×64 = 4×4 cell
+const TREE_TILE_H = 4
+const TREE_OCCUPY_W = 2 // 나무들끼리 50% 겹침 → 빽빽한 숲 느낌
+const TREE_OCCUPY_H = 2
+const FOREST_NOISE_SCALE = 0.05
+const FOREST_DENSITY_HIGH = 0.58 // 숲 영역
+const FOREST_DENSITY_LOW = 0.45 // 0.45~0.58 → 가장자리 sparse
+const FOREST_PROB_HIGH = 0.85 // 숲 cell 에 나무 둘 확률 (빽빽)
+const FOREST_PROB_LOW = 0.06 // 가장자리
+
+function hash2D(x: number, y: number, seed: number): number {
+  let h = (x * 374761393) ^ (y * 668265263) ^ seed
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+
+function smoothstep(t: number): number {
+  return t * t * (3 - 2 * t)
+}
+
+function valueNoise(x: number, y: number, seed: number): number {
+  const ix = Math.floor(x)
+  const iy = Math.floor(y)
+  const fx = x - ix
+  const fy = y - iy
+  const a = hash2D(ix, iy, seed)
+  const b = hash2D(ix + 1, iy, seed)
+  const c = hash2D(ix, iy + 1, seed)
+  const d = hash2D(ix + 1, iy + 1, seed)
+  const u = smoothstep(fx)
+  const v = smoothstep(fy)
+  return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v
+}
+
+function placeTrees(
+  grid: boolean[][],
+  riverGrid: boolean[][],
+  stadiumPositions: Array<{ gx: number; gy: number }>
+): Array<{ gx: number; gy: number; variant: number }> {
+  const rng = makeRng(2027)
+  const trees: Array<{ gx: number; gy: number; variant: number }> = []
+  const occupied: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
+
+  const isStadiumNearby = (gx: number, gy: number) =>
+    stadiumPositions.some((s) => Math.abs(gx - s.gx) < 5 && Math.abs(gy - s.gy) < 5)
+
+  function fitsHere(gx: number, gy: number): boolean {
+    if (gx < 0 || gx + TREE_TILE_W > GRID_W) return false
+    if (gy < 0 || gy + TREE_TILE_H > GRID_H) return false
+    // tree 4×4 footprint 내 land + 강·바다 X 체크
+    for (let dy = 0; dy < TREE_TILE_H; dy++) {
+      for (let dx = 0; dx < TREE_TILE_W; dx++) {
+        const cx = gx + dx
+        const cy = gy + dy
+        if (!grid[cy][cx]) return false
+        if (riverGrid[cy][cx]) return false
+      }
+    }
+    // 작은 occupy core (2×2 가운데) 만 검사 → 50% overlap 허용
+    const ox = gx + (TREE_TILE_W - TREE_OCCUPY_W) / 2
+    const oy = gy + (TREE_TILE_H - TREE_OCCUPY_H) / 2
+    for (let dy = 0; dy < TREE_OCCUPY_H; dy++) {
+      for (let dx = 0; dx < TREE_OCCUPY_W; dx++) {
+        if (occupied[oy + dy][ox + dx]) return false
+      }
+    }
+    if (isStadiumNearby(gx + TREE_TILE_W / 2, gy + TREE_TILE_H / 2)) return false
+    return true
+  }
+
+  // 영국 본섬 land cell 모두 순회. noise 값으로 forest density 결정.
+  // 순서 random하게 shuffle 해야 cluster 자연.
+  const candidates: Array<[number, number]> = []
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (grid[gy][gx]) candidates.push([gx, gy])
+    }
+  }
+  // shuffle
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[candidates[i], candidates[j]] = [candidates[j], candidates[i]]
+  }
+
+  for (const [gx, gy] of candidates) {
+    const noise = valueNoise(gx * FOREST_NOISE_SCALE, gy * FOREST_NOISE_SCALE, 7777)
+    let prob = 0
+    if (noise > FOREST_DENSITY_HIGH) prob = FOREST_PROB_HIGH
+    else if (noise > FOREST_DENSITY_LOW) prob = FOREST_PROB_LOW
+    if (prob === 0) continue
+    if (rng() > prob) continue
+    if (!fitsHere(gx, gy)) continue
+    // mark occupied (작은 core 만 — 다른 나무 sprite 살짝 겹침 OK)
+    const ox = gx + (TREE_TILE_W - TREE_OCCUPY_W) / 2
+    const oy = gy + (TREE_TILE_H - TREE_OCCUPY_H) / 2
+    for (let dy = 0; dy < TREE_OCCUPY_H; dy++) {
+      for (let dx = 0; dx < TREE_OCCUPY_W; dx++) {
+        occupied[oy + dy][ox + dx] = true
+      }
+    }
+    const variant = 1 + Math.floor(rng() * TREE_VARIANTS)
+    trees.push({ gx, gy, variant })
+  }
+  return trees
+}
+
 // ---------- 강 래스터화 (Bresenham) ----------
 function bresenhamLine(x0: number, y0: number, x1: number, y1: number): Array<[number, number]> {
   const points: Array<[number, number]> = []
@@ -345,6 +480,42 @@ function bresenhamLine(x0: number, y0: number, x1: number, y1: number): Array<[n
   return points
 }
 
+/** Catmull-Rom spline subsample: control points 사이에 곡선 점 N개 보간 */
+function catmullRomSubsample(
+  pts: Array<[number, number]>,
+  samplesPerSegment: number
+): Array<[number, number]> {
+  if (pts.length < 2) return pts
+  const out: Array<[number, number]> = []
+  const ext: Array<[number, number]> = [pts[0], ...pts, pts[pts.length - 1]]
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = ext[i]
+    const p1 = ext[i + 1]
+    const p2 = ext[i + 2]
+    const p3 = ext[i + 3]
+    for (let t = 0; t < samplesPerSegment; t++) {
+      const tt = t / samplesPerSegment
+      const t2 = tt * tt
+      const t3 = t2 * tt
+      const x =
+        0.5 *
+        (2 * p1[0] +
+          (-p0[0] + p2[0]) * tt +
+          (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 +
+          (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3)
+      const y =
+        0.5 *
+        (2 * p1[1] +
+          (-p0[1] + p2[1]) * tt +
+          (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 +
+          (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)
+      out.push([x, y])
+    }
+  }
+  out.push(pts[pts.length - 1])
+  return out
+}
+
 function buildRiverGrid(
   bbox: { minLon: number; maxLon: number; minLat: number; maxLat: number },
   landGrid: boolean[][]
@@ -352,14 +523,19 @@ function buildRiverGrid(
   const riverGrid: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
 
   for (const river of RIVERS) {
-    // 1. polyline → 1 cell 폭 cells
+    // 1. lat/lon → grid → Catmull-Rom 보간 (자연 곡선)
+    const ctrlGrid: Array<[number, number]> = river.points.map(([lon, lat]) => {
+      const p = projectToGrid(lon, lat, bbox)
+      return [p.gx, p.gy] as [number, number]
+    })
+    const smoothed = catmullRomSubsample(ctrlGrid, 16)
     const linePoints: Array<[number, number]> = []
-    for (let i = 0; i < river.points.length - 1; i++) {
-      const [lon1, lat1] = river.points[i]
-      const [lon2, lat2] = river.points[i + 1]
-      const a = projectToGrid(lon1, lat1, bbox)
-      const b = projectToGrid(lon2, lat2, bbox)
-      linePoints.push(...bresenhamLine(a.gx, a.gy, b.gx, b.gy))
+    for (let i = 0; i < smoothed.length - 1; i++) {
+      const [x1, y1] = smoothed[i]
+      const [x2, y2] = smoothed[i + 1]
+      linePoints.push(
+        ...bresenhamLine(Math.round(x1), Math.round(y1), Math.round(x2), Math.round(y2))
+      )
     }
 
     // 2. dilate (radius = river.width) → 폭 (2*width + 1) cell
@@ -459,30 +635,25 @@ interface TiledMap {
 function buildTiledMap(
   grid: boolean[][],
   riverGrid: boolean[][],
+  dirtGrid: boolean[][],
   stadiumCells: Array<{
     stadium: (typeof STADIUMS)[number]
     gx: number
     gy: number
     px: number
     py: number
-  }>
+  }>,
+  trees: Array<{ gx: number; gy: number; variant: number }>
 ): TiledMap {
-  // background — 육지: 강 cell=river, 그 외=잔디 변종 random / 바다=autotile
+  // background — 육지: 강=river, 흙=dirt autotile, 잔디 / 바다=sea autotile
   const grassRng = makeRng(2026)
   const backgroundData: number[] = []
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
       if (grid[y][x]) {
-        if (riverGrid[y][x]) {
-          backgroundData.push(TILE_RIVER)
-        } else {
-          // 80% default 잔디 + 20% 변종 (subtle texture, 너무 noisy 안 되게)
-          if (grassRng() < 0.2) {
-            backgroundData.push(GRASS_TILES[Math.floor(grassRng() * GRASS_TILES.length)])
-          } else {
-            backgroundData.push(TILE_GRASS)
-          }
-        }
+        if (riverGrid[y][x]) backgroundData.push(TILE_RIVER)
+        else if (dirtGrid[y][x]) backgroundData.push(autotileDirtCell(dirtGrid, x, y))
+        else backgroundData.push(GRASS_TILES[Math.floor(grassRng() * GRASS_TILES.length)])
       } else {
         backgroundData.push(autotileSeaCell(grid, x, y))
       }
@@ -492,7 +663,7 @@ function buildTiledMap(
   const collisionData = new Array(GRID_W * GRID_H).fill(0)
 
   const ENTRANCE_SIZE = TILE_SIZE * 4 // 64×64 (4×4 cell) — 큰 stadium 에셋 들어갈 자리
-  const objects: TiledObject[] = stadiumCells.map(({ stadium, px, py }, idx) => ({
+  const stadiumObjects: TiledObject[] = stadiumCells.map(({ stadium, px, py }, idx) => ({
     height: ENTRANCE_SIZE,
     id: idx + 1,
     name: stadium.teamId,
@@ -509,6 +680,23 @@ function buildTiledMap(
     x: px - ENTRANCE_SIZE / 2,
     y: py - ENTRANCE_SIZE / 2,
   }))
+
+  const TREE_PX = TILE_SIZE * TREE_TILE_W // 64
+  const treeObjects: TiledObject[] = trees.map((t, idx) => ({
+    height: TREE_PX,
+    id: stadiumObjects.length + idx + 1,
+    name: `tree-${t.variant}`,
+    opacity: 1,
+    properties: [{ name: "asset", type: "string", value: `tree-${t.variant}` }],
+    rotation: 0,
+    type: "tree",
+    visible: true,
+    width: TREE_PX,
+    x: t.gx * TILE_SIZE,
+    y: t.gy * TILE_SIZE,
+  }))
+
+  const objects = [...stadiumObjects, ...treeObjects]
 
   return {
     compressionlevel: -1,
@@ -639,8 +827,17 @@ function main() {
   const riverCellCount = riverGrid.flat().filter(Boolean).length
   console.log(`강 cell: ${riverCellCount} (${RIVERS.length} 강, Bresenham 폭 1 cell)`)
 
+  // 흙 영역 (산악 transition)
+  const dirtGrid = buildDirtGrid(grid, riverGrid)
+  const dirtCellCount = dirtGrid.flat().filter(Boolean).length
+  console.log(`흙 cell: ${dirtCellCount} (Grass_3 9-tile autotile)`)
+
+  // Tree decoration placement
+  const trees = placeTrees(grid, riverGrid, stadiumCells)
+  console.log(`나무: ${trees.length} 개 (${TREE_VARIANTS} 변종)`)
+
   // .tmj 출력
-  const tmjMap = buildTiledMap(grid, riverGrid, stadiumCells)
+  const tmjMap = buildTiledMap(grid, riverGrid, dirtGrid, stadiumCells, trees)
   writeFileSync(resolve(OUTPUT_JSON), JSON.stringify(tmjMap, null, 1), "utf-8")
   console.log(`\n→ ${OUTPUT_JSON} 작성 완료 (${GRID_W}×${GRID_H}, ${STADIUMS.length} 경기장)`)
 }

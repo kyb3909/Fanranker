@@ -25,7 +25,8 @@ interface TiledProperty {
 
 const PLAYER_SPEED = 200
 const AVATAR_SCALE = 0.4
-const MINIMAP_SIZE = 180
+const MINIMAP_W = 120
+const MINIMAP_H = 180
 const MINIMAP_PAD = 12
 
 export class TestTilemapScene extends Phaser.Scene {
@@ -41,6 +42,9 @@ export class TestTilemapScene extends Phaser.Scene {
   preload() {
     this.load.image("modern-exteriors", "/map/tilesets/modern-exteriors.png")
     this.load.tilemapTiledJSON("uk-auto", "/map/uk-auto.json")
+    for (let i = 1; i <= 5; i++) {
+      this.load.image(`tree-${i}`, `/map/decoration/tree-${i}.png`)
+    }
     preloadProAvatar(this)
   }
 
@@ -64,6 +68,16 @@ export class TestTilemapScene extends Phaser.Scene {
     let spawnY = map.heightInPixels / 2
     const objectsLayer = map.getObjectLayer("objects")
     objectsLayer?.objects.forEach((obj) => {
+      // Tree decoration
+      if (obj.type === "tree") {
+        const props = (obj.properties ?? []) as TiledProperty[]
+        const asset = (props.find((p) => p.name === "asset")?.value as string) ?? "tree-1"
+        const w = obj.width ?? 64
+        const h = obj.height ?? 64
+        // origin (0, 1) — Tiled tile object 컨벤션. tree image 64×64 라 그대로
+        this.add.image((obj.x ?? 0) + w / 2, (obj.y ?? 0) + h / 2, asset).setDepth(5)
+        return
+      }
       if (obj.type !== "stadium_entrance" && obj.type !== "entrance") return
       const w = obj.width ?? 32
       const h = obj.height ?? 32
@@ -115,15 +129,12 @@ export class TestTilemapScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
     this.cameras.main.setBackgroundColor("#0b1320")
 
-    // 미니맵 (우상단)
+    // 미니맵 (우상단) — 영국 비율 (2:3) 에 맞춰 세로 길게
     const viewW = this.scale.width
-    const minimapX = viewW - MINIMAP_SIZE - MINIMAP_PAD
+    const minimapX = viewW - MINIMAP_W - MINIMAP_PAD
     const minimapY = MINIMAP_PAD
-    const minimapZoom = Math.min(
-      MINIMAP_SIZE / map.widthInPixels,
-      MINIMAP_SIZE / map.heightInPixels
-    )
-    const minimap = this.cameras.add(minimapX, minimapY, MINIMAP_SIZE, MINIMAP_SIZE)
+    const minimapZoom = Math.min(MINIMAP_W / map.widthInPixels, MINIMAP_H / map.heightInPixels)
+    const minimap = this.cameras.add(minimapX, minimapY, MINIMAP_W, MINIMAP_H)
     minimap.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
     minimap.setZoom(minimapZoom)
     minimap.centerOn(map.widthInPixels / 2, map.heightInPixels / 2)
@@ -131,7 +142,7 @@ export class TestTilemapScene extends Phaser.Scene {
 
     // 미니맵 border (HUD)
     const border = this.add
-      .rectangle(minimapX, minimapY, MINIMAP_SIZE, MINIMAP_SIZE)
+      .rectangle(minimapX, minimapY, MINIMAP_W, MINIMAP_H)
       .setStrokeStyle(2, 0xffffff, 0.8)
       .setFillStyle(0, 0)
       .setOrigin(0, 0)
