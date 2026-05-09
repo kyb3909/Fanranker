@@ -298,6 +298,18 @@ export class IndoorMapScene extends Phaser.Scene {
       if (this.input.keyboard) this.input.keyboard.enabled = true
     })
 
+    // window blur (alt-tab, 다른 탭 전환 등) 시 모든 키 reset — keyup 못 받아 stuck 되는 케이스 방지
+    const onWindowBlur = () => {
+      resetAllKeys()
+      const body = this.player.body as Phaser.Physics.Arcade.Body
+      body.setAccelerationX(0)
+      body.setVelocityX(0)
+    }
+    window.addEventListener("blur", onWindowBlur)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("blur", onWindowBlur)
+    })
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubChatSend?.()
       this.unsubChatOpen?.()
