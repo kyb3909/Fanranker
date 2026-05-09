@@ -30,7 +30,9 @@ import {
 } from "@/lib/metaverse/avatar/pro-avatar-xl"
 import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
+import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import { ChatBubble } from "./chat-bubble"
 
 export const INDOOR_MAP_SCENE_KEY = "MetaverseIndoorMap"
 
@@ -90,6 +92,9 @@ export class IndoorMapScene extends Phaser.Scene {
 
   private player!: Phaser.Physics.Arcade.Sprite
   private nameTag!: Phaser.GameObjects.Text
+  /** 로컬 채팅 말풍선 — chat:send 받으면 갱신, 5초 후 자동 destroy */
+  private chatBubble: ChatBubble | null = null
+  private unsubChatSend: (() => void) | null = null
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
@@ -238,17 +243,37 @@ export class IndoorMapScene extends Phaser.Scene {
       this.physics.add.collider(this.ball, this.platforms)
     }
 
-    // 닉네임 태그
+    // 닉네임 태그 — 아바타 하단 (말풍선이 머리 위 가리지 않도록)
     this.nameTag = this.add
-      .text(this.player.x, this.player.y - this.avatarVisualH / 2 - 6, this.identity.nickname, {
+      .text(this.player.x, this.player.y + this.avatarVisualH / 2 + 4, this.identity.nickname, {
         fontFamily: "sans-serif",
         fontSize: "12px",
         color: "#ffffff",
         backgroundColor: "#00000099",
         padding: { x: 4, y: 2 },
       })
-      .setOrigin(0.5, 1)
+      .setOrigin(0.5, 0)
       .setDepth(20)
+
+    // 채팅 — chat:send 받으면 머리 위 말풍선 갱신
+    this.unsubChatSend = sceneBridge.on("chat:send", (payload) => {
+      if (!payload?.text) return
+      this.showChatBubble(payload.text)
+      // chat-log 패널에도 자기 메시지 push
+      sceneBridge.emit("chat:log:append", {
+        userId: this.identity.userId,
+        nickname: this.identity.nickname,
+        text: payload.text,
+        timestamp: Date.now(),
+        scope: "local",
+      })
+    })
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.unsubChatSend?.()
+      this.unsubChatSend = null
+      this.chatBubble?.destroy()
+      this.chatBubble = null
+    })
 
     // 도어 zones + prompts
     for (const door of this.mapConfig.doors) {
@@ -558,7 +583,20 @@ export class IndoorMapScene extends Phaser.Scene {
   }
 
   private updateNameTag() {
-    this.nameTag.setPosition(this.player.x, this.player.y - this.avatarVisualH / 2 - 6)
+    this.nameTag.setPosition(this.player.x, this.player.y + this.avatarVisualH / 2 + 4)
+    if (this.chatBubble && this.chatBubble.active) {
+      this.chatBubble.setPosition(this.player.x, this.player.y - this.avatarVisualH / 2 - 22)
+    }
+  }
+
+  private showChatBubble(text: string) {
+    this.chatBubble?.destroy()
+    const bubble = new ChatBubble(this, text)
+    bubble.setAutoExpire(METAVERSE.BUBBLE_DURATION_MS)
+    bubble.on(Phaser.GameObjects.Events.DESTROY, () => {
+      if (this.chatBubble === bubble) this.chatBubble = null
+    })
+    this.chatBubble = bubble
   }
 
   // ============================================================
