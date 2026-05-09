@@ -142,12 +142,11 @@ function autotileRiverCell(riverGrid: boolean[][], x: number, y: number): number
   return autotile9(isGrass, SEA, x, y)
 }
 
-// 영국 주요 강 — Natural Earth 데이터에 부족해서 수동 hardcode (lon, lat).
-// Source → 주요 도시 → mouth 순. mouth는 sea cell 까지 닿도록 살짝 외곽으로.
+// 영국 주요 강 — Thames 만 (사용자 요청).
 const RIVERS: Array<{ name: string; points: [number, number][]; width: number }> = [
   {
     name: "Thames",
-    width: 0, // 폭 1 cell — 모든 강 통일
+    width: 2, // 폭 5 cell (굵게)
     points: [
       [-1.78, 51.69], // Source (Cotswolds)
       [-1.26, 51.75], // Oxford
@@ -156,47 +155,6 @@ const RIVERS: Array<{ name: string; points: [number, number][]; width: number }>
       [-0.12, 51.5], // London
       [0.4, 51.45], // Lower Thames
       [1.5, 51.45], // North Sea (sea cell 도달)
-    ],
-  },
-  {
-    name: "Severn",
-    width: 0, // 폭 1 cell — Thames 다음으로 큼 단 시각상 가늘게
-    points: [
-      [-3.78, 52.55], // Source (Wales)
-      [-2.75, 52.71], // Shrewsbury
-      [-2.22, 52.19], // Worcester
-      [-2.55, 51.86], // Gloucester
-      [-2.95, 51.5], // Bristol
-      [-3.5, 51.3], // Bristol Channel (sea)
-    ],
-  },
-  {
-    name: "Trent",
-    width: 0,
-    points: [
-      [-2.04, 53.05], // Source (Staffordshire)
-      [-1.63, 52.8], // Burton
-      [-1.15, 52.96], // Nottingham
-      [-0.5, 53.7], // Humber
-      [0.5, 53.65], // North Sea (sea)
-    ],
-  },
-  {
-    name: "Tyne",
-    width: 0,
-    points: [
-      [-2.3, 54.97], // Source (Pennines)
-      [-1.62, 54.97], // Newcastle
-      [-1.0, 55.0], // North Sea (sea)
-    ],
-  },
-  {
-    name: "Tweed",
-    width: 0,
-    points: [
-      [-3.34, 55.46], // Source (Tweedsmuir)
-      [-3.18, 55.65], // Peebles
-      [-1.7, 55.77], // North Sea (sea)
     ],
   },
 ]
@@ -347,6 +305,43 @@ function printGridAscii(grid: boolean[][]) {
   console.log(`\n육지 셀: ${grid.flat().filter(Boolean).length} / ${grid.length * grid[0].length}`)
 }
 
+// ---------- 강 가장자리 sprite overlay (Grass_Water 9-tile) ----------
+// water-edge-1~8 = 가장자리, 9 = plain. river cell 4변에 잔디 인접하면 가장자리 그림.
+function buildWaterEdges(
+  riverGrid: boolean[][]
+): Array<{ gx: number; gy: number; variant: number }> {
+  const edges: Array<{ gx: number; gy: number; variant: number }> = []
+  const isGrass = (cx: number, cy: number) =>
+    cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H && !riverGrid[cy][cx]
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (!riverGrid[gy][gx]) continue
+      const N = isGrass(gx, gy - 1)
+      const E = isGrass(gx + 1, gy)
+      const S = isGrass(gx, gy + 1)
+      const W = isGrass(gx - 1, gy)
+      const count = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (W ? 1 : 0)
+      let variant = 9 // 4변 river → plain (water-edge-9)
+      if (count === 1) {
+        if (N) variant = 2
+        else if (E) variant = 4
+        else if (S) variant = 6
+        else variant = 8
+      } else if (count === 2) {
+        if (N && W) variant = 1
+        else if (N && E) variant = 3
+        else if (S && E) variant = 5
+        else if (S && W) variant = 7
+        else variant = 9 // 좁은 해협 → plain
+      } else if (count >= 3) {
+        variant = 9 // inlet → plain
+      }
+      edges.push({ gx, gy, variant })
+    }
+  }
+  return edges
+}
+
 // ---------- 잔디 sprinkle decoration (작은 풀) ----------
 const SPROUT_VARIANTS = 4
 const SPROUT_DENSITY = 0.08 // 잔디 cell 8% 에 작은 풀
@@ -372,9 +367,58 @@ function placeSprouts(
   return sprouts
 }
 
+// ---------- 산악 영역 (스코틀랜드 + 웨일즈 hardcoded bbox) ----------
+const UK_MOUNTAIN_REGIONS: Array<{
+  name: string
+  bbox: [number, number, number, number]
+  density: number
+}> = [
+  // bbox = [minLon, minLat, maxLon, maxLat]
+  { name: "Scottish Highlands", bbox: [-5.7, 56.5, -3.0, 58.6], density: 0.85 }, // 스코틀랜드 북부 빽빽
+  { name: "Southern Uplands", bbox: [-4.5, 55.0, -2.5, 55.7], density: 0.65 }, // 스코틀랜드 남부
+  { name: "Lake District", bbox: [-3.4, 54.3, -2.8, 54.8], density: 0.55 },
+  { name: "Snowdonia", bbox: [-4.3, 52.8, -3.6, 53.2], density: 0.55 }, // 웨일즈 북
+  { name: "Brecon Beacons", bbox: [-3.7, 51.7, -3.1, 52.0], density: 0.45 }, // 웨일즈 남
+]
+
+function buildMountainGrid(
+  bbox: { minLon: number; maxLon: number; minLat: number; maxLat: number },
+  landGrid: boolean[][],
+  riverGrid: boolean[][]
+): boolean[][] {
+  const mGrid: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
+  const rng = makeRng(3030)
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (!landGrid[gy][gx]) continue
+      if (riverGrid[gy][gx]) continue
+      // grid → lon/lat
+      const padFactor = 0.05
+      const lonRange = bbox.maxLon - bbox.minLon
+      const latRange = bbox.maxLat - bbox.minLat
+      const lonStart = bbox.minLon - lonRange * padFactor
+      const lonEnd = bbox.maxLon + lonRange * padFactor
+      const latStart = bbox.minLat - latRange * padFactor
+      const latEnd = bbox.maxLat + latRange * padFactor
+      const cellW = (lonEnd - lonStart) / GRID_W
+      const cellH = (latEnd - latStart) / GRID_H
+      const lon = lonStart + (gx + 0.5) * cellW
+      const lat = latEnd - (gy + 0.5) * cellH
+      // bbox 안 검사
+      const inRegion = UK_MOUNTAIN_REGIONS.find(
+        (r) => lon >= r.bbox[0] && lon <= r.bbox[2] && lat >= r.bbox[1] && lat <= r.bbox[3]
+      )
+      if (!inRegion) continue
+      // density 따라 random
+      if (rng() < inRegion.density) mGrid[gy][gx] = true
+    }
+  }
+  return mGrid
+}
+
 // ---------- 흙 영역 마스크 (영국 본섬 일부) ----------
-const DIRT_NOISE_SCALE = 0.1 // 더 작은 cluster
-const DIRT_NOISE_THRESHOLD = 0.74 // 흙 영역 줄임
+const DIRT_NOISE_SCALE = 0.1
+const DIRT_NOISE_THRESHOLD = 0.74
 
 function buildDirtGrid(landGrid: boolean[][], riverGrid: boolean[][]): boolean[][] {
   const dirtGrid: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
@@ -396,10 +440,10 @@ const TREE_LARGE_VARIANTS = 3 // tree-1~3 (큰 나무)
 const TREE_SMALL_VARIANTS = 5 // tree-s-1~5 (작은 나무)
 const TREE_LARGE_W = 4 // 64×64
 const TREE_SMALL_W = 2 // 32×32
-const FOREST_NOISE_SCALE = 0.06
-const FOREST_DENSITY_HIGH = 0.55 // 숲 영역 (binary 마스크)
-const FOREST_PROB_SMALL = 0.92 // 숲 cell 에 작은 나무 둘 확률 (빽빽)
-const FOREST_PROB_LARGE_BONUS = 0.08 // 작은 나무 자리에 큰 나무 sparse 추가
+const FOREST_NOISE_SCALE = 0.05
+const FOREST_DENSITY_HIGH = 0.42 // 숲 영역 확대 (경기장 없는 곳 빽빽)
+const FOREST_PROB_SMALL = 0.95 // 숲 cell 에 작은 나무 둘 확률 (매우 빽빽)
+const FOREST_PROB_LARGE_BONUS = 0.05 // 큰 나무 sparse 추가
 
 function hash2D(x: number, y: number, seed: number): number {
   let h = (x * 374761393) ^ (y * 668265263) ^ seed
@@ -455,19 +499,17 @@ function placeTrees(
         if (!grid[cy][cx]) return false
         if (riverGrid[cy][cx]) return false
         if (dirtGrid[cy][cx]) return false // 흙 영역엔 나무 X
-        if (occupied[cy][cx]) return false
       }
     }
+    // 같은 cell 좌상 시작점만 중복 차단 — 인접 cell 에 나무 OK (sprite 겹침)
+    if (occupied[gy][gx]) return false
     if (isStadiumNearby(gx + sz / 2, gy + sz / 2)) return false
     return true
   }
 
   function markOccupied(gx: number, gy: number, sz: number) {
-    for (let dy = 0; dy < sz; dy++) {
-      for (let dx = 0; dx < sz; dx++) {
-        occupied[gy + dy][gx + dx] = true
-      }
-    }
+    void sz
+    occupied[gy][gx] = true
   }
 
   // 1차: 작은 나무 빽빽이 (2×2 cell footprint). 모든 land cell scan.
@@ -692,7 +734,8 @@ function buildTiledMap(
     py: number
   }>,
   trees: TreePlacement[],
-  sprouts: Array<{ gx: number; gy: number; variant: number }>
+  sprouts: Array<{ gx: number; gy: number; variant: number }>,
+  waterEdges: Array<{ gx: number; gy: number; variant: number }>
 ): TiledMap {
   // background — 육지: 강=river, 흙=dirt autotile, 잔디 / 바다=sea autotile
   const grassRng = makeRng(2026)
@@ -700,7 +743,8 @@ function buildTiledMap(
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
       if (grid[y][x]) {
-        if (riverGrid[y][x]) backgroundData.push(autotileRiverCell(riverGrid, x, y))
+        // river cell 은 background = 잔디 (sprite 로 덮음 — 색 mismatch 방지)
+        if (riverGrid[y][x]) backgroundData.push(TILE_GRASS)
         else if (dirtGrid[y][x]) backgroundData.push(autotileDirtCell(dirtGrid, x, y))
         else backgroundData.push(GRASS_TILES[Math.floor(grassRng() * GRASS_TILES.length)])
       } else {
@@ -764,7 +808,22 @@ function buildTiledMap(
     y: s.gy * TILE_SIZE,
   }))
 
-  const objects = [...stadiumObjects, ...treeObjects, ...sproutObjects]
+  const baseId2 = baseId + sproutObjects.length
+  const waterEdgeObjects: TiledObject[] = waterEdges.map((e, idx) => ({
+    height: TILE_SIZE,
+    id: baseId2 + idx + 1,
+    name: `water-edge-${e.variant}`,
+    opacity: 1,
+    properties: [{ name: "asset", type: "string", value: `water-edge-${e.variant}` }],
+    rotation: 0,
+    type: "water-edge",
+    visible: true,
+    width: TILE_SIZE,
+    x: e.gx * TILE_SIZE,
+    y: e.gy * TILE_SIZE,
+  }))
+
+  const objects = [...stadiumObjects, ...treeObjects, ...sproutObjects, ...waterEdgeObjects]
 
   return {
     compressionlevel: -1,
@@ -895,10 +954,21 @@ function main() {
   const riverCellCount = riverGrid.flat().filter(Boolean).length
   console.log(`강 cell: ${riverCellCount} (${RIVERS.length} 강, Bresenham 폭 1 cell)`)
 
-  // 흙 영역 (산악 transition)
+  // 산악 영역 (스코틀랜드·웨일즈)
+  const mountainGrid = buildMountainGrid(bbox, grid, riverGrid)
+  const mountainCellCount = mountainGrid.flat().filter(Boolean).length
+  console.log(`산악 cell: ${mountainCellCount} (스코틀랜드 + 웨일즈)`)
+
+  // 흙 영역 = 산악 + 추가 noise cluster
   const dirtGrid = buildDirtGrid(grid, riverGrid)
+  // 산악 cell도 흙으로 marking (흙 autotile 사용)
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (mountainGrid[gy][gx]) dirtGrid[gy][gx] = true
+    }
+  }
   const dirtCellCount = dirtGrid.flat().filter(Boolean).length
-  console.log(`흙 cell: ${dirtCellCount} (Grass_3 9-tile autotile)`)
+  console.log(`흙 cell (산악 포함): ${dirtCellCount}`)
 
   // Tree decoration placement (작은 + 큰 나무 mix)
   const { trees, occupied: treeOccupied } = placeTrees(grid, riverGrid, dirtGrid, stadiumCells)
@@ -910,8 +980,12 @@ function main() {
   const sprouts = placeSprouts(grid, riverGrid, dirtGrid, treeOccupied)
   console.log(`작은 풀: ${sprouts.length} 개`)
 
+  // 강 가장자리 sprite overlay (Grass_Water 9-tile single PNG 사용)
+  const waterEdges = buildWaterEdges(riverGrid)
+  console.log(`강 가장자리: ${waterEdges.length} 개`)
+
   // .tmj 출력
-  const tmjMap = buildTiledMap(grid, riverGrid, dirtGrid, stadiumCells, trees, sprouts)
+  const tmjMap = buildTiledMap(grid, riverGrid, dirtGrid, stadiumCells, trees, sprouts, waterEdges)
   writeFileSync(resolve(OUTPUT_JSON), JSON.stringify(tmjMap, null, 1), "utf-8")
   console.log(`\n→ ${OUTPUT_JSON} 작성 완료 (${GRID_W}×${GRID_H}, ${STADIUMS.length} 경기장)`)
 }

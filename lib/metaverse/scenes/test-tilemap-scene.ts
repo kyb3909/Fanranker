@@ -49,6 +49,9 @@ export class TestTilemapScene extends Phaser.Scene {
     for (let i = 1; i <= 4; i++) {
       this.load.image(`sprout-${i}`, `/map/decoration/sprout-${i}.png`)
     }
+    for (let i = 1; i <= 9; i++) {
+      this.load.image(`water-edge-${i}`, `/map/decoration/water-edge-${i}.png`)
+    }
     preloadProAvatar(this)
   }
 
@@ -72,13 +75,13 @@ export class TestTilemapScene extends Phaser.Scene {
     let spawnY = map.heightInPixels / 2
     const objectsLayer = map.getObjectLayer("objects")
     objectsLayer?.objects.forEach((obj) => {
-      // Tree / Sprout decoration
-      if (obj.type === "tree" || obj.type === "sprout") {
+      // Tree / Sprout / water-edge decoration
+      if (obj.type === "tree" || obj.type === "sprout" || obj.type === "water-edge") {
         const props = (obj.properties ?? []) as TiledProperty[]
         const asset = (props.find((p) => p.name === "asset")?.value as string) ?? "tree-1"
         const w = obj.width ?? 16
         const h = obj.height ?? 16
-        const depth = obj.type === "sprout" ? 4 : 5
+        const depth = obj.type === "tree" ? 5 : obj.type === "sprout" ? 4 : 3
         this.add.image((obj.x ?? 0) + w / 2, (obj.y ?? 0) + h / 2, asset).setDepth(depth)
         return
       }
