@@ -1,9 +1,8 @@
 /**
- * LimeZu 통짜 타일셋에서 특정 16×16 타일의 ID 찾기.
+ * LimeZu sheet에서 특정 16×16 타일의 ID 자동 검색.
  *
- * 분류된 single PNG (예: Deep_Water_1_1.png 16×16) 의 픽셀과
- * 통짜 PNG (modern-exteriors.png 2816×8224) 의 모든 grid 위치를 비교해
- * 일치하는 첫 위치의 Tiled ID 반환 (firstgid=1 기준).
+ * 분류된 single PNG의 픽셀과 sheet PNG의 모든 grid 위치를 비교해
+ * 일치하는 첫 위치의 Tiled ID 반환 (firstgid 기준).
  *
  * 실행: pnpm exec tsx scripts/find-tile-ids.ts
  */
@@ -11,19 +10,7 @@
 import { resolve } from "node:path"
 import sharp from "sharp"
 
-const MAIN_PNG = "public/map/tilesets/modern-exteriors.png"
-const COLUMNS = 176
 const TILE = 16
-
-const LIMEZU_SINGLES =
-  "C:/Users/user/Downloads/Compressed/limezu/modernexteriors-win/Modern_Exteriors_16x16/ME_Theme_Sorter_16x16/1_Terrains_and_Fences_Singles_16x16"
-
-const TARGETS: Array<{ label: string; file: string }> = [
-  ...Array.from({ length: 22 }, (_, i) => ({
-    label: `Deep_Water_1_${i + 1}`,
-    file: `${LIMEZU_SINGLES}/ME_Singles_Terrains_and_Fences_16x16_Deep_Water_1_${i + 1}.png`,
-  })),
-]
 
 interface RawImage {
   data: Buffer
@@ -31,6 +18,61 @@ interface RawImage {
   height: number
   channels: number
 }
+
+interface Sheet {
+  label: string
+  path: string
+  columns: number
+  firstgid: number
+}
+
+const SHEETS: Sheet[] = [
+  // 통짜 (잔디·물 위주)
+  {
+    label: "modern-exteriors",
+    path: "public/map/tilesets/modern-exteriors.png",
+    columns: 176,
+    firstgid: 1,
+  },
+  // me-camping: Rock·Tree·Stump 등
+  { label: "me-camping", path: "public/map/tilesets/me-camping.png", columns: 32, firstgid: 90465 },
+  // me-garden: Sprout·Flower·Bush 등
+  { label: "me-garden", path: "public/map/tilesets/me-garden.png", columns: 32, firstgid: 96257 },
+]
+
+const LIMEZU_BASE =
+  "C:/Users/user/Downloads/Compressed/limezu/modernexteriors-win/Modern_Exteriors_16x16/ME_Theme_Sorter_16x16"
+const TERRAINS = `${LIMEZU_BASE}/1_Terrains_and_Fences_Singles_16x16`
+const CAMPING = `${LIMEZU_BASE}/11_Camping_Singles_16x16`
+const GARDEN = `${LIMEZU_BASE}/17_Garden_Singles_16x16`
+
+interface Target {
+  label: string
+  file: string
+  /** 우선 검색할 sheet labels (없으면 전체) */
+  preferSheets?: string[]
+}
+
+const TARGETS: Target[] = [
+  // 산·숲 decoration (me-camping)
+  ...Array.from({ length: 9 }, (_, i) => ({
+    label: `Rock_${i + 1}`,
+    file: `${CAMPING}/ME_Singles_Camping_16x16_Rock_${i + 1}.png`,
+    preferSheets: ["me-camping"],
+  })),
+  // 잔디 decoration (me-garden)
+  ...Array.from({ length: 7 }, (_, i) => ({
+    label: `Big_Sprout_${i + 1}`,
+    file: `${GARDEN}/ME_Singles_Garden_16x16_Big_Sprout_${i + 1}.png`,
+    preferSheets: ["me-garden"],
+  })),
+  ...Array.from({ length: 23 }, (_, i) => ({
+    label: `Bush_${i + 1}`,
+    file: `${GARDEN}/ME_Singles_Garden_16x16_Bush_${i + 1}.png`,
+    preferSheets: ["me-garden"],
+  })),
+]
+void TERRAINS
 
 async function loadRaw(path: string): Promise<RawImage> {
   const { data, info } = await sharp(resolve(path))
@@ -40,25 +82,27 @@ async function loadRaw(path: string): Promise<RawImage> {
   return { data, width: info.width, height: info.height, channels: 4 }
 }
 
+const PIXEL_TOL = 4 // anti-aliasing / alpha encoding 차이 허용
+
 function tileMatches(main: RawImage, target: RawImage, tx: number, ty: number): boolean {
   for (let py = 0; py < TILE; py++) {
     for (let px = 0; px < TILE; px++) {
       const mainIdx = ((ty * TILE + py) * main.width + (tx * TILE + px)) * main.channels
       const targetIdx = (py * TILE + px) * target.channels
       for (let c = 0; c < 4; c++) {
-        if (main.data[mainIdx + c] !== target.data[targetIdx + c]) return false
+        if (Math.abs(main.data[mainIdx + c] - target.data[targetIdx + c]) > PIXEL_TOL) return false
       }
     }
   }
   return true
 }
 
-async function findId(target: RawImage, main: RawImage): Promise<number | null> {
-  const totalRows = Math.floor(main.height / TILE)
+function findInSheet(target: RawImage, sheet: RawImage, columns: number): number | null {
+  const totalRows = Math.floor(sheet.height / TILE)
   for (let ty = 0; ty < totalRows; ty++) {
-    for (let tx = 0; tx < COLUMNS; tx++) {
-      if (tileMatches(main, target, tx, ty)) {
-        return ty * COLUMNS + tx + 1
+    for (let tx = 0; tx < columns; tx++) {
+      if (tileMatches(sheet, target, tx, ty)) {
+        return ty * columns + tx // local index (0-based)
       }
     }
   }
@@ -66,28 +110,51 @@ async function findId(target: RawImage, main: RawImage): Promise<number | null> 
 }
 
 async function main() {
-  console.log(`통짜 PNG 로드: ${MAIN_PNG}`)
-  const mainImg = await loadRaw(MAIN_PNG)
-  console.log(`  ${mainImg.width}×${mainImg.height}, ${mainImg.channels}ch`)
+  // 모든 sheet 미리 로드
+  const sheets = await Promise.all(
+    SHEETS.map(async (s) => ({ ...s, image: await loadRaw(s.path) }))
+  )
+  console.log("Sheets:")
+  for (const s of sheets) {
+    console.log(`  ${s.label}: ${s.image.width}×${s.image.height}, firstgid ${s.firstgid}`)
+  }
+  console.log()
+
+  const results: Array<{ label: string; sheet: string; localIdx: number; gid: number }> = []
+  const notFound: string[] = []
 
   for (const t of TARGETS) {
     const target = await loadRaw(t.file)
     if (target.width !== TILE || target.height !== TILE) {
-      console.log(`  ⚠ ${t.label}: 사이즈 ${target.width}×${target.height} (16×16 아님, 스킵)`)
+      console.log(`⚠ ${t.label}: ${target.width}×${target.height} (16×16 아님, skip)`)
       continue
     }
-    process.stdout.write(`검색: ${t.label} … `)
-    const t0 = Date.now()
-    const id = await findId(target, mainImg)
-    const dt = Date.now() - t0
-    if (id !== null) {
-      const row = Math.floor((id - 1) / COLUMNS)
-      const col = (id - 1) % COLUMNS
-      console.log(`ID = ${id} (row ${row}, col ${col}) [${dt}ms]`)
+    const order = t.preferSheets
+      ? [
+          ...sheets.filter((s) => t.preferSheets!.includes(s.label)),
+          ...sheets.filter((s) => !t.preferSheets!.includes(s.label)),
+        ]
+      : sheets
+    let found: { sheet: string; localIdx: number; gid: number } | null = null
+    for (const s of order) {
+      const idx = findInSheet(target, s.image, s.columns)
+      if (idx !== null) {
+        found = { sheet: s.label, localIdx: idx, gid: s.firstgid + idx }
+        break
+      }
+    }
+    if (found) {
+      console.log(`✓ ${t.label.padEnd(20)} → ${found.sheet} idx=${found.localIdx} gid=${found.gid}`)
+      results.push({ label: t.label, ...found })
     } else {
-      console.log(`찾지 못함 [${dt}ms]`)
+      console.log(`✗ ${t.label.padEnd(20)} 어느 sheet에도 없음`)
+      notFound.push(t.label)
     }
   }
+
+  console.log(
+    `\n총 ${results.length}/${TARGETS.length} 발견${notFound.length ? `, 미발견: ${notFound.join(", ")}` : ""}`
+  )
 }
 
 main().catch((err) => {

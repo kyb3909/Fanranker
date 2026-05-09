@@ -25,6 +25,8 @@ interface TiledProperty {
 
 const PLAYER_SPEED = 200
 const AVATAR_SCALE = 0.4
+const MINIMAP_SIZE = 180
+const MINIMAP_PAD = 12
 
 export class TestTilemapScene extends Phaser.Scene {
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
@@ -99,6 +101,7 @@ export class TestTilemapScene extends Phaser.Scene {
     })
 
     // 캐릭터
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
     this.player = this.physics.add.sprite(spawnX, spawnY, textureKeyIdle("south"))
     this.player.setScale(AVATAR_SCALE)
     this.player.setDepth(10)
@@ -111,6 +114,30 @@ export class TestTilemapScene extends Phaser.Scene {
     this.cameras.main.setZoom(1)
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
     this.cameras.main.setBackgroundColor("#0b1320")
+
+    // 미니맵 (우상단)
+    const viewW = this.scale.width
+    const minimapX = viewW - MINIMAP_SIZE - MINIMAP_PAD
+    const minimapY = MINIMAP_PAD
+    const minimapZoom = Math.min(
+      MINIMAP_SIZE / map.widthInPixels,
+      MINIMAP_SIZE / map.heightInPixels
+    )
+    const minimap = this.cameras.add(minimapX, minimapY, MINIMAP_SIZE, MINIMAP_SIZE)
+    minimap.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
+    minimap.setZoom(minimapZoom)
+    minimap.centerOn(map.widthInPixels / 2, map.heightInPixels / 2)
+    minimap.setBackgroundColor("#0b1320")
+
+    // 미니맵 border (HUD)
+    const border = this.add
+      .rectangle(minimapX, minimapY, MINIMAP_SIZE, MINIMAP_SIZE)
+      .setStrokeStyle(2, 0xffffff, 0.8)
+      .setFillStyle(0, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(1000)
+    minimap.ignore(border)
 
     // 입력
     this.wasd = this.input.keyboard!.addKeys("W,A,S,D") as Record<
