@@ -44,6 +44,10 @@ export class TestTilemapScene extends Phaser.Scene {
     this.load.tilemapTiledJSON("uk-auto", "/map/uk-auto.json")
     for (let i = 1; i <= 5; i++) {
       this.load.image(`tree-${i}`, `/map/decoration/tree-${i}.png`)
+      this.load.image(`tree-s-${i}`, `/map/decoration/tree-s-${i}.png`)
+    }
+    for (let i = 1; i <= 4; i++) {
+      this.load.image(`sprout-${i}`, `/map/decoration/sprout-${i}.png`)
     }
     preloadProAvatar(this)
   }
@@ -68,14 +72,14 @@ export class TestTilemapScene extends Phaser.Scene {
     let spawnY = map.heightInPixels / 2
     const objectsLayer = map.getObjectLayer("objects")
     objectsLayer?.objects.forEach((obj) => {
-      // Tree decoration
-      if (obj.type === "tree") {
+      // Tree / Sprout decoration
+      if (obj.type === "tree" || obj.type === "sprout") {
         const props = (obj.properties ?? []) as TiledProperty[]
         const asset = (props.find((p) => p.name === "asset")?.value as string) ?? "tree-1"
-        const w = obj.width ?? 64
-        const h = obj.height ?? 64
-        // origin (0, 1) — Tiled tile object 컨벤션. tree image 64×64 라 그대로
-        this.add.image((obj.x ?? 0) + w / 2, (obj.y ?? 0) + h / 2, asset).setDepth(5)
+        const w = obj.width ?? 16
+        const h = obj.height ?? 16
+        const depth = obj.type === "sprout" ? 4 : 5
+        this.add.image((obj.x ?? 0) + w / 2, (obj.y ?? 0) + h / 2, asset).setDepth(depth)
         return
       }
       if (obj.type !== "stadium_entrance" && obj.type !== "entrance") return

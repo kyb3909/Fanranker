@@ -53,16 +53,12 @@ interface Target {
   preferSheets?: string[]
 }
 
-// Grass_3 (흙) / Grass_4 (모래) 9-tile autotile 가장자리 1~9
-const TARGETS: Target[] = [
-  ...[3, 4].flatMap((v) =>
-    [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ({
-      label: `Grass_${v}_${i}`,
-      file: `${TERRAINS}/ME_Singles_Terrains_and_Fences_16x16_Grass_${v}_${i}.png`,
-      preferSheets: ["modern-exteriors"],
-    }))
-  ),
-]
+// Grass_Water 9-tile autotile (잔디↔강 transition)
+const TARGETS: Target[] = Array.from({ length: 9 }, (_, i) => ({
+  label: `Grass_Water_1_${i + 1}`,
+  file: `${TERRAINS}/ME_Singles_Terrains_and_Fences_16x16_Grass_Water_1_${i + 1}.png`,
+  preferSheets: ["modern-exteriors"],
+}))
 void CAMPING
 void GARDEN
 
@@ -74,7 +70,7 @@ async function loadRaw(path: string): Promise<RawImage> {
   return { data, width: info.width, height: info.height, channels: 4 }
 }
 
-const PIXEL_TOL = 4
+const PIXEL_TOL = 8
 
 function tileMatches(main: RawImage, target: RawImage, tx: number, ty: number): boolean {
   for (let py = 0; py < TILE; py++) {

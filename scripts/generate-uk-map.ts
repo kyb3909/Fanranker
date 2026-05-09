@@ -84,7 +84,17 @@ const DIRT = {
   plain: 8397,
 } as const
 
-type AutotileSet = typeof SEA
+type AutotileSet = {
+  topLeft: number
+  top: number
+  topRight: number
+  right: number
+  bottomRight: number
+  bottom: number
+  bottomLeft: number
+  left: number
+  plain: number
+}
 function autotile9(
   isOutside: (cx: number, cy: number) => boolean,
   set: AutotileSet,
@@ -122,6 +132,14 @@ function autotileDirtCell(dirtGrid: boolean[][], x: number, y: number): number {
   const isGrass = (cx: number, cy: number) =>
     cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H && !dirtGrid[cy][cx]
   return autotile9(isGrass, DIRT, x, y)
+}
+
+function autotileRiverCell(riverGrid: boolean[][], x: number, y: number): number {
+  // 강 cell 입장에서 "외부" = 잔디 (= river가 아닌 곳).
+  // Deep_Water set 재사용 (같은 물 색).
+  const isGrass = (cx: number, cy: number) =>
+    cx >= 0 && cx < GRID_W && cy >= 0 && cy < GRID_H && !riverGrid[cy][cx]
+  return autotile9(isGrass, SEA, x, y)
 }
 
 // 영국 주요 강 — Natural Earth 데이터에 부족해서 수동 hardcode (lon, lat).
@@ -329,9 +347,34 @@ function printGridAscii(grid: boolean[][]) {
   console.log(`\n육지 셀: ${grid.flat().filter(Boolean).length} / ${grid.length * grid[0].length}`)
 }
 
+// ---------- 잔디 sprinkle decoration (작은 풀) ----------
+const SPROUT_VARIANTS = 4
+const SPROUT_DENSITY = 0.08 // 잔디 cell 8% 에 작은 풀
+
+function placeSprouts(
+  grid: boolean[][],
+  riverGrid: boolean[][],
+  dirtGrid: boolean[][],
+  treeOccupied: boolean[][]
+): Array<{ gx: number; gy: number; variant: number }> {
+  const rng = makeRng(2028)
+  const sprouts: Array<{ gx: number; gy: number; variant: number }> = []
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (!grid[gy][gx]) continue
+      if (riverGrid[gy][gx]) continue
+      if (dirtGrid[gy][gx]) continue
+      if (treeOccupied[gy][gx]) continue
+      if (rng() > SPROUT_DENSITY) continue
+      sprouts.push({ gx, gy, variant: 1 + Math.floor(rng() * SPROUT_VARIANTS) })
+    }
+  }
+  return sprouts
+}
+
 // ---------- 흙 영역 마스크 (영국 본섬 일부) ----------
-const DIRT_NOISE_SCALE = 0.08 // 작을수록 큰 cluster
-const DIRT_NOISE_THRESHOLD = 0.65 // 높을수록 흙 영역 작음
+const DIRT_NOISE_SCALE = 0.1 // 더 작은 cluster
+const DIRT_NOISE_THRESHOLD = 0.74 // 흙 영역 줄임
 
 function buildDirtGrid(landGrid: boolean[][], riverGrid: boolean[][]): boolean[][] {
   const dirtGrid: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
@@ -347,16 +390,16 @@ function buildDirtGrid(landGrid: boolean[][], riverGrid: boolean[][]): boolean[]
 }
 
 // ---------- Tree decoration placement (forest cluster via value noise) ----------
-const TREE_VARIANTS = 3 // tree-1~3 (초록만)
-const TREE_TILE_W = 4 // 64×64 = 4×4 cell
-const TREE_TILE_H = 4
-const TREE_OCCUPY_W = 2 // 나무들끼리 50% 겹침 → 빽빽한 숲 느낌
-const TREE_OCCUPY_H = 2
-const FOREST_NOISE_SCALE = 0.05
-const FOREST_DENSITY_HIGH = 0.58 // 숲 영역
-const FOREST_DENSITY_LOW = 0.45 // 0.45~0.58 → 가장자리 sparse
-const FOREST_PROB_HIGH = 0.85 // 숲 cell 에 나무 둘 확률 (빽빽)
-const FOREST_PROB_LOW = 0.06 // 가장자리
+// 작은 나무 (32×32, tree-s-1~5) + 큰 나무 (64×64, tree-1~3) mix.
+// 빽빽한 숲 = 작은 나무 위주.
+const TREE_LARGE_VARIANTS = 3 // tree-1~3 (큰 나무)
+const TREE_SMALL_VARIANTS = 5 // tree-s-1~5 (작은 나무)
+const TREE_LARGE_W = 4 // 64×64
+const TREE_SMALL_W = 2 // 32×32
+const FOREST_NOISE_SCALE = 0.06
+const FOREST_DENSITY_HIGH = 0.55 // 숲 영역 (binary 마스크)
+const FOREST_PROB_SMALL = 0.92 // 숲 cell 에 작은 나무 둘 확률 (빽빽)
+const FOREST_PROB_LARGE_BONUS = 0.08 // 작은 나무 자리에 큰 나무 sparse 추가
 
 function hash2D(x: number, y: number, seed: number): number {
   let h = (x * 374761393) ^ (y * 668265263) ^ seed
@@ -382,76 +425,81 @@ function valueNoise(x: number, y: number, seed: number): number {
   return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v
 }
 
+type TreePlacement = {
+  gx: number
+  gy: number
+  size: "small" | "large"
+  variant: number
+}
+
 function placeTrees(
   grid: boolean[][],
   riverGrid: boolean[][],
+  dirtGrid: boolean[][],
   stadiumPositions: Array<{ gx: number; gy: number }>
-): Array<{ gx: number; gy: number; variant: number }> {
+): { trees: TreePlacement[]; occupied: boolean[][] } {
   const rng = makeRng(2027)
-  const trees: Array<{ gx: number; gy: number; variant: number }> = []
+  const trees: TreePlacement[] = []
   const occupied: boolean[][] = Array.from({ length: GRID_H }, () => new Array(GRID_W).fill(false))
 
   const isStadiumNearby = (gx: number, gy: number) =>
-    stadiumPositions.some((s) => Math.abs(gx - s.gx) < 5 && Math.abs(gy - s.gy) < 5)
+    stadiumPositions.some((s) => Math.abs(gx - s.gx) < 4 && Math.abs(gy - s.gy) < 4)
 
-  function fitsHere(gx: number, gy: number): boolean {
-    if (gx < 0 || gx + TREE_TILE_W > GRID_W) return false
-    if (gy < 0 || gy + TREE_TILE_H > GRID_H) return false
-    // tree 4×4 footprint 내 land + 강·바다 X 체크
-    for (let dy = 0; dy < TREE_TILE_H; dy++) {
-      for (let dx = 0; dx < TREE_TILE_W; dx++) {
+  function fits(gx: number, gy: number, sz: number): boolean {
+    if (gx < 0 || gx + sz > GRID_W) return false
+    if (gy < 0 || gy + sz > GRID_H) return false
+    for (let dy = 0; dy < sz; dy++) {
+      for (let dx = 0; dx < sz; dx++) {
         const cx = gx + dx
         const cy = gy + dy
         if (!grid[cy][cx]) return false
         if (riverGrid[cy][cx]) return false
+        if (dirtGrid[cy][cx]) return false // 흙 영역엔 나무 X
+        if (occupied[cy][cx]) return false
       }
     }
-    // 작은 occupy core (2×2 가운데) 만 검사 → 50% overlap 허용
-    const ox = gx + (TREE_TILE_W - TREE_OCCUPY_W) / 2
-    const oy = gy + (TREE_TILE_H - TREE_OCCUPY_H) / 2
-    for (let dy = 0; dy < TREE_OCCUPY_H; dy++) {
-      for (let dx = 0; dx < TREE_OCCUPY_W; dx++) {
-        if (occupied[oy + dy][ox + dx]) return false
-      }
-    }
-    if (isStadiumNearby(gx + TREE_TILE_W / 2, gy + TREE_TILE_H / 2)) return false
+    if (isStadiumNearby(gx + sz / 2, gy + sz / 2)) return false
     return true
   }
 
-  // 영국 본섬 land cell 모두 순회. noise 값으로 forest density 결정.
-  // 순서 random하게 shuffle 해야 cluster 자연.
-  const candidates: Array<[number, number]> = []
-  for (let gy = 0; gy < GRID_H; gy++) {
-    for (let gx = 0; gx < GRID_W; gx++) {
-      if (grid[gy][gx]) candidates.push([gx, gy])
-    }
-  }
-  // shuffle
-  for (let i = candidates.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[candidates[i], candidates[j]] = [candidates[j], candidates[i]]
-  }
-
-  for (const [gx, gy] of candidates) {
-    const noise = valueNoise(gx * FOREST_NOISE_SCALE, gy * FOREST_NOISE_SCALE, 7777)
-    let prob = 0
-    if (noise > FOREST_DENSITY_HIGH) prob = FOREST_PROB_HIGH
-    else if (noise > FOREST_DENSITY_LOW) prob = FOREST_PROB_LOW
-    if (prob === 0) continue
-    if (rng() > prob) continue
-    if (!fitsHere(gx, gy)) continue
-    // mark occupied (작은 core 만 — 다른 나무 sprite 살짝 겹침 OK)
-    const ox = gx + (TREE_TILE_W - TREE_OCCUPY_W) / 2
-    const oy = gy + (TREE_TILE_H - TREE_OCCUPY_H) / 2
-    for (let dy = 0; dy < TREE_OCCUPY_H; dy++) {
-      for (let dx = 0; dx < TREE_OCCUPY_W; dx++) {
-        occupied[oy + dy][ox + dx] = true
+  function markOccupied(gx: number, gy: number, sz: number) {
+    for (let dy = 0; dy < sz; dy++) {
+      for (let dx = 0; dx < sz; dx++) {
+        occupied[gy + dy][gx + dx] = true
       }
     }
-    const variant = 1 + Math.floor(rng() * TREE_VARIANTS)
-    trees.push({ gx, gy, variant })
   }
-  return trees
+
+  // 1차: 작은 나무 빽빽이 (2×2 cell footprint). 모든 land cell scan.
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (!grid[gy][gx]) continue
+      const noise = valueNoise(gx * FOREST_NOISE_SCALE, gy * FOREST_NOISE_SCALE, 7777)
+      if (noise <= FOREST_DENSITY_HIGH) continue
+      if (rng() > FOREST_PROB_SMALL) continue
+      // 작은 나무 (2×2)
+      if (!fits(gx, gy, TREE_SMALL_W)) continue
+      markOccupied(gx, gy, TREE_SMALL_W)
+      const variant = 1 + Math.floor(rng() * TREE_SMALL_VARIANTS)
+      trees.push({ gx, gy, size: "small", variant })
+    }
+  }
+
+  // 2차: 큰 나무 sparse (4×4 footprint). occupied 안 된 forest cell 에서.
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      if (!grid[gy][gx]) continue
+      const noise = valueNoise(gx * FOREST_NOISE_SCALE, gy * FOREST_NOISE_SCALE, 7777)
+      if (noise <= FOREST_DENSITY_HIGH) continue
+      if (rng() > FOREST_PROB_LARGE_BONUS) continue
+      if (!fits(gx, gy, TREE_LARGE_W)) continue
+      markOccupied(gx, gy, TREE_LARGE_W)
+      const variant = 1 + Math.floor(rng() * TREE_LARGE_VARIANTS)
+      trees.push({ gx, gy, size: "large", variant })
+    }
+  }
+
+  return { trees, occupied }
 }
 
 // ---------- 강 래스터화 (Bresenham) ----------
@@ -528,7 +576,7 @@ function buildRiverGrid(
       const p = projectToGrid(lon, lat, bbox)
       return [p.gx, p.gy] as [number, number]
     })
-    const smoothed = catmullRomSubsample(ctrlGrid, 16)
+    const smoothed = catmullRomSubsample(ctrlGrid, 32)
     const linePoints: Array<[number, number]> = []
     for (let i = 0; i < smoothed.length - 1; i++) {
       const [x1, y1] = smoothed[i]
@@ -643,7 +691,8 @@ function buildTiledMap(
     px: number
     py: number
   }>,
-  trees: Array<{ gx: number; gy: number; variant: number }>
+  trees: TreePlacement[],
+  sprouts: Array<{ gx: number; gy: number; variant: number }>
 ): TiledMap {
   // background — 육지: 강=river, 흙=dirt autotile, 잔디 / 바다=sea autotile
   const grassRng = makeRng(2026)
@@ -651,7 +700,7 @@ function buildTiledMap(
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
       if (grid[y][x]) {
-        if (riverGrid[y][x]) backgroundData.push(TILE_RIVER)
+        if (riverGrid[y][x]) backgroundData.push(autotileRiverCell(riverGrid, x, y))
         else if (dirtGrid[y][x]) backgroundData.push(autotileDirtCell(dirtGrid, x, y))
         else backgroundData.push(GRASS_TILES[Math.floor(grassRng() * GRASS_TILES.length)])
       } else {
@@ -681,22 +730,41 @@ function buildTiledMap(
     y: py - ENTRANCE_SIZE / 2,
   }))
 
-  const TREE_PX = TILE_SIZE * TREE_TILE_W // 64
-  const treeObjects: TiledObject[] = trees.map((t, idx) => ({
-    height: TREE_PX,
-    id: stadiumObjects.length + idx + 1,
-    name: `tree-${t.variant}`,
+  const treeObjects: TiledObject[] = trees.map((t, idx) => {
+    const sz = t.size === "small" ? TREE_SMALL_W : TREE_LARGE_W
+    const px = sz * TILE_SIZE
+    const asset = t.size === "small" ? `tree-s-${t.variant}` : `tree-${t.variant}`
+    return {
+      height: px,
+      id: stadiumObjects.length + idx + 1,
+      name: asset,
+      opacity: 1,
+      properties: [{ name: "asset", type: "string", value: asset }],
+      rotation: 0,
+      type: "tree",
+      visible: true,
+      width: px,
+      x: t.gx * TILE_SIZE,
+      y: t.gy * TILE_SIZE,
+    }
+  })
+
+  const baseId = stadiumObjects.length + treeObjects.length
+  const sproutObjects: TiledObject[] = sprouts.map((s, idx) => ({
+    height: TILE_SIZE,
+    id: baseId + idx + 1,
+    name: `sprout-${s.variant}`,
     opacity: 1,
-    properties: [{ name: "asset", type: "string", value: `tree-${t.variant}` }],
+    properties: [{ name: "asset", type: "string", value: `sprout-${s.variant}` }],
     rotation: 0,
-    type: "tree",
+    type: "sprout",
     visible: true,
-    width: TREE_PX,
-    x: t.gx * TILE_SIZE,
-    y: t.gy * TILE_SIZE,
+    width: TILE_SIZE,
+    x: s.gx * TILE_SIZE,
+    y: s.gy * TILE_SIZE,
   }))
 
-  const objects = [...stadiumObjects, ...treeObjects]
+  const objects = [...stadiumObjects, ...treeObjects, ...sproutObjects]
 
   return {
     compressionlevel: -1,
@@ -832,12 +900,18 @@ function main() {
   const dirtCellCount = dirtGrid.flat().filter(Boolean).length
   console.log(`흙 cell: ${dirtCellCount} (Grass_3 9-tile autotile)`)
 
-  // Tree decoration placement
-  const trees = placeTrees(grid, riverGrid, stadiumCells)
-  console.log(`나무: ${trees.length} 개 (${TREE_VARIANTS} 변종)`)
+  // Tree decoration placement (작은 + 큰 나무 mix)
+  const { trees, occupied: treeOccupied } = placeTrees(grid, riverGrid, dirtGrid, stadiumCells)
+  const smallCount = trees.filter((t) => t.size === "small").length
+  const largeCount = trees.length - smallCount
+  console.log(`나무: ${trees.length} 개 (작은 ${smallCount} / 큰 ${largeCount})`)
+
+  // 잔디 위 작은 풀 sprinkle
+  const sprouts = placeSprouts(grid, riverGrid, dirtGrid, treeOccupied)
+  console.log(`작은 풀: ${sprouts.length} 개`)
 
   // .tmj 출력
-  const tmjMap = buildTiledMap(grid, riverGrid, dirtGrid, stadiumCells, trees)
+  const tmjMap = buildTiledMap(grid, riverGrid, dirtGrid, stadiumCells, trees, sprouts)
   writeFileSync(resolve(OUTPUT_JSON), JSON.stringify(tmjMap, null, 1), "utf-8")
   console.log(`\n→ ${OUTPUT_JSON} 작성 완료 (${GRID_W}×${GRID_H}, ${STADIUMS.length} 경기장)`)
 }
