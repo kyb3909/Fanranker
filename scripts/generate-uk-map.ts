@@ -335,10 +335,51 @@ function buildCoastline(landGrid: boolean[][]): WangSprite[] {
   for (let gy = 0; gy < GRID_H; gy++) {
     for (let gx = 0; gx < GRID_W; gx++) {
       const mask = wangCornerMask(landGrid, gx, gy)
-      // plain cells (전부 같음) 은 sprite skip — background tile 그대로
       if (mask === 0b1111 || mask === 0b0000) continue
-      // unavailable mask는 가장 가까운 fallback (현재는 그대로 — 일부 tile missing)
       if (!WANG_AVAILABLE.has(mask)) continue
+      out.push({ gx, gy, mask })
+    }
+  }
+  return out
+}
+
+// ts-grass-river Wang: upper=잔디 / lower=강. cell이 강이면 mask=0000, 잔디=1111.
+// 모든 cell 에 wang sprite (transition 자연 표현).
+function buildRiverWang(landGrid: boolean[][], riverGrid: boolean[][]): WangSprite[] {
+  const out: WangSprite[] = []
+  // type 0 = river, type 1 = grass. corner = 4 cells (NW/NE/SE/SW) majority.
+  // 단순화: corner = cell 자체 type. 즉 cell이 river이면 mask 0000, 잔디면 1111.
+  // transition은 별도 — diagonal 4 cell 검사 시 mixed mask.
+  // 표준 corner-based wang: cell의 NW corner = (gx-1,gy-1) cell type, NE=(gx+1,gy-1), SE=(gx+1,gy+1), SW=(gx-1,gy+1)
+  const get = (cx: number, cy: number): number => {
+    if (cx < 0 || cx >= GRID_W || cy < 0 || cy >= GRID_H) return 1 // bbox 밖 = 잔디 (영국 외각은 ocean-grass 처리)
+    if (riverGrid[cy][cx]) return 0
+    if (!landGrid[cy][cx]) return 1 // 바다는 잔디로 취급 (river 와 별개)
+    return 1 // 잔디
+  }
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      // 강 cell 자체와 인접 cell 만 처리
+      const isRiver = riverGrid[gy][gx]
+      const adjacent =
+        isRiver ||
+        (landGrid[gy][gx] &&
+          (get(gx - 1, gy - 1) === 0 ||
+            get(gx + 1, gy - 1) === 0 ||
+            get(gx + 1, gy + 1) === 0 ||
+            get(gx - 1, gy + 1) === 0 ||
+            (gx > 0 && riverGrid[gy][gx - 1]) ||
+            (gx < GRID_W - 1 && riverGrid[gy][gx + 1]) ||
+            (gy > 0 && riverGrid[gy - 1][gx]) ||
+            (gy < GRID_H - 1 && riverGrid[gy + 1][gx])))
+      if (!adjacent) continue
+      const nw = get(gx - 1, gy - 1)
+      const ne = get(gx + 1, gy - 1)
+      const se = get(gx + 1, gy + 1)
+      const sw = get(gx - 1, gy + 1)
+      // cell 자체가 river면 모든 corner 강한 lower 압력 — 단순화: cell이 river이면 mask 0000
+      // 잔디 cell with river adjacent → corner mask 자체 사용
+      const mask = isRiver ? 0b0000 : (nw << 3) | (ne << 2) | (se << 1) | sw
       out.push({ gx, gy, mask })
     }
   }
@@ -766,7 +807,8 @@ function buildTiledMap(
   trees: TreePlacement[],
   sprouts: Array<{ gx: number; gy: number; variant: number }>,
   waterEdges: Array<{ gx: number; gy: number; variant: number }>,
-  coastline: WangSprite[]
+  coastline: WangSprite[],
+  riverWang: WangSprite[]
 ): TiledMap {
   // background — 육지: 강=river, 흙=dirt autotile, 잔디 / 바다=sea autotile
   const grassRng = makeRng(2026)
@@ -872,12 +914,31 @@ function buildTiledMap(
     }
   })
 
+  const baseId4 = baseId3 + coastlineObjects.length
+  const riverWangObjects: TiledObject[] = riverWang.map((c, idx) => {
+    const maskBin = c.mask.toString(2).padStart(4, "0")
+    return {
+      height: TILE_SIZE,
+      id: baseId4 + idx + 1,
+      name: `r-${maskBin}`,
+      opacity: 1,
+      properties: [{ name: "asset", type: "string", value: `r-${maskBin}` }],
+      rotation: 0,
+      type: "wang-river",
+      visible: true,
+      width: TILE_SIZE,
+      x: c.gx * TILE_SIZE,
+      y: c.gy * TILE_SIZE,
+    }
+  })
+
   const objects = [
     ...stadiumObjects,
     ...treeObjects,
     ...sproutObjects,
     ...waterEdgeObjects,
     ...coastlineObjects,
+    ...riverWangObjects,
   ]
 
   return {
@@ -1042,6 +1103,10 @@ function main() {
   // 해안선 wang autotile (PixelLab tileset-ocean-grass)
   const coastline = buildCoastline(grid)
   console.log(`해안선 wang: ${coastline.length}`)
+
+  // 강 wang autotile (PixelLab ts-grass-river)
+  const riverWang = buildRiverWang(grid, riverGrid)
+  console.log(`강 wang: ${riverWang.length}`)
   console.log(`강 가장자리: ${waterEdges.length} 개`)
 
   // .tmj 출력
@@ -1053,7 +1118,8 @@ function main() {
     trees,
     sprouts,
     waterEdges,
-    coastline
+    coastline,
+    riverWang
   )
   writeFileSync(resolve(OUTPUT_JSON), JSON.stringify(tmjMap, null, 1), "utf-8")
   console.log(`\n→ ${OUTPUT_JSON} 작성 완료 (${GRID_W}×${GRID_H}, ${STADIUMS.length} 경기장)`)
