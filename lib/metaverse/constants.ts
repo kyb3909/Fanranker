@@ -8,9 +8,9 @@
  */
 
 export const METAVERSE = {
-  // Phaser 월드 사이즈 — england-map.webp (1600×1066) 와 일치 (UK 픽셀아트 지도)
-  WORLD_WIDTH: 1600,
-  WORLD_HEIGHT: 1066,
+  // Phaser 월드 사이즈 — eng.png (1122×1402) 와 일치 (영국 본섬 픽셀아트 지도, 사용자 신규 자산)
+  WORLD_WIDTH: 1122,
+  WORLD_HEIGHT: 1402,
 
   // 타일
   TILE_SIZE: 16,

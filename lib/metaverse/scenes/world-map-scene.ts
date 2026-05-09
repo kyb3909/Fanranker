@@ -108,7 +108,7 @@ export class WorldMapScene extends Phaser.Scene {
   preload() {
     preloadProAvatar(this)
     if (!this.textures.exists("england-map")) {
-      this.load.image("england-map", "/map/regions/england-map.webp")
+      this.load.image("england-map", "/map/regions/eng.png")
     }
     if (!this.textures.exists("wembley-hex")) {
       this.load.image("wembley-hex", "/map/objects/hex-stadium-wembley.webp")
@@ -124,7 +124,7 @@ export class WorldMapScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLOR_BG)
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
 
-    // 영국 픽셀아트 지도 — 1600×1066 캔버스 가득 채움
+    // 영국 픽셀아트 지도 — 1122×1402 (사용자 신규 자산, 본섬만)
     this.add.image(0, 0, "england-map").setOrigin(0, 0).setDepth(0)
 
     // 광장 마커 + 스타디움 입구 — 실제 영국 지리 기준 percent 좌표
