@@ -71,9 +71,11 @@ describe("BettingMatchCard", () => {
   })
 
   it("renders 2-column grid for basketball (no draw)", () => {
+    // 신 매핑(2026-05) 이후 컴포넌트는 sport 가 아닌 draw_odds 존재 여부로 3-way 판별.
+    // 농구 실데이터는 draw_odds=null 이므로 테스트 게임에도 명시적으로 null 지정.
     const basketMatch = makeGroupedMatch({
       sport: "농구",
-      games: [makeGame({ sport: "농구", game_type: "승패" })],
+      games: [makeGame({ sport: "농구", game_type: "승패", draw_odds: null })],
     })
     render(<BettingMatchCard {...defaultProps} groupedMatch={basketMatch} />)
     // No draw button for basketball
