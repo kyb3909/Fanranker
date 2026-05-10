@@ -32,9 +32,12 @@ import { ChatBubble } from "./chat-bubble"
 // Gandalf 4방향 X · 좌우 facing 만 사용 (sheet 기준).
 type Facing = "east" | "west"
 
-// Player hitbox — sprite 80×64 보다 좁게 잡아 충돌·도어 자연스럽게.
-const PLAYER_BODY_W = 28
-const PLAYER_BODY_H = 56
+/** 캐릭터 시각 + hitbox 공통 스케일. 1 = 원본 80×64, 2 = 두 배 (사용자 요청). */
+const AVATAR_VISUAL_SCALE = 2
+
+// Player hitbox — sprite 80×64 보다 좁게 잡아 충돌·도어 자연스럽게. AVATAR_VISUAL_SCALE 적용.
+const PLAYER_BODY_W = 28 * AVATAR_VISUAL_SCALE
+const PLAYER_BODY_H = 56 * AVATAR_VISUAL_SCALE
 /** Container 위치(=발끝) 기준으로 body 좌상단 offset. */
 const PLAYER_BODY_OFFSET_X = -PLAYER_BODY_W / 2
 const PLAYER_BODY_OFFSET_Y = -PLAYER_BODY_H
@@ -182,9 +185,9 @@ export class IndoorMapScene extends Phaser.Scene {
     // Gandalf body+hair Container 생성. Container 자체에 arcade physics body 부여.
     const spawnY = floorTopY // origin (0.5, 1.0) → container.y == 발끝 Y
     this.avatar = createGandalfAvatar(this, this.spawnX, spawnY)
-    // 좌우 2배 시각 (사용자 요청). 세로는 1배 유지. hitbox 는 별개 — physics body 그대로.
-    this.avatar.body.setScale(2, 1)
-    this.avatar.hair.setScale(2, 1)
+    // 가로·세로 2배 시각 (사용자 요청). hitbox 도 같은 비율 (PLAYER_BODY_W/H 에 SCALE 적용됨).
+    this.avatar.body.setScale(AVATAR_VISUAL_SCALE)
+    this.avatar.hair.setScale(AVATAR_VISUAL_SCALE)
     this.player = this.avatar.container
     this.player.setDepth(10)
     this.physics.world.enable(this.player)
