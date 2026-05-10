@@ -34,21 +34,46 @@ export function HighburyStage() {
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
+  /** Supabase profiles.nickname — Clerk username 보다 우선 (사이트 실제 닉네임). */
+  const [profileNickname, setProfileNickname] = useState<string | null>(null)
+
+  // 사이트 닉네임 로드 — /api/profile/me 의 nickname 우선 사용.
+  useEffect(() => {
+    if (!isSignedIn) return
+    let cancelled = false
+    fetch("/api/profile/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return
+        const nick = data?.profile?.nickname || data?.nickname
+        if (typeof nick === "string" && nick.trim()) setProfileNickname(nick)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [isSignedIn])
 
   // 비로그인 차단 — 사이트는 /sign-in 라우트가 아니라 GNB inline SignInButton 사용.
   // 비로그인 시 메시지만 표시 + 홈 버튼.
   void router
 
-  // Clerk identity — userId/닉네임은 Clerk 사용자 정보 기반.
+  // identity — Supabase profiles.nickname 우선 → Clerk username/firstName fallback.
+  // profile fetch 가 끝날 때까지 identity null 유지 (Phaser 부팅 지연) — 잘못된 fallback 닉네임으로 시작 방지.
   const identity = useMemo<MetaversePlayerIdentity | null>(() => {
     if (!user) return null
-    const nickname = user.username || user.firstName || user.fullName || `User-${user.id.slice(-4)}`
+    if (!profileNickname) {
+      // profile fetch 진행 중 — Clerk username 이라도 있으면 사용 (없으면 null 로 잠시 대기)
+      const fallback = user.username || user.firstName || user.fullName
+      if (!fallback) return null
+      return { userId: user.id, nickname: fallback, avatarKey: ARSENAL_HOME_AVATAR_KEY }
+    }
     return {
       userId: user.id,
-      nickname,
+      nickname: profileNickname,
       avatarKey: ARSENAL_HOME_AVATAR_KEY,
     }
-  }, [user])
+  }, [user, profileNickname])
 
   // user:report 이벤트 listen — UserActionPopover 의 신고 버튼 → ReportUserDialog open
   useEffect(() => {
