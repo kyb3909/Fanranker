@@ -27,7 +27,12 @@ import {
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
+import type {
+  IndoorPresenceChannel,
+  IndoorActionState,
+} from "@/lib/metaverse/realtime/indoor-presence-channel"
 import { ChatBubble } from "./chat-bubble"
+import { IndoorRemoteAvatar } from "./indoor-remote-avatar"
 
 // Gandalf 4방향 X · 좌우 facing 만 사용 (sheet 기준).
 type Facing = "east" | "west"
@@ -79,6 +84,8 @@ export interface IndoorMapInit {
   identity: MetaversePlayerIdentity
   mapId: MapId
   spawnX?: number
+  /** 옵셔널 — Realtime presence 채널. null/undefined 면 싱글플레이 mode. */
+  channel?: IndoorPresenceChannel | null
 }
 
 interface DoorHandle {
@@ -130,6 +137,12 @@ export class IndoorMapScene extends Phaser.Scene {
   /** 페이드 전환 중에는 입력·도어 트리거 무시 — 중복 트리거 방지 */
   private isTransitioning = false
 
+  /** 멀티플레이 presence 채널 (없으면 싱글). */
+  private channel: IndoorPresenceChannel | null = null
+  /** 원격 유저 아바타 Map — userId 키 */
+  private remoteAvatars: Map<string, IndoorRemoteAvatar> = new Map()
+  private unsubRemote: (() => void) | null = null
+
   constructor() {
     super(INDOOR_MAP_SCENE_KEY)
   }
@@ -138,6 +151,7 @@ export class IndoorMapScene extends Phaser.Scene {
     this.identity = data.identity
     this.mapConfig = MAPS[data.mapId]
     this.spawnX = data.spawnX ?? this.mapConfig.defaultSpawnX
+    this.channel = data.channel ?? null
     // restart() 후 상태 초기화
     this.isTransitioning = false
     this.facing = "east"
@@ -151,6 +165,11 @@ export class IndoorMapScene extends Phaser.Scene {
     this.pendingBallY = null
     this.kickLockY = null
     this.ball = null
+    // 원격 아바타는 매 restart 마다 새로 만든다 (transitionToMap 시 다음 씬에서 재구성)
+    for (const avatar of this.remoteAvatars.values()) avatar.destroy()
+    this.remoteAvatars.clear()
+    this.unsubRemote?.()
+    this.unsubRemote = null
   }
 
   preload() {
@@ -200,6 +219,12 @@ export class IndoorMapScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.platforms)
     this.avatarVisualH = PLAYER_BODY_H * AVATAR_SCALE
     this.avatar.playAnim("idle")
+
+    // 멀티플레이 presence — 채널 있으면 초기 위치 publish + 원격 유저 sync 시작
+    if (this.channel) {
+      this.channel.setInitialPosition(this.player.x, this.player.y)
+      this.unsubRemote = this.channel.onRemoteChange((remote) => this.applyRemoteState(remote))
+    }
 
     // 킥(=attack) anim 완료 → 공 발사 + Y 락 한 번 더 강제 후 해제 + 중력 복원
     this.avatar.body.on(
@@ -306,6 +331,10 @@ export class IndoorMapScene extends Phaser.Scene {
       this.unsubChatClose = null
       this.chatBubble?.destroy()
       this.chatBubble = null
+      this.unsubRemote?.()
+      this.unsubRemote = null
+      for (const avatar of this.remoteAvatars.values()) avatar.destroy()
+      this.remoteAvatars.clear()
     })
 
     // 도어 zones + prompts
@@ -504,6 +533,47 @@ export class IndoorMapScene extends Phaser.Scene {
     }
 
     void insideAnyDoor
+
+    // 멀티플레이 — 매 프레임 presence publish (200ms throttle 내부) + 원격 lerp
+    if (this.channel) {
+      const cur = this.avatar.getCurrentState() ?? "idle"
+      this.channel.publishPresence(this.player.x, this.player.y, this.facing, cur)
+    }
+    for (const avatar of this.remoteAvatars.values()) {
+      avatar.update(deltaMs)
+    }
+  }
+
+  // ============================================================
+  // 멀티플레이 presence sync helpers
+  // ============================================================
+
+  private applyRemoteState(
+    remote: Map<string, import("../realtime/indoor-presence-channel").IndoorPresence>
+  ) {
+    // 들어옴
+    for (const [userId, state] of remote.entries()) {
+      let avatar = this.remoteAvatars.get(userId)
+      if (!avatar) {
+        avatar = new IndoorRemoteAvatar(this, state)
+        this.remoteAvatars.set(userId, avatar)
+      } else {
+        avatar.applyState(state)
+      }
+    }
+    // 나감
+    for (const userId of [...this.remoteAvatars.keys()]) {
+      if (!remote.has(userId)) {
+        const avatar = this.remoteAvatars.get(userId)
+        avatar?.destroy()
+        this.remoteAvatars.delete(userId)
+      }
+    }
+  }
+
+  // 사용 안 함 — type re-export 회피용 stub. 컴파일러가 import 사용 인식하도록.
+  private _unusedActionStateHint(): IndoorActionState {
+    return "idle"
   }
 
   // ============================================================

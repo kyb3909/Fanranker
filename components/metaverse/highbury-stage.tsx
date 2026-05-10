@@ -24,6 +24,8 @@ import { UserActionPopover } from "./user-action-popover"
 import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
+import { IndoorPresenceChannel } from "@/lib/metaverse/realtime/indoor-presence-channel"
+import { METAVERSE } from "@/lib/metaverse/constants"
 import { createAnonClient } from "@/lib/supabase/client"
 
 export interface HighburyStageProps {
@@ -159,14 +161,35 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
   useEffect(() => {
     if (!parentRef.current || !identity) return
     let cancelled = false
+    let presenceChannel: IndoorPresenceChannel | null = null
     ;(async () => {
       try {
+        // presence 채널 — 다른 사용자 위치/액션 sync. 실패해도 싱글플레이로 부팅.
+        const supabase = createAnonClient()
+        const newPresence = new IndoorPresenceChannel(
+          supabase,
+          identity,
+          METAVERSE.CHANNEL_INDOOR_HIGHBURY
+        )
+        try {
+          await newPresence.connect()
+          presenceChannel = newPresence
+        } catch (err) {
+          console.warn("[highbury] presence connect failed — 싱글플레이 mode", err)
+          presenceChannel = null
+        }
+        if (cancelled) {
+          void presenceChannel?.disconnect()
+          return
+        }
+
         const { bootIndoorMap } = await import("@/lib/metaverse/boot")
         if (cancelled || !parentRef.current) return
         gameRef.current = bootIndoorMap({
           parent: parentRef.current,
           identity,
           mapId: "highbury",
+          channel: presenceChannel,
         })
       } catch (err) {
         console.error("[highbury] boot failed", err)
@@ -177,6 +200,7 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
       cancelled = true
       gameRef.current?.destroy(true)
       gameRef.current = null
+      void presenceChannel?.disconnect()
     }
   }, [identity])
 

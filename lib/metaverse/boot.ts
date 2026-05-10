@@ -124,9 +124,16 @@ export interface IndoorMapBootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
   mapId: MapId
+  /** 옵셔널 — 멀티 presence 채널. 없으면 싱글플레이. */
+  channel?: import("./realtime/indoor-presence-channel").IndoorPresenceChannel | null
 }
 
-export function bootIndoorMap({ parent, identity, mapId }: IndoorMapBootOptions): Phaser.Game {
+export function bootIndoorMap({
+  parent,
+  identity,
+  mapId,
+  channel = null,
+}: IndoorMapBootOptions): Phaser.Game {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -149,7 +156,7 @@ export function bootIndoorMap({ parent, identity, mapId }: IndoorMapBootOptions)
     scene: [IndoorMapScene],
     dom: { createContainer: false },
   })
-  game.scene.start(INDOOR_MAP_SCENE_KEY, { identity, mapId })
+  game.scene.start(INDOOR_MAP_SCENE_KEY, { identity, mapId, channel })
   return game
 }
 

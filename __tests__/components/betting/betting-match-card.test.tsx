@@ -75,7 +75,7 @@ describe("BettingMatchCard", () => {
     // 농구 실데이터는 draw_odds=null 이므로 테스트 게임에도 명시적으로 null 지정.
     const basketMatch = makeGroupedMatch({
       sport: "농구",
-      games: [makeGame({ sport: "농구", game_type: "승패", draw_odds: null })],
+      games: [makeGame({ sport: "농구", game_type: "승패", draw_odds: undefined })],
     })
     render(<BettingMatchCard {...defaultProps} groupedMatch={basketMatch} />)
     // No draw button for basketball
