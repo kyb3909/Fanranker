@@ -26,7 +26,12 @@ import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 import { createAnonClient } from "@/lib/supabase/client"
 
-export function HighburyStage() {
+export interface HighburyStageProps {
+  /** true 면 비로그인 게스트도 진입 가능 (테스트용 — /metaverse/gandalf 등). 기본 false. */
+  allowGuest?: boolean
+}
+
+export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
   const { isSignedIn, isLoaded } = useAuth()
   const { user } = useUser()
   const router = useRouter()
@@ -58,12 +63,28 @@ export function HighburyStage() {
   // 비로그인 시 메시지만 표시 + 홈 버튼.
   void router
 
+  // 게스트 모드용 안정적 userId — useMemo 첫 호출 시 1번 생성 후 유지.
+  const guestIdentityRef = useRef<MetaversePlayerIdentity | null>(null)
+  if (allowGuest && !guestIdentityRef.current && typeof window !== "undefined") {
+    const rand = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0")
+    guestIdentityRef.current = {
+      userId: `guest-gandalf-${rand}`,
+      nickname: `방문객-${rand}`,
+      avatarKey: ARSENAL_HOME_AVATAR_KEY,
+    }
+  }
+
   // identity — Supabase profiles.nickname 우선 → Clerk username/firstName fallback.
-  // profile fetch 가 끝날 때까지 identity null 유지 (Phaser 부팅 지연) — 잘못된 fallback 닉네임으로 시작 방지.
+  // allowGuest=true & 비로그인 시 게스트 identity 사용.
   const identity = useMemo<MetaversePlayerIdentity | null>(() => {
-    if (!user) return null
+    if (!user) {
+      // 비로그인 + 게스트 모드 허용 → 미리 생성된 게스트 identity 반환
+      if (allowGuest && guestIdentityRef.current) return guestIdentityRef.current
+      return null
+    }
     if (!profileNickname) {
-      // profile fetch 진행 중 — Clerk username 이라도 있으면 사용 (없으면 null 로 잠시 대기)
       const fallback = user.username || user.firstName || user.fullName
       if (!fallback) return null
       return { userId: user.id, nickname: fallback, avatarKey: ARSENAL_HOME_AVATAR_KEY }
@@ -73,7 +94,7 @@ export function HighburyStage() {
       nickname: profileNickname,
       avatarKey: ARSENAL_HOME_AVATAR_KEY,
     }
-  }, [user, profileNickname])
+  }, [user, profileNickname, allowGuest])
 
   // user:report 이벤트 listen — UserActionPopover 의 신고 버튼 → ReportUserDialog open
   useEffect(() => {
@@ -186,7 +207,8 @@ export function HighburyStage() {
   }
 
   // 비로그인 — 안내 + 홈 버튼 (사이트는 /sign-in 라우트 없이 GNB SignInButton 사용)
-  if (!isSignedIn) {
+  // allowGuest=true 면 비로그인이어도 게스트로 진입 가능 → 차단 X.
+  if (!isSignedIn && !allowGuest) {
     return (
       <div className="flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center gap-4 bg-neutral-950 p-6 text-center text-white">
         <div className="space-y-2">

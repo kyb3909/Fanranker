@@ -18,21 +18,26 @@
 import * as Phaser from "phaser"
 import { MAPS, type MapConfig, type MapId, type DoorConfig } from "@/lib/metaverse/maps/map-config"
 import {
-  preloadAllAvatarPresets,
-  createAllAvatarAnimations,
-  texKeyIdle,
-  texKeyRotation,
-  animKey,
-  rotationPath,
-  TURN_FRAME_MS,
-  type Facing,
-  type RotationDir,
-} from "@/lib/metaverse/avatar/pro-avatar-xl"
-import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
+  preloadGandalf,
+  createGandalfAnimations,
+  createGandalfAvatar,
+  type GandalfAvatar,
+  type GandalfState,
+} from "@/lib/metaverse/avatar/gandalf-avatar"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { ChatBubble } from "./chat-bubble"
+
+// Gandalf 4방향 X · 좌우 facing 만 사용 (sheet 기준).
+type Facing = "east" | "west"
+
+// Player hitbox — sprite 80×64 보다 좁게 잡아 충돌·도어 자연스럽게.
+const PLAYER_BODY_W = 28
+const PLAYER_BODY_H = 56
+/** Container 위치(=발끝) 기준으로 body 좌상단 offset. */
+const PLAYER_BODY_OFFSET_X = -PLAYER_BODY_W / 2
+const PLAYER_BODY_OFFSET_Y = -PLAYER_BODY_H
 
 export const INDOOR_MAP_SCENE_KEY = "MetaverseIndoorMap"
 
@@ -79,18 +84,18 @@ interface DoorHandle {
   prompt: Phaser.GameObjects.Text
 }
 
-type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
+type PlayerState = "idle" | "walking" | "jumping" | "kicking"
 
 export class IndoorMapScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
   private mapConfig!: MapConfig
   private spawnX!: number
-  private presetKey: string = DEFAULT_AVATAR_KEY
-  private avatarVisualH: number = 98
-  /** 킥 시 사이즈 일치용 보정 스케일 (Arsenal kick 프레임이 idle 보다 큰 케이스에 0.65 등) */
-  private presetKickScale: number = 1
+  private avatarVisualH: number = 64
 
-  private player!: Phaser.Physics.Arcade.Sprite
+  /** Container + body·hair sprite 합성 아바타. physics body 는 container 에 붙음. */
+  private avatar!: GandalfAvatar
+  /** 기존 코드 호환용 alias — avatar.container. body 캐스팅으로 physics body 접근. */
+  private player!: Phaser.GameObjects.Container
   private nameTag!: Phaser.GameObjects.Text
   /** 로컬 채팅 말풍선 — chat:send 받으면 갱신, 5초 후 자동 destroy */
   private chatBubble: ChatBubble | null = null
@@ -118,13 +123,7 @@ export class IndoorMapScene extends Phaser.Scene {
   private kickLockY: number | null = null
 
   private facing: Facing = "east"
-  private orientation: RotationDir = "east"
   private state: PlayerState = "idle"
-
-  // 8방향 turn 애니 — ↑/↓ 로 정면(south)/뒤통수(north) 등 회전 시 프레임 시퀀스
-  private turnPath: RotationDir[] = []
-  private turnFrameIdx = 0
-  private turnFrameTimer = 0
   /** 페이드 전환 중에는 입력·도어 트리거 무시 — 중복 트리거 방지 */
   private isTransitioning = false
 
@@ -134,13 +133,11 @@ export class IndoorMapScene extends Phaser.Scene {
 
   init(data: IndoorMapInit) {
     this.identity = data.identity
-    this.presetKey = data.identity.avatarKey ?? DEFAULT_AVATAR_KEY
     this.mapConfig = MAPS[data.mapId]
     this.spawnX = data.spawnX ?? this.mapConfig.defaultSpawnX
     // restart() 후 상태 초기화
     this.isTransitioning = false
     this.facing = "east"
-    this.orientation = "east"
     this.state = "idle"
     this.doorHandles = []
     this.chargeStartedAt = null
@@ -151,9 +148,6 @@ export class IndoorMapScene extends Phaser.Scene {
     this.pendingBallY = null
     this.kickLockY = null
     this.ball = null
-    this.turnPath = []
-    this.turnFrameIdx = 0
-    this.turnFrameTimer = 0
   }
 
   preload() {
@@ -164,7 +158,7 @@ export class IndoorMapScene extends Phaser.Scene {
     if (this.mapConfig.hasBall && !this.textures.exists(BALL_TEXTURE)) {
       this.load.image(BALL_TEXTURE, BALL_URL)
     }
-    preloadAllAvatarPresets(this)
+    preloadGandalf(this)
   }
 
   create() {
@@ -183,53 +177,40 @@ export class IndoorMapScene extends Phaser.Scene {
       .setOrigin(0, 0)
     this.platforms.add(floor)
 
-    createAllAvatarAnimations(this)
+    createGandalfAnimations(this)
 
-    const preset = getAvatarPreset(this.presetKey)
-    this.player = this.physics.add.sprite(
-      this.spawnX,
-      floorTopY - 100,
-      texKeyIdle("east", this.presetKey)
-    )
-    this.player.setScale(AVATAR_SCALE)
+    // Gandalf body+hair Container 생성. Container 자체에 arcade physics body 부여.
+    const spawnY = floorTopY // origin (0.5, 1.0) → container.y == 발끝 Y
+    this.avatar = createGandalfAvatar(this, this.spawnX, spawnY)
+    this.player = this.avatar.container
     this.player.setDepth(10)
-    this.player.setCollideWorldBounds(true)
-    this.player.setBounce(0)
-    this.player.setMaxVelocity(WALK_SPEED, MAX_FALL_SPEED)
+    this.physics.world.enable(this.player)
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body
-    playerBody.setSize(preset.bodyWidth, preset.bodyHeight)
-    playerBody.setOffset(preset.bodyOffsetX, preset.bodyOffsetY)
+    playerBody.setSize(PLAYER_BODY_W, PLAYER_BODY_H)
+    playerBody.setOffset(PLAYER_BODY_OFFSET_X, PLAYER_BODY_OFFSET_Y)
+    playerBody.setCollideWorldBounds(true)
+    playerBody.setBounce(0)
+    playerBody.setMaxVelocity(WALK_SPEED, MAX_FALL_SPEED)
     this.physics.add.collider(this.player, this.platforms)
-    this.avatarVisualH = preset.bodyHeight * AVATAR_SCALE
-    this.presetKickScale = preset.kickScale ?? 1
+    this.avatarVisualH = PLAYER_BODY_H * AVATAR_SCALE
+    this.avatar.playAnim("idle")
 
-    // 킥 anim 완료 → 공 발사 + scale 복원 + Y 락 한 번 더 강제 후 해제 + 중력 복원
-    this.player.on(
+    // 킥(=attack) anim 완료 → 공 발사 + Y 락 한 번 더 강제 후 해제 + 중력 복원
+    this.avatar.body.on(
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
-        const key = anim.key
-        if (
-          key === animKey("kick", "east", this.presetKey) ||
-          key === animKey("kick", "west", this.presetKey)
-        ) {
-          this.applyPendingKickToBall()
-          const body = this.player.body as Phaser.Physics.Arcade.Body
-          // 1. 스케일 idle 로 복원
-          this.player.setScale(AVATAR_SCALE)
-          // 2. 락 Y 로 한 번 더 강제 — scale 변화로 sprite.y 가 흔들렸을 가능성 차단
-          if (this.kickLockY !== null) {
-            this.player.y = this.kickLockY
-          }
-          body.setVelocity(0, 0)
-          body.updateFromGameObject()
-          // 3. 잠금 해제 + 중력 복원
-          this.kickLockY = null
-          body.allowGravity = true
-          this.state = "idle"
-          this.orientation = this.facing
-          this.player.setTexture(texKeyRotation(this.facing, this.presetKey))
-          this.player.setFlipX(false)
+        if (anim.key !== "gandalf_attack_body") return
+        this.applyPendingKickToBall()
+        const body = this.player.body as Phaser.Physics.Arcade.Body
+        if (this.kickLockY !== null) {
+          this.player.y = this.kickLockY
         }
+        body.setVelocity(0, 0)
+        // 잠금 해제 + 중력 복원
+        this.kickLockY = null
+        body.allowGravity = true
+        this.state = "idle"
+        this.avatar.playAnim("idle")
       }
     )
 
@@ -414,22 +395,6 @@ export class IndoorMapScene extends Phaser.Scene {
       return
     }
 
-    // 회전 중 — 좌우 입력 들어오면 즉시 취소하고 walking 으로, 아니면 프레임 진행
-    if (this.state === "turning") {
-      const leftDown = this.cursors.left?.isDown || this.wasd.A.isDown
-      const rightDown = this.cursors.right?.isDown || this.wasd.D.isDown
-      if (leftDown || rightDown) {
-        this.cancelTurn()
-        // fall through — 일반 입력 처리
-      } else {
-        this.advanceTurn(deltaMs)
-        body.setAccelerationX(0)
-        body.setDragX(GROUND_DRAG)
-        this.updateNameTag()
-        return
-      }
-    }
-
     const left = this.cursors.left?.isDown || this.wasd.A.isDown
     const right = this.cursors.right?.isDown || this.wasd.D.isDown
     const upPressed =
@@ -460,18 +425,13 @@ export class IndoorMapScene extends Phaser.Scene {
         body.setAccelerationX(0)
         body.setVelocity(0, 0)
         body.setDragX(GROUND_DRAG)
-        // 1. Y 잠금 (sprite.y 고정값 저장)
+        // 1. Y 잠금 (Container.y 고정값 저장)
         this.kickLockY = this.player.y
         // 2. 중력 차단
         body.allowGravity = false
-        // 3. 킥 anim 재생
-        this.player.play(animKey("kick", "east", this.presetKey), true)
-        this.player.setFlipX(this.facing === "west")
-        // 4. 사이즈 일치용 스케일 보정 (Arsenal 처럼 kickScale<1 인 프리셋만 변화)
-        this.player.setScale(AVATAR_SCALE * this.presetKickScale)
-        // 5. 스케일 변경으로 sprite.y 가 바뀌었을 가능성 → 즉시 락 Y 로 강제
-        this.player.y = this.kickLockY
-        body.updateFromGameObject()
+        // 3. attack anim 재생 (kick = attack 매핑)
+        this.avatar.playAnim("attack")
+        this.avatar.setFlipX(this.facing === "west")
         // 공 임시 숨김 (킥 발사 직전 위치 기억)
         this.pendingBallX = ball.x
         this.pendingBallY = ball.y
@@ -489,40 +449,38 @@ export class IndoorMapScene extends Phaser.Scene {
     if (left) {
       body.setAccelerationX(-accelValue)
       this.facing = "west"
-      this.orientation = "west"
     } else if (right) {
       body.setAccelerationX(accelValue)
       this.facing = "east"
-      this.orientation = "east"
     } else {
       body.setAccelerationX(0)
     }
     body.setDragX(dragValue)
+    this.avatar.setFlipX(this.facing === "west")
 
     // 점프
     if (jumpPressed && onGround) {
       body.setVelocityY(JUMP_VELOCITY)
       this.state = "jumping"
-      this.player.play(animKey("jump", this.facing, this.presetKey), true)
+      this.avatar.playAnim("jump")
     } else if (this.state === "jumping" && onGround && body.velocity.y >= 0) {
       this.state = "idle"
     }
 
-    // walk / idle anim 동기화
-    if (this.state !== "jumping") {
+    // 공중 상태 — 점프 후 v.y > 0 (낙하) 면 fall anim
+    const inAir = !onGround
+    if (inAir && body.velocity.y > 0) {
+      const cur = this.avatar.getCurrentState()
+      if (cur !== "fall") this.avatar.playAnim("fall")
+    } else if (this.state !== "jumping") {
+      // 지상 walk / idle 결정
       const moving = onGround && Math.abs(body.velocity.x) > 10
       this.state = moving ? "walking" : "idle"
-      if (moving) {
-        const walkKey = animKey("walk", this.facing, this.presetKey)
-        if (this.player.anims.currentAnim?.key !== walkKey || !this.player.anims.isPlaying) {
-          this.player.play(walkKey, true)
-        }
-      } else {
-        if (this.player.anims.isPlaying) this.player.anims.stop()
-        this.player.setTexture(texKeyRotation(this.orientation, this.presetKey))
+      const desired: GandalfState = moving ? "walk" : "idle"
+      if (this.avatar.getCurrentState() !== desired) {
+        this.avatar.playAnim(desired)
       }
     }
-    this.player.setFlipX(false)
 
     this.updateNameTag()
     this.updateChargeBar()
@@ -539,57 +497,7 @@ export class IndoorMapScene extends Phaser.Scene {
       }
     }
 
-    // 정면(앞)/뒤통수 회전 — 정지 상태 + 도어 밖에서만. ↑ 도어 트리거 우선이므로
-    // 도어 안에선 ↑ 안 받음, ↓ 는 어디서든 가능.
-    const lookDownPressed =
-      Phaser.Input.Keyboard.JustDown(this.cursors.down!) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.S)
-    const isStationary = onGround && !left && !right && Math.abs(body.velocity.x) < 20
-    if (isStationary && this.state === "idle") {
-      if (upPressed && !insideAnyDoor) this.requestOrientation("north")
-      else if (lookDownPressed) this.requestOrientation("south")
-    }
-  }
-
-  // ============================================================
-  // 8방향 turn 애니 — ↑ 뒤통수, ↓ 앞면 회전
-  // ============================================================
-
-  private requestOrientation(target: RotationDir) {
-    if (this.state === "turning") return
-    if (this.orientation === target) return
-    const path = rotationPath(this.orientation, target)
-    if (path.length === 0) return
-    this.turnPath = path
-    this.turnFrameIdx = 0
-    this.turnFrameTimer = 0
-    this.orientation = target
-    this.state = "turning"
-    this.player.anims.stop()
-    this.player.setFlipX(false)
-    this.player.setTexture(texKeyRotation(path[0], this.presetKey))
-    this.turnFrameIdx = 1
-  }
-
-  private advanceTurn(deltaMs: number) {
-    this.turnFrameTimer += deltaMs
-    while (this.turnFrameTimer >= TURN_FRAME_MS && this.turnFrameIdx < this.turnPath.length) {
-      this.player.setTexture(texKeyRotation(this.turnPath[this.turnFrameIdx], this.presetKey))
-      this.turnFrameIdx++
-      this.turnFrameTimer -= TURN_FRAME_MS
-    }
-    if (this.turnFrameIdx >= this.turnPath.length) {
-      this.state = "idle"
-      this.turnPath = []
-      this.turnFrameIdx = 0
-    }
-  }
-
-  private cancelTurn() {
-    this.turnPath = []
-    this.turnFrameIdx = 0
-    this.turnFrameTimer = 0
-    this.state = "idle"
+    void insideAnyDoor
   }
 
   // ============================================================
@@ -630,7 +538,7 @@ export class IndoorMapScene extends Phaser.Scene {
     this.pendingKickAngleDeg = null
     this.pendingBallX = null
     this.pendingBallY = null
-    this.player.setFlipX(false)
+    this.avatar.setFlipX(this.facing === "west")
     if (!ball) return
     ball.setVisible(true)
     if (speed === null || angleDeg === null || x === null || y === null) return
