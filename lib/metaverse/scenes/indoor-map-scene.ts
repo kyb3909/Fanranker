@@ -182,6 +182,9 @@ export class IndoorMapScene extends Phaser.Scene {
     // Gandalf body+hair Container 생성. Container 자체에 arcade physics body 부여.
     const spawnY = floorTopY // origin (0.5, 1.0) → container.y == 발끝 Y
     this.avatar = createGandalfAvatar(this, this.spawnX, spawnY)
+    // 좌우 2배 시각 (사용자 요청). 세로는 1배 유지. hitbox 는 별개 — physics body 그대로.
+    this.avatar.body.setScale(2, 1)
+    this.avatar.hair.setScale(2, 1)
     this.player = this.avatar.container
     this.player.setDepth(10)
     this.physics.world.enable(this.player)
@@ -431,7 +434,7 @@ export class IndoorMapScene extends Phaser.Scene {
         body.allowGravity = false
         // 3. attack anim 재생 (kick = attack 매핑)
         this.avatar.playAnim("attack")
-        this.avatar.setFlipX(this.facing === "west")
+        this.avatar.setFlipX(this.facing === "east")
         // 공 임시 숨김 (킥 발사 직전 위치 기억)
         this.pendingBallX = ball.x
         this.pendingBallY = ball.y
@@ -456,7 +459,7 @@ export class IndoorMapScene extends Phaser.Scene {
       body.setAccelerationX(0)
     }
     body.setDragX(dragValue)
-    this.avatar.setFlipX(this.facing === "west")
+    this.avatar.setFlipX(this.facing === "east")
 
     // 점프
     if (jumpPressed && onGround) {
@@ -538,7 +541,7 @@ export class IndoorMapScene extends Phaser.Scene {
     this.pendingKickAngleDeg = null
     this.pendingBallX = null
     this.pendingBallY = null
-    this.avatar.setFlipX(this.facing === "west")
+    this.avatar.setFlipX(this.facing === "east")
     if (!ball) return
     ball.setVisible(true)
     if (speed === null || angleDeg === null || x === null || y === null) return
