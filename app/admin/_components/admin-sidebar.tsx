@@ -15,6 +15,7 @@ import {
   FolderOpen,
   Flag,
   Image,
+  ShieldAlert,
   Smile,
   Trophy,
   Shield,
@@ -46,7 +47,7 @@ interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  badge?: "reports" | "stickers" | "matches"
+  badge?: "reports" | "stickers" | "matches" | "metaverseReports"
 }
 
 interface NavGroup {
@@ -84,6 +85,12 @@ const navGroups: NavGroup[] = [
       { title: "배너 관리", href: "/admin/content/banners", icon: Image },
       { title: "스티커 승인", href: "/admin/content/stickers", icon: Smile, badge: "stickers" },
       { title: "신고 관리", href: "/admin/content/reports", icon: Flag, badge: "reports" },
+      {
+        title: "메타버스 신고",
+        href: "/admin/content/metaverse-reports",
+        icon: ShieldAlert,
+        badge: "metaverseReports",
+      },
     ],
   },
   {
@@ -110,7 +117,12 @@ const navGroups: NavGroup[] = [
 export function AdminSidebar() {
   const pathname = usePathname()
   const { data } = useSWR<{
-    alerts: { pendingReports: number; pendingStickers: number; unsettledGames: number }
+    alerts: {
+      pendingReports: number
+      pendingStickers: number
+      unsettledGames: number
+      pendingMetaverseReports: number
+    }
   }>("/api/admin/operations/dashboard", fetcher, {
     refreshInterval: 60_000,
     revalidateOnFocus: false,
@@ -119,6 +131,7 @@ export function AdminSidebar() {
     reports: data?.alerts?.pendingReports ?? 0,
     stickers: data?.alerts?.pendingStickers ?? 0,
     matches: data?.alerts?.unsettledGames ?? 0,
+    metaverseReports: data?.alerts?.pendingMetaverseReports ?? 0,
   }
 
   return (
