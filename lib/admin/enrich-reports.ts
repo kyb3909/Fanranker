@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 interface ReportRow {
   id: string
+  reporter_id: string
   target_type: string
   target_id: string
 }
@@ -11,6 +12,8 @@ export interface ReportEnrichment {
   post_title: string | null
   author_id: string | null
   author_yellow_count: number
+  reporter_total_reports: number
+  reporter_dismissed_rate: number
 }
 
 export async function enrichReports<T extends ReportRow>(
@@ -75,17 +78,38 @@ export async function enrichReports<T extends ReportRow>(
     }
   }
 
+  // 신고자별 누적 신뢰도 통계 (전체 기간, content_reports 한정)
+  const reporterIds = Array.from(new Set(reports.map((r) => r.reporter_id).filter(Boolean)))
+  const reporterStats: Record<string, { total: number; dismissed: number }> = {}
+  if (reporterIds.length > 0) {
+    const { data } = await supabase
+      .from("content_reports")
+      .select("reporter_id, status")
+      .in("reporter_id", reporterIds)
+    for (const row of data ?? []) {
+      if (!row.reporter_id) continue
+      const s = (reporterStats[row.reporter_id] ??= { total: 0, dismissed: 0 })
+      s.total++
+      if (row.status === "dismissed") s.dismissed++
+    }
+  }
+
   return reports.map((r) => {
     const authorId =
       r.target_type === "comment"
         ? (commentAuthorMap[r.target_id] ?? null)
         : (postAuthorMap[r.target_id] ?? null)
+    const rep = reporterStats[r.reporter_id]
+    const total = rep?.total ?? 0
+    const dismissedRate = total > 0 ? (rep?.dismissed ?? 0) / total : 0
     return {
       ...r,
       post_id: r.target_type === "comment" ? (commentPostMap[r.target_id] ?? null) : r.target_id,
       post_title: r.target_type === "post" ? (postTitleMap[r.target_id] ?? null) : null,
       author_id: authorId,
       author_yellow_count: authorId ? (yellowCountByAuthor[authorId] ?? 0) : 0,
+      reporter_total_reports: total,
+      reporter_dismissed_rate: dismissedRate,
     }
   })
 }
