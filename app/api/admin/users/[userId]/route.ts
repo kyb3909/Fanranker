@@ -19,7 +19,8 @@ export async function GET(
       { count: postCount },
       { count: commentCount },
       { count: predictionCount },
-      { data: sanctions },
+      { data: cards },
+      { data: suspensions },
       { data: recentPosts },
     ] = await Promise.all([
       supabase
@@ -48,11 +49,17 @@ export async function GET(
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId),
       supabase
-        .from("user_sanctions")
-        .select("*")
+        .from("user_cards")
+        .select("id, card_type, reason, report_id, issued_at, expires_at")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(10),
+        .order("issued_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("user_suspensions")
+        .select("id, reason, suspended_at, suspended_until")
+        .eq("user_id", userId)
+        .order("suspended_at", { ascending: false })
+        .limit(20),
       supabase
         .from("posts")
         .select("id, title, community_slug, created_at")
@@ -78,7 +85,8 @@ export async function GET(
         commentCount: commentCount ?? 0,
         predictionCount: predictionCount ?? 0,
       },
-      sanctions: sanctions ?? [],
+      cards: cards ?? [],
+      suspensions: suspensions ?? [],
       recentPosts: recentPosts ?? [],
     })
   } catch (error) {

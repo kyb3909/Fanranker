@@ -47,14 +47,19 @@ interface UserDetail {
     commentCount: number
     predictionCount: number
   }
-  sanctions: Array<{
+  cards: Array<{
     id: string
-    type: string
+    card_type: string
     reason: string
-    starts_at: string
+    report_id: string | null
+    issued_at: string
     expires_at: string | null
-    lifted_at: string | null
-    created_at: string
+  }>
+  suspensions: Array<{
+    id: string
+    reason: string
+    suspended_at: string
+    suspended_until: string | null
   }>
   recentPosts: Array<{
     id: string
@@ -66,12 +71,9 @@ interface UserDetail {
 
 type Tab = "overview" | "economy" | "activity" | "sanctions"
 
-const sanctionTypeLabels: Record<string, string> = {
-  warning: "경고",
-  timeout: "타임아웃",
-  ban: "밴",
-  shadowban: "섀도우밴",
-  content_restrict: "콘텐츠 제한",
+const cardTypeLabels: Record<string, string> = {
+  yellow: "옐로카드",
+  red: "레드카드",
 }
 
 export function UserDetailTabs({ userId }: { userId: string }) {
@@ -163,7 +165,8 @@ export function UserDetailTabs({ userId }: { userId: string }) {
     return <div className="text-muted-foreground py-12 text-center">사용자를 찾을 수 없습니다.</div>
   }
 
-  const { profile, economy, activity, sanctions, recentPosts } = data
+  const { profile, economy, activity, cards, suspensions, recentPosts } = data
+  const now = Date.now()
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "overview", label: "개요" },
@@ -410,64 +413,127 @@ export function UserDetailTabs({ userId }: { userId: string }) {
       )}
 
       {activeTab === "sanctions" && (
-        <div className="space-y-4">
-          {sanctions.length === 0 ? (
-            <Card>
-              <CardContent className="text-muted-foreground pt-6 text-center">
-                제재 이력이 없습니다.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>유형</TableHead>
-                    <TableHead>사유</TableHead>
-                    <TableHead>시작일</TableHead>
-                    <TableHead>만료일</TableHead>
-                    <TableHead>상태</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sanctions.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>
-                        <Badge variant="destructive" className="text-xs">
-                          <AlertTriangle className="mr-0.5 h-3 w-3" />
-                          {sanctionTypeLabels[s.type] ?? s.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">{s.reason}</TableCell>
-                      <TableCell className="text-xs">
-                        {new Date(s.starts_at).toLocaleDateString("ko-KR")}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {s.expires_at
-                          ? new Date(s.expires_at).toLocaleDateString("ko-KR")
-                          : "무기한"}
-                      </TableCell>
-                      <TableCell>
-                        {s.lifted_at ? (
-                          <Badge variant="secondary" className="text-xs">
-                            해제됨
-                          </Badge>
-                        ) : s.expires_at && new Date(s.expires_at) < new Date() ? (
-                          <Badge variant="outline" className="text-xs">
-                            만료됨
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive" className="text-xs">
-                            활성
-                          </Badge>
-                        )}
-                      </TableCell>
+        <div className="space-y-6">
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">카드 이력</h3>
+            {cards.length === 0 ? (
+              <Card>
+                <CardContent className="text-muted-foreground pt-6 text-center text-sm">
+                  카드 발급 이력이 없습니다.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>유형</TableHead>
+                      <TableHead>사유</TableHead>
+                      <TableHead>발급일</TableHead>
+                      <TableHead>만료일</TableHead>
+                      <TableHead>상태</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {cards.map((c) => {
+                      const expired = c.expires_at && new Date(c.expires_at).getTime() < now
+                      const isYellow = c.card_type === "yellow"
+                      return (
+                        <TableRow key={c.id}>
+                          <TableCell>
+                            <Badge
+                              variant={isYellow ? "outline" : "destructive"}
+                              className={`text-xs ${isYellow ? "border-yellow-500 text-yellow-700 dark:text-yellow-400" : ""}`}
+                            >
+                              <AlertTriangle className="mr-0.5 h-3 w-3" />
+                              {cardTypeLabels[c.card_type] ?? c.card_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm">
+                            {c.reason}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(c.issued_at).toLocaleDateString("ko-KR")}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {c.expires_at
+                              ? new Date(c.expires_at).toLocaleDateString("ko-KR")
+                              : "영구"}
+                          </TableCell>
+                          <TableCell>
+                            {expired ? (
+                              <Badge variant="outline" className="text-xs">
+                                만료
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive" className="text-xs">
+                                유효
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">정지 이력</h3>
+            {suspensions.length === 0 ? (
+              <Card>
+                <CardContent className="text-muted-foreground pt-6 text-center text-sm">
+                  정지 이력이 없습니다.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>사유</TableHead>
+                      <TableHead>시작일</TableHead>
+                      <TableHead>종료일</TableHead>
+                      <TableHead>상태</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {suspensions.map((s) => {
+                      const ended = s.suspended_until && new Date(s.suspended_until).getTime() < now
+                      return (
+                        <TableRow key={s.id}>
+                          <TableCell className="max-w-[240px] truncate text-sm">
+                            {s.reason}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(s.suspended_at).toLocaleDateString("ko-KR")}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {s.suspended_until
+                              ? new Date(s.suspended_until).toLocaleDateString("ko-KR")
+                              : "영구"}
+                          </TableCell>
+                          <TableCell>
+                            {ended ? (
+                              <Badge variant="outline" className="text-xs">
+                                종료
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive" className="text-xs">
+                                활성
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>
