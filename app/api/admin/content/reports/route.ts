@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
+import { enrichReports } from "@/lib/admin/enrich-reports"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { z } from "zod"
@@ -125,43 +126,7 @@ export async function GET(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // 댓글 신고의 경우 post_id를 조회하여 게시글 링크 생성 가능하도록
-    const reports = data ?? []
-    const commentTargetIds = reports
-      .filter((r) => r.target_type === "comment")
-      .map((r) => r.target_id)
-
-    let commentPostMap: Record<string, string> = {}
-    if (commentTargetIds.length > 0) {
-      const { data: comments } = await supabase
-        .from("comments")
-        .select("id, post_id")
-        .in("id", commentTargetIds)
-      if (comments) {
-        commentPostMap = Object.fromEntries(comments.map((c) => [c.id, c.post_id]))
-      }
-    }
-
-    // 게시글 신고의 경우 제목도 가져오기
-    const postTargetIds = reports.filter((r) => r.target_type === "post").map((r) => r.target_id)
-
-    let postTitleMap: Record<string, string> = {}
-    if (postTargetIds.length > 0) {
-      const { data: posts } = await supabase
-        .from("posts")
-        .select("id, title")
-        .in("id", postTargetIds)
-      if (posts) {
-        postTitleMap = Object.fromEntries(posts.map((p) => [p.id, p.title]))
-      }
-    }
-
-    const enrichedReports = reports.map((r) => ({
-      ...r,
-      post_id: r.target_type === "comment" ? (commentPostMap[r.target_id] ?? null) : r.target_id,
-      post_title: r.target_type === "post" ? (postTitleMap[r.target_id] ?? null) : null,
-    }))
-
+    const enrichedReports = await enrichReports(supabase, data ?? [])
     return NextResponse.json({ reports: enrichedReports, total: count ?? 0, page, limit })
   } catch (error) {
     return apiError("서버 오류", 500, error)

@@ -29,6 +29,8 @@ interface Report {
   created_at: string
   post_id: string | null
   post_title: string | null
+  author_id: string | null
+  author_yellow_count: number
 }
 
 const REPORT_REASONS: Record<string, { label: string; card: "red" | "yellow" }> = {
@@ -80,7 +82,28 @@ export function ReportQueue({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reportId, action }),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
+      const body = (await res.json()) as {
+        error?: string
+        cardIssued?: boolean
+        userSuspended?: boolean
+      }
+      if (!res.ok) throw new Error(body.error ?? "오류 발생")
+
+      if (action === "resolve") {
+        if (body.userSuspended) {
+          toast({
+            variant: "destructive",
+            title: "자동 정지 발효",
+            description: "옐로카드 누적으로 작성자가 정지되었습니다.",
+          })
+        } else if (body.cardIssued) {
+          toast({
+            title: "카드 발급",
+            description: "신고 사유에 따라 카드가 발급되었습니다.",
+          })
+        }
+      }
+
       await fetchReports(statusFilter)
     } catch (error) {
       toast({
@@ -126,6 +149,7 @@ export function ReportQueue({
           <TableHeader>
             <TableRow>
               <TableHead>유형</TableHead>
+              <TableHead>작성자</TableHead>
               <TableHead>사유</TableHead>
               <TableHead>설명</TableHead>
               <TableHead>상태</TableHead>
@@ -136,7 +160,7 @@ export function ReportQueue({
           <TableBody>
             {reports.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
+                <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
                   신고가 없습니다.
                 </TableCell>
               </TableRow>
@@ -170,6 +194,27 @@ export function ReportQueue({
                         <p className="text-muted-foreground mt-0.5 max-w-[150px] truncate text-xs">
                           {report.post_title}
                         </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {report.author_id ? (
+                        <Link
+                          href={`/admin/users/${report.author_id}`}
+                          className="inline-flex items-center gap-1 text-xs hover:underline"
+                          title={report.author_id}
+                        >
+                          <span className="text-muted-foreground">상세</span>
+                          {report.author_yellow_count > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="h-4 border-yellow-500 px-1 text-[10px] text-yellow-700 dark:text-yellow-400"
+                            >
+                              옐로 {report.author_yellow_count}
+                            </Badge>
+                          )}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
                     <TableCell>
