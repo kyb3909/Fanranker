@@ -35,4 +35,26 @@ test.describe("oEmbed 렌더링", () => {
     const res = await request.get("/api/oembed")
     expect(res.status()).toBe(400)
   })
+
+  test("oEmbed API가 Instagram 게시물 URL에 blockquote fallback을 반환해야 한다", async ({
+    request,
+  }) => {
+    const res = await request.get(
+      "/api/oembed?url=https://www.instagram.com/p/C1example99/&includeHtml=true"
+    )
+    expect(res.status()).toBe(200)
+    const data = await res.json()
+    expect(data.provider).toBe("instagram")
+    // 토큰 유무와 무관하게 embed.js 가 처리할 blockquote 가 항상 포함되어야 함
+    expect(data.html).toContain("instagram-media")
+  })
+
+  test("oEmbed API가 Instagram Reel URL도 인식해야 한다", async ({ request }) => {
+    const res = await request.get(
+      "/api/oembed?url=https://www.instagram.com/reel/C1example99/&includeHtml=true"
+    )
+    expect(res.status()).toBe(200)
+    const data = await res.json()
+    expect(data.provider).toBe("instagram")
+  })
 })
