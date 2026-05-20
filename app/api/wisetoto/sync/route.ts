@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError } from "@/lib/api-error"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 
 const WISETOTO_BASE = "https://www.wisetoto.com"
 const SPORT_CODES = ["sc", "bs", "bk", "vl"] as const
@@ -22,7 +23,7 @@ interface WiseTotoGame {
  */
 export const dynamic = "force-dynamic"
 
-export async function GET(request: NextRequest) {
+async function syncHandler(request: NextRequest) {
   // 인증: Vercel cron (CRON_SECRET) 또는 프로덕션 브라우저 폴링 (origin/referer)
   const cronAuthResult = verifyCronSecret(request)
   const isCronAuthed = cronAuthResult === null
@@ -137,6 +138,8 @@ export async function GET(request: NextRequest) {
     return apiError("wisetoto 동기화 오류", 500, e)
   }
 }
+
+export const GET = withCronLog("wisetoto-sync", syncHandler)
 
 /** 시작 시간이 지난 scheduled 경기를 in_progress로 전환 */
 async function updateScheduledGames(supabase: ReturnType<typeof createServiceRoleClient>) {

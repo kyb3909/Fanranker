@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 
 /**
@@ -76,6 +77,4 @@ export async function POST(request: NextRequest) {
  * 실제 로직은 POST 에 있으므로 GET 은 POST 로 위임한다.
  * POST 내부의 verifyCronSecret 이 CRON_SECRET 을 검증하므로 무단 호출은 차단된다.
  */
-export async function GET(request: NextRequest) {
-  return POST(request)
-}
+export const GET = withCronLog("daily-token-reset", (request: NextRequest) => POST(request))

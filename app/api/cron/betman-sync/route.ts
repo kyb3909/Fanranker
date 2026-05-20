@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { fetchAllGmTs } from "@/lib/betman/game-fetcher"
 import { syncSingleGmTs } from "@/lib/betman/sync-orchestrator"
@@ -30,7 +31,7 @@ const STALE_THRESHOLD_HOURS = 3
 const URGENT_THRESHOLD_HOURS = 6
 const PROBE_RANGE = 5
 
-export async function GET(request: NextRequest) {
+async function cronGet(request: NextRequest) {
   const start = Date.now()
 
   try {
@@ -312,6 +313,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export const GET = withCronLog("betman-sync", cronGet)
+
 export async function POST(request: NextRequest) {
-  return GET(request)
+  return cronGet(request)
 }

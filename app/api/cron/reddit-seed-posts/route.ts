@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const maxDuration = 60
@@ -208,7 +209,7 @@ function textToTipTapJson(text: string) {
 
 // ── 메인 핸들러 ───────────────────────────────────────────
 
-export async function GET(request: Request) {
+async function cronGet(request: Request) {
   const authError = verifyCronSecret(request)
   if (authError) return authError
 
@@ -336,3 +337,5 @@ export async function GET(request: Request) {
     summary: { inserted: totalInserted, errors: totalErrors },
   })
 }
+
+export const GET = withCronLog("reddit-seed-posts", cronGet)

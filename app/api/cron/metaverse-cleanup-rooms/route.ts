@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { broadcastRoomClosed } from "@/lib/metaverse/realtime/server-broadcast"
 
 export const dynamic = "force-dynamic"
@@ -53,6 +54,4 @@ export async function POST(req: NextRequest) {
  * 실제 로직은 POST 에 있으므로 GET 은 POST 로 위임한다.
  * POST 내부의 verifyCronSecret 이 CRON_SECRET 을 검증하므로 무단 호출은 차단된다.
  */
-export async function GET(req: NextRequest) {
-  return POST(req)
-}
+export const GET = withCronLog("metaverse-cleanup-rooms", (req: NextRequest) => POST(req))

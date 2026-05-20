@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { fetchWeeklyReport } from "@/lib/ga4/fetch-weekly-report"
 
@@ -74,10 +75,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 403 })
-  }
-
-  return POST(request)
-}
+/**
+ * Vercel Cron 은 GET 으로 호출한다 (메서드 지정 불가). 실제 로직은 POST 에 있으므로
+ * GET 을 POST 로 위임. POST 내부의 verifyCronSecret 이 무단 호출을 차단한다.
+ */
+export const GET = withCronLog("weekly-analytics", (request: NextRequest) => POST(request))
