@@ -15,6 +15,7 @@ import {
   FolderOpen,
   Flag,
   Image,
+  Inbox,
   ShieldAlert,
   Smile,
   Trophy,
@@ -92,6 +93,7 @@ const navGroups: NavGroup[] = [
         icon: ShieldAlert,
         badge: "metaverseReports",
       },
+      { title: "뉴스룸 큐", href: "/admin/content/newsroom", icon: Inbox },
     ],
   },
   {
