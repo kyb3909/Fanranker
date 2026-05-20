@@ -4,6 +4,7 @@ import { SystemHealthCards } from "./system-health-cards"
 import { CrawlerHistory } from "./crawler-history"
 import { CronMonitor, CRON_JOBS, type CronLastRun } from "./cron-monitor"
 import { ApiHealthStrip } from "./api-health-strip"
+import { QueueBacklogCard } from "./queue-backlog-card"
 
 export const metadata: Metadata = { title: "시스템 상태" }
 export const dynamic = "force-dynamic"
@@ -30,6 +31,8 @@ export default async function AdminSystemPage() {
     { count: crawlerTotal },
     { data: dailyRound },
     { count: tickerCount },
+    { count: queueBacklog },
+    { data: oldestQueued },
   ] = await Promise.all([
     supabase
       .from("betman_sync_state")
@@ -50,6 +53,17 @@ export default async function AdminSystemPage() {
       .limit(1)
       .maybeSingle(),
     supabase.from("news_ticker_items").select("*", { count: "exact", head: true }),
+    supabase
+      .from("temperature_update_queue")
+      .select("*", { count: "exact", head: true })
+      .is("processed_at", null),
+    supabase
+      .from("temperature_update_queue")
+      .select("queued_at")
+      .is("processed_at", null)
+      .order("queued_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const lastCrawlerRun = crawlerRuns?.[0] ?? null
@@ -94,6 +108,13 @@ export default async function AdminSystemPage() {
           tickerCount: tickerCount ?? 0,
         }}
       />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <QueueBacklogCard
+          backlog={queueBacklog ?? 0}
+          oldestQueuedAt={oldestQueued?.queued_at ?? null}
+        />
+      </div>
 
       <CronMonitor jobs={cronJobs} />
 
