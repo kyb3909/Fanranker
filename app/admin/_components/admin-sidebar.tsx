@@ -21,6 +21,7 @@ import {
   Shield,
   Coins,
   Target,
+  RotateCcw,
   Activity,
   StickyNote,
   ChevronRight,
@@ -47,7 +48,7 @@ interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  badge?: "reports" | "stickers" | "matches" | "metaverseReports"
+  badge?: "reports" | "stickers" | "matches" | "metaverseReports" | "refunds"
 }
 
 interface NavGroup {
@@ -103,6 +104,7 @@ const navGroups: NavGroup[] = [
       { title: "전문가 승인", href: "/admin/experts", icon: Shield },
       { title: "정산 처리", href: "/admin/settlements", icon: Coins },
       { title: "토큰 모니터링", href: "/admin/tokens", icon: Target },
+      { title: "환불 큐", href: "/admin/refunds", icon: RotateCcw, badge: "refunds" },
     ],
   },
   {
@@ -122,6 +124,7 @@ export function AdminSidebar() {
       pendingStickers: number
       unsettledGames: number
       pendingMetaverseReports: number
+      pendingRefunds: number
     }
   }>("/api/admin/operations/dashboard", fetcher, {
     refreshInterval: 60_000,
@@ -132,6 +135,7 @@ export function AdminSidebar() {
     stickers: data?.alerts?.pendingStickers ?? 0,
     matches: data?.alerts?.unsettledGames ?? 0,
     metaverseReports: data?.alerts?.pendingMetaverseReports ?? 0,
+    refunds: data?.alerts?.pendingRefunds ?? 0,
   }
 
   return (

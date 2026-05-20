@@ -28,6 +28,7 @@ export async function GET() {
     const [
       { count: pendingReports },
       { count: pendingMetaverseReports },
+      { count: pendingRefunds },
       { count: pendingStickers },
       { data: syncState },
       { count: unsettledGames },
@@ -49,6 +50,10 @@ export async function GET() {
         .from("metaverse_user_reports")
         .select("*", { count: "exact", head: true })
         .eq("status", "open"),
+      supabase
+        .from("pending_refunds")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending"),
       supabase.from("stickers").select("*", { count: "exact", head: true }).eq("status", "pending"),
       supabase
         .from("betman_sync_state")
@@ -119,6 +124,7 @@ export async function GET() {
       alerts: {
         pendingReports: pendingReports ?? 0,
         pendingMetaverseReports: pendingMetaverseReports ?? 0,
+        pendingRefunds: pendingRefunds ?? 0,
         pendingStickers: pendingStickers ?? 0,
         betmanSyncStale,
         betmanLastSync,
