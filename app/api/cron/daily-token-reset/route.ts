@@ -71,12 +71,11 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/cron/daily-token-reset
- * Manual trigger for testing (development only)
+ *
+ * Vercel Cron 은 등록된 path 로 GET 요청을 보낸다 (메서드 지정 불가).
+ * 실제 로직은 POST 에 있으므로 GET 은 POST 로 위임한다.
+ * POST 내부의 verifyCronSecret 이 CRON_SECRET 을 검증하므로 무단 호출은 차단된다.
  */
 export async function GET(request: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 403 })
-  }
-
   return POST(request)
 }
