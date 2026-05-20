@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
-import { syncSingleGmTs } from "@/lib/betman/sync-orchestrator"
+import { updateSyncState } from "@/lib/betman/sync-state"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { z } from "zod"
 
@@ -15,24 +15,22 @@ const manualSyncSchema = z.object({
 /**
  * POST /api/betman/manual-sync
  *
- * 관리자가 수동으로 특정 gmTs를 동기화하는 폴백 엔드포인트.
- * Vercel cron이 실패했거나, VPS 스크래퍼가 동작하지 않을 때 사용.
+ * 관리자가 특정 gmTs 의 재동기화를 요청하는 엔드포인트.
+ *
+ * betman.co.kr 은 한국 IP 에서만 접근 가능하므로 Vercel(해외 IP)에서 직접
+ * 스크래핑하지 않는다. 대신 betman_sync_state 에 manual resync 플래그를
+ * 세팅하고, Vultr 서울 VPS cron 이 이를 읽어 실제 동기화를 수행한다.
+ *
+ * NOTE: 과거 이 route 는 syncSingleGmTs 로 betman 을 직접 호출했으나,
+ * Vercel 해외 IP 에서 100% 실패하므로 resync 신호 방식으로 전환됨
+ * (betman-sync watchdog 의 VPS 신호 패턴과 동일).
  *
  * Body:
- *   { gmTs: "260021" }           - 단일 gmTs
+ *   { gmTs: "260021" }            - 단일 gmTs
  *   { gmTs: ["260021","260022"] } - 복수 gmTs
- *
  * Auth: CRON_SECRET Bearer token
- *
- * 사용법:
- *   curl -X POST https://your-domain/api/betman/manual-sync \
- *     -H "Authorization: Bearer YOUR_CRON_SECRET" \
- *     -H "Content-Type: application/json" \
- *     -d '{"gmTs":"260021"}'
  */
 export async function POST(request: NextRequest) {
-  const start = Date.now()
-
   try {
     const authError = verifyCronSecret(request)
     if (authError) return authError
@@ -52,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // gmTs를 단일 또는 배열로 받기
+    // gmTs를 단일 또는 배열로 정규화
     let gmTsList: string[] = []
     const gmTsValue = parsed.data.gmTs
     if (Array.isArray(gmTsValue)) {
@@ -61,7 +59,6 @@ export async function POST(request: NextRequest) {
       gmTsList = [String(gmTsValue).trim()]
     }
 
-    // 유효성 검사: gmTs는 숫자 문자열이어야 함
     for (const gmTs of gmTsList) {
       if (!/^\d+$/.test(gmTs)) {
         return apiBadRequest(`유효하지 않은 gmTs: "${gmTs}" (숫자만 가능)`)
@@ -70,62 +67,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
 
-    const results: Array<{
-      gmTs: string
-      action: string
-      roundId: string
-      games: number
-      errors: number
-    }> = []
-    const errors: string[] = []
-
-    for (const gmTs of gmTsList) {
-      const result = await syncSingleGmTs(supabase, gmTs)
-
-      if ("error" in result) {
-        errors.push(result.error)
-        console.error(`[manual-sync] gmTs ${gmTs} 실패:`, result.error)
-        continue
-      }
-
-      results.push({ gmTs, ...result })
+    // betman_sync_state 에 manual resync 플래그 세팅 → Vultr cron 이 처리
+    const resyncFlag = {
+      needs_resync: true,
+      requested_at: new Date().toISOString(),
+      reason: "manual",
+      target_gm_ts: gmTsList,
     }
-
-    // sync_state 업데이트
-    const latestGmTs = gmTsList[gmTsList.length - 1]
-    const totalGames = results.reduce((sum, r) => sum + r.games, 0)
-
-    const { data: existing } = await supabase
-      .from("betman_sync_state")
-      .select("id")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const updateData = {
-      last_checked_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      latest_gm_ts: latestGmTs,
-      last_sync_action: "manual_sync",
-      last_sync_games_count: totalGames,
-      last_error: errors.length > 0 ? errors.join("; ") : null,
-    }
-
-    if (existing) {
-      await supabase.from("betman_sync_state").update(updateData).eq("id", existing.id)
-    } else {
-      await supabase.from("betman_sync_state").insert(updateData)
-    }
-
-    const duration = Date.now() - start
+    await updateSyncState(supabase, null, "manual_resync_request", 0, JSON.stringify(resyncFlag))
 
     return NextResponse.json({
       ok: true,
-      rounds: gmTsList.length,
-      results,
-      errors,
-      totalGames,
-      duration: `${duration}ms`,
+      message: "Vultr 재동기화 요청이 등록되었습니다. 다음 VPS cron 주기에 처리됩니다.",
+      target_gm_ts: gmTsList,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
