@@ -2,10 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Database, Rss, Clock, RefreshCw } from "lucide-react"
+import { Database, Rss, Clock, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "@/hooks/use-toast"
 
 interface SystemHealthData {
   betmanSync: {
@@ -54,11 +55,30 @@ function SyncStatusBadge({
 export function SystemHealthCards({ data }: { data: SystemHealthData }) {
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
+  const [resyncing, setResyncing] = useState(false)
 
   const handleRefresh = () => {
     setRefreshing(true)
     router.refresh()
     setTimeout(() => setRefreshing(false), 1000)
+  }
+
+  const handleResync = async () => {
+    setResyncing(true)
+    try {
+      const res = await fetch("/api/admin/betman/resync", { method: "POST" })
+      const body = (await res.json()) as { ok?: boolean; message?: string; error?: string }
+      if (!res.ok) throw new Error(body.error ?? "오류가 발생했습니다.")
+      toast({ title: "재동기화 요청됨", description: body.message })
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: e instanceof Error ? e.message : "오류가 발생했습니다.",
+      })
+    } finally {
+      setResyncing(false)
+    }
   }
 
   return (
@@ -100,10 +120,24 @@ export function SystemHealthCards({ data }: { data: SystemHealthData }) {
               <span>{data.betmanSync.gamesCount ?? 0}</span>
             </div>
             {data.betmanSync.lastError && (
-              <div className="mt-2 rounded bg-primary/10 p-2 text-xs text-primary">
+              <div className="bg-primary/10 text-primary mt-2 rounded p-2 text-xs">
                 {data.betmanSync.lastError}
               </div>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={handleResync}
+              disabled={resyncing}
+            >
+              {resyncing ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              긴급 재동기화 요청
+            </Button>
           </CardContent>
         </Card>
 
