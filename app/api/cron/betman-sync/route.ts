@@ -3,28 +3,25 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
-import { fetchAllGmTs } from "@/lib/betman/game-fetcher"
-import { syncSingleGmTs } from "@/lib/betman/sync-orchestrator"
-import { fetchAndApplyResults } from "@/lib/betman/result-fetcher"
 import { updateSyncState } from "@/lib/betman/sync-state"
 
 /**
  * GET /api/cron/betman-sync
  *
- * Vercel Cron Watchdog + Round Maintenance
+ * Betman 동기화 watchdog — 30분마다.
  *
- * betman.co.kr은 한국 IP에서만 접근 가능하므로 Vercel에서 직접 스크래핑하지 않음.
- * 대신 아래 역할을 수행:
+ * betman.co.kr 은 한국 IP 에서만 접근 가능하므로 Vercel(해외 IP)에서 직접
+ * 스크래핑하지 않는다. 게임 동기화·결과 수집·정산은 Vultr 서울 VPS cron
+ * (sync.sh / fetch-results.sh) 이 전담한다.
  *
- * 1. 동기화 staleness 감시 → VPS에 urgent resync 신호
- * 2. 라운드 생명주기 관리 (auto-close, status 정리)
- * 3. 새 회차 감지를 위한 DB 기반 프로빙 요청 플래그
- * 4. 동기화 상태 헬스체크 및 로깅
+ * 이 route 는 DB 만 보고 다음을 수행:
+ * 1. 동기화 staleness 감시
+ * 2. 라운드 생명주기 관리 (과거 게임 정리, open 라운드 auto-close)
+ * 3. staleness 감지 시 VPS 에 urgent resync 신호 (betman_sync_state 플래그)
  *
- * 도메인 로직은 lib/betman/에 분리:
- * - game-fetcher / result-fetcher: betman HTTP 조회
- * - sync-orchestrator: 단일 gmTs 업서트
- * - sync-state: betman_sync_state 갱신
+ * NOTE: 과거 이 route 는 Phase 3(fetchAllGmTs 직접 탐색)·3.5(fetchAndApplyResults
+ * 결과 수집)에서 betman.co.kr 을 직접 호출했으나, Vercel 해외 IP 에서 100% 실패하며
+ * 매 실행 5분 timeout 을 유발해 제거됨. betman 직접 접근은 Vultr 전담.
  */
 
 const STALE_THRESHOLD_HOURS = 3
@@ -128,130 +125,9 @@ async function cronGet(request: NextRequest) {
     }
 
     // ============================================
-    // Phase 3: 새 회차 직접 탐색 시도 (Vercel → betman)
+    // Phase 3: 동기화 상태 갱신 / VPS resync 신호
     // ============================================
-    // Vercel이 해외 IP라 실패할 수 있지만, 일부 CDN 엣지에서는 성공할 수도 있음
-    const directSyncResults: Array<{
-      gmTs: string
-      action: string
-      roundId: string
-      games: number
-      errors: number
-    }> = []
-
-    // 3a. betman API에서 구매 가능 gmTs 직접 시도
-    const gmTsList = await fetchAllGmTs()
-
-    if (gmTsList.length > 0) {
-      actions.push(`direct_api_success: found gmTs ${gmTsList.join(", ")}`)
-
-      for (const gmTs of gmTsList) {
-        const result = await syncSingleGmTs(supabase, gmTs)
-        if (!("error" in result)) {
-          directSyncResults.push({ gmTs, ...result })
-          if (result.action === "created") {
-            actions.push(`new_round_synced: ${gmTs} (${result.games} games)`)
-          }
-        }
-      }
-    } else {
-      actions.push("direct_api_failed: betman unreachable from Vercel (expected)")
-
-      // 3b. Fallback: DB 기반 프로빙 (+1 ~ +PROBE_RANGE)
-      const latestGmTs = syncState?.latest_gm_ts
-      if (latestGmTs) {
-        const current = parseInt(latestGmTs, 10)
-        if (!isNaN(current)) {
-          actions.push(`probing: trying gmTs ${current + 1} to ${current + PROBE_RANGE}`)
-
-          for (let i = 1; i <= PROBE_RANGE; i++) {
-            const candidate = String(current + i)
-            const result = await syncSingleGmTs(supabase, candidate)
-            if (!("error" in result) && result.games > 0) {
-              directSyncResults.push({ gmTs: candidate, ...result })
-              actions.push(`probe_success: gmTs ${candidate} (${result.games} games)`)
-            }
-          }
-        }
-      }
-    }
-
-    // ============================================
-    // Phase 3.5: 경기 결과 수집 + 자동 정산
-    // ============================================
-    let resultsFetched = 0
-    let resultsCancelled = 0
-    const resultErrors: string[] = []
-
-    const { data: roundsNeedingResults } = await supabase
-      .from("betman_rounds")
-      .select("id, gm_ts")
-      .in("status", ["open", "closed"])
-      .order("gm_ts", { ascending: false })
-      .limit(5)
-
-    if (roundsNeedingResults && roundsNeedingResults.length > 0) {
-      for (const round of roundsNeedingResults) {
-        const { count: pendingCount } = await supabase
-          .from("betman_games")
-          .select("*", { count: "exact", head: true })
-          .eq("round_id", round.id)
-          .in("status", ["scheduled", "in_progress"])
-
-        if (!pendingCount || pendingCount === 0) continue
-
-        const { updated, cancelled, errors } = await fetchAndApplyResults(supabase, round.gm_ts)
-        if (updated > 0 || cancelled > 0) {
-          resultsFetched += updated
-          resultsCancelled += cancelled
-          actions.push(
-            `results_fetched: gmTs=${round.gm_ts} (${updated} updated, ${cancelled} cancelled)`
-          )
-        }
-        resultErrors.push(...errors)
-      }
-    }
-
-    // 결과가 새로 입력된 게임에 대해 자동 정산 실행
-    let autoSettleResult = null
-    if (resultsFetched > 0 || resultsCancelled > 0) {
-      try {
-        const { settlePredictions } = await import("@/lib/betman/settle")
-
-        const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
-        const { data: recentlyUpdatedGames } = await supabase
-          .from("betman_games")
-          .select(
-            "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
-          )
-          .in("status", ["completed", "cancelled"])
-          .not("result", "is", null)
-          .gte("updated_at", fiveMinAgo)
-
-        if (recentlyUpdatedGames && recentlyUpdatedGames.length > 0) {
-          const gameIds = recentlyUpdatedGames.map((g) => g.id)
-          const { data: predictions } = await supabase
-            .from("betman_predictions")
-            .select("id, user_id, game_id, prediction, status, slip_id, locked_odds, stake")
-            .in("game_id", gameIds)
-            .eq("status", "pending")
-
-          if (predictions && predictions.length > 0) {
-            autoSettleResult = await settlePredictions(supabase, recentlyUpdatedGames, predictions)
-            actions.push(
-              `auto_settled: ${autoSettleResult.settled} predictions (${autoSettleResult.correct} correct, ${autoSettleResult.wrong} wrong)`
-            )
-          }
-        }
-      } catch (settleErr) {
-        actions.push(`auto_settle_error: ${(settleErr as Error).message}`)
-      }
-    }
-
-    // ============================================
-    // Phase 4: VPS에 urgent resync 신호 (DB 플래그)
-    // ============================================
-    if (isStale && directSyncResults.length === 0) {
+    if (isStale) {
       const resyncFlag = {
         needs_resync: true,
         requested_at: now.toISOString(),
@@ -269,22 +145,9 @@ async function cronGet(request: NextRequest) {
       actions.push(
         `resync_flagged: ${isUrgent ? "URGENT" : "stale"} (${hoursSinceSync.toFixed(1)}h)`
       )
-    }
-
-    // ============================================
-    // Phase 5: 동기화 상태 업데이트
-    // ============================================
-    const totalGames = directSyncResults.reduce((sum, r) => sum + r.games, 0)
-
-    if (directSyncResults.length > 0 && totalGames > 0) {
-      const latestGmTs = directSyncResults[directSyncResults.length - 1].gmTs
-      const activeGmTs = directSyncResults.map((r) => r.gmTs)
-      await updateSyncState(supabase, latestGmTs, "watchdog_sync", totalGames, null, activeGmTs)
-    } else if (!isStale) {
+    } else {
       await updateSyncState(supabase, null, "watchdog_ok", 0, null)
     }
-
-    const duration = Date.now() - start
 
     return NextResponse.json({
       mode: "watchdog",
@@ -292,21 +155,7 @@ async function cronGet(request: NextRequest) {
       isUrgent,
       hoursSinceSync: hoursSinceSync.toFixed(1),
       actions,
-      directSyncResults,
-      totalGames,
-      results: {
-        fetched: resultsFetched,
-        cancelled: resultsCancelled,
-        errors: resultErrors.length > 0 ? resultErrors : undefined,
-      },
-      autoSettle: autoSettleResult
-        ? {
-            settled: autoSettleResult.settled,
-            correct: autoSettleResult.correct,
-            wrong: autoSettleResult.wrong,
-          }
-        : null,
-      duration: `${duration}ms`,
+      duration: `${Date.now() - start}ms`,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
