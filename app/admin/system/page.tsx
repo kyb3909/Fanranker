@@ -1,13 +1,27 @@
 import type { Metadata } from "next"
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { SystemHealthCards } from './system-health-cards'
-import { CrawlerHistory } from './crawler-history'
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { SystemHealthCards } from "./system-health-cards"
+import { CrawlerHistory } from "./crawler-history"
+import { CronMonitor, CRON_JOBS, type CronLastRun } from "./cron-monitor"
 
 export const metadata: Metadata = { title: "시스템 상태" }
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function AdminSystemPage() {
   const supabase = createServiceRoleClient()
+
+  const cronJobs = await Promise.all(
+    CRON_JOBS.map(async (job) => {
+      const { data } = await supabase
+        .from("cron_run_log")
+        .select("status, http_status, error_message, duration_ms, started_at")
+        .eq("job_name", job.name)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return { ...job, lastRun: (data as CronLastRun | null) ?? null }
+    })
+  )
 
   const [
     { data: syncState },
@@ -17,37 +31,35 @@ export default async function AdminSystemPage() {
     { count: tickerCount },
   ] = await Promise.all([
     supabase
-      .from('betman_sync_state')
-      .select('*')
-      .order('updated_at', { ascending: false })
+      .from("betman_sync_state")
+      .select("*")
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
     supabase
-      .from('crawler_run_log')
-      .select('*')
-      .order('started_at', { ascending: false })
+      .from("crawler_run_log")
+      .select("*")
+      .order("started_at", { ascending: false })
       .limit(50),
+    supabase.from("crawler_run_log").select("*", { count: "exact", head: true }),
     supabase
-      .from('crawler_run_log')
-      .select('*', { count: 'exact', head: true }),
-    supabase
-      .from('betman_daily_rounds')
-      .select('*')
-      .order('daily_id', { ascending: false })
+      .from("betman_daily_rounds")
+      .select("*")
+      .order("daily_id", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from('news_ticker_items')
-      .select('*', { count: 'exact', head: true }),
+    supabase.from("news_ticker_items").select("*", { count: "exact", head: true }),
   ])
 
   const lastCrawlerRun = crawlerRuns?.[0] ?? null
 
   return (
-    <main id="main-content" tabIndex={-1} className="p-6 space-y-8">
+    <main id="main-content" tabIndex={-1} className="space-y-8 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">시스템 상태</h1>
-        <p className="text-sm text-muted-foreground">서비스 동기화 및 크롤러 상태를 모니터링합니다.</p>
+        <h1 className="text-foreground text-2xl font-bold">시스템 상태</h1>
+        <p className="text-muted-foreground text-sm">
+          서비스 동기화 및 크롤러 상태를 모니터링합니다.
+        </p>
       </div>
 
       <SystemHealthCards
@@ -81,6 +93,8 @@ export default async function AdminSystemPage() {
           tickerCount: tickerCount ?? 0,
         }}
       />
+
+      <CronMonitor jobs={cronJobs} />
 
       <CrawlerHistory runs={crawlerRuns ?? []} />
     </main>
