@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { SystemHealthCards } from "./system-health-cards"
 import { CrawlerHistory } from "./crawler-history"
 import { CronMonitor, CRON_JOBS, type CronLastRun } from "./cron-monitor"
+import { ApiHealthStrip } from "./api-health-strip"
 
 export const metadata: Metadata = { title: "시스템 상태" }
 export const dynamic = "force-dynamic"
@@ -95,6 +96,8 @@ export default async function AdminSystemPage() {
       />
 
       <CronMonitor jobs={cronJobs} />
+
+      <ApiHealthStrip />
 
       <CrawlerHistory runs={crawlerRuns ?? []} />
     </main>
