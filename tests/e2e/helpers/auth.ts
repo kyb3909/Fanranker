@@ -59,4 +59,11 @@ export async function logout(page: Page): Promise<void> {
     const Clerk = (window as unknown as { Clerk?: any }).Clerk
     if (Clerk?.signOut) await Clerk.signOut()
   })
+  // signOut() 반환 후에도 Clerk 의 클라이언트 user 상태가 비워지기까지
+  // 짧은 지연이 있어, 실제로 null 이 될 때까지 기다린다.
+  await page.waitForFunction(
+    () => !(window as unknown as { Clerk?: { user?: unknown } }).Clerk?.user,
+    null,
+    { timeout: 10_000 }
+  )
 }
