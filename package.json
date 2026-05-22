@@ -20,7 +20,10 @@
     "audit:headless": "playwright test --config=playwright.audit.config.ts tests/audit/full-app-audit.spec.ts",
     "audit:cwv": "playwright test --config=playwright.audit.config.ts tests/audit/cwv.spec.ts",
     "audit:diff": "tsx tests/audit/lib/compare-runs.ts",
-    "audit:parse": "tsx tests/audit/lib/parse-events.ts"
+    "audit:parse": "tsx tests/audit/lib/parse-events.ts",
+    "test:e2e": "playwright test --config=playwright.e2e.config.ts",
+    "test:e2e:report": "tsx scripts/generate-e2e-report.ts",
+    "test:e2e:cleanup": "tsx tests/e2e/setup/bot-factory-cli.ts cleanup"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
