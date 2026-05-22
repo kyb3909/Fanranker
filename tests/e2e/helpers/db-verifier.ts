@@ -49,7 +49,8 @@ export async function expectDBRecord(
   match: Match,
   opts: { timeoutMs?: number; intervalMs?: number } = {}
 ): Promise<Row> {
-  const timeoutMs = opts.timeoutMs ?? 6_000
+  // 10워커 동시 부하에서 API 라운드트립이 느려질 수 있어 넉넉히 폴링한다.
+  const timeoutMs = opts.timeoutMs ?? 15_000
   const intervalMs = opts.intervalMs ?? 250
   const deadline = Date.now() + timeoutMs
   let lastError = ""
@@ -75,7 +76,7 @@ export async function expectDBRecordGone(
   match: Match,
   opts: { timeoutMs?: number; intervalMs?: number } = {}
 ): Promise<void> {
-  const timeoutMs = opts.timeoutMs ?? 6_000
+  const timeoutMs = opts.timeoutMs ?? 15_000
   const intervalMs = opts.intervalMs ?? 250
   const deadline = Date.now() + timeoutMs
 
