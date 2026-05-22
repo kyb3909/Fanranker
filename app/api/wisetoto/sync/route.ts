@@ -24,15 +24,25 @@ interface WiseTotoGame {
 export const dynamic = "force-dynamic"
 
 async function syncHandler(request: NextRequest) {
-  // 인증: Vercel cron (CRON_SECRET) 또는 프로덕션 브라우저 폴링 (origin/referer)
+  // 인증: Vercel cron (CRON_SECRET) 또는 자사 도메인 브라우저 폴링.
+  // origin/referer 의 호스트를 substring 이 아닌 '정확 일치'로 검사한다 —
+  // 과거 includes() 매칭은 gongnori.fan.evil.com 같은 위장 도메인을 통과시켰다.
+  // (헤더 자체는 위조 가능하나, 이 엔드포인트는 25초 쿨다운이 걸린 멱등
+  //  점수 동기화만 수행해 잔여 위험이 낮다.)
   const cronAuthResult = verifyCronSecret(request)
   const isCronAuthed = cronAuthResult === null
-  const origin = request.headers.get("origin")
-  const referer = request.headers.get("referer")
-  const allowedHosts = ["gongnori.fan", "community-app-brown.vercel.app", "localhost"]
+  const ALLOWED_ORIGINS = ["https://gongnori.fan", "https://community-app-brown.vercel.app"]
+  const isSelfOrigin = (value: string | null): boolean => {
+    if (!value) return false
+    try {
+      const o = new URL(value).origin
+      return ALLOWED_ORIGINS.includes(o) || o.startsWith("http://localhost")
+    } catch {
+      return false
+    }
+  }
   const isAllowedOrigin =
-    (!!origin && allowedHosts.some((h) => origin.includes(h))) ||
-    (!!referer && allowedHosts.some((h) => referer.includes(h)))
+    isSelfOrigin(request.headers.get("origin")) || isSelfOrigin(request.headers.get("referer"))
 
   if (!isCronAuthed && !isAllowedOrigin) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 })
