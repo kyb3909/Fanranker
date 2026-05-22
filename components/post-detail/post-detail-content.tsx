@@ -71,9 +71,32 @@ export function PostDetailContent({
     router.push(`/search?q=${encodeURIComponent(post.author)}&type=nickname`)
   }
 
-  const handleBlockUser = () => {
-    if (confirm(`${post.author}님을 차단하시겠습니까?`)) {
-      toast({ variant: "destructive", title: "알림", description: "차단 기능은 준비 중입니다." })
+  const handleBlockUser = async () => {
+    if (!confirm(`${post.author}님을 차단하시겠습니까?`)) return
+    try {
+      const res = await fetch("/api/users/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: post.userId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: data.error || "차단에 실패했습니다.",
+        })
+        return
+      }
+      toast({
+        title: data.blocked ? "차단 완료" : "차단 해제",
+        description: data.blocked
+          ? `${post.author}님을 차단했습니다.`
+          : `${post.author}님 차단을 해제했습니다.`,
+      })
+      router.refresh()
+    } catch {
+      toast({ variant: "destructive", title: "오류", description: "차단 중 오류가 발생했습니다." })
     }
   }
 
