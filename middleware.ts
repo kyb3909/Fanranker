@@ -26,6 +26,15 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     if (onboardingRedirect) return onboardingRedirect
   } catch (error) {
     console.error("Middleware error:", error)
+    // 관리자 영역은 가드 예외 시 fail-closed — 예외를 틈탄 보호 우회를 막는다.
+    // 그 외 경로는 가용성 우선으로 통과시킨다 (가드 일시 오류로 사이트 전체가
+    // 막히지 않게).
+    const path = req.nextUrl.pathname
+    if (path.startsWith("/admin") || path.startsWith("/api/admin")) {
+      return path.startsWith("/api/")
+        ? NextResponse.json({ error: "일시적 오류로 요청을 처리할 수 없습니다." }, { status: 503 })
+        : NextResponse.redirect(new URL("/", req.url))
+    }
     return NextResponse.next()
   }
 })
