@@ -5,13 +5,17 @@ Sentry.init({
   enabled: process.env.NODE_ENV === "production",
   environment: process.env.VERCEL_ENV || process.env.NODE_ENV,
   release: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
-  tracesSampleRate: 0.1,
+  // 클라이언트 트레이싱 비활성화 — Vercel Analytics + Lighthouse로 페이지 로드 성능 측정.
+  // Sentry는 에러 캡처 전용. excludeTracing(next.config.mjs)와 함께 BrowserTracing 코드 트리쉐이킹.
+  tracesSampleRate: 0,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
   debug: false,
 
-  // 초기 번들 감소 위해 Replay는 에러 시 lazy-load
-  integrations: (integrations) => integrations.filter((i) => i.name !== "Replay"),
+  // 초기 번들 감소: Replay/BrowserTracing은 기본 integration에서 제외.
+  // Replay는 첫 에러 발생 시 lazy-load (아래 코드 참조).
+  integrations: (integrations) =>
+    integrations.filter((i) => i.name !== "Replay" && i.name !== "BrowserTracing"),
 
   // 환경성/반복 에러 필터 — Sentry 쿼터 보호
   ignoreErrors: [

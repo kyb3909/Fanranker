@@ -216,5 +216,19 @@ export default withBundleAnalyzer(
 
   // SENTRY_AUTH_TOKEN 없으면 빌드 실패하지 않게
   authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // 번들 사이즈 최적화 — 빌드 시 미사용 기능 트리쉐이킹.
+  // Replay는 `sentry.client.config.ts`에서 첫 에러 발생 시 lazy-load 하므로
+  // 메인 번들에서 Replay 관련 코드(Canvas/Worker/iframe/ShadowDom) 전부 제거.
+  // 클라이언트 트레이싱도 사용 안 함 (Vercel Analytics + Lighthouse로 측정).
+  // Sentry SDK v8+ 공식 옵션.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayCanvas: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+    excludeReplayIframe: true,
+    excludeTracing: true,
+  },
   })
 )

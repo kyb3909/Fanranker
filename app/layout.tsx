@@ -30,14 +30,18 @@ const pretendard = localFont({
   weight: "45 920",
 })
 
-// 제목/디스플레이 한글 폰트: SUIT Variable — 자간이 살짝 좁아 굵은 weight에서 진중함.
+// 제목/디스플레이 한글 폰트: SUIT (정적 wght=700 인스턴스).
 // 본문 Pretendard와 듀얼 시스템 (NYT/Verge/Pitchfork 식 에디토리얼 톤).
+// font-title 클래스가 항상 font-bold(700) 만 사용하므로 Variable axis 불필요.
+// pyftsubset로 KS X 1001 한글(2,668자) + Latin + CJK 기호로 서브셋팅: 624KB → 173KB.
 // display: optional — 첫 렌더 블로킹 안 함, 캐시되면 적용 (헤딩 폰트 특성상 fallback 허용).
+// preload: false — 초기 critical path에서 제거. 헤딩 전용이라 LCP 영향 없음.
 const suit = localFont({
-  src: "../public/fonts/SUIT-Variable.woff2",
+  src: "../public/fonts/SUIT-700.woff2",
   display: "optional",
   variable: "--font-suit",
-  weight: "100 900",
+  weight: "700",
+  preload: false,
 })
 
 const koLocalization = {
