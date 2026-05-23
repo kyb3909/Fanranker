@@ -11,7 +11,7 @@ async function fetchExploreData() {
   const [categoriesResult, postsResult] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, slug, name, icon, sort_order, description")
+      .select("id, slug, name, icon, sort_order, description, parent_slug")
       .eq("is_active", true)
       .is("parent_slug", null)
       .order("sort_order", { ascending: true }),

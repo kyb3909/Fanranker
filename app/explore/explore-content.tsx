@@ -15,7 +15,12 @@ interface Category {
   icon: string | null
   sort_order: number
   description: string | null
+  parent_slug: string | null
 }
+
+// 게시판 둘러보기 그리드에 노출할 최대 개수.
+// 디자인이 2x5 / 5x2 그리드로 고정이라 항상 정확히 10개만 표시.
+const EXPLORE_GRID_LIMIT = 10
 
 interface Post {
   id: string
@@ -82,7 +87,12 @@ function ExploreInner() {
     swrOptions
   )
 
-  const categories = catData?.categories || []
+  // 게시판 둘러보기 그리드: 상위 카테고리(parent_slug=NULL)만, sort_order 순, 최대 10개.
+  // /api/categories 응답에는 자식 카테고리(예: gamst → parent=football)도 섞여 있어
+  // 필터링 필수. 자식은 사이드바 community-sidebar 에서 트리로 노출됨.
+  const categories = (catData?.categories || [])
+    .filter((c) => !c.parent_slug)
+    .slice(0, EXPLORE_GRID_LIMIT)
   const allPosts = mapPosts(postsData?.posts || [])
 
   // 7일 이내 + 추천 1개 이상 필터
