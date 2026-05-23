@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
+
+/**
+ * 카테고리 변경 후 채널 메뉴를 노출하는 모든 페이지 재검증.
+ * - /explore: 채널 그리드
+ * - /: 홈 사이드바
+ * - /community/[slug]: 채널 페이지 (slug 알면 정확히, 모르면 layout 무효화)
+ * 또한 /api/categories 응답 캐시는 Cache-Control: s-maxage=60 이라 1분 내 자연 만료.
+ */
+function revalidateCategoryPages(slug?: string) {
+  revalidatePath("/explore")
+  revalidatePath("/")
+  revalidatePath("/community", "layout")
+  if (slug) revalidatePath(`/community/${slug}`)
+}
 
 export async function GET() {
   try {
@@ -100,6 +115,8 @@ export async function POST(request: NextRequest) {
       ipAddress: getIpFromRequest(request),
     })
 
+    revalidateCategoryPages(slug)
+
     return NextResponse.json({ board }, { status: 201 })
   } catch (error) {
     return apiError("서버 오류", 500, error)
@@ -137,7 +154,13 @@ export async function PATCH(request: NextRequest) {
     if (sort_order !== undefined) updateData.sort_order = sort_order
     if (is_active !== undefined) updateData.is_active = is_active
 
-    const { error } = await supabase.from("categories").update(updateData).eq("id", boardId)
+    // slug를 같이 받아와 정확한 채널 페이지까지 무효화.
+    const { data: updated, error } = await supabase
+      .from("categories")
+      .update(updateData)
+      .eq("id", boardId)
+      .select("slug")
+      .single()
     if (error) return apiError(error.message, 500, error)
 
     await writeAuditLog({
@@ -148,6 +171,8 @@ export async function PATCH(request: NextRequest) {
       details: updateData,
       ipAddress: getIpFromRequest(request),
     })
+
+    revalidateCategoryPages(updated?.slug)
 
     return NextResponse.json({ success: true })
   } catch (error) {

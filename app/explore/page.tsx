@@ -1,6 +1,10 @@
 import { createAnonClient } from "@/lib/supabase/server"
 import { ExploreContent } from "./explore-content"
 
+// ISR 60초 — 어드민에서 채널 추가/토글 시 최대 1분 내 반영.
+// 어드민 boards 라우트(POST/PATCH)가 revalidatePath('/explore') 호출하므로 보통 즉시 반영.
+export const revalidate = 60
+
 async function fetchExploreData() {
   const supabase = createAnonClient()
 

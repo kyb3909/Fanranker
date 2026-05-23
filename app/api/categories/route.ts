@@ -16,6 +16,8 @@ export async function GET() {
   }
 
   const res = NextResponse.json({ categories: data })
-  res.headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400")
+  // 어드민에서 채널 추가/토글 시 1분 내 반영되어야 하므로 짧게.
+  // 어드민 boards 라우트(PATCH/POST)에서 revalidatePath 호출로 즉시 무효화도 병행.
+  res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   return res
 }
