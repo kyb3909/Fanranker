@@ -11,9 +11,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    import("@sentry/nextjs").then((Sentry) => {
-      Sentry.captureException(error)
-    })
+    console.error("[shop/error-boundary]", error)
   }, [error])
 
   return (

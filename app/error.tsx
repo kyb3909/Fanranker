@@ -11,9 +11,10 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    import("@sentry/nextjs").then((Sentry) => {
-      Sentry.captureException(error)
-    })
+    // 클라이언트 Sentry 제거 (모바일 번들 165KB 감소). 서버 측 에러는 instrumentation.ts
+    // 의 server/edge Sentry init 으로 계속 캡처됨. 클라이언트 런타임 에러는 Vercel
+    // 로그 / 사용자 신고로 인지.
+    console.error("[error-boundary]", error)
   }, [error])
 
   return (

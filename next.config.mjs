@@ -211,36 +211,22 @@ const nextConfig = {
   },
 }
 
+// Sentry 클라이언트 측 제거 (모바일 번들 165KB 감소). 서버/edge runtime 의 Sentry 는
+// instrumentation.ts 의 register() 에서 계속 init 함.
+// withSentryConfig 자체는 유지 — 서버 측 빌드 hook + source map 업로드(token 있을 때)
+// 가 필요하므로. SENTRY_AUTH_TOKEN 없으면 source map 업로드 단계 자동 skip.
+// disableClientWebpackPlugin: true 로 클라이언트 webpack 변환 단계 자체 비활성화 →
+// client 번들에 Sentry SDK 코드가 webpack 단에서 traceable 형태로 남는 것을 막음.
 export default withBundleAnalyzer(
   withSentryConfig(nextConfig, {
-  // Sentry 빌드 옵션
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-
-  // 소스맵을 Sentry에 업로드 (프로덕션 빌드에서만)
-  silent: !process.env.CI,
-
-  // 클라이언트 번들에서 소스맵 숨김
-  hideSourceMaps: true,
-
-  // 자동 트리 쉐이킹
-  disableLogger: true,
-
-  // SENTRY_AUTH_TOKEN 없으면 빌드 실패하지 않게
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-
-  // 번들 사이즈 최적화 — 빌드 시 미사용 기능 트리쉐이킹.
-  // Replay는 `sentry.client.config.ts`에서 첫 에러 발생 시 lazy-load 하므로
-  // 메인 번들에서 Replay 관련 코드(Canvas/Worker/iframe/ShadowDom) 전부 제거.
-  // 클라이언트 트레이싱도 사용 안 함 (Vercel Analytics + Lighthouse로 측정).
-  // Sentry SDK v8+ 공식 옵션.
-  bundleSizeOptimizations: {
-    excludeDebugStatements: true,
-    excludeReplayCanvas: true,
-    excludeReplayShadowDom: true,
-    excludeReplayWorker: true,
-    excludeReplayIframe: true,
-    excludeTracing: true,
-  },
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    silent: !process.env.CI,
+    hideSourceMaps: true,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    // 클라이언트 빌드에서 Sentry webpack plugin 완전 비활성화.
+    // sentry.client.config.ts 가 비어있어도 SDK 자체는 import 될 수 있어
+    // 명시적으로 plugin 을 꺼서 클라이언트 번들에서 완전히 제외.
+    disableClientWebpackPlugin: true,
   })
 )
