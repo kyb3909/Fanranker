@@ -59,8 +59,21 @@ export const ActivitySidebar = memo(function ActivitySidebar({
   initialRecentComments?: unknown[]
 }) {
   const { ref: stickyRef, stickyTop } = useStickySidebar()
-  const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
+  // SSR prefetch 데이터로 useState lazy init → 첫 render 부터 댓글 포함된 HTML.
+  // 이전엔 빈 배열로 시작 후 useEffect 에서 채우는 패턴 → hydration 후 sidebar 높이
+  // 증가로 데스크톱 CLS 0.21+ 발생. lazy init 으로 SSR HTML 에 이미 댓글이 들어가
+  // 시프트 제거.
+  const [recentPosts, setRecentPosts] = useState<RecentPost[]>(() => {
+    if (initialRecentComments && initialRecentComments.length > 0) {
+      return mapApiPostsToRecentPosts(
+        initialRecentComments as Parameters<typeof mapApiPostsToRecentPosts>[0]
+      )
+    }
+    return []
+  })
+  const [isLoadingPosts, setIsLoadingPosts] = useState(
+    !(initialRecentComments && initialRecentComments.length > 0)
+  )
   const [standingsVisible, setStandingsVisible] = useState(false)
   const standingsRef = useRef<HTMLDivElement>(null)
 
@@ -83,14 +96,12 @@ export const ActivitySidebar = memo(function ActivitySidebar({
 
   // 최근 댓글이 달린 글 가져오기 (서버 프리페치 데이터 우선 사용, 60초 캐시)
   useEffect(() => {
-    // 서버에서 받은 초기 데이터가 있으면 바로 사용
-    if (initialRecentComments && initialRecentComments.length > 0 && recentPosts.length === 0) {
-      const mapped = mapApiPostsToRecentPosts(
-        initialRecentComments as Parameters<typeof mapApiPostsToRecentPosts>[0]
-      )
-      setRecentPosts(mapped)
-      recentCommentsCache = { data: mapped, fetchedAt: Date.now() }
-      setIsLoadingPosts(false)
+    // SSR prefetch 가 useState lazy init 으로 이미 채웠으면 client fetch 자체 skip.
+    // cache 도 갱신해서 다른 ActivitySidebar 인스턴스에서 재사용 가능하게.
+    if (initialRecentComments && initialRecentComments.length > 0) {
+      if (recentPosts.length > 0 && !recentCommentsCache) {
+        recentCommentsCache = { data: recentPosts, fetchedAt: Date.now() }
+      }
       return
     }
 

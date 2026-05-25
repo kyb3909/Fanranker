@@ -285,23 +285,35 @@ export default async function CommunityPage({
   }
 
   // 모든 데이터를 병렬로 가져오기 (SSR waterfall 제거)
-  const [{ data: channels }, { data: flairs }, { posts: rawPosts, totalCount }] = await Promise.all(
-    [
-      supabaseForMeta
-        .from("categories")
-        .select("slug, name, icon, description")
-        .eq("parent_slug", slug)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
-      supabaseForMeta
-        .from("post_flairs")
-        .select("id, name, color, sort_order")
-        .eq("community_slug", slug)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
-      fetchPosts(slug, currentPage, flairId),
-    ]
-  )
+  // recentComments 는 ActivitySidebar SSR prefetch 용 — hydration 후 client fetch 로
+  // sidebar 가 채워지면서 발생하던 데스크톱 CLS 0.21+ 제거.
+  const [
+    { data: channels },
+    { data: flairs },
+    { posts: rawPosts, totalCount },
+    { data: recentComments },
+  ] = await Promise.all([
+    supabaseForMeta
+      .from("categories")
+      .select("slug, name, icon, description")
+      .eq("parent_slug", slug)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabaseForMeta
+      .from("post_flairs")
+      .select("id, name, color, sort_order")
+      .eq("community_slug", slug)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    fetchPosts(slug, currentPage, flairId),
+    supabaseForMeta
+      .from("posts")
+      .select("id, title, community_slug, comment_count, latest_comment_at, created_at")
+      .is("deleted_at", null)
+      .gt("comment_count", 0)
+      .order("latest_comment_at", { ascending: false, nullsFirst: false })
+      .limit(10),
+  ])
   const communityPosts = transformPosts(rawPosts)
   const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
 
@@ -380,7 +392,7 @@ export default async function CommunityPage({
             </div>
 
             <aside className="hidden lg:col-span-3 lg:block">
-              <ActivitySidebar />
+              <ActivitySidebar initialRecentComments={recentComments ?? []} />
             </aside>
           </div>
         </main>
