@@ -69,6 +69,7 @@
     "lucide-react": "^0.454.0",
     "next": "15.5.18",
     "phaser": "^4.0.0",
+    "protobufjs": "^7.6.1",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
