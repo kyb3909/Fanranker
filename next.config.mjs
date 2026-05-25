@@ -128,14 +128,17 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
-  // /games 는 게임 인덱스 stub — 현재 galcup 만 1급. Edge 308 redirect 로 SSR 비용 + RSC streaming
-  // redirect 의 client-navigation 부수효과(측정 도구 컨텍스트 파괴) 제거. 다종목 hub 페이지로 승격
-  // 시점에 이 항목 제거하고 app/games/page.tsx 를 진짜 페이지로 교체.
+  // /games 는 게임 인덱스 stub. 갈드컵은 components/games-tab-nav.tsx 에서 메뉴 hidden
+  // 처리됐고, 드래프트 게임이 현 메인. /games default landing 도 드래프트로 → GNB
+  // "운동장" 클릭이 hidden 페이지로 안 가게.
+  // Edge 308 redirect 로 SSR 비용 + RSC streaming redirect 의 client-navigation 부수효과
+  // (측정 도구 컨텍스트 파괴) 제거. 다종목 hub 페이지로 승격 시점에 이 항목 제거하고
+  // app/games/page.tsx 를 진짜 페이지로 교체.
   async redirects() {
     return [
       {
         source: '/games',
-        destination: '/games/galcup',
+        destination: '/games/draft',
         permanent: true,
       },
     ]
