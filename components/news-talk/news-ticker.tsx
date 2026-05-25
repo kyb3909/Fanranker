@@ -185,7 +185,21 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
     }
   }, [tickerItems])
 
-  if (tickerItems.length === 0) return null
+  // 빈 상태도 같은 높이 컨테이너로 유지해 CLS 방지. items 가 mount 직후엔 항상 빈 배열
+  // (useEffect 에서 fetch) → return null 하면 skeleton 64px → 0 → 43px 두 번 시프트 발생.
+  // 외부 구조 유지하고 안쪽만 invisible 로 자리 잡아둠.
+  if (tickerItems.length === 0) {
+    return (
+      <div
+        className="w-full overflow-hidden border-b border-neutral-800 bg-neutral-900"
+        aria-hidden
+      >
+        <div className="container mx-auto flex min-h-11 max-w-[1280px] items-center px-4 py-2.5 sm:min-h-0">
+          <span className="text-[12px] text-transparent select-none">.</span>
+        </div>
+      </div>
+    )
+  }
 
   const items = [...tickerItems, ...tickerItems]
 

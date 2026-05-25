@@ -7,7 +7,9 @@ import { CommunityContent } from "@/components/community-content"
 
 const NewsTicker = dynamic(
   () => import("@/components/news-talk/news-ticker").then((m) => ({ default: m.NewsTicker })),
-  { loading: () => <div className="wc-skeleton h-16 rounded-xl" /> }
+  // Skeleton 높이를 실제 ticker 렌더 높이에 맞춤: 모바일 ~64px (item min-h-11 + py), 데스크톱 ~44px.
+  // 베이스 h-16 (64px) 만 두면 lg 에서 64→43 충돌로 CLS 발생.
+  { loading: () => <div className="wc-skeleton h-16 rounded-xl lg:h-11" /> }
 )
 import { createServerAnonClient } from "@/lib/supabase"
 import { jsonLd } from "@/lib/seo"
