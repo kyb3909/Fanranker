@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/metaverse-cleanup-rooms",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/draft-rooms-cleanup",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

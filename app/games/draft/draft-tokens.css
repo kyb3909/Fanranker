@@ -1,0 +1,170 @@
+/*
+ * 드래프트 게임 디자인 토큰
+ * Editorial-meets-game-UI · warm paper, burgundy accent, deep ink
+ *
+ * 격리 규칙:
+ * - 모든 변수에 --draft-* prefix
+ * - .draft-scope wrapper 안에서만 유효 (page-scope)
+ * - 글로벌 토큰 / shadcn 토큰 / 다른 페이지에 영향 없음
+ * - worldcup-scope 토큰과 충돌 회피 (prefix 다름)
+ */
+
+.draft-scope {
+  /* core palette */
+  --draft-paper: #fbf6f0;
+  --draft-paper-dim: #f4ece6;
+  --draft-soft: #f4ece6;
+  --draft-card: #ffffff;
+  --draft-ink: #1a1416;
+  --draft-ink-soft: #3a2f33;
+  --draft-mute: #807370;
+  --draft-line: #e5dcd2;
+  --draft-rule: #d8ccbf;
+
+  /* hot accent */
+  --draft-burgundy: #a0203b;
+  --draft-burgundy-deep: #7a1830;
+  --draft-burgundy-soft: #f7e2e7;
+
+  /* utility colors used sparingly */
+  --draft-emerald: #2a6a4a;
+  --draft-amber: #c98615;
+  --draft-marine: #1f4d7a;
+  --draft-violet: #5b3a8a;
+
+  /* game theme palette (cards use these as side stripes only) */
+  --draft-th-epl: #38003c;
+  --draft-th-arsenal: #ef0107;
+  --draft-th-slamdunk: #c8102e;
+  --draft-th-3kingdoms: #1a3a5c;
+  --draft-th-kpop: #ff6b9d;
+  --draft-th-tour: #fbcd5a;
+
+  /* shadow */
+  --draft-shadow-1: 0 1px 2px rgba(26, 20, 22, 0.06), 0 1px 1px rgba(26, 20, 22, 0.04);
+  --draft-shadow-2: 0 8px 24px rgba(26, 20, 22, 0.1), 0 2px 4px rgba(26, 20, 22, 0.04);
+  --draft-shadow-3: 0 24px 48px rgba(26, 20, 22, 0.14), 0 4px 8px rgba(26, 20, 22, 0.06);
+
+  /* type */
+  --draft-font-title: "SUIT Variable", "SUIT", "Pretendard Variable", system-ui, sans-serif;
+  --draft-font-body: "Pretendard Variable", "Pretendard", system-ui, sans-serif;
+  --draft-font-serif: "Source Serif Pro", "Source Serif 4", "Noto Serif KR", Georgia, serif;
+  --draft-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+
+  font-family: var(--draft-font-body);
+  color: var(--draft-ink);
+  background: var(--draft-paper);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.draft-scope h1,
+.draft-scope h2,
+.draft-scope h3,
+.draft-scope h4 {
+  margin: 0;
+  font-family: var(--draft-font-title);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-weight: 800;
+}
+.draft-scope p {
+  margin: 0;
+}
+.draft-scope button {
+  font-family: inherit;
+  cursor: pointer;
+}
+.draft-scope .draft-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.draft-scope .draft-serif {
+  font-family: var(--draft-font-serif);
+}
+.draft-scope .draft-title {
+  font-family: var(--draft-font-title);
+}
+
+/* kraft texture — subtle paper grain */
+.draft-scope.draft-kraft,
+.draft-scope .draft-kraft {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(160, 32, 59, 0.05), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(26, 20, 22, 0.04), transparent 60%),
+    var(--draft-paper);
+}
+
+/* magazine rule */
+.draft-scope .draft-rule {
+  height: 1px;
+  background: var(--draft-rule);
+  width: 100%;
+}
+.draft-scope .draft-rule-thick {
+  height: 3px;
+  background: var(--draft-ink);
+  width: 100%;
+}
+
+/* small caps eyebrow */
+.draft-scope .draft-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--draft-mute);
+}
+.draft-scope .draft-eyebrow-burg {
+  color: var(--draft-burgundy);
+}
+
+/* card */
+.draft-scope .draft-card {
+  background: var(--draft-card);
+  border: 1px solid var(--draft-line);
+  border-radius: 14px;
+  box-shadow: var(--draft-shadow-1);
+}
+
+/* pill */
+.draft-scope .draft-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--draft-line);
+  background: var(--draft-card);
+  color: var(--draft-ink);
+}
+.draft-scope .draft-pill-burg {
+  background: var(--draft-burgundy);
+  color: white;
+  border-color: var(--draft-burgundy);
+}
+
+/* live dot pulse */
+.draft-scope .draft-dot-live {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--draft-burgundy);
+  box-shadow: 0 0 0 0 rgba(160, 32, 59, 0.55);
+  animation: draft-dotpulse 1.6s ease-out infinite;
+}
+@keyframes draft-dotpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(160, 32, 59, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(160, 32, 59, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(160, 32, 59, 0);
+  }
+}

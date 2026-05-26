@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Crown } from "lucide-react"
+import { Compass, LayoutGrid, Trophy, Crown, Gamepad2 } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -26,6 +26,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname.startsWith("/prediction")
   const isWorldcup = pathname.startsWith("/worldcup")
+  const isGames = pathname.startsWith("/games")
 
   return (
     <nav
@@ -85,6 +86,15 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
               aria-hidden
               className="wc-hdr-pulse ml-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
             />
+          </span>
+        </Link>
+        <Link href="/games/draft">
+          <span className={baseClass} data-on={isGames ? "true" : undefined}>
+            <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
+            게임
+            <span aria-hidden className="ml-0.5 text-[10px] font-normal tracking-normal opacity-60">
+              (test)
+            </span>
           </span>
         </Link>
         {/*

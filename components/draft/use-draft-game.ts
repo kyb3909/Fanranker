@@ -42,7 +42,7 @@ export function useDraftGame() {
     const participant = currentState.participants.find((p) => p.seatIndex === seat)
     if (!participant?.isAI) return
 
-    const delay = 5000 + Math.random() * 2000
+    const delay = 500 + Math.random() * 400
     aiTimeoutRef.current = setTimeout(() => {
       const pickId = getAIPick(currentState, seat)
       const newState = makePick(currentState, pickId, false)
