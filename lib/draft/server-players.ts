@@ -14,7 +14,7 @@ let cache: Player[] | null = null
 
 export async function getServerPlayers(): Promise<Player[]> {
   if (cache) return cache
-  const filePath = path.join(process.cwd(), "public", "data", "fpl-players.json")
+  const filePath = path.join(process.cwd(), "public", "data", "arsenal-players.json")
   const raw = await fs.readFile(filePath, "utf-8")
   cache = JSON.parse(raw) as Player[]
   return cache

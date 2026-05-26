@@ -34,6 +34,8 @@ export type DraftCatalogEntry = {
   positions: DraftGamePosition[]
   badge: DraftGameBadge
   active: boolean
+  /** UI 노출 차단. true 면 카드/Featured 모두에서 제외된다. */
+  hidden?: boolean
 }
 
 export const DRAFT_GAMES: DraftCatalogEntry[] = [
@@ -58,7 +60,8 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
       { code: "FW", label: "공격", color: "#a0203b", count: 3 },
     ],
     badge: "HOT",
-    active: true,
+    active: false,
+    hidden: true,
   },
   {
     slug: "arsenal",
@@ -66,11 +69,11 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     emoji: "🔴",
     sport: "football",
     themeColor: "#ef0107",
-    blurb: "1971 더블부터 2024 인비저블까지. 한 구단의 모든 시대.",
+    blurb: "1971 더블부터 2024 인비저블까지. 한 구단의 모든 시대 219명.",
     rosterSize: 11,
     budget: 100,
-    currency: "£",
-    poolSize: 86,
+    currency: "$",
+    poolSize: 219,
     avgMinutes: 7,
     plays: 0,
     formationOptions: ["4-3-3", "4-4-2", "3-4-3"],
@@ -80,8 +83,8 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
       { code: "MF", label: "미드필더", color: "#2a6a4a", count: 3 },
       { code: "FW", label: "공격", color: "#a0203b", count: 3 },
     ],
-    badge: "SOON",
-    active: false,
+    badge: "HOT",
+    active: true,
   },
   {
     slug: "slamdunk",

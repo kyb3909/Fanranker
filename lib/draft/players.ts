@@ -16,9 +16,9 @@ let _loadingPromise: Promise<Player[]> | null = null
 export async function loadPlayers(): Promise<Player[]> {
   if (_players) return _players
   if (_loadingPromise) return _loadingPromise
-  _loadingPromise = fetch("/data/fpl-players.json")
+  _loadingPromise = fetch("/data/arsenal-players.json")
     .then((r) => {
-      if (!r.ok) throw new Error(`fpl-players load failed: ${r.status}`)
+      if (!r.ok) throw new Error(`arsenal-players load failed: ${r.status}`)
       return r.json() as Promise<Player[]>
     })
     .then((data) => {

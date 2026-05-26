@@ -549,8 +549,9 @@ function HistoryEmpty() {
 
 export function GameSelectScreen() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all")
-  const featured = DRAFT_GAMES.find((g) => g.slug === "epl")!
-  const others = DRAFT_GAMES.filter((g) => g.slug !== "epl")
+  const catalog = DRAFT_GAMES.filter((g) => !g.hidden)
+  const featured = catalog.find((g) => g.active) ?? catalog[0]!
+  const others = catalog.filter((g) => g.slug !== featured.slug)
 
   const visibleOthers = filter === "all" ? others : others.filter((g) => g.sport === filter)
   const featuredVisible = filter === "all" || featured.sport === filter
