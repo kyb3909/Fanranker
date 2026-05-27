@@ -8,9 +8,9 @@
  * Phase 2+: arsenal, slamdunk, 3kingdoms 등 실제 게임 화면 단계적 추가.
  */
 
-export type DraftGameBadge = "HOT" | "NEW" | "SOON" | null
+type DraftGameBadge = "HOT" | "NEW" | "SOON" | null
 
-export type DraftGamePosition = {
+type DraftGamePosition = {
   code: string
   label: string
   color: string

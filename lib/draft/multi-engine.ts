@@ -211,7 +211,7 @@ export class PickError extends Error {
   }
 }
 
-export interface PickParams {
+interface PickParams {
   roomId: string
   /** null 이면 서버 측 자동 픽 (AI 또는 timeout). non-null 이면 사용자 액션 */
   userId: string | null
@@ -463,7 +463,7 @@ interface StaleSeatRow {
   disconnected_at: string
 }
 
-export interface CleanupSummary {
+interface CleanupSummary {
   staleSeatsConverted: number
   staleRoomsAbandoned: number
   affectedRoomIds: string[]

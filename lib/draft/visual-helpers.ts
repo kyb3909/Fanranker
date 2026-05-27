@@ -7,7 +7,7 @@
 
 import type { Player, Position } from "./players"
 
-export type Tier = "S" | "A" | "B" | "C"
+type Tier = "S" | "A" | "B" | "C"
 
 /** 가격 기반 등급 — FPL 가격대 기준 (£14↑ S, £8↑ A, £5↑ B, 나머지 C). */
 export function getTier(price: number): Tier {

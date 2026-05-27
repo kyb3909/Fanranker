@@ -20,7 +20,7 @@ import type { WorldChannel } from "./realtime/world-channel"
 import type { SideScrollerChannel } from "./realtime/sidescroll-channel"
 import type { MapId } from "./maps/map-config"
 
-export interface BootOptions {
+interface BootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
   channel?: WorldChannel | null
@@ -78,7 +78,7 @@ export function bootMetaverseGame({
  * 사이드스크롤러 프로토타입 부팅 (Phase 4 선행 데모).
  * 월드맵 씬과 다른 게임 인스턴스 — 중력/씬 구성 독립.
  */
-export interface SideScrollerBootOptions {
+interface SideScrollerBootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
   /** 옵셔널 — Realtime 채널. null/undefined 면 싱글플레이 fallback. */
@@ -120,7 +120,7 @@ export function bootSideScrollerDemo({
  * Indoor map (Highbury / Clockend 등) 부팅. 데이터 기반 사이드뷰 씬으로,
  * mapId 만 바꾸면 동일 씬이 재시작되며 페이드 전환됨.
  */
-export interface IndoorMapBootOptions {
+interface IndoorMapBootOptions {
   parent: HTMLElement
   identity: MetaversePlayerIdentity
   mapId: MapId

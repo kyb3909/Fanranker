@@ -45,7 +45,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   const myParticipant = state.participants.find((p) => p.seatIndex === mySeat)
   const totalPicks = state.snakeOrder.length
 
-  const myRoster = state.roster[mySeat] || []
+  const myRoster = useMemo(() => state.roster[mySeat] || [], [state.roster, mySeat])
   const myBudgetRemaining = state.budget[mySeat] ?? 0
   const myLimits = getSeatLimits(state, mySeat)
   const formation = myParticipant?.formation ?? "4-3-3"

@@ -14,7 +14,7 @@ import {
   type Formation,
 } from "@/lib/draft/engine"
 
-export type GamePhase = "setup" | "drafting" | "placement" | "completed"
+type GamePhase = "setup" | "drafting" | "placement" | "completed"
 export type GameMode = "solo" | "multi"
 
 const AI_NAMES = ["AI 알렉스", "AI 모건", "AI 테리", "AI 수아레즈"]

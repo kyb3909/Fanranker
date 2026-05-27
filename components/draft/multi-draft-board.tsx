@@ -88,7 +88,10 @@ export function MultiDraftBoard({
     () => state.seats.find((s) => s.user_id === myUserId && s.left_at === null) ?? null,
     [state.seats, myUserId]
   )
-  const myRoster = mySeat ? (seatRosters[mySeat.seat_index] ?? []) : []
+  const myRoster = useMemo(
+    () => (mySeat ? (seatRosters[mySeat.seat_index] ?? []) : []),
+    [mySeat, seatRosters]
+  )
   const myBudgetUsed = myRoster.reduce((s, p) => s + p.price, 0)
   const myBudgetRemaining = state.budget - myBudgetUsed
   const myPosCounts = useMemo<Record<Position, number>>(() => {
