@@ -226,168 +226,6 @@ function GameCard({ game }: { game: DraftCatalogEntry }) {
   )
 }
 
-function FeaturedGameCard({ game }: { game: DraftCatalogEntry }) {
-  return (
-    <Link
-      href={`/games/draft/${game.slug}`}
-      style={{ textDecoration: "none", color: "inherit", display: "block", gridColumn: "span 2" }}
-    >
-      <div
-        className="draft-card"
-        style={{
-          position: "relative",
-          padding: 0,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "row",
-          flexWrap: "wrap",
-          minHeight: 320,
-          border: "none",
-          boxShadow: "var(--draft-shadow-2)",
-        }}
-      >
-        {/* left: editorial header on themed background */}
-        <div
-          style={{
-            flex: "1 1 56%",
-            minWidth: 280,
-            padding: "32px 32px 26px",
-            background: `linear-gradient(135deg, ${game.themeColor} 0%, ${game.themeColor}cc 60%, #0e0a09 100%)`,
-            color: "white",
-            position: "relative",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div
-            className="draft-eyebrow"
-            style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.18em" }}
-          >
-            ─── 오늘의 추천 드래프트
-          </div>
-          <div style={{ fontSize: 72, marginTop: 20, marginBottom: 8, lineHeight: 1 }}>
-            {game.emoji}
-          </div>
-          <h2
-            style={{
-              fontFamily: "var(--draft-font-title)",
-              fontWeight: 900,
-              fontSize: 36,
-              letterSpacing: "-0.03em",
-              lineHeight: 1,
-              marginBottom: 12,
-            }}
-          >
-            {game.name}
-          </h2>
-          <p
-            className="draft-serif"
-            style={{
-              fontSize: 15,
-              fontStyle: "italic",
-              lineHeight: 1.5,
-              opacity: 0.9,
-              maxWidth: 360,
-            }}
-          >
-            {game.blurb}
-          </p>
-          <div style={{ flex: 1 }} />
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              marginTop: 18,
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                background: "white",
-                color: game.themeColor,
-                fontFamily: "var(--draft-font-title)",
-                fontWeight: 800,
-                border: "none",
-                padding: "12px 18px",
-                borderRadius: 999,
-                letterSpacing: "-0.01em",
-                fontSize: 15,
-                display: "inline-block",
-              }}
-            >
-              바로 드래프트 시작 →
-            </span>
-          </div>
-        </div>
-
-        {/* right: stats column */}
-        <div
-          style={{
-            flex: "1 1 320px",
-            padding: "32px 32px 26px",
-            background: "var(--draft-card)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 18,
-          }}
-        >
-          <div className="draft-eyebrow draft-eyebrow-burg">이번 시즌 통계</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-            {[
-              [game.plays.toLocaleString(), "누적 드래프트"],
-              [game.poolSize.toString(), "선수 풀"],
-              [`${game.currency}${game.budget}`, "예산"],
-              [`${game.avgMinutes}분`, "평균 플레이"],
-            ].map(([n, l]) => (
-              <div key={l}>
-                <div
-                  className="draft-num"
-                  style={{
-                    fontFamily: "var(--draft-font-title)",
-                    fontWeight: 900,
-                    fontSize: 28,
-                    letterSpacing: "-0.03em",
-                    color: "var(--draft-ink)",
-                  }}
-                >
-                  {n}
-                </div>
-                <div className="draft-eyebrow" style={{ fontSize: 10, marginTop: 2 }}>
-                  {l}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="draft-rule" />
-
-          <div>
-            <div className="draft-eyebrow" style={{ marginBottom: 10 }}>
-              포메이션 옵션
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {game.formationOptions.map((f) => (
-                <span
-                  key={f}
-                  className="draft-pill"
-                  style={{
-                    fontFamily: "var(--draft-font-title)",
-                    fontWeight: 700,
-                    fontSize: 12,
-                  }}
-                >
-                  {f}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
-}
-
 function HistoryEmpty() {
   return (
     <div style={{ padding: "16px 24px 32px" }}>
@@ -437,11 +275,7 @@ function HistoryEmpty() {
 export function GameSelectScreen() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all")
   const catalog = DRAFT_GAMES.filter((g) => !g.hidden)
-  const featured = catalog.find((g) => g.active) ?? catalog[0]!
-  const others = catalog.filter((g) => g.slug !== featured.slug)
-
-  const visibleOthers = filter === "all" ? others : others.filter((g) => g.sport === filter)
-  const featuredVisible = filter === "all" || featured.sport === filter
+  const visibleGames = filter === "all" ? catalog : catalog.filter((g) => g.sport === filter)
 
   return (
     <div className="draft-scope draft-kraft" style={{ minHeight: "100vh" }}>
@@ -501,12 +335,11 @@ export function GameSelectScreen() {
             gap: 16,
           }}
         >
-          {featuredVisible && <FeaturedGameCard game={featured} />}
-          {visibleOthers.map((g) => (
+          {visibleGames.map((g) => (
             <GameCard key={g.slug} game={g} />
           ))}
         </div>
-        {!featuredVisible && visibleOthers.length === 0 && (
+        {visibleGames.length === 0 && (
           <div
             className="draft-serif"
             style={{

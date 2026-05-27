@@ -65,11 +65,11 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
   },
   {
     slug: "arsenal",
-    name: "아스널 레전드",
+    name: "아스널 선수 드래프트",
     emoji: "🔴",
     sport: "football",
     themeColor: "#ef0107",
-    blurb: "1971 더블부터 2024 인비저블까지. 한 구단의 모든 시대 219명.",
+    blurb: "2003 인비저블부터 2026 현재까지. 아스널 한 구단의 선수 드래프트.",
     rosterSize: 11,
     budget: 100,
     currency: "$",
