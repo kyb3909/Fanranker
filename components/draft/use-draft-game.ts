@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import { loadPlayers } from "@/lib/draft/players"
+import { getDraftGame, type DraftCatalogEntry } from "@/lib/draft/games-catalog"
 import {
   createInitialState,
   getCurrentSeat,
@@ -19,7 +20,8 @@ export type GameMode = "solo" | "multi"
 const AI_NAMES = ["AI 알렉스", "AI 모건", "AI 테리", "AI 수아레즈"]
 const AI_FORMATIONS: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2", "5-4-1"]
 
-export function useDraftGame() {
+export function useDraftGame(slug: string) {
+  const entry: DraftCatalogEntry | undefined = getDraftGame(slug)
   const [phase, setPhase] = useState<GamePhase>("setup")
   const [mode, setMode] = useState<GameMode>("solo")
   const [aiCount, setAiCount] = useState(3)
@@ -105,7 +107,7 @@ export function useDraftGame() {
       }
     }
 
-    const initialState = createInitialState(participants)
+    const initialState = createInitialState(participants, entry?.budget)
     setState(initialState)
     setPhase("drafting")
     setTimerReset(0)
@@ -115,7 +117,7 @@ export function useDraftGame() {
     if (firstParticipant?.isAI) {
       processAITurn(initialState)
     }
-  }, [mode, aiCount, mySeat, playerName, myFormation, processAITurn])
+  }, [mode, aiCount, mySeat, playerName, myFormation, processAITurn, entry])
 
   const handlePick = useCallback(
     (playerId: string) => {
@@ -181,6 +183,7 @@ export function useDraftGame() {
   }, [])
 
   return {
+    entry,
     phase,
     setPhase,
     mode,

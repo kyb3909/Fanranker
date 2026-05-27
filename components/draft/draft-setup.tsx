@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getAllPlayers } from "@/lib/draft/players"
 import { FORMATIONS, type Formation } from "@/lib/draft/engine"
+import type { DraftCatalogEntry } from "@/lib/draft/games-catalog"
 import type { OpenRoomSummary } from "@/lib/draft/rooms"
 import { OpenRoomsGrid } from "./open-rooms-grid"
 import type { GameMode } from "./use-draft-game"
@@ -11,6 +12,7 @@ import type { GameMode } from "./use-draft-game"
 const FORMATION_LIST: Formation[] = ["4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2", "5-4-1"]
 
 interface DraftSetupProps {
+  entry: DraftCatalogEntry | undefined
   mode: GameMode
   setMode: (mode: GameMode) => void
   aiCount: number
@@ -25,6 +27,7 @@ interface DraftSetupProps {
 }
 
 export function DraftSetup({
+  entry,
   mode,
   setMode,
   aiCount,
@@ -136,10 +139,12 @@ export function DraftSetup({
     <div className="mx-auto max-w-lg py-8">
       <div className="border-border bg-card rounded-2xl border p-8 shadow-lg">
         <div className="mb-8 text-center">
-          <div className="text-4xl">⚽</div>
-          <h1 className="text-foreground mt-3 text-2xl font-black">스네이크 드래프트</h1>
+          <div className="text-4xl">{entry?.emoji ?? "⚽"}</div>
+          <h1 className="text-foreground mt-3 text-2xl font-black">
+            {entry?.name ?? "스네이크 드래프트"}
+          </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            EPL 선수를 드래프트해서 나만의 드림팀을 만드세요
+            {entry?.blurb ?? "선수를 드래프트해서 나만의 드림팀을 만드세요"}
           </p>
         </div>
 
@@ -321,13 +326,16 @@ export function DraftSetup({
           <h3 className="text-foreground mb-2 text-xs font-bold">규칙</h3>
           <ul className="text-muted-foreground space-y-1 text-[11px]">
             <li>• 스네이크 순서: 1→2→...→N→N→...→1 반복</li>
-            <li>• 11라운드, 예산 £80.0</li>
+            <li>
+              • {entry?.rosterSize ?? 11}라운드, 예산 {entry?.currency ?? "£"}
+              {entry?.budget ?? 80}
+            </li>
             <li>
               • 포메이션 {myFormation}: GK {selectedLimits.GK}, DF {selectedLimits.DF}, MF{" "}
               {selectedLimits.MF}, FW {selectedLimits.FW}
             </li>
             <li>• 픽 제한시간 30초 (초과 시 자동 선택)</li>
-            <li>• 총 {getAllPlayers().length}명의 EPL 선수</li>
+            <li>• 선수 풀 {getAllPlayers().length}명</li>
           </ul>
         </div>
 

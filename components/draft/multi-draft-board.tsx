@@ -208,6 +208,7 @@ export function MultiDraftBoard({
       snakeOrder: state.snake_order ?? [],
       status: "drafting" as const,
       budget: [],
+      initialBudget: state.budget ?? 0,
       roster: {},
       draftedPlayerIds: new Set<string>(),
       totalRounds: state.total_rounds,

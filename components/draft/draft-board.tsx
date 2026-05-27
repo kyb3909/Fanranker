@@ -110,7 +110,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   const { strengths, weaknesses } = analyzeLineup(myRoster)
   const slotsFilled = rosterToSlots(myRoster, formation)
   const rosterSize = state.totalRounds // 라운드 수 = 1인 로스터 크기
-  const myBudgetUsed = 80 - myBudgetRemaining // INITIAL_BUDGET 80
+  const myBudgetUsed = state.initialBudget - myBudgetRemaining
 
   const togglePin = (id: string) => setPinned((prev) => ({ ...prev, [id]: !prev[id] }))
 

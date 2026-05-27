@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function EplDraftPage() {
-  return <DraftGame />
+  return <DraftGame slug="epl" />
 }

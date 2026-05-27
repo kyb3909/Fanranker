@@ -33,12 +33,14 @@ export interface DraftState {
   snakeOrder: number[]
   status: "setup" | "drafting" | "completed"
   budget: number[]
+  /** 게임 시작 시점의 1인당 예산. 잔액 표시에 필요 (잔액은 budget[]). */
+  initialBudget: number
   roster: Record<number, Player[]>
   draftedPlayerIds: Set<string>
   totalRounds: number
 }
 
-const INITIAL_BUDGET = 80.0
+const DEFAULT_BUDGET = 80.0
 const TOTAL_ROUNDS = 11
 
 /** 좌석별 포지션 제한 가져오기 */
@@ -59,10 +61,13 @@ export function generateSnakeOrder(playerCount: number, rounds: number): number[
   return order
 }
 
-/** 초기 상태 생성 */
-export function createInitialState(participants: Participant[]): DraftState {
+/** 초기 상태 생성. budget 생략 시 80 (EPL 호환 기본값). */
+export function createInitialState(
+  participants: Participant[],
+  initialBudget: number = DEFAULT_BUDGET
+): DraftState {
   const snakeOrder = generateSnakeOrder(participants.length, TOTAL_ROUNDS)
-  const budget = participants.map(() => INITIAL_BUDGET)
+  const budget = participants.map(() => initialBudget)
   const roster: Record<number, Player[]> = {}
   participants.forEach((p) => {
     roster[p.seatIndex] = []
@@ -75,6 +80,7 @@ export function createInitialState(participants: Participant[]): DraftState {
     snakeOrder,
     status: "drafting",
     budget,
+    initialBudget,
     roster,
     draftedPlayerIds: new Set(),
     totalRounds: TOTAL_ROUNDS,

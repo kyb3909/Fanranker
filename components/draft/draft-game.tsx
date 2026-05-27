@@ -6,12 +6,13 @@ import { DraftResult } from "./draft-result"
 import { FormationField } from "./formation-field"
 import { useDraftGame } from "./use-draft-game"
 
-export function DraftGame() {
-  const game = useDraftGame()
+export function DraftGame({ slug }: { slug: string }) {
+  const game = useDraftGame(slug)
 
   if (game.phase === "setup") {
     return (
       <DraftSetup
+        entry={game.entry}
         mode={game.mode}
         setMode={game.setMode}
         aiCount={game.aiCount}
