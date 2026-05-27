@@ -8,8 +8,6 @@ import "@/app/games/draft/draft-tokens.css"
 
 const FILTERS: Array<{ key: "all" | DraftCatalogEntry["sport"]; label: string }> = [
   { key: "all", label: "전체" },
-  { key: "football", label: "축구" },
-  { key: "basketball", label: "농구" },
   { key: "strategy", label: "전략" },
   { key: "culture", label: "컬처" },
 ]
@@ -390,117 +388,6 @@ function FeaturedGameCard({ game }: { game: DraftCatalogEntry }) {
   )
 }
 
-function HeroSection() {
-  return (
-    <div
-      style={{
-        padding: "40px 24px 16px",
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr)",
-        gap: 32,
-      }}
-      className="draft-hero-grid"
-    >
-      <style>{`
-        @media (min-width: 900px) {
-          .draft-hero-grid {
-            grid-template-columns: 1fr 1fr !important;
-            align-items: end !important;
-            padding: 52px 40px 24px !important;
-            gap: 48px !important;
-          }
-        }
-      `}</style>
-
-      <div>
-        <div className="draft-eyebrow draft-eyebrow-burg" style={{ marginBottom: 12 }}>
-          <span
-            style={{
-              display: "inline-block",
-              width: 22,
-              height: 1,
-              background: "var(--draft-burgundy)",
-              verticalAlign: "middle",
-              marginRight: 8,
-            }}
-          />
-          VOL.07 · PLAY
-        </div>
-        <h1
-          style={{
-            fontSize: "clamp(36px, 5vw, 64px)",
-            lineHeight: 0.95,
-            letterSpacing: "-0.035em",
-            fontWeight: 900,
-            fontFamily: "var(--draft-font-title)",
-          }}
-        >
-          나만의
-          <br />
-          <span style={{ color: "var(--draft-burgundy)" }}>드림팀</span>을
-          <br />
-          드래프트 하세요.
-        </h1>
-        <p
-          className="draft-serif"
-          style={{
-            marginTop: 14,
-            fontSize: 16,
-            color: "var(--draft-ink-soft)",
-            maxWidth: 560,
-            lineHeight: 1.55,
-            fontStyle: "italic",
-          }}
-        >
-          현역 EPL부터 아스널 인비저블, 슬램덩크 북산, 삼국지 위촉오까지 ― 한정된 예산으로 라인업을
-          짠다. 솔로 vs AI 또는 친구와의 PvP.
-        </p>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div className="draft-rule-thick" style={{ width: 60 }} />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-          {[
-            [DRAFT_GAMES.length.toString(), "드래프트 라이브러리"],
-            ["스네이크", "픽 순서"],
-            ["30초", "픽 제한"],
-          ].map(([v, l]) => (
-            <div key={l} style={{ borderLeft: "2px solid var(--draft-ink)", paddingLeft: 12 }}>
-              <div
-                className="draft-num"
-                style={{
-                  fontFamily: "var(--draft-font-title)",
-                  fontWeight: 900,
-                  fontSize: 22,
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                {v}
-              </div>
-              <div className="draft-eyebrow" style={{ fontSize: 10, marginTop: 2 }}>
-                {l}
-              </div>
-            </div>
-          ))}
-        </div>
-        <p
-          className="draft-serif"
-          style={{
-            fontSize: 13,
-            color: "var(--draft-mute)",
-            fontStyle: "italic",
-            marginTop: 8,
-            lineHeight: 1.5,
-          }}
-        >
-          &ldquo;축구는 11명이 22명에 맞서는 게 아니라 한 명의 매니저가 22명에 맞서는
-          게임이다.&rdquo;
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function HistoryEmpty() {
   return (
     <div style={{ padding: "16px 24px 32px" }}>
@@ -558,9 +445,7 @@ export function GameSelectScreen() {
 
   return (
     <div className="draft-scope draft-kraft" style={{ minHeight: "100vh" }}>
-      <HeroSection />
-
-      <div style={{ padding: "8px 24px" }}>
+      <div style={{ padding: "32px 24px 8px" }}>
         <div className="draft-rule" />
       </div>
 

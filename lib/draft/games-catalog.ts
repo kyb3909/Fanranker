@@ -109,6 +109,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     ],
     badge: "SOON",
     active: false,
+    hidden: true,
   },
   {
     slug: "3kingdoms",
