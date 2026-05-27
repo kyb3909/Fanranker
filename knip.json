@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "scripts/**/*.{ts,mjs}",
+    "playwright.audit.config.ts",
+    "playwright.e2e.config.ts",
+    "tests/audit/**/*.spec.ts",
+    "tests/e2e/**/*.ts",
+    "e2e/**/*.spec.ts"
+  ],
+  "project": [
+    "**/*.{ts,tsx}",
+    "!**/node_modules/**",
+    "!**/.next/**",
+    "!**/.audit/**",
+    "!**/.playwright-cli/**",
+    "!supabase/migrations-backup/**",
+    "!data/agents/**",
+    "!data/crawlers/**",
+    "!aseprite-mcp/**"
+  ],
+  "ignore": ["lib/supabase/types.ts", "lib/supabase/database.types.ts"],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "autoprefixer",
+    "tw-animate-css",
+    "@testing-library/jest-dom",
+    "madge",
+    "protobufjs"
+  ]
+}
