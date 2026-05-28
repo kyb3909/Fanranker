@@ -4,13 +4,36 @@ import { batchUpdateUserStats } from "./stats"
 import { syncStadiumContributions } from "@/lib/stadium/contribution-sync"
 
 /**
- * 환불 재시도 (3회) + 실패 시 pending_refunds 기록
+ * settlement_audit_log INSERT 페이로드.
+ * 슬립 단위 정산 + 환불 이벤트만 기록 (예측 단위 생략 — 부하 최소화).
+ * 자세한 설계: docs/PRD-betting-integrity.md
+ */
+interface AuditRow {
+  event_type: "settle_slip" | "refund" | "cancel" | "manual_reverse"
+  actor: string
+  game_id: string | null
+  slip_id: string | null
+  prediction_id: string | null
+  user_id: string | null
+  before_state: Record<string, unknown>
+  after_state: Record<string, unknown>
+  amount: number | null
+  reason: string
+  rpc_name: string
+}
+
+/**
+ * 환불 재시도 (3회) + 실패 시 pending_refunds 기록.
+ * 성공 시 audit 행 1개를 auditRows 에 push.
  */
 async function retryRefund(
   supabase: SupabaseClient,
   userId: string,
   amount: number,
-  description: string
+  description: string,
+  slipId: string | null,
+  auditRows: AuditRow[],
+  actor: string
 ): Promise<string | null> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const { error } = await supabase.rpc("refund_tokens", {
@@ -18,7 +41,22 @@ async function retryRefund(
       p_amount: amount,
       p_description: description,
     })
-    if (!error) return null
+    if (!error) {
+      auditRows.push({
+        event_type: "refund",
+        actor,
+        game_id: null,
+        slip_id: slipId,
+        prediction_id: null,
+        user_id: userId,
+        before_state: { reason: "pre-refund" },
+        after_state: { refund_applied: true, attempt },
+        amount, // 양수 — 토큰 지급
+        reason: description,
+        rpc_name: "refund_tokens",
+      })
+      return null
+    }
     if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt))
   }
   // 모든 재시도 실패 → pending_refunds에 기록
@@ -99,13 +137,23 @@ function getPointsEarned(pred: PredictionData, game: GameData): number {
 /**
  * 공통 정산 로직: 예측 정산 → 슬립 정산 → 유저 통계 갱신
  *
- * settle/route.ts와 results/route.ts 양쪽에서 사용
+ * settle/route.ts와 results/route.ts 양쪽에서 사용.
+ *
+ * audit 정책 (PRD Phase 1):
+ *   - 슬립 단위 정산 (won/lost/cancelled) 이벤트만 audit log 에 기록
+ *   - 예측 단위는 부하 최소화 위해 생략
+ *   - 환불 성공 시 별도 audit row
+ *   - Batch INSERT 1회 (round-trip 최소화)
  */
 export async function settlePredictions(
   supabase: SupabaseClient,
   games: GameData[],
-  predictions: PredictionData[]
+  predictions: PredictionData[],
+  options: { actor?: string } = {}
 ): Promise<SettleResult> {
+  const actor = options.actor ?? "cron:settle"
+  const auditRows: AuditRow[] = []
+
   const result: SettleResult = {
     settled: 0,
     correct: 0,
@@ -208,11 +256,29 @@ export async function settlePredictions(
             .select("id")
 
           if (cancelledSlip && cancelledSlip.length > 0) {
+            // audit: 슬립 취소 (refund 는 retryRefund 안에서 별도 audit)
+            auditRows.push({
+              event_type: "settle_slip",
+              actor,
+              game_id: null,
+              slip_id: slipId,
+              prediction_id: null,
+              user_id: slipData.user_id,
+              before_state: { status: "pending", stake: slipData.stake },
+              after_state: { status: "cancelled", stake: slipData.stake },
+              amount: null,
+              reason: "all predictions cancelled → slip cancelled",
+              rpc_name: "settlePredictions",
+            })
+
             const refundErr = await retryRefund(
               supabase,
               slipData.user_id,
               slipData.stake,
-              `경기 취소 환불 (슬립 ${slipId})`
+              `경기 취소 환불 (슬립 ${slipId})`,
+              slipId,
+              auditRows,
+              actor
             )
             if (refundErr) result.errors.push(refundErr)
           }
@@ -258,7 +324,31 @@ export async function settlePredictions(
           .eq("status", "pending")
           .select("id")
 
-        if (wonSlip && wonSlip.length > 0) result.slipsWon++
+        if (wonSlip && wonSlip.length > 0) {
+          result.slipsWon++
+          auditRows.push({
+            event_type: "settle_slip",
+            actor,
+            game_id: null,
+            slip_id: slipId,
+            prediction_id: null,
+            user_id: currentSlip.user_id,
+            before_state: {
+              status: "pending",
+              stake: currentSlip.stake,
+              total_odds: currentSlip.total_odds,
+            },
+            after_state: {
+              status: "won",
+              stake: currentSlip.stake,
+              total_odds: adjustedTotalOdds,
+              payout, // 계산된 payout (실제 토큰 지급은 없음 — "점수만" 모델)
+            },
+            amount: null, // 토큰 변동 없음
+            reason: `all correct (predictions=${activePreds.length}, cancelled=${cancelledPreds.length})`,
+            rpc_name: "settlePredictions",
+          })
+        }
       } else {
         const { data: lostSlip } = await supabase
           .from("prediction_slips")
@@ -267,10 +357,46 @@ export async function settlePredictions(
           .eq("status", "pending")
           .select("id")
 
-        if (lostSlip && lostSlip.length > 0) result.slipsLost++
+        if (lostSlip && lostSlip.length > 0) {
+          result.slipsLost++
+          auditRows.push({
+            event_type: "settle_slip",
+            actor,
+            game_id: null,
+            slip_id: slipId,
+            prediction_id: null,
+            user_id: currentSlip.user_id,
+            before_state: {
+              status: "pending",
+              stake: currentSlip.stake,
+              total_odds: currentSlip.total_odds,
+            },
+            after_state: {
+              status: "lost",
+              stake: currentSlip.stake,
+              total_odds: adjustedTotalOdds,
+            },
+            amount: null,
+            reason: `some wrong (predictions=${activePreds.length}, cancelled=${cancelledPreds.length})`,
+            rpc_name: "settlePredictions",
+          })
+        }
       }
     } catch (slipErr) {
       result.errors.push(`slip=${slipId}: ${(slipErr as Error).message}`)
+    }
+  }
+
+  // 2.5 정산 audit log batch INSERT
+  // 정산 자체는 이미 끝났음. audit 실패해도 정산은 그대로 — 단 Sentry 알럿.
+  if (auditRows.length > 0) {
+    const { error: auditErr } = await supabase.from("settlement_audit_log").insert(auditRows)
+    if (auditErr) {
+      Sentry.captureException(auditErr, {
+        level: "fatal",
+        extra: { context: "settlement_audit_batch_insert", rowCount: auditRows.length },
+      })
+      result.errors.push(`audit_log insert failed: ${auditErr.message}`)
     }
   }
 
