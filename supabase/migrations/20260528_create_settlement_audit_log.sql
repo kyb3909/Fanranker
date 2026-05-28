@@ -126,7 +126,7 @@ CREATE POLICY "admin only select on settlement_audit_log"
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE profiles.user_id = (auth.jwt() ->> 'sub')
-        AND profiles.is_admin = true
+        AND profiles.role = 'admin'
     )
   );
 
