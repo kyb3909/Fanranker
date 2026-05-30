@@ -326,8 +326,13 @@ for GMTS in $GMTS_LIST; do
     NULL_COUNT_RESP=$(curl_retry \
       "${SUPABASE_URL}/rest/v1/betman_games?select=id&round_id=eq.${ROUND_ID}&result=is.null&status=neq.cancelled" \
       "${SB_HEADERS[@]}" \
-      -H "Prefer: count=exact" 2>/dev/null) || NULL_COUNT_RESP="[]"
-    NULL_COUNT=$(echo "$NULL_COUNT_RESP" | jq 'length' 2>/dev/null || echo "999")
+      -H "Prefer: count=exact" 2>/dev/null) || NULL_COUNT_RESP=""
+    # curl 실패(빈 응답) 시 보류 — 빈 "[]" 로 오인해 result 미확인인데 강제 settled 전환되는 것 방지 (review #8)
+    if [ -z "$NULL_COUNT_RESP" ]; then
+      NULL_COUNT="999"
+    else
+      NULL_COUNT=$(echo "$NULL_COUNT_RESP" | jq 'length' 2>/dev/null || echo "999")
+    fi
 
     if [ "$NULL_COUNT" = "0" ]; then
       SETTLE_RND_HTTP=$(curl -sf -o /dev/null -w "%{http_code}" -X PATCH \
