@@ -72,7 +72,7 @@ For each user, for each day:
 ### 3.1 잘 작동하는 부분 (건드리지 않음)
 
 - **Row-level idempotency**: `settlePredictions` 의 모든 UPDATE는 `.eq("status", "pending")` 필터. 두 번 호출해도 두 번째는 0 rows affected — 안전.
-- **`locked_odds` 저장**: 베팅 시점 배당이 prediction에 잠금. 정산 시 동일 배당 사용 — 사용자 분쟁 방지.
+- **`locked_odds` / `locked_line` / `locked_handicap` 저장**: 베팅 시점 배당·언더오버 기준선·핸디캡을 prediction에 잠금. 정산 시 동일 조건 사용 — 사용자 분쟁 방지. (`locked_line`/`locked_handicap` 은 2026-05-30 추가 — 기준선이 sync 마다 변동하므로 유저가 본 조건 보존.)
 - **Refund 재시도 + DLQ**: `retryRefund` 3회 + 실패 시 `pending_refunds` 테이블에 기록 + Sentry fatal. `lib/betman/refund-tokens.ts:13`, `lib/betman/settle.ts:9`.
 - **부분 취소 처리**: 슬립 중 일부만 cancelled 시 `total_odds` 재계산 + 적중률 재산정. `lib/betman/settle.ts:232`.
 - **Stadium 기여 동기화 분리**: 정산 본체와 격리 — 기여 실패가 정산을 깨지 않음. `settle.ts:283`.
@@ -86,6 +86,7 @@ For each user, for each day:
 | **Odds 노출 게이트** | NULL odds 그대로 UI 노출 가능 | `odds_ready` 게이트 — 모든 마켓 채워질 때까지 베팅 차단 |
 | **상태 추적** | `betman_games.status`는 있지만 전이 로그 없음 | `game_state_transitions` 로그 (actor + timestamp) |
 | **수동 복구 도구** | 없음 — DB 직접 수정해야 함 | `/admin/settlements` 에 재정산 / 역연산 버튼 + audit log 기반 정확한 reversal |
+| **베팅 생성 원자성** (2026-05-30 추가) | slip→predictions→spend_tokens 가 비원자. 예측 INSERT 실패 시 best-effort 롤백(`slip delete`)이 실패하면 orphan 슬립 + 영구 pending (실데이터 3건 발견, 5/7) | 단일 RPC `place_bet` 로 트랜잭션화. **단 토큰 모델이 점수만이라 영향 경미(빈 슬립) → Phase 2/3 후보, 우선순위 낮음** |
 
 ---
 
