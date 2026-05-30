@@ -29,6 +29,7 @@ export type BetmanGameType =
   | "언더오버"
   | "S언더오버"
   | "SUM"
+  | "SSUM"
   | string
 
 /**
@@ -58,7 +59,7 @@ export function mapGameResult(
   } else if (gameType === "언더오버" || gameType === "S언더오버") {
     if (gameResult === "0") return { result: "under", status: "completed" }
     if (gameResult === "2") return { result: "over", status: "completed" }
-  } else if (gameType === "SUM") {
+  } else if (gameType === "SUM" || gameType === "SSUM") {
     if (gameResult === "0") return { result: "odd", status: "completed" }
     if (gameResult === "2") return { result: "even", status: "completed" }
   }
@@ -98,7 +99,7 @@ export function deriveResultFromScore(
     return ""
   }
 
-  if (gameType === "SUM") {
+  if (gameType === "SUM" || gameType === "SSUM") {
     const total = homeScore + awayScore
     return total % 2 === 0 ? "even" : "odd"
   }

@@ -8,7 +8,7 @@ import { z } from "zod"
 
 const predictionItemSchema = z.object({
   game_id: z.string().min(1, "게임 ID가 필요합니다."),
-  prediction: z.enum(["home", "draw", "away", "over", "under"], {
+  prediction: z.enum(["home", "draw", "away", "over", "under", "odd", "even"], {
     message: "잘못된 예측 값입니다.",
   }),
 })
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const { data: games, error: gamesError } = await supabase
       .from("betman_games")
       .select(
-        "id, round_id, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, league_code"
+        "id, round_id, daily_round_id, sport, game_type, status, match_time, home_team_name, away_team_name, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, over_under_line, handicap, league_code"
       )
       .in("id", gameIds)
 
@@ -404,6 +404,8 @@ export async function POST(request: NextRequest) {
         draw: parseFloat(game?.draw_odds) || 0,
         over: parseFloat(game?.over_odds) || 0,
         under: parseFloat(game?.under_odds) || 0,
+        odd: parseFloat(game?.odd_odds) || 0,
+        even: parseFloat(game?.even_odds) || 0,
       }
       return {
         user_id: user.id,
@@ -414,6 +416,8 @@ export async function POST(request: NextRequest) {
         slip_id: slip.id,
         stake,
         locked_odds: oddsMap[pred.prediction] || 0,
+        locked_line: game?.over_under_line ?? null,
+        locked_handicap: game?.handicap ?? null,
         created_at: new Date().toISOString(),
       }
     })

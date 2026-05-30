@@ -365,4 +365,92 @@ describe("settlePredictions", () => {
     expect(capturedUpdate.points_earned).toBe(0)
     expect(capturedUpdate.is_correct).toBe(false)
   })
+
+  // SUM 마켓 (홀/짝) — review#4 정식 지원. 실제 cron 데이터 값 사용.
+  it("settles correct SUM 'odd' prediction with odd_odds (real cron game 8497: 4+3=7 -> odd)", async () => {
+    const game = makeGame({ game_type: "SUM", result: "odd", odd_odds: "1.56", even_odds: "1.97" })
+    const pred = makePrediction({ prediction: "odd", locked_odds: null })
+
+    let capturedUpdate: any = null
+    const mockFrom = vi.fn().mockImplementation(() => ({
+      update: vi.fn().mockImplementation((data: any) => {
+        capturedUpdate = data
+        return {
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: [{ id: "pred-1" }], error: null }),
+        }
+      }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+    }))
+    const supabase = { from: mockFrom, rpc: vi.fn().mockResolvedValue({ error: null }) } as any
+
+    const result = await settlePredictions(supabase, [game], [pred])
+
+    expect(result.correct).toBe(1)
+    expect(capturedUpdate.is_correct).toBe(true)
+    expect(capturedUpdate.points_earned).toBe(1.56) // odd_odds
+  })
+
+  it("settles correct SUM 'even' prediction with even_odds (real cron game 8489: 1+7=8 -> even)", async () => {
+    const game = makeGame({ game_type: "SUM", result: "even", odd_odds: "1.57", even_odds: "1.95" })
+    const pred = makePrediction({ prediction: "even", locked_odds: null })
+
+    let capturedUpdate: any = null
+    const mockFrom = vi.fn().mockImplementation(() => ({
+      update: vi.fn().mockImplementation((data: any) => {
+        capturedUpdate = data
+        return {
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: [{ id: "pred-1" }], error: null }),
+        }
+      }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+    }))
+    const supabase = { from: mockFrom, rpc: vi.fn().mockResolvedValue({ error: null }) } as any
+
+    const result = await settlePredictions(supabase, [game], [pred])
+
+    expect(result.correct).toBe(1)
+    expect(capturedUpdate.is_correct).toBe(true)
+    expect(capturedUpdate.points_earned).toBe(1.95) // even_odds
+  })
+
+  it("scores SUM wrong when prediction misses (game 8489 even, user bet odd)", async () => {
+    const game = makeGame({ game_type: "SUM", result: "even", odd_odds: "1.57", even_odds: "1.95" })
+    const pred = makePrediction({ prediction: "odd", locked_odds: null })
+
+    let capturedUpdate: any = null
+    const mockFrom = vi.fn().mockImplementation(() => ({
+      update: vi.fn().mockImplementation((data: any) => {
+        capturedUpdate = data
+        return {
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: [{ id: "pred-1" }], error: null }),
+        }
+      }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+    }))
+    const supabase = { from: mockFrom, rpc: vi.fn().mockResolvedValue({ error: null }) } as any
+
+    const result = await settlePredictions(supabase, [game], [pred])
+
+    expect(result.wrong).toBe(1)
+    expect(capturedUpdate.is_correct).toBe(false)
+    expect(capturedUpdate.points_earned).toBe(0)
+  })
 })
