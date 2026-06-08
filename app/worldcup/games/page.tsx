@@ -99,15 +99,6 @@ export default async function WorldcupGamesPage() {
                 </li>
                 <li>
                   <span>
-                    그동안{" "}
-                    <Link href="/prediction" className="underline">
-                      일반 승부예측
-                    </Link>
-                    에서 다른 경기 베팅을 즐기세요. 그 슬립은 월드컵 랭킹에 반영되지 않습니다.
-                  </span>
-                </li>
-                <li>
-                  <span>
                     이벤트 시작 즈음 푸시 알림을 보내드릴게요. 등록만 해두면 자동으로 받습니다.
                   </span>
                 </li>

@@ -24,10 +24,6 @@ const ActivitySidebar = dynamic(
     loading: () => <div className="wc-skeleton h-96 rounded-lg" />,
   }
 )
-const OnboardingBanner = dynamic(
-  () => import("@/components/onboarding-banner").then((m) => ({ default: m.OnboardingBanner })),
-  { ssr: false }
-)
 const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
@@ -201,10 +197,7 @@ export function HomeClient({
               </div>
             )}
 
-            {activeTab === "feed" &&
-              isSignedIn &&
-              followedCommunities.size === 0 &&
-              followsLoaded && <OnboardingBanner />}
+            {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
             {activeTab === "feed" && (
               <div className="space-y-4">

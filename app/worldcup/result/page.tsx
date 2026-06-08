@@ -229,11 +229,10 @@ export default async function WorldcupResultPage() {
           <div className="wc-res-next-eb">NEXT EVENT</div>
           <div className="wc-res-next-h">다음 시즌 이벤트를 기다리세요</div>
           <p className="wc-res-next-b">
-            다음 빅 이벤트가 시작되면 알림으로 알려드릴게요. 그동안 일반 승부예측에서 베팅 감각을
-            유지하세요.
+            다음 빅 이벤트가 시작되면 알림으로 알려드릴게요. 등록만 해두면 자동으로 받습니다.
           </p>
-          <Link href="/prediction" className="wc-res-next-cta">
-            일반 승부예측 →
+          <Link href="/worldcup" className="wc-res-next-cta">
+            이벤트 안내로 →
           </Link>
         </div>
       </div>
