@@ -737,7 +737,7 @@ function SwLine({ label, items, fallback }: { label: string; items: string[]; fa
             className="draft-serif"
             style={{
               color: "var(--draft-mute)",
-              fontStyle: "italic",
+              fontStyle: "normal",
               fontWeight: 400,
             }}
           >

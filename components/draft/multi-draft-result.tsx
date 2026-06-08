@@ -527,7 +527,7 @@ function StrengthWeakness({
                 className="draft-serif"
                 style={{
                   color: "var(--draft-mute)",
-                  fontStyle: "italic",
+                  fontStyle: "normal",
                   fontWeight: 400,
                 }}
               >
@@ -564,7 +564,7 @@ function StrengthWeakness({
                 className="draft-serif"
                 style={{
                   color: "var(--draft-mute)",
-                  fontStyle: "italic",
+                  fontStyle: "normal",
                   fontWeight: 400,
                 }}
               >
@@ -650,7 +650,7 @@ function RosterList({ roster }: { roster: Player[] }) {
             style={{
               fontSize: 12,
               color: "var(--draft-mute)",
-              fontStyle: "italic",
+              fontStyle: "normal",
               padding: 8,
             }}
           >

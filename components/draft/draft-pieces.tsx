@@ -227,7 +227,7 @@ export function PlayerPoolCard({
         >
           <span>{player.teamKo}</span>
           <span style={{ color: "var(--draft-rule)" }}>·</span>
-          <span style={{ fontStyle: "italic" }}>{player.name}</span>
+          <span style={{ fontStyle: "normal" }}>{player.name}</span>
         </div>
       </div>
 
@@ -505,7 +505,7 @@ export function AiPanel({
             style={{
               fontSize: 11,
               color: "var(--draft-mute)",
-              fontStyle: "italic",
+              fontStyle: "normal",
             }}
           >
             아직 픽 없음

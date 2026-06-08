@@ -730,7 +730,7 @@
   background: var(--wc-soft);
   border-left: 3px solid var(--gp);
   font-size: 13px;
-  font-style: italic;
+  font-style: normal;
   border-radius: 0 6px 6px 0;
   color: var(--wc-ink);
   line-height: 1.5;
@@ -1250,7 +1250,7 @@
   margin-bottom: 16px;
 }
 .worldcup-scope .wc-reg-card-motto {
-  font-style: italic;
+  font-style: normal;
   font-size: 14px;
   color: var(--wc-ink);
   padding: 12px 14px;
@@ -1384,7 +1384,7 @@
   line-height: 1.1;
 }
 .worldcup-scope .wc-done-tagline {
-  font-style: italic;
+  font-style: normal;
   color: var(--wc-ink);
   font-size: 16px;
 }
