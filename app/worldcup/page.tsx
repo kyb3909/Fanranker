@@ -6,13 +6,12 @@ import { Countdown } from "@/components/worldcup/countdown"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
-  title: "월드컵 승부예측 그룹 대결",
-  description:
-    "응원하는 클럽 그룹에 가입해 월드컵 기간 예측 대결. 1위 상품 증정, 그룹 평균 적중률로 축잘알 팬덤 결정.",
+  title: "월드컵 승부예측 구너 대결",
+  description: "아스날 구너들끼리 월드컵 기간 예측 대결. 적중률·수익률 1위에게 상품 증정.",
   alternates: { canonical: "/worldcup" },
   openGraph: {
-    title: "월드컵 승부예측 그룹 대결 | gongnori.fan",
-    description: "1위 상품 증정. 응원 그룹에 가입해 축잘알 1위에 도전하세요.",
+    title: "월드컵 승부예측 구너 대결 | gongnori.fan",
+    description: "아스날 구너 전용. 월드컵 예측 적중률 1위에 도전하세요.",
     url: "/worldcup",
   },
 }
@@ -20,6 +19,7 @@ export const metadata: Metadata = {
 // 등록자 카운트 즉시 반영
 export const dynamic = "force-dynamic"
 
+// 아스날(Gooner) 전용 이벤트 — Kop/Blues 제거 (아스날 유튜버 콜라보 연계).
 const GROUPS = [
   {
     slug: "gooner",
@@ -29,26 +29,10 @@ const GROUPS = [
     youtuber: "아스날 채널",
     motto: "Victoria Concordia Crescit",
   },
-  {
-    slug: "kop",
-    name: "Kopite",
-    clubKor: "리버풀",
-    color: "#C8102E",
-    youtuber: "리버풀 채널",
-    motto: "You'll Never Walk Alone",
-  },
-  {
-    slug: "blues",
-    name: "Blue",
-    clubKor: "첼시",
-    color: "#034694",
-    youtuber: "첼시 채널",
-    motto: "Pride of London",
-  },
 ] as const
 
 const STEPS = [
-  { num: "01", title: "사전 등록", body: "월드컵 시작 전 등록하고 응원 그룹 한 곳을 고릅니다." },
+  { num: "01", title: "사전 등록", body: "월드컵 시작 전 구너로 사전 등록합니다." },
   {
     num: "02",
     title: "월드컵 기간 베팅",
@@ -57,7 +41,7 @@ const STEPS = [
   {
     num: "03",
     title: "1위 결정",
-    body: "그룹 내 적중률·수익률로 랭킹 산정. 그룹 평균으로 축잘알 팬덤도 가립니다.",
+    body: "구너들끼리 적중률·수익률로 랭킹 산정. 1위에게 상품을 증정합니다.",
   },
 ] as const
 
@@ -87,9 +71,7 @@ export default async function WorldcupPage() {
                 </span>
                 <div>
                   <div className="text-base leading-none font-black tracking-tight">상품 증정</div>
-                  <div className="mt-1 text-[10px] tracking-[0.12em] opacity-70">
-                    각 그룹 1위에게
-                  </div>
+                  <div className="mt-1 text-[10px] tracking-[0.12em] opacity-70">구너 1위에게</div>
                 </div>
               </div>
             </div>
@@ -103,11 +85,11 @@ export default async function WorldcupPage() {
               <h1 className="mb-4 text-[40px] leading-[1.05] font-black tracking-tight sm:text-[56px]">
                 월드컵 승부예측
                 <br />
-                <span style={{ color: "var(--wc-gold)" }}>그룹 대결</span>
+                <span style={{ color: "var(--wc-gold)" }}>구너 대결</span>
               </h1>
               <p className="mb-8 max-w-xl text-[15px] leading-relaxed opacity-85 sm:text-base">
-                Gooner / Kopite / Blue 세 그룹 중 한 곳에 합류해 월드컵 기간 동안 예측 대결. 그룹
-                1위에게 상품 증정, 그룹 평균 적중률로 &quot;축잘알 팬덤&quot;을 가립니다.
+                아스날 구너들끼리 월드컵 기간 동안 예측 대결. 적중률·수익률 1위 구너에게 상품을
+                증정합니다.
               </p>
 
               <Countdown target="2026-06-11T00:00:00+09:00" label="이벤트 시작까지" />
@@ -124,7 +106,7 @@ export default async function WorldcupPage() {
                     border: "1px solid rgba(255,255,255,0.25)",
                   }}
                 >
-                  팬덤 현황 →
+                  구너 현황 →
                 </Link>
                 {totalRegistrations !== null && (
                   <span className="text-xs font-semibold opacity-80">
@@ -146,10 +128,10 @@ export default async function WorldcupPage() {
                 <Trophy className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="wc-fact-h">상품 증정 + 축잘알 팬덤 선정</h2>
+                <h2 className="wc-fact-h">적중률·수익률 1위 구너에게 상품 증정</h2>
                 <p className="wc-fact-b">
-                  각 그룹 1위에게 상품 증정. 그룹 평균 적중률·수익률 1위 그룹은 &quot;이번 시즌의
-                  축잘알 팬덤&quot;으로 선정됩니다.
+                  월드컵 기간 동안 구너들끼리 정정당당 예측 대결. 적중률·수익률 1위 구너에게 상품을
+                  증정합니다.
                 </p>
               </div>
             </div>
@@ -176,13 +158,13 @@ export default async function WorldcupPage() {
         </div>
       </section>
 
-      {/* Z1.4 그룹 카드 — 영문 호칭 + motto */}
+      {/* Z1.4 구너 정체성 카드 — 아스날 전용 */}
       <section className="px-4 py-12">
         <div className="mx-auto max-w-5xl">
           <header className="wc-sec-head">
-            <div className="wc-sec-eb">CHOOSE YOUR PATH</div>
-            <h2 className="wc-sec-h2">참여 그룹</h2>
-            <p className="wc-sec-sub">한 그룹에만 가입할 수 있습니다. 등록 후 변경 불가.</p>
+            <div className="wc-sec-eb">FOR GOONERS</div>
+            <h2 className="wc-sec-h2">아스날 구너 전용</h2>
+            <p className="wc-sec-sub">이 이벤트는 아스날 구너들만의 예측 대결입니다.</p>
           </header>
           <div className="wc-paths">
             {GROUPS.map((g) => (
@@ -217,7 +199,7 @@ export default async function WorldcupPage() {
               <Users className="mb-3 h-6 w-6" style={{ color: "var(--wc-burgundy)" }} />
               <div className="wc-action-card-h">사전 등록</div>
               <p className="wc-action-card-b">
-                Gooner / Kopite / Blue 중 한 그룹에 합류. 변경 불가, 신중히 선택.
+                아스날 구너로 등록하고 월드컵 예측 대결에 참가. 등록 후 변경 불가.
               </p>
               <span className="wc-action-card-cta">등록하기 →</span>
             </Link>
@@ -229,7 +211,7 @@ export default async function WorldcupPage() {
               <Gamepad2 className="mb-3 h-6 w-6" style={{ color: "var(--wc-go)" }} />
               <div className="wc-action-card-h">월드컵 경기 베팅</div>
               <p className="wc-action-card-b">
-                보유 토큰·골드로 월드컵 경기 예측. 슬립이 그룹 수익에 반영.
+                보유 토큰·골드로 월드컵 경기 예측. 슬립이 구너 랭킹에 반영.
               </p>
               <span className="wc-action-card-cta">베팅하러 →</span>
             </Link>
@@ -239,15 +221,15 @@ export default async function WorldcupPage() {
               style={{ ["--gp" as string]: "var(--wc-blue)" } as React.CSSProperties}
             >
               <BarChart3 className="mb-3 h-6 w-6" style={{ color: "var(--wc-blue)" }} />
-              <div className="wc-action-card-h">팬덤 현황</div>
+              <div className="wc-action-card-h">구너 현황</div>
               <p className="wc-action-card-b">
-                그룹 평균 비교 + 내 위치. 개별 순위는 종료 후 결과 발표에서 공개.
+                구너 전체 평균 + 내 위치. 개별 순위는 종료 후 결과 발표에서 공개.
               </p>
               <span className="wc-action-card-cta">현황 보기 →</span>
             </Link>
           </div>
           <p className="mt-8 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
-            등록은 무료. 응원 그룹은 한 번만 선택할 수 있습니다.
+            등록은 무료. 한 번 등록하면 변경할 수 없습니다.
             {totalRegistrations !== null && ` · 현재 ${totalRegistrations.toLocaleString()}명 등록`}
           </p>
         </div>

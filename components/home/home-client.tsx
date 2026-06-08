@@ -222,7 +222,7 @@ export function HomeClient({
 
           {/* Right Sidebar */}
           <aside className="col-span-3 hidden lg:block">
-            <ActivitySidebar showPrize initialRecentComments={initialRecentComments} />
+            <ActivitySidebar initialRecentComments={initialRecentComments} />
           </aside>
         </div>
 

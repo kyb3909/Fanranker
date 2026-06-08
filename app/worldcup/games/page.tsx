@@ -10,7 +10,7 @@ const BettingPage = nextDynamic(() => import("@/components/betting/betting-page"
 
 export const metadata: Metadata = {
   title: "월드컵 경기 베팅",
-  description: "월드컵 기간 동안 등록한 그룹 안에서 적중률·수익률로 1위에 도전하세요.",
+  description: "아스날 구너로 등록하고 월드컵 기간 적중률·수익률 1위에 도전하세요.",
   alternates: { canonical: "/worldcup/games" },
 }
 

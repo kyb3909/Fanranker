@@ -9,14 +9,15 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
  *
  * 월드컵 이벤트 사전 등록.
  * - Clerk 로그인 필수
- * - body: { group_slug: 'gooner' | 'kop' | 'blues', traffic_source?: string }
+ * - body: { group_slug: 'gooner', traffic_source?: string } — 아스날 전용 (Kop/Blues 가입 제외)
  * - UNIQUE (event_id, user_id) 위반 시 409 (한 번만 등록 가능 — 변경 불가)
  */
 
 const EVENT_SLUG = "worldcup-2026"
 
 const RegisterSchema = z.object({
-  group_slug: z.enum(["gooner", "kop", "blues"]),
+  // 아스날(Gooner) 전용 — kop/blues 슬러그는 거부 (UI·DB에 남아있어도 가입 차단)
+  group_slug: z.enum(["gooner"]),
   traffic_source: z.string().min(1).max(64).nullable().optional(),
 })
 
