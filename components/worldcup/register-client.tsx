@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useUser, SignInButton } from "@clerk/nextjs"
 import { Lock } from "lucide-react"
 
+// 월드컵 이벤트는 아스날(Gooner) 전용 — Kop/Blues 가입 제외 (아스날 유튜버 콜라보 연계).
 const GROUPS = [
   {
     slug: "gooner",
@@ -13,22 +14,6 @@ const GROUPS = [
     color: "#EF0107",
     youtuber: "아스날 채널",
     motto: "Victoria Concordia Crescit",
-  },
-  {
-    slug: "kop",
-    name: "Kopite",
-    clubKor: "리버풀",
-    color: "#C8102E",
-    youtuber: "리버풀 채널",
-    motto: "You'll Never Walk Alone",
-  },
-  {
-    slug: "blues",
-    name: "Blue",
-    clubKor: "첼시",
-    color: "#034694",
-    youtuber: "첼시 채널",
-    motto: "Pride of London",
   },
 ] as const
 
@@ -137,7 +122,7 @@ export function RegisterClient() {
         <ul className="wc-reg-rules-list">
           <li className="alert">
             <span>
-              <strong>한 번 선택한 그룹은 절대 변경할 수 없습니다.</strong> 신중하게 골라주세요.
+              <strong>한 번 등록하면 절대 변경할 수 없습니다.</strong> 신중하게 진행해주세요.
             </span>
           </li>
           <li>
@@ -145,11 +130,11 @@ export function RegisterClient() {
           </li>
           <li>
             <span>
-              월드컵 기간 적중률·수익률로 그룹 내 1위 결정 → <strong>상품 증정</strong>.
+              월드컵 기간 적중률·수익률로 구너 1위 결정 → <strong>상품 증정</strong>.
             </span>
           </li>
           <li>
-            <span>그룹 평균 적중률·수익률로 &quot;이번 시즌의 축잘알 팬덤&quot;을 선정.</span>
+            <span>다른 팬덤과의 비교 없이 아스날 구너들만의 예측 대결입니다.</span>
           </li>
         </ul>
       </div>
@@ -188,8 +173,7 @@ export function RegisterClient() {
       <label className="wc-reg-check">
         <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
         <span>
-          한 번 선택한 그룹은 변경할 수 없으며, 1위 결정은 그룹 내 적중률·수익률 기준으로 산정됨에
-          동의합니다.
+          한 번 등록하면 변경할 수 없으며, 1위는 구너 적중률·수익률 기준으로 산정됨에 동의합니다.
         </span>
       </label>
 

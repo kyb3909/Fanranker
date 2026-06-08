@@ -81,56 +81,21 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
 
   const myGroup = myInfo ? groups.find((g) => g.slug === myInfo.groupSlug) : null
   const myGroupAvg = myInfo ? groupAvgBySlug.get(myInfo.groupSlug) : null
-  const topFandom = groupAvg.find((g) => g.rank === 1)
-  const topFandomGroup = topFandom ? groups.find((g) => g.slug === topFandom.slug) : null
-
   return (
     <div className="wc-lb">
-      {/* 축잘알 팬덤 강조 (top group) */}
-      {topFandom && topFandomGroup && (
-        <div
-          className="wc-res-fandom"
-          style={
-            {
-              background: `linear-gradient(135deg, ${topFandomGroup.color}, color-mix(in srgb, ${topFandomGroup.color} 70%, black))`,
-            } as React.CSSProperties
-          }
-        >
-          <span aria-hidden className="wc-res-fandom-trophy">
-            👑
-          </span>
-          <div>
-            <div className="wc-res-fandom-eb">현재 축잘알 팬덤</div>
-            <div className="wc-res-fandom-h">
-              <em>{topFandomGroup.name}</em>
-              <span className="ml-2 text-sm font-normal opacity-80">
-                평균 수익 {fmtProfit(topFandom.avgProfit)} 볼
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 그룹 평균 비교 — 3 카드 (팀 정체성) */}
+      {/* 구너 전체 현황 — 단일 그룹(아스날 구너) 요약 카드 */}
       <div className="wc-lbg-grid">
         {sortedGroups.map((g) => {
           const stats = groupAvgBySlug.get(g.slug)
           if (!stats) return null
-          const isMine = g.slug === myInfo?.groupSlug
           return (
             <div
               key={g.slug}
-              className={`wc-lbg-card ${isMine ? "mine" : ""}`}
+              className="wc-lbg-card mine"
               style={{ ["--gp" as string]: g.color } as React.CSSProperties}
             >
-              <div aria-hidden className="wc-lbg-rank">
-                {stats.rank}
-              </div>
-              <div className="wc-lbg-name">
-                {g.name}
-                {isMine && <span className="wc-lbg-mine-tag">MINE</span>}
-              </div>
-              <div className="wc-lbg-name-sub">{g.clubKor} 팬덤</div>
+              <div className="wc-lbg-name">{g.name}</div>
+              <div className="wc-lbg-name-sub">{g.clubKor} 구너 전체</div>
               <div className="wc-lbg-roi">
                 <b>{fmtProfit(stats.avgProfit)}</b>
                 <span>평균 수익 (볼)</span>
@@ -159,7 +124,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
                 내 위치 — {fmtPercentile(myInfo.rank, myInfo.totalInGroup)}
               </div>
               <div className="wc-lb-me-sub">
-                {myGroup.name} · {myGroup.clubKor} 팬덤 · {myInfo.totalInGroup}명 중
+                {myGroup.clubKor} 구너 {myInfo.totalInGroup}명 중
               </div>
             </div>
           </div>
@@ -173,7 +138,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
               <b>{myInfo.accuracy}%</b>
             </div>
             <div className="wc-lb-me-s">
-              <span>그룹 평균</span>
+              <span>구너 평균</span>
               <b>{fmtProfit(myGroupAvg.avgProfit)}</b>
             </div>
             <div className="wc-lb-me-s">
@@ -189,7 +154,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
         <div className="wc-reg-rules">
           <div className="wc-reg-rules-h">아직 등록 전</div>
           <p className="text-[13px] leading-[1.6]">
-            등록하면 내 그룹 평균과 내 위치를 볼 수 있어요.{" "}
+            등록하면 구너 평균과 내 위치를 볼 수 있어요.{" "}
             <a
               href="/worldcup/register"
               className="underline"
@@ -202,7 +167,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
       )}
 
       <p className="text-center text-[11px]" style={{ color: "var(--wc-mute)" }}>
-        실시간 그룹 평균. 개별 순위는 종료 시점 결과 발표에서 공개됩니다.
+        실시간 구너 평균. 개별 순위는 종료 시점 결과 발표에서 공개됩니다.
       </p>
     </div>
   )
