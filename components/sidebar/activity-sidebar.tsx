@@ -1,20 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef, memo, Fragment } from "react"
-import dynamic from "next/dynamic"
+import { useState, useEffect, memo, Fragment } from "react"
 import { MessageSquare, Loader2 } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
 
-const StandingsWidget = dynamic(
-  () =>
-    import("@/components/sidebar/standings-widget").then((m) => ({ default: m.StandingsWidget })),
-  {
-    ssr: false,
-    loading: () => <div className="wc-skeleton h-64 rounded-lg" />,
-  }
-)
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 
@@ -74,26 +65,6 @@ export const ActivitySidebar = memo(function ActivitySidebar({
   const [isLoadingPosts, setIsLoadingPosts] = useState(
     !(initialRecentComments && initialRecentComments.length > 0)
   )
-  const [standingsVisible, setStandingsVisible] = useState(false)
-  const standingsRef = useRef<HTMLDivElement>(null)
-
-  // 순위표 위젯: 뷰포트에 들어올 때만 로드 (초기 로드 부하 감소)
-  useEffect(() => {
-    const el = standingsRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setStandingsVisible(true)
-          observer.disconnect()
-        }
-      },
-      { rootMargin: "200px" }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
   // 최근 댓글이 달린 글 가져오기 (서버 프리페치 데이터 우선 사용, 60초 캐시)
   useEffect(() => {
     // SSR prefetch 가 useState lazy init 으로 이미 채웠으면 client fetch 자체 skip.
@@ -225,14 +196,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
       {/* ===== 광고 플레이스홀더 ===== */}
       <AdPlaceholder variant="sidebar" />
 
-      {/* ===== 리그 순위표 위젯 (뷰포트 진입 시 로드) ===== */}
-      <div ref={standingsRef}>
-        {standingsVisible ? (
-          <StandingsWidget />
-        ) : (
-          <div className="bg-card border-border h-64 animate-pulse rounded-lg border" />
-        )}
-      </div>
+      {/* 리그 순위표 일단 숨김 — 월드컵 이벤트 집중 (복원: StandingsWidget + IntersectionObserver 복구) */}
     </div>
   )
 })
