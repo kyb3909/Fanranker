@@ -10,7 +10,7 @@ const BettingPage = nextDynamic(() => import("@/components/betting/betting-page"
 
 export const metadata: Metadata = {
   title: "월드컵 경기 베팅",
-  description: "월드컵 기간 동안 등록한 그룹 안에서 적중률·수익률로 1위에 도전하세요.",
+  description: "아스날 구너로 등록하고 월드컵 기간 적중률·수익률 1위에 도전하세요.",
   alternates: { canonical: "/worldcup/games" },
 }
 
@@ -95,15 +95,6 @@ export default async function WorldcupGamesPage() {
                   <span>
                     <strong>월드컵 경기 베팅</strong>은 이벤트 시작 + betman 의 월드컵 경기 코드
                     배정이 모두 완료된 후 활성화됩니다.
-                  </span>
-                </li>
-                <li>
-                  <span>
-                    그동안{" "}
-                    <Link href="/prediction" className="underline">
-                      일반 승부예측
-                    </Link>
-                    에서 다른 경기 베팅을 즐기세요. 그 슬립은 월드컵 랭킹에 반영되지 않습니다.
                   </span>
                 </li>
                 <li>

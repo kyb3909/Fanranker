@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Trophy, Crown, Gamepad2 } from "lucide-react"
+import { Compass, LayoutGrid, Crown, Gamepad2 } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -24,7 +24,6 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
 
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
-  const isPrediction = pathname.startsWith("/prediction")
   const isWorldcup = pathname.startsWith("/worldcup")
   const isGames = pathname.startsWith("/games")
 
@@ -41,11 +40,17 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             }
       }
     >
+      {/*
+        가로 스크롤 컨테이너에 justify-center 를 쓰면 내용이 넘칠 때 항목들이 양쪽으로
+        균등하게 삐져나가, 왼쪽으로 넘친 부분이 음수 스크롤 영역에 들어가 도달 불가
+        (맨 왼쪽 아이콘이 잘림). first:ml-auto + last:mr-auto 로 "들어가면 중앙정렬,
+        넘치면 왼쪽부터 정상 스크롤" 동작을 얻는다.
+      */}
       <div
         className={
           inline
             ? "scrollbar-none flex items-center gap-0.5 overflow-x-auto"
-            : "scrollbar-none flex items-center justify-center overflow-x-auto"
+            : "scrollbar-none flex items-center overflow-x-auto [&>:first-child]:ml-auto [&>:last-child]:mr-auto"
         }
       >
         <Link
@@ -72,12 +77,10 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             운동장
           </span>
         </Link>
-        <Link href="/prediction">
-          <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
-            <Trophy className="h-[18px] w-[18px] shrink-0" />
-            경기 예측
-          </span>
-        </Link>
+        {/*
+          경기 예측(/prediction)은 월드컵 이벤트에 집중하기 위해 메뉴에서 숨김.
+          라우트(/prediction/*)는 유지 — 직접 URL로만 접근 가능.
+        */}
         <Link href="/worldcup">
           <span className={baseClass} data-on={isWorldcup ? "true" : undefined}>
             <Crown className="h-[18px] w-[18px] shrink-0" />

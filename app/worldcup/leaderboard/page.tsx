@@ -13,8 +13,8 @@ import {
 const EVENT_SLUG = "worldcup-2026"
 
 export const metadata: Metadata = {
-  title: "월드컵 팬덤 현황",
-  description: "그룹 평균과 축잘알 팬덤 비교. 개별 순위는 종료 후 공개.",
+  title: "월드컵 구너 현황",
+  description: "구너 전체 평균과 내 위치. 개별 순위는 종료 후 공개.",
   alternates: { canonical: "/worldcup/leaderboard" },
 }
 
@@ -70,6 +70,7 @@ export default async function WorldcupLeaderboardPage() {
         .from("event_groups")
         .select("id, slug, name, club_kor, color, sort_order")
         .eq("event_id", event.id)
+        .eq("slug", "gooner") // 아스날 전용 — kop/blues DB 행이 남아있어도 리더보드엔 구너만
         .order("sort_order"),
       supabase.from("event_registrations").select("user_id, group_id").eq("event_id", event.id),
       supabase
@@ -209,7 +210,7 @@ export default async function WorldcupLeaderboardPage() {
           <Link href="/worldcup" className="wc-reg-head-back">
             ← 이벤트 안내로
           </Link>
-          <div className="wc-sec-eb">FANDOM STATUS</div>
+          <div className="wc-sec-eb">GOONER STATUS</div>
           <h1
             className="font-black tracking-tight"
             style={{
@@ -219,11 +220,11 @@ export default async function WorldcupLeaderboardPage() {
               letterSpacing: "-0.02em",
             }}
           >
-            팬덤 현황
+            구너 현황
           </h1>
           <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-            그룹 평균과 &ldquo;축잘알 팬덤&rdquo; 비교. 개별 순위는 의욕 상실 방지를 위해 진행
-            중에는 비공개 — 종료 후 결과 발표에서 그룹 1위 공개.
+            구너 전체 평균과 내 위치. 개별 순위는 의욕 상실 방지를 위해 진행 중에는 비공개 — 종료 후
+            결과 발표에서 구너 1위 공개.
           </p>
         </header>
 

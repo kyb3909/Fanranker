@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
   title: "월드컵 이벤트 결과 발표",
-  description: "그룹별 1위 + 축잘알 팬덤 발표.",
+  description: "구너 1위 발표.",
   alternates: { canonical: "/worldcup/result" },
 }
 
@@ -78,7 +78,7 @@ export default async function WorldcupResultPage() {
           <div className="wc-res-eb mt-6">RESULT</div>
           <h1 className="wc-res-h1">결과 발표 대기 중</h1>
           <p className="wc-res-sub mt-3">
-            이벤트가 아직 진행 중입니다. 종료 후 그룹별 1위와 &quot;축잘알 팬덤&quot;을 발표해요.
+            이벤트가 아직 진행 중입니다. 종료 후 구너 1위를 발표해요.
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Link href="/worldcup/leaderboard" className="wc-btn-primary-big">
@@ -169,9 +169,6 @@ export default async function WorldcupResultPage() {
     })
   }
 
-  // 축잘알 팬덤 = 그룹 평균 1위
-  const topFandom = [...winners].sort((a, b) => b.avgProfit - a.avgProfit)[0]
-
   return (
     <div className="px-4 pt-6 pb-16 sm:pt-10">
       <div className="mx-auto max-w-5xl">
@@ -182,27 +179,8 @@ export default async function WorldcupResultPage() {
         <header className="wc-res-hero">
           <div className="wc-res-eb">FINAL RESULT</div>
           <h1 className="wc-res-h1">{event.name} 결과</h1>
-          <p className="wc-res-sub">그룹별 1위 + &quot;축잘알 팬덤&quot; 발표.</p>
+          <p className="wc-res-sub">구너 1위 발표.</p>
         </header>
-
-        {/* 축잘알 팬덤 */}
-        {topFandom && (
-          <div className="wc-res-fandom">
-            <span aria-hidden className="wc-res-fandom-trophy">
-              👑
-            </span>
-            <div>
-              <div className="wc-res-fandom-eb">이번 시즌의 축잘알 팬덤</div>
-              <div className="wc-res-fandom-h">
-                <em>{topFandom.group.name}</em>
-                <span className="ml-2 text-sm font-normal opacity-80">
-                  평균 수익 {topFandom.avgProfit >= 0 ? "+" : ""}
-                  {topFandom.avgProfit} 볼
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Podium */}
         {winners.length === 0 ? (
@@ -222,9 +200,9 @@ export default async function WorldcupResultPage() {
               >
                 <span aria-hidden className="wc-rp-glow" />
                 <div className="wc-rp-trophy">🏆</div>
-                <div className="wc-rp-rank">GROUP 1ST</div>
+                <div className="wc-rp-rank">구너 1위</div>
                 <div className="wc-rp-grp">{w.group.name}</div>
-                <div className="wc-rp-sub">{w.group.club_kor} 팬덤</div>
+                <div className="wc-rp-sub">{w.group.club_kor} 구너</div>
                 <div className="wc-rp-winner">{w.nickname}</div>
                 <div className="wc-rp-handle">{w.user_id.slice(0, 12)}…</div>
                 <div className="wc-rp-stats">
@@ -249,13 +227,12 @@ export default async function WorldcupResultPage() {
         {/* 다음 이벤트 예고 */}
         <div className="wc-res-next">
           <div className="wc-res-next-eb">NEXT EVENT</div>
-          <div className="wc-res-next-h">다음 시즌 그룹 대결을 기다리세요</div>
+          <div className="wc-res-next-h">다음 시즌 이벤트를 기다리세요</div>
           <p className="wc-res-next-b">
-            다음 빅 이벤트가 시작되면 알림으로 알려드릴게요. 그동안 일반 승부예측에서 베팅 감각을
-            유지하세요.
+            다음 빅 이벤트가 시작되면 알림으로 알려드릴게요. 등록만 해두면 자동으로 받습니다.
           </p>
-          <Link href="/prediction" className="wc-res-next-cta">
-            일반 승부예측 →
+          <Link href="/worldcup" className="wc-res-next-cta">
+            이벤트 안내로 →
           </Link>
         </div>
       </div>
