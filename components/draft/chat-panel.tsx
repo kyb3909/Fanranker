@@ -179,7 +179,7 @@ export function ChatPanel({ roomId, myUserId, myDisplayName, isMember }: ChatPan
               padding: 24,
               textAlign: "center",
               color: "var(--draft-mute)",
-              fontStyle: "italic",
+              fontStyle: "normal",
               fontSize: 13,
             }}
           >
@@ -326,7 +326,7 @@ function SystemMessage({ msg }: { msg: ChatMessage }) {
       style={{
         fontSize: 11,
         color: "var(--draft-mute)",
-        fontStyle: "italic",
+        fontStyle: "normal",
         textAlign: "center",
         padding: "4px 0",
       }}

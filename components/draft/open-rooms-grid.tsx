@@ -62,7 +62,7 @@ export function OpenRoomsGrid({
           className="draft-serif"
           style={{
             fontSize: embedded ? 13 : 16,
-            fontStyle: "italic",
+            fontStyle: "normal",
             color: "var(--draft-mute)",
             lineHeight: 1.55,
           }}

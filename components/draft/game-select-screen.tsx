@@ -105,7 +105,7 @@ function GameCard({ game }: { game: DraftCatalogEntry }) {
         style={{
           fontSize: 13,
           color: "var(--draft-ink-soft)",
-          fontStyle: "italic",
+          fontStyle: "normal",
           lineHeight: 1.5,
           fontWeight: 400,
           flex: 1,
@@ -259,7 +259,7 @@ function HistoryEmpty() {
             className="draft-serif"
             style={{
               fontSize: 13,
-              fontStyle: "italic",
+              fontStyle: "normal",
               color: "var(--draft-mute)",
               marginTop: 4,
             }}
@@ -345,7 +345,7 @@ export function GameSelectScreen() {
             style={{
               padding: "32px 0",
               textAlign: "center",
-              fontStyle: "italic",
+              fontStyle: "normal",
               color: "var(--draft-mute)",
             }}
           >

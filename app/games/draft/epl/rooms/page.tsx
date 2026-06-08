@@ -127,7 +127,7 @@ export default async function OpenRoomsPage() {
             className="draft-serif"
             style={{
               fontSize: 13,
-              fontStyle: "italic",
+              fontStyle: "normal",
               color: "var(--draft-mute)",
               maxWidth: 340,
               lineHeight: 1.55,

@@ -425,7 +425,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
                 <div className="draft-eyebrow" style={{ marginBottom: 8 }}>
                   EMPTY
                 </div>
-                <p className="draft-serif" style={{ fontSize: 13, fontStyle: "italic" }}>
+                <p className="draft-serif" style={{ fontSize: 13, fontStyle: "normal" }}>
                   조건에 맞는 선수가 없어요. 필터를 조정해보세요.
                 </p>
               </div>
@@ -543,7 +543,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
                       className="draft-serif"
                       style={{
                         color: "var(--draft-mute)",
-                        fontStyle: "italic",
+                        fontStyle: "normal",
                         fontWeight: 400,
                       }}
                     >
@@ -580,7 +580,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
                       className="draft-serif"
                       style={{
                         color: "var(--draft-mute)",
-                        fontStyle: "italic",
+                        fontStyle: "normal",
                         fontWeight: 400,
                       }}
                     >
@@ -681,7 +681,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
                   className="draft-serif"
                   style={{
                     color: "var(--draft-mute)",
-                    fontStyle: "italic",
+                    fontStyle: "normal",
                     textAlign: "center",
                     fontFamily: "var(--draft-font-serif)",
                   }}

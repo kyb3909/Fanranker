@@ -132,6 +132,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     ],
     badge: "SOON",
     active: false,
+    hidden: true,
   },
   {
     slug: "kpop",
@@ -150,6 +151,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     positions: [],
     badge: "SOON",
     active: false,
+    hidden: true,
   },
   {
     slug: "tour",
@@ -168,6 +170,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     positions: [],
     badge: "SOON",
     active: false,
+    hidden: true,
   },
 ]
 

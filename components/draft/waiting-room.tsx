@@ -386,7 +386,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
               style={{
                 marginTop: 12,
                 fontSize: 12,
-                fontStyle: "italic",
+                fontStyle: "normal",
                 color: "var(--draft-mute)",
                 lineHeight: 1.55,
               }}
@@ -552,7 +552,7 @@ function SeatCard({
               alignItems: "center",
               justifyContent: "center",
               color: "var(--draft-mute)",
-              fontStyle: "italic",
+              fontStyle: "normal",
               fontSize: 14,
             }}
           >
