@@ -434,46 +434,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "예측 저장 중 오류가 발생했습니다." }, { status: 500 })
     }
 
-    // ===== 예측 활동 피드 생성 (upsert) =====
-    try {
-      // 해당 라운드+종목의 총 예측 수 조회
-      const { count } = await supabase
-        .from("betman_predictions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("daily_round_id", dailyRoundId)
+    // ===== 예측 활동 피드 + 팔로워 알림 (이벤트 슬립 제외) =====
+    // 월드컵 등 이벤트 베팅은 메인 피드/알림에 노출하지 않는다 — 온보딩성 베팅은
+    // "전문가 예측" 사회적 신호가 아니므로 prediction_activities/notifications 생략.
+    if (!eventId) {
+      // ===== 예측 활동 피드 생성 (upsert) =====
+      try {
+        // 해당 라운드+종목의 총 예측 수 조회
+        const { count } = await supabase
+          .from("betman_predictions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("daily_round_id", dailyRoundId)
 
-      await supabase.from("prediction_activities").upsert(
-        {
-          user_id: user.id,
-          round_id: games[0].round_id,
-          daily_round_id: dailyRoundId,
-          sport: sports[0],
-          prediction_count: count || predictions.length,
-        },
-        { onConflict: "user_id,round_id,sport" }
-      )
-    } catch (e) {
-      console.error("Failed to upsert prediction activity:", e)
-    }
-
-    // ===== 팔로워에게 알림 전송 =====
-    try {
-      const { data: followers } = await supabase
-        .from("user_follows")
-        .select("follower_id")
-        .eq("followed_user_id", user.id)
-
-      if (followers && followers.length > 0) {
-        const notifications = followers.map((f) => ({
-          user_id: f.follower_id,
-          type: "expert_prediction",
-          actor_id: user.id,
-        }))
-        await supabase.from("notifications").insert(notifications)
+        await supabase.from("prediction_activities").upsert(
+          {
+            user_id: user.id,
+            round_id: games[0].round_id,
+            daily_round_id: dailyRoundId,
+            sport: sports[0],
+            prediction_count: count || predictions.length,
+          },
+          { onConflict: "user_id,round_id,sport" }
+        )
+      } catch (e) {
+        console.error("Failed to upsert prediction activity:", e)
       }
-    } catch (e) {
-      console.error("Failed to send follower notifications:", e)
+
+      // ===== 팔로워에게 알림 전송 =====
+      try {
+        const { data: followers } = await supabase
+          .from("user_follows")
+          .select("follower_id")
+          .eq("followed_user_id", user.id)
+
+        if (followers && followers.length > 0) {
+          const notifications = followers.map((f) => ({
+            user_id: f.follower_id,
+            type: "expert_prediction",
+            actor_id: user.id,
+          }))
+          await supabase.from("notifications").insert(notifications)
+        }
+      } catch (e) {
+        console.error("Failed to send follower notifications:", e)
+      }
     }
 
     return NextResponse.json({
@@ -518,6 +523,7 @@ export async function GET(request: NextRequest) {
         .from("prediction_slips")
         .select("*")
         .eq("user_id", user.id)
+        .is("event_id", null) // 이벤트(월드컵) 슬립은 메인 내역에서 제외
         .order("created_at", { ascending: false })
         .limit(50)
 

@@ -30,6 +30,7 @@ interface PredSlip {
   status: string
   analysis_title: string | null
   analysis_text: string | null
+  event_id: string | null
 }
 
 /**
@@ -136,7 +137,7 @@ export async function GET(request: NextRequest) {
           game:betman_games(home_team_name, away_team_name, match_time, game_type, sport, result,
             league_code, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds,
             home_score, away_score, venue, handicap, over_under_line),
-          slip:prediction_slips(id, stake, total_odds, status, analysis_title, analysis_text)
+          slip:prediction_slips(id, stake, total_odds, status, analysis_title, analysis_text, event_id)
         `
         )
         .in("user_id", userIds)
@@ -148,14 +149,6 @@ export async function GET(request: NextRequest) {
     const statsMap = new Map(stats?.map((s) => [s.user_id, s]) || [])
     const roundMap = new Map(rounds?.map((r) => [r.id, r]) || [])
 
-    // 활동별로 예측 그룹핑
-    const predictionsMap = new Map<string, typeof allPreds>()
-    for (const act of activities) {
-      const preds =
-        allPreds?.filter((p) => p.user_id === act.user_id && p.round_id === act.round_id) || []
-      predictionsMap.set(act.id, preds)
-    }
-
     // Supabase 조인 결과에서 단일 객체를 추출하는 헬퍼
     const getGame = (p: NonNullable<typeof allPreds>[number]): PredGame | null => {
       const g = p.game
@@ -166,6 +159,18 @@ export async function GET(request: NextRequest) {
       const s = (p as Record<string, unknown>).slip
       if (!s) return null
       return ((Array.isArray(s) ? s[0] : s) as PredSlip | undefined) ?? null
+    }
+
+    // 활동별로 예측 그룹핑 — 이벤트(월드컵) 슬립 예측은 제외.
+    // 이벤트 베팅은 애초에 prediction_activities 도 안 만들지만, 같은 betman 라운드에
+    // 일반+이벤트 베팅이 섞이면 round_id 매칭으로 딸려올 수 있어 슬립 단에서 한 번 더 차단.
+    const predictionsMap = new Map<string, typeof allPreds>()
+    for (const act of activities) {
+      const preds =
+        allPreds?.filter(
+          (p) => p.user_id === act.user_id && p.round_id === act.round_id && !getSlip(p)?.event_id
+        ) || []
+      predictionsMap.set(act.id, preds)
     }
 
     // 경기 시간이 모두 지났는지 확인하는 함수
