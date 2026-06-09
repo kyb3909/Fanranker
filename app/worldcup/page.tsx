@@ -104,7 +104,7 @@ export default async function WorldcupPage() {
                       </span>
                     ) : (
                       <span className="text-xs font-semibold opacity-80">
-                        🥇 1호 등록의 주인공이 되세요
+                        1호 등록의 주인공이 되세요
                       </span>
                     ))}
                 </div>
@@ -112,7 +112,7 @@ export default async function WorldcupPage() {
 
               {/* 1등 상품 쇼케이스 — 디클런 라이스 사인 유니폼 */}
               <figure className="wc-prize-show">
-                <span className="wc-prize-badge">🏆 1등 상품</span>
+                <span className="wc-prize-badge">1등 상품</span>
                 <Image
                   src="/worldcup/prize-rice-jersey.webp"
                   alt="디클런 라이스 사인 유니폼 — 월드컵 이벤트 1등 상품"
@@ -141,10 +141,10 @@ export default async function WorldcupPage() {
                 <Trophy className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="wc-fact-h">최대 점수를 쌓은 구너에게 1등 상품 증정</h2>
+                <h2 className="wc-fact-h">1등 상품 · 디클런 라이스 사인 유니폼</h2>
                 <p className="wc-fact-b">
-                  월드컵 32강 전까지 사전 등록. 토너먼트 기간 중 최대 점수를 쌓은 구너에게 디클런
-                  라이스 사인 유니폼을 증정합니다.
+                  토너먼트 기간 동안 가장 높은 점수를 쌓은 구너 한 명에게 증정합니다. 등록은 무료,
+                  보유한 볼·골드로 참여합니다.
                 </p>
               </div>
             </div>
