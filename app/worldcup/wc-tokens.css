@@ -624,37 +624,39 @@
 
 /* ─── Z1.2 Fact card (축잘알 팬덤 + 상품 증정 메커니즘) ──── */
 .worldcup-scope .wc-fact-card {
-  background: linear-gradient(180deg, #fff7e5, #ffe9c4);
-  border: 2px solid var(--wc-warn);
+  background: var(--wc-card);
+  border: 1px solid var(--wc-line);
+  border-left: 3px solid var(--wc-burgundy);
   border-radius: 12px;
-  padding: 20px 24px;
+  padding: 22px 26px;
+  box-shadow: var(--wc-shadow-1);
 }
 .worldcup-scope .wc-fact-row {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 18px;
 }
 .worldcup-scope .wc-fact-icon {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgba(200, 132, 42, 0.18);
-  color: var(--wc-burgundy-deep);
+  background: var(--wc-soft);
+  color: var(--wc-burgundy);
 }
 .worldcup-scope .wc-fact-h {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
-  color: var(--wc-burgundy-deep);
+  color: var(--wc-ink);
   letter-spacing: -0.01em;
   margin-bottom: 4px;
 }
 .worldcup-scope .wc-fact-b {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--wc-ink);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--wc-mute);
 }
 
 /* ─── Z1.3 How steps ─────────────────────────────────────── */
