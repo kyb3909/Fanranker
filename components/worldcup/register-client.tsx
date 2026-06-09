@@ -3,108 +3,93 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser, SignInButton } from "@clerk/nextjs"
-import { Lock } from "lucide-react"
+import { Lock, Check, ShieldCheck } from "lucide-react"
 
-// 월드컵 이벤트는 아스날(Gooner) 전용 — Kop/Blues 가입 제외 (아스날 유튜버 콜라보 연계).
-const GROUPS = [
-  {
-    slug: "gooner",
-    name: "Gooner",
-    clubKor: "아스날",
-    color: "#EF0107",
-    youtuber: "아스날 채널",
-    motto: "Victoria Concordia Crescit",
-  },
-] as const
+// 아스날 구너 전용 — 그룹/채널 선택 없음 (모두 아스날 팬). 등록 = 약관 동의 한 단계.
+const TERMS = [
+  "이 이벤트의 예측은 게임 내 사이버 재화(토큰·골드)로만 진행되며, 현금으로 충전·환급·교환되지 않습니다.",
+  "적중 보상은 게임 점수로만 지급됩니다 — 현금성 보상이 아닙니다.",
+  "따라서 본 이벤트는 사행 행위(도박)가 아닌 적법한 게임 콘텐츠입니다.",
+  "한 번 등록하면 참가 정보를 변경할 수 없습니다.",
+]
 
 export function RegisterClient() {
   const router = useRouter()
   const { isSignedIn, isLoaded } = useUser()
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!isLoaded) {
-    return <div className="bg-muted h-64 animate-pulse rounded-lg" />
+    return (
+      <div className="h-64 animate-pulse rounded-2xl" style={{ background: "var(--wc-soft)" }} />
+    )
   }
 
-  /** 비로그인 분기 — 베이스라인 보존 (시안엔 없는 분기). 시안 .reg-warn 톤만 차용. */
+  // 비로그인 — 로그인 안내 카드
   if (!isSignedIn) {
     return (
-      <div className="space-y-6">
-        <div className="wc-reg-signin">
-          <div className="wc-reg-signin-row">
-            <Lock className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "var(--wc-burgundy)" }} />
-            <div>
-              <div className="wc-reg-signin-h">로그인 후 등록 가능</div>
-              <p className="wc-reg-signin-b">
-                gongnori.fan 계정으로 로그인하면 그룹을 선택하고 등록을 마칠 수 있어요.
-              </p>
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid var(--wc-line)",
+          borderRadius: 18,
+          padding: 24,
+          boxShadow: "var(--wc-shadow-1)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <Lock
+            className="h-5 w-5 shrink-0"
+            style={{ color: "var(--wc-burgundy)", marginTop: 2 }}
+          />
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
+              로그인 후 참가할 수 있어요
             </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+              gongnori.fan 계정으로 로그인하면 바로 참가를 마칠 수 있습니다.
+            </p>
           </div>
-          <SignInButton mode="modal">
-            <button type="button" className="wc-btn-on-warn">
-              로그인하기
-            </button>
-          </SignInButton>
         </div>
-
-        {/* 그룹 미리보기 (비활성) — 베이스라인 분기 보존 */}
-        <div className="wc-reg-grid">
-          {GROUPS.map((g) => (
-            <div
-              key={g.slug}
-              className="wc-reg-card disabled"
-              style={{ ["--gp" as string]: g.color } as React.CSSProperties}
-            >
-              <span aria-hidden className="wc-reg-card-bg" />
-              <div className="wc-reg-card-top">
-                <div>
-                  <div className="wc-reg-card-name">{g.name}</div>
-                  <div className="wc-reg-card-sub">{g.clubKor} 팬덤</div>
-                </div>
-                <Lock className="h-5 w-5" style={{ color: "var(--wc-mute-2)" }} />
-              </div>
-              <p className="wc-reg-card-motto">{g.motto}</p>
-              <p className="wc-reg-card-foot">유입 · {g.youtuber}</p>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
-          로그인하면 그룹을 선택하고 등록을 진행할 수 있습니다.
-        </p>
+        <SignInButton mode="modal">
+          <button
+            type="button"
+            className="wc-hbtn wc-hbtn-primary"
+            style={{ alignSelf: "flex-start" }}
+          >
+            로그인하기
+          </button>
+        </SignInButton>
       </div>
     )
   }
 
   const handleSubmit = async () => {
-    if (!selectedGroup || !agreed) return
+    if (!agreed || submitting) return
     setSubmitting(true)
     setError(null)
     try {
       const res = await fetch("/api/event/worldcup/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group_slug: selectedGroup }),
+        body: JSON.stringify({ group_slug: "gooner" }),
       })
       const json = (await res.json().catch(() => ({}))) as {
         ok?: boolean
         error?: string
         already_registered?: boolean
       }
-      if (!res.ok) {
-        // 이미 등록된 경우 done 페이지로 이동 (사용자에게 자연스러움)
-        if (json.already_registered) {
-          router.push(`/worldcup/register/done?group=${selectedGroup}`)
-          return
-        }
-        setError(json.error || "등록 중 오류가 발생했습니다.")
-        setSubmitting(false)
+      // 등록 완료 또는 이미 등록 → 바로 월드컵 경기/예측 화면으로
+      if (res.ok || json.already_registered) {
+        router.push("/worldcup/games")
         return
       }
-      router.push(`/worldcup/register/done?group=${selectedGroup}`)
+      setError(json.error || "등록 중 오류가 발생했습니다.")
+      setSubmitting(false)
     } catch {
       setError("네트워크 오류가 발생했습니다. 다시 시도해주세요.")
       setSubmitting(false)
@@ -112,76 +97,114 @@ export function RegisterClient() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Z2.4 참가 규칙 */}
-      <div className="wc-reg-rules">
-        <div className="wc-reg-rules-h">
-          <span aria-hidden>★</span>
-          참가 규칙
+    <div className="space-y-5">
+      {/* 참가 약관 카드 */}
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid var(--wc-line)",
+          borderRadius: 18,
+          padding: "22px 24px",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 15,
+            fontWeight: 800,
+            color: "var(--wc-ink)",
+            letterSpacing: "-.01em",
+            marginBottom: 14,
+          }}
+        >
+          <ShieldCheck className="h-[18px] w-[18px]" style={{ color: "var(--wc-burgundy)" }} />
+          참가 전 꼭 확인하세요
         </div>
-        <ul className="wc-reg-rules-list">
-          <li className="alert">
-            <span>
-              <strong>한 번 등록하면 절대 변경할 수 없습니다.</strong> 신중하게 진행해주세요.
-            </span>
-          </li>
-          <li>
-            <span>일반 베팅 시스템과 동일한 룰. 보유한 토큰·골드로 월드컵 경기에 베팅합니다.</span>
-          </li>
-          <li>
-            <span>
-              월드컵 기간 적중률·수익률로 구너 1위 결정 → <strong>상품 증정</strong>.
-            </span>
-          </li>
-          <li>
-            <span>다른 팬덤과의 비교 없이 아스날 구너들만의 예측 대결입니다.</span>
-          </li>
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 11,
+          }}
+        >
+          {TERMS.map((t) => (
+            <li
+              key={t}
+              style={{
+                display: "flex",
+                gap: 10,
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: "var(--wc-ink-2)",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  flexShrink: 0,
+                  marginTop: 7,
+                  width: 5,
+                  height: 5,
+                  borderRadius: "50%",
+                  background: "var(--wc-burgundy)",
+                }}
+              />
+              <span>{t}</span>
+            </li>
+          ))}
         </ul>
       </div>
 
-      {/* Z2.5 그룹 선택 카드 */}
-      <div className="wc-reg-grid">
-        {GROUPS.map((g) => {
-          const isSelected = selectedGroup === g.slug
-          return (
-            <button
-              key={g.slug}
-              type="button"
-              onClick={() => setSelectedGroup(g.slug)}
-              className={`wc-reg-card ${isSelected ? "on" : ""}`}
-              style={{ ["--gp" as string]: g.color } as React.CSSProperties}
-              aria-pressed={isSelected}
-            >
-              <span aria-hidden className="wc-reg-card-bg" />
-              <div className="wc-reg-card-top">
-                <div>
-                  <div className="wc-reg-card-name">{g.name}</div>
-                  <div className="wc-reg-card-sub">{g.clubKor} 팬덤</div>
-                </div>
-                <span aria-hidden className={`wc-radio ${isSelected ? "on" : ""}`}>
-                  {isSelected ? "✓" : ""}
-                </span>
-              </div>
-              <p className="wc-reg-card-motto">{g.motto}</p>
-              <p className="wc-reg-card-foot">유입 · {g.youtuber}</p>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Z2.6 동의 체크박스 */}
-      <label className="wc-reg-check">
-        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-        <span>
-          한 번 등록하면 변경할 수 없으며, 1위는 구너 적중률·수익률 기준으로 산정됨에 동의합니다.
+      {/* 동의 체크박스 */}
+      <button
+        type="button"
+        onClick={() => setAgreed((a) => !a)}
+        aria-pressed={agreed}
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 11,
+          width: "100%",
+          textAlign: "left",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 2,
+        }}
+      >
+        <span
+          style={{
+            flexShrink: 0,
+            width: 22,
+            height: 22,
+            borderRadius: 7,
+            border: `1.5px solid ${agreed ? "var(--wc-burgundy)" : "#cfd2d7"}`,
+            background: agreed ? "var(--wc-burgundy)" : "#fff",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "all .12s",
+          }}
+        >
+          {agreed && <Check className="h-[13px] w-[13px]" />}
         </span>
-      </label>
+        <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--wc-ink-2)" }}>
+          위 내용을 모두 확인했으며,{" "}
+          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>동의하고 참가합니다.</b>
+        </span>
+      </button>
 
-      {/* 에러 메시지 */}
       {error && (
         <div
           role="alert"
-          className="rounded-lg border p-3 text-[13px]"
+          className="rounded-xl border p-3 text-[13px]"
           style={{
             background: "rgba(192, 58, 58, 0.06)",
             borderColor: "var(--wc-down)",
@@ -192,15 +215,25 @@ export function RegisterClient() {
         </div>
       )}
 
-      {/* Z2.7 등록 CTA */}
       <button
         type="button"
-        className="wc-reg-cta"
-        disabled={!selectedGroup || !agreed || submitting}
+        className="wc-hbtn wc-hbtn-primary"
+        disabled={!agreed || submitting}
         onClick={handleSubmit}
+        style={{
+          width: "100%",
+          height: 54,
+          fontSize: 16,
+          opacity: agreed && !submitting ? 1 : 0.5,
+          cursor: agreed && !submitting ? "pointer" : "not-allowed",
+          boxShadow: agreed ? "0 6px 16px rgba(158,28,48,.22)" : "none",
+        }}
       >
-        {submitting ? "등록 중..." : "등록 완료"}
+        {submitting ? "등록 중..." : "동의하고 참가하기"}
       </button>
+      <p className="text-center text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+        등록은 무료이며, 한 번 등록하면 변경할 수 없습니다.
+      </p>
     </div>
   )
 }
