@@ -6,11 +6,14 @@ import { DRAFT_GAMES, type DraftCatalogEntry } from "@/lib/draft/games-catalog"
 
 import "@/app/games/draft/draft-tokens.css"
 
-const FILTERS: Array<{ key: "all" | DraftCatalogEntry["sport"]; label: string }> = [
-  { key: "all", label: "전체" },
-  { key: "strategy", label: "전략" },
-  { key: "culture", label: "컬처" },
-]
+// 종목 라벨 — 활성 게임이 있는 분류만 필터로 동적 노출.
+const SPORT_LABELS: Record<DraftCatalogEntry["sport"], string> = {
+  football: "축구",
+  basketball: "농구",
+  strategy: "전략",
+  culture: "컬처",
+  cycling: "사이클",
+}
 
 function GameStripe({ color }: { color: string }) {
   return (
@@ -273,8 +276,17 @@ function HistoryEmpty() {
 }
 
 export function GameSelectScreen() {
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all")
+  const [filter, setFilter] = useState<"all" | DraftCatalogEntry["sport"]>("all")
   const catalog = DRAFT_GAMES.filter((g) => !g.hidden)
+  // 활성 게임이 있는 종목만 필터로 노출. 단일 종목이면 필터 행 자체를 숨김.
+  const availableSports = [...new Set(catalog.map((g) => g.sport))]
+  const filters: Array<{ key: "all" | DraftCatalogEntry["sport"]; label: string }> =
+    availableSports.length > 1
+      ? [
+          { key: "all", label: "전체" },
+          ...availableSports.map((s) => ({ key: s, label: SPORT_LABELS[s] })),
+        ]
+      : []
   const visibleGames = filter === "all" ? catalog : catalog.filter((g) => g.sport === filter)
 
   return (
@@ -310,22 +322,24 @@ export function GameSelectScreen() {
             </span>
             모든 드래프트
           </h2>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {FILTERS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setFilter(t.key)}
-                className={`draft-pill ${filter === t.key ? "draft-pill-burg" : ""}`}
-                style={{
-                  cursor: "pointer",
-                  fontFamily: "var(--draft-font-body)",
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {filters.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {filters.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setFilter(t.key)}
+                  className={`draft-pill ${filter === t.key ? "draft-pill-burg" : ""}`}
+                  style={{
+                    cursor: "pointer",
+                    fontFamily: "var(--draft-font-body)",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div

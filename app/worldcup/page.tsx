@@ -7,11 +7,11 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
   title: "월드컵 승부예측 구너 대결",
-  description: "아스날 구너들끼리 월드컵 기간 예측 대결. 적중률·수익률 1위에게 상품 증정.",
+  description: "월드컵 32강 전까지 사전 등록. 토너먼트 기간 획득 점수 1위 구너에게 상품 증정.",
   alternates: { canonical: "/worldcup" },
   openGraph: {
     title: "월드컵 승부예측 구너 대결 | gongnori.fan",
-    description: "아스날 구너 전용. 월드컵 예측 적중률 1위에 도전하세요.",
+    description: "아스날 구너 전용. 월드컵 토너먼트 획득 점수 1위에 도전하세요.",
     url: "/worldcup",
   },
 }
@@ -32,7 +32,7 @@ const GROUPS = [
 ] as const
 
 const STEPS = [
-  { num: "01", title: "사전 등록", body: "월드컵 시작 전 구너로 사전 등록합니다." },
+  { num: "01", title: "사전 등록", body: "월드컵 32강 전까지 구너로 사전 등록합니다." },
   {
     num: "02",
     title: "월드컵 기간 베팅",
@@ -41,7 +41,7 @@ const STEPS = [
   {
     num: "03",
     title: "1위 결정",
-    body: "구너들끼리 적중률·수익률로 랭킹 산정. 1위에게 상품을 증정합니다.",
+    body: "토너먼트 기간 동안 모은 획득 점수로 랭킹 산정. 1위 구너에게 상품 증정.",
   },
 ] as const
 
@@ -88,8 +88,8 @@ export default async function WorldcupPage() {
                 <span style={{ color: "var(--wc-gold)" }}>구너 대결</span>
               </h1>
               <p className="mb-8 max-w-xl text-[15px] leading-relaxed opacity-85 sm:text-base">
-                아스날 구너들끼리 월드컵 기간 동안 예측 대결. 적중률·수익률 1위 구너에게 상품을
-                증정합니다.
+                월드컵 32강 전까지 구너로 사전 등록하고, 토너먼트 기간 동안 예측으로 점수를
+                모으세요. 획득 점수 1위 구너에게 상품을 증정합니다.
               </p>
 
               <Countdown target="2026-06-11T00:00:00+09:00" label="이벤트 시작까지" />
@@ -128,9 +128,9 @@ export default async function WorldcupPage() {
                 <Trophy className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="wc-fact-h">적중률·수익률 1위 구너에게 상품 증정</h2>
+                <h2 className="wc-fact-h">토너먼트 획득 점수 1위 구너에게 상품 증정</h2>
                 <p className="wc-fact-b">
-                  월드컵 기간 동안 구너들끼리 정정당당 예측 대결. 적중률·수익률 1위 구너에게 상품을
+                  월드컵 32강 전까지 사전 등록. 토너먼트 기간 중 획득 점수 1위 구너에게 상품을
                   증정합니다.
                 </p>
               </div>
