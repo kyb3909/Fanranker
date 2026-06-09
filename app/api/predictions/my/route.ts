@@ -106,7 +106,8 @@ export async function GET(request: NextRequest) {
           id,
           stake,
           total_odds,
-          status
+          status,
+          event_id
         )
       `
       )
@@ -189,6 +190,7 @@ export async function GET(request: NextRequest) {
       stake: number
       total_odds: number
       status: string | null
+      event_id: string | null
     }
     interface BetmanPred {
       id: string
@@ -207,12 +209,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Group betman predictions by slip_id (or round_id for legacy)
-    const betmanPreds = (betmanPredictions || []).map((p) => ({
-      ...p,
-      round: p.round as unknown as BetmanRoundJoin | null,
-      game: p.game as unknown as BetmanGameJoin | null,
-      slip: p.slip as unknown as BetmanSlipJoin | null,
-    })) as BetmanPred[]
+    const betmanPreds = (betmanPredictions || [])
+      .map((p) => ({
+        ...p,
+        round: p.round as unknown as BetmanRoundJoin | null,
+        game: p.game as unknown as BetmanGameJoin | null,
+        slip: p.slip as unknown as BetmanSlipJoin | null,
+      }))
+      // 이벤트(월드컵) 슬립 예측은 메인 "내 예측"에서 제외
+      .filter((p) => !p.slip?.event_id) as BetmanPred[]
     const betmanBySlip = new Map<string, BetmanPred[]>()
     for (const pred of betmanPreds) {
       const groupKey = pred.slip_id || pred.round_id || "unknown"

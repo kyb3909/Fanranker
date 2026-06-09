@@ -17,6 +17,13 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // 이벤트(월드컵) 슬립 전역 집합 — 커뮤니티 통계에서 이벤트 베팅 제외
+    const { data: eventSlipRows } = await supabase
+      .from("prediction_slips")
+      .select("id")
+      .not("event_id", "is", null)
+    const eventSlipIdSet = new Set((eventSlipRows ?? []).map((s) => s.id))
+
     // 1. 전체/종목별 통계
     const { data: allStats, error: statsError } = await supabase
       .from("betman_user_sport_stats")
@@ -135,6 +142,7 @@ export async function GET() {
           .select("id, stake, total_odds, status")
           .in("id", ids)
           .in("status", ["won", "lost"])
+          .is("event_id", null) // 이벤트 슬립 제외
         if (slipsErr) continue
         slipsData = slipsData.concat(slips ?? [])
       }
@@ -158,7 +166,7 @@ export async function GET() {
     const dayEnd = dailyDates[dailyDates.length - 1]
     const { data: settledPreds } = await supabase
       .from("betman_predictions")
-      .select("settled_at, is_correct, status")
+      .select("settled_at, is_correct, status, slip_id")
       .in("status", ["settled", "cancelled"])
       .not("settled_at", "is", null)
       .gte("settled_at", new Date(dayStart + "T00:00:00.000+09:00").toISOString())
@@ -170,6 +178,7 @@ export async function GET() {
     }
     for (const p of settledPreds ?? []) {
       if (p.status === "cancelled") continue
+      if (p.slip_id && eventSlipIdSet.has(p.slip_id)) continue
       const d = toKSTDate((p as { settled_at: string }).settled_at)
       const cur = correctWrongByDate.get(d)
       if (!cur) continue

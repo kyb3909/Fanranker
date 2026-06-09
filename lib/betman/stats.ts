@@ -30,6 +30,14 @@ export async function updateUserSportStats(supabase: SupabaseClient, userId: str
 
   if (predsError || !userPreds || userPreds.length === 0) return
 
+  // 이벤트(월드컵 등) 슬립은 메인 통계에서 제외 — 온보딩/이벤트 베팅 격리.
+  const { data: eventSlips } = await supabase
+    .from("prediction_slips")
+    .select("id")
+    .eq("user_id", userId)
+    .not("event_id", "is", null)
+  const eventSlipIds = new Set((eventSlips ?? []).map((s) => s.id))
+
   // 2. 예측의 slip_id로 슬립 조회 (user_id 불일치 방어)
   const slipIds = [...new Set(userPreds.map((p) => p.slip_id).filter(Boolean))]
   let userSlips: Array<{
@@ -47,6 +55,7 @@ export async function updateUserSportStats(supabase: SupabaseClient, userId: str
       .select("id, sport, stake, total_odds, status, created_at")
       .in("id", slipIds)
       .in("status", ["won", "lost", "cancelled"])
+      .is("event_id", null) // 이벤트 슬립 제외
       .order("created_at", { ascending: true })
     if (slipsError) return
     userSlips = data
@@ -88,6 +97,8 @@ export async function updateUserSportStats(supabase: SupabaseClient, userId: str
     allCancelled = 0
 
   for (const p of userPreds) {
+    // 이벤트 슬립에 속한 예측은 메인 통계에서 제외
+    if (p.slip_id && eventSlipIds.has(p.slip_id)) continue
     const game = p.betman_games as unknown as { sport: string }
     const sport = game?.sport ?? "기타"
     const s = ensureSport(sport)
