@@ -187,7 +187,7 @@ export default async function WorldcupResultPage() {
           <div className="wc-reg-rules">
             <div className="wc-reg-rules-h">데이터 부족</div>
             <p className="text-[13px] leading-[1.6]">
-              이벤트가 종료됐지만 등록자/슬립 데이터가 없어 결과를 산정할 수 없습니다.
+              이벤트가 종료됐지만 참가자/예측 데이터가 없어 결과를 산정할 수 없습니다.
             </p>
           </div>
         ) : (
@@ -229,7 +229,7 @@ export default async function WorldcupResultPage() {
           <div className="wc-res-next-eb">NEXT EVENT</div>
           <div className="wc-res-next-h">다음 시즌 이벤트를 기다리세요</div>
           <p className="wc-res-next-b">
-            다음 빅 이벤트가 시작되면 알림으로 알려드릴게요. 등록만 해두면 자동으로 받습니다.
+            다음 빅 이벤트가 시작되면 알림으로 알려드릴게요. 참가 신청만 해두면 자동으로 받습니다.
           </p>
           <Link href="/worldcup" className="wc-res-next-cta">
             이벤트 안내로 →

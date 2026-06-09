@@ -3,14 +3,23 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser, SignInButton } from "@clerk/nextjs"
-import { Lock, Check, ShieldCheck } from "lucide-react"
+import { Lock, Check } from "lucide-react"
 
-// 아스날 구너 전용 — 그룹/채널 선택 없음 (모두 아스날 팬). 등록 = 약관 동의 한 단계.
-const TERMS = [
-  "이 이벤트의 예측은 게임 내 사이버 재화(토큰·골드)로만 진행되며, 현금으로 충전·환급·교환되지 않습니다.",
-  "적중 보상은 게임 점수로만 지급됩니다 — 현금성 보상이 아닙니다.",
-  "따라서 본 이벤트는 사행 행위(도박)가 아닌 적법한 게임 콘텐츠입니다.",
-  "한 번 등록하면 참가 정보를 변경할 수 없습니다.",
+// 아스날 구너 전용 — 그룹/채널 선택 없음. 등록 = 규칙 확인 + 참가 한 단계.
+// 방어적 고지 대신, 게임이 어떻게 굴러가는지 친근하게 설명한다.
+const RULES = [
+  {
+    title: "매일 볼 10개, 공짜로",
+    body: "매일 아침 볼 10개가 들어와요. 충전도 결제도 없이, 그 볼로만 참여합니다.",
+  },
+  {
+    title: "예측하고 점수 쌓기",
+    body: "볼로 월드컵 경기 결과를 맞혀보세요. 적중할 때마다 점수가 차곡차곡 쌓입니다.",
+  },
+  {
+    title: "최고 점수 구너가 우승",
+    body: "토너먼트가 끝날 때 점수가 가장 높은 구너 한 명이 데클런 라이스 사인 유니폼을 가져가요.",
+  },
 ]
 
 export function RegisterClient() {
@@ -48,10 +57,10 @@ export function RegisterClient() {
           />
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
-              로그인 후 참가할 수 있어요
+              로그인 후 참가 신청할 수 있어요
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
-              gongnori.fan 계정으로 로그인하면 바로 참가를 마칠 수 있습니다.
+              gongnori.fan 계정으로 로그인하면 바로 참가 신청을 마칠 수 있습니다.
             </p>
           </div>
         </div>
@@ -98,30 +107,26 @@ export function RegisterClient() {
 
   return (
     <div className="space-y-5">
-      {/* 참가 약관 카드 */}
+      {/* 게임 규칙 — 친근하게 설명 */}
       <div
         style={{
           background: "#fff",
           border: "1px solid var(--wc-line)",
           borderRadius: 18,
-          padding: "22px 24px",
+          padding: "22px 24px 24px",
           boxShadow: "var(--wc-shadow-1)",
         }}
       >
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: 800,
             color: "var(--wc-ink)",
             letterSpacing: "-.01em",
-            marginBottom: 14,
+            marginBottom: 16,
           }}
         >
-          <ShieldCheck className="h-[18px] w-[18px]" style={{ color: "var(--wc-burgundy)" }} />
-          참가 전 꼭 확인하세요
+          규칙은 간단해요
         </div>
         <ul
           style={{
@@ -130,32 +135,44 @@ export function RegisterClient() {
             padding: 0,
             display: "flex",
             flexDirection: "column",
-            gap: 11,
+            gap: 16,
           }}
         >
-          {TERMS.map((t) => (
-            <li
-              key={t}
-              style={{
-                display: "flex",
-                gap: 10,
-                fontSize: 14,
-                lineHeight: 1.6,
-                color: "var(--wc-ink-2)",
-              }}
-            >
+          {RULES.map((r, i) => (
+            <li key={r.title} style={{ display: "flex", gap: 13 }}>
               <span
                 aria-hidden
                 style={{
                   flexShrink: 0,
-                  marginTop: 7,
-                  width: 5,
-                  height: 5,
-                  borderRadius: "50%",
-                  background: "var(--wc-burgundy)",
+                  width: 26,
+                  height: 26,
+                  borderRadius: 9,
+                  background: "var(--wc-wine-tint)",
+                  color: "var(--wc-burgundy)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  fontWeight: 800,
                 }}
-              />
-              <span>{t}</span>
+              >
+                {i + 1}
+              </span>
+              <div>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--wc-ink)" }}>
+                  {r.title}
+                </div>
+                <p
+                  style={{
+                    fontSize: 13.5,
+                    lineHeight: 1.6,
+                    color: "var(--wc-ink-2)",
+                    marginTop: 2,
+                  }}
+                >
+                  {r.body}
+                </p>
+              </div>
             </li>
           ))}
         </ul>
@@ -196,8 +213,8 @@ export function RegisterClient() {
           {agreed && <Check className="h-[13px] w-[13px]" />}
         </span>
         <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--wc-ink-2)" }}>
-          위 내용을 모두 확인했으며,{" "}
-          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>동의하고 참가합니다.</b>
+          규칙을 확인했고,{" "}
+          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>구너로 참가 신청할게요.</b>
         </span>
       </button>
 
@@ -229,10 +246,10 @@ export function RegisterClient() {
           boxShadow: agreed ? "0 6px 16px rgba(158,28,48,.22)" : "none",
         }}
       >
-        {submitting ? "등록 중..." : "동의하고 참가하기"}
+        {submitting ? "신청 처리 중..." : "참가 신청하기"}
       </button>
       <p className="text-center text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
-        등록은 무료이며, 한 번 등록하면 변경할 수 없습니다.
+        현금이 오가지 않는 무료 이벤트예요. 참가 신청은 한 번만 가능하고, 이후엔 변경할 수 없어요.
       </p>
     </div>
   )
