@@ -4,6 +4,7 @@ import Link from "@/components/ui/app-link"
 import { Crown, ArrowRight } from "lucide-react"
 import { Countdown } from "@/components/worldcup/countdown"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
 
 export const metadata: Metadata = {
   title: "월드컵 승부예측 구너 대결",
@@ -46,6 +47,18 @@ export default async function WorldcupPage() {
     .select("*", { count: "exact", head: true })
   const regCount = count ?? 0
 
+  // 현재 유저가 이미 등록한 구너인지 — 등록 후엔 CTA 를 "경기 예측하러 가기" 로 전환
+  const user = await currentUser()
+  let isRegistered = false
+  if (user) {
+    const { data: reg } = await supabase
+      .from("event_registrations")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+    isRegistered = !!reg
+  }
+
   return (
     <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
       {/* ── Hero ─────────────────────────────────────────────── */}
@@ -80,14 +93,22 @@ export default async function WorldcupPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link href="/worldcup/register" className="wc-hbtn wc-hbtn-primary">
-              사전 등록하기 <ArrowRight className="h-[17px] w-[17px]" />
-            </Link>
+            {isRegistered ? (
+              <Link href="/worldcup/games" className="wc-hbtn wc-hbtn-primary">
+                경기 예측하러 가기 <ArrowRight className="h-[17px] w-[17px]" />
+              </Link>
+            ) : (
+              <Link href="/worldcup/register" className="wc-hbtn wc-hbtn-primary">
+                사전 등록하기 <ArrowRight className="h-[17px] w-[17px]" />
+              </Link>
+            )}
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-ghost">
               구너 현황
             </Link>
             <span className="text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
-              {regCount > 0 ? (
+              {isRegistered ? (
+                <span style={{ color: "var(--wc-go)", fontWeight: 700 }}>✓ 참가 완료</span>
+              ) : regCount > 0 ? (
                 <>
                   현재 <b style={{ color: "var(--wc-burgundy)" }}>{regCount.toLocaleString()}명</b>{" "}
                   등록 중
@@ -198,21 +219,33 @@ export default async function WorldcupPage() {
               className="text-[12.5px] font-extrabold uppercase"
               style={{ letterSpacing: ".14em", color: "rgba(255,255,255,.72)" }}
             >
-              Pre-register
+              {isRegistered ? "You're in" : "Pre-register"}
             </div>
             <h2
               className="text-[21px] font-extrabold text-white sm:text-[25px]"
               style={{ letterSpacing: "-.03em", lineHeight: 1.3 }}
             >
-              지금 등록하고 구너 대결에 합류하세요
+              {isRegistered
+                ? "이미 참가 중 — 월드컵 경기를 예측하세요"
+                : "지금 등록하고 구너 대결에 합류하세요"}
             </h2>
             <div className="text-[14px]" style={{ color: "rgba(255,255,255,.82)" }}>
-              등록은 무료 · 한 번 등록하면 변경 불가
-              {regCount > 0 && ` · 현재 ${regCount.toLocaleString()}명 등록 중`}
+              {isRegistered ? (
+                "경기가 열리면 예측 슬립을 작성해 점수를 쌓으세요."
+              ) : (
+                <>
+                  등록은 무료 · 한 번 등록하면 변경 불가
+                  {regCount > 0 && ` · 현재 ${regCount.toLocaleString()}명 등록 중`}
+                </>
+              )}
             </div>
           </div>
-          <Link href="/worldcup/register" className="wc-cta-btn">
-            사전 등록하기 <ArrowRight className="h-[18px] w-[18px]" />
+          <Link
+            href={isRegistered ? "/worldcup/games" : "/worldcup/register"}
+            className="wc-cta-btn"
+          >
+            {isRegistered ? "경기 예측하러 가기" : "사전 등록하기"}{" "}
+            <ArrowRight className="h-[18px] w-[18px]" />
           </Link>
         </div>
         <div className="mt-[26px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
