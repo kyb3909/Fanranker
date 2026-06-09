@@ -97,11 +97,16 @@ export default async function WorldcupPage() {
                   >
                     구너 현황 →
                   </Link>
-                  {totalRegistrations !== null && (
-                    <span className="text-xs font-semibold opacity-80">
-                      현재 {totalRegistrations.toLocaleString()}명 등록 중
-                    </span>
-                  )}
+                  {totalRegistrations !== null &&
+                    (totalRegistrations > 0 ? (
+                      <span className="text-xs font-semibold opacity-80">
+                        현재 {totalRegistrations.toLocaleString()}명 등록 중
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold opacity-80">
+                        🥇 1호 등록의 주인공이 되세요
+                      </span>
+                    ))}
                 </div>
               </div>
 
@@ -238,7 +243,9 @@ export default async function WorldcupPage() {
           </div>
           <p className="mt-8 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
             등록은 무료. 한 번 등록하면 변경할 수 없습니다.
-            {totalRegistrations !== null && ` · 현재 ${totalRegistrations.toLocaleString()}명 등록`}
+            {totalRegistrations !== null &&
+              totalRegistrations > 0 &&
+              ` · 현재 ${totalRegistrations.toLocaleString()}명 등록`}
           </p>
         </div>
       </section>

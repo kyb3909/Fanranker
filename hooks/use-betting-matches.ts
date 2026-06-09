@@ -4,7 +4,7 @@ import { getMsUntilReset } from "@/lib/betman/daily-round"
 import type { TodayInfo, GroupedMatch } from "@/components/betting/betting-types"
 import { fetcher } from "@/lib/swr"
 
-export function useBettingMatches() {
+export function useBettingMatches(eventSlug?: string) {
   const [sportFilter, setSportFilterRaw] = useState<"all" | "축구" | "야구" | "농구" | "배구">(
     "all"
   )
@@ -18,8 +18,10 @@ export function useBettingMatches() {
     setLeagueFilter("all")
   }, [])
 
-  // SWR for games data
-  const gamesKey = `/api/sports/games?${sportFilter !== "all" ? `sport=${sportFilter}` : ""}`
+  // SWR for games data — 이벤트 모드면 ?event=<slug> 추가 (해당 이벤트 경기만 반환)
+  const sportParam = sportFilter !== "all" ? `sport=${sportFilter}` : ""
+  const eventParam = eventSlug ? `event=${encodeURIComponent(eventSlug)}` : ""
+  const gamesKey = `/api/sports/games?${[sportParam, eventParam].filter(Boolean).join("&")}`
   const {
     data: gamesData,
     error: gamesError,

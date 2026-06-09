@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const sportFilter = searchParams.get("sport") || "all"
     const gameTypeFilter = searchParams.get("game_type") || "all"
     const dateParam = searchParams.get("date") // YYYY-MM-DD or null (today)
+    const eventParam = searchParams.get("event") // 이벤트 slug (월드컵 등) or null
 
     // Validate date param if provided
     if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
@@ -72,6 +73,28 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
+    // --- 이벤트 경기 풀 분리 ---
+    // ?event=<slug> → 그 이벤트 league_codes 만 포함 (이벤트 베팅 페이지 전용)
+    // param 없음(메인) → 활성 이벤트(미종료) league_codes 전부 제외 → 이벤트 경기는 메인 풀에 안 보임
+    let includeCodes: string[] | null = null
+    let excludeCodes: string[] = []
+    if (eventParam) {
+      const { data: ev } = await supabase
+        .from("events")
+        .select("league_codes")
+        .eq("slug", eventParam)
+        .maybeSingle()
+      includeCodes = ((ev?.league_codes ?? []) as string[]).filter(Boolean)
+    } else {
+      const { data: activeEvents } = await supabase
+        .from("events")
+        .select("league_codes")
+        .neq("status", "closed")
+      excludeCodes = [
+        ...new Set((activeEvents ?? []).flatMap((e) => (e.league_codes ?? []) as string[])),
+      ].filter(Boolean)
+    }
+
     // --- Fetch games in daily window (kickoff-time based) ---
     const isToday = !dateParam || dailyId === getTodayDailyId()
     let query = supabase
@@ -88,6 +111,14 @@ export async function GET(request: NextRequest) {
       .not("away_team_name", "is", null)
       .order("match_time", { ascending: true })
       .order("game_no", { ascending: true })
+
+    // 이벤트 경기 풀 분리 — 메인은 이벤트 코드 제외, 이벤트 모드는 해당 코드만
+    if (includeCodes !== null) {
+      query = query.in("league_code", includeCodes.length > 0 ? includeCodes : ["__none__"])
+    } else if (excludeCodes.length > 0) {
+      // null league_code 게임은 유지하고 이벤트 코드만 제외
+      query = query.or(`league_code.is.null,league_code.not.in.(${excludeCodes.join(",")})`)
+    }
 
     // 오늘 경기는 scheduled만, 과거 날짜는 전체 상태 반환
     if (isToday) {
