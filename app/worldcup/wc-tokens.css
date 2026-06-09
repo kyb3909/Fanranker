@@ -454,26 +454,56 @@
   left: -40px;
 }
 
-.worldcup-scope .wc-prize-ribbon {
+/* 1등 상품 쇼케이스 — 라이스 사인 유니폼 (버건디 hero 위 화이트 플린스 카드) */
+.worldcup-scope .wc-prize-show {
+  position: relative;
+  margin: 0;
+  background: linear-gradient(180deg, #ffffff, var(--wc-soft));
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.worldcup-scope .wc-prize-badge {
   position: absolute;
-  right: -20px;
-  top: 28px;
+  top: -14px;
+  left: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--wc-gold);
   color: var(--wc-burgundy-deep);
-  padding: 14px 28px 14px 18px;
-  border-radius: 4px 0 0 4px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-  transform: rotate(2deg);
-  z-index: 2;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
 }
-.worldcup-scope .wc-prize-ribbon::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 100%;
-  border-style: solid;
-  border-width: 8px 12px 0 0;
-  border-color: var(--wc-gold-deep) transparent transparent transparent;
+.worldcup-scope .wc-prize-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+.worldcup-scope .wc-prize-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px 6px;
+  text-align: center;
+}
+.worldcup-scope .wc-prize-cap strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--wc-ink);
+  letter-spacing: -0.01em;
+}
+.worldcup-scope .wc-prize-cap span {
+  font-size: 12px;
+  color: var(--wc-mute);
+  line-height: 1.5;
 }
 
 .worldcup-scope .wc-eyebrow {

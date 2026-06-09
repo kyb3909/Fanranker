@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { Card } from "@/components/ui/card"
 import { Trophy, Users, BarChart3, Gamepad2 } from "lucide-react"
@@ -63,57 +64,64 @@ export default async function WorldcupPage() {
             <div aria-hidden className="wc-orb wc-orb-w" />
             <div aria-hidden className="wc-orb wc-orb-b" />
 
-            {/* Prize ribbon — Q1+Q3: 🏆 + 상품 증정 */}
-            <div className="wc-prize-ribbon">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl" aria-hidden>
-                  🏆
-                </span>
-                <div>
-                  <div className="text-base leading-none font-black tracking-tight">상품 증정</div>
-                  <div className="mt-1 text-[10px] tracking-[0.12em] opacity-70">구너 1위에게</div>
+            {/* Content — 좌: 카피·CTA · 우: 1등 상품(라이스 사인 유니폼) 쇼케이스 */}
+            <div className="relative grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="text-white">
+                <div className="wc-eyebrow mb-5">
+                  <span aria-hidden className="wc-eyebrow-dot" />
+                  WORLD CUP 2026
+                </div>
+                <h1 className="mb-4 text-[40px] leading-[1.05] font-black tracking-tight sm:text-[56px]">
+                  월드컵 승부예측
+                  <br />
+                  <span style={{ color: "var(--wc-gold)" }}>구너 대결</span>
+                </h1>
+                <p className="mb-8 max-w-xl text-[15px] leading-relaxed opacity-85 sm:text-base">
+                  월드컵 32강 전까지 구너로 사전 등록하고, 토너먼트 기간 동안 예측으로 최대 점수를
+                  쌓아보세요.
+                </p>
+
+                <Countdown target="2026-06-11T00:00:00+09:00" label="이벤트 시작까지" />
+
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Link href="/worldcup/register" className="wc-btn-on-hero">
+                    사전 등록하기
+                  </Link>
+                  <Link
+                    href="/worldcup/leaderboard"
+                    className="inline-flex items-center gap-1.5 rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors"
+                    style={{
+                      background: "rgba(255,255,255,0.12)",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                    }}
+                  >
+                    구너 현황 →
+                  </Link>
+                  {totalRegistrations !== null && (
+                    <span className="text-xs font-semibold opacity-80">
+                      현재 {totalRegistrations.toLocaleString()}명 등록 중
+                    </span>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Content */}
-            <div className="relative max-w-2xl text-white">
-              <div className="wc-eyebrow mb-5">
-                <span aria-hidden className="wc-eyebrow-dot" />
-                WORLD CUP 2026
-              </div>
-              <h1 className="mb-4 text-[40px] leading-[1.05] font-black tracking-tight sm:text-[56px]">
-                월드컵 승부예측
-                <br />
-                <span style={{ color: "var(--wc-gold)" }}>구너 대결</span>
-              </h1>
-              <p className="mb-8 max-w-xl text-[15px] leading-relaxed opacity-85 sm:text-base">
-                월드컵 32강 전까지 구너로 사전 등록하고, 토너먼트 기간 동안 예측으로 점수를
-                모으세요. 획득 점수 1위 구너에게 상품을 증정합니다.
-              </p>
-
-              <Countdown target="2026-06-11T00:00:00+09:00" label="이벤트 시작까지" />
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link href="/worldcup/register" className="wc-btn-on-hero">
-                  사전 등록하기
-                </Link>
-                <Link
-                  href="/worldcup/leaderboard"
-                  className="inline-flex items-center gap-1.5 rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors"
-                  style={{
-                    background: "rgba(255,255,255,0.12)",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                  }}
-                >
-                  구너 현황 →
-                </Link>
-                {totalRegistrations !== null && (
-                  <span className="text-xs font-semibold opacity-80">
-                    현재 {totalRegistrations.toLocaleString()}명 등록 중
-                  </span>
-                )}
-              </div>
+              {/* 1등 상품 쇼케이스 — 디클런 라이스 사인 유니폼 */}
+              <figure className="wc-prize-show">
+                <span className="wc-prize-badge">🏆 1등 상품</span>
+                <Image
+                  src="/worldcup/prize-rice-jersey.webp"
+                  alt="디클런 라이스 사인 유니폼 — 월드컵 이벤트 1등 상품"
+                  width={1190}
+                  height={794}
+                  className="wc-prize-img"
+                  sizes="(min-width: 1024px) 40vw, 100vw"
+                  priority
+                />
+                <figcaption className="wc-prize-cap">
+                  <strong>디클런 라이스 사인 유니폼</strong>
+                  <span>월드컵 토너먼트 기간 중 최대 점수를 쌓은 구너에게 증정</span>
+                </figcaption>
+              </figure>
             </div>
           </div>
         </div>
@@ -128,10 +136,10 @@ export default async function WorldcupPage() {
                 <Trophy className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="wc-fact-h">토너먼트 획득 점수 1위 구너에게 상품 증정</h2>
+                <h2 className="wc-fact-h">최대 점수를 쌓은 구너에게 1등 상품 증정</h2>
                 <p className="wc-fact-b">
-                  월드컵 32강 전까지 사전 등록. 토너먼트 기간 중 획득 점수 1위 구너에게 상품을
-                  증정합니다.
+                  월드컵 32강 전까지 사전 등록. 토너먼트 기간 중 최대 점수를 쌓은 구너에게 디클런
+                  라이스 사인 유니폼을 증정합니다.
                 </p>
               </div>
             </div>
