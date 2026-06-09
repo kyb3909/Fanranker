@@ -9,7 +9,7 @@ import { currentUser } from "@clerk/nextjs/server"
 export const metadata: Metadata = {
   title: "월드컵 승부예측 구너 대결",
   description:
-    "월드컵 32강 전까지 사전 등록. 최고 점수를 기록한 구너에게 디클런 라이스 사인 유니폼 증정.",
+    "월드컵 32강 전까지 사전 등록. 최고 점수를 기록한 구너에게 데클런 라이스 사인 유니폼 증정.",
   alternates: { canonical: "/worldcup" },
   openGraph: {
     title: "월드컵 승부예측 구너 대결 | gongnori.fan",
@@ -84,7 +84,7 @@ export default async function WorldcupPage() {
           >
             32강 전까지 구너로 등록하고, 토너먼트 내내 예측으로 점수를 쌓으세요. 최고 점수를 기록한
             단 한 명에게{" "}
-            <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>디클런 라이스 사인 유니폼</b>을
+            <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>데클런 라이스 사인 유니폼</b>을
             드립니다.
           </p>
 
@@ -120,7 +120,7 @@ export default async function WorldcupPage() {
           </div>
         </div>
 
-        {/* 1등 상품 카드 — 디클런 라이스 사인 유니폼 */}
+        {/* 1등 상품 카드 — 데클런 라이스 사인 유니폼 */}
         <figure className="wc-prize-card">
           <div
             className="relative"
@@ -137,7 +137,7 @@ export default async function WorldcupPage() {
             </span>
             <Image
               src="/worldcup/prize-rice-jersey.webp"
-              alt="디클런 라이스 사인 유니폼"
+              alt="데클런 라이스 사인 유니폼"
               width={1190}
               height={794}
               priority
@@ -157,7 +157,7 @@ export default async function WorldcupPage() {
                   className="text-[18px] font-extrabold"
                   style={{ letterSpacing: "-.02em", lineHeight: 1.25 }}
                 >
-                  디클런 라이스 사인 유니폼
+                  데클런 라이스 사인 유니폼
                 </div>
                 <div className="mt-1 text-[13.5px]" style={{ color: "var(--wc-ink-2)" }}>
                   친필 사인 · 정품 · 액자 증정
