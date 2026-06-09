@@ -43,7 +43,7 @@ export default function BettingPage({
     "predictions"
   )
 
-  const matches = useBettingMatches()
+  const matches = useBettingMatches(eventSlug)
   const slip = useBettingSlip(matches.groupedMatches, matches.loadMatches, { eventSlug })
 
   // 이벤트 모드: league_code 화이트리스트 필터 (UI 단계, 서버에서도 검증)
