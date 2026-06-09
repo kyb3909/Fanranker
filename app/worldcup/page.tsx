@@ -9,7 +9,7 @@ import { currentUser } from "@clerk/nextjs/server"
 export const metadata: Metadata = {
   title: "월드컵 승부예측 구너 대결",
   description:
-    "월드컵 32강 전까지 사전 등록. 최고 점수를 기록한 구너에게 데클런 라이스 사인 유니폼 증정.",
+    "월드컵 32강 토너먼트 전까지 참가 신청. 최고 점수를 기록한 구너에게 데클런 라이스 사인 유니폼 증정.",
   alternates: { canonical: "/worldcup" },
   openGraph: {
     title: "월드컵 승부예측 구너 대결 | gongnori.fan",
@@ -24,8 +24,8 @@ export const dynamic = "force-dynamic"
 const STEPS = [
   {
     num: "01",
-    title: "사전 등록",
-    body: "월드컵 32강 전까지 아스날 구너로 등록하세요. 등록은 무료이며, 한 번 등록하면 변경할 수 없습니다.",
+    title: "참가 신청",
+    body: "월드컵 32강 토너먼트 전까지 참가 신청을 하세요. 모든 신청은 무료입니다.",
   },
   {
     num: "02",
@@ -82,8 +82,8 @@ export default async function WorldcupPage() {
             className="mb-[30px] max-w-[480px] text-[15.5px] sm:text-[16.5px]"
             style={{ lineHeight: 1.66, color: "var(--wc-ink-2)" }}
           >
-            32강 전까지 구너로 등록하고, 토너먼트 내내 예측으로 점수를 쌓으세요. 최고 점수를 기록한
-            단 한 명에게{" "}
+            32강 전까지 구너로 참가 신청하고, 토너먼트 내내 예측으로 점수를 쌓으세요. 최고 점수를
+            기록한 단 한 명에게{" "}
             <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>데클런 라이스 사인 유니폼</b>을
             드립니다.
           </p>
@@ -99,7 +99,7 @@ export default async function WorldcupPage() {
               </Link>
             ) : (
               <Link href="/worldcup/register" className="wc-hbtn wc-hbtn-primary">
-                사전 등록하기 <ArrowRight className="h-[17px] w-[17px]" />
+                참가 신청하기 <ArrowRight className="h-[17px] w-[17px]" />
               </Link>
             )}
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-ghost">
@@ -107,14 +107,14 @@ export default async function WorldcupPage() {
             </Link>
             <span className="text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
               {isRegistered ? (
-                <span style={{ color: "var(--wc-go)", fontWeight: 700 }}>✓ 참가 완료</span>
+                <span style={{ color: "var(--wc-go)", fontWeight: 700 }}>✓ 참가 신청 완료</span>
               ) : regCount > 0 ? (
                 <>
                   현재 <b style={{ color: "var(--wc-burgundy)" }}>{regCount.toLocaleString()}명</b>{" "}
-                  등록 중
+                  신청 완료
                 </>
               ) : (
-                "1호 등록의 주인공이 되세요"
+                "1호 신청자가 되어보세요"
               )}
             </span>
           </div>
@@ -226,16 +226,16 @@ export default async function WorldcupPage() {
               style={{ letterSpacing: "-.03em", lineHeight: 1.3 }}
             >
               {isRegistered
-                ? "이미 참가 중 — 월드컵 경기를 예측하세요"
-                : "지금 등록하고 구너 대결에 합류하세요"}
+                ? "참가 신청 완료 — 경기가 열리면 예측하세요"
+                : "지금 신청하고 구너 대결에 합류하세요"}
             </h2>
             <div className="text-[14px]" style={{ color: "rgba(255,255,255,.82)" }}>
               {isRegistered ? (
-                "경기가 열리면 예측 슬립을 작성해 점수를 쌓으세요."
+                "경기가 열리면 결과를 예측하고 점수를 쌓으세요."
               ) : (
                 <>
-                  등록은 무료 · 한 번 등록하면 변경 불가
-                  {regCount > 0 && ` · 현재 ${regCount.toLocaleString()}명 등록 중`}
+                  신청은 무료 · 한 번 신청하면 변경 불가
+                  {regCount > 0 && ` · 현재 ${regCount.toLocaleString()}명 신청 완료`}
                 </>
               )}
             </div>
@@ -244,7 +244,7 @@ export default async function WorldcupPage() {
             href={isRegistered ? "/worldcup/games" : "/worldcup/register"}
             className="wc-cta-btn"
           >
-            {isRegistered ? "경기 예측하러 가기" : "사전 등록하기"}{" "}
+            {isRegistered ? "경기 예측하러 가기" : "참가 신청하기"}{" "}
             <ArrowRight className="h-[18px] w-[18px]" />
           </Link>
         </div>

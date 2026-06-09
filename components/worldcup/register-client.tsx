@@ -57,10 +57,10 @@ export function RegisterClient() {
           />
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
-              로그인 후 참가할 수 있어요
+              로그인 후 참가 신청할 수 있어요
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
-              gongnori.fan 계정으로 로그인하면 바로 참가를 마칠 수 있습니다.
+              gongnori.fan 계정으로 로그인하면 바로 참가 신청을 마칠 수 있습니다.
             </p>
           </div>
         </div>
@@ -214,7 +214,7 @@ export function RegisterClient() {
         </span>
         <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--wc-ink-2)" }}>
           규칙을 확인했고,{" "}
-          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>구너로 참가할게요.</b>
+          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>구너로 참가 신청할게요.</b>
         </span>
       </button>
 
@@ -246,10 +246,10 @@ export function RegisterClient() {
           boxShadow: agreed ? "0 6px 16px rgba(158,28,48,.22)" : "none",
         }}
       >
-        {submitting ? "참가 처리 중..." : "구너로 참가하기"}
+        {submitting ? "신청 처리 중..." : "참가 신청하기"}
       </button>
       <p className="text-center text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
-        현금이 오가지 않는 무료 이벤트예요. 등록은 한 번만 가능하고, 이후엔 변경할 수 없어요.
+        현금이 오가지 않는 무료 이벤트예요. 참가 신청은 한 번만 가능하고, 이후엔 변경할 수 없어요.
       </p>
     </div>
   )

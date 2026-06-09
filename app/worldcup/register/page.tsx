@@ -7,9 +7,9 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { RegisterClient } from "@/components/worldcup/register-client"
 
 export const metadata: Metadata = {
-  title: "월드컵 이벤트 사전 등록",
+  title: "월드컵 이벤트 참가 신청",
   description:
-    "아스날 구너로 월드컵 승부예측에 참가하세요. 등록은 무료, 한 번 등록하면 변경할 수 없습니다.",
+    "아스날 구너로 월드컵 승부예측에 참가 신청하세요. 신청은 무료, 한 번 신청하면 변경할 수 없습니다.",
   alternates: { canonical: "/worldcup/register" },
 }
 
@@ -56,14 +56,14 @@ export default async function WorldcupRegisterPage() {
           className="text-[30px] font-extrabold sm:text-[38px]"
           style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
         >
-          월드컵 사전 등록
+          월드컵 참가 신청
         </h1>
         <p
           className="mt-2.5 mb-8 text-[15px]"
           style={{ lineHeight: 1.6, color: "var(--wc-ink-2)" }}
         >
-          아스날 구너로 월드컵 승부예측 대결에 참가합니다. 등록을 마치면 바로 경기 일정과 예측이
-          열립니다.
+          아스날 구너로 월드컵 승부예측 대결에 참가 신청합니다. 신청을 마치면 바로 경기 일정과
+          예측이 열립니다.
         </p>
         <RegisterClient />
       </div>

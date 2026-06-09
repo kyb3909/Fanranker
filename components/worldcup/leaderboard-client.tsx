@@ -142,7 +142,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
               <b>{fmtProfit(myGroupAvg.avgProfit)}</b>
             </div>
             <div className="wc-lb-me-s">
-              <span>정산 슬립</span>
+              <span>완료된 예측</span>
               <b>{myInfo.settled}</b>
             </div>
           </div>
@@ -152,15 +152,15 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
       {/* 비등록자 안내 */}
       {!myInfo && (
         <div className="wc-reg-rules">
-          <div className="wc-reg-rules-h">아직 등록 전</div>
+          <div className="wc-reg-rules-h">아직 참가 신청 전</div>
           <p className="text-[13px] leading-[1.6]">
-            등록하면 구너 평균과 내 위치를 볼 수 있어요.{" "}
+            참가 신청하면 구너 평균과 내 위치를 볼 수 있어요.{" "}
             <a
               href="/worldcup/register"
               className="underline"
               style={{ color: "var(--wc-burgundy)" }}
             >
-              지금 등록하기 →
+              지금 참가 신청하기 →
             </a>
           </p>
         </div>
