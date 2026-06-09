@@ -1,20 +1,21 @@
 import type { Metadata } from "next"
 import nextDynamic from "next/dynamic"
 import Link from "@/components/ui/app-link"
+import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { Countdown } from "@/components/worldcup/countdown"
-import { Lock, Users, ArrowRight } from "lucide-react"
+import { getDailyWindow } from "@/lib/betman/daily-round"
 
 // BettingPage 는 client component (use client). dynamic import 로 lazy.
 const BettingPage = nextDynamic(() => import("@/components/betting/betting-page"))
 
 export const metadata: Metadata = {
-  title: "월드컵 경기 베팅",
-  description: "아스날 구너로 등록하고 월드컵 기간 적중률·수익률 1위에 도전하세요.",
+  title: "월드컵 경기 예측",
+  description: "아스날 구너로 월드컵 경기를 예측하고 최고 점수 1위에 도전하세요.",
   alternates: { canonical: "/worldcup/games" },
 }
 
-// status / league_codes / 등록자 카운트 즉시 반영
+// 경기 유무·등록자 즉시 반영
 export const dynamic = "force-dynamic"
 
 const EVENT_SLUG = "worldcup-2026"
@@ -23,7 +24,6 @@ interface EventRow {
   id: string
   status: string
   start_at: string
-  registration_closes_at: string
   league_codes: string[] | null
 }
 
@@ -32,11 +32,29 @@ export default async function WorldcupGamesPage() {
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, status, start_at, registration_closes_at, league_codes")
+    .select("id, status, start_at, league_codes")
     .eq("slug", EVENT_SLUG)
     .maybeSingle<EventRow>()
 
-  // 등록자 카운트
+  const leagueCodes = event?.league_codes ?? []
+
+  // 오늘 베팅 윈도우에 "이벤트 코드"의 예정 경기가 있을 때만 베팅을 연다.
+  // 없으면 카운트다운만 — NBA 더미 시기엔 0건이라 카운트다운, 실제 월드컵 경기가
+  // 등록되는 순간(코드 매칭) 자동으로 예측 화면이 열린다.
+  let hasGamesToday = false
+  if (event && event.status === "live" && leagueCodes.length > 0) {
+    const { start, end } = getDailyWindow()
+    const { count } = await supabase
+      .from("betman_games")
+      .select("id", { count: "exact", head: true })
+      .in("league_code", leagueCodes)
+      .eq("status", "scheduled")
+      .gte("match_time", start.toISOString())
+      .lt("match_time", end.toISOString())
+    hasGamesToday = (count ?? 0) > 0
+  }
+  const bettingOpen = hasGamesToday
+
   let totalRegistrations = 0
   if (event) {
     const { count } = await supabase
@@ -46,126 +64,76 @@ export default async function WorldcupGamesPage() {
     totalRegistrations = count ?? 0
   }
 
-  const leagueCodes = event?.league_codes ?? []
-  const codesAssigned = leagueCodes.length > 0
-  const eventLive = event?.status === "live"
-
   return (
-    <div className="px-4 pt-6 pb-16 sm:pt-10">
-      <div className="mx-auto max-w-4xl">
-        <header className="mb-8">
-          <Link href="/worldcup" className="wc-reg-head-back">
-            ← 이벤트 안내로
-          </Link>
-          <div className="wc-sec-eb">WORLD CUP GAMES</div>
-          <h1
-            className="font-black tracking-tight"
-            style={{
-              fontSize: "clamp(28px, 4.5vw, 36px)",
-              lineHeight: 1.15,
-              color: "var(--wc-ink)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            월드컵 경기 베팅
-          </h1>
-        </header>
+    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+      <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
+        <Link
+          href="/worldcup"
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold"
+          style={{ color: "var(--wc-mute)" }}
+        >
+          <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
+        </Link>
+        <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
+          WORLD CUP
+        </div>
+        <h1
+          className="text-[28px] font-extrabold sm:text-[36px]"
+          style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
+        >
+          월드컵 경기 예측
+        </h1>
 
-        {!event ? (
-          <div className="wc-reg-rules">
-            <div className="wc-reg-rules-h">
-              <span aria-hidden>!</span>
-              이벤트 미존재
-            </div>
-            <p className="text-[13px] leading-[1.6]">
-              월드컵 이벤트(slug=&quot;{EVENT_SLUG}&quot;)를 찾을 수 없습니다. 마이그레이션 적용 후
-              다시 시도해주세요.
-            </p>
-          </div>
-        ) : !eventLive || !codesAssigned ? (
-          <div className="space-y-6">
-            {/* 안내 카드 — 코드 미배정 또는 시작 전 */}
-            <div className="wc-reg-rules">
-              <div className="wc-reg-rules-h">
-                <Lock className="h-4 w-4" aria-hidden />
-                {!eventLive ? "이벤트 시작 대기 중" : "월드컵 경기 코드 배정 대기 중"}
-              </div>
-              <ul className="wc-reg-rules-list">
-                <li>
-                  <span>
-                    <strong>월드컵 경기 베팅</strong>은 이벤트 시작 + betman 의 월드컵 경기 코드
-                    배정이 모두 완료된 후 활성화됩니다.
-                  </span>
-                </li>
-                <li>
-                  <span>
-                    이벤트 시작 즈음 푸시 알림을 보내드릴게요. 등록만 해두면 자동으로 받습니다.
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            {/* 카운트다운 */}
-            <div className="wc-done-cd-wrap">
-              <Countdown target={event.start_at} label="이벤트 시작까지" />
-            </div>
-
-            {/* 등록자 카운트 */}
-            <div
-              className="flex items-center justify-between rounded-xl border p-5"
-              style={{
-                background: "var(--wc-card)",
-                borderColor: "var(--wc-line)",
-                boxShadow: "var(--wc-shadow-1)",
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5" style={{ color: "var(--wc-burgundy)" }} />
-                <div>
-                  <div
-                    className="text-[12px] font-semibold tracking-[0.08em] uppercase"
-                    style={{ color: "var(--wc-mute)" }}
-                  >
-                    현재 등록자
-                  </div>
-                  <div
-                    className="text-2xl font-black tabular-nums"
-                    style={{ color: "var(--wc-ink)" }}
-                  >
-                    {totalRegistrations.toLocaleString()}명
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/worldcup/register"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold"
-                style={{ color: "var(--wc-burgundy)" }}
-              >
-                등록하기 <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <div className="text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
-              {codesAssigned ? (
-                <>월드컵 경기 코드 {leagueCodes.length}개 배정됨 — 이벤트 시작 시 활성화</>
-              ) : (
-                <>betman 월드컵 코드 배정 후 운영자가 이 페이지를 활성화합니다.</>
-              )}
-            </div>
+        {bettingOpen ? (
+          <div className="mt-7">
+            <BettingPage eventSlug={EVENT_SLUG} leagueCodes={leagueCodes} bettingOnly />
           </div>
         ) : (
-          <div className="space-y-4">
-            <div
-              className="rounded-lg border p-3 text-[12px]"
-              style={{
-                background: "rgba(47, 125, 91, 0.06)",
-                borderColor: "var(--wc-go)",
-                color: "var(--wc-go)",
-              }}
-            >
-              ✓ 월드컵 베팅 활성화됨 · 대상 코드: {leagueCodes.join(", ")} · 등록자만 베팅 가능
+          <div
+            className="mt-8"
+            style={{
+              background: "#fff",
+              border: "1px solid var(--wc-line)",
+              borderRadius: 20,
+              boxShadow: "var(--wc-shadow-1)",
+              padding: "44px 24px 40px",
+              textAlign: "center",
+            }}
+          >
+            <div className="flex justify-center">
+              <span className="wc-pill-wine">경기 대기 중</span>
             </div>
-            <BettingPage eventSlug={EVENT_SLUG} leagueCodes={leagueCodes} bettingOnly />
+            <h2
+              className="mt-4 text-[22px] font-extrabold sm:text-[26px]"
+              style={{ letterSpacing: "-.02em", color: "var(--wc-ink)" }}
+            >
+              곧 월드컵 경기가 시작됩니다
+            </h2>
+            <p
+              className="mx-auto mt-2.5 mb-7 max-w-[440px] text-[14.5px]"
+              style={{ lineHeight: 1.65, color: "var(--wc-ink-2)" }}
+            >
+              월드컵 경기가 열리면 이곳에 일정과 승부예측이 바로 나타납니다. 미리 등록해 두면 준비
+              끝!
+            </p>
+            <div
+              className="wc-cd-light"
+              style={{ maxWidth: 360, margin: "0 auto", textAlign: "left" }}
+            >
+              <Countdown
+                target={event?.start_at ?? "2026-06-10T14:00:00+09:00"}
+                label="월드컵 시작까지"
+              />
+            </div>
+            {totalRegistrations > 0 && (
+              <p className="mt-6 text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
+                현재{" "}
+                <span style={{ color: "var(--wc-burgundy)" }}>
+                  {totalRegistrations.toLocaleString()}명
+                </span>{" "}
+                참가 중
+              </p>
+            )}
           </div>
         )}
       </div>
