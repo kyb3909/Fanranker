@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser, SignInButton } from "@clerk/nextjs"
-import { Lock, Check } from "lucide-react"
+import { Lock, Check, ChevronDown } from "lucide-react"
+import { EVENT_TERMS, EVENT_TERMS_TITLE, EVENT_TERMS_DATE } from "./event-terms"
 
 // 아스날 구너 전용 — 그룹/채널 선택 없음. 등록 = 규칙 확인 + 참가 한 단계.
 // 방어적 고지 대신, 게임이 어떻게 굴러가는지 친근하게 설명한다.
@@ -26,6 +27,7 @@ export function RegisterClient() {
   const router = useRouter()
   const { isSignedIn, isLoaded } = useUser()
   const [agreed, setAgreed] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -178,6 +180,110 @@ export function RegisterClient() {
         </ul>
       </div>
 
+      {/* 이벤트 참가 약관 — 접이식 전문 */}
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid var(--wc-line)",
+          borderRadius: 18,
+          boxShadow: "var(--wc-shadow-1)",
+          overflow: "hidden",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setTermsOpen((o) => !o)}
+          aria-expanded={termsOpen}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            padding: "16px 24px",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 14.5,
+            fontWeight: 700,
+            color: "var(--wc-ink)",
+            textAlign: "left",
+          }}
+        >
+          <span>
+            이벤트 참가 약관{" "}
+            <span style={{ fontWeight: 500, fontSize: 12.5, color: "var(--wc-mute)" }}>
+              (전문 보기)
+            </span>
+          </span>
+          <ChevronDown
+            className="h-4 w-4 shrink-0"
+            style={{
+              color: "var(--wc-mute)",
+              transform: termsOpen ? "rotate(180deg)" : "none",
+              transition: "transform .15s",
+            }}
+          />
+        </button>
+        {termsOpen && (
+          <div
+            style={{
+              maxHeight: 320,
+              overflowY: "auto",
+              padding: "4px 24px 20px",
+              borderTop: "1px solid var(--wc-line)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13.5,
+                fontWeight: 800,
+                color: "var(--wc-ink)",
+                margin: "14px 0 2px",
+              }}
+            >
+              {EVENT_TERMS_TITLE}
+            </div>
+            <div style={{ fontSize: 11.5, color: "var(--wc-mute)", marginBottom: 12 }}>
+              {EVENT_TERMS_DATE}
+            </div>
+            {EVENT_TERMS.map((art) => (
+              <div key={art.title} style={{ marginBottom: 12 }}>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: "var(--wc-ink)",
+                    marginBottom: 4,
+                  }}
+                >
+                  {art.title}
+                </div>
+                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                  {art.items.map((item, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        fontSize: 12.5,
+                        lineHeight: 1.65,
+                        color: "var(--wc-ink-2)",
+                        marginBottom: 3,
+                        display: "flex",
+                        gap: 7,
+                      }}
+                    >
+                      <span aria-hidden style={{ flexShrink: 0, color: "var(--wc-mute-2)" }}>
+                        {art.items.length > 1 ? `${i + 1}.` : "·"}
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* 동의 체크박스 */}
       <button
         type="button"
@@ -213,8 +319,8 @@ export function RegisterClient() {
           {agreed && <Check className="h-[13px] w-[13px]" />}
         </span>
         <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--wc-ink-2)" }}>
-          규칙을 확인했고,{" "}
-          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>구너로 참가 신청할게요.</b>
+          규칙과 이벤트 참가 약관을 확인했으며,{" "}
+          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>동의하고 참가 신청할게요.</b>
         </span>
       </button>
 
