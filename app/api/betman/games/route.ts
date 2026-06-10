@@ -13,6 +13,7 @@ import {
   getDailyWindow,
   getGameBetDeadline,
 } from "@/lib/betman/daily-round"
+import { dedupeMarketRows } from "@/lib/betman/market-dedup"
 import { z } from "zod"
 
 const gamesPostSchema = z.object({
@@ -251,6 +252,9 @@ export async function GET(request: NextRequest) {
     // 박는 것 — Vultr 수정 후속 작업으로.
     for (const group of Object.values(groupedGames)) {
       group.games.sort((a, b) => Number(a.game_no ?? 0) - Number(b.game_no ?? 0))
+      // 라운드 교차 완전 중복 마켓 제거 (같은 경기 다중 라운드 등록 시 ×N 노출 방지).
+      // 배당까지 포함한 시그니처라 진짜 전반전 row(배당 다름)는 보존 → 아래 휴리스틱 무손상.
+      group.games = dedupeMarketRows(group.games)
       const sumIndex = group.games.findIndex((g) => g.game_type === "SUM")
       const seenCount = new Map<string, number>()
       for (let i = 0; i < group.games.length; i++) {
@@ -270,7 +274,12 @@ export async function GET(request: NextRequest) {
     // DB 유입(POST)은 유지: SUM row 가 위 전반전 휴리스틱 2의 디스크리미네이터라
     // 쿼리가 아닌 응답 단계에서 제외한다. 베팅 차단은 prediction 라우트 enum 에서.
     const isSumType = (t: unknown) => t === "SUM" || t === "SSUM"
-    const visibleGames = gamesWithOdds.filter((g) => !isSumType(g.game_type))
+    // 그룹 dedup 에서 살아남은 row 만 flat 목록에도 반영 (total/bettable 카운트 일관성)
+    const keptIds = new Set<unknown>()
+    for (const group of Object.values(groupedGames)) {
+      for (const g of group.games) keptIds.add(g.id)
+    }
+    const visibleGames = gamesWithOdds.filter((g) => !isSumType(g.game_type) && keptIds.has(g.id))
     const visibleGroups = Object.values(groupedGames)
       .map((group) => ({
         ...group,
