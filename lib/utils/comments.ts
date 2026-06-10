@@ -2,11 +2,7 @@
 // 댓글 유틸 함수
 // ============================================
 
-import type {
-  Comment,
-  TitleDisplay,
-  CommentSticker,
-} from "@/components/post-detail/post-detail-types"
+import type { Comment, TitleDisplay, CommentSticker } from "@/types/post-detail"
 import { formatRelativeTime } from "@/lib/utils/date"
 
 /**

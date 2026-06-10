@@ -21,7 +21,7 @@ import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import { openReport } from "@/hooks/use-report-dialog"
-import type { Post } from "./post-detail-types"
+import type { Post } from "@/types/post-detail"
 
 const TipTapContent = dynamic(
   () =>

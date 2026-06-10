@@ -7,8 +7,8 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
 import { CommentItem } from "./comment-item"
 import { CommentForm } from "./comment-form"
-import { countAllComments, transformComments } from "./post-detail-types"
-import type { Comment } from "./post-detail-types"
+import { countAllComments, transformComments } from "@/types/post-detail"
+import type { Comment } from "@/types/post-detail"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
 
 interface InitialData {

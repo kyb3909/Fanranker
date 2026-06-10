@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { countAllComments, transformComments } from "@/lib/utils/comments"
-import type { Comment } from "@/components/post-detail/post-detail-types"
+import type { Comment } from "@/types/post-detail"
 
 describe("countAllComments", () => {
   it("returns 0 for empty array", () => {
