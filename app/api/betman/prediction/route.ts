@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
-import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
+import {
+  getGameBetDeadline,
+  getDailyWindow,
+  getTodayDailyId,
+  isBettingWindowOpen,
+} from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { retryRefundTokens } from "@/lib/betman/refund-tokens"
 import { z } from "zod"
@@ -58,6 +63,14 @@ export async function POST(request: NextRequest) {
     }
     const { predictions, betAmount, analysis_title, analysis_text, idempotency_key, event_slug } =
       parsed.data
+
+    // 프로토 발매 시간: 매일 08:00 ~ 23:00 KST 에만 베팅 가능 (밤 시간 잠금)
+    if (!isBettingWindowOpen()) {
+      return NextResponse.json(
+        { error: "예측은 매일 오전 8시부터 밤 11시까지 가능합니다." },
+        { status: 400 }
+      )
+    }
 
     // Idempotency check: prevent duplicate submissions
     if (idempotency_key) {

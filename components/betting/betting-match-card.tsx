@@ -10,6 +10,8 @@ interface BettingMatchCardProps {
   groupedMatch: GroupedMatch
   selectedBets: SelectedBet[]
   selectedSport: string | null
+  /** 프로토 발매 시간 여부 — false 면 마감 대신 "오픈 전" 라벨 (미리보기 모드) */
+  windowOpen?: boolean
   onBetSelection: (
     gameId: string,
     matchKey: string,
@@ -26,6 +28,7 @@ export function BettingMatchCard({
   groupedMatch,
   selectedBets,
   selectedSport,
+  windowOpen,
   onBetSelection,
 }: BettingMatchCardProps) {
   const hasSelectionFromThisMatch = selectedBets.some((b) => b.matchKey === groupedMatch.matchKey)
@@ -179,7 +182,7 @@ export function BettingMatchCard({
           <div className="ml-auto flex items-center gap-2">
             {gameBetClosed && (
               <span style={{ color: "var(--wc-burgundy)", fontSize: 11, fontWeight: 700 }}>
-                마감
+                {windowOpen === false ? "오픈 전" : "마감"}
               </span>
             )}
             {sportMismatch && !gameBetClosed && (

@@ -40,6 +40,9 @@ export function useBettingMatches(eventSlug?: string) {
   // 아래 useMemo들의 deps가 항상 변경된 것으로 평가됨.
   const groupedMatches = useMemo<GroupedMatch[]>(() => gamesData?.groupedGames ?? [], [gamesData])
   const earliestBetClose: string | null = gamesData?.earliestBetClose ?? null
+  // 프로토 발매 시간 상태 (08:00~23:00 KST 밖이면 isOpen=false — 라인업 미리보기만)
+  const bettingWindow: { isOpen: boolean; message: string; nextOpenAt?: string } | null =
+    gamesData?.bettingWindow ?? null
   const error: string | null = gamesError ? "경기 데이터를 불러오는데 실패했습니다." : null
   const lastUpdated: Date | null = useMemo(() => (gamesData ? new Date() : null), [gamesData])
 
@@ -120,6 +123,7 @@ export function useBettingMatches(eventSlug?: string) {
     setLeagueFilter,
     availableLeagues,
     todayInfo,
+    bettingWindow,
     groupedMatches,
     filteredMatches,
     isLoading,
