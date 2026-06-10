@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
+import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export const metadata: Metadata = {
@@ -54,11 +55,21 @@ export default async function WorldcupResultPage() {
 
   if (!event) {
     return (
-      <div className="px-4 py-16">
-        <div className="mx-auto max-w-3xl">
-          <div className="wc-reg-rules">
-            <div className="wc-reg-rules-h">이벤트 미존재</div>
-            <p className="text-[13px] leading-[1.6]">
+      <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+        <div className="mx-auto max-w-[640px] px-6 py-16">
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid var(--wc-line)",
+              borderRadius: 18,
+              boxShadow: "var(--wc-shadow-1)",
+              padding: "22px 24px",
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
+              이벤트 미존재
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
               이벤트(slug=&quot;{EVENT_SLUG}&quot;)를 찾을 수 없습니다.
             </p>
           </div>
@@ -70,19 +81,19 @@ export default async function WorldcupResultPage() {
   // 종료 전이면 안내만
   if (event.status !== "closed") {
     return (
-      <div className="px-4 py-16">
-        <div className="mx-auto max-w-3xl text-center">
-          <Link href="/worldcup" className="wc-reg-head-back">
-            ← 이벤트 안내로
-          </Link>
-          <div className="wc-res-eb mt-6">RESULT</div>
+      <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+        <div className="mx-auto max-w-[640px] px-6 py-16 text-center">
+          <div className="wc-res-eb">RESULT</div>
           <h1 className="wc-res-h1">결과 발표 대기 중</h1>
           <p className="wc-res-sub mt-3">
             이벤트가 아직 진행 중입니다. 종료 후 구너 1위를 발표해요.
           </p>
           <div className="mt-8 flex justify-center gap-3">
-            <Link href="/worldcup/leaderboard" className="wc-btn-primary-big">
-              현재 리더보드 보기
+            <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-primary">
+              현재 구너 현황 보기
+            </Link>
+            <Link href="/worldcup" className="wc-hbtn wc-hbtn-ghost">
+              이벤트 안내로
             </Link>
           </div>
         </div>
@@ -170,10 +181,14 @@ export default async function WorldcupResultPage() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-16 sm:pt-10">
-      <div className="mx-auto max-w-5xl">
-        <Link href="/worldcup" className="wc-reg-head-back">
-          ← 이벤트 안내로
+    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+      <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
+        <Link
+          href="/worldcup"
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold"
+          style={{ color: "var(--wc-mute)" }}
+        >
+          <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
         </Link>
 
         <header className="wc-res-hero">
@@ -184,9 +199,17 @@ export default async function WorldcupResultPage() {
 
         {/* Podium */}
         {winners.length === 0 ? (
-          <div className="wc-reg-rules">
-            <div className="wc-reg-rules-h">데이터 부족</div>
-            <p className="text-[13px] leading-[1.6]">
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid var(--wc-line)",
+              borderRadius: 18,
+              boxShadow: "var(--wc-shadow-1)",
+              padding: "22px 24px",
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>데이터 부족</div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
               이벤트가 종료됐지만 참가자/예측 데이터가 없어 결과를 산정할 수 없습니다.
             </p>
           </div>
@@ -196,7 +219,7 @@ export default async function WorldcupResultPage() {
               <article
                 key={w.group.slug}
                 className="wc-rp-card"
-                style={{ ["--gp" as string]: w.group.color } as React.CSSProperties}
+                style={{ ["--gp" as string]: "var(--wc-burgundy)" } as React.CSSProperties}
               >
                 <span aria-hidden className="wc-rp-glow" />
                 <div className="wc-rp-trophy">🏆</div>

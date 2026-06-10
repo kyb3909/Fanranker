@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
+import { ArrowLeft } from "lucide-react"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import {
@@ -204,29 +205,31 @@ export default async function WorldcupLeaderboardPage() {
   }))
 
   return (
-    <div className="px-4 pt-6 pb-16 sm:pt-10">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-8">
-          <Link href="/worldcup" className="wc-reg-head-back">
-            ← 이벤트 안내로
-          </Link>
-          <div className="wc-sec-eb">GOONER STATUS</div>
-          <h1
-            className="font-black tracking-tight"
-            style={{
-              fontSize: "clamp(28px, 4.5vw, 36px)",
-              lineHeight: 1.15,
-              color: "var(--wc-ink)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            구너 현황
-          </h1>
-          <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-            구너 전체 평균과 내 위치. 개별 순위는 의욕 상실 방지를 위해 진행 중에는 비공개 — 종료 후
-            결과 발표에서 구너 1위 공개.
-          </p>
-        </header>
+    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+      <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
+        <Link
+          href="/worldcup"
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold"
+          style={{ color: "var(--wc-mute)" }}
+        >
+          <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
+        </Link>
+        <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
+          GOONER STATUS
+        </div>
+        <h1
+          className="text-[28px] font-extrabold sm:text-[36px]"
+          style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
+        >
+          구너 현황
+        </h1>
+        <p
+          className="mt-2.5 mb-8 max-w-[560px] text-[15px]"
+          style={{ lineHeight: 1.6, color: "var(--wc-ink-2)" }}
+        >
+          구너 전체 평균과 내 위치. 개별 순위는 의욕 상실 방지를 위해 진행 중에는 비공개 — 종료 후
+          결과 발표에서 구너 1위를 공개합니다.
+        </p>
 
         <LeaderboardClient
           groups={groupsForClient}

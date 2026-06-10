@@ -68,11 +68,19 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
     [groups, groupAvgBySlug]
   )
 
+  // 디자인 시스템 공통 카드 (랜딩/신청 페이지와 동일 톤)
+  const cardStyle: React.CSSProperties = {
+    background: "#fff",
+    border: "1px solid var(--wc-line)",
+    borderRadius: 18,
+    boxShadow: "var(--wc-shadow-1)",
+  }
+
   if (groups.length === 0) {
     return (
-      <div className="wc-reg-rules">
-        <div className="wc-reg-rules-h">데이터 없음</div>
-        <p className="text-[13px] leading-[1.6]">
+      <div style={{ ...cardStyle, padding: "22px 24px" }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>데이터 없음</div>
+        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
           이벤트 또는 그룹 데이터가 없습니다. 마이그레이션이 적용됐는지 확인하세요.
         </p>
       </div>
@@ -83,28 +91,63 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
   const myGroupAvg = myInfo ? groupAvgBySlug.get(myInfo.groupSlug) : null
   return (
     <div className="wc-lb">
-      {/* 구너 전체 현황 — 단일 그룹(아스날 구너) 요약 카드 */}
-      <div className="wc-lbg-grid">
+      {/* 구너 전체 현황 — 단일 그룹(아스날 구너) 요약 카드 (디자인 시스템 화이트 카드) */}
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,420px)]">
         {sortedGroups.map((g) => {
           const stats = groupAvgBySlug.get(g.slug)
           if (!stats) return null
           return (
-            <div
-              key={g.slug}
-              className="wc-lbg-card mine"
-              style={{ ["--gp" as string]: g.color } as React.CSSProperties}
-            >
-              <div className="wc-lbg-name">{g.name}</div>
-              <div className="wc-lbg-name-sub">{g.clubKor} 구너 전체</div>
-              <div className="wc-lbg-roi">
-                <b>{fmtProfit(stats.avgProfit)}</b>
-                <span>평균 획득 점수</span>
+            <div key={g.slug} style={{ ...cardStyle, padding: "22px 24px" }}>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  letterSpacing: "-.02em",
+                  color: "var(--wc-ink)",
+                }}
+              >
+                {g.name}
               </div>
-              <div className="wc-lbg-meta">
+              <div
+                style={{
+                  fontSize: 11,
+                  letterSpacing: ".1em",
+                  textTransform: "uppercase",
+                  color: "var(--wc-mute)",
+                  fontWeight: 600,
+                  marginTop: 5,
+                }}
+              >
+                {g.clubKor} 구너 전체
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14 }}>
+                <b
+                  className="tabular-nums"
+                  style={{
+                    fontSize: 30,
+                    fontWeight: 800,
+                    letterSpacing: "-.02em",
+                    color: "var(--wc-burgundy)",
+                  }}
+                >
+                  {fmtProfit(stats.avgProfit)}
+                </b>
+                <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>평균 획득 점수</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  marginTop: 8,
+                  fontSize: 12.5,
+                  color: "var(--wc-mute)",
+                }}
+              >
                 <span>
-                  적중 <b>{stats.avgAccuracy}%</b>
+                  적중{" "}
+                  <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>{stats.avgAccuracy}%</b>
                 </span>
-                <span>{stats.members}명</span>
+                <span>{stats.members}명 참가</span>
               </div>
             </div>
           )
@@ -115,7 +158,13 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
       {myInfo && myGroup && myGroupAvg && (
         <div
           className="wc-lb-me"
-          style={{ ["--gp" as string]: myGroup.color } as React.CSSProperties}
+          style={
+            {
+              // 디자인 시스템 와인 밴드로 통일 (클럽 레드 대신 버건디) + 라운드 일치
+              ["--gp" as string]: "var(--wc-burgundy)",
+              borderRadius: 18,
+            } as React.CSSProperties
+          }
         >
           <div className="wc-lb-me-l">
             <Crown className="h-7 w-7 shrink-0" />
@@ -149,20 +198,30 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
         </div>
       )}
 
-      {/* 비등록자 안내 */}
+      {/* 비등록자 안내 — 디자인 시스템 화이트 카드 + 와인 CTA */}
       {!myInfo && (
-        <div className="wc-reg-rules">
-          <div className="wc-reg-rules-h">아직 참가 신청 전</div>
-          <p className="text-[13px] leading-[1.6]">
-            참가 신청하면 구너 평균과 내 위치를 볼 수 있어요.{" "}
-            <a
-              href="/worldcup/register"
-              className="underline"
-              style={{ color: "var(--wc-burgundy)" }}
-            >
-              지금 참가 신청하기 →
-            </a>
-          </p>
+        <div
+          style={{
+            ...cardStyle,
+            padding: 24,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--wc-ink)" }}>
+              아직 참가 신청 전이에요
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
+              참가 신청하면 구너 평균과 내 위치를 볼 수 있어요.
+            </p>
+          </div>
+          <a href="/worldcup/register" className="wc-hbtn wc-hbtn-primary" style={{ height: 44 }}>
+            참가 신청하기
+          </a>
         </div>
       )}
 
