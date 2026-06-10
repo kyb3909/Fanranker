@@ -263,7 +263,9 @@
       "Skill(office-hours)",
       "PowerShell(pnpm exec *)",
       "Bash(git cherry-pick *)",
-      "Bash(echo \"EXIT: $?\")"
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(git rev-parse *)",
+      "Bash(git rev-list *)"
     ]
   }
 }
