@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>작가 레이어 테스트 (male_basic + top, 128x124)</title>
+<style>
+  html,body{margin:0;height:100%;background:#2b2b38;color:#e8e8ef;font-family:ui-monospace,monospace;overflow:hidden}
+  #ui{position:fixed;top:10px;left:10px;font-size:13px;line-height:1.6;background:rgba(0,0,0,.55);padding:10px 12px;border-radius:8px;white-space:pre;pointer-events:none}
+</style>
+<script src="/phaser.min.js"></script>
+</head>
+<body>
+<div id="ui"></div>
+<script>
+  // 작가 클린 포맷: 레이어별 PNG, 128x124 프레임, 7열, 각 행 = 다른 동작.
+  const FRAME_W = 128, FRAME_H = 124, COLS = 7, ANIM_ROWS = 6;
+  // 아래→위 그리기 순서
+  const LAYERS = [
+    { key: 'body', url: '/male_basic.png' },
+    { key: 'top',  url: '/male_basictop.png' },
+  ];
+  // 행별 동작 추정 라벨 (스크럽하며 확정)
+  const ROW_LABELS = ['row0', 'row1', 'row2', 'row3', 'row4', 'row5'];
+  let animRow = 0, scale = 4, facing = 1, playing = true;
+  let posX = 0, posY = 0, cursors, ui, sprites = [];
+
+  const animKeyOf = (k, r) => k + '_r' + r;
+  function ensureAnim(scene, key, row) {
+    const k = animKeyOf(key, row);
+    if (!scene.anims.exists(k)) {
+      scene.anims.create({
+        key: k,
+        frames: scene.anims.generateFrameNumbers(key, { start: row * COLS, end: row * COLS + COLS - 1 }),
+        frameRate: 10, repeat: -1,
+      });
+    }
+    return k;
+  }
+  function rebuild(scene) {
+    sprites.forEach((s) => s.destroy());
+    sprites = [];
+    LAYERS.forEach((L, i) => {
+      const s = scene.add.sprite(posX, posY, L.key, animRow * COLS).setOrigin(0.5, 0.5).setScale(scale).setDepth(i);
+      if (playing) s.play(ensureAnim(scene, L.key, animRow)); else s.setFrame(animRow * COLS);
+      sprites.push(s);
+    });
+    paint();
+  }
+  function paint() {
+    ui.textContent =
+      `작가 클린 레이어  |  frame ${FRAME_W}x${FRAME_H}  cols ${COLS}\n` +
+      `애니 행 ${animRow}/${ANIM_ROWS - 1} (${ROW_LABELS[animRow]})   레이어: body+top   scale x${scale}  ${playing ? '▶' : '⏸'}\n` +
+      `방향키=이동/flip   [ ]=동작 행 바꾸기   space=재생/정지   - ==크기`;
+  }
+  class Test extends Phaser.Scene {
+    preload() {
+      LAYERS.forEach((L) => this.load.spritesheet(L.key, L.url, { frameWidth: FRAME_W, frameHeight: FRAME_H }));
+    }
+    create() {
+      ui = document.getElementById('ui');
+      posX = this.scale.width / 2; posY = this.scale.height / 2;
+      rebuild(this);
+      cursors = this.input.keyboard.createCursorKeys();
+      this.input.keyboard.on('keydown', (e) => {
+        if (e.key === '[') { animRow = (animRow - 1 + ANIM_ROWS) % ANIM_ROWS; rebuild(this); }
+        else if (e.key === ']') { animRow = (animRow + 1) % ANIM_ROWS; rebuild(this); }
+        else if (e.key === '-') { scale = Math.max(1, scale - 1); }
+        else if (e.key === '=' || e.key === '+') { scale = Math.min(12, scale + 1); }
+        else if (e.key === ' ') { playing = !playing; rebuild(this); }
+        paint();
+      });
+    }
+    update() {
+      const sp = 3;
+      if (cursors.left.isDown) { posX -= sp; facing = -1; }
+      else if (cursors.right.isDown) { posX += sp; facing = 1; }
+      if (cursors.up.isDown) posY -= sp;
+      else if (cursors.down.isDown) posY += sp;
+      sprites.forEach((s) => { s.x = posX; s.y = posY; s.setScale(scale * facing, scale); });
+    }
+  }
+  window.game = new Phaser.Game({
+    type: Phaser.AUTO,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    backgroundColor: '#2b2b38',
+    pixelArt: true,
+    scene: Test,
+  });
+</script>
+</body>
+</html>

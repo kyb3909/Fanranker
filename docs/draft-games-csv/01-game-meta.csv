@@ -1,0 +1,6 @@
+slug,name,description,icon_emoji,theme_color,roster_size,currency_label,budget,formation_default,formation_options,sort_order,is_active
+arsenal-legends,역대 아스널 레전드,아스널의 역사를 만든 선수들로 드림팀을 구성하세요. Wenger era와 Invincibles까지 시대를 초월한 라인업.,🔴,#EF0107,11,£,80,4-3-3,4-4-2|4-3-3|3-5-2|3-4-3,10,true
+epl-fpl,FPL EPL 현역 드래프트,현재 시즌 EPL 선수들로 만드는 판타지 드림팀.,⚽,#37003C,11,£,80,4-3-3,4-4-2|4-3-3|3-5-2|3-4-3|5-3-2|5-4-1,20,true
+slam-dunk,슬램덩크 드림팀,북산·산왕·해남·능남의 전설들로 5인 라인업 구성. 빈자리 없이 5명 채워야 시작.,🏀,#E94B3D,5,점수,100,positional,positional,30,true
+three-kingdoms,삼국지 무장 드래프트,위촉오 무장 중 5명을 영입해서 천하를 도모하라. 군주 1명 + 책사 1-2명 + 맹장 2-3명.,⚔️,#8B0000,5,충성도,80,roles,roles,40,true
+kpop-girls,K팝 걸그룹 드래프트,역대 4세대 걸그룹 멤버 중 7명으로 가상 그룹 결성. 보컬·댄스·랩·비주얼 균형이 핵심.,🎤,#FF6B9D,7,popularity,100,positional,positional,50,true

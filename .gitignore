@@ -132,3 +132,4 @@ tests/e2e/fixtures/bots.json
 tests/e2e/reports/
 # E2E 환경 오버라이드 (로컬 Supabase 키 — 머신별)
 tests/e2e/.env.e2e
+aseprite-mcp/

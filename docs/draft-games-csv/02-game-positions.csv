@@ -1,0 +1,22 @@
+game_slug,position_code,position_label_en,position_label_ko,min_slots,max_slots,color,sort_order
+arsenal-legends,GK,Goalkeeper,골키퍼,1,1,#FFC107,1
+arsenal-legends,DF,Defender,수비수,3,5,#2196F3,2
+arsenal-legends,MF,Midfielder,미드필더,3,5,#4CAF50,3
+arsenal-legends,FW,Forward,공격수,1,3,#F44336,4
+epl-fpl,GK,Goalkeeper,골키퍼,1,1,#FFC107,1
+epl-fpl,DF,Defender,수비수,3,5,#2196F3,2
+epl-fpl,MF,Midfielder,미드필더,3,5,#4CAF50,3
+epl-fpl,FW,Forward,공격수,1,3,#F44336,4
+slam-dunk,PG,Point Guard,포인트가드,1,1,#FFC107,1
+slam-dunk,SG,Shooting Guard,슈팅가드,1,1,#2196F3,2
+slam-dunk,SF,Small Forward,스몰포워드,1,1,#4CAF50,3
+slam-dunk,PF,Power Forward,파워포워드,1,1,#9C27B0,4
+slam-dunk,C,Center,센터,1,1,#F44336,5
+three-kingdoms,RULER,Ruler,군주,1,1,#FFC107,1
+three-kingdoms,STRATEGIST,Strategist,책사,1,2,#4CAF50,2
+three-kingdoms,WARRIOR,Warrior,맹장,2,3,#F44336,3
+kpop-girls,VOCAL,Vocal,메인보컬,1,2,#FFC107,1
+kpop-girls,DANCE,Dancer,메인댄서,1,2,#2196F3,2
+kpop-girls,RAP,Rapper,래퍼,1,2,#4CAF50,3
+kpop-girls,VISUAL,Visual,비주얼,1,2,#9C27B0,4
+kpop-girls,MEMBER,Member,멤버,1,3,#F44336,5

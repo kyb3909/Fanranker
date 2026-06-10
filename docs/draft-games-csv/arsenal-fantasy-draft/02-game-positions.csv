@@ -1,0 +1,5 @@
+game_slug,position_code,position_label_en,position_label_ko,min_slots,max_slots,color,sort_order
+arsenal-fantasy,GK,Goalkeeper,골키퍼,1,1,#FFC107,1
+arsenal-fantasy,DF,Defender,수비수,3,5,#2196F3,2
+arsenal-fantasy,MF,Midfielder,미드필더,3,5,#4CAF50,3
+arsenal-fantasy,FW,Forward,공격수,1,3,#F44336,4

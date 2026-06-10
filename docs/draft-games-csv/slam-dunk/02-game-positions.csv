@@ -1,0 +1,6 @@
+game_slug,position_code,position_label_en,position_label_ko,min_slots,max_slots,color,sort_order
+slam-dunk,PG,Point Guard,포인트가드,1,1,#FFC107,1
+slam-dunk,SG,Shooting Guard,슈팅가드,1,1,#2196F3,2
+slam-dunk,SF,Small Forward,스몰포워드,1,1,#4CAF50,3
+slam-dunk,PF,Power Forward,파워포워드,1,1,#9C27B0,4
+slam-dunk,C,Center,센터,1,1,#F44336,5
