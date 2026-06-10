@@ -98,7 +98,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
               <div className="wc-lbg-name-sub">{g.clubKor} 구너 전체</div>
               <div className="wc-lbg-roi">
                 <b>{fmtProfit(stats.avgProfit)}</b>
-                <span>평균 수익 (볼)</span>
+                <span>평균 획득 점수</span>
               </div>
               <div className="wc-lbg-meta">
                 <span>
@@ -130,7 +130,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
           </div>
           <div className="wc-lb-me-stats">
             <div className="wc-lb-me-s">
-              <span>내 수익 (볼)</span>
+              <span>내 획득 점수</span>
               <b className={myInfo.profit >= 0 ? "up" : ""}>{fmtProfit(myInfo.profit)}</b>
             </div>
             <div className="wc-lb-me-s">

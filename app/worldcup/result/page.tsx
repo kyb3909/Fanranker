@@ -211,7 +211,7 @@ export default async function WorldcupResultPage() {
                       {w.profit >= 0 ? "+" : ""}
                       {w.profit}
                     </b>
-                    <span>수익 (볼)</span>
+                    <span>획득 점수</span>
                   </div>
                   <div>
                     <b>{w.accuracy}%</b>
