@@ -151,8 +151,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Betting window status
+    // Betting window status (프로토 발매 시간 08:00~23:00 KST)
     const windowStatus = getBettingWindowStatus()
+    // 경기별 마감 = min(킥오프, 표시 라운드의 23:00) — 프로토 발매 마감 규정
+    const roundCloseAt = new Date(getBetCloseAt(dailyId))
 
     const gamesWithOdds = (games || []).map((game) => {
       const rawGameType = (game.game_type as string) || ""
@@ -179,10 +181,11 @@ export async function GET(request: NextRequest) {
         odd_odds = game.odd_odds != null ? parseFloat(String(game.odd_odds)) : undefined
         even_odds = game.even_odds != null ? parseFloat(String(game.even_odds)) : undefined
       }
-      // Per-game bet deadline = kickoff time
-      const betCloseAt = getGameBetDeadline(game.match_time as string)
+      // 마감 = min(킥오프, 라운드 23:00). 밤 시간(23:00~08:00)엔 전면 잠금.
+      const kickoff = getGameBetDeadline(game.match_time as string)
+      const betCloseAt = kickoff < roundCloseAt ? kickoff : roundCloseAt
       const now = new Date()
-      const isBettable = now < betCloseAt
+      const isBettable = windowStatus.isOpen && now < betCloseAt
       return {
         ...game,
         home_odds,

@@ -1,10 +1,12 @@
 /**
  * Daily Round & Fixed Window Utilities
  *
- * 국내 토토 시뮬레이션 규정:
- * - 23:00 KST: 데일리 회차 리셋 (볼 10개 리셋, 새 경기 리스트 표시)
+ * 국내 토토(프로토) 시뮬레이션 규정:
+ * - 23:00 KST: 데일리 회차 리셋 (볼 10개 리셋, 다음날 경기 리스트로 업데이트)
  * - 회차 범위: 당일 08:00 KST ~ 익일 08:00 KST 경기
- * - 베팅 제한 없음 (경기 시작 전까지 자유롭게 베팅 가능)
+ * - 베팅 가능 시간: 매일 08:00 ~ 23:00 KST (프로토 발매 시간).
+ *   23:00~08:00 은 라인업 미리보기만 가능, 베팅 잠금 (2026-06-11 도입)
+ * - 경기별 마감: min(킥오프, 당일 23:00)
  * - 하나의 데일리 회차에 betman gmTs 여러 개가 포함될 수 있음
  * - gmTs는 메타데이터 전용 — 표시/필터링에 사용 안 함
  */
@@ -20,7 +22,7 @@ export function computeDailyId(matchTime: string | Date): string {
   const kstMs = d.getTime() + 9 * 60 * 60 * 1000
   // Subtract 8 hours for daily window (08:00 KST cutoff)
   const adjusted = new Date(kstMs - 8 * 60 * 60 * 1000)
-  return adjusted.toISOString().split('T')[0] // YYYY-MM-DD
+  return adjusted.toISOString().split("T")[0] // YYYY-MM-DD
 }
 
 /**
@@ -38,14 +40,18 @@ export function getTodayDailyId(): string {
   const kstMs = now.getTime() + 9 * 60 * 60 * 1000
   // Add 1 hour: at 23:00 KST → 00:00 next day → daily_id flips
   const adjusted = new Date(kstMs + 1 * 60 * 60 * 1000)
-  return adjusted.toISOString().split('T')[0]
+  return adjusted.toISOString().split("T")[0]
 }
 
 /**
  * Get fixed daily window boundaries: [dailyId 08:00 KST, dailyId+1 08:00 KST)
  * Flips at 23:00 KST to next day's window (via getTodayDailyId).
  */
-export function getDailyWindow(overrideDailyId?: string): { start: Date; end: Date; dailyId: string } {
+export function getDailyWindow(overrideDailyId?: string): {
+  start: Date
+  end: Date
+  dailyId: string
+} {
   const dailyId = overrideDailyId || getTodayDailyId()
   // 08:00 KST = 23:00 UTC of the PREVIOUS calendar day
   // e.g. dailyId '2026-02-21' → start = 2026-02-20T23:00:00Z (= 2/21 08:00 KST)
@@ -60,9 +66,19 @@ export function getRolling24hWindow(): { start: Date; end: Date } {
   return { start, end }
 }
 
-/** Check if current time is in betting window (always open — no time restriction) */
-export function isBettingWindowOpen(): boolean {
-  return true
+/** Check if current time is in betting hours (08:00 ~ 23:00 KST — 프로토 발매 시간) */
+export function isBettingWindowOpen(now: Date = new Date()): boolean {
+  const kstHour = (now.getUTCHours() + 9) % 24
+  return kstHour >= 8 && kstHour < 23
+}
+
+/** Get the next 08:00 KST betting-open time as ISO string */
+export function getNextBetOpenAt(now: Date = new Date()): string {
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000
+  const kstDateStr = new Date(kstMs).toISOString().split("T")[0]
+  const todayOpen = new Date(`${kstDateStr}T08:00:00+09:00`)
+  if (now < todayOpen) return todayOpen.toISOString()
+  return new Date(todayOpen.getTime() + 24 * 60 * 60 * 1000).toISOString()
 }
 
 /** Get KST hour (0-23) */
@@ -87,9 +103,9 @@ export function isGameBettable(matchTime: string | Date): boolean {
 
 /** Format daily_id as Korean date label: "N월 D일 (요일)" */
 export function formatDailyIdLabel(dailyId: string): string {
-  const [year, month, day] = dailyId.split('-').map(Number)
+  const [year, month, day] = dailyId.split("-").map(Number)
   const date = new Date(year, month - 1, day)
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"]
   return `${month}월 ${day}일 (${weekdays[date.getDay()]})`
 }
 
@@ -108,7 +124,7 @@ export function getNextResetTime(): Date {
   const now = new Date()
   const kstMs = now.getTime() + 9 * 60 * 60 * 1000
   const kstDate = new Date(kstMs)
-  const kstDateStr = kstDate.toISOString().split('T')[0]
+  const kstDateStr = kstDate.toISOString().split("T")[0]
 
   // Today 23:00 KST = today 14:00 UTC
   const today2300 = new Date(`${kstDateStr}T14:00:00.000Z`)
@@ -125,11 +141,18 @@ export function getMsUntilReset(): number {
   return Math.max(0, getNextResetTime().getTime() - Date.now())
 }
 
-/** Get betting window status message (always open) */
+/** Get betting window status (프로토 발매 시간: 08:00 ~ 23:00 KST) */
 export function getBettingWindowStatus(): {
   isOpen: boolean
   message: string
   nextOpenAt?: string
 } {
-  return { isOpen: true, message: '베팅 가능' }
+  if (isBettingWindowOpen()) {
+    return { isOpen: true, message: "베팅 가능" }
+  }
+  return {
+    isOpen: false,
+    message: "예측은 매일 오전 8시부터 밤 11시까지 가능합니다",
+    nextOpenAt: getNextBetOpenAt(),
+  }
 }
