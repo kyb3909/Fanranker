@@ -5,6 +5,7 @@ import { useAuth, useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { MessageCircle, Bookmark } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { reportClientError } from "@/lib/client-error"
 import { ShareMenu } from "@/components/share-menu"
 import { VoteButtons } from "@/components/vote-buttons"
 
@@ -40,8 +41,9 @@ export function PostActions({
           const { voted, voteType } = await response.json()
           setMyVote(voted ? voteType : null)
         }
-      } catch {
-        // Silent fail - vote status check is non-critical
+      } catch (error) {
+        // 비핵심 프리페치 — 토스트 없이 보고만 (인벤토리 A-경)
+        reportClientError("post.voteStatus", error)
       }
     }
 
@@ -59,8 +61,9 @@ export function PostActions({
           const { bookmarked } = await response.json()
           setIsBookmarked(bookmarked)
         }
-      } catch {
-        // Silent fail - bookmark status check is non-critical
+      } catch (error) {
+        // 비핵심 프리페치 — 토스트 없이 보고만 (인벤토리 A-경)
+        reportClientError("post.bookmarkStatus", error)
       }
     }
 
@@ -97,7 +100,8 @@ export function PostActions({
       const data = await response.json()
       setVoteCount(data.voteCount)
       setMyVote(data.voteType)
-    } catch {
+    } catch (error) {
+      reportClientError("post.vote", error)
       setMyVote(prevVote)
       setVoteCount(prevCount)
       toast({
@@ -130,6 +134,7 @@ export function PostActions({
       const { bookmarked } = await response.json()
       setIsBookmarked(bookmarked)
     } catch (error) {
+      reportClientError("post.bookmark", error)
       toast({
         variant: "destructive",
         title: "오류",

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useUser } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
+import { reportClientError } from "@/lib/client-error"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
@@ -93,7 +94,8 @@ export function PostDetailContent({
           : `${post.author}님 차단을 해제했습니다.`,
       })
       router.refresh()
-    } catch {
+    } catch (error) {
+      reportClientError("post.block", error)
       toast({ variant: "destructive", title: "오류", description: "차단 중 오류가 발생했습니다." })
     }
   }
@@ -117,7 +119,8 @@ export function PostDetailContent({
       }
       router.push("/")
       router.refresh()
-    } catch {
+    } catch (error) {
+      reportClientError("post.delete", error)
       toast({ variant: "destructive", title: "오류", description: "삭제 중 오류가 발생했습니다." })
     }
   }

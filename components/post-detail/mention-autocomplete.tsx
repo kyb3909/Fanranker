@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import Image from "next/image"
+import { reportClientError } from "@/lib/client-error"
 
 interface Sticker {
   id: string
@@ -39,7 +40,9 @@ export function useMentionAutocomplete(onSelect: (sticker: Sticker) => void) {
           }))
         )
       }
-    } catch {
+    } catch (error) {
+      // 자동완성이라 토스트 생략 — 보고만 (인벤토리 A-경)
+      reportClientError("comments.mentionSearch", error)
       setMentionResults([])
     } finally {
       setMentionLoading(false)

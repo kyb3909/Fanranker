@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { toast } from "@/hooks/use-toast"
+import { reportClientError } from "@/lib/client-error"
 import type { Comment } from "@/types/post-detail"
 import { openReport } from "@/hooks/use-report-dialog"
 import { CommentActions } from "./comment-actions"
@@ -76,6 +77,7 @@ export const CommentItem = memo(function CommentItem({
       setIsEditing(false)
       onCommentUpdated()
     } catch (error) {
+      reportClientError("comments.update", error)
       toast({
         variant: "destructive",
         title: "수정 실패",
@@ -96,6 +98,7 @@ export const CommentItem = memo(function CommentItem({
       }
       onCommentUpdated()
     } catch (error) {
+      reportClientError("comments.delete", error)
       toast({
         variant: "destructive",
         title: "삭제 실패",
@@ -136,7 +139,9 @@ export const CommentItem = memo(function CommentItem({
       const data = await res.json()
       setVoteCount(data.voteCount)
       setMyVote(data.voteType)
-    } catch {
+    } catch (error) {
+      // 무알림 롤백이었음 — 실패 표면화 + 보고 (인벤토리 A)
+      reportClientError("comments.vote", error, { toast: "투표 처리에 실패했습니다" })
       setMyVote(prevVote)
       setVoteCount(prevCount)
     } finally {
