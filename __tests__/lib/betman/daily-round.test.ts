@@ -87,32 +87,8 @@ describe("getDailyWindow", () => {
 })
 
 describe("isBettingWindowOpen", () => {
-  it("returns true during betting hours (10:00 KST)", () => {
-    // 2026-02-22 10:00 KST = 01:00 UTC
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-22T01:00:00.000Z"))
+  it("always returns true (23:00 리셋부터 항상 베팅 가능 — 밤 잠금 없음)", () => {
     expect(isBettingWindowOpen()).toBe(true)
-  })
-
-  it("returns true at exactly 08:00 KST (open boundary)", () => {
-    // 2026-02-22 08:00 KST = 2026-02-21 23:00 UTC
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-21T23:00:00.000Z"))
-    expect(isBettingWindowOpen()).toBe(true)
-  })
-
-  it("returns false at 23:00 KST (close boundary)", () => {
-    // 2026-02-22 23:00 KST = 14:00 UTC
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-22T14:00:00.000Z"))
-    expect(isBettingWindowOpen()).toBe(false)
-  })
-
-  it("returns false in early morning (07:59 KST)", () => {
-    // 2026-02-22 07:59 KST = 2026-02-21 22:59 UTC
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-21T22:59:00.000Z"))
-    expect(isBettingWindowOpen()).toBe(false)
   })
 })
 
@@ -196,30 +172,9 @@ describe("getNextResetTime", () => {
 })
 
 describe("getBettingWindowStatus", () => {
-  it("returns open status during betting hours", () => {
-    // 2026-02-22 10:00 KST = 01:00 UTC
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-22T01:00:00.000Z"))
+  it("always returns open status", () => {
     const status = getBettingWindowStatus()
     expect(status.isOpen).toBe(true)
     expect(status.message).toBe("베팅 가능")
-  })
-
-  it("returns closed + nextOpenAt during night lock (23:30 KST)", () => {
-    // 2026-02-22 23:30 KST = 14:30 UTC → next open = 2026-02-23 08:00 KST (= 02-22 23:00 UTC)
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-22T14:30:00.000Z"))
-    const status = getBettingWindowStatus()
-    expect(status.isOpen).toBe(false)
-    expect(status.nextOpenAt).toBe("2026-02-22T23:00:00.000Z")
-  })
-
-  it("returns closed + same-day nextOpenAt in early morning (07:00 KST)", () => {
-    // 2026-02-22 07:00 KST = 2026-02-21 22:00 UTC → next open = 2026-02-22 08:00 KST (= 02-21 23:00 UTC)
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date("2026-02-21T22:00:00.000Z"))
-    const status = getBettingWindowStatus()
-    expect(status.isOpen).toBe(false)
-    expect(status.nextOpenAt).toBe("2026-02-21T23:00:00.000Z")
   })
 })

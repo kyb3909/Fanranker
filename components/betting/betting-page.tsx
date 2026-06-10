@@ -82,7 +82,6 @@ export default function BettingPage({
             lastUpdated={matches.lastUpdated}
             isLoading={matches.isLoading}
             error={matches.error}
-            bettingWindow={matches.bettingWindow}
             filteredMatches={effectiveFilteredMatches}
             selectedBets={slip.selectedBets}
             selectedSport={slip.selectedSport}

@@ -3,10 +3,10 @@
  *
  * 국내 토토(프로토) 시뮬레이션 규정:
  * - 23:00 KST: 데일리 회차 리셋 (볼 10개 리셋, 다음날 경기 리스트로 업데이트)
- * - 회차 범위: 당일 08:00 KST ~ 익일 08:00 KST 경기
- * - 베팅 가능 시간: 매일 08:00 ~ 23:00 KST (프로토 발매 시간).
- *   23:00~08:00 은 라인업 미리보기만 가능, 베팅 잠금 (2026-06-11 도입)
- * - 경기별 마감: min(킥오프, 당일 23:00)
+ *   → 리셋 직후부터 다음 슬레이트 베팅 가능 (밤 잠금 없음 — 우리는 24시간 베팅)
+ * - 회차 범위: 당일 08:00 KST 초과 ~ 익일 08:00 KST. 8시 "정각" 킥오프 경기는
+ *   프로토 발매(08:00 오픈)에서 걸 수 없는 경기라 슬레이트에서 제외 (2026-06-11)
+ * - 경기별 마감: min(킥오프, 당일 23:00) — 23:00 슬레이트 교체와 일치
  * - 하나의 데일리 회차에 betman gmTs 여러 개가 포함될 수 있음
  * - gmTs는 메타데이터 전용 — 표시/필터링에 사용 안 함
  */
@@ -66,19 +66,9 @@ export function getRolling24hWindow(): { start: Date; end: Date } {
   return { start, end }
 }
 
-/** Check if current time is in betting hours (08:00 ~ 23:00 KST — 프로토 발매 시간) */
-export function isBettingWindowOpen(now: Date = new Date()): boolean {
-  const kstHour = (now.getUTCHours() + 9) % 24
-  return kstHour >= 8 && kstHour < 23
-}
-
-/** Get the next 08:00 KST betting-open time as ISO string */
-export function getNextBetOpenAt(now: Date = new Date()): string {
-  const kstMs = now.getTime() + 9 * 60 * 60 * 1000
-  const kstDateStr = new Date(kstMs).toISOString().split("T")[0]
-  const todayOpen = new Date(`${kstDateStr}T08:00:00+09:00`)
-  if (now < todayOpen) return todayOpen.toISOString()
-  return new Date(todayOpen.getTime() + 24 * 60 * 60 * 1000).toISOString()
+/** Check if betting is open (항상 true — 23:00 리셋 직후부터 다음 슬레이트 베팅 가능) */
+export function isBettingWindowOpen(): boolean {
+  return true
 }
 
 /** Get KST hour (0-23) */
@@ -141,18 +131,11 @@ export function getMsUntilReset(): number {
   return Math.max(0, getNextResetTime().getTime() - Date.now())
 }
 
-/** Get betting window status (프로토 발매 시간: 08:00 ~ 23:00 KST) */
+/** Get betting window status (always open — 23:00 리셋부터 항상 베팅 가능) */
 export function getBettingWindowStatus(): {
   isOpen: boolean
   message: string
   nextOpenAt?: string
 } {
-  if (isBettingWindowOpen()) {
-    return { isOpen: true, message: "베팅 가능" }
-  }
-  return {
-    isOpen: false,
-    message: "예측은 매일 오전 8시부터 밤 11시까지 가능합니다",
-    nextOpenAt: getNextBetOpenAt(),
-  }
+  return { isOpen: true, message: "베팅 가능" }
 }

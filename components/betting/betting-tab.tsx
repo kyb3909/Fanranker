@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { RefreshCw, Clock } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { BettingMatchCard } from "./betting-match-card"
 import type { GroupedMatch, SelectedBet } from "./betting-types"
 
@@ -41,8 +41,6 @@ interface BettingTabProps {
   lastUpdated: Date | null
   isLoading: boolean
   error: string | null
-  /** 프로토 발매 시간 상태 — isOpen=false 면 라인업 미리보기 모드 (베팅 잠금) */
-  bettingWindow?: { isOpen: boolean; message: string; nextOpenAt?: string } | null
   filteredMatches: GroupedMatch[]
   selectedBets: SelectedBet[]
   selectedSport: string | null
@@ -63,35 +61,14 @@ export function BettingTab({
   lastUpdated,
   isLoading,
   error,
-  bettingWindow,
   filteredMatches,
   selectedBets,
   selectedSport,
   onBetSelection,
   onRefresh,
 }: BettingTabProps) {
-  const windowClosed = bettingWindow ? !bettingWindow.isOpen : false
   return (
     <div className="space-y-2">
-      {/* 프로토 발매 시간 밖 — 미리보기 안내 배너 */}
-      {windowClosed && (
-        <div
-          className="flex items-start gap-2.5 rounded-lg border px-4 py-3"
-          style={{
-            background: "var(--wc-soft)",
-            borderColor: "var(--wc-line)",
-            color: "var(--wc-ink)",
-          }}
-        >
-          <Clock className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--wc-burgundy)" }} />
-          <div className="text-[13px] leading-relaxed">
-            <b style={{ fontWeight: 700 }}>지금은 예측 준비 시간이에요.</b> 예측은 매일{" "}
-            <b style={{ fontWeight: 700 }}>오전 8시 ~ 밤 11시</b>에 가능합니다 — 그동안 오늘의
-            라인업을 미리 살펴보세요.
-          </div>
-        </div>
-      )}
-
       {/* Today's matches header + deadline countdown */}
 
       {/* Loading/Error/Refresh status */}
@@ -210,7 +187,6 @@ export function BettingTab({
             selectedBets={selectedBets}
             selectedSport={selectedSport}
             onBetSelection={onBetSelection}
-            windowOpen={!windowClosed}
           />
         </div>
       ))}
