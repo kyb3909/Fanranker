@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCw } from "lucide-react"
 import { BettingMatchCard } from "./betting-match-card"
-import type { GroupedMatch, SelectedBet } from "./betting-types"
+import type { GroupedMatch, SelectedBet } from "@/types/betting"
 
 /** SportsEvent JSON-LD for SEO rich snippets */
 function SportsEventSchema({ match }: { match: GroupedMatch }) {

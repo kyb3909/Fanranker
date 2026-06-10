@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useSWRConfig } from "swr"
-import type { SelectedBet, GroupedMatch } from "@/components/betting/betting-types"
+import type { SelectedBet, GroupedMatch } from "@/types/betting"
 import { useAlertModal } from "./use-alert-modal"
 import { trackEvent } from "@/lib/analytics/events"
 

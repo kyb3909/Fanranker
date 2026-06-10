@@ -1,7 +1,7 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { SPORT_ICONS } from "./betting-types"
+import { SPORT_ICONS } from "@/types/betting"
 import type { CommunityStatsData } from "@/hooks/use-betting-community-stats"
 
 interface StatsTabProps {

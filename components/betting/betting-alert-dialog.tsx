@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { AlertCircle, Circle } from "lucide-react"
-import type { AlertModalState } from "./betting-types"
+import type { AlertModalState } from "@/types/betting"
 
 interface BettingAlertDialogProps {
   alertModal: AlertModalState

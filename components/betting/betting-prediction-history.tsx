@@ -1,7 +1,7 @@
 "use client"
 
 import { Loader2 } from "lucide-react"
-import type { PredictionHistoryItem } from "./betting-types"
+import type { PredictionHistoryItem } from "@/types/betting"
 import { PredictionSlipCard } from "./prediction-slip-card"
 
 interface BettingPredictionHistoryProps {

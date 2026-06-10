@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { Clock, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { GroupedMatch, SelectedBet, SportsGame } from "./betting-types"
-import { SPORT_ICONS, getGameTypeLabel, formatMatchTime, sportColors } from "./betting-types"
+import type { GroupedMatch, SelectedBet, SportsGame } from "@/types/betting"
+import { SPORT_ICONS, getGameTypeLabel, formatMatchTime, sportColors } from "@/types/betting"
 
 interface BettingMatchCardProps {
   groupedMatch: GroupedMatch

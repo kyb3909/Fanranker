@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
-import type { RankingUser, MyRank } from "@/components/betting/betting-types"
+import type { RankingUser, MyRank } from "@/types/betting"
 
 export function useBettingRankings(active: boolean) {
   const { isSignedIn } = useAuth()

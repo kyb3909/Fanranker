@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react"
-import type { AlertModalState } from "@/components/betting/betting-types"
+import type { AlertModalState } from "@/types/betting"
 
 export function useAlertModal() {
   const [alertModal, setAlertModal] = useState<AlertModalState>({

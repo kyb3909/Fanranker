@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Lock, TrendingUp, Target, Flame, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
-import type { PredictionMatch } from "@/components/betting/betting-types"
+import type { PredictionMatch } from "@/types/betting"
 
 interface PredictionGame {
   home_team_name: string

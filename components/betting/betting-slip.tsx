@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronDown, ChevronUp, Target, Circle, Loader2, X, Newspaper } from "lucide-react"
-import type { SelectedBet, GroupedMatch } from "./betting-types"
-import { getGameTypeLabel, formatMatchTime, SPORT_ICONS } from "./betting-types"
+import type { SelectedBet, GroupedMatch } from "@/types/betting"
+import { getGameTypeLabel, formatMatchTime, SPORT_ICONS } from "@/types/betting"
 
 interface BettingSlipProps {
   selectedBets: SelectedBet[]

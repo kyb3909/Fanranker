@@ -2,8 +2,8 @@
 
 import { Card } from "@/components/ui/card"
 import { Target, BarChart3, Loader2 } from "lucide-react"
-import type { MyStatsData } from "./betting-types"
-import { SPORT_ICONS } from "./betting-types"
+import type { MyStatsData } from "@/types/betting"
+import { SPORT_ICONS } from "@/types/betting"
 
 interface BettingMyStatsProps {
   myStats: MyStatsData | null

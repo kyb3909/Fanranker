@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Trophy, Target, Loader2 } from "lucide-react"
-import type { RankingUser, MyRank } from "./betting-types"
+import type { RankingUser, MyRank } from "@/types/betting"
 
 interface BettingRankingsProps {
   rankings: RankingUser[]

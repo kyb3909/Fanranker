@@ -1,7 +1,7 @@
 "use client"
 
 import { TrendingUp, Target, Coins } from "lucide-react"
-import { SPORT_TABS } from "./betting-types"
+import { SPORT_TABS } from "@/types/betting"
 
 interface BettingHeaderProps {
   activeTab: "betting" | "ranking" | "stats" | "mypage"

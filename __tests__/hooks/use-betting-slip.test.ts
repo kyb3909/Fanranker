@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import type { SelectedBet, GroupedMatch, SportsGame } from "@/components/betting/betting-types"
+import type { SelectedBet, GroupedMatch, SportsGame } from "@/types/betting"
 
 // ============================================================
 // Pure logic extracted from use-betting-slip.ts for testing

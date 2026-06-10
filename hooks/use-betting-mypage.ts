@@ -2,11 +2,7 @@ import { useMemo } from "react"
 import useSWR from "swr"
 import { useAuth } from "@clerk/nextjs"
 import { fetcher } from "@/lib/swr"
-import type {
-  MyStatsData,
-  PredictionHistoryItem,
-  PredictionMatch,
-} from "@/components/betting/betting-types"
+import type { MyStatsData, PredictionHistoryItem, PredictionMatch } from "@/types/betting"
 
 interface RawSlip {
   id: string

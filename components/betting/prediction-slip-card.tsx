@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { ChevronDown, Lock } from "lucide-react"
-import type { PredictionMatch } from "./betting-types"
-import { sportColorFill, SPORT_ICONS } from "./betting-types"
+import type { PredictionMatch } from "@/types/betting"
+import { sportColorFill, SPORT_ICONS } from "@/types/betting"
 
 const SPORT_HEADER_STYLES: Record<string, { bg: string; text: string }> = {
   축구: { bg: "bg-rose-50", text: "text-rose-700" },

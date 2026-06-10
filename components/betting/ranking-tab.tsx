@@ -1,7 +1,7 @@
 "use client"
 
 import { BettingRankings } from "./betting-rankings"
-import type { RankingUser, MyRank } from "./betting-types"
+import type { RankingUser, MyRank } from "@/types/betting"
 
 interface RankingTabProps {
   rankings: RankingUser[]
@@ -12,7 +12,14 @@ interface RankingTabProps {
   onFollow: (userId: string) => void
 }
 
-export function RankingTab({ rankings, myRank, isLoading, followedUsers, followLoading, onFollow }: RankingTabProps) {
+export function RankingTab({
+  rankings,
+  myRank,
+  isLoading,
+  followedUsers,
+  followLoading,
+  onFollow,
+}: RankingTabProps) {
   return (
     <BettingRankings
       rankings={rankings}

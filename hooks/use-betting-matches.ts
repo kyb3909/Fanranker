@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import useSWR from "swr"
 import { getMsUntilReset } from "@/lib/betman/daily-round"
-import type { TodayInfo, GroupedMatch } from "@/components/betting/betting-types"
+import type { TodayInfo, GroupedMatch } from "@/types/betting"
 import { fetcher } from "@/lib/swr"
 
 export function useBettingMatches(eventSlug?: string) {
