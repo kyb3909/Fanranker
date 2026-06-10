@@ -102,7 +102,9 @@ export async function GET(request: NextRequest) {
       .select(
         "id, round_id, game_no, match_time, sport, league_code, game_type, home_team_name, away_team_name, handicap, over_under_line, venue, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
       )
-      .gte("match_time", windowStart.toISOString())
+      // 시작 경계 exclusive — 8시 "정각" 킥오프는 프로토 발매(08:00 오픈)에서
+      // 걸 수 없는 경기라 슬레이트에서 제외 (프로토 규정 추종, 2026-06-11)
+      .gt("match_time", windowStart.toISOString())
       .lt("match_time", windowEnd.toISOString())
       // betman 다음 라운드 preview placeholder 차단 — '미정 vs 미정' 또는 빈 팀명
       .neq("home_team_name", "미정")
@@ -181,11 +183,12 @@ export async function GET(request: NextRequest) {
         odd_odds = game.odd_odds != null ? parseFloat(String(game.odd_odds)) : undefined
         even_odds = game.even_odds != null ? parseFloat(String(game.even_odds)) : undefined
       }
-      // 마감 = min(킥오프, 라운드 23:00). 밤 시간(23:00~08:00)엔 전면 잠금.
+      // 마감 = min(킥오프, 라운드 23:00) — 23:00 슬레이트 교체와 일치.
+      // 베팅 자체는 23:00 리셋 직후부터 항상 가능 (밤 잠금 없음).
       const kickoff = getGameBetDeadline(game.match_time as string)
       const betCloseAt = kickoff < roundCloseAt ? kickoff : roundCloseAt
       const now = new Date()
-      const isBettable = windowStatus.isOpen && now < betCloseAt
+      const isBettable = now < betCloseAt
       return {
         ...game,
         home_odds,
