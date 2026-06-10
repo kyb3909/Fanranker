@@ -1,12 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "scripts/**/*.{ts,mjs}",
+    "scripts/**/*.ts",
+    "scripts/**/*.mjs",
     "playwright.audit.config.ts",
     "playwright.e2e.config.ts",
     "tests/audit/**/*.spec.ts",
     "tests/e2e/**/*.ts",
-    "e2e/**/*.spec.ts"
+    "e2e/**/*.spec.ts",
+    "types/**/*.d.ts"
   ],
   "project": [
     "**/*.{ts,tsx}",
