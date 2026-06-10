@@ -3,7 +3,7 @@
  * DB stadium_level_thresholds 테이블과 동기화
  */
 
-export interface StadiumLevel {
+interface StadiumLevel {
   level: number
   requiredPoints: number
   nameKo: string
@@ -95,11 +95,11 @@ export const STADIUM_LEVELS: StadiumLevel[] = [
   },
 ]
 
-export function getStadiumLevel(level: number): StadiumLevel {
+function getStadiumLevel(level: number): StadiumLevel {
   return STADIUM_LEVELS.find((l) => l.level === level) ?? STADIUM_LEVELS[0]
 }
 
-export function getNextLevelThreshold(
+function getNextLevelThreshold(
   currentPoints: number
 ): { nextLevel: number; requiredPoints: number } | null {
   for (const level of STADIUM_LEVELS) {

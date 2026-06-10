@@ -13,7 +13,7 @@ interface UseDraftRoomGameParams {
   myDisplayName: string | null
 }
 
-export interface DraftRoomGameLive {
+interface DraftRoomGameLive {
   state: DraftRoomFullState
   isConnected: boolean
   /** 클라가 본인 차례 timeout 발견 시 호출 — 서버에서 자동 픽 */

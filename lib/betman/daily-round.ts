@@ -61,7 +61,7 @@ export function getDailyWindow(overrideDailyId?: string): {
 }
 
 /** @deprecated Use getDailyWindow() instead */
-export function getRolling24hWindow(): { start: Date; end: Date } {
+function getRolling24hWindow(): { start: Date; end: Date } {
   const { start, end } = getDailyWindow()
   return { start, end }
 }

@@ -13,7 +13,7 @@ interface TipTapJsonNode {
  * TipTap JSON에서 임베드 노드를 추출하는 유틸리티 함수
  */
 
-export interface EmbedNode {
+interface EmbedNode {
   type: "embed"
   attrs: {
     provider: "youtube" | "instagram" | "x"

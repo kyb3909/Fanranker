@@ -19,7 +19,7 @@ export interface Participant {
   avatarUrl?: string
 }
 
-export interface Pick {
+interface Pick {
   pickNumber: number
   seatIndex: number
   playerId: string

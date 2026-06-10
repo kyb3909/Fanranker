@@ -28,7 +28,7 @@ import { IndoorPresenceChannel } from "@/lib/metaverse/realtime/indoor-presence-
 import { METAVERSE } from "@/lib/metaverse/constants"
 import { createAnonClient } from "@/lib/supabase/client"
 
-export interface HighburyStageProps {
+interface HighburyStageProps {
   /** true 면 비로그인 게스트도 진입 가능 (테스트용 — /metaverse/gandalf 등). 기본 false. */
   allowGuest?: boolean
 }

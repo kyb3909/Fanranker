@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { ArrowUp, ArrowDown, MessageCircle, Flag, Ban } from "lucide-react"
 
-export interface CommentActionsProps {
+interface CommentActionsProps {
   depth: number
   maxDepth: number
   voteCount: number

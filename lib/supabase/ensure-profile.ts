@@ -103,7 +103,7 @@ export async function ensureProfile() {
  * Server Action to sync current user's profile
  * Call this after user updates their Clerk profile
  */
-export async function syncProfile() {
+async function syncProfile() {
   "use server"
 
   const { userId } = await auth()

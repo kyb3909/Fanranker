@@ -10,7 +10,7 @@ import type { Player, Position } from "./players"
 type Tier = "S" | "A" | "B" | "C"
 
 /** 가격 기반 등급 — FPL 가격대 기준 (£14↑ S, £8↑ A, £5↑ B, 나머지 C). */
-export function getTier(price: number): Tier {
+function getTier(price: number): Tier {
   if (price >= 14) return "S"
   if (price >= 8) return "A"
   if (price >= 5) return "B"
@@ -25,7 +25,7 @@ export const POSITION_HEX: Record<Position, string> = {
   FW: "#a0203b",
 }
 
-export const POSITION_LABEL_KO: Record<Position, string> = {
+const POSITION_LABEL_KO: Record<Position, string> = {
   GK: "골키퍼",
   DF: "수비",
   MF: "미드",
@@ -69,7 +69,7 @@ export function getPlayerInitial(p: Player): string {
 }
 
 /** 평균 tier 계산 (S=4, A=3, B=2, C=1). */
-export function getAvgTier(players: Player[]): { avg: number | null; label: string } {
+function getAvgTier(players: Player[]): { avg: number | null; label: string } {
   if (players.length === 0) return { avg: null, label: "–" }
   const val: Record<Tier, number> = { S: 4, A: 3, B: 2, C: 1 }
   const avg = players.reduce((s, p) => s + val[getTier(p.price)], 0) / players.length

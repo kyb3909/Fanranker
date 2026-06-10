@@ -17,7 +17,7 @@
 
 import type * as Phaser from "phaser"
 
-export const DIRECTIONS_8 = [
+const DIRECTIONS_8 = [
   "south",
   "south-east",
   "east",
@@ -29,7 +29,7 @@ export const DIRECTIONS_8 = [
 ] as const
 export type Direction8 = (typeof DIRECTIONS_8)[number]
 
-export const AVATAR_PRO = {
+const AVATAR_PRO = {
   FRAME_WIDTH: 124,
   FRAME_HEIGHT: 124,
   WALK_FRAMES: 4,
@@ -42,7 +42,7 @@ export function textureKeyIdle(dir: Direction8): string {
   return `${AVATAR_PRO.TEXTURE_PREFIX}-idle-${dir}`
 }
 
-export function textureKeyWalk(dir: Direction8, frame: number): string {
+function textureKeyWalk(dir: Direction8, frame: number): string {
   return `${AVATAR_PRO.TEXTURE_PREFIX}-walk-${dir}-${frame}`
 }
 

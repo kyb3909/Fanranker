@@ -6,7 +6,7 @@
  * 노출되며, 참가 신청 동의 체크의 대상 문서다.
  */
 
-export interface TermsArticle {
+interface TermsArticle {
   title: string
   items: string[]
 }

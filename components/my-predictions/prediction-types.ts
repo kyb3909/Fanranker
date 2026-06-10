@@ -1,6 +1,5 @@
 // Re-export shared constants from betting-types (single source of truth)
 export {
-  gameTypeLabels,
   getGameTypeLabel,
   SPORT_ICONS,
   sportColorFill,
@@ -87,7 +86,7 @@ export interface Stats {
 }
 
 // Get prediction label
-export function getPredictionLabel(prediction: string, homeTeam: string, awayTeam: string): string {
+function getPredictionLabel(prediction: string, homeTeam: string, awayTeam: string): string {
   switch (prediction) {
     case "home":
       return homeTeam

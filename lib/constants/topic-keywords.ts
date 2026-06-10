@@ -3,7 +3,7 @@
  * 글 제목/내용에서 키워드를 매칭하여 토픽 점유율 산출
  */
 
-export interface TopicDef {
+interface TopicDef {
   /** 토픽 표시명 */
   label: string
   /** 매칭할 키워드 (OR 조건, 대소문자 무시) */

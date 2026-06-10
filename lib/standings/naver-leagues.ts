@@ -2,10 +2,10 @@
  * 네이버 스포츠 순위표 페이지 URL (기록/순위)
  * PC: sports.news.naver.com (링크용) / 스크래핑: m.sports.naver.com (모바일)
  */
-export const NAVER_SPORTS_BASE = "https://sports.news.naver.com"
-export const NAVER_SPORTS_MOBILE_BASE = "https://m.sports.naver.com"
+const NAVER_SPORTS_BASE = "https://sports.news.naver.com"
+const NAVER_SPORTS_MOBILE_BASE = "https://m.sports.naver.com"
 
-export interface StandingsLeague {
+interface StandingsLeague {
   id: string
   name: string
   /** 위젯 탭용 짧은 라벨 (예: EN, K1, K2) */
@@ -130,7 +130,7 @@ function buildNaverUrl(league: StandingsLeague): string {
   return `${base}${league.path}`
 }
 
-export function getStandingsUrl(leagueId: string): string | null {
+function getStandingsUrl(leagueId: string): string | null {
   const league = STANDINGS_LEAGUES.find((l) => l.id === leagueId)
   if (!league) return null
   return buildNaverUrl(league)
@@ -153,7 +153,7 @@ export function getLeagueById(leagueId: string): StandingsLeague | null {
 }
 
 /** 리그별 그룹(디비전/컨퍼런스) 서브탭 정의 */
-export interface LeagueGroup {
+interface LeagueGroup {
   key: string
   label: string
   /** group 필드 매칭값 */
@@ -181,13 +181,13 @@ const LEAGUE_GROUPS: Record<string, LeagueGroup[]> = {
   ],
 }
 
-export function getLeagueGroups(leagueId: string): LeagueGroup[] | null {
+function getLeagueGroups(leagueId: string): LeagueGroup[] | null {
   return LEAGUE_GROUPS[leagueId] ?? null
 }
 
-export type SportKey = "football" | "baseball" | "basketball" | "volleyball"
+type SportKey = "football" | "baseball" | "basketball" | "volleyball"
 
-export const SPORT_TABS: { key: SportKey; label: string }[] = [
+const SPORT_TABS: { key: SportKey; label: string }[] = [
   { key: "football", label: "축구" },
   { key: "baseball", label: "야구" },
   { key: "basketball", label: "농구" },
@@ -201,7 +201,7 @@ const SPORT_LEAGUE_IDS: Record<SportKey, string[]> = {
   volleyball: ["kovo_men", "kovo_women"],
 }
 
-export function getLeaguesBySport(sport: SportKey): StandingsLeague[] {
+function getLeaguesBySport(sport: SportKey): StandingsLeague[] {
   const ids = SPORT_LEAGUE_IDS[sport] ?? []
   return ids
     .map((id) => STANDINGS_LEAGUES.find((l) => l.id === id))

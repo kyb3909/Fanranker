@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 
-export interface HotPostAlert {
+interface HotPostAlert {
   id: string
   community_slug: string | null
   community_name: string

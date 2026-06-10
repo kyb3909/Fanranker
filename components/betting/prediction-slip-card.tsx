@@ -15,7 +15,7 @@ const SPORT_HEADER_STYLES: Record<string, { bg: string; text: string }> = {
 
 const DEFAULT_HEADER_STYLE = { bg: "bg-muted", text: "text-foreground" }
 
-export interface PredictionSlipCardProps {
+interface PredictionSlipCardProps {
   sport: string
   date: string
   status: string // "win" | "lose" | "pending"

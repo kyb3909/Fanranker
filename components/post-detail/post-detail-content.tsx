@@ -29,9 +29,7 @@ const TipTapContent = dynamic(
   { ssr: false, loading: () => <div className="bg-muted h-32 animate-pulse rounded" /> }
 )
 
-export type { Post }
-
-export interface InitialCommentsData {
+interface InitialCommentsData {
   comments: {
     id: string
     user_id: string

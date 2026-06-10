@@ -10,7 +10,7 @@ type SupabaseClient = {
   }
 }
 
-export interface SellerRewardContext {
+interface SellerRewardContext {
   sellerId: string
   buyerId: string
   activityId: string

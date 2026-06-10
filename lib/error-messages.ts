@@ -28,4 +28,4 @@ export const ERR = {
   NO_SETTLEABLE_GAMES: "정산 가능한 경기가 없습니다.",
 } as const
 
-export type ErrorKey = keyof typeof ERR
+type ErrorKey = keyof typeof ERR

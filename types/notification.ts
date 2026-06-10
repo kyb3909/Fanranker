@@ -1,5 +1,5 @@
 /** 알림 메타데이터 */
-export interface NotificationMetadata {
+interface NotificationMetadata {
   sport?: string
   prediction_count?: number
   settlement_profit?: number

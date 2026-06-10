@@ -1,7 +1,7 @@
 import { getClient, getPropertyId } from "./client"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
-export interface WeeklyReportData {
+interface WeeklyReportData {
   users: {
     dauAvg: number
     wau: number

@@ -7,13 +7,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Sparkles } from "lucide-react"
 import { StickerPicker } from "@/components/sticker/sticker-picker"
 
-export interface SelectedSticker {
+interface SelectedSticker {
   id: string
   name: string
   image_url: string
 }
 
-export interface CommentReplyFormProps {
+interface CommentReplyFormProps {
   replyText: string
   isSubmitting: boolean
   onReplyTextChange: (text: string) => void

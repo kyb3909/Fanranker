@@ -2,11 +2,11 @@ import { Node, mergeAttributes } from "@tiptap/core"
 import { ReactNodeViewRenderer } from "@tiptap/react"
 import { EmbedRenderer } from "./embed-renderer"
 
-export interface EmbedOptions {
+interface EmbedOptions {
   HTMLAttributes: Record<string, string>
 }
 
-export interface EmbedAttributes {
+interface EmbedAttributes {
   provider: "youtube" | "instagram" | "x"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요

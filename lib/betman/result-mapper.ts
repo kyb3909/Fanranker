@@ -10,19 +10,10 @@
  * 이 모듈은 아직 직접 참조하지 않지만, 향후 path alias 세팅 후 동일 import로 통일 가능.
  */
 
-export type BetmanResult =
-  | "home"
-  | "away"
-  | "draw"
-  | "over"
-  | "under"
-  | "odd"
-  | "even"
-  | "cancelled"
-  | ""
+type BetmanResult = "home" | "away" | "draw" | "over" | "under" | "odd" | "even" | "cancelled" | ""
 
 /** Betman 공식 게임 타입 (한국어 원문). */
-export type BetmanGameType =
+type BetmanGameType =
   | "일반"
   | "핸디캡"
   | "S핸디캡"

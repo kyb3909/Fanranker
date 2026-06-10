@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 
-export interface AvatarShopItem {
+interface AvatarShopItem {
   avatarKey: string
   name: string
   description: string | null
@@ -20,7 +20,7 @@ export interface AvatarShopItem {
   sortOrder: number
 }
 
-export interface AvatarMeState {
+interface AvatarMeState {
   equippedAvatarKey: string
   ownedAvatarKeys: string[]
   goldBalance: number | null
@@ -262,4 +262,4 @@ export function AvatarShopModal({
   )
 }
 
-export { LOCAL_STORAGE_KEY as AVATAR_EQUIP_LOCAL_KEY, DEFAULT_AVATAR_KEY }
+export { LOCAL_STORAGE_KEY as AVATAR_EQUIP_LOCAL_KEY }

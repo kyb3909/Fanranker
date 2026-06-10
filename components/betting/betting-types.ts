@@ -9,7 +9,7 @@ export interface TodayInfo {
   label: string
 }
 
-export interface DailyRoundInfo {
+interface DailyRoundInfo {
   id: string
   daily_id: string
   status: string
@@ -18,7 +18,7 @@ export interface DailyRoundInfo {
   game_count: number
 }
 
-export interface BettingWindowInfo {
+interface BettingWindowInfo {
   isOpen: boolean
   message: string
   nextOpenAt?: string
@@ -64,7 +64,7 @@ export interface GroupedMatch {
   games: SportsGame[]
 }
 
-export interface WindowInfo {
+interface WindowInfo {
   start: string
   end: string
 }
@@ -188,7 +188,7 @@ export interface PredictionHistoryItem {
 // Constants
 // ============================================================
 
-export const gameTypeLabels: Record<string, string> = {
+const gameTypeLabels: Record<string, string> = {
   일반: "승무패",
   S일반: "승무패",
   핸디캡: "핸디캡",
@@ -326,7 +326,7 @@ export function formatMatchTime(dateStr: string): string {
     .replace(". ", " ")
 }
 
-export function formatDeadline(dateStr: string): string {
+function formatDeadline(dateStr: string): string {
   const date = new Date(dateStr)
   return date.toLocaleDateString("ko-KR", {
     month: "long",

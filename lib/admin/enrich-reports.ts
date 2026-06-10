@@ -7,7 +7,7 @@ interface ReportRow {
   target_id: string
 }
 
-export interface ReportEnrichment {
+interface ReportEnrichment {
   post_id: string | null
   post_title: string | null
   author_id: string | null

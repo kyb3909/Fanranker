@@ -8,7 +8,8 @@
     "tests/audit/**/*.spec.ts",
     "tests/e2e/**/*.ts",
     "e2e/**/*.spec.ts",
-    "types/**/*.d.ts"
+    "types/**/*.d.ts",
+    "lib/stadium/game/scenes/index.ts"
   ],
   "project": [
     "**/*.{ts,tsx}",
@@ -21,7 +22,11 @@
     "!data/crawlers/**",
     "!aseprite-mcp/**"
   ],
-  "ignore": ["lib/supabase/types.ts", "lib/supabase/database.types.ts"],
+  "ignore": [
+    "components/battle/battle-types.ts",
+    "lib/supabase/database.types.ts",
+    "lib/supabase/types.ts"
+  ],
   "ignoreDependencies": [
     "tailwindcss",
     "autoprefixer",

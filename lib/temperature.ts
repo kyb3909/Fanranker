@@ -46,14 +46,14 @@ export function getTemperatureColor(temp: number): string {
 
 // ── 온도 계산 (V2) ──
 
-export const HALF_LIFE_HOURS = 24
+const HALF_LIFE_HOURS = 24
 const W_VOTE = 12
 const W_COMMENT = 10
 const W_VIEW = 2
 const R_MAX = 8
 const NEW_BOOST_MAX = 3
 
-export interface TemperatureInput {
+interface TemperatureInput {
   vote_count: number
   comment_count: number
   view_count?: number

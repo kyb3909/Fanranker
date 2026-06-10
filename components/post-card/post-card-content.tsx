@@ -22,7 +22,7 @@ import { useVisibility } from "@/hooks/use-visibility"
 import type { TipTapNode } from "@/components/post-card"
 import type { PostFlair } from "@/types/post"
 
-export interface PostCardContentProps {
+interface PostCardContentProps {
   postId: number | string
   title: string
   content: string | TipTapNode

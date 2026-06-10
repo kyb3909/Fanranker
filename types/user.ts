@@ -13,7 +13,7 @@ export interface BaseProfile {
 }
 
 /** 장착된 칭호 정보 (API 응답) */
-export interface EquippedTitle {
+interface EquippedTitle {
   user_id: string
   board_slug: string
   adj_titles: { title: string; rarity: string } | null

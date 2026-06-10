@@ -11,7 +11,7 @@ import {
 import { Clock } from "lucide-react"
 import { formatKoreanTime } from "@/lib/utils/date"
 
-export interface CronJobMeta {
+interface CronJobMeta {
   name: string
   label: string
   schedule: string
@@ -52,7 +52,7 @@ export interface CronLastRun {
   started_at: string
 }
 
-export interface CronJobStatus extends CronJobMeta {
+interface CronJobStatus extends CronJobMeta {
   lastRun: CronLastRun | null
 }
 

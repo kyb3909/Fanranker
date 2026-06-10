@@ -14,7 +14,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 // 타입 정의 (database.types.ts 갱신 전까지 inline)
 // ─────────────────────────────────────────────
 
-export type DraftRoomStatus = "waiting" | "drafting" | "completed" | "abandoned"
+type DraftRoomStatus = "waiting" | "drafting" | "completed" | "abandoned"
 
 export interface DraftRoom {
   id: string

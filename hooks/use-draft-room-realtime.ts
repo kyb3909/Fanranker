@@ -13,7 +13,7 @@ interface UseDraftRoomRealtimeParams {
   myDisplayName: string | null
 }
 
-export interface DraftRoomLiveState {
+interface DraftRoomLiveState {
   room: DraftRoom
   seats: DraftRoomSeat[]
   presenceCount: number

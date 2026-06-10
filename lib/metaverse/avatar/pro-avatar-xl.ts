@@ -18,7 +18,7 @@ import type * as Phaser from "phaser"
 import { AVATAR_PRESETS, DEFAULT_AVATAR_KEY, getAvatarPreset, type AvatarPreset } from "./presets"
 
 export type Facing = "east" | "west"
-export const FACINGS: readonly Facing[] = ["east", "west"] as const
+const FACINGS: readonly Facing[] = ["east", "west"] as const
 
 /**
  * 8방향 정적 rotation. idle 상태에서 캐릭터가 바라보는 방향을 표현할 때 사용.
@@ -26,7 +26,7 @@ export const FACINGS: readonly Facing[] = ["east", "west"] as const
  *
  * 배열 순서는 시계방향 (south 부터) — `rotationPath` 에서 최단 경로 계산에 쓰임.
  */
-export const ROTATIONS = [
+const ROTATIONS = [
   "south",
   "south-east",
   "east",
@@ -77,7 +77,7 @@ export function texKeyIdle(f: Facing, presetKey?: string): string {
 }
 
 /** 애니 프레임 텍스처 키. */
-export function texKeyAnim(kind: Kind, f: Facing, frame: number, presetKey?: string): string {
+function texKeyAnim(kind: Kind, f: Facing, frame: number, presetKey?: string): string {
   const preset = getAvatarPreset(presetKey)
   return `${preset.texturePrefix}-${kind}-${f}-${frame}`
 }
@@ -109,7 +109,7 @@ export function rotationPath(from: RotationDir, to: RotationDir): RotationDir[] 
 }
 
 /** 지정 프리셋 하나만 preload. */
-export function preloadAvatarPreset(scene: Phaser.Scene, presetKey: string): void {
+function preloadAvatarPreset(scene: Phaser.Scene, presetKey: string): void {
   const preset = getAvatarPreset(presetKey)
   for (const dir of ROTATIONS) {
     const key = texKeyRotation(dir, preset.id)
@@ -139,7 +139,7 @@ export function preloadAllAvatarPresets(scene: Phaser.Scene): void {
 }
 
 /** 지정 프리셋의 Phaser anim 등록. 키가 이미 있으면 skip. */
-export function createAvatarAnimations(scene: Phaser.Scene, presetKey: string): void {
+function createAvatarAnimations(scene: Phaser.Scene, presetKey: string): void {
   const preset = getAvatarPreset(presetKey)
   const defs: Array<{ kind: Kind; repeat: number }> = [
     { kind: "walk", repeat: -1 },
@@ -170,17 +170,17 @@ export function createAllAvatarAnimations(scene: Phaser.Scene): void {
 // ============================================================
 
 /** @deprecated — preset 명시 버전 사용 권장 (`preloadAvatarPreset`). 기본 프리셋 한정. */
-export function preloadProAvatarXl(scene: Phaser.Scene): void {
+function preloadProAvatarXl(scene: Phaser.Scene): void {
   preloadAvatarPreset(scene, DEFAULT_AVATAR_KEY)
 }
 
 /** @deprecated — preset 명시 버전 사용 권장 (`createAvatarAnimations`). 기본 프리셋 한정. */
-export function createProAvatarXlAnimations(scene: Phaser.Scene): void {
+function createProAvatarXlAnimations(scene: Phaser.Scene): void {
   createAvatarAnimations(scene, DEFAULT_AVATAR_KEY)
 }
 
 /** 기본 프리셋 상수 — 기존 `AVATAR_PRO_XL.FRAME_HEIGHT` 사용처용. */
-export const AVATAR_PRO_XL = {
+const AVATAR_PRO_XL = {
   get FRAME_WIDTH() {
     return AVATAR_PRESETS[DEFAULT_AVATAR_KEY].frameWidth
   },

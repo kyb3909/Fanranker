@@ -7,13 +7,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { X, Check, Sparkles } from "lucide-react"
 import { StickerPicker } from "@/components/sticker/sticker-picker"
 
-export interface EditSticker {
+interface EditSticker {
   id: string
   name: string
   image_url: string
 }
 
-export interface CommentEditFormProps {
+interface CommentEditFormProps {
   editText: string
   isSaving: boolean
   currentSticker?: EditSticker | null

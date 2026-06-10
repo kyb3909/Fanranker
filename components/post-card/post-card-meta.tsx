@@ -25,7 +25,7 @@ import { RelativeTime } from "@/components/ui/relative-time"
 import { ShareMenu } from "@/components/share-menu"
 import { cn } from "@/lib/utils"
 
-export interface PostCardMetaProps {
+interface PostCardMetaProps {
   postId: number | string
   postTitle: string
   author: string

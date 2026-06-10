@@ -25,4 +25,3 @@ export interface Comment {
 
 // Re-export utils for backward compatibility
 export { countAllComments, transformComments } from "@/lib/utils/comments"
-export { formatRelativeTime } from "@/lib/utils/date"

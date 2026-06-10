@@ -16,7 +16,7 @@ const OCCUPIED_FILL = 0xffd54f
 const OCCUPIED_FILL_ALPHA = 0.08
 const OCCUPIED_BORDER = 0xffecb3
 
-export interface PlotMarkerOptions {
+interface PlotMarkerOptions {
   id: string
   centerX: number
   centerY: number

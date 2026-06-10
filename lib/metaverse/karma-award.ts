@@ -12,7 +12,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-export type FlairKarmaSource = "post" | "comment" | "prediction_hit" | "bonus"
+type FlairKarmaSource = "post" | "comment" | "prediction_hit" | "bonus"
 
 const POINTS_BY_SOURCE: Record<FlairKarmaSource, number> = {
   post: 10,

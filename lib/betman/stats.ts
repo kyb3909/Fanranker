@@ -20,7 +20,7 @@ export function calculateStreaks(results: boolean[]) {
 }
 
 /** 유저의 종목별 + 전체 통계를 재계산하여 UPSERT */
-export async function updateUserSportStats(supabase: SupabaseClient, userId: string) {
+async function updateUserSportStats(supabase: SupabaseClient, userId: string) {
   // 1. 개별 예측 조회
   const { data: userPreds, error: predsError } = await supabase
     .from("betman_predictions")

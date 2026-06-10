@@ -25,7 +25,7 @@ import {
 // 타입
 // ─────────────────────────────────────────────
 
-export interface DraftPickRow {
+interface DraftPickRow {
   id: string
   room_id: string
   pick_number: number
@@ -473,7 +473,7 @@ interface CleanupSummary {
  * 진행 중인 게임에서 30초 이상 disconnected 좌석을 AI 로 전환.
  * 본인 차례 좌석이 AI 로 바뀌면 즉시 자동 픽 진행.
  */
-export async function convertStaleSeatsToAi(): Promise<{
+async function convertStaleSeatsToAi(): Promise<{
   converted: number
   affectedRoomIds: string[]
 }> {
@@ -546,7 +546,7 @@ export async function convertStaleSeatsToAi(): Promise<{
 /**
  * 30분 이상 대기 중인 방을 abandoned 처리.
  */
-export async function markStaleWaitingRoomsAbandoned(): Promise<{
+async function markStaleWaitingRoomsAbandoned(): Promise<{
   abandoned: number
   affectedRoomIds: string[]
 }> {

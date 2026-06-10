@@ -103,7 +103,7 @@ interface PredictionData {
   locked_odds: number | null
 }
 
-export interface SettleResult {
+interface SettleResult {
   settled: number
   correct: number
   wrong: number

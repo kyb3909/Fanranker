@@ -11,7 +11,7 @@
 
 import { BETMAN_BASE, BROWSER_HEADERS, GM_ID, fetchWithRetry } from "./http-client"
 
-export const SPORT_MAP: Record<string, string> = {
+const SPORT_MAP: Record<string, string> = {
   SC: "축구",
   BK: "농구",
   VL: "배구",
@@ -43,7 +43,7 @@ export interface BetmanGameData {
   keys: string[]
 }
 
-export interface BetmanGame {
+interface BetmanGame {
   round_id: string
   game_no: number
   match_time: string | null
@@ -69,7 +69,7 @@ export interface BetmanGame {
  * 현재 구매 가능한 모든 gmTs(회차) 목록 조회.
  * betman이 해외 IP를 차단하므로 Vercel에서는 보통 빈 배열 반환.
  */
-export async function fetchAllGmTs(): Promise<string[]> {
+async function fetchAllGmTs(): Promise<string[]> {
   try {
     const resp = await fetchWithRetry(`${BETMAN_BASE}/buyPsblGame/inqBuyAbleGameInfoList.do`, {
       method: "POST",

@@ -14,7 +14,7 @@ import { CommentEditForm } from "./comment-edit-form"
 import { CommentReplyForm } from "./comment-reply-form"
 import { TitleBadge } from "@/components/profile/title-badge"
 
-export interface CommentItemProps {
+interface CommentItemProps {
   comment: Comment
   currentUserId?: string | null
   replyingTo: string | number | null

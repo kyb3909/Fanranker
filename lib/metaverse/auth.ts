@@ -10,7 +10,7 @@ import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 
 const GUEST_ID_PATTERN = /^guest-[a-z0-9-]{4,40}$/i
 
-export interface ResolvedMetaverseUser {
+interface ResolvedMetaverseUser {
   userId: string
   isGuest: boolean
 }

@@ -19,7 +19,7 @@ const RESULT_HANDI_MAP: Record<number, string> = {
   14: "일반",
 }
 
-export interface ResultItem {
+interface ResultItem {
   GAME_RESULT: string
   GM_SEQ: number
   MCH_SCORE: string

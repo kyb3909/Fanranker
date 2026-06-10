@@ -15,7 +15,7 @@ import TextAlign from "@tiptap/extension-text-align"
 import TiptapImage from "@tiptap/extension-image"
 import { Embed } from "./embed"
 
-export interface SharedExtensionsOptions {
+interface SharedExtensionsOptions {
   /** 에디터에서만 필요 (붙여넣기된 base64 이미지 허용 여부). 뷰어는 의미 없음. */
   imageAllowBase64?: boolean
 }

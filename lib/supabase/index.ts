@@ -15,16 +15,10 @@
  */
 
 // Server-side clients (Server Components, Server Actions, Route Handlers)
-export { createAnonClient as createServerAnonClient, createServiceRoleClient } from "./server"
+export { createAnonClient as createServerAnonClient } from "./server"
 
 // Client-side clients (Client Components)
-export {
-  createAuthClient as createBrowserAuthClient,
-  createAnonClient as createBrowserAnonClient,
-} from "./client"
 
 // React Hooks
-export { useSupabase, useSupabaseAnon, useClerkUserId } from "./hooks"
 
 // Database Types (auto-generated from Supabase schema)
-export type { Database, Tables, TablesInsert, TablesUpdate, Json } from "./types"

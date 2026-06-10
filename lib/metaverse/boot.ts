@@ -30,7 +30,7 @@ interface BootOptions {
   initialPlotCode?: string
 }
 
-export function bootMetaverseGame({
+function bootMetaverseGame({
   parent,
   identity,
   channel = null,
@@ -159,5 +159,3 @@ export function bootIndoorMap({
   game.scene.start(INDOOR_MAP_SCENE_KEY, { identity, mapId, channel })
   return game
 }
-
-export { METAVERSE }

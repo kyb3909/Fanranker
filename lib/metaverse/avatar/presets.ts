@@ -96,6 +96,6 @@ export function getAvatarPreset(key: string | undefined | null): AvatarPreset {
   return AVATAR_PRESETS[DEFAULT_AVATAR_KEY]
 }
 
-export function listAvatarPresets(): AvatarPreset[] {
+function listAvatarPresets(): AvatarPreset[] {
   return Object.values(AVATAR_PRESETS)
 }

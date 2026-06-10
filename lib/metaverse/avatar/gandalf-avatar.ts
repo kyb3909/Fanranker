@@ -17,8 +17,8 @@ import * as Phaser from "phaser"
 
 export const GANDALF_BODY_TEX = "gandalf-body"
 export const GANDALF_HAIR_TEX = "gandalf-hair"
-export const GANDALF_FRAME_W = 80
-export const GANDALF_FRAME_H = 64
+const GANDALF_FRAME_W = 80
+const GANDALF_FRAME_H = 64
 
 const BODY_URL = "/assets/characters/gandalf/Male_Skin1.png"
 const HAIR_URL = "/assets/characters/gandalf/Male_Hair1.png"
@@ -33,7 +33,7 @@ interface AnimDef {
   repeat: number
 }
 
-export const GANDALF_ANIMS: Record<GandalfState, AnimDef> = {
+const GANDALF_ANIMS: Record<GandalfState, AnimDef> = {
   idle: { start: 0, end: 4, fps: 8, repeat: -1 },
   walk: { start: 10, end: 17, fps: 12, repeat: -1 },
   run: { start: 20, end: 27, fps: 14, repeat: -1 },
@@ -110,7 +110,7 @@ export interface GandalfAvatar {
   getCurrentState: () => GandalfState | null
 }
 
-export interface GandalfAvatarOptions {
+interface GandalfAvatarOptions {
   /** body·hair 의 setOrigin Y. 기본 1.0 (발끝). */
   originY?: number
 }

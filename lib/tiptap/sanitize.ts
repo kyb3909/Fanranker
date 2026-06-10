@@ -35,12 +35,12 @@ const ALLOWED_EMBED_PROVIDERS = new Set<string>(["youtube", "instagram", "x"])
 const ALLOWED_TEXT_ALIGN = new Set<string>(["left", "center", "right"])
 const ALLOWED_HEADING_LEVELS = new Set<number>([1, 2, 3])
 
-export interface TipTapMark {
+interface TipTapMark {
   type: string
   attrs?: Record<string, unknown>
 }
 
-export interface TipTapNode {
+interface TipTapNode {
   type: string
   attrs?: Record<string, unknown>
   content?: TipTapNode[]

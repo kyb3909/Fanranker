@@ -8,7 +8,7 @@ import useSWR from "swr"
 import { ExternalLink, Loader2, Play } from "lucide-react"
 import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 
-export interface EmbedCardProps {
+interface EmbedCardProps {
   provider: "youtube" | "instagram" | "x"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요

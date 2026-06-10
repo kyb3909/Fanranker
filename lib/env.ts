@@ -71,8 +71,8 @@ function validateEnv() {
   return clientResult.data
 }
 
-export type ServerEnv = z.infer<typeof serverSchema> & z.infer<typeof clientSchema>
-export type ClientEnv = z.infer<typeof clientSchema>
+type ServerEnv = z.infer<typeof serverSchema> & z.infer<typeof clientSchema>
+type ClientEnv = z.infer<typeof clientSchema>
 
 // Validate on first import
 export const env = validateEnv() as ServerEnv

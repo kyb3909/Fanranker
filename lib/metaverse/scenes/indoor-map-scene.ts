@@ -80,7 +80,7 @@ const KICK_MIN_SPEED = 400
 const KICK_MAX_SPEED = 900
 const KICK_CHARGE_MAX_MS = 1200
 
-export interface IndoorMapInit {
+interface IndoorMapInit {
   identity: MetaversePlayerIdentity
   mapId: MapId
   spawnX?: number

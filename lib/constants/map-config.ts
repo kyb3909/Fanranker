@@ -3,13 +3,13 @@
  * pin 좌표는 각 국가 지도 이미지 기준 % (0~100)
  */
 
-export interface MapConfig {
+interface MapConfig {
   country: string
   countryName: string
   mapImage: string
 }
 
-export const LEAGUE_MAP_CONFIG: Record<string, MapConfig> = {
+const LEAGUE_MAP_CONFIG: Record<string, MapConfig> = {
   // 한국 리그 (공용 지도)
   kbo: { country: "KR", countryName: "대한민국", mapImage: "/maps/korea.png" },
   kleague1: { country: "KR", countryName: "대한민국", mapImage: "/maps/korea.png" },
