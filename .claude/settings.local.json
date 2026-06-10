@@ -266,7 +266,12 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(git rev-parse *)",
       "Bash(git rev-list *)",
-      "Skill(health)"
+      "Skill(health)",
+      "Bash(xargs sed -i 's|from \"\\\\./betting-types\"|from \"@/types/betting\"|g')",
+      "Bash(xargs sed -i 's|from \"@/components/betting/betting-types\"|from \"@/types/betting\"|g')",
+      "Bash(git branch *)",
+      "Bash(PORT=3100 pnpm start *)",
+      "Bash(pnpm start *)"
     ]
   }
 }

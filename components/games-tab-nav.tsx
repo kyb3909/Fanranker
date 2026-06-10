@@ -4,8 +4,8 @@ import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
 import { ListOrdered } from "lucide-react"
 
-// 갈드컵 / 이상형 월드컵은 메뉴에서 숨김 — 페이지 코드는 유지하고 URL 직접 접근만 가능.
-// 향후 재오픈 검토 시 entry 복원.
+// Phase 2 절제: 갈드컵은 삭제, 이상형 월드컵은 notFound 숨김 (컴포넌트 보존).
+// 재오픈 시 app/games/worldcup/page.tsx 원복 + 여기 entry 추가.
 const games = [{ href: "/games/draft", icon: ListOrdered, label: "드래프트 게임" }]
 
 export function GamesTabNav() {

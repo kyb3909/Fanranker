@@ -24,6 +24,12 @@
   ],
   "ignore": [
     "components/battle/battle-types.ts",
+    "components/battle/create-worldcup-dialog.tsx",
+    "components/battle/worldcup-stats.tsx",
+    "components/battle/worldcup-view.tsx",
+    "components/worldcup/worldcup-page-client.tsx",
+    "components/worldcup/worldcup-page.tsx",
+    "hooks/use-worldcup.ts",
     "lib/supabase/database.types.ts",
     "lib/supabase/types.ts"
   ],
