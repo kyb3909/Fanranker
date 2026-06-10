@@ -171,3 +171,11 @@ production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
 - 아키텍처 리뷰 → `plan-eng-review`
 - 진행 저장/이어가기 → `checkpoint`
 - 코드 품질 헬스체크 → `health`
+
+## Health Stack
+
+- typecheck: pnpm exec tsc --noEmit
+- lint: pnpm exec eslint .
+- test: pnpm test
+- deadcode: pnpm exec knip
+- circular: pnpm exec madge --circular .
