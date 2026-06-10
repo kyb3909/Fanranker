@@ -8,7 +8,8 @@ import { z } from "zod"
 
 const predictionItemSchema = z.object({
   game_id: z.string().min(1, "게임 ID가 필요합니다."),
-  prediction: z.enum(["home", "draw", "away", "over", "under", "odd", "even"], {
+  // SUM(홀짝) 마켓 중단(2026-06-11) — odd/even 은 더 이상 받지 않음
+  prediction: z.enum(["home", "draw", "away", "over", "under"], {
     message: "잘못된 예측 값입니다.",
   }),
 })
@@ -404,8 +405,6 @@ export async function POST(request: NextRequest) {
         draw: parseFloat(game?.draw_odds) || 0,
         over: parseFloat(game?.over_odds) || 0,
         under: parseFloat(game?.under_odds) || 0,
-        odd: parseFloat(game?.odd_odds) || 0,
-        even: parseFloat(game?.even_odds) || 0,
       }
       return {
         user_id: user.id,
