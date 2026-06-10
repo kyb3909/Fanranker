@@ -14,3 +14,10 @@ worldcup 게임 숨김으로 다음 6파일이 unreferenced 가 됨. AUDIT_REPOR
 - hooks/use-worldcup.ts
 - components/battle/create-worldcup-dialog.tsx / worldcup-stats.tsx / worldcup-view.tsx
 - components/worldcup/worldcup-page.tsx / worldcup-page-client.tsx
+
+## H-목록 집행 방식 변경 (2026-06-11 게이트 중 발견)
+notFound() 페이지는 Next 15.5 에서 root layout Suspense 스트리밍(동적) 또는
+prerender meta 무status(정적) 때문에 **HTTP 200 + 404 UI(soft-404)** 가 되고,
+root metadata 가 robots index,follow 를 덮어써 **색인까지 됨** — 게이트(404) 미충족.
+→ 라우트 자체 삭제로 전환. 부활 = app/games/worldcup/page.tsx 1파일 재생성
+(worldcup-page-client 등 컴포넌트는 보존됨 — AUDIT 보존 결정 그대로).
