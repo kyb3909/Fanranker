@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { LogIn, Landmark, Lock } from "lucide-react"
-import type { MapPin } from "./region-map"
+import type { MapPin } from "@/types/stadium"
 
 interface StadiumInfoCardProps {
   pin: MapPin

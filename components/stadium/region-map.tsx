@@ -4,24 +4,10 @@ import { useRef, useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { StadiumInfoCard } from "./stadium-info-card"
+import type { MapPin } from "@/types/stadium"
 import { easeOutCubic, clamp, hexToRgba } from "@/lib/stadium/map-utils"
 
 // ─── Types ───────────────────────────────────────────────
-export interface MapPin {
-  team_id: string
-  name: string
-  team_name: string
-  team_short_name: string
-  pin_x: number // 0-100
-  pin_y: number // 0-100
-  color: string
-  level: number
-  total_points: number
-  fan_count: number
-  progress_pct: number
-  pinImage?: string // optional custom pin image URL
-}
-
 interface RegionMapProps {
   regionName: string
   league: string

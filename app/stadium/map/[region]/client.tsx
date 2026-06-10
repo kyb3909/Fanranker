@@ -2,7 +2,8 @@
 
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
-import { RegionMap, type MapPin } from "@/components/stadium/region-map"
+import { RegionMap } from "@/components/stadium/region-map"
+import type { MapPin } from "@/types/stadium"
 import { STADIUM_LEVELS } from "@/lib/constants/stadium-levels"
 
 interface Props {
