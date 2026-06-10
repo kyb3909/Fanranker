@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs"
 import { ArrowUpDown } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
+import { reportClientError } from "@/lib/client-error"
 import { CommentItem } from "./comment-item"
 import { CommentForm } from "./comment-form"
 import { countAllComments, transformComments } from "@/types/post-detail"
@@ -52,6 +53,7 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
   const [replyText, setReplyText] = useState("")
   const [isSubmittingReply, setIsSubmittingReply] = useState<string | number | null>(null)
   const [commentSort, setCommentSort] = useState<"newest" | "popular">("newest")
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const updateComments = useCallback(
     (newComments: Comment[]) => {
@@ -74,10 +76,18 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
         equippedTitles || []
       )
       updateComments(transformedComments)
-    } catch {
-      updateComments([])
+      setLoadFailed(false)
+    } catch (error) {
+      // 빈 목록으로 위장하지 않는다 — 에러 상태로 표면화 + 보고
+      reportClientError("comments.load", error)
+      setLoadFailed(true)
     }
   }, [postId, updateComments])
+
+  const retryLoadComments = () => {
+    setIsLoadingComments(true)
+    reloadComments().finally(() => setIsLoadingComments(false))
+  }
 
   const hasInitialData = useRef(!!initialData)
   useEffect(() => {
@@ -117,6 +127,7 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
       }
       await reloadComments()
     } catch (error) {
+      reportClientError("comments.create", error)
       toast({
         variant: "destructive",
         title: "댓글 작성 실패",
@@ -161,6 +172,7 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
       await reloadComments()
       setReplyingTo(null)
     } catch (error) {
+      reportClientError("comments.reply", error)
       toast({
         variant: "destructive",
         title: "답글 작성 실패",
@@ -221,6 +233,19 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
               <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
                 댓글을 불러오는 중...
               </p>
+            </div>
+          ) : loadFailed ? (
+            <div className="py-8 text-center">
+              <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+                댓글을 불러오지 못했습니다.
+              </p>
+              <button
+                onClick={retryLoadComments}
+                className="mt-3 rounded-md px-3 py-1.5 text-xs font-bold transition-colors"
+                style={{ color: "var(--wc-ink)", background: "var(--wc-soft)" }}
+              >
+                다시 시도
+              </button>
             </div>
           ) : comments.length === 0 ? (
             <div className="py-8 text-center">
