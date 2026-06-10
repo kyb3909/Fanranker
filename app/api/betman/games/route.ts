@@ -126,7 +126,8 @@ export async function GET(request: NextRequest) {
     }
 
     const allowedSports = ["축구", "야구", "농구", "배구"]
-    const allowedGameTypes = ["일반", "핸디캡", "언더오버", "SUM"]
+    // SUM(홀짝) 은 2026-06-11 부로 노출/베팅 중단 — 필터 화이트리스트에서도 제외
+    const allowedGameTypes = ["일반", "핸디캡", "언더오버"]
     if (sportFilter !== "all") {
       if (!allowedSports.includes(sportFilter)) {
         return NextResponse.json({ error: "유효하지 않은 종목입니다." }, { status: 400 })
@@ -258,10 +259,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ===== SUM(홀짝/합계) 마켓 노출 제거 (2026-06-11) =====
+    // 홀짝·합계는 분석력과 무관한 운 게임 — 전 종목(배구 Set합계 포함)에서 표시/베팅 중단.
+    // DB 유입(POST)은 유지: SUM row 가 위 전반전 휴리스틱 2의 디스크리미네이터라
+    // 쿼리가 아닌 응답 단계에서 제외한다. 베팅 차단은 prediction 라우트 enum 에서.
+    const isSumType = (t: unknown) => t === "SUM" || t === "SSUM"
+    const visibleGames = gamesWithOdds.filter((g) => !isSumType(g.game_type))
+    const visibleGroups = Object.values(groupedGames)
+      .map((group) => ({
+        ...group,
+        games: group.games.filter((g) => !isSumType(g.game_type)),
+      }))
+      .filter((group) => group.games.length > 0)
+
     const user = await currentUser()
     let userPredictions: unknown[] = []
-    if (user && gamesWithOdds.length > 0) {
-      const gameIds = gamesWithOdds.map((g) => g.id).filter(Boolean)
+    if (user && visibleGames.length > 0) {
+      const gameIds = visibleGames.map((g) => g.id).filter(Boolean)
       const { data: predictions } = await supabase
         .from("betman_predictions")
         .select("*")
@@ -287,7 +301,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find the earliest bet_close_at among bettable games (for countdown)
-    const bettableGames = gamesWithOdds.filter((g) => g.is_bettable)
+    const bettableGames = visibleGames.filter((g) => g.is_bettable)
     const earliestBetClose =
       bettableGames.length > 0
         ? bettableGames.reduce(
@@ -307,10 +321,10 @@ export async function GET(request: NextRequest) {
       dailyRound: null, // No longer used for display — kept for API compat
       bettingWindow: windowStatus,
       earliestBetClose,
-      games: gamesWithOdds,
-      groupedGames: Object.values(groupedGames),
+      games: visibleGames,
+      groupedGames: visibleGroups,
       userPredictions,
-      total: gamesWithOdds.length,
+      total: visibleGames.length,
       syncInfo: {
         status: syncStatus,
         latestGmTs: syncState?.latest_gm_ts,
