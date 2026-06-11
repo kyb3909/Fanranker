@@ -8,6 +8,119 @@ import useSWR from "swr"
 import { ExternalLink, Loader2, Play } from "lucide-react"
 import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 
+/** 플랫폼 BI 헤더 스트립 */
+function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" }) {
+  const configs = {
+    youtube: {
+      bg: "var(--wc-card, #ffffff)",
+      iconColor: "#FF0000",
+      label: "YouTube",
+      labelColor: "var(--wc-mute, #5C6470)",
+      source: "youtube.com",
+      sourceMuted: true,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M23 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.4-1C16.6 3.6 12 3.6 12 3.6s-4.6 0-7.7.3c-.5.1-1.5.1-2.4 1-.7.7-.9 2.3-.9 2.3S.8 9.1.8 11v1.8c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.6.3 7.6.3s4.6 0 7.7-.3c.5-.1 1.5-.1 2.4-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8V11c0-1.9-.2-3.8-.2-3.8zM9.7 15.1V8.4l6.2 3.4-6.2 3.3z" />
+        </svg>
+      ),
+      borderBottom: "1px solid var(--wc-line, #E2E5EA)",
+    },
+    x: {
+      bg: "#000000",
+      iconColor: "#FFFFFF",
+      label: "",
+      labelColor: "#FFFFFF",
+      source: "x.com",
+      sourceMuted: false,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      ),
+      borderBottom: "none",
+    },
+    instagram: {
+      bg: "linear-gradient(95deg, #F9CE34 -15%, #EE2A7B 52%, #6228D7 115%)",
+      iconColor: "#FFFFFF",
+      label: "Instagram",
+      labelColor: "#FFFFFF",
+      source: "instagram.com",
+      sourceMuted: false,
+      icon: (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          width="15"
+          height="15"
+        >
+          <rect x="2.8" y="2.8" width="18.4" height="18.4" rx="5.2" />
+          <circle cx="12" cy="12" r="4.2" />
+          <circle cx="17.4" cy="6.6" r="1.2" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+      borderBottom: "none",
+    },
+  } as const
+
+  const c = configs[platform]
+  const sourceOpacity = c.sourceMuted ? "var(--wc-mute-2, #8B93A0)" : "rgba(255,255,255,0.62)"
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "9px 13px",
+        background: c.bg,
+        borderBottom: c.borderBottom,
+      }}
+    >
+      <span style={{ display: "inline-flex", color: c.iconColor }}>{c.icon}</span>
+      {c.label && (
+        <span
+          style={{
+            fontSize: 11.5,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            color: c.labelColor,
+            textTransform: "uppercase",
+          }}
+        >
+          {c.label}
+        </span>
+      )}
+      <span
+        style={{
+          marginLeft: "auto",
+          fontSize: 11.5,
+          color: sourceOpacity,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          width="11"
+          height="11"
+        >
+          <path
+            d="M10 14a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.1M14 10a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"
+            strokeLinecap="round"
+          />
+        </svg>
+        {c.source}
+      </span>
+    </div>
+  )
+}
+
 interface EmbedCardProps {
   provider: "youtube" | "instagram" | "x"
   url: string
@@ -73,6 +186,7 @@ export function EmbedCard({
     return (
       <Card className={cn("border-border overflow-hidden border", className)}>
         <CardContent className="p-0">
+          <PlatformBadge platform="youtube" />
           <div className="relative aspect-video w-full bg-black">
             <iframe
               src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
@@ -168,6 +282,7 @@ export function EmbedCard({
   return (
     <Card className={cn("border-border overflow-hidden border", className)}>
       <CardContent className="p-0">
+        <PlatformBadge platform="youtube" />
         <div className="relative aspect-video w-full bg-black">
           <div
             className="h-full w-full [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
@@ -227,21 +342,24 @@ function InstagramEmbed({
   }, [safeHtml])
 
   return (
-    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
-      <CardContent className="p-4">
-        <div
-          ref={containerRef}
-          className="mx-auto max-w-[540px] [&_.instagram-media]:!mx-auto"
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
-        />
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground mt-2 block text-xs break-all hover:underline"
-        >
-          {url}
-        </a>
+    <Card className={cn("border-border overflow-hidden border", className)}>
+      <CardContent className="p-0">
+        <PlatformBadge platform="instagram" />
+        <div className="bg-card p-4">
+          <div
+            ref={containerRef}
+            className="mx-auto max-w-[540px] [&_.instagram-media]:!mx-auto"
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+          />
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground mt-2 block text-xs break-all hover:underline"
+          >
+            {url}
+          </a>
+        </div>
       </CardContent>
     </Card>
   )
@@ -258,29 +376,32 @@ function XFallbackCard({
   className?: string
 }) {
   return (
-    <Card className={cn("border-border bg-card overflow-hidden border", className)}>
-      <CardContent className="p-4">
-        <div className="mx-auto max-w-[550px] space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <svg viewBox="0 0 24 24" className="fill-foreground h-5 w-5" aria-label="X">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-              {author_name && (
-                <span className="text-foreground text-sm font-medium">{author_name}</span>
-              )}
+    <Card className={cn("border-border overflow-hidden border", className)}>
+      <CardContent className="p-0">
+        <PlatformBadge platform="x" />
+        <div className="bg-card p-4">
+          <div className="mx-auto max-w-[550px] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" className="fill-foreground h-5 w-5" aria-label="X">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                {author_name && (
+                  <span className="text-foreground text-sm font-medium">{author_name}</span>
+                )}
+              </div>
             </div>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary flex items-center gap-2 text-sm hover:underline"
+            >
+              <ExternalLink className="h-4 w-4" />
+              X에서 보기
+            </a>
+            <p className="text-muted-foreground text-xs break-all">{url}</p>
           </div>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary flex items-center gap-2 text-sm hover:underline"
-          >
-            <ExternalLink className="h-4 w-4" />
-            X에서 보기
-          </a>
-          <p className="text-muted-foreground text-xs break-all">{url}</p>
         </div>
       </CardContent>
     </Card>
@@ -312,6 +433,7 @@ function XRichEmbed({
   return (
     <Card className={cn("border-border overflow-hidden border", className)}>
       <CardContent className="p-0">
+        <PlatformBadge platform="x" />
         {/* 미디어 영역 — 피드와 동일 프레임 */}
         {firstMedia && (
           <div className="relative aspect-video w-full overflow-hidden bg-black">
