@@ -64,7 +64,7 @@ export function BettingRankings({
             >
               {myRank.rank ?? "-"}
             </div>
-            <span className="text-sm font-bold" style={{ color: "var(--wc-ink, #1a1416)" }}>
+            <span className="text-sm font-bold" style={{ color: "var(--wc-ink, #14161A)" }}>
               {myRank.nickname || "나"}
             </span>
             <div

@@ -56,7 +56,7 @@ export function GoldBalance() {
             />
             <span
               className="text-sm font-bold tabular-nums"
-              style={{ color: "var(--wc-ink, #1a1416)" }}
+              style={{ color: "var(--wc-ink, #14161A)" }}
             >
               {balance ?? 0}
             </span>
