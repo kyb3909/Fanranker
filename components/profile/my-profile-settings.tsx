@@ -271,10 +271,18 @@ export function MyProfileSettings() {
       </div>
 
       {isLoading ? (
-        <Card className="p-8 text-center">
-          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">정보를 불러오는 중...</p>
-        </Card>
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+        >
+          <Loader2
+            className="mx-auto mb-2 h-8 w-8 animate-spin"
+            style={{ color: "var(--wc-mute)" }}
+          />
+          <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+            정보를 불러오는 중...
+          </p>
+        </div>
       ) : (
         <div className="space-y-5">
           <ProfileHero
@@ -292,19 +300,41 @@ export function MyProfileSettings() {
           />
 
           <Tabs defaultValue="activity" className="gap-4">
-            <TabsList className="grid h-11 w-full grid-cols-4 sm:h-9">
-              <TabsTrigger value="activity" className="gap-1.5 text-xs sm:text-sm">
+            <TabsList
+              className="h-auto w-full justify-start gap-0 rounded-none p-0"
+              style={{
+                background: "transparent",
+                borderBottom: "1px solid var(--wc-line)",
+              }}
+            >
+              <TabsTrigger
+                value="activity"
+                className="gap-1.5 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold shadow-none data-[state=active]:border-[var(--wc-burgundy)] data-[state=active]:bg-transparent data-[state=active]:text-[color:var(--wc-burgundy)] data-[state=active]:shadow-none"
+                style={{ color: "var(--wc-mute)" }}
+              >
                 <User className="h-3.5 w-3.5" />
                 활동
               </TabsTrigger>
-              <TabsTrigger value="identity" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger
+                value="identity"
+                className="gap-1.5 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold shadow-none data-[state=active]:border-[var(--wc-burgundy)] data-[state=active]:bg-transparent data-[state=active]:text-[color:var(--wc-burgundy)] data-[state=active]:shadow-none"
+                style={{ color: "var(--wc-mute)" }}
+              >
                 <Sparkles className="h-3.5 w-3.5" />팬 정체성
               </TabsTrigger>
-              <TabsTrigger value="follows" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger
+                value="follows"
+                className="gap-1.5 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold shadow-none data-[state=active]:border-[var(--wc-burgundy)] data-[state=active]:bg-transparent data-[state=active]:text-[color:var(--wc-burgundy)] data-[state=active]:shadow-none"
+                style={{ color: "var(--wc-mute)" }}
+              >
                 <Hash className="h-3.5 w-3.5" />
                 팔로우
               </TabsTrigger>
-              <TabsTrigger value="settings" className="gap-1.5 text-xs sm:text-sm">
+              <TabsTrigger
+                value="settings"
+                className="gap-1.5 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold shadow-none data-[state=active]:border-[var(--wc-burgundy)] data-[state=active]:bg-transparent data-[state=active]:text-[color:var(--wc-burgundy)] data-[state=active]:shadow-none"
+                style={{ color: "var(--wc-mute)" }}
+              >
                 <Settings className="h-3.5 w-3.5" />
                 설정
               </TabsTrigger>
@@ -355,6 +385,27 @@ export function MyProfileSettings() {
               <PasswordSection user={user} />
 
               <DeleteAccountSection onDelete={handleDeleteAccount} />
+
+              {/* 로그아웃 */}
+              <button
+                onClick={() => signOut()}
+                className="w-full text-left"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "14px 20px",
+                  borderTop: "1px solid var(--wc-line)",
+                  background: "var(--wc-card)",
+                  border: "none",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "var(--wc-down)",
+                }}
+              >
+                로그아웃
+              </button>
             </TabsContent>
           </Tabs>
         </div>
