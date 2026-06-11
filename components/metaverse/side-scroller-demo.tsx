@@ -21,12 +21,17 @@ import { UserActionPopover } from "./user-action-popover"
 import { ReportUserDialog, type ReportTarget } from "./report-user-dialog"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { AvatarShopModal, AVATAR_EQUIP_LOCAL_KEY } from "./avatar-shop-modal"
-import { ARSENAL_HOME_AVATAR_KEY, DEFAULT_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
+import {
+  ARSENAL_HOME_AVATAR_KEY,
+  DEFAULT_AVATAR_KEY,
+  MALE_BASIC_AVATAR_KEY,
+} from "@/lib/metaverse/avatar/presets"
 import { METAVERSE_GUEST_HEADER } from "@/lib/metaverse/constants"
 import { MetaverseHud } from "./metaverse-hud"
 
-/** 데모·게스트 기본 유니폼 — 마이그레이션 전 테스트용으로 아스날 홈킷 고정. */
-const DEMO_FALLBACK_AVATAR_KEY = ARSENAL_HOME_AVATAR_KEY
+/** 데모·게스트 기본 유니폼 — gandalf 검증 중: male-basic 고정. 완료 후 ARSENAL_HOME_AVATAR_KEY 로 복원. */
+const DEMO_FALLBACK_AVATAR_KEY = MALE_BASIC_AVATAR_KEY
+void ARSENAL_HOME_AVATAR_KEY // 나중에 복원 시 사용
 
 export function SideScrollerDemo() {
   const parentRef = useRef<HTMLDivElement>(null)
