@@ -32,9 +32,13 @@
 2. 댓글 작성/답글/수정/삭제/투표 정상 (훅 추출 회귀 확인)
 3. 회귀: `/`(home), `/prediction` 렌더 무변화
 
-## 4b — write 정렬 (R8)
+## 4b — write 정렬 (R8) ✅
 
-design-only 산출물: [05_write_decomposition_design.md](05_write_decomposition_design.md). **승인 후 실행** (플랜 규정).
+design-only 산출물: [05_write_decomposition_design.md](05_write_decomposition_design.md) — 사용자 승인 후 실행 (플랜 규정 준수).
+
+- 435줄 → 합성 루트(72줄) + `use-write-form`(reducer 소유) / `use-write-uploads` / `use-write-og` / `use-write-submit`. `useWriteEditor()` 반환 API 불변 → `app/write/page.tsx` 수정 0줄.
+- **기계적 이탈 1건**: 서브 훅으로 이동하며 `dispatch` 가 파라미터가 되어 useCallback deps 에 추가됨 (`[]→[dispatch]` 등). dispatch 는 React 보장 stable ref — 런타임 차이 없음.
+- 게이트: tsc 0 · eslint 0 · vitest 901/901 · build 0 · knip clean(내부 전용 타입 3개 export 강등) · **e2e write.spec diff 중립** (전/후 25 failed 집합 동일 — 4a 와 같은 스테일 스펙 부채, 백로그).
 
 ## 4c — metaverse UI 정렬 ✅ (선행 완료 확인)
 
