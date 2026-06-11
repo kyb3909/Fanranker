@@ -6,24 +6,17 @@ import Link from "@/components/ui/app-link"
 import { CommunitySidebar } from "@/components/sidebar/community-sidebar"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Loader2, Search as SearchIcon, User, Hash, FileText } from "lucide-react"
+import { Loader2, Search as SearchIcon } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 
 type SearchType = "nickname" | "id" | "title" | "title_content"
 
 const SEARCH_TYPE_OPTIONS = [
-  { value: "title_content", label: "제목", icon: FileText },
-  { value: "nickname", label: "닉네임", icon: User },
-  { value: "id", label: "ID", icon: Hash },
+  { value: "title_content", label: "전체" },
+  { value: "title", label: "제목" },
+  { value: "nickname", label: "닉네임" },
+  { value: "id", label: "ID" },
 ] as const
 
 interface Post {
@@ -34,12 +27,36 @@ interface Post {
   avatar: string
   timestamp: string
   title: string
-  content: string | Record<string, unknown> // TipTap JSON or string
+  content: string | Record<string, unknown>
   image?: string
   upvotes: number
   comments: number
   isUpvoted: boolean
   createdAt: Date
+}
+
+function highlightMatch(text: string, query: string) {
+  if (!query.trim()) return <>{text}</>
+  const q = query.trim()
+  const i = text.toLowerCase().indexOf(q.toLowerCase())
+  if (i < 0) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark
+        style={{
+          background: "var(--wc-soft)",
+          color: "var(--wc-burgundy)",
+          fontWeight: 800,
+          padding: "0 1px",
+          borderRadius: 3,
+        }}
+      >
+        {text.slice(i, i + q.length)}
+      </mark>
+      {text.slice(i + q.length)}
+    </>
+  )
 }
 
 function SearchContent() {
@@ -59,7 +76,6 @@ function SearchContent() {
 
   const PAGE_SIZE = 20
 
-  // URL에서 검색어가 있으면 자동 검색 (초기 진입 시에만)
   const initialSearchDone = useState(false)
   useEffect(() => {
     if (initialSearchDone[0]) return
@@ -86,7 +102,6 @@ function SearchContent() {
     const offset = loadMore ? posts.length : 0
 
     try {
-      // API 호출
       const response = await fetch(
         `/api/search?q=${encodeURIComponent(query.trim())}&type=${type}&limit=${PAGE_SIZE}&offset=${offset}`
       )
@@ -101,7 +116,6 @@ function SearchContent() {
       const data = await response.json()
       const { posts: fetchedPosts, profiles } = data || { posts: [], profiles: [] }
 
-      // 프로필 매핑
       const profileMap = new Map<
         string,
         { user_id: string; nickname: string; avatar_url: string | null }
@@ -112,7 +126,6 @@ function SearchContent() {
         ]) || []
       )
 
-      // 데이터 변환
       const transformedPosts: Post[] = (fetchedPosts || []).map(
         (post: {
           id: string
@@ -169,13 +182,11 @@ function SearchContent() {
 
     if (!finalQuery) return
 
-    // URL 업데이트
     const params = new URLSearchParams()
     params.set("q", finalQuery)
     params.set("type", finalType)
     router.push(`/search?${params.toString()}`, { scroll: false })
 
-    // API 호출
     performSearch(finalQuery, finalType)
   }
 
@@ -183,8 +194,6 @@ function SearchContent() {
     e.preventDefault()
     handleSearch()
   }
-
-  const selectedTypeOption = SEARCH_TYPE_OPTIONS.find((opt) => opt.value === searchType)
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
@@ -199,133 +208,178 @@ function SearchContent() {
           </aside>
           <div className="col-span-12 space-y-4 lg:col-span-6">
             {/* 검색 헤더 */}
-            <div className="space-y-4">
-              <h1 className="text-foreground text-2xl font-bold">검색</h1>
-
-              {/* 검색 폼 */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex gap-2">
-                  {/* 검색 타입 선택 */}
-                  <Select
-                    value={searchType}
-                    onValueChange={(value) => setSearchType(value as SearchType)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue>
-                        {selectedTypeOption && (
-                          <div className="flex items-center gap-2">
-                            <selectedTypeOption.icon className="h-4 w-4" />
-                            <span>{selectedTypeOption.label}</span>
-                          </div>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SEARCH_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center gap-2">
-                            <option.icon className="h-4 w-4" />
-                            <span>{option.label}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* 검색 입력 */}
-                  <div className="relative flex-1">
-                    <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2" />
-                    <Input
-                      type="text"
-                      placeholder={
-                        searchType === "nickname"
-                          ? "닉네임을 입력하세요..."
-                          : searchType === "id"
-                            ? "글 ID를 입력하세요..."
-                            : searchType === "title"
-                              ? "제목을 입력하세요..."
-                              : "제목 또는 내용을 입력하세요..."
-                      }
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleSubmit(e)
-                        }
-                      }}
-                      className="h-10 pl-10"
-                    />
-                  </div>
-
-                  {/* 검색 버튼 */}
-                  <Button type="submit" disabled={isLoading || !searchQuery.trim()}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        검색 중...
-                      </>
-                    ) : (
-                      <>
-                        <SearchIcon className="mr-2 h-4 w-4" />
-                        검색
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+            <div>
+              <div className="wc-sec-eb">SEARCH</div>
+              <h1
+                className="text-[23px] font-extrabold"
+                style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
+              >
+                검색
+              </h1>
             </div>
 
+            {/* 검색 폼 */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div style={{ position: "relative" }}>
+                <SearchIcon
+                  style={{
+                    position: "absolute",
+                    left: 16,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 18,
+                    height: 18,
+                    color: "var(--wc-mute-2)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="게시물, 닉네임 검색"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmit(e as unknown as React.FormEvent)
+                  }}
+                  style={{
+                    width: "100%",
+                    height: 52,
+                    padding: "0 16px 0 44px",
+                    fontSize: 15.5,
+                    fontFamily: "var(--font-sans)",
+                    border: "1px solid var(--wc-line-2)",
+                    borderRadius: 14,
+                    outline: "none",
+                    background: "#fff",
+                    color: "var(--wc-ink)",
+                    boxShadow: "var(--wc-shadow-1)",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "var(--wc-burgundy)"
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--wc-line-2)"
+                  }}
+                />
+              </div>
+
+              {/* 검색 타입 pills */}
+              <div style={{ display: "flex", gap: 6 }}>
+                {SEARCH_TYPE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSearchType(opt.value as SearchType)}
+                    className={`wc-pill-tab${searchType === opt.value ? "on" : ""}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </form>
+
             {/* 검색 결과 */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               {errorMessage ? (
-                <div className="bg-destructive/10 border-destructive/20 rounded-lg border p-6 text-center">
-                  <p className="text-destructive mb-2 text-sm font-medium">{errorMessage}</p>
-                  <p className="text-muted-foreground text-xs">잠시 후 다시 시도해주세요.</p>
+                <div
+                  className="rounded-xl p-6 text-center"
+                  style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+                >
+                  <p className="mb-2 text-sm font-medium" style={{ color: "var(--wc-warn)" }}>
+                    {errorMessage}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--wc-mute)" }}>
+                    잠시 후 다시 시도해주세요.
+                  </p>
                 </div>
               ) : isLoading ? (
-                <div className="bg-card border-border rounded-lg border p-8 text-center">
-                  <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-                  <p className="text-muted-foreground text-sm">검색 중...</p>
+                <div
+                  className="rounded-xl p-8 text-center"
+                  style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+                >
+                  <Loader2
+                    className="mx-auto mb-2 h-8 w-8 animate-spin"
+                    style={{ color: "var(--wc-mute)" }}
+                  />
+                  <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+                    검색 중...
+                  </p>
                 </div>
               ) : hasSearched && posts.length === 0 ? (
-                <div className="bg-card border-border rounded-lg border p-8 text-center">
-                  <p className="text-muted-foreground mb-2 text-sm">검색 결과가 없습니다.</p>
-                  <p className="text-muted-foreground text-xs">
+                <div
+                  className="rounded-xl p-8 text-center"
+                  style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+                >
+                  <p className="mb-2 text-sm" style={{ color: "var(--wc-mute)" }}>
+                    검색 결과가 없습니다.
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--wc-mute-2)" }}>
                     다른 검색어나 검색 타입을 시도해보세요.
                   </p>
                 </div>
               ) : hasSearched && posts.length > 0 ? (
                 <>
-                  <div className="text-muted-foreground mb-2 text-sm">
-                    검색 결과:{" "}
-                    <span className="text-foreground font-semibold">{posts.length}개</span>
+                  <div className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                    검색 결과 <b style={{ color: "var(--wc-burgundy)" }}>{posts.length}건</b>
                   </div>
-                  <div className="bg-card border-border overflow-hidden rounded-lg border">
-                    {/* 게시판 목록 헤더 */}
-                    <div className="bg-muted/40 border-border text-muted-foreground grid grid-cols-12 gap-2 border-b px-4 py-2.5 text-[12px] font-semibold">
-                      <div className="col-span-6 sm:col-span-7">제목</div>
-                      <div className="col-span-3 sm:col-span-2">게시판</div>
-                      <div className="col-span-3 text-right sm:col-span-3">작성일</div>
-                    </div>
-                    {/* 목록 행 */}
-                    {posts.map((post) => (
-                      <Link
-                        key={post.id}
-                        href={`/post/${post.id}`}
-                        className="border-border hover:bg-muted/40 grid grid-cols-12 items-center gap-2 border-b px-4 py-2.5 transition-colors last:border-b-0"
+                  {posts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/post/${post.id}`}
+                      className="gn-card-lift block overflow-hidden rounded-xl"
+                      style={{
+                        background: "var(--wc-card)",
+                        border: "1px solid var(--wc-line)",
+                        padding: "15px 18px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 6,
+                        }}
                       >
-                        <div className="text-foreground col-span-6 truncate pr-2 text-[14px] font-medium sm:col-span-7">
-                          {post.title}
-                        </div>
-                        <div className="text-muted-foreground col-span-3 truncate text-[13px] sm:col-span-2">
+                        <span
+                          className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                          style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+                        >
                           {post.community}
-                        </div>
-                        <div className="text-muted-foreground col-span-3 shrink-0 text-right text-[12px] sm:col-span-3">
-                          {post.timestamp}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                        </span>
+                        <span style={{ fontSize: 12, color: "var(--wc-mute-2)" }}>
+                          {highlightMatch(post.author, searchQuery)} · {post.timestamp}
+                        </span>
+                      </div>
+                      <h2
+                        style={{
+                          margin: "0 0 4px",
+                          fontSize: 16,
+                          fontWeight: 800,
+                          letterSpacing: "-0.02em",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {highlightMatch(post.title, searchQuery)}
+                      </h2>
+                      {typeof post.content === "string" && post.content && (
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 13.5,
+                            lineHeight: 1.55,
+                            color: "var(--wc-mute)",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical" as const,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {highlightMatch(post.content, searchQuery)}
+                        </p>
+                      )}
+                    </Link>
+                  ))}
                   {hasMore && (
                     <div className="py-4 text-center">
                       <Button
@@ -346,13 +400,19 @@ function SearchContent() {
                   )}
                 </>
               ) : (
-                <div className="bg-card border-border rounded-lg border p-8 text-center">
-                  <SearchIcon className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-50" />
-                  <p className="text-muted-foreground mb-2 text-sm">
-                    검색어를 입력하고 검색 버튼을 누르세요.
+                <div
+                  className="rounded-xl p-8 text-center"
+                  style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+                >
+                  <SearchIcon
+                    className="mx-auto mb-4 h-12 w-12 opacity-40"
+                    style={{ color: "var(--wc-mute)" }}
+                  />
+                  <p className="mb-2 text-sm" style={{ color: "var(--wc-mute)" }}>
+                    검색어를 입력하고 검색하세요.
                   </p>
-                  <p className="text-muted-foreground text-xs">
-                    검색 타입을 선택하여 원하는 방식으로 검색할 수 있습니다.
+                  <p className="text-xs" style={{ color: "var(--wc-mute-2)" }}>
+                    타입을 선택하여 원하는 방식으로 검색할 수 있습니다.
                   </p>
                 </div>
               )}
@@ -376,9 +436,17 @@ export default function SearchPage() {
           className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
           tabIndex={-1}
         >
-          <div className="bg-card border-border rounded-lg border p-8 text-center">
-            <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground text-sm">로딩 중...</p>
+          <div
+            className="rounded-xl p-8 text-center"
+            style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+          >
+            <Loader2
+              className="mx-auto mb-2 h-8 w-8 animate-spin"
+              style={{ color: "var(--wc-mute)" }}
+            />
+            <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+              로딩 중...
+            </p>
           </div>
         </main>
       }
