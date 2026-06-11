@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import useSWR, { SWRConfig } from "swr"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
-import { Eye, MessageSquare, Loader2, ThumbsUp, LayoutGrid } from "lucide-react"
+import { Eye, MessageSquare, Loader2, ThumbsUp } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { fetcher } from "@/lib/swr"
@@ -18,9 +18,17 @@ interface Category {
   parent_slug: string | null
 }
 
-// 게시판 둘러보기 그리드에 노출할 최대 개수.
-// 디자인이 2x5 / 5x2 그리드로 고정이라 항상 정확히 10개만 표시.
 const EXPLORE_GRID_LIMIT = 10
+
+const CAT_CHIP_MAP: Record<string, { bg: string; color: string }> = {
+  축구: { bg: "#FDECEC", color: "#9F1239" },
+  야구: { bg: "#EAF1FD", color: "#1E3A8A" },
+  농구: { bg: "#FDF1E5", color: "#9A3412" },
+  배구: { bg: "#F4EEFB", color: "#581C87" },
+  게임: { bg: "#EEF0FA", color: "#2D3A8C" },
+  애니: { bg: "#EAF4F4", color: "#0F5858" },
+  음악: { bg: "#FDEFF3", color: "#9F1239" },
+}
 
 interface Post {
   id: string
@@ -128,65 +136,77 @@ function ExploreInner() {
         <div className="grid grid-cols-12 gap-6">
           {/* Main Content */}
           <div className="col-span-12 space-y-6 xl:col-span-9">
-            {/* 게시판 둘러보기 */}
+            {/* 섹션 헤더 */}
+            <div style={{ marginBottom: 4 }}>
+              <div className="wc-sec-eb">Explore</div>
+              <h1
+                className="font-title text-[28px] font-extrabold sm:text-[34px]"
+                style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
+              >
+                운동장
+              </h1>
+              <p className="mt-2 text-[14px]" style={{ color: "var(--wc-mute)", lineHeight: 1.6 }}>
+                관심 있는 커뮤니티를 찾아 즐겨찾기에 추가하세요.
+              </p>
+            </div>
+
+            {/* 커뮤니티 카드 그리드 */}
             {categories.length > 0 && (
               <div
-                className="overflow-hidden rounded-xl"
                 style={{
-                  background: "var(--wc-card)",
-                  boxShadow: "var(--wc-shadow-1)",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                  gap: 14,
                 }}
               >
-                <div
-                  className="flex items-center gap-2 px-4 py-3"
-                  style={{
-                    background: "var(--wc-soft)",
-                    borderBottom: "1px solid var(--wc-line)",
-                  }}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
-                  <h2
-                    className="text-[11px] font-bold uppercase"
-                    style={{
-                      color: "var(--wc-burgundy)",
-                      letterSpacing: "0.18em",
-                    }}
-                  >
-                    게시판 둘러보기
-                  </h2>
-                </div>
-                <div
-                  className="grid grid-cols-2 sm:grid-cols-5"
-                  style={{
-                    gap: 0,
-                  }}
-                >
-                  {categories.map((cat) => (
+                {categories.map((cat) => {
+                  const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
+                  return (
                     <Link
                       key={cat.slug}
                       href={`/community/${cat.slug}`}
-                      className="flex flex-col items-center gap-1.5 py-4 text-center transition-colors"
+                      className="gn-card-lift flex flex-col items-start gap-2.5"
                       style={{
-                        borderRight: "1px solid var(--wc-line)",
-                        borderBottom: "1px solid var(--wc-line)",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "var(--wc-soft)"
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent"
+                        background: "var(--wc-card)",
+                        border: "1px solid var(--wc-line)",
+                        borderRadius: 12,
+                        padding: "20px 20px 18px",
+                        textDecoration: "none",
                       }}
                     >
-                      <span className="text-2xl">{cat.icon || "📋"}</span>
                       <span
-                        className="text-[13px] font-semibold"
-                        style={{ color: "var(--wc-ink)" }}
+                        aria-hidden
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 12,
+                          background: chip.bg,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 21,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {cat.icon || "📋"}
+                      </span>
+                      <span
+                        className="font-title text-[16.5px] font-extrabold"
+                        style={{ color: "var(--wc-ink)", letterSpacing: "-.01em" }}
                       >
                         {cat.name}
                       </span>
+                      {cat.description && (
+                        <span
+                          className="text-[12.5px]"
+                          style={{ color: "var(--wc-mute)", lineHeight: 1.5 }}
+                        >
+                          {cat.description}
+                        </span>
+                      )}
                     </Link>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
             )}
 
