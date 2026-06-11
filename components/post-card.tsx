@@ -65,16 +65,10 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   return (
     <article>
       <div
-        className="overflow-hidden rounded-lg transition-colors"
+        className="gn-card-lift overflow-hidden rounded-lg"
         style={{
           background: "var(--wc-card)",
           boxShadow: "var(--wc-shadow-1)",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--wc-soft)"
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "var(--wc-card)"
         }}
       >
         <div className="relative px-4 py-3 sm:px-5">
