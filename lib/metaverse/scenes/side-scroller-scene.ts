@@ -42,6 +42,13 @@ import {
   type RotationDir,
 } from "@/lib/metaverse/avatar/pro-avatar-xl"
 import { DEFAULT_AVATAR_KEY, getAvatarPreset } from "@/lib/metaverse/avatar/presets"
+import {
+  preloadAllGandalfPresets,
+  createAllGandalfAnims,
+  gandalfAnimKey,
+  gandalfIdleTexKey,
+  type GandalfAnimKind,
+} from "@/lib/metaverse/avatar/gandalf-avatar"
 import { ChatBubble } from "./chat-bubble"
 import { SideScrollerRemoteAvatar } from "./sidescroll-remote-avatar"
 
@@ -103,7 +110,17 @@ const BG_TEXTURE = "ss-bg-stadium"
 // 1916×821 stadium 일러스트 — webp q=80 으로 압축 (PNG 2.2MB → webp 221KB, 시각 거의 동일).
 const BG_URL = "/metaverse/bg-stadium.webp"
 
-type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "turning"
+type PlayerState =
+  | "idle"
+  | "walking"
+  | "running"
+  | "jumping"
+  | "kicking"
+  | "turning"
+  | "biting"
+  | "headbutting"
+  | "knockback"
+  | "pain"
 
 export class SideScrollerScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -119,6 +136,12 @@ export class SideScrollerScene extends Phaser.Scene {
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
   private rKey!: Phaser.Input.Keyboard.Key
+  /** Z = 물기(Suarez), H = 박치기(Zidane) — gandalf 시스템 전용 */
+  private zKey!: Phaser.Input.Keyboard.Key
+  private hKey!: Phaser.Input.Keyboard.Key
+  private shiftKey!: Phaser.Input.Keyboard.Key
+  /** gandalf 시스템 사용 여부 — create() 에서 preset 확인 후 세팅. */
+  private avatarIsGandalf: boolean = false
   private platforms!: Phaser.Physics.Arcade.StaticGroup
 
   /** Realtime 채널 — 없으면 (데모 스탠드얼론) 싱글플레이 fallback */
@@ -197,6 +220,7 @@ export class SideScrollerScene extends Phaser.Scene {
     }
     // 원격 유저의 다양한 프리셋 지원 위해 전체 프리셋 선로딩.
     preloadAllAvatarPresets(this)
+    preloadAllGandalfPresets(this)
   }
 
   create() {
@@ -222,13 +246,15 @@ export class SideScrollerScene extends Phaser.Scene {
 
     // walk / jump / kick anim 등록 — 모든 프리셋에 대해 (원격 유저들의 다양한 외형 대응)
     createAllAvatarAnimations(this)
+    createAllGandalfAnims(this)
 
     const preset = getAvatarPreset(this.presetKey)
+    this.avatarIsGandalf = preset.avatarSystem === "gandalf"
     // 플레이어 스프라이트 — 초기 east idle. 프리셋별 스프라이트.
     this.player = this.physics.add.sprite(
       100,
       FLOOR_TOP_Y - 100,
-      texKeyIdle("east", this.presetKey)
+      this.avatarIsGandalf ? gandalfIdleTexKey(this.presetKey) : texKeyIdle("east", this.presetKey)
     )
     this.player.setScale(AVATAR_SCALE)
     this.player.setDepth(10)
@@ -254,6 +280,25 @@ export class SideScrollerScene extends Phaser.Scene {
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
         const key = anim.key
+
+        // Gandalf one-shot 완료 → idle 복귀
+        if (this.avatarIsGandalf) {
+          const kickKey = gandalfAnimKey("kick", this.presetKey)
+          if (key === kickKey) {
+            this.applyPendingKickToBall()
+            this.state = "idle"
+            this.player.play(gandalfAnimKey("idle", this.presetKey), true)
+            return
+          }
+          const oneShotKinds: GandalfAnimKind[] = ["bite", "headbut", "knockback", "pain"]
+          if (oneShotKinds.map((k) => gandalfAnimKey(k, this.presetKey)).includes(key)) {
+            this.state = "idle"
+            this.player.play(gandalfAnimKey("idle", this.presetKey), true)
+          }
+          return
+        }
+
+        // Pro-xl kick 완료
         if (
           key === animKey("kick", "east", this.presetKey) ||
           key === animKey("kick", "west", this.presetKey)
@@ -302,9 +347,12 @@ export class SideScrollerScene extends Phaser.Scene {
       "W" | "A" | "S" | "D",
       Phaser.Input.Keyboard.Key
     >
-    // 액션 키: Space = 점프, R = 킥 (홀드 충전)
+    // 액션 키: Space = 점프, R = 킥 (홀드 충전), Z = 물기, H = 박치기, Shift = 달리기(gandalf)
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
+    this.zKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z)
+    this.hKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.H)
+    this.shiftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
 
     // 카메라 follow + 월드 경계
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
@@ -394,8 +442,14 @@ export class SideScrollerScene extends Phaser.Scene {
       }
     }
 
-    // 킥 중에는 입력·이동 차단 — 발 심고 동작 완료까지 기다림
-    if (this.state === "kicking") {
+    // 킥/물기/박치기/피격 중에는 입력·이동 차단 — 동작 완료까지 기다림
+    if (
+      this.state === "kicking" ||
+      this.state === "biting" ||
+      this.state === "headbutting" ||
+      this.state === "knockback" ||
+      this.state === "pain"
+    ) {
       body.setAccelerationX(0)
       body.setDragX(GROUND_DRAG)
       this.updateNameTag()
@@ -451,12 +505,17 @@ export class SideScrollerScene extends Phaser.Scene {
         body.setAccelerationX(0)
         body.setVelocityX(0)
         body.setDragX(GROUND_DRAG)
-        // kick anim 은 east 원본만 — west 쪽은 동일한 east 방향 그림이라 flipX 로 반전.
-        this.player.play(animKey("kick", "east", this.presetKey), true)
-        this.player.setFlipX(this.facing === "west")
-        // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 idle 대비 과하게 큰 경우 스케일 다운.
-        // body.bottom 유지로 발 위치 고정 (스케일 변화에 따른 body world-Y drift 차단).
-        this.setScaleKeepingFeet(AVATAR_SCALE * this.presetKickScale)
+        // kick anim: gandalf=east-only flipX, pro-xl=east 원본 + kickScale 보정
+        if (this.avatarIsGandalf) {
+          this.player.play(gandalfAnimKey("kick", this.presetKey), true)
+          this.player.setFlipX(this.facing === "west")
+        } else {
+          this.player.play(animKey("kick", "east", this.presetKey), true)
+          this.player.setFlipX(this.facing === "west")
+          // 프리셋별 kickScale 보정 — PixelLab 커스텀 kick 이 idle 대비 과하게 큰 경우 스케일 다운.
+          // body.bottom 유지로 발 위치 고정 (스케일 변화에 따른 body world-Y drift 차단).
+          this.setScaleKeepingFeet(AVATAR_SCALE * this.presetKickScale)
+        }
         // 킥 중엔 공 시각만 숨김. body 는 그대로 두고 floor collider 가 알아서 처리.
         // (이전 body.enable / allowGravity 토글 시도들은 모두 부작용 발생.)
         this.pendingBallX = this.ball.x
@@ -466,6 +525,34 @@ export class SideScrollerScene extends Phaser.Scene {
         this.pendingKickAngleDeg = angle
         this.updateNameTag()
         this.updateChargeBar()
+        return
+      }
+    }
+
+    // Gandalf 전용 — Z=물기, H=박치기 (지상 + 이동 중 허용)
+    if (this.avatarIsGandalf && onGround) {
+      const biteJustDown = Phaser.Input.Keyboard.JustDown(this.zKey)
+      const headbutJustDown = Phaser.Input.Keyboard.JustDown(this.hKey)
+      if (
+        biteJustDown &&
+        (this.state === "idle" || this.state === "walking" || this.state === "running")
+      ) {
+        this.state = "biting"
+        body.setAccelerationX(0)
+        body.setVelocityX(0)
+        this.player.play(gandalfAnimKey("bite", this.presetKey), true)
+        this.updateNameTag()
+        return
+      }
+      if (
+        headbutJustDown &&
+        (this.state === "idle" || this.state === "walking" || this.state === "running")
+      ) {
+        this.state = "headbutting"
+        body.setAccelerationX(0)
+        body.setVelocityX(0)
+        this.player.play(gandalfAnimKey("headbut", this.presetKey), true)
+        this.updateNameTag()
         return
       }
     }
@@ -486,7 +573,7 @@ export class SideScrollerScene extends Phaser.Scene {
     // 걷는 도중엔 무시 (방향이 이미 east/west 로 잠겨있어야 자연스러움).
     // 이 지점에선 state ∈ {idle, walking, jumping} (kicking/turning 은 이미 early return)
     const isStationary = onGround && !left && !right && Math.abs(body.velocity.x) < 20
-    if (isStationary && this.state !== "jumping") {
+    if (!this.avatarIsGandalf && isStationary && this.state !== "jumping") {
       if (lookUpPressed) this.requestOrientation("north")
       else if (lookDownPressed) this.requestOrientation("south")
     }
@@ -495,10 +582,15 @@ export class SideScrollerScene extends Phaser.Scene {
     if (jumpPressed && onGround) {
       body.setVelocityY(JUMP_VELOCITY)
       this.state = "jumping"
-      // 점프할 때 orientation 을 facing 으로 sync (north/south 보고 있다가 점프하면 east/west 로)
-      this.orientation = this.facing
-      this.player.setFlipX(false)
-      this.player.play(animKey("jump", this.facing, this.presetKey), true)
+      if (this.avatarIsGandalf) {
+        // east-only 스프라이트 — flipX 는 이미 facing 과 동기화됨
+        this.player.play(gandalfAnimKey("jump", this.presetKey), true)
+      } else {
+        // 점프할 때 orientation 을 facing 으로 sync (north/south 보고 있다가 점프하면 east/west 로)
+        this.orientation = this.facing
+        this.player.setFlipX(false)
+        this.player.play(animKey("jump", this.facing, this.presetKey), true)
+      }
       // juice: squash & stretch
       this.playJumpSquash()
     }
@@ -521,9 +613,12 @@ export class SideScrollerScene extends Phaser.Scene {
     }
     this.wasOnGround = onGround
 
-    // 공중이 아닌데 jumping / turning 이 아니면 walking/idle 판정
+    // locked 상태 아니면 walking/idle/running 판정 (gandalf) 또는 walking/idle (pro-xl).
+    // biting/headbutting/knockback/pain 은 위에서 이미 early-return 됨 → 여기선 jumping/turning 만 체크.
     if (this.state !== "jumping" && this.state !== "turning") {
-      this.state = onGround && Math.abs(body.velocity.x) > 10 ? "walking" : "idle"
+      if (!this.avatarIsGandalf) {
+        this.state = onGround && Math.abs(body.velocity.x) > 10 ? "walking" : "idle"
+      }
       this.syncIdleOrWalkAnim(onGround, body.velocity.x)
     }
 
@@ -542,6 +637,13 @@ export class SideScrollerScene extends Phaser.Scene {
   private setFacing(next: Facing) {
     if (this.facing === next) return
     this.facing = next
+
+    if (this.avatarIsGandalf) {
+      // orientation/rotation 없음 — west 방향은 flipX 만으로 처리
+      this.player.setFlipX(next === "west")
+      return
+    }
+
     this.orientation = next // 걷기 중엔 orientation 도 east/west 와 동일
     this.player.setFlipX(false)
     const cur = this.player.anims.currentAnim?.key ?? ""
@@ -555,11 +657,32 @@ export class SideScrollerScene extends Phaser.Scene {
   }
 
   /**
-   * state === idle | walking 일 때 anim 동기화. jump/kick/turning 은 별도 분기.
-   * idle 에선 orientation (8방향 중 하나) 의 rotation 텍스처를 보여줌 — 정면/후면
-   * 포함 north/south 도 정상 표시.
+   * state === idle | walking | running 일 때 anim 동기화.
+   * jump/kick/one-shot 은 별도 분기.
+   * gandalf: idle/walking/run 모두 looping anim.
+   * pro-xl: idle = rotation 텍스처, walk = walk anim.
    */
   private syncIdleOrWalkAnim(onGround: boolean, vx: number) {
+    if (this.avatarIsGandalf) {
+      const absVx = Math.abs(vx)
+      let kind: GandalfAnimKind
+      if (!onGround || absVx <= 10) {
+        this.state = "idle"
+        kind = "idle"
+      } else if (this.shiftKey?.isDown) {
+        this.state = "running"
+        kind = "run"
+      } else {
+        this.state = "walking"
+        kind = "walking"
+      }
+      const key = gandalfAnimKey(kind, this.presetKey)
+      if (this.player.anims.currentAnim?.key !== key || !this.player.anims.isPlaying) {
+        this.player.play(key, true)
+      }
+      return
+    }
+
     if (onGround && Math.abs(vx) > 10) {
       const walkKey = animKey("walk", this.facing, this.presetKey)
       if (this.player.anims.currentAnim?.key !== walkKey || !this.player.anims.isPlaying) {
@@ -671,7 +794,8 @@ export class SideScrollerScene extends Phaser.Scene {
     this.pendingBallX = null
     this.pendingBallY = null
     // 상태 복원: flipX 해제, 공 재표시
-    this.player.setFlipX(false)
+    // gandalf: facing 방향 flipX 복원. pro-xl: flipX 해제.
+    this.player.setFlipX(this.avatarIsGandalf ? this.facing === "west" : false)
     this.ball.setVisible(true)
     if (speed === null || angleDeg === null || x === null || y === null) return
     // 안전장치: pendingBallY 가 floor 안쪽 또는 아래쪽이면 floor 위 휴지 위치로 클램프.
@@ -750,6 +874,7 @@ export class SideScrollerScene extends Phaser.Scene {
   private wireActionState(): SideScrollerActionState {
     switch (this.state) {
       case "walking":
+      case "running":
         return "walking"
       case "jumping":
         return "jumping"
@@ -757,6 +882,10 @@ export class SideScrollerScene extends Phaser.Scene {
         return "kicking"
       case "turning":
         return "turning"
+      case "biting":
+      case "headbutting":
+      case "knockback":
+      case "pain":
       case "idle":
       default:
         return "idle"

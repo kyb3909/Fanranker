@@ -1,151 +1,263 @@
 /**
- * GandalfHardcore avatar — body + hair 두 sprite 합성 (Phaser Container).
+ * Gandalf Avatar — 9-애니 east-only 사이드뷰 시스템.
  *
- * Sheet 구조: 800×432, 80×64 cell, 7행 × 10열.
- *  - row 0 (frame 0~4)   : idle (5)
- *  - row 1 (frame 10~17) : walk (8)
- *  - row 2 (frame 20~27) : run (8)
- *  - row 3 (frame 30~33) : jump (4)
- *  - row 4 (frame 40~43) : fall (4)
- *  - row 5 (frame 50~55) : attack (6)
+ * 에셋 레이아웃 (`public/metaverse/avatars/<preset-id>/` 아래):
+ *   walking/frame_{000-003}.png   — 걷기 4프레임
+ *   idle/frame_{000-003}.png      — 정지 4프레임
+ *   run/frame_{000-003}.png       — 달리기 4프레임
+ *   jump/frame_{000-005}.png      — 점프 6프레임
+ *   bite/frame_{000-005}.png      — 물기 6프레임 (Suarez)
+ *   headbut/frame_{000-004}.png   — 박치기 5프레임 (Zidane)
+ *   kick/frame_{000-005}.png      — 킥 6프레임
+ *   knockback/frame_{000-004}.png — 피격 넉백 5프레임
+ *   pain/frame_{000-004}.png      — 고통 5프레임
  *
- * 두 sheet (Male_Skin1·Male_Hair1) 동일 frame 레이아웃 → 같은 state 키로 동시 play.
- * Container 자체에 physics body. 자식 sprite 는 origin (0.5, 1.0) 발끝 정렬.
+ * west 방향은 east 텍스처를 setFlipX(true) 로 재사용. 별도 west 폴더 없음.
  */
 
-import * as Phaser from "phaser"
+import type * as Phaser from "phaser"
+import { AVATAR_PRESETS, type AvatarPreset } from "./presets"
 
-export const GANDALF_BODY_TEX = "gandalf-body"
-export const GANDALF_HAIR_TEX = "gandalf-hair"
-const GANDALF_FRAME_W = 80
-const GANDALF_FRAME_H = 64
+export type GandalfAnimKind =
+  | "walking"
+  | "idle"
+  | "run"
+  | "jump"
+  | "bite"
+  | "headbut"
+  | "kick"
+  | "knockback"
+  | "pain"
 
-const BODY_URL = "/assets/characters/gandalf/Male_Skin1.png"
-const HAIR_URL = "/assets/characters/gandalf/Male_Hair1.png"
+export const GANDALF_ANIM_KINDS: GandalfAnimKind[] = [
+  "walking",
+  "idle",
+  "run",
+  "jump",
+  "bite",
+  "headbut",
+  "kick",
+  "knockback",
+  "pain",
+]
 
+/** loop=-1 애니 목록 (나머지는 repeat=0 one-shot). */
+const LOOPING_ANIMS = new Set<GandalfAnimKind>(["walking", "idle", "run"])
+
+function frameCount(preset: AvatarPreset, kind: GandalfAnimKind): number {
+  switch (kind) {
+    case "walking":
+      return preset.walkFrames
+    case "idle":
+      return preset.idleFrames ?? 4
+    case "run":
+      return preset.runFrames ?? 4
+    case "jump":
+      return preset.jumpFrames
+    case "bite":
+      return preset.biteFrames ?? 6
+    case "headbut":
+      return preset.headbutFrames ?? 5
+    case "kick":
+      return preset.kickFrames
+    case "knockback":
+      return preset.knockbackFrames ?? 5
+    case "pain":
+      return preset.painFrames ?? 5
+  }
+}
+
+function fps(preset: AvatarPreset, kind: GandalfAnimKind): number {
+  switch (kind) {
+    case "walking":
+      return preset.walkFps
+    case "idle":
+      return preset.idleFps ?? 6
+    case "run":
+      return preset.runFps ?? 14
+    case "jump":
+      return preset.jumpFps
+    case "bite":
+      return preset.biteFps ?? 10
+    case "headbut":
+      return preset.headbutFps ?? 12
+    case "kick":
+      return preset.kickFps
+    case "knockback":
+      return preset.knockbackFps ?? 10
+    case "pain":
+      return preset.painFps ?? 8
+  }
+}
+
+/** Phaser image 텍스처 키 — 프레임 단위. */
+export function gandalfTexKey(kind: GandalfAnimKind, frame: number, presetId: string): string {
+  const preset = AVATAR_PRESETS[presetId]
+  return `${preset.texturePrefix}-${kind}-${frame}`
+}
+
+/** Phaser anims.play() 용 애니 키. */
+export function gandalfAnimKey(kind: GandalfAnimKind, presetId: string): string {
+  const preset = AVATAR_PRESETS[presetId]
+  return `${preset.texturePrefix}-${kind}`
+}
+
+/** 초기 표시용 첫 idle 프레임 텍스처 키. */
+export function gandalfIdleTexKey(presetId: string): string {
+  return gandalfTexKey("idle", 0, presetId)
+}
+
+function preloadGandalfPreset(scene: Phaser.Scene, presetId: string): void {
+  const preset = AVATAR_PRESETS[presetId]
+  if (!preset || preset.avatarSystem !== "gandalf") return
+
+  for (const kind of GANDALF_ANIM_KINDS) {
+    const count = frameCount(preset, kind)
+    for (let i = 0; i < count; i++) {
+      const key = gandalfTexKey(kind, i, presetId)
+      if (!scene.textures.exists(key)) {
+        const padded = String(i).padStart(3, "0")
+        scene.load.image(key, `${preset.assetBase}/${kind}/frame_${padded}.png`)
+      }
+    }
+  }
+}
+
+/** 등록된 모든 gandalf 프리셋을 preload. */
+export function preloadAllGandalfPresets(scene: Phaser.Scene): void {
+  for (const id of Object.keys(AVATAR_PRESETS)) {
+    preloadGandalfPreset(scene, id)
+  }
+}
+
+function createGandalfAnimsForPreset(scene: Phaser.Scene, presetId: string): void {
+  const preset = AVATAR_PRESETS[presetId]
+  if (!preset || preset.avatarSystem !== "gandalf") return
+
+  for (const kind of GANDALF_ANIM_KINDS) {
+    const key = gandalfAnimKey(kind, presetId)
+    if (scene.anims.exists(key)) continue
+
+    const count = frameCount(preset, kind)
+    const frames = Array.from({ length: count }, (_, i) => ({
+      key: gandalfTexKey(kind, i, presetId),
+    }))
+
+    scene.anims.create({
+      key,
+      frames,
+      frameRate: fps(preset, kind),
+      repeat: LOOPING_ANIMS.has(kind) ? -1 : 0,
+    })
+  }
+}
+
+/** 등록된 모든 gandalf 프리셋의 Phaser anim 등록. */
+export function createAllGandalfAnims(scene: Phaser.Scene): void {
+  for (const id of Object.keys(AVATAR_PRESETS)) {
+    createGandalfAnimsForPreset(scene, id)
+  }
+}
+
+/** one-shot 애니(bite/headbut/kick/knockback/pain) 여부. */
+export function gandalfIsOneShot(kind: GandalfAnimKind): boolean {
+  return !LOOPING_ANIMS.has(kind)
+}
+
+// ============================================================
+// IndoorMapScene 호환 API — Container 기반 body+hair 레이어 시스템.
+// TODO: body/hair 분리 스프라이트 에셋이 준비되면 구현 완성.
+// ============================================================
+
+export const GANDALF_BODY_TEX = "gandalf-body-sheet"
+export const GANDALF_HAIR_TEX = "gandalf-hair-sheet"
+
+/** IndoorMapScene 의 상태 이름 (indoor 씬 고유 — IndoorActionState 와 동일). */
 export type GandalfState = "idle" | "walk" | "run" | "jump" | "fall" | "attack"
 
-interface AnimDef {
-  start: number
-  end: number
-  fps: number
-  /** -1 = 무한 반복, 0 = 1회 */
-  repeat: number
+/**
+ * IndoorMapScene 아바타 래퍼 — Container + body/hair sprite + 헬퍼 메서드.
+ * body+hair 분리 에셋 미준비 상태: body 스프라이트만 표시, hair 는 alpha 0.
+ */
+export class GandalfAvatar {
+  readonly container: Phaser.GameObjects.Container
+  readonly body: Phaser.GameObjects.Sprite
+  readonly hair: Phaser.GameObjects.Sprite
+  private _currentState: GandalfState = "idle"
+  private readonly _presetId: string
+
+  constructor(
+    container: Phaser.GameObjects.Container,
+    body: Phaser.GameObjects.Sprite,
+    hair: Phaser.GameObjects.Sprite,
+    presetId: string
+  ) {
+    this.container = container
+    this.body = body
+    this.hair = hair
+    this._presetId = presetId
+  }
+
+  playAnim(state: GandalfState): void {
+    this._currentState = state
+    // indoor state → gandalf anim kind 매핑 (분리 에셋 미준비, body 스프라이트만 사용)
+    const kind = this._mapToAnimKind(state)
+    const key = gandalfAnimKey(kind, this._presetId)
+    if (this.body.anims.currentAnim?.key !== key || !this.body.anims.isPlaying) {
+      this.body.play(key, true)
+    }
+  }
+
+  setFlipX(flip: boolean): void {
+    this.body.setFlipX(flip)
+    this.hair.setFlipX(flip)
+  }
+
+  getCurrentState(): GandalfState {
+    return this._currentState
+  }
+
+  private _mapToAnimKind(state: GandalfState): GandalfAnimKind {
+    switch (state) {
+      case "walk":
+        return "walking"
+      case "run":
+        return "run"
+      case "jump":
+      case "fall":
+        return "jump"
+      case "attack":
+        return "kick"
+      case "idle":
+      default:
+        return "idle"
+    }
+  }
 }
 
-const GANDALF_ANIMS: Record<GandalfState, AnimDef> = {
-  idle: { start: 0, end: 4, fps: 8, repeat: -1 },
-  walk: { start: 10, end: 17, fps: 12, repeat: -1 },
-  run: { start: 20, end: 27, fps: 14, repeat: -1 },
-  jump: { start: 30, end: 33, fps: 12, repeat: 0 },
-  fall: { start: 40, end: 43, fps: 8, repeat: -1 },
-  attack: { start: 50, end: 55, fps: 14, repeat: 0 },
-}
-
-const STATE_KEYS: GandalfState[] = ["idle", "walk", "run", "jump", "fall", "attack"]
-
-/** body·hair 각자 텍스처별 anim 키 (texture-bound). */
-function bodyAnimKey(state: GandalfState): string {
-  return `gandalf_${state}_body`
-}
-function hairAnimKey(state: GandalfState): string {
-  return `gandalf_${state}_hair`
-}
-
+/** IndoorMapScene preload — 현재 male-basic 합성 스프라이트 fallback. */
 export function preloadGandalf(scene: Phaser.Scene): void {
-  if (!scene.textures.exists(GANDALF_BODY_TEX)) {
-    scene.load.spritesheet(GANDALF_BODY_TEX, BODY_URL, {
-      frameWidth: GANDALF_FRAME_W,
-      frameHeight: GANDALF_FRAME_H,
-    })
-  }
-  if (!scene.textures.exists(GANDALF_HAIR_TEX)) {
-    scene.load.spritesheet(GANDALF_HAIR_TEX, HAIR_URL, {
-      frameWidth: GANDALF_FRAME_W,
-      frameHeight: GANDALF_FRAME_H,
-    })
-  }
+  preloadAllGandalfPresets(scene)
 }
 
+/** IndoorMapScene anim 등록. */
 export function createGandalfAnimations(scene: Phaser.Scene): void {
-  for (const state of STATE_KEYS) {
-    const def = GANDALF_ANIMS[state]
-    const bodyKey = bodyAnimKey(state)
-    if (!scene.anims.exists(bodyKey)) {
-      scene.anims.create({
-        key: bodyKey,
-        frames: scene.anims.generateFrameNumbers(GANDALF_BODY_TEX, {
-          start: def.start,
-          end: def.end,
-        }),
-        frameRate: def.fps,
-        repeat: def.repeat,
-      })
-    }
-    const hairKey = hairAnimKey(state)
-    if (!scene.anims.exists(hairKey)) {
-      scene.anims.create({
-        key: hairKey,
-        frames: scene.anims.generateFrameNumbers(GANDALF_HAIR_TEX, {
-          start: def.start,
-          end: def.end,
-        }),
-        frameRate: def.fps,
-        repeat: def.repeat,
-      })
-    }
-  }
+  createAllGandalfAnims(scene)
 }
 
-/** body·hair sprite 합성 + 공통 헬퍼. Container 가 physics body 를 가짐. */
-export interface GandalfAvatar {
-  container: Phaser.GameObjects.Container
-  body: Phaser.GameObjects.Sprite
-  hair: Phaser.GameObjects.Sprite
-  /** state 애니메이션을 body·hair 동시 재생. ignoreIfPlaying=true 가 디폴트. */
-  playAnim: (state: GandalfState) => void
-  /** Container 는 setFlipX 없음 — 자식 sprite 각자 flip. */
-  setFlipX: (flip: boolean) => void
-  /** 현재 재생 중인 state 키 (마지막 호출값). 외부 state 머신 동기화용. */
-  getCurrentState: () => GandalfState | null
-}
-
-interface GandalfAvatarOptions {
-  /** body·hair 의 setOrigin Y. 기본 1.0 (발끝). */
-  originY?: number
-}
-
+/**
+ * IndoorMapScene Container 기반 아바타 생성.
+ * body+hair 분리 에셋 미준비 → male-basic 합성 스프라이트로 임시 렌더.
+ */
 export function createGandalfAvatar(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  options: GandalfAvatarOptions = {}
+  presetId: string = "male-basic"
 ): GandalfAvatar {
-  const originY = options.originY ?? 1.0
-
-  const body = scene.add.sprite(0, 0, GANDALF_BODY_TEX, 0).setOrigin(0.5, originY)
-  const hair = scene.add.sprite(0, 0, GANDALF_HAIR_TEX, 0).setOrigin(0.5, originY)
-  // hair 가 body 위에 렌더 (Container 의 children index 순서로 결정)
+  const body = scene.add.sprite(0, 0, gandalfIdleTexKey(presetId)).setOrigin(0.5, 1.0)
+  const hair = scene.add.sprite(0, 0, gandalfIdleTexKey(presetId)).setOrigin(0.5, 1.0)
+  hair.setAlpha(0) // 분리 에셋 미준비: hair 는 숨김
   const container = scene.add.container(x, y, [body, hair])
-
-  let currentState: GandalfState | null = null
-
-  return {
-    container,
-    body,
-    hair,
-    playAnim(state) {
-      // 같은 state 가 이미 재생 중이면 재시작 안 함 (ignoreIfPlaying=true)
-      body.play(bodyAnimKey(state), true)
-      hair.play(hairAnimKey(state), true)
-      currentState = state
-    },
-    setFlipX(flip) {
-      body.setFlipX(flip)
-      hair.setFlipX(flip)
-    },
-    getCurrentState() {
-      return currentState
-    },
-  }
+  return new GandalfAvatar(container, body, hair, presetId)
 }
