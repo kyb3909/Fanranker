@@ -154,13 +154,10 @@
 
   /* 카드 hover: shadow-lift (배경 유지, 그림자+올라오기) */
   .gn-card-lift {
-    transition:
-      box-shadow 0.18s ease,
-      transform 0.18s ease;
+    transition: box-shadow 0.18s ease;
   }
   .gn-card-lift:hover {
-    box-shadow: 0 4px 16px rgba(24, 18, 21, 0.07);
-    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(24, 18, 21, 0.09);
   }
 
   .safe-area-pb {
