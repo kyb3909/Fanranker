@@ -1,6 +1,6 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
+import type { CSSProperties } from "react"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Circle, Lock } from "lucide-react"
 import {
@@ -12,79 +12,64 @@ import {
   formatMatchTime,
 } from "./prediction-types"
 
-/**
- * 개별 배당률 셀의 스타일을 결정합니다.
- *
- * 디자인 원칙 (베트맨 참고, 자체 스타일):
- * - 적중한 내 선택: primary 배경 + 흰 글씨 (포인트 강조)
- * - 미적중한 내 선택: 연한 배경 + 흐린 텍스트 (선택 표시만)
- * - 정답 (내가 안 고른): primary 테두리 (정답 표시)
- * - 대기중 내 선택: 스포츠 색상
- * - 기본: 회색 배경
- */
 function getOddsCellStyle(
   optionKey: string,
   game: SportsGame,
   sportColor: { bg: string; text: string; border: string }
-) {
+): { cls: string; style: CSSProperties; icon: string | null } {
   const isSelected = game.prediction === optionKey
   const isCorrectAnswer = game.result === optionKey
   const isSettled = game.isCorrect !== null
 
-  // 경기 결과 확정된 경우
   if (isSettled) {
-    // 내 선택 + 적중: primary 배경 + 흰 글씨
     if (isSelected && game.isCorrect) {
       return {
-        container: "bg-primary text-primary-foreground",
-        label: "text-primary-foreground",
-        odds: "text-primary-foreground",
+        cls: "rounded-lg px-2 py-2.5 text-center",
+        style: { background: "var(--wc-burgundy)", color: "#fff" },
         icon: "✓",
       }
     }
-    // 내 선택 + 미적중: 연한 배경 + 흐린 텍스트
     if (isSelected && !game.isCorrect) {
       return {
-        container: "bg-muted/60 border border-border",
-        label: "text-muted-foreground",
-        odds: "text-muted-foreground",
+        cls: "rounded-lg px-2 py-2.5 text-center",
+        style: {
+          background: "var(--wc-paper)",
+          border: "1px solid var(--wc-line)",
+          color: "var(--wc-mute)",
+        },
         icon: "✗",
       }
     }
-    // 정답 (내가 안 골랐지만 이게 정답): primary 테두리
     if (isCorrectAnswer) {
       return {
-        container: "border-2 border-primary/40 bg-primary/5",
-        label: "text-primary",
-        odds: "text-primary",
+        cls: "rounded-lg px-2 py-2.5 text-center",
+        style: {
+          border: "2px solid var(--wc-burgundy)",
+          background: "var(--wc-soft)",
+          color: "var(--wc-burgundy)",
+        },
         icon: "✓",
       }
     }
-    // 나머지 (선택도 아니고 정답도 아님)
     return {
-      container: "bg-muted/20",
-      label: "text-muted-foreground/50",
-      odds: "text-muted-foreground/40",
-      icon: null as string | null,
+      cls: "rounded-lg px-2 py-2.5 text-center",
+      style: { background: "var(--wc-paper)", color: "var(--wc-mute-2)" },
+      icon: null,
     }
   }
 
-  // 대기중: 내 선택
   if (isSelected) {
     return {
-      container: `border-2 ${sportColor.border} ${sportColor.bg}`,
-      label: sportColor.text,
-      odds: sportColor.text,
-      icon: null as string | null,
+      cls: `rounded-lg border-2 px-2 py-2.5 text-center ${sportColor.border} ${sportColor.bg}`,
+      style: {},
+      icon: null,
     }
   }
 
-  // 대기중: 선택 안한 옵션
   return {
-    container: "bg-muted/30",
-    label: "text-muted-foreground",
-    odds: "text-foreground",
-    icon: null as string | null,
+    cls: "rounded-lg px-2 py-2.5 text-center",
+    style: { background: "var(--wc-paper)", color: "var(--wc-mute)" },
+    icon: null,
   }
 }
 
@@ -134,12 +119,16 @@ export function BettingSlipCard({
   const resultStatus = getResultStatus()
 
   return (
-    <Card className="overflow-hidden border-0 shadow-sm">
+    <div
+      className="overflow-hidden rounded-xl"
+      style={{
+        background: "var(--wc-card)",
+        border: "1px solid var(--wc-line)",
+        boxShadow: "var(--wc-shadow-1)",
+      }}
+    >
       {/* Slip Header - Always Visible */}
-      <div
-        className={`hover:bg-muted/30 cursor-pointer p-3 transition-colors ${sportColor.bg}`}
-        onClick={onToggle}
-      >
+      <div className={`cursor-pointer p-3 transition-colors ${sportColor.bg}`} onClick={onToggle}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {locked && <Lock className="text-muted-foreground h-4 w-4" />}
@@ -170,18 +159,22 @@ export function BettingSlipCard({
           <div className="flex items-center gap-2">
             {/* Result Badge */}
             {locked ? (
-              <span className="bg-muted text-muted-foreground rounded px-2 py-1 text-xs font-medium">
+              <span
+                className="rounded px-2 py-1 text-xs font-medium"
+                style={{ background: "var(--wc-paper)", color: "var(--wc-mute)" }}
+              >
                 잠금
               </span>
             ) : (
               <div
-                className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                className="rounded px-2.5 py-1 text-xs font-semibold"
+                style={
                   resultStatus === "win"
-                    ? "bg-primary text-primary-foreground"
+                    ? { background: "var(--wc-burgundy)", color: "#fff" }
                     : resultStatus === "lose"
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-amber-50 text-amber-600"
-                }`}
+                      ? { background: "var(--wc-paper)", color: "var(--wc-mute)" }
+                      : { background: "#FEF3C7", color: "#D97706" }
+                }
               >
                 {resultStatus === "win" ? (
                   <span className="flex items-center gap-1">
@@ -214,17 +207,19 @@ export function BettingSlipCard({
 
       {/* Expanded Content - Betting Slip Details */}
       {isExpanded && locked && (
-        <div className="border-t px-4 py-5 text-center">
-          <Lock className="text-muted-foreground mx-auto mb-2 h-6 w-6" />
-          <p className="text-muted-foreground text-sm font-medium">구매 후 확인 가능</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
+        <div className="px-4 py-5 text-center" style={{ borderTop: "1px solid var(--wc-line)" }}>
+          <Lock className="mx-auto mb-2 h-6 w-6" style={{ color: "var(--wc-mute)" }} />
+          <p className="text-sm font-medium" style={{ color: "var(--wc-mute)" }}>
+            구매 후 확인 가능
+          </p>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--wc-mute-2)" }}>
             배점, 선택지 등 상세 정보는 열람 후 확인할 수 있습니다.
           </p>
           {lockedContent && <div className="mt-3">{lockedContent}</div>}
         </div>
       )}
       {isExpanded && !locked && (
-        <div className="border-t">
+        <div style={{ borderTop: "1px solid var(--wc-line)" }}>
           {/* Games List */}
           <div className="divide-y">
             {slip.games.map((game) => {
@@ -234,7 +229,10 @@ export function BettingSlipCard({
               return (
                 <div key={game.id} className="p-3">
                   {/* League & Time */}
-                  <div className="text-muted-foreground mb-2 flex items-center justify-between text-xs">
+                  <div
+                    className="mb-2 flex items-center justify-between text-xs"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     <span className="font-medium">{game.match.league}</span>
                     <span>{formatMatchTime(game.match.matchTime)}</span>
                   </div>
@@ -313,15 +311,14 @@ export function BettingSlipCard({
                           return (
                             <div
                               key={opt.key}
-                              className={`odds-btn rounded-lg px-2 py-2.5 text-center ${cellStyle.container}`}
+                              className={`odds-btn ${cellStyle.cls}`}
+                              style={cellStyle.style}
                             >
-                              <div className={`truncate text-xs ${cellStyle.label}`}>
+                              <div className="truncate text-xs">
                                 {cellStyle.icon && <span className="mr-0.5">{cellStyle.icon}</span>}
                                 {opt.label}
                               </div>
-                              <div
-                                className={`font-[family-name:var(--font-display)] text-sm font-bold ${cellStyle.odds}`}
-                              >
+                              <div className="font-[family-name:var(--font-display)] text-sm font-bold">
                                 {optionOdds ? optionOdds.toFixed(2) : "-"}
                               </div>
                             </div>
@@ -333,7 +330,10 @@ export function BettingSlipCard({
 
                   {/* Match Result (if finished) */}
                   {game.match.status === "finished" && game.match.homeScore !== undefined && (
-                    <div className="text-muted-foreground bg-muted/30 mt-2 rounded px-2 py-1 text-xs">
+                    <div
+                      className="mt-2 rounded px-2 py-1 text-xs"
+                      style={{ background: "var(--wc-paper)", color: "var(--wc-mute)" }}
+                    >
                       최종: {game.match.homeTeam} {game.match.homeScore} - {game.match.awayScore}{" "}
                       {game.match.awayTeam}
                     </div>
@@ -344,26 +344,29 @@ export function BettingSlipCard({
           </div>
 
           {/* Slip Footer - Summary */}
-          <div className="bg-muted/20 border-t px-3 py-3">
+          <div
+            className="px-3 py-3"
+            style={{ background: "var(--wc-paper)", borderTop: "1px solid var(--wc-line)" }}
+          >
             <div className="flex items-center justify-between">
-              <div className="text-muted-foreground text-sm">
+              <div className="text-sm" style={{ color: "var(--wc-mute)" }}>
                 <span className="flex items-center gap-1">
-                  <Circle className="fill-primary text-primary h-3 w-3" />
+                  <Circle
+                    className="h-3 w-3"
+                    style={{ fill: "var(--wc-burgundy)", color: "var(--wc-burgundy)" }}
+                  />
                   {slip.ballsUsed}볼 사용
                 </span>
               </div>
               <div className="text-right">
-                <div className="text-muted-foreground mb-0.5 text-xs">
+                <div className="mb-0.5 text-xs" style={{ color: "var(--wc-mute)" }}>
                   총 배점 {slip.totalOdds.toFixed(2)}배
                 </div>
                 <div
-                  className={`text-sm font-bold ${
-                    resultStatus === "win"
-                      ? "text-primary"
-                      : resultStatus === "lose"
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground"
-                  }`}
+                  className="text-sm font-bold"
+                  style={{
+                    color: resultStatus === "win" ? "var(--wc-burgundy)" : "var(--wc-mute)",
+                  }}
                 >
                   {resultStatus === "pending"
                     ? `예상 +${Math.floor(slip.ballsUsed * slip.totalOdds)}볼`
@@ -376,6 +379,6 @@ export function BettingSlipCard({
           </div>
         </div>
       )}
-    </Card>
+    </div>
   )
 }

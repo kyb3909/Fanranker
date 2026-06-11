@@ -1,21 +1,30 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
 import { CheckCircle2, XCircle, Clock } from "lucide-react"
 import { type RegularPrediction } from "./prediction-types"
 
 // Regular Prediction Card (for non-betman predictions)
 export function RegularPredictionCard({ prediction }: { prediction: RegularPrediction }) {
   return (
-    <Card className="overflow-hidden p-4">
+    <div
+      className="overflow-hidden rounded-xl p-4"
+      style={{
+        background: "var(--wc-card)",
+        border: "1px solid var(--wc-line)",
+        boxShadow: "var(--wc-shadow-1)",
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           {/* Match Info */}
           <div className="mb-2 flex items-center gap-2">
-            <span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-xs font-medium">
+            <span
+              className="rounded px-2 py-0.5 text-xs font-medium"
+              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+            >
               {prediction.match.league}
             </span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
               {new Date(prediction.match.matchTime).toLocaleDateString("ko-KR", {
                 month: "short",
                 day: "numeric",
@@ -26,13 +35,16 @@ export function RegularPredictionCard({ prediction }: { prediction: RegularPredi
           </div>
 
           {/* Teams */}
-          <p className="mb-2 text-sm font-medium">
+          <p className="mb-2 text-sm font-medium" style={{ color: "var(--wc-ink)" }}>
             {prediction.match.homeTeam} vs {prediction.match.awayTeam}
           </p>
 
           {/* Prediction Info */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-muted rounded px-2 py-1 text-xs">
+            <span
+              className="rounded px-2 py-1 text-xs"
+              style={{ background: "var(--wc-paper)", color: "var(--wc-mute)" }}
+            >
               예측:{" "}
               {prediction.predictedValue === "home"
                 ? prediction.match.homeTeam + " 승"
@@ -46,32 +58,34 @@ export function RegularPredictionCard({ prediction }: { prediction: RegularPredi
                         ? "무승부"
                         : prediction.predictedValue}
             </span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
               배점 {prediction.oddsAtPrediction.toFixed(2)}
             </span>
-            <span className="text-muted-foreground text-xs">{prediction.amount}볼 사용</span>
+            <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
+              {prediction.amount}볼 사용
+            </span>
           </div>
         </div>
 
         {/* Result */}
         <div className="text-right">
           {prediction.isCorrect === null ? (
-            <div className="flex items-center gap-1 text-amber-500">
+            <div className="flex items-center gap-1" style={{ color: "#D97706" }}>
               <Clock className="h-4 w-4" />
               <span className="text-xs font-medium">대기중</span>
             </div>
           ) : prediction.isCorrect ? (
             <div>
-              <div className="mb-1 flex items-center gap-1 text-emerald-500">
+              <div className="mb-1 flex items-center gap-1" style={{ color: "var(--wc-burgundy)" }}>
                 <CheckCircle2 className="h-4 w-4" />
                 <span className="text-xs font-medium">적중</span>
               </div>
-              <p className="text-sm font-bold text-emerald-600">
+              <p className="text-sm font-bold" style={{ color: "var(--wc-burgundy)" }}>
                 +{Number(prediction.pointsEarned).toFixed(2)} 볼
               </p>
             </div>
           ) : (
-            <div className="text-primary flex items-center gap-1">
+            <div className="flex items-center gap-1" style={{ color: "var(--wc-mute)" }}>
               <XCircle className="h-4 w-4" />
               <span className="text-xs font-medium">미적중</span>
             </div>
@@ -81,13 +95,13 @@ export function RegularPredictionCard({ prediction }: { prediction: RegularPredi
 
       {/* Match Result (if finished) */}
       {prediction.match.status === "finished" && prediction.match.homeScore !== undefined && (
-        <div className="border-border mt-3 border-t pt-3">
-          <p className="text-muted-foreground text-xs">
+        <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--wc-line)" }}>
+          <p className="text-xs" style={{ color: "var(--wc-mute)" }}>
             최종 스코어: {prediction.match.homeTeam} {prediction.match.homeScore} -{" "}
             {prediction.match.awayScore} {prediction.match.awayTeam}
           </p>
         </div>
       )}
-    </Card>
+    </div>
   )
 }

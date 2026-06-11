@@ -87,10 +87,19 @@ export default function MyPredictionsPage() {
   if (!isSignedIn) {
     return (
       <div className="flex items-center justify-center px-4 py-20">
-        <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
-          <Trophy className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
-          <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
-          <p className="text-muted-foreground mb-4 text-sm">
+        <div
+          className="max-w-sm rounded-xl p-8 text-center"
+          style={{
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
+          <Trophy className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute)" }} />
+          <h2 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink)" }}>
+            로그인이 필요합니다
+          </h2>
+          <p className="mb-4 text-sm" style={{ color: "var(--wc-mute)" }}>
             내 예측 내역을 확인하려면 먼저 로그인해주세요.
           </p>
           <div className="flex justify-center gap-2">
@@ -133,11 +142,26 @@ export default function MyPredictionsPage() {
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
           className="w-full"
         >
-          <TabsList className="mb-4 grid w-full grid-cols-4">
-            <TabsTrigger value="all">전체</TabsTrigger>
-            <TabsTrigger value="pending">대기중</TabsTrigger>
-            <TabsTrigger value="correct">적중</TabsTrigger>
-            <TabsTrigger value="incorrect">미적중</TabsTrigger>
+          <TabsList
+            className="mb-4 h-auto w-full justify-start gap-0 rounded-none p-0"
+            style={{ background: "transparent", borderBottom: "1px solid var(--wc-line)" }}
+          >
+            {(["all", "pending", "correct", "incorrect"] as const).map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold shadow-none data-[state=active]:border-[var(--wc-burgundy)] data-[state=active]:bg-transparent data-[state=active]:text-[color:var(--wc-burgundy)] data-[state=active]:shadow-none"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                {tab === "all"
+                  ? "전체"
+                  : tab === "pending"
+                    ? "대기중"
+                    : tab === "correct"
+                      ? "적중"
+                      : "미적중"}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value={activeTab}>
