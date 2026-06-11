@@ -141,7 +141,6 @@ export default function MyPostsPage() {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-        {/* 미니 헤더 — 뒤로가기 + 카운트 (페이지 인트로 헤더 제거) */}
         <div className="mb-4 flex items-center gap-3">
           <Button
             variant="ghost"
@@ -151,6 +150,9 @@ export default function MyPostsPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
+          <h1 className="text-[17px] font-black" style={{ color: "var(--wc-ink)" }}>
+            내 작성글
+          </h1>
           <span
             className="ml-auto text-sm font-semibold tabular-nums"
             style={{ color: "var(--wc-mute)" }}
