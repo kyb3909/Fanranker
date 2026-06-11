@@ -914,14 +914,14 @@ function InstagramInlineContent({ url }: { url: string }) {
       </div>
 
       {/* 미디어 — 클릭 시 원본 IG로 이동 */}
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="bg-muted relative mt-2.5 block aspect-square w-full overflow-hidden rounded-xl"
-      >
-        {data.thumbnail_url ? (
+      {data.thumbnail_url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="bg-muted relative mt-2.5 block aspect-square w-full overflow-hidden rounded-xl"
+        >
           <Image
             src={data.thumbnail_url}
             alt=""
@@ -933,16 +933,23 @@ function InstagramInlineContent({ url }: { url: string }) {
               ;(e.currentTarget as HTMLImageElement).style.display = "none"
             }}
           />
-        ) : (
-          <div
-            aria-hidden
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #2a1a2e, #4a1a3a)" }}
-          >
-            <InstagramIcon className="h-12 w-12 text-white/30" />
-          </div>
-        )}
-      </a>
+        </a>
+      ) : (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2.5 flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl no-underline"
+          style={{
+            height: 200,
+            background: "linear-gradient(135deg, #f09433 0%, #dc2743 50%, #bc1888 100%)",
+          }}
+        >
+          <InstagramIcon className="h-8 w-8 text-white/80" />
+          <span className="text-[13px] font-semibold text-white/90">Instagram에서 보기</span>
+        </a>
+      )}
 
       {/* 캡션 */}
       {data.title && (
