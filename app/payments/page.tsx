@@ -91,7 +91,7 @@ export default function PaymentsPage() {
     return (
       <div className="flex items-center justify-center px-4 py-20">
         <div className="bg-card border-border max-w-sm rounded-xl border p-8 text-center">
-          <Coins className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+          <Coins className="mx-auto mb-3 h-10 w-10" style={{ color: "#D97706" }} />
           <h2 className="mb-2 text-lg font-bold">로그인이 필요합니다</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             골드 내역을 보려면 먼저 로그인해주세요.
@@ -116,7 +116,7 @@ export default function PaymentsPage() {
             variant="ghost"
             size="icon"
             onClick={() => router.back()}
-            style={{ color: "var(--wc-mute, #5C6470)" }}
+            style={{ color: "var(--wc-mute)" }}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -125,7 +125,9 @@ export default function PaymentsPage() {
         {/* 에러 상태 */}
         {errorMessage && (
           <Card className="mb-6 p-8 text-center">
-            <p className="text-primary mb-3 text-sm">{errorMessage}</p>
+            <p className="mb-3 text-sm" style={{ color: "var(--wc-down)" }}>
+              {errorMessage}
+            </p>
             <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
               다시 시도
             </Button>
@@ -134,13 +136,22 @@ export default function PaymentsPage() {
 
         {/* 현재 잔액 카드 */}
         {goldInfo && (
-          <Card className="mb-6 border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-6">
+          <Card
+            className="mb-6 p-6"
+            style={{
+              borderColor: "rgba(245,158,11,0.2)",
+              background:
+                "linear-gradient(135deg, rgba(254,243,199,0.6) 0%, rgba(253,230,138,0.2) 100%)",
+            }}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted-foreground mb-1 text-sm">보유 골드</p>
                 <div className="flex items-center gap-2">
-                  <Coins className="h-6 w-6 text-amber-500" />
-                  <span className="text-3xl font-bold text-amber-600">{goldInfo.balance}</span>
+                  <Coins className="h-6 w-6" style={{ color: "#D97706" }} />
+                  <span className="text-3xl font-bold" style={{ color: "#D97706" }}>
+                    {goldInfo.balance}
+                  </span>
                 </div>
               </div>
               <div className="text-right">
@@ -155,17 +166,21 @@ export default function PaymentsPage() {
         <div className="mb-6 grid grid-cols-2 gap-3">
           <Card className="p-4">
             <div className="mb-2 flex items-center gap-2">
-              <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
+              <ArrowDownLeft className="h-4 w-4" style={{ color: "#10b981" }} />
               <span className="text-muted-foreground text-sm">총 획득</span>
             </div>
-            <p className="text-xl font-bold text-emerald-600">+{totalEarned} 골드</p>
+            <p className="text-xl font-bold" style={{ color: "#059669" }}>
+              +{totalEarned} 골드
+            </p>
           </Card>
           <Card className="p-4">
             <div className="mb-2 flex items-center gap-2">
-              <ArrowUpRight className="text-primary h-4 w-4" />
+              <ArrowUpRight className="h-4 w-4" style={{ color: "var(--wc-burgundy)" }} />
               <span className="text-muted-foreground text-sm">총 사용</span>
             </div>
-            <p className="text-primary text-xl font-bold">-{totalSpent} 골드</p>
+            <p className="text-xl font-bold" style={{ color: "var(--wc-burgundy)" }}>
+              -{totalSpent} 골드
+            </p>
           </Card>
         </div>
 
@@ -175,10 +190,20 @@ export default function PaymentsPage() {
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
           className="w-full"
         >
-          <TabsList className="mb-4 grid w-full grid-cols-3">
-            <TabsTrigger value="all">전체</TabsTrigger>
-            <TabsTrigger value="earn">획득</TabsTrigger>
-            <TabsTrigger value="spend">사용</TabsTrigger>
+          <TabsList
+            className="mb-4 h-auto w-full justify-start gap-0 rounded-none p-0"
+            style={{ background: "transparent", borderBottom: "1px solid var(--wc-line)" }}
+          >
+            {(["all", "earn", "spend"] as const).map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold shadow-none data-[state=active]:border-[var(--wc-burgundy)] data-[state=active]:bg-transparent data-[state=active]:text-[color:var(--wc-burgundy)] data-[state=active]:shadow-none"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                {tab === "all" ? "전체" : tab === "earn" ? "획득" : "사용"}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value={activeTab}>
@@ -194,11 +219,12 @@ export default function PaymentsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`rounded-full p-2 ${
+                          className="rounded-full p-2"
+                          style={
                             tx.type === "earn"
-                              ? "bg-emerald-100 text-emerald-600"
-                              : "bg-primary/15 text-primary"
-                          }`}
+                              ? { background: "#D1FAE5", color: "#059669" }
+                              : { background: "var(--wc-soft)", color: "var(--wc-burgundy)" }
+                          }
                         >
                           {tx.type === "earn" ? (
                             <ArrowDownLeft className="h-4 w-4" />
@@ -221,9 +247,8 @@ export default function PaymentsPage() {
                       </div>
                       <div className="text-right">
                         <p
-                          className={`font-bold ${
-                            tx.type === "earn" ? "text-emerald-600" : "text-primary"
-                          }`}
+                          className="font-bold"
+                          style={{ color: tx.type === "earn" ? "#059669" : "var(--wc-burgundy)" }}
                         >
                           {tx.type === "earn" ? "+" : ""}
                           {tx.amount} 골드
