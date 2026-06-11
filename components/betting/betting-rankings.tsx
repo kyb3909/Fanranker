@@ -42,15 +42,15 @@ export function BettingRankings({
           <div
             className="flex items-center gap-2 px-4 py-3"
             style={{
-              background: "var(--wc-soft, #f4ece6)",
-              borderBottom: "1px solid var(--wc-line, #efe7e0)",
+              background: "var(--wc-soft, #F6E4E8)",
+              borderBottom: "1px solid var(--wc-line, #E2E5EA)",
             }}
           >
-            <Target className="h-4 w-4" style={{ color: "var(--wc-burgundy, #a0203b)" }} />
+            <Target className="h-4 w-4" style={{ color: "var(--wc-burgundy, #961E37)" }} />
             <span
               className="text-[11px] font-bold uppercase"
               style={{
-                color: "var(--wc-burgundy, #a0203b)",
+                color: "var(--wc-burgundy, #961E37)",
                 letterSpacing: "0.18em",
               }}
             >
@@ -60,7 +60,7 @@ export function BettingRankings({
           <div className="flex items-center gap-3 px-4 py-3">
             <div
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums"
-              style={{ background: "var(--wc-burgundy, #a0203b)", color: "white" }}
+              style={{ background: "var(--wc-burgundy, #961E37)", color: "white" }}
             >
               {myRank.rank ?? "-"}
             </div>
@@ -69,7 +69,7 @@ export function BettingRankings({
             </span>
             <div
               className="flex flex-1 items-center gap-3 text-xs"
-              style={{ color: "var(--wc-mute, #7a6b65)" }}
+              style={{ color: "var(--wc-mute, #5C6470)" }}
             >
               <span>
                 수익률{" "}
@@ -90,7 +90,7 @@ export function BettingRankings({
                 적중률{" "}
                 <span
                   className="font-bold tabular-nums"
-                  style={{ color: "var(--wc-burgundy, #a0203b)" }}
+                  style={{ color: "var(--wc-burgundy, #961E37)" }}
                 >
                   {(myRank.accuracy || 0).toFixed(1)}%
                 </span>
@@ -140,10 +140,10 @@ export function BettingRankings({
           <div
             className="grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 px-3 py-2.5 text-[11px] font-bold uppercase sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4"
             style={{
-              background: "var(--wc-soft, #f4ece6)",
-              color: "var(--wc-burgundy, #a0203b)",
+              background: "var(--wc-soft, #F6E4E8)",
+              color: "var(--wc-burgundy, #961E37)",
               letterSpacing: "0.06em",
-              borderBottom: "1px solid var(--wc-line, #efe7e0)",
+              borderBottom: "1px solid var(--wc-line, #E2E5EA)",
             }}
           >
             <span className="text-center">#</span>
@@ -202,7 +202,7 @@ export function BettingRankings({
                 <div className="hidden text-right sm:block">
                   <span
                     className="text-xs font-bold tabular-nums"
-                    style={{ color: "var(--wc-burgundy, #a0203b)" }}
+                    style={{ color: "var(--wc-burgundy, #961E37)" }}
                   >
                     {(user.accuracy || 0).toFixed(1)}%
                   </span>

@@ -42,8 +42,8 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
         <div
           className="p-3"
           style={{
-            background: "var(--wc-soft, #f4ece6)",
-            borderBottom: "1px solid var(--wc-line, #efe7e0)",
+            background: "var(--wc-soft, #F6E4E8)",
+            borderBottom: "1px solid var(--wc-line, #E2E5EA)",
           }}
         >
           <div className="flex items-center gap-2">
