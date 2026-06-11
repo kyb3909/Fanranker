@@ -60,7 +60,7 @@ export default async function WorldcupPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+    <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="mx-auto grid max-w-[1120px] items-center gap-10 px-6 pt-12 pb-14 lg:grid-cols-[1.04fr_.96fr] lg:gap-[52px]">
         <div>
