@@ -65,7 +65,7 @@ export default async function WorldcupGamesPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+    <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
         <Link
           href="/worldcup"

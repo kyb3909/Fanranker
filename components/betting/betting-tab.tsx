@@ -87,7 +87,7 @@ export function BettingTab({
           type="button"
           onClick={onRefresh}
           disabled={isLoading}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-[12px] font-semibold transition-colors disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-[12px] font-bold transition-colors disabled:opacity-50"
           style={{
             background: "var(--wc-soft)",
             color: "var(--wc-burgundy)",
