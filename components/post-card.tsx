@@ -68,7 +68,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
         className="gn-card-lift overflow-hidden rounded-xl"
         style={{
           background: "var(--wc-card)",
-          boxShadow: "var(--wc-shadow-1)",
+          border: "1px solid var(--wc-line)",
+          boxShadow: "0 1px 2px rgba(24,18,21,.05)",
         }}
       >
         <div className="relative px-4 py-3 sm:px-5">

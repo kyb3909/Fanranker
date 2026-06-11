@@ -159,7 +159,7 @@
       transform 0.18s ease;
   }
   .gn-card-lift:hover {
-    box-shadow: var(--wc-shadow-2, 0 4px 16px rgba(150, 30, 55, 0.14));
+    box-shadow: 0 4px 16px rgba(24, 18, 21, 0.07);
     transform: translateY(-1px);
   }
 
