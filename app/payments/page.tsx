@@ -116,7 +116,7 @@ export default function PaymentsPage() {
             variant="ghost"
             size="icon"
             onClick={() => router.back()}
-            style={{ color: "var(--wc-mute, #7a6b65)" }}
+            style={{ color: "var(--wc-mute, #5C6470)" }}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

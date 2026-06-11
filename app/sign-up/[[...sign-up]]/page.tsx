@@ -456,7 +456,7 @@ export default function SignUpPage() {
       <div className="worldcup-scope flex min-h-screen items-center justify-center">
         <Loader2
           className="h-8 w-8 animate-spin"
-          style={{ color: "var(--wc-burgundy, #a0203b)" }}
+          style={{ color: "var(--wc-burgundy, #961E37)" }}
         />
       </div>
     )

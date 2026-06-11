@@ -73,7 +73,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       </div>
       <span
         className="relative mt-2 text-[11px] font-semibold tracking-wide"
-        style={{ color: "var(--wc-mute-2, #a0938c)" }}
+        style={{ color: "var(--wc-mute-2, #8B93A0)" }}
       >
         {config.dimensions}
       </span>

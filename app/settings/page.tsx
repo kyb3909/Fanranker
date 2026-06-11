@@ -31,11 +31,11 @@ export default function SettingsPage() {
             boxShadow: "var(--wc-shadow-1)",
           }}
         >
-          <User className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute, #7a6b65)" }} />
-          <h2 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink, #1a1416)" }}>
+          <User className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute, #5C6470)" }} />
+          <h2 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink, #14161A)" }}>
             로그인이 필요합니다
           </h2>
-          <p className="mb-4 text-sm" style={{ color: "var(--wc-mute, #7a6b65)" }}>
+          <p className="mb-4 text-sm" style={{ color: "var(--wc-mute, #5C6470)" }}>
             마이페이지를 이용하려면 먼저 로그인해주세요.
           </p>
           <div className="flex justify-center gap-2">
@@ -44,7 +44,7 @@ export default function SettingsPage() {
             </Button>
             <Button
               onClick={() => router.push("/sign-up")}
-              style={{ background: "var(--wc-burgundy, #a0203b)", color: "white" }}
+              style={{ background: "var(--wc-burgundy, #961E37)", color: "white" }}
             >
               로그인 / 가입
             </Button>
@@ -56,7 +56,7 @@ export default function SettingsPage() {
 
   return (
     <div className="worldcup-scope flex min-h-[100dvh] items-center justify-center py-20">
-      <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--wc-mute, #7a6b65)" }} />
+      <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--wc-mute, #5C6470)" }} />
     </div>
   )
 }
