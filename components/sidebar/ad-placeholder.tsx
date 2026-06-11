@@ -40,7 +40,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       className={`${config.className} group relative flex flex-col items-center justify-center overflow-hidden rounded-xl`}
       style={{
         ...config.style,
-        background: "linear-gradient(180deg, var(--wc-soft, #f4ece6), var(--wc-line, #efe7e0))",
+        background: "linear-gradient(180deg, var(--wc-soft, #F6E4E8), var(--wc-line, #E2E5EA))",
         boxShadow: "var(--wc-shadow-1)",
       }}
     >
@@ -50,7 +50,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
           backgroundImage:
-            "linear-gradient(var(--wc-line-2, #e5dad2) 1px, transparent 1px), linear-gradient(90deg, var(--wc-line-2, #e5dad2) 1px, transparent 1px)",
+            "linear-gradient(var(--wc-line-2, #CFD4DC) 1px, transparent 1px), linear-gradient(90deg, var(--wc-line-2, #CFD4DC) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
           maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
           WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
@@ -59,7 +59,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       <div
         className="relative flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.18em] uppercase"
         style={{
-          color: "var(--wc-burgundy, #a0203b)",
+          color: "var(--wc-burgundy, #961E37)",
           background: "var(--wc-card, #ffffff)",
           boxShadow: "0 1px 2px rgba(26, 20, 22, 0.06)",
         }}
