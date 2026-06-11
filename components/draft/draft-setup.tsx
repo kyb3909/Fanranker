@@ -135,45 +135,61 @@ export function DraftSetup({
     }
   }
 
+  const segOn = {
+    border: "2px solid var(--wc-burgundy)",
+    background: "var(--wc-soft)",
+    color: "var(--wc-burgundy)",
+  } as const
+  const segOff = {
+    border: "2px solid var(--wc-line)",
+    background: "var(--wc-card)",
+    color: "var(--wc-mute)",
+  } as const
+
   return (
-    <div className="mx-auto max-w-lg py-8">
-      <div className="border-border bg-card rounded-2xl border p-8 shadow-lg">
+    <div className="worldcup-scope mx-auto max-w-lg py-8">
+      <div
+        className="rounded-2xl p-8"
+        style={{
+          background: "var(--wc-card)",
+          border: "1px solid var(--wc-line)",
+          boxShadow: "var(--wc-shadow-1)",
+        }}
+      >
         <div className="mb-8 text-center">
           <div className="text-4xl">{entry?.emoji ?? "⚽"}</div>
-          <h1 className="text-foreground mt-3 text-2xl font-black">
+          <h1 className="mt-3 text-2xl font-black" style={{ color: "var(--wc-ink)" }}>
             {entry?.name ?? "스네이크 드래프트"}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="mt-1 text-sm" style={{ color: "var(--wc-mute)" }}>
             {entry?.blurb ?? "선수를 드래프트해서 나만의 드림팀을 만드세요"}
           </p>
         </div>
 
         {/* 게임 모드 */}
         <div className="mb-6">
-          <label className="text-foreground mb-2 block text-sm font-semibold">게임 모드</label>
+          <label className="mb-2 block text-sm font-semibold" style={{ color: "var(--wc-ink)" }}>
+            게임 모드
+          </label>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setMode("solo")}
-              className={`rounded-lg border-2 px-4 py-3 text-sm font-semibold transition-all ${
-                mode === "solo"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:border-muted-foreground"
-              }`}
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all"
+              style={mode === "solo" ? segOn : segOff}
             >
               <div className="text-lg">🤖</div>
               <div className="mt-1">솔로 (vs AI)</div>
             </button>
             <button
               onClick={() => setMode("multi")}
-              className={`rounded-lg border-2 px-4 py-3 text-sm font-semibold transition-all ${
-                mode === "multi"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:border-muted-foreground"
-              }`}
+              className="rounded-lg px-4 py-3 text-sm font-semibold transition-all"
+              style={mode === "multi" ? segOn : segOff}
             >
               <div className="text-lg">👥</div>
               <div className="mt-1">멀티플레이어</div>
-              <div className="text-muted-foreground text-[10px]">최대 4명 PvP</div>
+              <div className="text-[10px]" style={{ color: "var(--wc-mute)" }}>
+                최대 4명 PvP
+              </div>
             </button>
           </div>
         </div>
@@ -181,13 +197,20 @@ export function DraftSetup({
         {/* 닉네임 — 솔로만 (멀티는 profiles.nickname 사용) */}
         {mode === "solo" && (
           <div className="mb-6">
-            <label className="text-foreground mb-2 block text-sm font-semibold">닉네임</label>
+            <label className="mb-2 block text-sm font-semibold" style={{ color: "var(--wc-ink)" }}>
+              닉네임
+            </label>
             <input
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="닉네임 입력..."
-              className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus:ring-primary h-10 w-full rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
+              className="h-10 w-full rounded-lg px-3 text-sm focus:outline-none"
+              style={{
+                border: "1px solid var(--wc-line-2)",
+                background: "var(--wc-paper)",
+                color: "var(--wc-ink)",
+              }}
               maxLength={12}
             />
           </div>
@@ -195,7 +218,9 @@ export function DraftSetup({
 
         {/* 포메이션 선택 — 솔로/멀티 공통 */}
         <div className="mb-6">
-          <label className="text-foreground mb-2 block text-sm font-semibold">포메이션</label>
+          <label className="mb-2 block text-sm font-semibold" style={{ color: "var(--wc-ink)" }}>
+            포메이션
+          </label>
           <div className="grid grid-cols-3 gap-2">
             {FORMATION_LIST.map((f) => {
               const limits = FORMATIONS[f]
@@ -203,11 +228,8 @@ export function DraftSetup({
                 <button
                   key={f}
                   onClick={() => setMyFormation(f)}
-                  className={`rounded-lg border-2 px-3 py-2.5 text-center transition-all ${
-                    myFormation === f
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:border-muted-foreground"
-                  }`}
+                  className="rounded-lg px-3 py-2.5 text-center transition-all"
+                  style={myFormation === f ? segOn : segOff}
                 >
                   <div className="text-sm font-bold">{f}</div>
                   <div className="mt-0.5 text-[10px] opacity-70">
@@ -223,7 +245,10 @@ export function DraftSetup({
         {mode === "solo" && (
           <>
             <div className="mb-6">
-              <label className="text-foreground mb-2 block text-sm font-semibold">
+              <label
+                className="mb-2 block text-sm font-semibold"
+                style={{ color: "var(--wc-ink)" }}
+              >
                 AI 상대 수: {aiCount}명 (총 {totalPlayers}명)
               </label>
               <div className="flex gap-2">
@@ -234,11 +259,8 @@ export function DraftSetup({
                       setAiCount(n)
                       if (mySeat >= n + 1) setMySeat(0)
                     }}
-                    className={`flex-1 rounded-lg border-2 py-2 text-sm font-semibold transition-all ${
-                      aiCount === n
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-muted-foreground"
-                    }`}
+                    className="flex-1 rounded-lg py-2 text-sm font-semibold transition-all"
+                    style={aiCount === n ? segOn : segOff}
                   >
                     {n}명
                   </button>
@@ -247,7 +269,10 @@ export function DraftSetup({
             </div>
 
             <div className="mb-8">
-              <label className="text-foreground mb-2 block text-sm font-semibold">
+              <label
+                className="mb-2 block text-sm font-semibold"
+                style={{ color: "var(--wc-ink)" }}
+              >
                 내 드래프트 순서
               </label>
               <div className="flex gap-2">
@@ -255,17 +280,14 @@ export function DraftSetup({
                   <button
                     key={i}
                     onClick={() => setMySeat(i)}
-                    className={`flex-1 rounded-lg border-2 py-2 text-sm font-semibold transition-all ${
-                      mySeat === i
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-muted-foreground"
-                    }`}
+                    className="flex-1 rounded-lg py-2 text-sm font-semibold transition-all"
+                    style={mySeat === i ? segOn : segOff}
                   >
                     {i + 1}번째
                   </button>
                 ))}
               </div>
-              <p className="text-muted-foreground mt-1.5 text-[11px]">
+              <p className="mt-1.5 text-[11px]" style={{ color: "var(--wc-mute)" }}>
                 1번째는 첫 픽이 빠르고, 마지막은 연속 2픽 유리!
               </p>
             </div>
@@ -280,15 +302,18 @@ export function DraftSetup({
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="accent-primary h-4 w-4"
+                className="h-4 w-4"
+                style={{ accentColor: "var(--wc-burgundy)" }}
               />
-              <span className="text-foreground font-semibold">친구만 (비공개 방)</span>
-              <span className="text-muted-foreground text-[11px]">
+              <span className="font-semibold" style={{ color: "var(--wc-ink)" }}>
+                친구만 (비공개 방)
+              </span>
+              <span className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
                 공개 목록에서 안 보이고 코드로만 참가 가능
               </span>
             </label>
 
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
               · 픽 순서는 시작 시점에 자동 랜덤. 모든 참가자 동일 확률.
               <br />· 4명 안 모이면 호스트가 &ldquo;지금 시작&rdquo; 으로 AI 채워서 시작 가능.
             </p>
@@ -297,10 +322,13 @@ export function DraftSetup({
             {openRooms !== null && (
               <div className="mt-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-foreground text-xs font-bold tracking-wider uppercase">
+                  <span
+                    className="text-xs font-bold tracking-wider uppercase"
+                    style={{ color: "var(--wc-ink)" }}
+                  >
                     지금 모집 중
                     {openRooms.length > 0 && (
-                      <span className="text-muted-foreground ml-1 font-mono">
+                      <span className="ml-1 font-mono" style={{ color: "var(--wc-mute)" }}>
                         ({openRooms.length})
                       </span>
                     )}
@@ -309,7 +337,8 @@ export function DraftSetup({
                     <button
                       type="button"
                       onClick={() => router.push("/games/draft/epl/rooms")}
-                      className="text-primary text-[11px] font-semibold hover:underline"
+                      className="text-[11px] font-semibold hover:underline"
+                      style={{ color: "var(--wc-burgundy)" }}
                     >
                       전체 보기 →
                     </button>
@@ -322,9 +351,11 @@ export function DraftSetup({
         )}
 
         {/* 규칙 요약 */}
-        <div className="bg-muted/50 mb-6 rounded-lg p-4">
-          <h3 className="text-foreground mb-2 text-xs font-bold">규칙</h3>
-          <ul className="text-muted-foreground space-y-1 text-[11px]">
+        <div className="mb-6 rounded-lg p-4" style={{ background: "var(--wc-paper)" }}>
+          <h3 className="mb-2 text-xs font-bold" style={{ color: "var(--wc-ink)" }}>
+            규칙
+          </h3>
+          <ul className="space-y-1 text-[11px]" style={{ color: "var(--wc-mute)" }}>
             <li>• 스네이크 순서: 1→2→...→N→N→...→1 반복</li>
             <li>
               • {entry?.rosterSize ?? 11}라운드, 예산 {entry?.currency ?? "£"}
@@ -340,7 +371,10 @@ export function DraftSetup({
         </div>
 
         {errorMsg && (
-          <div className="bg-destructive/10 text-destructive mb-4 rounded-lg px-4 py-3 text-sm">
+          <div
+            className="mb-4 rounded-lg px-4 py-3 text-sm"
+            style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+          >
             {errorMsg}
           </div>
         )}
@@ -349,7 +383,8 @@ export function DraftSetup({
         {mode === "solo" ? (
           <button
             onClick={onStart}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-full rounded-xl text-base font-bold shadow-lg transition-all hover:shadow-xl active:scale-[0.98]"
+            className="h-12 w-full rounded-xl text-base font-bold shadow-lg transition-all hover:opacity-90 hover:shadow-xl active:scale-[0.98]"
+            style={{ background: "var(--wc-burgundy)", color: "#fff" }}
           >
             드래프트 시작!
           </button>
@@ -358,24 +393,34 @@ export function DraftSetup({
             <button
               onClick={handleCreateRoom}
               disabled={busy}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-full rounded-xl text-base font-bold shadow-lg transition-all hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
+              className="h-12 w-full rounded-xl text-base font-bold shadow-lg transition-all hover:opacity-90 hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
+              style={{ background: "var(--wc-burgundy)", color: "#fff" }}
             >
               {busy ? "..." : "방 만들기"}
             </button>
 
-            <div className="border-border flex gap-2 rounded-xl border p-2">
+            <div
+              className="flex gap-2 rounded-xl p-2"
+              style={{ border: "1px solid var(--wc-line)" }}
+            >
               <input
                 type="text"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                 placeholder="초대 코드 (예: ABCD12)"
                 maxLength={8}
-                className="bg-muted/40 text-foreground placeholder:text-muted-foreground h-10 flex-1 rounded-lg px-3 font-mono text-sm tracking-wider focus:outline-none"
+                className="h-10 flex-1 rounded-lg px-3 font-mono text-sm tracking-wider focus:outline-none"
+                style={{ background: "var(--wc-paper)", color: "var(--wc-ink)" }}
               />
               <button
                 onClick={handleJoinByCode}
                 disabled={busy || inviteCode.length < 4}
-                className="border-border text-foreground hover:bg-muted h-10 rounded-lg border px-4 text-sm font-semibold disabled:opacity-40"
+                className="h-10 rounded-lg px-4 text-sm font-semibold disabled:opacity-40"
+                style={{
+                  border: "1px solid var(--wc-line)",
+                  color: "var(--wc-ink)",
+                  background: "var(--wc-card)",
+                }}
               >
                 참가
               </button>
@@ -383,7 +428,12 @@ export function DraftSetup({
 
             <button
               onClick={() => router.push("/games/draft/epl/rooms")}
-              className="border-border text-muted-foreground hover:bg-muted h-10 w-full rounded-xl border text-sm font-semibold"
+              className="h-10 w-full rounded-xl text-sm font-semibold"
+              style={{
+                border: "1px solid var(--wc-line)",
+                color: "var(--wc-mute)",
+                background: "var(--wc-card)",
+              }}
             >
               공개 방 둘러보기 →
             </button>
