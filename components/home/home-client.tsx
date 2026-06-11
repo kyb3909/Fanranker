@@ -135,26 +135,33 @@ export function HomeClient({
           {/* Main Content */}
           <div className="col-span-12 space-y-4 lg:col-span-6">
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
-            {/* 탭 네비게이션 — wc-games-tabs */}
-            <div className="wc-games-tabs" role="tablist" aria-label="홈 탭">
-              <button
-                role="tab"
-                aria-selected={activeTab === "feed"}
-                onClick={() => handleTabClick("feed")}
-                className={activeTab === "feed" ? "on" : ""}
-              >
-                <FileText className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                게시물
-              </button>
-              <button
-                role="tab"
-                aria-selected={activeTab === "content"}
-                onClick={() => handleTabClick("content")}
-                className={activeTab === "content" ? "on" : ""}
-              >
-                <Trophy className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                경기 분석글
-              </button>
+            {/* 탭 네비게이션 — pill chips */}
+            <div className="flex items-center gap-1.5" role="tablist" aria-label="홈 탭">
+              {(
+                [
+                  { key: "feed", icon: FileText, label: "게시물" },
+                  { key: "content", icon: Trophy, label: "경기 분석글" },
+                ] as const
+              ).map(({ key, icon: Icon, label }) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={activeTab === key}
+                  onClick={() => handleTabClick(key)}
+                  className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
+                  style={{
+                    background: activeTab === key ? "var(--wc-burgundy)" : "var(--wc-card)",
+                    color: activeTab === key ? "white" : "var(--wc-mute)",
+                    border:
+                      activeTab === key
+                        ? "1px solid var(--wc-burgundy)"
+                        : "1px solid var(--wc-line-2)",
+                  }}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
             </div>
 
             {activeTab === "feed" && (
