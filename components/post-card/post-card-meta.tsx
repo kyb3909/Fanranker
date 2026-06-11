@@ -75,7 +75,15 @@ export function PostCardMeta({
   const hasTitleBadge = titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle)
 
   return (
-    <div className="mt-3.5 flex items-center gap-2 text-[12px]" style={{ color: "var(--wc-mute)" }}>
+    <div
+      className="flex items-center gap-2 text-[12px]"
+      style={{
+        color: "var(--wc-mute)",
+        marginTop: 12,
+        paddingTop: 12,
+        borderTop: "1px solid var(--wc-line)",
+      }}
+    >
       {/* 좌측: 아바타 + 작성자 + 호칭/플레어 + 시간 */}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         {/* 모바일 아바타 — 프로필로 직행 */}

@@ -89,7 +89,7 @@ export const PostCardContent = memo(function PostCardContent({
     <div>
       {/* 카테고리 chip + 시간 + 온도 chip */}
       {(category || (temperature != null && temperature > 0)) && (
-        <div className="mb-2 flex items-center gap-2">
+        <div className="flex items-center gap-2" style={{ marginBottom: 9 }}>
           {category && (
             <>
               {categoryLink ? (
@@ -156,6 +156,7 @@ export const PostCardContent = memo(function PostCardContent({
                 fontWeight: 800,
                 letterSpacing: "-0.02em",
                 lineHeight: 1.4,
+                marginBottom: 6,
               }}
             >
               {title}
@@ -165,14 +166,14 @@ export const PostCardContent = memo(function PostCardContent({
           {/* 본문 */}
           {typeof content === "string" ? (
             <p
-              className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
-              style={{ color: "var(--wc-mute, #5C6470)" }}
+              className="line-clamp-2 text-[14px]"
+              style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
             >
               {content}
             </p>
           ) : (
             <p
-              className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
+              className="line-clamp-2 text-[14px]"
               style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
             >
               {stripUrlTokens(extractTextFromTipTapJSON(content))}
