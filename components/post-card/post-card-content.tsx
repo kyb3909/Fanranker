@@ -22,6 +22,16 @@ import { useVisibility } from "@/hooks/use-visibility"
 import type { TipTapNode } from "@/components/post-card"
 import type { PostFlair } from "@/types/post"
 
+const CATEGORY_CHIP: Record<string, { bg: string; color: string }> = {
+  축구: { bg: "#FDECEC", color: "#9F1239" },
+  야구: { bg: "#EAF1FD", color: "#1E3A8A" },
+  농구: { bg: "#FDF1E5", color: "#9A3412" },
+  배구: { bg: "#F4EEFB", color: "#581C87" },
+  게임: { bg: "#EEF0FA", color: "#2D3A8C" },
+  애니: { bg: "#EAF4F4", color: "#0F5858" },
+  음악: { bg: "#FDEFF3", color: "#9F1239" },
+}
+
 interface PostCardContentProps {
   postId: number | string
   title: string
@@ -42,6 +52,7 @@ interface PostCardContentProps {
   category?: string
   categoryLink?: string
   flair?: PostFlair | null
+  temperature?: number
 }
 
 export const PostCardContent = memo(function PostCardContent({
@@ -56,31 +67,64 @@ export const PostCardContent = memo(function PostCardContent({
   category,
   categoryLink,
   flair,
+  temperature,
 }: PostCardContentProps) {
   const hasSingleImage = !!displayImage && !firstEmbed && imageSources.length <= 1
+  const catChip = CATEGORY_CHIP[category ?? ""]
 
   return (
     <div>
-      {/* 카테고리 라벨 — 에디토리얼 톤. flair 있으면 "게시판 · flair" 형태. */}
-      {category && (
-        <div
-          className="font-title mb-1.5 text-[11px] font-bold tracking-[0.18em] uppercase"
-          style={{ color: "var(--wc-burgundy, #961E37)" }}
-        >
-          {categoryLink ? (
-            <Link href={`/community/${categoryLink}`} className="inline-block hover:underline">
-              {category}
-            </Link>
-          ) : (
-            <span>{category}</span>
-          )}
-          {flair?.name && (
+      {/* 카테고리 chip + 온도 chip */}
+      {(category || (temperature != null && temperature > 0)) && (
+        <div className="mb-2 flex items-center gap-2">
+          {category && (
             <>
-              <span aria-hidden className="mx-1.5" style={{ color: "var(--wc-mute-2, #8B93A0)" }}>
-                ·
-              </span>
-              <span style={flair.color ? { color: flair.color } : undefined}>{flair.name}</span>
+              {categoryLink ? (
+                <Link
+                  href={`/community/${categoryLink}`}
+                  className="transition-opacity hover:opacity-80"
+                >
+                  <span
+                    className="inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
+                    style={{
+                      background: catChip?.bg ?? "var(--wc-soft)",
+                      color: catChip?.color ?? "var(--wc-burgundy)",
+                    }}
+                  >
+                    {category}
+                  </span>
+                </Link>
+              ) : (
+                <span
+                  className="inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
+                  style={{
+                    background: catChip?.bg ?? "var(--wc-soft)",
+                    color: catChip?.color ?? "var(--wc-burgundy)",
+                  }}
+                >
+                  {category}
+                </span>
+              )}
+              {flair?.name && (
+                <span
+                  className="inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
+                  style={{
+                    background: "var(--wc-soft)",
+                    color: flair.color ?? "var(--wc-burgundy)",
+                  }}
+                >
+                  {flair.name}
+                </span>
+              )}
             </>
+          )}
+          {temperature != null && temperature > 0 && (
+            <span
+              className="tnum ml-auto inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
+              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+            >
+              🌡 {temperature}°
+            </span>
           )}
         </div>
       )}
@@ -91,7 +135,7 @@ export const PostCardContent = memo(function PostCardContent({
           {/* 제목 */}
           <Link href={`/post/${postId}`} className="group block">
             <h2
-              className="font-title line-clamp-2 text-[16px] leading-[1.35] font-bold tracking-tight transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[17px]"
+              className="font-title line-clamp-2 text-[17px] leading-[1.35] font-extrabold tracking-tight transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
               style={{ color: "var(--wc-ink)" }}
             >
               {title}
