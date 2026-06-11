@@ -1,9 +1,20 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Sparkles, Image, Award, Upload, ShoppingBag, Star, TrendingUp, Search } from "lucide-react"
+import {
+  Sparkles,
+  Image,
+  Award,
+  Upload,
+  ShoppingBag,
+  Star,
+  TrendingUp,
+  Search,
+  Coins,
+} from "lucide-react"
 import { StickerUploadDialog } from "./sticker-upload-dialog"
 import { StickerCard } from "./sticker-card"
+import { TitleCard, type TitleItem } from "./title-card"
 
 interface Sticker {
   id: string
@@ -28,12 +39,78 @@ interface StickerPack {
   board_slug: string | null
 }
 
-type ShopTab = "stickers" | "titles" | "pixel-art"
+type ShopTab = "stickers" | "titles" | "pixel-art" | "gold"
 
 const SHOP_TABS = [
   { id: "stickers" as ShopTab, label: "밈 스티커", icon: Sparkles, color: "text-amber-400" },
   { id: "titles" as ShopTab, label: "칭호", icon: Award, color: "text-violet-400" },
   { id: "pixel-art" as ShopTab, label: "픽셀아트", icon: Image, color: "text-emerald-400" },
+  { id: "gold" as ShopTab, label: "골드 충전", icon: Coins, color: "text-yellow-400" },
+]
+
+const MOCK_TITLES: TitleItem[] = [
+  {
+    id: "t1",
+    name: "구너 칭호",
+    adjTitle: "아스날",
+    nounTitle: "구너",
+    rarity: "common",
+    price: 2_000,
+    description: "아스날 팬덤 입문 칭호",
+  },
+  {
+    id: "t2",
+    name: "앙리의 후예",
+    adjTitle: "앙리의",
+    nounTitle: "후예",
+    rarity: "rare",
+    price: 10_000,
+    description: "레전드 선수 헌정 칭호",
+    owned: true,
+  },
+  {
+    id: "t3",
+    name: "인빈서블",
+    adjTitle: "무패의",
+    nounTitle: "인빈서블",
+    rarity: "epic",
+    price: 50_000,
+    description: "무패우승 시그니처 칭호",
+  },
+  {
+    id: "t4",
+    name: "레드 데빌",
+    adjTitle: "레드",
+    nounTitle: "데빌",
+    rarity: "common",
+    price: 2_000,
+    description: "맨체스터 유나이티드 팬덤 칭호",
+  },
+  {
+    id: "t5",
+    name: "퍼기의 계승자",
+    adjTitle: "퍼기의",
+    nounTitle: "계승자",
+    rarity: "rare",
+    price: 10_000,
+    description: "레전드 감독 헌정 칭호",
+  },
+  {
+    id: "t6",
+    name: "트레블러",
+    adjTitle: "역대급",
+    nounTitle: "트레블러",
+    rarity: "epic",
+    price: 50_000,
+    description: "3관왕 시그니처 칭호",
+  },
+]
+
+const GOLD_PACKAGES = [
+  { id: "g1", gold: 1_000, krw: 1_000, bonus: null },
+  { id: "g2", gold: 5_000, krw: 4_500, bonus: "+10% 보너스" },
+  { id: "g3", gold: 10_000, krw: 8_000, bonus: "+25% 보너스" },
+  { id: "g4", gold: 50_000, krw: 35_000, bonus: "+40% 보너스" },
 ]
 
 export default function ShopPage() {
@@ -306,14 +383,10 @@ export default function ShopPage() {
 
       {/* ====== 칭호 탭 ====== */}
       {activeTab === "titles" && (
-        <div className="rounded-2xl p-12 text-center" style={{ background: "var(--wc-paper)" }}>
-          <div className="text-5xl">🏷️</div>
-          <p className="mt-3 text-sm font-medium" style={{ color: "var(--wc-mute)" }}>
-            칭호 상점은 준비 중입니다
-          </p>
-          <p className="mt-1 text-xs" style={{ color: "var(--wc-mute-2)" }}>
-            활동 포인트로 특별한 칭호를 구매할 수 있습니다
-          </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {MOCK_TITLES.map((item) => (
+            <TitleCard key={item.id} item={item} />
+          ))}
         </div>
       )}
 
@@ -327,6 +400,88 @@ export default function ShopPage() {
           <p className="mt-1 text-xs" style={{ color: "var(--wc-mute-2)" }}>
             나만의 픽셀아트 아이템을 수집하세요
           </p>
+        </div>
+      )}
+
+      {/* ====== 골드 충전 탭 ====== */}
+      {activeTab === "gold" && (
+        <div className="space-y-4">
+          <div
+            className="rounded-xl p-4"
+            style={{ background: "var(--wc-soft)", border: "1px solid var(--wc-line)" }}
+          >
+            <p style={{ fontSize: 13, color: "var(--wc-mute)" }}>
+              골드는 승부예측 분석, 스티커, 칭호 구매에 사용됩니다. 결제 후 즉시 지급됩니다.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {GOLD_PACKAGES.map((pkg) => (
+              <div
+                key={pkg.id}
+                className="gn-card-lift"
+                style={{
+                  border: "1px solid var(--wc-line)",
+                  borderRadius: 12,
+                  padding: 16,
+                  background: "var(--wc-card)",
+                }}
+              >
+                <Coins style={{ width: 22, height: 22, color: "#D97706", marginBottom: 10 }} />
+                <p
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: "var(--wc-ink)",
+                    fontVariantNumeric: "tabular-nums",
+                    marginBottom: 2,
+                  }}
+                >
+                  {pkg.gold.toLocaleString()} 골드
+                </p>
+                {pkg.bonus && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--wc-burgundy)" }}>
+                    {pkg.bonus}
+                  </span>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: 14,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: "var(--wc-ink)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    ₩{pkg.krw.toLocaleString()}
+                  </span>
+                  <button
+                    style={{
+                      height: 32,
+                      padding: "0 14px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      background: "#fff",
+                      border: "1px solid var(--wc-line-2)",
+                      color: "var(--wc-ink)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    구매
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

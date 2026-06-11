@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Check, ShoppingCart, Sparkles } from "lucide-react"
+import { Check, Coins } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,12 +69,10 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
           ? {
               border: "1px solid rgba(16,185,129,0.3)",
               background: "rgba(16,185,129,0.05)",
-              borderTop: "3px solid #10b981",
             }
           : {
               border: "1px solid var(--wc-line)",
               background: "var(--wc-card)",
-              borderTop: `3px solid var(--wc-burgundy)`,
             }
       }
     >
@@ -101,36 +99,60 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
         </p>
         <div className="mt-1 flex items-center justify-between">
           <span
-            className="flex items-center gap-0.5 text-[10px]"
-            style={{ color: "var(--wc-mute)" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
+              fontSize: 13,
+              fontWeight: 800,
+              color: "var(--wc-ink)",
+              fontVariantNumeric: "tabular-nums",
+            }}
           >
-            <Sparkles className="h-2.5 w-2.5" style={{ color: "var(--wc-burgundy)" }} />
-            {sticker.purchase_count}명 보유
+            <Coins style={{ width: 13, height: 13 }} />
+            {sticker.price}
           </span>
 
           {owned ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+            <span
+              style={{
+                height: 26,
+                padding: "0 8px",
+                display: "inline-flex",
+                alignItems: "center",
+                borderRadius: 8,
+                fontSize: 11,
+                fontWeight: 600,
+                background: "var(--wc-soft)",
+                color: "var(--wc-mute)",
+              }}
+            >
               보유중
             </span>
           ) : (
             <button
               onClick={() => setConfirmOpen(true)}
               disabled={buying}
-              className="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold text-white transition-all hover:opacity-90 disabled:opacity-50"
-              style={{ background: "var(--wc-burgundy)" }}
+              style={{
+                height: 26,
+                padding: "0 10px",
+                display: "inline-flex",
+                alignItems: "center",
+                borderRadius: 8,
+                fontSize: 11,
+                fontWeight: 600,
+                background: "#fff",
+                border: "1px solid var(--wc-line-2)",
+                color: "var(--wc-ink)",
+                cursor: "pointer",
+                opacity: buying ? 0.5 : 1,
+              }}
             >
-              {buying ? (
-                "..."
-              ) : (
-                <>
-                  <ShoppingCart className="h-2.5 w-2.5" />
-                  {sticker.price}P
-                </>
-              )}
+              {buying ? "..." : "구매"}
             </button>
           )}
         </div>
-        {error && <p className="mt-0.5 text-[10px] text-red-500">{error}</p>}
+        {error && <p style={{ marginTop: 2, fontSize: 10, color: "var(--wc-down)" }}>{error}</p>}
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
