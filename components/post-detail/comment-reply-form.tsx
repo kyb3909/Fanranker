@@ -97,7 +97,7 @@ export function CommentReplyForm({
             onClick={() => onSubmit(selectedSticker)}
             disabled={!canSubmit || isSubmitting}
             style={{
-              background: "var(--wc-burgundy, #a0203b)",
+              background: "var(--wc-burgundy, #961E37)",
               color: "white",
             }}
           >

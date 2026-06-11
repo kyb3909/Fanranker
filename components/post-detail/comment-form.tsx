@@ -149,7 +149,7 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
           onClick={handleSubmit}
           disabled={(!commentText.trim() && !selectedSticker) || isSubmitting}
           style={{
-            background: "var(--wc-burgundy, #a0203b)",
+            background: "var(--wc-burgundy, #961E37)",
             color: "white",
           }}
         >
