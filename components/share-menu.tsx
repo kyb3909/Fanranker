@@ -46,7 +46,14 @@ export function ShareMenu({ postId, postTitle }: ShareMenuProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="text-muted-foreground hover:text-foreground h-11 w-11"
+          className="text-muted-foreground hover:text-foreground"
+          style={{
+            height: 34,
+            width: 34,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           aria-label="공유"
         >
           <Share2 className="h-4 w-4" />

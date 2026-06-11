@@ -39,8 +39,8 @@ export function PostActions({
         borderTop: "1px solid var(--wc-line)",
       }}
     >
-      {/* Vote pill — flex-shrink:0 prevents container from squishing VoteButtons */}
-      <span style={{ flexShrink: 0 }}>
+      {/* Vote pill — inline-flex removes baseline offset that caused vertical misalignment */}
+      <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center" }}>
         <VoteButtons voteCount={voteCount} myVote={myVote} onVote={handleVote} size="md" />
       </span>
 

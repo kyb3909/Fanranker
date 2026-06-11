@@ -48,6 +48,10 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         className="tnum animate-vote-bump"
         style={{
           minWidth: 26,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
           textAlign: "center",
           fontSize: fs,
           fontWeight: 800,
