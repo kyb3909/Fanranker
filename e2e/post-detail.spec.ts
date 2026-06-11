@@ -210,10 +210,8 @@ test.describe("게시글 상세 페이지", () => {
   })
 
   test.describe("조회수", () => {
-    // 앱 버그 발견(2026-06-11): /api/posts/[id]/view 엔드포인트는 존재하지만
-    // 호출하는 클라이언트 코드가 없음 (app/post/[id]/page.tsx:45 주석과 불일치).
-    // 조회수 추적이 복구되면 fixme 해제.
-    test.fixme("페이지 로드 시 조회수 API가 호출되어야 한다", async ({ page }) => {
+    // 2026-06-11 복구: usePostViewTracker 가 상세 진입 시 POST /view 비콘을 쏜다
+    test("페이지 로드 시 조회수 API가 호출되어야 한다", async ({ page }) => {
       const href = await getFirstPostHref(page)
       const viewResponse = page.waitForResponse(
         (res) => res.url().includes("/view") && res.request().method() === "POST",

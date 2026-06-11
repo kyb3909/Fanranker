@@ -17,6 +17,7 @@ import {
 import { useUser } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import { reportClientError } from "@/lib/client-error"
+import { usePostViewTracker } from "@/hooks/use-post-view-tracker"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
@@ -61,6 +62,9 @@ export function PostDetailContent({
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
   const [commentCount, setCommentCount] = useState(0)
+
+  // 조회수 증가 (서버가 IP 기반 1시간 중복 제한 처리)
+  usePostViewTracker(post.id)
 
   const handleCommentCountChange = useCallback((count: number) => {
     setCommentCount(count)
