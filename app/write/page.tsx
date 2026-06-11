@@ -69,9 +69,21 @@ function WriteContent() {
         className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
         tabIndex={-1}
       >
-        <div className="bg-card border-border rounded-lg border p-8 text-center">
-          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">로딩 중...</p>
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
+          <Loader2
+            className="mx-auto mb-2 h-8 w-8 animate-spin"
+            style={{ color: "var(--wc-mute)" }}
+          />
+          <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+            로딩 중...
+          </p>
         </div>
       </main>
     )
@@ -102,9 +114,21 @@ function WriteContent() {
         className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
         tabIndex={-1}
       >
-        <div className="bg-card border-border rounded-lg border p-8 text-center">
-          <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">글을 불러오는 중...</p>
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
+          <Loader2
+            className="mx-auto mb-2 h-8 w-8 animate-spin"
+            style={{ color: "var(--wc-mute)" }}
+          />
+          <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+            글을 불러오는 중...
+          </p>
         </div>
       </main>
     )
@@ -117,7 +141,14 @@ function WriteContent() {
         className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
         tabIndex={-1}
       >
-        <div className="bg-card border-border rounded-lg border p-8 text-center">
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line)",
+            boxShadow: "var(--wc-shadow-1)",
+          }}
+        >
           <p className="text-destructive mb-2 text-sm">{editor.editLoadError}</p>
           <Button variant="outline" onClick={() => editor.router.push("/")}>
             홈으로
@@ -139,16 +170,21 @@ function WriteContent() {
             <BackButton />
 
             <div
-              className="rounded-lg p-6"
+              className="rounded-xl"
               style={{
                 background: "var(--wc-card)",
                 boxShadow: "var(--wc-shadow-1)",
+                padding: "20px 22px 24px",
               }}
             >
               <form onSubmit={editor.handleSubmit} className="space-y-6">
                 {/* 게시판 선택 */}
                 <div className="space-y-2">
-                  <Label htmlFor="community" className="text-foreground text-sm font-semibold">
+                  <Label
+                    htmlFor="community"
+                    className="text-[12.5px] font-bold"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     게시판 선택
                   </Label>
                   <Select
@@ -188,7 +224,7 @@ function WriteContent() {
                 {/* 말머리 선택 */}
                 {editor.flairs.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-foreground text-sm font-semibold">
+                    <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       말머리 <span className="text-muted-foreground font-normal">(선택)</span>
                     </Label>
                     <div className="flex flex-wrap gap-1.5">
@@ -220,7 +256,7 @@ function WriteContent() {
                 {/* 팀 플레어 선택 — 스포츠 커뮤니티에만 표시. 선택 시 해당 팀 카르마 적립. */}
                 {editor.teamFlairs.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-foreground text-sm font-semibold">
+                    <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       팀 플레어 <span className="text-muted-foreground font-normal">(선택)</span>
                       <span className="text-muted-foreground ml-2 text-[11px] font-normal">
                         달고 쓰면 해당 팀 카르마 +10
@@ -269,7 +305,11 @@ function WriteContent() {
 
                 {/* 소스 URL */}
                 <div className="space-y-2">
-                  <Label htmlFor="source-url" className="text-foreground text-sm font-semibold">
+                  <Label
+                    htmlFor="source-url"
+                    className="text-[12.5px] font-bold"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     소스 URL <span className="text-muted-foreground font-normal">(선택)</span>
                   </Label>
                   <div className="flex gap-2">
@@ -317,23 +357,49 @@ function WriteContent() {
 
                 {/* 제목 */}
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-foreground text-sm font-semibold">
+                  <Label
+                    htmlFor="title"
+                    className="text-[12.5px] font-bold"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     제목
                   </Label>
-                  <Input
+                  <input
                     id="title"
                     type="text"
                     placeholder="제목을 입력하세요"
                     value={editor.title}
                     onChange={(e) => editor.setTitle(e.target.value)}
-                    className="h-10"
                     required
+                    style={{
+                      width: "100%",
+                      height: 52,
+                      padding: "0 16px",
+                      fontSize: 17,
+                      fontWeight: 700,
+                      fontFamily: "var(--font-sans)",
+                      border: "1px solid var(--wc-line-2)",
+                      borderRadius: 10,
+                      outline: "none",
+                      background: "var(--wc-paper)",
+                      color: "var(--wc-ink)",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "var(--wc-burgundy)"
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--wc-line-2)"
+                    }}
                   />
                 </div>
 
                 {/* 내용 */}
                 <div className="space-y-2">
-                  <Label htmlFor="content" className="text-foreground text-sm font-semibold">
+                  <Label
+                    htmlFor="content"
+                    className="text-[12.5px] font-bold"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
                     내용
                   </Label>
                   <TipTapEditor
@@ -347,13 +413,18 @@ function WriteContent() {
 
                 {/* 이미지: 소스 URL 등으로 지정한 대표 이미지 + 본문 삽입용 업로드 */}
                 <div className="space-y-2">
-                  <Label className="text-foreground text-sm font-semibold">이미지</Label>
+                  <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                    이미지
+                  </Label>
                   {editor.imagePreview && (
                     <div className="space-y-1.5">
                       <p className="text-muted-foreground text-xs">
                         대표 이미지 (소스 URL·수정 시 기존 썸네일)
                       </p>
-                      <div className="border-border relative aspect-video w-full max-w-md overflow-hidden rounded-lg border">
+                      <div
+                        className="relative aspect-video w-full max-w-md overflow-hidden rounded-xl"
+                        style={{ border: "1px solid var(--wc-line-2)" }}
+                      >
                         <Image
                           src={editor.imagePreview}
                           alt="대표 이미지"
@@ -373,7 +444,8 @@ function WriteContent() {
                     </div>
                   )}
                   <div
-                    className="border-border rounded-lg border-2 border-dashed p-6 text-center"
+                    className="rounded-xl p-6 text-center"
+                    style={{ border: "1px dashed var(--wc-line-2)", background: "var(--wc-paper)" }}
                     onDragOver={onBottomImageDragOver}
                     onDrop={onBottomImageDrop}
                   >
@@ -411,11 +483,18 @@ function WriteContent() {
                 </div>
 
                 {/* 버튼 */}
-                <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
+                <div
+                  className="flex items-center justify-end gap-3 pt-4"
+                  style={{ borderTop: "1px solid var(--wc-line)" }}
+                >
                   <Button type="button" variant="outline" onClick={() => window.history.back()}>
                     취소
                   </Button>
-                  <Button type="submit" disabled={!editor.canSubmit}>
+                  <Button
+                    type="submit"
+                    disabled={!editor.canSubmit}
+                    style={{ background: "var(--wc-burgundy)", color: "#fff", border: "none" }}
+                  >
                     {editor.isEmbedLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -451,9 +530,21 @@ export default function WritePage() {
           className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
           tabIndex={-1}
         >
-          <div className="bg-card border-border rounded-lg border p-8 text-center">
-            <Loader2 className="text-muted-foreground mx-auto mb-2 h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground text-sm">로딩 중...</p>
+          <div
+            className="rounded-xl p-8 text-center"
+            style={{
+              background: "var(--wc-card)",
+              border: "1px solid var(--wc-line)",
+              boxShadow: "var(--wc-shadow-1)",
+            }}
+          >
+            <Loader2
+              className="mx-auto mb-2 h-8 w-8 animate-spin"
+              style={{ color: "var(--wc-mute)" }}
+            />
+            <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
+              로딩 중...
+            </p>
           </div>
         </main>
       }
