@@ -2,6 +2,7 @@ import type React from "react"
 import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
 import localFont from "next/font/local"
+import { Nanum_Pen_Script } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -41,6 +42,14 @@ const suit = localFont({
   display: "optional",
   variable: "--font-suit",
   weight: "700",
+  preload: false,
+})
+
+const nanumPen = Nanum_Pen_Script({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-pen",
+  display: "swap",
   preload: false,
 })
 
@@ -143,7 +152,7 @@ export default function RootLayout({
       <ClerkProvider localization={koLocalization} dynamic>
         <html
           lang="ko"
-          className={`${pretendard.variable} ${suit.variable}`}
+          className={`${pretendard.variable} ${suit.variable} ${nanumPen.variable}`}
           suppressHydrationWarning
         >
           <head>

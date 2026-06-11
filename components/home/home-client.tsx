@@ -173,7 +173,7 @@ export function HomeClient({
             <p
               className="leading-snug"
               style={{
-                fontFamily: "var(--pen, 'Nanum Pen Script', cursive)",
+                fontFamily: "var(--font-pen, 'Nanum Pen Script', cursive)",
                 fontSize: 19,
                 color: "var(--wc-mute)",
                 marginBottom: -4,

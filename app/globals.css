@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url("https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap");
 
 /* 본문: Pretendard Variable / 제목: SUIT Variable — layout.tsx의 next/font/local 로 self-host. */
 
