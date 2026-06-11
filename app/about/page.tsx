@@ -10,11 +10,23 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-4 py-5 sm:px-6 sm:py-6" tabIndex={-1}>
+    <main
+      id="main-content"
+      className="worldcup-scope mx-auto max-w-[720px] px-4 py-5 sm:px-6 sm:py-6"
+      tabIndex={-1}
+    >
       <BackButton />
-      <Card className="border-border bg-card mt-4 border p-6">
-        <h1 className="text-foreground mb-4 text-2xl font-bold">gongnori.fan 소개</h1>
-        <div className="text-muted-foreground space-y-4 leading-relaxed">
+      <Card
+        className="mt-4 p-6"
+        style={{ border: "1px solid var(--wc-line)", background: "var(--wc-card)" }}
+      >
+        <h1 className="mb-4" style={{ fontSize: 22, fontWeight: 900, color: "var(--wc-ink)" }}>
+          gongnori.fan 소개
+        </h1>
+        <div
+          className="space-y-4"
+          style={{ fontSize: 15, lineHeight: 1.75, color: "var(--wc-mute)" }}
+        >
           <p>
             <strong className="text-foreground">그깟 공놀이를 좋아하는 팬들의 놀이터.</strong>{" "}
             스포츠 팬들이 경기 결과를 가볍게 예측하고, 응원하는 팀과 선수에 대해 이야기하는 커뮤니티

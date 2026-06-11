@@ -10,10 +10,19 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-4 py-5 sm:px-6 sm:py-6" tabIndex={-1}>
+    <main
+      id="main-content"
+      className="worldcup-scope mx-auto max-w-[720px] px-4 py-5 sm:px-6 sm:py-6"
+      tabIndex={-1}
+    >
       <BackButton />
-      <Card className="border-border bg-card mt-4 border p-6">
-        <h1 className="text-foreground mb-6 text-2xl font-bold">개인정보처리방침</h1>
+      <Card
+        className="mt-4 p-6"
+        style={{ border: "1px solid var(--wc-line)", background: "var(--wc-card)" }}
+      >
+        <h1 className="mb-6" style={{ fontSize: 22, fontWeight: 900, color: "var(--wc-ink)" }}>
+          개인정보처리방침
+        </h1>
         <PrivacyContent />
       </Card>
     </main>

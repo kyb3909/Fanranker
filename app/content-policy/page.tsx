@@ -9,20 +9,33 @@ export const metadata: Metadata = {
 
 export default function ContentPolicyPage() {
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-4 py-5 sm:px-6 sm:py-6" tabIndex={-1}>
+    <main
+      id="main-content"
+      className="worldcup-scope mx-auto max-w-[720px] px-4 py-5 sm:px-6 sm:py-6"
+      tabIndex={-1}
+    >
       <BackButton />
-      <Card className="border-border bg-card mt-4 border p-6">
-        <h1 className="text-foreground mb-6 text-2xl font-bold">게시물 운영정책</h1>
-        <div className="text-foreground/90 space-y-6 text-[14px] leading-relaxed">
-
+      <Card
+        className="mt-4 p-6"
+        style={{ border: "1px solid var(--wc-line)", background: "var(--wc-card)" }}
+      >
+        <h1 className="mb-6" style={{ fontSize: 22, fontWeight: 900, color: "var(--wc-ink)" }}>
+          게시물 운영정책
+        </h1>
+        <div
+          className="space-y-6"
+          style={{ fontSize: 15, lineHeight: 1.75, color: "var(--wc-ink)" }}
+        >
           <p>
-            공놀이판(gongnori.fan)은 건전하고 활기찬 스포츠 커뮤니티를 지향합니다.
-            모든 회원이 즐겁게 참여할 수 있는 환경을 만들기 위해 다음 운영정책을 시행합니다.
+            공놀이판(gongnori.fan)은 건전하고 활기찬 스포츠 커뮤니티를 지향합니다. 모든 회원이
+            즐겁게 참여할 수 있는 환경을 만들기 위해 다음 운영정책을 시행합니다.
           </p>
 
           <section>
             <h2 className="text-foreground mb-2 text-lg font-semibold">1. 금지 행위</h2>
-            <p className="mb-2">다음에 해당하는 게시물은 사전 통지 없이 삭제될 수 있으며, 반복 시 이용이 제한됩니다.</p>
+            <p className="mb-2">
+              다음에 해당하는 게시물은 사전 통지 없이 삭제될 수 있으며, 반복 시 이용이 제한됩니다.
+            </p>
 
             <div className="space-y-3">
               <div>
@@ -102,7 +115,9 @@ export default function ContentPolicyPage() {
                   <tr>
                     <td className="border-border border px-3 py-2">1차</td>
                     <td className="border-border border px-3 py-2">경고</td>
-                    <td className="border-border border px-3 py-2">해당 게시물 삭제 및 경고 알림</td>
+                    <td className="border-border border px-3 py-2">
+                      해당 게시물 삭제 및 경고 알림
+                    </td>
                   </tr>
                   <tr>
                     <td className="border-border border px-3 py-2">2차</td>
@@ -142,14 +157,17 @@ export default function ContentPolicyPage() {
             <ul className="list-disc space-y-1 pl-5">
               <li>승부 예측은 오락 목적으로 제공되며, 실제 금전 거래가 아닙니다.</li>
               <li>볼(포인트)을 이용하여 예측에 참여하며, 적중 시 보상을 받습니다.</li>
-              <li>다중 계정을 이용한 예측 조작은 엄격히 금지되며, 적발 시 모든 관련 계정이 정지됩니다.</li>
+              <li>
+                다중 계정을 이용한 예측 조작은 엄격히 금지되며, 적발 시 모든 관련 계정이 정지됩니다.
+              </li>
               <li>비정상적인 방법(버그 악용 등)으로 볼을 획득하는 행위는 금지됩니다.</li>
             </ul>
           </section>
 
           <section className="border-border border-t pt-4">
             <p className="text-muted-foreground text-[13px]">
-              본 운영정책은 2026년 3월 3일부터 시행합니다.<br />
+              본 운영정책은 2026년 3월 3일부터 시행합니다.
+              <br />
               운영정책은 서비스 환경 변화에 따라 수정될 수 있으며, 변경 시 공지합니다.
             </p>
           </section>
