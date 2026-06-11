@@ -150,7 +150,8 @@ export const PostCardContent = memo(function PostCardContent({
           {/* 제목 */}
           <Link href={`/post/${postId}`} className="group gn-pin-title block">
             <h2
-              className="font-title line-clamp-2 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
+              title={title}
+              className="font-title line-clamp-1 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
               style={{
                 color: "var(--wc-ink, #14161a)",
                 fontWeight: 800,
