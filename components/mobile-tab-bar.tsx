@@ -48,7 +48,7 @@ function MobileTabBarContent() {
       aria-label="모바일 메뉴"
       style={{
         background: "rgba(255, 255, 255, 0.92)",
-        borderTop: "1px solid var(--wc-line, #efe7e0)",
+        borderTop: "1px solid var(--wc-line, #E2E5EA)",
         boxShadow: "0 -4px 12px rgba(26, 20, 22, 0.05)",
       }}
     >
@@ -61,7 +61,7 @@ function MobileTabBarContent() {
               href={tab.href}
               className="flex min-h-[48px] min-w-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 transition-colors"
               style={{
-                color: isActive ? "var(--wc-burgundy, #a0203b)" : "var(--wc-mute, #7a6b65)",
+                color: isActive ? "var(--wc-burgundy, #961E37)" : "var(--wc-mute, #5C6470)",
               }}
             >
               <tab.icon className={`h-[22px] w-[22px] ${isActive ? "stroke-[2.5]" : ""}`} />

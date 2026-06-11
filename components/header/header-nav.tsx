@@ -36,7 +36,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           ? undefined
           : {
               background: "var(--wc-card, #ffffff)",
-              borderTop: "1px solid var(--wc-line, #efe7e0)",
+              borderTop: "1px solid var(--wc-line, #E2E5EA)",
             }
       }
     >

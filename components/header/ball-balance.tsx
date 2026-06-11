@@ -49,13 +49,13 @@ export function BallBalance() {
             role="status"
             aria-label={`보유 볼: ${balance}개`}
             style={{
-              background: "rgba(160, 32, 59, 0.12)",
+              background: "rgba(150,30,55,0.12)",
             }}
           >
             <Circle
               className="h-4 w-4"
               aria-hidden="true"
-              style={{ fill: "var(--wc-burgundy, #a0203b)", color: "var(--wc-burgundy, #a0203b)" }}
+              style={{ fill: "var(--wc-burgundy, #961E37)", color: "var(--wc-burgundy, #961E37)" }}
             />
             <span
               className="text-sm font-bold tabular-nums"

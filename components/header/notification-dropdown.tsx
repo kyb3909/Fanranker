@@ -227,7 +227,7 @@ export function NotificationDropdown() {
             <span
               className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
               aria-hidden="true"
-              style={{ background: "var(--wc-burgundy, #a0203b)" }}
+              style={{ background: "var(--wc-burgundy, #961E37)" }}
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
@@ -242,14 +242,14 @@ export function NotificationDropdown() {
         <div
           className="flex items-center justify-between p-4"
           style={{
-            background: "var(--wc-soft, #f4ece6)",
-            borderBottom: "1px solid var(--wc-line, #efe7e0)",
+            background: "var(--wc-soft, #F6E4E8)",
+            borderBottom: "1px solid var(--wc-line, #E2E5EA)",
           }}
         >
           <h3
             className="text-[11px] font-bold uppercase"
             style={{
-              color: "var(--wc-burgundy, #a0203b)",
+              color: "var(--wc-burgundy, #961E37)",
               letterSpacing: "0.18em",
             }}
           >
@@ -259,7 +259,7 @@ export function NotificationDropdown() {
             <button
               onClick={markAllAsRead}
               className="text-xs font-bold"
-              style={{ color: "var(--wc-burgundy, #a0203b)" }}
+              style={{ color: "var(--wc-burgundy, #961E37)" }}
             >
               모두 읽음
             </button>

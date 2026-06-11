@@ -55,7 +55,7 @@ export function Header() {
                 style={{ letterSpacing: "-0.02em", color: "var(--wc-ink, #1A1416)" }}
               >
                 <span className="font-bold">gongnori</span>
-                <span className="font-normal" style={{ color: "var(--wc-burgundy, #A0203B)" }}>
+                <span className="font-normal" style={{ color: "var(--wc-burgundy, #961E37)" }}>
                   .fan
                 </span>
               </span>

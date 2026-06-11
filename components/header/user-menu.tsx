@@ -60,8 +60,8 @@ export function UserMenu() {
             <AvatarFallback
               className="text-sm font-bold"
               style={{
-                background: "rgba(160, 32, 59, 0.12)",
-                color: "var(--wc-burgundy, #a0203b)",
+                background: "rgba(150,30,55,0.12)",
+                color: "var(--wc-burgundy, #961E37)",
               }}
             >
               {userInitials}
@@ -82,8 +82,8 @@ export function UserMenu() {
               <AvatarFallback
                 className="text-base font-bold"
                 style={{
-                  background: "rgba(160, 32, 59, 0.12)",
-                  color: "var(--wc-burgundy, #a0203b)",
+                  background: "rgba(150,30,55,0.12)",
+                  color: "var(--wc-burgundy, #961E37)",
                 }}
               >
                 {userInitials}
@@ -93,7 +93,7 @@ export function UserMenu() {
               <p className="truncate text-sm font-bold" style={{ color: "var(--wc-ink, #1a1416)" }}>
                 {displayName}
               </p>
-              <p className="truncate text-xs" style={{ color: "var(--wc-mute, #7a6b65)" }}>
+              <p className="truncate text-xs" style={{ color: "var(--wc-mute, #5C6470)" }}>
                 {user.username || user.emailAddresses[0]?.emailAddress}
               </p>
             </div>
@@ -126,7 +126,7 @@ export function UserMenu() {
 
         <Link href="/shop">
           <DropdownMenuItem className="hover:bg-muted/50 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
-            <Sparkles className="mr-3 h-4 w-4" style={{ color: "var(--wc-burgundy, #a0203b)" }} />
+            <Sparkles className="mr-3 h-4 w-4" style={{ color: "var(--wc-burgundy, #961E37)" }} />
             <span className="text-sm font-medium">상점</span>
           </DropdownMenuItem>
         </Link>
