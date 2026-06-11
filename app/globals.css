@@ -35,27 +35,27 @@
   --primary: #961e37;
   --primary-foreground: #ffffff;
 
-  /* Secondary: Light gray for secondary elements */
-  --secondary: #f8f8f8;
+  /* Secondary: wine tint — hover/chip 서피스 */
+  --secondary: #f6e4e8;
   --secondary-foreground: #222222;
 
-  /* Muted: For muted backgrounds */
-  --muted: #f7f8f9;
-  /* Secondary Text: #999 - 메타 정보, 라벨, 설명 */
-  --muted-foreground: #999999;
+  /* Muted: wine tint — bg-muted/40 등 */
+  --muted: #f6e4e8;
+  /* Secondary Text: steel mute */
+  --muted-foreground: #5c6470;
 
-  --accent: #f8f9fa;
+  --accent: #f6e4e8;
   --accent-foreground: #222222;
 
   --destructive: oklch(0.45 0.18 15);
   --destructive-foreground: #ffffff;
 
-  /* Border: Clean border color */
-  --border: #ebebeb;
-  --input: #e5e5e5;
+  /* Border: steel line */
+  --border: #e2e5ea;
+  --input: #e2e5ea;
 
-  /* Ring: Burgundy for focus states */
-  --ring: oklch(0.45 0.18 15);
+  /* Ring: wine #961E37 */
+  --ring: #961e37;
 
   --chart-1: oklch(0.45 0.18 15);
   --chart-2: oklch(0.5 0.16 15);
