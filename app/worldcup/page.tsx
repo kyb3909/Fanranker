@@ -59,40 +59,113 @@ export default async function WorldcupPage() {
     isRegistered = !!reg
   }
 
+  const WC_TS = new Date("2026-06-11T18:00:00+09:00").getTime()
+  const dday = Math.ceil(Math.max(0, WC_TS - Date.now()) / (1000 * 60 * 60 * 24))
+
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="mx-auto grid max-w-[1120px] items-center gap-10 px-6 pt-12 pb-14 lg:grid-cols-[1.04fr_.96fr] lg:gap-[52px]">
-        <div>
-          <div className="mb-5 flex flex-wrap items-center gap-2.5">
-            <span className="wc-pill-wine">WORLD CUP 2026</span>
-            <span className="text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
-              아스날 구너 전용
+      <section
+        style={{
+          background: "linear-gradient(180deg, var(--wc-card), var(--wc-paper))",
+          borderBottom: "1px solid var(--wc-line)",
+        }}
+      >
+        <div
+          className="mx-auto flex flex-col items-center px-6 text-center"
+          style={{ maxWidth: 760, padding: "56px 24px 52px" }}
+        >
+          {/* 상단 칩 2개 */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
+            <span className="wc-pill-wine">EVENT</span>
+            <span
+              className="tnum inline-flex items-center"
+              style={{
+                height: 28,
+                padding: "0 12px",
+                background: "var(--wc-ink)",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                borderRadius: 999,
+              }}
+            >
+              D-{dday}
             </span>
           </div>
+
+          {/* 타이틀 */}
           <h1
-            className="mb-[18px] text-[34px] font-extrabold sm:text-[52px]"
-            style={{ letterSpacing: "-.035em", lineHeight: 1.12 }}
+            className="font-title mb-[14px]"
+            style={{
+              fontSize: "clamp(34px, 5vw, 50px)",
+              fontWeight: 900,
+              letterSpacing: "-.03em",
+              lineHeight: 1.2,
+              wordBreak: "keep-all",
+            }}
           >
-            월드컵 승부예측,
+            2026 월드컵 승부예측
             <br />
-            <span style={{ color: "var(--wc-burgundy)" }}>구너들의 대결.</span>
+            <span style={{ color: "var(--wc-burgundy)" }}>구너들의 대결</span>
           </h1>
+
+          {/* 소개문 */}
           <p
-            className="mb-[30px] max-w-[480px] text-[15.5px] sm:text-[16.5px]"
-            style={{ lineHeight: 1.66, color: "var(--wc-ink-2)" }}
+            className="mb-[28px] max-w-[520px]"
+            style={{
+              fontSize: 16,
+              lineHeight: 1.7,
+              color: "var(--wc-mute)",
+              wordBreak: "keep-all",
+            }}
           >
-            32강 전까지 구너로 참가 신청하고, 토너먼트 내내 예측으로 점수를 쌓으세요. 최고 점수를
-            기록한 단 한 명에게{" "}
-            <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>데클런 라이스 사인 유니폼</b>을
-            드립니다.
+            토너먼트 기간 동안 예측으로 점수를 쌓고, 최고 득점 구너에게 드리는 단 하나의{" "}
+            <b style={{ color: "var(--wc-ink)" }}>데클런 라이스 친필 사인 유니폼</b>에 도전하세요.
           </p>
 
+          {/* 이벤트 정보 박스 */}
+          <div
+            className="mb-[28px] w-full overflow-hidden rounded-xl"
+            style={{ background: "#fff", border: "1px solid var(--wc-line)", display: "flex" }}
+          >
+            {[
+              ["이벤트 기간", "2026.06.11(목) ~ 결승전 종료"],
+              ["참가 신청", "32강 시작 전까지"],
+              ["참가 대상", "아스날 구너 누구나"],
+            ].map(([k, v], i) => (
+              <div
+                key={k}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                  padding: "15px 8px",
+                  alignItems: "center",
+                  borderLeft: i > 0 ? "1px solid var(--wc-line)" : "none",
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--wc-mute-2)" }}>
+                  {k}
+                </span>
+                <span
+                  className="text-center"
+                  style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4, wordBreak: "keep-all" }}
+                >
+                  {v}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* 카운트다운 */}
           <div className="wc-cd-light mb-[30px]">
             <Countdown target="2026-06-11T18:00:00+09:00" label="이벤트 시작까지" />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* CTA 버튼 행 */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
             {isRegistered ? (
               <Link href="/worldcup/games" className="wc-hbtn wc-hbtn-primary">
                 경기 예측하러 가기 <ArrowRight className="h-[17px] w-[17px]" />
@@ -105,78 +178,22 @@ export default async function WorldcupPage() {
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-ghost">
               구너 현황
             </Link>
-            <span className="text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
-              {isRegistered ? (
-                <span style={{ color: "var(--wc-go)", fontWeight: 700 }}>✓ 참가 신청 완료</span>
-              ) : regCount > 0 ? (
-                <>
-                  현재 <b style={{ color: "var(--wc-burgundy)" }}>{regCount.toLocaleString()}명</b>{" "}
-                  신청 완료
-                </>
-              ) : (
-                "1호 신청자가 되어보세요"
-              )}
-            </span>
           </div>
-        </div>
 
-        {/* 1등 상품 카드 — 데클런 라이스 사인 유니폼 */}
-        <figure className="wc-prize-card">
-          <div
-            className="relative"
-            style={{
-              background: "linear-gradient(180deg,#FAFAFA,#F1F2F4)",
-              padding: "14px 14px 0",
-            }}
-          >
-            <span
-              className="wc-pill-gold absolute"
-              style={{ top: 16, left: 16, zIndex: 2, boxShadow: "var(--wc-shadow-1)" }}
-            >
-              <Crown className="h-[13px] w-[13px]" /> 1등 상품
-            </span>
-            <Image
-              src="/worldcup/prize-rice-jersey.webp"
-              alt="데클런 라이스 사인 유니폼"
-              width={1190}
-              height={794}
-              priority
-              sizes="(min-width: 1024px) 45vw, 100vw"
-              style={{
-                width: "100%",
-                aspectRatio: "1190 / 794",
-                objectFit: "cover",
-                borderRadius: "12px 12px 0 0",
-              }}
-            />
-          </div>
-          <div style={{ padding: "18px 22px 22px", borderTop: "1px solid var(--wc-line)" }}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div
-                  className="text-[18px] font-extrabold"
-                  style={{ letterSpacing: "-.02em", lineHeight: 1.25 }}
-                >
-                  데클런 라이스 사인 유니폼
-                </div>
-                <div className="mt-1 text-[13.5px]" style={{ color: "var(--wc-ink-2)" }}>
-                  친필 사인 · 정품 · 액자 증정
-                </div>
-              </div>
-              <span
-                className="shrink-0 text-[13px] font-bold tabular-nums"
-                style={{
-                  color: "var(--wc-mute)",
-                  background: "#F0F2F5",
-                  borderRadius: 8,
-                  padding: "6px 10px",
-                }}
-              >
-                #41
-              </span>
-            </div>
-          </div>
-        </figure>
+          {/* 신청 카운트 문구 */}
+          <span className="mt-[14px] text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
+            {isRegistered ? (
+              <span style={{ color: "var(--wc-go)", fontWeight: 700 }}>✓ 참가 신청 완료</span>
+            ) : regCount > 0 ? (
+              <>
+                현재 <b style={{ color: "var(--wc-burgundy)" }}>{regCount.toLocaleString()}명</b>{" "}
+                신청 완료
+              </>
+            ) : (
+              "1호 신청자가 되어보세요"
+            )}
+          </span>
+        </div>
       </section>
 
       {/* ── 진행 방식 ────────────────────────────────────────── */}
