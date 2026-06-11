@@ -686,27 +686,6 @@ function ProviderCard({
   url: string
   children: ReactNode
 }) {
-  const headerStyle: React.CSSProperties =
-    provider === "x"
-      ? { background: "#000", color: "#fff" }
-      : provider === "instagram"
-        ? { background: "linear-gradient(90deg,#f09433,#dc2743,#bc1888)", color: "#fff" }
-        : { background: "#fff", borderBottom: "1px solid var(--wc-line)", color: "var(--wc-ink)" }
-
-  const pathColor =
-    provider === "x"
-      ? "rgba(255,255,255,.65)"
-      : provider === "instagram"
-        ? "rgba(255,255,255,.75)"
-        : "var(--wc-mute)"
-
-  const linkColor =
-    provider === "x"
-      ? "rgba(255,255,255,.75)"
-      : provider === "instagram"
-        ? "rgba(255,255,255,.85)"
-        : "var(--wc-mute)"
-
   return (
     <div className="border-border bg-card relative overflow-hidden rounded-xl border">
       {/* 좌측 4px 액센트 바 */}
@@ -718,16 +697,20 @@ function ProviderCard({
       {/* 출처 헤더 */}
       <header
         className="flex items-center gap-2 py-2 pr-3 pl-4 text-[11px] font-bold"
-        style={headerStyle}
+        style={{
+          background: "#fff",
+          borderBottom: "1px solid var(--wc-line)",
+          color: "var(--wc-ink)",
+        }}
       >
         <ProviderBadge provider={provider} />
         <span>{sourceLabel}</span>
         {sourcePath && (
           <>
-            <span aria-hidden style={{ color: pathColor, fontWeight: 400 }}>
+            <span aria-hidden style={{ color: "var(--wc-mute)", fontWeight: 400 }}>
               ·
             </span>
-            <span style={{ color: pathColor, fontWeight: 600 }}>{sourcePath}</span>
+            <span style={{ color: "var(--wc-mute)", fontWeight: 600 }}>{sourcePath}</span>
           </>
         )}
         <a
@@ -735,8 +718,8 @@ function ProviderCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="ml-auto inline-flex items-center gap-0.5 transition-opacity hover:opacity-80"
-          style={{ color: linkColor }}
+          className="ml-auto inline-flex items-center gap-0.5 transition-opacity hover:opacity-70"
+          style={{ color: "var(--wc-mute)" }}
         >
           원본 보기
           <ExternalLink className="h-3 w-3" />
