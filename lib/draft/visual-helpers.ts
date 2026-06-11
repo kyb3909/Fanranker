@@ -22,7 +22,7 @@ export const POSITION_HEX: Record<Position, string> = {
   GK: "#c98615",
   DF: "#1f4d7a",
   MF: "#2a6a4a",
-  FW: "#a0203b",
+  FW: "#961E37",
 }
 
 const POSITION_LABEL_KO: Record<Position, string> = {
