@@ -11,20 +11,20 @@
 
 .draft-scope {
   /* core palette */
-  --draft-paper: #fbf6f0;
-  --draft-paper-dim: #f4ece6;
-  --draft-soft: #f4ece6;
+  --draft-paper: #ffffff;
+  --draft-paper-dim: #f6e4e8;
+  --draft-soft: #f6e4e8;
   --draft-card: #ffffff;
-  --draft-ink: #1a1416;
-  --draft-ink-soft: #3a2f33;
-  --draft-mute: #807370;
-  --draft-line: #e5dcd2;
-  --draft-rule: #d8ccbf;
+  --draft-ink: #14161a;
+  --draft-ink-soft: #5c6470;
+  --draft-mute: #8b93a0;
+  --draft-line: #e2e5ea;
+  --draft-rule: #cfd4dc;
 
   /* hot accent */
-  --draft-burgundy: #a0203b;
-  --draft-burgundy-deep: #7a1830;
-  --draft-burgundy-soft: #f7e2e7;
+  --draft-burgundy: #961e37;
+  --draft-burgundy-deep: #771629;
+  --draft-burgundy-soft: #f6e4e8;
 
   /* utility colors used sparingly */
   --draft-emerald: #2a6a4a;
@@ -41,14 +41,14 @@
   --draft-th-tour: #fbcd5a;
 
   /* shadow */
-  --draft-shadow-1: 0 1px 2px rgba(26, 20, 22, 0.06), 0 1px 1px rgba(26, 20, 22, 0.04);
-  --draft-shadow-2: 0 8px 24px rgba(26, 20, 22, 0.1), 0 2px 4px rgba(26, 20, 22, 0.04);
-  --draft-shadow-3: 0 24px 48px rgba(26, 20, 22, 0.14), 0 4px 8px rgba(26, 20, 22, 0.06);
+  --draft-shadow-1: 0 1px 2px rgba(24, 18, 21, 0.06), 0 1px 1px rgba(24, 18, 21, 0.04);
+  --draft-shadow-2: 0 8px 24px rgba(24, 18, 21, 0.1), 0 2px 4px rgba(24, 18, 21, 0.04);
+  --draft-shadow-3: 0 24px 48px rgba(24, 18, 21, 0.14), 0 4px 8px rgba(24, 18, 21, 0.06);
 
   /* type */
   --draft-font-title: "SUIT Variable", "SUIT", "Pretendard Variable", system-ui, sans-serif;
   --draft-font-body: "Pretendard Variable", "Pretendard", system-ui, sans-serif;
-  --draft-font-serif: "Source Serif Pro", "Source Serif 4", "Noto Serif KR", Georgia, serif;
+  --draft-font-serif: var(--draft-font-body);
   --draft-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
 
   font-family: var(--draft-font-body);
@@ -90,10 +90,7 @@
 /* kraft texture — subtle paper grain */
 .draft-scope.draft-kraft,
 .draft-scope .draft-kraft {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(160, 32, 59, 0.05), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(26, 20, 22, 0.04), transparent 60%),
-    var(--draft-paper);
+  background: var(--draft-paper);
 }
 
 /* magazine rule */
@@ -154,17 +151,17 @@
   height: 8px;
   border-radius: 50%;
   background: var(--draft-burgundy);
-  box-shadow: 0 0 0 0 rgba(160, 32, 59, 0.55);
+  box-shadow: 0 0 0 0 rgba(150, 30, 55, 0.55);
   animation: draft-dotpulse 1.6s ease-out infinite;
 }
 @keyframes draft-dotpulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(160, 32, 59, 0.55);
+    box-shadow: 0 0 0 0 rgba(150, 30, 55, 0.55);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(160, 32, 59, 0);
+    box-shadow: 0 0 0 8px rgba(150, 30, 55, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(160, 32, 59, 0);
+    box-shadow: 0 0 0 0 rgba(150, 30, 55, 0);
   }
 }

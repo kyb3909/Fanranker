@@ -32,7 +32,7 @@
   --popover-foreground: #111111;
 
   /* Primary Accent: Burgundy/Wine Red - 버튼, 액티브 상태, 핵심 강조 */
-  --primary: oklch(0.45 0.18 15);
+  --primary: #961e37;
   --primary-foreground: #ffffff;
 
   /* Secondary: Light gray for secondary elements */
@@ -324,7 +324,7 @@
 }
 
 .tiptap-editor .tiptap-image.ProseMirror-selectednode {
-  outline: 2px solid hsl(var(--primary));
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 0.5rem;
 }

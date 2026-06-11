@@ -13,16 +13,17 @@
    *   #F1F3F5 (soft) · #E4E7EC · #D2D6DD · #FFFFFF · #9B1F33 (burgundy)
    * sky/blue 끼 없는 순수 cool gray — 가장 중립적, 깔끔.
    * mute (텍스트) 도 cool gray 유지 (가독성). */
-  --wc-burgundy: #9b1f33;
-  --wc-burgundy-deep: #7c172a;
-  --wc-ink: #1a1416;
+  --wc-burgundy: #961e37;
+  --wc-burgundy-deep: #771629;
+  --wc-ink: #14161a;
   --wc-paper: #ffffff;
   --wc-card: #ffffff;
-  --wc-line: #e4e7ec;
-  --wc-line-2: #d2d6dd;
-  --wc-mute: #6c757d;
-  --wc-mute-2: #adb5bd;
-  --wc-soft: #f1f3f5;
+  --wc-line: #e2e5ea;
+  --wc-line-2: #cfd4dc;
+  --wc-mute: #5c6470;
+  --wc-mute-2: #8b93a0;
+  --wc-soft: #f6e4e8;
+  --wc-tint: #f6e4e8; /* 강조 서피스 — 사이드바 헤더 등 */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */
   --wc-wine-tint: #fbf2f4; /* 와인 faint fill — pill/step number */
 
@@ -42,9 +43,9 @@
   --wc-club-blue: #1e3a8a;
 
   /* Shadows */
-  --wc-shadow-1: 0 1px 2px rgba(26, 20, 22, 0.04), 0 0 0 1px var(--wc-line);
-  --wc-shadow-2: 0 4px 16px rgba(26, 20, 22, 0.06), 0 0 0 1px var(--wc-line);
-  --wc-shadow-3: 0 12px 40px rgba(126, 26, 47, 0.12), 0 0 0 1px var(--wc-line);
+  --wc-shadow-1: 0 1px 2px rgba(24, 18, 21, 0.05), 0 0 0 1px var(--wc-line);
+  --wc-shadow-2: 0 4px 16px rgba(24, 18, 21, 0.07), 0 0 0 1px var(--wc-line);
+  --wc-shadow-3: 0 12px 40px rgba(119, 22, 41, 0.14), 0 0 0 1px var(--wc-line);
 
   /* Type scale (시안 기준) */
   --wc-fs-hero: clamp(40px, 6vw, 56px);
@@ -201,7 +202,7 @@
   color: var(--wc-ink, #1a1416);
 }
 .wc-hdr-link[data-on="true"] {
-  color: var(--wc-burgundy, #a0203b);
+  color: var(--wc-burgundy, #961e37);
   font-weight: 700;
 }
 .wc-hdr-link[data-on="true"]::after {
@@ -211,7 +212,7 @@
   bottom: -1px;
   left: 10px;
   height: 3px;
-  background: var(--wc-burgundy, #a0203b);
+  background: var(--wc-burgundy, #961e37);
   border-radius: 2px 2px 0 0;
 }
 .wc-hdr-pulse {
@@ -1654,7 +1655,7 @@
   border-bottom: 0;
 }
 .worldcup-scope .wc-lb-tr.you {
-  background: rgba(160, 32, 59, 0.04);
+  background: rgba(150, 30, 55, 0.04);
 }
 .worldcup-scope .wc-lb-rk {
   font-weight: 700;
