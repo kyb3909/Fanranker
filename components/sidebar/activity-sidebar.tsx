@@ -121,7 +121,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
         <div
           className="flex items-center gap-2 px-4 py-3"
           style={{
-            background: "var(--wc-soft)",
+            background: "var(--wc-card)",
             borderBottom: "1px solid var(--wc-line)",
           }}
         >

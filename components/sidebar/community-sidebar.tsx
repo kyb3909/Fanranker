@@ -355,7 +355,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
         <div
           className="flex items-center justify-between px-4 py-3"
           style={{
-            background: "var(--wc-soft)",
+            background: "var(--wc-card)",
             borderBottom: "1px solid var(--wc-line)",
           }}
         >
