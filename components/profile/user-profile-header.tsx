@@ -68,49 +68,55 @@ export function UserProfileHeader({
   }
 
   return (
-    <div className="bg-card border-border flex flex-col gap-4 border-b p-4 sm:p-6">
-      <div className="flex items-start gap-4">
-        <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-          <AvatarImage src={avatarUrl || "/placeholder-user.jpg"} alt={nickname} />
-          <AvatarFallback className="text-lg font-semibold sm:text-xl">
-            {nickname[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-foreground truncate text-xl font-bold sm:text-2xl">{nickname}</h1>
-            {isExpert && <UserProfileBadge isExpert={isExpert} size="md" />}
-            {isJournalist && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                <Newspaper className="h-3 w-3" />
-                기자
-              </span>
-            )}
-          </div>
+    <div className="flex flex-wrap items-center gap-4">
+      <Avatar className="h-[72px] w-[72px] shrink-0">
+        <AvatarImage src={avatarUrl || "/placeholder-user.jpg"} alt={nickname} />
+        <AvatarFallback
+          className="text-xl font-extrabold"
+          style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+        >
+          {nickname[0].toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="truncate font-extrabold" style={{ fontSize: 20, color: "var(--wc-ink)" }}>
+            {nickname}
+          </h1>
+          {isExpert && <UserProfileBadge isExpert={isExpert} size="md" />}
+          {isJournalist && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              <Newspaper className="h-3 w-3" />
+              기자
+            </span>
+          )}
         </div>
       </div>
       {!isOwnProfile && currentUserId && isJournalist && (
-        <div className="flex justify-end">
-          <Button
-            variant={isFollowing ? "outline" : "default"}
-            size="sm"
-            onClick={handleFollow}
-            disabled={isLoading}
-            className="gap-2"
-          >
-            {isFollowing ? (
-              <>
-                <UserMinus className="h-4 w-4" />
-                <span>언팔로우</span>
-              </>
-            ) : (
-              <>
-                <UserPlus className="h-4 w-4" />
-                <span>팔로우</span>
-              </>
-            )}
-          </Button>
-        </div>
+        <Button
+          variant={isFollowing ? "outline" : "default"}
+          size="sm"
+          onClick={handleFollow}
+          disabled={isLoading}
+          className="shrink-0 gap-2"
+          style={
+            isFollowing
+              ? undefined
+              : { background: "var(--wc-burgundy)", color: "#fff", border: "none" }
+          }
+        >
+          {isFollowing ? (
+            <>
+              <UserMinus className="h-4 w-4" />
+              <span>언팔로우</span>
+            </>
+          ) : (
+            <>
+              <UserPlus className="h-4 w-4" />
+              <span>팔로우</span>
+            </>
+          )}
+        </Button>
       )}
     </div>
   )
