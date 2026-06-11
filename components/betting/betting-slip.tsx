@@ -1,10 +1,10 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ChevronDown, ChevronUp, Target, Circle, Loader2, X, Newspaper } from "lucide-react"
+import { ChevronDown, ChevronUp, Circle, Loader2, X, Newspaper } from "lucide-react"
 import type { SelectedBet, GroupedMatch } from "@/types/betting"
 import { getGameTypeLabel, formatMatchTime, SPORT_ICONS } from "@/types/betting"
 
@@ -53,8 +53,9 @@ export function BettingSlip({
   variant,
 }: BettingSlipProps) {
   const isRail = variant === "rail"
+  const [mascotError, setMascotError] = useState(false)
 
-  // Rail 빈 상태 — 레이아웃 점프 방지
+  // CC6 — Rail 빈 상태 with mascot
   if (selectedBets.length === 0 && isRail) {
     return (
       <div
@@ -63,15 +64,32 @@ export function BettingSlip({
           border: "1px solid var(--wc-line)",
           borderRadius: 12,
           boxShadow: "var(--wc-shadow-1)",
-          padding: "40px 20px",
+          padding: "0 20px 24px",
           textAlign: "center",
+          minHeight: 240,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <div className="text-[36px]" aria-hidden>
-          🎯
-        </div>
-        <p className="mt-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
-          경기를 선택하면 슬립에 담겨요
+        {mascotError ? (
+          <div style={{ fontSize: 36, marginTop: 20, marginBottom: 4 }} aria-hidden>
+            🎯
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/mascot/bet-slip.png"
+            alt=""
+            width={128}
+            height={128}
+            style={{ marginTop: 20, marginBottom: 4, objectFit: "contain" }}
+            onError={() => setMascotError(true)}
+          />
+        )}
+        <p style={{ fontSize: 13, color: "var(--wc-mute)", marginTop: mascotError ? 8 : 0 }}>
+          전술 분석 중… 경기를 선택해 슬립에 담아보세요
         </p>
       </div>
     )
@@ -79,84 +97,155 @@ export function BettingSlip({
 
   if (selectedBets.length === 0) return null
 
-  // 공유 내부 컨텐츠 (rail + 하단 sticky 모두 사용)
+  // 선택 항목 라벨 헬퍼
+  const selectionLabel = (bet: SelectedBet, groupedMatch: GroupedMatch) => {
+    const s = bet.selection
+    const label =
+      s === "home" || s === "1"
+        ? groupedMatch.homeTeam
+        : s === "away" || s === "2"
+          ? groupedMatch.awayTeam
+          : s === "draw" || s === "X"
+            ? "무승부"
+            : s === "over"
+              ? "오버"
+              : s === "under"
+                ? "언더"
+                : s === "odd"
+                  ? "홀"
+                  : s === "even"
+                    ? "짝"
+                    : s
+    return bet.handicap !== null
+      ? `${label} (${bet.handicap > 0 ? "+" : ""}${bet.handicap})`
+      : label
+  }
+
+  const canSubmit =
+    !isSubmitting &&
+    selectedBets.length > 0 &&
+    betAmount > 0 &&
+    !selectedBets.some((b) => !b.odds || b.odds <= 0)
+
+  // CC1–CC5 내부 컨텐츠
   const innerContent = (
     <>
-      {/* 전체 삭제 */}
-      <div className="border-border flex items-center justify-between border-b pb-2">
-        <span className="text-muted-foreground text-xs">선택한 경기 {selectedBets.length}개</span>
+      {/* 전체 삭제 헤더 */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingBottom: 10,
+          borderBottom: "1px solid var(--wc-line)",
+          marginBottom: 10,
+        }}
+      >
+        <span style={{ fontSize: 12, color: "var(--wc-mute)" }}>
+          선택한 경기 {selectedBets.length}개
+        </span>
         <button
           onClick={onClearAllBets}
-          className="text-primary hover:text-primary/80 text-xs font-medium"
+          style={{ fontSize: 12, fontWeight: 600, color: "var(--wc-mute)" }}
           aria-label="선택한 경기 전체 삭제"
         >
           전체 삭제
         </button>
       </div>
 
-      {/* 선택 경기 목록 */}
+      {/* CC2 — 선택 항목 미니 카드 */}
       <div
-        className={`divide-border divide-y overflow-y-auto ${isRail ? "max-h-[50vh]" : "max-h-[40vh]"}`}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          maxHeight: isRail ? "50vh" : "40vh",
+          overflowY: "auto",
+          marginBottom: 12,
+        }}
       >
         {selectedBets.map((bet) => {
           const groupedMatch = groupedMatches.find((m) => m.matchKey === bet.matchKey)
           const game = groupedMatch?.games.find((g) => g.id === bet.gameId)
           if (!groupedMatch || !game) return null
+
+          const marketLabel = getGameTypeLabel(bet.gameType, bet.sport)
+          const handicapSuffix =
+            bet.gameType.includes("핸디캡") && bet.handicap !== null
+              ? ` (${groupedMatch.homeTeam.slice(0, 4)} ${bet.handicap > 0 ? "+" : ""}${bet.handicap})`
+              : ""
+          const lineSuffix =
+            bet.gameType.includes("언더오버") && bet.overUnderLine != null
+              ? ` · 기준 ${bet.overUnderLine}`
+              : ""
+
           return (
-            <div key={bet.gameId} className="group relative py-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRemoveBet(bet.gameId)
+            <div
+              key={bet.gameId}
+              style={{
+                background: "#fff",
+                border: "1px solid var(--wc-line)",
+                borderRadius: 10,
+                padding: "10px 12px",
+              }}
+            >
+              {/* 행 1: 리그 · 시간 · 마켓 + X */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                  gap: 6,
                 }}
-                className="text-muted-foreground hover:text-primary absolute top-2 right-0 flex h-5 w-5 items-center justify-center transition-colors"
-                aria-label={`${groupedMatch.homeTeam} vs ${groupedMatch.awayTeam} 선택 삭제`}
               >
-                <X className="h-4 w-4" />
-              </button>
-              <div className="text-muted-foreground mb-0.5 flex flex-wrap items-center gap-2 text-[11px]">
-                <span>{groupedMatch.leagueCode}</span>
-                <span className="text-border">|</span>
-                <span>{formatMatchTime(groupedMatch.matchTime)}</span>
-                <span className="text-border">|</span>
-                <span className="text-primary">{getGameTypeLabel(bet.gameType, bet.sport)}</span>
-                {bet.gameType.includes("핸디캡") && bet.handicap !== null && (
-                  <span className="text-primary font-medium">
-                    ({groupedMatch.homeTeam.slice(0, 4)} {bet.handicap > 0 ? "+" : ""}
-                    {bet.handicap})
-                  </span>
-                )}
-                {bet.gameType.includes("언더오버") && bet.overUnderLine != null && (
-                  <span className="font-medium" style={{ color: "var(--wc-blue)" }}>
-                    (기준 {bet.overUnderLine})
-                  </span>
-                )}
+                <span style={{ fontSize: 11, color: "var(--wc-mute-2)", lineHeight: 1.4 }}>
+                  {groupedMatch.leagueCode} · {formatMatchTime(groupedMatch.matchTime)} ·{" "}
+                  {marketLabel}
+                  {handicapSuffix}
+                  {lineSuffix}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveBet(bet.gameId)
+                  }}
+                  style={{ color: "var(--wc-mute)", flexShrink: 0 }}
+                  aria-label={`${groupedMatch.homeTeam} vs ${groupedMatch.awayTeam} 선택 삭제`}
+                >
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
               </div>
-              <div className="text-foreground mb-1 pr-6 text-sm">
+
+              {/* 행 2: 매치명 */}
+              <div
+                style={{
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  color: "var(--wc-ink)",
+                  wordBreak: "keep-all",
+                  marginBottom: 5,
+                }}
+              >
                 {groupedMatch.homeTeam} vs {groupedMatch.awayTeam}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-primary text-sm font-medium">
-                  선택:{" "}
-                  {bet.selection === "home" || bet.selection === "1"
-                    ? groupedMatch.homeTeam
-                    : bet.selection === "away" || bet.selection === "2"
-                      ? groupedMatch.awayTeam
-                      : bet.selection === "draw" || bet.selection === "X"
-                        ? "무승부"
-                        : bet.selection === "over"
-                          ? "오버"
-                          : bet.selection === "under"
-                            ? "언더"
-                            : bet.selection === "odd"
-                              ? "홀"
-                              : bet.selection === "even"
-                                ? "짝"
-                                : bet.selection}
-                  {bet.handicap !== null && ` (${bet.handicap > 0 ? "+" : ""}${bet.handicap})`}
+
+              {/* 행 3: 선택 팀 + 배당 */}
+              <div
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--wc-burgundy)" }}>
+                  선택 {selectionLabel(bet, groupedMatch)}
                 </span>
                 {bet.odds && (
-                  <span className="text-sm font-bold" style={{ color: "var(--wc-go)" }}>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "var(--wc-ink)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
                     {bet.odds.toFixed(2)}배
                   </span>
                 )}
@@ -166,119 +255,204 @@ export function BettingSlip({
         })}
       </div>
 
-      {/* 베팅 금액 + 제출 영역 */}
-      <div className="border-border mt-2 space-y-3 border-t pt-3">
-        {/* 보유 볼 */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">보유 볼</span>
-          <span className="flex items-center gap-1 font-medium">
-            <Circle className="fill-primary text-primary h-3.5 w-3.5" />
+      {/* 베팅 금액 + 제출 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* CC1 — 보유 볼 */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: 13,
+          }}
+        >
+          <span style={{ color: "var(--wc-mute)" }}>보유 볼</span>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontWeight: 700,
+              color: "var(--wc-ink)",
+            }}
+          >
+            <Circle
+              style={{ width: 12, height: 12, fill: "var(--wc-ink)", color: "var(--wc-ink)" }}
+            />
             {userBalls.toLocaleString()}
           </span>
         </div>
 
-        {/* 베팅 금액 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm">베팅 금액</span>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                inputMode="numeric"
-                enterKeyHint="done"
-                pattern="[0-9]*"
-                value={betAmount}
-                onChange={(e) =>
-                  setBetAmount(Math.max(0, Math.min(userBalls, parseInt(e.target.value) || 0)))
-                }
-                className="h-8 w-20 text-right text-sm sm:w-24"
-                min={0}
-                max={userBalls}
-              />
-              <span className="text-muted-foreground text-sm">볼</span>
-            </div>
-          </div>
-          {/* 퀵 버튼 */}
-          <div className="flex gap-1">
-            {[1, 3, 5, 10].map((amount) => (
-              <button
-                key={amount}
-                onClick={() => setBetAmount(Math.min(amount, userBalls))}
-                className={`flex-1 rounded border py-1 text-xs transition-colors ${
-                  betAmount === amount
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/50 hover:bg-muted border-border"
-                } ${amount > userBalls ? "opacity-50" : ""}`}
-                disabled={amount > userBalls}
-              >
-                {amount}
-              </button>
-            ))}
-          </div>
+        {/* CC3 — 베팅 금액 인풋 (suffix inside) */}
+        <div style={{ position: "relative" }}>
+          <input
+            type="number"
+            inputMode="numeric"
+            enterKeyHint="done"
+            pattern="[0-9]*"
+            value={betAmount}
+            onChange={(e) =>
+              setBetAmount(Math.max(0, Math.min(userBalls, parseInt(e.target.value) || 0)))
+            }
+            style={{
+              height: 38,
+              width: "100%",
+              borderRadius: 10,
+              border: "1px solid var(--wc-line-2)",
+              paddingRight: 40,
+              paddingLeft: 12,
+              fontSize: 14,
+              color: "var(--wc-ink)",
+              background: "var(--wc-paper)",
+              fontVariantNumeric: "tabular-nums",
+              outline: "none",
+              textAlign: "right",
+              boxSizing: "border-box",
+            }}
+            min={0}
+            max={userBalls}
+          />
+          <span
+            style={{
+              position: "absolute",
+              right: 12,
+              top: "50%",
+              transform: "translateY(-50%)",
+              fontSize: 13,
+              color: "var(--wc-mute)",
+              pointerEvents: "none",
+            }}
+          >
+            볼
+          </span>
+        </div>
+
+        {/* CC3 — 퀵 버튼 세그먼트 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            borderRadius: 10,
+            overflow: "hidden",
+            border: "1px solid var(--wc-line-2)",
+          }}
+        >
+          {[1, 3, 5, 10].map((amount, i) => (
+            <button
+              key={amount}
+              onClick={() => setBetAmount(Math.min(amount, userBalls))}
+              disabled={amount > userBalls}
+              style={{
+                height: 32,
+                fontSize: 12,
+                fontWeight: 600,
+                borderLeft: i > 0 ? "1px solid var(--wc-line-2)" : "none",
+                background: betAmount === amount ? "var(--wc-burgundy)" : "#fff",
+                color: betAmount === amount ? "#fff" : "var(--wc-ink)",
+                opacity: amount > userBalls ? 0.4 : 1,
+                cursor: amount > userBalls ? "not-allowed" : "pointer",
+                transition: "background .15s",
+              }}
+            >
+              {amount}
+            </button>
+          ))}
         </div>
 
         {/* 기자 분석글 */}
         {isJournalist && setAnalysisText && setAnalysisTitle && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Newspaper className="h-3.5 w-3.5" style={{ color: "var(--wc-blue)" }} />
-              <span className="text-sm font-medium" style={{ color: "var(--wc-blue)" }}>
-                분석글
-              </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Newspaper style={{ width: 14, height: 14, color: "var(--wc-blue)" }} />
+              <span style={{ fontSize: 14, fontWeight: 500, color: "var(--wc-blue)" }}>분析글</span>
             </div>
             <Input
               value={analysisTitle}
               onChange={(e) => setAnalysisTitle(e.target.value)}
-              placeholder="분석글 제목 (선택)"
+              placeholder="분析글 제목 (선택)"
               maxLength={100}
               className="text-sm"
             />
             <Textarea
               value={analysisText}
               onChange={(e) => setAnalysisText(e.target.value)}
-              placeholder="이 조합에 대한 분석글을 작성하세요..."
+              placeholder="이 조합에 대한 분析글을 작성하세요..."
               maxLength={5000}
               rows={3}
               className="resize-none text-sm"
             />
-            <span className="text-muted-foreground text-xs">{analysisText.length}/5000</span>
+            <span style={{ fontSize: 12, color: "var(--wc-mute)" }}>
+              {analysisText.length}/5000
+            </span>
           </div>
         )}
 
-        {/* 배당 요약 */}
-        <div className="bg-muted/30 space-y-2 rounded-lg p-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">총 배점</span>
-            <span className="text-primary font-bold">{totalOdds.toFixed(2)}배</span>
+        {/* CC4 — 배당 요약 박스 */}
+        <div
+          style={{
+            background: "var(--wc-soft)",
+            borderRadius: 10,
+            padding: "12px 14px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>총 배점</span>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: "var(--wc-ink)",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {totalOdds.toFixed(2)}배
+            </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm">예상 획득 점수</span>
-            <span className="text-lg font-bold" style={{ color: "var(--wc-go)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>예상 획득 점수</span>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: "var(--wc-burgundy)",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
               {(betAmount * totalOdds).toFixed(2)}점
             </span>
           </div>
         </div>
 
-        {/* 예측하기 버튼 — 배당률 0/undefined 가드 */}
-        <Button
-          className="bg-primary hover:bg-primary/90 text-primary-foreground h-11 w-full"
+        {/* CC5 — CTA: 아이콘 제거, 48px, radius 10 */}
+        <button
           onClick={onSubmit}
-          disabled={
-            isSubmitting ||
-            selectedBets.length === 0 ||
-            betAmount <= 0 ||
-            selectedBets.some((b) => !b.odds || b.odds <= 0)
-          }
+          disabled={!canSubmit}
+          style={{
+            height: 48,
+            width: "100%",
+            borderRadius: 10,
+            background: "var(--wc-burgundy)",
+            color: "#fff",
+            fontSize: 15,
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: canSubmit ? 1 : 0.5,
+            cursor: canSubmit ? "pointer" : "not-allowed",
+            border: "none",
+            transition: "opacity .15s",
+          }}
         >
           {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" />
           ) : (
-            <span className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              {selectedBets.length}경기 {betAmount.toLocaleString()}볼 예측하기
-            </span>
+            `${selectedBets.length}경기 ${betAmount.toLocaleString()}볼 예측하기`
           )}
-        </Button>
+        </button>
       </div>
     </>
   )
@@ -295,7 +469,7 @@ export function BettingSlip({
           overflow: "hidden",
         }}
       >
-        <div className="px-4 py-3 sm:px-5 sm:py-4">{innerContent}</div>
+        <div style={{ padding: "16px 16px 20px" }}>{innerContent}</div>
       </div>
     )
   }
@@ -336,7 +510,14 @@ export function BettingSlip({
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="text-xs font-medium sm:text-sm">{selectedBets.length}경기 선택</span>
               {selectedBets.length > 0 && selectedBets[0].sport && (
-                <span className="text-muted-foreground bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] sm:text-xs">
+                <span
+                  className="rounded px-1.5 py-0.5 text-[10px] sm:text-xs"
+                  style={{
+                    background: "var(--wc-soft)",
+                    color: "var(--wc-burgundy)",
+                    fontWeight: 600,
+                  }}
+                >
                   {SPORT_ICONS[selectedBets[0].sport] || "🎯"} {selectedBets[0].sport}
                 </span>
               )}
@@ -351,7 +532,9 @@ export function BettingSlip({
           </div>
 
           {isSlipExpanded && (
-            <div className="border-t px-4 py-3 sm:px-5 sm:py-4">{innerContent}</div>
+            <div style={{ borderTop: "1px solid var(--wc-line)", padding: "12px 16px 20px" }}>
+              {innerContent}
+            </div>
           )}
         </Card>
       </div>
