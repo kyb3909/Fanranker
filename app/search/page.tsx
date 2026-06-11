@@ -10,10 +10,9 @@ import { Loader2, Search as SearchIcon } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 
-type SearchType = "nickname" | "id" | "title" | "title_content"
+type SearchType = "nickname" | "id" | "title"
 
 const SEARCH_TYPE_OPTIONS = [
-  { value: "title_content", label: "전체" },
   { value: "title", label: "제목" },
   { value: "nickname", label: "닉네임" },
   { value: "id", label: "ID" },
@@ -45,9 +44,9 @@ function highlightMatch(text: string, query: string) {
       {text.slice(0, i)}
       <mark
         style={{
-          background: "var(--wc-soft)",
+          background: "#F6E4E8",
           color: "var(--wc-burgundy)",
-          fontWeight: 800,
+          fontWeight: 700,
           padding: "0 1px",
           borderRadius: 3,
         }}
@@ -64,8 +63,11 @@ function SearchContent() {
   const searchParams = useSearchParams()
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
+  const validTypes: SearchType[] = ["title", "nickname", "id"]
   const [searchType, setSearchType] = useState<SearchType>(
-    (searchParams.get("type") as SearchType) || "title_content"
+    (validTypes.includes(searchParams.get("type") as SearchType)
+      ? searchParams.get("type")
+      : "title") as SearchType
   )
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -80,7 +82,8 @@ function SearchContent() {
   useEffect(() => {
     if (initialSearchDone[0]) return
     const q = searchParams.get("q")
-    const type = (searchParams.get("type") as SearchType) || "title_content"
+    const rawType = searchParams.get("type") as SearchType
+    const type: SearchType = validTypes.includes(rawType) ? rawType : "title"
     if (q && q.trim().length > 0) {
       setSearchQuery(q)
       setSearchType(type)
@@ -219,48 +222,64 @@ function SearchContent() {
             </div>
 
             {/* 검색 폼 */}
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div style={{ position: "relative" }}>
-                <SearchIcon
+            <form onSubmit={handleSubmit} className="space-y-2">
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <SearchIcon
+                    style={{
+                      position: "absolute",
+                      left: 14,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 18,
+                      height: 18,
+                      color: "var(--wc-mute-2)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="게시물, 닉네임 검색"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: 48,
+                      padding: "0 14px 0 42px",
+                      fontSize: 15,
+                      fontFamily: "var(--font-sans)",
+                      border: "1px solid var(--wc-line-2)",
+                      borderRadius: 12,
+                      outline: "none",
+                      background: "#fff",
+                      color: "var(--wc-ink)",
+                      boxShadow: "var(--wc-shadow-1)",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "var(--wc-burgundy)"
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--wc-line-2)"
+                    }}
+                  />
+                </div>
+                <button
+                  type="submit"
                   style={{
-                    position: "absolute",
-                    left: 16,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 18,
-                    height: 18,
-                    color: "var(--wc-mute-2)",
-                    pointerEvents: "none",
+                    height: 48,
+                    padding: "0 20px",
+                    borderRadius: 12,
+                    background: "var(--wc-burgundy)",
+                    color: "#fff",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
                   }}
-                />
-                <input
-                  type="text"
-                  placeholder="게시물, 닉네임 검색"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSubmit(e as unknown as React.FormEvent)
-                  }}
-                  style={{
-                    width: "100%",
-                    height: 52,
-                    padding: "0 16px 0 44px",
-                    fontSize: 15.5,
-                    fontFamily: "var(--font-sans)",
-                    border: "1px solid var(--wc-line-2)",
-                    borderRadius: 14,
-                    outline: "none",
-                    background: "#fff",
-                    color: "var(--wc-ink)",
-                    boxShadow: "var(--wc-shadow-1)",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "var(--wc-burgundy)"
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--wc-line-2)"
-                  }}
-                />
+                >
+                  검색
+                </button>
               </div>
 
               {/* 검색 타입 pills */}
@@ -270,7 +289,31 @@ function SearchContent() {
                     key={opt.value}
                     type="button"
                     onClick={() => setSearchType(opt.value as SearchType)}
-                    className={`wc-pill-tab${searchType === opt.value ? "on" : ""}`}
+                    style={
+                      searchType === opt.value
+                        ? {
+                            height: 30,
+                            padding: "0 14px",
+                            borderRadius: 20,
+                            border: "1px solid var(--wc-burgundy)",
+                            background: "var(--wc-burgundy)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }
+                        : {
+                            height: 30,
+                            padding: "0 14px",
+                            borderRadius: 20,
+                            border: "1px solid var(--wc-line-2)",
+                            background: "#fff",
+                            color: "var(--wc-mute)",
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                          }
+                    }
                   >
                     {opt.label}
                   </button>
