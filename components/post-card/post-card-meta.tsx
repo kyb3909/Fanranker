@@ -75,7 +75,7 @@ export function PostCardMeta({
   const hasTitleBadge = titleDisplay && (titleDisplay.adjTitle || titleDisplay.nounTitle)
 
   return (
-    <div className="mt-3.5 flex items-center gap-2 text-[12px] text-neutral-500 dark:text-neutral-400">
+    <div className="mt-3.5 flex items-center gap-2 text-[12px]" style={{ color: "var(--wc-mute)" }}>
       {/* 좌측: 아바타 + 작성자 + 호칭/플레어 + 시간 */}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         {/* 모바일 아바타 — 프로필로 직행 */}
@@ -159,7 +159,7 @@ export function PostCardMeta({
             "inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 transition-colors sm:min-h-0 sm:min-w-0 sm:py-1.5",
             myVote === "up"
               ? "text-primary"
-              : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800"
+              : "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)]"
           )}
         >
           <ThumbsUp className={cn("h-3.5 w-3.5", myVote === "up" && "fill-current")} />
@@ -169,7 +169,7 @@ export function PostCardMeta({
         <Link
           href={`/post/${postId}`}
           aria-label={`댓글 ${comments}개`}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 sm:min-h-0 sm:min-w-0 sm:py-1.5 dark:hover:bg-neutral-800"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 transition-colors hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)] sm:min-h-0 sm:min-w-0 sm:py-1.5"
         >
           <MessageCircle className="h-3.5 w-3.5" />
           <span className="font-medium tabular-nums">{comments}</span>
@@ -186,7 +186,7 @@ export function PostCardMeta({
             "hidden min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors sm:inline-flex sm:min-h-0 sm:min-w-0 sm:py-1.5",
             isBookmarked
               ? "text-primary"
-              : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800"
+              : "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)]"
           )}
         >
           <Bookmark className={cn("h-3.5 w-3.5", isBookmarked && "fill-current")} />
@@ -200,7 +200,7 @@ export function PostCardMeta({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 sm:min-h-0 sm:min-w-0 sm:py-1.5 dark:hover:bg-neutral-800"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)] sm:min-h-0 sm:min-w-0 sm:py-1.5"
               aria-label="더보기 메뉴"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
@@ -235,14 +235,16 @@ function AvatarSm({ avatar, author }: { avatar: string; author: string }) {
   return (
     <Avatar className="h-5 w-5">
       <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
-      <AvatarFallback className="text-[9px]">{author?.[0] ?? "?"}</AvatarFallback>
+      <AvatarFallback className="text-[9px]" style={{ background: "#F6E4E8", color: "#961E37" }}>
+        {author?.[0] ?? "?"}
+      </AvatarFallback>
     </Avatar>
   )
 }
 
 function Hairline() {
   return (
-    <span aria-hidden className="text-neutral-300 dark:text-neutral-600">
+    <span aria-hidden style={{ color: "var(--wc-line-2, #cfd4dc)" }}>
       ·
     </span>
   )
