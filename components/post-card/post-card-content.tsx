@@ -257,7 +257,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
 
   if (error) {
     return (
-      <div className="border-border bg-card overflow-hidden rounded-xl border">
+      <div className="border-border bg-card overflow-hidden border" style={{ borderRadius: 10 }}>
         <div className="bg-muted text-muted-foreground/50 flex min-h-[120px] w-full items-center justify-center">
           <ImageOff className="h-8 w-8" />
         </div>
@@ -266,18 +266,18 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
   }
 
   return (
-    <div className="border-border bg-card overflow-hidden rounded-xl border">
+    <div className="border-border bg-card overflow-hidden border" style={{ borderRadius: 10 }}>
       {/*
-        사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-contain.
+        사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-cover.
         width/height prop 기반으로는 Next.js가 자연 비율 불일치 경고(지속 발생)를 피할 수 없음.
       */}
-      <div className="bg-muted relative flex aspect-video max-h-[400px] w-full items-center justify-center transition-opacity hover:opacity-95">
+      <div className="bg-muted relative flex aspect-video max-h-[480px] w-full items-center justify-center transition-opacity hover:opacity-95">
         {canUseOptimizedFeedImage(src) ? (
           <Image
             src={src}
             alt={alt}
             fill
-            className="object-contain"
+            className="object-cover"
             priority={priority}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
             onError={() => setError(true)}
@@ -287,7 +287,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
           <img
             src={src}
             alt={alt}
-            className="h-auto max-h-[400px] w-full object-contain"
+            className="h-auto max-h-[480px] w-full object-cover"
             loading={priority ? "eager" : "lazy"}
             referrerPolicy="no-referrer"
             onError={() => setError(true)}
@@ -348,14 +348,14 @@ function FeedImageCarousel({
 
         <button
           onClick={prev}
-          className="absolute top-1/2 left-2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
+          className="absolute top-1/2 left-2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
           aria-label="이전 이미지"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={next}
-          className="absolute top-1/2 right-2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
+          className="absolute top-1/2 right-2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
           aria-label="다음 이미지"
         >
           <ChevronRight className="h-4 w-4" />
