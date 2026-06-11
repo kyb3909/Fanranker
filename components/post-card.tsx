@@ -85,6 +85,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             categoryLink={communityLink}
             flair={post.flair}
             temperature={post.temperature}
+            timestamp={post.timestamp}
           />
           <PostCardMeta
             postId={post.id}

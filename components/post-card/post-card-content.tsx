@@ -22,15 +22,16 @@ import { useVisibility } from "@/hooks/use-visibility"
 import type { TipTapNode } from "@/components/post-card"
 import type { PostFlair } from "@/types/post"
 
-const CATEGORY_CHIP: Record<string, { bg: string; color: string }> = {
-  축구: { bg: "#FDECEC", color: "#9F1239" },
-  야구: { bg: "#EAF1FD", color: "#1E3A8A" },
-  농구: { bg: "#FDF1E5", color: "#9A3412" },
-  배구: { bg: "#F4EEFB", color: "#581C87" },
-  게임: { bg: "#EEF0FA", color: "#2D3A8C" },
-  애니: { bg: "#EAF4F4", color: "#0F5858" },
-  음악: { bg: "#FDEFF3", color: "#9F1239" },
+const CATEGORY_CHIP: Record<string, { bg: string; color: string; emoji?: string }> = {
+  축구: { bg: "#FDECEC", color: "#9F1239", emoji: "⚽" },
+  야구: { bg: "#EAF1FD", color: "#1E3A8A", emoji: "⚾" },
+  농구: { bg: "#FDF1E5", color: "#9A3412", emoji: "🏀" },
+  배구: { bg: "#F4EEFB", color: "#581C87", emoji: "🏐" },
+  게임: { bg: "#EEF0FA", color: "#2D3A8C", emoji: "🎮" },
+  애니: { bg: "#EAF4F4", color: "#0F5858", emoji: "🎌" },
+  음악: { bg: "#FDEFF3", color: "#9F1239", emoji: "🎵" },
 }
+const CHIP_FALLBACK = { bg: "#EFF2F4", color: "#3A3D45" }
 
 interface PostCardContentProps {
   postId: number | string
@@ -53,6 +54,7 @@ interface PostCardContentProps {
   categoryLink?: string
   flair?: PostFlair | null
   temperature?: number
+  timestamp?: string
 }
 
 export const PostCardContent = memo(function PostCardContent({
@@ -68,13 +70,14 @@ export const PostCardContent = memo(function PostCardContent({
   categoryLink,
   flair,
   temperature,
+  timestamp,
 }: PostCardContentProps) {
   const hasSingleImage = !!displayImage && !firstEmbed && imageSources.length <= 1
-  const catChip = CATEGORY_CHIP[category ?? ""]
+  const catChip = CATEGORY_CHIP[category ?? ""] ?? CHIP_FALLBACK
 
   return (
     <div>
-      {/* 카테고리 chip + 온도 chip */}
+      {/* 카테고리 chip + 시간 + 온도 chip */}
       {(category || (temperature != null && temperature > 0)) && (
         <div className="mb-2 flex items-center gap-2">
           {category && (
@@ -85,43 +88,45 @@ export const PostCardContent = memo(function PostCardContent({
                   className="transition-opacity hover:opacity-80"
                 >
                   <span
-                    className="inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
-                    style={{
-                      background: catChip?.bg ?? "var(--wc-soft)",
-                      color: catChip?.color ?? "var(--wc-burgundy)",
-                    }}
+                    className="inline-flex h-6 items-center gap-1 px-2 text-[11.5px] font-bold"
+                    style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
                   >
+                    {catChip.emoji && <span aria-hidden>{catChip.emoji}</span>}
                     {category}
                   </span>
                 </Link>
               ) : (
                 <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
-                  style={{
-                    background: catChip?.bg ?? "var(--wc-soft)",
-                    color: catChip?.color ?? "var(--wc-burgundy)",
-                  }}
+                  className="inline-flex h-6 items-center gap-1 px-2 text-[11.5px] font-bold"
+                  style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
                 >
+                  {catChip.emoji && <span aria-hidden>{catChip.emoji}</span>}
                   {category}
-                </span>
-              )}
-              {flair?.name && (
-                <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
-                  style={{
-                    background: "var(--wc-soft)",
-                    color: flair.color ?? "var(--wc-burgundy)",
-                  }}
-                >
-                  {flair.name}
                 </span>
               )}
             </>
           )}
+          {timestamp && (
+            <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute-2, #8B93A0)" }}>
+              {timestamp}
+            </span>
+          )}
+          {flair?.name && (
+            <span
+              className="inline-flex h-6 items-center px-2 text-[11.5px] font-bold"
+              style={{
+                background: "var(--wc-soft)",
+                color: flair.color ?? "var(--wc-burgundy)",
+                borderRadius: 6,
+              }}
+            >
+              {flair.name}
+            </span>
+          )}
           {temperature != null && temperature > 0 && (
             <span
-              className="tnum ml-auto inline-flex items-center rounded px-2 py-0.5 text-[11.5px] font-bold"
-              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+              className="tnum ml-auto inline-flex h-6 items-center px-2 text-[11.5px] font-bold"
+              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)", borderRadius: 6 }}
             >
               🌡 {temperature}°
             </span>
