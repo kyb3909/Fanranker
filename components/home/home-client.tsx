@@ -248,7 +248,7 @@ export function HomeClient({
             {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
             {activeTab === "feed" && (
-              <div className="space-y-4">
+              <div className="space-y-2.5">
                 <FeedSection
                   posts={posts}
                   isLoading={isLoading}

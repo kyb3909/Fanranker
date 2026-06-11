@@ -257,7 +257,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
 
   if (error) {
     return (
-      <div className="border-border bg-card overflow-hidden border" style={{ borderRadius: 10 }}>
+      <div className="bg-card overflow-hidden" style={{ borderRadius: 10 }}>
         <div className="bg-muted text-muted-foreground/50 flex min-h-[120px] w-full items-center justify-center">
           <ImageOff className="h-8 w-8" />
         </div>

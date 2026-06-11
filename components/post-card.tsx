@@ -65,7 +65,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   return (
     <article>
       <div
-        className="gn-card-lift overflow-hidden rounded-lg"
+        className="gn-card-lift overflow-hidden rounded-xl"
         style={{
           background: "var(--wc-card)",
           boxShadow: "var(--wc-shadow-1)",
