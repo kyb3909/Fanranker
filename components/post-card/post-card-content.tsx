@@ -15,6 +15,7 @@ import {
   X as CloseIcon,
 } from "lucide-react"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import { RelativeTime } from "@/components/ui/relative-time"
 import { canUseOptimizedFeedImage } from "@/lib/image/feed-selector"
 import { extractYouTubeId } from "@/lib/embed/youtube"
 import { useInView } from "@/hooks/use-in-view"
@@ -117,7 +118,7 @@ export const PostCardContent = memo(function PostCardContent({
           )}
           {timestamp && (
             <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute-2, #8B93A0)" }}>
-              {timestamp}
+              <RelativeTime date={timestamp} />
             </span>
           )}
           {flair?.name && (
