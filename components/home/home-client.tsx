@@ -162,8 +162,8 @@ export function HomeClient({
                 </span>
               </span>
               <span
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-bold"
-                style={{ background: "rgba(255,255,255,.14)" }}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12.5px] font-bold"
+                style={{ background: "rgba(255,255,255,.14)", padding: "7px 13px" }}
               >
                 사전 등록
                 <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
