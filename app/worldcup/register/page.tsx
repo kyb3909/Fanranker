@@ -40,7 +40,7 @@ export default async function WorldcupRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+    <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       <div className="mx-auto max-w-[640px] px-6 pt-10 pb-16">
         <Link
           href="/worldcup"

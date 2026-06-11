@@ -945,8 +945,8 @@
 
 /* ─── Z2.2 비로그인 안내 배너 (분기 보존, 시안 .reg-warn 톤) */
 .worldcup-scope .wc-reg-signin {
-  background: linear-gradient(180deg, #fff7e5, #ffe9c4);
-  border: 2px solid var(--wc-warn);
+  background: var(--wc-soft);
+  border: 1.5px solid rgba(150, 30, 55, 0.35);
   border-radius: 8px;
   padding: 16px 20px;
   display: flex;
@@ -993,8 +993,8 @@
 /* ─── Z2.4 참가 규칙 (시안 .reg-warn 톤) ─────────────────── */
 .worldcup-scope .wc-reg-rules {
   padding: 20px 24px;
-  background: linear-gradient(180deg, #fff7e5, #ffe9c4);
-  border: 2px solid var(--wc-warn);
+  background: var(--wc-soft);
+  border: 1.5px solid rgba(150, 30, 55, 0.35);
   border-radius: 10px;
 }
 .worldcup-scope .wc-reg-rules-h {

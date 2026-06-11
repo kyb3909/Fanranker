@@ -42,8 +42,8 @@ export function RegisterClient() {
     return (
       <div
         style={{
-          background: "#fff",
-          border: "1px solid var(--wc-line)",
+          background: "var(--wc-soft)",
+          border: "1.5px solid rgba(150,30,55,.35)",
           borderRadius: 18,
           padding: 24,
           boxShadow: "var(--wc-shadow-1)",
@@ -112,8 +112,8 @@ export function RegisterClient() {
       {/* 게임 규칙 — 친근하게 설명 */}
       <div
         style={{
-          background: "#fff",
-          border: "1px solid var(--wc-line)",
+          background: "var(--wc-soft)",
+          border: "1.5px solid rgba(150,30,55,.35)",
           borderRadius: 18,
           padding: "22px 24px 24px",
           boxShadow: "var(--wc-shadow-1)",
@@ -308,7 +308,7 @@ export function RegisterClient() {
             height: 22,
             borderRadius: 7,
             border: `1.5px solid ${agreed ? "var(--wc-burgundy)" : "#cfd2d7"}`,
-            background: agreed ? "var(--wc-burgundy)" : "#fff",
+            background: agreed ? "var(--wc-burgundy)" : "var(--wc-soft)",
             color: "#fff",
             display: "flex",
             alignItems: "center",
