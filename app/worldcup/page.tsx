@@ -196,6 +196,132 @@ export default async function WorldcupPage() {
         </div>
       </section>
 
+      {/* ── 경품 안내 ────────────────────────────────────────── */}
+      <section className="mx-auto max-w-[1120px] px-6 py-[60px]">
+        <div className="mb-[30px] text-center">
+          <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+            Prize
+          </div>
+          <h2
+            className="text-[26px] font-extrabold sm:text-[30px]"
+            style={{ letterSpacing: "-.03em" }}
+          >
+            경품 안내
+          </h2>
+          <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
+            토너먼트 최고 득점 구너 단 한 명을 위한 상품입니다.
+          </p>
+        </div>
+        <div
+          className="mx-auto overflow-hidden rounded-xl"
+          style={{
+            maxWidth: 900,
+            display: "grid",
+            gridTemplateColumns: "1.05fr .95fr",
+            background: "#fff",
+            border: "1px solid var(--wc-line)",
+            boxShadow: "var(--wc-shadow-2)",
+          }}
+        >
+          <div className="relative" style={{ minHeight: 290, background: "var(--wc-soft)" }}>
+            <span
+              className="wc-pill-gold absolute"
+              style={{ top: 16, left: 16, zIndex: 2, boxShadow: "var(--wc-shadow-1)" }}
+            >
+              <Crown className="h-[13px] w-[13px]" /> 1등 경품
+            </span>
+            <Image
+              src="/worldcup/prize-rice-jersey.webp"
+              alt="데클런 라이스 사인 유니폼"
+              width={1190}
+              height={794}
+              sizes="(min-width: 1024px) 45vw, 100vw"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+          <div
+            style={{
+              padding: "32px 34px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12.5,
+                fontWeight: 800,
+                letterSpacing: ".1em",
+                color: "var(--wc-burgundy)",
+                marginBottom: 8,
+              }}
+            >
+              ARSENAL No.41
+            </div>
+            <div
+              className="font-title"
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: "-.02em",
+                lineHeight: 1.32,
+                marginBottom: 18,
+                wordBreak: "keep-all",
+              }}
+            >
+              데클런 라이스
+              <br />
+              친필 사인 유니폼
+            </div>
+            {[
+              ["경품", "친필 사인 유니폼 (정품, 액자 포함)"],
+              ["인원", "최종 랭킹 1위 구너 1명"],
+              ["발표", "결승전 종료 후 7일 이내 · 담벼락 공지"],
+              ["배송", "국내 무료 배송"],
+            ].map(([k, v], i) => (
+              <div
+                key={k}
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  padding: "11px 0",
+                  borderTop: i === 0 ? "1px solid var(--wc-line-2)" : "1px solid var(--wc-line)",
+                }}
+              >
+                <span
+                  style={{
+                    flexShrink: 0,
+                    width: 40,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "var(--wc-mute-2)",
+                  }}
+                >
+                  {k}
+                </span>
+                <span
+                  style={{
+                    fontSize: 13.5,
+                    lineHeight: 1.55,
+                    color: "var(--wc-mute)",
+                    fontWeight: 500,
+                    wordBreak: "keep-all",
+                  }}
+                >
+                  {v}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── 진행 방식 ────────────────────────────────────────── */}
       <section className="mx-auto max-w-[1120px] px-6 pb-3">
         <div className="mb-6">
