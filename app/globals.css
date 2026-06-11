@@ -145,6 +145,13 @@
  * 불일치로 hydration mismatch를 일으킨 사례가 있어 명명 유틸로 이전.
  */
 @layer utilities {
+  /* 피드 카드 제목 링크: 기본/visited 모두 --wc-ink 고정 */
+  .gn-pin-title,
+  .gn-pin-title:visited {
+    color: var(--wc-ink, #14161a);
+    text-decoration: none;
+  }
+
   /* 카드 hover: shadow-lift (배경 유지, 그림자+올라오기) */
   .gn-card-lift {
     transition:
