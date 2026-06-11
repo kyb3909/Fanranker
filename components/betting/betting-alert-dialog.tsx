@@ -32,7 +32,7 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
             style={{
               background:
                 alertModal.type === "error"
-                  ? "rgba(160,32,59,0.15)"
+                  ? "rgba(150,30,55,0.15)"
                   : alertModal.type === "warning"
                     ? "rgba(200,132,42,0.15)"
                     : "rgba(47,125,91,0.15)",

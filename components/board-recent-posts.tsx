@@ -72,7 +72,7 @@ export function BoardRecentPosts({
               }
               style={{
                 borderBottom: "1px solid var(--wc-line)",
-                background: isCurrent ? "rgba(160,32,59,0.06)" : undefined,
+                background: isCurrent ? "rgba(150,30,55,0.06)" : undefined,
               }}
             >
               <span

@@ -124,9 +124,9 @@ export function BettingMatchCard({
     } as const
     const badgeBurgundy = {
       ...badgeBase,
-      background: "rgba(160,32,59,0.1)",
+      background: "rgba(150,30,55,0.1)",
       color: "var(--wc-burgundy)",
-      border: "1px solid rgba(160,32,59,0.4)",
+      border: "1px solid rgba(150,30,55,0.4)",
     } as const
     const badgeBlue = {
       ...badgeBase,
