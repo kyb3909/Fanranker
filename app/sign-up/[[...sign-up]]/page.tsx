@@ -479,6 +479,8 @@ export default function SignUpPage() {
           className="overflow-hidden p-0"
           style={{
             background: "var(--wc-card, #ffffff)",
+            border: "1px solid var(--wc-line)",
+            borderRadius: 14,
             boxShadow: "var(--wc-shadow-2)",
           }}
         >
