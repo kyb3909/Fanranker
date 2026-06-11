@@ -176,7 +176,7 @@ export function HomeClient({
                 fontFamily: "var(--font-pen, 'Nanum Pen Script', cursive)",
                 fontSize: 19,
                 color: "var(--wc-mute)",
-                marginBottom: -4,
+                margin: "18px 0 12px",
               }}
             >
               그깟 공놀이를 좋아하는 팬들의 놀이터
