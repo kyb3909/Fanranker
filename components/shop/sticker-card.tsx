@@ -59,14 +59,23 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-xl border transition-all ${
+      className={`group relative overflow-hidden rounded-xl${owned ? "" : "gn-card-lift"}`}
+      style={
         owned
-          ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-border bg-card hover:border-amber-500/30 hover:shadow-md"
-      }`}
+          ? {
+              border: "1px solid rgba(16,185,129,0.3)",
+              background: "rgba(16,185,129,0.05)",
+              borderTop: "3px solid #10b981",
+            }
+          : {
+              border: "1px solid var(--wc-line)",
+              background: "var(--wc-card)",
+              borderTop: `3px solid var(--wc-burgundy)`,
+            }
+      }
     >
       {/* 이미지 */}
-      <div className="bg-muted/30 relative aspect-square p-3">
+      <div className="relative aspect-square p-3" style={{ background: "var(--wc-paper)" }}>
         <Image
           src={sticker.image_url}
           alt={sticker.name}
@@ -82,11 +91,16 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
       </div>
 
       {/* 정보 */}
-      <div className="border-border/50 border-t p-2">
-        <p className="text-foreground truncate text-xs font-semibold">{sticker.name}</p>
+      <div className="p-2" style={{ borderTop: "1px solid var(--wc-line)" }}>
+        <p className="truncate text-xs font-semibold" style={{ color: "var(--wc-ink)" }}>
+          {sticker.name}
+        </p>
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
-            <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+          <span
+            className="flex items-center gap-0.5 text-[10px]"
+            style={{ color: "var(--wc-mute)" }}
+          >
+            <Sparkles className="h-2.5 w-2.5" style={{ color: "var(--wc-burgundy)" }} />
             {sticker.purchase_count}명 보유
           </span>
 
@@ -98,7 +112,8 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
             <button
               onClick={() => setConfirmOpen(true)}
               disabled={buying}
-              className="flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white transition-all hover:shadow-sm disabled:opacity-50"
+              className="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold text-white transition-all hover:opacity-90 disabled:opacity-50"
+              style={{ background: "var(--wc-burgundy)" }}
             >
               {buying ? (
                 "..."
