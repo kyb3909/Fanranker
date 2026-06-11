@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { Dices, Flame, Clock, FileText, Trophy, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -186,17 +186,19 @@ export function HomeClient({
               <div className="flex items-center gap-1.5" role="tablist" aria-label="홈 탭">
                 {(
                   [
-                    { key: "feed", icon: FileText, label: "게시물" },
-                    { key: "content", icon: Trophy, label: "경기 분석글" },
+                    { key: "feed", label: "게시물" },
+                    { key: "content", label: "경기 분석글" },
                   ] as const
-                ).map(({ key, icon: Icon, label }) => (
+                ).map(({ key, label }) => (
                   <button
                     key={key}
                     role="tab"
                     aria-selected={activeTab === key}
                     onClick={() => handleTabClick(key)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
+                    className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${activeTab !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
                     style={{
+                      height: 34,
+                      padding: "0 14px",
                       background: activeTab === key ? "var(--wc-burgundy)" : "var(--wc-card)",
                       color: activeTab === key ? "white" : "var(--wc-mute)",
                       border:
@@ -205,7 +207,6 @@ export function HomeClient({
                           : "1px solid var(--wc-line-2)",
                     }}
                   >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {label}
                   </button>
                 ))}
@@ -218,16 +219,18 @@ export function HomeClient({
                   />
                   <div className="flex items-center gap-1.5" role="group" aria-label="게시물 정렬">
                     {[
-                      { key: "random" as const, icon: Dices, label: "랜덤" },
-                      { key: "hot" as const, icon: Flame, label: "온도순" },
-                      { key: "new" as const, icon: Clock, label: "최신순" },
-                    ].map(({ key, icon: Icon, label }) => (
+                      { key: "random" as const, label: "랜덤" },
+                      { key: "hot" as const, label: "온도순" },
+                      { key: "new" as const, label: "최신순" },
+                    ].map(({ key, label }) => (
                       <button
                         key={key}
                         onClick={() => setSortBy(key)}
                         aria-pressed={sortBy === key}
-                        className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors"
+                        className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${sortBy !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
                         style={{
+                          height: 34,
+                          padding: "0 14px",
                           background: sortBy === key ? "var(--wc-burgundy)" : "var(--wc-card)",
                           color: sortBy === key ? "white" : "var(--wc-mute)",
                           border:
@@ -236,7 +239,6 @@ export function HomeClient({
                               : "1px solid var(--wc-line-2)",
                         }}
                       >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {label}
                       </button>
                     ))}
