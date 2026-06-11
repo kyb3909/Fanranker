@@ -59,7 +59,11 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-xl${owned ? "" : "gn-card-lift"}`}
+      className={
+        owned
+          ? "group relative overflow-hidden rounded-xl"
+          : "group gn-card-lift relative overflow-hidden rounded-xl"
+      }
       style={
         owned
           ? {
