@@ -86,7 +86,7 @@ export default async function WorldcupGamesPage() {
 
         {bettingOpen ? (
           <div className="mt-7">
-            <BettingPage eventSlug={EVENT_SLUG} leagueCodes={leagueCodes} bettingOnly />
+            <BettingPage eventSlug={EVENT_SLUG} leagueCodes={leagueCodes} bettingOnly railMode />
           </div>
         ) : (
           <div

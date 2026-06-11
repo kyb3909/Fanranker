@@ -2,13 +2,6 @@
 
 import dynamic from "next/dynamic"
 
-const CommunitySidebar = dynamic(
-  () =>
-    import("@/components/sidebar/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
-  {
-    loading: () => <div className="wc-skeleton h-96 rounded-lg" />,
-  }
-)
 const ActivitySidebar = dynamic(
   () =>
     import("@/components/sidebar/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
@@ -35,10 +28,7 @@ interface PredictionClientProps {
   initialRecentComments?: unknown[]
 }
 
-export function PredictionClient({
-  initialCategories,
-  initialRecentComments,
-}: PredictionClientProps) {
+export function PredictionClient({ initialRecentComments }: PredictionClientProps) {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       <main
@@ -48,12 +38,9 @@ export function PredictionClient({
       >
         <h1 className="sr-only">승부예측 — gongnori.fan</h1>
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
-          <aside className="col-span-3 hidden lg:block">
-            <CommunitySidebar initialCategories={initialCategories} />
-          </aside>
-
-          <div className="col-span-12 space-y-4 lg:col-span-6">
-            <BettingPage />
+          {/* BettingPage가 col-span-9를 점유하며 내부에서 slip rail(4) + content(8) 분할 */}
+          <div className="col-span-12 lg:col-span-9">
+            <BettingPage railMode />
           </div>
 
           <aside className="col-span-3 hidden lg:block">
