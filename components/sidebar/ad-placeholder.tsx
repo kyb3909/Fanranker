@@ -40,7 +40,8 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       className={`${config.className} group relative flex flex-col items-center justify-center overflow-hidden rounded-xl`}
       style={{
         ...config.style,
-        background: "linear-gradient(180deg, var(--wc-soft, #F6E4E8), var(--wc-line, #E2E5EA))",
+        background: "#F7F8FA",
+        border: "1px dashed var(--wc-line-2, #CFD4DC)",
         boxShadow: "var(--wc-shadow-1)",
       }}
     >
@@ -59,7 +60,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       <div
         className="relative flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.18em] uppercase"
         style={{
-          color: "var(--wc-burgundy, #961E37)",
+          color: "var(--wc-mute-2, #8B93A0)",
           background: "var(--wc-card, #ffffff)",
           boxShadow: "0 1px 2px rgba(26, 20, 22, 0.06)",
         }}

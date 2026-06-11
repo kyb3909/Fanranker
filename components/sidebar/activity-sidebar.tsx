@@ -129,7 +129,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
           <h3
             className="text-[11px] font-bold uppercase"
             style={{
-              color: "var(--wc-burgundy)",
+              color: "var(--wc-ink)",
               letterSpacing: "0.18em",
             }}
           >
@@ -163,21 +163,21 @@ export const ActivitySidebar = memo(function ActivitySidebar({
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">
                     <p
-                      className="truncate text-[13px] font-semibold"
-                      style={{ color: "var(--wc-ink)" }}
+                      className="truncate text-[13px]"
+                      style={{ color: "var(--wc-ink)", fontWeight: 500 }}
                     >
                       {post.title}
                     </p>
                     {post.comments > 0 && (
                       <span
-                        className="shrink-0 text-[11px] font-bold tabular-nums"
-                        style={{ color: "var(--wc-warn)" }}
+                        className="shrink-0 text-[11px] font-semibold tabular-nums"
+                        style={{ color: "var(--wc-mute)" }}
                       >
                         [{post.comments}]
                       </span>
                     )}
                   </div>
-                  <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute)" }}>
+                  <span className="shrink-0 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
                     {post.community}
                   </span>
                 </Link>

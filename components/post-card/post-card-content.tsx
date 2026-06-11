@@ -98,7 +98,7 @@ export const PostCardContent = memo(function PostCardContent({
                   className="transition-opacity hover:opacity-80"
                 >
                   <span
-                    className="inline-flex h-6 items-center gap-1 px-2 text-[11.5px] font-bold"
+                    className="inline-flex h-6 items-center gap-1 px-2 text-[11px] font-bold"
                     style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
                   >
                     {catChip.emoji && <span aria-hidden>{catChip.emoji}</span>}
@@ -107,7 +107,7 @@ export const PostCardContent = memo(function PostCardContent({
                 </Link>
               ) : (
                 <span
-                  className="inline-flex h-6 items-center gap-1 px-2 text-[11.5px] font-bold"
+                  className="inline-flex h-6 items-center gap-1 px-2 text-[11px] font-bold"
                   style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
                 >
                   {catChip.emoji && <span aria-hidden>{catChip.emoji}</span>}
@@ -135,8 +135,8 @@ export const PostCardContent = memo(function PostCardContent({
           )}
           {temperature != null && temperature > 0 && (
             <span
-              className="tnum ml-auto inline-flex h-6 items-center px-2 text-[11.5px] font-bold"
-              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)", borderRadius: 6 }}
+              className="tnum ml-auto text-[12px] font-bold"
+              style={{ color: "var(--wc-burgundy)" }}
             >
               🌡 {temperature}°
             </span>
