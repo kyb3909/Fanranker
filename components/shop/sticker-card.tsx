@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Check, Coins } from "lucide-react"
+import { Coins } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,22 +59,8 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
 
   return (
     <div
-      className={
-        owned
-          ? "group relative overflow-hidden rounded-xl"
-          : "group gn-card-lift relative overflow-hidden rounded-xl"
-      }
-      style={
-        owned
-          ? {
-              border: "1px solid rgba(16,185,129,0.3)",
-              background: "rgba(16,185,129,0.05)",
-            }
-          : {
-              border: "1px solid var(--wc-line)",
-              background: "var(--wc-card)",
-            }
-      }
+      className="group gn-card-lift relative overflow-hidden rounded-xl"
+      style={{ border: "1px solid var(--wc-line)", background: "var(--wc-card)" }}
     >
       {/* 이미지 */}
       <div className="relative aspect-square p-3" style={{ background: "var(--wc-paper)" }}>
@@ -86,9 +72,22 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
           sizes="(max-width: 640px) 25vw, 120px"
         />
         {owned && (
-          <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <Check className="h-3 w-3" />
-          </div>
+          <span
+            className="absolute top-1.5 right-1.5"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              height: 20,
+              padding: "0 6px",
+              borderRadius: 10,
+              background: "var(--wc-soft)",
+              color: "var(--wc-burgundy)",
+              fontSize: 10.5,
+              fontWeight: 700,
+            }}
+          >
+            ✓
+          </span>
         )}
       </div>
 
@@ -116,8 +115,8 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
           {owned ? (
             <span
               style={{
-                height: 26,
-                padding: "0 8px",
+                height: 28,
+                padding: "0 10px",
                 display: "inline-flex",
                 alignItems: "center",
                 borderRadius: 8,
@@ -134,18 +133,32 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
               onClick={() => setConfirmOpen(true)}
               disabled={buying}
               style={{
-                height: 26,
-                padding: "0 10px",
+                height: 32,
+                padding: "0 12px",
                 display: "inline-flex",
                 alignItems: "center",
                 borderRadius: 8,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 background: "#fff",
                 border: "1px solid var(--wc-line-2)",
                 color: "var(--wc-ink)",
                 cursor: "pointer",
                 opacity: buying ? 0.5 : 1,
+                transition: "background .15s, color .15s, border-color .15s",
+              }}
+              onMouseEnter={(e) => {
+                if (buying) return
+                const t = e.currentTarget
+                t.style.background = "var(--wc-burgundy)"
+                t.style.color = "#fff"
+                t.style.borderColor = "var(--wc-burgundy)"
+              }}
+              onMouseLeave={(e) => {
+                const t = e.currentTarget
+                t.style.background = "#fff"
+                t.style.color = "var(--wc-ink)"
+                t.style.borderColor = "var(--wc-line-2)"
               }}
             >
               {buying ? "..." : "구매"}
