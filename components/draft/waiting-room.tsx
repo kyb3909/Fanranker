@@ -125,7 +125,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
           <div
             className="draft-eyebrow"
             style={{
-              color: "rgba(244,236,230,0.5)",
+              color: "rgba(246,228,232,0.5)",
               fontSize: 9,
               marginBottom: 4,
               display: "flex",
@@ -160,7 +160,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
               className="draft-num"
               style={{
                 fontSize: 12,
-                color: "rgba(244,236,230,0.5)",
+                color: "rgba(246,228,232,0.5)",
                 fontWeight: 600,
               }}
             >
@@ -176,7 +176,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             display: "flex",
             alignItems: "center",
             gap: 8,
-            background: "rgba(244,236,230,0.08)",
+            background: "rgba(246,228,232,0.08)",
             padding: "8px 14px",
             borderRadius: 999,
           }}
@@ -197,7 +197,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             <span
               style={{
                 fontSize: 10,
-                color: "rgba(244,236,230,0.6)",
+                color: "rgba(246,228,232,0.6)",
                 fontWeight: 600,
               }}
             >
@@ -216,7 +216,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             padding: "8px 14px",
             borderRadius: 999,
             background: "transparent",
-            border: "1.5px solid rgba(244,236,230,0.3)",
+            border: "1.5px solid rgba(246,228,232,0.3)",
             color: "var(--draft-paper)",
             fontFamily: "var(--draft-font-title)",
             fontWeight: 700,
@@ -239,7 +239,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             padding: "8px 14px",
             borderRadius: 999,
             background: "transparent",
-            border: "1.5px solid rgba(244,236,230,0.3)",
+            border: "1.5px solid rgba(246,228,232,0.3)",
             color: "var(--draft-paper)",
             fontFamily: "var(--draft-font-title)",
             fontWeight: 700,
@@ -455,7 +455,7 @@ function SeatCard({
         display: "flex",
         flexDirection: "column",
         gap: 10,
-        boxShadow: isMe ? "0 0 0 4px rgba(160,32,59,0.13)" : "var(--draft-shadow-1)",
+        boxShadow: isMe ? "0 0 0 4px rgba(150,30,55,0.13)" : "var(--draft-shadow-1)",
         transition: "all .2s",
       }}
     >

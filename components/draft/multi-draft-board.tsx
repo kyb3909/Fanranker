@@ -238,7 +238,7 @@ export function MultiDraftBoard({
           <div
             className="draft-eyebrow"
             style={{
-              color: "rgba(244,236,230,0.5)",
+              color: "rgba(246,228,232,0.5)",
               fontSize: 9,
               marginBottom: 2,
               display: "flex",
@@ -273,7 +273,7 @@ export function MultiDraftBoard({
               className="draft-num"
               style={{
                 fontSize: 11,
-                color: "rgba(244,236,230,0.5)",
+                color: "rgba(246,228,232,0.5)",
                 fontWeight: 600,
               }}
             >
@@ -282,7 +282,7 @@ export function MultiDraftBoard({
           </div>
         </div>
 
-        <div style={{ width: 1, height: 32, background: "rgba(244,236,230,0.15)" }} />
+        <div style={{ width: 1, height: 32, background: "rgba(246,228,232,0.15)" }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <TimerRing
@@ -300,7 +300,7 @@ export function MultiDraftBoard({
             <div
               className="draft-eyebrow"
               style={{
-                color: "rgba(244,236,230,0.5)",
+                color: "rgba(246,228,232,0.5)",
                 fontSize: 9,
                 marginBottom: 1,
               }}
@@ -325,7 +325,7 @@ export function MultiDraftBoard({
                   style={{
                     marginLeft: 6,
                     fontSize: 9,
-                    color: "rgba(244,236,230,0.6)",
+                    color: "rgba(246,228,232,0.6)",
                     fontWeight: 700,
                     letterSpacing: "0.08em",
                   }}
@@ -337,13 +337,13 @@ export function MultiDraftBoard({
           </div>
         </div>
 
-        <div style={{ width: 1, height: 32, background: "rgba(244,236,230,0.15)" }} />
+        <div style={{ width: 1, height: 32, background: "rgba(246,228,232,0.15)" }} />
 
         <div style={{ flex: 1, minWidth: 240 }}>
           <div
             className="draft-eyebrow"
             style={{
-              color: "rgba(244,236,230,0.5)",
+              color: "rgba(246,228,232,0.5)",
               fontSize: 9,
               marginBottom: 6,
             }}
@@ -353,7 +353,7 @@ export function MultiDraftBoard({
               {state.current_pick + 1}
             </span>{" "}
             / {totalPicks}
-            <span className="draft-num" style={{ marginLeft: 12, color: "rgba(244,236,230,0.7)" }}>
+            <span className="draft-num" style={{ marginLeft: 12, color: "rgba(246,228,232,0.7)" }}>
               ⏱ {remainingSec}s
             </span>
           </div>

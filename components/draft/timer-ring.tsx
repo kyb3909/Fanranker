@@ -65,7 +65,7 @@ export function TimerRing({
   const off = c * (1 - pct)
   const danger = remaining <= 5 && isActive
 
-  const baseStroke = dark ? "rgba(244,236,230,0.2)" : "var(--draft-line)"
+  const baseStroke = dark ? "rgba(246,228,232,0.2)" : "var(--draft-line)"
   const activeStroke = danger
     ? "var(--draft-burgundy)"
     : dark

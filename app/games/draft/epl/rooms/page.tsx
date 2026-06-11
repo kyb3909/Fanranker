@@ -34,7 +34,7 @@ export default async function OpenRoomsPage() {
           <div
             className="draft-eyebrow"
             style={{
-              color: "rgba(244,236,230,0.5)",
+              color: "rgba(246,228,232,0.5)",
               fontSize: 9,
               marginBottom: 4,
               display: "flex",
@@ -61,7 +61,7 @@ export default async function OpenRoomsPage() {
               className="draft-num"
               style={{
                 fontSize: 12,
-                color: "rgba(244,236,230,0.5)",
+                color: "rgba(246,228,232,0.5)",
                 fontWeight: 600,
               }}
             >

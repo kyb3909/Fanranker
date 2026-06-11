@@ -134,7 +134,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
           <div
             className="draft-eyebrow"
             style={{
-              color: "rgba(244,236,230,0.5)",
+              color: "rgba(246,228,232,0.5)",
               fontSize: 9,
               marginBottom: 2,
               display: "flex",
@@ -161,7 +161,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
               className="draft-num"
               style={{
                 fontSize: 11,
-                color: "rgba(244,236,230,0.5)",
+                color: "rgba(246,228,232,0.5)",
                 fontWeight: 600,
               }}
             >
@@ -174,7 +174,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
           style={{
             width: 1,
             height: 32,
-            background: "rgba(244,236,230,0.15)",
+            background: "rgba(246,228,232,0.15)",
           }}
         />
 
@@ -192,7 +192,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
             <div
               className="draft-eyebrow"
               style={{
-                color: "rgba(244,236,230,0.5)",
+                color: "rgba(246,228,232,0.5)",
                 fontSize: 9,
                 marginBottom: 1,
               }}
@@ -220,7 +220,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
           style={{
             width: 1,
             height: 32,
-            background: "rgba(244,236,230,0.15)",
+            background: "rgba(246,228,232,0.15)",
           }}
         />
 
@@ -229,7 +229,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
           <div
             className="draft-eyebrow"
             style={{
-              color: "rgba(244,236,230,0.5)",
+              color: "rgba(246,228,232,0.5)",
               fontSize: 9,
               marginBottom: 6,
             }}

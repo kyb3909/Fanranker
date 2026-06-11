@@ -354,7 +354,7 @@ export function AiPanel({
         border: `${isCurrent ? 2 : 1}px solid ${
           isCurrent ? "var(--draft-burgundy)" : "var(--draft-line)"
         }`,
-        boxShadow: isCurrent ? "0 0 0 4px rgba(160,32,59,0.13)" : "none",
+        boxShadow: isCurrent ? "0 0 0 4px rgba(150,30,55,0.13)" : "none",
         transition: "all .2s",
       }}
     >
@@ -568,7 +568,7 @@ export function SnakeOrder({ state, mySeat }: SnakeOrderProps) {
                 style={{
                   width: 1,
                   height: 14,
-                  background: "rgba(244,236,230,0.2)",
+                  background: "rgba(246,228,232,0.2)",
                   marginLeft: 2,
                   marginRight: 2,
                 }}
@@ -592,9 +592,9 @@ export function SnakeOrder({ state, mySeat }: SnakeOrderProps) {
                     ? "var(--draft-burgundy)"
                     : me
                       ? "var(--draft-paper)"
-                      : "rgba(244,236,230,0.3)"
+                      : "rgba(246,228,232,0.3)"
                 }`,
-                boxShadow: current ? "0 0 0 3px rgba(160,32,59,0.4)" : "none",
+                boxShadow: current ? "0 0 0 3px rgba(150,30,55,0.4)" : "none",
                 transition: "all .2s",
                 animation: current ? "draft-dotpulse 1.6s infinite" : "none",
               }}
