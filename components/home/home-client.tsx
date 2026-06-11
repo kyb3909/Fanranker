@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
-import { Dices, Flame, Clock, FileText, Trophy } from "lucide-react"
+import Link from "next/link"
+import { Dices, Flame, Clock, FileText, Trophy, ArrowRight } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -135,6 +136,39 @@ export function HomeClient({
           {/* Main Content */}
           <div className="col-span-12 space-y-4 lg:col-span-6">
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
+            {/* 월드컵 이벤트 배너 */}
+            <Link
+              href="/worldcup"
+              className="flex items-center gap-3 rounded-xl px-[18px] py-[14px] no-underline transition-opacity hover:opacity-90"
+              style={{
+                background:
+                  "linear-gradient(100deg, var(--wc-burgundy-deep, #771629), var(--wc-burgundy, #961e37))",
+                boxShadow: "var(--wc-shadow-2, 0 4px 16px rgba(150,30,55,.22))",
+                color: "#fff",
+              }}
+            >
+              <span style={{ fontSize: 20 }} aria-hidden>
+                🏆
+              </span>
+              <span className="min-w-0 flex-1">
+                <span
+                  className="block text-[11px] font-extrabold uppercase"
+                  style={{ letterSpacing: "0.14em", color: "var(--wc-gold, #FFD96B)" }}
+                >
+                  World Cup 2026 Event
+                </span>
+                <span className="mt-0.5 block text-[14.5px] font-bold">
+                  월드컵 승부예측 팬덤 대결 — 지금 참가하세요
+                </span>
+              </span>
+              <span
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-bold"
+                style={{ background: "rgba(255,255,255,.14)" }}
+              >
+                사전 등록
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              </span>
+            </Link>
             {/* 필터 스트립 — 한 줄: 탭 pills | separator | sort pills */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5" role="tablist" aria-label="홈 탭">
