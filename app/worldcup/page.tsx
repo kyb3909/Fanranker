@@ -21,6 +21,14 @@ export const metadata: Metadata = {
 // 등록자 카운트 즉시 반영
 export const dynamic = "force-dynamic"
 
+const NOTICES = [
+  "본 이벤트는 gongnori.fan 회원 중 아스날 구너를 대상으로 진행됩니다.",
+  "참가 신청은 월드컵 32강 시작 전까지 가능하며, 신청 후에는 취소·변경이 불가합니다.",
+  "예측 점수는 기존 토큰·골드 베팅 시스템의 적중 결과를 기준으로 자동 집계됩니다.",
+  "부정한 방법(다중 계정 등)으로 참여한 경우 순위에서 제외될 수 있습니다.",
+  "경품 이미지는 실제 상품과 다소 차이가 있을 수 있습니다.",
+]
+
 const STEPS = [
   {
     num: "01",
@@ -391,13 +399,33 @@ export default async function WorldcupPage() {
             <ArrowRight className="h-[18px] w-[18px]" />
           </Link>
         </div>
-        <div className="mt-[26px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-          이 이벤트는 아스날 구너들만의 예측 대결입니다 ·{" "}
-          <span style={{ fontStyle: "italic", color: "var(--wc-ink-2)" }}>
-            Victoria Concordia Crescit
-          </span>
-        </div>
       </section>
+
+      {/* ── 유의사항 ────────────────────────────────────────── */}
+      <section className="mx-auto px-6 pb-10" style={{ maxWidth: 880, paddingTop: 44 }}>
+        <h3 className="mb-[14px] text-[15.5px] font-extrabold" style={{ color: "var(--wc-mute)" }}>
+          유의사항
+        </h3>
+        <ul className="flex flex-col gap-2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {NOTICES.map((n) => (
+            <li
+              key={n}
+              className="flex gap-2 text-[13px]"
+              style={{ lineHeight: 1.6, color: "var(--wc-mute-2)", wordBreak: "keep-all" }}
+            >
+              <span style={{ flexShrink: 0 }}>·</span>
+              <span>{n}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <div className="pb-[56px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
+        이 이벤트는 아스날 구너들만의 예측 대결입니다 ·{" "}
+        <span style={{ fontStyle: "italic", color: "var(--wc-ink-2)" }}>
+          Victoria Concordia Crescit
+        </span>
+      </div>
     </div>
   )
 }
