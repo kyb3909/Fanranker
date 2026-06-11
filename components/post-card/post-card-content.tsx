@@ -167,15 +167,15 @@ export const PostCardContent = memo(function PostCardContent({
           {/* 본문 */}
           {typeof content === "string" ? (
             <p
-              className="line-clamp-2 text-[14px]"
-              style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
+              className="line-clamp-1 text-[14px]"
+              style={{ color: "var(--wc-mute-2, #8B93A0)", lineHeight: 1.62 }}
             >
               {content}
             </p>
           ) : (
             <p
-              className="line-clamp-2 text-[14px]"
-              style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
+              className="line-clamp-1 text-[14px]"
+              style={{ color: "var(--wc-mute-2, #8B93A0)", lineHeight: 1.62 }}
             >
               {stripUrlTokens(extractTextFromTipTapJSON(content))}
             </p>

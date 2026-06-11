@@ -65,14 +65,14 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   return (
     <article>
       <div
-        className="gn-card-lift overflow-hidden rounded-xl"
+        className="group gn-card-lift overflow-hidden rounded-xl"
         style={{
           background: "var(--wc-card)",
           border: "1px solid var(--wc-line)",
           boxShadow: "0 1px 2px rgba(24,18,21,.05)",
         }}
       >
-        <div className="relative" style={{ padding: "18px 20px" }}>
+        <div className="relative" style={{ padding: "16px 18px" }}>
           <PostCardContent
             postId={post.id}
             title={post.title}

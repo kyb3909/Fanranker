@@ -79,7 +79,7 @@ export function PostCardMeta({
       className="flex items-center gap-2 text-[12px]"
       style={{
         color: "var(--wc-mute)",
-        marginTop: 12,
+        marginTop: 10,
         paddingTop: 12,
         borderTop: "1px solid var(--wc-line)",
       }}
@@ -183,57 +183,60 @@ export function PostCardMeta({
           <span className="font-medium tabular-nums">{comments}</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={onBookmark}
-          onMouseEnter={onBookmarkHover}
-          onFocus={onBookmarkHover}
-          aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
-          aria-pressed={isBookmarked}
-          className={cn(
-            "hidden min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors sm:inline-flex sm:min-h-0 sm:min-w-0 sm:py-1.5",
-            isBookmarked
-              ? "text-primary"
-              : "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)]"
-          )}
-        >
-          <Bookmark className={cn("h-3.5 w-3.5", isBookmarked && "fill-current")} />
-        </button>
-
-        <span className="hidden sm:inline">
-          <ShareMenu postId={postId} postTitle={postTitle} />
-        </span>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)] sm:min-h-0 sm:min-w-0 sm:py-1.5"
-              aria-label="더보기 메뉴"
-            >
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            {isAuthor ? (
-              <>
-                <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  수정
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onDelete} className="text-destructive cursor-pointer">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  삭제
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <DropdownMenuItem onClick={onReport} className="text-destructive cursor-pointer">
-                <Flag className="mr-2 h-4 w-4" />
-                신고하기
-              </DropdownMenuItem>
+        {/* 데스크톱: hover/focus 시 노출 — 모바일: 상시 노출 */}
+        <div className="flex items-center sm:opacity-0 sm:transition-opacity sm:duration-150 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={onBookmark}
+            onMouseEnter={onBookmarkHover}
+            onFocus={onBookmarkHover}
+            aria-label={isBookmarked ? "북마크 해제" : "북마크 추가"}
+            aria-pressed={isBookmarked}
+            className={cn(
+              "hidden min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors sm:inline-flex sm:min-h-0 sm:min-w-0 sm:py-1.5",
+              isBookmarked
+                ? "text-primary"
+                : "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)]"
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          >
+            <Bookmark className={cn("h-3.5 w-3.5", isBookmarked && "fill-current")} />
+          </button>
+
+          <span className="hidden sm:inline">
+            <ShareMenu postId={postId} postTitle={postTitle} />
+          </span>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)] sm:min-h-0 sm:min-w-0 sm:py-1.5"
+                aria-label="더보기 메뉴"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {isAuthor ? (
+                <>
+                  <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
+                    <Pencil className="mr-2 h-4 w-4" />
+                    수정
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDelete} className="text-destructive cursor-pointer">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    삭제
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem onClick={onReport} className="text-destructive cursor-pointer">
+                  <Flag className="mr-2 h-4 w-4" />
+                  신고하기
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   )
