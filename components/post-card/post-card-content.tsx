@@ -65,7 +65,7 @@ export const PostCardContent = memo(function PostCardContent({
       {category && (
         <div
           className="font-title mb-1.5 text-[11px] font-bold tracking-[0.18em] uppercase"
-          style={{ color: "var(--wc-burgundy, #a0203b)" }}
+          style={{ color: "var(--wc-burgundy, #961E37)" }}
         >
           {categoryLink ? (
             <Link href={`/community/${categoryLink}`} className="inline-block hover:underline">
@@ -76,7 +76,7 @@ export const PostCardContent = memo(function PostCardContent({
           )}
           {flair?.name && (
             <>
-              <span aria-hidden className="mx-1.5" style={{ color: "var(--wc-mute-2, #a0938c)" }}>
+              <span aria-hidden className="mx-1.5" style={{ color: "var(--wc-mute-2, #8B93A0)" }}>
                 ·
               </span>
               <span style={flair.color ? { color: flair.color } : undefined}>{flair.name}</span>
@@ -102,14 +102,14 @@ export const PostCardContent = memo(function PostCardContent({
           {typeof content === "string" ? (
             <p
               className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
-              style={{ color: "var(--wc-mute, #7a6b65)" }}
+              style={{ color: "var(--wc-mute, #5C6470)" }}
             >
               {content}
             </p>
           ) : (
             <p
               className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
-              style={{ color: "var(--wc-mute, #7a6b65)" }}
+              style={{ color: "var(--wc-mute, #5C6470)" }}
             >
               {extractTextFromTipTapJSON(content)}
             </p>

@@ -178,7 +178,7 @@ export const CommunityContent = memo(function CommunityContent({
                       className="absolute top-1/2 left-0 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors sm:flex"
                       style={{
                         background: "var(--wc-card, #ffffff)",
-                        color: "var(--wc-burgundy, #a0203b)",
+                        color: "var(--wc-burgundy, #961E37)",
                         boxShadow: "0 1px 4px rgba(26,20,22,0.12)",
                       }}
                     >
@@ -229,7 +229,7 @@ export const CommunityContent = memo(function CommunityContent({
                       className="absolute top-1/2 right-0 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors sm:flex"
                       style={{
                         background: "var(--wc-card, #ffffff)",
-                        color: "var(--wc-burgundy, #a0203b)",
+                        color: "var(--wc-burgundy, #961E37)",
                         boxShadow: "0 1px 4px rgba(26,20,22,0.12)",
                       }}
                     >
