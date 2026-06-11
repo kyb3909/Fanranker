@@ -149,7 +149,14 @@ export default function PaymentsPage() {
                 <p className="text-muted-foreground mb-1 text-sm">보유 골드</p>
                 <div className="flex items-center gap-2">
                   <Coins className="h-6 w-6" style={{ color: "#D97706" }} />
-                  <span className="text-3xl font-bold" style={{ color: "#D97706" }}>
+                  <span
+                    className="text-3xl"
+                    style={{
+                      color: "#D97706",
+                      fontWeight: 800,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
                     {goldInfo.balance}
                   </span>
                 </div>
