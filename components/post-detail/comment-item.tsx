@@ -65,8 +65,8 @@ export const CommentItem = memo(function CommentItem({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-3">
-        <Avatar className={depth === 0 ? "h-10 w-10" : "h-8 w-8"}>
+      <div className="flex gap-[11px]">
+        <Avatar className={depth === 0 ? "h-9 w-9" : "h-7 w-7"}>
           <AvatarImage src={comment.avatar || "/placeholder.svg"} alt={comment.author} />
           <AvatarFallback>{comment.author[0].toUpperCase()}</AvatarFallback>
         </Avatar>
@@ -77,23 +77,20 @@ export const CommentItem = memo(function CommentItem({
                 {comment.userId ? (
                   <Link
                     href={`/profile/${comment.userId}`}
-                    className={`font-bold transition-colors hover:text-[color:var(--wc-burgundy)] ${depth === 0 ? "" : "text-sm"}`}
-                    style={{ color: "var(--wc-ink)" }}
+                    className="font-extrabold transition-colors hover:text-[color:var(--wc-burgundy)]"
+                    style={{ fontSize: depth === 0 ? 13.5 : 12.5, color: "var(--wc-ink)" }}
                   >
                     {comment.author}
                   </Link>
                 ) : (
                   <span
-                    className={`font-bold ${depth === 0 ? "" : "text-sm"}`}
-                    style={{ color: "var(--wc-ink)" }}
+                    className="font-extrabold"
+                    style={{ fontSize: depth === 0 ? 13.5 : 12.5, color: "var(--wc-ink)" }}
                   >
                     {comment.author}
                   </span>
                 )}
-                <span
-                  className={`${depth === 0 ? "text-sm" : "text-xs"}`}
-                  style={{ color: "var(--wc-mute)" }}
-                >
+                <span className="text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
                   {comment.timestamp}
                 </span>
               </div>
@@ -147,8 +144,12 @@ export const CommentItem = memo(function CommentItem({
             <div>
               {comment.content && (
                 <p
-                  className={`leading-relaxed ${depth === 0 ? "" : "text-sm"}`}
-                  style={{ color: "var(--wc-ink)" }}
+                  style={{
+                    fontSize: depth === 0 ? 14 : 13,
+                    lineHeight: 1.65,
+                    color: "var(--wc-ink)",
+                    margin: "5px 0 0",
+                  }}
                 >
                   {comment.content}
                 </p>

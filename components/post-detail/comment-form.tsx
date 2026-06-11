@@ -82,6 +82,23 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
           ref={textareaRef}
           placeholder="댓글을 입력하세요... (@스티커이름으로 스티커 검색)"
           className="min-h-[100px] resize-none"
+          style={{
+            padding: "11px 13px",
+            fontSize: 13.5,
+            lineHeight: 1.55,
+            border: "1px solid var(--wc-line-2)",
+            borderRadius: 10,
+            background: "var(--wc-paper)",
+            color: "var(--wc-ink)",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--wc-burgundy)"
+            e.currentTarget.style.background = "var(--wc-card)"
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--wc-line-2)"
+            e.currentTarget.style.background = "var(--wc-paper)"
+          }}
           value={commentText}
           onChange={(e) => handleTextChange(e.target.value)}
           onKeyDown={(e) => {
@@ -105,7 +122,10 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
       </div>
       {/* 선택된 스티커 미리보기 */}
       {selectedSticker && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+        <div
+          className="flex items-center gap-2 rounded-lg border px-3 py-2"
+          style={{ borderColor: "var(--wc-line-2)", background: "var(--wc-soft)" }}
+        >
           <Image
             src={selectedSticker.image_url}
             alt={selectedSticker.name}
@@ -128,7 +148,7 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
             onClick={() => setShowStickerPicker(!showStickerPicker)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
               showStickerPicker
-                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                ? "bg-[var(--wc-soft)] text-[var(--wc-mute)]"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >

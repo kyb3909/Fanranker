@@ -1,7 +1,5 @@
 "use client"
 
-import { cn } from "@/lib/utils"
-
 interface VoteButtonsProps {
   voteCount: number
   myVote: "up" | "down" | null
@@ -10,65 +8,74 @@ interface VoteButtonsProps {
 }
 
 export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButtonsProps) {
-  const isSmall = size === "sm"
+  const h = size === "md" ? 34 : 26
+  const fs = size === "md" ? 13.5 : 12
 
   return (
-    <div
-      className={cn(
-        "border-border/60 inline-flex items-center rounded-full border",
-        isSmall ? "gap-0.5 px-0.5 py-0.5" : "gap-1 px-1 py-0.5"
-      )}
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: h,
+        borderRadius: h / 2,
+        border: "1px solid var(--wc-line-2)",
+        background: "var(--wc-card)",
+        overflow: "hidden",
+      }}
     >
-      {/* UP */}
       <button
-        className={cn(
-          "rounded-full font-bold tracking-wide transition-all duration-150 select-none",
-          // 모바일은 min-h-11 로 44px 보장, sm+ 에선 컴팩트 디자인 유지
-          isSmall
-            ? "min-h-11 min-w-11 px-2.5 text-[11px] sm:min-h-0 sm:min-w-0 sm:py-0.5"
-            : "min-h-11 min-w-11 px-3 text-xs sm:min-h-0 sm:min-w-0 sm:py-1",
-          myVote === "up"
-            ? "bg-primary text-primary-foreground scale-[1.02]"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95"
-        )}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: h,
+          height: "100%",
+          border: "none",
+          background: myVote === "up" ? "var(--wc-soft)" : "transparent",
+          color: myVote === "up" ? "var(--wc-burgundy)" : "var(--wc-mute)",
+          fontSize: fs,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
         onClick={() => onVote("up")}
         aria-label="추천"
         aria-pressed={myVote === "up"}
       >
         UP
       </button>
-
-      {/* 숫자 */}
       <span
         key={voteCount}
-        className={cn(
-          "animate-vote-bump min-w-[1.5rem] text-center font-semibold tabular-nums",
-          isSmall ? "text-[11px]" : "text-sm",
-          voteCount > 0 && "text-primary",
-          voteCount < 0 && "text-blue-500",
-          voteCount === 0 && "text-muted-foreground"
-        )}
+        className="tnum animate-vote-bump"
+        style={{
+          minWidth: 26,
+          textAlign: "center",
+          fontSize: fs,
+          fontWeight: 800,
+          color: myVote === "up" ? "var(--wc-burgundy)" : "var(--wc-ink)",
+        }}
       >
         {voteCount}
       </span>
-
-      {/* DOWN */}
       <button
-        className={cn(
-          "rounded-full font-bold tracking-wide transition-all duration-150 select-none",
-          isSmall
-            ? "min-h-11 min-w-11 px-2.5 text-[11px] sm:min-h-0 sm:min-w-0 sm:py-0.5"
-            : "min-h-11 min-w-11 px-3 text-xs sm:min-h-0 sm:min-w-0 sm:py-1",
-          myVote === "down"
-            ? "scale-[1.02] bg-blue-500 text-white"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95"
-        )}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: h,
+          height: "100%",
+          border: "none",
+          background: myVote === "down" ? "var(--wc-soft)" : "transparent",
+          color: myVote === "down" ? "var(--wc-blue, #4B96E6)" : "var(--wc-mute)",
+          fontSize: fs,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
         onClick={() => onVote("down")}
         aria-label="비추천"
         aria-pressed={myVote === "down"}
       >
         DOWN
       </button>
-    </div>
+    </span>
   )
 }

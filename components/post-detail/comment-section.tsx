@@ -41,27 +41,21 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
 
   return (
     <div
-      className="rounded-lg"
+      className="rounded-xl"
       style={{
         background: "var(--wc-card)",
         boxShadow: "var(--wc-shadow-1)",
+        padding: "18px 24px 22px",
       }}
     >
-      <div className="space-y-6 p-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div>
-            <div className="wc-sec-eb">COMMENTS</div>
-            <h3
-              className="font-black tracking-tight"
-              style={{
-                fontSize: "clamp(18px, 2.5vw, 22px)",
-                color: "var(--wc-ink)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              댓글 <span className="tabular-nums">{countAllComments(comments)}</span>개
-            </h3>
-          </div>
+          <h2 style={{ margin: 0, fontSize: 15.5, fontWeight: 800 }}>
+            댓글{" "}
+            <span className="tnum" style={{ color: "var(--wc-burgundy)" }}>
+              {countAllComments(comments)}
+            </span>
+          </h2>
           {comments.length > 1 && (
             <button
               onClick={() => setCommentSort((s) => (s === "newest" ? "popular" : "newest"))}

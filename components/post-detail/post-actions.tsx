@@ -1,7 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { MessageCircle, Bookmark } from "lucide-react"
+import { MessageCircle } from "lucide-react"
 import { ShareMenu } from "@/components/share-menu"
 import { VoteButtons } from "@/components/vote-buttons"
 import { usePostActions } from "@/hooks/use-post-actions"
@@ -28,40 +27,57 @@ export function PostActions({
   )
 
   return (
-    <div className="mt-4 flex items-center gap-2">
-      {/* Upvote/Downvote */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        marginTop: 18,
+        paddingTop: 14,
+        borderTop: "1px solid var(--wc-line)",
+      }}
+    >
       <VoteButtons voteCount={voteCount} myVote={myVote} onVote={handleVote} size="md" />
 
-      {/* Comments */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="gap-2 rounded-full"
+      <span
         style={{
-          background: "var(--wc-soft)",
-          color: "var(--wc-ink)",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          height: 34,
+          padding: "0 13px",
+          borderRadius: 17,
+          border: "1px solid var(--wc-line-2)",
+          fontSize: 13,
+          fontWeight: 700,
+          color: "var(--wc-mute)",
         }}
       >
-        <MessageCircle className="h-5 w-5" />
-        <span className="text-sm font-bold tabular-nums">{commentCount}</span>
-      </Button>
+        <MessageCircle style={{ width: 14, height: 14 }} />
+        {commentCount}
+      </span>
 
-      {/* Bookmark */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 rounded-full"
-        style={{
-          color: isBookmarked ? "var(--wc-burgundy)" : "var(--wc-mute)",
-        }}
-        onClick={handleBookmark}
-        aria-label={isBookmarked ? "북마크 해제" : "북마크"}
-      >
-        <Bookmark className={`h-5 w-5 ${isBookmarked ? "fill-current" : ""}`} />
-      </Button>
-
-      {/* Share */}
-      <ShareMenu postId={postId} postTitle={postTitle} />
+      <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <button
+          onClick={handleBookmark}
+          aria-label={isBookmarked ? "북마크 해제" : "북마크"}
+          aria-pressed={isBookmarked}
+          style={{
+            height: 34,
+            padding: "0 13px",
+            borderRadius: 17,
+            fontSize: 12.5,
+            fontWeight: 700,
+            border: isBookmarked ? "1px solid var(--wc-burgundy)" : "1px solid var(--wc-line-2)",
+            background: isBookmarked ? "var(--wc-soft)" : "transparent",
+            color: isBookmarked ? "var(--wc-burgundy)" : "var(--wc-mute)",
+            cursor: "pointer",
+          }}
+        >
+          {isBookmarked ? "★ 저장됨" : "☆ 북마크"}
+        </button>
+        <ShareMenu postId={postId} postTitle={postTitle} />
+      </span>
     </div>
   )
 }

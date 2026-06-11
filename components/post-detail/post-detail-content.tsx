@@ -134,7 +134,7 @@ export function PostDetailContent({
       <ImageLightbox />
       {/* Post Detail Card */}
       <div
-        className="overflow-hidden rounded-lg"
+        className="overflow-hidden rounded-xl"
         style={{
           background: "var(--wc-card)",
           boxShadow: "var(--wc-shadow-1)",
@@ -151,7 +151,10 @@ export function PostDetailContent({
                       <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
                       <AvatarFallback>{post.author?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
                     </Avatar>
-                    <span className="text-foreground text-base font-semibold hover:underline">
+                    <span
+                      className="text-[14.5px] font-extrabold hover:underline"
+                      style={{ color: "var(--wc-ink)" }}
+                    >
                       {post.author}
                     </span>
                   </button>
@@ -186,13 +189,16 @@ export function PostDetailContent({
                   size="sm"
                 />
               )}
-              <span className="text-muted-foreground text-sm">{post.timestamp}</span>
+              <span className="text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
+                {post.timestamp}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-7 rounded-full bg-transparent px-3 text-xs font-medium"
+                className="h-7 rounded-full px-3 text-[12px] font-bold"
+                style={{ border: "1px solid var(--wc-line-2)", color: "var(--wc-mute)" }}
               >
                 {post.community}
               </Button>
@@ -255,18 +261,29 @@ export function PostDetailContent({
           {/* Content */}
           <div className="space-y-3">
             <h2
-              className="leading-snug font-black tracking-tight text-pretty"
+              className="font-black tracking-tight text-pretty"
               style={{
                 fontSize: "clamp(20px, 3.2vw, 26px)",
                 color: "var(--wc-ink)",
                 letterSpacing: "-0.02em",
+                lineHeight: 1.35,
+                wordBreak: "keep-all",
               }}
             >
               {post.title}
             </h2>
-            <div className="px-1 pt-3">
+            <div>
               {typeof post.content === "string" ? (
-                <p className="text-foreground leading-relaxed">{post.content}</p>
+                <p
+                  style={{
+                    fontSize: 15,
+                    lineHeight: 1.75,
+                    color: "var(--wc-ink)",
+                    wordBreak: "keep-all",
+                  }}
+                >
+                  {post.content}
+                </p>
               ) : (
                 // TipTap JSON 렌더링 (임베드 포함)
                 <TipTapContent content={post.content} />
