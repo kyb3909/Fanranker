@@ -60,7 +60,7 @@ export function BettingSlip({
     return (
       <div
         style={{
-          background: "#FCFCFC",
+          background: "var(--wc-card)",
           border: "1px solid var(--wc-line)",
           borderRadius: 12,
           boxShadow: "var(--wc-shadow-1)",
