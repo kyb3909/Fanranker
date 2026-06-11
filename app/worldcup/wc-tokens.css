@@ -177,7 +177,7 @@
 /* ─── Skeleton (dynamic import loading) — paper 톤 일관 ─── */
 /* scope-free: AppShell 어디서나 사용 가능 (paper 톤 글로벌) */
 .wc-skeleton {
-  background: linear-gradient(180deg, var(--wc-soft, #f4ece6), var(--wc-line, #efe7e0));
+  background: linear-gradient(180deg, var(--wc-soft, #f6e4e8), var(--wc-line, #e2e5ea));
   border-radius: 12px;
   animation: wc-skeleton-pulse 1.6s ease-in-out infinite;
 }
@@ -196,10 +196,10 @@
 /* AppShell 헤더는 .worldcup-scope wrapper 밖에 있을 수 있어 hex fallback 포함 */
 .wc-hdr-link {
   position: relative;
-  color: var(--wc-mute, #6c757d);
+  color: var(--wc-mute, #5c6470);
 }
 .wc-hdr-link:hover {
-  color: var(--wc-ink, #1a1416);
+  color: var(--wc-ink, #14161a);
 }
 .wc-hdr-link[data-on="true"] {
   color: var(--wc-burgundy, #961e37);
