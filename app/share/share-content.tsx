@@ -29,7 +29,7 @@ export function ShareContent() {
   return (
     <main
       id="main-content"
-      className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6"
+      className="worldcup-scope mx-auto max-w-[1280px] px-4 py-5 sm:px-6 sm:py-6"
       tabIndex={-1}
     >
       <div className="grid grid-cols-12 gap-5 lg:gap-6">
@@ -50,7 +50,11 @@ export function ShareContent() {
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="animate-pulse p-4">
+                <Card
+                  key={i}
+                  className="animate-pulse p-4"
+                  style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+                >
                   <div className="bg-muted mb-3 h-5 w-24 rounded" />
                   <div className="bg-muted h-7 w-full rounded-full" />
                 </Card>
@@ -105,7 +109,14 @@ function TopicShareCard({
   const maxCount = Math.max(...topics.map((t) => t.count), 1)
 
   return (
-    <Card className="p-4">
+    <Card
+      className="p-4"
+      style={{
+        background: "var(--wc-card)",
+        border: "1px solid var(--wc-line)",
+        boxShadow: "var(--wc-shadow-1)",
+      }}
+    >
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
