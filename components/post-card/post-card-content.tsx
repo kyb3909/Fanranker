@@ -686,6 +686,27 @@ function ProviderCard({
   url: string
   children: ReactNode
 }) {
+  const headerStyle: React.CSSProperties =
+    provider === "x"
+      ? { background: "#000", color: "#fff" }
+      : provider === "instagram"
+        ? { background: "linear-gradient(90deg,#f09433,#dc2743,#bc1888)", color: "#fff" }
+        : { background: "#fff", borderBottom: "1px solid var(--wc-line)", color: "var(--wc-ink)" }
+
+  const pathColor =
+    provider === "x"
+      ? "rgba(255,255,255,.65)"
+      : provider === "instagram"
+        ? "rgba(255,255,255,.75)"
+        : "var(--wc-mute)"
+
+  const linkColor =
+    provider === "x"
+      ? "rgba(255,255,255,.75)"
+      : provider === "instagram"
+        ? "rgba(255,255,255,.85)"
+        : "var(--wc-mute)"
+
   return (
     <div className="border-border bg-card relative overflow-hidden rounded-xl border">
       {/* 좌측 4px 액센트 바 */}
@@ -695,15 +716,18 @@ function ProviderCard({
         style={{ background: accent }}
       />
       {/* 출처 헤더 */}
-      <header className="border-border bg-muted/40 text-foreground flex items-center gap-2 border-b py-2 pr-3 pl-4 text-[11px] font-bold">
+      <header
+        className="flex items-center gap-2 py-2 pr-3 pl-4 text-[11px] font-bold"
+        style={headerStyle}
+      >
         <ProviderBadge provider={provider} />
         <span>{sourceLabel}</span>
         {sourcePath && (
           <>
-            <span aria-hidden className="text-muted-foreground font-normal">
+            <span aria-hidden style={{ color: pathColor, fontWeight: 400 }}>
               ·
             </span>
-            <span className="text-muted-foreground font-semibold">{sourcePath}</span>
+            <span style={{ color: pathColor, fontWeight: 600 }}>{sourcePath}</span>
           </>
         )}
         <a
@@ -711,7 +735,8 @@ function ProviderCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="text-muted-foreground hover:text-foreground ml-auto inline-flex items-center gap-0.5 transition-colors"
+          className="ml-auto inline-flex items-center gap-0.5 transition-opacity hover:opacity-80"
+          style={{ color: linkColor }}
         >
           원본 보기
           <ExternalLink className="h-3 w-3" />
