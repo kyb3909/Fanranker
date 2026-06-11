@@ -137,6 +137,7 @@ export function PostDetailContent({
         className="overflow-hidden rounded-xl"
         style={{
           background: "var(--wc-card)",
+          border: "1px solid var(--wc-line)",
           boxShadow: "var(--wc-shadow-1)",
         }}
       >

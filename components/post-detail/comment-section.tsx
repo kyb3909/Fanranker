@@ -44,6 +44,7 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
       className="rounded-xl"
       style={{
         background: "var(--wc-card)",
+        border: "1px solid var(--wc-line)",
         boxShadow: "var(--wc-shadow-1)",
         padding: "18px 24px 22px",
       }}
