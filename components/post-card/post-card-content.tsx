@@ -33,6 +33,15 @@ const CATEGORY_CHIP: Record<string, { bg: string; color: string; emoji?: string 
 }
 const CHIP_FALLBACK = { bg: "#EFF2F4", color: "#3A3D45" }
 
+/** 미리보기 텍스트에서 http(s) URL 토큰 제거 (원본 데이터 불변) */
+function stripUrlTokens(text: string): string {
+  return text
+    .split(/\s+/)
+    .filter((t) => !/^https?:\/\//.test(t))
+    .join(" ")
+    .trim()
+}
+
 interface PostCardContentProps {
   postId: number | string
   title: string
@@ -160,7 +169,7 @@ export const PostCardContent = memo(function PostCardContent({
               className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
               style={{ color: "var(--wc-mute, #5C6470)" }}
             >
-              {extractTextFromTipTapJSON(content)}
+              {stripUrlTokens(extractTextFromTipTapJSON(content))}
             </p>
           )}
         </div>
