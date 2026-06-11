@@ -150,8 +150,13 @@ export const PostCardContent = memo(function PostCardContent({
           {/* 제목 */}
           <Link href={`/post/${postId}`} className="group gn-pin-title block">
             <h2
-              className="font-title line-clamp-2 text-[17px] leading-[1.35] font-extrabold tracking-tight transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
-              style={{ color: "var(--wc-ink, #14161a)" }}
+              className="font-title line-clamp-2 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
+              style={{
+                color: "var(--wc-ink, #14161a)",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.4,
+              }}
             >
               {title}
             </h2>
@@ -168,7 +173,7 @@ export const PostCardContent = memo(function PostCardContent({
           ) : (
             <p
               className="mt-2 line-clamp-2 text-[14px] leading-[1.65]"
-              style={{ color: "var(--wc-mute, #5C6470)" }}
+              style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
             >
               {stripUrlTokens(extractTextFromTipTapJSON(content))}
             </p>
