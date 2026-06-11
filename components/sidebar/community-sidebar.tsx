@@ -24,6 +24,19 @@ interface Category {
   parent_slug: string | null
 }
 
+const CATEGORY_PASTEL: Record<string, string> = {
+  축구: "#FDECEC",
+  야구: "#EAF1FD",
+  농구: "#FDF1E5",
+  배구: "#F4EEFB",
+  게임: "#EEF0FA",
+  애니: "#EAF4F4",
+  음악: "#FDEFF3",
+}
+function getCategoryChipBg(name: string): string {
+  return CATEGORY_PASTEL[name] ?? "var(--secondary, #F6E4E8)"
+}
+
 export const CommunitySidebar = memo(function CommunitySidebar({
   initialCategories,
 }: {
@@ -185,9 +198,10 @@ export const CommunitySidebar = memo(function CommunitySidebar({
         className="flex min-w-0 flex-1 items-center gap-3"
       >
         <span
-          className={`bg-secondary flex shrink-0 items-center justify-center rounded text-base ${
+          className={`flex shrink-0 items-center justify-center rounded text-base ${
             isChannel ? "h-6 w-6 text-sm" : "h-7 w-7"
           }`}
+          style={{ background: getCategoryChipBg(community.name) }}
         >
           {community.emoji}
         </span>
@@ -234,7 +248,10 @@ export const CommunitySidebar = memo(function CommunitySidebar({
                 onClick={() => toggleExpand(community.slug)}
                 className="flex items-center gap-3"
               >
-                <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-base"
+                  style={{ background: getCategoryChipBg(community.name) }}
+                >
                   {community.emoji}
                 </span>
                 <span className="text-foreground group-hover:text-primary text-[14px] font-medium">
@@ -248,7 +265,10 @@ export const CommunitySidebar = memo(function CommunitySidebar({
               </button>
             ) : (
               <Link href={`/community/${community.slug}`} className="flex items-center gap-3">
-                <span className="bg-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded text-base">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-base"
+                  style={{ background: getCategoryChipBg(community.name) }}
+                >
                   {community.emoji}
                 </span>
                 <span className="text-foreground group-hover:text-primary truncate text-[14px] font-medium">
@@ -285,7 +305,10 @@ export const CommunitySidebar = memo(function CommunitySidebar({
                 href={`/community/${community.slug}`}
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
-                <span className="bg-secondary flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm">
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm"
+                  style={{ background: getCategoryChipBg(community.name) }}
+                >
                   {community.emoji}
                 </span>
                 <span className="text-foreground group-hover:text-primary truncate text-[13px] font-medium">
