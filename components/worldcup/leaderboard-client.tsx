@@ -70,7 +70,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
 
   // 디자인 시스템 공통 카드 (랜딩/신청 페이지와 동일 톤)
   const cardStyle: React.CSSProperties = {
-    background: "#fff",
+    background: "var(--wc-card)",
     border: "1px solid var(--wc-line)",
     borderRadius: 18,
     boxShadow: "var(--wc-shadow-1)",
