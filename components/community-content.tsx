@@ -191,8 +191,12 @@ export const CommunityContent = memo(function CommunityContent({
                     >
                       <Link
                         href={`/community/${communitySlug}`}
-                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold whitespace-nowrap transition-colors sm:min-h-0"
+                        className="inline-flex shrink-0 items-center justify-center rounded-full whitespace-nowrap transition-colors"
                         style={{
+                          height: 34,
+                          padding: "0 14px",
+                          fontSize: 13,
+                          fontWeight: 700,
                           background: !activeFlairId ? "var(--wc-burgundy)" : "var(--wc-card)",
                           color: !activeFlairId ? "white" : "var(--wc-mute)",
                           border: !activeFlairId
@@ -206,8 +210,12 @@ export const CommunityContent = memo(function CommunityContent({
                         <Link
                           key={f.id}
                           href={`/community/${communitySlug}?flair=${f.id}`}
-                          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold whitespace-nowrap transition-colors hover:opacity-90 sm:min-h-0"
+                          className="inline-flex shrink-0 items-center justify-center rounded-full whitespace-nowrap transition-colors hover:opacity-90"
                           style={{
+                            height: 34,
+                            padding: "0 14px",
+                            fontSize: 13,
+                            fontWeight: 700,
                             backgroundColor: activeFlairId === f.id ? f.color : `${f.color}15`,
                             color: activeFlairId === f.id ? "white" : f.color,
                             border:
@@ -295,7 +303,7 @@ export const CommunityContent = memo(function CommunityContent({
                   className="block gap-2 px-3 py-2.5 text-xs transition-colors last:border-0 sm:grid sm:grid-cols-10"
                   style={{
                     borderBottom: "1px solid var(--wc-line)",
-                    background: post.isNotice ? "var(--wc-soft)" : "transparent",
+                    background: post.isNotice ? "rgba(246,228,232,0.5)" : "transparent",
                   }}
                   onMouseEnter={(e) => {
                     if (!post.isNotice) e.currentTarget.style.background = "var(--wc-soft)"
@@ -478,7 +486,15 @@ function PostPagination({
             </PaginationItem>
           ) : (
             <PaginationItem key={page}>
-              <PaginationLink href={pageUrl(page)} isActive={page === currentPage}>
+              <PaginationLink
+                href={pageUrl(page)}
+                isActive={page === currentPage}
+                className={
+                  page === currentPage
+                    ? "!border-[var(--wc-burgundy)] !bg-[var(--wc-burgundy)] !text-white"
+                    : "!border-[var(--wc-line-2)] !bg-white"
+                }
+              >
                 {page}
               </PaginationLink>
             </PaginationItem>
