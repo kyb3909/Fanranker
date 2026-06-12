@@ -218,8 +218,8 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     }
   }, [])
 
-  // 로딩 상태 — Phaser 부팅 안 함
-  if (!isLoaded) {
+  // 로딩 상태 — Phaser 부팅 안 함 (게스트 모드면 Clerk 결과 기다리지 않음)
+  if (!isLoaded && !allowGuest) {
     return (
       <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center bg-neutral-950 text-white">
         <div className="flex items-center gap-2 text-sm text-white/70">
