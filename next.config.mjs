@@ -17,7 +17,7 @@ const STRICT_CSP_REPORT_ONLY = [
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https://video.twimg.com https://*.cdninstagram.com https://scontent.cdninstagram.com https://*.fbcdn.net",
   "font-src 'self' data: https://cdn.jsdelivr.net",
-  "frame-src https://www.youtube.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
+  "frame-src 'self' https://www.youtube.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://clerk.gongnori.fan https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://cdn.jsdelivr.net https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net",
   "report-uri /api/security/csp-report",
 ].join('; ')
@@ -45,7 +45,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               "media-src 'self' blob: https://video.twimg.com https://*.cdninstagram.com https://scontent.cdninstagram.com https://*.fbcdn.net",
               "font-src 'self' data: https://cdn.jsdelivr.net",
-              "frame-src https://www.youtube.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
+              "frame-src 'self' https://www.youtube.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://clerk.gongnori.fan https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://cdn.jsdelivr.net https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net",
             ].join('; '),
           },
@@ -56,6 +56,13 @@ const nextConfig = {
             value: STRICT_CSP_REPORT_ONLY,
           },
         ],
+      },
+      {
+        // 미니게임(public/games/*.html) 을 /games/* 래퍼 페이지 iframe 으로 띄우기 위한 예외.
+        // 전역 DENY 를 SAMEORIGIN 으로 완화 (같은 도메인 framing 만 허용 — 클릭재킹 방어 유지).
+        // 글로벌 '/(.*)' 항목보다 뒤에 있어야 같은 키를 override 함.
+        source: '/games/:path*',
+        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
       },
       {
         // Cache read-only API responses (posts, profiles, communities)
