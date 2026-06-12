@@ -275,7 +275,21 @@
       "Bash(sort -t: -k2 -rn)",
       "mcp__aseprite__get_sprite_info",
       "mcp__aseprite__audit_animation",
-      "mcp__aseprite__export_sprite"
+      "mcp__aseprite__export_sprite",
+      "Bash(echo \"---exit:$?\")",
+      "Bash(echo \"exit:$?\")",
+      "Bash(git check-attr *)",
+      "Bash(powershell -Command \"Get-Process -Id 57412 | Select-Object Id, ProcessName, CommandLine\")",
+      "Bash(powershell -Command 'Get-WmiObject Win32_Process | Where-Object {\\(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue\\).OwningProcess -contains $_.ProcessId} | Select-Object ProcessId, CommandLine')",
+      "PowerShell(Get-WmiObject *)",
+      "Read(//d/Projects/새 폴더/adding\\(test\\)/Fanranker-reskin/public/metaverse/**)",
+      "Read(//d/Projects/새 폴더/adding\\(test\\)/Fanranker-reskin/public/metaverse/avatars/**)",
+      "Bash(ls *.html)",
+      "Bash(ls public/*.html)",
+      "Bash(ls app/games/)",
+      "Bash(sed -n '560,585p' rondo.html)",
+      "Bash(sed -n '704,725p' pass-survivor.html)",
+      "Bash(sed -n '1525,1545p' corner-hero.html)"
     ]
   }
 }
