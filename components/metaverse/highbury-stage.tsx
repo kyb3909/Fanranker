@@ -16,7 +16,7 @@ import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
-import { ARSENAL_HOME_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
+import { MALE_BASIC_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { MetaverseHud } from "./metaverse-hud"
 import { ChatOverlay } from "./chat-overlay"
 import { ChatLogPanel } from "./chat-log-panel"
@@ -74,7 +74,7 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     guestIdentityRef.current = {
       userId: `guest-gandalf-${rand}`,
       nickname: `방문객-${rand}`,
-      avatarKey: ARSENAL_HOME_AVATAR_KEY,
+      avatarKey: MALE_BASIC_AVATAR_KEY,
     }
   }
 
@@ -89,12 +89,12 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     if (!profileNickname) {
       const fallback = user.username || user.firstName || user.fullName
       if (!fallback) return null
-      return { userId: user.id, nickname: fallback, avatarKey: ARSENAL_HOME_AVATAR_KEY }
+      return { userId: user.id, nickname: fallback, avatarKey: MALE_BASIC_AVATAR_KEY }
     }
     return {
       userId: user.id,
       nickname: profileNickname,
-      avatarKey: ARSENAL_HOME_AVATAR_KEY,
+      avatarKey: MALE_BASIC_AVATAR_KEY,
     }
   }, [user, profileNickname, allowGuest])
 

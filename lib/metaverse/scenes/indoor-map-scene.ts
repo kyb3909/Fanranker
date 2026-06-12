@@ -21,9 +21,11 @@ import {
   preloadGandalf,
   createGandalfAnimations,
   createGandalfAvatar,
+  gandalfAnimKey,
   type GandalfAvatar,
   type GandalfState,
 } from "@/lib/metaverse/avatar/gandalf-avatar"
+import { AVATAR_PRESETS, MALE_BASIC_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { METAVERSE } from "@/lib/metaverse/constants"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
@@ -101,6 +103,8 @@ export class IndoorMapScene extends Phaser.Scene {
   private mapConfig!: MapConfig
   private spawnX!: number
   private avatarVisualH: number = 64
+  /** 실제 사용할 gandalf 프리셋 키 — identity.avatarKey 가 gandalf 이면 그것, 아니면 male-basic. */
+  private gandalfPresetId: string = MALE_BASIC_AVATAR_KEY
 
   /** Container + body·hair sprite 합성 아바타. physics body 는 container 에 붙음. */
   private avatar!: GandalfAvatar
@@ -152,6 +156,10 @@ export class IndoorMapScene extends Phaser.Scene {
     this.mapConfig = MAPS[data.mapId]
     this.spawnX = data.spawnX ?? this.mapConfig.defaultSpawnX
     this.channel = data.channel ?? null
+    // avatarKey 가 gandalf 프리셋이면 그것, 아니면 male-basic fallback
+    const key = data.identity.avatarKey
+    this.gandalfPresetId =
+      key && AVATAR_PRESETS[key]?.avatarSystem === "gandalf" ? key : MALE_BASIC_AVATAR_KEY
     // restart() 후 상태 초기화
     this.isTransitioning = false
     this.facing = "east"
@@ -203,7 +211,7 @@ export class IndoorMapScene extends Phaser.Scene {
 
     // Gandalf body+hair Container 생성. Container 자체에 arcade physics body 부여.
     const spawnY = floorTopY // origin (0.5, 1.0) → container.y == 발끝 Y
-    this.avatar = createGandalfAvatar(this, this.spawnX, spawnY)
+    this.avatar = createGandalfAvatar(this, this.spawnX, spawnY, this.gandalfPresetId)
     // 가로·세로 2배 시각 (사용자 요청). hitbox 도 같은 비율 (PLAYER_BODY_W/H 에 SCALE 적용됨).
     this.avatar.body.setScale(AVATAR_VISUAL_SCALE)
     this.avatar.hair.setScale(AVATAR_VISUAL_SCALE)
@@ -230,7 +238,7 @@ export class IndoorMapScene extends Phaser.Scene {
     this.avatar.body.on(
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
-        if (anim.key !== "gandalf_attack_body") return
+        if (anim.key !== gandalfAnimKey("kick", this.gandalfPresetId)) return
         this.applyPendingKickToBall()
         const body = this.player.body as Phaser.Physics.Arcade.Body
         if (this.kickLockY !== null) {
@@ -466,7 +474,7 @@ export class IndoorMapScene extends Phaser.Scene {
         body.allowGravity = false
         // 3. attack anim 재생 (kick = attack 매핑)
         this.avatar.playAnim("attack")
-        this.avatar.setFlipX(this.facing === "east")
+        this.avatar.setFlipX(this.facing === "west")
         // 공 임시 숨김 (킥 발사 직전 위치 기억)
         this.pendingBallX = ball.x
         this.pendingBallY = ball.y
@@ -491,7 +499,7 @@ export class IndoorMapScene extends Phaser.Scene {
       body.setAccelerationX(0)
     }
     body.setDragX(dragValue)
-    this.avatar.setFlipX(this.facing === "east")
+    this.avatar.setFlipX(this.facing === "west")
 
     // 점프
     if (jumpPressed && onGround) {
@@ -614,7 +622,7 @@ export class IndoorMapScene extends Phaser.Scene {
     this.pendingKickAngleDeg = null
     this.pendingBallX = null
     this.pendingBallY = null
-    this.avatar.setFlipX(this.facing === "east")
+    this.avatar.setFlipX(this.facing === "west")
     if (!ball) return
     ball.setVisible(true)
     if (speed === null || angleDeg === null || x === null || y === null) return
