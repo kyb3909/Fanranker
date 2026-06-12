@@ -15,6 +15,7 @@ import {
   INDOOR_MAP_SCENE_KEY,
 } from "./scenes"
 import { METAVERSE } from "./constants"
+import { getDpr } from "./dpr"
 import type { ChatRoomMeta, MetaversePlayerIdentity, WorldPlot } from "./types"
 import type { WorldChannel } from "./realtime/world-channel"
 import type { SideScrollerChannel } from "./realtime/sidescroll-channel"
@@ -134,11 +135,14 @@ export function bootIndoorMap({
   mapId,
   channel = null,
 }: IndoorMapBootOptions): Phaser.Game {
+  // HiDPI: backing store 를 물리 픽셀 크기로 잡고 CSS 로 1/dpr 축소 표시 → 텍스트 블러 제거.
+  // 월드 스케일은 씬에서 camera.setZoom(getDpr()) 로 보정 (좌표계는 CSS px 그대로).
+  const dpr = getDpr()
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: parent.clientWidth,
-    height: parent.clientHeight,
+    width: parent.clientWidth * dpr,
+    height: parent.clientHeight * dpr,
     backgroundColor: "#000",
     physics: {
       default: "arcade",
@@ -148,7 +152,8 @@ export function bootIndoorMap({
       },
     },
     scale: {
-      mode: Phaser.Scale.RESIZE,
+      mode: Phaser.Scale.NONE, // RESIZE 는 CSS px 기준이라 dpr 반영 불가 — 수동 resize
+      zoom: 1 / dpr,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     pixelArt: true,
@@ -156,6 +161,11 @@ export function bootIndoorMap({
     scene: [IndoorMapScene],
     dom: { createContainer: false },
   })
+  const onResize = () => {
+    game.scale.resize(parent.clientWidth * dpr, parent.clientHeight * dpr)
+  }
+  window.addEventListener("resize", onResize)
+  game.events.once("destroy", () => window.removeEventListener("resize", onResize))
   game.scene.start(INDOOR_MAP_SCENE_KEY, { identity, mapId, channel })
   return game
 }

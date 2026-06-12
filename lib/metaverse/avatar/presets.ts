@@ -70,6 +70,7 @@ export interface AvatarPreset {
 export const DEFAULT_AVATAR_KEY = "male-basic" as const
 export const MALE_BASIC_AVATAR_KEY = "male-basic" as const
 export const FEMALE_BASIC_AVATAR_KEY = "female-basic" as const
+export const MALE_ARSENAL_AVATAR_KEY = "male-arsenal" as const
 
 export const AVATAR_PRESETS: Record<string, AvatarPreset> = {
   [MALE_BASIC_AVATAR_KEY]: {
@@ -100,6 +101,38 @@ export const AVATAR_PRESETS: Record<string, AvatarPreset> = {
     knockbackFps: 10,
     painFps: 8,
     // 실측 기준 추정: 128×117 캔버스, 캐릭터 몸통 ~30px wide, ~88px tall, 중앙 약간 왼쪽
+    bodyWidth: 30,
+    bodyHeight: 88,
+    bodyOffsetX: 44,
+    bodyOffsetY: 22,
+  },
+  [MALE_ARSENAL_AVATAR_KEY]: {
+    id: MALE_ARSENAL_AVATAR_KEY,
+    label: "아스날 홈",
+    avatarSystem: "gandalf",
+    texturePrefix: "avatar-male-arsenal",
+    assetBase: "/metaverse/avatars/male-arsenal",
+    // male-basic 색 치환 (scripts/make-arsenal-kit.mjs) — 프레임 구성 동일
+    frameWidth: 128,
+    frameHeight: 117,
+    walkFrames: 4,
+    jumpFrames: 6,
+    kickFrames: 6,
+    walkFps: 10,
+    jumpFps: 10,
+    kickFps: 12,
+    idleFrames: 4,
+    runFrames: 4,
+    biteFrames: 6,
+    headbutFrames: 5,
+    knockbackFrames: 5,
+    painFrames: 5,
+    idleFps: 6,
+    runFps: 14,
+    biteFps: 10,
+    headbutFps: 12,
+    knockbackFps: 10,
+    painFps: 8,
     bodyWidth: 30,
     bodyHeight: 88,
     bodyOffsetX: 44,

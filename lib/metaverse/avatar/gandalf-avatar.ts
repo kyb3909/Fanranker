@@ -117,7 +117,9 @@ function preloadGandalfPreset(scene: Phaser.Scene, presetId: string): void {
       const key = gandalfTexKey(kind, i, presetId)
       if (!scene.textures.exists(key)) {
         const padded = String(i).padStart(3, "0")
-        scene.load.image(key, `${preset.assetBase}/${kind}/frame_${padded}.png`)
+        // /api/av/[preset]/[anim]/[frame] — extension 없는 URL so Next.js routes to API handler
+        // ?v=N: 에셋 갱신 시 버전을 올려 immutable 캐시 무효화 (v3 = 목 그림자 alpha 복구판)
+        scene.load.image(key, `/api/av/${preset.id}/${kind}/${padded}?v=3`)
       }
     }
   }
@@ -196,6 +198,11 @@ export class GandalfAvatar {
     this.body = body
     this.hair = hair
     this._presetId = presetId
+  }
+
+  /** bite/headbut 등 GandalfState 매핑에 없는 one-shot 애니를 직접 재생. 완료 처리는 씬 책임. */
+  playOneShot(kind: GandalfAnimKind): void {
+    this.body.play(gandalfAnimKey(kind, this._presetId), true)
   }
 
   playAnim(state: GandalfState): void {

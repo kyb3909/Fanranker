@@ -4,6 +4,7 @@
  */
 
 import * as Phaser from "phaser"
+import { getDpr } from "@/lib/metaverse/dpr"
 
 const PADDING_X = 6
 const PADDING_Y = 3
@@ -24,6 +25,7 @@ export class ChatBubble extends Phaser.GameObjects.Container {
       color: "#111111",
       wordWrap: { width: 180 },
       align: "center",
+      resolution: getDpr(), // HiDPI 글리프 블러 방지 (camera zoom 보정과 세트)
     })
     this.textObj.setOrigin(0.5, 1)
 

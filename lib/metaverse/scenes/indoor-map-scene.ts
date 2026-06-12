@@ -16,6 +16,7 @@
  */
 
 import * as Phaser from "phaser"
+import { getDpr } from "@/lib/metaverse/dpr"
 import { MAPS, type MapConfig, type MapId, type DoorConfig } from "@/lib/metaverse/maps/map-config"
 import {
   preloadGandalf,
@@ -39,8 +40,8 @@ import { IndoorRemoteAvatar } from "./indoor-remote-avatar"
 // Gandalf 4방향 X · 좌우 facing 만 사용 (sheet 기준).
 type Facing = "east" | "west"
 
-/** 캐릭터 시각 + hitbox 공통 스케일. 1 = 원본 80×64, 2 = 두 배 (사용자 요청). */
-const AVATAR_VISUAL_SCALE = 2
+/** 캐릭터 시각 + hitbox 공통 스케일. 1 = 2/3 에서 1.5배 키움 (사용자 요청). */
+const AVATAR_VISUAL_SCALE = 1
 
 // Player hitbox — sprite 80×64 보다 좁게 잡아 충돌·도어 자연스럽게. AVATAR_VISUAL_SCALE 적용.
 const PLAYER_BODY_W = 28 * AVATAR_VISUAL_SCALE
@@ -96,7 +97,7 @@ interface DoorHandle {
   prompt: Phaser.GameObjects.Text
 }
 
-type PlayerState = "idle" | "walking" | "jumping" | "kicking"
+type PlayerState = "idle" | "walking" | "jumping" | "kicking" | "acting"
 
 export class IndoorMapScene extends Phaser.Scene {
   private identity!: MetaversePlayerIdentity
@@ -122,6 +123,8 @@ export class IndoorMapScene extends Phaser.Scene {
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>
   private spaceKey!: Phaser.Input.Keyboard.Key
   private rKey!: Phaser.Input.Keyboard.Key
+  private oneKey!: Phaser.Input.Keyboard.Key // 박치기 (headbut)
+  private twoKey!: Phaser.Input.Keyboard.Key // 물기 (bite)
   private platforms!: Phaser.Physics.Arcade.StaticGroup
   private doorHandles: DoorHandle[] = []
 
@@ -160,6 +163,8 @@ export class IndoorMapScene extends Phaser.Scene {
     const key = data.identity.avatarKey
     this.gandalfPresetId =
       key && AVATAR_PRESETS[key]?.avatarSystem === "gandalf" ? key : MALE_BASIC_AVATAR_KEY
+    // TODO(try-on): 아스날 유니폼 미리보기 — 확정 시 아바타 선택 UI 로 이전
+    this.gandalfPresetId = "male-arsenal"
     // restart() 후 상태 초기화
     this.isTransitioning = false
     this.facing = "east"
@@ -238,6 +243,17 @@ export class IndoorMapScene extends Phaser.Scene {
     this.avatar.body.on(
       Phaser.Animations.Events.ANIMATION_COMPLETE,
       (anim: Phaser.Animations.Animation) => {
+        // 박치기(1)/물기(2) one-shot 완료 → idle 복귀
+        if (
+          anim.key === gandalfAnimKey("headbut", this.gandalfPresetId) ||
+          anim.key === gandalfAnimKey("bite", this.gandalfPresetId)
+        ) {
+          if (this.state === "acting") {
+            this.state = "idle"
+            this.avatar.playAnim("idle")
+          }
+          return
+        }
         if (anim.key !== gandalfAnimKey("kick", this.gandalfPresetId)) return
         this.applyPendingKickToBall()
         const body = this.player.body as Phaser.Physics.Arcade.Body
@@ -275,6 +291,7 @@ export class IndoorMapScene extends Phaser.Scene {
         color: "#ffffff",
         backgroundColor: "#00000099",
         padding: { x: 4, y: 2 },
+        resolution: getDpr(), // camera zoom 만큼 글리프도 고해상도 렌더
       })
       .setOrigin(0.5, 0)
       .setDepth(20)
@@ -302,6 +319,8 @@ export class IndoorMapScene extends Phaser.Scene {
       this.wasd.S.reset()
       this.spaceKey.reset()
       this.rKey.reset()
+      this.oneKey.reset()
+      this.twoKey.reset()
     }
     this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
       this.isChatInputOpen = true
@@ -356,6 +375,7 @@ export class IndoorMapScene extends Phaser.Scene {
           color: "#ffffff",
           backgroundColor: "#dc2626dd",
           padding: { x: 8, y: 4 },
+          resolution: getDpr(),
         })
         .setOrigin(0.5, 1)
         .setDepth(25)
@@ -371,8 +391,11 @@ export class IndoorMapScene extends Phaser.Scene {
     >
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.rKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R)
+    this.oneKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE)
+    this.twoKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO)
 
-    // 카메라
+    // 카메라 — HiDPI: backing store 가 dpr 배 크므로 zoom 으로 월드 스케일 복원 (boot.ts 참고)
+    this.cameras.main.setZoom(getDpr())
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
     this.cameras.main.setBounds(0, 0, bgWidth, bgHeight)
 
@@ -424,6 +447,15 @@ export class IndoorMapScene extends Phaser.Scene {
       return
     }
 
+    // 박치기/물기 중에는 이동 차단 (완료는 ANIMATION_COMPLETE 에서 idle 복귀)
+    if (this.state === "acting") {
+      body.setAccelerationX(0)
+      body.setDragX(GROUND_DRAG)
+      this.updateNameTag()
+      this.updateChargeBar()
+      return
+    }
+
     // 킥 중에는 입력·이동 차단 + Y 강제 고정 (sprite.y 변동 원천 차단)
     if (this.state === "kicking") {
       if (this.kickLockY !== null) {
@@ -446,6 +478,20 @@ export class IndoorMapScene extends Phaser.Scene {
     const jumpPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey)
     const kickJustDown = this.mapConfig.hasBall && Phaser.Input.Keyboard.JustDown(this.rKey)
     const kickJustUp = this.mapConfig.hasBall && Phaser.Input.Keyboard.JustUp(this.rKey)
+    const headbutPressed = Phaser.Input.Keyboard.JustDown(this.oneKey)
+    const bitePressed = Phaser.Input.Keyboard.JustDown(this.twoKey)
+
+    // 박치기(1) / 물기(2) — 지상 one-shot. 킥 충전 중에는 무시.
+    if ((headbutPressed || bitePressed) && onGround && this.chargeStartedAt === null) {
+      this.state = "acting"
+      body.setAccelerationX(0)
+      body.setVelocityX(0)
+      this.avatar.setFlipX(this.facing === "west")
+      this.avatar.playOneShot(headbutPressed ? "headbut" : "bite")
+      this.updateNameTag()
+      this.updateChargeBar()
+      return
+    }
 
     const accelValue = onGround ? GROUND_ACCEL : AIR_ACCEL
     const dragValue = onGround ? GROUND_DRAG : AIR_DRAG
@@ -652,7 +698,9 @@ export class IndoorMapScene extends Phaser.Scene {
   private updateNameTag() {
     this.nameTag.setPosition(this.player.x, this.player.y + this.avatarVisualH / 2 + 4)
     if (this.chatBubble && this.chatBubble.active) {
-      this.chatBubble.setPosition(this.player.x, this.player.y - this.avatarVisualH / 2 - 22)
+      // container.y = 발끝 → 캐릭터 키(bodyHeight×scale) + 여백만큼 올려 머리 위에 배치
+      const headH = AVATAR_PRESETS[this.gandalfPresetId].bodyHeight * AVATAR_VISUAL_SCALE
+      this.chatBubble.setPosition(this.player.x, this.player.y - headH - 26)
     }
   }
 

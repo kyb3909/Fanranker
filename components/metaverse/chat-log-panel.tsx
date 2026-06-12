@@ -119,6 +119,8 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
   const [muted, setMuted] = useState<Set<string>>(new Set())
   const [layout, setLayout] = useState<PanelLayout>(() => loadLayout())
   const [unread, setUnread] = useState(0)
+  /** append 콜백에서 최신 접힘 상태 참조용 (구독은 mount 1회라 state 캡처 불가) */
+  const collapsedRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   // HTMLElement ref — div(펼침) 과 button(접힘) 둘 다 받기 위해
   const panelRef = useRef<HTMLElement | null>(null)
@@ -147,6 +149,8 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
     setMuted(getMutedUsers())
     const unsubAppend = sceneBridge.on("chat:log:append", (m) => {
       if (!m) return
+      // 접힘 상태에서 받은 남의 메시지만 unread 증가 — 펼치거나 접을 때는 toggleCollapsed 가 리셋
+      if (collapsedRef.current && m.userId !== selfUserId) setUnread((c) => c + 1)
       setEntries((prev) => {
         const entry: LogEntry = {
           id: `${m.userId}-${m.timestamp}-${prev.length}`,
@@ -164,14 +168,12 @@ export function ChatLogPanel({ identity }: { identity?: MetaversePlayerIdentity 
       unsubAppend()
       unsubMute()
     }
-  }, [])
+  }, [selfUserId])
 
-  // 접혀있을 때 새 메시지 unread 카운트
+  // collapsedRef 동기화 — append 콜백이 최신 접힘 상태를 보게 함
   useEffect(() => {
-    if (layout.collapsed && entries.length > 0) {
-      setUnread((c) => c + 1)
-    }
-  }, [entries.length, layout.collapsed])
+    collapsedRef.current = layout.collapsed
+  }, [layout.collapsed])
 
   // 자동 스크롤
   useEffect(() => {
