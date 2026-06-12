@@ -271,7 +271,11 @@
       "Bash(xargs sed -i 's|from \"@/components/betting/betting-types\"|from \"@/types/betting\"|g')",
       "Bash(git branch *)",
       "Bash(PORT=3100 pnpm start *)",
-      "Bash(pnpm start *)"
+      "Bash(pnpm start *)",
+      "Bash(sort -t: -k2 -rn)",
+      "mcp__aseprite__get_sprite_info",
+      "mcp__aseprite__audit_animation",
+      "mcp__aseprite__export_sprite"
     ]
   }
 }
