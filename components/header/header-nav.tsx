@@ -95,9 +95,6 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           <span className={baseClass} data-on={isGames ? "true" : undefined}>
             <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
             게임
-            <span aria-hidden className="ml-0.5 text-[10px] font-normal tracking-normal opacity-60">
-              (test)
-            </span>
           </span>
         </Link>
         {/*
