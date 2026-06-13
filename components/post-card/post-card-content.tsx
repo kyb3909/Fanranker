@@ -154,7 +154,7 @@ export const PostCardContent = memo(function PostCardContent({
               className="font-title line-clamp-1 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
               style={{
                 color: "var(--wc-ink, #14161a)",
-                fontWeight: 800,
+                fontWeight: 700,
                 letterSpacing: "-0.02em",
                 lineHeight: 1.4,
                 marginBottom: 6,
