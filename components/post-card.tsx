@@ -72,7 +72,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
           boxShadow: "0 1px 2px rgba(24,18,21,.05)",
         }}
       >
-        <div className="relative" style={{ padding: "16px 18px" }}>
+        <div className="relative" style={{ padding: "18px 20px" }}>
           <PostCardContent
             postId={post.id}
             title={post.title}
