@@ -10,6 +10,7 @@ import type { CommunityInfo } from "@/lib/constants/communities"
 import { toast } from "@/hooks/use-toast"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { SidebarResources } from "./sidebar-resources"
+import { BoardIcon } from "./board-icon"
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import useSWR, { useSWRConfig } from "swr"
 import { fetcher } from "@/lib/swr"
@@ -35,6 +36,20 @@ const CATEGORY_PASTEL: Record<string, string> = {
 }
 function getCategoryChipBg(name: string): string {
   return CATEGORY_PASTEL[name] ?? "var(--secondary, #F6E4E8)"
+}
+
+/** 게시판 라인 아이콘 색 — 파스텔 bg 와 톤 맞춘 진한 액센트. 미지정(영화/아이돌/자유/채널)은 와인. */
+const CATEGORY_ICON_COLOR: Record<string, string> = {
+  축구: "#9F1239",
+  야구: "#1E3A8A",
+  농구: "#9A3412",
+  배구: "#581C87",
+  게임: "#2D3A8C",
+  애니: "#0F5858",
+  음악: "#9F1239",
+}
+function getCategoryIconColor(name: string): string {
+  return CATEGORY_ICON_COLOR[name] ?? "var(--wc-burgundy)"
 }
 
 export const CommunitySidebar = memo(function CommunitySidebar({
@@ -198,12 +213,18 @@ export const CommunitySidebar = memo(function CommunitySidebar({
         className="flex min-w-0 flex-1 items-center gap-3"
       >
         <span
-          className={`flex shrink-0 items-center justify-center rounded text-base ${
-            isChannel ? "h-6 w-6 text-sm" : "h-7 w-7"
+          className={`flex shrink-0 items-center justify-center rounded ${
+            isChannel ? "h-6 w-6" : "h-7 w-7"
           }`}
-          style={{ background: getCategoryChipBg(community.name) }}
+          style={{
+            background: getCategoryChipBg(community.name),
+            color: getCategoryIconColor(community.name),
+          }}
         >
-          {community.emoji}
+          <BoardIcon
+            slug={community.slug}
+            className={isChannel ? "h-4 w-4" : "h-[18px] w-[18px]"}
+          />
         </span>
         <span
           className={`text-foreground group-hover:text-primary truncate font-medium ${
@@ -249,10 +270,13 @@ export const CommunitySidebar = memo(function CommunitySidebar({
                 className="flex items-center gap-3"
               >
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-base"
-                  style={{ background: getCategoryChipBg(community.name) }}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded"
+                  style={{
+                    background: getCategoryChipBg(community.name),
+                    color: getCategoryIconColor(community.name),
+                  }}
                 >
-                  {community.emoji}
+                  <BoardIcon slug={community.slug} className="h-[18px] w-[18px]" />
                 </span>
                 <span className="text-foreground group-hover:text-primary text-[14px] font-medium">
                   {community.name}
@@ -266,10 +290,13 @@ export const CommunitySidebar = memo(function CommunitySidebar({
             ) : (
               <Link href={`/community/${community.slug}`} className="flex items-center gap-3">
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-base"
-                  style={{ background: getCategoryChipBg(community.name) }}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded"
+                  style={{
+                    background: getCategoryChipBg(community.name),
+                    color: getCategoryIconColor(community.name),
+                  }}
                 >
-                  {community.emoji}
+                  <BoardIcon slug={community.slug} className="h-[18px] w-[18px]" />
                 </span>
                 <span className="text-foreground group-hover:text-primary truncate text-[14px] font-medium">
                   {community.name}
@@ -306,10 +333,13 @@ export const CommunitySidebar = memo(function CommunitySidebar({
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
                 <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm"
-                  style={{ background: getCategoryChipBg(community.name) }}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded"
+                  style={{
+                    background: getCategoryChipBg(community.name),
+                    color: getCategoryIconColor(community.name),
+                  }}
                 >
-                  {community.emoji}
+                  <BoardIcon slug={community.slug} className="h-4 w-4" />
                 </span>
                 <span className="text-foreground group-hover:text-primary truncate text-[13px] font-medium">
                   {community.name} 일반
