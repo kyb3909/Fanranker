@@ -190,6 +190,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 전반전(반쪽) 마켓 베팅 차단 (2026-06-14, 사용자 요청) — GET 노출 제외와 일치.
+    // betman 전반 마켓은 S 접두사(S일반/S핸디캡/S언더오버). SUM/SSUM 은 prediction enum 에서 이미 차단.
+    const halfTimeGames = games.filter(
+      (g) =>
+        typeof g.game_type === "string" &&
+        g.game_type.startsWith("S") &&
+        g.game_type !== "SUM" &&
+        g.game_type !== "SSUM"
+    )
+    if (halfTimeGames.length > 0) {
+      return NextResponse.json({ error: "전반전 마켓은 베팅할 수 없습니다." }, { status: 400 })
+    }
+
     // Check per-game bet deadlines (must bet before kickoff)
     const now = new Date()
     const closedGames = games.filter((g) => {

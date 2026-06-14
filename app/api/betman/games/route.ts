@@ -269,21 +269,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ===== SUM(홀짝/합계) 마켓 노출 제거 (2026-06-11) =====
-    // 홀짝·합계는 분석력과 무관한 운 게임 — 전 종목(배구 Set합계 포함)에서 표시/베팅 중단.
-    // DB 유입(POST)은 유지: SUM row 가 위 전반전 휴리스틱 2의 디스크리미네이터라
-    // 쿼리가 아닌 응답 단계에서 제외한다. 베팅 차단은 prediction 라우트 enum 에서.
+    // ===== SUM(홀짝/합계) + 전반전(반쪽) 마켓 노출 제거 =====
+    // SUM(2026-06-11): 홀짝·합계는 분석력과 무관한 운 게임.
+    // 전반전(2026-06-14, 사용자 요청): is_half_time 휴리스틱 마킹 또는 S 접두사(S일반/S핸디캡/S언더오버).
+    //   풀타임 마켓만 표시/베팅. DB 유입(POST)은 유지(SUM row 가 전반전 휴리스틱 디스크리미네이터라
+    //   쿼리가 아닌 응답 단계에서만 제외). 베팅 차단은 prediction 라우트(SUM=enum, 전반전=S접두사 가드).
     const isSumType = (t: unknown) => t === "SUM" || t === "SSUM"
+    const isHidden = (g: { game_type?: unknown; is_half_time?: boolean }) =>
+      isSumType(g.game_type) ||
+      g.is_half_time === true ||
+      (typeof g.game_type === "string" && g.game_type.startsWith("S") && !isSumType(g.game_type))
     // 그룹 dedup 에서 살아남은 row 만 flat 목록에도 반영 (total/bettable 카운트 일관성)
     const keptIds = new Set<unknown>()
     for (const group of Object.values(groupedGames)) {
       for (const g of group.games) keptIds.add(g.id)
     }
-    const visibleGames = gamesWithOdds.filter((g) => !isSumType(g.game_type) && keptIds.has(g.id))
+    const visibleGames = gamesWithOdds.filter((g) => !isHidden(g) && keptIds.has(g.id))
     const visibleGroups = Object.values(groupedGames)
       .map((group) => ({
         ...group,
-        games: group.games.filter((g) => !isSumType(g.game_type)),
+        games: group.games.filter((g) => !isHidden(g)),
       }))
       .filter((group) => group.games.length > 0)
 
