@@ -232,6 +232,9 @@ export function getGameTypeLabel(
       const noDraw = sport === "농구" || sport === "야구" || sport === "배구"
       baseLabel = noDraw ? "승패" : "승무패"
     }
+  } else if (sport === "배구" && (baseType === "소수핸디캡" || baseType === "핸디캡")) {
+    // 배구 핸디캡 = 세트 핸디캡. 내부 game_type 은 소수핸디캡(2-way) 재사용, 표시만 종목 인지.
+    baseLabel = "세트핸디캡"
   } else {
     baseLabel = gameTypeLabels[baseType] || baseType
   }
