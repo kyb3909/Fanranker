@@ -3,6 +3,7 @@ import { GamesTabNav } from "@/components/games-tab-nav"
 
 export const metadata: Metadata = {
   title: "게임",
+  description: "드래프트, 코너킥 히어로, 론도 등 여러 미니게임을 즐겨보세요.",
 }
 
 export default function GamesLayout({ children }: { children: React.ReactNode }) {

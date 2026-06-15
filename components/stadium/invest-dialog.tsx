@@ -66,7 +66,7 @@ export function InvestDialog({
       if (!res.ok) {
         toast({
           variant: "destructive",
-          title: "투자 실패",
+          title: "보태기 실패",
           description: data.error || "포인트가 부족합니다.",
         })
         return
@@ -79,8 +79,8 @@ export function InvestDialog({
         })
       } else {
         toast({
-          title: "투자 완료",
-          description: `${numAmount.toLocaleString()}pt를 ${teamName} 경기장에 투자했습니다.`,
+          title: "보태기 완료",
+          description: `${numAmount.toLocaleString()}pt를 ${teamName} 경기장에 보탰습니다.`,
         })
       }
 
@@ -91,7 +91,7 @@ export function InvestDialog({
       toast({
         variant: "destructive",
         title: "오류",
-        description: "투자 중 오류가 발생했습니다.",
+        description: "보태는 중 오류가 발생했습니다.",
       })
     } finally {
       setIsSubmitting(false)
@@ -104,9 +104,11 @@ export function InvestDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Hammer className="h-5 w-5" />
-            경기장 건설 투자
+            경기장 키우기
           </DialogTitle>
-          <DialogDescription>승부예측 수익을 {teamName} 경기장에 투자하세요</DialogDescription>
+          <DialogDescription>
+            예측으로 모은 포인트를 {teamName} 경기장에 보태보세요
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -114,7 +116,7 @@ export function InvestDialog({
           <div className="bg-muted/50 flex items-center justify-between rounded-lg px-3 py-2.5">
             <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
               <TrendingUp className="h-4 w-4" />
-              투자 가능
+              사용 가능
             </span>
             <span className="font-bold tabular-nums">
               {availablePoints.toLocaleString()}
@@ -124,7 +126,7 @@ export function InvestDialog({
 
           {/* 수량 입력 */}
           <div>
-            <p className="mb-2 text-sm font-medium">투자할 포인트</p>
+            <p className="mb-2 text-sm font-medium">보탤 포인트</p>
             <input
               type="number"
               inputMode="numeric"
@@ -161,7 +163,7 @@ export function InvestDialog({
 
           {/* 안내 */}
           <p className="text-muted-foreground text-[11px]">
-            승부예측 적중으로 벌어들인 수익만 투자할 수 있습니다.
+            현금 결제 없이, 예측으로 얻은 포인트만 사용할 수 있어요.
           </p>
 
           {/* 투자 버튼 */}
@@ -174,12 +176,12 @@ export function InvestDialog({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                투자 중...
+                보태는 중...
               </>
             ) : (
               <>
                 <Hammer className="mr-2 h-4 w-4" />
-                {numAmount > 0 ? `${numAmount.toLocaleString()}pt 투자하기` : "투자하기"}
+                {numAmount > 0 ? `${numAmount.toLocaleString()}pt 보태기` : "보태기"}
               </>
             )}
           </Button>

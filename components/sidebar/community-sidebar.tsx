@@ -439,7 +439,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
             <div className="mb-1 px-4 py-2.5">
               <p className="text-primary mb-1.5 text-[12px] font-semibold">인기 게시판</p>
               <p className="text-muted-foreground text-[12px]">
-                별을 눌러 팔로우하면 맞춤 담벼락을 볼 수 있어요
+                별을 눌러 팔로우하면 내 담벼락이 더 알차져요
               </p>
             </div>
           )}

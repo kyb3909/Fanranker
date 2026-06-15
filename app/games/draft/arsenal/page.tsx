@@ -4,7 +4,7 @@ import { DraftGame } from "@/components/draft/draft-game"
 export const metadata: Metadata = {
   title: "아스널 선수 드래프트",
   description:
-    "2003 인비저블부터 2026 현재까지 — 아스널 219명에서 예산 $100으로 나만의 베스트 일레븐.",
+    "2003 인빈시블부터 2026 현재까지, 예산 $100으로 아스널 베스트 일레븐을 만들어보세요.",
 }
 
 export default function ArsenalDraftPage() {

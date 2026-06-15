@@ -421,7 +421,7 @@ export default function SignUpPage() {
 
       // 5. 환영 메시지 + 홈으로 이동 (toast가 보이도록 약간 딜레이)
       toast({
-        title: "공놀이판에 오신 것을 환영합니다!",
+        title: "공놀이판 입장 완료!",
         duration: 5000,
       })
       await new Promise((r) => setTimeout(r, 500))
@@ -562,21 +562,21 @@ export default function SignUpPage() {
 
         {/* Terms footer */}
         <p className="text-muted-foreground mt-4 text-center text-[11px] leading-relaxed">
-          가입 시{" "}
+          가입하면{" "}
           <Link
             href="/terms"
             className="text-primary hover:text-primary/80 underline underline-offset-2"
           >
             이용약관
-          </Link>{" "}
-          및{" "}
+          </Link>
+          과{" "}
           <Link
             href="/privacy"
             className="text-primary hover:text-primary/80 underline underline-offset-2"
           >
             개인정보처리방침
           </Link>
-          에 동의하는 것으로 간주합니다.
+          에 동의한 것으로 간주됩니다.
         </p>
       </div>
     </div>

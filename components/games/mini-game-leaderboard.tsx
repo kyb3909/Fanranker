@@ -93,7 +93,7 @@ export function MiniGameLeaderboard({ game }: { game: MiniGameId }) {
         )}
         {saveState === "need-login" && (
           <span className="text-muted-foreground ml-auto text-[12px]">
-            로그인하면 순위에 기록됩니다
+            로그인하면 내 기록이 순위표에 남아요
           </span>
         )}
       </div>

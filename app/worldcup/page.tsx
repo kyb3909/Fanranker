@@ -7,13 +7,13 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 
 export const metadata: Metadata = {
-  title: "월드컵 승부예측 구너 대결",
+  title: "월드컵 승부예측 — 구너들의 대결",
   description:
-    "월드컵 32강 토너먼트 전까지 참가 신청. 최고 점수를 기록한 구너에게 데클런 라이스 사인 유니폼 증정.",
+    "월드컵 토너먼트 전까지 참가 신청하세요. 최종 1위 구너에게 데클런 라이스 친필 사인 유니폼을 드립니다.",
   alternates: { canonical: "/worldcup" },
   openGraph: {
-    title: "월드컵 승부예측 구너 대결 | gongnori.fan",
-    description: "아스날 구너 전용. 월드컵 토너먼트 최고 점수 1위에 도전하세요.",
+    title: "월드컵 승부예측 — 구너들의 대결 | gongnori.fan",
+    description: "아스날 팬 전용 월드컵 승부예측. 토너먼트 최고 점수 1위에 도전하세요.",
     url: "/worldcup",
   },
 }
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic"
 const NOTICES = [
   "본 이벤트는 gongnori.fan 회원 중 아스날 구너를 대상으로 진행됩니다.",
   "참가 신청은 월드컵 32강 시작 전까지 가능하며, 신청 후에는 취소·변경이 불가합니다.",
-  "예측 점수는 기존 토큰·골드 베팅 시스템의 적중 결과를 기준으로 자동 집계됩니다.",
+  "예측 점수는 무료 볼을 사용한 승부예측 결과를 기준으로 자동 집계됩니다.",
   "부정한 방법(다중 계정 등)으로 참여한 경우 순위에서 제외될 수 있습니다.",
   "경품 이미지는 실제 상품과 다소 차이가 있을 수 있습니다.",
 ]
@@ -33,7 +33,7 @@ const STEPS = [
   {
     num: "01",
     title: "참가 신청",
-    body: "월드컵 32강 토너먼트 전까지 참가 신청을 하세요. 모든 신청은 무료입니다.",
+    body: "월드컵 32강 토너먼트 전까지 신청하세요. 참가비는 없습니다.",
   },
   {
     num: "02",
@@ -43,7 +43,7 @@ const STEPS = [
   {
     num: "03",
     title: "1위 결정",
-    body: "토너먼트 기간 동안 모은 점수로 랭킹을 산정합니다. 최고 득점 구너가 1등 상품을 가져갑니다.",
+    body: "토너먼트 기간 동안 모은 점수로 랭킹을 산정합니다. 최종 1위가 상품을 가져갑니다.",
   },
 ] as const
 
@@ -128,8 +128,8 @@ export default async function WorldcupPage() {
               wordBreak: "keep-all",
             }}
           >
-            토너먼트 기간 동안 예측으로 점수를 쌓고, 최고 득점 구너에게 드리는 단 하나의{" "}
-            <b style={{ color: "var(--wc-ink)" }}>데클런 라이스 친필 사인 유니폼</b>에 도전하세요.
+            토너먼트 기간 동안 경기 결과를 예측하고 점수를 쌓아보세요. 최종 1위 구너에게는{" "}
+            <b style={{ color: "var(--wc-ink)" }}>데클런 라이스 친필 사인 유니폼</b>이 주어집니다.
           </p>
 
           {/* 이벤트 정보 박스 */}
@@ -140,7 +140,7 @@ export default async function WorldcupPage() {
             {[
               ["이벤트 기간", "2026.06.11(목) ~ 결승전 종료"],
               ["참가 신청", "32강 시작 전까지"],
-              ["참가 대상", "아스날 구너 누구나"],
+              ["참가 대상", "아스날 팬 누구나"],
             ].map(([k, v], i) => (
               <div
                 key={k}
@@ -184,7 +184,7 @@ export default async function WorldcupPage() {
               </Link>
             )}
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-ghost">
-              구너 현황
+              리더보드
             </Link>
           </div>
 
@@ -217,7 +217,7 @@ export default async function WorldcupPage() {
             경품 안내
           </h2>
           <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
-            토너먼트 최고 득점 구너 단 한 명을 위한 상품입니다.
+            토너먼트 최고 점수를 기록한 단 한 명의 구너를 위한 상품입니다.
           </p>
         </div>
         <div
@@ -288,8 +288,8 @@ export default async function WorldcupPage() {
               친필 사인 유니폼
             </div>
             {[
-              ["경품", "친필 사인 유니폼 (정품, 액자 포함)"],
-              ["인원", "최종 랭킹 1위 구너 1명"],
+              ["경품", "친필 사인 유니폼 (정품, 액자 미포함)"],
+              ["인원", "최종 랭킹 1위 1명"],
               ["발표", "결승전 종료 후 7일 이내 · 담벼락 공지"],
               ["배송", "국내 무료 배송"],
             ].map(([k, v], i) => (
@@ -377,15 +377,15 @@ export default async function WorldcupPage() {
               style={{ letterSpacing: "-.03em", lineHeight: 1.3 }}
             >
               {isRegistered
-                ? "참가 신청 완료 — 경기가 열리면 예측하세요"
+                ? "참가 신청 완료 — 이제 경기 결과를 예측하세요"
                 : "지금 신청하고 구너 대결에 합류하세요"}
             </h2>
             <div className="text-[14px]" style={{ color: "rgba(255,255,255,.82)" }}>
               {isRegistered ? (
-                "경기가 열리면 결과를 예측하고 점수를 쌓으세요."
+                "경기가 열리면 결과를 예측하고 점수를 쌓아보세요."
               ) : (
                 <>
-                  신청은 무료 · 한 번 신청하면 변경 불가
+                  참가비 없음 · 한 번 신청하면 변경 불가
                   {regCount > 0 && ` · 현재 ${regCount.toLocaleString()}명 신청 완료`}
                 </>
               )}

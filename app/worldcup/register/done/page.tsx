@@ -49,10 +49,10 @@ export default async function RegisterDonePage() {
           {/* Action cards */}
           <div className="wc-done-cards">
             <div className="wc-done-card">
-              <div className="wc-done-card-h">구너 현황 보기</div>
+              <div className="wc-done-card-h">리더보드</div>
               <p className="wc-done-card-b">구너 전체 평균과 내 위치를 확인하세요.</p>
               <Link href="/worldcup/leaderboard" className="wc-done-card-cta">
-                현황 보기 →
+                리더보드 보기 →
               </Link>
             </div>
             <div className="wc-done-card">

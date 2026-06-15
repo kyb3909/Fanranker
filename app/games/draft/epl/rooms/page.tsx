@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "공개 드래프트 방 — 지금 모집 중",
-  description: "지금 사람을 모으고 있는 EPL 드래프트 방. 클릭해서 바로 참가.",
+  description: "지금 모집 중인 EPL 드래프트 방을 확인하고 바로 참가해보세요.",
 }
 
 export default async function OpenRoomsPage() {

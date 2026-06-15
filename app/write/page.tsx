@@ -259,7 +259,7 @@ function WriteContent() {
                     <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       팀 플레어 <span className="text-muted-foreground font-normal">(선택)</span>
                       <span className="text-muted-foreground ml-2 text-[11px] font-normal">
-                        달고 쓰면 해당 팀 카르마 +10
+                        달고 쓰면 해당 팀 카르마가 +10 올라가요
                       </span>
                     </Label>
                     <div className="flex flex-wrap gap-1.5">
@@ -318,7 +318,7 @@ function WriteContent() {
                       <Input
                         id="source-url"
                         type="text"
-                        placeholder="뉴스나 기사 URL을 붙여넣으면 이미지를 자동으로 가져옵니다"
+                        placeholder="뉴스나 기사 링크를 붙여넣으면 대표 이미지를 자동으로 가져와요"
                         value={editor.sourceUrl}
                         onChange={(e) => editor.setSourceUrl(e.target.value)}
                         onKeyDown={(e) => {
@@ -407,7 +407,7 @@ function WriteContent() {
                     content={editor.content}
                     onChange={(json: unknown) => editor.setContent(json)}
                     onEmbedLoading={editor.setIsEmbedLoading}
-                    placeholder="내용을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드됩니다."
+                    placeholder="글을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드돼요."
                   />
                 </div>
 
@@ -462,10 +462,10 @@ function WriteContent() {
                         <>
                           <ImageIcon className="text-muted-foreground h-8 w-8" />
                           <span className="text-muted-foreground text-sm">
-                            클릭 또는 드래그로 본문에 이미지 삽입
+                            클릭하거나 드래그해서 본문에 이미지를 넣을 수 있어요
                           </span>
                           <span className="text-muted-foreground text-xs">
-                            한 번에 최대 10장 · 각 파일 10MB 이하
+                            한 번에 최대 10장, 파일당 10MB까지 가능합니다
                           </span>
                         </>
                       )}

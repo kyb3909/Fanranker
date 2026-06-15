@@ -9,7 +9,7 @@ export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "승부예측",
-  description: "오늘의 경기를 예측하고 팬심을 증명해보세요",
+  description: "오늘의 경기를 예측하고, 맞힌 기록을 랭킹으로 남겨보세요",
   alternates: { canonical: "/prediction" },
   openGraph: {
     title: "승부예측 | gongnori.fan",

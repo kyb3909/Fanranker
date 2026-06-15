@@ -89,7 +89,7 @@ export function BettingSlip({
           />
         )}
         <p style={{ fontSize: 13, color: "var(--wc-mute)", marginTop: mascotError ? 8 : 0 }}>
-          전술 분석 중… 경기를 선택해 슬립에 담아보세요
+          전술 분석 중… 마음 가는 경기를 슬립에 담아보세요
         </p>
       </div>
     )

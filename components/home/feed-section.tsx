@@ -83,13 +83,13 @@ export const FeedSection = memo(function FeedSection({
         <Compass className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute)" }} />
         <p className="mb-2 text-sm font-bold" style={{ color: "var(--wc-ink)" }}>
           {isSignedIn
-            ? "관심 있는 게시판을 팔로우해보세요!"
-            : "로그인하고 게시판을 팔로우해보세요!"}
+            ? "관심 게시판을 팔로우해보세요!"
+            : "로그인하고 관심 게시판을 팔로우해보세요!"}
         </p>
         <p className="mb-4 text-xs" style={{ color: "var(--wc-mute)" }}>
           {isSignedIn
-            ? "팔로우한 게시판의 글이 담벼락에 표시됩니다."
-            : "팔로우한 게시판의 최신 글을 모아볼 수 있어요."}
+            ? "팔로우한 게시판의 글이 내 담벼락에 표시돼요."
+            : "팔로우한 게시판의 최신 글을 담벼락에서 모아볼 수 있어요."}
         </p>
         <Link
           href="/explore"

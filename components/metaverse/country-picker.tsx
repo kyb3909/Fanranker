@@ -66,9 +66,9 @@ export function CountryPicker() {
           <p className="text-[11px] font-semibold tracking-[0.25em] text-white/40 uppercase">
             Stadium Metaverse
           </p>
-          <h1 className="mt-3 text-2xl font-bold md:text-3xl">어느 나라로 입장할까요?</h1>
+          <h1 className="mt-3 text-2xl font-bold md:text-3xl">어느 리그로 떠나볼까요?</h1>
           <p className="mt-2 text-sm text-white/60">
-            국가를 선택하면 해당 리그의 월드맵으로 이동합니다.
+            국가를 선택하면 해당 리그의 월드맵으로 이동해요.
           </p>
         </div>
 
@@ -127,7 +127,7 @@ export function CountryPicker() {
         </ul>
 
         <p className="mt-10 text-center text-[10px] text-white/40">
-          내부 테스트 중 · 국가별 지도와 리그 데이터가 순차 오픈됩니다.
+          내부 테스트 중 · 국가별 지도와 리그 데이터는 순차적으로 열릴 예정입니다.
         </p>
       </div>
     </div>

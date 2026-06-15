@@ -146,7 +146,7 @@ function ExploreInner() {
                 운동장
               </h1>
               <p className="mt-2 text-[14px]" style={{ color: "var(--wc-mute)", lineHeight: 1.6 }}>
-                관심 있는 커뮤니티를 찾아 즐겨찾기에 추가하세요.
+                관심 있는 게시판을 찾아 팔로우해보세요.
               </p>
             </div>
 

@@ -332,7 +332,7 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
         <div className="border-border bg-card shrink-0 border-t px-4 py-3.5">
           {!user ? (
             <p className="text-muted-foreground py-1 text-center text-[13px]">
-              댓글을 작성하려면 로그인이 필요합니다.
+              댓글을 작성하려면 로그인이 필요해요.
             </p>
           ) : !isRealTicker ? (
             <p className="text-muted-foreground py-1 text-center text-[13px]">

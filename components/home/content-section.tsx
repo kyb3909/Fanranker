@@ -167,7 +167,7 @@ export function ContentSection() {
       {!isSignedIn ? (
         <div className="rounded-lg p-8 text-center" style={stateCardStyle}>
           <p className="text-sm" style={{ color: "var(--wc-mute)" }}>
-            로그인하면 팔로우한 랭커의 예측 콘텐츠를 확인할 수 있습니다.
+            로그인하면 팔로우한 랭커의 예측 콘텐츠를 확인할 수 있어요.
           </p>
         </div>
       ) : isContentLoading ? (
@@ -195,7 +195,7 @@ export function ContentSection() {
         <div className="rounded-lg p-8 text-center" style={stateCardStyle}>
           <Trophy className="mx-auto mb-2 h-8 w-8" style={{ color: "var(--wc-mute)" }} />
           <p className="mb-2 text-sm font-bold" style={{ color: "var(--wc-ink)" }}>
-            랭커를 팔로우하면 예측 콘텐츠가 여기에 표시됩니다
+            랭커를 팔로우하면 예측 콘텐츠가 여기에 표시돼요.
           </p>
           <p className="mb-4 text-xs" style={{ color: "var(--wc-mute)" }}>
             승부예측 랭킹에서 랭커를 팔로우해보세요.

@@ -162,7 +162,8 @@ export function DraftSetup({
             {entry?.name ?? "스네이크 드래프트"}
           </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--wc-mute)" }}>
-            {entry?.blurb ?? "선수를 드래프트해서 나만의 드림팀을 만드세요"}
+            {entry?.blurb ??
+              "선수를 고르고, 나만의 드림팀을 만들어보세요. 솔로(vs AI)부터 최대 4명 PvP까지 즐길 수 있어요."}
           </p>
         </div>
 

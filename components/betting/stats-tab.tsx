@@ -50,7 +50,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
         <div className="p-4 sm:p-5">
           <div className="mb-4 text-center">
             <h3 className="text-foreground text-lg font-bold">주인장 vs 유저</h3>
-            <p className="text-muted-foreground mt-0.5 text-sm">누가 이기고 있을까?</p>
+            <p className="text-muted-foreground mt-0.5 text-sm">지금 누가 더 잘 예측하고 있을까?</p>
           </div>
 
           {/* 메인 대결 카드 */}
@@ -74,10 +74,10 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
               }`}
             >
               {usersWinning
-                ? "유저들이 이기고 있다!"
+                ? "유저들이 앞서고 있어요!"
                 : housePnl > 0
-                  ? "주인장이 웃고 있다..."
-                  : "현재 무승부!"}
+                  ? "주인장이 웃고 있습니다…"
+                  : "아직 팽팽해요!"}
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
               주인장 {usersWinning ? "손실" : "수익"}:{" "}

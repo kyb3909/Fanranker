@@ -1,16 +1,16 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "탐색",
-  description: "다양한 스포츠 커뮤니티를 탐색하세요",
+  title: "운동장",
+  description: "관심 있는 게시판을 찾아 팔로우하고 내 담벼락을 채워보세요",
   openGraph: {
-    title: "탐색 - gongnori.fan",
-    description: "다양한 스포츠 커뮤니티를 탐색하세요",
+    title: "운동장 - gongnori.fan",
+    description: "관심 있는 게시판을 찾아 팔로우하고 내 담벼락을 채워보세요",
   },
   twitter: {
     card: "summary",
-    title: "탐색 - gongnori.fan",
-    description: "다양한 스포츠 커뮤니티를 탐색하세요",
+    title: "운동장 - gongnori.fan",
+    description: "관심 있는 게시판을 찾아 팔로우하고 내 담벼락을 채워보세요",
   },
   alternates: { canonical: "/explore" },
 }

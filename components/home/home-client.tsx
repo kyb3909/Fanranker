@@ -126,7 +126,7 @@ export function HomeClient({
         className="mx-auto min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
         tabIndex={-1}
       >
-        <h1 className="sr-only">gongnori.fan — 스포츠 팬 커뮤니티</h1>
+        <h1 className="sr-only">gongnori.fan — 공놀이에 진심인 팬들의 놀이터</h1>
         <div className="grid grid-cols-12 gap-5 lg:gap-6">
           {/* Left Sidebar */}
           <aside className="col-span-3 hidden lg:block">
@@ -158,14 +158,14 @@ export function HomeClient({
                   World Cup 2026 Event
                 </span>
                 <span className="mt-0.5 block text-[14.5px] font-bold">
-                  월드컵 승부예측 팬덤 대결 — 지금 참가하세요
+                  월드컵 승부예측 구너들의 대결 — 지금 참가하세요
                 </span>
               </span>
               <span
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12.5px] font-bold"
                 style={{ background: "rgba(255,255,255,.14)", padding: "7px 13px" }}
               >
-                사전 등록
+                참가 신청
                 <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </span>
             </Link>
@@ -179,7 +179,7 @@ export function HomeClient({
                 margin: "18px 0 12px",
               }}
             >
-              그깟 공놀이를 좋아하는 팬들의 놀이터
+              그깟 공놀이에 진심인 팬들의 놀이터
             </p>
             {/* 필터 스트립 — 한 줄: 탭 pills | separator | sort pills */}
             <div className="flex flex-wrap items-center gap-2">

@@ -90,7 +90,7 @@ export default async function WorldcupResultPage() {
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-primary">
-              현재 구너 현황 보기
+              현재 리더보드 보기
             </Link>
             <Link href="/worldcup" className="wc-hbtn wc-hbtn-ghost">
               이벤트 안내로

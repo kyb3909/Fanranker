@@ -27,7 +27,7 @@ export function CommunitiesStep({
     <div className="p-6">
       <h2 className="text-foreground mb-1 text-lg font-bold">관심 게시판 선택</h2>
       <p className="text-muted-foreground mb-5 text-sm">
-        관심 있는 게시판을 선택하면 맞춤 담벼락을 볼 수 있어요. (1개 이상)
+        관심 게시판을 고르면 내 담벼락이 채워져요. 1개 이상 선택해주세요.
       </p>
 
       {/* Sports */}

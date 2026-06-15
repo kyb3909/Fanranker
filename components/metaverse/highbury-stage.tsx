@@ -236,12 +236,8 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     return (
       <div className="flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center gap-4 bg-neutral-950 p-6 text-center text-white">
         <div className="space-y-2">
-          <p className="text-base font-semibold">로그인이 필요합니다</p>
-          <p className="text-xs text-white/60">
-            메타버스에 접속하려면 헤더 우측{" "}
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-white/90">로그인</span> 버튼으로
-            먼저 로그인해주세요.
-          </p>
+          <p className="text-base font-semibold">로그인이 필요해요</p>
+          <p className="text-xs text-white/60">메타버스에 입장하려면 먼저 로그인해주세요.</p>
         </div>
         <Link
           href="/"

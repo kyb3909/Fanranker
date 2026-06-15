@@ -45,9 +45,7 @@ export function ProfileStep({
   return (
     <div className="p-6">
       <h2 className="text-foreground mb-1 text-lg font-bold">프로필 설정</h2>
-      <p className="text-muted-foreground mb-5 text-sm">
-        커뮤니티에서 사용할 프로필을 설정해주세요.
-      </p>
+      <p className="text-muted-foreground mb-5 text-sm">공놀이에서 사용할 프로필을 정해주세요.</p>
 
       {/* Avatar */}
       <div className="mb-5 flex flex-col items-center gap-1.5">
@@ -117,7 +115,7 @@ export function ProfileStep({
         <Input
           value={bio}
           onChange={(e) => setBio(e.target.value)}
-          placeholder="나를 한줄로 표현해보세요"
+          placeholder="나를 한 줄로 소개해보세요"
           maxLength={50}
         />
         <p className="text-muted-foreground mt-1 text-xs">{bio.length}/50</p>
@@ -129,7 +127,7 @@ export function ProfileStep({
           <Coins className="h-4 w-4 text-amber-500" />
           <p className="text-foreground text-sm font-medium">최애 팀 & 선수</p>
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
-            +100 골드
+            +100골드
           </span>
         </div>
         <div className="space-y-3">
@@ -157,7 +155,7 @@ export function ProfileStep({
           </div>
         </div>
         <p className="text-muted-foreground mt-2 text-[11px]">
-          하나라도 입력하면 100 골드를 드려요!
+          하나라도 입력하면 100골드를 드려요!
         </p>
       </div>
 

@@ -123,9 +123,9 @@ export function BettingRankings({
       ) : rankings.length === 0 ? (
         <div className="py-8 text-center">
           <Trophy className="text-muted-foreground/30 mx-auto mb-2 h-10 w-10" />
-          <p className="text-muted-foreground text-sm">아직 랭킹 데이터가 없습니다.</p>
+          <p className="text-muted-foreground text-sm">아직 랭킹 데이터가 없어요.</p>
           <p className="text-muted-foreground/60 mt-1 text-xs">
-            예측에 참여하고 랭킹에 도전해보세요!
+            경기를 예측하고 랭킹에 도전해보세요!
           </p>
         </div>
       ) : (

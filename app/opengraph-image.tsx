@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og"
 
-export const alt = "공놀이 - 스포츠 예측 커뮤니티"
+export const alt = "공놀이 - 스포츠 팬 커뮤니티"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -44,7 +44,7 @@ export default function OgImage() {
           fontWeight: 500,
         }}
       >
-        그깟 공놀이를 좋아하는 팬들의 놀이터
+        그깟 공놀이에 진심인 팬들의 놀이터
       </div>
       <div
         style={{

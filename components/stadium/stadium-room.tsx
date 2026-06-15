@@ -207,7 +207,7 @@ export function StadiumRoom({ teamId, initialData }: StadiumRoomProps) {
               <Trophy className="text-primary mx-auto mb-3 h-10 w-10" />
               <h2 className="mb-1 text-lg font-bold">{team.team_name} 경기장</h2>
               <p className="text-muted-foreground mb-4 text-sm">
-                로그인하면 채팅에 참여하고 경기장 건설에 투자할 수 있습니다.
+                로그인하면 채팅에 참여하고, 예측 포인트로 경기장을 키울 수 있어요.
               </p>
               <Button onClick={() => openSignIn()} className="w-full">
                 <LogIn className="mr-2 h-4 w-4" />

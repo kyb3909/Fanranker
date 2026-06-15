@@ -10,16 +10,16 @@ import { EVENT_TERMS, EVENT_TERMS_TITLE, EVENT_TERMS_DATE } from "./event-terms"
 // 방어적 고지 대신, 게임이 어떻게 굴러가는지 친근하게 설명한다.
 const RULES = [
   {
-    title: "매일 볼 10개, 공짜로",
+    title: "매일 볼 10개, 무료 지급",
     body: "매일 아침 볼 10개가 들어와요. 충전도 결제도 없이, 그 볼로만 참여합니다.",
   },
   {
     title: "예측하고 점수 쌓기",
-    body: "볼로 월드컵 경기 결과를 맞혀보세요. 적중할 때마다 점수가 차곡차곡 쌓입니다.",
+    body: "볼로 월드컵 경기 결과를 예측해보세요. 맞힐 때마다 점수가 차곡차곡 쌓입니다.",
   },
   {
     title: "최고 점수 구너가 우승",
-    body: "토너먼트가 끝날 때 점수가 가장 높은 구너 한 명이 데클런 라이스 사인 유니폼을 가져가요.",
+    body: "토너먼트가 끝났을 때 점수가 가장 높은 구너 한 명이 데클런 라이스 사인 유니폼을 가져가요.",
   },
 ]
 
@@ -62,7 +62,7 @@ export function RegisterClient() {
               로그인 후 참가 신청할 수 있어요
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--wc-ink-2)", marginTop: 4 }}>
-              gongnori.fan 계정으로 로그인하면 바로 참가 신청을 마칠 수 있습니다.
+              gongnori.fan 계정으로 로그인하면 바로 참가 신청을 마칠 수 있어요.
             </p>
           </div>
         </div>
@@ -319,8 +319,8 @@ export function RegisterClient() {
           {agreed && <Check className="h-[13px] w-[13px]" />}
         </span>
         <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--wc-ink-2)" }}>
-          규칙과 이벤트 참가 약관을 확인했으며,{" "}
-          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>동의하고 참가 신청할게요.</b>
+          규칙과 이벤트 참가 약관을 확인했으며, 이에{" "}
+          <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>동의하고 참가 신청합니다.</b>
         </span>
       </button>
 
@@ -355,7 +355,7 @@ export function RegisterClient() {
         {submitting ? "신청 처리 중..." : "참가 신청하기"}
       </button>
       <p className="text-center text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
-        현금이 오가지 않는 무료 이벤트예요. 참가 신청은 한 번만 가능하고, 이후엔 변경할 수 없어요.
+        현금이 오가지 않는 무료 이벤트예요. 참가 신청은 한 번만 가능하며, 이후에는 변경할 수 없어요.
       </p>
     </div>
   )

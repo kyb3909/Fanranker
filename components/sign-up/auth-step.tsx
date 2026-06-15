@@ -114,7 +114,7 @@ export function AuthStep({
   return (
     <div className="p-6">
       <h2 className="text-foreground mb-1 text-lg font-bold">계정 만들기</h2>
-      <p className="text-muted-foreground mb-5 text-sm">Google 또는 이메일로 가입할 수 있습니다.</p>
+      <p className="text-muted-foreground mb-5 text-sm">Google 또는 이메일로 가입할 수 있어요.</p>
 
       {!signUpLoaded ? (
         <div className="flex justify-center py-8">
@@ -179,8 +179,8 @@ export function AuthStep({
                 <li className={password.length >= 8 ? "text-emerald-500" : ""}>
                   {password.length >= 8 ? "✓" : "•"} 8자 이상
                 </li>
-                <li>• 유출된 적 없는 비밀번호 (보안 검사 자동 수행)</li>
-                <li>• 너무 단순한 패턴 금지 (예: 12345678, password)</li>
+                <li>• 유출 이력이 없는 비밀번호</li>
+                <li>• 너무 단순한 패턴은 사용할 수 없어요</li>
               </ul>
             </div>
 

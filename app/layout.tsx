@@ -57,7 +57,7 @@ const koLocalization = {
   signIn: {
     start: {
       title: "로그인",
-      subtitle: "계속하려면 로그인하세요",
+      subtitle: "계속하려면 로그인이 필요해요",
       actionText: "계정이 없으신가요?",
       actionLink: "가입하기",
     },
@@ -65,7 +65,7 @@ const koLocalization = {
   signUp: {
     start: {
       title: "회원가입",
-      subtitle: "계속하려면 가입하세요",
+      subtitle: "계속하려면 가입이 필요해요",
       actionText: "이미 계정이 있으신가요?",
       actionLink: "로그인",
     },
@@ -101,7 +101,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: `${SITE_CONFIG.name} - 스포츠 예측 커뮤니티`,
+        alt: `${SITE_CONFIG.name} - 스포츠 팬 커뮤니티`,
       },
     ],
   },
@@ -163,7 +163,7 @@ export default function RootLayout({
             {/* PWA: standalone 모드 */}
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-            <meta name="apple-mobile-web-app-title" content="공놀이" />
+            <meta name="apple-mobile-web-app-title" content="공놀이판" />
             {/* Preconnect: 크리티컬 외부 리소스 (DNS+TCP+TLS 선연결) */}
             <link
               rel="preconnect"

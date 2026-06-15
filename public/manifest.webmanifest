@@ -1,7 +1,7 @@
 {
-  "name": "공놀이 - 스포츠 팬 커뮤니티",
-  "short_name": "공놀이",
-  "description": "그깟 공놀이를 좋아하는 팬들의 놀이터. 스포츠 팬들을 위한 가벼운 경기 예측 커뮤니티입니다.",
+  "name": "공놀이판 - 스포츠 팬 커뮤니티",
+  "short_name": "공놀이판",
+  "description": "그깟 공놀이에 진심인 팬들의 놀이터. 경기 결과를 예측하고, 이야기하고, 팬심을 기록하는 스포츠 팬 커뮤니티입니다.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

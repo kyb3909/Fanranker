@@ -27,7 +27,9 @@ export function TermsStep({
   return (
     <div className="p-6">
       <h2 className="text-foreground mb-1 text-lg font-bold">약관 동의</h2>
-      <p className="text-muted-foreground mb-5 text-sm">서비스 이용을 위해 약관에 동의해주세요.</p>
+      <p className="text-muted-foreground mb-5 text-sm">
+        공놀이를 시작하려면 약관 동의가 필요해요.
+      </p>
 
       <div className="space-y-3">
         {/* 이용약관 */}

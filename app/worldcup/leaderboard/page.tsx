@@ -14,7 +14,7 @@ import {
 const EVENT_SLUG = "worldcup-2026"
 
 export const metadata: Metadata = {
-  title: "월드컵 구너 현황",
+  title: "월드컵 리더보드",
   description: "구너 전체 평균과 내 위치. 개별 순위는 종료 후 공개.",
   alternates: { canonical: "/worldcup/leaderboard" },
 }
@@ -215,13 +215,13 @@ export default async function WorldcupLeaderboardPage() {
           <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
         </Link>
         <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
-          GOONER STATUS
+          LEADERBOARD
         </div>
         <h1
           className="text-[28px] font-extrabold sm:text-[36px]"
           style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
         >
-          구너 현황
+          리더보드
         </h1>
         <p
           className="mt-2.5 mb-8 max-w-[560px] text-[15px]"

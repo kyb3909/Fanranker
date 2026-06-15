@@ -116,7 +116,7 @@ export function SignInMenu() {
       >
         <div className="px-6 pt-6 pb-2">
           <h2 className="text-foreground text-xl font-bold">로그인</h2>
-          <p className="text-muted-foreground mt-1 text-sm">계속하려면 로그인하세요</p>
+          <p className="text-muted-foreground mt-1 text-sm">계속하려면 로그인이 필요해요</p>
         </div>
 
         <div className="px-6 pb-4">
@@ -216,21 +216,21 @@ export function SignInMenu() {
 
         {/* Terms footer */}
         <p className="border-border text-muted-foreground border-t px-4 py-3 text-center text-[11px] leading-relaxed">
-          가입 시{" "}
+          가입하면{" "}
           <Link
             href="/terms"
             className="text-primary hover:text-primary/80 underline underline-offset-2"
           >
             이용약관
-          </Link>{" "}
-          및{" "}
+          </Link>
+          과{" "}
           <Link
             href="/privacy"
             className="text-primary hover:text-primary/80 underline underline-offset-2"
           >
             개인정보처리방침
           </Link>
-          에 동의하는 것으로 간주합니다.
+          에 동의한 것으로 간주됩니다.
         </p>
       </DropdownMenuContent>
     </DropdownMenu>

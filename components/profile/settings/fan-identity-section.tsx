@@ -130,10 +130,10 @@ export function FanIdentitySection() {
           <Sparkles className="h-4 w-4 text-amber-500" />내 팬 정체성
         </h3>
         <p className="text-muted-foreground text-sm">
-          글, 댓글, 받은 추천으로 점수가 쌓이면 여기 호칭이 잠금 해제돼요.
+          글, 댓글, 받은 추천이 쌓이면 새로운 호칭이 열려요.
           <br />
           <span className="text-xs">
-            글 = 10점 / 댓글 = 1점 / 받은 추천 = 1점 · 같은 flair team 의 경기장에 기부 가능
+            글 10점 · 댓글 1점 · 받은 추천 1점. 같은 팀 경기장에 포인트를 보탤 수 있어요.
           </span>
         </p>
       </Card>
@@ -160,7 +160,7 @@ export function FanIdentitySection() {
           <Sparkles className="h-4 w-4 text-amber-500" />내 팬 정체성
         </h3>
         <p className="text-muted-foreground text-xs">
-          flair 활동 점수로 잠금 해제된 호칭 중 하나를 표시할 수 있어요. 닉네임 옆에 노출됩니다.
+          활동 점수로 열린 호칭 중 하나를 골라 닉네임 옆에 표시할 수 있어요.
         </p>
       </div>
 
