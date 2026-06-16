@@ -1,6 +1,11 @@
-import { redirect } from "next/navigation"
+import type { Metadata } from "next"
+import { GamesHub } from "@/components/games/games-hub"
+
+export const metadata: Metadata = {
+  title: "게임",
+  description: "드래프트, 코너킥 히어로, 패스 서바이버, 론도. 골라서 바로 플레이하세요.",
+}
 
 export default function GamesPage() {
-  // 갈드컵 절제(Phase 2)로 현행 메인 게임인 드래프트로 보냄
-  redirect("/games/draft")
+  return <GamesHub />
 }
