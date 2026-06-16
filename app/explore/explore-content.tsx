@@ -3,7 +3,24 @@
 import { useState, useMemo } from "react"
 import useSWR, { SWRConfig } from "swr"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
-import { Eye, MessageSquare, Loader2, ThumbsUp } from "lucide-react"
+import {
+  Eye,
+  MessageSquare,
+  Loader2,
+  ThumbsUp,
+  Goal,
+  Circle,
+  Dribbble,
+  Volleyball,
+  Gamepad2,
+  Clapperboard,
+  Music,
+  MicVocal,
+  Sparkles,
+  MessagesSquare,
+  LayoutGrid,
+  type LucideIcon,
+} from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { fetcher } from "@/lib/swr"
@@ -28,6 +45,21 @@ const CAT_CHIP_MAP: Record<string, { bg: string; color: string }> = {
   게임: { bg: "#EEF0FA", color: "#2D3A8C" },
   애니: { bg: "#EAF4F4", color: "#0F5858" },
   음악: { bg: "#FDEFF3", color: "#9F1239" },
+}
+
+// 카테고리 slug → lucide 아이콘. 축구/야구/농구는 lucide에 전용 볼이 없어 근사
+// (Goal=축구 골대, Circle=야구 공, Dribbble=농구 공). 미등록 slug 는 LayoutGrid.
+const CAT_ICON: Record<string, LucideIcon> = {
+  football: Goal,
+  baseball: Circle,
+  basketball: Dribbble,
+  volleyball: Volleyball,
+  game: Gamepad2,
+  movies: Clapperboard,
+  music: Music,
+  idol: MicVocal,
+  anime: Sparkles,
+  "free-board": MessagesSquare,
 }
 
 interface Post {
@@ -155,55 +187,47 @@ function ExploreInner() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                  gap: 14,
+                  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                  gap: 10,
                 }}
               >
                 {categories.map((cat) => {
                   const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
+                  const Icon = CAT_ICON[cat.slug] ?? LayoutGrid
                   return (
                     <Link
                       key={cat.slug}
                       href={`/community/${cat.slug}`}
-                      className="gn-card-lift flex flex-col items-start gap-2.5"
+                      className="gn-card-lift flex items-center gap-2.5"
                       style={{
                         background: "var(--wc-card)",
                         border: "1px solid var(--wc-line)",
-                        borderRadius: 12,
-                        padding: "20px 20px 18px",
+                        borderRadius: 10,
+                        padding: "12px 14px",
                         textDecoration: "none",
                       }}
                     >
                       <span
                         aria-hidden
                         style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: 12,
+                          width: 34,
+                          height: 34,
+                          borderRadius: 9,
                           background: chip.bg,
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 21,
                           flexShrink: 0,
                         }}
                       >
-                        {cat.icon || "📋"}
+                        <Icon size={18} strokeWidth={2.2} style={{ color: chip.color }} />
                       </span>
                       <span
-                        className="font-title text-[16.5px] font-extrabold"
+                        className="font-title truncate text-[15px] font-extrabold"
                         style={{ color: "var(--wc-ink)", letterSpacing: "-.01em" }}
                       >
                         {cat.name}
                       </span>
-                      {cat.description && (
-                        <span
-                          className="text-[12.5px]"
-                          style={{ color: "var(--wc-mute)", lineHeight: 1.5 }}
-                        >
-                          {cat.description}
-                        </span>
-                      )}
                     </Link>
                   )
                 })}
