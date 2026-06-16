@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { User } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 
 const CLERK_ERROR_MAP: Record<string, string> = {
   form_password_incorrect: "비밀번호가 올바르지 않습니다.",
@@ -114,7 +115,15 @@ export function SignInMenu() {
         className="bg-card border-border mt-2 w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-xl border p-0 shadow-lg"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="px-6 pt-6 pb-2">
+        <div className="flex flex-col items-center px-6 pt-6 pb-2 text-center">
+          <Image
+            src="/mascot/hi.webp"
+            alt=""
+            width={60}
+            height={60}
+            className="mb-2 h-[60px] w-[60px] select-none"
+            draggable={false}
+          />
           <h2 className="text-foreground text-xl font-bold">로그인</h2>
           <p className="text-muted-foreground mt-1 text-sm">계속하려면 로그인이 필요해요</p>
         </div>
