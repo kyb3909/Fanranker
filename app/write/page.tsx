@@ -14,11 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
+import { Image as ImageIcon, X, Loader2, Link as LinkIcon, Megaphone } from "lucide-react"
 import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
 import { trackEvent } from "@/lib/analytics/events"
 import { NoticeToggleButton } from "@/components/write/notice-toggle-button"
+import { useCanPostNotice } from "@/hooks/use-board-moderator"
 
 const TipTapEditor = dynamic(
   () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
@@ -33,6 +34,8 @@ const SignIn = dynamic(() => import("@clerk/nextjs").then((m) => ({ default: m.S
 
 function WriteContent() {
   const editor = useWriteEditor()
+  const canPostNotice = useCanPostNotice(editor.selectedCommunity)
+  const noticeMode = editor.isNoticeMode && canPostNotice
   const tiptapRef = useRef<TipTapEditorHandle>(null)
 
   const insertBodyImages = useCallback((urls: string[]) => {
@@ -179,6 +182,18 @@ function WriteContent() {
               }}
             >
               <form onSubmit={editor.handleSubmit} className="space-y-6">
+                {noticeMode && (
+                  <div
+                    className="flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[13px] font-bold"
+                    style={{
+                      background: "color-mix(in srgb, var(--wc-burgundy) 10%, transparent)",
+                      color: "var(--wc-burgundy)",
+                      border: "1px solid color-mix(in srgb, var(--wc-burgundy) 30%, transparent)",
+                    }}
+                  >
+                    <Megaphone className="h-4 w-4" />이 글은 공지로 등록됩니다 — 게시판 상단 고정
+                  </div>
+                )}
                 {/* 게시판 선택 */}
                 <div className="space-y-2">
                   <Label
@@ -510,6 +525,8 @@ function WriteContent() {
                         </>
                       ) : editor.editId ? (
                         "수정하기"
+                      ) : noticeMode ? (
+                        "공지 등록"
                       ) : (
                         "작성하기"
                       )}

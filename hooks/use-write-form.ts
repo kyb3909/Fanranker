@@ -107,6 +107,7 @@ export function useWriteForm() {
   const searchParams = useSearchParams()
   const communitySlug = searchParams.get("community") || ""
   const editId = searchParams.get("edit") || ""
+  const isNoticeMode = searchParams.get("notice") === "1"
 
   const { data: catData } = useSWR<{ categories: Category[] }>("/api/categories", fetcher, {
     revalidateOnFocus: false,
@@ -213,6 +214,7 @@ export function useWriteForm() {
     state,
     dispatch,
     editId,
+    isNoticeMode,
     communities,
     canSubmit,
     setSelectedCommunity,

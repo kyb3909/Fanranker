@@ -9,6 +9,7 @@ import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { awardFlairKarma } from "@/lib/metaverse/karma-award"
 import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
+import { canPostNotice } from "@/lib/board-moderator"
 import { z } from "zod"
 
 const MAX_CONTENT_SIZE = 100_000 // 100KB
@@ -35,6 +36,8 @@ const PostCreateSchema = z.object({
   flair_id: z.string().uuid().nullable().optional(),
   // 팀 플레어 (선택) — 메타버스 카르마 적립 대상. team_map_pins.team_id 참조.
   flair_team_id: z.string().min(1).max(64).nullable().optional(),
+  // 공지 여부 — MOD/관리자만. 서버에서 canPostNotice 게이트하므로 일반 유저가 보내도 무시됨.
+  is_notice: z.boolean().optional(),
 })
 
 /**
@@ -264,6 +267,7 @@ export async function POST(request: NextRequest) {
       image,
       flair_id,
       flair_team_id,
+      is_notice: wantNotice,
     } = result.data
 
     // TipTap JSON sanitization — 저장 전 노드/속성 whitelist (저장형 XSS 방지)
@@ -284,6 +288,10 @@ export async function POST(request: NextRequest) {
       imageUrl = image
     }
 
+    // 공지 등록은 권한 게이트 — admin / 글로벌 moderator / 해당 게시판 board MOD 만 true.
+    const isNotice =
+      wantNotice === true ? await canPostNotice(supabase, userId, community_slug) : false
+
     // Supabase에 글 저장
     // community_slug → category_id 변환은 DB 트리거가 자동 처리
     const { data, error } = await supabase
@@ -296,6 +304,7 @@ export async function POST(request: NextRequest) {
         image: imageUrl,
         flair_id: flair_id || null,
         flair_team_id: flair_team_id || null,
+        is_notice: isNotice,
       })
       .select()
       .single()

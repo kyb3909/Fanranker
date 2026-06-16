@@ -255,7 +255,7 @@ export const CommunityContent = memo(function CommunityContent({
               </div>
               {communitySlug && canPostNotice && (
                 <Link
-                  href={`/community/${communitySlug}/notice/new`}
+                  href={`/write?community=${communitySlug}&notice=1`}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-bold transition-colors"
                   style={{
                     borderColor: "var(--wc-burgundy)",

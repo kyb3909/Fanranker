@@ -13,7 +13,8 @@ export function useWriteSubmit(
   state: EditorState,
   dispatch: Dispatch<EditorAction>,
   editId: string,
-  router: ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>,
+  isNoticeMode = false
 ) {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -73,6 +74,7 @@ export function useWriteSubmit(
             image: imageUrl,
             flair_id: state.selectedFlair || null,
             flair_team_id: state.selectedTeamFlair || null,
+            is_notice: isNoticeMode,
           }),
         })
 
@@ -98,7 +100,7 @@ export function useWriteSubmit(
         dispatch({ type: "SET_FIELD", field: "isSubmitting", value: false })
       }
     },
-    [state, dispatch, editId, router]
+    [state, dispatch, editId, router, isNoticeMode]
   )
 
   return { handleSubmit }

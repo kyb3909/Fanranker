@@ -18,6 +18,7 @@ export function useWriteEditor() {
     state,
     dispatch,
     editId,
+    isNoticeMode,
     communities,
     canSubmit,
     setSelectedCommunity,
@@ -31,12 +32,13 @@ export function useWriteEditor() {
 
   const { handleBottomImages, handleRemoveImage } = useWriteUploads(dispatch)
   const { handleFetchOg } = useWriteOg(state.title, dispatch)
-  const { handleSubmit } = useWriteSubmit(state, dispatch, editId, router)
+  const { handleSubmit } = useWriteSubmit(state, dispatch, editId, router, isNoticeMode)
 
   return {
     isSignedIn,
     isLoaded,
     editId,
+    isNoticeMode,
     communities,
     selectedCommunity: state.selectedCommunity,
     setSelectedCommunity,
