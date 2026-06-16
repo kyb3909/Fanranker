@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, memo } from "react"
-import { Users, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, Pencil, Megaphone, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Pagination,
@@ -16,6 +16,7 @@ import Link from "@/components/ui/app-link"
 import { useAuth } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
+import { useCanPostNotice } from "@/hooks/use-board-moderator"
 
 interface Flair {
   id: string
@@ -82,6 +83,7 @@ export const CommunityContent = memo(function CommunityContent({
 }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
   const { isBlocked } = useBlockedUsers()
+  const canPostNotice = useCanPostNotice(communitySlug)
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
 
@@ -251,6 +253,21 @@ export const CommunityContent = memo(function CommunityContent({
                   </>
                 )}
               </div>
+              {communitySlug && canPostNotice && (
+                <Link
+                  href={`/community/${communitySlug}/notice/new`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-bold transition-colors"
+                  style={{
+                    borderColor: "var(--wc-burgundy)",
+                    color: "var(--wc-burgundy)",
+                    background: "var(--wc-card)",
+                    minHeight: 36,
+                  }}
+                >
+                  <Megaphone className="h-3.5 w-3.5" />
+                  공지 작성
+                </Link>
+              )}
               {communitySlug && (
                 <Link
                   href={`/write?community=${communitySlug}`}

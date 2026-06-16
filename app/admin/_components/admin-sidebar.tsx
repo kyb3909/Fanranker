@@ -21,6 +21,7 @@ import {
   Smile,
   Trophy,
   Shield,
+  UserCog,
   Coins,
   Target,
   RotateCcw,
@@ -83,6 +84,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: "게시글", href: "/admin/content/posts", icon: FileText },
       { title: "일괄 공지", href: "/admin/content/notices", icon: Megaphone },
+      { title: "MOD 관리", href: "/admin/content/moderators", icon: UserCog },
       { title: "댓글", href: "/admin/content/comments", icon: MessageSquare },
       { title: "뉴스 티커", href: "/admin/content/ticker", icon: Newspaper },
       { title: "카테고리", href: "/admin/content/boards", icon: FolderOpen },
