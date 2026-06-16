@@ -68,6 +68,7 @@ interface CommunityContentProps {
   totalCount?: number
   flairs?: Flair[]
   activeFlairId?: string
+  hideFollowHeader?: boolean
 }
 
 export const CommunityContent = memo(function CommunityContent({
@@ -80,6 +81,7 @@ export const CommunityContent = memo(function CommunityContent({
   totalCount = 0,
   flairs = [],
   activeFlairId,
+  hideFollowHeader,
 }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
   const { isBlocked } = useBlockedUsers()
@@ -136,30 +138,32 @@ export const CommunityContent = memo(function CommunityContent({
       <>
         {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
         <div className="py-4">
-          {/* 미니 헤더 — 멤버 + 팔로우 (페이지 인트로 헤더 제거) */}
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div
-              className="flex items-center gap-1.5 text-[12px]"
-              style={{ color: "var(--wc-mute)" }}
-            >
-              <Users className="h-3.5 w-3.5" />
-              <span className="font-semibold tabular-nums">{community.members}</span>
+          {/* 미니 헤더 — 멤버 + 팔로우 (크리에이터 보드는 상단 채널 헤더로 이동 → hideFollowHeader) */}
+          {!hideFollowHeader && (
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div
+                className="flex items-center gap-1.5 text-[12px]"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                <Users className="h-3.5 w-3.5" />
+                <span className="font-semibold tabular-nums">{community.members}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleFollow}
+                disabled={isFollowLoading}
+                className="shrink-0 rounded-md px-4 py-2 text-[13px] font-bold transition-colors disabled:opacity-60"
+                style={{
+                  background: "var(--wc-card)",
+                  color: isFollowing ? "var(--wc-mute)" : "var(--wc-ink)",
+                  border: "1px solid var(--wc-line-2)",
+                  minHeight: 36,
+                }}
+              >
+                {isFollowing ? "팔로잉" : "팔로우"}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleFollow}
-              disabled={isFollowLoading}
-              className="shrink-0 rounded-md px-4 py-2 text-[13px] font-bold transition-colors disabled:opacity-60"
-              style={{
-                background: "var(--wc-card)",
-                color: isFollowing ? "var(--wc-mute)" : "var(--wc-ink)",
-                border: "1px solid var(--wc-line-2)",
-                minHeight: 36,
-              }}
-            >
-              {isFollowing ? "팔로잉" : "팔로우"}
-            </button>
-          </div>
+          )}
 
           <div
             className="overflow-hidden rounded-lg"
