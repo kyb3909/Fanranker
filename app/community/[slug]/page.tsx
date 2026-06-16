@@ -268,9 +268,18 @@ export default async function CommunityPage({
   const { page: pageParam, flair: flairId } = await searchParams
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1)
 
-  // 크리에이터 보드(캣스날 등) — 영상 싱크 레이아웃으로 분기 (표준 게시판 렌더 우회)
+  // 크리에이터 보드(캣스날 등): 상단 = 유튜브 영상/공지(CreatorBoard), 하단 = 사람들의 게시판(표준 보드)
   const creator = getCreator(slug)
   if (creator) {
+    const { posts: rawCreatorPosts, totalCount } = await fetchPosts(slug, currentPage, flairId)
+    const creatorPosts = transformPosts(rawCreatorPosts)
+    const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE)
+    const creatorBoardInfo = {
+      name: `${creator.name} 게시판`,
+      description: "",
+      members: formatMemberCount(0),
+      banner: "/placeholder.jpg",
+    }
     return (
       <div className="worldcup-scope min-h-[100dvh]">
         <main
@@ -279,6 +288,17 @@ export default async function CommunityPage({
           tabIndex={-1}
         >
           <CreatorBoard creator={creator} />
+          <div className="mt-6">
+            <CommunityContent
+              community={creatorBoardInfo}
+              posts={creatorPosts}
+              communitySlug={slug}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              flairs={[]}
+            />
+          </div>
         </main>
       </div>
     )
