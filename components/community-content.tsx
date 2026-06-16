@@ -173,7 +173,7 @@ export const CommunityContent = memo(function CommunityContent({
             <div
               className="flex items-center gap-2 px-3 py-2"
               style={{
-                background: "var(--wc-card)",
+                background: "#ffffff",
                 borderBottom: "1px solid var(--wc-line)",
               }}
             >
@@ -228,8 +228,8 @@ export const CommunityContent = memo(function CommunityContent({
                             fontSize: 13,
                             fontWeight: 700,
                             backgroundColor:
-                              activeFlairId === f.id ? "var(--wc-burgundy)" : "var(--wc-card)",
-                            color: activeFlairId === f.id ? "white" : "var(--wc-mute)",
+                              activeFlairId === f.id ? "var(--wc-burgundy)" : "#ffffff",
+                            color: activeFlairId === f.id ? "#ffffff" : "var(--wc-mute)",
                             border:
                               activeFlairId === f.id
                                 ? "1px solid var(--wc-burgundy)"
@@ -294,7 +294,7 @@ export const CommunityContent = memo(function CommunityContent({
             <div
               className="hidden grid-cols-10 gap-2 px-3 py-2.5 text-[11px] font-bold sm:grid"
               style={{
-                background: "var(--wc-card)",
+                background: "#ffffff",
                 color: "var(--wc-mute)",
                 borderBottom: "1px solid var(--wc-line)",
                 letterSpacing: "0.06em",
@@ -311,7 +311,7 @@ export const CommunityContent = memo(function CommunityContent({
             <div
               className="grid grid-cols-12 gap-1 px-3 py-2.5 text-[11px] font-bold sm:hidden"
               style={{
-                background: "var(--wc-card)",
+                background: "#ffffff",
                 color: "var(--wc-mute)",
                 borderBottom: "1px solid var(--wc-line)",
                 letterSpacing: "0.06em",
@@ -358,8 +358,9 @@ export const CommunityContent = memo(function CommunityContent({
                       <span
                         className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
                         style={{
-                          backgroundColor: "var(--wc-soft)",
+                          backgroundColor: "#ffffff",
                           color: "var(--wc-mute)",
+                          border: "1px solid var(--wc-line-2)",
                         }}
                       >
                         {post.flair.name}
@@ -410,8 +411,9 @@ export const CommunityContent = memo(function CommunityContent({
                         <span
                           className="shrink-0 rounded px-1 py-0.5 text-[10px] font-bold"
                           style={{
-                            backgroundColor: "var(--wc-soft)",
+                            backgroundColor: "#ffffff",
                             color: "var(--wc-mute)",
+                            border: "1px solid var(--wc-line-2)",
                           }}
                         >
                           {post.flair.name}

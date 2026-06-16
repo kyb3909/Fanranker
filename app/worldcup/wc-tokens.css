@@ -26,7 +26,7 @@
   --wc-tint: #f6e4e8; /* 강조 서피스 — 사이드바 헤더 등 */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */
   --wc-wine-tint: #fbf2f4; /* 와인 faint fill — pill/step number */
-  --wc-canvas: #edeff2; /* 보드 페이지 캔버스 (흰 카드가 떠 보이도록) */
+  --wc-canvas: #ffffff; /* 보드 페이지 캔버스 — 전부 흰 배경 */
 
   /* Semantic accents */
   --wc-warn: #c8842a;
