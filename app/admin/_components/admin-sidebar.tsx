@@ -10,6 +10,7 @@ import {
   MonitorCheck,
   Users,
   FileText,
+  Megaphone,
   MessageSquare,
   Newspaper,
   FolderOpen,
@@ -81,6 +82,7 @@ const navGroups: NavGroup[] = [
     icon: FileText,
     items: [
       { title: "게시글", href: "/admin/content/posts", icon: FileText },
+      { title: "일괄 공지", href: "/admin/content/notices", icon: Megaphone },
       { title: "댓글", href: "/admin/content/comments", icon: MessageSquare },
       { title: "뉴스 티커", href: "/admin/content/ticker", icon: Newspaper },
       { title: "카테고리", href: "/admin/content/boards", icon: FolderOpen },
