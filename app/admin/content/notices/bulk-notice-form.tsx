@@ -1,11 +1,17 @@
 "use client"
 
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
+
+const TipTapEditor = dynamic(
+  () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
+  { ssr: false, loading: () => <div className="bg-muted h-64 animate-pulse rounded-lg" /> }
+)
 
 interface Board {
   slug: string
@@ -15,7 +21,8 @@ interface Board {
 export function BulkNoticeForm({ boards }: { boards: Board[] }) {
   const router = useRouter()
   const [title, setTitle] = useState("")
-  const [body, setBody] = useState("")
+  const [content, setContent] = useState<unknown>(null)
+  const [embedLoading, setEmbedLoading] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,7 +37,7 @@ export function BulkNoticeForm({ boards }: { boards: Board[] }) {
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(boards.map((b) => b.slug)))
 
   const submit = async () => {
-    if (!title.trim() || !body.trim() || selected.size === 0) {
+    if (!title.trim() || !content || selected.size === 0) {
       toast({
         variant: "destructive",
         title: "입력 확인",
@@ -44,7 +51,7 @@ export function BulkNoticeForm({ boards }: { boards: Board[] }) {
       const res = await fetch("/api/admin/content/notices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, community_slugs: [...selected] }),
+        body: JSON.stringify({ title, content, community_slugs: [...selected] }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string; count?: number }
       if (!res.ok) {
@@ -57,7 +64,7 @@ export function BulkNoticeForm({ boards }: { boards: Board[] }) {
       }
       toast({ title: "공지 등록 완료", description: `${data.count}개 게시판에 공지를 올렸어요.` })
       setTitle("")
-      setBody("")
+      setContent(null)
       setSelected(new Set())
       router.refresh()
     } catch {
@@ -81,15 +88,11 @@ export function BulkNoticeForm({ boards }: { boards: Board[] }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="notice-body">내용</Label>
-        <textarea
-          id="notice-body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={6}
-          maxLength={5000}
-          placeholder="공지 내용 (줄바꿈 가능)"
-          className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        <Label>내용</Label>
+        <TipTapEditor
+          onChange={(json) => setContent(json)}
+          onEmbedLoading={setEmbedLoading}
+          placeholder="공지 내용을 입력하세요. 이미지 업로드, YouTube·Instagram·X 링크 임베드 모두 가능해요."
         />
       </div>
 
@@ -124,8 +127,8 @@ export function BulkNoticeForm({ boards }: { boards: Board[] }) {
         </div>
       </div>
 
-      <Button onClick={submit} disabled={submitting}>
-        {submitting ? "등록 중..." : "공지 등록"}
+      <Button onClick={submit} disabled={submitting || embedLoading}>
+        {submitting ? "등록 중..." : embedLoading ? "임베드 로딩 중..." : "공지 등록"}
       </Button>
     </div>
   )

@@ -4,32 +4,34 @@ import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
+import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
+import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 
 const VALID_SLUGS = new Set(ALL_COMMUNITIES.map((c) => c.slug))
+const MAX_CONTENT_SIZE = 100_000 // 100KB
 
 const BulkNoticeSchema = z.object({
   title: z.string().min(1, "제목을 입력해주세요.").max(200, "제목은 200자 이하여야 합니다."),
-  body: z.string().min(1, "내용을 입력해주세요.").max(5000, "내용은 5000자 이하여야 합니다."),
+  content: z
+    .any()
+    .refine((v) => v !== undefined && v !== null && v !== "", { message: "내용을 입력해주세요." })
+    .refine(
+      (v) => {
+        try {
+          return JSON.stringify(v).length <= MAX_CONTENT_SIZE
+        } catch {
+          return false
+        }
+      },
+      { message: "내용이 너무 깁니다. (최대 100KB)" }
+    ),
   community_slugs: z.array(z.string().min(1)).min(1, "게시판을 1개 이상 선택해주세요."),
 })
-
-// 평문 → 최소 TipTap doc (줄바꿈 = 문단). 관리자 입력이므로 텍스트 노드만 → 본질적으로 안전.
-function textToTipTap(text: string) {
-  return {
-    type: "doc",
-    content: text
-      .split("\n")
-      .map((line) =>
-        line.length
-          ? { type: "paragraph", content: [{ type: "text", text: line }] }
-          : { type: "paragraph" }
-      ),
-  }
-}
 
 /**
  * POST /api/admin/content/notices
  * 선택한 게시판마다 상단 고정 공지(is_notice=true) 글을 일괄 생성. 관리자 전용.
+ * 본문은 TipTap JSON (이미지/임베드 포함) — /write 와 동일한 에디터로 작성.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -46,17 +48,24 @@ export async function POST(request: NextRequest) {
     const parsed = BulkNoticeSchema.safeParse(body)
     if (!parsed.success)
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 입력입니다.")
-    const { title, body: noticeBody, community_slugs } = parsed.data
+    const { title, content: rawContent, community_slugs } = parsed.data
+
+    // TipTap JSON sanitization (저장형 XSS 방지) — /write 와 동일
+    const content = sanitizeTipTapJSON(rawContent)
+    if (!content) return apiBadRequest("본문 형식이 올바르지 않습니다.")
 
     const slugs = [...new Set(community_slugs)].filter((s) => VALID_SLUGS.has(s))
     if (slugs.length === 0) return apiBadRequest("유효한 게시판이 없습니다.")
 
-    const content = textToTipTap(noticeBody)
+    // 대표 이미지 (본문 첫 이미지) — 카드 썸네일용
+    const image = extractFirstImageSrcFromTipTapJSON(content)
+
     const rows = slugs.map((slug) => ({
       user_id: userId,
       community_slug: slug,
       title,
       content,
+      image,
       is_notice: true,
     }))
 
