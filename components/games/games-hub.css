@@ -1,0 +1,386 @@
+/* 게임 허브 — 게시판과 동일한 화이트/쿨라인/버건디 톤. .games-hub 스코프 self-contained. */
+.games-hub {
+  --gh-bg: #ffffff;
+  --gh-card: #ffffff;
+  --gh-ink: #1a1416;
+  --gh-ink-soft: #494d56;
+  --gh-mute: #6c757d;
+  --gh-line: #e4e7ec;
+  --gh-line-2: #d2d6dd;
+  --gh-soft: #f1f3f5;
+  --gh-burgundy: #9b1f33;
+  --gh-burgundy-deep: #7c172a;
+  --gh-burgundy-soft: #f6eff1;
+  --gh-arsenal: #ef0107;
+  --gh-marine: #1f4d7a;
+  --gh-amber: #c98615;
+  --gh-emerald: #2a6a4a;
+  background: var(--gh-bg);
+  color: var(--gh-ink);
+  font-family:
+    "Pretendard Variable",
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  min-height: 100dvh;
+}
+.gh-wrap {
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: 24px 28px 56px;
+}
+
+/* ── 매스트헤드 ── */
+.gh-mast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--gh-line);
+  padding-bottom: 20px;
+}
+.gh-kicker {
+  margin-bottom: 8px;
+  color: var(--gh-burgundy);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.gh-title {
+  font-family: "SUIT Variable", "Pretendard Variable", sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--gh-ink);
+}
+.gh-sub {
+  max-width: 540px;
+  margin-top: 8px;
+  color: var(--gh-mute);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.gh-mascot {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+/* ── 섹션 라벨 ── */
+.gh-section {
+  margin-top: 28px;
+}
+.gh-sec-label {
+  margin-bottom: 12px;
+  color: var(--gh-mute);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ── 01 플래그십 (드래프트) ── */
+.gh-flagship {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--gh-line);
+  border-radius: 18px;
+  background: var(--gh-card);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+.gh-flagship:hover {
+  border-color: var(--gh-line-2);
+}
+.gh-flag-stripe {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 7px;
+  background: var(--gh-burgundy);
+}
+.gh-flag-l {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 28px 24px 32px;
+}
+.gh-badges {
+  display: flex;
+  gap: 8px;
+}
+.gh-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.gh-badge-hot {
+  background: var(--gh-burgundy);
+  color: #fff;
+}
+.gh-badge-soft {
+  background: var(--gh-soft);
+  color: var(--gh-mute);
+}
+.gh-flag-title {
+  font-family: "SUIT Variable", "Pretendard Variable", sans-serif;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--gh-ink);
+}
+.gh-flag-desc {
+  color: var(--gh-ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.gh-meta {
+  color: var(--gh-mute);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.gh-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--gh-line-2);
+  border-radius: 999px;
+  color: var(--gh-ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.gh-chip-soon {
+  border-style: dashed;
+  color: var(--gh-mute);
+}
+.gh-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.gh-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+.gh-cta {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 9px;
+  background: var(--gh-burgundy);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.15s;
+}
+.gh-flagship:hover .gh-cta {
+  background: var(--gh-burgundy-deep);
+}
+.gh-cta-note {
+  color: var(--gh-mute);
+  font-size: 12px;
+}
+
+/* 포메이션 비주얼 (장식) */
+.gh-flag-r {
+  position: relative;
+  min-height: 270px;
+  background: linear-gradient(160deg, #7c172a, #9b1f33 60%, #b13247);
+}
+.gh-pitch {
+  position: absolute;
+  inset: 0;
+}
+.gh-pitch-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 84px;
+  height: 84px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+}
+.gh-pitch-half {
+  position: absolute;
+  top: 50%;
+  right: 7%;
+  left: 7%;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.gh-pdot {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.gh-pdot-fw {
+  background: #ffd34d;
+}
+.gh-formation-label {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* ── 02 아케이드 카드 그리드 ── */
+.gh-arcade-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.gh-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--gh-line);
+  border-radius: 16px;
+  background: var(--gh-card);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
+}
+.gh-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent, var(--gh-line-2));
+}
+.gh-screen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 128px;
+  padding: 0 20px;
+  overflow: hidden;
+  background: linear-gradient(145deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000));
+  color: #fff;
+}
+.gh-screen-icon {
+  position: relative;
+  z-index: 1;
+}
+.gh-screen-num {
+  position: absolute;
+  right: 16px;
+  bottom: -12px;
+  font-family: "SUIT Variable", sans-serif;
+  font-size: 78px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.18);
+}
+.gh-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px 14px;
+}
+.gh-card-title {
+  font-family: "SUIT Variable", "Pretendard Variable", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gh-ink);
+}
+.gh-card-desc {
+  flex: 1;
+  color: var(--gh-mute);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.gh-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--gh-line);
+}
+.gh-card-best {
+  color: var(--gh-mute);
+  font-size: 12px;
+}
+.gh-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--gh-line-2);
+  border-radius: 50%;
+  color: var(--gh-mute);
+  font-size: 14px;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.gh-card:hover .gh-arrow {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── 푸터 ── */
+.gh-footer {
+  margin-top: 40px;
+  color: var(--gh-mute);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* ── 반응형 ── */
+@media (max-width: 860px) {
+  .gh-flagship {
+    grid-template-columns: 1fr;
+  }
+  .gh-flag-r {
+    min-height: 200px;
+  }
+  .gh-arcade-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .gh-wrap {
+    padding: 20px 16px 48px;
+  }
+  .gh-title {
+    font-size: 28px;
+  }
+  .gh-mascot {
+    width: 60px;
+    height: 60px;
+  }
+}
