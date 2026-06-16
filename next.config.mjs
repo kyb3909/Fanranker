@@ -114,6 +114,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '*.ggpht.com', // YouTube 커뮤니티 게시물 이미지 (yt3.ggpht.com 등)
+      },
+      {
+        protocol: 'https',
         hostname: '*.cdninstagram.com', // Instagram
       },
       {

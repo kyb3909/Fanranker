@@ -271,8 +271,6 @@ export default async function CommunityPage({
   // 크리에이터 보드(캣스날 등) — 영상 싱크 레이아웃으로 분기 (표준 게시판 렌더 우회)
   const creator = getCreator(slug)
   if (creator) {
-    const { posts: rawCreatorPosts } = await fetchPosts(slug, currentPage)
-    const creatorPosts = transformPosts(rawCreatorPosts)
     return (
       <div className="worldcup-scope min-h-[100dvh]">
         <main
@@ -280,7 +278,7 @@ export default async function CommunityPage({
           className="container mx-auto max-w-[1280px] px-4 py-6"
           tabIndex={-1}
         >
-          <CreatorBoard creator={creator} posts={creatorPosts} />
+          <CreatorBoard creator={creator} />
         </main>
       </div>
     )

@@ -2,22 +2,12 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import Link from "@/components/ui/app-link"
 import { Play } from "lucide-react"
 import { useCreatorVideos, type CreatorVideo } from "@/hooks/use-creator-videos"
 import type { CreatorInfo } from "@/lib/constants/creators"
 
-interface CreatorBoardPost {
-  id: string | number
-  title: string
-  author: string
-  timestamp: string
-  comments: number
-}
-
 interface CreatorBoardProps {
   creator: CreatorInfo
-  posts: CreatorBoardPost[]
 }
 
 const card: React.CSSProperties = {
@@ -35,10 +25,11 @@ const sectionHead: React.CSSProperties = {
 
 /**
  * 크리에이터(유튜버) 보드 — 메인 배너(최신 영상, 클릭 시 그 자리 재생) + 오른쪽
- * 최근 영상 리스트 + 해당 게시판 커뮤니티 글. iframe 은 재생 클릭 시에만 lazy 로드.
+ * 최근 영상 리스트 + 유튜브 커뮤니티(게시물) 글(공지). iframe 은 재생 클릭 시에만 lazy 로드.
+ * 데스크탑은 우측 컬럼을 좌측 영상 높이에 맞추고 각 섹션 내부 스크롤.
  */
-export function CreatorBoard({ creator, posts }: CreatorBoardProps) {
-  const { hero, recent, isLoading } = useCreatorVideos(creator.creatorId)
+export function CreatorBoard({ creator }: CreatorBoardProps) {
+  const { hero, recent, community, isLoading } = useCreatorVideos(creator.creatorId)
   const [active, setActive] = useState<CreatorVideo | null>(null)
   const [playing, setPlaying] = useState(false)
 
@@ -133,84 +124,124 @@ export function CreatorBoard({ creator, posts }: CreatorBoardProps) {
           </div>
         </div>
 
-        {/* 오른쪽: 최근 영상 + 커뮤니티 글 */}
-        <div className="space-y-4 lg:col-span-1">
-          <section className="overflow-hidden rounded-xl" style={card} data-testid="creator-recent">
-            <div className="px-4 py-2.5 text-[12px] font-bold" style={sectionHead}>
-              최근 영상
-            </div>
-            {recent.length > 0 ? (
-              <ul>
-                {recent.map((v) => (
-                  <li key={v.youtube_video_id}>
-                    <button
-                      type="button"
-                      data-testid="creator-recent-item"
-                      onClick={() => playVideo(v)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--wc-soft)]"
-                      style={{ borderBottom: "1px solid var(--wc-line)" }}
-                    >
-                      <span
-                        className="relative block aspect-video w-[88px] shrink-0 overflow-hidden rounded-md"
-                        style={{ background: "var(--wc-soft)" }}
+        {/* 오른쪽: 최근 영상 + 유튜브 커뮤니티 글 — 데스크탑은 좌측 영상 높이에 맞춰 각 섹션 스크롤 */}
+        <div className="lg:relative lg:col-span-1">
+          <div className="flex flex-col gap-4 lg:absolute lg:inset-0">
+            {/* 최근 영상 */}
+            <section
+              className="overflow-hidden rounded-xl lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+              style={card}
+              data-testid="creator-recent"
+            >
+              <div className="px-4 py-2.5 text-[12px] font-bold lg:shrink-0" style={sectionHead}>
+                최근 영상
+              </div>
+              {recent.length > 0 ? (
+                <ul className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                  {recent.map((v) => (
+                    <li key={v.youtube_video_id}>
+                      <button
+                        type="button"
+                        data-testid="creator-recent-item"
+                        onClick={() => playVideo(v)}
+                        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--wc-soft)]"
+                        style={{ borderBottom: "1px solid var(--wc-line)" }}
                       >
-                        <Image
-                          src={v.thumbnail_url}
-                          alt={v.title}
-                          fill
-                          sizes="88px"
-                          className="object-cover"
-                        />
-                      </span>
-                      <span
-                        className="line-clamp-2 text-[13px] font-semibold"
-                        style={{ color: "var(--wc-ink)" }}
-                      >
-                        {v.title}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-4 py-6 text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-                {isLoading ? "불러오는 중..." : "최근 영상이 없습니다."}
-              </p>
-            )}
-          </section>
+                        <span
+                          className="relative block aspect-video w-[88px] shrink-0 overflow-hidden rounded-md"
+                          style={{ background: "var(--wc-soft)" }}
+                        >
+                          <Image
+                            src={v.thumbnail_url}
+                            alt={v.title}
+                            fill
+                            sizes="88px"
+                            className="object-cover"
+                          />
+                        </span>
+                        <span
+                          className="line-clamp-2 text-[13px] font-semibold"
+                          style={{ color: "var(--wc-ink)" }}
+                        >
+                          {v.title}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
+                  className="px-4 py-6 text-center text-[13px]"
+                  style={{ color: "var(--wc-mute)" }}
+                >
+                  {isLoading ? "불러오는 중..." : "최근 영상이 없습니다."}
+                </p>
+              )}
+            </section>
 
-          <section className="overflow-hidden rounded-xl" style={card} data-testid="creator-posts">
-            <div className="px-4 py-2.5 text-[12px] font-bold" style={sectionHead}>
-              게시판 글
-            </div>
-            {posts.length > 0 ? (
-              <ul>
-                {posts.map((p) => (
-                  <li key={p.id} data-testid="creator-post-item">
-                    <Link
-                      href={`/post/${p.id}`}
-                      className="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--wc-soft)]"
-                      style={{ borderBottom: "1px solid var(--wc-line)" }}
-                    >
-                      <span
-                        className="truncate text-[13px] font-semibold"
-                        style={{ color: "var(--wc-ink)" }}
+            {/* 공지 — 유튜브 커뮤니티(게시물) 글 */}
+            <section
+              className="overflow-hidden rounded-xl lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
+              style={card}
+              data-testid="creator-community"
+            >
+              <div className="px-4 py-2.5 text-[12px] font-bold lg:shrink-0" style={sectionHead}>
+                공지
+              </div>
+              {community.length > 0 ? (
+                <ul className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                  {community.map((post) => (
+                    <li key={post.postId}>
+                      <a
+                        href={post.postUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="creator-community-item"
+                        className="block px-3 py-3 transition-colors hover:bg-[var(--wc-soft)]"
+                        style={{ borderBottom: "1px solid var(--wc-line)" }}
                       >
-                        {p.title}
-                      </span>
-                      <span className="shrink-0 text-[11px]" style={{ color: "var(--wc-mute-2)" }}>
-                        {p.author}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-4 py-6 text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-                아직 게시판 글이 없습니다.
-              </p>
-            )}
-          </section>
+                        {post.text && (
+                          <p
+                            className="line-clamp-3 text-[13px]"
+                            style={{ color: "var(--wc-ink)" }}
+                          >
+                            {post.text}
+                          </p>
+                        )}
+                        {post.imageUrl && (
+                          <span
+                            className="relative mt-2 block aspect-video w-full overflow-hidden rounded-md"
+                            style={{ background: "var(--wc-soft)" }}
+                          >
+                            <Image
+                              src={post.imageUrl}
+                              alt=""
+                              fill
+                              sizes="(max-width: 1024px) 100vw, 320px"
+                              className="object-cover"
+                            />
+                          </span>
+                        )}
+                        <span
+                          className="mt-1.5 block text-[11px]"
+                          style={{ color: "var(--wc-mute-2)" }}
+                        >
+                          {post.publishedText} · YouTube
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
+                  className="px-4 py-6 text-center text-[13px]"
+                  style={{ color: "var(--wc-mute)" }}
+                >
+                  {isLoading ? "불러오는 중..." : "공지가 없어요."}
+                </p>
+              )}
+            </section>
+          </div>
         </div>
       </div>
     </div>

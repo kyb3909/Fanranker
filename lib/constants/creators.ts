@@ -36,3 +36,8 @@ export function getCreator(slug: string): CreatorInfo | null {
 
 /** 싱크 cron 에서 순회할 전체 크리에이터. */
 export const ALL_CREATORS: CreatorInfo[] = Object.values(CREATORS)
+
+/** creator_id 로 크리에이터 조회 (API 라우트에서 핸들 매핑용). */
+export function getCreatorById(creatorId: string): CreatorInfo | null {
+  return ALL_CREATORS.find((c) => c.creatorId === creatorId) ?? null
+}

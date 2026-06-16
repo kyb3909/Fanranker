@@ -14,7 +14,7 @@ for (let run = 1; run <= REPEAT; run++) {
     await expect(page.getByTestId("creator-board")).toBeVisible()
     await expect(page.getByTestId("creator-hero")).toBeVisible()
     await expect(page.getByTestId("creator-recent")).toBeVisible()
-    await expect(page.getByTestId("creator-posts")).toBeVisible()
+    await expect(page.getByTestId("creator-community")).toBeVisible()
 
     // 초기 로드 시 iframe 이 박혀있지 않아야 함 (재생 클릭 전 lazy)
     await expect(page.getByTestId("creator-hero-iframe")).toHaveCount(0)

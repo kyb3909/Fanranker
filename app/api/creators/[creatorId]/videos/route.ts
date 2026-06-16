@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerAnonClient } from "@/lib/supabase"
 import { apiError } from "@/lib/api-error"
+import { getCreatorById } from "@/lib/constants/creators"
+import { fetchCommunityPosts } from "@/lib/youtube/community-posts"
 
 /**
  * GET /api/creators/[creatorId]/videos
@@ -15,20 +17,27 @@ export async function GET(
   try {
     const { creatorId } = await params
     const supabase = createServerAnonClient()
+    const creator = getCreatorById(creatorId)
 
-    const { data, error } = await supabase
-      .from("creator_videos")
-      .select("youtube_video_id, title, thumbnail_url, published_at")
-      .eq("creator_id", creatorId)
-      .order("published_at", { ascending: false })
-      .limit(13) // hero 1 + recent 12
+    // 영상(DB) + 커뮤니티 글(YouTube 라이브 스크래핑)을 병렬로. 스크래핑 실패해도 영상은 반환.
+    const [videosResult, community] = await Promise.all([
+      supabase
+        .from("creator_videos")
+        .select("youtube_video_id, title, thumbnail_url, published_at")
+        .eq("creator_id", creatorId)
+        .order("published_at", { ascending: false })
+        .limit(13), // hero 1 + recent 12
+      creator ? fetchCommunityPosts(creator.handle) : Promise.resolve([]),
+    ])
 
-    if (error) return apiError("영상 목록을 가져오지 못했습니다.", 500, error)
+    if (videosResult.error)
+      return apiError("영상 목록을 가져오지 못했습니다.", 500, videosResult.error)
 
-    const videos = data ?? []
+    const videos = videosResult.data ?? []
     const res = NextResponse.json({
       hero: videos[0] ?? null,
       recent: videos.slice(1),
+      community,
     })
     res.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600")
     return res
