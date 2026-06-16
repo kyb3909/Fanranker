@@ -186,7 +186,7 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
               data-testid="creator-community"
             >
               <div className="px-4 py-2.5 text-[12px] font-bold lg:shrink-0" style={sectionHead}>
-                공지
+                유튜브 게시글
               </div>
               {community.length > 0 ? (
                 <ul className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
@@ -237,7 +237,7 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
                   className="px-4 py-6 text-center text-[13px]"
                   style={{ color: "var(--wc-mute)" }}
                 >
-                  {isLoading ? "불러오는 중..." : "공지가 없어요."}
+                  {isLoading ? "불러오는 중..." : "게시글이 없어요."}
                 </p>
               )}
             </section>
