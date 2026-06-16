@@ -18,6 +18,7 @@ import { Image as ImageIcon, X, Loader2, Link as LinkIcon } from "lucide-react"
 import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
 import { trackEvent } from "@/lib/analytics/events"
+import { NoticeToggleButton } from "@/components/write/notice-toggle-button"
 
 const TipTapEditor = dynamic(
   () => import("@/components/editor/tiptap-editor").then((mod) => ({ default: mod.TipTapEditor })),
@@ -484,33 +485,36 @@ function WriteContent() {
 
                 {/* 버튼 */}
                 <div
-                  className="flex items-center justify-end gap-3 pt-4"
+                  className="flex items-center justify-between gap-3 pt-4"
                   style={{ borderTop: "1px solid var(--wc-line)" }}
                 >
-                  <Button type="button" variant="outline" onClick={() => window.history.back()}>
-                    취소
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!editor.canSubmit}
-                    style={{ background: "var(--wc-burgundy)", color: "#fff", border: "none" }}
-                  >
-                    {editor.isEmbedLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        임베드 로딩 중...
-                      </>
-                    ) : editor.isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        작성 중...
-                      </>
-                    ) : editor.editId ? (
-                      "수정하기"
-                    ) : (
-                      "작성하기"
-                    )}
-                  </Button>
+                  <div>{editor.editId && <NoticeToggleButton postId={editor.editId} />}</div>
+                  <div className="flex items-center gap-3">
+                    <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                      취소
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!editor.canSubmit}
+                      style={{ background: "var(--wc-burgundy)", color: "#fff", border: "none" }}
+                    >
+                      {editor.isEmbedLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          임베드 로딩 중...
+                        </>
+                      ) : editor.isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          작성 중...
+                        </>
+                      ) : editor.editId ? (
+                        "수정하기"
+                      ) : (
+                        "작성하기"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </div>
