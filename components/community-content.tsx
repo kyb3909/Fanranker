@@ -223,11 +223,12 @@ export const CommunityContent = memo(function CommunityContent({
                             padding: "0 14px",
                             fontSize: 13,
                             fontWeight: 700,
-                            backgroundColor: activeFlairId === f.id ? f.color : `${f.color}15`,
-                            color: activeFlairId === f.id ? "white" : f.color,
+                            backgroundColor:
+                              activeFlairId === f.id ? "var(--wc-burgundy)" : "var(--wc-card)",
+                            color: activeFlairId === f.id ? "white" : "var(--wc-mute)",
                             border:
                               activeFlairId === f.id
-                                ? `1px solid ${f.color}`
+                                ? "1px solid var(--wc-burgundy)"
                                 : "1px solid var(--wc-line-2)",
                           }}
                         >
@@ -353,8 +354,8 @@ export const CommunityContent = memo(function CommunityContent({
                       <span
                         className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
                         style={{
-                          backgroundColor: `${post.flair.color}20`,
-                          color: post.flair.color,
+                          backgroundColor: "var(--wc-soft)",
+                          color: "var(--wc-mute)",
                         }}
                       >
                         {post.flair.name}
@@ -405,8 +406,8 @@ export const CommunityContent = memo(function CommunityContent({
                         <span
                           className="shrink-0 rounded px-1 py-0.5 text-[10px] font-bold"
                           style={{
-                            backgroundColor: `${post.flair.color}20`,
-                            color: post.flair.color,
+                            backgroundColor: "var(--wc-soft)",
+                            color: "var(--wc-mute)",
                           }}
                         >
                           {post.flair.name}
