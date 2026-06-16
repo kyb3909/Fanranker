@@ -151,9 +151,9 @@ export const CommunityContent = memo(function CommunityContent({
               disabled={isFollowLoading}
               className="shrink-0 rounded-md px-4 py-2 text-[13px] font-bold transition-colors disabled:opacity-60"
               style={{
-                background: isFollowing ? "var(--wc-card)" : "var(--wc-burgundy)",
-                color: isFollowing ? "var(--wc-mute)" : "white",
-                border: isFollowing ? "1px solid var(--wc-line-2)" : "1px solid var(--wc-burgundy)",
+                background: "var(--wc-card)",
+                color: isFollowing ? "var(--wc-mute)" : "var(--wc-ink)",
+                border: "1px solid var(--wc-line-2)",
                 minHeight: 36,
               }}
             >
@@ -169,7 +169,7 @@ export const CommunityContent = memo(function CommunityContent({
             <div
               className="flex items-center gap-2 px-3 py-2"
               style={{
-                background: "var(--wc-soft)",
+                background: "var(--wc-card)",
                 borderBottom: "1px solid var(--wc-line)",
               }}
             >
@@ -273,8 +273,9 @@ export const CommunityContent = memo(function CommunityContent({
                   href={`/write?community=${communitySlug}`}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-[12px] font-bold transition-colors"
                   style={{
-                    background: "var(--wc-burgundy)",
-                    color: "white",
+                    background: "var(--wc-card)",
+                    color: "var(--wc-mute)",
+                    border: "1px solid var(--wc-line-2)",
                     minHeight: 36,
                   }}
                 >
@@ -288,7 +289,7 @@ export const CommunityContent = memo(function CommunityContent({
             <div
               className="hidden grid-cols-10 gap-2 px-3 py-2.5 text-[11px] font-bold sm:grid"
               style={{
-                background: "var(--wc-soft)",
+                background: "var(--wc-card)",
                 color: "var(--wc-mute)",
                 borderBottom: "1px solid var(--wc-line)",
                 letterSpacing: "0.06em",
@@ -305,7 +306,7 @@ export const CommunityContent = memo(function CommunityContent({
             <div
               className="grid grid-cols-12 gap-1 px-3 py-2.5 text-[11px] font-bold sm:hidden"
               style={{
-                background: "var(--wc-soft)",
+                background: "var(--wc-card)",
                 color: "var(--wc-mute)",
                 borderBottom: "1px solid var(--wc-line)",
                 letterSpacing: "0.06em",

@@ -281,7 +281,7 @@ export default async function CommunityPage({
       banner: "/placeholder.jpg",
     }
     return (
-      <div className="worldcup-scope min-h-[100dvh]">
+      <div className="worldcup-scope wc-board-canvas min-h-[100dvh]">
         <main
           id="main-content"
           className="container mx-auto max-w-[1280px] px-4 py-6"
@@ -378,7 +378,7 @@ export default async function CommunityPage({
         }}
       />
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
-      <div className="worldcup-scope min-h-[100dvh]">
+      <div className="worldcup-scope wc-board-canvas min-h-[100dvh]">
         <main
           id="main-content"
           className="container mx-auto max-w-[1280px] px-4 py-6"
