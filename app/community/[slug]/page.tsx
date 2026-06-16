@@ -17,6 +17,8 @@ import { formatRelativeTime } from "@/lib/utils/date"
 import { formatMemberCount } from "@/lib/utils/format"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import Link from "@/components/ui/app-link"
+import { getCreator } from "@/lib/constants/creators"
+import { CreatorBoard } from "@/components/creator/creator-board"
 
 // ISR: 30초 캐시 + stale-while-revalidate
 export const revalidate = 30
@@ -206,6 +208,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
+  const creator = getCreator(slug)
+  if (creator) {
+    return {
+      title: creator.name,
+      description: creator.description || `${creator.name} - gongnori.fan`,
+      alternates: { canonical: `/community/${creator.slug}` },
+    }
+  }
   const info = COMMUNITY_MAP[slug]
   let name = info?.name
   let description: string | undefined =
@@ -257,6 +267,24 @@ export default async function CommunityPage({
   const { slug } = await params
   const { page: pageParam, flair: flairId } = await searchParams
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1)
+
+  // 크리에이터 보드(캣스날 등) — 영상 싱크 레이아웃으로 분기 (표준 게시판 렌더 우회)
+  const creator = getCreator(slug)
+  if (creator) {
+    const { posts: rawCreatorPosts } = await fetchPosts(slug, currentPage)
+    const creatorPosts = transformPosts(rawCreatorPosts)
+    return (
+      <div className="worldcup-scope min-h-[100dvh]">
+        <main
+          id="main-content"
+          className="container mx-auto max-w-[1280px] px-4 py-6"
+          tabIndex={-1}
+        >
+          <CreatorBoard creator={creator} posts={creatorPosts} />
+        </main>
+      </div>
+    )
+  }
 
   const info = COMMUNITY_MAP[slug]
 

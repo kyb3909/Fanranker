@@ -106,7 +106,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'i.ytimg.com', // YouTube 썸네일
+        hostname: '*.ytimg.com', // YouTube 썸네일 (i.ytimg.com + i1~i9 CDN 미러)
       },
       {
         protocol: 'https',
