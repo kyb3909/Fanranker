@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
-import Link from "@/components/ui/app-link"
-import { MascotImg } from "@/components/mascot-img"
+import Image from "next/image"
+import { NotFoundActions } from "@/components/not-found-actions"
 
 export const metadata: Metadata = {
   title: "페이지를 찾을 수 없습니다",
@@ -9,41 +9,35 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div className="worldcup-scope flex min-h-screen items-center justify-center px-4">
-      <div className="text-center" style={{ maxWidth: 360 }}>
-        <MascotImg />
+    <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[400px] text-center">
+        <Image
+          src="/mascot/cry.webp"
+          alt=""
+          width={204}
+          height={198}
+          className="mx-auto mb-1 h-auto w-[150px] select-none"
+          draggable={false}
+        />
+        <div className="text-primary text-[68px] leading-none font-black tracking-tight">404</div>
         <h1
-          style={{
-            fontSize: 22,
-            fontWeight: 900,
-            color: "var(--wc-ink)",
-            marginBottom: 8,
-            wordBreak: "keep-all",
-          }}
+          className="text-foreground mt-3 text-[21px] font-extrabold"
+          style={{ wordBreak: "keep-all" }}
         >
-          길을 잃었구너…
+          앗, 공이 골대 밖으로 나갔어요
         </h1>
-        <p style={{ fontSize: 14, color: "var(--wc-mute)", marginBottom: 24, lineHeight: 1.6 }}>
-          요청하신 페이지가 존재하지 않거나 이동되었습니다.
-        </p>
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: 44,
-            padding: "0 24px",
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 700,
-            background: "var(--wc-burgundy)",
-            color: "#fff",
-            textDecoration: "none",
-          }}
+        <p
+          className="text-muted-foreground mx-auto mt-2 text-sm leading-relaxed"
+          style={{ wordBreak: "keep-all" }}
         >
-          홈으로
-        </Link>
+          찾으시는 페이지가 없거나 주소가 바뀌었어요.
+          <br />
+          마스코트도 한참 찾아봤지만 안 보이네요...
+        </p>
+        <NotFoundActions />
+        <p className="text-muted-foreground/70 mt-7 text-[12.5px] italic">
+          “내가 분명 여기 어디 차 놨는데...” — 주인장
+        </p>
       </div>
     </div>
   )

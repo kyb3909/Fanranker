@@ -118,10 +118,12 @@ export function PostCardMeta({
               <Search className="mr-2 h-4 w-4" />
               <span>해당 아이디로 검색</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
-              <Ban className="mr-2 h-4 w-4" />
-              <span>차단하기</span>
-            </DropdownMenuItem>
+            {!isAuthor && (
+              <DropdownMenuItem onClick={onBlockUser} className="text-destructive cursor-pointer">
+                <Ban className="mr-2 h-4 w-4" />
+                <span>차단하기</span>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

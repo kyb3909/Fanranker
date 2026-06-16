@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, Search as SearchIcon } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
+import { useBlockedUsers } from "@/hooks/use-blocked-users"
 
 type SearchType = "nickname" | "id" | "title"
 
@@ -22,6 +23,7 @@ interface Post {
   id: string
   community: string
   communitySlug?: string
+  userId?: string
   author: string
   avatar: string
   timestamp: string
@@ -75,6 +77,7 @@ function SearchContent() {
   const [hasSearched, setHasSearched] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const { isBlocked } = useBlockedUsers()
 
   const PAGE_SIZE = 20
 
@@ -146,6 +149,7 @@ function SearchContent() {
             id: post.id,
             community: COMMUNITY_NAMES[post.community_slug] || post.community_slug,
             communitySlug: post.community_slug,
+            userId: post.user_id,
             author: profile?.nickname || "익명",
             avatar: profile?.avatar_url || "/placeholder-user.jpg",
             timestamp: formatRelativeTime(new Date(post.created_at)),
@@ -197,6 +201,9 @@ function SearchContent() {
     e.preventDefault()
     handleSearch()
   }
+
+  // 차단한 유저의 검색 결과는 숨김 (피드/댓글과 동일 클라 필터)
+  const visiblePosts = posts.filter((p) => !p.userId || !isBlocked(p.userId))
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
@@ -363,9 +370,9 @@ function SearchContent() {
               ) : hasSearched && posts.length > 0 ? (
                 <>
                   <div className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
-                    검색 결과 <b style={{ color: "var(--wc-burgundy)" }}>{posts.length}건</b>
+                    검색 결과 <b style={{ color: "var(--wc-burgundy)" }}>{visiblePosts.length}건</b>
                   </div>
-                  {posts.map((post) => (
+                  {visiblePosts.map((post) => (
                     <Link
                       key={post.id}
                       href={`/post/${post.id}`}

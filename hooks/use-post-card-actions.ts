@@ -2,10 +2,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth, useClerk } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
+import { useBlockedUsers } from "@/hooks/use-blocked-users"
 
 interface UsePostCardActionsOptions {
   postId: number | string
   author: string
+  authorId?: string
   upvotes: number
   isUpvoted: boolean
 }
@@ -13,12 +15,14 @@ interface UsePostCardActionsOptions {
 export function usePostCardActions({
   postId,
   author,
+  authorId,
   upvotes,
   isUpvoted,
 }: UsePostCardActionsOptions) {
   const router = useRouter()
   const { isSignedIn } = useAuth()
   const { openSignIn } = useClerk()
+  const { toggleBlock } = useBlockedUsers()
 
   const [voteCount, setVoteCount] = useState(upvotes)
   const [myVote, setMyVote] = useState<"up" | "down" | null>(isUpvoted ? "up" : null)
@@ -53,9 +57,28 @@ export function usePostCardActions({
     router.push(`/search?q=${encodeURIComponent(author)}&type=nickname`)
   }
 
-  const handleBlockUser = () => {
-    if (confirm(`${author}님을 차단하시겠습니까?`)) {
-      toast({ variant: "destructive", title: "알림", description: "차단 기능은 준비 중입니다." })
+  const handleBlockUser = async () => {
+    if (!isSignedIn) {
+      openSignIn()
+      return
+    }
+    if (!authorId) return
+    if (!confirm(`${author}님을 차단하시겠습니까?\n차단하면 이 사용자의 글이 보이지 않아요.`))
+      return
+    try {
+      const result = await toggleBlock(authorId)
+      if (!result) {
+        toast({ variant: "destructive", title: "오류", description: "차단 처리에 실패했습니다." })
+        return
+      }
+      toast({
+        title: result.blocked ? "차단 완료" : "차단 해제",
+        description: result.blocked
+          ? `${author}님을 차단했어요.`
+          : `${author}님 차단을 해제했어요.`,
+      })
+    } catch {
+      toast({ variant: "destructive", title: "오류", description: "차단 중 오류가 발생했습니다." })
     }
   }
 

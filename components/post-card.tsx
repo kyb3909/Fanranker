@@ -50,6 +50,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   } = usePostCardActions({
     postId: post.id,
     author: post.author,
+    authorId: post.userId,
     upvotes: post.upvotes,
     isUpvoted: post.isUpvoted,
   })

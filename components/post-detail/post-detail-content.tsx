@@ -23,6 +23,7 @@ import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import { openReport } from "@/hooks/use-report-dialog"
+import { useBlockedUsers } from "@/hooks/use-blocked-users"
 import type { Post } from "@/types/post-detail"
 
 const TipTapContent = dynamic(
@@ -61,6 +62,7 @@ export function PostDetailContent({
   const router = useRouter()
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
+  const { toggleBlock } = useBlockedUsers()
   const [commentCount, setCommentCount] = useState(0)
 
   // 조회수 증가 (서버가 IP 기반 1시간 중복 제한 처리)
@@ -75,29 +77,21 @@ export function PostDetailContent({
   }
 
   const handleBlockUser = async () => {
-    if (!confirm(`${post.author}님을 차단하시겠습니까?`)) return
+    if (!post.userId) return
+    if (!confirm(`${post.author}님을 차단하시겠습니까?\n차단하면 이 사용자의 글이 보이지 않아요.`))
+      return
     try {
-      const res = await fetch("/api/users/block", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: post.userId }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast({
-          variant: "destructive",
-          title: "오류",
-          description: data.error || "차단에 실패했습니다.",
-        })
+      const result = await toggleBlock(post.userId)
+      if (!result) {
+        toast({ variant: "destructive", title: "오류", description: "차단에 실패했습니다." })
         return
       }
       toast({
-        title: data.blocked ? "차단 완료" : "차단 해제",
-        description: data.blocked
-          ? `${post.author}님을 차단했습니다.`
-          : `${post.author}님 차단을 해제했습니다.`,
+        title: result.blocked ? "차단 완료" : "차단 해제",
+        description: result.blocked
+          ? `${post.author}님을 차단했어요.`
+          : `${post.author}님 차단을 해제했어요.`,
       })
-      router.refresh()
     } catch (error) {
       reportClientError("post.block", error)
       toast({ variant: "destructive", title: "오류", description: "차단 중 오류가 발생했습니다." })
@@ -173,13 +167,15 @@ export function PostDetailContent({
                     <Search className="mr-2 h-4 w-4" />
                     <span>해당 아이디로 검색</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleBlockUser}
-                    className="text-destructive cursor-pointer"
-                  >
-                    <Ban className="mr-2 h-4 w-4" />
-                    <span>차단하기</span>
-                  </DropdownMenuItem>
+                  {!isAuthor && (
+                    <DropdownMenuItem
+                      onClick={handleBlockUser}
+                      className="text-destructive cursor-pointer"
+                    >
+                      <Ban className="mr-2 h-4 w-4" />
+                      <span>차단하기</span>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               {post.titleDisplay && (post.titleDisplay.adjTitle || post.titleDisplay.nounTitle) && (

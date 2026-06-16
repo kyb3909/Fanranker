@@ -15,6 +15,7 @@ import {
 import Link from "@/components/ui/app-link"
 import { useAuth } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
+import { useBlockedUsers } from "@/hooks/use-blocked-users"
 
 interface Flair {
   id: string
@@ -80,6 +81,7 @@ export const CommunityContent = memo(function CommunityContent({
   activeFlairId,
 }: CommunityContentProps) {
   const { isSignedIn } = useAuth()
+  const { isBlocked } = useBlockedUsers()
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
 
@@ -121,8 +123,11 @@ export const CommunityContent = memo(function CommunityContent({
     }
   }
 
+  // 차단한 유저의 글은 목록에서 숨김 (피드/댓글과 동일 클라 필터)
   // 항상 최신순 정렬 (공지는 서버에서 이미 상단 배치)
-  const sortedPosts = [...posts].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  const sortedPosts = [...posts]
+    .filter((p) => !p.userId || !isBlocked(p.userId))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
   if (!isMainContent) {
     return (

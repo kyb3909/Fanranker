@@ -8,6 +8,7 @@ import Link from "@/components/ui/app-link"
 import { useAuth } from "@clerk/nextjs"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import type { Post } from "@/hooks/use-feed"
+import { useBlockedUsers } from "@/hooks/use-blocked-users"
 
 interface FeedSectionProps {
   posts: Post[]
@@ -23,7 +24,11 @@ export const FeedSection = memo(function FeedSection({
   loadMore,
 }: FeedSectionProps) {
   const { isSignedIn } = useAuth()
+  const { isBlocked } = useBlockedUsers()
   const loadMoreRef = useInfiniteScroll(loadMore)
+
+  // 차단한 유저의 글은 피드에서 숨김 (댓글 섹션과 동일한 클라이언트 필터)
+  const visiblePosts = posts.filter((p) => !p.userId || !isBlocked(p.userId))
 
   if (isLoading) {
     return (
@@ -108,7 +113,7 @@ export const FeedSection = memo(function FeedSection({
 
   return (
     <>
-      {posts.map((post, index) => (
+      {visiblePosts.map((post, index) => (
         <React.Fragment key={post.id}>
           {/* content-visibility: auto — 뷰포트 밖 카드의 렌더링을 브라우저가 스킵 */}
           {/* 첫 3개(above-the-fold)는 즉시 렌더, 나머지는 지연 */}
