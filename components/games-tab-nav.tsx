@@ -16,6 +16,7 @@ const games = [
 
 export function GamesTabNav() {
   const pathname = usePathname()
+  if (pathname === "/games") return null // 허브에선 큰 카드가 곧 메뉴라 작은 탭 숨김
 
   return (
     <div className="border-border scrollbar-none mb-5 flex gap-1 overflow-x-auto border-b">
