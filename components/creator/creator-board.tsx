@@ -16,7 +16,7 @@ const card: React.CSSProperties = {
   boxShadow: "var(--wc-shadow-1)",
 }
 const sectionHead: React.CSSProperties = {
-  background: "var(--wc-soft)",
+  background: "var(--wc-card)",
   color: "var(--wc-mute)",
   borderBottom: "1px solid var(--wc-line)",
   letterSpacing: "0.06em",
@@ -42,19 +42,23 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
 
   return (
     <div className="py-4" data-testid="creator-board">
-      <div className="mb-4">
-        <div className="wc-sec-eb">CREATOR</div>
-        <h1
-          className="text-[22px] font-extrabold"
-          style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
-        >
-          {creator.name}
-        </h1>
-        {creator.description && (
-          <p className="mt-0.5 text-[13px]" style={{ color: "var(--wc-mute)" }}>
-            {creator.description}
-          </p>
-        )}
+      <div
+        className="mb-4 flex items-center gap-3 rounded-xl px-4 py-3.5"
+        style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+      >
+        <div className="min-w-0">
+          <h1
+            className="text-[19px] font-extrabold"
+            style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
+          >
+            {creator.name}
+          </h1>
+          {creator.description && (
+            <p className="mt-0.5 truncate text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+              {creator.description}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
