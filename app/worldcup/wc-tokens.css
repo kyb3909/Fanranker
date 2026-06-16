@@ -26,6 +26,7 @@
   --wc-tint: #f6e4e8; /* 강조 서피스 — 사이드바 헤더 등 */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */
   --wc-wine-tint: #fbf2f4; /* 와인 faint fill — pill/step number */
+  --wc-canvas: #edeff2; /* 보드 페이지 캔버스 (흰 카드가 떠 보이도록) */
 
   /* Semantic accents */
   --wc-warn: #c8842a;
@@ -59,6 +60,12 @@
   /* Page surface */
   background: var(--wc-paper);
   color: var(--wc-ink);
+}
+
+/* 보드 페이지 캔버스 — 흰 카드가 떠 보이도록 (월드컵 랜딩은 흰 배경 유지) */
+.worldcup-scope.wc-board-canvas,
+.wc-board-canvas {
+  background: var(--wc-canvas);
 }
 
 /* Pulse animation (이벤트 신호 — 시안 .evt-pulse) */
