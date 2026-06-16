@@ -125,7 +125,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
             borderBottom: "1px solid var(--wc-line)",
           }}
         >
-          <MessageSquare className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
+          <MessageSquare className="h-3.5 w-3.5" style={{ color: "var(--wc-mute-2)" }} />
           <h3
             className="text-[11px] font-bold uppercase"
             style={{
