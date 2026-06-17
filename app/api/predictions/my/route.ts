@@ -273,9 +273,11 @@ export async function GET(request: NextRequest) {
         overallResult = false // One wrong means entire slip is wrong
       }
 
-      // Calculate total points earned (only if all correct)
+      // 적중 시 획득 = stake × total_odds (그로스 페이아웃) — 리더보드 손익·"예상" 표시와 동일.
+      // (과거 Σ 픽별 배당(locked_odds)은 stake 무시 + 콤보 중복으로 실제와 어긋났음)
+      const ballsUsed = Number(slip?.stake ?? firstPred?.stake ?? preds.length) || 0
       const totalPointsEarned = allCorrect
-        ? preds.reduce((sum: number, p: BetmanPred) => sum + (p.points_earned || 0), 0)
+        ? Math.round(ballsUsed * Number(totalOdds) * 100) / 100
         : anyIncorrect
           ? 0
           : null
@@ -332,21 +334,11 @@ export async function GET(request: NextRequest) {
           : null,
         gameCount: preds.length,
         totalOdds: totalOdds,
-        ballsUsed: slip?.stake || firstPred?.stake || preds.length,
+        ballsUsed,
         isCorrect: overallResult,
         pointsEarned: totalPointsEarned,
         createdAt: firstPred?.created_at,
         games: games,
-      }
-    })
-
-    // Also keep individual betman predictions for stats calculation
-    const flatBetmanPredictions = betmanPreds.map((pred: BetmanPred) => {
-      return {
-        id: pred.id,
-        isCorrect: pred.is_correct,
-        pointsEarned: pred.points_earned,
-        amount: 1,
       }
     })
 
@@ -358,30 +350,79 @@ export async function GET(request: NextRequest) {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
 
-    // Calculate stats from all individual predictions
-    const allIndividualPredictions = [...regularForOutput, ...flatBetmanPredictions]
-    const totalPredictions = allIndividualPredictions.length
-    interface IndividualPrediction {
-      isCorrect: boolean | null
-      pointsEarned: number | null
-      amount: number
+    // ───── 통계: 슬립(베팅) 단위 손익 — 리더보드와 동일 모델 ─────
+    // 적중(won): 받은 += stake × total_odds, 쓴 볼 += stake
+    // 미적중(lost): 쓴 볼 += stake
+    // 취소(cancelled): 환불 → 통계 제외 / 대기(pending): 정산 전 → 손익 미반영(쓴 볼에도 미포함)
+    // 적중률·획득점수(받은−쓴)·수익률 모두 슬립 단위 → 리더보드(평균 획득 점수)와 일치.
+    // (과거: 픽 단위 Σ + amount:1 하드코딩 → stake 무시·콤보 중복·진 픽 배당 가산으로 불일치)
+    const pickOdds = (pred: BetmanPred): number => {
+      const g = pred.game
+      switch (pred.prediction) {
+        case "home":
+          return parseFloat(String(g?.home_win_odds)) || 1
+        case "away":
+          return parseFloat(String(g?.away_win_odds)) || 1
+        case "draw":
+          return parseFloat(String(g?.draw_odds)) || 1
+        case "over":
+          return parseFloat(String(g?.over_odds)) || 1
+        case "under":
+          return parseFloat(String(g?.under_odds)) || 1
+        default:
+          return 1
+      }
     }
-    const settledPredictions = allIndividualPredictions.filter(
-      (p: IndividualPrediction) => p.isCorrect !== null
-    )
-    const correctPredictions = allIndividualPredictions.filter(
-      (p: IndividualPrediction) => p.isCorrect === true
-    ).length
-    const accuracy =
-      settledPredictions.length > 0 ? (correctPredictions / settledPredictions.length) * 100 : 0
-    const totalPointsEarned = allIndividualPredictions.reduce(
-      (sum: number, p: IndividualPrediction) => sum + (p.pointsEarned || 0),
-      0
-    )
-    const totalPointsUsed = allIndividualPredictions.reduce(
-      (sum: number, p: IndividualPrediction) => sum + (p.amount || 0),
-      0
-    )
+
+    let totalPredictions = 0
+    let correctPredictions = 0
+    let settledCount = 0
+    let totalPointsEarned = 0
+    let totalPointsUsed = 0
+
+    // 베팅 슬립 (betman / 월드컵) — 리더보드와 동일하게 슬립 status 기준
+    for (const preds of betmanBySlip.values()) {
+      const slip = preds[0]?.slip
+      const stake = Number(slip?.stake ?? preds[0]?.stake ?? preds.length) || 0
+      // 슬립 상태: DB status 우선, 없으면(legacy 라운드 그룹) 픽으로 추론
+      let status = slip?.status ?? null
+      if (!status) {
+        const anyIncorrect = preds.some((p) => p.is_correct === false)
+        const allSettled = preds.every((p) => p.is_correct !== null)
+        status = anyIncorrect ? "lost" : allSettled ? "won" : "pending"
+      }
+      if (status === "cancelled") continue // 환불 — 통계 제외
+      totalPredictions++
+      if (status === "won") {
+        const odds = Number(slip?.total_odds) || preds.reduce((a, p) => a * pickOdds(p), 1)
+        totalPointsEarned += stake * odds
+        totalPointsUsed += stake
+        correctPredictions++
+        settledCount++
+      } else if (status === "lost") {
+        totalPointsUsed += stake
+        settledCount++
+      }
+      // pending → 카운트만, 손익 미반영
+    }
+
+    // 일반(legacy) 예측 — /my-predictions(비이벤트)에서만 포함
+    for (const reg of regularForOutput) {
+      totalPredictions++
+      if (reg.isCorrect === null) continue
+      settledCount++
+      if (reg.isCorrect === true) {
+        totalPointsEarned += Number(reg.pointsEarned) || 0
+        totalPointsUsed += Number(reg.amount) || 0
+        correctPredictions++
+      } else {
+        totalPointsUsed += Number(reg.amount) || 0
+      }
+    }
+
+    const accuracy = settledCount > 0 ? (correctPredictions / settledCount) * 100 : 0
+    totalPointsEarned = Math.round(totalPointsEarned * 100) / 100
+    totalPointsUsed = Math.round(totalPointsUsed * 100) / 100
 
     return NextResponse.json({
       predictions: allItems,
