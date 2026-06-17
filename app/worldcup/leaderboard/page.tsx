@@ -233,7 +233,7 @@ export default async function WorldcupLeaderboardPage() {
 
         {userId && (
           <Link
-            href="/my-predictions?event=worldcup-2026"
+            href="/worldcup/my-predictions"
             className="wc-hbtn wc-hbtn-ghost mb-8 inline-flex"
             style={{ height: 42 }}
           >
