@@ -369,9 +369,9 @@ export function BettingSlipCard({
                   }}
                 >
                   {resultStatus === "pending"
-                    ? `예상 +${Math.floor(slip.ballsUsed * slip.totalOdds)}볼`
+                    ? `예상 돌려받음 ${(slip.ballsUsed * slip.totalOdds).toFixed(2)}볼`
                     : resultStatus === "win"
-                      ? `+${Number(slip.pointsEarned || Math.floor(slip.ballsUsed * slip.totalOdds)).toFixed(2)}볼 획득`
+                      ? `${Number(slip.pointsEarned || slip.ballsUsed * slip.totalOdds).toFixed(2)}볼 돌려받음`
                       : `-${slip.ballsUsed}볼`}
                 </div>
               </div>
