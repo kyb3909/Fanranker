@@ -91,7 +91,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             />
           </span>
         </Link>
-        <Link href="/games/draft">
+        <Link href="/games">
           <span className={baseClass} data-on={isGames ? "true" : undefined}>
             <Gamepad2 className="h-[18px] w-[18px] shrink-0" />
             게임
