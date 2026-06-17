@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User as UserIcon, FileText, Trophy, Coins, Settings, LogOut, Sparkles } from "lucide-react"
+import { User as UserIcon, FileText, Trophy, Settings, LogOut } from "lucide-react"
 import Link from "@/components/ui/app-link"
 
 export function UserMenu() {
@@ -124,19 +124,20 @@ export function UserMenu() {
           </DropdownMenuItem>
         </Link>
 
+        {/* 골드 경제 잠시 숨김 (launch) — 상점 / 골드 내역. 복원 시 lucide import(Sparkles, Coins) 도 함께 복구.
         <Link href="/shop">
           <DropdownMenuItem className="hover:bg-muted/50 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
             <Sparkles className="mr-3 h-4 w-4" style={{ color: "var(--wc-burgundy, #961E37)" }} />
             <span className="text-sm font-medium">상점</span>
           </DropdownMenuItem>
         </Link>
-
         <Link href="/payments">
           <DropdownMenuItem className="hover:bg-muted/50 cursor-pointer rounded-lg px-3 py-2.5 transition-colors">
             <Coins className="mr-3 h-4 w-4" style={{ color: "var(--wc-gold-deep, #b8941a)" }} />
             <span className="text-sm font-medium">골드 내역</span>
           </DropdownMenuItem>
         </Link>
+        */}
 
         <DropdownMenuSeparator className="bg-border" />
 

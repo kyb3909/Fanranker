@@ -10,7 +10,7 @@ import { UserMenu } from "./user-menu"
 import { SignInMenu } from "./sign-in-menu"
 import { NotificationDropdown } from "./notification-dropdown"
 import { BallBalance } from "./ball-balance"
-import { GoldBalance } from "./gold-balance"
+// 골드 경제 잠시 숨김 (launch): import { GoldBalance } from "./gold-balance"
 import { HeaderSearch } from "./header-search"
 import { HeaderNav } from "./header-nav"
 
@@ -80,7 +80,7 @@ export function Header() {
 
             <SignedIn>
               <div className="flex items-center gap-2">
-                <GoldBalance />
+                {/* 골드 잠시 숨김 (launch): <GoldBalance /> */}
                 <BallBalance />
               </div>
               <NotificationDropdown />

@@ -157,7 +157,7 @@ export function BettingHeader({
               {[
                 { id: "predictions", label: "예측 내역" },
                 { id: "stats", label: "내 통계" },
-                { id: "gold", label: "골드 내역" },
+                // 골드 내역 탭 잠시 숨김 (launch): { id: "gold", label: "골드 내역" },
                 { id: "profile", label: "개인정보" },
               ].map((tab) => (
                 <button
