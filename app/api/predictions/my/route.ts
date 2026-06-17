@@ -432,6 +432,7 @@ export async function GET(request: NextRequest) {
         accuracy,
         totalPointsEarned,
         totalPointsUsed,
+        settled: settledCount,
       },
       pagination: {
         limit,

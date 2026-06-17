@@ -119,7 +119,7 @@ export function PredictionHistory({ eventSlug }: { eventSlug?: string }) {
 
   return (
     <>
-      {stats && <PredictionStatsSummary stats={stats} />}
+      {stats && <PredictionStatsSummary stats={stats} eventSlug={eventSlug} />}
 
       <Tabs
         value={activeTab}

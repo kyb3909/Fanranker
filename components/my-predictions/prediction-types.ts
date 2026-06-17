@@ -78,6 +78,8 @@ export interface Stats {
   accuracy: number
   totalPointsEarned: number
   totalPointsUsed: number
+  /** 정산 완료(적중+미적중) 슬립 수 — 성적표 등급/적중률 산정용 */
+  settled: number
 }
 
 // Get prediction label
