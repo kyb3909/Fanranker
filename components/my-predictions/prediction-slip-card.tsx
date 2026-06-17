@@ -16,7 +16,7 @@ function getOddsCellStyle(
   optionKey: string,
   game: SportsGame,
   sportColor: { bg: string; text: string; border: string }
-): { cls: string; style: CSSProperties; icon: string | null } {
+): { cls: string; style: CSSProperties; icon: string | null; tag: string | null } {
   const isSelected = game.prediction === optionKey
   const isCorrectAnswer = game.result === optionKey
   const isSettled = game.isCorrect !== null
@@ -27,20 +27,25 @@ function getOddsCellStyle(
         cls: "rounded-lg px-2 py-2.5 text-center",
         style: { background: "var(--wc-burgundy)", color: "#fff" },
         icon: "✓",
+        tag: null,
       }
     }
     if (isSelected && !game.isCorrect) {
+      // 내가 고른 셀이 틀림 — 취소선 + 회색
       return {
         cls: "rounded-lg px-2 py-2.5 text-center",
         style: {
           background: "var(--wc-paper)",
           border: "1px solid var(--wc-line)",
           color: "var(--wc-mute)",
+          textDecoration: "line-through",
         },
         icon: "✗",
+        tag: null,
       }
     }
     if (isCorrectAnswer) {
+      // 실제 결과 셀 (내 선택 아님) — 버건디 테두리 + "실제 결과" 라벨
       return {
         cls: "rounded-lg px-2 py-2.5 text-center",
         style: {
@@ -49,12 +54,14 @@ function getOddsCellStyle(
           color: "var(--wc-burgundy)",
         },
         icon: "✓",
+        tag: "실제 결과",
       }
     }
     return {
       cls: "rounded-lg px-2 py-2.5 text-center",
       style: { background: "var(--wc-paper)", color: "var(--wc-mute-2)" },
       icon: null,
+      tag: null,
     }
   }
 
@@ -63,6 +70,7 @@ function getOddsCellStyle(
       cls: `rounded-lg border-2 px-2 py-2.5 text-center ${sportColor.border} ${sportColor.bg}`,
       style: {},
       icon: null,
+      tag: null,
     }
   }
 
@@ -70,6 +78,7 @@ function getOddsCellStyle(
     cls: "rounded-lg px-2 py-2.5 text-center",
     style: { background: "var(--wc-paper)", color: "var(--wc-mute)" },
     icon: null,
+    tag: null,
   }
 }
 
@@ -172,8 +181,8 @@ export function BettingSlipCard({
                   resultStatus === "win"
                     ? { background: "var(--wc-burgundy)", color: "#fff" }
                     : resultStatus === "lose"
-                      ? { background: "var(--wc-paper)", color: "var(--wc-mute)" }
-                      : { background: "#FEF3C7", color: "#D97706" }
+                      ? { background: "var(--wc-soft)", color: "var(--wc-mute)" }
+                      : { background: "#fdf3e2", color: "var(--wc-warn)" }
                 }
               >
                 {resultStatus === "win" ? (
@@ -321,6 +330,11 @@ export function BettingSlipCard({
                               <div className="font-[family-name:var(--font-display)] text-sm font-bold">
                                 {optionOdds ? optionOdds.toFixed(2) : "-"}
                               </div>
+                              {cellStyle.tag && (
+                                <div className="mt-0.5 text-[9px] font-bold tracking-wide">
+                                  {cellStyle.tag}
+                                </div>
+                              )}
                             </div>
                           )
                         })}
