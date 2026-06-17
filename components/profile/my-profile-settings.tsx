@@ -177,7 +177,8 @@ export function MyProfileSettings() {
       if (response.ok) {
         const updatedProfile = await response.json()
 
-        // 첫 1회 보상: 이전에 없던 필드를 새로 설정한 경우
+        // 골드 경제 잠시 비활성 (launch) — 첫 설정 골드 지급 보류. 골드 오픈 시 아래 블록 복원.
+        /*
         const rewards: Promise<unknown>[] = []
         if (
           (favoriteTeam.trim() || favoritePlayer.trim()) &&
@@ -201,6 +202,7 @@ export function MyProfileSettings() {
           toast({ title: "보상 지급!", description: "첫 설정 보상 골드가 지급되었습니다." })
           window.dispatchEvent(new Event("goldBalanceUpdate"))
         }
+        */
 
         setProfile(updatedProfile)
         setSaveSuccess(true)

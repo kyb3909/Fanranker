@@ -393,10 +393,9 @@ export default function SignUpPage() {
       )
       await Promise.allSettled(followPromises)
 
-      // 3. Gold rewards (fire-and-forget, don't block redirect)
+      // 3. 골드 경제 잠시 비활성 (launch) — 온보딩 골드 지급 보류. 골드 오픈 시 아래 블록 복원.
+      /*
       const rewardPromises: Promise<unknown>[] = []
-
-      // 최애 팀/선수 설정 보상: +100 골드
       if (favoriteTeam.trim() || favoritePlayer.trim()) {
         rewardPromises.push(
           fetch("/api/gold/reward", {
@@ -410,11 +409,10 @@ export default function SignUpPage() {
           })
         )
       }
-
-      // 보상 지급 완료 후 리다이렉트 (fetch 취소 방지)
       if (rewardPromises.length > 0) {
         await Promise.allSettled(rewardPromises)
       }
+      */
 
       // 4. Analytics: 가입 완료 이벤트
       trackEvent({ name: "signup_complete", params: { method: signupMethod } })
