@@ -8,14 +8,12 @@ import {
   type SportsGame,
   getGameTypeLabel,
   SPORT_ICONS,
-  sportColorFill,
   formatMatchTime,
 } from "./prediction-types"
 
 function getOddsCellStyle(
   optionKey: string,
-  game: SportsGame,
-  sportColor: { bg: string; text: string; border: string }
+  game: SportsGame
 ): { cls: string; style: CSSProperties; icon: string | null; tag: string | null } {
   const isSelected = game.prediction === optionKey
   const isCorrectAnswer = game.result === optionKey
@@ -67,8 +65,8 @@ function getOddsCellStyle(
 
   if (isSelected) {
     return {
-      cls: `rounded-lg border-2 px-2 py-2.5 text-center ${sportColor.border} ${sportColor.bg}`,
-      style: {},
+      cls: "rounded-lg px-2 py-2.5 text-center",
+      style: { background: "var(--wc-burgundy)", color: "#fff" },
       icon: null,
       tag: null,
     }
@@ -116,7 +114,6 @@ export function BettingSlipCard({
   lockedContent?: React.ReactNode
   matchCount?: number
 }) {
-  const sportColor = sportColorFill[slip.sport] || sportColorFill["축구"]
   const isBasketball = slip.sport === "농구"
 
   // Determine result status
@@ -137,14 +134,16 @@ export function BettingSlipCard({
       }}
     >
       {/* Slip Header - Always Visible */}
-      <div className={`cursor-pointer p-3 transition-colors ${sportColor.bg}`} onClick={onToggle}>
+      <div className="cursor-pointer p-3 transition-colors" onClick={onToggle}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {locked && <Lock className="text-muted-foreground h-4 w-4" />}
             <span className="text-lg">{SPORT_ICONS[slip.sport] || "🎯"}</span>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-semibold ${sportColor.text}`}>{slip.sport}</span>
+                <span className="text-sm font-semibold" style={{ color: "var(--wc-ink)" }}>
+                  {slip.sport}
+                </span>
                 {slip.roundInfo && (
                   <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
                     {slip.roundInfo.year}년 {slip.roundInfo.round}회차
@@ -314,7 +313,7 @@ export function BettingSlipCard({
                         }`}
                       >
                         {options.map((opt) => {
-                          const cellStyle = getOddsCellStyle(opt.key, game, sportColor)
+                          const cellStyle = getOddsCellStyle(opt.key, game)
                           const optionOdds = getOddsForOption(opt.key, game)
 
                           return (
