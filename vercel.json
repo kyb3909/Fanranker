@@ -9,6 +9,10 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/cron/settle-pending",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/wisetoto/sync",
       "schedule": "* * * * *"
     },
