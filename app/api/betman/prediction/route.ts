@@ -218,14 +218,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check all games are within the daily window (08:00 KST today ~ 08:00 KST tomorrow)
-    // 메인은 8시 "정각" 제외(t <= start) — 프로토 발매(08:00) 불가 경기.
-    // 이벤트(월드컵)는 프로토 비대상이라 8시 정각 포함(t < start) — GET 노출/슬레이트와 일치.
+    // 시작 경계 exclusive: 8시 정각 킥오프는 프로토 발매 불가 경기라 베팅 차단 (GET 노출 제외와 일치)
     const { start: windowStart, end: windowEnd } = getDailyWindow()
-    const isEventBet = Boolean(event_slug)
     const outOfWindow = games.filter((g) => {
       const t = new Date(g.match_time)
-      const beforeStart = isEventBet ? t < windowStart : t <= windowStart
-      return beforeStart || t >= windowEnd
+      return t <= windowStart || t >= windowEnd
     })
     if (outOfWindow.length > 0) {
       return NextResponse.json(

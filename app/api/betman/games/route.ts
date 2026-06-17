@@ -103,7 +103,9 @@ export async function GET(request: NextRequest) {
       .select(
         "id, round_id, game_no, match_time, sport, league_code, game_type, home_team_name, away_team_name, handicap, over_under_line, venue, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
       )
-      // 시작 경계(.gt/.gte)는 메인/이벤트 분기에서 적용 (아래 includeCodes 분기 참조)
+      // 시작 경계 exclusive — 8시 "정각" 킥오프는 프로토 발매(08:00 오픈)에서
+      // 걸 수 없는 경기라 슬레이트에서 제외 (프로토 규정 추종, 2026-06-11)
+      .gt("match_time", windowStart.toISOString())
       .lt("match_time", windowEnd.toISOString())
       // betman 다음 라운드 preview placeholder 차단 — '미정 vs 미정' 또는 빈 팀명
       .neq("home_team_name", "미정")
@@ -113,21 +115,12 @@ export async function GET(request: NextRequest) {
       .order("match_time", { ascending: true })
       .order("game_no", { ascending: true })
 
-    // 시작 경계 + 이벤트 경기 풀 분리.
-    // 메인 슬레이트: 8시 "정각" 킥오프 제외(.gt) — 프로토 발매(08:00)에서 못 거는 경기(2026-06-11).
-    //   + 이벤트 코드는 메인 풀에서 제외.
-    // 이벤트(월드컵): 프로토 비대상 + 슬레이트가 전날 23:00 에 미리 열려 23:00~08:00 베팅
-    //   가능하므로 8시 정각 경기도 포함(.gte). 해당 코드만.
+    // 이벤트 경기 풀 분리 — 메인은 이벤트 코드 제외, 이벤트 모드는 해당 코드만
     if (includeCodes !== null) {
-      query = query
-        .gte("match_time", windowStart.toISOString())
-        .in("league_code", includeCodes.length > 0 ? includeCodes : ["__none__"])
-    } else {
-      query = query.gt("match_time", windowStart.toISOString())
-      if (excludeCodes.length > 0) {
-        // null league_code 게임은 유지하고 이벤트 코드만 제외
-        query = query.or(`league_code.is.null,league_code.not.in.(${excludeCodes.join(",")})`)
-      }
+      query = query.in("league_code", includeCodes.length > 0 ? includeCodes : ["__none__"])
+    } else if (excludeCodes.length > 0) {
+      // null league_code 게임은 유지하고 이벤트 코드만 제외
+      query = query.or(`league_code.is.null,league_code.not.in.(${excludeCodes.join(",")})`)
     }
 
     // 오늘 경기는 scheduled만, 과거 날짜는 전체 상태 반환

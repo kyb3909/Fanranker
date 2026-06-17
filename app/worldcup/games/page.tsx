@@ -49,8 +49,7 @@ export default async function WorldcupGamesPage() {
       .select("id", { count: "exact", head: true })
       .in("league_code", leagueCodes)
       .eq("status", "scheduled")
-      // 이벤트는 8시 "정각" 킥오프도 포함(.gte) — 메인 GET 이벤트 모드와 동일 (8시 경기 사각지대 방지)
-      .gte("match_time", start.toISOString())
+      .gt("match_time", start.toISOString()) // 8시 정각 제외 — 메인 games GET 과 동일 규칙
       .lt("match_time", end.toISOString())
     hasGamesToday = (count ?? 0) > 0
   }
