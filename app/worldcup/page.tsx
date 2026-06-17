@@ -183,6 +183,11 @@ export default async function WorldcupPage() {
                 참가 신청하기 <ArrowRight className="h-[17px] w-[17px]" />
               </Link>
             )}
+            {isRegistered && (
+              <Link href="/worldcup/my-predictions" className="wc-hbtn wc-hbtn-ghost">
+                내 예측 기록
+              </Link>
+            )}
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-ghost">
               리더보드
             </Link>
