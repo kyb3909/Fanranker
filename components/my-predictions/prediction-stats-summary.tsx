@@ -2,7 +2,7 @@
 
 import { type Stats } from "./prediction-types"
 
-// 등급: 정산 적중률 기반 (순수 조회 — 문장 아님)
+// 등급: 적중률(끝난 경기 기준) 기반 (순수 조회 — 문장 아님)
 function gradeOf(rate: number): { letter: string; low: boolean } {
   if (rate >= 0.8) return { letter: "S", low: false }
   if (rate >= 0.65) return { letter: "A", low: false }
@@ -41,7 +41,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
   const roiText = roiPct === null ? "—" : `${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(1)}%`
 
   const grade = gradeOf(rate)
-  // 정산 0건이면 등급 미정 → 중립(버건디) 톤으로 안전 표시
+  // 끝난 경기 0건이면 등급 미정 → 중립(버건디) 톤으로 안전 표시
   const low = hasSettled ? grade.low : false
   const gradeLetter = hasSettled ? grade.letter : "—"
   const rateText = hasSettled ? `${Math.round(rate * 100)}%` : "—"
@@ -63,7 +63,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
 
   const stats4 = [
     { label: "총 예측", value: String(total), color: "#fff" },
-    { label: "정산 적중", value: `${winCount} / ${settled}`, color: "#fff" },
+    { label: "맞힌 경기", value: `${winCount} / ${settled}`, color: "#fff" },
     { label: "수익률", value: roiText, color: roiColor },
     { label: "획득 점수", value: scoreText, color: scoreColor },
   ]
@@ -140,7 +140,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
               {rateText}
             </span>
             <span style={{ fontSize: 10.5, fontWeight: 700, marginTop: 4, opacity: 0.78 }}>
-              정산 적중률
+              적중률
             </span>
           </div>
         </div>
@@ -148,7 +148,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
         {/* 본문 */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.82, marginBottom: 6 }}>
-            {hasSettled ? `${grade.letter}등급 · ` : ""}정산 {settled}건 · 대기 {pending}건
+            {hasSettled ? `${grade.letter}등급 · ` : ""}끝난 경기 {settled} · 대기 {pending}
           </div>
           <h2
             style={{
