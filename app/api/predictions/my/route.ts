@@ -21,9 +21,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100)
     const offset = parseInt(searchParams.get("offset") || "0")
+    const eventSlug = searchParams.get("event")
 
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const supabase = createServiceRoleClient()
+
+    // ?event=<slug> → 그 이벤트(월드컵) 슬립만 조회. 없으면 일반 조회(이벤트 제외).
+    let eventId: string | null = null
+    if (eventSlug) {
+      const { data: ev } = await supabase
+        .from("events")
+        .select("id")
+        .eq("slug", eventSlug)
+        .maybeSingle<{ id: string }>()
+      eventId = ev?.id ?? null
+    }
 
     // 1. Fetch regular predictions with match details
     const { data: regularPredictions, error: regularError } = await supabase
@@ -113,7 +125,8 @@ export async function GET(request: NextRequest) {
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1)
+      // event 한정 조회는 슬립이 바운드돼 있어 넉넉히 받아 post-filter (limit cutoff 방지)
+      .range(offset, offset + (eventSlug ? 500 : limit) - 1)
 
     if (betmanError) {
       console.error("Failed to fetch betman predictions:", betmanError)
@@ -216,8 +229,8 @@ export async function GET(request: NextRequest) {
         game: p.game as unknown as BetmanGameJoin | null,
         slip: p.slip as unknown as BetmanSlipJoin | null,
       }))
-      // 이벤트(월드컵) 슬립 예측은 메인 "내 예측"에서 제외
-      .filter((p) => !p.slip?.event_id) as BetmanPred[]
+      // ?event 있으면 그 이벤트 슬립만, 없으면 이벤트 슬립 제외 (메인 "내 예측")
+      .filter((p) => (eventId ? p.slip?.event_id === eventId : !p.slip?.event_id)) as BetmanPred[]
     const betmanBySlip = new Map<string, BetmanPred[]>()
     for (const pred of betmanPreds) {
       const groupKey = pred.slip_id || pred.round_id || "unknown"
@@ -337,13 +350,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // ?event 한정 시 일반(legacy) 예측은 제외 — 이벤트는 betman 슬립만.
+    const regularForOutput = eventSlug ? [] : transformedRegular
+
     // Combine regular predictions and betman slips, sort by created_at
-    const allItems = [...transformedRegular, ...transformedBetmanSlips].sort(
+    const allItems = [...regularForOutput, ...transformedBetmanSlips].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
 
     // Calculate stats from all individual predictions
-    const allIndividualPredictions = [...transformedRegular, ...flatBetmanPredictions]
+    const allIndividualPredictions = [...regularForOutput, ...flatBetmanPredictions]
     const totalPredictions = allIndividualPredictions.length
     interface IndividualPrediction {
       isCorrect: boolean | null

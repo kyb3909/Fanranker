@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Trophy, ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import {
   type PredictionItem,
@@ -17,9 +17,11 @@ import { BettingSlipCard } from "@/components/my-predictions/prediction-slip-car
 import { RegularPredictionCard } from "@/components/my-predictions/regular-prediction-card"
 import { PredictionStatsSummary } from "@/components/my-predictions/prediction-stats-summary"
 
-export default function MyPredictionsPage() {
+function MyPredictionsContent() {
   const { isSignedIn, isLoaded } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const eventSlug = searchParams.get("event") // 값 있으면 그 이벤트(월드컵) 한정
   const [predictions, setPredictions] = useState<PredictionItem[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -36,7 +38,10 @@ export default function MyPredictionsPage() {
 
       setIsLoading(true)
       try {
-        const response = await fetch("/api/predictions/my")
+        const url = eventSlug
+          ? `/api/predictions/my?event=${encodeURIComponent(eventSlug)}`
+          : "/api/predictions/my"
+        const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
           setPredictions(data.predictions || [])
@@ -52,7 +57,7 @@ export default function MyPredictionsPage() {
     if (isSignedIn) {
       fetchMyPredictions()
     }
-  }, [isSignedIn, isLoaded, router])
+  }, [isSignedIn, isLoaded, eventSlug])
 
   // Toggle slip expansion
   const toggleSlip = (slipId: string) => {
@@ -121,7 +126,7 @@ export default function MyPredictionsPage() {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       <main id="main-content" className="mx-auto max-w-[800px] px-4 py-6" tabIndex={-1}>
-        {/* 미니 헤더 — 뒤로가기만 */}
+        {/* 미니 헤더 — 뒤로가기 + (이벤트 한정이면 월드컵 타이틀) */}
         <div className="mb-4">
           <Button
             variant="ghost"
@@ -131,6 +136,20 @@ export default function MyPredictionsPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
+          {eventSlug && (
+            <div className="mt-1">
+              <div className="wc-sec-eb">WORLD CUP</div>
+              <h1
+                className="text-[22px] font-extrabold"
+                style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
+              >
+                내 월드컵 예측 기록
+              </h1>
+              <p className="mt-1 text-[13px]" style={{ color: "var(--wc-mute)" }}>
+                이벤트 기간 동안의 예측 결과입니다.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -207,10 +226,10 @@ export default function MyPredictionsPage() {
                         : "미적중 예측이 없습니다"}
                 </h3>
                 <p className="mb-4 text-sm" style={{ color: "var(--wc-mute)" }}>
-                  승부예측에 참여해보세요!
+                  {eventSlug ? "월드컵 경기를 예측해보세요!" : "승부예측에 참여해보세요!"}
                 </p>
                 <Button
-                  onClick={() => router.push("/")}
+                  onClick={() => router.push(eventSlug ? "/worldcup/games" : "/")}
                   style={{ background: "var(--wc-burgundy)", color: "white" }}
                 >
                   예측하러 가기
@@ -221,5 +240,19 @@ export default function MyPredictionsPage() {
         </Tabs>
       </main>
     </div>
+  )
+}
+
+export default function MyPredictionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
+      <MyPredictionsContent />
+    </Suspense>
   )
 }

@@ -231,6 +231,16 @@ export default async function WorldcupLeaderboardPage() {
           결과 발표에서 구너 1위를 공개합니다.
         </p>
 
+        {userId && (
+          <Link
+            href="/my-predictions?event=worldcup-2026"
+            className="wc-hbtn wc-hbtn-ghost mb-8 inline-flex"
+            style={{ height: 42 }}
+          >
+            내 예측 기록 보기
+          </Link>
+        )}
+
         <LeaderboardClient
           groups={groupsForClient}
           groupAvg={groupAvgArr}
