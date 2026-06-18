@@ -15,53 +15,33 @@ const SPORT_LABELS: Record<DraftCatalogEntry["sport"], string> = {
   cycling: "사이클",
 }
 
-function GameStripe({ color }: { color: string }) {
+// 상단 배지 — HOT/NEW 만 (SOON 은 푸터에서 "COMING SOON" 으로 처리).
+// 아웃라인 텍스트 배지: HOT=버건디 / NEW=ink. 컬러 fill 없음.
+function GameBadge({ badge }: { badge: "HOT" | "NEW" }) {
+  const color = badge === "HOT" ? "var(--draft-burgundy)" : "var(--draft-ink)"
   return (
-    <div
+    <span
       style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 6,
-        background: color,
-        borderRadius: "14px 0 0 14px",
-      }}
-    />
-  )
-}
-
-function GameBadge({ badge }: { badge: NonNullable<DraftCatalogEntry["badge"]> }) {
-  const bg =
-    badge === "HOT"
-      ? "var(--draft-burgundy)"
-      : badge === "NEW"
-        ? "var(--draft-ink)"
-        : "var(--draft-mute)"
-  return (
-    <div
-      style={{
-        position: "absolute",
-        top: 14,
-        right: 14,
-        padding: "3px 8px",
+        color,
+        border: "1px solid currentColor",
         borderRadius: 4,
-        background: bg,
-        color: "white",
+        padding: "1px 5px",
         fontFamily: "var(--draft-font-title)",
-        fontWeight: 900,
-        fontSize: 10,
-        letterSpacing: "0.08em",
+        fontWeight: 800,
+        fontSize: 9.5,
+        letterSpacing: "0.1em",
+        lineHeight: 1.5,
       }}
     >
       {badge}
-    </div>
+    </span>
   )
 }
 
 function GameCard({ game }: { game: DraftCatalogEntry }) {
   const [hover, setHover] = useState(false)
   const dim = !game.active
+  const topBadge = game.badge === "HOT" || game.badge === "NEW" ? game.badge : null
 
   const cardInner = (
     <div
@@ -69,139 +49,111 @@ function GameCard({ game }: { game: DraftCatalogEntry }) {
       onMouseLeave={() => setHover(false)}
       className="draft-card"
       style={{
-        position: "relative",
-        padding: 22,
-        paddingLeft: 28,
-        transition: "transform .2s, box-shadow .2s, border-color .2s",
-        transform: hover && !dim ? "translateY(-3px)" : "none",
+        padding: 20,
+        borderRadius: 12,
+        transition: "transform .18s, box-shadow .18s",
+        transform: hover && !dim ? "translateY(-2px)" : "none",
+        // 중립 그림자 + 1px 라인만 (컬러 글로우 금지)
         boxShadow:
           hover && !dim
-            ? `0 16px 32px rgba(26,20,22,.12), inset 0 0 0 2px ${game.themeColor}33`
+            ? "0 6px 18px rgba(24,18,21,.08), 0 0 0 1px var(--draft-rule)"
             : "var(--draft-shadow-1)",
         opacity: dim ? 0.55 : 1,
         cursor: dim ? "not-allowed" : "pointer",
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        minHeight: 220,
-        overflow: "hidden",
+        gap: 11,
+        minHeight: 198,
       }}
     >
-      <GameStripe color={game.themeColor} />
-      {game.badge && <GameBadge badge={game.badge} />}
+      {/* 상단행: 이모지(좌, plain) + HOT/NEW 배지(우) */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 24, lineHeight: 1, filter: "saturate(0.85)" }}>{game.emoji}</span>
+        {topBadge && <GameBadge badge={topBadge} />}
+      </div>
 
-      <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 4 }}>{game.emoji}</div>
-
-      <h3
-        style={{
-          fontSize: 18,
-          fontFamily: "var(--draft-font-title)",
-          fontWeight: 900,
-          letterSpacing: "-0.025em",
-        }}
-      >
-        {game.name}
-      </h3>
+      <h3 style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em" }}>{game.name}</h3>
 
       <p
-        className="draft-serif"
         style={{
           fontSize: 13,
           color: "var(--draft-ink-soft)",
-          fontStyle: "normal",
-          lineHeight: 1.5,
-          fontWeight: 400,
+          lineHeight: 1.55,
+          wordBreak: "keep-all",
           flex: 1,
         }}
       >
         {game.blurb}
       </p>
 
+      {/* 얇은 구분선 */}
+      <div className="draft-rule" />
+
+      {/* 스탯행 — tabular-nums, 값만 ink+800. 각 span nowrap/keep-all (단어 중간 줄바꿈 방지) */}
       <div
         className="draft-num"
         style={{
           display: "flex",
           flexWrap: "wrap",
-          gap: 10,
-          fontSize: 11,
+          gap: 8,
+          fontSize: 12,
           color: "var(--draft-mute)",
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 600,
-          letterSpacing: "0.02em",
         }}
       >
-        <span>
-          <strong style={{ color: "var(--draft-ink)" }}>{game.rosterSize}</strong>인
+        <span style={{ whiteSpace: "nowrap", wordBreak: "keep-all" }}>
+          <b style={{ color: "var(--draft-ink)", fontWeight: 800 }}>{game.rosterSize}</b>인
         </span>
         <span style={{ color: "var(--draft-rule)" }}>│</span>
-        <span>
-          <strong style={{ color: "var(--draft-ink)" }}>
+        <span style={{ whiteSpace: "nowrap", wordBreak: "keep-all" }}>
+          <b style={{ color: "var(--draft-ink)", fontWeight: 800 }}>
             {game.currency}
             {game.budget}
-          </strong>
+          </b>
         </span>
         <span style={{ color: "var(--draft-rule)" }}>│</span>
-        <span>
-          풀 <strong style={{ color: "var(--draft-ink)" }}>{game.poolSize || "–"}</strong>
+        <span style={{ whiteSpace: "nowrap", wordBreak: "keep-all" }}>
+          풀 <b style={{ color: "var(--draft-ink)", fontWeight: 800 }}>{game.poolSize || "–"}</b>
         </span>
         {game.avgMinutes > 0 && (
           <>
             <span style={{ color: "var(--draft-rule)" }}>│</span>
-            <span>
-              ~<strong style={{ color: "var(--draft-ink)" }}>{game.avgMinutes}</strong>분
+            <span style={{ whiteSpace: "nowrap", wordBreak: "keep-all" }}>
+              ~<b style={{ color: "var(--draft-ink)", fontWeight: 800 }}>{game.avgMinutes}</b>분
             </span>
           </>
         )}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: 4,
-        }}
-      >
-        {game.plays > 0 ? (
-          <span
-            className="draft-num"
-            style={{
-              fontSize: 11,
-              color: "var(--draft-mute)",
-              display: "inline-flex",
-              alignItems: "center",
-            }}
-          >
-            <span className="draft-dot-live" style={{ width: 6, height: 6, marginRight: 6 }} />
-            누적 {game.plays.toLocaleString()}회 플레이
-          </span>
-        ) : (
-          <span
-            style={{
-              fontSize: 11,
-              color: "var(--draft-mute)",
-              fontFamily: "var(--draft-font-title)",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-            }}
-          >
-            {dim ? "COMING SOON" : "NEW"}
-          </span>
-        )}
+      {/* 푸터: 좌 메타 + 우 화살표 원 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span
+          style={{
+            fontSize: 11,
+            color: "var(--draft-mute)",
+            fontFamily: "var(--draft-font-title)",
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >
+          {dim ? "Coming soon" : game.plays > 0 ? `누적 ${game.plays.toLocaleString()}회` : "New"}
+        </span>
         <span
           aria-hidden
           style={{
             width: 32,
             height: 32,
             borderRadius: "50%",
-            background: hover && !dim ? game.themeColor : "var(--draft-soft)",
-            color: hover && !dim ? "white" : "var(--draft-ink)",
+            background: hover && !dim ? "var(--draft-ink)" : "var(--draft-neutral)",
+            color: hover && !dim ? "#fff" : "var(--draft-ink)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 16,
             fontWeight: 700,
-            transition: "all .2s",
+            transform: hover && !dim ? "translateX(2px)" : "none",
+            transition: "all .18s",
           }}
         >
           →
@@ -212,7 +164,12 @@ function GameCard({ game }: { game: DraftCatalogEntry }) {
 
   if (dim) {
     return (
-      <div aria-disabled="true" role="group" aria-label={`${game.name} (준비 중)`}>
+      <div
+        aria-disabled="true"
+        role="group"
+        aria-label={`${game.name} (준비 중)`}
+        style={{ pointerEvents: "none" }}
+      >
         {cardInner}
       </div>
     )
@@ -226,52 +183,6 @@ function GameCard({ game }: { game: DraftCatalogEntry }) {
     >
       {cardInner}
     </Link>
-  )
-}
-
-function HistoryEmpty() {
-  return (
-    <div style={{ padding: "16px 24px 32px" }}>
-      <div className="draft-rule" style={{ marginBottom: 18 }} />
-      <div className="draft-eyebrow" style={{ marginBottom: 10 }}>
-        02 · 내 기록
-      </div>
-      <div
-        className="draft-card"
-        style={{
-          padding: "20px 18px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontFamily: "var(--draft-font-title)",
-              fontWeight: 800,
-              fontSize: 16,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            아직 드래프트 기록이 없어요.
-          </div>
-          <div
-            className="draft-serif"
-            style={{
-              fontSize: 13,
-              fontStyle: "normal",
-              color: "var(--draft-mute)",
-              marginTop: 4,
-            }}
-          >
-            위 카드 중 하나를 골라 첫 드래프트를 시작해보세요.
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -329,9 +240,10 @@ export function GameSelectScreen() {
                   key={t.key}
                   type="button"
                   onClick={() => setFilter(t.key)}
-                  className={`draft-pill ${filter === t.key ? "draft-pill-burg" : ""}`}
+                  className={`draft-pill ${filter === t.key ? "draft-pill-on" : ""}`}
                   style={{
                     cursor: "pointer",
+                    whiteSpace: "nowrap",
                     fontFamily: "var(--draft-font-body)",
                   }}
                 >
@@ -342,11 +254,13 @@ export function GameSelectScreen() {
           )}
         </div>
 
+        {/* 카드 폭 캡(340px) + 좌측 정렬 — 카드 1개여도 풀폭으로 늘어지지 않고, 여러 개면 보드처럼 타일 */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 340px))",
             gap: 16,
+            justifyContent: "start",
           }}
         >
           {visibleGames.map((g) => (
@@ -355,11 +269,9 @@ export function GameSelectScreen() {
         </div>
         {visibleGames.length === 0 && (
           <div
-            className="draft-serif"
             style={{
               padding: "32px 0",
               textAlign: "center",
-              fontStyle: "normal",
               color: "var(--draft-mute)",
             }}
           >
@@ -367,8 +279,6 @@ export function GameSelectScreen() {
           </div>
         )}
       </div>
-
-      <HistoryEmpty />
     </div>
   )
 }

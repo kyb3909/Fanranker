@@ -20,6 +20,7 @@
   --draft-mute: #8b93a0;
   --draft-line: #e2e5ea;
   --draft-rule: #cfd4dc;
+  --draft-neutral: #f4f5f7; /* 중립 회색 — 호버/아이콘 타일 (핑크 틴트 대체) */
 
   /* hot accent */
   --draft-burgundy: #961e37;
@@ -142,6 +143,15 @@
   background: var(--draft-burgundy);
   color: white;
   border-color: var(--draft-burgundy);
+}
+/* 필터 활성 — 버건디 대신 ink fill (게시판 톤). 호버는 중립 회색(핑크 금지). */
+.draft-scope .draft-pill:hover:not(.draft-pill-on):not(.draft-pill-burg) {
+  background: var(--draft-neutral);
+}
+.draft-scope .draft-pill-on {
+  background: var(--draft-ink);
+  color: #fff;
+  border-color: var(--draft-ink);
 }
 
 /* live dot pulse */
