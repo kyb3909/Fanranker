@@ -16,7 +16,7 @@
   --wc-burgundy: #961e37;
   --wc-burgundy-deep: #771629;
   --wc-ink: #14161a;
-  --wc-paper: #ffffff;
+  --wc-paper: #f1f1f3;
   --wc-card: #ffffff;
   --wc-line: #e2e5ea;
   --wc-line-2: #cfd4dc;
@@ -26,7 +26,7 @@
   --wc-tint: #f6e4e8; /* 강조 서피스 — 사이드바 헤더 등 */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */
   --wc-wine-tint: #fbf2f4; /* 와인 faint fill — pill/step number */
-  --wc-canvas: #ffffff; /* 보드 페이지 캔버스 — 전부 흰 배경 */
+  --wc-canvas: #f1f1f3; /* 보드 페이지 캔버스 — 연회색 배경 위 흰 카드 */
 
   /* Semantic accents */
   --wc-warn: #c8842a;
