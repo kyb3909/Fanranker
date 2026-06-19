@@ -74,6 +74,7 @@
         <div><span class="k">마우스</span><b>조준</b> — 패스·슛 방향</div>
         <div><span class="k">꾹</span><b>차징</b> — 강한 킥 준비, 대신 발이 느려진다</div>
         <div><span class="k">놓기</span><b>킥</b> — 동료 방향이면 패스, 골대가 열렸으면 슛</div>
+        <div><span class="k">Space</span><b>태클</b> — 공이 없을 때 슬라이딩으로 공 탈취</div>
         <div><span class="k">⚡</span><b>넉다운</b> — 충분히 빠른 공은 수비를 쓰러뜨린다</div>
         <div><span class="k">⚠</span><b>지역 방어</b> — 수비는 구역을 지키고, 들어가면 밀착마크가 붙는다</div>
       </div>
@@ -125,6 +126,7 @@ const CFG = {
   BALL_MIN:380, BALL_MAX:950, BALL_FRICTION:300,
   KNOCKDOWN_V:520, PIERCE_BASE:1, PIERCE_DECAY:0.12,
   TACKLE_R:28, TACKLE_HOLD:0.2, STUN_TACKLED:0.5,
+  SLIDE_SPEED:560, SLIDE_T:0.26, SLIDE_CD:0.7, SLIDE_REACH:22,
   LOOSE_TIMER:4.5, PICKUP_R:26, RECOV_CD:8.0, CLEAR_EXTEND:0.5, LOOSE_CAP:6.5,
   JOSTLE_SLOW:0.65, DEF_SEP_R:26, DEF_SEP_RATE:9,
   ZONE_R:255, ZONE_LEASH:345, ZONE_COLS:5, ZONE_ROWS:3, GUARD_SPD:0.8,
@@ -413,7 +415,8 @@ function newGame(){
   G={
     t:0, over:false, reason:'', cleared:false, extraTime:false,
     halfDone:false, fullDone:false, spawnPauseT:0, ceremonyT:0, hintT:12,
-    player:{x:CFG.WORLD_W/2, y:CFG.WORLD_H/2, run:0, face:1, stunT:0},
+    player:{x:CFG.WORLD_W/2, y:CFG.WORLD_H/2, run:0, face:1, stunT:0,
+      slideT:0, slideVx:0, slideVy:0, slideCd:0},
     ball:{x:CFG.WORLD_W/2, y:CFG.WORLD_H/2+14, vx:0, vy:0, state:'P', mateIdx:-1,
       homing:null, kickX:0, kickY:0, pierce:0, kdOverride:false, shotGoal:false,
       looseT:0, nutSet:new Set(), rot:0, tickT:0},
@@ -595,7 +598,7 @@ function ballDefInteract(dt){
       const ca=Math.atan2(cy,cx)+ja;
       b.vx=Math.cos(ca)*CFG.CLEAR_KICK; b.vy=Math.sin(ca)*CFG.CLEAR_KICK;
       if(b.state!=='loose'){ b.looseT=CFG.LOOSE_TIMER; G.combo=1; }
-      else b.looseT=Math.min(CFG.LOOSE_CAP, b.looseT+CFG.CLEAR_EXTEND);
+      // 이미 루즈볼이면 수비가 다시 차내도 회수 타이머를 리셋/연장하지 않음 — 공이 떠난 시간은 계속 흐른다
       b.state='loose'; b.homing=null; b.shotGoal=false;
       const s=S(b.x,b.y);
       floater('차단!', s.x, s.y-30, {color:'#ff8a8a',size:14});
@@ -795,8 +798,15 @@ function update(dt){
   // ---- 플레이어 ----
   const p=G.player;
   p.stunT=Math.max(0,p.stunT-dt);
+  p.slideCd=Math.max(0,p.slideCd-dt);
   G.jostleT=Math.max(0,G.jostleT-dt);
-  if(p.stunT<=0){
+  if(p.slideT>0){
+    // 태클 슬라이딩 — 공 방향으로 짧게 돌진, 이동 입력 무시
+    p.slideT-=dt;
+    p.x+=p.slideVx*dt; p.y+=p.slideVy*dt;
+    p.run+=dt*14;
+    if(p.slideVx!==0) p.face=p.slideVx>0?1:-1;
+  } else if(p.stunT<=0){
     let mx=0,my=0;
     if(keys.has('KeyA')||keys.has('ArrowLeft')) mx-=1;
     if(keys.has('KeyD')||keys.has('ArrowRight')) mx+=1;
@@ -882,7 +892,7 @@ function update(dt){
     }
     if(b.state==='free'||b.state==='loose'){
       const wasLoose=b.state==='loose';
-      if(hyp(b.x-p.x,b.y-p.y)<pickupR()&&p.stunT<=0){
+      if(hyp(b.x-p.x,b.y-p.y)<pickupR()+(p.slideT>0?CFG.SLIDE_REACH:0)&&p.stunT<=0){
         b.state='P'; b.homing=null;
         if(wasLoose){
           sfx.recover();
@@ -1354,8 +1364,21 @@ window.addEventListener('pointerup',e=>{
 });
 const keys=new Set();
 const MOVE_KEYS=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+function tryTackle(){
+  if(app.screen!=='play'||!G||G.over||G.lvOpen||paused) return;
+  const p=G.player, b=G.ball;
+  if(p.stunT>0||p.slideT>0||p.slideCd>0) return;
+  if(b.state!=='loose'&&b.state!=='free') return;   // 공이 내게 없을 때만
+  let dx=b.x-p.x, dy=b.y-p.y; const d=hyp(dx,dy)||1;
+  p.slideVx=dx/d*CFG.SLIDE_SPEED; p.slideVy=dy/d*CFG.SLIDE_SPEED;
+  p.slideT=CFG.SLIDE_T; p.slideCd=CFG.SLIDE_CD;
+  G.charging=false; G.chargeT=0;
+  const s=S(p.x,p.y);
+  spark(s.x,s.y,6,'#6cffb0'); sfx.tackle(); shake(3,.12);
+}
 window.addEventListener('keydown',e=>{
   if(MOVE_KEYS.includes(e.code)){ keys.add(e.code); e.preventDefault(); }
+  if(e.code==='Space'){ e.preventDefault(); if(!keys.has('Space')){ keys.add('Space'); tryTackle(); } }
   if(e.code==='KeyP') togglePause();
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
