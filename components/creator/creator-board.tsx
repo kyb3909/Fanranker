@@ -51,18 +51,35 @@ export function CreatorBoard({ creator, members }: CreatorBoardProps) {
         className="mb-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3.5"
         style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
       >
-        <div className="min-w-0">
-          <h1
-            className="text-[19px] font-extrabold"
-            style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
-          >
-            {creator.name}
-          </h1>
-          {creator.description && (
-            <p className="mt-0.5 truncate text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
-              {creator.description}
-            </p>
+        <div className="flex min-w-0 items-center gap-3">
+          {creator.avatar && (
+            <span
+              className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-full sm:h-14 sm:w-14"
+              style={{ border: "1px solid var(--wc-line)", background: "var(--wc-soft)" }}
+            >
+              <Image
+                src={creator.avatar}
+                alt={`${creator.name} 프로필`}
+                fill
+                sizes="56px"
+                className="object-cover"
+                priority
+              />
+            </span>
           )}
+          <div className="min-w-0">
+            <h1
+              className="text-[19px] font-extrabold"
+              style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
+            >
+              {creator.name}
+            </h1>
+            {creator.description && (
+              <p className="mt-0.5 truncate text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                {creator.description}
+              </p>
+            )}
+          </div>
         </div>
         <BoardFollow communitySlug={creator.slug} members={members} />
       </div>

@@ -24,7 +24,9 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   // 서비스의 일부라 헤더·탭바 유지 — 단 배너는 메인 피드에서만.
   const hideChrome = pathname.startsWith("/admin")
   const isHome = pathname === "/"
-  const showBanner = isHome && !hideChrome
+  // 출시 전 임시 숨김: 헤더에서 내려오는 공지·광고 드롭다운 배너 (캣스날 데모용).
+  // 복원 시 → `isHome && !hideChrome` 로 되돌릴 것.
+  const showBanner = false && isHome && !hideChrome
 
   // 로그인됐지만 온보딩 미완료 유저 → /sign-up으로 리다이렉트
   useOnboardingGuard()

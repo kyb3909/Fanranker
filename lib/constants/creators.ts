@@ -16,6 +16,8 @@ export interface CreatorInfo {
   /** UC... 유튜브 채널 ID */
   channelId: string
   description?: string
+  /** 게시판 프로필 사진 (원형 아바타). public 경로 또는 외부 URL. */
+  avatar?: string
 }
 
 export const CREATORS: Record<string, CreatorInfo> = {
@@ -26,6 +28,7 @@ export const CREATORS: Record<string, CreatorInfo> = {
     handle: "@catsenal",
     channelId: "UCVPFecM-P0NBUOtbm_f0YQQ",
     description: "아스날 팬 유튜버 캣스날 채널",
+    avatar: "/creators/catsenal.jpg",
   },
 }
 

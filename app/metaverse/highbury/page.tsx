@@ -7,5 +7,6 @@ export const metadata = {
 }
 
 export default function HighburyPage() {
-  return <HighburyStage />
+  // 가입 없이 게스트로 진입 가능 (캣스날 오픈 체험용).
+  return <HighburyStage allowGuest />
 }
