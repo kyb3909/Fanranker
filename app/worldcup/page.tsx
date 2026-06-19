@@ -73,16 +73,8 @@ export default async function WorldcupPage() {
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section
-        style={{
-          background: "linear-gradient(180deg, var(--wc-card), var(--wc-paper))",
-          borderBottom: "1px solid var(--wc-line)",
-        }}
-      >
-        <div
-          className="mx-auto flex flex-col items-center px-6 text-center"
-          style={{ maxWidth: 760, padding: "56px 24px 52px" }}
-        >
+      <section className="mx-auto w-full max-w-[840px] px-4 pt-8 sm:px-6">
+        <div className="wc-panel flex flex-col items-center text-center">
           {/* 상단 칩 2개 */}
           <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
             <span className="wc-pill-wine">EVENT</span>
@@ -210,127 +202,127 @@ export default async function WorldcupPage() {
       </section>
 
       {/* ── 경품 안내 ────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1120px] px-6 py-[60px]">
-        <div className="mb-[30px] text-center">
-          <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-            Prize
-          </div>
-          <h2
-            className="text-[26px] font-extrabold sm:text-[30px]"
-            style={{ letterSpacing: "-.03em" }}
-          >
-            경품 안내
-          </h2>
-          <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
-            토너먼트 최고 점수를 기록한 단 한 명의 구너를 위한 상품입니다.
-          </p>
-        </div>
-        <div
-          className="mx-auto overflow-hidden rounded-xl"
-          style={{
-            maxWidth: 900,
-            display: "grid",
-            gridTemplateColumns: "1.05fr .95fr",
-            background: "#fff",
-            border: "1px solid var(--wc-line)",
-            boxShadow: "var(--wc-shadow-2)",
-          }}
-        >
-          <div className="relative" style={{ minHeight: 290, background: "var(--wc-soft)" }}>
-            <span
-              className="wc-pill-gold absolute"
-              style={{ top: 16, left: 16, zIndex: 2, boxShadow: "var(--wc-shadow-1)" }}
+      <section className="mx-auto max-w-[1120px] px-4 py-8 sm:px-6">
+        <div className="wc-panel">
+          <div className="mb-[30px] text-center">
+            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+              Prize
+            </div>
+            <h2
+              className="text-[26px] font-extrabold sm:text-[30px]"
+              style={{ letterSpacing: "-.03em" }}
             >
-              <Crown className="h-[13px] w-[13px]" /> 1등 경품
-            </span>
-            <Image
-              src="/worldcup/prize-rice-jersey.webp"
-              alt="데클런 라이스 사인 유니폼"
-              width={1190}
-              height={794}
-              sizes="(min-width: 1024px) 45vw, 100vw"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
-            />
+              경품 안내
+            </h2>
+            <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
+              토너먼트 최고 점수를 기록한 단 한 명의 구너를 위한 상품입니다.
+            </p>
           </div>
           <div
+            className="mx-auto overflow-hidden rounded-xl"
             style={{
-              padding: "32px 34px",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
+              maxWidth: 900,
+              display: "grid",
+              gridTemplateColumns: "1.05fr .95fr",
+              border: "1px solid var(--wc-line)",
             }}
           >
-            <div
-              style={{
-                fontSize: 12.5,
-                fontWeight: 800,
-                letterSpacing: ".1em",
-                color: "var(--wc-burgundy)",
-                marginBottom: 8,
-              }}
-            >
-              ARSENAL No.41
-            </div>
-            <div
-              className="font-title"
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                letterSpacing: "-.02em",
-                lineHeight: 1.32,
-                marginBottom: 18,
-                wordBreak: "keep-all",
-              }}
-            >
-              데클런 라이스
-              <br />
-              친필 사인 유니폼
-            </div>
-            {[
-              ["경품", "친필 사인 유니폼 (정품, 액자 미포함)"],
-              ["인원", "최종 랭킹 1위 1명"],
-              ["발표", "결승전 종료 후 7일 이내 · 담벼락 공지"],
-              ["배송", "국내 무료 배송"],
-            ].map(([k, v], i) => (
-              <div
-                key={k}
+            <div className="relative" style={{ minHeight: 290, background: "var(--wc-soft)" }}>
+              <span
+                className="wc-pill-gold absolute"
+                style={{ top: 16, left: 16, zIndex: 2, boxShadow: "var(--wc-shadow-1)" }}
+              >
+                <Crown className="h-[13px] w-[13px]" /> 1등 경품
+              </span>
+              <Image
+                src="/worldcup/prize-rice-jersey.webp"
+                alt="데클런 라이스 사인 유니폼"
+                width={1190}
+                height={794}
+                sizes="(min-width: 1024px) 45vw, 100vw"
                 style={{
-                  display: "flex",
-                  gap: 16,
-                  padding: "11px 0",
-                  borderTop: i === 0 ? "1px solid var(--wc-line-2)" : "1px solid var(--wc-line)",
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                padding: "32px 34px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  letterSpacing: ".1em",
+                  color: "var(--wc-burgundy)",
+                  marginBottom: 8,
                 }}
               >
-                <span
-                  style={{
-                    flexShrink: 0,
-                    width: 40,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: "var(--wc-mute-2)",
-                  }}
-                >
-                  {k}
-                </span>
-                <span
-                  style={{
-                    fontSize: 13.5,
-                    lineHeight: 1.55,
-                    color: "var(--wc-mute)",
-                    fontWeight: 500,
-                    wordBreak: "keep-all",
-                  }}
-                >
-                  {v}
-                </span>
+                ARSENAL No.41
               </div>
-            ))}
+              <div
+                className="font-title"
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  letterSpacing: "-.02em",
+                  lineHeight: 1.32,
+                  marginBottom: 18,
+                  wordBreak: "keep-all",
+                }}
+              >
+                데클런 라이스
+                <br />
+                친필 사인 유니폼
+              </div>
+              {[
+                ["경품", "친필 사인 유니폼 (정품, 액자 미포함)"],
+                ["인원", "최종 랭킹 1위 1명"],
+                ["발표", "결승전 종료 후 7일 이내 · 담벼락 공지"],
+                ["배송", "국내 무료 배송"],
+              ].map(([k, v], i) => (
+                <div
+                  key={k}
+                  style={{
+                    display: "flex",
+                    gap: 16,
+                    padding: "11px 0",
+                    borderTop: i === 0 ? "1px solid var(--wc-line-2)" : "1px solid var(--wc-line)",
+                  }}
+                >
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      width: 40,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "var(--wc-mute-2)",
+                    }}
+                  >
+                    {k}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 13.5,
+                      lineHeight: 1.55,
+                      color: "var(--wc-mute)",
+                      fontWeight: 500,
+                      wordBreak: "keep-all",
+                    }}
+                  >
+                    {v}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -407,22 +399,27 @@ export default async function WorldcupPage() {
       </section>
 
       {/* ── 유의사항 ────────────────────────────────────────── */}
-      <section className="mx-auto px-6 pb-10" style={{ maxWidth: 880, paddingTop: 44 }}>
-        <h3 className="mb-[14px] text-[15.5px] font-extrabold" style={{ color: "var(--wc-mute)" }}>
-          유의사항
-        </h3>
-        <ul className="flex flex-col gap-2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {NOTICES.map((n) => (
-            <li
-              key={n}
-              className="flex gap-2 text-[13px]"
-              style={{ lineHeight: 1.6, color: "var(--wc-mute-2)", wordBreak: "keep-all" }}
-            >
-              <span style={{ flexShrink: 0 }}>·</span>
-              <span>{n}</span>
-            </li>
-          ))}
-        </ul>
+      <section className="mx-auto px-4 pb-10 sm:px-6" style={{ maxWidth: 880, paddingTop: 24 }}>
+        <div className="wc-panel">
+          <h3
+            className="mb-[14px] text-[15.5px] font-extrabold"
+            style={{ color: "var(--wc-mute)" }}
+          >
+            유의사항
+          </h3>
+          <ul className="flex flex-col gap-2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {NOTICES.map((n) => (
+              <li
+                key={n}
+                className="flex gap-2 text-[13px]"
+                style={{ lineHeight: 1.6, color: "var(--wc-mute-2)", wordBreak: "keep-all" }}
+              >
+                <span style={{ flexShrink: 0 }}>·</span>
+                <span>{n}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <div className="pb-[56px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>

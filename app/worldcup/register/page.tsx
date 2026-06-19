@@ -5,6 +5,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { RegisterClient } from "@/components/worldcup/register-client"
+import { SectionHeader } from "@/components/section-header"
 
 export const metadata: Metadata = {
   title: "월드컵 이벤트 참가 신청",
@@ -49,22 +50,12 @@ export default async function WorldcupRegisterPage() {
         >
           <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
         </Link>
-        <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
-          PRE-REGISTER
-        </div>
-        <h1
-          className="text-[30px] font-extrabold sm:text-[38px]"
-          style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
-        >
-          월드컵 참가 신청
-        </h1>
-        <p
-          className="mt-2.5 mb-8 text-[15px]"
-          style={{ lineHeight: 1.6, color: "var(--wc-ink-2)" }}
-        >
-          아스날 구너로 월드컵 승부예측 대결에 참가 신청합니다. 신청을 마치면 바로 경기 일정과
-          예측이 열립니다.
-        </p>
+        <SectionHeader
+          label="PRE-REGISTER"
+          title="월드컵 참가 신청"
+          description="아스날 구너로 월드컵 승부예측 대결에 참가 신청합니다. 신청을 마치면 바로 경기 일정과 예측이 열립니다."
+          style={{ marginTop: 16 }}
+        />
         <RegisterClient />
       </div>
     </div>

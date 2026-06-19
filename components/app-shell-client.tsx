@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import dynamic from "next/dynamic"
 import { usePathname } from "next/navigation"
 import { useOnboardingGuard } from "@/hooks/use-onboarding-guard"
+import { SiteFooter } from "@/components/site-footer"
 
 const AnnouncementCarousel = dynamic(
   () =>
@@ -24,6 +25,9 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
   // 서비스의 일부라 헤더·탭바 유지 — 단 배너는 메인 피드에서만.
   const hideChrome = pathname.startsWith("/admin")
   const isHome = pathname === "/"
+  // 푸터 — chrome 노출 페이지에만. 풀스크린 다크 캔버스(스타디움·메타버스)는 제외.
+  const hideFooter =
+    hideChrome || pathname.startsWith("/stadium") || pathname.startsWith("/metaverse")
   // 출시 전 임시 숨김: 헤더에서 내려오는 공지·광고 드롭다운 배너 (캣스날 데모용).
   // 복원 시 → `isHome && !hideChrome` 로 되돌릴 것.
   const showBanner = false && isHome && !hideChrome
@@ -48,6 +52,7 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
         )}
         {children}
       </div>
+      {!hideFooter && <SiteFooter />}
     </div>
   )
 }

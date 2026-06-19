@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { Countdown } from "@/components/worldcup/countdown"
 import { getDailyWindow } from "@/lib/betman/daily-round"
+import { SectionHeader } from "@/components/section-header"
 
 // BettingPage 는 client component (use client). dynamic import 로 lazy.
 const BettingPage = nextDynamic(() => import("@/components/betting/betting-page"))
@@ -74,15 +75,7 @@ export default async function WorldcupGamesPage() {
         >
           <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
         </Link>
-        <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
-          WORLD CUP
-        </div>
-        <h1
-          className="text-[28px] font-extrabold sm:text-[36px]"
-          style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
-        >
-          월드컵 경기 예측
-        </h1>
+        <SectionHeader label="WORLD CUP" title="월드컵 경기 예측" style={{ marginTop: 16 }} />
 
         {bettingOpen ? (
           <div className="mt-7">

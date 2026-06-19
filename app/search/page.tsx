@@ -10,6 +10,7 @@ import { Loader2, Search as SearchIcon } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
+import { SectionHeader } from "@/components/section-header"
 
 type SearchType = "nickname" | "id" | "title"
 
@@ -217,16 +218,8 @@ function SearchContent() {
             <CommunitySidebar />
           </aside>
           <div className="col-span-12 space-y-4 lg:col-span-6">
-            {/* 검색 헤더 */}
-            <div>
-              <div className="wc-sec-eb">SEARCH</div>
-              <h1
-                className="text-[23px] font-extrabold"
-                style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
-              >
-                검색
-              </h1>
-            </div>
+            {/* 검색 헤더 — 흰 밴드 */}
+            <SectionHeader label="SEARCH" title="검색" style={{ marginBottom: 0 }} />
 
             {/* 검색 폼 */}
             <form onSubmit={handleSubmit} className="space-y-2">

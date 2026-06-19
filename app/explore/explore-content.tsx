@@ -8,6 +8,7 @@ import { BoardIcon } from "@/components/sidebar/board-icon"
 import Link from "@/components/ui/app-link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { fetcher } from "@/lib/swr"
+import { SectionHeader } from "@/components/section-header"
 
 interface Category {
   id: string
@@ -136,179 +137,175 @@ function ExploreInner() {
       <main id="main-content" className="container mx-auto max-w-[1280px] px-4 py-6" tabIndex={-1}>
         <div className="grid grid-cols-12 gap-6">
           {/* Main Content */}
-          <div className="col-span-12 space-y-6 xl:col-span-9">
-            {/* 섹션 헤더 */}
-            <div style={{ marginBottom: 4 }}>
-              <div className="wc-sec-eb">Explore</div>
-              <h1
-                className="font-title text-[28px] font-extrabold sm:text-[34px]"
-                style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
-              >
-                운동장
-              </h1>
-              <p className="mt-2 text-[14px]" style={{ color: "var(--wc-mute)", lineHeight: 1.6 }}>
-                관심 있는 게시판을 찾아 팔로우해보세요.
-              </p>
-            </div>
+          <div className="col-span-12 xl:col-span-9">
+            {/* 섹션 헤더 — 흰 밴드 (회색 캔버스 위 분리) */}
+            <SectionHeader
+              label="Explore"
+              title="운동장"
+              description="관심 있는 게시판을 찾아 팔로우해보세요."
+            />
 
-            {/* 커뮤니티 카드 그리드 */}
-            {categories.length > 0 && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                  gap: 10,
-                }}
-              >
-                {categories.map((cat) => {
-                  const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
-                  return (
-                    <Link
-                      key={cat.slug}
-                      href={`/community/${cat.slug}`}
-                      className="gn-card-lift flex items-center gap-2.5"
-                      style={{
-                        background: "var(--wc-card)",
-                        border: "1px solid var(--wc-line)",
-                        borderRadius: 10,
-                        padding: "12px 14px",
-                        textDecoration: "none",
-                      }}
-                    >
-                      <span
-                        aria-hidden
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 9,
-                          background: chip.bg,
-                          color: chip.color,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <BoardIcon slug={cat.slug} className="h-[18px] w-[18px]" />
-                      </span>
-                      <span
-                        className="font-title truncate text-[15px] font-extrabold"
-                        style={{ color: "var(--wc-ink)", letterSpacing: "-.01em" }}
-                      >
-                        {cat.name}
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* 실시간 인기글 */}
-            <div
-              className="overflow-hidden rounded-xl"
-              style={{
-                background: "var(--wc-card)",
-                boxShadow: "var(--wc-shadow-1)",
-              }}
-            >
-              <div
-                className="flex items-center justify-between px-4 py-3"
-                style={{
-                  background: "var(--wc-soft)",
-                  borderBottom: "1px solid var(--wc-line)",
-                }}
-              >
-                <h2
-                  className="text-[11px] font-bold uppercase"
+            {/* 콘텐츠 — 회색 캔버스 위 흰 카드 */}
+            <div className="space-y-6">
+              {/* 커뮤니티 카드 그리드 */}
+              {categories.length > 0 && (
+                <div
                   style={{
-                    color: "var(--wc-burgundy)",
-                    letterSpacing: "0.18em",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                    gap: 10,
                   }}
                 >
-                  실시간 인기글
-                </h2>
-                <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
-                  추천 1+ · 최근 7일
-                </span>
-              </div>
+                  {categories.map((cat) => {
+                    const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
+                    return (
+                      <Link
+                        key={cat.slug}
+                        href={`/community/${cat.slug}`}
+                        className="gn-card-lift flex items-center gap-2.5"
+                        style={{
+                          background: "var(--wc-card)",
+                          border: "1px solid var(--wc-line)",
+                          borderRadius: 10,
+                          padding: "12px 14px",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 9,
+                            background: chip.bg,
+                            color: chip.color,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <BoardIcon slug={cat.slug} className="h-[18px] w-[18px]" />
+                        </span>
+                        <span
+                          className="font-title truncate text-[15px] font-extrabold"
+                          style={{ color: "var(--wc-ink)", letterSpacing: "-.01em" }}
+                        >
+                          {cat.name}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
 
-              {/* 정렬 탭 — wc-underline-tabs */}
-              <div className="wc-underline-tabs">
-                {SORT_TABS.map(({ key, label, icon: Icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => setSortTab(key)}
-                    className={sortTab === key ? "on" : ""}
+              {/* 실시간 인기글 */}
+              <div
+                className="overflow-hidden rounded-xl"
+                style={{
+                  background: "var(--wc-card)",
+                  boxShadow: "var(--wc-shadow-1)",
+                }}
+              >
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{
+                    background: "var(--wc-soft)",
+                    borderBottom: "1px solid var(--wc-line)",
+                  }}
+                >
+                  <h2
+                    className="text-[11px] font-bold uppercase"
+                    style={{
+                      color: "var(--wc-burgundy)",
+                      letterSpacing: "0.18em",
+                    }}
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                ))}
-              </div>
+                    실시간 인기글
+                  </h2>
+                  <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
+                    추천 1+ · 최근 7일
+                  </span>
+                </div>
 
-              <div>
-                {isContentLoading ? (
-                  <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
-                    <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
-                    <p className="text-sm">글 목록을 불러오는 중...</p>
-                  </div>
-                ) : sortedPosts.length > 0 ? (
-                  sortedPosts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/post/${post.id}`}
-                      className="flex items-center justify-between p-3 transition-colors"
-                      style={{
-                        borderBottom: "1px solid var(--wc-line)",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "var(--wc-soft)"
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent"
-                      }}
+                {/* 정렬 탭 — wc-underline-tabs */}
+                <div className="wc-underline-tabs">
+                  {SORT_TABS.map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setSortTab(key)}
+                      className={sortTab === key ? "on" : ""}
                     >
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className="truncate text-sm font-semibold"
-                          style={{ color: "var(--wc-ink)" }}
-                        >
-                          {post.title}
-                        </p>
-                        <span className="mt-1 block text-xs" style={{ color: "var(--wc-mute)" }}>
-                          {post.community}
-                        </span>
-                      </div>
-                      <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs tabular-nums">
-                        <span
-                          className="flex items-center gap-1 font-bold"
-                          style={{ color: "var(--wc-burgundy)" }}
-                        >
-                          <ThumbsUp className="h-3 w-3" />
-                          {post.upvotes}
-                        </span>
-                        <span
-                          className="flex items-center gap-1"
-                          style={{ color: "var(--wc-mute)" }}
-                        >
-                          <MessageSquare className="h-3 w-3" />
-                          {post.comments}
-                        </span>
-                        <span
-                          className="flex items-center gap-1"
-                          style={{ color: "var(--wc-mute)" }}
-                        >
-                          <Eye className="h-3 w-3" />
-                          {post.views}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
-                    <p className="text-sm">최근 7일 내 추천받은 게시물이 없습니다.</p>
-                  </div>
-                )}
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  {isContentLoading ? (
+                    <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
+                      <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+                      <p className="text-sm">글 목록을 불러오는 중...</p>
+                    </div>
+                  ) : sortedPosts.length > 0 ? (
+                    sortedPosts.map((post) => (
+                      <Link
+                        key={post.id}
+                        href={`/post/${post.id}`}
+                        className="flex items-center justify-between p-3 transition-colors"
+                        style={{
+                          borderBottom: "1px solid var(--wc-line)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "var(--wc-soft)"
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent"
+                        }}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className="truncate text-sm font-semibold"
+                            style={{ color: "var(--wc-ink)" }}
+                          >
+                            {post.title}
+                          </p>
+                          <span className="mt-1 block text-xs" style={{ color: "var(--wc-mute)" }}>
+                            {post.community}
+                          </span>
+                        </div>
+                        <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs tabular-nums">
+                          <span
+                            className="flex items-center gap-1 font-bold"
+                            style={{ color: "var(--wc-burgundy)" }}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                            {post.upvotes}
+                          </span>
+                          <span
+                            className="flex items-center gap-1"
+                            style={{ color: "var(--wc-mute)" }}
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            {post.comments}
+                          </span>
+                          <span
+                            className="flex items-center gap-1"
+                            style={{ color: "var(--wc-mute)" }}
+                          >
+                            <Eye className="h-3 w-3" />
+                            {post.views}
+                          </span>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center" style={{ color: "var(--wc-mute)" }}>
+                      <p className="text-sm">최근 7일 내 추천받은 게시물이 없습니다.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

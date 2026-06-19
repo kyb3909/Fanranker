@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { PredictionHistory } from "@/components/my-predictions/prediction-history"
+import { SectionHeader } from "@/components/section-header"
 
 export const metadata: Metadata = {
   title: "내 월드컵 예측 기록",
@@ -24,21 +25,12 @@ export default function WorldcupMyPredictionsPage() {
         >
           <ArrowLeft className="h-4 w-4" /> 리더보드로
         </Link>
-        <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
-          WORLD CUP
-        </div>
-        <h1
-          className="text-[28px] font-extrabold sm:text-[36px]"
-          style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
-        >
-          내 예측 기록
-        </h1>
-        <p
-          className="mt-2.5 mb-8 max-w-[560px] text-[15px]"
-          style={{ lineHeight: 1.6, color: "var(--wc-ink-2)" }}
-        >
-          월드컵 이벤트 기간 동안의 내 예측 내역입니다.
-        </p>
+        <SectionHeader
+          label="WORLD CUP"
+          title="내 예측 기록"
+          description="월드컵 이벤트 기간 동안의 내 예측 내역입니다."
+          style={{ marginTop: 16 }}
+        />
 
         <PredictionHistory eventSlug="worldcup-2026" />
       </div>

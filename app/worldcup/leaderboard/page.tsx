@@ -3,6 +3,7 @@ import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { SectionHeader } from "@/components/section-header"
 import {
   LeaderboardClient,
   type LbGroup,
@@ -214,22 +215,12 @@ export default async function WorldcupLeaderboardPage() {
         >
           <ArrowLeft className="h-4 w-4" /> 이벤트 안내로
         </Link>
-        <div className="wc-sec-eb" style={{ marginTop: 22, marginBottom: 8 }}>
-          LEADERBOARD
-        </div>
-        <h1
-          className="text-[28px] font-extrabold sm:text-[36px]"
-          style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
-        >
-          리더보드
-        </h1>
-        <p
-          className="mt-2.5 mb-8 max-w-[560px] text-[15px]"
-          style={{ lineHeight: 1.6, color: "var(--wc-ink-2)" }}
-        >
-          구너 전체 평균과 내 위치. 개별 순위는 의욕 상실 방지를 위해 진행 중에는 비공개 — 종료 후
-          결과 발표에서 구너 1위를 공개합니다.
-        </p>
+        <SectionHeader
+          label="LEADERBOARD"
+          title="리더보드"
+          description="구너 전체 평균과 내 위치. 개별 순위는 의욕 상실 방지를 위해 진행 중에는 비공개 — 종료 후 결과 발표에서 구너 1위를 공개합니다."
+          style={{ marginTop: 16 }}
+        />
 
         {userId && (
           <Link

@@ -169,20 +169,8 @@ export function HomeClient({
                 <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </span>
             </Link>
-            {/* 손글씨 태그라인 */}
-            <p
-              className="leading-snug"
-              style={{
-                fontFamily: "var(--font-pen, 'Nanum Pen Script', cursive)",
-                fontSize: 19,
-                color: "var(--wc-mute)",
-                margin: "18px 0 12px",
-              }}
-            >
-              그깟 공놀이에 진심인 팬들의 놀이터
-            </p>
-            {/* 필터 스트립 — 한 줄: 탭 pills | separator | sort pills */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* 필터 스트립 — 한 줄: 탭 pills | separator | sort pills (태그라인은 푸터로 이동) */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5" role="tablist" aria-label="홈 탭">
                 {(
                   [
