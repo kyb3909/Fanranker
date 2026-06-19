@@ -33,7 +33,7 @@
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 14
+    "price": 13
   },
   {
     "id": "a5",
@@ -46,132 +46,105 @@
   },
   {
     "id": "a6",
-    "name": "로빈 반 페르시",
-    "nameKo": "로빈 반 페르시",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "FW",
-    "price": 13
-  },
-  {
-    "id": "a7",
     "name": "솔 캠벨",
     "nameKo": "솔 캠벨",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a8",
+    "id": "a7",
     "name": "콜로 투레",
     "nameKo": "콜로 투레",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a9",
+    "id": "a8",
     "name": "애슐리 콜",
     "nameKo": "애슐리 콜",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a10",
+    "id": "a9",
     "name": "윌리엄 살리바",
     "nameKo": "윌리엄 살리바",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a11",
+    "id": "a10",
     "name": "부카요 사카",
     "nameKo": "부카요 사카",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a12",
+    "id": "a11",
     "name": "마르틴 외데고르",
     "nameKo": "마르틴 외데고르",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 13
+    "price": 11
   },
   {
-    "id": "a13",
+    "id": "a12",
     "name": "데클런 라이스",
     "nameKo": "데클런 라이스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a14",
+    "id": "a13",
     "name": "가브리엘 마갈량이스",
     "nameKo": "가브리엘 마갈량이스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 13
+    "price": 12
   },
   {
-    "id": "a15",
-    "name": "가브리엘 마르티넬리",
-    "nameKo": "가브리엘 마르티넬리",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "FW",
-    "price": 13
-  },
-  {
-    "id": "a16",
+    "id": "a14",
     "name": "질베르투 실바",
     "nameKo": "질베르투 실바",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 12
+    "price": 10
   },
   {
-    "id": "a17",
+    "id": "a15",
     "name": "프레디 융베리",
     "nameKo": "프레디 융베리",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 12
+    "price": 10
   },
   {
-    "id": "a18",
+    "id": "a16",
     "name": "옌스 레만",
     "nameKo": "옌스 레만",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "GK",
-    "price": 12
+    "price": 11
   },
   {
-    "id": "a19",
-    "name": "라우렌",
-    "nameKo": "라우렌",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 12
-  },
-  {
-    "id": "a20",
+    "id": "a17",
     "name": "메수트 외질",
     "nameKo": "메수트 외질",
     "team": "Arsenal",
@@ -180,7 +153,7 @@
     "price": 12
   },
   {
-    "id": "a21",
+    "id": "a18",
     "name": "알렉시스 산체스",
     "nameKo": "알렉시스 산체스",
     "team": "Arsenal",
@@ -189,7 +162,7 @@
     "price": 12
   },
   {
-    "id": "a22",
+    "id": "a19",
     "name": "피에르-에메릭 오바메양",
     "nameKo": "피에르-에메릭 오바메양",
     "team": "Arsenal",
@@ -198,7 +171,7 @@
     "price": 12
   },
   {
-    "id": "a23",
+    "id": "a20",
     "name": "산티 카솔라",
     "nameKo": "산티 카솔라",
     "team": "Arsenal",
@@ -207,106 +180,52 @@
     "price": 12
   },
   {
-    "id": "a24",
-    "name": "애런 램지",
-    "nameKo": "애런 램지",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 12
-  },
-  {
-    "id": "a25",
-    "name": "올리비에 지루",
-    "nameKo": "올리비에 지루",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "FW",
-    "price": 12
-  },
-  {
-    "id": "a26",
-    "name": "로랑 코시엘니",
-    "nameKo": "로랑 코시엘니",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 12
-  },
-  {
-    "id": "a27",
-    "name": "페어 메르테자커",
-    "nameKo": "페어 메르테자커",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 12
-  },
-  {
-    "id": "a28",
-    "name": "바카리 사냐",
-    "nameKo": "바카리 사냐",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 12
-  },
-  {
-    "id": "a29",
-    "name": "미켈 아르테타",
-    "nameKo": "미켈 아르테타",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 12
-  },
-  {
-    "id": "a30",
-    "name": "보이체흐 슈체스니",
-    "nameKo": "보이체흐 슈체스니",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "GK",
-    "price": 12
-  },
-  {
-    "id": "a31",
-    "name": "페트르 체흐",
-    "nameKo": "페트르 체흐",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "GK",
-    "price": 12
-  },
-  {
-    "id": "a32",
+    "id": "a21",
     "name": "다비드 라야",
     "nameKo": "다비드 라야",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "GK",
-    "price": 12
+    "price": 11
   },
   {
-    "id": "a33",
+    "id": "a22",
     "name": "카이 하베르츠",
     "nameKo": "카이 하베르츠",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 12
+    "price": 10
   },
   {
-    "id": "a34",
+    "id": "a23",
+    "name": "애런 램지",
+    "nameKo": "애런 램지",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "MF",
+    "price": 9
+  },
+  {
+    "id": "a24",
+    "name": "올리비에 지루",
+    "nameKo": "올리비에 지루",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "FW",
+    "price": 10
+  },
+  {
+    "id": "a25",
     "name": "위리언 팀버",
     "nameKo": "위리언 팀버",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 12
+    "price": 10
   },
   {
-    "id": "a35",
+    "id": "a26",
     "name": "데이비드 시먼",
     "nameKo": "데이비드 시먼",
     "team": "Arsenal",
@@ -315,97 +234,97 @@
     "price": 11
   },
   {
-    "id": "a36",
+    "id": "a27",
     "name": "테오 월콧",
     "nameKo": "테오 월콧",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 11
+    "price": 8
   },
   {
-    "id": "a37",
+    "id": "a28",
     "name": "실뱅 윌토드",
     "nameKo": "실뱅 윌토드",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 11
+    "price": 8
   },
   {
-    "id": "a38",
+    "id": "a29",
     "name": "에두",
     "nameKo": "에두",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 11
+    "price": 8
   },
   {
-    "id": "a39",
+    "id": "a30",
     "name": "토마시 로시츠키",
     "nameKo": "토마시 로시츠키",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a40",
+    "id": "a31",
     "name": "에두아르두 다 실바",
     "nameKo": "에두아르두 다 실바",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a41",
+    "id": "a32",
     "name": "에마뉘엘 아데바요르",
     "nameKo": "에마뉘엘 아데바요르",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a42",
+    "id": "a33",
     "name": "알렉산데르 흘레프",
     "nameKo": "알렉산데르 흘레프",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a43",
+    "id": "a34",
     "name": "사미르 나스리",
     "nameKo": "사미르 나스리",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a44",
+    "id": "a35",
     "name": "안드레이 아르샤빈",
     "nameKo": "안드레이 아르샤빈",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a45",
+    "id": "a36",
     "name": "잭 윌셔",
     "nameKo": "잭 윌셔",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a46",
+    "id": "a37",
     "name": "그라니트 자카",
     "nameKo": "그라니트 자카",
     "team": "Arsenal",
@@ -414,7 +333,7 @@
     "price": 11
   },
   {
-    "id": "a47",
+    "id": "a38",
     "name": "토마스 파티",
     "nameKo": "토마스 파티",
     "team": "Arsenal",
@@ -423,7 +342,7 @@
     "price": 11
   },
   {
-    "id": "a48",
+    "id": "a39",
     "name": "알렉상드르 라카제트",
     "nameKo": "알렉상드르 라카제트",
     "team": "Arsenal",
@@ -432,34 +351,34 @@
     "price": 11
   },
   {
-    "id": "a49",
+    "id": "a40",
     "name": "나초 몬레알",
     "nameKo": "나초 몬레알",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 11
+    "price": 9
   },
   {
-    "id": "a50",
+    "id": "a41",
     "name": "엑토르 벨레린",
     "nameKo": "엑토르 벨레린",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 11
+    "price": 8
   },
   {
-    "id": "a51",
+    "id": "a42",
     "name": "애런 램스데일",
     "nameKo": "애런 램스데일",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "GK",
-    "price": 11
+    "price": 8
   },
   {
-    "id": "a52",
+    "id": "a43",
     "name": "벤 화이트",
     "nameKo": "벤 화이트",
     "team": "Arsenal",
@@ -468,7 +387,7 @@
     "price": 11
   },
   {
-    "id": "a53",
+    "id": "a44",
     "name": "레안드로 트로사르",
     "nameKo": "레안드로 트로사르",
     "team": "Arsenal",
@@ -477,7 +396,7 @@
     "price": 11
   },
   {
-    "id": "a54",
+    "id": "a45",
     "name": "가브리엘 제주스",
     "nameKo": "가브리엘 제주스",
     "team": "Arsenal",
@@ -486,7 +405,7 @@
     "price": 11
   },
   {
-    "id": "a55",
+    "id": "a46",
     "name": "마르틴 주비멘디",
     "nameKo": "마르틴 주비멘디",
     "team": "Arsenal",
@@ -495,7 +414,7 @@
     "price": 11
   },
   {
-    "id": "a56",
+    "id": "a47",
     "name": "빅토르 요케레스",
     "nameKo": "빅토르 요케레스",
     "team": "Arsenal",
@@ -504,7 +423,7 @@
     "price": 11
   },
   {
-    "id": "a57",
+    "id": "a48",
     "name": "에베레치 에세",
     "nameKo": "에베레치 에세",
     "team": "Arsenal",
@@ -513,7 +432,70 @@
     "price": 11
   },
   {
-    "id": "a58",
+    "id": "a49",
+    "name": "가브리엘 마르티넬리",
+    "nameKo": "가브리엘 마르티넬리",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "FW",
+    "price": 10
+  },
+  {
+    "id": "a50",
+    "name": "로렌",
+    "nameKo": "로렌",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "DF",
+    "price": 10
+  },
+  {
+    "id": "a51",
+    "name": "로랑 코시엘니",
+    "nameKo": "로랑 코시엘니",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "DF",
+    "price": 10
+  },
+  {
+    "id": "a52",
+    "name": "페어 메르테자커",
+    "nameKo": "페어 메르테자커",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "DF",
+    "price": 10
+  },
+  {
+    "id": "a53",
+    "name": "바카리 사냐",
+    "nameKo": "바카리 사냐",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "DF",
+    "price": 10
+  },
+  {
+    "id": "a54",
+    "name": "미켈 아르테타",
+    "nameKo": "미켈 아르테타",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "MF",
+    "price": 10
+  },
+  {
+    "id": "a55",
+    "name": "페트르 체흐",
+    "nameKo": "페트르 체흐",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "GK",
+    "price": 10
+  },
+  {
+    "id": "a56",
     "name": "마틴 키언",
     "nameKo": "마틴 키언",
     "team": "Arsenal",
@@ -522,7 +504,7 @@
     "price": 10
   },
   {
-    "id": "a59",
+    "id": "a57",
     "name": "레이 팔러",
     "nameKo": "레이 팔러",
     "team": "Arsenal",
@@ -531,7 +513,7 @@
     "price": 10
   },
   {
-    "id": "a60",
+    "id": "a58",
     "name": "파스칼 시강",
     "nameKo": "파스칼 시강",
     "team": "Arsenal",
@@ -540,7 +522,7 @@
     "price": 10
   },
   {
-    "id": "a61",
+    "id": "a59",
     "name": "호세 안토니오 레예스",
     "nameKo": "호세 안토니오 레예스",
     "team": "Arsenal",
@@ -549,7 +531,7 @@
     "price": 10
   },
   {
-    "id": "a62",
+    "id": "a60",
     "name": "윌리엄 갈라스",
     "nameKo": "윌리엄 갈라스",
     "team": "Arsenal",
@@ -558,7 +540,7 @@
     "price": 10
   },
   {
-    "id": "a63",
+    "id": "a61",
     "name": "가엘 클리시",
     "nameKo": "가엘 클리시",
     "team": "Arsenal",
@@ -567,7 +549,7 @@
     "price": 10
   },
   {
-    "id": "a64",
+    "id": "a62",
     "name": "에마뉘엘 에부에",
     "nameKo": "에마뉘엘 에부에",
     "team": "Arsenal",
@@ -576,7 +558,7 @@
     "price": 10
   },
   {
-    "id": "a65",
+    "id": "a63",
     "name": "마누엘 알무니아",
     "nameKo": "마누엘 알무니아",
     "team": "Arsenal",
@@ -585,7 +567,7 @@
     "price": 10
   },
   {
-    "id": "a66",
+    "id": "a64",
     "name": "마티외 플라미니",
     "nameKo": "마티외 플라미니",
     "team": "Arsenal",
@@ -594,7 +576,7 @@
     "price": 10
   },
   {
-    "id": "a67",
+    "id": "a65",
     "name": "아부 디아비",
     "nameKo": "아부 디아비",
     "team": "Arsenal",
@@ -603,7 +585,7 @@
     "price": 10
   },
   {
-    "id": "a68",
+    "id": "a66",
     "name": "알렉산드르 송",
     "nameKo": "알렉산드르 송",
     "team": "Arsenal",
@@ -612,7 +594,7 @@
     "price": 10
   },
   {
-    "id": "a69",
+    "id": "a67",
     "name": "루카스 포돌스키",
     "nameKo": "루카스 포돌스키",
     "team": "Arsenal",
@@ -621,7 +603,7 @@
     "price": 10
   },
   {
-    "id": "a70",
+    "id": "a68",
     "name": "세아드 콜라시나치",
     "nameKo": "세아드 콜라시나치",
     "team": "Arsenal",
@@ -630,7 +612,7 @@
     "price": 10
   },
   {
-    "id": "a71",
+    "id": "a69",
     "name": "헨리흐 음히타리안",
     "nameKo": "헨리흐 음히타리안",
     "team": "Arsenal",
@@ -639,7 +621,7 @@
     "price": 10
   },
   {
-    "id": "a72",
+    "id": "a70",
     "name": "에인슬리 메이트랜드-나일스",
     "nameKo": "에인슬리 메이트랜드-나일스",
     "team": "Arsenal",
@@ -648,7 +630,7 @@
     "price": 10
   },
   {
-    "id": "a73",
+    "id": "a71",
     "name": "리카르도 칼라피오리",
     "nameKo": "리카르도 칼라피오리",
     "team": "Arsenal",
@@ -657,7 +639,7 @@
     "price": 10
   },
   {
-    "id": "a74",
+    "id": "a72",
     "name": "올렉산드르 진첸코",
     "nameKo": "올렉산드르 진첸코",
     "team": "Arsenal",
@@ -666,7 +648,7 @@
     "price": 10
   },
   {
-    "id": "a75",
+    "id": "a73",
     "name": "미켈 메리노",
     "nameKo": "미켈 메리노",
     "team": "Arsenal",
@@ -675,7 +657,16 @@
     "price": 10
   },
   {
-    "id": "a76",
+    "id": "a74",
+    "name": "보이체흐 슈체스니",
+    "nameKo": "보이체흐 슈체스니",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "GK",
+    "price": 9
+  },
+  {
+    "id": "a75",
     "name": "은완쿠 카누",
     "nameKo": "은완쿠 카누",
     "team": "Arsenal",
@@ -684,7 +675,7 @@
     "price": 9
   },
   {
-    "id": "a77",
+    "id": "a76",
     "name": "필리프 센데로스",
     "nameKo": "필리프 센데로스",
     "team": "Arsenal",
@@ -693,7 +684,7 @@
     "price": 9
   },
   {
-    "id": "a78",
+    "id": "a77",
     "name": "조한 주루",
     "nameKo": "조한 주루",
     "team": "Arsenal",
@@ -702,7 +693,7 @@
     "price": 9
   },
   {
-    "id": "a79",
+    "id": "a78",
     "name": "데닐손",
     "nameKo": "데닐손",
     "team": "Arsenal",
@@ -711,7 +702,7 @@
     "price": 9
   },
   {
-    "id": "a80",
+    "id": "a79",
     "name": "카를로스 벨라",
     "nameKo": "카를로스 벨라",
     "team": "Arsenal",
@@ -720,7 +711,7 @@
     "price": 9
   },
   {
-    "id": "a81",
+    "id": "a80",
     "name": "니클라스 벤트너",
     "nameKo": "니클라스 벤트너",
     "team": "Arsenal",
@@ -729,7 +720,7 @@
     "price": 9
   },
   {
-    "id": "a82",
+    "id": "a81",
     "name": "우카시 파비안스키",
     "nameKo": "우카시 파비안스키",
     "team": "Arsenal",
@@ -738,7 +729,7 @@
     "price": 9
   },
   {
-    "id": "a83",
+    "id": "a82",
     "name": "마티외 드뷔시",
     "nameKo": "마티외 드뷔시",
     "team": "Arsenal",
@@ -747,7 +738,7 @@
     "price": 9
   },
   {
-    "id": "a84",
+    "id": "a83",
     "name": "캘럼 체임버스",
     "nameKo": "캘럼 체임버스",
     "team": "Arsenal",
@@ -756,7 +747,7 @@
     "price": 9
   },
   {
-    "id": "a85",
+    "id": "a84",
     "name": "가브리엘 파울리스타",
     "nameKo": "가브리엘 파울리스타",
     "team": "Arsenal",
@@ -765,7 +756,7 @@
     "price": 9
   },
   {
-    "id": "a86",
+    "id": "a85",
     "name": "다비드 오스피나",
     "nameKo": "다비드 오스피나",
     "team": "Arsenal",
@@ -774,7 +765,7 @@
     "price": 9
   },
   {
-    "id": "a87",
+    "id": "a86",
     "name": "모하메드 엘네니",
     "nameKo": "모하메드 엘네니",
     "team": "Arsenal",
@@ -783,7 +774,7 @@
     "price": 9
   },
   {
-    "id": "a88",
+    "id": "a87",
     "name": "알렉스 이워비",
     "nameKo": "알렉스 이워비",
     "team": "Arsenal",
@@ -792,7 +783,7 @@
     "price": 9
   },
   {
-    "id": "a89",
+    "id": "a88",
     "name": "대니 웰벡",
     "nameKo": "대니 웰벡",
     "team": "Arsenal",
@@ -801,7 +792,7 @@
     "price": 9
   },
   {
-    "id": "a90",
+    "id": "a89",
     "name": "베른트 레노",
     "nameKo": "베른트 레노",
     "team": "Arsenal",
@@ -810,7 +801,7 @@
     "price": 9
   },
   {
-    "id": "a91",
+    "id": "a90",
     "name": "소크라티스",
     "nameKo": "소크라티스",
     "team": "Arsenal",
@@ -819,7 +810,7 @@
     "price": 9
   },
   {
-    "id": "a92",
+    "id": "a91",
     "name": "에밀 스미스 로",
     "nameKo": "에밀 스미스 로",
     "team": "Arsenal",
@@ -828,7 +819,7 @@
     "price": 9
   },
   {
-    "id": "a93",
+    "id": "a92",
     "name": "루카스 토레이라",
     "nameKo": "루카스 토레이라",
     "team": "Arsenal",
@@ -837,7 +828,7 @@
     "price": 9
   },
   {
-    "id": "a94",
+    "id": "a93",
     "name": "에디 응케티아",
     "nameKo": "에디 응케티아",
     "team": "Arsenal",
@@ -846,16 +837,16 @@
     "price": 9
   },
   {
-    "id": "a95",
-    "name": "다케히로 도미야스",
-    "nameKo": "다케히로 도미야스",
+    "id": "a94",
+    "name": "타케히로 토미야스",
+    "nameKo": "타케히로 토미야스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
     "price": 9
   },
   {
-    "id": "a96",
+    "id": "a95",
     "name": "키어런 티어니",
     "nameKo": "키어런 티어니",
     "team": "Arsenal",
@@ -864,79 +855,79 @@
     "price": 9
   },
   {
-    "id": "a97",
+    "id": "a96",
     "name": "파비오 비에이라",
     "nameKo": "파비오 비에이라",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 9
+    "price": 8
   },
   {
-    "id": "a98",
+    "id": "a97",
     "name": "노니 마두에케",
     "nameKo": "노니 마두에케",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 9
+    "price": 8
   },
   {
-    "id": "a99",
+    "id": "a98",
     "name": "지오반니 반 브롱크호르스트",
     "nameKo": "지오반니 반 브롱크호르스트",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 8
+    "price": 7
   },
   {
-    "id": "a100",
+    "id": "a99",
     "name": "제레미 알리아디에르",
     "nameKo": "제레미 알리아디에르",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 8
+    "price": 5
   },
   {
-    "id": "a101",
+    "id": "a100",
     "name": "스튜어트 테일러",
     "nameKo": "스튜어트 테일러",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "GK",
-    "price": 8
+    "price": 5
   },
   {
-    "id": "a102",
+    "id": "a101",
     "name": "저스틴 호이트",
     "nameKo": "저스틴 호이트",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 8
+    "price": 5
   },
   {
-    "id": "a103",
+    "id": "a102",
     "name": "마르트 품",
     "nameKo": "마르트 품",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "GK",
-    "price": 8
+    "price": 6
   },
   {
-    "id": "a104",
+    "id": "a103",
     "name": "아르망 트라오레",
     "nameKo": "아르망 트라오레",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 8
+    "price": 6
   },
   {
-    "id": "a105",
+    "id": "a104",
     "name": "칼 젠킨슨",
     "nameKo": "칼 젠킨슨",
     "team": "Arsenal",
@@ -945,16 +936,16 @@
     "price": 8
   },
   {
-    "id": "a106",
+    "id": "a105",
     "name": "키어런 깁스",
     "nameKo": "키어런 깁스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 8
+    "price": 7
   },
   {
-    "id": "a107",
+    "id": "a106",
     "name": "알렉스 옥슬레이드-체임벌린",
     "nameKo": "알렉스 옥슬레이드-체임벌린",
     "team": "Arsenal",
@@ -963,43 +954,43 @@
     "price": 8
   },
   {
-    "id": "a108",
+    "id": "a107",
     "name": "요시 베나윤",
     "nameKo": "요시 베나윤",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 8
+    "price": 7
   },
   {
-    "id": "a109",
+    "id": "a108",
     "name": "미카엘 실베스트르",
     "nameKo": "미카엘 실베스트르",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 8
+    "price": 6
   },
   {
-    "id": "a110",
-    "name": "세바스티앙 스킬라시",
-    "nameKo": "세바스티앙 스킬라시",
+    "id": "a109",
+    "name": "세바스티앙 스킬라치",
+    "nameKo": "세바스티앙 스킬라치",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 8
+    "price": 6
   },
   {
-    "id": "a111",
+    "id": "a110",
     "name": "마루안 샤마크",
     "nameKo": "마루안 샤마크",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 8
+    "price": 6
   },
   {
-    "id": "a112",
+    "id": "a111",
     "name": "제르비뉴",
     "nameKo": "제르비뉴",
     "team": "Arsenal",
@@ -1008,7 +999,7 @@
     "price": 8
   },
   {
-    "id": "a113",
+    "id": "a112",
     "name": "조르지뉴",
     "nameKo": "조르지뉴",
     "team": "Arsenal",
@@ -1017,16 +1008,16 @@
     "price": 8
   },
   {
-    "id": "a114",
+    "id": "a113",
     "name": "박주영",
     "nameKo": "박주영",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 8
+    "price": 5
   },
   {
-    "id": "a115",
+    "id": "a114",
     "name": "롭 홀딩",
     "nameKo": "롭 홀딩",
     "team": "Arsenal",
@@ -1035,7 +1026,7 @@
     "price": 8
   },
   {
-    "id": "a116",
+    "id": "a115",
     "name": "야야 사노고",
     "nameKo": "야야 사노고",
     "team": "Arsenal",
@@ -1044,7 +1035,7 @@
     "price": 7
   },
   {
-    "id": "a117",
+    "id": "a116",
     "name": "조엘 캠벨",
     "nameKo": "조엘 캠벨",
     "team": "Arsenal",
@@ -1053,16 +1044,16 @@
     "price": 7
   },
   {
-    "id": "a118",
+    "id": "a117",
     "name": "콘스탄티노스 마브로파노스",
     "nameKo": "콘스탄티노스 마브로파노스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 7
+    "price": 6
   },
   {
-    "id": "a119",
+    "id": "a118",
     "name": "마테오 구엔두지",
     "nameKo": "마테오 구엔두지",
     "team": "Arsenal",
@@ -1071,16 +1062,16 @@
     "price": 7
   },
   {
-    "id": "a120",
+    "id": "a119",
     "name": "슈테판 리히트슈타이너",
     "nameKo": "슈테판 리히트슈타이너",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 7
+    "price": 6
   },
   {
-    "id": "a121",
+    "id": "a120",
     "name": "세바스티안 라르손",
     "nameKo": "세바스티안 라르손",
     "team": "Arsenal",
@@ -1089,7 +1080,7 @@
     "price": 7
   },
   {
-    "id": "a122",
+    "id": "a121",
     "name": "매튜 업슨",
     "nameKo": "매튜 업슨",
     "team": "Arsenal",
@@ -1098,7 +1089,7 @@
     "price": 7
   },
   {
-    "id": "a123",
+    "id": "a122",
     "name": "저메인 페넌트",
     "nameKo": "저메인 페넌트",
     "team": "Arsenal",
@@ -1107,7 +1098,7 @@
     "price": 7
   },
   {
-    "id": "a124",
+    "id": "a123",
     "name": "안드레 산토스",
     "nameKo": "안드레 산토스",
     "team": "Arsenal",
@@ -1116,7 +1107,7 @@
     "price": 7
   },
   {
-    "id": "a125",
+    "id": "a124",
     "name": "다니 세바요스",
     "nameKo": "다니 세바요스",
     "team": "Arsenal",
@@ -1125,7 +1116,7 @@
     "price": 7
   },
   {
-    "id": "a126",
+    "id": "a125",
     "name": "세드릭 소아레스",
     "nameKo": "세드릭 소아레스",
     "team": "Arsenal",
@@ -1134,7 +1125,7 @@
     "price": 7
   },
   {
-    "id": "a127",
+    "id": "a126",
     "name": "파블로 마리",
     "nameKo": "파블로 마리",
     "team": "Arsenal",
@@ -1143,25 +1134,25 @@
     "price": 7
   },
   {
-    "id": "a128",
+    "id": "a127",
     "name": "다비드 루이스",
     "nameKo": "다비드 루이스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 7
+    "price": 8
   },
   {
-    "id": "a129",
+    "id": "a128",
     "name": "누누 타바레스",
     "nameKo": "누누 타바레스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 7
+    "price": 6
   },
   {
-    "id": "a130",
+    "id": "a129",
     "name": "야쿠브 키비오르",
     "nameKo": "야쿠브 키비오르",
     "team": "Arsenal",
@@ -1170,16 +1161,16 @@
     "price": 7
   },
   {
-    "id": "a131",
+    "id": "a130",
     "name": "슈코드란 무스타피",
     "nameKo": "슈코드란 무스타피",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "DF",
-    "price": 7
+    "price": 6
   },
   {
-    "id": "a132",
+    "id": "a131",
     "name": "마일스 루이스-스켈리",
     "nameKo": "마일스 루이스-스켈리",
     "team": "Arsenal",
@@ -1188,7 +1179,7 @@
     "price": 7
   },
   {
-    "id": "a133",
+    "id": "a132",
     "name": "알베르 삼비 로콩가",
     "nameKo": "알베르 삼비 로콩가",
     "team": "Arsenal",
@@ -1197,7 +1188,7 @@
     "price": 6
   },
   {
-    "id": "a134",
+    "id": "a133",
     "name": "이고르스 스테파놉스",
     "nameKo": "이고르스 스테파놉스",
     "team": "Arsenal",
@@ -1206,7 +1197,7 @@
     "price": 6
   },
   {
-    "id": "a135",
+    "id": "a134",
     "name": "올레흐 루즈니",
     "nameKo": "올레흐 루즈니",
     "team": "Arsenal",
@@ -1215,16 +1206,7 @@
     "price": 6
   },
   {
-    "id": "a136",
-    "name": "스타티스 타블라리디스",
-    "nameKo": "스타티스 타블라리디스",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 6
-  },
-  {
-    "id": "a137",
+    "id": "a135",
     "name": "비토 만노네",
     "nameKo": "비토 만노네",
     "team": "Arsenal",
@@ -1233,7 +1215,7 @@
     "price": 6
   },
   {
-    "id": "a138",
+    "id": "a136",
     "name": "리스 넬슨",
     "nameKo": "리스 넬슨",
     "team": "Arsenal",
@@ -1242,16 +1224,16 @@
     "price": 6
   },
   {
-    "id": "a139",
-    "name": "다미안 마르티네스",
-    "nameKo": "다미안 마르티네스",
+    "id": "a137",
+    "name": "에미 마르티네스",
+    "nameKo": "에미 마르티네스",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "GK",
     "price": 6
   },
   {
-    "id": "a140",
+    "id": "a138",
     "name": "매트 터너",
     "nameKo": "매트 터너",
     "team": "Arsenal",
@@ -1260,7 +1242,7 @@
     "price": 6
   },
   {
-    "id": "a141",
+    "id": "a139",
     "name": "케파 아리사발라가",
     "nameKo": "케파 아리사발라가",
     "team": "Arsenal",
@@ -1269,7 +1251,7 @@
     "price": 6
   },
   {
-    "id": "a142",
+    "id": "a140",
     "name": "크리스티안 모스케라",
     "nameKo": "크리스티안 모스케라",
     "team": "Arsenal",
@@ -1278,7 +1260,7 @@
     "price": 6
   },
   {
-    "id": "a143",
+    "id": "a141",
     "name": "조 윌록",
     "nameKo": "조 윌록",
     "team": "Arsenal",
@@ -1287,16 +1269,16 @@
     "price": 6
   },
   {
-    "id": "a144",
+    "id": "a142",
     "name": "윌리안",
     "nameKo": "윌리안",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 5
+    "price": 7
   },
   {
-    "id": "a145",
+    "id": "a143",
     "name": "마르키뉴스",
     "nameKo": "마르키뉴스",
     "team": "Arsenal",
@@ -1305,7 +1287,7 @@
     "price": 5
   },
   {
-    "id": "a146",
+    "id": "a144",
     "name": "루카스 페레스",
     "nameKo": "루카스 페레스",
     "team": "Arsenal",
@@ -1314,16 +1296,7 @@
     "price": 5
   },
   {
-    "id": "a147",
-    "name": "퀸시 오우수-아베이에",
-    "nameKo": "퀸시 오우수-아베이에",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "FW",
-    "price": 5
-  },
-  {
-    "id": "a148",
+    "id": "a145",
     "name": "데이비드 벤틀리",
     "nameKo": "데이비드 벤틀리",
     "team": "Arsenal",
@@ -1332,16 +1305,16 @@
     "price": 5
   },
   {
-    "id": "a149",
+    "id": "a146",
     "name": "니콜라스 페페",
     "nameKo": "니콜라스 페페",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 5
+    "price": 8
   },
   {
-    "id": "a150",
+    "id": "a147",
     "name": "폴라린 발로건",
     "nameKo": "폴라린 발로건",
     "team": "Arsenal",
@@ -1350,7 +1323,7 @@
     "price": 5
   },
   {
-    "id": "a151",
+    "id": "a148",
     "name": "라미 샤반",
     "nameKo": "라미 샤반",
     "team": "Arsenal",
@@ -1359,7 +1332,7 @@
     "price": 5
   },
   {
-    "id": "a152",
+    "id": "a149",
     "name": "헨리 랜스버리",
     "nameKo": "헨리 랜스버리",
     "team": "Arsenal",
@@ -1368,9 +1341,36 @@
     "price": 5
   },
   {
-    "id": "a153",
+    "id": "a150",
     "name": "라사나 디아라",
     "nameKo": "라사나 디아라",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "MF",
+    "price": 7
+  },
+  {
+    "id": "a151",
+    "name": "크리스티안 노르고르",
+    "nameKo": "크리스티안 노르고르",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "MF",
+    "price": 6
+  },
+  {
+    "id": "a152",
+    "name": "피에로 인카피에",
+    "nameKo": "피에로 인카피에",
+    "team": "Arsenal",
+    "teamKo": "아스널",
+    "position": "DF",
+    "price": 8
+  },
+  {
+    "id": "a153",
+    "name": "맥스 다우먼",
+    "nameKo": "맥스 다우먼",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
@@ -1378,33 +1378,6 @@
   },
   {
     "id": "a154",
-    "name": "크리스티안 노르고르",
-    "nameKo": "크리스티안 노르고르",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 5
-  },
-  {
-    "id": "a155",
-    "name": "피에로 인카피에",
-    "nameKo": "피에로 인카피에",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 5
-  },
-  {
-    "id": "a156",
-    "name": "루나르 알렉스 루나르손",
-    "nameKo": "루나르 알렉스 루나르손",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "GK",
-    "price": 5
-  },
-  {
-    "id": "a157",
     "name": "오스턴 트러스티",
     "nameKo": "오스턴 트러스티",
     "team": "Arsenal",
@@ -1413,7 +1386,7 @@
     "price": 4
   },
   {
-    "id": "a158",
+    "id": "a155",
     "name": "데니스 수아레스",
     "nameKo": "데니스 수아레스",
     "team": "Arsenal",
@@ -1422,7 +1395,7 @@
     "price": 4
   },
   {
-    "id": "a159",
+    "id": "a156",
     "name": "앤서니 스톡스",
     "nameKo": "앤서니 스톡스",
     "team": "Arsenal",
@@ -1431,16 +1404,16 @@
     "price": 4
   },
   {
-    "id": "a160",
+    "id": "a157",
     "name": "아르투로 루폴리",
     "nameKo": "아르투로 루폴리",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "FW",
-    "price": 4
+    "price": 3
   },
   {
-    "id": "a161",
+    "id": "a158",
     "name": "세르주 그나브리",
     "nameKo": "세르주 그나브리",
     "team": "Arsenal",
@@ -1449,7 +1422,7 @@
     "price": 4
   },
   {
-    "id": "a162",
+    "id": "a159",
     "name": "이그나시 미켈",
     "nameKo": "이그나시 미켈",
     "team": "Arsenal",
@@ -1458,16 +1431,16 @@
     "price": 4
   },
   {
-    "id": "a163",
+    "id": "a160",
     "name": "에마뉘엘 프림퐁",
     "nameKo": "에마뉘엘 프림퐁",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 4
+    "price": 5
   },
   {
-    "id": "a164",
+    "id": "a161",
     "name": "매트 라이언",
     "nameKo": "매트 라이언",
     "team": "Arsenal",
@@ -1476,34 +1449,7 @@
     "price": 4
   },
   {
-    "id": "a165",
-    "name": "기욤 바르무스",
-    "nameKo": "기욤 바르무스",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "GK",
-    "price": 4
-  },
-  {
-    "id": "a166",
-    "name": "케레아 길버트",
-    "nameKo": "케레아 길버트",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 4
-  },
-  {
-    "id": "a167",
-    "name": "라이언 게리",
-    "nameKo": "라이언 게리",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 4
-  },
-  {
-    "id": "a168",
+    "id": "a162",
     "name": "파브리스 무암바",
     "nameKo": "파브리스 무암바",
     "team": "Arsenal",
@@ -1512,16 +1458,16 @@
     "price": 4
   },
   {
-    "id": "a169",
+    "id": "a163",
     "name": "프란 메리다",
     "nameKo": "프란 메리다",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 4
+    "price": 3
   },
   {
-    "id": "a170",
+    "id": "a164",
     "name": "찰리 파티노",
     "nameKo": "찰리 파티노",
     "team": "Arsenal",
@@ -1530,7 +1476,7 @@
     "price": 4
   },
   {
-    "id": "a171",
+    "id": "a165",
     "name": "카를 하인",
     "nameKo": "카를 하인",
     "team": "Arsenal",
@@ -1539,25 +1485,16 @@
     "price": 4
   },
   {
-    "id": "a172",
-    "name": "이선 응와네리",
-    "nameKo": "이선 응와네리",
+    "id": "a166",
+    "name": "에단 은와네리",
+    "nameKo": "에단 은와네리",
     "team": "Arsenal",
     "teamKo": "아스널",
     "position": "MF",
-    "price": 4
+    "price": 6
   },
   {
-    "id": "a173",
-    "name": "매튜 코널리",
-    "nameKo": "매튜 코널리",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 3
-  },
-  {
-    "id": "a174",
+    "id": "a167",
     "name": "카일 바틀리",
     "nameKo": "카일 바틀리",
     "team": "Arsenal",
@@ -1566,7 +1503,7 @@
     "price": 3
   },
   {
-    "id": "a175",
+    "id": "a168",
     "name": "호바르 노르드트베이트",
     "nameKo": "호바르 노르드트베이트",
     "team": "Arsenal",
@@ -1575,7 +1512,7 @@
     "price": 3
   },
   {
-    "id": "a176",
+    "id": "a169",
     "name": "코너 헨더슨",
     "nameKo": "코너 헨더슨",
     "team": "Arsenal",
@@ -1584,7 +1521,7 @@
     "price": 3
   },
   {
-    "id": "a177",
+    "id": "a170",
     "name": "매트 마세이",
     "nameKo": "매트 마세이",
     "team": "Arsenal",
@@ -1593,7 +1530,7 @@
     "price": 3
   },
   {
-    "id": "a178",
+    "id": "a171",
     "name": "노르베르토 네투",
     "nameKo": "노르베르토 네투",
     "team": "Arsenal",
@@ -1602,7 +1539,7 @@
     "price": 3
   },
   {
-    "id": "a179",
+    "id": "a172",
     "name": "라힘 스털링",
     "nameKo": "라힘 스털링",
     "team": "Arsenal",
@@ -1611,7 +1548,7 @@
     "price": 3
   },
   {
-    "id": "a180",
+    "id": "a173",
     "name": "세바스티안 스배르",
     "nameKo": "세바스티안 스배르",
     "team": "Arsenal",
@@ -1620,16 +1557,7 @@
     "price": 3
   },
   {
-    "id": "a181",
-    "name": "모리츠 폴츠",
-    "nameKo": "모리츠 폴츠",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 3
-  },
-  {
-    "id": "a182",
+    "id": "a174",
     "name": "마크 랜들",
     "nameKo": "마크 랜들",
     "team": "Arsenal",
@@ -1638,7 +1566,7 @@
     "price": 3
   },
   {
-    "id": "a183",
+    "id": "a175",
     "name": "제이 심슨",
     "nameKo": "제이 심슨",
     "team": "Arsenal",
@@ -1647,7 +1575,7 @@
     "price": 3
   },
   {
-    "id": "a184",
+    "id": "a176",
     "name": "나세르 바라지트",
     "nameKo": "나세르 바라지트",
     "team": "Arsenal",
@@ -1656,16 +1584,7 @@
     "price": 3
   },
   {
-    "id": "a185",
-    "name": "질 수누",
-    "nameKo": "질 수누",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "FW",
-    "price": 3
-  },
-  {
-    "id": "a186",
+    "id": "a177",
     "name": "미야이치 료",
     "nameKo": "미야이치 료",
     "team": "Arsenal",
@@ -1674,7 +1593,7 @@
     "price": 3
   },
   {
-    "id": "a187",
+    "id": "a178",
     "name": "이스마엘 베나세르",
     "nameKo": "이스마엘 베나세르",
     "team": "Arsenal",
@@ -1683,7 +1602,7 @@
     "price": 3
   },
   {
-    "id": "a188",
+    "id": "a179",
     "name": "프랜시스 제퍼스",
     "nameKo": "프랜시스 제퍼스",
     "team": "Arsenal",
@@ -1692,16 +1611,7 @@
     "price": 3
   },
   {
-    "id": "a189",
-    "name": "맥스 다우먼",
-    "nameKo": "맥스 다우먼",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 3
-  },
-  {
-    "id": "a190",
+    "id": "a180",
     "name": "크리스티안 비엘리크",
     "nameKo": "크리스티안 비엘리크",
     "team": "Arsenal",
@@ -1710,16 +1620,7 @@
     "price": 2
   },
   {
-    "id": "a191",
-    "name": "제프 레인-아델라이드",
-    "nameKo": "제프 레인-아델라이드",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 2
-  },
-  {
-    "id": "a192",
+    "id": "a181",
     "name": "그레이엄 스택",
     "nameKo": "그레이엄 스택",
     "team": "Arsenal",
@@ -1728,16 +1629,7 @@
     "price": 2
   },
   {
-    "id": "a193",
-    "name": "프랭키 시멕",
-    "nameKo": "프랭키 시멕",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 2
-  },
-  {
-    "id": "a194",
+    "id": "a182",
     "name": "추바 아크폼",
     "nameKo": "추바 아크폼",
     "team": "Arsenal",
@@ -1746,7 +1638,7 @@
     "price": 2
   },
   {
-    "id": "a195",
+    "id": "a183",
     "name": "글렌 카마라",
     "nameKo": "글렌 카마라",
     "team": "Arsenal",
@@ -1755,7 +1647,7 @@
     "price": 2
   },
   {
-    "id": "a196",
+    "id": "a184",
     "name": "스테피 마비디디",
     "nameKo": "스테피 마비디디",
     "team": "Arsenal",
@@ -1764,7 +1656,7 @@
     "price": 2
   },
   {
-    "id": "a197",
+    "id": "a185",
     "name": "아서 오콘크워",
     "nameKo": "아서 오콘크워",
     "team": "Arsenal",
@@ -1773,25 +1665,7 @@
     "price": 2
   },
   {
-    "id": "a198",
-    "name": "톨라지 볼라",
-    "nameKo": "톨라지 볼라",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 2
-  },
-  {
-    "id": "a199",
-    "name": "제크 메들리",
-    "nameKo": "제크 메들리",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 2
-  },
-  {
-    "id": "a200",
+    "id": "a186",
     "name": "타이리스 존-줄스",
     "nameKo": "타이리스 존-줄스",
     "team": "Arsenal",
@@ -1800,7 +1674,7 @@
     "price": 2
   },
   {
-    "id": "a201",
+    "id": "a187",
     "name": "아모리 비쇼프",
     "nameKo": "아모리 비쇼프",
     "team": "Arsenal",
@@ -1809,7 +1683,7 @@
     "price": 2
   },
   {
-    "id": "a202",
+    "id": "a188",
     "name": "척스 아네케",
     "nameKo": "척스 아네케",
     "team": "Arsenal",
@@ -1818,7 +1692,7 @@
     "price": 2
   },
   {
-    "id": "a203",
+    "id": "a189",
     "name": "다니엘 보아텡",
     "nameKo": "다니엘 보아텡",
     "team": "Arsenal",
@@ -1827,7 +1701,7 @@
     "price": 1
   },
   {
-    "id": "a204",
+    "id": "a190",
     "name": "게디온 젤랄렘",
     "nameKo": "게디온 젤랄렘",
     "team": "Arsenal",
@@ -1836,7 +1710,7 @@
     "price": 1
   },
   {
-    "id": "a205",
+    "id": "a191",
     "name": "크리스 윌록",
     "nameKo": "크리스 윌록",
     "team": "Arsenal",
@@ -1845,16 +1719,7 @@
     "price": 1
   },
   {
-    "id": "a206",
-    "name": "데얀 일리에프",
-    "nameKo": "데얀 일리에프",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "GK",
-    "price": 1
-  },
-  {
-    "id": "a207",
+    "id": "a192",
     "name": "네이선 버틀러-오예데지",
     "nameKo": "네이선 버틀러-오예데지",
     "team": "Arsenal",
@@ -1863,7 +1728,7 @@
     "price": 1
   },
   {
-    "id": "a208",
+    "id": "a193",
     "name": "카탈린 치르얀",
     "nameKo": "카탈린 치르얀",
     "team": "Arsenal",
@@ -1872,7 +1737,7 @@
     "price": 1
   },
   {
-    "id": "a209",
+    "id": "a194",
     "name": "브룩 노턴-커피",
     "nameKo": "브룩 노턴-커피",
     "team": "Arsenal",
@@ -1881,25 +1746,7 @@
     "price": 1
   },
   {
-    "id": "a210",
-    "name": "이나모토 준이치",
-    "nameKo": "이나모토 준이치",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 1
-  },
-  {
-    "id": "a211",
-    "name": "리웰 월터스",
-    "nameKo": "리웰 월터스",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 1
-  },
-  {
-    "id": "a212",
+    "id": "a195",
     "name": "토미 셋포드",
     "nameKo": "토미 셋포드",
     "team": "Arsenal",
@@ -1908,7 +1755,7 @@
     "price": 1
   },
   {
-    "id": "a213",
+    "id": "a196",
     "name": "벤 시프",
     "nameKo": "벤 시프",
     "team": "Arsenal",
@@ -1917,7 +1764,7 @@
     "price": 1
   },
   {
-    "id": "a214",
+    "id": "a197",
     "name": "카욘 에드워즈",
     "nameKo": "카욘 에드워즈",
     "team": "Arsenal",
@@ -1926,7 +1773,7 @@
     "price": 1
   },
   {
-    "id": "a215",
+    "id": "a198",
     "name": "찰스 사고에 주니어",
     "nameKo": "찰스 사고에 주니어",
     "team": "Arsenal",
@@ -1935,34 +1782,7 @@
     "price": 1
   },
   {
-    "id": "a216",
-    "name": "마르쿠스 비니시우스",
-    "nameKo": "마르쿠스 비니시우스",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 1
-  },
-  {
-    "id": "a217",
-    "name": "말디니 카쿠리",
-    "nameKo": "말디니 카쿠리",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "DF",
-    "price": 1
-  },
-  {
-    "id": "a218",
-    "name": "살라-에딘 울라드 음하드",
-    "nameKo": "살라-에딘 울라드 음하드",
-    "team": "Arsenal",
-    "teamKo": "아스널",
-    "position": "MF",
-    "price": 1
-  },
-  {
-    "id": "a219",
+    "id": "a199",
     "name": "제인 몬루이스",
     "nameKo": "제인 몬루이스",
     "team": "Arsenal",
