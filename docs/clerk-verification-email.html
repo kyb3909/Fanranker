@@ -1,0 +1,81 @@
+<!--
+  공놀이(gongnori.fan) 이메일 인증코드 템플릿 — Clerk "Verification code" 이메일용.
+
+  사용법:
+  1. Clerk Dashboard → Customization → Emails → "Verification code" 템플릿 열기
+  2. 우측 상단 코드(</>) 보기로 전환 → 아래 HTML 전체 붙여넣기
+  3. {{otp_code}} 는 Clerk 머지 변수(인증코드). 편집기 변수 목록에 동일 이름이 있는지 확인.
+     (없으면 변수 선택기에서 "OTP code" 를 골라 그 자리에 삽입)
+  4. Subject(제목)도 "[공놀이] 이메일 인증코드" 등으로 변경
+  5. 마스코트 이미지는 배포 후 https://gongnori.fan/mascot/hi-email.png 로 제공됨
+
+  주의: 이메일 클라이언트는 외부 CSS/webp 지원이 제각각이라 테이블+인라인 스타일+PNG 사용.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:0;background:#f1f1f3;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border:1px solid #ebedf0;border-radius:16px;overflow:hidden;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',Arial,sans-serif;">
+
+        <!-- 헤더 밴드 -->
+        <tr>
+          <td align="center" style="background:#961e37;padding:28px 24px 22px;">
+            <img src="https://gongnori.fan/mascot/hi-email.png" width="84" height="84" alt="공놀이 마스코트"
+                 style="display:block;border:0;outline:none;width:84px;height:84px;" />
+            <div style="margin-top:12px;color:#ffffff;font-size:20px;font-weight:800;letter-spacing:-0.02em;">
+              공놀이<span style="color:#ffd96b;">.fan</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- 본문 -->
+        <tr>
+          <td style="padding:32px 32px 8px;">
+            <div style="font-size:18px;font-weight:800;color:#14161a;letter-spacing:-0.02em;">
+              이메일 인증코드입니다
+            </div>
+            <p style="margin:12px 0 0;font-size:14px;line-height:1.7;color:#494d56;">
+              공놀이 가입을 거의 마치셨어요. 아래 인증코드를 입력하면 끝납니다.
+            </p>
+          </td>
+        </tr>
+
+        <!-- 인증코드 박스 -->
+        <tr>
+          <td style="padding:20px 32px 8px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="background:#f6e4e8;border:1px solid #f0d2da;border-radius:12px;padding:20px;">
+                  <div style="font-size:34px;font-weight:900;letter-spacing:10px;color:#961e37;font-family:'Courier New',monospace;">
+                    {{otp_code}}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- 안내 문구 -->
+        <tr>
+          <td style="padding:8px 32px 28px;">
+            <p style="margin:8px 0 0;font-size:12.5px;line-height:1.7;color:#8b93a0;">
+              이 코드는 잠시 후 만료됩니다. 본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.
+            </p>
+          </td>
+        </tr>
+
+        <!-- 푸터 -->
+        <tr>
+          <td align="center" style="border-top:1px solid #ebedf0;padding:20px 24px 24px;">
+            <div style="font-family:'Nanum Pen Script',cursive,'Apple SD Gothic Neo',sans-serif;font-size:15px;color:#5c6470;">
+              그깟 공놀이에 진심인 팬들의 놀이터
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:#aeb9cf;">
+              <a href="https://gongnori.fan" style="color:#961e37;text-decoration:none;font-weight:700;">gongnori.fan</a>
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
