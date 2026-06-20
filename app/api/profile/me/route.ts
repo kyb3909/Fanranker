@@ -18,6 +18,36 @@ const deleteProfileSchema = z.object({
 })
 
 /**
+ * 온보딩 완료 시 미들웨어(onboardingGuard)의 쿠키를 즉시 동기화한다.
+ *
+ * 미들웨어는 신규 유저에게 `onboarding_status=incomplete`(5분) 쿠키를 굽고,
+ * 이후 요청에서 이 쿠키가 있으면 DB 재조회 없이 곧장 /sign-up 으로 단락시킨다.
+ * 완료 후 이 쿠키를 비워주지 않으면, DB 는 완료인데 미들웨어는 미완료로 알고
+ * /↔/sign-up 무한 리다이렉트 루프가 발생한다 (최대 5분).
+ *
+ * → 완료 응답에서 incomplete 쿠키를 삭제하고 done 쿠키를 굽는다.
+ *   (쿠키 속성은 미들웨어 설정과 동일해야 브라우저가 같은 쿠키로 인식한다.)
+ */
+function syncOnboardingCookies(res: NextResponse, onboardingCompleted: boolean | undefined) {
+  if (onboardingCompleted !== true) return
+  const secure = process.env.NODE_ENV === "production"
+  res.cookies.set("onboarding_status", "", {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  })
+  res.cookies.set("onboarding_done", "1", {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  })
+}
+
+/**
  * GET /api/profile/me
  *
  * Get current user's profile
@@ -208,7 +238,9 @@ export async function PATCH(request: NextRequest) {
         console.error("Failed to create profile:", { error: insertError, userId })
         return NextResponse.json({ error: "프로필 생성 중 오류가 발생했습니다." }, { status: 500 })
       }
-      return NextResponse.json(newProfile)
+      const res = NextResponse.json(newProfile)
+      syncOnboardingCookies(res, onboarding_completed)
+      return res
     }
 
     // Case 3: 프로필 존재 — 닉네임 쿨다운 체크
@@ -252,7 +284,9 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(updatedProfile)
+    const res = NextResponse.json(updatedProfile)
+    syncOnboardingCookies(res, onboarding_completed)
+    return res
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error("PATCH /api/profile/me error:", msg)
