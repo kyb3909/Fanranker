@@ -23,7 +23,8 @@ export const dynamic = "force-dynamic"
 
 const NOTICES = [
   "본 이벤트는 gongnori.fan 회원 중 아스날 구너를 대상으로 진행됩니다.",
-  "참가 신청은 월드컵 32강 시작 전까지 가능하며, 신청 후에는 취소·변경이 불가합니다.",
+  "참가 신청은 2026.06.28(일)까지 가능하며, 신청 후에는 취소·변경이 불가합니다.",
+  "정식 점수 집계와 랭킹 반영은 32강 토너먼트부터 시작됩니다.",
   "예측 점수는 무료 볼을 사용한 승부예측 결과를 기준으로 자동 집계됩니다.",
   "부정한 방법(다중 계정 등)으로 참여한 경우 순위에서 제외될 수 있습니다.",
   "경품 이미지는 실제 상품과 다소 차이가 있을 수 있습니다.",
@@ -131,7 +132,7 @@ export default async function WorldcupPage() {
           >
             {[
               ["이벤트 기간", "2026.06.11(목) ~ 결승전 종료"],
-              ["참가 신청", "32강 시작 전까지"],
+              ["참가 신청", "~6.28(일)까지"],
               ["참가 대상", "아스날 팬 누구나"],
             ].map(([k, v], i) => (
               <div
@@ -157,6 +158,30 @@ export default async function WorldcupPage() {
                 </span>
               </div>
             ))}
+          </div>
+
+          {/* 정식 집계 시점 — 못박기 */}
+          <div
+            className="mb-[28px] w-full rounded-xl text-left"
+            style={{
+              background: "var(--wc-wine-tint)",
+              border: "1px solid rgba(150,30,55,.2)",
+              padding: "14px 16px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.65,
+                color: "var(--wc-ink-2)",
+                wordBreak: "keep-all",
+              }}
+            >
+              <b style={{ color: "var(--wc-burgundy)", fontWeight: 800 }}>
+                정식 점수 집계와 랭킹 반영은 32강 토너먼트부터
+              </b>{" "}
+              시작됩니다. 지금 미리 신청해두시면 32강부터 바로 참여하실 수 있어요.
+            </p>
           </div>
 
           {/* 카운트다운 */}
