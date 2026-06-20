@@ -32,14 +32,16 @@ export async function onboardingGuard(
   const { userId } = await auth()
   if (!userId) return null
 
+  // 완료 상태만 쿠키(positive cache, 24h)로 DB 재조회를 건너뛴다.
+  //
+  // 미완료(negative cache)는 캐싱하지 않는다. 과거엔 `onboarding_status=incomplete`
+  // 쿠키가 있으면 DB 재조회 없이 곧장 /sign-up 으로 단락시켰는데, 온보딩 완료 직후
+  // DB 는 완료지만 이 쿠키가 (동기화 실패·쿠키 path 불일치 등으로) 남으면
+  // `/` → /sign-up → (이미 완료라) 빈 화면(null) → `/` … 무한 루프가 발생했다.
+  // negative cache 를 없애 매 요청 DB 로 self-heal 한다. 미완료 유저는 어차피
+  // /sign-up 으로 보내지므로 추가 DB 조회 비용은 무시할 수준이다.
   const onboardingCookie = req.cookies.get("onboarding_done")
   if (onboardingCookie) return null
-
-  // 미완료 상태도 캐싱 — 5분간 DB 재조회 방지
-  const incompleteCookie = req.cookies.get("onboarding_status")
-  if (incompleteCookie?.value === "incomplete") {
-    return NextResponse.redirect(new URL("/sign-up", req.url))
-  }
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -62,14 +64,8 @@ export async function onboardingGuard(
     const isOnboardingIncomplete = profile && profile.onboarding_completed === false
 
     if (isNewUser || isOnboardingIncomplete) {
-      const response = NextResponse.redirect(new URL("/sign-up", req.url))
-      response.cookies.set("onboarding_status", "incomplete", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 5, // 5분간 캐싱
-      })
-      return response
+      // negative cache 없이 매번 DB 로 판정 → 완료 즉시 루프 없이 통과.
+      return NextResponse.redirect(new URL("/sign-up", req.url))
     }
 
     // 온보딩 완료 확인됨 → 쿠키에 캐싱 (24시간)

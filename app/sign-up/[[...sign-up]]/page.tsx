@@ -460,9 +460,17 @@ export default function SignUpPage() {
     )
   }
 
-  // Already onboarded
+  // Already onboarded → 홈으로 보내는 중. null 대신 로더를 그려
+  // (헤더·푸터만 남는) 빈 화면이 보이지 않게 한다. 리다이렉트는 위 useEffect 가 수행.
   if (isSignedIn && profile?.onboarding_completed === true) {
-    return null
+    return (
+      <div className="worldcup-scope flex min-h-screen items-center justify-center">
+        <Loader2
+          className="h-8 w-8 animate-spin"
+          style={{ color: "var(--wc-burgundy, #961E37)" }}
+        />
+      </div>
+    )
   }
 
   return (

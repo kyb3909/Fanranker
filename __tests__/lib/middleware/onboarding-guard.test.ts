@@ -61,51 +61,36 @@ describe("onboarding-guard logic", () => {
   })
 
   // ──────────────────────────────────────────────────────────────
-  // 회귀: 가입 완료 후 /↔/sign-up 무한 리다이렉트 루프 (2026-06-20)
+  // 회귀: 가입 직후 /↔/sign-up 무한 리다이렉트 루프 → 빈 /sign-up(null) 화면 (2026-06-20)
   //
-  // 미들웨어는 `onboarding_status=incomplete` 쿠키가 있으면 DB 재조회 없이
-  // 곧장 /sign-up 으로 단락한다. 완료 시 이 쿠키를 비워주지 않으면 DB 는
-  // 완료인데 미들웨어는 미완료로 알아 영구 루프가 된다.
-  //   → 완료 처리(PATCH /api/profile/me)가 incomplete 쿠키를 삭제하고
-  //     done 쿠키를 굽도록 syncOnboardingCookies 로 수정.
+  // 과거 미들웨어는 `onboarding_status=incomplete` 쿠키(negative cache)가 있으면
+  // DB 재조회 없이 곧장 /sign-up 으로 단락했다. 온보딩 완료 직후 DB 는 완료지만
+  // 이 쿠키가 (동기화 실패·path 불일치 등으로) 남으면, /sign-up 은 "이미 완료"라
+  // null(빈 화면)을 그리고 다시 / 로 보내 무한 루프가 됐다.
+  //   → negative cache 를 제거. 완료 쿠키(positive cache)만 통과시키고,
+  //     그 외에는 항상 DB 로 판정해 self-heal 한다.
   // ──────────────────────────────────────────────────────────────
-  describe("redirect-loop regression — cookie short-circuit", () => {
+  describe("redirect-loop regression — no negative cache", () => {
     type Cookies = { onboarding_done?: string; onboarding_status?: string }
 
-    // 미들웨어 결정 로직 미러 (onboarding-guard.ts:35-42 의 쿠키 단락 부분)
-    function middlewareShortCircuit(cookies: Cookies): "pass" | "redirect" | "check-db" {
+    // 미들웨어 결정 로직 미러 (onboarding-guard.ts 의 쿠키 단락 부분)
+    function middlewareShortCircuit(cookies: Cookies): "pass" | "check-db" {
       if (cookies.onboarding_done) return "pass"
-      if (cookies.onboarding_status === "incomplete") return "redirect"
+      // incomplete 쿠키는 더 이상 단락하지 않는다 → 항상 DB 재확인.
       return "check-db"
     }
 
-    // 완료 처리(PATCH 응답)의 쿠키 동기화 미러 (route.ts syncOnboardingCookies)
-    function applyCompletion(cookies: Cookies): Cookies {
-      const next = { ...cookies }
-      delete next.onboarding_status // maxAge:0 → 삭제
-      next.onboarding_done = "1"
-      return next
-    }
-
-    it("신규 유저는 incomplete 쿠키로 /sign-up 단락된다", () => {
-      expect(middlewareShortCircuit({ onboarding_status: "incomplete" })).toBe("redirect")
+    it("완료 쿠키(done)가 있으면 DB 조회 없이 통과한다", () => {
+      expect(middlewareShortCircuit({ onboarding_done: "1" })).toBe("pass")
     })
 
-    it("완료 후에는 incomplete 쿠키가 사라지고 done 쿠키로 통과한다 (루프 없음)", () => {
-      // 신규 유저 진입 시 미들웨어가 구운 상태
-      const afterEntry: Cookies = { onboarding_status: "incomplete" }
-      // 가입 완료 → 쿠키 동기화
-      const afterComplete = applyCompletion(afterEntry)
-      // 완료 후 / 로 이동 → 미들웨어는 더 이상 /sign-up 으로 보내지 않아야 함
-      expect(afterComplete.onboarding_status).toBeUndefined()
-      expect(afterComplete.onboarding_done).toBe("1")
-      expect(middlewareShortCircuit(afterComplete)).toBe("pass")
+    it("incomplete 쿠키가 남아 있어도 단락하지 않고 DB 로 재확인한다 (self-heal)", () => {
+      // DB 가 완료라면 check-db 단계에서 통과 처리되므로 루프가 생기지 않는다.
+      expect(middlewareShortCircuit({ onboarding_status: "incomplete" })).toBe("check-db")
     })
 
-    it("완료 동기화가 없으면(버그 상태) incomplete 쿠키가 남아 루프가 재현된다", () => {
-      // 회귀 가드: 동기화를 빼면 redirect 로 되돌아간다는 것을 명시
-      const buggy: Cookies = { onboarding_status: "incomplete" } // applyCompletion 미적용
-      expect(middlewareShortCircuit(buggy)).toBe("redirect")
+    it("쿠키가 전혀 없으면 DB 로 판정한다", () => {
+      expect(middlewareShortCircuit({})).toBe("check-db")
     })
   })
 })
