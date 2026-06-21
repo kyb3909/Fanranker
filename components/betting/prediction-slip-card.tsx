@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { ChevronDown, Lock } from "lucide-react"
 import type { PredictionMatch } from "@/types/betting"
-import { sportColorFill, SPORT_ICONS } from "@/types/betting"
+import { sportColorFill } from "@/types/betting"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 
 const SPORT_HEADER_STYLES: Record<string, { bg: string; text: string }> = {
   축구: { bg: "bg-rose-50", text: "text-rose-700" },
@@ -172,7 +173,8 @@ export function PredictionSlipCard({
         <div className="flex items-center gap-2">
           {locked && <Lock className="text-muted-foreground h-3 w-3" />}
           <span className={`font-semibold ${headerStyle.text}`}>
-            {SPORT_ICONS[sport] || "🎯"} {sport}
+            <BoardIcon slug={sport} className="mr-1 inline-block h-3 w-3 align-[-2px]" />
+            {sport}
           </span>
           {date && <span className="text-muted-foreground">{date}</span>}
           <span className="text-muted-foreground">{displayMatchCount}경기</span>

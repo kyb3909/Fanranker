@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Clock, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { GroupedMatch, SelectedBet, SportsGame } from "@/types/betting"
-import { SPORT_ICONS, getGameTypeLabel, formatMatchTime, sportColors } from "@/types/betting"
+import { getGameTypeLabel, formatMatchTime, sportColors } from "@/types/betting"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 
 interface BettingMatchCardProps {
   groupedMatch: GroupedMatch
@@ -232,9 +233,7 @@ export function BettingMatchCard({
     <div className={cn("wc-mrow", hasSelectionFromThisMatch && "selected")}>
       {/* Match Header — 종목별 색 띠 (축구 rose · 야구 blue · 농구 orange · 배구 purple) */}
       <div className={`wc-mrow-head ${headerColor.bg} ${headerColor.text}`}>
-        <span className="text-base" aria-hidden>
-          {SPORT_ICONS[groupedMatch.sport] || "⚽"}
-        </span>
+        <BoardIcon slug={groupedMatch.sport} className="h-[18px] w-[18px]" />
         <span className="wc-mrow-head-lg">{groupedMatch.leagueCode}</span>
         <span className="wc-mrow-head-time">
           <Clock className="h-3.5 w-3.5" />

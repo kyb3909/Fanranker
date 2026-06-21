@@ -1,6 +1,7 @@
 "use client"
 
-import { TrendingUp, Target, Coins } from "lucide-react"
+import { TrendingUp, Target, Coins, LayoutGrid } from "lucide-react"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 import { SPORT_TABS } from "@/types/betting"
 
 interface BettingHeaderProps {
@@ -86,7 +87,11 @@ export function BettingHeader({
                     disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
                     className={sportFilter === tab.id ? "on" : ""}
                   >
-                    <span className="text-base">{tab.icon}</span>
+                    {tab.id === "all" ? (
+                      <LayoutGrid className="h-4 w-4" />
+                    ) : (
+                      <BoardIcon slug={tab.id} className="h-4 w-4" />
+                    )}
                     <span>{tab.label}</span>
                   </button>
                 ))}
@@ -126,7 +131,11 @@ export function BettingHeader({
                     onClick={() => setRankingSportFilter(tab.id)}
                     className={rankingSportFilter === tab.id ? "on" : ""}
                   >
-                    <span className="text-base">{tab.icon}</span>
+                    {tab.id === "전체" ? (
+                      <LayoutGrid className="h-4 w-4" />
+                    ) : (
+                      <BoardIcon slug={tab.id} className="h-4 w-4" />
+                    )}
                     <span>{tab.label}</span>
                   </button>
                 ))}

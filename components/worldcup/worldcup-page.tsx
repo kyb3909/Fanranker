@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Plus, Trophy, Users, Clock } from "lucide-react"
+import { Plus, Trophy, Users, Clock, LayoutGrid } from "lucide-react"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 import { WorldcupView } from "@/components/battle/worldcup-view"
 import { CreateWorldcupDialog } from "@/components/battle/create-worldcup-dialog"
 import type { BattleRoom } from "@/components/battle/battle-types"
@@ -81,7 +82,11 @@ export default function WorldcupPage() {
                 : "bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
-            <span className="text-sm">{cat.icon}</span>
+            {cat.id === "all" ? (
+              <LayoutGrid className="h-4 w-4" />
+            ) : (
+              <BoardIcon slug={cat.id} className="h-4 w-4" />
+            )}
             {cat.label}
           </button>
         ))}

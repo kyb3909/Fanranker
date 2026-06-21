@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Target, BarChart3, Loader2 } from "lucide-react"
 import type { MyStatsData } from "@/types/betting"
-import { SPORT_ICONS } from "@/types/betting"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 
 interface BettingMyStatsProps {
   myStats: MyStatsData | null
@@ -137,12 +137,11 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
           </div>
           <div className="divide-y">
             {myStats.sports.map((sport) => {
-              const icon = SPORT_ICONS[sport.sport] || "🎯"
               return (
                 <div key={sport.sport} className="p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm">{icon}</span>
+                      <BoardIcon slug={sport.sport} className="h-4 w-4" />
                       <span className="text-sm font-semibold">{sport.sport}</span>
                       <span className="text-muted-foreground ml-1 text-[10px]">
                         {sport.correct_predictions}/{sport.total_predictions}적중

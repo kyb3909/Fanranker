@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronDown, ChevronUp, Circle, Loader2, X, Newspaper } from "lucide-react"
 import type { SelectedBet, GroupedMatch } from "@/types/betting"
-import { getGameTypeLabel, formatMatchTime, SPORT_ICONS } from "@/types/betting"
+import { getGameTypeLabel, formatMatchTime } from "@/types/betting"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 
 interface BettingSlipProps {
   selectedBets: SelectedBet[]
@@ -554,7 +555,11 @@ export function BettingSlip({
                     fontWeight: 600,
                   }}
                 >
-                  {SPORT_ICONS[selectedBets[0].sport] || "🎯"} {selectedBets[0].sport}
+                  <BoardIcon
+                    slug={selectedBets[0].sport}
+                    className="mr-1 inline-block h-3 w-3 align-[-2px]"
+                  />
+                  {selectedBets[0].sport}
                 </span>
               )}
             </div>

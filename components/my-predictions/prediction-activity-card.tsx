@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Lock, TrendingUp, Target, Flame, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
 import type { PredictionMatch } from "@/types/betting"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 
 interface PredictionGame {
   home_team_name: string
@@ -73,13 +74,6 @@ const SPORT_LABELS: Record<string, string> = {
   야구: "야구",
   농구: "농구",
   배구: "배구",
-}
-
-const SPORT_EMOJI: Record<string, string> = {
-  축구: "⚽",
-  야구: "⚾",
-  농구: "🏀",
-  배구: "🏐",
 }
 
 /**
@@ -172,7 +166,6 @@ export function PredictionActivityCard({
   }
 
   const sportLabel = SPORT_LABELS[activity.sport] || activity.sport
-  const sportEmoji = SPORT_EMOJI[activity.sport] || "🎯"
   const sportColor = SPORT_COLOR[activity.sport] || SPORT_COLOR_DEFAULT
   const contentUnlocked = isPurchased || isFree
 
@@ -267,7 +260,11 @@ export function PredictionActivityCard({
                 {/* Meta + 상태 pill */}
                 <div className="mb-2.5 flex flex-wrap items-center gap-2">
                   <span className="text-[12px] font-semibold text-gray-500">
-                    {sportEmoji} {sportLabel} {group.matchCount}경기
+                    <BoardIcon
+                      slug={activity.sport}
+                      className="mr-1 inline-block h-3 w-3 align-[-2px]"
+                    />
+                    {sportLabel} {group.matchCount}경기
                   </span>
                   <span
                     className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${

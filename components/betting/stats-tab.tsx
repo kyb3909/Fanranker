@@ -1,7 +1,7 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { SPORT_ICONS } from "@/types/betting"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 import type { CommunityStatsData } from "@/hooks/use-betting-community-stats"
 
 interface StatsTabProps {
@@ -144,14 +144,13 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
           <h3 className="text-foreground mb-3 text-base font-bold">종목별 통계</h3>
           <div className="space-y-2">
             {bySport.map((s) => {
-              const sportIcon = SPORT_ICONS[s.sport] ?? "🎯"
               const sportHouseLosing = s.housePnl < 0
               return (
                 <div
                   key={s.sport}
                   className="bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-lg p-3 transition-colors"
                 >
-                  <span className="text-2xl">{sportIcon}</span>
+                  <BoardIcon slug={s.sport} className="h-6 w-6" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-foreground text-sm font-semibold">{s.sport}</span>

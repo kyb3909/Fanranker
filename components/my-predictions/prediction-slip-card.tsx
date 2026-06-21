@@ -7,9 +7,9 @@ import {
   type SportsSlip,
   type SportsGame,
   getGameTypeLabel,
-  SPORT_ICONS,
   formatMatchTime,
 } from "./prediction-types"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 
 function getOddsCellStyle(
   optionKey: string,
@@ -138,7 +138,7 @@ export function BettingSlipCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {locked && <Lock className="text-muted-foreground h-4 w-4" />}
-            <span className="text-lg">{SPORT_ICONS[slip.sport] || "🎯"}</span>
+            <BoardIcon slug={slip.sport} className="h-5 w-5" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold" style={{ color: "var(--wc-ink)" }}>
