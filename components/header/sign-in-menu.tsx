@@ -84,7 +84,17 @@ export function SignInMenu() {
       const result = await signIn.create({ identifier: email, password })
       if (result.status === "complete") {
         await setActive!({ session: result.createdSessionId })
+        // 홈에서 로그인 시 router.push("/")가 no-op이 되어 화면이 안 바뀌는 문제 방지.
+        // refresh로 서버 컴포넌트(인증 상태)까지 확실히 갱신.
         router.push("/")
+        router.refresh()
+      } else {
+        // status가 "complete"가 아니면(예: 구글로 가입해 비번이 없는 계정, 추가 인증 필요)
+        // 과거엔 아무 처리 없이 조용히 멈춰 "로그인이 안 된다"로 보였다 → 안내 메시지 표시.
+        console.warn("[sign-in] incomplete status:", result.status)
+        setError(
+          "로그인을 완료하지 못했어요. 구글로 가입한 계정이라면 위 'Google로 계속하기'로 로그인해 주세요."
+        )
       }
     } catch (err) {
       setError(getErrorMessage(err))
