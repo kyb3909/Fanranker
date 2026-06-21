@@ -65,6 +65,14 @@ const nextConfig = {
         headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
       },
       {
+        // 서비스워커는 항상 최신으로 — 캐시 금지. 자기소멸(청소) 워커가 다음 접속 즉시
+        // 전파되어, 구버전 화면을 붙들고 있는 옛 SW/캐시를 모든 PC에서 빠르게 정리하게 함.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+        ],
+      },
+      {
         // Cache read-only API responses (posts, profiles, communities)
         source: '/api/(posts|communities|profiles)/:path*',
         headers: [
