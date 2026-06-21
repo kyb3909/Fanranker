@@ -12,7 +12,7 @@ export function EmbedRenderer({ node }: NodeViewProps) {
   const attrs = node.attrs
 
   return (
-    <NodeViewWrapper className="embed-node-wrapper my-4" data-type="embed">
+    <NodeViewWrapper className="embed-node-wrapper my-4 max-w-[520px]" data-type="embed">
       <EmbedCard
         provider={attrs.provider}
         url={attrs.url}
