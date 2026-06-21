@@ -46,6 +46,9 @@ export function SignInMenu() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  // 이메일 코드 2차 인증 단계 (Clerk이 needs_second_factor 반환 시)
+  const [mfaMode, setMfaMode] = useState(false)
+  const [mfaCode, setMfaCode] = useState("")
 
   async function handleGoogleSignIn() {
     if (!isLoaded || !signIn) return
@@ -88,15 +91,48 @@ export function SignInMenu() {
         // refresh로 서버 컴포넌트(인증 상태)까지 확실히 갱신.
         router.push("/")
         router.refresh()
+      } else if (result.status === "needs_second_factor") {
+        // Clerk이 2차 인증을 요구 — 이메일 코드를 보내고 코드 입력 단계로 전환.
+        const emailFactor = result.supportedSecondFactors?.find((f) => f.strategy === "email_code")
+        if (emailFactor && "emailAddressId" in emailFactor) {
+          await signIn.prepareSecondFactor({
+            strategy: "email_code",
+            emailAddressId: emailFactor.emailAddressId,
+          })
+          setMfaMode(true)
+        } else {
+          setError("추가 인증이 필요한 계정이에요. 'Google로 계속하기'를 사용해 주세요.")
+        }
       } else {
-        // status가 "complete"가 아니면 과거엔 조용히 멈춰 "로그인이 안 된다"로 보였다.
-        // → status별 안내 메시지 표시(무반응 방지).
         console.warn("[sign-in] incomplete status:", result.status)
         setError(
-          result.status === "needs_second_factor"
-            ? "2단계 인증(2FA)이 설정된 계정이에요. 2FA를 해제한 뒤 다시 로그인해 주세요."
-            : "로그인을 완료하지 못했어요. 구글로 가입했다면 'Google로 계속하기'를 사용해 주세요."
+          "로그인을 완료하지 못했어요. 구글로 가입했다면 'Google로 계속하기'를 사용해 주세요."
         )
+      }
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 이메일로 받은 2차 인증 코드 확인
+  async function handleVerifyMfa(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isLoaded || !signIn) return
+    setError("")
+    setLoading(true)
+    try {
+      const result = await signIn.attemptSecondFactor({
+        strategy: "email_code",
+        code: mfaCode.trim(),
+      })
+      if (result.status === "complete") {
+        await setActive!({ session: result.createdSessionId })
+        router.push("/")
+        router.refresh()
+      } else {
+        setError("인증코드가 올바르지 않습니다. 다시 시도해 주세요.")
       }
     } catch (err) {
       setError(getErrorMessage(err))
@@ -137,90 +173,135 @@ export function SignInMenu() {
         </div>
 
         <div className="px-6 pb-4">
-          {/* Google OAuth */}
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 w-full gap-3 font-medium"
-            onClick={handleGoogleSignIn}
-            disabled={!isLoaded || googleLoading}
-          >
-            {googleLoading ? (
-              <Spinner className="size-5" />
-            ) : (
-              <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-            )}
-            Google로 계속하기
-          </Button>
-
-          {/* Divider */}
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="border-border w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card text-muted-foreground px-2">or</span>
-            </div>
-          </div>
-
-          {/* Email/Password form */}
-          <form onSubmit={handleEmailSignIn} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="sign-in-email" className="text-sm">
-                이메일 주소
-              </Label>
-              <Input
-                id="sign-in-email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="sign-in-password" className="text-sm">
-                비밀번호
-              </Label>
-              <Input
-                id="sign-in-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            {error && (
-              <p className="text-destructive text-sm" role="alert">
-                {error}
+          {mfaMode ? (
+            /* 이메일 코드 2차 인증 입력 */
+            <form onSubmit={handleVerifyMfa} className="space-y-3">
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                <b className="text-foreground">{email}</b>로 인증코드를 보냈어요. 메일을 확인하고
+                코드를 입력해 주세요.
               </p>
-            )}
+              <div className="space-y-1.5">
+                <Label htmlFor="sign-in-mfa-code" className="text-sm">
+                  인증코드
+                </Label>
+                <Input
+                  id="sign-in-mfa-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="이메일로 받은 코드"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <p className="text-destructive text-sm" role="alert">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={!isLoaded || loading}>
+                {loading ? <Spinner className="size-4" /> : "인증코드 확인"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMfaMode(false)
+                  setMfaCode("")
+                  setError("")
+                }}
+                className="text-muted-foreground hover:text-foreground w-full text-center text-xs"
+              >
+                ← 다른 계정으로 로그인
+              </button>
+            </form>
+          ) : (
+            <>
+              {/* Google OAuth */}
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-full gap-3 font-medium"
+                onClick={handleGoogleSignIn}
+                disabled={!isLoaded || googleLoading}
+              >
+                {googleLoading ? (
+                  <Spinner className="size-5" />
+                ) : (
+                  <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+                    <path
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                      fill="#4285F4"
+                    />
+                    <path
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      fill="#34A853"
+                    />
+                    <path
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      fill="#FBBC05"
+                    />
+                    <path
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      fill="#EA4335"
+                    />
+                  </svg>
+                )}
+                Google로 계속하기
+              </Button>
 
-            <Button type="submit" className="w-full" disabled={!isLoaded || loading}>
-              {loading ? <Spinner className="size-4" /> : "로그인"}
-            </Button>
-          </form>
+              {/* Divider */}
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="border-border w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-card text-muted-foreground px-2">or</span>
+                </div>
+              </div>
+
+              {/* Email/Password form */}
+              <form onSubmit={handleEmailSignIn} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sign-in-email" className="text-sm">
+                    이메일 주소
+                  </Label>
+                  <Input
+                    id="sign-in-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="sign-in-password" className="text-sm">
+                    비밀번호
+                  </Label>
+                  <Input
+                    id="sign-in-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                {error && (
+                  <p className="text-destructive text-sm" role="alert">
+                    {error}
+                  </p>
+                )}
+
+                <Button type="submit" className="w-full" disabled={!isLoaded || loading}>
+                  {loading ? <Spinner className="size-4" /> : "로그인"}
+                </Button>
+              </form>
+            </>
+          )}
 
           {/* Sign up link */}
           <p className="text-muted-foreground mt-4 text-center text-sm">
