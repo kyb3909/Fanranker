@@ -2,11 +2,7 @@
 
 import { useState } from "react"
 import { useSignIn, useSignUp } from "@clerk/nextjs"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -98,8 +94,8 @@ export function SignInMenu() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
@@ -108,9 +104,9 @@ export function SignInMenu() {
         >
           <User className="h-[18px] w-[18px]" aria-hidden="true" />
         </Button>
-      </DropdownMenuTrigger>
+      </PopoverTrigger>
 
-      <DropdownMenuContent
+      <PopoverContent
         align="end"
         className="bg-card border-border mt-2 w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-xl border p-0 shadow-lg"
         onCloseAutoFocus={(e) => e.preventDefault()}
@@ -241,7 +237,7 @@ export function SignInMenu() {
           </Link>
           에 동의한 것으로 간주됩니다.
         </p>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   )
 }
