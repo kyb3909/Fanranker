@@ -1,5 +1,7 @@
 "use client"
 
+import { ThumbsUp, ThumbsDown } from "lucide-react"
+
 interface VoteButtonsProps {
   voteCount: number
   myVote: "up" | "down" | null
@@ -10,6 +12,7 @@ interface VoteButtonsProps {
 export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButtonsProps) {
   const h = size === "md" ? 34 : 26
   const fs = size === "md" ? 13.5 : 12
+  const iconSize = size === "md" ? 17 : 14
 
   return (
     <span
@@ -41,7 +44,7 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         aria-label="추천"
         aria-pressed={myVote === "up"}
       >
-        UP
+        <ThumbsUp size={iconSize} style={{ fill: myVote === "up" ? "currentColor" : "none" }} />
       </button>
       <span
         key={voteCount}
@@ -78,7 +81,7 @@ export function VoteButtons({ voteCount, myVote, onVote, size = "sm" }: VoteButt
         aria-label="비추천"
         aria-pressed={myVote === "down"}
       >
-        DOWN
+        <ThumbsDown size={iconSize} style={{ fill: myVote === "down" ? "currentColor" : "none" }} />
       </button>
     </span>
   )
