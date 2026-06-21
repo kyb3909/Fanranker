@@ -86,23 +86,29 @@ export function PostCardMeta({
     >
       {/* 좌측: 아바타 + 작성자 + 호칭/플레어 + 시간 */}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        {/* 모바일 아바타 — 프로필로 직행 */}
+        {/* 모바일 — 아바타+닉네임 클릭 시 프로필로 직행 */}
         <Link
           href={userId ? `/profile/${userId}` : "#"}
-          className="shrink-0 sm:hidden"
+          className="flex min-w-0 items-center gap-1.5 sm:hidden"
           aria-label={`${author} 프로필`}
         >
           <AvatarSm avatar={avatar} author={author} />
+          <span className="truncate font-bold" style={{ color: "var(--wc-ink)" }}>
+            {author}
+          </span>
         </Link>
-        {/* 데스크톱 아바타 — 드롭다운 */}
+        {/* 데스크톱 — 아바타+닉네임 클릭 시 작성자 메뉴 */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="hidden shrink-0 cursor-pointer sm:block"
+              className="hidden min-w-0 cursor-pointer items-center gap-1.5 sm:flex"
               aria-label={`${author} 메뉴`}
             >
               <AvatarSm avatar={avatar} author={author} />
+              <span className="truncate font-bold" style={{ color: "var(--wc-ink)" }}>
+                {author}
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-44">
@@ -126,10 +132,6 @@ export function PostCardMeta({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <span className="truncate font-bold" style={{ color: "var(--wc-ink)" }}>
-          {author}
-        </span>
 
         {hasTitleBadge && (
           <>
