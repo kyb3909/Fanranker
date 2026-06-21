@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
 
   const raw = request.nextUrl.searchParams.get("url")?.trim()
   if (!raw) return apiBadRequest("url이 필요합니다.")
-  const debug = request.nextUrl.searchParams.get("debug") === "1"
 
   let parsed: URL
   try {
@@ -90,10 +89,8 @@ export async function GET(request: NextRequest) {
   }
 
   const result = await contentTypeOf(parsed.toString())
-  const isImage = !!result && result.ct.startsWith("image/")
-  const payload: Record<string, unknown> = isImage
-    ? { isImage: true, url: result!.finalUrl, contentType: result!.ct }
-    : { isImage: false }
-  if (debug) payload._debug = result ?? { fetch: "failed" }
-  return NextResponse.json(payload)
+  if (result && result.ct.startsWith("image/")) {
+    return NextResponse.json({ isImage: true, url: result.finalUrl, contentType: result.ct })
+  }
+  return NextResponse.json({ isImage: false })
 }
