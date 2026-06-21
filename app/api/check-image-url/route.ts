@@ -34,14 +34,23 @@ function isBlockedHost(host: string): boolean {
   return false
 }
 
-async function contentTypeOf(url: string): Promise<{ ct: string; finalUrl: string } | null> {
+// 일부 이미지 호스트는 UA 없는 데이터센터 요청을 차단 → 브라우저 UA 로 위장
+const FETCH_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+}
+
+async function contentTypeOf(
+  url: string
+): Promise<{ ct: string; finalUrl: string; status: number } | null> {
   // HEAD 우선, 미지원이면 1바이트 Range GET 으로 재시도
   for (const method of ["HEAD", "GET"] as const) {
     try {
       const res = await fetch(url, {
         method,
         redirect: "follow",
-        headers: method === "GET" ? { Range: "bytes=0-0" } : undefined,
+        headers: method === "GET" ? { ...FETCH_HEADERS, Range: "bytes=0-0" } : FETCH_HEADERS,
         signal: AbortSignal.timeout(4500),
       })
       const finalUrl = res.url || url
@@ -51,7 +60,7 @@ async function contentTypeOf(url: string): Promise<{ ct: string; finalUrl: strin
         return null
       }
       const ct = (res.headers.get("content-type") || "").toLowerCase()
-      if (ct) return { ct, finalUrl }
+      if (ct) return { ct, finalUrl, status: res.status }
     } catch {
       // 다음 method 로 재시도
     }
@@ -65,6 +74,7 @@ export async function GET(request: NextRequest) {
 
   const raw = request.nextUrl.searchParams.get("url")?.trim()
   if (!raw) return apiBadRequest("url이 필요합니다.")
+  const debug = request.nextUrl.searchParams.get("debug") === "1"
 
   let parsed: URL
   try {
@@ -80,8 +90,10 @@ export async function GET(request: NextRequest) {
   }
 
   const result = await contentTypeOf(parsed.toString())
-  if (result && result.ct.startsWith("image/")) {
-    return NextResponse.json({ isImage: true, url: result.finalUrl, contentType: result.ct })
-  }
-  return NextResponse.json({ isImage: false })
+  const isImage = !!result && result.ct.startsWith("image/")
+  const payload: Record<string, unknown> = isImage
+    ? { isImage: true, url: result!.finalUrl, contentType: result!.ct }
+    : { isImage: false }
+  if (debug) payload._debug = result ?? { fetch: "failed" }
+  return NextResponse.json(payload)
 }
