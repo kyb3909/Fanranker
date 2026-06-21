@@ -57,33 +57,47 @@ function Basketball({ className }: IconProps) {
   )
 }
 
+/**
+ * slug 또는 한글 이름(축구/야구/…) 둘 다 허용 — 게시판 아이콘 단일 출처.
+ * 곳곳에 흩어진 이모지/맵 대신 이걸 쓰면 사이트 전체 게시판 아이콘이 통일된다.
+ */
 export function BoardIcon({ slug, className }: { slug: string; className?: string }) {
   switch (slug) {
     case "football":
     case "soccer":
     case "overseas-football":
     case "domestic-football":
+    case "축구":
       return <SoccerBall className={className} />
     case "baseball":
+    case "야구":
       return <Baseball className={className} />
     case "basketball":
+    case "농구":
       return <Basketball className={className} />
     case "volleyball":
+    case "배구":
       return <Volleyball className={className} aria-hidden />
     case "game":
     case "esports":
+    case "게임":
       return <Gamepad2 className={className} aria-hidden />
     case "movies":
+    case "영화":
       return <Film className={className} aria-hidden />
     case "music":
+    case "음악":
       return <Music className={className} aria-hidden />
     case "idol":
+    case "아이돌":
       return <Mic className={className} aria-hidden />
     case "anime":
+    case "애니":
       return <Tv className={className} aria-hidden />
     case "free-board":
     case "free":
     case "tips":
+    case "자유":
       return <MessageSquare className={className} aria-hidden />
     default:
       return <Hash className={className} aria-hidden />

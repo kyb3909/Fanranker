@@ -20,6 +20,7 @@ import { canUseOptimizedFeedImage } from "@/lib/image/feed-selector"
 import { extractYouTubeId } from "@/lib/embed/youtube"
 import { useInView } from "@/hooks/use-in-view"
 import { useVisibility } from "@/hooks/use-visibility"
+import { BoardIcon } from "@/components/sidebar/board-icon"
 import type { TipTapNode } from "@/components/post-card"
 import type { PostFlair } from "@/types/post"
 
@@ -101,7 +102,7 @@ export const PostCardContent = memo(function PostCardContent({
                     className="inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
                     style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
                   >
-                    {catChip.emoji && <span aria-hidden>{catChip.emoji}</span>}
+                    <BoardIcon slug={category} className="h-3.5 w-3.5" />
                     {category}
                   </span>
                 </Link>
@@ -110,7 +111,7 @@ export const PostCardContent = memo(function PostCardContent({
                   className="inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
                   style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
                 >
-                  {catChip.emoji && <span aria-hidden>{catChip.emoji}</span>}
+                  <BoardIcon slug={category} className="h-3.5 w-3.5" />
                   {category}
                 </span>
               )}
