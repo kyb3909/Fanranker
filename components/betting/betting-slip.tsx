@@ -91,6 +91,42 @@ export function BettingSlip({
         <p style={{ fontSize: 13, color: "var(--wc-mute)", marginTop: mascotError ? 8 : 0 }}>
           전술 분석 중… 마음 가는 경기를 슬립에 담아보세요
         </p>
+
+        {/* 선택 전에도 오늘 남은 볼을 안내 (베팅 후 잔액 그대로 반영) */}
+        <div
+          style={{
+            marginTop: 16,
+            padding: "10px 16px",
+            background: "var(--wc-soft)",
+            borderRadius: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 13,
+          }}
+        >
+          <span style={{ color: "var(--wc-mute)" }}>오늘 사용 가능한 볼</span>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontWeight: 800,
+              color: "var(--wc-burgundy)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            <Circle
+              style={{
+                width: 12,
+                height: 12,
+                fill: "var(--wc-burgundy)",
+                color: "var(--wc-burgundy)",
+              }}
+            />
+            {userBalls.toLocaleString()}개
+          </span>
+        </div>
       </div>
     )
   }
