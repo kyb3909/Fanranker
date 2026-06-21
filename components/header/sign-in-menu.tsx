@@ -89,11 +89,13 @@ export function SignInMenu() {
         router.push("/")
         router.refresh()
       } else {
-        // status가 "complete"가 아니면(예: 구글로 가입해 비번이 없는 계정, 추가 인증 필요)
-        // 과거엔 아무 처리 없이 조용히 멈춰 "로그인이 안 된다"로 보였다 → 안내 메시지 표시.
+        // status가 "complete"가 아니면 과거엔 조용히 멈춰 "로그인이 안 된다"로 보였다.
+        // → status별 안내 메시지 표시(무반응 방지).
         console.warn("[sign-in] incomplete status:", result.status)
         setError(
-          "로그인을 완료하지 못했어요. 구글로 가입한 계정이라면 위 'Google로 계속하기'로 로그인해 주세요."
+          result.status === "needs_second_factor"
+            ? "2단계 인증(2FA)이 설정된 계정이에요. 2FA를 해제한 뒤 다시 로그인해 주세요."
+            : "로그인을 완료하지 못했어요. 구글로 가입했다면 'Google로 계속하기'를 사용해 주세요."
         )
       }
     } catch (err) {
