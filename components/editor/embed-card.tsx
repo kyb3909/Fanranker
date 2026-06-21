@@ -164,8 +164,11 @@ export function EmbedCard({
       : null
 
   // SWR: YouTube가 아니면서 html prop이 없을 때만 fetch.
+  // 단, X는 저장된 html을 쓰지 않고 fetch한 구조화 데이터(media 포함)로 렌더하므로,
+  // html이 저장돼 있어도 항상 fetch한다. (html 저장된 옛 X글이 상세에서 fallback 링크
+  // 카드만 뜨던 버그 수정 — 피드는 attrs로 그려 정상이라 상세만 깨졌었음)
   // SWR dedup/cache로 같은 URL 다중 embed-card가 있어도 1회만 호출하고 재렌더 시에도 재fetch 안 함.
-  const shouldFetch = !youtubeVideoId && !htmlProp
+  const shouldFetch = !youtubeVideoId && (provider === "x" || !htmlProp)
   const apiUrl = shouldFetch
     ? provider === "x"
       ? `/api/oembed?url=${encodeURIComponent(url)}`
