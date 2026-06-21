@@ -82,8 +82,8 @@ export function BettingSlip({
           <img
             src="/mascot/bet-slip.png"
             alt=""
-            width={128}
-            height={128}
+            width={256}
+            height={256}
             style={{ marginTop: 20, marginBottom: 4, objectFit: "contain" }}
             onError={() => setMascotError(true)}
           />
