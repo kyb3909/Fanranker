@@ -204,14 +204,17 @@ export const CommunitySidebar = memo(function CommunitySidebar({
   const renderCommunityRow = (community: CommunityInfo, isFollowed: boolean, isChannel = false) => (
     <div
       key={community.slug}
-      className={`hover:bg-muted/40 group flex items-center justify-between transition-colors ${
+      className={`hover:bg-muted/40 group relative flex items-center justify-between transition-colors ${
         isChannel ? "py-2 pr-4 pl-10" : "px-4 py-2.5"
       }`}
     >
+      {/* 행 전체를 덮는 클릭 영역 → 게시판 진입 (별 버튼은 위에서 제외) */}
       <Link
         href={`/community/${community.slug}`}
-        className="flex min-w-0 flex-1 items-center gap-3"
-      >
+        className="absolute inset-0"
+        aria-label={`${community.name} 게시판`}
+      />
+      <span className="pointer-events-none flex min-w-0 flex-1 items-center gap-3">
         <span
           className={`flex shrink-0 items-center justify-center rounded ${
             isChannel ? "h-6 w-6" : "h-7 w-7"
@@ -233,14 +236,15 @@ export const CommunitySidebar = memo(function CommunitySidebar({
         >
           {community.name}
         </span>
-      </Link>
+      </span>
       <button
         onClick={(e) => {
           e.preventDefault()
+          e.stopPropagation()
           toggleFollow(community.slug)
         }}
         disabled={togglingSlug === community.slug}
-        className="hover:bg-muted flex-shrink-0 rounded-lg p-2 disabled:opacity-50"
+        className="hover:bg-muted relative z-10 flex-shrink-0 rounded-lg p-2 disabled:opacity-50"
         aria-label={isFollowed ? "즐겨찾기 해제" : "즐겨찾기 추가"}
       >
         {togglingSlug === community.slug ? (

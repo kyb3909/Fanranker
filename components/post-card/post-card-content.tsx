@@ -147,7 +147,7 @@ export const PostCardContent = memo(function PostCardContent({
       {/* 제목 + 본문 + 사이드 썸네일 */}
       <div className={hasSingleImage ? "flex gap-4" : undefined}>
         <div className={hasSingleImage ? "min-w-0 flex-1" : undefined}>
-          {/* 제목 */}
+          {/* 제목 + 본문 — 블록 전체 클릭 시 게시물로 이동 */}
           <Link href={`/post/${postId}`} className="group gn-pin-title block">
             <h2
               title={title}
@@ -162,24 +162,22 @@ export const PostCardContent = memo(function PostCardContent({
             >
               {title}
             </h2>
+            {typeof content === "string" ? (
+              <p
+                className="line-clamp-1 text-[14px]"
+                style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
+              >
+                {content}
+              </p>
+            ) : (
+              <p
+                className="line-clamp-1 text-[14px]"
+                style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
+              >
+                {stripUrlTokens(extractTextFromTipTapJSON(content))}
+              </p>
+            )}
           </Link>
-
-          {/* 본문 */}
-          {typeof content === "string" ? (
-            <p
-              className="line-clamp-1 text-[14px]"
-              style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
-            >
-              {content}
-            </p>
-          ) : (
-            <p
-              className="line-clamp-1 text-[14px]"
-              style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
-            >
-              {stripUrlTokens(extractTextFromTipTapJSON(content))}
-            </p>
-          )}
         </div>
 
         {/* 데스크톱 사이드 썸네일 */}
