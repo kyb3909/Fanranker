@@ -55,10 +55,12 @@ export function SignInMenu() {
     setError("")
     setGoogleLoading(true)
     try {
+      // 로그인 후 보던 페이지로 그대로 복귀
+      const returnTo = window.location.pathname + window.location.search
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/",
+        redirectUrlComplete: returnTo || "/",
       })
     } catch {
       // 계정이 없으면 signIn 실패 → 자동으로 signUp으로 폴백
@@ -87,9 +89,7 @@ export function SignInMenu() {
       const result = await signIn.create({ identifier: email, password })
       if (result.status === "complete") {
         await setActive!({ session: result.createdSessionId })
-        // 홈에서 로그인 시 router.push("/")가 no-op이 되어 화면이 안 바뀌는 문제 방지.
-        // refresh로 서버 컴포넌트(인증 상태)까지 확실히 갱신.
-        router.push("/")
+        // 로그인한 그 페이지에 그대로 머무름 — 이동 없이 인증 상태만 갱신.
         router.refresh()
       } else if (result.status === "needs_second_factor") {
         // Clerk이 2차 인증을 요구 — 이메일 코드를 보내고 코드 입력 단계로 전환.
@@ -129,7 +129,7 @@ export function SignInMenu() {
       })
       if (result.status === "complete") {
         await setActive!({ session: result.createdSessionId })
-        router.push("/")
+        // 로그인한 그 페이지에 그대로 머무름.
         router.refresh()
       } else {
         setError("인증코드가 올바르지 않습니다. 다시 시도해 주세요.")
