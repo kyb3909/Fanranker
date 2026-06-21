@@ -238,6 +238,33 @@ export const EmbedPaste = Extension.create({
               return true
             }
 
+            // 마지막: 확장자 없는 단일 URL → 서버에서 Content-Type 확인해 이미지면 image 노드로 승격.
+            // preventDefault 하지 않아 기본 동작(autolink, 링크)으로 먼저 들어가고, 이미지로
+            // 확인되면 그 블록만 image 노드로 교체. (확장자 있는 이미지는 위에서 이미 처리됨)
+            if (/^https?:\/\//i.test(normalizedUrl)) {
+              const pastedText = trimmedText
+              updateLoading(1)
+              fetch(`/api/check-image-url?url=${encodeURIComponent(normalizedUrl)}`)
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data: { isImage?: boolean; url?: string } | null) => {
+                  if (!data?.isImage || !data.url) return
+                  const st = view.state
+                  const imageType = st.schema.nodes.image
+                  if (!imageType) return
+                  const blockRange = findLoadingBlockRange(st.doc, pastedText)
+                  if (!blockRange) return
+                  view.dispatch(
+                    st.tr.replaceWith(
+                      blockRange.start,
+                      blockRange.end,
+                      imageType.create({ src: data.url, alt: "" })
+                    )
+                  )
+                })
+                .catch(() => {})
+                .finally(() => updateLoading(-1))
+            }
+
             return false
           },
         },
