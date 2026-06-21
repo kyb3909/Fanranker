@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { SectionHeader } from "@/components/section-header"
+import { WORLDCUP_SCORING_STARTS_AT } from "@/lib/worldcup/scoring"
 import {
   LeaderboardClient,
   type LbGroup,
@@ -78,7 +79,9 @@ export default async function WorldcupLeaderboardPage() {
       supabase
         .from("prediction_slips")
         .select("user_id, stake, total_odds, status")
-        .eq("event_id", event.id),
+        .eq("event_id", event.id)
+        // 32강부터 정식 집계 — 그 이전 슬립은 순위에 반영하지 않는다.
+        .gte("created_at", WORLDCUP_SCORING_STARTS_AT),
     ])
     groups = (g ?? []) as GroupRow[]
     registrations = (r ?? []) as RegistrationRow[]

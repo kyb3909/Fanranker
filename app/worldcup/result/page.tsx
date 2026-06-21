@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { WORLDCUP_SCORING_STARTS_AT } from "@/lib/worldcup/scoring"
 
 export const metadata: Metadata = {
   title: "월드컵 이벤트 결과 발표",
@@ -112,7 +113,9 @@ export default async function WorldcupResultPage() {
     supabase
       .from("prediction_slips")
       .select("user_id, stake, total_odds, status")
-      .eq("event_id", event.id),
+      .eq("event_id", event.id)
+      // 32강부터 정식 집계 — 우승자 산정도 리더보드와 동일 기준.
+      .gte("created_at", WORLDCUP_SCORING_STARTS_AT),
   ])
   const groups = (g ?? []) as GroupRow[]
   const registrations = (r ?? []) as RegRow[]

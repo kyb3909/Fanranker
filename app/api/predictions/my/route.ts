@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { isWorldcupScoringSlip } from "@/lib/worldcup/scoring"
 
 /**
  * GET /api/predictions/my
@@ -230,7 +231,12 @@ export async function GET(request: NextRequest) {
         slip: p.slip as unknown as BetmanSlipJoin | null,
       }))
       // ?event 있으면 그 이벤트 슬립만, 없으면 이벤트 슬립 제외 (메인 "내 예측")
-      .filter((p) => (eventId ? p.slip?.event_id === eventId : !p.slip?.event_id)) as BetmanPred[]
+      // 이벤트(월드컵) 한정 시: 정식 집계 시작(32강) 이전 슬립은 제외 → 리더보드와 일치.
+      .filter((p) =>
+        eventId
+          ? p.slip?.event_id === eventId && isWorldcupScoringSlip(p.created_at)
+          : !p.slip?.event_id
+      ) as BetmanPred[]
     const betmanBySlip = new Map<string, BetmanPred[]>()
     for (const pred of betmanPreds) {
       const groupKey = pred.slip_id || pred.round_id || "unknown"
