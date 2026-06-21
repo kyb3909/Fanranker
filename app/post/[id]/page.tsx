@@ -312,7 +312,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           <div className="grid grid-cols-12 gap-6">
             {/* Main Content - 9 columns */}
             <div className="col-span-12 space-y-4 lg:col-span-9">
-              <BackButton />
+              <BackButton fallbackHref={`/community/${postData.community_slug}`} />
 
               {/* Post Detail Content */}
               <PostDetailContent post={post} initialCommentsData={commentsData} />
