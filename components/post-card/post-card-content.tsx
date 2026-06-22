@@ -450,10 +450,7 @@ function YouTubeInlinePlayer({
       sourcePath={sourcePath}
       url={url}
     >
-      <div
-        ref={visRef}
-        className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
-      >
+      <div ref={visRef} className="relative -mx-4 aspect-video w-full overflow-hidden bg-black">
         {playing ? (
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
@@ -604,7 +601,7 @@ function XInlineContent({ url }: { url: string }) {
 
       {/* 미디어 */}
       {firstMedia && (
-        <div className="bg-muted relative mt-2.5 aspect-video w-full overflow-hidden rounded-xl">
+        <div className="bg-muted relative -mx-4 mt-2.5 aspect-video w-full overflow-hidden">
           {firstMedia.type === "photo" ? (
             <button
               type="button"
@@ -695,7 +692,6 @@ function EmbedImageLightbox({ src, onClose }: { src: string; onClose: () => void
 
 /* 공통 ProviderCard — X / Instagram / YouTube 임베드 카드의 outer 프레임. */
 function ProviderCard({
-  accent,
   provider,
   sourceLabel,
   sourcePath,
@@ -711,12 +707,6 @@ function ProviderCard({
 }) {
   return (
     <div className="border-border bg-card relative overflow-hidden border-y">
-      {/* 좌측 4px 액센트 바 */}
-      <span
-        aria-hidden
-        className="absolute top-0 bottom-0 left-0 w-[4px]"
-        style={{ background: accent }}
-      />
       {/* 출처 헤더 */}
       <header
         className="flex items-center gap-2 py-2 pr-3 pl-4 text-[11px] font-bold"
@@ -958,7 +948,7 @@ function InstagramInlineContent({ url }: { url: string }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="bg-muted relative mt-2.5 block aspect-square w-full overflow-hidden rounded-xl"
+          className="bg-muted relative -mx-4 mt-2.5 block aspect-square w-full overflow-hidden"
         >
           <Image
             src={data.thumbnail_url}
