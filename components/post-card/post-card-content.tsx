@@ -450,7 +450,10 @@ function YouTubeInlinePlayer({
       sourcePath={sourcePath}
       url={url}
     >
-      <div ref={visRef} className="relative -mx-4 aspect-video w-full overflow-hidden bg-black">
+      <div
+        ref={visRef}
+        className="relative -mx-4 aspect-video w-[calc(100%_+_2rem)] overflow-hidden bg-black"
+      >
         {playing ? (
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
@@ -601,7 +604,7 @@ function XInlineContent({ url }: { url: string }) {
 
       {/* 미디어 */}
       {firstMedia && (
-        <div className="bg-muted relative -mx-4 mt-2.5 aspect-video w-full overflow-hidden">
+        <div className="bg-muted relative -mx-4 mt-2.5 aspect-video w-[calc(100%_+_2rem)] overflow-hidden">
           {firstMedia.type === "photo" ? (
             <button
               type="button"
@@ -948,7 +951,7 @@ function InstagramInlineContent({ url }: { url: string }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="bg-muted relative -mx-4 mt-2.5 block aspect-square w-full overflow-hidden"
+          className="bg-muted relative -mx-4 mt-2.5 block aspect-square w-[calc(100%_+_2rem)] overflow-hidden"
         >
           <Image
             src={data.thumbnail_url}
