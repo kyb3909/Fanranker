@@ -556,10 +556,6 @@ function XInlineContent({ url }: { url: string }) {
   }
 
   const firstMedia = data.media?.[0]
-  // oembed.author_name 형태 예: "Erling Haaland (@ErlingHaaland)" → 이름만 추출
-  const displayName =
-    data.author_name?.replace(/\s*\(@.*\)\s*$/, "").trim() ||
-    (realHandle ? `@${realHandle}` : "X 사용자")
 
   return (
     <ProviderCard
@@ -569,36 +565,6 @@ function XInlineContent({ url }: { url: string }) {
       sourcePath={realHandle ? `@${realHandle}` : null}
       url={url}
     >
-      {/* 작성자 행 */}
-      <div className="flex items-center gap-2.5">
-        {data.author_avatar ? (
-          <Image
-            src={data.author_avatar}
-            alt=""
-            width={36}
-            height={36}
-            className="h-9 w-9 shrink-0 rounded-full object-cover"
-            unoptimized
-            onError={(e) => {
-              ;(e.currentTarget as HTMLImageElement).style.display = "none"
-            }}
-          />
-        ) : (
-          <div
-            aria-hidden
-            className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-900"
-          />
-        )}
-        <div className="flex min-w-0 flex-1 items-center gap-1">
-          <span className="text-foreground truncate text-[14px] font-extrabold">{displayName}</span>
-          <VerifyBadge />
-          {realHandle && (
-            <span className="text-muted-foreground ml-0.5 truncate text-[12px]">@{realHandle}</span>
-          )}
-        </div>
-        <XIcon className="text-foreground h-[18px] w-[18px] shrink-0" />
-      </div>
-
       {/* 트윗 텍스트 — 해시태그/멘션/링크 #1d9bf0 컬러 */}
       {data.title && (
         <p className="text-foreground mt-2.5 text-[14px] leading-[1.5] whitespace-pre-wrap">
@@ -771,17 +737,6 @@ function ProviderBadge({ provider }: { provider: "x" | "instagram" | "youtube" }
     >
       <Play className="ml-[1px] h-[8px] w-[8px] fill-white text-white" />
     </span>
-  )
-}
-
-function VerifyBadge() {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-[#1d9bf0]">
-      <path
-        fill="currentColor"
-        d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334-4.334 6.5c-.144.216-.382.348-.638.355h-.018c-.25 0-.485-.115-.64-.314l-2.156-2.785c-.272-.351-.21-.857.14-1.128.354-.272.86-.21 1.128.141l1.49 1.928 3.815-5.92c.255-.376.755-.473 1.13-.218.378.255.474.755.218 1.13z"
-      />
-    </svg>
   )
 }
 
