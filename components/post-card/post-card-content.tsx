@@ -869,24 +869,16 @@ function InstagramInlineContent({ url }: { url: string }) {
 
   if (isLoading) return <EmbedSkeleton provider="instagram" />
 
-  // 출처 = oembed author_name(FB 토큰 시) 또는 URL 유저명(instagram.com/{username}/p/...)
-  const username = url.match(/instagram\.com\/([\w.]+)\/(?:p|reel|tv)\//i)?.[1] ?? null
-  const author = data?.author_name?.replace(/^@/, "").trim() || username
-  const sourcePath = author ? `@${author}` : null
-
-  if (!data) {
-    return (
-      <ProviderCard
-        accent="#dc2743"
-        provider="instagram"
-        sourceLabel="Instagram에서 퍼온 게시물"
-        sourcePath={sourcePath}
-        url={url}
-      >
-        <p className="text-muted-foreground text-sm">게시물을 불러올 수 없습니다.</p>
-      </ProviderCard>
-    )
+  // 담벼락에선 우리 헤더(원본 가기) 없이 embed.js 로 IG 게시물만 렌더.
+  // (썸네일이 있는 경우 = FB 토큰 설정 시에만 헤더 + 이미지 + 캡션 커스텀 카드)
+  if (!data?.thumbnail_url) {
+    return <InstagramJsEmbed url={url} />
   }
+
+  // 출처 = oembed author_name 또는 URL 유저명
+  const username = url.match(/instagram\.com\/([\w.]+)\/(?:p|reel|tv)\//i)?.[1] ?? null
+  const author = data.author_name?.replace(/^@/, "").trim() || username
+  const sourcePath = author ? `@${author}` : null
 
   return (
     <ProviderCard
