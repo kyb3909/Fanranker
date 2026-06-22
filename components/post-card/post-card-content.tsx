@@ -537,6 +537,9 @@ function XInlineContent({ url }: { url: string }) {
   }
 
   const handle = url.match(/(?:twitter\.com|x\.com)\/(\w+)\/status/i)?.[1] ?? null
+  // x.com/i/status 형태는 URL handle 이 "i"(placeholder) → author_name 의 실제 @핸들 우선
+  const authorHandle = data?.author_name?.match(/\(@(\w+)\)/)?.[1]
+  const realHandle = authorHandle || (handle && handle !== "i" ? handle : null)
 
   if (!data) {
     return (
@@ -544,7 +547,7 @@ function XInlineContent({ url }: { url: string }) {
         accent="#000000"
         provider="x"
         sourceLabel="X (Twitter)에서 퍼온 게시물"
-        sourcePath={handle ? `x.com/${handle}` : null}
+        sourcePath={realHandle ? `@${realHandle}` : null}
         url={url}
       >
         <p className="text-muted-foreground text-sm">트윗을 불러올 수 없습니다.</p>
@@ -555,7 +558,8 @@ function XInlineContent({ url }: { url: string }) {
   const firstMedia = data.media?.[0]
   // oembed.author_name 형태 예: "Erling Haaland (@ErlingHaaland)" → 이름만 추출
   const displayName =
-    data.author_name?.replace(/\s*\(@.*\)\s*$/, "").trim() || (handle ? `@${handle}` : "X 사용자")
+    data.author_name?.replace(/\s*\(@.*\)\s*$/, "").trim() ||
+    (realHandle ? `@${realHandle}` : "X 사용자")
 
   return (
     <ProviderCard
@@ -588,8 +592,8 @@ function XInlineContent({ url }: { url: string }) {
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <span className="text-foreground truncate text-[14px] font-extrabold">{displayName}</span>
           <VerifyBadge />
-          {handle && (
-            <span className="text-muted-foreground ml-0.5 truncate text-[12px]">@{handle}</span>
+          {realHandle && (
+            <span className="text-muted-foreground ml-0.5 truncate text-[12px]">@{realHandle}</span>
           )}
         </div>
         <XIcon className="text-foreground h-[18px] w-[18px] shrink-0" />
@@ -696,7 +700,6 @@ function EmbedImageLightbox({ src, onClose }: { src: string; onClose: () => void
 /* 공통 ProviderCard — X / Instagram / YouTube 임베드 카드의 outer 프레임. */
 function ProviderCard({
   provider,
-  sourceLabel,
   sourcePath,
   url,
   children,
@@ -720,14 +723,8 @@ function ProviderCard({
         }}
       >
         <ProviderBadge provider={provider} />
-        <span>{sourceLabel}</span>
         {sourcePath && (
-          <>
-            <span aria-hidden style={{ color: "var(--wc-mute)", fontWeight: 400 }}>
-              ·
-            </span>
-            <span style={{ color: "var(--wc-mute)", fontWeight: 600 }}>{sourcePath}</span>
-          </>
+          <span style={{ color: "var(--wc-ink)", fontWeight: 700 }}>{sourcePath}</span>
         )}
         <a
           href={url}
@@ -737,7 +734,7 @@ function ProviderCard({
           className="ml-auto inline-flex items-center gap-0.5 transition-opacity hover:opacity-70"
           style={{ color: "var(--wc-mute)" }}
         >
-          원본 보기
+          원본 가기
           <ExternalLink className="h-3 w-3" />
         </a>
       </header>
