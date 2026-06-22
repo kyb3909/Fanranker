@@ -2,6 +2,7 @@
 
 import React, { memo } from "react"
 import { PostCard } from "@/components/post-card"
+import { extractFirstEmbedFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { Loader2, Compass } from "lucide-react"
 import Link from "@/components/ui/app-link"
@@ -29,6 +30,21 @@ export const FeedSection = memo(function FeedSection({
 
   // 차단한 유저의 글은 피드에서 숨김 (댓글 섹션과 동일한 클라이언트 필터)
   const visiblePosts = posts.filter((p) => !p.userId || !isBlocked(p.userId))
+
+  // Instagram 임베드는 embed.js 가 iframe 을 동적으로 self-resize → content-visibility:auto 의
+  // size containment 와 충돌해 스크롤 시 임베드가 collapse/사라짐. 해당 카드만 content-visibility 제외.
+  const igEmbedIds = React.useMemo(() => {
+    const ids = new Set<Post["id"]>()
+    for (const p of posts) {
+      if (
+        typeof p.content === "object" &&
+        extractFirstEmbedFromTipTapJSON(p.content)?.attrs.provider === "instagram"
+      ) {
+        ids.add(p.id)
+      }
+    }
+    return ids
+  }, [posts])
 
   if (isLoading) {
     return (
@@ -119,7 +135,7 @@ export const FeedSection = memo(function FeedSection({
           {/* 첫 3개(above-the-fold)는 즉시 렌더, 나머지는 지연 */}
           <div
             style={
-              index >= 3
+              index >= 3 && !igEmbedIds.has(post.id)
                 ? { contentVisibility: "auto", containIntrinsicSize: "auto 400px" }
                 : undefined
             }
