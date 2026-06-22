@@ -29,6 +29,8 @@ const pretendard = localFont({
   display: "swap",
   variable: "--font-pretendard",
   weight: "45 920",
+  // size-adjust/ascent 폴백 메트릭 자동 생성 → Pretendard swap 시 본문 텍스트 리플로우(CLS) 최소화.
+  adjustFontFallback: "Arial",
 })
 
 // 제목/디스플레이 한글 폰트: SUIT (정적 wght=700 인스턴스).
@@ -49,7 +51,8 @@ const nanumPen = Nanum_Pen_Script({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-pen",
-  display: "swap",
+  // 푸터 장식용 브러시 폰트 — optional 로 swap 리플로우(CLS) 제거 (첫 방문 fallback 허용).
+  display: "optional",
   preload: false,
 })
 

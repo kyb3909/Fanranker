@@ -887,7 +887,7 @@ function InstagramJsEmbed({ url }: { url: string }) {
   return (
     <div
       ref={containerRef}
-      className="-mx-4 mt-1 [&_.instagram-media]:!mx-auto [&_.instagram-media]:!my-0"
+      className="-mx-4 mt-1 min-h-[700px] [&_.instagram-media]:!mx-auto [&_.instagram-media]:!my-0"
     />
   )
 }
@@ -979,8 +979,13 @@ function InstagramInlineContent({ url }: { url: string }) {
 /* ── 통일 스켈레톤 (로드 전 플레이스홀더) ── */
 
 function EmbedSkeleton({ provider }: { provider: "x" | "instagram" }) {
+  // Instagram 임베드(embed.js iframe)는 ~700~880px 로 뜸 → 스켈레톤에 높이 예약해 로드 시 밀림(CLS) 최소화.
   return (
-    <div className="bg-muted flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg">
+    <div
+      className={`bg-muted flex w-full items-center justify-center overflow-hidden rounded-lg ${
+        provider === "instagram" ? "min-h-[700px]" : "aspect-video"
+      }`}
+    >
       <div className="flex flex-col items-center gap-2">
         {provider === "x" ? (
           <XIcon className="text-muted-foreground/30 h-10 w-10" />
