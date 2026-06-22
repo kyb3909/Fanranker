@@ -290,7 +290,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
   }
 
   return (
-    <div className="border-border bg-card overflow-hidden border-y">
+    <div className="border-border bg-card overflow-hidden border-t">
       {/*
         사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-cover.
         width/height prop 기반으로는 Next.js가 자연 비율 불일치 경고(지속 발생)를 피할 수 없음.
