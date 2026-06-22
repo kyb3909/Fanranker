@@ -59,6 +59,7 @@ interface PostCardContentProps {
       author_name?: string
     }
   } | null
+  firstVideoSrc?: string | null
   image?: string
   priority: boolean
   category?: string
@@ -75,6 +76,7 @@ export const PostCardContent = memo(function PostCardContent({
   displayImage,
   imageSources,
   firstEmbed,
+  firstVideoSrc,
   image,
   priority,
   category,
@@ -83,7 +85,7 @@ export const PostCardContent = memo(function PostCardContent({
   temperature,
   timestamp,
 }: PostCardContentProps) {
-  const hasSingleImage = !!displayImage && !firstEmbed && imageSources.length <= 1
+  const hasSingleImage = !!displayImage && !firstEmbed && !firstVideoSrc && imageSources.length <= 1
   const catChip = CATEGORY_CHIP[category ?? ""] ?? CHIP_FALLBACK
 
   return (
@@ -191,8 +193,12 @@ export const PostCardContent = memo(function PostCardContent({
         )}
       </div>
 
-      {/* 미디어 (임베드 · 캐러셀 · 모바일 단일이미지) */}
-      {firstEmbed && !image ? (
+      {/* 미디어 (동영상 · 임베드 · 캐러셀 · 모바일 단일이미지) */}
+      {firstVideoSrc ? (
+        <div className="mt-2.5">
+          <FeedVideoPlayer src={firstVideoSrc} />
+        </div>
+      ) : firstEmbed && !image ? (
         <div className="mt-2.5">
           {firstEmbed.attrs.provider === "youtube" ? (
             <YouTubeInlinePlayer
@@ -381,6 +387,21 @@ function FeedImageCarousel({
           {safeIndex + 1} / {total}
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ── 동영상 인라인 플레이어 (피드) ── */
+function FeedVideoPlayer({ src }: { src: string }) {
+  return (
+    <div className="relative aspect-video max-h-[480px] w-full overflow-hidden rounded-xl bg-black">
+      <video
+        src={src}
+        controls
+        preload="metadata"
+        playsInline
+        className="absolute inset-0 h-full w-full"
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { isProbablyDirectImageUrl } from "@/lib/image-paste-url"
+import { isProbablyDirectImageUrl, isProbablyDirectVideoUrl } from "@/lib/image-paste-url"
 
 /** TipTap JSON 노드의 기본 구조 */
 interface TipTapJsonNode {
@@ -199,4 +199,35 @@ export function extractAllImageSrcsFromTipTapJSON(content: unknown): string[] {
 
   visit(content)
   return results
+}
+
+/**
+ * TipTap JSON에서 첫 번째 동영상 src (피드 인라인 플레이어용).
+ * video 노드 + 텍스트로 남은 직접 mp4/webm URL(기능 배포 전 옛 글) 둘 다 감지.
+ */
+export function extractFirstVideoSrcFromTipTapJSON(content: unknown): string | null {
+  if (!content || typeof content !== "object") return null
+  const node = content as {
+    type?: string
+    text?: string
+    marks?: { type?: string; attrs?: { href?: string } }[]
+    attrs?: { src?: string }
+    content?: unknown[]
+  }
+  if (node.type === "video" && typeof node.attrs?.src === "string" && node.attrs.src) {
+    return node.attrs.src
+  }
+  if (node.type === "text") {
+    const rawText = typeof node.text === "string" ? node.text.trim() : ""
+    if (isProbablyDirectVideoUrl(rawText)) return rawText
+    const linkHref = node.marks?.find((mark) => mark.type === "link")?.attrs?.href?.trim()
+    if (linkHref && isProbablyDirectVideoUrl(linkHref)) return linkHref
+  }
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) {
+      const found = extractFirstVideoSrcFromTipTapJSON(child)
+      if (found) return found
+    }
+  }
+  return null
 }

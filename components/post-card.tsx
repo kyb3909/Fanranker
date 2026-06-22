@@ -6,6 +6,7 @@ import { openReport } from "@/hooks/use-report-dialog"
 import {
   extractAllImageSrcsFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
+  extractFirstVideoSrcFromTipTapJSON,
 } from "@/lib/utils/tiptap-embeds"
 import { usePostCardActions } from "@/hooks/use-post-card-actions"
 import { PostCardContent } from "@/components/post-card/post-card-content"
@@ -58,6 +59,8 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   const communityLink = post.communitySlug || post.community
   const firstEmbed =
     typeof post.content === "object" ? extractFirstEmbedFromTipTapJSON(post.content) : null
+  const firstVideoSrc =
+    typeof post.content === "object" ? extractFirstVideoSrcFromTipTapJSON(post.content) : null
   const contentImages =
     typeof post.content === "object" ? extractAllImageSrcsFromTipTapJSON(post.content) : []
   const imageSources = contentImages.length > 0 ? contentImages : post.image ? [post.image] : []
@@ -81,6 +84,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             displayImage={displayImage}
             imageSources={imageSources}
             firstEmbed={firstEmbed}
+            firstVideoSrc={firstVideoSrc}
             image={post.image}
             priority={priority}
             category={post.community}
