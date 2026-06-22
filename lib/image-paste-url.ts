@@ -3,6 +3,7 @@
  */
 
 const IMAGE_EXT_PATH = /\.(jpe?g|png|gif|webp|avif|bmp)(\?[^#]*)?(#.*)?$/i
+const VIDEO_EXT_PATH = /\.(mp4|webm|mov|m4v|ogv)(\?[^#]*)?(#.*)?$/i
 
 /** 경로가 일반적인 이미지 확장자로 끝나는 http(s) URL */
 export function isProbablyDirectImageUrl(raw: string): boolean {
@@ -10,6 +11,17 @@ export function isProbablyDirectImageUrl(raw: string): boolean {
     const u = new URL(raw.trim())
     if (u.protocol !== "http:" && u.protocol !== "https:") return false
     return IMAGE_EXT_PATH.test(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+/** 경로가 일반적인 동영상 확장자(mp4/webm 등)로 끝나는 http(s) URL */
+export function isProbablyDirectVideoUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw.trim())
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false
+    return VIDEO_EXT_PATH.test(u.pathname)
   } catch {
     return false
   }

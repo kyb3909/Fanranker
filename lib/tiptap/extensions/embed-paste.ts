@@ -1,7 +1,11 @@
 import { Extension } from "@tiptap/core"
 import type { Node as PMNode } from "@tiptap/pm/model"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
-import { isProbablyDirectImageUrl, needsOembedImageResolve } from "@/lib/image-paste-url"
+import {
+  isProbablyDirectImageUrl,
+  isProbablyDirectVideoUrl,
+  needsOembedImageResolve,
+} from "@/lib/image-paste-url"
 
 /** 로딩 텍스트의 인라인 범위 (텍스트→텍스트 교체용) */
 function findLoadingTextRange(doc: PMNode, loadingText: string) {
@@ -194,6 +198,16 @@ export const EmbedPaste = Extension.create({
               return true
             }
 
+            // mp4/webm 등 직접 동영상 URL → video 노드 (레딧처럼 인라인 플레이어)
+            if (isProbablyDirectVideoUrl(normalizedUrl)) {
+              const videoType = view.state.schema.nodes.video
+              if (!videoType) return false
+              event.preventDefault()
+              const vNode = videoType.create({ src: normalizedUrl })
+              view.dispatch(view.state.tr.replaceSelectionWith(vNode))
+              return true
+            }
+
             if (needsOembedImageResolve(normalizedUrl)) {
               event.preventDefault()
               const loadingText = "⏳ 이미지 불러오는 중..."
@@ -246,20 +260,17 @@ export const EmbedPaste = Extension.create({
               updateLoading(1)
               fetch(`/api/check-image-url?url=${encodeURIComponent(normalizedUrl)}`)
                 .then((res) => (res.ok ? res.json() : null))
-                .then((data: { isImage?: boolean; url?: string } | null) => {
-                  if (!data?.isImage || !data.url) return
+                .then((data: { isImage?: boolean; isVideo?: boolean; url?: string } | null) => {
+                  if (!data?.url || (!data.isImage && !data.isVideo)) return
                   const st = view.state
-                  const imageType = st.schema.nodes.image
-                  if (!imageType) return
+                  const nodeType = data.isImage ? st.schema.nodes.image : st.schema.nodes.video
+                  if (!nodeType) return
                   const blockRange = findLoadingBlockRange(st.doc, pastedText)
                   if (!blockRange) return
-                  view.dispatch(
-                    st.tr.replaceWith(
-                      blockRange.start,
-                      blockRange.end,
-                      imageType.create({ src: data.url, alt: "" })
-                    )
-                  )
+                  const node = data.isImage
+                    ? nodeType.create({ src: data.url, alt: "" })
+                    : nodeType.create({ src: data.url })
+                  view.dispatch(st.tr.replaceWith(blockRange.start, blockRange.end, node))
                 })
                 .catch(() => {})
                 .finally(() => updateLoading(-1))

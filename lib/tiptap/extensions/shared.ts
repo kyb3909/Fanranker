@@ -14,6 +14,7 @@ import StarterKit from "@tiptap/starter-kit"
 import TextAlign from "@tiptap/extension-text-align"
 import TiptapImage from "@tiptap/extension-image"
 import { Embed } from "./embed"
+import { Video } from "./video"
 
 interface SharedExtensionsOptions {
   /** 에디터에서만 필요 (붙여넣기된 base64 이미지 허용 여부). 뷰어는 의미 없음. */
@@ -36,5 +37,6 @@ export function createSharedTipTapExtensions(options: SharedExtensionsOptions = 
       allowBase64: options.imageAllowBase64 ?? false,
     }),
     Embed.configure({ HTMLAttributes: { class: "embed-node" } }),
+    Video,
   ]
 }

@@ -89,8 +89,13 @@ export async function GET(request: NextRequest) {
   }
 
   const result = await contentTypeOf(parsed.toString())
-  if (result && result.ct.startsWith("image/")) {
-    return NextResponse.json({ isImage: true, url: result.finalUrl, contentType: result.ct })
+  if (result) {
+    if (result.ct.startsWith("image/")) {
+      return NextResponse.json({ isImage: true, url: result.finalUrl, contentType: result.ct })
+    }
+    if (result.ct.startsWith("video/")) {
+      return NextResponse.json({ isVideo: true, url: result.finalUrl, contentType: result.ct })
+    }
   }
   return NextResponse.json({ isImage: false })
 }
