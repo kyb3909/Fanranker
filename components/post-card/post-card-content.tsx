@@ -538,7 +538,7 @@ function XInlineContent({ url }: { url: string }) {
 
   const handle = url.match(/(?:twitter\.com|x\.com)\/(\w+)\/status/i)?.[1] ?? null
   // x.com/i/status 형태는 URL handle 이 "i"(placeholder) → author_name 의 실제 @핸들 우선
-  const authorHandle = data?.author_name?.match(/\(@(\w+)\)/)?.[1]
+  const authorHandle = data?.author_name?.match(/\(@?(\w+)\)/)?.[1]
   const realHandle = authorHandle || (handle && handle !== "i" ? handle : null)
 
   if (!data) {
@@ -566,7 +566,7 @@ function XInlineContent({ url }: { url: string }) {
       accent="#000000"
       provider="x"
       sourceLabel="X (Twitter)에서 퍼온 게시물"
-      sourcePath={handle ? `x.com/${handle}` : null}
+      sourcePath={realHandle ? `@${realHandle}` : null}
       url={url}
     >
       {/* 작성자 행 */}
