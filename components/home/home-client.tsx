@@ -10,21 +10,12 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
+// 사이드바는 SSR 프리페치 데이터로 즉시 렌더되므로 직접 import.
+// dynamic() 로 감싸면 하이드레이션 시 loading 스켈레톤(h-96)이 잠깐 떴다가 실제 사이드바로
+// 되돌아오며 광고 박스가 ~365px 밀리는 CLS 발생 → 직접 import 로 그 시프트 제거.
+import { CommunitySidebar } from "@/components/sidebar/community-sidebar"
+import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 
-const CommunitySidebar = dynamic(
-  () =>
-    import("@/components/sidebar/community-sidebar").then((m) => ({ default: m.CommunitySidebar })),
-  {
-    loading: () => <div className="wc-skeleton h-96 rounded-lg" />,
-  }
-)
-const ActivitySidebar = dynamic(
-  () =>
-    import("@/components/sidebar/activity-sidebar").then((m) => ({ default: m.ActivitySidebar })),
-  {
-    loading: () => <div className="wc-skeleton h-96 rounded-lg" />,
-  }
-)
 const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
