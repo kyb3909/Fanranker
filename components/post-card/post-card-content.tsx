@@ -193,43 +193,45 @@ export const PostCardContent = memo(function PostCardContent({
         )}
       </div>
 
-      {/* 미디어 (동영상 · 임베드 · 캐러셀 · 모바일 단일이미지) */}
-      {firstVideoSrc ? (
-        <div className="mt-2.5">
-          <FeedVideoPlayer src={firstVideoSrc} />
-        </div>
-      ) : firstEmbed && !image ? (
-        <div className="mt-2.5">
-          {firstEmbed.attrs.provider === "youtube" ? (
-            <YouTubeInlinePlayer
-              url={firstEmbed.attrs.url}
-              thumbnail_url={firstEmbed.attrs.thumbnail_url}
-              title={firstEmbed.attrs.title}
-              author_name={firstEmbed.attrs.author_name}
-              priority={priority}
-            />
-          ) : firstEmbed.attrs.provider === "x" ? (
-            <LazyXInlinePreview url={firstEmbed.attrs.url} />
-          ) : firstEmbed.attrs.provider === "instagram" ? (
-            <LazyInstagramPreview url={firstEmbed.attrs.url} />
-          ) : null}
-        </div>
-      ) : displayImage ? (
-        imageSources.length > 1 ? (
+      {/* 미디어 — 카드 좌우 꽉 차게 (가로 패딩 -mx-5 로 밖으로) */}
+      <div className="-mx-5">
+        {firstVideoSrc ? (
           <div className="mt-2.5">
-            <FeedImageCarousel
-              postId={postId}
-              title={title}
-              imageSources={imageSources}
-              priority={priority}
-            />
+            <FeedVideoPlayer src={firstVideoSrc} />
           </div>
-        ) : (
-          <Link href={`/post/${postId}`} className="mt-2.5 block sm:hidden">
-            <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
-          </Link>
-        )
-      ) : null}
+        ) : firstEmbed && !image ? (
+          <div className="mt-2.5">
+            {firstEmbed.attrs.provider === "youtube" ? (
+              <YouTubeInlinePlayer
+                url={firstEmbed.attrs.url}
+                thumbnail_url={firstEmbed.attrs.thumbnail_url}
+                title={firstEmbed.attrs.title}
+                author_name={firstEmbed.attrs.author_name}
+                priority={priority}
+              />
+            ) : firstEmbed.attrs.provider === "x" ? (
+              <LazyXInlinePreview url={firstEmbed.attrs.url} />
+            ) : firstEmbed.attrs.provider === "instagram" ? (
+              <LazyInstagramPreview url={firstEmbed.attrs.url} />
+            ) : null}
+          </div>
+        ) : displayImage ? (
+          imageSources.length > 1 ? (
+            <div className="mt-2.5">
+              <FeedImageCarousel
+                postId={postId}
+                title={title}
+                imageSources={imageSources}
+                priority={priority}
+              />
+            </div>
+          ) : (
+            <Link href={`/post/${postId}`} className="mt-2.5 block sm:hidden">
+              <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
+            </Link>
+          )
+        ) : null}
+      </div>
     </div>
   )
 })
@@ -288,7 +290,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
   }
 
   return (
-    <div className="border-border bg-card overflow-hidden border" style={{ borderRadius: 10 }}>
+    <div className="border-border bg-card overflow-hidden border-y">
       {/*
         사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-cover.
         width/height prop 기반으로는 Next.js가 자연 비율 불일치 경고(지속 발생)를 피할 수 없음.
@@ -394,7 +396,7 @@ function FeedImageCarousel({
 /* ── 동영상 인라인 플레이어 (피드) ── */
 function FeedVideoPlayer({ src }: { src: string }) {
   return (
-    <div className="relative aspect-video max-h-[480px] w-full overflow-hidden rounded-xl bg-black">
+    <div className="relative aspect-video max-h-[480px] w-full overflow-hidden bg-black">
       <video
         src={src}
         controls
@@ -708,7 +710,7 @@ function ProviderCard({
   children: ReactNode
 }) {
   return (
-    <div className="border-border bg-card relative overflow-hidden rounded-xl border">
+    <div className="border-border bg-card relative overflow-hidden border-y">
       {/* 좌측 4px 액센트 바 */}
       <span
         aria-hidden
