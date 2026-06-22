@@ -258,8 +258,15 @@ function WriteContent() {
                           }`}
                           style={{
                             backgroundColor:
-                              editor.selectedFlair === f.id ? f.color : `${f.color}15`,
-                            color: editor.selectedFlair === f.id ? "white" : f.color,
+                              editor.selectedFlair === f.id
+                                ? "var(--wc-burgundy)"
+                                : "var(--wc-card, #fff)",
+                            color: editor.selectedFlair === f.id ? "white" : "var(--wc-ink)",
+                            border: "1px solid",
+                            borderColor:
+                              editor.selectedFlair === f.id
+                                ? "var(--wc-burgundy)"
+                                : "var(--wc-line)",
                           }}
                         >
                           {f.name}
@@ -281,7 +288,6 @@ function WriteContent() {
                     <div className="flex flex-wrap gap-1.5">
                       {editor.teamFlairs.map((t) => {
                         const selected = editor.selectedTeamFlair === t.teamId
-                        const color = t.color || "#666666"
                         return (
                           <button
                             key={t.teamId}
@@ -303,11 +309,13 @@ function WriteContent() {
                               selected ? "text-white shadow-sm" : "hover:opacity-80"
                             }`}
                             style={{
-                              backgroundColor: selected ? color : `${color}15`,
-                              color: selected ? "white" : color,
+                              backgroundColor: selected
+                                ? "var(--wc-burgundy)"
+                                : "var(--wc-card, #fff)",
+                              color: selected ? "white" : "var(--wc-ink)",
                               borderWidth: 1,
                               borderStyle: "solid",
-                              borderColor: selected ? color : `${color}40`,
+                              borderColor: selected ? "var(--wc-burgundy)" : "var(--wc-line)",
                             }}
                             title={t.teamName}
                           >
