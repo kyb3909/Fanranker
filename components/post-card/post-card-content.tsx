@@ -18,6 +18,7 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { RelativeTime } from "@/components/ui/relative-time"
 import { canUseOptimizedFeedImage } from "@/lib/image/feed-selector"
 import { extractYouTubeId } from "@/lib/embed/youtube"
+import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 import { useInView } from "@/hooks/use-in-view"
 import { useVisibility } from "@/hooks/use-visibility"
 import { BoardIcon } from "@/components/sidebar/board-icon"
@@ -840,6 +841,25 @@ function LazyInstagramPreview({ url }: { url: string }) {
   )
 }
 
+/** 피드 IG 임베드 — 썸네일 없을 때(FB 토큰 미설정) embed.js 로 실제 게시물 렌더 */
+function InstagramJsEmbed({ url }: { url: string }) {
+  const m = url.match(/(?:p|reel|tv)\/([\w-]+)/)
+  const isReel = url.includes("/reel/")
+  const permalink = m ? `https://www.instagram.com/${isReel ? "reel" : "p"}/${m[1]}/` : url
+  useEffect(() => {
+    const t = setTimeout(() => loadInstagramEmbedJs(() => processInstagramEmbeds()), 0)
+    return () => clearTimeout(t)
+  }, [permalink])
+  return (
+    <div
+      className="-mx-4 mt-1 [&_.instagram-media]:!mx-auto [&_.instagram-media]:!my-0"
+      dangerouslySetInnerHTML={{
+        __html: `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="margin:0 auto;max-width:540px;min-width:280px;width:100%"></blockquote>`,
+      }}
+    />
+  )
+}
+
 function InstagramInlineContent({ url }: { url: string }) {
   const { data, isLoading } = useSWR<InstagramOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}`,
@@ -918,20 +938,8 @@ function InstagramInlineContent({ url }: { url: string }) {
           />
         </a>
       ) : (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="mt-2.5 flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl no-underline"
-          style={{
-            height: 200,
-            background: "linear-gradient(135deg, #f09433 0%, #dc2743 50%, #bc1888 100%)",
-          }}
-        >
-          <InstagramIcon className="h-8 w-8 text-white/80" />
-          <span className="text-[13px] font-semibold text-white/90">Instagram에서 보기</span>
-        </a>
+        /* 썸네일 없으면(FB 토큰 미설정) embed.js 로 실제 게시물 렌더 */
+        <InstagramJsEmbed url={url} />
       )}
 
       {/* 캡션 */}
