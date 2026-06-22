@@ -208,10 +208,10 @@ export const CommunityContent = memo(function CommunityContent({
                           padding: "0 14px",
                           fontSize: 13,
                           fontWeight: 700,
-                          background: !activeFlairId ? "var(--wc-burgundy)" : "var(--wc-card)",
+                          background: !activeFlairId ? "var(--wc-ink)" : "var(--wc-card)",
                           color: !activeFlairId ? "white" : "var(--wc-mute)",
                           border: !activeFlairId
-                            ? "1px solid var(--wc-burgundy)"
+                            ? "1px solid var(--wc-ink)"
                             : "1px solid var(--wc-line-2)",
                         }}
                       >
@@ -227,12 +227,11 @@ export const CommunityContent = memo(function CommunityContent({
                             padding: "0 14px",
                             fontSize: 13,
                             fontWeight: 700,
-                            backgroundColor:
-                              activeFlairId === f.id ? "var(--wc-burgundy)" : "#ffffff",
+                            backgroundColor: activeFlairId === f.id ? "var(--wc-ink)" : "#ffffff",
                             color: activeFlairId === f.id ? "#ffffff" : "var(--wc-mute)",
                             border:
                               activeFlairId === f.id
-                                ? "1px solid var(--wc-burgundy)"
+                                ? "1px solid var(--wc-ink)"
                                 : "1px solid var(--wc-line-2)",
                           }}
                         >

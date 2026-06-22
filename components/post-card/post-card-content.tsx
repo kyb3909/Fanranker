@@ -126,8 +126,8 @@ export const PostCardContent = memo(function PostCardContent({
             <span
               className="inline-flex h-6 items-center px-2 text-[11.5px] font-bold"
               style={{
-                background: "var(--wc-soft)",
-                color: flair.color ?? "var(--wc-burgundy)",
+                background: "#eef0f3",
+                color: "var(--wc-mute)",
                 borderRadius: 6,
               }}
             >
