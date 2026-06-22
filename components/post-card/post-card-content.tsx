@@ -215,7 +215,7 @@ export const PostCardContent = memo(function PostCardContent({
                 priority={priority}
               />
             ) : firstEmbed.attrs.provider === "x" ? (
-              <LazyXInlinePreview url={firstEmbed.attrs.url} />
+              <LazyXInlinePreview url={firstEmbed.attrs.url} priority={priority} />
             ) : firstEmbed.attrs.provider === "instagram" ? (
               <LazyInstagramPreview url={firstEmbed.attrs.url} />
             ) : null}
@@ -529,15 +529,18 @@ function buildTwitterVideoProxyUrl(url: string) {
   return `/api/media-proxy?url=${encodeURIComponent(url)}`
 }
 
-function LazyXInlinePreview({ url }: { url: string }) {
+function LazyXInlinePreview({ url, priority }: { url: string; priority?: boolean }) {
   const { ref, inView } = useInView()
-
+  // priority(above-the-fold) 카드는 inView 게이트를 건너뛰고 즉시 렌더 → oembed 즉시 fetch + LCP 이미지 eager.
+  const show = priority || inView
   return (
-    <div ref={ref}>{inView ? <XInlineContent url={url} /> : <EmbedSkeleton provider="x" />}</div>
+    <div ref={ref}>
+      {show ? <XInlineContent url={url} priority={priority} /> : <EmbedSkeleton provider="x" />}
+    </div>
   )
 }
 
-function XInlineContent({ url }: { url: string }) {
+function XInlineContent({ url, priority }: { url: string; priority?: boolean }) {
   const { data, isLoading } = useSWR<XOEmbedData | null>(
     `/api/oembed?url=${encodeURIComponent(url)}`,
     oembedFetcher,
@@ -605,6 +608,7 @@ function XInlineContent({ url }: { url: string }) {
                 fill
                 className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                 sizes="(max-width: 640px) 100vw, 560px"
+                priority={priority}
                 unoptimized
                 onError={(e) => {
                   ;(e.currentTarget as HTMLImageElement).style.display = "none"
@@ -614,6 +618,7 @@ function XInlineContent({ url }: { url: string }) {
           ) : (
             <XVideoPlayer
               media={firstMedia as { type: "video"; url: string; thumbnail_url?: string }}
+              priority={priority}
             />
           )}
         </div>
@@ -777,8 +782,10 @@ function renderTweetText(text: string) {
 
 function XVideoPlayer({
   media,
+  priority,
 }: {
   media: { type: "video"; url: string; thumbnail_url?: string }
+  priority?: boolean
 }) {
   const [playing, setPlaying] = useState(false)
   const [videoError, setVideoError] = useState(false)
@@ -820,6 +827,7 @@ function XVideoPlayer({
               src={media.thumbnail_url}
               alt=""
               fill
+              priority={priority}
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 560px"
               onError={(e) => {

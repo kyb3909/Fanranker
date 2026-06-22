@@ -140,8 +140,8 @@ export const FeedSection = memo(function FeedSection({
                 : undefined
             }
           >
-            {/* LCP 후보가 첫 카드가 아닐 수 있음(첫 카드에 이미지 없으면 2번째가 LCP). 상위 2개에 priority. */}
-            <PostCard post={post} priority={index < 2} />
+            {/* LCP 후보가 첫 카드가 아닐 수 있음(텍스트/iframe 카드가 앞서면 3번째가 LCP). 상위 3개에 priority. */}
+            <PostCard post={post} priority={index < 3} />
           </div>
           {(index + 1) % 7 === 0 && <AdPlaceholder variant="banner" />}
         </React.Fragment>
