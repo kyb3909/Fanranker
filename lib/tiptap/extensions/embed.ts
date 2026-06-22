@@ -7,7 +7,7 @@ interface EmbedOptions {
 }
 
 interface EmbedAttributes {
-  provider: "youtube" | "instagram" | "x"
+  provider: "youtube" | "instagram" | "x" | "streamable"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요
   title?: string

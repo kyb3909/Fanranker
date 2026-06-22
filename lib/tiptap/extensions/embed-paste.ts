@@ -54,12 +54,13 @@ const URL_PATTERNS = {
     /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/,
   x: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/,
+  streamable: /(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:[eosm]\/)?([a-zA-Z0-9]+)/,
 }
 
 /**
  * Detect if a URL matches any supported oEmbed provider
  */
-function detectProvider(url: string): "youtube" | "instagram" | "x" | null {
+function detectProvider(url: string): "youtube" | "instagram" | "x" | "streamable" | null {
   if (URL_PATTERNS.youtube.test(url)) {
     return "youtube"
   }
@@ -68,6 +69,9 @@ function detectProvider(url: string): "youtube" | "instagram" | "x" | null {
   }
   if (URL_PATTERNS.x.test(url)) {
     return "x"
+  }
+  if (URL_PATTERNS.streamable.test(url)) {
+    return "streamable"
   }
   return null
 }

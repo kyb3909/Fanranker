@@ -9,7 +9,7 @@ interface EmbedMedia {
 }
 
 interface OEmbedResponse {
-  provider: "youtube" | "instagram" | "x"
+  provider: "youtube" | "instagram" | "x" | "streamable"
   url: string
   html?: string
   title?: string
@@ -40,6 +40,8 @@ const ALLOWED_HOSTS = new Set([
   "www.twitter.com",
   "x.com",
   "www.x.com",
+  "streamable.com",
+  "www.streamable.com",
 ])
 
 /**
@@ -50,12 +52,13 @@ const URL_PATTERNS = {
     /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/,
   x: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/,
+  streamable: /(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:[eosm]\/)?([a-zA-Z0-9]+)/,
 }
 
 /**
  * Detect which provider a URL belongs to
  */
-function detectProvider(url: string): "youtube" | "instagram" | "x" | null {
+function detectProvider(url: string): "youtube" | "instagram" | "x" | "streamable" | null {
   if (URL_PATTERNS.youtube.test(url)) {
     return "youtube"
   }
@@ -65,7 +68,22 @@ function detectProvider(url: string): "youtube" | "instagram" | "x" | null {
   if (URL_PATTERNS.x.test(url)) {
     return "x"
   }
+  if (URL_PATTERNS.streamable.test(url)) {
+    return "streamable"
+  }
   return null
+}
+
+/**
+ * Streamable 임베드 — 별도 oEmbed API 호출 없이 shortcode 로 iframe 직접 구성.
+ * 실제 플레이어 iframe(streamable.com/e/{id})은 EmbedCard 가 url 로 만든다.
+ */
+function buildStreamableEmbed(url: string): OEmbedResponse {
+  const match = url.match(URL_PATTERNS.streamable)
+  if (!match) {
+    throw new Error("Invalid Streamable URL")
+  }
+  return { provider: "streamable", url }
 }
 
 /**
@@ -360,6 +378,9 @@ export async function GET(request: NextRequest) {
           break
         case "x":
           oembedData = await fetchXOEmbed(url, includeHtml)
+          break
+        case "streamable":
+          oembedData = buildStreamableEmbed(url)
           break
         default:
           return NextResponse.json({ error: "Unsupported provider" }, { status: 422 })

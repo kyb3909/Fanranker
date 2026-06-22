@@ -9,7 +9,7 @@ import { ExternalLink, Loader2, Play } from "lucide-react"
 import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 
 /** 플랫폼 BI 헤더 스트립 */
-function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" }) {
+function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" | "streamable" }) {
   const configs = {
     youtube: {
       bg: "var(--wc-card, #ffffff)",
@@ -61,6 +61,20 @@ function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" }
         </svg>
       ),
       borderBottom: "none",
+    },
+    streamable: {
+      bg: "var(--wc-card, #ffffff)",
+      iconColor: "#0F90FA",
+      label: "Streamable",
+      labelColor: "var(--wc-mute, #5C6470)",
+      source: "streamable.com",
+      sourceMuted: true,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l7 4.5-7 4.5z" />
+        </svg>
+      ),
+      borderBottom: "1px solid var(--wc-line, #E2E5EA)",
     },
   } as const
 
@@ -122,7 +136,7 @@ function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" }
 }
 
 interface EmbedCardProps {
-  provider: "youtube" | "instagram" | "x"
+  provider: "youtube" | "instagram" | "x" | "streamable"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요
   title?: string
@@ -163,12 +177,19 @@ export function EmbedCard({
         )?.[1]
       : null
 
+  // Streamable: shortcode 추출 → iframe 직접 렌더 (oEmbed/html 불필요)
+  const streamableId =
+    provider === "streamable"
+      ? url.match(/streamable\.com\/(?:[eosm]\/)?([a-zA-Z0-9]+)/)?.[1]
+      : null
+
   // SWR: YouTube가 아니면서 html prop이 없을 때만 fetch.
   // 단, X는 저장된 html을 쓰지 않고 fetch한 구조화 데이터(media 포함)로 렌더하므로,
   // html이 저장돼 있어도 항상 fetch한다. (html 저장된 옛 X글이 상세에서 fallback 링크
   // 카드만 뜨던 버그 수정 — 피드는 attrs로 그려 정상이라 상세만 깨졌었음)
   // SWR dedup/cache로 같은 URL 다중 embed-card가 있어도 1회만 호출하고 재렌더 시에도 재fetch 안 함.
-  const shouldFetch = !youtubeVideoId && (provider === "x" || !htmlProp)
+  const shouldFetch =
+    !youtubeVideoId && provider !== "streamable" && (provider === "x" || !htmlProp)
   const apiUrl = shouldFetch
     ? provider === "x"
       ? `/api/oembed?url=${encodeURIComponent(url)}`
@@ -209,6 +230,42 @@ export function EmbedCard({
               {author_name && <p className="text-muted-foreground mt-1 text-xs">{author_name}</p>}
             </div>
           )}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Streamable: shortcode 로 iframe 직접 렌더 (레딧 클립처럼 인라인 플레이어)
+  if (provider === "streamable") {
+    if (!streamableId) {
+      return (
+        <Card className={cn("border-border bg-card border", className)}>
+          <CardContent className="p-4">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary text-sm break-all hover:underline"
+            >
+              {url}
+            </a>
+          </CardContent>
+        </Card>
+      )
+    }
+    return (
+      <Card className={cn("border-border overflow-hidden border", className)}>
+        <CardContent className="p-0">
+          <PlatformBadge platform="streamable" />
+          <div className="relative aspect-video w-full bg-black">
+            <iframe
+              src={`https://streamable.com/e/${streamableId}`}
+              title="Streamable video"
+              className="absolute inset-0 h-full w-full border-0"
+              allow="autoplay; fullscreen"
+              allowFullScreen
+            />
+          </div>
         </CardContent>
       </Card>
     )
