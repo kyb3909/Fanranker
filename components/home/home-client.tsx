@@ -77,6 +77,22 @@ export function HomeClient({
   }, [searchParams])
   const [sortBy, setSortBy] = useState<SortType>("hot")
 
+  // 정렬을 URL ?sort= 에 보존 → 새로고침·뒤로가기 시 선택한 정렬 유지
+  useEffect(() => {
+    const s = searchParams.get("sort")
+    if (s === "new" || s === "hot" || s === "random") setSortBy(s)
+  }, [searchParams])
+
+  const changeSort = (key: SortType) => {
+    setSortBy(key)
+    const params = new URLSearchParams(searchParams.toString())
+    if (key === "hot")
+      params.delete("sort") // 기본값은 URL 깔끔하게
+    else params.set("sort", key)
+    const qs = params.toString()
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false })
+  }
+
   // SWR로 팔로우 커뮤니티 로드 (community-sidebar와 캐시 공유)
   const { data: followsData, mutate: mutateFollows } = useSWR(
     isSignedIn ? "/api/community/follows" : null,
@@ -213,7 +229,7 @@ export function HomeClient({
                     ].map(({ key, label }) => (
                       <button
                         key={key}
-                        onClick={() => setSortBy(key)}
+                        onClick={() => changeSort(key)}
                         aria-pressed={sortBy === key}
                         className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${sortBy !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
                         style={{
