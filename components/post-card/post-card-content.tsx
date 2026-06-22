@@ -862,16 +862,24 @@ function InstagramJsEmbed({ url }: { url: string }) {
   const m = url.match(/(?:p|reel|tv)\/([\w-]+)/)
   const isReel = url.includes("/reel/")
   const permalink = m ? `https://www.instagram.com/${isReel ? "reel" : "p"}/${m[1]}/` : url
+  const containerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const t = setTimeout(() => loadInstagramEmbedJs(() => processInstagramEmbeds()), 0)
-    return () => clearTimeout(t)
+    const el = containerRef.current
+    if (!el) return
+    // blockquote 를 React 밖에서 ref 로 직접 주입한다.
+    // dangerouslySetInnerHTML 로 두면 피드 리렌더(무한스크롤 revalidateFirstPage 등) 시 React 가
+    // innerHTML 을 다시 적용 → embed.js 가 만든 iframe 을 raw blockquote 로 덮어쓰고, useEffect
+    // 는 [permalink] 불변이라 재실행 안 돼 재처리도 안 됨 → 임베드가 height 0 으로 사라짐.
+    // 직접 주입하면 React 가 div 내부를 reconcile 하지 않아 iframe 이 리렌더에도 유지됨.
+    if (!el.querySelector(".instagram-media")) {
+      el.innerHTML = `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="margin:0 auto;max-width:540px;min-width:280px;width:100%"></blockquote>`
+    }
+    loadInstagramEmbedJs(() => processInstagramEmbeds())
   }, [permalink])
   return (
     <div
+      ref={containerRef}
       className="-mx-4 mt-1 [&_.instagram-media]:!mx-auto [&_.instagram-media]:!my-0"
-      dangerouslySetInnerHTML={{
-        __html: `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="margin:0 auto;max-width:540px;min-width:280px;width:100%"></blockquote>`,
-      }}
     />
   )
 }
