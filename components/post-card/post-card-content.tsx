@@ -678,7 +678,7 @@ function ProviderCard({
   children: ReactNode
 }) {
   return (
-    <div className="border-border bg-card relative overflow-hidden border-y">
+    <div className="border-border bg-card relative overflow-hidden border-t">
       {/* 출처 헤더 */}
       <header
         className="flex items-center gap-2 py-2 pr-3 pl-4 text-[11px] font-bold"

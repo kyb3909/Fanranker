@@ -80,6 +80,8 @@ export function PostCardMeta({
       style={{
         color: "var(--wc-mute)",
         marginTop: 12,
+        paddingTop: 12,
+        borderTop: "1px solid var(--wc-line)",
       }}
     >
       {/* 좌측: 아바타 + 작성자 + 호칭/플레어 + 시간 */}
