@@ -899,22 +899,24 @@ function InstagramInlineContent({ url }: { url: string }) {
       sourcePath={sourcePath}
       url={url}
     >
-      {/* 작성자 행 — 그라데이션 링 아바타 + 닉네임 + 옵션 버튼 */}
-      <div className="flex items-center gap-2.5">
-        <div
-          aria-hidden
-          className="h-9 w-9 shrink-0 rounded-full p-[2px]"
-          style={{ background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)" }}
-        >
-          <div className="bg-card flex h-full w-full items-center justify-center rounded-full">
-            <InstagramIcon className="h-4 w-4 text-[#dc2743]" />
+      {/* 작성자 행 — 썸네일 미리보기일 때만 (embed.js 임베드는 자체 헤더 보유) */}
+      {data.thumbnail_url && (
+        <div className="flex items-center gap-2.5">
+          <div
+            aria-hidden
+            className="h-9 w-9 shrink-0 rounded-full p-[2px]"
+            style={{ background: "linear-gradient(135deg, #f09433, #dc2743, #bc1888)" }}
+          >
+            <div className="bg-card flex h-full w-full items-center justify-center rounded-full">
+              <InstagramIcon className="h-4 w-4 text-[#dc2743]" />
+            </div>
           </div>
+          <span className="text-foreground min-w-0 flex-1 truncate text-[13px] font-bold">
+            {author || "instagram_user"}
+          </span>
+          <MoreHorizontal className="text-muted-foreground h-5 w-5 shrink-0" />
         </div>
-        <span className="text-foreground min-w-0 flex-1 truncate text-[13px] font-bold">
-          {author || "instagram_user"}
-        </span>
-        <MoreHorizontal className="text-muted-foreground h-5 w-5 shrink-0" />
-      </div>
+      )}
 
       {/* 미디어 — 클릭 시 원본 IG로 이동 */}
       {data.thumbnail_url ? (
@@ -942,8 +944,8 @@ function InstagramInlineContent({ url }: { url: string }) {
         <InstagramJsEmbed url={url} />
       )}
 
-      {/* 캡션 */}
-      {data.title && (
+      {/* 캡션 — 썸네일 미리보기일 때만 */}
+      {data.thumbnail_url && data.title && (
         <p className="text-foreground mt-2.5 line-clamp-3 text-[13px] leading-[1.5]">
           {author && <span className="font-bold">{author} </span>}
           {data.title}
