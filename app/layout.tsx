@@ -89,6 +89,15 @@ export const metadata: Metadata = {
   },
   description: SITE_CONFIG.description,
   keywords: SITE_CONFIG.keywords,
+  // PWA / AdSense 계정 메타 — 수동 <head> 제거(Metadata API 충돌)에 따라 metadata 로 이전.
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "공놀이판",
+    ...(process.env.NEXT_PUBLIC_ADSENSE_ID
+      ? { "google-adsense-account": process.env.NEXT_PUBLIC_ADSENSE_ID }
+      : {}),
+  },
   openGraph: {
     type: "website",
     siteName: SITE_CONFIG.name,
@@ -155,15 +164,13 @@ export default function RootLayout({
           className={`${pretendard.variable} ${suit.variable} ${nanumPen.variable}`}
           suppressHydrationWarning
         >
-          <head>
-            {/* Google AdSense 계정 메타 태그 */}
-            {process.env.NEXT_PUBLIC_ADSENSE_ID && (
-              <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_ID} />
-            )}
-            {/* PWA: standalone 모드 */}
-            <meta name="mobile-web-app-capable" content="yes" />
-            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-            <meta name="apple-mobile-web-app-title" content="공놀이판" />
+          {/*
+            수동 <head> 제거: App Router 에서 명시적 <head> JSX 는 Metadata API 출력
+            (title/description/og/twitter/canonical/manifest)을 통째로 덮어써 누락시킴.
+            아래 link/Script 는 React 19 + Next 15 가 자동으로 <head>로 hoist.
+            PWA / AdSense 계정 메타는 위 metadata.other 로 이전.
+          */}
+          <body className="safe-area-pb-tabbar font-sans antialiased" suppressHydrationWarning>
             {/* Preconnect: 크리티컬 외부 리소스 (DNS+TCP+TLS 선연결) */}
             <link
               rel="preconnect"
@@ -187,8 +194,6 @@ export default function RootLayout({
                 }}
               />
             )}
-          </head>
-          <body className="safe-area-pb-tabbar font-sans antialiased" suppressHydrationWarning>
             <script
               type="application/ld+json"
               dangerouslySetInnerHTML={{
