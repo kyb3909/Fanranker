@@ -24,6 +24,14 @@ const STRICT_CSP_REPORT_ONLY = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next.js 15 스트리밍 메타데이터: 일반 UA는 메타데이터(description/og/canonical 등)를 <body>로
+  // 스트림하고 브라우저가 <head>로 hoist. 아래 매칭 봇은 blocking 렌더 → 메타데이터를 <head>에
+  // 직접 출력(JS 미실행 스크래퍼·링크 미리보기 대응).
+  // 값 = Next 기본 htmlLimitedBots 목록 + 한국 봇(Naver Yeti / KakaoTalk / Daum).
+  //   기본 목록엔 한국 봇이 없어 카카오톡 미리보기·네이버 검색이 메타데이터를 못 받았음.
+  //   Next 업그레이드 시 기본 목록 변동분 재확인 필요.
+  htmlLimitedBots:
+    /Googlebot|Mediapartners-Google|AdsBot-Google|googleweblight|Storebot-Google|Google-PageRenderer|Google-InspectionTool|Bingbot|BingPreview|Slurp|DuckDuckBot|baiduspider|yandex|sogou|LinkedInBot|bitlybot|tumblr|vkShare|quora link preview|facebookexternalhit|facebookcatalog|Twitterbot|applebot|redditbot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|ia_archiver|Yeti|kakaotalk-scrap|Daumoa/i,
   // Lighthouse Best Practices: 소스맵은 개발환경에서만 사용
   async headers() {
     return [
