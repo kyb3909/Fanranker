@@ -259,14 +259,12 @@ function WriteContent() {
                           style={{
                             backgroundColor:
                               editor.selectedFlair === f.id
-                                ? "var(--wc-burgundy)"
+                                ? "var(--wc-ink)"
                                 : "var(--wc-card, #fff)",
                             color: editor.selectedFlair === f.id ? "white" : "var(--wc-ink)",
                             border: "1px solid",
                             borderColor:
-                              editor.selectedFlair === f.id
-                                ? "var(--wc-burgundy)"
-                                : "var(--wc-line)",
+                              editor.selectedFlair === f.id ? "var(--wc-ink)" : "var(--wc-line)",
                           }}
                         >
                           {f.name}
@@ -309,13 +307,11 @@ function WriteContent() {
                               selected ? "text-white shadow-sm" : "hover:opacity-80"
                             }`}
                             style={{
-                              backgroundColor: selected
-                                ? "var(--wc-burgundy)"
-                                : "var(--wc-card, #fff)",
+                              backgroundColor: selected ? "var(--wc-ink)" : "var(--wc-card, #fff)",
                               color: selected ? "white" : "var(--wc-ink)",
                               borderWidth: 1,
                               borderStyle: "solid",
-                              borderColor: selected ? "var(--wc-burgundy)" : "var(--wc-line)",
+                              borderColor: selected ? "var(--wc-ink)" : "var(--wc-line)",
                             }}
                             title={t.teamName}
                           >
