@@ -48,6 +48,11 @@ const ContentSection = dynamic(
   }
 )
 
+// 홈 피드는 전체(유니버설) — 로그인 유저도 팔로우 필터 미적용.
+// 서버 SSR(전체 hot)과 동일 키 → 클라 재요청/피드 리렌더(CLS) 방지 + ISR 캐시 유지.
+// 개인화는 개별 게시판(/community/[slug])에서. (HotPostToast는 followedCommunities를 따로 사용.)
+const EMPTY_FOLLOWS = new Set<string>()
+
 type TabType = "feed" | "content"
 
 interface HomeClientProps {
@@ -108,8 +113,6 @@ export function HomeClient({
       (followsData.communities || []).map((c: { community_slug: string }) => c.community_slug)
     )
   }, [isSignedIn, followsData])
-  const followsLoaded = !isSignedIn || !!followsData
-
   useEffect(() => {
     const handler = () => {
       mutateFollows()
@@ -118,11 +121,11 @@ export function HomeClient({
     return () => window.removeEventListener("communityFollowChanged", handler)
   }, [mutateFollows])
 
-  // 피드 데이터 훅 (서버에서 받은 초기 데이터 전달)
+  // 피드 데이터 훅 — 홈은 유니버설(전체) 피드. EMPTY_FOLLOWS로 SSR fallback 그대로 사용(재요청 X).
   const { posts, isLoading, isLoadingMore, loadMore } = useFeed(
     sortBy,
-    followedCommunities,
-    followsLoaded,
+    EMPTY_FOLLOWS,
+    true,
     initialFeed
   )
 
