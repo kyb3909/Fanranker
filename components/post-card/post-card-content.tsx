@@ -186,7 +186,11 @@ export const PostCardContent = memo(function PostCardContent({
 
         {/* 데스크톱 사이드 썸네일 */}
         {hasSingleImage && displayImage && (
-          <Link href={`/post/${postId}`} className="mt-0.5 hidden shrink-0 sm:block">
+          <Link
+            href={`/post/${postId}`}
+            aria-label={title || "게시물 보기"}
+            className="mt-0.5 hidden shrink-0 sm:block"
+          >
             <div className="bg-muted h-[84px] w-[120px] overflow-hidden rounded-lg transition-opacity hover:opacity-90">
               <FeedSideThumbnail src={displayImage} alt={title || "Post image"} />
             </div>
@@ -227,7 +231,11 @@ export const PostCardContent = memo(function PostCardContent({
               />
             </div>
           ) : (
-            <Link href={`/post/${postId}`} className="mt-2.5 block sm:hidden">
+            <Link
+              href={`/post/${postId}`}
+              aria-label={title || "게시물 보기"}
+              className="mt-2.5 block sm:hidden"
+            >
               <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
             </Link>
           )
@@ -363,7 +371,7 @@ function FeedImageCarousel({
   return (
     <div className="mt-2">
       <div className="relative">
-        <Link href={`/post/${postId}`} className="block">
+        <Link href={`/post/${postId}`} aria-label={title || "게시물 보기"} className="block">
           <FeedImageFrame
             src={currentSrc}
             alt={title || `Post image ${safeIndex + 1}`}
@@ -464,7 +472,11 @@ function YouTubeInlinePlayer({
             allowFullScreen
           />
         ) : (
-          <button onClick={handlePlay} className="group relative block h-full w-full">
+          <button
+            onClick={handlePlay}
+            aria-label="동영상 재생"
+            className="group relative block h-full w-full"
+          >
             {thumb && (
               <Image
                 src={thumb}
@@ -798,7 +810,11 @@ function XVideoPlayer({
           onError={() => setVideoError(true)}
         />
       ) : (
-        <button onClick={() => setPlaying(true)} className="group relative block h-full w-full">
+        <button
+          onClick={() => setPlaying(true)}
+          aria-label="동영상 재생"
+          className="group relative block h-full w-full"
+        >
           {media.thumbnail_url && (
             <Image
               src={media.thumbnail_url}

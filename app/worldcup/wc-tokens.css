@@ -21,7 +21,7 @@
   --wc-line: #e2e5ea;
   --wc-line-2: #cfd4dc;
   --wc-mute: #5c6470;
-  --wc-mute-2: #8b93a0;
+  --wc-mute-2: #6b7280; /* WCAG AA: 4.8:1 on white (구 #8b93a0 = 3.09:1, 미달) */
   --wc-soft: #f6e4e8;
   --wc-tint: #f6e4e8; /* 강조 서피스 — 사이드바 헤더 등 */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */

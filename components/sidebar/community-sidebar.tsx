@@ -393,7 +393,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
             borderBottom: "1px solid var(--wc-line)",
           }}
         >
-          <h3
+          <h2
             className="flex items-center gap-2 text-[11px] font-bold uppercase"
             style={{
               color: "var(--wc-ink)",
@@ -402,7 +402,7 @@ export const CommunitySidebar = memo(function CommunitySidebar({
           >
             <LayoutGrid className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
             게시판
-          </h3>
+          </h2>
           <button
             onClick={toggleSearch}
             className="rounded-lg p-1.5 transition-colors"
