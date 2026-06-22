@@ -869,13 +869,10 @@ function InstagramInlineContent({ url }: { url: string }) {
 
   if (isLoading) return <EmbedSkeleton provider="instagram" />
 
-  const handle = url.match(/instagram\.com\/(?:p|reel|tv)\/([\w-]+)/i)?.[1] ?? null
-  const author = data?.author_name?.replace(/^@/, "").trim() ?? null
-  const sourcePath = author
-    ? `instagram.com/${author}`
-    : handle
-      ? `instagram.com/p/${handle}`
-      : null
+  // 출처 = oembed author_name(FB 토큰 시) 또는 URL 유저명(instagram.com/{username}/p/...)
+  const username = url.match(/instagram\.com\/([\w.]+)\/(?:p|reel|tv)\//i)?.[1] ?? null
+  const author = data?.author_name?.replace(/^@/, "").trim() || username
+  const sourcePath = author ? `@${author}` : null
 
   if (!data) {
     return (
