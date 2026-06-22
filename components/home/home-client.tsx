@@ -55,6 +55,7 @@ interface HomeClientProps {
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
   initialTab?: TabType
+  initialSort?: SortType
 }
 
 export function HomeClient({
@@ -62,6 +63,7 @@ export function HomeClient({
   initialCategories,
   initialRecentComments,
   initialTab = "feed",
+  initialSort = "hot",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -75,7 +77,7 @@ export function HomeClient({
       setActiveTab(urlTab)
     }
   }, [searchParams])
-  const [sortBy, setSortBy] = useState<SortType>("hot")
+  const [sortBy, setSortBy] = useState<SortType>(initialSort)
 
   // 정렬을 URL ?sort= 에 보존 → 새로고침·뒤로가기 시 선택한 정렬 유지
   useEffect(() => {

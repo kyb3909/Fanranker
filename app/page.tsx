@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
-import type { PostsResponse } from "@/hooks/use-feed"
+import type { PostsResponse, SortType } from "@/hooks/use-feed"
 
 // 홈페이지 ISR: 5분 캐시 + stale-while-revalidate.
 // 새 글 작성 시 /api/posts POST가 revalidatePath("/")로 즉시 갱신.
@@ -14,22 +14,25 @@ export const revalidate = 300
  * 서버에서 피드 + 사이드바 + 배너 데이터를 병렬로 프리페치하여
  * 클라이언트 API 워터폴을 제거. TTFB에 모든 데이터가 포함됨.
  */
-async function fetchAllHomeData() {
+async function fetchAllHomeData(sort: SortType) {
   const supabase = createAnonClient()
 
   // 모든 데이터를 병렬로 가져오기
   const [feedResult, categoriesResult, recentCommentsResult] = await Promise.all([
-    // 1) 메인 피드
+    // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
     (async (): Promise<PostsResponse> => {
       try {
-        const { data: posts, error } = await supabase
+        const base = supabase
           .from("posts")
           .select(
             "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
           )
           .is("deleted_at", null)
-          .order("temperature", { ascending: false, nullsFirst: false })
-          .range(0, 19)
+        const ordered =
+          sort === "new"
+            ? base.order("created_at", { ascending: false })
+            : base.order("temperature", { ascending: false, nullsFirst: false })
+        const { data: posts, error } = await ordered.range(0, 19)
 
         if (error || !posts || posts.length === 0) {
           return { posts: [], profiles: [] }
@@ -99,7 +102,9 @@ export default async function Home({
     redirect(params.tab ? `/prediction?tab=${params.tab}` : "/prediction")
   }
 
-  const homeData = await fetchAllHomeData()
+  const initialSort: SortType =
+    params.sort === "new" ? "new" : params.sort === "random" ? "random" : "hot"
+  const homeData = await fetchAllHomeData(initialSort)
 
   return (
     <Suspense>
@@ -108,6 +113,7 @@ export default async function Home({
         initialCategories={homeData.initialCategories}
         initialRecentComments={homeData.initialRecentComments}
         initialTab={params.tab === "content" ? "content" : "feed"}
+        initialSort={initialSort}
       />
     </Suspense>
   )
