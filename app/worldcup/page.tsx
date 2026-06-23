@@ -224,6 +224,43 @@ export default async function WorldcupPage() {
             )}
           </span>
 
+          {/* 진행 방식 — hero 카드에 통합 (경품 안내 위) */}
+          <div
+            className="mt-[34px] w-full pt-[30px]"
+            style={{ borderTop: "1px solid var(--wc-line)" }}
+          >
+            <div className="mb-[24px] text-center">
+              <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+                How it works
+              </div>
+              <h2
+                className="text-[24px] font-extrabold sm:text-[28px]"
+                style={{ letterSpacing: "-.03em" }}
+              >
+                진행 방식
+              </h2>
+            </div>
+            <div className="grid w-full gap-[18px] text-left sm:grid-cols-3">
+              {STEPS.map((s) => (
+                <div key={s.num} className="wc-step-card">
+                  <div className="wc-step-num">{s.num}</div>
+                  <div
+                    className="mb-[9px] text-[18px] font-extrabold"
+                    style={{ letterSpacing: "-.02em" }}
+                  >
+                    {s.title}
+                  </div>
+                  <p
+                    className="text-[14.5px]"
+                    style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}
+                  >
+                    {s.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* 경품 안내 — hero 카드에 통합 */}
           <div
             className="mt-[34px] w-full pt-[30px]"
@@ -346,37 +383,6 @@ export default async function WorldcupPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── 진행 방식 ────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1120px] px-6 pb-3">
-        <div className="mb-6">
-          <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-            How it works
-          </div>
-          <h2
-            className="text-[26px] font-extrabold sm:text-[30px]"
-            style={{ letterSpacing: "-.03em" }}
-          >
-            진행 방식
-          </h2>
-        </div>
-        <div className="grid gap-[18px] sm:grid-cols-3">
-          {STEPS.map((s) => (
-            <div key={s.num} className="wc-step-card">
-              <div className="wc-step-num">{s.num}</div>
-              <div
-                className="mb-[9px] text-[18px] font-extrabold"
-                style={{ letterSpacing: "-.02em" }}
-              >
-                {s.title}
-              </div>
-              <p className="text-[14.5px]" style={{ lineHeight: 1.62, color: "var(--wc-ink-2)" }}>
-                {s.body}
-              </p>
-            </div>
-          ))}
         </div>
       </section>
 
