@@ -244,12 +244,8 @@ export default async function WorldcupPage() {
               </p>
             </div>
             <div
-              className="w-full overflow-hidden rounded-xl text-left"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.05fr .95fr",
-                border: "1px solid var(--wc-line)",
-              }}
+              className="grid w-full grid-cols-1 overflow-hidden rounded-xl text-left sm:grid-cols-[1.05fr_.95fr]"
+              style={{ border: "1px solid var(--wc-line)" }}
             >
               <div className="relative" style={{ minHeight: 290, background: "var(--wc-soft)" }}>
                 <span
