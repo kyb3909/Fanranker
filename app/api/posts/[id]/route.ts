@@ -3,6 +3,7 @@ import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
+import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { z } from "zod"
 
 const patchPostSchema = z.object({
@@ -123,6 +124,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
       const thumb = extractFirstImageSrcFromTipTapJSON(sanitizedContent)
       if (thumb) updates.image = thumb
+    }
+
+    // 이미지 URL 검증 — 작성(POST) 경로와 동일하게 허용 도메인 / 자체 Storage 경로만.
+    if (updates.image != null && !isAllowedImageUrl(updates.image as string)) {
+      return apiBadRequest("허용되지 않은 이미지 URL입니다. 이미지를 다시 업로드해주세요.")
     }
 
     const { data, error } = await supabase

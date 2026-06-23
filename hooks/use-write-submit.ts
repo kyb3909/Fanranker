@@ -5,6 +5,11 @@ import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { trackEvent } from "@/lib/analytics/events"
 import type { EditorState, EditorAction } from "@/hooks/use-write-form"
 
+/** 이미 우리 Storage에 있는 이미지인지 — 프록시 경로(/storage/) 또는 Supabase 도메인. */
+function isSelfHostedImage(url: string): boolean {
+  return url.startsWith("/storage/") || /:\/\/[^/]+\.supabase\.co\//.test(url)
+}
+
 /**
  * 글 발행/수정 제출 (Phase 4b — use-write-editor 에서 추출, 동작 변경 0).
  * 검증 → 커버 이미지 업로드 → POST/PATCH → analytics → 리다이렉트.
@@ -37,24 +42,41 @@ export function useWriteSubmit(
       dispatch({ type: "SET_FIELD", field: "isSubmitting", value: true })
       try {
         let imageUrl: string | null = null
-        if (state.imagePreview) {
-          if (
-            state.imagePreview.startsWith("http://") ||
-            state.imagePreview.startsWith("https://")
-          ) {
-            imageUrl = state.imagePreview
-          } else if (state.imageFile) {
-            const formData = new FormData()
-            formData.append("file", state.imageFile)
-            const uploadResponse = await fetch("/api/upload/image", {
+        if (state.imageFile) {
+          // 새로 첨부한 로컬 파일 → 업로드
+          const formData = new FormData()
+          formData.append("file", state.imageFile)
+          const uploadResponse = await fetch("/api/upload/image", {
+            method: "POST",
+            body: formData,
+          })
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.json()
+            throw new Error(error.error || "이미지 업로드에 실패했습니다.")
+          }
+          const { url } = await uploadResponse.json()
+          imageUrl = url
+        } else if (state.imagePreview) {
+          const preview = state.imagePreview
+          if (isSelfHostedImage(preview)) {
+            // 이미 우리 Storage(프록시 경로 또는 Supabase 도메인) — 그대로 사용
+            imageUrl = preview
+          } else if (/^https?:\/\//i.test(preview)) {
+            // 외부 이미지(기사 OG·직접 URL) → 서버에서 우리 Storage로 재호스팅.
+            // 외부 URL은 허용 도메인이 아니라 그대로 저장하면 서버가 거부하기 때문.
+            const rehostResponse = await fetch("/api/upload/image", {
               method: "POST",
-              body: formData,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: preview }),
             })
-            if (!uploadResponse.ok) {
-              const error = await uploadResponse.json()
-              throw new Error(error.error || "이미지 업로드에 실패했습니다.")
+            if (!rehostResponse.ok) {
+              const error = await rehostResponse.json()
+              throw new Error(
+                error.error ||
+                  "대표 이미지를 가져오지 못했습니다. 이미지를 제거하거나 직접 업로드해 주세요."
+              )
             }
-            const { url } = await uploadResponse.json()
+            const { url } = await rehostResponse.json()
             imageUrl = url
           }
         }

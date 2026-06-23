@@ -75,6 +75,22 @@ describe("isAllowedImageUrl", () => {
     expect(isAllowedImageUrl("/images/photo.png")).toBe(false)
   })
 
+  // --- Self-hosted storage proxy path ---
+
+  it("allows the self-hosted /storage/ proxy path", () => {
+    // next.config rewrites /storage/* → Supabase Storage; uploads return this path.
+    expect(isAllowedImageUrl("/storage/posts/user_x/1700000000-abcd1234.webp")).toBe(true)
+  })
+
+  it("rejects a protocol-relative URL disguised as a storage path", () => {
+    // `//evil.com/...` must not be treated as the self-hosted /storage/ path.
+    expect(isAllowedImageUrl("//evil.com/storage/x.png")).toBe(false)
+  })
+
+  it("rejects other path-only strings that are not /storage/", () => {
+    expect(isAllowedImageUrl("/storageX/posts/x.webp")).toBe(false)
+  })
+
   it("returns false for a javascript: URI", () => {
     expect(isAllowedImageUrl("javascript:alert(1)")).toBe(false)
   })
