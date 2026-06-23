@@ -383,46 +383,6 @@ export default async function WorldcupPage() {
         </div>
       </section>
 
-      {/* ── 사전 등록 CTA 밴드 ───────────────────────────────── */}
-      <section className="mx-auto max-w-[1120px] px-6 pt-10 pb-14">
-        <div className="wc-cta-band">
-          <div aria-hidden className="wc-cta-orb" />
-          <div className="relative flex max-w-[560px] flex-col items-start gap-[13px]">
-            <div
-              className="text-[12.5px] font-extrabold uppercase"
-              style={{ letterSpacing: ".14em", color: "rgba(255,255,255,.72)" }}
-            >
-              {isRegistered ? "You're in" : "Pre-register"}
-            </div>
-            <h2
-              className="text-[21px] font-extrabold text-white sm:text-[25px]"
-              style={{ letterSpacing: "-.03em", lineHeight: 1.3 }}
-            >
-              {isRegistered
-                ? "참가 신청 완료 — 이제 경기 결과를 예측하세요"
-                : "지금 신청하고 구너 대결에 합류하세요"}
-            </h2>
-            <div className="text-[14px]" style={{ color: "rgba(255,255,255,.82)" }}>
-              {isRegistered ? (
-                "경기가 열리면 결과를 예측하고 점수를 쌓아보세요."
-              ) : (
-                <>
-                  참가비 없음 · 한 번 신청하면 변경 불가
-                  {regCount > 0 && ` · 현재 ${regCount.toLocaleString()}명 신청 완료`}
-                </>
-              )}
-            </div>
-          </div>
-          <Link
-            href={isRegistered ? "/worldcup/games" : "/worldcup/register"}
-            className="wc-cta-btn"
-          >
-            {isRegistered ? "경기 예측하러 가기" : "참가 신청하기"}{" "}
-            <ArrowRight className="h-[18px] w-[18px]" />
-          </Link>
-        </div>
-      </section>
-
       {/* ── 유의사항 ────────────────────────────────────────── */}
       <section className="mx-auto px-4 pb-10 sm:px-6" style={{ maxWidth: 880, paddingTop: 24 }}>
         <div className="wc-panel">
