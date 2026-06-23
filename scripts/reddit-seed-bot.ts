@@ -56,6 +56,19 @@ interface RssApiResponse {
   items?: RssItem[]
 }
 
+/** HTML 엔티티 디코딩 (lib/decode-html-entities 와 동일 — scripts 는 @/ alias 미사용으로 자체 사본) */
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+}
+
 function textToTipTapJson(text: string): object {
   const trimmed = text?.trim()
   if (!trimmed) {
@@ -138,7 +151,7 @@ async function main() {
     console.log(`[${SUBREDDIT}] ${items.length}개 fetch (RSS) → ${communitySlug}`)
 
     for (const item of items) {
-      const title = (item.title ?? "(제목 없음)").slice(0, 200)
+      const title = decodeHtmlEntities(item.title ?? "(제목 없음)").slice(0, 200)
       let body = item.message?.trim() || ""
 
       const postId = item.link ? extractPostIdFromRedditUrl(item.link) : null

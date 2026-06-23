@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sanitizeEmbedHtml } from "@/lib/sanitize-embed"
 import { apiError } from "@/lib/api-error"
+import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 
 interface EmbedMedia {
   type: "photo" | "video"
@@ -393,6 +394,10 @@ export async function GET(request: NextRequest) {
     if (oembedData.html) {
       oembedData.html = sanitizeEmbedHtml(oembedData.html, provider)
     }
+
+    // 외부 oEmbed API 가 넘긴 제목·작성자명의 HTML 엔티티 디코딩 (평문 표시용 — html 은 제외)
+    if (oembedData.title) oembedData.title = decodeHtmlEntities(oembedData.title)
+    if (oembedData.author_name) oembedData.author_name = decodeHtmlEntities(oembedData.author_name)
 
     return NextResponse.json(oembedData, {
       headers: {

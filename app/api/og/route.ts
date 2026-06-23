@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { apiError } from "@/lib/api-error"
 import { assertPublicUrl, SsrfBlockedError } from "@/lib/ssrf-guard"
+import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 
 export const runtime = "nodejs"
 
@@ -153,23 +154,6 @@ export async function GET(request: NextRequest) {
     }
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }
-}
-
-/**
- * OG 메타태그 content 의 HTML 엔티티를 디코딩한다.
- * 네이버 등은 og:title 을 `&#x27;...&quot;` 처럼 인코딩해서 내려주므로, 그대로 쓰면
- * 제목/설명에 raw 엔티티가 노출되고 이미지 URL 의 `&amp;` 가 fetch 를 깨뜨린다.
- */
-function decodeHtmlEntities(s: string): string {
-  return s
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&") // &amp; 는 마지막에 (이중 디코딩 방지)
 }
 
 function extractMeta(html: string, property: string): string | null {

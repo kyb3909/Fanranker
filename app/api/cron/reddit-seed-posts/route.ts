@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { decodeHtmlEntities } from "@/lib/decode-html-entities"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -62,13 +63,7 @@ function extractNestedTag(xml: string, parent: string, child: string): string | 
 }
 
 function decodeHTML(str: string): string {
-  return str
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
+  return decodeHtmlEntities(str)
 }
 
 // 스킵 패턴 (자동 생성 스레드, 스티키 등)
