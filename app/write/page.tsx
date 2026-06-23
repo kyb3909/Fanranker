@@ -236,19 +236,11 @@ function WriteContent() {
                   </Select>
                 </div>
 
-                {/* 말머리 선택 — 팀이 매핑된 말머리를 달면 그 팀 경험치 +10 */}
+                {/* 말머리 선택 */}
                 {editor.flairs.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       말머리 <span className="text-muted-foreground font-normal">(선택)</span>
-                      {editor.flairs.some((f) => f.team_id) && (
-                        <span
-                          className="ml-2 text-[11px] font-semibold"
-                          style={{ color: "var(--wc-burgundy)" }}
-                        >
-                          🔥 내 팀 달고 쓰면 경험치 +10
-                        </span>
-                      )}
                     </Label>
                     <div className="flex flex-wrap gap-1.5">
                       {editor.flairs.map((f) => {
@@ -258,7 +250,7 @@ function WriteContent() {
                             key={f.id}
                             type="button"
                             onClick={() => editor.setSelectedFlair(selected ? null : f.id)}
-                            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                               selected ? "text-white shadow-sm" : "hover:opacity-80"
                             }`}
                             style={{
@@ -269,7 +261,6 @@ function WriteContent() {
                             }}
                           >
                             {f.name}
-                            {f.team_id && <span aria-hidden>🔥</span>}
                           </button>
                         )
                       })}

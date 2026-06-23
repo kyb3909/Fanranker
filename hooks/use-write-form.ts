@@ -17,8 +17,6 @@ interface Flair {
   id: string
   name: string
   color: string
-  /** 매핑된 팀 (team_map_pins.team_id) — 있으면 선택 시 그 팀 경험치 +10, 없으면 일반 말머리. */
-  team_id: string | null
 }
 
 interface OgData {

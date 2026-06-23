@@ -6,7 +6,6 @@ import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
-import { awardFlairKarma } from "@/lib/metaverse/karma-award"
 import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { canPostNotice } from "@/lib/board-moderator"
@@ -289,18 +288,6 @@ export async function POST(request: NextRequest) {
     const isNotice =
       wantNotice === true ? await canPostNotice(supabase, userId, community_slug) : false
 
-    // 말머리에 팀이 매핑돼 있으면 그 팀을 카르마 대상으로 — flair_id 에서 서버 파생
-    // (클라가 임의 팀으로 카르마를 위조하지 못하도록 신뢰 경계를 서버에 둔다).
-    let flairTeamId: string | null = null
-    if (flair_id) {
-      const { data: flairRow } = await supabase
-        .from("post_flairs")
-        .select("team_id")
-        .eq("id", flair_id)
-        .maybeSingle()
-      flairTeamId = flairRow?.team_id ?? null
-    }
-
     // Supabase에 글 저장
     // community_slug → category_id 변환은 DB 트리거가 자동 처리
     const { data, error } = await supabase
@@ -312,7 +299,7 @@ export async function POST(request: NextRequest) {
         content, // TipTap JSON
         image: imageUrl,
         flair_id: flair_id || null,
-        flair_team_id: flairTeamId,
+        flair_team_id: null,
         is_notice: isNotice,
       })
       .select()
@@ -333,13 +320,6 @@ export async function POST(request: NextRequest) {
       "글 작성",
       String(data.id)
     ).catch((err: unknown) => console.error("Failed to award points for post:", err))
-
-    // 팀 플레어 카르마 적립 (메타버스) — 말머리에 팀이 매핑된 글만. 비동기, 실패 무시.
-    if (flairTeamId) {
-      awardFlairKarma(supabase, userId, flairTeamId, "post").catch((err) =>
-        console.error("Failed to award flair karma for post:", err)
-      )
-    }
 
     // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
     Promise.resolve(
