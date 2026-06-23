@@ -129,7 +129,10 @@ function sanitizeEmbedAttrs(attrs: unknown): Record<string, unknown> | null {
 function sanitizeImageAttrs(attrs: unknown): Record<string, unknown> | null {
   if (!attrs || typeof attrs !== "object") return null
   const src = getString(attrs, "src")
-  if (!isSafeUrl(src)) return null // javascript:, data: 등 차단
+  // 자체 Storage 프록시 경로(/storage/*)는 상대경로라 new URL() 검증을 통과 못 한다 → 명시 허용.
+  // (이게 없으면 업로드한 본문 이미지 노드가 sanitize 단계에서 전부 drop 됐다.)
+  // 그 외에는 http(s) 만 허용 (javascript:, data: 등 차단).
+  if (!src || (!src.startsWith("/storage/") && !isSafeUrl(src))) return null
   const out: Record<string, unknown> = { src }
   const alt = getString(attrs, "alt")
   if (alt) out.alt = alt.slice(0, 500)

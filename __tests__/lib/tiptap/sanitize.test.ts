@@ -91,6 +91,18 @@ describe("sanitizeTipTapJSON", () => {
       })
     })
 
+    it("이미지 /storage/ 프록시 경로(상대경로) 유지 — 업로드 본문 이미지가 drop 되면 안 됨", () => {
+      const input = doc({
+        type: "image",
+        attrs: { src: "/storage/posts/user_x/123-abc.webp" },
+      })
+      const result = sanitizeTipTapJSON(input)
+      expect(result?.content?.[0]).toEqual({
+        type: "image",
+        attrs: { src: "/storage/posts/user_x/123-abc.webp" },
+      })
+    })
+
     it("embed (youtube) 통과, html은 sanitizeEmbedHtml로 재검증", () => {
       const input = doc({
         type: "embed",
