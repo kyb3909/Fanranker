@@ -51,6 +51,8 @@ interface PostCardContentProps {
   content: string | TipTapNode
   displayImage: string | null
   imageSources: string[]
+  /** 퍼온 글(본문 이미지 없이 대표 이미지만) — true 면 작은 링크 프리뷰 썸네일로 렌더 */
+  isLinkPreview: boolean
   firstEmbed: {
     attrs: {
       provider: "youtube" | "instagram" | "x"
@@ -76,6 +78,7 @@ export const PostCardContent = memo(function PostCardContent({
   content,
   displayImage,
   imageSources,
+  isLinkPreview,
   firstEmbed,
   firstVideoSrc,
   image,
@@ -86,7 +89,8 @@ export const PostCardContent = memo(function PostCardContent({
   temperature,
   timestamp,
 }: PostCardContentProps) {
-  const hasSingleImage = !!displayImage && !firstEmbed && !firstVideoSrc && imageSources.length <= 1
+  // 퍼온 글(본문 이미지 없이 대표 이미지만) → 제목/요약 옆 작은 썸네일. 부모(isLinkPreview)가 판정.
+  const showSideThumb = isLinkPreview && !!displayImage
   const catChip = CATEGORY_CHIP[category ?? ""] ?? CHIP_FALLBACK
 
   return (
@@ -149,8 +153,8 @@ export const PostCardContent = memo(function PostCardContent({
       )}
 
       {/* 제목 + 본문 + 사이드 썸네일 */}
-      <div className={hasSingleImage ? "flex gap-4" : undefined}>
-        <div className={hasSingleImage ? "min-w-0 flex-1" : undefined}>
+      <div className={showSideThumb ? "flex gap-4" : undefined}>
+        <div className={showSideThumb ? "min-w-0 flex-1" : undefined}>
           {/* 제목 + 본문 — 블록 전체 클릭 시 게시물로 이동 */}
           <Link href={`/post/${postId}`} className="group gn-pin-title block">
             <h2
@@ -184,14 +188,14 @@ export const PostCardContent = memo(function PostCardContent({
           </Link>
         </div>
 
-        {/* 데스크톱 사이드 썸네일 */}
-        {hasSingleImage && displayImage && (
+        {/* 사이드 썸네일 (퍼온 글) — 모바일·데스크톱 모두 작게 */}
+        {showSideThumb && displayImage && (
           <Link
             href={`/post/${postId}`}
             aria-label={title || "게시물 보기"}
-            className="mt-0.5 hidden shrink-0 sm:block"
+            className="mt-0.5 block shrink-0"
           >
-            <div className="bg-muted h-[84px] w-[120px] overflow-hidden rounded-lg transition-opacity hover:opacity-90">
+            <div className="bg-muted h-[64px] w-[92px] overflow-hidden rounded-lg transition-opacity hover:opacity-90 sm:h-[84px] sm:w-[120px]">
               <FeedSideThumbnail src={displayImage} alt={title || "Post image"} />
             </div>
           </Link>
@@ -220,7 +224,7 @@ export const PostCardContent = memo(function PostCardContent({
               <LazyInstagramPreview url={firstEmbed.attrs.url} />
             ) : null}
           </div>
-        ) : displayImage ? (
+        ) : !isLinkPreview && displayImage ? (
           imageSources.length > 1 ? (
             <div className="mt-2.5">
               <FeedImageCarousel
@@ -231,10 +235,11 @@ export const PostCardContent = memo(function PostCardContent({
               />
             </div>
           ) : (
+            // 업로드 글(본문 이미지) — 1장이어도 큰 이미지로. (퍼온 글은 위 사이드 썸네일이 처리)
             <Link
               href={`/post/${postId}`}
               aria-label={title || "게시물 보기"}
-              className="mt-2.5 block sm:hidden"
+              className="mt-2.5 block"
             >
               <FeedImageFrame src={displayImage} alt={title || "Post image"} priority={priority} />
             </Link>

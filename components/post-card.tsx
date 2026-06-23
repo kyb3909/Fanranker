@@ -65,6 +65,9 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
     typeof post.content === "object" ? extractAllImageSrcsFromTipTapJSON(post.content) : []
   const imageSources = contentImages.length > 0 ? contentImages : post.image ? [post.image] : []
   const displayImage = imageSources[0] || firstEmbed?.attrs.thumbnail_url || null
+  // 본문에 삽입된 이미지가 없고 대표 이미지만 있으면 = 링크에서 퍼온 글 → 작은 링크 프리뷰 썸네일.
+  // 본문에 이미지가 있으면 = 직접 올린 글 → 큰 이미지(1장이어도). 임베드/동영상 글은 제외.
+  const isLinkPreview = contentImages.length === 0 && !!post.image && !firstEmbed && !firstVideoSrc
 
   return (
     <article>
@@ -83,6 +86,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             content={post.content}
             displayImage={displayImage}
             imageSources={imageSources}
+            isLinkPreview={isLinkPreview}
             firstEmbed={firstEmbed}
             firstVideoSrc={firstVideoSrc}
             image={post.image}
