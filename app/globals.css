@@ -314,12 +314,13 @@
   margin: 1rem 0;
 }
 
-/* TipTap 이미지 스타일 — 데스크탑은 60% 너비, 모바일은 풀폭. 클릭 시 라이트박스 확대 */
+/* TipTap 이미지 스타일 — 데스크탑 60% / 모바일 90%, 가운데 정렬(좌우 여백). 클릭 시 라이트박스 확대 */
 .tiptap-image {
-  max-width: 100%;
+  display: block;
+  max-width: 90%;
   height: auto;
   border-radius: 0.5rem;
-  margin: 1rem 0;
+  margin: 1rem auto;
   cursor: zoom-in;
   transition: opacity 0.15s;
 }
