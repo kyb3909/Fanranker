@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useRef, useCallback } from "react"
+import { Suspense, useRef, useCallback, useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import type { TipTapEditorHandle } from "@/components/editor/tiptap-editor"
 import { BackButton } from "@/components/back-button"
@@ -39,6 +39,23 @@ function WriteContent() {
   const insertBodyImages = useCallback((urls: string[]) => {
     tiptapRef.current?.insertImagesFromUrls(urls)
   }, [])
+
+  // 대표 이미지 미리보기 로드 실패 (외부 핫링킹 차단 등) → placeholder 로 폴백
+  const [previewError, setPreviewError] = useState(false)
+  useEffect(() => setPreviewError(false), [editor.imagePreview])
+
+  // 소스 URL "가져오기" → OG 메타 + 본문 3줄 요약을 빈 본문에 자동 삽입
+  const fetchOgAndSummarize = useCallback(
+    async (rawUrl: string) => {
+      const result = await editor.handleFetchOg(rawUrl)
+      if (result?.summary && result.summary.length > 0) {
+        let src = rawUrl.trim()
+        if (!/^https?:\/\//i.test(src)) src = "https://" + src
+        tiptapRef.current?.insertSummary(result.summary, src, result.siteName)
+      }
+    },
+    [editor]
+  )
 
   const onBottomImageInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,13 +305,13 @@ function WriteContent() {
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault()
-                            editor.handleFetchOg(editor.sourceUrl)
+                            fetchOgAndSummarize(editor.sourceUrl)
                           }
                         }}
                         onPaste={(e) => {
                           const pasted = e.clipboardData.getData("text")
                           if (pasted && /^https?:\/\//i.test(pasted.trim())) {
-                            setTimeout(() => editor.handleFetchOg(pasted.trim()), 100)
+                            setTimeout(() => fetchOgAndSummarize(pasted.trim()), 100)
                           }
                         }}
                         className="h-10 pl-9"
@@ -303,7 +320,7 @@ function WriteContent() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => editor.handleFetchOg(editor.sourceUrl)}
+                      onClick={() => fetchOgAndSummarize(editor.sourceUrl)}
                       disabled={editor.isFetchingOg || !editor.sourceUrl.trim()}
                       className="shrink-0"
                     >
@@ -389,14 +406,31 @@ function WriteContent() {
                         className="relative aspect-video w-full max-w-md overflow-hidden rounded-xl"
                         style={{ border: "1px solid var(--wc-line-2)" }}
                       >
-                        {/* 외부(기사 OG) 도메인일 수 있어 next/image 대신 일반 img 사용 —
-                            발행 시 use-write-submit 에서 우리 Storage 로 재호스팅된다 */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={editor.imagePreview}
-                          alt="대표 이미지"
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
+                        {previewError ? (
+                          <div className="bg-muted absolute inset-0 flex flex-col items-center justify-center gap-2 px-4">
+                            <ImageIcon className="h-8 w-8" style={{ color: "var(--wc-mute)" }} />
+                            <span
+                              className="text-center text-xs leading-relaxed"
+                              style={{ color: "var(--wc-mute)" }}
+                            >
+                              미리보기를 불러올 수 없어요
+                              <br />
+                              발행하면 정상 표시됩니다
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            {/* 외부(기사 OG) 도메인은 핫링킹 차단으로 미리보기가 깨질 수 있음 —
+                                onError 시 placeholder. 발행 시 use-write-submit 이 우리 Storage 로 재호스팅 */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={editor.imagePreview}
+                              alt="대표 이미지"
+                              onError={() => setPreviewError(true)}
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          </>
+                        )}
                         <Button
                           type="button"
                           variant="destructive"

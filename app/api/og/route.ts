@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     if (!url) {
       return NextResponse.json({ error: "URL이 필요합니다." }, { status: 400 })
     }
+    const wantSummary = request.nextUrl.searchParams.get("summarize") === "1"
 
     // URL 유효성 검증 (scheme)
     let parsedUrl: URL
@@ -102,14 +103,15 @@ export async function GET(request: NextRequest) {
 
     let html = ""
     const decoder = new TextDecoder()
-    const maxBytes = 50 * 1024
+    // 요약이 필요하면 본문까지 더 읽는다 (메타는 head 에 있지만 본문은 head 이후).
+    const maxBytes = wantSummary ? 250 * 1024 : 50 * 1024
 
     while (html.length < maxBytes) {
       const { done, value } = await reader.read()
       if (done) break
       html += decoder.decode(value, { stream: true })
-      // </head> 이후는 불필요
-      if (html.includes("</head>")) break
+      // 요약 안 할 때는 </head> 이후 불필요
+      if (!wantSummary && html.includes("</head>")) break
     }
     reader.cancel()
 
@@ -136,6 +138,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 본문 3줄 요약 (요청 시 + 저렴 모델). 실패해도 메타는 정상 반환.
+    let summary: string[] | null = null
+    if (wantSummary) {
+      const bodyText = extractArticleText(html)
+      if (bodyText.length > 200) {
+        summary = await summarizeArticle(bodyText, pageTitle)
+      }
+    }
+
     return NextResponse.json(
       {
         image: absoluteImageUrl,
@@ -143,6 +154,7 @@ export async function GET(request: NextRequest) {
         description: ogDescription || "",
         siteName: ogSiteName || parsedUrl.hostname,
         url: parsedUrl.toString(),
+        summary,
       },
       {
         headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
@@ -186,4 +198,59 @@ function extractMeta(html: string, property: string): string | null {
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/** HTML 에서 기사 본문 텍스트를 대략 추출 (LLM 요약 입력용 — 완벽 추출 불필요). */
+function extractArticleText(html: string): string {
+  const h = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+  // 본문 컨테이너 우선 (네이버 _article_content/dic_area, 일반 article)
+  const m =
+    h.match(
+      /<(?:div|section|article)[^>]*(?:id|class)=["'][^"']*(?:_article_content|dic_area|article_body|newsct_article|article-?body|post-?content|entry-?content)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section|article)>/i
+    ) || h.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
+  const scope = m ? m[1] : h
+  return decodeHtmlEntities(scope.replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 4000)
+}
+
+/** 기사 본문을 한국어 3줄로 요약 (gpt-4o-mini). 실패 시 null. */
+async function summarizeArticle(text: string, title: string): Promise<string[] | null> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) return null
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              '기사를 한국어 3줄로 요약한다. 각 줄은 객관적 사실만, 뉴스 와이어체(~했다/~이다). 감상·평가·질문·추측·이모지 금지. JSON 으로만 응답: {"lines": ["...", "...", "..."]}',
+          },
+          { role: "user", content: `제목: ${title}\n\n본문:\n${text}` },
+        ],
+        temperature: 0.3,
+        max_tokens: 400,
+        response_format: { type: "json_object" },
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content
+    if (!content) return null
+    const parsed = JSON.parse(content) as { lines?: unknown }
+    if (!Array.isArray(parsed.lines)) return null
+    return parsed.lines
+      .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
+      .slice(0, 3)
+  } catch {
+    return null
+  }
 }

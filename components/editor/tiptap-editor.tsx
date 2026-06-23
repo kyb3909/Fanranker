@@ -43,6 +43,8 @@ export interface TipTapEditorProps {
 export type TipTapEditorHandle = {
   /** 업로드된 이미지 URL들을 커서 위치에 순서대로 삽입 */
   insertImagesFromUrls: (urls: string[]) => void
+  /** 기사 3줄 요약을 본문에 삽입 (에디터가 비어있을 때만 — 사용자 작성 보호) */
+  insertSummary: (lines: string[], sourceUrl: string, siteName?: string) => void
 }
 
 /**
@@ -152,6 +154,35 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
           { type: "paragraph" as const },
         ])
         editor.chain().focus().insertContent(nodes).run()
+      },
+      insertSummary: (lines: string[], sourceUrl: string, siteName?: string) => {
+        // 에디터가 비어있을 때만 채운다 (사용자가 이미 쓴 본문을 덮지 않도록)
+        if (!editor || lines.length === 0 || !editor.isEmpty) return
+        const paragraphs = lines.map((line) => ({
+          type: "paragraph" as const,
+          content: [{ type: "text" as const, text: line }],
+        }))
+        editor
+          .chain()
+          .focus()
+          .setContent({
+            type: "doc",
+            content: [
+              ...paragraphs,
+              {
+                type: "paragraph" as const,
+                content: [
+                  { type: "text" as const, text: "출처: " },
+                  {
+                    type: "text" as const,
+                    text: siteName || sourceUrl,
+                    marks: [{ type: "link" as const, attrs: { href: sourceUrl } }],
+                  },
+                ],
+              },
+            ],
+          })
+          .run()
       },
     }),
     [editor]
