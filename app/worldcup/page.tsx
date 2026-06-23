@@ -121,7 +121,7 @@ export default async function WorldcupPage() {
               wordBreak: "keep-all",
             }}
           >
-            토너먼트 기간 동안 경기 결과를 예측하고 점수를 쌓아보세요. 최종 1위 구너에게는{" "}
+            토너먼트 기간 동안 경기 결과를 예측하고 점수를 쌓아보세요. 최종 1위에게는{" "}
             <b style={{ color: "var(--wc-ink)" }}>데클런 라이스 친필 사인 유니폼</b>이 주어집니다.
           </p>
 
@@ -131,8 +131,8 @@ export default async function WorldcupPage() {
             style={{ background: "#fff", border: "1px solid var(--wc-line)", display: "flex" }}
           >
             {[
-              ["이벤트 기간", "2026.06.11(목) ~ 결승전 종료"],
-              ["참가 신청", "~6.29(월) 04시"],
+              ["참가 신청", "~6.29(월) 새벽 4시"],
+              ["이벤트 기간", "6.29(월) 새벽 4시 ~ 결승전 종료"],
               ["참가 대상", "아스날 팬 누구나"],
             ].map(([k, v], i) => (
               <div
