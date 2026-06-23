@@ -158,31 +158,20 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
       insertSummary: (lines: string[], sourceUrl: string, siteName?: string) => {
         // 에디터가 비어있을 때만 채운다 (사용자가 이미 쓴 본문을 덮지 않도록)
         if (!editor || lines.length === 0 || !editor.isEmpty) return
-        const paragraphs = lines.map((line) => ({
-          type: "paragraph" as const,
-          content: [{ type: "text" as const, text: line }],
-        }))
-        editor
-          .chain()
-          .focus()
-          .setContent({
-            type: "doc",
-            content: [
-              ...paragraphs,
-              {
-                type: "paragraph" as const,
-                content: [
-                  { type: "text" as const, text: "출처: " },
-                  {
-                    type: "text" as const,
-                    text: siteName || sourceUrl,
-                    marks: [{ type: "link" as const, attrs: { href: sourceUrl } }],
-                  },
-                ],
-              },
-            ],
-          })
-          .run()
+        // 출처는 plain text — 에디터 schema 는 StarterKit 만 써서 link mark 가 없다.
+        // link mark 를 넣으면 schema 위반으로 삽입 전체가 무효가 된다.
+        // insertContent 는 이미지 삽입과 동일하게 onChange 를 발생시켜 폼 content 상태도 갱신.
+        const nodes = [
+          ...lines.map((line) => ({
+            type: "paragraph" as const,
+            content: [{ type: "text" as const, text: line }],
+          })),
+          {
+            type: "paragraph" as const,
+            content: [{ type: "text" as const, text: `출처: ${siteName || sourceUrl}` }],
+          },
+        ]
+        editor.chain().focus().insertContent(nodes).run()
       },
     }),
     [editor]
