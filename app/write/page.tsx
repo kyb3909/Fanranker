@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Image as ImageIcon, X, Loader2, Link as LinkIcon, Megaphone } from "lucide-react"
-import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
 import { NoticeToggleButton } from "@/components/write/notice-toggle-button"
 import { useCanPostNotice } from "@/hooks/use-board-moderator"
@@ -390,11 +389,13 @@ function WriteContent() {
                         className="relative aspect-video w-full max-w-md overflow-hidden rounded-xl"
                         style={{ border: "1px solid var(--wc-line-2)" }}
                       >
-                        <Image
+                        {/* 외부(기사 OG) 도메인일 수 있어 next/image 대신 일반 img 사용 —
+                            발행 시 use-write-submit 에서 우리 Storage 로 재호스팅된다 */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src={editor.imagePreview}
                           alt="대표 이미지"
-                          fill
-                          className="object-cover"
+                          className="absolute inset-0 h-full w-full object-cover"
                         />
                         <Button
                           type="button"

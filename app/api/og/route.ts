@@ -119,9 +119,9 @@ export async function GET(request: NextRequest) {
     const ogDescription = extractMeta(html, "og:description")
     const ogSiteName = extractMeta(html, "og:site_name")
 
-    // <title> 태그 폴백
+    // <title> 태그 폴백 (ogTitle 은 extractMeta 에서 이미 디코딩됨)
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i)
-    const pageTitle = ogTitle || titleMatch?.[1]?.trim() || ""
+    const pageTitle = ogTitle || (titleMatch?.[1] ? decodeHtmlEntities(titleMatch[1].trim()) : "")
 
     const imageUrl = ogImage || twitterImage || null
 
@@ -155,6 +155,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * OG 메타태그 content 의 HTML 엔티티를 디코딩한다.
+ * 네이버 등은 og:title 을 `&#x27;...&quot;` 처럼 인코딩해서 내려주므로, 그대로 쓰면
+ * 제목/설명에 raw 엔티티가 노출되고 이미지 URL 의 `&amp;` 가 fetch 를 깨뜨린다.
+ */
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&") // &amp; 는 마지막에 (이중 디코딩 방지)
+}
+
 function extractMeta(html: string, property: string): string | null {
   // property="og:image" content="..."
   const propRegex = new RegExp(
@@ -162,7 +179,7 @@ function extractMeta(html: string, property: string): string | null {
     "i"
   )
   const propMatch = html.match(propRegex)
-  if (propMatch) return propMatch[1]
+  if (propMatch) return decodeHtmlEntities(propMatch[1])
 
   // content="..." property="og:image" (순서 뒤집힌 경우)
   const reverseRegex = new RegExp(
@@ -170,7 +187,7 @@ function extractMeta(html: string, property: string): string | null {
     "i"
   )
   const reverseMatch = html.match(reverseRegex)
-  if (reverseMatch) return reverseMatch[1]
+  if (reverseMatch) return decodeHtmlEntities(reverseMatch[1])
 
   // name="twitter:image" content="..."
   const nameRegex = new RegExp(
@@ -178,7 +195,7 @@ function extractMeta(html: string, property: string): string | null {
     "i"
   )
   const nameMatch = html.match(nameRegex)
-  if (nameMatch) return nameMatch[1]
+  if (nameMatch) return decodeHtmlEntities(nameMatch[1])
 
   return null
 }
