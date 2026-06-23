@@ -26,7 +26,6 @@ export function useWriteEditor() {
     setContent,
     setSourceUrl,
     setSelectedFlair,
-    setSelectedTeamFlair,
     setIsEmbedLoading,
   } = useWriteForm()
 
@@ -53,9 +52,6 @@ export function useWriteEditor() {
     flairs: state.flairs,
     selectedFlair: state.selectedFlair,
     setSelectedFlair,
-    teamFlairs: state.teamFlairs,
-    selectedTeamFlair: state.selectedTeamFlair,
-    setSelectedTeamFlair,
     isSubmitting: state.isSubmitting,
     isUploadingImage: state.isUploadingImage,
     isEmbedLoading: state.isEmbedLoading,

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const supabase = createAnonClient()
   const { data: flairs, error } = await supabase
     .from("post_flairs")
-    .select("id, name, color, sort_order")
+    .select("id, name, color, sort_order, team_id")
     .eq("community_slug", communitySlug)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })

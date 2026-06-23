@@ -95,7 +95,6 @@ export function useWriteSubmit(
             content: state.content,
             image: imageUrl,
             flair_id: state.selectedFlair || null,
-            flair_team_id: state.selectedTeamFlair || null,
             is_notice: isNoticeMode,
           }),
         })

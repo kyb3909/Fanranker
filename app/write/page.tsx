@@ -17,7 +17,6 @@ import {
 import { Image as ImageIcon, X, Loader2, Link as LinkIcon, Megaphone } from "lucide-react"
 import Image from "next/image"
 import { useWriteEditor } from "@/hooks/use-write-editor"
-import { trackEvent } from "@/lib/analytics/events"
 import { NoticeToggleButton } from "@/components/write/notice-toggle-button"
 import { useCanPostNotice } from "@/hooks/use-board-moderator"
 
@@ -237,85 +236,40 @@ function WriteContent() {
                   </Select>
                 </div>
 
-                {/* 말머리 선택 */}
+                {/* 말머리 선택 — 팀이 매핑된 말머리를 달면 그 팀 경험치 +10 */}
                 {editor.flairs.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
                       말머리 <span className="text-muted-foreground font-normal">(선택)</span>
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {editor.flairs.map((f) => (
-                        <button
-                          key={f.id}
-                          type="button"
-                          onClick={() =>
-                            editor.setSelectedFlair(editor.selectedFlair === f.id ? null : f.id)
-                          }
-                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                            editor.selectedFlair === f.id
-                              ? "text-white shadow-sm"
-                              : "hover:opacity-80"
-                          }`}
-                          style={{
-                            backgroundColor:
-                              editor.selectedFlair === f.id
-                                ? "var(--wc-ink)"
-                                : "var(--wc-card, #fff)",
-                            color: editor.selectedFlair === f.id ? "white" : "var(--wc-ink)",
-                            border: "1px solid",
-                            borderColor:
-                              editor.selectedFlair === f.id ? "var(--wc-ink)" : "var(--wc-line)",
-                          }}
+                      {editor.flairs.some((f) => f.team_id) && (
+                        <span
+                          className="ml-2 text-[11px] font-semibold"
+                          style={{ color: "var(--wc-burgundy)" }}
                         >
-                          {f.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 팀 플레어 선택 — 스포츠 커뮤니티에만 표시. 선택 시 해당 팀 카르마 적립. */}
-                {editor.teamFlairs.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
-                      팀 플레어 <span className="text-muted-foreground font-normal">(선택)</span>
-                      <span className="text-muted-foreground ml-2 text-[11px] font-normal">
-                        달고 쓰면 해당 팀 카르마가 +10 올라가요
-                      </span>
+                          🔥 내 팀 달고 쓰면 경험치 +10
+                        </span>
+                      )}
                     </Label>
                     <div className="flex flex-wrap gap-1.5">
-                      {editor.teamFlairs.map((t) => {
-                        const selected = editor.selectedTeamFlair === t.teamId
+                      {editor.flairs.map((f) => {
+                        const selected = editor.selectedFlair === f.id
                         return (
                           <button
-                            key={t.teamId}
+                            key={f.id}
                             type="button"
-                            onClick={() => {
-                              const next = selected ? null : t.teamId
-                              editor.setSelectedTeamFlair(next)
-                              if (next) {
-                                trackEvent({
-                                  name: "flair_team_selected",
-                                  params: {
-                                    community: editor.selectedCommunity,
-                                    team_id: next,
-                                  },
-                                })
-                              }
-                            }}
-                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                            onClick={() => editor.setSelectedFlair(selected ? null : f.id)}
+                            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                               selected ? "text-white shadow-sm" : "hover:opacity-80"
                             }`}
                             style={{
                               backgroundColor: selected ? "var(--wc-ink)" : "var(--wc-card, #fff)",
                               color: selected ? "white" : "var(--wc-ink)",
-                              borderWidth: 1,
-                              borderStyle: "solid",
+                              border: "1px solid",
                               borderColor: selected ? "var(--wc-ink)" : "var(--wc-line)",
                             }}
-                            title={t.teamName}
                           >
-                            {t.teamShortName || t.teamName}
+                            {f.name}
+                            {f.team_id && <span aria-hidden>🔥</span>}
                           </button>
                         )
                       })}
