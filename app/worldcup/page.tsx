@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic"
 
 const NOTICES = [
   "본 이벤트는 gongnori.fan 회원 중 아스날 구너를 대상으로 진행됩니다.",
-  "참가 신청은 2026.06.28(일)까지 가능하며, 신청 후에는 취소·변경이 불가합니다.",
+  "참가 신청은 2026.06.29(월) 새벽 4시까지 가능하며, 신청 후에는 취소·변경이 불가합니다.",
   "정식 점수 집계와 랭킹 반영은 32강 토너먼트부터 시작됩니다.",
   "예측 점수는 무료 볼을 사용한 승부예측 결과를 기준으로 자동 집계됩니다.",
   "부정한 방법(다중 계정 등)으로 참여한 경우 순위에서 제외될 수 있습니다.",
@@ -106,9 +106,9 @@ export default async function WorldcupPage() {
               wordBreak: "keep-all",
             }}
           >
-            2026 월드컵 승부예측
+            아스날 팬들을 위한
             <br />
-            <span style={{ color: "var(--wc-burgundy)" }}>구너들의 대결</span>
+            <span style={{ color: "var(--wc-burgundy)" }}>2026 월드컵 승부예측 이벤트</span>
           </h1>
 
           {/* 소개문 */}
@@ -132,7 +132,7 @@ export default async function WorldcupPage() {
           >
             {[
               ["이벤트 기간", "2026.06.11(목) ~ 결승전 종료"],
-              ["참가 신청", "~6.28(일)까지"],
+              ["참가 신청", "~6.29(월) 04시"],
               ["참가 대상", "아스날 팬 누구나"],
             ].map(([k, v], i) => (
               <div
