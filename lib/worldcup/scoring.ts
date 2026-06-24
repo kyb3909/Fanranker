@@ -9,7 +9,9 @@
  *
  * 실제 32강 일정이 확정되면 이 값만 조정하면 리더보드와 내 점수가 함께 따라간다.
  */
-export const WORLDCUP_SCORING_STARTS_AT = "2026-06-29T08:00:00+09:00"
+// [임시·확인용] 오픈 전 /worldcup/my-predictions 표시 확인을 위해 과거로 당겼다.
+// 확인이 끝나면 반드시 "2026-06-29T08:00:00+09:00" 로 복구할 것.
+export const WORLDCUP_SCORING_STARTS_AT = "2026-06-01T08:00:00+09:00"
 
 const SCORING_START_MS = new Date(WORLDCUP_SCORING_STARTS_AT).getTime()
 
