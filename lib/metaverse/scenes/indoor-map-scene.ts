@@ -21,11 +21,15 @@ import { MAPS, type MapConfig, type MapId, type DoorConfig } from "@/lib/metaver
 import {
   preloadGandalf,
   createGandalfAnimations,
-  createGandalfAvatar,
-  gandalfAnimKey,
-  type GandalfAvatar,
   type GandalfState,
 } from "@/lib/metaverse/avatar/gandalf-avatar"
+import {
+  preloadLayered,
+  createLayeredAnims,
+  createLayeredAvatar,
+  type LayeredAvatar,
+  type Outfit,
+} from "@/lib/metaverse/avatar/layered-avatar"
 import { AVATAR_PRESETS, MALE_BASIC_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { sceneBridge } from "@/lib/metaverse/scene-bridge"
 import { METAVERSE } from "@/lib/metaverse/constants"
@@ -51,6 +55,12 @@ const PLAYER_BODY_OFFSET_X = -PLAYER_BODY_W / 2
 const PLAYER_BODY_OFFSET_Y = -PLAYER_BODY_H
 
 export const INDOOR_MAP_SCENE_KEY = "MetaverseIndoorMap"
+
+/**
+ * Phase 1b 슬라이스 — 하드코딩 outfit (남자 base + 1T 빨강 셔츠 + 기본 하의).
+ * Phase 2 에서 identity 의 DB equipped 슬롯으로 교체 예정.
+ */
+const SLICE_OUTFIT: Outfit = { gender: "male", top: "1t", bottom: "basic" }
 
 // 물리 — SideScrollerScene 와 동일 튜닝값 (걸음·점프·킥 감각 통일)
 const GRAVITY_Y = 900
@@ -107,8 +117,8 @@ export class IndoorMapScene extends Phaser.Scene {
   /** 실제 사용할 gandalf 프리셋 키 — identity.avatarKey 가 gandalf 이면 그것, 아니면 male-basic. */
   private gandalfPresetId: string = MALE_BASIC_AVATAR_KEY
 
-  /** Container + body·hair sprite 합성 아바타. physics body 는 container 에 붙음. */
-  private avatar!: GandalfAvatar
+  /** Container + base·bottom·top sprite 합성 아바타(레이어드). physics body 는 container 에 붙음. */
+  private avatar!: LayeredAvatar
   /** 기존 코드 호환용 alias — avatar.container. body 캐스팅으로 physics body 접근. */
   private player!: Phaser.GameObjects.Container
   private nameTag!: Phaser.GameObjects.Text
@@ -163,8 +173,8 @@ export class IndoorMapScene extends Phaser.Scene {
     const key = data.identity.avatarKey
     this.gandalfPresetId =
       key && AVATAR_PRESETS[key]?.avatarSystem === "gandalf" ? key : MALE_BASIC_AVATAR_KEY
-    // TODO(try-on): 아스날 유니폼 미리보기 — 확정 시 아바타 선택 UI 로 이전
-    this.gandalfPresetId = "male-arsenal"
+    // Phase 1b: 레이어드 아바타(SLICE_OUTFIT)로 렌더. 치수(bodyHeight 등)는 male-basic 기준.
+    this.gandalfPresetId = MALE_BASIC_AVATAR_KEY
     // restart() 후 상태 초기화
     this.isTransitioning = false
     this.facing = "east"
@@ -194,6 +204,7 @@ export class IndoorMapScene extends Phaser.Scene {
       this.load.image(BALL_TEXTURE, BALL_URL)
     }
     preloadGandalf(this)
+    preloadLayered(this, SLICE_OUTFIT)
   }
 
   create() {
@@ -213,13 +224,13 @@ export class IndoorMapScene extends Phaser.Scene {
     this.platforms.add(floor)
 
     createGandalfAnimations(this)
+    createLayeredAnims(this, SLICE_OUTFIT)
 
-    // Gandalf body+hair Container 생성. Container 자체에 arcade physics body 부여.
+    // 레이어드 아바타(base+하의+상의) Container 생성. Container 자체에 arcade physics body 부여.
     const spawnY = floorTopY // origin (0.5, 1.0) → container.y == 발끝 Y
-    this.avatar = createGandalfAvatar(this, this.spawnX, spawnY, this.gandalfPresetId)
-    // 가로·세로 2배 시각 (사용자 요청). hitbox 도 같은 비율 (PLAYER_BODY_W/H 에 SCALE 적용됨).
-    this.avatar.body.setScale(AVATAR_VISUAL_SCALE)
-    this.avatar.hair.setScale(AVATAR_VISUAL_SCALE)
+    this.avatar = createLayeredAvatar(this, this.spawnX, spawnY, SLICE_OUTFIT)
+    // 시각 스케일 — 모든 레이어 스프라이트에 동일 적용 (hitbox 는 PLAYER_BODY_W/H 에 SCALE 반영됨).
+    this.avatar.setScale(AVATAR_VISUAL_SCALE)
     this.player = this.avatar.container
     this.player.setDepth(10)
     this.physics.world.enable(this.player)
@@ -245,8 +256,8 @@ export class IndoorMapScene extends Phaser.Scene {
       (anim: Phaser.Animations.Animation) => {
         // 박치기(1)/물기(2) one-shot 완료 → idle 복귀
         if (
-          anim.key === gandalfAnimKey("headbut", this.gandalfPresetId) ||
-          anim.key === gandalfAnimKey("bite", this.gandalfPresetId)
+          anim.key === this.avatar.animKey("headbut") ||
+          anim.key === this.avatar.animKey("bite")
         ) {
           if (this.state === "acting") {
             this.state = "idle"
@@ -254,7 +265,7 @@ export class IndoorMapScene extends Phaser.Scene {
           }
           return
         }
-        if (anim.key !== gandalfAnimKey("kick", this.gandalfPresetId)) return
+        if (anim.key !== this.avatar.animKey("kick")) return
         this.applyPendingKickToBall()
         const body = this.player.body as Phaser.Physics.Arcade.Body
         if (this.kickLockY !== null) {
