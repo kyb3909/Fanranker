@@ -22,12 +22,21 @@ async function fetchAllHomeData(sort: SortType) {
     // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
     (async (): Promise<PostsResponse> => {
       try {
+        // active 게시판만 — 게시판 축소(is_active)를 비로그인 담벼락에도 일관 적용.
+        // 이 initialFeed 는 use-feed 가 hot+비로그인일 때 그대로 fallback 으로 쓰므로
+        // 여기서 안 막으면 숨긴 게시판 글이 담벼락에 그대로 노출된다.
+        const { data: activeCats } = await supabase
+          .from("categories")
+          .select("slug")
+          .eq("is_active", true)
+        const activeSlugs = (activeCats ?? []).map((c) => c.slug)
         const base = supabase
           .from("posts")
           .select(
             "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
           )
           .is("deleted_at", null)
+          .in("community_slug", activeSlugs)
         const ordered =
           sort === "new"
             ? base.order("created_at", { ascending: false })

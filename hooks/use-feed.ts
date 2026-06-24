@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
+import useSWR from "swr"
 import useSWRInfinite from "swr/infinite"
 import type { TipTapNode, PostFlair } from "@/types/post"
 import type { TitleDisplay } from "@/types/user"
@@ -126,10 +127,29 @@ export function useFeed(
 
   const slugsArray = useMemo(() => Array.from(followedCommunities), [followedCommunities])
 
+  // 담벼락 말머리 개인화 — 내 prefs 를 받아 favorite(only)/mute(exclude) flair id 로 변환.
+  // community_slugs 와 동일하게 URL 파라미터로 /api/posts 에 넘겨 CDN 캐시를 조합별로 유지.
+  const { data: flairPrefsData } = useSWR<{ prefs: { flair_id: string; pref: string }[] }>(
+    isSignedIn ? "/api/flair-prefs" : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+  const { onlyFlairs, excludeFlairs } = useMemo(() => {
+    const prefs = flairPrefsData?.prefs ?? []
+    return {
+      onlyFlairs: prefs.filter((p) => p.pref === "favorite").map((p) => p.flair_id),
+      excludeFlairs: prefs.filter((p) => p.pref === "mute").map((p) => p.flair_id),
+    }
+  }, [flairPrefsData])
+
   // 홈 SSR initialFeed는 항상 온도순(hot) + 전체 게시판(또는 비로그인/팔로우 0과 동일한 쿼리)만 의미가 있다.
   // 그 외(최신순·랜덤·팔로우 필터)에 동일 fallback을 쓰면 SWR이 재검증 없이 잘못된 순서를 유지한다.
   const useServerHydratedFallback = Boolean(
-    initialData && sortBy === "hot" && (!isSignedIn || slugsArray.length === 0)
+    initialData &&
+    sortBy === "hot" &&
+    (!isSignedIn || slugsArray.length === 0) &&
+    onlyFlairs.length === 0 &&
+    excludeFlairs.length === 0
   )
 
   const getKey = useCallback(
@@ -145,10 +165,13 @@ export function useFeed(
       const offset = pageIndex * PAGE_SIZE
       const followedParam =
         isSignedIn && slugsArray.length > 0 ? `&community_slugs=${slugsArray.join(",")}` : ""
+      const onlyParam = onlyFlairs.length > 0 ? `&only_flairs=${onlyFlairs.join(",")}` : ""
+      const excludeParam =
+        excludeFlairs.length > 0 ? `&exclude_flairs=${excludeFlairs.join(",")}` : ""
 
-      return `/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}${followedParam}`
+      return `/api/posts?sort=${sortParam}&limit=${PAGE_SIZE}&offset=${offset}${followedParam}${onlyParam}${excludeParam}`
     },
-    [sortBy, followsLoaded, isSignedIn, slugsArray]
+    [sortBy, followsLoaded, isSignedIn, slugsArray, onlyFlairs, excludeFlairs]
   )
 
   const { data, error, size, setSize, isLoading, isValidating } = useSWRInfinite<PostsResponse>(

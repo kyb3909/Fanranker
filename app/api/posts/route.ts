@@ -55,6 +55,15 @@ export async function GET(request: NextRequest) {
     const communitySlug = searchParams.get("community_slug")
     const communitySlugsParam = searchParams.get("community_slugs")
     const flairId = searchParams.get("flair_id")
+    // 담벼락 말머리 개인화 — 클라가 user_flair_prefs 를 URL 로 전달 (CDN 캐시 조합별 유지).
+    // .or 문자열 보간에 들어가므로 uuid 형식만 통과시켜 injection 방어.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const onlyFlairs = (searchParams.get("only_flairs") || "")
+      .split(",")
+      .filter((s) => UUID_RE.test(s)) // favorite whitelist
+    const excludeFlairs = (searchParams.get("exclude_flairs") || "")
+      .split(",")
+      .filter((s) => UUID_RE.test(s)) // mute
     const sort = searchParams.get("sort") || "new" // 'hot', 'new', 'comments', 'recent_comments'
     const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
@@ -87,6 +96,18 @@ export async function GET(request: NextRequest) {
       return res
     }
 
+    // 비로그인/팔로우 0 → 숨긴 게시판(is_active=false) 글 제외.
+    // 게시판 축소(온보딩)를 담벼락 피드에도 일관 적용한다. explore/글쓰기만 숨기면
+    // 비로그인 담벼락엔 baseball 등 숨긴 게시판 글이 그대로 떠서 구멍이 생긴다.
+    let activeSlugs: string[] | null = null
+    if (!communitySlug && !followedSlugs) {
+      const { data: activeCats } = await supabase
+        .from("categories")
+        .select("slug")
+        .eq("is_active", true)
+      activeSlugs = (activeCats ?? []).map((c) => c.slug)
+    }
+
     // 정렬 로직 (hot, new, comments)
     const buildQuery = () => {
       let q = supabase
@@ -114,11 +135,20 @@ export async function GET(request: NextRequest) {
         q = q.eq("community_slug", communitySlug)
       } else if (followedSlugs) {
         q = q.in("community_slug", followedSlugs)
+      } else if (activeSlugs) {
+        q = q.in("community_slug", activeSlugs)
       }
 
-      // 말머리 필터링
+      // 말머리 필터링 (게시판 페이지: 단일 flair 클릭)
       if (flairId) {
         q = q.eq("flair_id", flairId)
+      }
+      // 담벼락 말머리 개인화 — favorite(whitelist) 가 있으면 그 말머리만,
+      // 없으면 mute 한 말머리를 제외(flair 없는 글은 유지). favorite 이 강한 의도라 우선.
+      if (onlyFlairs.length > 0) {
+        q = q.in("flair_id", onlyFlairs)
+      } else if (excludeFlairs.length > 0) {
+        q = q.or(`flair_id.is.null,flair_id.not.in.(${excludeFlairs.join(",")})`)
       }
 
       // 정렬 (range 전에 order — postgrest-js 권장, 동일 created_at 시 id로 안정화)

@@ -10,6 +10,7 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
+import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 // 사이드바는 SSR 프리페치 데이터로 즉시 렌더되므로 직접 import.
 // dynamic() 로 감싸면 하이드레이션 시 loading 스켈레톤(h-96)이 잠깐 떴다가 실제 사이드바로
 // 되돌아오며 광고 박스가 ~365px 밀리는 CLS 발생 → 직접 import 로 그 시프트 제거.
@@ -39,9 +40,9 @@ const ContentSection = dynamic(
   }
 )
 
-// 홈 피드는 전체(유니버설) — 로그인 유저도 팔로우 필터 미적용.
-// 서버 SSR(전체 hot)과 동일 키 → 클라 재요청/피드 리렌더(CLS) 방지 + ISR 캐시 유지.
-// 개인화는 개별 게시판(/community/[slug])에서. (HotPostToast는 followedCommunities를 따로 사용.)
+// 비로그인은 유니버설(전체 hot) — SSR 과 동일 키로 CLS/ISR 캐시 유지(클라 재요청 X).
+// 로그인은 개인화(팔로우 게시판 + 말머리 필터): 로그인 유저만 /api/posts 를 재요청하므로
+// 비로그인 홍보 트래픽의 CLS/ISR 은 그대로다. EMPTY_FOLLOWS 는 비로그인 fallback 용.
 const EMPTY_FOLLOWS = new Set<string>()
 
 type TabType = "feed" | "content"
@@ -112,11 +113,13 @@ export function HomeClient({
     return () => window.removeEventListener("communityFollowChanged", handler)
   }, [mutateFollows])
 
-  // 피드 데이터 훅 — 홈은 유니버설(전체) 피드. EMPTY_FOLLOWS로 SSR fallback 그대로 사용(재요청 X).
+  // 피드 데이터 훅 — 비로그인은 유니버설(SSR fallback, 재요청 X), 로그인은 개인화
+  // (팔로우 게시판 + 말머리 필터). followsLoaded 로 팔로우 로드 전 빈 피드 깜빡임 방지.
+  const followsLoaded = !isSignedIn || !!followsData
   const { posts, isLoading, isLoadingMore, loadMore } = useFeed(
     sortBy,
-    EMPTY_FOLLOWS,
-    true,
+    isSignedIn ? followedCommunities : EMPTY_FOLLOWS,
+    followsLoaded,
     initialFeed
   )
 
@@ -251,6 +254,8 @@ export function HomeClient({
 
             {activeTab === "feed" && (
               <div className="space-y-2.5">
+                {/* 말머리 필터 — 로그인 사용자만. 팔로우 게시판 말머리 즐겨찾기/뮤트로 담벼락 개인화 */}
+                {isSignedIn && <FlairFilterBar followedSlugs={[...followedCommunities]} />}
                 <FeedSection
                   posts={posts}
                   isLoading={isLoading}
