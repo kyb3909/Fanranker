@@ -8,7 +8,6 @@ import { Loader2, FileText, ArrowLeft } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { useRouter } from "next/navigation"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
-import { formatRelativeTime } from "@/lib/utils/date"
 
 interface Post {
   id: string
@@ -78,7 +77,7 @@ export default function MyPostsPage() {
                 author: profile?.nickname || "나",
                 avatar: profile?.avatar_url || "/placeholder-user.jpg",
                 userId: post.user_id,
-                timestamp: formatRelativeTime(new Date(post.created_at)),
+                timestamp: post.created_at,
                 title: post.title,
                 content: post.content,
                 image: post.image,
