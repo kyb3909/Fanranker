@@ -59,7 +59,7 @@ export class SideScrollerChannel {
     if (this.channel) return
 
     this.channel = this.supabase.channel(METAVERSE.CHANNEL_SIDESCROLL, {
-      config: { presence: { key: this.identity.userId } },
+      config: { private: true, presence: { key: this.identity.userId } },
     })
 
     this.channel.on("presence", { event: "sync" }, () => this.emitRemoteChange())

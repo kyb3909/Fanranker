@@ -43,7 +43,7 @@ export class RoomChannel {
 
     const name = `${METAVERSE.CHANNEL_CHAT_ROOM_PREFIX}${this.roomId}`
     this.channel = this.supabase.channel(name, {
-      config: { presence: { key: this.identity.userId } },
+      config: { private: true, presence: { key: this.identity.userId } },
     })
 
     this.channel.on("presence", { event: "sync" }, () => this.emitPresenceCount())

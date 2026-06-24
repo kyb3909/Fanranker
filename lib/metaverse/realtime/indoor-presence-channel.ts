@@ -56,7 +56,7 @@ export class IndoorPresenceChannel {
   async connect(): Promise<void> {
     if (this.channel) return
     this.channel = this.supabase.channel(this.channelName, {
-      config: { presence: { key: this.identity.userId } },
+      config: { private: true, presence: { key: this.identity.userId } },
     })
     this.channel.on("presence", { event: "sync" }, () => this.emitRemote())
     this.channel.on("presence", { event: "join" }, () => this.emitRemote())

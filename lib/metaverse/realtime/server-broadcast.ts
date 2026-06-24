@@ -24,7 +24,7 @@ const SUBSCRIBE_TIMEOUT_MS = 4000
 async function broadcastToWorld(msg: BroadcastPayload): Promise<void> {
   const supabase = createServiceRoleClient()
   const channel = supabase.channel(METAVERSE.CHANNEL_WORLD, {
-    config: { broadcast: { ack: false, self: false } },
+    config: { private: true, broadcast: { ack: false, self: false } },
   })
 
   try {
