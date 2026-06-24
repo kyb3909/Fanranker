@@ -29,6 +29,15 @@ export function PredictionHistory({ eventSlug }: { eventSlug?: string }) {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "correct" | "incorrect">("all")
   const [expandedSlips, setExpandedSlips] = useState<Set<string>>(new Set())
+  // SSR/hydration 첫 렌더 일치용. Clerk isLoaded 가 SSR(서버 세션)=true 인데
+  // 클라 첫 hydration 에선 false(Clerk JS 로드 전)라 분기가 갈려, 서버는
+  // "불러오는 중" 텍스트를 그리고 클라는 스피너만 그려 #418(텍스트 불일치)이 났다.
+  // mounted=false 동안은 SSR·첫 hydration 모두 동일한 로딩 UI만 그린다.
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -86,7 +95,7 @@ export function PredictionHistory({ eventSlug }: { eventSlug?: string }) {
     boxShadow: "var(--wc-shadow-1)",
   } as const
 
-  if (!isLoaded) {
+  if (!mounted || !isLoaded) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
