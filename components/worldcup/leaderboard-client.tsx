@@ -40,21 +40,14 @@ export interface LbMyInfo {
 interface LeaderboardClientProps {
   groups: LbGroup[]
   groupAvg: LbGroupAvg[]
-  /** TOP 10 list — 의욕 상실 방지 위해 client 에 노출하지 않음. 데이터는 props 로 받지만 사용 X (시그니처 호환). */
+  /** 그룹별 TOP 10 순위 (공개). */
   rankings?: Record<string, LbRanking[]>
   myInfo: LbMyInfo | null
 }
 
 const fmtProfit = (n: number) => `${n >= 0 ? "+" : ""}${n.toLocaleString()}`
 
-/** rank / totalInGroup → '상위 N%' 부드러운 표현 */
-function fmtPercentile(rank: number, total: number): string {
-  if (total <= 1) return "—"
-  const pct = Math.round((rank / total) * 100)
-  return `상위 ${Math.max(1, pct)}%`
-}
-
-export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClientProps) {
+export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: LeaderboardClientProps) {
   const groupAvgBySlug = useMemo(() => new Map(groupAvg.map((g) => [g.slug, g])), [groupAvg])
 
   // 그룹 카드 정렬 — rank 순 (avgProfit 내림차순)
@@ -154,7 +147,81 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
         })}
       </div>
 
-      {/* 내 위치 — percentile (구체 ranking 숨김, 의욕 상실 방지) */}
+      {/* TOP 10 순위 — 공개 */}
+      {rankings &&
+        sortedGroups.map((g) => {
+          const list = rankings[g.slug] ?? []
+          if (list.length === 0) return null
+          return (
+            <div key={`top-${g.slug}`} style={{ ...cardStyle, padding: "20px 24px" }}>
+              <div
+                style={{ fontSize: 16, fontWeight: 800, color: "var(--wc-ink)", marginBottom: 14 }}
+              >
+                TOP 10
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {list.map((u, i) => (
+                  <div
+                    key={u.user_id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "9px 0",
+                      borderTop: i === 0 ? "none" : "1px solid var(--wc-line)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      <b
+                        className="tabular-nums"
+                        style={{
+                          width: 22,
+                          textAlign: "center",
+                          fontSize: 14,
+                          color: u.rank <= 3 ? "var(--wc-burgundy)" : "var(--wc-mute)",
+                        }}
+                      >
+                        {u.rank}
+                      </b>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--wc-ink)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {u.nickname}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 14,
+                        fontSize: 12.5,
+                        color: "var(--wc-mute)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <b
+                        className="tabular-nums"
+                        style={{ color: u.profit >= 0 ? "var(--wc-burgundy)" : "var(--wc-mute)" }}
+                      >
+                        {fmtProfit(u.profit)}
+                      </b>
+                      <span className="tabular-nums">{u.accuracy}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+
+      {/* 내 위치 — 공개 순위 */}
       {myInfo && myGroup && myGroupAvg && (
         <div
           className="wc-lb-me"
@@ -170,7 +237,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
             <Crown className="h-7 w-7 shrink-0" />
             <div>
               <div className="wc-lb-me-h">
-                내 위치 — {fmtPercentile(myInfo.rank, myInfo.totalInGroup)}
+                내 순위 — {myInfo.rank}위 / {myInfo.totalInGroup}명
               </div>
               <div className="wc-lb-me-sub">
                 {myGroup.clubKor} 구너 {myInfo.totalInGroup}명 중
@@ -226,7 +293,7 @@ export function LeaderboardClient({ groups, groupAvg, myInfo }: LeaderboardClien
       )}
 
       <p className="text-center text-[11px]" style={{ color: "var(--wc-mute)" }}>
-        실시간 구너 평균. 개별 순위는 종료 시점 결과 발표에서 공개됩니다.
+        실시간 구너 평균과 순위. 정식 집계는 32강부터 반영됩니다.
       </p>
     </div>
   )

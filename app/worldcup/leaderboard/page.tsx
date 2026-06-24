@@ -17,7 +17,7 @@ const EVENT_SLUG = "worldcup-2026"
 
 export const metadata: Metadata = {
   title: "월드컵 리더보드",
-  description: "구너 전체 평균과 내 위치. 개별 순위는 종료 후 공개.",
+  description: "구너 전체 평균과 실시간 TOP 10 순위, 내 순위.",
   alternates: { canonical: "/worldcup/leaderboard" },
 }
 
@@ -221,7 +221,7 @@ export default async function WorldcupLeaderboardPage() {
         <SectionHeader
           label="LEADERBOARD"
           title="리더보드"
-          description="구너 전체 평균과 내 위치. 개별 순위는 의욕 상실 방지를 위해 진행 중에는 비공개 — 종료 후 결과 발표에서 구너 1위를 공개합니다."
+          description="구너 전체 평균과 실시간 TOP 10 순위, 그리고 내 순위를 확인하세요. 정식 집계는 32강부터 반영됩니다."
           style={{ marginTop: 16 }}
         />
 
