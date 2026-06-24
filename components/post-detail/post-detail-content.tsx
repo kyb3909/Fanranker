@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Search, Ban, Pencil, Trash2, User, Flag } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import Image from "next/image"
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import {
@@ -61,12 +61,7 @@ export function PostDetailContent({
 }) {
   const router = useRouter()
   const { user } = useUser()
-  // SSR/hydration 첫 렌더 일치용. Clerk user 가 SSR↔클라 첫 hydration 에서 갈리면
-  // isAuthor 가 달라져 더보기 메뉴(수정·삭제 ↔ 프로필·신고)가 서버≠클라로 어긋나 #418.
-  // mounted=true(클라 effect) 후에만 isAuthor 를 평가해 SSR·첫 hydration 을 통일한다.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  const isAuthor = mounted && post.userId === user?.id
+  const isAuthor = post.userId === user?.id
   const { toggleBlock } = useBlockedUsers()
   const [commentCount, setCommentCount] = useState(0)
 
