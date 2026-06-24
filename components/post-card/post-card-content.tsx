@@ -892,7 +892,7 @@ function InstagramJsEmbed({ url }: { url: string }) {
   return (
     <div
       ref={containerRef}
-      className="-mx-4 mt-1 min-h-[600px] sm:min-h-[760px] [&_.instagram-media]:!mx-auto [&_.instagram-media]:!my-0"
+      className="mt-1 min-h-[600px] sm:min-h-[760px] [&_.instagram-media]:!mx-auto [&_.instagram-media]:!my-0"
     />
   )
 }

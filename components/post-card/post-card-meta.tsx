@@ -141,6 +141,7 @@ export function PostCardMeta({
               nounTitle={titleDisplay.nounTitle}
               rarity={titleDisplay.rarity}
               size="sm"
+              className="shrink-0 whitespace-nowrap"
             />
           </>
         )}
