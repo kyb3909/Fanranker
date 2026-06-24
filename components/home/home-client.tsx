@@ -21,37 +21,16 @@ const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
 )
-const ContentSection = dynamic(
-  () => import("@/components/home/content-section").then((m) => ({ default: m.ContentSection })),
-  {
-    loading: () => (
-      <div className="min-h-[400px]">
-        <div className="bg-card border-border animate-pulse rounded-lg border p-6">
-          <div className="bg-muted mb-4 h-6 w-1/3 rounded" />
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-muted h-20 rounded" />
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-    ssr: false,
-  }
-)
 
 // 비로그인은 유니버설(전체 hot) — SSR 과 동일 키로 CLS/ISR 캐시 유지(클라 재요청 X).
 // 로그인은 개인화(팔로우 게시판 + 말머리 필터): 로그인 유저만 /api/posts 를 재요청하므로
 // 비로그인 홍보 트래픽의 CLS/ISR 은 그대로다. EMPTY_FOLLOWS 는 비로그인 fallback 용.
 const EMPTY_FOLLOWS = new Set<string>()
 
-type TabType = "feed" | "content"
-
 interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
-  initialTab?: TabType
   initialSort?: SortType
 }
 
@@ -59,21 +38,11 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
-  initialTab = "feed",
   initialSort = "hot",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
-
-  // soft navigation 대응: URL ?tab=content 변경 시 activeTab 동기화
-  useEffect(() => {
-    const urlTab = searchParams.get("tab")
-    if (urlTab === "content" || urlTab === "feed") {
-      setActiveTab(urlTab)
-    }
-  }, [searchParams])
   const [sortBy, setSortBy] = useState<SortType>(initialSort)
 
   // 정렬을 URL ?sort= 에 보존 → 새로고침·뒤로가기 시 선택한 정렬 유지
@@ -122,17 +91,6 @@ export function HomeClient({
     followsLoaded,
     initialFeed
   )
-
-  const handleTabClick = (tab: TabType) => {
-    setActiveTab(tab)
-    // URL 쿼리 동기화 — 새로고침해도 현재 탭 유지.
-    // 기본값(feed)은 쿼리 제거, content는 ?tab=content로.
-    const nextUrl = tab === "content" ? "/?tab=content" : "/"
-    router.replace(nextUrl, { scroll: false })
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "auto" })
-    }
-  }
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
@@ -184,88 +142,47 @@ export function HomeClient({
                 <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </span>
             </Link>
-            {/* 필터 스트립 — 한 줄: 탭 pills | separator | sort pills (태그라인은 푸터로 이동) */}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5" role="tablist" aria-label="홈 탭">
-                {(
-                  [
-                    { key: "feed", label: "게시물" },
-                    { key: "content", label: "경기 분석글" },
-                  ] as const
-                ).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    role="tab"
-                    aria-selected={activeTab === key}
-                    onClick={() => handleTabClick(key)}
-                    className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${activeTab !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
-                    style={{
-                      height: 34,
-                      padding: "0 14px",
-                      background: activeTab === key ? "var(--wc-burgundy)" : "var(--wc-card)",
-                      color: activeTab === key ? "white" : "var(--wc-mute)",
-                      border:
-                        activeTab === key
-                          ? "1px solid var(--wc-burgundy)"
-                          : "1px solid var(--wc-line-2)",
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {activeTab === "feed" && (
-                <>
-                  <span
-                    aria-hidden
-                    style={{ width: 1, height: 20, background: "var(--wc-line-2)" }}
-                  />
-                  <div className="flex items-center gap-1.5" role="group" aria-label="게시물 정렬">
-                    {[
-                      { key: "random" as const, label: "랜덤" },
-                      { key: "hot" as const, label: "온도순" },
-                      { key: "new" as const, label: "최신순" },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => changeSort(key)}
-                        aria-pressed={sortBy === key}
-                        className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${sortBy !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
-                        style={{
-                          height: 34,
-                          padding: "0 14px",
-                          background: sortBy === key ? "var(--wc-burgundy)" : "var(--wc-card)",
-                          color: sortBy === key ? "white" : "var(--wc-mute)",
-                          border:
-                            sortBy === key
-                              ? "1px solid var(--wc-burgundy)"
-                              : "1px solid var(--wc-line-2)",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+
+            {/* 정렬 스트립 — 랜덤/온도순/최신순. (경기 분석글 탭은 분석글이 없어 제거 — 복원은 git history) */}
+            <div className="mt-4 flex items-center gap-1.5" role="group" aria-label="게시물 정렬">
+              {[
+                { key: "random" as const, label: "랜덤" },
+                { key: "hot" as const, label: "온도순" },
+                { key: "new" as const, label: "최신순" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => changeSort(key)}
+                  aria-pressed={sortBy === key}
+                  className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${sortBy !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
+                  style={{
+                    height: 34,
+                    padding: "0 14px",
+                    background: sortBy === key ? "var(--wc-burgundy)" : "var(--wc-card)",
+                    color: sortBy === key ? "white" : "var(--wc-mute)",
+                    border:
+                      sortBy === key
+                        ? "1px solid var(--wc-burgundy)"
+                        : "1px solid var(--wc-line-2)",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
-            {activeTab === "feed" && (
-              <div className="space-y-2.5">
-                {/* 말머리 필터 — 로그인 사용자만. 팔로우 게시판 말머리 즐겨찾기/뮤트로 담벼락 개인화 */}
-                {isSignedIn && <FlairFilterBar followedSlugs={[...followedCommunities]} />}
-                <FeedSection
-                  posts={posts}
-                  isLoading={isLoading}
-                  isLoadingMore={isLoadingMore}
-                  loadMore={loadMore}
-                />
-              </div>
-            )}
-
-            {activeTab === "content" && <ContentSection />}
+            <div className="space-y-2.5">
+              {/* 말머리 필터 — 로그인 사용자만. 팔로우 게시판 말머리 즐겨찾기/뮤트로 담벼락 개인화 */}
+              {isSignedIn && <FlairFilterBar followedSlugs={[...followedCommunities]} />}
+              <FeedSection
+                posts={posts}
+                isLoading={isLoading}
+                isLoadingMore={isLoadingMore}
+                loadMore={loadMore}
+              />
+            </div>
           </div>
 
           {/* Right Sidebar */}
@@ -274,10 +191,8 @@ export function HomeClient({
           </aside>
         </div>
 
-        {/* 실시간 인기글 토스트 — feed 탭 + 로그인 시 */}
-        {activeTab === "feed" && isSignedIn && (
-          <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />
-        )}
+        {/* 실시간 인기글 토스트 — 로그인 시 */}
+        {isSignedIn && <HotPostToast enabled followedSlugs={[...followedCommunities].sort()} />}
       </main>
     </div>
   )

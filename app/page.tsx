@@ -121,7 +121,6 @@ export default async function Home({
         initialFeed={homeData.initialFeed}
         initialCategories={homeData.initialCategories}
         initialRecentComments={homeData.initialRecentComments}
-        initialTab={params.tab === "content" ? "content" : "feed"}
         initialSort={initialSort}
       />
     </Suspense>
