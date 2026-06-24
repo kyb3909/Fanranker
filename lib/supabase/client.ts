@@ -21,11 +21,27 @@ import { env } from "@/lib/env"
  * Creates an anonymous Supabase client (no authentication)
  * Use this for public data access without RLS restrictions
  */
+let cachedAnonClient: ReturnType<typeof createSupabaseClient> | null = null
+
 export function createAnonClient() {
-  return createSupabaseClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  )
+  // 브라우저에서는 단일 인스턴스를 재사용한다. createAnonClient 를 여러 곳
+  // (메타버스 RoomChannel + IndoorPresenceChannel 등)에서 호출하면 GoTrueClient 가
+  // 같은 storage key 로 중복 생성돼 "Multiple GoTrueClient instances" 경고 +
+  // Realtime auth 동시성 문제(presence sync 불안정 → 다른 유저가 안 보임)를 일으킨다.
+  // 서버(SSR/route)에서는 요청 간 격리를 위해 캐시하지 않고 매번 새로 만든다.
+  if (typeof window === "undefined") {
+    return createSupabaseClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    )
+  }
+  if (!cachedAnonClient) {
+    cachedAnonClient = createSupabaseClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    )
+  }
+  return cachedAnonClient
 }
 
 /**
