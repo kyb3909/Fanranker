@@ -447,7 +447,17 @@ export async function POST(request: NextRequest) {
       console.error("Failed to insert predictions:", insertError)
       await supabase.from("prediction_slips").delete().eq("id", slip.id)
       await retryRefundTokens(supabase, user.id, stake, "예측 저장 실패 환불")
-      return NextResponse.json({ error: "예측 저장 중 오류가 발생했습니다." }, { status: 500 })
+      // 같은 경기 중복 예측(unique idx_unique_user_game_active_prediction 위반)은
+      // 서버 오류가 아니라 사용자 안내 대상 → 500 대신 409. 한 경기는 한 번만 예측 가능.
+      const isDuplicate = (insertError as { code?: string }).code === "23505"
+      return NextResponse.json(
+        {
+          error: isDuplicate
+            ? "이미 예측한 경기가 포함되어 있어요. 같은 경기는 한 번만 예측할 수 있습니다."
+            : "예측 저장 중 오류가 발생했습니다.",
+        },
+        { status: isDuplicate ? 409 : 500 }
+      )
     }
 
     // ===== 예측 활동 피드 + 팔로워 알림 (이벤트 슬립 제외) =====
