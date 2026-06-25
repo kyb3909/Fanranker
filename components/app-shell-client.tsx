@@ -42,7 +42,10 @@ export function AppShellClient({ header, children }: AppShellClientProps) {
     <div className="worldcup-scope min-h-screen">
       {!hideChrome && header}
       {/* 배너 = 피드 위 오버레이 레이어. 홈에서만 절대 위치로 상단 덮개. */}
-      <div className="relative">
+      {/* min-h-screen: 본문(스트리밍/하이드레이션)이 채워지기 전에도 본문 영역을 뷰포트 높이로
+          예약 → footer 가 처음부터 fold 밖. 안 하면 본문이 늦게 자랄 때(특히 홈 피드) footer 가
+          밀려 CLS 발생(콜드 로그아웃 포함 ~0.15-0.3, audit:cwv raw 샘플 10/12 스파이크). */}
+      <div className="relative min-h-screen">
         {showBanner && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
             <div className="pointer-events-auto w-full">
