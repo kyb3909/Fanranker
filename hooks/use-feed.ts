@@ -187,8 +187,14 @@ export function useFeed(
   )
 
   const posts = useMemo(() => {
-    if (!data) return []
-    const allPosts = data.flatMap((page) =>
+    // SWR 데이터가 아직 없으면(로그인 콜드 로드: follows·개인화 피드 대기) SSR initialData 로 렌더.
+    // 하이드레이션이 SSR 피드(긴 콘텐츠)를 빈 상태/스켈레톤으로 무너뜨리면 footer 가 fold 위로
+    // 올라왔다가 데이터 도착 시 다시 밀려나며 CLS(footer 시프트 0.27)가 생긴다 → SSR 피드를 계속
+    // 그려 페이지 높이를 유지(footer off-screen 고정). 로그아웃은 fallbackData 로 data 가 즉시
+    // 채워져 이 분기를 타지 않으므로 동작 불변.
+    const pages = data && data.length > 0 ? data : initialData ? [initialData] : []
+    if (pages.length === 0) return []
+    const allPosts = pages.flatMap((page) =>
       transformPosts(page.posts || [], page.profiles || [], page.equippedTitles, page.flairTitles)
     )
 
@@ -221,7 +227,7 @@ export function useFeed(
       )
     }
     return dedupedPosts
-  }, [data, sortBy])
+  }, [data, sortBy, initialData])
 
   const isLoadingMore = !isLoading && isValidating && size > 1
 

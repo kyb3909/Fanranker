@@ -46,7 +46,9 @@ export const FeedSection = memo(function FeedSection({
     return ids
   }, [posts])
 
-  if (isLoading) {
+  // posts 가 비었을 때만 스켈레톤. 로그인 콜드 로드는 useFeed 가 SSR initialData 를 반환하므로
+  // posts 가 차 있어 스켈레톤 대신 실제 피드를 그린다(footer off-screen 유지 → CLS 방지).
+  if (isLoading && visiblePosts.length === 0) {
     return (
       <>
         {[1, 2, 3, 4, 5].map((i) => (
