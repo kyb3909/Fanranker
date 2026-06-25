@@ -322,10 +322,12 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary user URL, not in remotePatterns
+          // fill 분기(next/image)와 동일하게 absolute inset-0 로 채워 16/9 예약 박스를 넘지 않게 함.
+          // (h-auto 면 세로 긴 이미지가 박스를 뚫고 자라 아래 콘텐츠·푸터를 밀어 CLS 발생)
           <img
             src={src}
             alt={alt}
-            className="h-auto max-h-[480px] w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
             loading={priority ? "eager" : "lazy"}
             referrerPolicy="no-referrer"
             onError={() => setError(true)}
