@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 본문 3줄 요약 (요청 시 + 저렴 모델). 실패해도 메타는 정상 반환.
+    // 본문 5줄 요약 (요청 시 + 저렴 모델). 실패해도 메타는 정상 반환.
     let summary: string[] | null = null
     if (wantSummary) {
       const bodyText = extractArticleText(html)
@@ -217,7 +217,7 @@ function extractArticleText(html: string): string {
     .slice(0, 4000)
 }
 
-/** 기사 본문을 한국어 3줄로 요약 (gpt-4o-mini). 실패 시 null. */
+/** 기사 본문을 한국어 5줄로 요약 (gpt-4o-mini). 실패 시 null. */
 async function summarizeArticle(text: string, title: string): Promise<string[] | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
@@ -232,12 +232,12 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
           {
             role: "system",
             content:
-              '기사를 한국어 3줄로 요약한다. 각 줄은 객관적 사실만, 뉴스 와이어체(~했다/~이다). 감상·평가·질문·추측·이모지 금지. JSON 으로만 응답: {"lines": ["...", "...", "..."]}',
+              '기사를 한국어 5줄로 요약한다. 각 줄은 객관적 사실만, 뉴스 와이어체(~했다/~이다). 감상·평가·질문·추측·이모지 금지. JSON 으로만 응답: {"lines": ["...", "...", "...", "...", "..."]}',
           },
           { role: "user", content: `제목: ${title}\n\n본문:\n${text}` },
         ],
         temperature: 0.3,
-        max_tokens: 400,
+        max_tokens: 600,
         response_format: { type: "json_object" },
       }),
     })
@@ -249,7 +249,7 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
     if (!Array.isArray(parsed.lines)) return null
     return parsed.lines
       .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
-      .slice(0, 3)
+      .slice(0, 5)
   } catch {
     return null
   }
