@@ -104,7 +104,7 @@ export default async function WorldcupGamesPage() {
               className="mt-4 text-[22px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.02em", color: "var(--wc-ink)" }}
             >
-              곧 월드컵 경기가 시작됩니다
+              32강 대진이 확정된 이후 예측이 열립니다
             </h2>
             <p
               className="mx-auto mt-2.5 mb-7 max-w-[440px] text-[14.5px]"
