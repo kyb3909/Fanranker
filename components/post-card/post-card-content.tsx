@@ -25,6 +25,18 @@ import { BoardIcon } from "@/components/sidebar/board-icon"
 import type { TipTapNode } from "@/components/post-card"
 import type { PostFlair } from "@/types/post"
 
+// 트윗 사진 표시용 URL → medium(≈1200px). 카드 표시폭 ~560px라 orig(1536px·760KB)는 과대.
+// 라이트박스(원본 확대)는 호출부에서 orig 그대로 사용. pbs.twimg 외·파싱 실패는 원본 반환.
+function toTwitterMedium(raw: string): string {
+  try {
+    const u = new URL(raw)
+    if (u.hostname === "pbs.twimg.com") u.searchParams.set("name", "medium")
+    return u.toString()
+  } catch {
+    return raw
+  }
+}
+
 const CATEGORY_CHIP: Record<string, { bg: string; color: string; emoji?: string }> = {
   축구: { bg: "#FDECEC", color: "#9F1239", emoji: "⚽" },
   야구: { bg: "#EAF1FD", color: "#1E3A8A", emoji: "⚾" },
@@ -579,6 +591,9 @@ function XInlineContent({ url, priority }: { url: string; priority?: boolean }) 
   }
 
   const firstMedia = data.media?.[0]
+  // 표시용 사진은 medium 으로 축소(LCP·바이트). 라이트박스는 orig 유지(아래 setLightboxSrc).
+  const photoDisplaySrc =
+    firstMedia?.type === "photo" ? toTwitterMedium(firstMedia.url) : (firstMedia?.url ?? "")
 
   return (
     <ProviderCard
@@ -610,7 +625,7 @@ function XInlineContent({ url, priority }: { url: string; priority?: boolean }) 
               aria-label="이미지 크게 보기"
             >
               <Image
-                src={firstMedia.url}
+                src={photoDisplaySrc}
                 alt=""
                 fill
                 className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"

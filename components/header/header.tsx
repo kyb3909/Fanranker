@@ -47,7 +47,12 @@ export function Header() {
               className="relative -ml-1 flex min-h-11 items-baseline"
               aria-label="홈"
             >
-              <span className="relative z-0 hidden shrink-0 sm:block" aria-hidden>
+              {/* sm:h/w 명시 — 로고 이미지 디코드 전에도 슬롯 예약 → 데스크톱 헤더가 자라
+                  본문(div.relative)을 미는 CLS(~0.024) 방지. 모바일은 hidden 이라 무관. */}
+              <span
+                className="relative z-0 hidden shrink-0 sm:block sm:h-[33px] sm:w-[112px]"
+                aria-hidden
+              >
                 <Image src="/logo-brush.webp" alt="" width={112} height={33} priority />
               </span>
               <span
