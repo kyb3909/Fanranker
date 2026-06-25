@@ -117,10 +117,7 @@ export default async function WorldcupGamesPage() {
               className="wc-cd-light"
               style={{ maxWidth: 360, margin: "0 auto", textAlign: "left" }}
             >
-              <Countdown
-                target={event?.start_at ?? "2026-06-10T14:00:00+09:00"}
-                label="월드컵 시작까지"
-              />
+              <Countdown target="2026-06-29T04:00:00+09:00" label="월드컵 시작까지" />
             </div>
             {totalRegistrations > 0 && (
               <p className="mt-6 text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
