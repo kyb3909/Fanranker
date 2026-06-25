@@ -273,9 +273,11 @@ export const CommunityContent = memo(function CommunityContent({
                 </Link>
               )}
               {communitySlug && (
+                // 모바일은 우하단 글쓰기 FAB(floating-write-button)가 있어 중복 → 줄 안 버튼은 데스크톱만.
+                // 모바일에서 이 버튼을 숨겨야 말머리 칩이 전체 너비를 써서 글쓰기 버튼에 가려지지 않음.
                 <Link
                   href={`/write?community=${communitySlug}`}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-[12px] font-bold transition-colors"
+                  className="hidden shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-[12px] font-bold transition-colors sm:inline-flex"
                   style={{
                     background: "var(--wc-card)",
                     color: "var(--wc-mute)",
