@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Users } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 
@@ -9,13 +8,7 @@ import { toast } from "@/hooks/use-toast"
  * 게시판 [멤버 수 + 팔로우 버튼] 행. 팔로우 상태/토글은 자체 관리.
  * 크리에이터 보드 상단 채널 헤더에서 사용 (일반 보드는 CommunityContent 미니헤더가 담당).
  */
-export function BoardFollow({
-  communitySlug,
-  members,
-}: {
-  communitySlug: string
-  members?: string
-}) {
+export function BoardFollow({ communitySlug }: { communitySlug: string }) {
   const { isSignedIn } = useAuth()
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
@@ -51,12 +44,6 @@ export function BoardFollow({
 
   return (
     <div className="flex shrink-0 items-center gap-3">
-      {members != null && (
-        <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
-          <Users className="h-3.5 w-3.5" />
-          <span className="font-semibold tabular-nums">{members}</span>
-        </div>
-      )}
       <button
         type="button"
         onClick={handleFollow}

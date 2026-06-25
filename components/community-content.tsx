@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, memo } from "react"
-import { Users, Pencil, Megaphone, ChevronLeft, ChevronRight } from "lucide-react"
+import { Pencil, Megaphone, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Pagination,
@@ -54,7 +54,6 @@ interface Post {
 interface Community {
   name: string
   description: string
-  members: string
   banner: string
 }
 
@@ -140,14 +139,7 @@ export const CommunityContent = memo(function CommunityContent({
         <div className="py-4">
           {/* 미니 헤더 — 멤버 + 팔로우 (크리에이터 보드는 상단 채널 헤더로 이동 → hideFollowHeader) */}
           {!hideFollowHeader && (
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div
-                className="flex items-center gap-1.5 text-[12px]"
-                style={{ color: "var(--wc-mute)" }}
-              >
-                <Users className="h-3.5 w-3.5" />
-                <span className="font-semibold tabular-nums">{community.members}</span>
-              </div>
+            <div className="mb-4 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={handleFollow}

@@ -14,7 +14,6 @@ const NewsTicker = dynamic(
 import { createServerAnonClient } from "@/lib/supabase"
 import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
-import { formatMemberCount } from "@/lib/utils/format"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import Link from "@/components/ui/app-link"
 import { getCreator } from "@/lib/constants/creators"
@@ -25,20 +24,6 @@ export const revalidate = 30
 
 /** slug → community info lookup (from centralized constants) */
 const COMMUNITY_MAP = Object.fromEntries(ALL_COMMUNITIES.map((c) => [c.slug, c]))
-
-/** Member counts (placeholder until real analytics) */
-const MEMBER_COUNTS: Record<string, number> = {
-  football: 1245000,
-  baseball: 982000,
-  basketball: 387000,
-  volleyball: 221000,
-  game: 671000,
-  movies: 567000,
-  music: 432000,
-  idol: 789000,
-  anime: 345000,
-  "free-board": 894000,
-}
 
 const POSTS_PER_PAGE = 25
 
@@ -277,7 +262,6 @@ export default async function CommunityPage({
     const creatorBoardInfo = {
       name: `${creator.name} 게시판`,
       description: "",
-      members: formatMemberCount(0),
       banner: "/placeholder.jpg",
     }
     return (
@@ -287,7 +271,7 @@ export default async function CommunityPage({
           className="container mx-auto max-w-[1280px] px-4 py-6"
           tabIndex={-1}
         >
-          <CreatorBoard creator={creator} members={creatorBoardInfo.members} />
+          <CreatorBoard creator={creator} />
           <div className="mt-6">
             <CommunityContent
               community={creatorBoardInfo}
@@ -327,7 +311,6 @@ export default async function CommunityPage({
   const community = {
     name: communityName,
     description: communityDesc,
-    members: formatMemberCount(MEMBER_COUNTS[slug] || 0),
     banner: "/placeholder.jpg",
   }
 

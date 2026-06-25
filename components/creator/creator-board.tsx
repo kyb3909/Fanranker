@@ -9,7 +9,6 @@ import { BoardFollow } from "@/components/community/board-follow"
 
 interface CreatorBoardProps {
   creator: CreatorInfo
-  members?: string
 }
 
 const card: React.CSSProperties = {
@@ -30,7 +29,7 @@ const sectionHead: React.CSSProperties = {
  * 최근 영상 리스트 + 유튜브 커뮤니티(게시물) 글(공지). iframe 은 재생 클릭 시에만 lazy 로드.
  * 데스크탑은 우측 컬럼을 좌측 영상 높이에 맞추고 각 섹션 내부 스크롤.
  */
-export function CreatorBoard({ creator, members }: CreatorBoardProps) {
+export function CreatorBoard({ creator }: CreatorBoardProps) {
   const { hero, recent, community, isLoading } = useCreatorVideos(creator.creatorId)
   const [active, setActive] = useState<CreatorVideo | null>(null)
   const [playing, setPlaying] = useState(false)
@@ -81,7 +80,7 @@ export function CreatorBoard({ creator, members }: CreatorBoardProps) {
             )}
           </div>
         </div>
-        <BoardFollow communitySlug={creator.slug} members={members} />
+        <BoardFollow communitySlug={creator.slug} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
