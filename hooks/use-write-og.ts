@@ -30,7 +30,12 @@ export function useWriteOg(title: string, dispatch: Dispatch<EditorAction>) {
         dispatch({
           type: "SET_FIELD",
           field: "ogData",
-          value: { title: data.title, description: data.description, siteName: data.siteName },
+          value: {
+            title: data.title,
+            description: data.description,
+            siteName: data.siteName,
+            url: finalUrl,
+          },
         })
 
         if (!title && data.title) dispatch({ type: "SET_FIELD", field: "title", value: data.title })

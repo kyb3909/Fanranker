@@ -44,7 +44,7 @@ export type TipTapEditorHandle = {
   /** 업로드된 이미지 URL들을 커서 위치에 순서대로 삽입 */
   insertImagesFromUrls: (urls: string[]) => void
   /** 기사 3줄 요약을 본문에 삽입 (에디터가 비어있을 때만 — 사용자 작성 보호) */
-  insertSummary: (lines: string[], sourceUrl: string, siteName?: string) => void
+  insertSummary: (lines: string[]) => void
 }
 
 /**
@@ -155,22 +155,16 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
         ])
         editor.chain().focus().insertContent(nodes).run()
       },
-      insertSummary: (lines: string[], sourceUrl: string, siteName?: string) => {
+      insertSummary: (lines: string[]) => {
         // 에디터가 비어있을 때만 채운다 (사용자가 이미 쓴 본문을 덮지 않도록)
         if (!editor || lines.length === 0 || !editor.isEmpty) return
-        // 출처는 plain text — 에디터 schema 는 StarterKit 만 써서 link mark 가 없다.
-        // link mark 를 넣으면 schema 위반으로 삽입 전체가 무효가 된다.
+        // 요약만 본문에 삽입. 출처는 발행 시 posts.source_url 메타데이터로 저장돼
+        // 상세 페이지에서 "원문 보기" 링크로 표시된다(본문 평문 출처 라인 제거).
         // insertContent 는 이미지 삽입과 동일하게 onChange 를 발생시켜 폼 content 상태도 갱신.
-        const nodes = [
-          ...lines.map((line) => ({
-            type: "paragraph" as const,
-            content: [{ type: "text" as const, text: line }],
-          })),
-          {
-            type: "paragraph" as const,
-            content: [{ type: "text" as const, text: `출처: ${siteName || sourceUrl}` }],
-          },
-        ]
+        const nodes = lines.map((line) => ({
+          type: "paragraph" as const,
+          content: [{ type: "text" as const, text: line }],
+        }))
         editor.chain().focus().insertContent(nodes).run()
       },
     }),

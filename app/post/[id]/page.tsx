@@ -30,7 +30,9 @@ async function fetchPost(id: string) {
       comment_count,
       temperature,
       created_at,
-      updated_at
+      updated_at,
+      source_url,
+      source_name
     `
     )
     .eq("id", id)
@@ -284,6 +286,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     isUpvoted: false,
     createdAt: new Date(postData.created_at),
     titleDisplay: postData.titleDisplay || null,
+    sourceUrl: postData.source_url,
+    sourceName: postData.source_name,
   }
 
   return (

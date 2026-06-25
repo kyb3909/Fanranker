@@ -36,4 +36,7 @@ export interface Post {
   titleDisplay?: TitleDisplay | null
   flairTitle?: string | null
   flair?: PostFlair | null
+  /** 퍼온(OG) 글의 출처 — 상세 페이지 "원문 보기" 링크용. 일반 글은 null. */
+  sourceUrl?: string | null
+  sourceName?: string | null
 }

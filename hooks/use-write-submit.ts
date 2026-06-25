@@ -96,6 +96,10 @@ export function useWriteSubmit(
             image: imageUrl,
             flair_id: state.selectedFlair || null,
             is_notice: isNoticeMode,
+            // 퍼온(OG) 글이면 출처 저장 — 새 글에서만(수정 시엔 기존 출처 유지). ogData.url 있을 때만.
+            ...(!editId && state.ogData?.url
+              ? { source_url: state.ogData.url, source_name: state.ogData.siteName ?? null }
+              : {}),
           }),
         })
 

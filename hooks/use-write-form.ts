@@ -23,6 +23,8 @@ interface OgData {
   title?: string
   description?: string
   siteName?: string
+  /** 퍼온 원본 URL — 발행 시 posts.source_url 로 저장. */
+  url?: string
 }
 
 // ── State & Reducer ──

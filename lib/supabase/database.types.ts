@@ -5,13 +5,7 @@
  * Generated: 2025-01-17
  */
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   __InternalSupabase: {
@@ -341,6 +335,8 @@ export type Database = {
           user_id: string
           view_count: number | null
           vote_count: number | null
+          source_url: string | null
+          source_name: string | null
         }
         Insert: {
           category_id: string
@@ -358,6 +354,8 @@ export type Database = {
           user_id: string
           view_count?: number | null
           vote_count?: number | null
+          source_url?: string | null
+          source_name?: string | null
         }
         Update: {
           category_id?: string
@@ -375,6 +373,8 @@ export type Database = {
           user_id?: string
           view_count?: number | null
           vote_count?: number | null
+          source_url?: string | null
+          source_name?: string | null
         }
         Relationships: [
           {
@@ -758,10 +758,8 @@ export type Tables<
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R

@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Search, Ban, Pencil, Trash2, User, Flag } from "lucide-react"
+import { MoreHorizontal, Search, Ban, Pencil, Trash2, User, Flag, ExternalLink } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import Image from "next/image"
 import { useState, useCallback } from "react"
@@ -122,6 +122,19 @@ export function PostDetailContent({
       toast({ variant: "destructive", title: "오류", description: "삭제 중 오류가 발생했습니다." })
     }
   }
+
+  // 퍼온(OG) 글 출처 — http(s) 만 링크 허용(저장형 XSS 방지). 언론사명 없으면 도메인으로 폴백.
+  const sourceUrl = post.sourceUrl && /^https?:\/\//i.test(post.sourceUrl) ? post.sourceUrl : null
+  const sourceLabel =
+    sourceUrl &&
+    (post.sourceName ||
+      (() => {
+        try {
+          return new URL(sourceUrl).hostname.replace(/^www\./, "")
+        } catch {
+          return sourceUrl
+        }
+      })())
 
   return (
     <div className="space-y-4">
@@ -269,6 +282,22 @@ export function PostDetailContent({
             >
               {post.title}
             </h2>
+            {sourceUrl && (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-opacity hover:opacity-80"
+                style={{
+                  background: "var(--wc-soft)",
+                  color: "var(--wc-burgundy)",
+                  border: "1px solid var(--wc-line)",
+                }}
+              >
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate">출처: {sourceLabel} · 원문 보기</span>
+              </a>
+            )}
             <div>
               {typeof post.content === "string" ? (
                 <p

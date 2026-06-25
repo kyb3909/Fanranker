@@ -49,9 +49,7 @@ function WriteContent() {
     async (rawUrl: string) => {
       const result = await editor.handleFetchOg(rawUrl)
       if (result?.summary && result.summary.length > 0) {
-        let src = rawUrl.trim()
-        if (!/^https?:\/\//i.test(src)) src = "https://" + src
-        tiptapRef.current?.insertSummary(result.summary, src, result.siteName)
+        tiptapRef.current?.insertSummary(result.summary)
       }
     },
     [editor]

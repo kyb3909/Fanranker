@@ -35,6 +35,15 @@ const PostCreateSchema = z.object({
   flair_id: z.string().uuid().nullable().optional(),
   // 공지 여부 — MOD/관리자만. 서버에서 canPostNotice 게이트하므로 일반 유저가 보내도 무시됨.
   is_notice: z.boolean().optional(),
+  // 퍼온(OG) 글 출처 — http(s) URL 만 허용(javascript: 등 차단), 언론사명은 텍스트.
+  source_url: z
+    .string()
+    .url()
+    .max(2000)
+    .refine((u) => /^https?:\/\//i.test(u), { message: "http(s) URL만 허용됩니다." })
+    .nullable()
+    .optional(),
+  source_name: z.string().max(200).nullable().optional(),
 })
 
 /**
@@ -294,6 +303,8 @@ export async function POST(request: NextRequest) {
       image,
       flair_id,
       is_notice: wantNotice,
+      source_url,
+      source_name,
     } = result.data
 
     // TipTap JSON sanitization — 저장 전 노드/속성 whitelist (저장형 XSS 방지)
@@ -331,6 +342,8 @@ export async function POST(request: NextRequest) {
         flair_id: flair_id || null,
         flair_team_id: null,
         is_notice: isNotice,
+        source_url: source_url ?? null,
+        source_name: source_name ?? null,
       })
       .select()
       .single()
