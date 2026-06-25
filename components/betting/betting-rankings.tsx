@@ -1,6 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Trophy, Target, Loader2 } from "lucide-react"
 import type { RankingUser, MyRank } from "@/types/betting"
 
@@ -8,6 +7,8 @@ interface BettingRankingsProps {
   rankings: RankingUser[]
   myRank: MyRank | null
   isLoading: boolean
+  // 팔로우 기능 비활성 — 기자 도입 후 복원 예정. 상위(ranking-tab/use-betting-rankings)가
+  // 계속 전달하므로 prop 계약은 유지하되, 화면에서 팔로우 버튼만 제거.
   followedUsers: Set<string>
   followLoading: Set<string>
   onFollow: (userId: string) => void
@@ -20,14 +21,7 @@ const medalRowBg = [
   "bg-orange-50/70 dark:bg-orange-950/20", // 동
 ]
 
-export function BettingRankings({
-  rankings,
-  myRank,
-  isLoading,
-  followedUsers,
-  followLoading,
-  onFollow,
-}: BettingRankingsProps) {
+export function BettingRankings({ rankings, myRank, isLoading }: BettingRankingsProps) {
   return (
     <div className="space-y-3">
       {/* 내 순위 카드 */}
@@ -136,9 +130,9 @@ export function BettingRankings({
             boxShadow: "var(--wc-shadow-1)",
           }}
         >
-          {/* 테이블 헤더 */}
+          {/* 테이블 헤더 — 팔로우 버튼 열은 비활성(기자 도입 후 복원) */}
           <div
-            className="grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 px-3 py-2.5 text-[11px] font-bold uppercase sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4"
+            className="grid grid-cols-[2rem_1fr_3.5rem] items-center gap-1 px-3 py-2.5 text-[11px] font-bold uppercase sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem] sm:gap-2 sm:px-4"
             style={{
               background: "var(--wc-soft, #F6E4E8)",
               color: "var(--wc-burgundy, #961E37)",
@@ -151,20 +145,17 @@ export function BettingRankings({
             <span className="text-right">수익률</span>
             <span className="hidden text-right sm:block">적중률</span>
             <span className="hidden text-right sm:block">순수익</span>
-            <span />
           </div>
 
           {/* 랭킹 행 */}
           {rankings.map((user, index) => {
             const rank = user.rank
             const isTop3 = rank <= 3
-            const isFollowed = followedUsers.has(user.user_id)
-            const isFollowLoading = followLoading.has(user.user_id)
 
             return (
               <div
                 key={user.user_id}
-                className={`grid grid-cols-[2rem_1fr_3.5rem_4rem] items-center gap-1 px-3 py-3 transition-colors sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem_4.5rem] sm:gap-2 sm:px-4 ${
+                className={`grid grid-cols-[2rem_1fr_3.5rem] items-center gap-1 px-3 py-3 transition-colors sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem] sm:gap-2 sm:px-4 ${
                   isTop3 ? `${medalRowBg[rank - 1]} hover:brightness-95` : "hover:bg-muted/40"
                 } ${index > 0 ? "border-border/30 border-t" : ""}`}
               >
@@ -224,28 +215,7 @@ export function BettingRankings({
                   </span>
                 </div>
 
-                {/* 팔로우 버튼 */}
-                <div className="text-right">
-                  <Button
-                    size="sm"
-                    variant={isFollowed ? "outline" : "default"}
-                    onClick={() => onFollow(user.user_id)}
-                    disabled={isFollowLoading}
-                    className={`h-7 shrink-0 rounded-full px-3 text-xs ${
-                      isFollowed
-                        ? "text-muted-foreground hover:border-primary/50 hover:text-primary"
-                        : "bg-primary text-primary-foreground hover:bg-primary/90"
-                    }`}
-                  >
-                    {isFollowLoading ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : isFollowed ? (
-                      "팔로잉"
-                    ) : (
-                      "팔로우"
-                    )}
-                  </Button>
-                </div>
+                {/* 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (팔로우 버튼 열 제거) */}
               </div>
             )
           })}

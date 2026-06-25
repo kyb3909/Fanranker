@@ -5,7 +5,6 @@ import Image from "next/image"
 import { Play, ChevronDown } from "lucide-react"
 import { useCreatorVideos, type CreatorVideo } from "@/hooks/use-creator-videos"
 import type { CreatorInfo } from "@/lib/constants/creators"
-import { BoardFollow } from "@/components/community/board-follow"
 
 interface CreatorBoardProps {
   creator: CreatorInfo
@@ -47,7 +46,7 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
   return (
     <div className="py-4" data-testid="creator-board">
       <div
-        className="mb-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3.5"
+        className="mb-4 flex items-center gap-3 rounded-xl px-4 py-3.5"
         style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -80,7 +79,7 @@ export function CreatorBoard({ creator }: CreatorBoardProps) {
             )}
           </div>
         </div>
-        <BoardFollow communitySlug={creator.slug} />
+        {/* 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (BoardFollow 렌더 제거) */}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

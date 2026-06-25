@@ -1,11 +1,8 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { UserProfileBadge } from "@/components/profile/user-profile-badge"
-import { UserPlus, UserMinus, Newspaper } from "lucide-react"
-import { toast } from "@/hooks/use-toast"
-import { useState, useEffect } from "react"
+import { Newspaper } from "lucide-react"
 
 interface UserProfileHeaderProps {
   userId: string
@@ -18,55 +15,11 @@ interface UserProfileHeaderProps {
 }
 
 export function UserProfileHeader({
-  userId,
   nickname,
   avatarUrl,
   isExpert,
   isJournalist,
-  currentUserId,
-  initialFollowing = false,
 }: UserProfileHeaderProps) {
-  const [isFollowing, setIsFollowing] = useState(initialFollowing)
-  const [isLoading, setIsLoading] = useState(false)
-  const isOwnProfile = currentUserId === userId
-
-  useEffect(() => {
-    setIsFollowing(initialFollowing)
-  }, [initialFollowing])
-
-  const handleFollow = async () => {
-    if (!currentUserId) {
-      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const action = isFollowing ? "unfollow" : "follow"
-      const response = await fetch(`/api/users/${userId}/follow`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "팔로우 처리에 실패했습니다.")
-      }
-
-      const { following } = await response.json()
-      setIsFollowing(following)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: error instanceof Error ? error.message : "팔로우 처리에 실패했습니다.",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-4">
       <Avatar className="h-[72px] w-[72px] shrink-0">
@@ -92,32 +45,7 @@ export function UserProfileHeader({
           )}
         </div>
       </div>
-      {!isOwnProfile && currentUserId && isJournalist && (
-        <Button
-          variant={isFollowing ? "outline" : "default"}
-          size="sm"
-          onClick={handleFollow}
-          disabled={isLoading}
-          className="shrink-0 gap-2"
-          style={
-            isFollowing
-              ? undefined
-              : { background: "var(--wc-burgundy)", color: "#fff", border: "none" }
-          }
-        >
-          {isFollowing ? (
-            <>
-              <UserMinus className="h-4 w-4" />
-              <span>언팔로우</span>
-            </>
-          ) : (
-            <>
-              <UserPlus className="h-4 w-4" />
-              <span>팔로우</span>
-            </>
-          )}
-        </Button>
-      )}
+      {/* 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (프로필 팔로우 버튼 제거) */}
     </div>
   )
 }

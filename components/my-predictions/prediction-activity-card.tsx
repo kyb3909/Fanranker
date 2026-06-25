@@ -120,15 +120,10 @@ function formatMatchTimeLabel(iso: string): string {
 export function PredictionActivityCard({
   activity,
   onPurchase,
-  isFollowed = false,
-  isFollowLoading = false,
-  onFollow,
 }: {
   activity: ActivityData
   onPurchase: (activityId: string) => Promise<Prediction[] | null>
-  isFollowed?: boolean
-  isFollowLoading?: boolean
-  onFollow?: () => void
+  // 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (isFollowed/isFollowLoading/onFollow 제거)
 }) {
   const [isPurchasing, setIsPurchasing] = useState(false)
   const [localSlipGroups, setLocalSlipGroups] = useState<SlipGroup[] | null>(
@@ -197,26 +192,7 @@ export function PredictionActivityCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[14px] font-bold text-white">{activity.profile.nickname}</span>
-              {onFollow && (
-                <button
-                  type="button"
-                  onClick={onFollow}
-                  disabled={isFollowLoading}
-                  className={`h-5 rounded-full px-2 text-[10px] font-semibold transition-colors ${
-                    isFollowed
-                      ? "bg-white/20 text-white/90 hover:bg-white/30"
-                      : "bg-white text-gray-800 shadow-sm hover:bg-white/90"
-                  }`}
-                >
-                  {isFollowLoading ? (
-                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                  ) : isFollowed ? (
-                    "팔로잉"
-                  ) : (
-                    "팔로우"
-                  )}
-                </button>
-              )}
+              {/* 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (작성자 옆 팔로우 버튼 제거) */}
               {activity.stats && activity.stats.accuracy > 0 && (
                 <span
                   className={`inline-flex h-5 items-center gap-0.5 rounded-full bg-white px-1.5 text-[10px] font-bold shadow-sm ${sportColor.text}`}

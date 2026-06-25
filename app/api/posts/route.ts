@@ -351,33 +351,9 @@ export async function POST(request: NextRequest) {
       String(data.id)
     ).catch((err: unknown) => console.error("Failed to award points for post:", err))
 
-    // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
-    // 작성자 본인(자기 자신 팔로우 행이 있는 경우)은 제외 — 본인 글에 본인이 알림받는 것 방지.
-    Promise.resolve(
-      supabase
-        .from("user_follows")
-        .select("follower_id")
-        .eq("followed_user_id", userId)
-        .neq("follower_id", userId)
-    )
-      .then(({ data: followers }) => {
-        if (!followers || followers.length === 0) return
-
-        // 각 팔로워에게 알림 생성
-        const notifications = followers.map((follow) => ({
-          user_id: follow.follower_id,
-          type: "new_post_by_followed",
-          actor_id: userId,
-          related_post_id: data.id,
-          related_comment_id: null,
-          is_read: false,
-        }))
-
-        return supabase.from("notifications").insert(notifications)
-      })
-      .catch((err: unknown) => {
-        console.error("Failed to create notifications for followers:", err)
-      })
+    // 일반 게시판글은 알림을 보내지 않는다 — 팔로우 기능 비활성(기자 도입 후 복원 예정).
+    // 분석글(기자 예측) 알림만 betman/prediction route 의 expert_prediction 으로 발송.
+    // 복원 시: user_follows(followed=userId, follower≠userId) → notifications(new_post_by_followed).
 
     // 홈 피드 ISR on-demand revalidate (새 글이 즉시 노출되도록)
     try {

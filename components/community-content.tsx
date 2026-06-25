@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, memo } from "react"
+import { useRef, memo } from "react"
 import { Pencil, Megaphone, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,8 +13,6 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination"
 import Link from "@/components/ui/app-link"
-import { useAuth } from "@clerk/nextjs"
-import { toast } from "@/hooks/use-toast"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
 import { useCanPostNotice } from "@/hooks/use-board-moderator"
 
@@ -80,13 +78,9 @@ export const CommunityContent = memo(function CommunityContent({
   totalCount = 0,
   flairs = [],
   activeFlairId,
-  hideFollowHeader,
 }: CommunityContentProps) {
-  const { isSignedIn } = useAuth()
   const { isBlocked } = useBlockedUsers()
   const canPostNotice = useCanPostNotice(communitySlug)
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [isFollowLoading, setIsFollowLoading] = useState(false)
 
   // flair 가로 스크롤 ref + 화살표 핸들러
   const flairScrollRef = useRef<HTMLDivElement>(null)
@@ -94,36 +88,6 @@ export const CommunityContent = memo(function CommunityContent({
     const el = flairScrollRef.current
     if (!el) return
     el.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" })
-  }
-
-  // 팔로우 상태 확인
-  useEffect(() => {
-    if (!isSignedIn || !communitySlug) return
-    fetch(`/api/community/${communitySlug}/follow`)
-      .then((res) => (res.ok ? res.json() : { following: false }))
-      .then((data) => setIsFollowing(data.following))
-      .catch(() => {})
-  }, [isSignedIn, communitySlug])
-
-  const handleFollow = async () => {
-    if (!isSignedIn) {
-      toast({ variant: "destructive", title: "로그인 필요", description: "로그인이 필요합니다." })
-      return
-    }
-    if (!communitySlug || isFollowLoading) return
-    setIsFollowLoading(true)
-    try {
-      const method = isFollowing ? "DELETE" : "POST"
-      const res = await fetch(`/api/community/${communitySlug}/follow`, { method })
-      if (res.ok) {
-        const data = await res.json()
-        setIsFollowing(data.following)
-      }
-    } catch {
-      // silent fail
-    } finally {
-      setIsFollowLoading(false)
-    }
   }
 
   // 차단한 유저의 글은 목록에서 숨김 (피드/댓글과 동일 클라 필터)
@@ -137,25 +101,7 @@ export const CommunityContent = memo(function CommunityContent({
       <>
         {/* 커뮤니티 콘텐츠: 컴팩트한 간격 */}
         <div className="py-4">
-          {/* 미니 헤더 — 멤버 + 팔로우 (크리에이터 보드는 상단 채널 헤더로 이동 → hideFollowHeader) */}
-          {!hideFollowHeader && (
-            <div className="mb-4 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleFollow}
-                disabled={isFollowLoading}
-                className="shrink-0 rounded-md px-4 py-2 text-[13px] font-bold transition-colors disabled:opacity-60"
-                style={{
-                  background: "var(--wc-card)",
-                  color: isFollowing ? "var(--wc-mute)" : "var(--wc-ink)",
-                  border: "1px solid var(--wc-line-2)",
-                  minHeight: 36,
-                }}
-              >
-                {isFollowing ? "팔로잉" : "팔로우"}
-              </button>
-            </div>
-          )}
+          {/* 팔로우 기능 비활성 — 기자 도입 후 복원 예정 (미니헤더 팔로우 버튼 제거) */}
 
           <div
             className="overflow-hidden rounded-lg"
