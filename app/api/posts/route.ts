@@ -352,8 +352,13 @@ export async function POST(request: NextRequest) {
     ).catch((err: unknown) => console.error("Failed to award points for post:", err))
 
     // 팔로워들에게 알림 생성 (비동기로 처리, 실패해도 무시)
+    // 작성자 본인(자기 자신 팔로우 행이 있는 경우)은 제외 — 본인 글에 본인이 알림받는 것 방지.
     Promise.resolve(
-      supabase.from("user_follows").select("follower_id").eq("followed_user_id", userId)
+      supabase
+        .from("user_follows")
+        .select("follower_id")
+        .eq("followed_user_id", userId)
+        .neq("follower_id", userId)
     )
       .then(({ data: followers }) => {
         if (!followers || followers.length === 0) return
