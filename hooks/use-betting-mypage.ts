@@ -25,6 +25,7 @@ function toHistoryItem(slip: RawSlip): PredictionHistoryItem {
   return {
     id: slip.id,
     date: formatSlipDate(slip.date),
+    isoDate: slip.date,
     sport: slip.sport,
     matches: slip.matches,
     totalOdds: slip.totalOdds,

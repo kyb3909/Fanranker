@@ -176,6 +176,8 @@ export interface PredictionMatch {
 export interface PredictionHistoryItem {
   id: string
   date: string
+  /** ISO 원본 날짜 — 날짜 구분선/그룹키 계산용. date는 표시용 "MM/DD HH:MM"이라 재파싱 시 연도가 깨짐(2001). */
+  isoDate: string
   sport: string
   matches: PredictionMatch[]
   totalOdds: number

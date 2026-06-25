@@ -57,10 +57,10 @@ export function BettingPredictionHistory({
   let currentKey = ""
 
   for (const pred of predictionHistory) {
-    const key = getDateKey(pred.date)
+    const key = getDateKey(pred.isoDate)
     if (key !== currentKey) {
       currentKey = key
-      grouped.push({ dateKey: key, label: formatDateLabel(pred.date), items: [] })
+      grouped.push({ dateKey: key, label: formatDateLabel(pred.isoDate), items: [] })
     }
     grouped[grouped.length - 1].items.push(pred)
   }
