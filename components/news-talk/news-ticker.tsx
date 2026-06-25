@@ -189,13 +189,17 @@ export function NewsTicker({ communitySlug }: NewsTickerProps) {
   // (useEffect 에서 fetch) → return null 하면 skeleton 64px → 0 → 43px 두 번 시프트 발생.
   // 외부 구조 유지하고 안쪽만 invisible 로 자리 잡아둠.
   if (tickerItems.length === 0) {
+    // 로딩/콘텐츠 없음: 검은 빈 띠 대신 LIVE 뱃지 + 안내를 넣어 "깨진 영역" 인상을 방지.
+    // 높이는 동일하게 유지해 CLS 방지(return null 하면 64→0→43 두 번 시프트).
     return (
       <div
         className="w-full overflow-hidden border-b border-neutral-800 bg-neutral-900"
         aria-hidden
       >
-        <div className="container mx-auto flex min-h-11 max-w-[1280px] items-center px-4 py-2.5 sm:min-h-0">
-          <span className="text-[12px] text-transparent select-none">.</span>
+        <div className="container mx-auto flex min-h-11 max-w-[1280px] items-center gap-2 px-4 py-2.5 sm:min-h-0">
+          <Zap className="h-4 w-4 shrink-0 text-amber-400" />
+          <span className="text-[12px] font-bold tracking-wide text-white">LIVE</span>
+          <span className="truncate text-[12px] text-neutral-400">실시간 소식을 불러오는 중…</span>
         </div>
       </div>
     )
