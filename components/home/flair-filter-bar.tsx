@@ -4,6 +4,11 @@ import { useMemo, useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
 import { SlidersHorizontal, Star, EyeOff } from "lucide-react"
 import { fetcher } from "@/lib/swr"
+import { SPORTS_COMMUNITIES } from "@/lib/constants/communities"
+
+// 말머리 필터는 스포츠 게시판의 "팀" 말머리만 대상(자유게시판 등 라이프 게시판의
+// 카테고리 말머리 잡담/유머/정보…는 팀 즐겨찾기/뮤트 개념과 안 맞아 제외).
+const SPORT_SLUGS = new Set(SPORTS_COMMUNITIES.map((c) => c.slug))
 
 interface Flair {
   id: string
@@ -27,7 +32,9 @@ export function FlairFilterBar({ followedSlugs }: { followedSlugs: string[] }) {
   const { mutate } = useSWRConfig()
   const [open, setOpen] = useState(false)
 
-  const slugsParam = useMemo(() => followedSlugs.slice().sort().join(","), [followedSlugs])
+  // 팔로우한 게시판 중 스포츠 게시판만 → 그 게시판들의 팀 말머리만 표시.
+  const sportSlugs = useMemo(() => followedSlugs.filter((s) => SPORT_SLUGS.has(s)), [followedSlugs])
+  const slugsParam = useMemo(() => sportSlugs.slice().sort().join(","), [sportSlugs])
   const { data: flairsData } = useSWR<{ flairs: Flair[] }>(
     slugsParam ? `/api/flairs?community_slugs=${slugsParam}` : null,
     fetcher,
@@ -54,7 +61,7 @@ export function FlairFilterBar({ followedSlugs }: { followedSlugs: string[] }) {
     [prefMap]
   )
 
-  if (followedSlugs.length === 0 || flairs.length === 0) return null
+  if (sportSlugs.length === 0 || flairs.length === 0) return null
 
   // none → favorite → mute → none 순환
   const cycle = async (flairId: string) => {
