@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Pencil } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -109,7 +109,31 @@ export function HomeClient({
           {/* Main Content */}
           <div className="col-span-12 space-y-4 lg:col-span-6">
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
-            {/* 월드컵 이벤트 배너 */}
+            {/* 인라인 글쓰기 프롬프트 — 작성 유도(상단) */}
+            <Link
+              href="/write"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 no-underline transition-opacity hover:opacity-90"
+              style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+                aria-hidden
+              >
+                <Pencil className="h-4 w-4" />
+              </span>
+              <span className="flex-1 text-[14px]" style={{ color: "var(--wc-mute)" }}>
+                오늘 무슨 공놀이 이야기? 한 줄 남겨보세요…
+              </span>
+              <span
+                className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-bold"
+                style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+              >
+                글쓰기
+              </span>
+            </Link>
+
+            {/* 월드컵 이벤트 배너 (글쓰기와 카드 사이) */}
             <Link
               href="/worldcup"
               className="flex items-center gap-3 rounded-xl px-[18px] py-[14px] no-underline transition-opacity hover:opacity-90"

@@ -109,7 +109,7 @@ export const PostCardContent = memo(function PostCardContent({
     <div>
       {/* 카테고리 chip + 시간 + 온도 chip */}
       {(category || (temperature != null && temperature > 0)) && (
-        <div className="flex items-center gap-2" style={{ marginBottom: 9 }}>
+        <div className="flex items-center gap-2" style={{ marginBottom: 13 }}>
           {category && (
             <>
               {categoryLink ? (
@@ -171,27 +171,27 @@ export const PostCardContent = memo(function PostCardContent({
           <Link href={`/post/${postId}`} className="group gn-pin-title block">
             <h2
               title={title}
-              className="font-title line-clamp-1 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
+              className="font-title line-clamp-2 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
               style={{
                 color: "var(--wc-ink, #14161a)",
                 fontWeight: 700,
                 letterSpacing: "-0.02em",
-                lineHeight: 1.4,
-                marginBottom: 6,
+                lineHeight: 1.45,
+                marginBottom: 8,
               }}
             >
               {title}
             </h2>
             {typeof content === "string" ? (
               <p
-                className="line-clamp-1 text-[14px]"
+                className="line-clamp-2 text-[14px]"
                 style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
               >
                 {content}
               </p>
             ) : (
               <p
-                className="line-clamp-1 text-[14px]"
+                className="line-clamp-2 text-[14px]"
                 style={{ color: "var(--wc-mute, #5C6470)", lineHeight: 1.62 }}
               >
                 {stripUrlTokens(extractTextFromTipTapJSON(content))}
