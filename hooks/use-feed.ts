@@ -24,6 +24,7 @@ interface RawPost {
   image?: string
   vote_count?: number
   comment_count?: number
+  view_count?: number
   temperature?: number
   created_at: string
   flair_id?: string | null
@@ -107,6 +108,7 @@ function transformPosts(
       image: post.image,
       upvotes: post.vote_count || 0,
       comments: post.comment_count || 0,
+      views: post.view_count || 0,
       temperature: post.temperature ?? 0,
       isUpvoted: false,
       createdAt: new Date(post.created_at),

@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   ThumbsUp,
   MessageCircle,
+  Eye,
   Bookmark,
   MoreHorizontal,
   Search,
@@ -37,6 +38,7 @@ interface PostCardMetaProps {
   voteCount: number
   myVote: "up" | "down" | null
   comments: number
+  viewCount?: number
   isBookmarked: boolean
   isAuthor: boolean
   onVote: (type: "up" | "down") => void
@@ -61,6 +63,7 @@ export function PostCardMeta({
   voteCount,
   myVote,
   comments,
+  viewCount,
   isBookmarked,
   isAuthor,
   onVote,
@@ -190,6 +193,15 @@ export function PostCardMeta({
           <MessageCircle className="h-3.5 w-3.5" />
           <span className="font-medium tabular-nums">{comments}</span>
         </Link>
+
+        {/* 조회수 — 비상호작용 표시 (날짜·추천·댓글 다음) */}
+        <span
+          className="inline-flex items-center gap-1 px-2"
+          aria-label={`조회 ${viewCount ?? 0}회`}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span className="font-medium tabular-nums">{viewCount ?? 0}</span>
+        </span>
 
         {/* 데스크톱: hover/focus 시 노출 — 모바일: 상시 노출 */}
         <div className="flex items-center sm:opacity-0 sm:transition-opacity sm:duration-150 sm:group-hover:opacity-100 sm:focus-within:opacity-100">

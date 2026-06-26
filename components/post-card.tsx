@@ -109,6 +109,7 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
             voteCount={voteCount}
             myVote={myVote}
             comments={post.comments}
+            viewCount={post.views}
             isBookmarked={isBookmarked}
             isAuthor={isAuthor}
             onVote={handleVote}

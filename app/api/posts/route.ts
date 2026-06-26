@@ -131,6 +131,7 @@ export async function GET(request: NextRequest) {
           image,
           vote_count,
           comment_count,
+          view_count,
           temperature,
           created_at,
           flair_id,
