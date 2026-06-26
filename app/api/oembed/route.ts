@@ -258,6 +258,12 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
           }
         }
 
+        // native 미디어가 없고 링크 카드(기사 미리보기)가 있으면 카드 이미지를 사용
+        // (예: 트윗이 BBC 기사를 링크 → X 에서 보이는 미리보기 사진)
+        if (mediaItems.length === 0 && tweet.card?.image?.url) {
+          mediaItems.push({ type: "photo", url: tweet.card.image.url })
+        }
+
         mediaUrl =
           mediaItems[0]?.type === "photo" ? mediaItems[0].url : mediaItems[0]?.thumbnail_url || ""
       }
@@ -313,7 +319,8 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
     provider: "x",
     url: originalUrl,
     html: cardHtml,
-    title: tweetText.slice(0, 100) || undefined,
+    // 트윗 전문 표시 (과거 100자 슬라이스로 본문이 잘려 보이던 문제 수정). 비정상적 장문 방어로 1000자만 상한.
+    title: tweetText.slice(0, 1000) || undefined,
     thumbnail_url: mediaUrl || undefined,
     author_name: displayName ? `${displayName} (${authorName})` : authorName,
     author_avatar: authorAvatar || undefined,
