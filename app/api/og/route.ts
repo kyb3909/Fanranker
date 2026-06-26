@@ -50,7 +50,11 @@ export async function GET(request: NextRequest) {
         const res = await fetch(target.toString(), {
           signal: controller.signal,
           headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; GongnoriBot/1.0; +https://gongnori.fan)",
+            // 언론사 안티봇(DataDome 등)은 소셜 링크-프리뷰 크롤러를 화이트리스트한다.
+            // 커스텀/브라우저 UA 는 403 으로 막히지만(as.com 등) facebookexternalhit 는
+            // 통과 → 깨끗한 OG 수신. 사이트가 미리보기를 원하므로 의도에도 부합.
+            "User-Agent":
+              "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
             Accept: "text/html",
           },
           redirect: "manual",

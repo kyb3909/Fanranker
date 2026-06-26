@@ -139,7 +139,8 @@ async function fetchExternalImage(
     res = await ssrfSafeFetch(parsed, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; GongnoriBot/1.0; +https://gongnori.fan)",
+        // OG 페치와 동일 UA — 이미지 CDN 도 안티봇으로 막을 수 있어 소셜 크롤러로 위장.
+        "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
         Accept: "image/*",
       },
     })
