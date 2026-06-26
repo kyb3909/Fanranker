@@ -269,11 +269,13 @@ function ExploreInner() {
                             className="truncate text-sm font-semibold"
                             style={{ color: "var(--wc-ink)" }}
                           >
+                            {post.community && (
+                              <span style={{ color: "var(--wc-burgundy)" }}>
+                                [{post.community}]{" "}
+                              </span>
+                            )}
                             {post.title}
                           </p>
-                          <span className="mt-1 block text-xs" style={{ color: "var(--wc-mute)" }}>
-                            {post.community}
-                          </span>
                         </div>
                         <div className="ml-4 flex flex-shrink-0 items-center gap-3 text-xs tabular-nums">
                           <span
