@@ -15,17 +15,26 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAnonClient()
-  let query = supabase
+
+  // 숨김 게시판(categories.is_active=false)의 말머리는 필터에서 제외.
+  // (게시판을 다시 열면 자동으로 다시 노출됨 — 말머리 데이터를 직접 끄지 않음.)
+  const requested = communitySlug ? [communitySlug] : (communitySlugs ?? [])
+  const { data: inactiveCats } = await supabase
+    .from("categories")
+    .select("slug")
+    .eq("is_active", false)
+  const inactiveSet = new Set((inactiveCats ?? []).map((c) => c.slug))
+  const visibleSlugs = requested.filter((s) => !inactiveSet.has(s))
+  if (visibleSlugs.length === 0) {
+    return NextResponse.json({ flairs: [] })
+  }
+
+  const { data: flairs, error } = await supabase
     .from("post_flairs")
     .select("id, name, color, sort_order, community_slug")
     .eq("is_active", true)
+    .in("community_slug", visibleSlugs)
     .order("sort_order", { ascending: true })
-  if (communitySlug) {
-    query = query.eq("community_slug", communitySlug)
-  } else if (communitySlugs) {
-    query = query.in("community_slug", communitySlugs)
-  }
-  const { data: flairs, error } = await query
 
   if (error) {
     return NextResponse.json({ flairs: [] })
