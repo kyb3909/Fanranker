@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
+import { attachNicknames } from "@/lib/admin/attach-nicknames"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
@@ -22,10 +23,11 @@ export async function GET(request: NextRequest) {
     const showDeleted = searchParams.get("showDeleted") === "true"
     const offset = (page - 1) * limit
 
+    // comments↔profiles 는 FK 가 없어 임베드 불가 → 닉네임은 attachNicknames 로 병합 (posts!inner 은 정상)
     let query = supabase
       .from("comments")
       .select(
-        "id, post_id, user_id, content, vote_count, depth, created_at, deleted_at, profiles!inner(nickname), posts!inner(title)",
+        "id, post_id, user_id, content, vote_count, depth, created_at, deleted_at, posts!inner(title)",
         { count: "exact" }
       )
 
@@ -37,7 +39,8 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (error) return apiError(error.message, 500, error)
-    return NextResponse.json({ comments: data ?? [], total: count ?? 0, page, limit })
+    const comments = await attachNicknames(supabase, data ?? [])
+    return NextResponse.json({ comments, total: count ?? 0, page, limit })
   } catch (error) {
     return apiError("서버 오류", 500, error)
   }

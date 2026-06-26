@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
+import { attachNicknames } from "@/lib/admin/attach-nicknames"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
 const PostActionSchema = z.object({
@@ -23,10 +24,11 @@ export async function GET(request: NextRequest) {
     const showDeleted = searchParams.get("showDeleted") === "true"
     const offset = (page - 1) * limit
 
+    // posts ↔ profiles 는 FK 가 없어 임베드 조인 불가 → 닉네임은 attachNicknames 로 별도 병합
     let query = supabase
       .from("posts")
       .select(
-        "id, user_id, title, community_slug, view_count, vote_count, comment_count, is_notice, created_at, deleted_at, profiles!inner(nickname)",
+        "id, user_id, title, community_slug, view_count, vote_count, comment_count, is_notice, created_at, deleted_at",
         { count: "exact" }
       )
 
@@ -40,7 +42,9 @@ export async function GET(request: NextRequest) {
 
     if (error) return apiError(error.message, 500, error)
 
-    return NextResponse.json({ posts: data ?? [], total: count ?? 0, page, limit })
+    const posts = await attachNicknames(supabase, data ?? [])
+
+    return NextResponse.json({ posts, total: count ?? 0, page, limit })
   } catch (error) {
     return apiError("서버 오류", 500, error)
   }

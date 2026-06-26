@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
+import { attachNicknames } from "@/lib/admin/attach-nicknames"
 import { apiError } from "@/lib/api-error"
 
 export const dynamic = "force-dynamic"
@@ -100,13 +101,16 @@ export async function GET() {
         .select("*", { count: "exact", head: true })
         .gte("created_at", prevWeekStartISO)
         .lt("created_at", weekStartISO),
+      // profiles 는 FK 가 없어 임베드 불가 → 아래에서 attachNicknames 로 닉네임 병합
       supabase
         .from("user_tokens")
-        .select("user_id, token_balance, profiles!inner(nickname)")
+        .select("user_id, token_balance")
         .gt("token_balance", 5000)
         .order("token_balance", { ascending: false })
         .limit(10),
     ])
+
+    const tokenLeaders = await attachNicknames(supabase, abnormalTokenBalances ?? [])
 
     // Betman 동기화 지연 체크 (3시간 기준)
     let betmanSyncStale = false
@@ -140,14 +144,11 @@ export async function GET() {
       weekly: {
         usersThisWeek: usersThisWeek ?? 0,
         usersPrevWeek: usersPrevWeek ?? 0,
-        abnormalTokenBalances: (abnormalTokenBalances ?? []).map((row: Record<string, unknown>) => {
-          const profile = row.profiles as Record<string, unknown> | null
-          return {
-            user_id: row.user_id,
-            nickname: profile?.nickname ?? null,
-            token_balance: row.token_balance,
-          }
-        }),
+        abnormalTokenBalances: tokenLeaders.map((row) => ({
+          user_id: row.user_id,
+          nickname: row.profiles.nickname,
+          token_balance: row.token_balance,
+        })),
       },
       fetchedAt: now.toISOString(),
     })
