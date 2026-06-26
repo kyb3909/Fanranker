@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
@@ -141,6 +142,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (error) {
       return apiError("게시글 수정에 실패했습니다.", 500, error)
     }
+
+    // 홈 피드 ISR on-demand revalidate (수정 내용이 즉시 반영되도록 — POST 경로와 동일)
+    try {
+      revalidatePath("/")
+    } catch {
+      // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
+    }
+
     return NextResponse.json(data)
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
@@ -177,6 +186,14 @@ export async function DELETE(
     if (error) {
       return apiError("게시글 삭제에 실패했습니다.", 500, error)
     }
+
+    // 홈 피드 ISR on-demand revalidate (삭제가 담벼락에 즉시 반영되도록 — POST 경로와 동일)
+    try {
+      revalidatePath("/")
+    } catch {
+      // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
