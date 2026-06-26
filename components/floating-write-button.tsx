@@ -21,9 +21,7 @@ export function FloatingWriteButton() {
   const pathname = usePathname()
   const { openSignIn } = useClerk()
 
-  // 홈(담벼락)은 상단 인라인 글쓰기 프롬프트가 있어 FAB 중복 → 홈에서만 숨김.
-  // (게시판 등 다른 페이지는 인라인 입력이 없어 FAB가 유일한 모바일 진입점이라 유지.)
-  const shouldHide = pathname === "/" || HIDDEN_PATHS.some((p) => pathname.startsWith(p))
+  const shouldHide = HIDDEN_PATHS.some((p) => pathname.startsWith(p))
   if (shouldHide) return null
 
   // community 안에서 클릭하면 그 community 로 prefill
