@@ -55,14 +55,18 @@ export async function GET() {
       return NextResponse.json({ issues: [], summary: { total: 0, error: 0, warning: 0 } })
     }
 
-    // 라이브룸 상태도 조회
-    const gameIds = games.map((g) => g.id)
-    const { data: liveRooms } = await supabase
-      .from("live_rooms")
-      .select("game_id, status")
-      .in("game_id", gameIds)
-
-    const roomMap = new Map((liveRooms ?? []).map((r) => [r.game_id, r.status]))
+    // 라이브룸 무결성 검사 — Live Room 기능 미구현이라 비활성(켜두면 모든 '일반' 경기가
+    // "라이브룸 없음" 오탐을 쏟아냄). 기능 구현 시 LIVE_ROOM_ENABLED=true 로 켜면 됨.
+    const LIVE_ROOM_ENABLED = false
+    const roomMap = new Map<string, string>()
+    if (LIVE_ROOM_ENABLED) {
+      const gameIds = games.map((g) => g.id)
+      const { data: liveRooms } = await supabase
+        .from("live_rooms")
+        .select("game_id, status")
+        .in("game_id", gameIds)
+      for (const r of liveRooms ?? []) roomMap.set(r.game_id, r.status)
+    }
 
     for (const game of games) {
       const round = game.betman_rounds as unknown as { gm_ts: string }
@@ -227,8 +231,8 @@ export async function GET() {
         })
       }
 
-      // ── 4. 라이브룸 상태 불일치 ──
-      if (game.game_type === "일반") {
+      // ── 4. 라이브룸 상태 불일치 ── (Live Room 미구현 시 LIVE_ROOM_ENABLED=false 로 skip)
+      if (LIVE_ROOM_ENABLED && game.game_type === "일반") {
         const roomStatus = roomMap.get(game.id)
 
         // 경기 있는데 라이브룸이 없고, 경기 시작 후 5시간 이내
