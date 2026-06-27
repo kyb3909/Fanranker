@@ -329,6 +329,7 @@ export type Database = {
           id: string
           image: string | null
           is_notice: boolean | null
+          is_global_notice: boolean | null
           temperature: number | null
           title: string
           updated_at: string | null
@@ -348,6 +349,7 @@ export type Database = {
           id?: string
           image?: string | null
           is_notice?: boolean | null
+          is_global_notice?: boolean | null
           temperature?: number | null
           title: string
           updated_at?: string | null
@@ -367,6 +369,7 @@ export type Database = {
           id?: string
           image?: string | null
           is_notice?: boolean | null
+          is_global_notice?: boolean | null
           temperature?: number | null
           title?: string
           updated_at?: string | null

@@ -11,6 +11,7 @@ import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
+import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
 // 사이드바는 SSR 프리페치 데이터로 즉시 렌더되므로 직접 import.
 // dynamic() 로 감싸면 하이드레이션 시 loading 스켈레톤(h-96)이 잠깐 떴다가 실제 사이드바로
 // 되돌아오며 광고 박스가 ~365px 밀리는 CLS 발생 → 직접 import 로 그 시프트 제거.
@@ -31,6 +32,7 @@ interface HomeClientProps {
   initialFeed: PostsResponse
   initialCategories?: unknown[]
   initialRecentComments?: unknown[]
+  initialGlobalNotices?: GlobalNotice[]
   initialSort?: SortType
 }
 
@@ -38,6 +40,7 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
+  initialGlobalNotices,
   initialSort = "new",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
@@ -108,6 +111,8 @@ export function HomeClient({
 
           {/* Main Content */}
           <div className="col-span-12 space-y-4 lg:col-span-6">
+            {/* 전체 공지 — 담벼락 최상단 고정 (관리자가 is_global_notice 로 설정) */}
+            <GlobalNoticeBanner notices={initialGlobalNotices ?? []} />
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
             {/* 인라인 글쓰기 프롬프트 — 작성 유도(상단) */}
             <Link

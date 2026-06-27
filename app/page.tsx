@@ -18,84 +18,103 @@ async function fetchAllHomeData(sort: SortType) {
   const supabase = createAnonClient()
 
   // 모든 데이터를 병렬로 가져오기
-  const [feedResult, categoriesResult, recentCommentsResult] = await Promise.all([
-    // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
-    (async (): Promise<PostsResponse> => {
-      try {
-        // active 게시판만 — 게시판 축소(is_active)를 비로그인 담벼락에도 일관 적용.
-        // 이 initialFeed 는 use-feed 가 hot+비로그인일 때 그대로 fallback 으로 쓰므로
-        // 여기서 안 막으면 숨긴 게시판 글이 담벼락에 그대로 노출된다.
-        const { data: activeCats } = await supabase
-          .from("categories")
-          .select("slug")
-          .eq("is_active", true)
-        const activeSlugs = (activeCats ?? []).map((c) => c.slug)
-        const base = supabase
-          .from("posts")
-          .select(
-            "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
-          )
-          .is("deleted_at", null)
-          .in("community_slug", activeSlugs)
-        const ordered =
-          sort === "new"
-            ? base.order("created_at", { ascending: false })
-            : base.order("temperature", { ascending: false, nullsFirst: false })
-        const { data: posts, error } = await ordered.range(0, 19)
+  const [feedResult, categoriesResult, recentCommentsResult, globalNoticesResult] =
+    await Promise.all([
+      // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
+      (async (): Promise<PostsResponse> => {
+        try {
+          // active 게시판만 — 게시판 축소(is_active)를 비로그인 담벼락에도 일관 적용.
+          // 이 initialFeed 는 use-feed 가 hot+비로그인일 때 그대로 fallback 으로 쓰므로
+          // 여기서 안 막으면 숨긴 게시판 글이 담벼락에 그대로 노출된다.
+          const { data: activeCats } = await supabase
+            .from("categories")
+            .select("slug")
+            .eq("is_active", true)
+          const activeSlugs = (activeCats ?? []).map((c) => c.slug)
+          const base = supabase
+            .from("posts")
+            .select(
+              "id, user_id, community_slug, title, content, image, vote_count, comment_count, temperature, created_at"
+            )
+            .is("deleted_at", null)
+            .in("community_slug", activeSlugs)
+          const ordered =
+            sort === "new"
+              ? base.order("created_at", { ascending: false })
+              : base.order("temperature", { ascending: false, nullsFirst: false })
+          const { data: posts, error } = await ordered.range(0, 19)
 
-        if (error || !posts || posts.length === 0) {
+          if (error || !posts || posts.length === 0) {
+            return { posts: [], profiles: [] }
+          }
+
+          const userIds = [...new Set(posts.map((p) => p.user_id))]
+          const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("user_id, nickname, avatar_url")
+              .in("user_id", userIds),
+            supabase
+              .from("user_equipped_titles")
+              .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
+              .in("user_id", userIds),
+          ])
+
+          return {
+            posts,
+            profiles: profiles || [],
+            equippedTitles: (equippedTitles || []) as unknown as PostsResponse["equippedTitles"],
+            hasMore: posts.length === 20,
+          }
+        } catch {
           return { posts: [], profiles: [] }
         }
+      })(),
 
-        const userIds = [...new Set(posts.map((p) => p.user_id))]
-        const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
-          supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
-          supabase
-            .from("user_equipped_titles")
-            .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
-            .in("user_id", userIds),
-        ])
+      // 2) 카테고리 (CommunitySidebar용)
+      Promise.resolve(
+        supabase
+          .from("categories")
+          .select("id, slug, name, icon, sort_order, description, parent_slug")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+      )
+        .then(({ data }) => data ?? [])
+        .catch(() => [] as unknown[]),
 
-        return {
-          posts,
-          profiles: profiles || [],
-          equippedTitles: (equippedTitles || []) as unknown as PostsResponse["equippedTitles"],
-          hasMore: posts.length === 20,
-        }
-      } catch {
-        return { posts: [], profiles: [] }
-      }
-    })(),
+      // 3) 최근 댓글 달린 글 (ActivitySidebar용)
+      Promise.resolve(
+        supabase
+          .from("posts")
+          .select("id, title, community_slug, comment_count, latest_comment_at, created_at")
+          .is("deleted_at", null)
+          .gt("comment_count", 0)
+          .order("latest_comment_at", { ascending: false, nullsFirst: false })
+          .limit(10)
+      )
+        .then(({ data }) => data ?? [])
+        .catch(() => [] as unknown[]),
 
-    // 2) 카테고리 (CommunitySidebar용)
-    Promise.resolve(
-      supabase
-        .from("categories")
-        .select("id, slug, name, icon, sort_order, description, parent_slug")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-    )
-      .then(({ data }) => data ?? [])
-      .catch(() => [] as unknown[]),
-
-    // 3) 최근 댓글 달린 글 (ActivitySidebar용)
-    Promise.resolve(
-      supabase
-        .from("posts")
-        .select("id, title, community_slug, comment_count, latest_comment_at, created_at")
-        .is("deleted_at", null)
-        .gt("comment_count", 0)
-        .order("latest_comment_at", { ascending: false, nullsFirst: false })
-        .limit(10)
-    )
-      .then(({ data }) => data ?? [])
-      .catch(() => [] as unknown[]),
-  ])
+      // 4) 전체 공지 (담벼락 최상단 고정) — 관리자가 is_global_notice=true 로 고정한 글.
+      //    컬럼 미적용(마이그레이션 전)이면 error+data:null → [] 로 안전하게 떨어진다.
+      Promise.resolve(
+        supabase
+          .from("posts")
+          .select("id, title")
+          .eq("is_global_notice", true)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(3)
+      )
+        .then(({ data }) => data ?? [])
+        .catch(() => [] as unknown[]),
+    ])
 
   return {
     initialFeed: feedResult,
     initialCategories: categoriesResult,
     initialRecentComments: recentCommentsResult,
+    initialGlobalNotices: globalNoticesResult as { id: string; title: string }[],
   }
 }
 
@@ -122,6 +141,7 @@ export default async function Home({
         initialFeed={homeData.initialFeed}
         initialCategories={homeData.initialCategories}
         initialRecentComments={homeData.initialRecentComments}
+        initialGlobalNotices={homeData.initialGlobalNotices}
         initialSort={initialSort}
       />
     </Suspense>
