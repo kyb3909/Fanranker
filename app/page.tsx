@@ -100,7 +100,7 @@ async function fetchAllHomeData(sort: SortType) {
       Promise.resolve(
         supabase
           .from("posts")
-          .select("id, title")
+          .select("id, title, content")
           .eq("is_global_notice", true)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
@@ -114,7 +114,11 @@ async function fetchAllHomeData(sort: SortType) {
     initialFeed: feedResult,
     initialCategories: categoriesResult,
     initialRecentComments: recentCommentsResult,
-    initialGlobalNotices: globalNoticesResult as { id: string; title: string }[],
+    initialGlobalNotices: globalNoticesResult as {
+      id: string
+      title: string
+      content?: unknown
+    }[],
   }
 }
 

@@ -430,6 +430,24 @@
   animation: vote-bump 200ms ease-out;
 }
 
+/* 전체 공지 카드 — 눈에 띄도록 골드 오우라가 은은하게 맥동 */
+@keyframes notice-aura {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px var(--wc-gold, #e7c66b),
+      0 0 10px 1px rgba(231, 198, 107, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px var(--wc-gold, #e7c66b),
+      0 0 22px 6px rgba(231, 198, 107, 0.6);
+  }
+}
+.notice-aura {
+  animation: notice-aura 2.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /*
    * 사용자가 모션 축소를 선호하는 경우 모든 장식적 애니메이션과 전환을
