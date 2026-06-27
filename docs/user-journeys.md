@@ -186,11 +186,11 @@
 - **단계**:
   1. `/metaverse` — 국가 선택 (`CountryPicker`): 국가별 월드맵 입장 링크 (`country-picker.tsx:111`)
   2. `/metaverse/uk` — 웸블리 이미지 핫스팟 클릭 → `/metaverse/highbury` (호버 scale 확대) (`app/metaverse/uk/page.tsx:25-39`)
-  3. `/metaverse/gandalf` — 메타버스 씬 (`HighburyStage allowGuest`): Phaser 캐릭터 이동, highbury와 동일 씬·채널 (`app/metaverse/gandalf/page.tsx:15`)
+  3. `/metaverse/prototype` — 메타버스 씬 (`HighburyStage allowGuest`): Phaser 캐릭터 이동, highbury와 동일 씬·채널 (`app/metaverse/prototype/page.tsx:15`)
   4. `/metaverse/interior-demo` — 사이드스크롤러 프로토타입 (`SideScrollerDemo`): 아바타 상점 모달 열기 (`side-scroller-demo.tsx:169`), 월드맵 이동 → `/metaverse/uk` (`:174-175`)
   5. `/metaverse/highbury` 직접 접근 → 비로그인 시 홈으로 링크 `/` 표시 (`highbury-stage.tsx:246-247`)
 - **분기**: `/metaverse/highbury`는 로그인 필요(게스트 미허용). `metaverse-stage`는 비로그인(프로덕션) 시 `/sign-up` 링크 (`metaverse-stage.tsx:97-98`).
-- **관련 파일**: `app/metaverse/page.tsx`, `app/metaverse/uk/page.tsx`, `app/metaverse/gandalf/page.tsx`, `app/metaverse/interior-demo/page.tsx`, `components/metaverse/*`
+- **관련 파일**: `app/metaverse/page.tsx`, `app/metaverse/uk/page.tsx`, `app/metaverse/prototype/page.tsx`, `app/metaverse/interior-demo/page.tsx`, `components/metaverse/*`
 - **API**: `GET /api/metaverse/plots`, `GET /api/metaverse/teams`, `GET /api/metaverse/avatar/shop`
 
 ### 저니: 공개 프로필 열람
@@ -1079,7 +1079,7 @@
 판정: `resolveMetaverseUser`가 Clerk 또는 dev 게스트로 해석. dev 환경에서만 guest 자동 진입. 최초 진입 시 활동 포인트 자동 seed. 관련: `app/api/metaverse/*` (`resolveMetaverseUser`).
 
 ### 저니: Dev Guest — 메타버스 진입·활동
-- **진입점**: dev 환경 `/metaverse/*` (`/metaverse/gandalf`는 `allowGuest`)
+- **진입점**: dev 환경 `/metaverse/*` (`/metaverse/prototype`는 `allowGuest`)
 - **단계**:
   1. 메타버스 진입 → `GET /api/metaverse/activity-balance/me`가 dev 게스트 최초 진입 시 활동 포인트 자동 seed
   2. 아바타 장착 시도 → `POST /api/metaverse/avatar/equip` — 게스트는 DB 쓰기 없이 200 반환

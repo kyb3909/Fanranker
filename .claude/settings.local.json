@@ -347,7 +347,23 @@
       "PowerShell(node \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Projects------adding-test--community\\\\921c76bb-7e12-479a-b8a8-1642007a5c32\\\\scratchpad\\\\te.mjs\" \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Projects------adding-test--community\\\\921c76bb-7e12-479a-b8a8-1642007a5c32\\\\scratchpad\\\\og-test.html\")",
       "PowerShell(python scripts/vultr-exec.py \"curl -sL -A 'Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\)' 'https://gongnori.fan/api/og?url=https%3A%2F%2Fm.sports.naver.com%2Ffifaworldcup2026%2Farticle%2F016%2F0002660542&summarize=1' | head -c 1500\")",
       "PowerShell(try { Stop-Process -Id 45580 -Force -ErrorAction Stop; \"좀비 dev\\(45580\\) 종료\" } catch { \"이미 종료됐거나 없음: $\\($_.Exception.Message\\)\" })",
-      "mcp__playwright__browser_fill_form"
+      "mcp__playwright__browser_fill_form",
+      "Bash(rm -f qa-home-mobile.png qa-football-mobile.png qa-write-mobile.png qa-prediction-mobile.png)",
+      "Bash(rm -rf .playwright-mcp)",
+      "Bash(~/.claude/skills/gstack/bin/gstack-timeline-log '{\"skill\":\"qa\",\"event\":\"completed\",\"branch\":\"main\",\"outcome\":\"success\"}')",
+      "Bash(~/.claude/skills/gstack/bin/gstack-timeline-log '{\"skill\":\"office-hours\",\"event\":\"completed\",\"branch\":\"main\",\"outcome\":\"success\"}')",
+      "Bash(~/.claude/skills/gstack/bin/gstack-timeline-log '{\"skill\":\"design-review\",\"event\":\"completed\",\"branch\":\"main\",\"outcome\":\"abort\"}')",
+      "Bash(rm -f diag-css-issue.png)",
+      "Bash(~/.claude/skills/gstack/bin/gstack-timeline-log '{\"skill\":\"design-review\",\"event\":\"completed\",\"branch\":\"main\",\"outcome\":\"success\",\"fixes\":2}')",
+      "PowerShell(gh api *)",
+      "Skill(loop)",
+      "Bash(vercel env *)",
+      "Bash(NODE_PATH=\"D:/Projects/새 폴더/adding\\(test\\)/community/node_modules\" node \"C:/Users/user/AppData/Local/Temp/claude/D--Projects------adding-test--community/0a932aaf-3a5d-4cb1-850b-409959db3f2e/scratchpad/shot.mjs\")",
+      "Bash(awk '{print $5, $NF}')",
+      "mcp__supabase__get_logs",
+      "Bash(mkdir -p /c/Users/user/AppData/Local/Temp/claude/ase)",
+      "Bash(cp \"D:/Projects/새 폴더/adding\\(test\\)/community/Male.aseprite\" /c/Users/user/AppData/Local/Temp/claude/ase/Male.aseprite)",
+      "Bash(cp \"D:/Projects/새 폴더/adding\\(test\\)/community/FEMALE.aseprite\" /c/Users/user/AppData/Local/Temp/claude/ase/FEMALE.aseprite)"
     ]
   }
 }
