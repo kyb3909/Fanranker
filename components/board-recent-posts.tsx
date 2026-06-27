@@ -37,7 +37,7 @@ export function BoardRecentPosts({
       <div
         className="flex items-center justify-between px-4 py-3"
         style={{
-          background: "#F7F7F8",
+          background: "var(--wc-soft)",
           borderBottom: "1px solid var(--wc-line)",
         }}
       >
