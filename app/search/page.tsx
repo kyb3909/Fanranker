@@ -47,7 +47,7 @@ function highlightMatch(text: string, query: string) {
       {text.slice(0, i)}
       <mark
         style={{
-          background: "#F6E4E8",
+          background: "#eceef2",
           color: "var(--wc-burgundy)",
           fontWeight: 700,
           padding: "0 1px",

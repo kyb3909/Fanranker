@@ -67,7 +67,7 @@ function NoticeCard({ notice }: { notice: GlobalNotice }) {
   return (
     <div
       className="notice-aura overflow-hidden rounded-xl"
-      style={{ background: "var(--wc-soft, #FBF1E7)", border: "1px solid var(--wc-gold, #E7C66B)" }}
+      style={{ background: "var(--wc-card, #ffffff)", border: "1px solid var(--wc-gold, #E7C66B)" }}
     >
       {/* 헤더 — 항상 표시. 클릭하면 펼치기/접기 */}
       <button

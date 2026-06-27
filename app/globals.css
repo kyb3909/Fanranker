@@ -39,16 +39,16 @@
   --primary: #961e37;
   --primary-foreground: #ffffff;
 
-  /* Secondary: wine tint — hover/chip 서피스 */
-  --secondary: #f6e4e8;
+  /* Secondary: 쿨 뉴트럴 — hover/chip 서피스 (구 #f6e4e8 핑크 교체) */
+  --secondary: #eceef2;
   --secondary-foreground: #222222;
 
-  /* Muted: wine tint — bg-muted/40 등 */
-  --muted: #f6e4e8;
+  /* Muted: 쿨 뉴트럴 — bg-muted/40 등 (구 #f6e4e8 핑크 교체) */
+  --muted: #eceef2;
   /* Secondary Text: steel mute */
   --muted-foreground: #5c6470;
 
-  --accent: #f6e4e8;
+  --accent: #eceef2;
   --accent-foreground: #222222;
 
   --destructive: oklch(0.45 0.18 15);
