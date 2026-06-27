@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* 리치 본문 렌더(TipTapContent)의 prose 클래스용 — 제목/목록/인용/강조 스타일 복원.
+ * (미설치 시 prose 가 무효가 되어 게시글 서식이 전부 평범하게 보였음) */
+@plugin "@tailwindcss/typography";
+
 /* 본문: Pretendard Variable / 제목: SUIT Variable — layout.tsx의 next/font/local 로 self-host. */
 
 /* Gmarket Sans Bold - 로고 "공놀이판"에만 사용, unicode-range로 필요 글자만 로드 */
