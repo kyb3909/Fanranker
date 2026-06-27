@@ -62,11 +62,19 @@ export class IndoorPresenceChannel {
     this.channel.on("presence", { event: "join" }, () => this.emitRemote())
     this.channel.on("presence", { event: "leave" }, () => this.emitRemote())
     await new Promise<void>((resolve, reject) => {
+      // 타임아웃 안전망 — subscribe 콜백이 SUBSCRIBED/CHANNEL_ERROR 어느 것도 안 오고
+      // 멈추면(예: realtime 인증 실패 시 무응답) 부팅이 영원히 hang 된다. 일정 시간 뒤
+      // reject 해서 호출부(HighburyStage)가 싱글플레이로 폴백하도록 한다.
+      const timer = setTimeout(() => {
+        reject(new Error("indoor presence subscribe timeout"))
+      }, METAVERSE.PRESENCE_SUBSCRIBE_TIMEOUT_MS)
       this.channel!.subscribe((status, err) => {
         if (status === "SUBSCRIBED") {
+          clearTimeout(timer)
           void this.publishImmediate()
           resolve()
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          clearTimeout(timer)
           reject(err instanceof Error ? err : new Error(`indoor presence ${status}`))
         }
       })

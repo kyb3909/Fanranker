@@ -28,6 +28,8 @@ export const METAVERSE = {
 
   // 위치 동기화
   POSITION_THROTTLE_MS: 200,
+  // presence 채널 구독 타임아웃 — realtime 무응답 시 부팅 hang 방지 (싱글플레이 폴백)
+  PRESENCE_SUBSCRIBE_TIMEOUT_MS: 4000,
 
   // 광장 Plot 타일 기반 크기 (DB width_units × TILE_SIZE)
   DEFAULT_PLOT_WIDTH_PX: 6 * 16, // 96
