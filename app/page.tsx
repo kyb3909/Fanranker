@@ -111,8 +111,9 @@ export default async function Home({
     redirect(params.tab ? `/prediction?tab=${params.tab}` : "/prediction")
   }
 
+  // 기본 정렬 = 최신순(new). ?sort=hot|random 으로만 다른 정렬 진입.
   const initialSort: SortType =
-    params.sort === "new" ? "new" : params.sort === "random" ? "random" : "hot"
+    params.sort === "hot" ? "hot" : params.sort === "random" ? "random" : "new"
   const homeData = await fetchAllHomeData(initialSort)
 
   return (

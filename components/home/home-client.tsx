@@ -38,7 +38,7 @@ export function HomeClient({
   initialFeed,
   initialCategories,
   initialRecentComments,
-  initialSort = "hot",
+  initialSort = "new",
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -54,8 +54,8 @@ export function HomeClient({
   const changeSort = (key: SortType) => {
     setSortBy(key)
     const params = new URLSearchParams(searchParams.toString())
-    if (key === "hot")
-      params.delete("sort") // 기본값은 URL 깔끔하게
+    if (key === "new")
+      params.delete("sort") // 기본값(최신순)은 URL 깔끔하게
     else params.set("sort", key)
     const qs = params.toString()
     router.replace(qs ? `/?${qs}` : "/", { scroll: false })
