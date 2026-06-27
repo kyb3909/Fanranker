@@ -68,7 +68,7 @@ export default async function WorldcupPage() {
     isRegistered = !!reg
   }
 
-  const WC_TS = new Date("2026-06-29T04:00:00+09:00").getTime()
+  const WC_TS = new Date("2026-06-28T13:00:00+09:00").getTime()
   const dday = Math.ceil(Math.max(0, WC_TS - Date.now()) / (1000 * 60 * 60 * 24))
 
   return (
@@ -186,7 +186,7 @@ export default async function WorldcupPage() {
 
           {/* 카운트다운 */}
           <div className="wc-cd-light mb-[30px]">
-            <Countdown target="2026-06-29T04:00:00+09:00" label="이벤트 시작까지" />
+            <Countdown target="2026-06-28T13:00:00+09:00" label="이벤트 시작까지" />
           </div>
 
           {/* CTA 버튼 행 */}

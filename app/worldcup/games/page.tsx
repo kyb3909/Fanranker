@@ -54,10 +54,10 @@ export default async function WorldcupGamesPage() {
       .lt("match_time", end.toISOString())
     hasGamesToday = (count ?? 0) > 0
   }
-  // 이벤트 시작(6.29 새벽 4시) 전엔 예측을 막는다. 축월드컵 경기가 미리 등록돼도
+  // 이벤트 시작(6.28 오후 1시 — 32강 확정 시점) 전엔 예측을 막는다. 축월드컵 경기가 미리 등록돼도
   // 시작 전 예측은 32강 정식 집계에 안 들어가 "예측은 되는데 점수 안 쌓임" 혼란을 부르므로,
   // 시작 전까지는 아래 "곧 시작" 안내 + 카운트다운만 노출. (랜딩 카운트다운 target 과 동일 상수)
-  const WC_START = new Date("2026-06-29T04:00:00+09:00").getTime()
+  const WC_START = new Date("2026-06-28T13:00:00+09:00").getTime()
   const bettingOpen = hasGamesToday && Date.now() >= WC_START
 
   let totalRegistrations = 0
@@ -117,7 +117,7 @@ export default async function WorldcupGamesPage() {
               className="wc-cd-light"
               style={{ maxWidth: 360, margin: "0 auto", textAlign: "left" }}
             >
-              <Countdown target="2026-06-29T04:00:00+09:00" label="월드컵 시작까지" />
+              <Countdown target="2026-06-28T13:00:00+09:00" label="월드컵 시작까지" />
             </div>
             {totalRegistrations > 0 && (
               <p className="mt-6 text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
