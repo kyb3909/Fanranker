@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import useSWR, { SWRConfig } from "swr"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
-import { Eye, MessageSquare, Loader2, ThumbsUp } from "lucide-react"
+import { Eye, MessageSquare, Loader2, ThumbsUp, TrendingUp } from "lucide-react"
 import { BoardIcon } from "@/components/sidebar/board-icon"
 import Link from "@/components/ui/app-link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -210,17 +210,18 @@ function ExploreInner() {
                 <div
                   className="flex items-center justify-between px-4 py-3"
                   style={{
-                    background: "var(--wc-soft)",
+                    background: "var(--wc-card)",
                     borderBottom: "1px solid var(--wc-line)",
                   }}
                 >
                   <h2
-                    className="text-[11px] font-bold uppercase"
+                    className="flex items-center gap-2 text-[11px] font-bold uppercase"
                     style={{
-                      color: "var(--wc-burgundy)",
+                      color: "var(--wc-ink)",
                       letterSpacing: "0.18em",
                     }}
                   >
+                    <TrendingUp className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
                     실시간 인기글
                   </h2>
                   <span className="text-xs" style={{ color: "var(--wc-mute)" }}>
