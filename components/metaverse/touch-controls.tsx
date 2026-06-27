@@ -46,9 +46,11 @@ export function TouchControls() {
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
   })
 
+  // 하단 패딩에 모바일 탭바 높이(h-14=3.5rem) + safe-area + 여백을 더해 버튼이 탭바
+  // (담벼락/운동장/월드컵/마이) 위로 올라오게 한다. 안 그러면 겹쳐서 메뉴가 눌림.
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] select-none"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between p-4 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] select-none"
       style={{ touchAction: "none" }}
       aria-hidden
     >
