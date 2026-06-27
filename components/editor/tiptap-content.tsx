@@ -28,7 +28,8 @@ export function TipTapContent({ content, className }: TipTapContentProps) {
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl mx-auto",
+          // 본문 크기는 base 선에서 캡 — lg/xl 에서 prose-lg/2xl 로 키우면 너무 커짐.
+          "prose prose-sm sm:prose-base mx-auto",
           "max-w-none",
           className
         ),
