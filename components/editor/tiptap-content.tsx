@@ -28,8 +28,8 @@ export function TipTapContent({ content, className }: TipTapContentProps) {
     editorProps: {
       attributes: {
         class: cn(
-          // 본문 크기는 base 선에서 캡 — lg/xl 에서 prose-lg/2xl 로 키우면 너무 커짐.
-          "prose prose-sm sm:prose-base mx-auto",
+          // 본문 크기 — 커뮤니티 글에 맞춰 작게(prose-sm) 고정. 큰 화면 업스케일 안 함.
+          "prose prose-sm mx-auto",
           "max-w-none",
           className
         ),
