@@ -86,10 +86,10 @@ async function fetchAllHomeData(sort: SortType) {
       Promise.resolve(
         supabase
           .from("posts")
-          .select("id, title, community_slug, comment_count, latest_comment_at, created_at")
+          .select("id, title, community_slug, comment_count, last_comment_at, created_at")
           .is("deleted_at", null)
           .gt("comment_count", 0)
-          .order("latest_comment_at", { ascending: false, nullsFirst: false })
+          .order("last_comment_at", { ascending: false, nullsFirst: false })
           .limit(10)
       )
         .then(({ data }) => data ?? [])

@@ -29,7 +29,7 @@ function mapApiPostsToRecentPosts(
     title: string
     community_slug: string
     comment_count?: number
-    latest_comment_at?: string
+    last_comment_at?: string
     created_at: string
   }[]
 ): RecentPost[] {
@@ -38,7 +38,7 @@ function mapApiPostsToRecentPosts(
     title: p.title,
     community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
     comments: p.comment_count || 0,
-    timestamp: p.latest_comment_at || p.created_at,
+    timestamp: p.last_comment_at || p.created_at,
   }))
 }
 
