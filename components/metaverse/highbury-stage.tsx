@@ -18,6 +18,7 @@ import { Loader2 } from "lucide-react"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { MALE_BASIC_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { MetaverseHud } from "./metaverse-hud"
+import { TouchControls } from "./touch-controls"
 import { ChatOverlay } from "./chat-overlay"
 import { ChatLogPanel } from "./chat-log-panel"
 import { UserActionPopover } from "./user-action-popover"
@@ -286,10 +287,12 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
           </Link>
         }
       />
-      {/* 조작 안내 — 우하단에 짧게 */}
-      <div className="pointer-events-none absolute right-3 bottom-3 rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm">
+      {/* 조작 안내 — 데스크톱(키보드)에서만. 터치 디바이스는 TouchControls 오버레이가 대체. */}
+      <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
         A/D · ←→ 이동 · Space 점프 · 도어 앞에서 W/↑ 진입 · Enter 채팅
       </div>
+      {/* 모바일 터치 조작 — pointer:coarse 에서만 렌더 */}
+      <TouchControls />
       {/* 채팅 — 로컬 echo (혼자 보낸 메시지만 패널에 누적) */}
       <ChatOverlay canSend={true} />
       <ChatLogPanel identity={identity} />

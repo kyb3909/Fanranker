@@ -67,6 +67,14 @@ type BridgeEventMap = {
   "highbury:enter": undefined
   /** 킥 충전 게이지 진행도 — React HUD 가 받아 시각화. progress=0..1, active=홀드 중 */
   "charge:progress": { active: boolean; progress: number }
+  /** 모바일 터치 D-pad — 좌우 이동 (hold). active=누름 시작 true / 뗌 false */
+  "touch:move": { dir: "left" | "right"; active: boolean }
+  /** 모바일 터치 — 점프 (one-shot) */
+  "touch:jump": undefined
+  /** 모바일 터치 — 위/도어 진입 (one-shot) */
+  "touch:up": undefined
+  /** 모바일 터치 — 액션(박치기) (one-shot) */
+  "touch:action": undefined
 }
 
 class MetaverseSceneBridge extends EventTarget {

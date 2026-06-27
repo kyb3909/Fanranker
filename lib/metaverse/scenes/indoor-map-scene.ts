@@ -135,6 +135,13 @@ export class IndoorMapScene extends Phaser.Scene {
   private rKey!: Phaser.Input.Keyboard.Key
   private oneKey!: Phaser.Input.Keyboard.Key // 박치기 (headbut)
   private twoKey!: Phaser.Input.Keyboard.Key // 물기 (bite)
+  // 모바일 터치 입력 — TouchControls 오버레이가 sceneBridge 로 전달. 키보드 입력과 OR 병합.
+  private touchLeft = false
+  private touchRight = false
+  private touchJumpQueued = false
+  private touchUpQueued = false
+  private touchActionQueued = false
+  private unsubTouch: (() => void)[] = []
   private platforms!: Phaser.Physics.Arcade.StaticGroup
   private doorHandles: DoorHandle[] = []
 
@@ -332,6 +339,12 @@ export class IndoorMapScene extends Phaser.Scene {
       this.rKey.reset()
       this.oneKey.reset()
       this.twoKey.reset()
+      // 터치 입력도 초기화 — 채팅창 열림/blur 시 hold 가 stuck 되지 않도록
+      this.touchLeft = false
+      this.touchRight = false
+      this.touchJumpQueued = false
+      this.touchUpQueued = false
+      this.touchActionQueued = false
     }
     this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
       this.isChatInputOpen = true
@@ -347,6 +360,23 @@ export class IndoorMapScene extends Phaser.Scene {
       resetAllKeys()
       if (this.input.keyboard) this.input.keyboard.enabled = true
     })
+
+    // 모바일 터치 컨트롤 — TouchControls 오버레이가 emit. hold(move) + one-shot(jump/up/action).
+    this.unsubTouch.push(
+      sceneBridge.on("touch:move", ({ dir, active }) => {
+        if (dir === "left") this.touchLeft = active
+        else this.touchRight = active
+      }),
+      sceneBridge.on("touch:jump", () => {
+        this.touchJumpQueued = true
+      }),
+      sceneBridge.on("touch:up", () => {
+        this.touchUpQueued = true
+      }),
+      sceneBridge.on("touch:action", () => {
+        this.touchActionQueued = true
+      })
+    )
 
     // window blur (alt-tab, 다른 탭 전환 등) 시 모든 키 reset — keyup 못 받아 stuck 되는 케이스 방지
     const onWindowBlur = () => {
@@ -367,6 +397,8 @@ export class IndoorMapScene extends Phaser.Scene {
       this.unsubChatSend = null
       this.unsubChatOpen = null
       this.unsubChatClose = null
+      for (const unsub of this.unsubTouch) unsub()
+      this.unsubTouch = []
       this.chatBubble?.destroy()
       this.chatBubble = null
       this.unsubRemote?.()
@@ -481,15 +513,23 @@ export class IndoorMapScene extends Phaser.Scene {
       return
     }
 
-    const left = this.cursors.left?.isDown || this.wasd.A.isDown
-    const right = this.cursors.right?.isDown || this.wasd.D.isDown
+    const left = this.cursors.left?.isDown || this.wasd.A.isDown || this.touchLeft
+    const right = this.cursors.right?.isDown || this.wasd.D.isDown || this.touchRight
+    // one-shot 터치 큐 — 이번 프레임에 소비하고 즉시 비움 (키보드 JustDown 과 동일 의미)
+    const touchUp = this.touchUpQueued
+    this.touchUpQueued = false
+    const touchJump = this.touchJumpQueued
+    this.touchJumpQueued = false
+    const touchAction = this.touchActionQueued
+    this.touchActionQueued = false
     const upPressed =
       Phaser.Input.Keyboard.JustDown(this.cursors.up!) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.W)
-    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey)
+      Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
+      touchUp
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.spaceKey) || touchJump
     const kickJustDown = this.mapConfig.hasBall && Phaser.Input.Keyboard.JustDown(this.rKey)
     const kickJustUp = this.mapConfig.hasBall && Phaser.Input.Keyboard.JustUp(this.rKey)
-    const headbutPressed = Phaser.Input.Keyboard.JustDown(this.oneKey)
+    const headbutPressed = Phaser.Input.Keyboard.JustDown(this.oneKey) || touchAction
     const bitePressed = Phaser.Input.Keyboard.JustDown(this.twoKey)
 
     // 박치기(1) / 물기(2) — 지상 one-shot. 킥 충전 중에는 무시.
