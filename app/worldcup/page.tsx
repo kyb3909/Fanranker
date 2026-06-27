@@ -69,7 +69,11 @@ export default async function WorldcupPage() {
   }
 
   const WC_TS = new Date("2026-06-28T13:00:00+09:00").getTime()
-  const dday = Math.ceil(Math.max(0, WC_TS - Date.now()) / (1000 * 60 * 60 * 24))
+  const msLeft = WC_TS - Date.now()
+  // 24시간 미만 남았으면 Math.ceil 이 1로 올려 "D-1"(=하루 남음)로 오해됨 → floor 로 남은 '완전한' 일수.
+  // 같은 날(24h 미만) = D-DAY, 시작 시각 지나면 진행 중.
+  const dday = Math.floor(Math.max(0, msLeft) / (1000 * 60 * 60 * 24))
+  const ddayLabel = msLeft <= 0 ? "진행 중" : dday > 0 ? `D-${dday}` : "D-DAY"
 
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
@@ -91,7 +95,7 @@ export default async function WorldcupPage() {
                 borderRadius: 999,
               }}
             >
-              D-{dday}
+              {ddayLabel}
             </span>
           </div>
 

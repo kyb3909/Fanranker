@@ -42,7 +42,7 @@ export default async function RegisterDonePage() {
               둘러보세요.
             </p>
             <div className="wc-done-cd-wrap">
-              <Countdown target="2026-06-11T00:00:00+09:00" label="이벤트 시작까지" />
+              <Countdown target="2026-06-28T13:00:00+09:00" label="이벤트 시작까지" />
             </div>
           </header>
 
