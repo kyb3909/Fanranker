@@ -20,7 +20,8 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
+        // 언더라인 탭 — 회색 박스(bg-muted) 제거, 하단 1px 구분선 + 균등분할
+        "flex w-full items-stretch border-b border-[#EDEFF2] px-3",
         className
       )}
       {...props}
@@ -33,7 +34,8 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:bg-background=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring=active]:border-input=active]:bg-input/30 text-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // 언더라인 탭 트리거 — 균등분할, 비활성 회색/활성 와인+밑줄, 박스/그림자 제거
+        "-mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent bg-transparent px-2 py-[13px] text-sm font-medium whitespace-nowrap text-[#7A828A] transition-colors hover:text-[#3A3F45] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-[#961E37] data-[state=active]:font-bold data-[state=active]:text-[#961E37] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

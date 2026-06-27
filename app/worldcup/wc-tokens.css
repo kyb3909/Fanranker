@@ -150,58 +150,66 @@
   cursor: not-allowed;
 }
 
-/* ─── Underline tabs (sub-filter 행 — 시안 underline 패턴) ──── */
-.worldcup-scope .wc-underline-tabs {
+/* ─── Underline tabs — 사이트 공통 세그먼트 탭 (상단 메뉴와 동일 언더라인 스타일).
+ * 전역 적용(구 .worldcup-scope 한정 → 해제). 활성 표시는 .on / .active / [aria-selected="true"] 모두 지원. */
+.wc-underline-tabs {
   display: flex;
-  border-bottom: 1px solid var(--wc-line);
+  padding: 0 12px;
+  border-bottom: 1px solid #edeff2;
 }
-.worldcup-scope .wc-underline-tabs button {
+.wc-underline-tabs button {
   flex: 1;
   min-width: 0;
-  padding: 12px 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--wc-mute);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    background 0.15s,
-    border-color 0.15s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  padding: 13px 0;
+  margin-bottom: -1px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7a828a;
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
-.worldcup-scope .wc-underline-tabs button:hover:not(:disabled):not(.on) {
-  color: var(--wc-ink);
-  background: var(--wc-soft);
+/* 탭 안 아이콘은 글자색을 그대로 따라감 */
+.wc-underline-tabs button svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
 }
-.worldcup-scope .wc-underline-tabs button.on {
-  color: var(--wc-burgundy);
-  border-bottom-color: var(--wc-burgundy);
+.wc-underline-tabs button:hover:not(:disabled):not(.on):not(.active):not([aria-selected="true"]) {
+  color: #3a3f45;
 }
-.worldcup-scope .wc-underline-tabs button:disabled {
+.wc-underline-tabs button.on,
+.wc-underline-tabs button.active,
+.wc-underline-tabs button[aria-selected="true"] {
+  color: #961e37;
+  font-weight: 700;
+  border-bottom-color: #961e37;
+}
+.wc-underline-tabs button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.worldcup-scope .wc-underline-tabs.scroll {
+.wc-underline-tabs.scroll {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.worldcup-scope .wc-underline-tabs.scroll::-webkit-scrollbar {
+.wc-underline-tabs.scroll::-webkit-scrollbar {
   display: none;
 }
 /* scroll variant: 균등 폭이 아니라 콘텐츠 폭 유지 */
-.worldcup-scope .wc-underline-tabs.scroll button {
+.wc-underline-tabs.scroll button {
   flex: 0 0 auto;
   padding: 10px 16px;
   font-size: 13px;
-  font-weight: 500;
 }
 
 /* ─── Hover utilities (server component safe — no JS handler) ─── */
