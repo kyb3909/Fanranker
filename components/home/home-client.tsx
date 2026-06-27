@@ -172,8 +172,8 @@ export function HomeClient({
               </span>
             </Link>
 
-            {/* 정렬 스트립 — 랜덤/온도순/최신순. 사이트 공통 언더라인 탭. */}
-            <div className="wc-underline-tabs mt-4" role="group" aria-label="게시물 정렬">
+            {/* 정렬 스트립 — 랜덤/온도순/최신순. (담벼락은 pill 스타일 유지 — 언더라인 통일 예외) */}
+            <div className="mt-4 flex items-center gap-1.5" role="group" aria-label="게시물 정렬">
               {[
                 { key: "random" as const, label: "랜덤" },
                 { key: "hot" as const, label: "온도순" },
@@ -183,7 +183,17 @@ export function HomeClient({
                   key={key}
                   onClick={() => changeSort(key)}
                   aria-pressed={sortBy === key}
-                  className={sortBy === key ? "on" : ""}
+                  className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${sortBy !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
+                  style={{
+                    height: 34,
+                    padding: "0 14px",
+                    background: sortBy === key ? "var(--wc-burgundy)" : "var(--wc-card)",
+                    color: sortBy === key ? "white" : "var(--wc-mute)",
+                    border:
+                      sortBy === key
+                        ? "1px solid var(--wc-burgundy)"
+                        : "1px solid var(--wc-line-2)",
+                  }}
                 >
                   {label}
                 </button>
