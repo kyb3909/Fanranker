@@ -13,6 +13,7 @@
 import StarterKit from "@tiptap/starter-kit"
 import TextAlign from "@tiptap/extension-text-align"
 import TiptapImage from "@tiptap/extension-image"
+import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table"
 import { Embed } from "./embed"
 import { Video } from "./video"
 
@@ -38,5 +39,10 @@ export function createSharedTipTapExtensions(options: SharedExtensionsOptions = 
     }),
     Embed.configure({ HTMLAttributes: { class: "embed-node" } }),
     Video,
+    // 표 — 에디터/뷰어 공통. resizable=false(읽기 전용 뷰어 + 단순 입력). prose 가 표 스타일 담당.
+    Table.configure({ resizable: false }),
+    TableRow,
+    TableHeader,
+    TableCell,
   ]
 }

@@ -29,6 +29,10 @@ const ALLOWED_NODES = new Set<string>([
   "hardBreak",
   "image",
   "embed",
+  "table",
+  "tableRow",
+  "tableHeader",
+  "tableCell",
 ])
 
 const ALLOWED_EMBED_PROVIDERS = new Set<string>(["youtube", "instagram", "x"])
@@ -193,6 +197,20 @@ function sanitizeNode(node: unknown): TipTapNode | null {
       const attrs = sanitizeEmbedAttrs(n.attrs)
       if (!attrs) return null
       out.attrs = attrs
+      break
+    }
+    case "tableCell":
+    case "tableHeader": {
+      // colspan/rowspan(1~50) + colwidth(number[]) 만 통과
+      const a = (n.attrs ?? {}) as Record<string, unknown>
+      const cellAttrs: Record<string, unknown> = {}
+      if (typeof a.colspan === "number" && a.colspan >= 1 && a.colspan <= 50)
+        cellAttrs.colspan = a.colspan
+      if (typeof a.rowspan === "number" && a.rowspan >= 1 && a.rowspan <= 50)
+        cellAttrs.rowspan = a.rowspan
+      if (Array.isArray(a.colwidth) && a.colwidth.every((x) => typeof x === "number"))
+        cellAttrs.colwidth = a.colwidth
+      if (Object.keys(cellAttrs).length > 0) out.attrs = cellAttrs
       break
     }
     // doc/paragraph(기본)/bulletList/orderedList/listItem/blockquote/codeBlock/
