@@ -161,7 +161,8 @@ export default async function WorldcupLeaderboardPage() {
     const sum = groupSummary.get(g.id)!
     return {
       slug: g.slug,
-      avgProfit: sum.members > 0 ? Math.round((sum.totalProfit / sum.members) * 10) / 10 : 0,
+      // 소수점 2자리 — net 손익 평균이라 값이 작아(±0 근처) 1자리면 0 으로 뭉개짐
+      avgProfit: sum.members > 0 ? Math.round((sum.totalProfit / sum.members) * 100) / 100 : 0,
       avgAccuracy: sum.settled > 0 ? Math.round((sum.won / sum.settled) * 1000) / 10 : 0,
       members: sum.members,
       rank: 0,
