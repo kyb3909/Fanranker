@@ -140,7 +140,7 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
                   적중{" "}
                   <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>{stats.avgAccuracy}%</b>
                 </span>
-                <span>{stats.members}명 참가</span>
+                <span>{stats.members}명 참여</span>
               </div>
             </div>
           )

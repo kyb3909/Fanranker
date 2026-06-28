@@ -142,7 +142,8 @@ export default async function WorldcupLeaderboardPage() {
     })
 
     const sum = groupSummary.get(reg.group_id)!
-    sum.members++
+    // 평가(평균/참가수)는 실제 예측에 참여한 사람만 — 등록만 하고 안 건 사람은 제외
+    if (stat.settled > 0) sum.members++
     sum.totalProfit += stat.profit
     sum.settled += stat.settled
     sum.won += stat.won
