@@ -123,10 +123,11 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
                     color: "var(--wc-burgundy)",
                   }}
                 >
-                  {fmtProfit(stats.avgProfit)}
+                  {stats.avgAccuracy}%
                 </b>
-                <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>평균 획득 점수</span>
+                <span style={{ fontSize: 12.5, color: "var(--wc-mute)" }}>평균 적중률</span>
               </div>
+              {/* 평균 "획득 점수"는 net 손익이라 베팅 풀 특성상 항상 0 근처 → 헤드라인은 적중률 사용 */}
               <div
                 style={{
                   display: "flex",
@@ -136,10 +137,6 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
                   color: "var(--wc-mute)",
                 }}
               >
-                <span>
-                  적중{" "}
-                  <b style={{ color: "var(--wc-ink)", fontWeight: 700 }}>{stats.avgAccuracy}%</b>
-                </span>
                 <span>{stats.members}명 참가</span>
               </div>
             </div>
@@ -254,8 +251,8 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
               <b>{myInfo.accuracy}%</b>
             </div>
             <div className="wc-lb-me-s">
-              <span>구너 평균</span>
-              <b>{fmtProfit(myGroupAvg.avgProfit)}</b>
+              <span>구너 평균 적중률</span>
+              <b>{myGroupAvg.avgAccuracy}%</b>
             </div>
             <div className="wc-lb-me-s">
               <span>완료된 예측</span>
