@@ -3,6 +3,7 @@ import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { Crown, ArrowRight } from "lucide-react"
 import { Countdown } from "@/components/worldcup/countdown"
+import { WorldcupRulesModal } from "@/components/worldcup/worldcup-rules-modal"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 
@@ -212,6 +213,11 @@ export default async function WorldcupPage() {
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-ghost">
               리더보드
             </Link>
+          </div>
+
+          {/* 승부 예측 규칙 — 첫 방문 1회 자동 노출 + 버튼 재열람 */}
+          <div className="mt-4 flex justify-center">
+            <WorldcupRulesModal />
           </div>
 
           {/* 신청 카운트 문구 */}
