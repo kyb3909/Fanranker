@@ -104,20 +104,29 @@ function NoticeCard({ notice }: { notice: GlobalNotice }) {
             style={{ borderColor: "var(--wc-gold, #E7C66B)", opacity: 0.99 }}
           >
             {hasContent ? (
-              typeof notice.content === "string" ? (
-                <p
-                  className="text-[14px] whitespace-pre-wrap"
-                  style={{
-                    color: "var(--wc-ink, #2A1A1F)",
-                    lineHeight: 1.7,
-                    wordBreak: "keep-all",
-                  }}
-                >
-                  {notice.content}
-                </p>
-              ) : (
-                <TipTapContent content={notice.content} />
-              )
+              // 긴 공지(예: 표)가 담벼락을 잡아먹지 않도록 높이 제한 + 하단 페이드.
+              // 전체는 "글 전체 보기"로. 짧은 공지는 320px 미만이라 잘림 없음.
+              <div className="relative max-h-[320px] overflow-hidden">
+                {typeof notice.content === "string" ? (
+                  <p
+                    className="text-[14px] whitespace-pre-wrap"
+                    style={{
+                      color: "var(--wc-ink, #2A1A1F)",
+                      lineHeight: 1.7,
+                      wordBreak: "keep-all",
+                    }}
+                  >
+                    {notice.content}
+                  </p>
+                ) : (
+                  <TipTapContent content={notice.content} />
+                )}
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
+                  style={{ background: "linear-gradient(transparent, var(--wc-card, #fff))" }}
+                  aria-hidden
+                />
+              </div>
             ) : null}
             <Link
               href={`/post/${notice.id}`}
