@@ -189,9 +189,9 @@ export default async function WorldcupPage() {
             </p>
           </div>
 
-          {/* 카운트다운 */}
+          {/* 카운트다운 — 이벤트 시작(6.28 13:00) 후엔 신청 마감까지로 전환 */}
           <div className="wc-cd-light mb-[30px]">
-            <Countdown target="2026-06-28T13:00:00+09:00" label="이벤트 시작까지" />
+            <Countdown target="2026-07-06T04:00:00+09:00" label="신청 마감까지" />
           </div>
 
           {/* CTA 버튼 행 */}
