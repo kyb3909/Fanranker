@@ -3,7 +3,6 @@ import nextDynamic from "next/dynamic"
 import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { Countdown } from "@/components/worldcup/countdown"
 import { getDailyWindow } from "@/lib/betman/daily-round"
 import { SectionHeader } from "@/components/section-header"
 
@@ -104,7 +103,7 @@ export default async function WorldcupGamesPage() {
               className="mt-4 text-[22px] font-extrabold sm:text-[26px]"
               style={{ letterSpacing: "-.02em", color: "var(--wc-ink)" }}
             >
-              32강 대진이 확정된 이후 예측이 열립니다
+              다음 경기를 기다리는 중이에요
             </h2>
             <p
               className="mx-auto mt-2.5 mb-7 max-w-[440px] text-[14.5px]"
@@ -112,12 +111,6 @@ export default async function WorldcupGamesPage() {
             >
               아직 등록된 경기 정보가 없어요. 업데이트되는 대로 이곳에 바로 추가됩니다.
             </p>
-            <div
-              className="wc-cd-light"
-              style={{ maxWidth: 360, margin: "0 auto", textAlign: "left" }}
-            >
-              <Countdown target="2026-06-28T13:00:00+09:00" label="월드컵 시작까지" />
-            </div>
             {totalRegistrations > 0 && (
               <p className="mt-6 text-[13px] font-semibold" style={{ color: "var(--wc-mute)" }}>
                 현재{" "}
