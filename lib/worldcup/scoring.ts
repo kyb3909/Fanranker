@@ -9,7 +9,7 @@
  *
  * 실제 32강 일정이 확정되면 이 값만 조정하면 리더보드와 내 점수가 함께 따라간다.
  */
-export const WORLDCUP_SCORING_STARTS_AT = "2026-06-29T08:00:00+09:00"
+export const WORLDCUP_SCORING_STARTS_AT = "2026-06-28T08:00:00+09:00"
 
 const SCORING_START_MS = new Date(WORLDCUP_SCORING_STARTS_AT).getTime()
 
