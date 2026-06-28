@@ -110,8 +110,7 @@ export default async function WorldcupGamesPage() {
               className="mx-auto mt-2.5 mb-7 max-w-[440px] text-[14.5px]"
               style={{ lineHeight: 1.65, color: "var(--wc-ink-2)" }}
             >
-              월드컵 경기가 열리면 이곳에 일정과 승부예측이 바로 나타납니다. 미리 신청해 두면 준비
-              끝!
+              아직 등록된 경기 정보가 없어요. 업데이트되는 대로 이곳에 바로 추가됩니다.
             </p>
             <div
               className="wc-cd-light"
