@@ -50,6 +50,8 @@ export default async function AdminNewsroomPage() {
       .from("news_reservoir")
       .select("id, source, raw, scores, draft, issue_type, created_at")
       .eq("status", "drafted")
+      // Hermes 에이전트 초안은 /admin/news-review 에서 검수 → 여기선 제외 (형식이 다름)
+      .or("source->>type.neq.hermes,source->>type.is.null")
       .order("created_at", { ascending: false })
       .limit(50),
   ])
