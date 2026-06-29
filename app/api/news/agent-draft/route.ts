@@ -3,6 +3,7 @@ import { z } from "zod"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
+import { notifyDiscordOps } from "@/lib/discord-notify"
 
 export const dynamic = "force-dynamic"
 
@@ -98,6 +99,15 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: "적재 실패", detail: error.message }, { status: 500 })
   }
+
+  // 운영 알림 — 새 검수 대기 기사 (디스코드 웹훅 미설정 시 no-op)
+  await notifyDiscordOps({
+    level: "info",
+    title: "🆕 새 검수 기사 대기",
+    description: d.title,
+    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://gongnori.fan"}/admin/news-review`,
+    fields: d.source_url ? [{ name: "원문", value: d.source_url }] : undefined,
+  })
 
   return NextResponse.json({ ok: true, id, status: "drafted" }, { status: 201 })
 }

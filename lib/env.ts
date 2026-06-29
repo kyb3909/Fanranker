@@ -9,6 +9,8 @@ const serverSchema = z.object({
   CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),
   CRON_SECRET: z.string().min(1, "CRON_SECRET is required"),
   FACEBOOK_ACCESS_TOKEN: z.string().optional(),
+  // 운영 알림 디스코드 웹훅 (신고/검수/정산/크롤링 이슈 → 직원 채널). 미설정 시 알림 no-op.
+  DISCORD_OPS_WEBHOOK_URL: z.string().url().optional(),
   // Cloudflare Stream (영상 업로드 — direct creator upload). 둘 다 있어야 영상 업로드 활성화.
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
