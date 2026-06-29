@@ -37,8 +37,8 @@ export default async function NewsReviewPage() {
     <div className="mx-auto max-w-[860px] p-6">
       <h1 className="text-xl font-bold">뉴스 검수 (Hermes 초안)</h1>
       <p className="text-muted-foreground mt-1 text-sm">
-        에이전트가 적재한 초안입니다. 발행하면 <b>풋볼매니아_kr</b> 이름으로 축구 게시판에
-        올라갑니다. 반려하면 발행되지 않습니다.
+        에이전트가 적재한 초안입니다. 발행하면 <b>공놀이봇</b> 이름으로 축구 게시판에 올라갑니다.
+        반려하면 발행되지 않습니다.
       </p>
       <NewsReviewClient items={items} />
     </div>

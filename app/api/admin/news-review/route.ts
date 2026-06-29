@@ -7,7 +7,7 @@ import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 
 export const dynamic = "force-dynamic"
 
-/** 발행 뉴스 작성자 = 기존 축구 뉴스봇(풋볼매니아_kr). football 게시판. */
+/** 발행 뉴스 작성자 = 공놀이봇(user_bot_soccer_kr). football 게시판. 봇 글은 전부 이 계정. */
 const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
 const FOOTBALL_CATEGORY_ID = "22105623-6c99-487d-975f-15073e0990fc"
 const FOOTBALL_SLUG = "football"
