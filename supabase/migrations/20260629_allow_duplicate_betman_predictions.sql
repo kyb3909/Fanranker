@@ -1,0 +1,12 @@
+-- 같은 경기·같은 선택에 다시 베팅 허용
+--
+-- 기존: idx_unique_user_game_active_prediction 가 (user_id, game_id) 를
+--       status in (pending, settled) 범위에서 UNIQUE 로 묶어, 한 경기당 한 번만
+--       예측 가능하도록 막고 있었음.
+-- 변경: 사용자가 같은 경기·같은 선택에 추가로 볼을 걸 수 있게 (예: 5볼 걸었다가
+--       나중에 5볼 더) 해당 UNIQUE 인덱스를 제거.
+--
+-- 안전성: 정산/조회/통계 로직은 모두 PK(id) 또는 slip_id 단위로 여러 행을
+--         개별 처리하므로 (user_id, game_id) 가 여러 행이어도 안전.
+--         조회 성능용 비-unique 인덱스 idx_betman_predictions_user_game 는 유지.
+DROP INDEX IF EXISTS "public"."idx_unique_user_game_active_prediction";
