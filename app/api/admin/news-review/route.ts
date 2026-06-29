@@ -14,20 +14,24 @@ const FOOTBALL_SLUG = "football"
 
 /**
  * POST /api/admin/news-review  — 관리자 전용 (admin layout + requireAdmin 이중 보호).
- * body: { id, action: "publish" | "reject" }
- *  - publish: news_reservoir(drafted) → posts 발행(풋볼매니아_kr) + reservoir status=published
+ * body: { id, action: "publish" | "reject" | "save", title?, content? }
+ *  - publish: news_reservoir(drafted) → posts 발행(공놀이봇) + reservoir status=published
+ *  - save   : 검수 중 수정본을 draft 에 저장 (발행 안 함)
  *  - reject : reservoir status=rejected (발행 안 함)
+ *  - title/content 가 오면(검수 편집) 그 수정본으로 저장/발행한다.
  */
 const BodySchema = z.object({
   id: z.string().min(1),
-  action: z.enum(["publish", "reject"]),
+  action: z.enum(["publish", "reject", "save"]),
+  title: z.string().min(1).max(300).optional(),
+  content: z.unknown().optional(),
 })
 
 interface DraftReservoirRow {
   id: string
   status: string
   urls: { source?: string | null } | null
-  draft: { title?: string; content?: unknown } | null
+  draft: { title?: string; content?: unknown; tags?: string[] } | null
 }
 
 export async function POST(req: NextRequest) {
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
   }
   const parsed = BodySchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: "id/action 필요" }, { status: 400 })
-  const { id, action } = parsed.data
+  const { id, action, title: editTitle, content: editContent } = parsed.data
 
   const supabase = createServiceRoleClient()
   const now = new Date().toISOString()
@@ -71,13 +75,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, status: "rejected" })
   }
 
-  // publish
-  const title = item.draft?.title?.trim()
-  const content = sanitizeTipTapJSON(item.draft?.content)
-  if (!title || !content) {
-    return NextResponse.json({ error: "초안 제목/본문이 유효하지 않습니다." }, { status: 400 })
+  // save/publish 공통 — 검수 편집본(title/content)이 오면 그걸, 아니면 기존 draft 사용
+  const finalTitle = (editTitle ?? item.draft?.title)?.trim()
+  const finalContent = sanitizeTipTapJSON(editContent ?? item.draft?.content)
+  if (!finalTitle || !finalContent) {
+    return NextResponse.json({ error: "제목/본문이 유효하지 않습니다." }, { status: 400 })
   }
-  const image = extractFirstImageSrcFromTipTapJSON(content)
+  const nextDraft = { ...(item.draft ?? {}), title: finalTitle, content: finalContent }
+
+  // 수정 저장만 (발행 안 함)
+  if (action === "save") {
+    await supabase.from("news_reservoir").update({ draft: nextDraft, updated_at: now }).eq("id", id)
+    return NextResponse.json({ ok: true, status: "drafted", saved: true })
+  }
+
+  // publish
+  const image = extractFirstImageSrcFromTipTapJSON(finalContent)
   const sourceUrl = item.urls?.source ?? null
 
   const { data: post, error: postErr } = await supabase
@@ -86,8 +99,8 @@ export async function POST(req: NextRequest) {
       user_id: NEWS_BOT_USER_ID,
       category_id: FOOTBALL_CATEGORY_ID,
       community_slug: FOOTBALL_SLUG,
-      title,
-      content,
+      title: finalTitle,
+      content: finalContent,
       ...(image ? { image } : {}),
       ...(sourceUrl ? { source_url: sourceUrl } : {}),
     })
@@ -102,6 +115,7 @@ export async function POST(req: NextRequest) {
     .update({
       status: "published",
       publish: { post_id: post.id, published_at: now },
+      draft: nextDraft,
       updated_at: now,
     })
     .eq("id", id)
