@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
+import { notifyDiscordOps } from "@/lib/discord-notify"
 import { z } from "zod"
 
 const VALID_REASONS = ["discrimination", "advertising", "profanity", "abuse", "political"] as const
@@ -63,6 +64,25 @@ export async function POST(request: NextRequest) {
     if (error) {
       return apiError("신고 접수에 실패했습니다.", 500, error)
     }
+
+    // 운영 알림 — 새 신고 (디스코드, 웹훅 미설정 시 no-op)
+    const REASON_LABELS: Record<string, string> = {
+      discrimination: "차별",
+      advertising: "광고",
+      profanity: "욕설/비속어",
+      abuse: "비방/괴롭힘",
+      political: "정치",
+    }
+    await notifyDiscordOps({
+      level: "warn",
+      title: "🚨 새 신고 접수",
+      description: `사유: ${REASON_LABELS[reason] ?? reason} · 대상: ${targetType === "post" ? "게시글" : "댓글"}`,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://gongnori.fan"}/admin/content/reports`,
+      fields: [
+        { name: "대상 ID", value: targetId, inline: true },
+        ...(description ? [{ name: "내용", value: description }] : []),
+      ],
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
