@@ -16,7 +16,8 @@ export function BallBalance() {
     isSignedIn && !isOnboarding ? "/api/tokens/balance" : null,
     fetcher,
     {
-      revalidateOnFocus: false,
+      // 리셋/베팅으로 잔액이 바뀐 뒤 옛 0 을 들고 있지 않도록 포커스 복귀 시 갱신
+      revalidateOnFocus: true,
       dedupingInterval: 30000,
     }
   )

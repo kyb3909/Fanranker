@@ -34,7 +34,7 @@ export function useBettingSlip(
       const res = await fetch("/api/tokens/balance")
       if (res.ok) {
         const data = await res.json()
-        setUserBalls(data.balance || 10)
+        setUserBalls(data.balance ?? 0)
       }
     } catch (err) {
       console.error("Failed to load user balls:", err)
@@ -57,7 +57,7 @@ export function useBettingSlip(
       ])
       if (balanceRes?.ok) {
         const data = await balanceRes.json()
-        setUserBalls(data.balance || 10)
+        setUserBalls(data.balance ?? 0)
       }
       if (profileRes?.ok) {
         const data = await profileRes.json()
