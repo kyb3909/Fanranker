@@ -13,6 +13,7 @@ import { RankingTab } from "./ranking-tab"
 import { StatsTab } from "./stats-tab"
 import { MypageTab } from "./mypage-tab"
 import { BettingSlip } from "./betting-slip"
+import { WorldcupRulesCard } from "@/components/worldcup/worldcup-rules-card"
 import { BettingAlertDialog } from "./betting-alert-dialog"
 
 const VALID_TABS = new Set(["betting", "ranking", "stats", "mypage"] as const)
@@ -149,6 +150,7 @@ export default function BettingPage({
             <div className="hidden lg:col-span-4 lg:block">
               <div className="sticky" style={{ top: 76 }}>
                 <BettingSlip variant="rail" {...slipProps} />
+                {eventSlug && <WorldcupRulesCard />}
               </div>
             </div>
             <div className="col-span-12 lg:col-span-8">
@@ -160,6 +162,7 @@ export default function BettingPage({
           {(activeTab === "betting" || bettingOnly) && (
             <div className="lg:hidden">
               <BettingSlip {...slipProps} />
+              {eventSlug && <WorldcupRulesCard />}
             </div>
           )}
         </>
