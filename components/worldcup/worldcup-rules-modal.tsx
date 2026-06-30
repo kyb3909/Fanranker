@@ -2,34 +2,51 @@
 
 import { useEffect, useState } from "react"
 import { Info } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { WorldcupRulesContent } from "./worldcup-rules-content"
 
-const SEEN_KEY = "wc-rules-seen-v1"
+// 운영 공지(볼 충전 오류 안내) — 첫 방문 시 1회 강제 확인. 새 공지마다 키 버전을 올린다.
+const NOTICE_SEEN_KEY = "wc-notice-ball-bug-2026-06-30"
 
 /**
- * 월드컵 승부예측 규칙 안내 모달.
- * 첫 방문 시 1회 자동 노출(공지), 이후엔 "승부 예측 규칙" 버튼으로 재열람.
+ * 월드컵 이벤트 모달.
+ * - 첫 방문 시 운영 공지를 1회 강제 노출("확인했음"을 눌러야만 닫힘 — ESC/바깥 클릭/X 불가).
+ * - "승부 예측 규칙" 버튼으로 규칙은 언제든 재열람(일반 닫기 가능).
  */
 export function WorldcupRulesModal() {
-  const [open, setOpen] = useState(false)
+  const [rulesOpen, setRulesOpen] = useState(false)
+  const [noticeOpen, setNoticeOpen] = useState(false)
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(SEEN_KEY)) {
-        setOpen(true)
-        localStorage.setItem(SEEN_KEY, "1")
+      if (!localStorage.getItem(NOTICE_SEEN_KEY)) {
+        setNoticeOpen(true)
       }
     } catch {
       /* localStorage 접근 불가 — 무시 */
     }
   }, [])
 
+  const acknowledgeNotice = () => {
+    try {
+      localStorage.setItem(NOTICE_SEEN_KEY, "1")
+    } catch {
+      /* 무시 */
+    }
+    setNoticeOpen(false)
+  }
+
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setRulesOpen(true)}
         className="inline-flex items-center gap-1.5 text-[13px] font-semibold"
         style={{ color: "var(--wc-mute)" }}
       >
@@ -37,12 +54,51 @@ export function WorldcupRulesModal() {
         승부 예측 규칙
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* 규칙 모달 — 일반(닫기 가능) */}
+      <Dialog open={rulesOpen} onOpenChange={setRulesOpen}>
         <DialogContent className="max-w-[460px]">
           <DialogHeader>
             <DialogTitle>승부 예측 규칙</DialogTitle>
           </DialogHeader>
           <WorldcupRulesContent />
+        </DialogContent>
+      </Dialog>
+
+      {/* 운영 공지 — 강제 확인("확인했음" 버튼으로만 닫힘) */}
+      <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
+        <DialogContent
+          className="max-w-[460px]"
+          showCloseButton={false}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>안내</DialogTitle>
+          </DialogHeader>
+          <div
+            className="space-y-3 text-[14px] leading-relaxed"
+            style={{ color: "var(--wc-ink-2, #494d56)", wordBreak: "keep-all" }}
+          >
+            <p>볼 충전에 오류가 있어 바로 수정했습니다.</p>
+            <p>
+              일일 볼은 하루 한 번만 충전되어야 하지만, 특정 상황에서 같은 날 한 번 더 충전되는
+              오류가 있었습니다.
+            </p>
+            <p>
+              이 오류로 추가 충전된 볼을 사용해 진행된 베팅 1건을 공정성을 위해 취소 처리했습니다.
+              정상적으로 충전된 볼로 하신 베팅에는 영향이 없습니다.
+            </p>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={acknowledgeNotice}
+              className="mt-1 w-full rounded-lg px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
+              style={{ background: "var(--wc-burgundy, #961e37)" }}
+            >
+              확인했음
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
