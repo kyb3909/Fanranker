@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { PollForm } from "./poll-form"
+import { PollList } from "./poll-list"
 
 export const dynamic = "force-dynamic"
 
@@ -32,26 +33,7 @@ export default async function AdminPollsPage() {
 
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-semibold">설문 목록</h2>
-        <div className="space-y-2">
-          {rows.map((p) => (
-            <div key={p.id} className="rounded-lg border p-3">
-              <div className="flex items-center gap-2">
-                {p.is_active && (
-                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-[11px] font-bold text-green-700">
-                    활성
-                  </span>
-                )}
-                <span className="font-medium">{p.question}</span>
-              </div>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {(p.options ?? []).map((o) => o.label).join(" · ")}
-              </p>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <p className="text-muted-foreground text-sm">아직 설문이 없습니다.</p>
-          )}
-        </div>
+        <PollList polls={rows} />
       </div>
     </main>
   )
