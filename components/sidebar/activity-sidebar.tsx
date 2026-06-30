@@ -5,6 +5,7 @@ import { MessageSquare, Loader2 } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
+import { PollWidget } from "@/components/sidebar/poll-widget"
 
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -192,6 +193,9 @@ export const ActivitySidebar = memo(function ActivitySidebar({
           )}
         </div>
       </div>
+
+      {/* ===== 설문조사(폴) 위젯 — 최근 댓글 아래 ===== */}
+      <PollWidget />
 
       {/* ===== 광고 플레이스홀더 ===== */}
       <AdPlaceholder variant="sidebar" />

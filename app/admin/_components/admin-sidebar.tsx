@@ -100,6 +100,7 @@ const navGroups: NavGroup[] = [
       },
       { title: "뉴스룸 큐", href: "/admin/content/newsroom", icon: Inbox },
       { title: "AI 뉴스 검수", href: "/admin/news-review", icon: Sparkles },
+      { title: "설문조사", href: "/admin/content/polls", icon: BarChart3 },
     ],
   },
   {
