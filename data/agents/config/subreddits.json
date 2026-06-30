@@ -3,7 +3,8 @@
   "note": "Phase C: football + NBA + MLB 확장. 서브 많아졌으니 scout.max_per_subreddit 낮춤. min_score는 서브 활성도에 맞게 조정. 한국 관심 선수 있는 팀(Padres 김하성, SFGiants 이정후, Dodgers 오타니)은 min_score 낮춰 폭넓게 수집.",
   "scout": {
     "lookback_hours": 24,
-    "max_per_subreddit": 10
+    "max_per_subreddit": 10,
+    "throttle_ms": 8000
   },
   "subreddits": [
     {
@@ -31,6 +32,8 @@
     { "name": "reddevils", "community_slug": "football", "min_score": 100, "weight": 0.9 },
     { "name": "chelseafc", "community_slug": "football", "min_score": 80, "weight": 0.9 },
     { "name": "MCFC", "community_slug": "football", "min_score": 80, "weight": 0.9 },
+    { "name": "coys", "community_slug": "football", "min_score": 50, "weight": 0.9 },
+    { "name": "ManchesterUnited", "community_slug": "football", "min_score": 80, "weight": 0.9 },
     { "name": "realmadrid", "community_slug": "football", "min_score": 80, "weight": 0.9 },
     { "name": "Barca", "community_slug": "football", "min_score": 80, "weight": 0.9 },
     { "name": "FCBayern", "community_slug": "football", "min_score": 50, "weight": 0.9 },

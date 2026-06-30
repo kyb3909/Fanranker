@@ -24,6 +24,8 @@ const CONFIG_PATH = join(__dirname, '..', 'config', 'subreddits.json')
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 function log(msg) {
   const ts = new Date().toISOString()
   process.stdout.write(`[${ts}] [scout] ${msg}\n`)
@@ -155,6 +157,8 @@ async function main() {
 
   const maxArticles = cfg.scout?.max_per_subreddit ?? 25
   const lookbackHours = cfg.scout?.lookback_hours ?? 24
+  // Reddit는 무쓰로틀 연타에 빈 응답(throttle)을 준다 → 서브레딧 간 딜레이로 우회.
+  const throttleMs = cfg.scout?.throttle_ms ?? 2500
 
   log(`dry=${dryRun} subreddits=${cfg.subreddits.length} drop_patterns=${compiled.length} lookback=${lookbackHours}h`)
 
@@ -168,7 +172,10 @@ async function main() {
     errors: 0,
   }
 
+  let firstFetch = true
   for (const entry of cfg.subreddits) {
+    if (!firstFetch) await sleep(throttleMs)
+    firstFetch = false
     log(`r/${entry.name}: fetching (max=${maxArticles})...`)
 
     let posts

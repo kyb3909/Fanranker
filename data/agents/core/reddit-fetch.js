@@ -11,6 +11,8 @@
 //   import { fetchRedditViaRSS } from './reddit-fetch.js'
 //   const posts = await fetchRedditViaRSS('soccer', { maxArticles: 25 })
 
+import { execSync } from "node:child_process";
+
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const REDDIT_BASE = "https://www.reddit.com";
@@ -43,16 +45,27 @@ export async function fetchRedditViaRSS(
   const limit = Math.min(maxArticles * 3, 100);
   const url = `${REDDIT_BASE}/r/${subreddit}/hot.rss?limit=${limit}`;
 
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Reddit RSS /r/${subreddit} returned HTTP ${res.status}`);
+  // Reddit는 Node native fetch의 TLS fingerprint를 429로 throttle한다(IP 무관, home·datacenter 둘 다).
+  // curl은 통과 → Linux(Vultr 운영)는 curl 사용, Windows 로컬 dev는 native fetch fallback.
+  let xml;
+  if (process.platform !== "win32") {
+    xml = execSync(
+      `curl -s -L -H 'User-Agent: ${USER_AGENT}' --max-time ${Math.ceil(timeoutMs / 1000)} '${url}'`,
+      { encoding: "utf-8", maxBuffer: 5 * 1024 * 1024 }
+    );
+    if (!xml) {
+      throw new Error(`Reddit RSS /r/${subreddit} curl returned empty`);
+    }
+  } else {
+    const res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) {
+      throw new Error(`Reddit RSS /r/${subreddit} returned HTTP ${res.status}`);
+    }
+    xml = await res.text();
   }
-
-  const xml = await res.text();
   if (
     xml.includes('<body class=theme-beta>') ||
     xml.includes("<!doctype html")
