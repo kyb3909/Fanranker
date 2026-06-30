@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { getDailyWindow } from "@/lib/betman/daily-round"
 import { SectionHeader } from "@/components/section-header"
+import { BoardRecentPosts } from "@/components/board-recent-posts"
 
 // BettingPage 는 client component (use client). dynamic import 로 lazy.
 const BettingPage = nextDynamic(() => import("@/components/betting/betting-page"))
@@ -68,6 +69,23 @@ export default async function WorldcupGamesPage() {
     totalRegistrations = count ?? 0
   }
 
+  // 예측 페이지 하단에 축구 게시판 최신글 노출 (예측 → 읽기 유도)
+  const { data: footballPosts } = await supabase
+    .from("posts")
+    .select("id, title, comment_count, vote_count, created_at")
+    .eq("community_slug", "football")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(8)
+  const recentFootball = (footballPosts ?? []).map((p) => ({
+    id: p.id,
+    title: p.title,
+    comment_count: p.comment_count ?? 0,
+    vote_count: p.vote_count ?? 0,
+    created_at: p.created_at ?? new Date().toISOString(),
+    profile: null,
+  }))
+
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
@@ -122,6 +140,15 @@ export default async function WorldcupGamesPage() {
             )}
           </div>
         )}
+
+        <div className="mt-12">
+          <BoardRecentPosts
+            posts={recentFootball}
+            boardName="축구"
+            boardSlug="football"
+            currentPostId=""
+          />
+        </div>
       </div>
     </div>
   )
