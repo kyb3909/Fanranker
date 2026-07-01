@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react"
 import Image from "next/image"
-import { Sparkles } from "lucide-react"
+import { Sparkles, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { StickerPicker } from "@/components/sticker/sticker-picker"
@@ -15,14 +15,17 @@ interface Sticker {
 }
 
 interface CommentFormProps {
-  onSubmit: (text: string, sticker: Sticker | null) => Promise<void>
+  onSubmit: (text: string, sticker: Sticker | null, isSecret?: boolean) => Promise<void>
   isSubmitting: boolean
+  /** 운영자에게만 "비밀댓글" 토글 노출 */
+  isAdmin?: boolean
 }
 
-export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
+export function CommentForm({ onSubmit, isSubmitting, isAdmin = false }: CommentFormProps) {
   const [commentText, setCommentText] = useState("")
   const [showStickerPicker, setShowStickerPicker] = useState(false)
   const [selectedSticker, setSelectedSticker] = useState<Sticker | null>(null)
+  const [isSecret, setIsSecret] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleMentionSelect = useCallback(
@@ -62,16 +65,19 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
 
     const text = commentText.trim()
     const sticker = selectedSticker
+    const secret = isSecret
     setCommentText("")
     setSelectedSticker(null)
     setShowStickerPicker(false)
+    setIsSecret(false)
 
     try {
-      await onSubmit(text, sticker)
+      await onSubmit(text, sticker, secret)
     } catch {
       // 실패 시 복원
       setCommentText(text)
       setSelectedSticker(sticker)
+      setIsSecret(secret)
     }
   }
 
@@ -165,16 +171,36 @@ export function CommentForm({ onSubmit, isSubmitting }: CommentFormProps) {
             />
           )}
         </div>
-        <Button
-          onClick={handleSubmit}
-          disabled={(!commentText.trim() && !selectedSticker) || isSubmitting}
-          style={{
-            background: "var(--wc-burgundy, #961E37)",
-            color: "white",
-          }}
-        >
-          {isSubmitting ? "작성 중..." : "댓글 작성"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* 운영자 전용: 비밀댓글 토글 (원글 작성자·운영자만 열람) */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsSecret((v) => !v)}
+              aria-pressed={isSecret}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+              style={
+                isSecret
+                  ? { background: "var(--wc-burgundy, #961E37)", color: "white" }
+                  : { background: "var(--wc-soft)", color: "var(--wc-mute)" }
+              }
+              title="원글 작성자와 운영자만 볼 수 있는 비밀댓글"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              비밀댓글
+            </button>
+          )}
+          <Button
+            onClick={handleSubmit}
+            disabled={(!commentText.trim() && !selectedSticker) || isSubmitting}
+            style={{
+              background: "var(--wc-burgundy, #961E37)",
+              color: "white",
+            }}
+          >
+            {isSubmitting ? "작성 중..." : isSecret ? "비밀댓글 작성" : "댓글 작성"}
+          </Button>
+        </div>
       </div>
     </div>
   )

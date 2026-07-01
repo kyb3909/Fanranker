@@ -20,6 +20,8 @@ export interface Comment {
   upvotes: number
   titleDisplay?: TitleDisplay | null
   sticker?: CommentSticker | null
+  /** 비밀댓글(운영자 작성) — 원글 작성자·운영자만 서버가 내려줌. true면 🔒 표시. */
+  isSecret?: boolean
   replies?: Comment[]
 }
 

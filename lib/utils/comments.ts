@@ -25,6 +25,7 @@ export function transformComments(
     vote_count: number
     created_at: string
     sticker_id?: string | null
+    is_secret?: boolean
     stickers?: { id: string; name: string; image_url: string } | null
   }[],
   profiles: { user_id: string; nickname: string; avatar_url: string | null }[],
@@ -69,6 +70,7 @@ export function transformComments(
       content: comment.content,
       upvotes: comment.vote_count || 0,
       titleDisplay,
+      isSecret: comment.is_secret ?? false,
       sticker: comment.stickers
         ? {
             id: comment.stickers.id,

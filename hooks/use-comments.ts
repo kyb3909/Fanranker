@@ -96,7 +96,8 @@ export function useComments(
 
   const handleCommentSubmit = async (
     text: string,
-    sticker: { id: string; name: string; image_url: string } | null
+    sticker: { id: string; name: string; image_url: string } | null,
+    isSecret?: boolean
   ) => {
     setIsSubmittingComment(true)
     try {
@@ -107,6 +108,7 @@ export function useComments(
           post_id: String(postId),
           content: text,
           ...(sticker && { sticker_id: sticker.id }),
+          ...(isSecret && { is_secret: true }),
         }),
       })
       if (!response.ok) {

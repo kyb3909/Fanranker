@@ -9,6 +9,7 @@ import { CommentForm } from "./comment-form"
 import { countAllComments } from "@/types/post-detail"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
 import { useComments } from "@/hooks/use-comments"
+import { useIsAdmin } from "@/hooks/use-is-admin"
 import type { CommentsInitialData } from "@/hooks/use-comments"
 
 interface CommentSectionProps {
@@ -19,6 +20,7 @@ interface CommentSectionProps {
 
 export function CommentSection({ postId, onCommentCountChange, initialData }: CommentSectionProps) {
   const { user } = useUser()
+  const isAdmin = useIsAdmin()
   const { isBlocked, toggleBlock } = useBlockedUsers()
 
   const {
@@ -72,7 +74,11 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
           )}
         </div>
 
-        <CommentForm onSubmit={handleCommentSubmit} isSubmitting={isSubmittingComment} />
+        <CommentForm
+          onSubmit={handleCommentSubmit}
+          isSubmitting={isSubmittingComment}
+          isAdmin={isAdmin}
+        />
 
         <Separator />
 

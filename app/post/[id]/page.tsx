@@ -5,6 +5,8 @@ import { PostDetailContent } from "@/components/post-detail/post-detail-content"
 import { BoardRecentPosts } from "@/components/board-recent-posts"
 import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
+import { auth } from "@clerk/nextjs/server"
+import { fetchVisibleComments } from "@/lib/comments/visible-comments"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -116,63 +118,10 @@ async function fetchBoardRecentPosts(communitySlug: string, excludePostId: strin
 }
 
 async function fetchComments(postId: string) {
-  const supabase = createServerAnonClient()
-
-  const { data: comments } = await supabase
-    .from("comments")
-    .select(
-      `
-      id, post_id, user_id, parent_id, content, vote_count, created_at, updated_at,
-      sticker_id,
-      stickers ( id, name, image_url, media_type )
-    `
-    )
-    .eq("post_id", postId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-
-  if (!comments || comments.length === 0) {
-    return { comments: [], profiles: [], equippedTitles: [] }
-  }
-
-  const userIds = [...new Set(comments.map((c) => c.user_id))]
-  const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
-    supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
-    supabase
-      .from("user_equipped_titles")
-      .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
-      .in("user_id", userIds),
-  ])
-
-  // Supabase는 stickers를 배열로 추론하지만, sticker_id FK가 단일 관계이므로 단일 객체로 변환
-  const normalizedComments = comments.map((c) => ({
-    ...c,
-    stickers: Array.isArray(c.stickers) ? c.stickers[0] || null : c.stickers,
-  }))
-
-  return {
-    comments: normalizedComments as {
-      id: string
-      user_id: string
-      parent_id: string | null
-      content: string
-      vote_count: number
-      created_at: string
-      sticker_id: string | null
-      stickers: { id: string; name: string; image_url: string } | null
-    }[],
-    profiles: (profiles || []) as {
-      user_id: string
-      nickname: string
-      avatar_url: string | null
-    }[],
-    equippedTitles: (equippedTitles || []) as unknown as {
-      user_id: string
-      board_slug: string
-      adj_titles: { title: string; rarity: string } | null
-      noun_titles: { title: string } | null
-    }[],
-  }
+  // 비밀댓글 필터를 SSR/클라 API가 공유(단일 출처). 원글 작성자·운영자는 초기 렌더에서도
+  // 비밀댓글을 본다. auth() 로 현재 뷰어를 넘겨 권한 판정.
+  const { userId } = await auth()
+  return fetchVisibleComments(postId, userId ?? null)
 }
 
 function extractDescription(content: unknown): string {

@@ -4,7 +4,7 @@ import { memo } from "react"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Lock } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import { useCommentActions } from "@/hooks/use-comment-actions"
 import type { Comment } from "@/types/post-detail"
@@ -93,6 +93,16 @@ export const CommentItem = memo(function CommentItem({
                 <span className="text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
                   {comment.timestamp}
                 </span>
+                {comment.isSecret && (
+                  <span
+                    className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10.5px] font-bold"
+                    style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+                    title="원글 작성자와 운영자만 볼 수 있는 비밀댓글입니다."
+                  >
+                    <Lock className="h-2.5 w-2.5" />
+                    비밀댓글
+                  </span>
+                )}
               </div>
               {comment.titleDisplay &&
                 (comment.titleDisplay.adjTitle || comment.titleDisplay.nounTitle) && (

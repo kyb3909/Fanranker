@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { awardFlairKarma } from "@/lib/metaverse/karma-award"
+import { fetchVisibleComments } from "@/lib/comments/visible-comments"
 import { z } from "zod"
 
 const CommentCreateSchema = z
@@ -16,6 +17,8 @@ const CommentCreateSchema = z
     content: z.string().max(5000, "댓글은 5000자 이하여야 합니다.").optional().default(""),
     parent_id: z.union([z.string(), z.number()]).transform(String).optional(),
     sticker_id: z.string().uuid().nullable().optional(),
+    // 비밀댓글 — 운영자만 실제 적용됨(아래 서버에서 role 검증). UI는 관리자에게만 노출.
+    is_secret: z.boolean().optional().default(false),
   })
   .refine((data) => data.content.trim().length > 0 || data.sticker_id, {
     message: "댓글 내용 또는 스티커를 선택해주세요.",
@@ -27,56 +30,22 @@ const CommentCreateSchema = z
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createAnonClient()
-    const searchParams = request.nextUrl.searchParams
-    const postId = searchParams.get("post_id")
+    const postId = request.nextUrl.searchParams.get("post_id")
 
     if (!postId) {
       return NextResponse.json({ error: "post_id가 필요합니다." }, { status: 400 })
     }
 
-    // 모든 댓글 조회 (부모 댓글과 대댓글 모두)
-    const { data: comments, error } = await supabase
-      .from("comments")
-      .select(
-        `
-        id,
-        post_id,
-        user_id,
-        parent_id,
-        content,
-        vote_count,
-        created_at,
-        updated_at,
-        sticker_id,
-        stickers ( id, name, image_url, media_type )
-      `
-      )
-      .eq("post_id", postId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
-      .limit(200)
+    // 비밀댓글은 {원글 작성자, 운영자}에게만 포함 — 신원 확인 후 공유 헬퍼로 조회.
+    const user = await currentUser()
+    const { comments, profiles, equippedTitles } = await fetchVisibleComments(
+      postId,
+      user?.id ?? null
+    )
 
-    if (error) {
-      return apiError("댓글을 불러오는 중 오류가 발생했습니다.", 500, error)
-    }
-
-    if (!comments || comments.length === 0) {
-      return NextResponse.json({ comments: [], profiles: [] })
-    }
-
-    // 작성자 프로필 + 장착 칭호 조회
-    const userIds = [...new Set(comments.map((c) => c.user_id))]
-    const [{ data: profiles }, { data: equippedTitles }] = await Promise.all([
-      supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", userIds),
-      supabase
-        .from("user_equipped_titles")
-        .select("user_id, board_slug, adj_titles ( title, rarity ), noun_titles ( title )")
-        .in("user_id", userIds),
-    ])
-
-    const res = NextResponse.json({ comments, profiles, equippedTitles: equippedTitles || [] })
-    res.headers.set("Cache-Control", "private, max-age=0, must-revalidate")
+    const res = NextResponse.json({ comments, profiles, equippedTitles })
+    // 비밀댓글 때문에 유저별로 응답이 달라지므로 절대 공유 캐시 금지.
+    res.headers.set("Cache-Control", "private, no-store")
     return res
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
@@ -120,6 +89,17 @@ export async function POST(request: NextRequest) {
     }
     const { post_id, parent_id, content, sticker_id } = result.data
 
+    // 비밀댓글: 운영자만 실제 적용. 비관리자가 요청하면 조용히 일반댓글로 강등(방어).
+    let isSecret = false
+    if (result.data.is_secret) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle()
+      isSecret = (prof as { role: string } | null)?.role === "admin"
+    }
+
     // 쿨다운 체크 (10초 간격)
     const { data: canPost, error: cooldownError } = await supabase.rpc("can_post_comment", {
       user_id_param: userId,
@@ -148,6 +128,7 @@ export async function POST(request: NextRequest) {
         content: content.trim() || (sticker_id ? "" : ""),
         vote_count: 0,
         sticker_id: sticker_id || null,
+        is_secret: isSecret,
       })
       .select()
       .single()
