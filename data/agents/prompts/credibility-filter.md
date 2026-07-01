@@ -53,7 +53,7 @@
 - 밈/감상/반응/낚시: 0.0~0.2
 
 ## verdict 규칙
-- credibility >= 0.4 AND newsworthiness >= 0.4 → `pass`
+- credibility >= 0.3 AND newsworthiness >= 0.4 → `pass`
 - 그 외 → `reject`
 
 ## 금지 사항

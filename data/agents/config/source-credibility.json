@@ -36,6 +36,6 @@
   },
   "no_source_self_post": 0.2,
   "tier1_flair_bonus": 0.05,
-  "credibility_floor": 0.4,
+  "credibility_floor": 0.3,
   "newsworthiness_floor": 0.4
 }
