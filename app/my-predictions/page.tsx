@@ -22,7 +22,9 @@ export default function MyPredictionsPage() {
           </Button>
         </div>
 
-        <PredictionHistory />
+        {/* 마이페이지 "승부예측 내역" = 월드컵 이벤트 기록. 일반 betman 마켓은
+            사실상 닫혀 있어 비어 보여 혼란 → 현재 진행 중인 월드컵 이벤트 기록을 노출. */}
+        <PredictionHistory eventSlug="worldcup-2026" />
       </main>
     </div>
   )
