@@ -2,7 +2,16 @@
 
 import type { CSSProperties } from "react"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Circle, Lock } from "lucide-react"
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Lock,
+  Ban,
+} from "lucide-react"
 import {
   type SportsSlip,
   type SportsGame,
@@ -118,6 +127,7 @@ export function BettingSlipCard({
 
   // Determine result status
   const getResultStatus = () => {
+    if (slip.isCancelled) return "cancelled"
     if (slip.isCorrect === null) return "pending"
     return slip.isCorrect ? "win" : "lose"
   }
@@ -181,7 +191,9 @@ export function BettingSlipCard({
                     ? { background: "var(--wc-burgundy)", color: "#fff" }
                     : resultStatus === "lose"
                       ? { background: "var(--wc-soft)", color: "var(--wc-mute)" }
-                      : { background: "#fdf3e2", color: "var(--wc-warn)" }
+                      : resultStatus === "cancelled"
+                        ? { background: "var(--wc-paper)", color: "var(--wc-mute)" }
+                        : { background: "#fdf3e2", color: "var(--wc-warn)" }
                 }
               >
                 {resultStatus === "win" ? (
@@ -193,6 +205,11 @@ export function BettingSlipCard({
                   <span className="flex items-center gap-1">
                     <XCircle className="h-3 w-3" />
                     미적중
+                  </span>
+                ) : resultStatus === "cancelled" ? (
+                  <span className="flex items-center gap-1">
+                    <Ban className="h-3 w-3" />
+                    취소됨
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
@@ -381,11 +398,13 @@ export function BettingSlipCard({
                     color: resultStatus === "win" ? "var(--wc-burgundy)" : "var(--wc-mute)",
                   }}
                 >
-                  {resultStatus === "pending"
-                    ? `예상 돌려받음 ${(slip.ballsUsed * slip.totalOdds).toFixed(2)}볼`
-                    : resultStatus === "win"
-                      ? `${Number(slip.pointsEarned || slip.ballsUsed * slip.totalOdds).toFixed(2)}볼 돌려받음`
-                      : `-${slip.ballsUsed}볼`}
+                  {resultStatus === "cancelled"
+                    ? "취소됨"
+                    : resultStatus === "pending"
+                      ? `예상 돌려받음 ${(slip.ballsUsed * slip.totalOdds).toFixed(2)}볼`
+                      : resultStatus === "win"
+                        ? `${Number(slip.pointsEarned || slip.ballsUsed * slip.totalOdds).toFixed(2)}볼 돌려받음`
+                        : `-${slip.ballsUsed}볼`}
                 </div>
               </div>
             </div>

@@ -83,8 +83,10 @@ export function PredictionHistory({ eventSlug }: { eventSlug?: string }) {
   }
 
   const filteredPredictions = predictions.filter((pred) => {
+    // 취소된 슬립은 is_correct가 null이지만 "대기중"이 아니라 "취소됨" — pending 탭에서 제외
+    const isCancelled = "isCancelled" in pred && pred.isCancelled
     if (activeTab === "all") return true
-    if (activeTab === "pending") return pred.isCorrect === null
+    if (activeTab === "pending") return pred.isCorrect === null && !isCancelled
     if (activeTab === "correct") return pred.isCorrect === true
     if (activeTab === "incorrect") return pred.isCorrect === false
     return true

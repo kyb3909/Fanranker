@@ -42,6 +42,8 @@ export interface SportsSlip {
   totalOdds: number
   ballsUsed: number
   isCorrect: boolean | null
+  /** 슬립이 취소/환불됨 — true면 정산 결과와 무관하게 "취소됨"으로 표시 */
+  isCancelled?: boolean
   pointsEarned: number | null
   createdAt: string
   games: SportsGame[]

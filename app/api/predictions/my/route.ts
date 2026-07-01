@@ -342,6 +342,9 @@ export async function GET(request: NextRequest) {
         totalOdds: totalOdds,
         ballsUsed,
         isCorrect: overallResult,
+        // 취소된 슬립은 픽 is_correct가 영원히 null이라, status를 안 내리면
+        // 화면에서 "대기중"으로 박제된다. 취소 여부를 명시적으로 내려준다.
+        isCancelled: slip?.status === "cancelled",
         pointsEarned: totalPointsEarned,
         createdAt: firstPred?.created_at,
         games: games,
