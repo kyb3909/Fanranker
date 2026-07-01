@@ -33,9 +33,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 타입 체크: `pnpm exec tsc --noEmit` (별도 script 없음 — strict 모드)
 - `pnpm test` / `pnpm test:watch` / `pnpm test:coverage`
 - 단일 unit 테스트: `pnpm vitest run __tests__/lib/foo.test.ts` (또는 `-t "test name"`)
-- E2E 전체: `pnpm exec playwright test` (서버 자동 기동 — `BASE_URL` 미설정 시 `pnpm dev`로 localhost:3000 띄움)
-- 단일 E2E: `pnpm exec playwright test e2e/home.spec.ts --project=chromium`
-- 외부 URL 대상 E2E: `BASE_URL=https://gongnori.fan pnpm exec playwright test` (webServer 스킵)
+- **Playwright 설정 3개 분리** (testDir·목적·포트가 다름 — 섞지 말 것):
+  - `playwright.config.ts` (`e2e/`) — 스모크/회귀. `pnpm exec playwright test e2e/home.spec.ts --project=chromium`, `BASE_URL=https://gongnori.fan pnpm exec playwright test`로 외부 URL 대상 (webServer 스킵). ko-KR / Asia/Seoul, 5 projects.
+  - `playwright.e2e.config.ts` (`tests/e2e/journeys/`) — guest/member/admin 여정 검증. `pnpm test:e2e`. **격리 원칙**: 포트 3100 + `tests/e2e/.env.e2e`의 로컬 Supabase로 구동 → `pnpm dev`(3000)·프로덕션과 안 부딪힘. 봇 팩토리(Clerk sign-in token)로 로그인 유저 생성, `globalSetup`/`globalTeardown`로 정리. `next build && next start`로 구동(10워커 부하에 Turbopack이 못 버팀). 리포트: `pnpm test:e2e:report`, 봇 정리: `pnpm test:e2e:cleanup`.
+  - `playwright.audit.config.ts` (`tests/audit/`) — 아래 Audit harness 참조.
 - 임의 스크립트: `pnpm exec tsx scripts/<name>.ts` (env는 `dotenv`로 자동 로드)
 - `pnpm reddit-seed` — Reddit 시딩 (`scripts/reddit-seed-bot.ts`)
 - `pnpm betman-fetch` — betman 경기/배당 동기화 (`scripts/betman-fetch-games.ts`)
@@ -128,6 +129,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Betting** (`components/betting/`, `lib/betman/`, `hooks/use-betting.ts`) — 토큰/골드 경제, pending refund, 정산. 토큰 차감은 `spend_tokens` RPC (반환 키 `remaining_balance`), 골드는 `spend_gold` RPC (반환 키 `remaining`).
 - **Battle** (migrations 056–057) — 유저 대 유저 대결.
 - **Worldcup Event** (`app/worldcup/`, `app/api/event/worldcup/`, migration `20260507_worldcup_event.sql`) — 그룹 대결 이벤트 (Gooner/Kopite/Blue 3 path). 등록 → 베팅 → 팬덤 현황 → 결과 발표. 월드컵 슬립은 `prediction_slips.event_id` 로 구분 → `/prediction` 통계 탭으로 흘러감. `events.league_codes text[]` 로 월드컵 경기 식별 (현재 NBA 임시 dummy, 시즌 시작 시 admin 에서 교체). `/admin/event` 운영 콘솔 (`requireAdmin` 가드). 의욕 상실 방지로 TOP 10 ranking 비공개, 종료 후 `result` 페이지에서 podium 1위만 발표. 메모: `project_worldcup_event.md`.
+- **Polls / 설문조사** (`app/api/polls/`, `app/api/admin/polls/`, migration `20260701_polls.sql`) — 메인 사이드바 위젯 + 어드민 생성/노출관리. `polls` (question, `options` jsonb `[{key,label}]`, `allow_reason`, `is_active`, `closes_at`) + `poll_votes` (poll_id, user_id, option_key, reason). `GET /api/polls/active`는 활성 폴 1개 + 집계 반환 (service role, `no-store`) — 비로그인도 질문/결과 열람, 투표만 로그인. 콘텐츠 소비 전환 실험의 일부(반응 유도).
 - **Journalist System** (migrations 027–028) — `profiles.is_journalist`, `prediction_slips.analysis_text`. 기자만 팔로우 가능, 분석글은 기자만 작성.
 - **Fan Identity / 호칭 / 기부** (migrations 20260502b/c/d) — flair 활동 점수 누적 → 임계값 호칭 자동 unlock → 사용자 선택 → 닉네임 옆 뱃지 + stadium 기부.
   - **DB**: `post_flairs.team_id` (text → `team_map_pins.team_id`, EPL 6 클럽만 매핑), `user_flair_scores (user_id, flair_id, score_total, score_balance, last_at)`, `flair_titles (flair_id, name, threshold)`, `user_unlocked_titles`, `profiles.display_title_id`.
