@@ -11,8 +11,16 @@ import {
 } from "@/components/ui/dialog"
 import { WorldcupRulesContent } from "./worldcup-rules-content"
 
-// 운영 공지(볼 충전 오류 안내) — 첫 방문 시 1회 강제 확인. 새 공지마다 키 버전을 올린다.
+// 운영 공지(볼 충전 오류 안내) — 하루 1회 강제 확인.
+// localStorage 값에 "마지막으로 확인한 날짜(KST, YYYY-MM-DD)"를 저장하고,
+// 오늘 날짜와 다르면 다시 띄운다. 기존에 "1"이 저장돼 있던 사용자도 날짜 불일치로 재노출된다.
+// 새 공지로 교체할 때는 키 버전을 올린다.
 const NOTICE_SEEN_KEY = "wc-notice-ball-bug-2026-06-30"
+
+/** KST 기준 오늘 날짜 (YYYY-MM-DD) */
+function todayKST(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" })
+}
 
 /**
  * 월드컵 이벤트 모달.
@@ -25,7 +33,8 @@ export function WorldcupRulesModal() {
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(NOTICE_SEEN_KEY)) {
+      // 오늘(KST) 확인 기록이 없으면 노출 → 하루 1회.
+      if (localStorage.getItem(NOTICE_SEEN_KEY) !== todayKST()) {
         setNoticeOpen(true)
       }
     } catch {
@@ -35,7 +44,7 @@ export function WorldcupRulesModal() {
 
   const acknowledgeNotice = () => {
     try {
-      localStorage.setItem(NOTICE_SEEN_KEY, "1")
+      localStorage.setItem(NOTICE_SEEN_KEY, todayKST())
     } catch {
       /* 무시 */
     }
