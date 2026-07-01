@@ -159,6 +159,9 @@ export const CommentItem = memo(function CommentItem({
                     lineHeight: 1.65,
                     color: "var(--wc-ink)",
                     margin: "5px 0 0",
+                    // 작성 시 줄바꿈/빈 줄을 그대로 보존 (기본 normal은 개행을 공백으로 합침)
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
                   }}
                 >
                   {comment.content}
