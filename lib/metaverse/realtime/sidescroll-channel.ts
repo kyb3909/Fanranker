@@ -79,6 +79,7 @@ export class SideScrollerChannel {
     action: "idle" as SideScrollerActionState,
   }
   private lastBallPublishAt = 0
+  private lastSent = { x: NaN, y: NaN, facing: "" as string, action: "" as string }
   private readonly remoteListeners = new Set<RemoteChangeCb>()
   private readonly chatListeners = new Set<ChatCb>()
   private readonly ballListeners = new Set<BallStateCb>()
@@ -157,7 +158,15 @@ export class SideScrollerChannel {
     action: SideScrollerActionState
   ): void {
     this.currentPresence = { x, y, facing, action }
+    // 무변화 시 발행 생략 (5초 keepalive) — 고정 200ms 발행은 idle 유저도 초당 5
+    // presence 이벤트를 만들어 ClientPresenceRateLimitReached 유발 (indoor 채널과 동일 수정).
     const now = Date.now()
+    const changed =
+      Math.abs(x - this.lastSent.x) > 0.5 ||
+      Math.abs(y - this.lastSent.y) > 0.5 ||
+      facing !== this.lastSent.facing ||
+      action !== this.lastSent.action
+    if (!changed && now - this.lastPresenceAt < 5000) return
     const elapsed = now - this.lastPresenceAt
     if (elapsed >= METAVERSE.POSITION_THROTTLE_MS) {
       void this.publishPresenceImmediate()
@@ -181,6 +190,7 @@ export class SideScrollerChannel {
     try {
       await this.channel.track(payload)
       this.lastPresenceAt = Date.now()
+      this.lastSent = { x: payload.x, y: payload.y, facing: payload.facing, action: payload.action }
     } catch (err) {
       console.warn("[sidescroll] presence track failed", err)
     }

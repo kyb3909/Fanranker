@@ -26,6 +26,9 @@ export interface IndoorPresence {
 
 type RemoteChangeCb = (remote: Map<string, IndoorPresence>) => void
 
+/** 무변화 시 presence 재발행 간격 — 연결 생존 신호용 */
+const PRESENCE_KEEPALIVE_MS = 5000
+
 export class IndoorPresenceChannel {
   private channel: RealtimeChannel | null = null
   private readonly supabase: SupabaseClient
@@ -41,6 +44,7 @@ export class IndoorPresenceChannel {
   }
   private readonly listeners = new Set<RemoteChangeCb>()
   private sawFirstSync = false
+  private lastSent = { x: NaN, y: NaN, facing: "" as string, action: "" as string }
 
   constructor(supabase: SupabaseClient, identity: MetaversePlayerIdentity, channelName: string) {
     this.supabase = supabase
@@ -127,7 +131,16 @@ export class IndoorPresenceChannel {
 
   publishPresence(x: number, y: number, facing: IndoorFacing, action: IndoorActionState): void {
     this.currentPresence = { x, y, facing, action }
+    // 변화 없으면 발행 생략 (5초 keepalive 만) — 씬이 매 프레임 호출하므로 고정 200ms
+    // 발행은 유저가 가만히 있어도 초당 5 presence 이벤트를 만들고, 방 인원이 늘면
+    // Supabase ClientPresenceRateLimitReached 로 presence 수신이 통째로 죽는다 (2026-07-02 실측).
     const now = Date.now()
+    const changed =
+      Math.abs(x - this.lastSent.x) > 0.5 ||
+      Math.abs(y - this.lastSent.y) > 0.5 ||
+      facing !== this.lastSent.facing ||
+      action !== this.lastSent.action
+    if (!changed && now - this.lastPresenceAt < PRESENCE_KEEPALIVE_MS) return
     const elapsed = now - this.lastPresenceAt
     if (elapsed >= METAVERSE.POSITION_THROTTLE_MS) {
       void this.publishImmediate()
@@ -150,6 +163,12 @@ export class IndoorPresenceChannel {
     try {
       await this.channel.track(payload)
       this.lastPresenceAt = Date.now()
+      this.lastSent = {
+        x: payload.x,
+        y: payload.y,
+        facing: payload.facing,
+        action: payload.action,
+      }
     } catch (err) {
       console.warn("[indoor-presence] track failed", err)
     }
