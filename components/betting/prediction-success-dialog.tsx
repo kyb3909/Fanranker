@@ -157,8 +157,10 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
           </DialogDescription>
         </DialogHeader>
 
+        {/* min-w-0 필수 — DialogContent 는 grid 이고 grid item 의 min-width:auto 기본값 때문에
+            긴 콘텐츠(HOT 제목)가 컬럼을 다이얼로그 밖으로 밀어냄 (truncate 무력화) */}
         {state.distribution.length > 0 && (
-          <div className="max-h-[280px] space-y-2 overflow-y-auto">
+          <div className="max-h-[280px] min-w-0 space-y-2 overflow-y-auto">
             {state.distribution.map((entry) => (
               <DistributionCard key={`${entry.gameId}-${entry.myPick}`} entry={entry} />
             ))}
@@ -166,7 +168,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
         )}
 
         {state.showCommunity && (
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             {hotPost && (
               <Link
                 href={`/post/${hotPost.id}`}
@@ -176,7 +178,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                     params: { post_id: hotPost.id },
                   })
                 }
-                className="flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 transition-colors hover:opacity-80"
+                className="flex min-w-0 items-center gap-2.5 rounded-lg px-3.5 py-2.5 transition-colors hover:opacity-80"
                 style={{
                   background: "rgba(150,30,55,0.06)",
                   border: "1px solid var(--wc-line, #e2e5ea)",
