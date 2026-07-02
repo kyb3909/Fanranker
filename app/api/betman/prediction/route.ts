@@ -508,6 +508,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ===== 픽 분포 (완료 모달용) =====
+    // 방금 예측한 경기들의 전체 유저 픽 분포. 커뮤니티 전환 실험(2026-07-02):
+    // "다른 사람들은 어디에 걸었나"를 완료 모달에 보여줘 게시판 유입 동기를 만든다.
+    // 조회 실패해도 예측 자체는 성공이므로 빈 배열로 응답.
+    let pickDistribution: Array<{
+      gameId: string
+      homeTeam: string
+      awayTeam: string
+      gameType: string
+      myPick: string
+      counts: Record<string, number>
+      total: number
+    }> = []
+    try {
+      const gameIds = predictions.map((p) => p.game_id)
+      const { data: allPicks } = await supabase
+        .from("betman_predictions")
+        .select("game_id, prediction")
+        .in("game_id", gameIds)
+        .limit(20000)
+      const byGame = new Map<string, Record<string, number>>()
+      for (const row of allPicks ?? []) {
+        const key = String(row.game_id)
+        const m = byGame.get(key) ?? {}
+        m[row.prediction] = (m[row.prediction] ?? 0) + 1
+        byGame.set(key, m)
+      }
+      pickDistribution = predictions.map((pred) => {
+        const game = games.find((g) => g.id === pred.game_id)
+        const counts = byGame.get(String(pred.game_id)) ?? {}
+        return {
+          gameId: pred.game_id,
+          homeTeam: String(game?.home_team_name ?? ""),
+          awayTeam: String(game?.away_team_name ?? ""),
+          gameType: String(game?.game_type ?? ""),
+          myPick: pred.prediction,
+          counts,
+          total: Object.values(counts).reduce((a, b) => a + b, 0),
+        }
+      })
+    } catch (e) {
+      console.error("Failed to compute pick distribution:", e)
+    }
+
     return NextResponse.json({
       success: true,
       slipId: slip.id,
@@ -515,6 +559,7 @@ export async function POST(request: NextRequest) {
       ballsUsed: stake,
       remainingBalls: newBalance,
       message: `${predictions.length}경기 조합 ${stake}볼 베팅 완료! (잔액: ${newBalance}볼)`,
+      pickDistribution,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)

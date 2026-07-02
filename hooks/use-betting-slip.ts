@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useSWRConfig } from "swr"
-import type { SelectedBet, GroupedMatch } from "@/types/betting"
+import type {
+  SelectedBet,
+  GroupedMatch,
+  PickDistributionEntry,
+  PredictionSuccessState,
+} from "@/types/betting"
 import { useAlertModal } from "./use-alert-modal"
 import { trackEvent } from "@/lib/analytics/events"
 
@@ -21,6 +26,17 @@ export function useBettingSlip(
   const [betAmount, setBetAmount] = useState<number>(1)
   const [userBalls, setUserBalls] = useState<number>(10)
   const [isSubmittingPrediction, setIsSubmittingPrediction] = useState(false)
+
+  // 예측 완료 모달 (픽 분포 + 커뮤니티 유도) — 커뮤니티 전환 실험 (2026-07-02)
+  const [successModal, setSuccessModal] = useState<PredictionSuccessState>({
+    isOpen: false,
+    message: "",
+    distribution: [],
+    showCommunity: false,
+  })
+  const closeSuccessModal = useCallback(() => {
+    setSuccessModal((prev) => ({ ...prev, isOpen: false }))
+  }, [])
 
   // Journalist analysis fields
   const [isJournalist, setIsJournalist] = useState(false)
@@ -241,11 +257,20 @@ export function useBettingSlip(
         name: "prediction_submit",
         params: { sport: selectedSport || "unknown", stake: betAmount },
       })
-      showAlert(
-        "success",
-        "예측 완료!",
-        data.message || `${selectedBets.length}경기 예측이 성공적으로 등록되었습니다.`
-      )
+      // 완료 모달: 픽 분포 + 커뮤니티 유도. 축구(월드컵 포함)만 게시판 섹션 노출
+      // — 다른 종목 게시판은 온보딩 중 비활성(is_active off)이라 링크하지 않는다.
+      const distribution = (data.pickDistribution ?? []) as PickDistributionEntry[]
+      const showCommunity = Boolean(eventSlug) || selectedSport === "축구"
+      setSuccessModal({
+        isOpen: true,
+        message: data.message || `${selectedBets.length}경기 예측이 성공적으로 등록되었습니다.`,
+        distribution,
+        showCommunity,
+      })
+      trackEvent({
+        name: "prediction_success_modal",
+        params: { game_count: distribution.length, has_community: showCommunity },
+      })
       setSelectedBets([])
       setIsSlipExpanded(false)
       setSelectedSport(null)
@@ -299,6 +324,9 @@ export function useBettingSlip(
 
     alertModal,
     closeAlert,
+
+    successModal,
+    closeSuccessModal,
 
     handleBetSelection,
     removeBet,

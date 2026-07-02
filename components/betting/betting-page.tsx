@@ -15,6 +15,7 @@ import { MypageTab } from "./mypage-tab"
 import { BettingSlip } from "./betting-slip"
 import { WorldcupRulesCard } from "@/components/worldcup/worldcup-rules-card"
 import { BettingAlertDialog } from "./betting-alert-dialog"
+import { PredictionSuccessDialog } from "./prediction-success-dialog"
 
 const VALID_TABS = new Set(["betting", "ranking", "stats", "mypage"] as const)
 type BettingTabType = "betting" | "ranking" | "stats" | "mypage"
@@ -175,6 +176,7 @@ export default function BettingPage({
       )}
 
       <BettingAlertDialog alertModal={slip.alertModal} onClose={slip.closeAlert} />
+      <PredictionSuccessDialog state={slip.successModal} onClose={slip.closeSuccessModal} />
     </div>
   )
 }

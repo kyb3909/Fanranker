@@ -87,6 +87,25 @@ export interface AlertModalState {
   message: string
 }
 
+/** 예측 POST 응답의 경기별 픽 분포 (완료 모달용) */
+export interface PickDistributionEntry {
+  gameId: string
+  homeTeam: string
+  awayTeam: string
+  gameType: string
+  myPick: string
+  counts: Record<string, number>
+  total: number
+}
+
+/** 예측 완료 모달 상태 — 픽 분포 + 커뮤니티(축구 게시판) 섹션 노출 여부 */
+export interface PredictionSuccessState {
+  isOpen: boolean
+  message: string
+  distribution: PickDistributionEntry[]
+  showCommunity: boolean
+}
+
 export interface RankingUser {
   rank: number
   user_id: string

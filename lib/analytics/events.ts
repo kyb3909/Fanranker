@@ -11,6 +11,10 @@ type AnalyticsEvent =
   | { name: "first_prediction"; params: { sport: string; game_count: number } }
   | { name: "board_view"; params: { board: string } }
   | { name: "prediction_submit"; params: { sport: string; stake: number } }
+  // ── 예측 완료 모달 → 커뮤니티 전환 실험 (2026-07-02) ──
+  | { name: "prediction_success_modal"; params: { game_count: number; has_community: boolean } }
+  | { name: "prediction_modal_post_click"; params: { post_id: string } }
+  | { name: "prediction_modal_board_click"; params: { board: string } }
   | { name: "search"; params: { query: string } }
   // ── 메타버스 이벤트 ──
   | { name: "metaverse_enter"; params: { is_guest: boolean } }
