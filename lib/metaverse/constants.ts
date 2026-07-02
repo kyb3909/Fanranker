@@ -43,7 +43,11 @@ export const METAVERSE = {
   CHANNEL_SIDESCROLL: "metaverse:sidescroll:default",
   // 팬 라운지 (정식 채팅방, Clerk 로그인 전용) — 데모 방과 분리된 채널.
   // 'metaverse:' prefix 유지 필수 — realtime.messages RLS 가 이 prefix 로 허용.
-  CHANNEL_LOUNGE: "metaverse:lounge:main",
+  // 방 샤딩: room-1, room-2 … — 방당 정원 초과 시 다음 번호로 자동 배정.
+  // 개설 가능한 방 수 = 경기장(epl_arsenal) 레벨 (/api/lounge/config).
+  CHANNEL_LOUNGE_PREFIX: "metaverse:lounge:room-",
+  LOUNGE_ROOM_CAPACITY: 10,
+  LOUNGE_TEAM_ID: "epl_arsenal",
   // Indoor presence (highbury 등 사이드뷰 실내 맵). 채팅은 RoomChannel(metaverse:chat:highbury)이 별도 처리.
   CHANNEL_INDOOR_HIGHBURY: "metaverse:indoor:highbury",
 

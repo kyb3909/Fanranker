@@ -7,8 +7,11 @@
  *  - Clerk 로그인 유저만 입장 — 실제 닉네임(profiles) + 실제 userId 로 presence
  *  - 입장 시 본인 "장착 아바타"(/api/metaverse/avatar/me equipped) 로 스폰 —
  *    유니폼 상점에서 갈아입으면 즉시 반영 (씬 재부팅)
- *  - 전용 Realtime 채널 (METAVERSE.CHANNEL_LOUNGE) — 데모 방과 분리.
- *    'metaverse:%' RLS 정책이 이미 프로덕션에 적용돼 있어 presence/broadcast 동작.
+ *  - 방 샤딩: 방당 정원(LOUNGE_ROOM_CAPACITY)명. 입장 시 1번 방부터 presence 를
+ *    프로브해 자리가 있는 첫 방에 배정, 정원 초과면 다음 방.
+ *  - 개설 가능한 방 수 = 아스날 경기장 레벨 (/api/lounge/config) — 모든 방이
+ *    만석이면 "경기장 레벨을 올리면 방이 늘어나요" 안내 → 기부 루프 당위성.
+ *  - 채널 'metaverse:lounge:room-N' — 'metaverse:%' RLS 정책이 프로덕션 적용됨.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -43,15 +46,25 @@ export function LoungeRoom() {
   // null = 아직 로드 전 (씬 부팅 보류 — 닉네임/아바타 없이 부팅했다 재부팅하는 깜빡임 방지)
   const [profileNickname, setProfileNickname] = useState<string | null>(null)
   const [equippedAvatarKey, setEquippedAvatarKey] = useState<string | null>(null)
+  // 방 구성 (경기장 레벨 연동) — 로드 실패 시 최소 구성으로 폴백
+  const [loungeConfig, setLoungeConfig] = useState<{
+    stadiumLevel: number
+    channelCap: number
+    capacityPerChannel: number
+  } | null>(null)
+  const [roomIndex, setRoomIndex] = useState<number | null>(null)
+  const [allFull, setAllFull] = useState(false)
+  const [joinAttempt, setJoinAttempt] = useState(0)
 
   // 입장 준비: 프로필 닉네임 + 장착 아바타를 병렬 로드
   useEffect(() => {
     if (!isSignedIn) return
     let cancelled = false
     ;(async () => {
-      const [profileRes, avatarRes] = await Promise.all([
+      const [profileRes, avatarRes, configRes] = await Promise.all([
         fetch("/api/profile/me", { cache: "no-store" }).catch(() => null),
         fetch("/api/metaverse/avatar/me", { cache: "no-store" }).catch(() => null),
+        fetch("/api/lounge/config").catch(() => null),
       ])
       if (cancelled) return
       let nickname = ""
@@ -65,9 +78,23 @@ export function LoungeRoom() {
         const data = (await avatarRes.json()) as { equippedAvatarKey?: string }
         if (data?.equippedAvatarKey) avatarKey = data.equippedAvatarKey
       }
+      let config = {
+        stadiumLevel: 1,
+        channelCap: 1,
+        capacityPerChannel: METAVERSE.LOUNGE_ROOM_CAPACITY as number,
+      }
+      if (configRes?.ok) {
+        const data = await configRes.json()
+        config = {
+          stadiumLevel: Number(data?.stadiumLevel) || 1,
+          channelCap: Math.max(1, Number(data?.channelCap) || 1),
+          capacityPerChannel: Number(data?.capacityPerChannel) || METAVERSE.LOUNGE_ROOM_CAPACITY,
+        }
+      }
       if (cancelled) return
       setProfileNickname(nickname)
       setEquippedAvatarKey(avatarKey)
+      setLoungeConfig(config)
     })()
     return () => {
       cancelled = true
@@ -88,20 +115,55 @@ export function LoungeRoom() {
   }, [isSignedIn, user?.id, profileNickname, equippedAvatarKey])
 
   useEffect(() => {
-    if (!identity || !parentRef.current) return
+    if (!identity || !loungeConfig || !parentRef.current) return
     let cancelled = false
-
+    setAllFull(false)
+    setRoomIndex(null)
     ;(async () => {
       try {
-        const [{ bootSideScrollerDemo }, { SideScrollerChannel }] = await Promise.all([
-          import("@/lib/metaverse/boot"),
-          import("@/lib/metaverse/realtime/sidescroll-channel"),
-        ])
+        const [{ bootSideScrollerDemo }, { SideScrollerChannel, probeChannelOccupancy }] =
+          await Promise.all([
+            import("@/lib/metaverse/boot"),
+            import("@/lib/metaverse/realtime/sidescroll-channel"),
+          ])
         if (cancelled) return
 
-        // Realtime 채널 — 실패해도 방은 부팅 (싱글플레이 fallback)
         const supabase = createAnonClient()
-        const channel = new SideScrollerChannel(supabase, identity, METAVERSE.CHANNEL_LOUNGE)
+
+        // ---- 방 배정: 1번 방부터 자리가 있는 첫 방 ----
+        // 프로브 실패(realtime 다운)면 1번 방으로 진행 → 아래 connect 도 실패하면
+        // 기존과 동일한 싱글플레이 fallback.
+        let assigned = -1
+        let realtimeDown = false
+        for (let i = 1; i <= loungeConfig.channelCap; i++) {
+          let occupancy = 0
+          try {
+            occupancy = await probeChannelOccupancy(
+              supabase,
+              `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${i}`
+            )
+          } catch (err) {
+            console.warn("[lounge] occupancy probe failed", err)
+            realtimeDown = true
+          }
+          if (cancelled) return
+          if (realtimeDown || occupancy < loungeConfig.capacityPerChannel) {
+            assigned = i
+            break
+          }
+        }
+        if (assigned < 0) {
+          // 모든 방 만석 — 경기장 레벨업 당위성 안내
+          if (!cancelled) setAllFull(true)
+          return
+        }
+
+        // Realtime 채널 — 실패해도 방은 부팅 (싱글플레이 fallback)
+        const channel = new SideScrollerChannel(
+          supabase,
+          identity,
+          `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${assigned}`
+        )
         try {
           await channel.connect()
           channelRef.current = channel
@@ -115,6 +177,7 @@ export function LoungeRoom() {
         }
 
         if (!parentRef.current) return
+        setRoomIndex(assigned)
         gameRef.current = bootSideScrollerDemo({
           parent: parentRef.current,
           identity,
@@ -133,7 +196,7 @@ export function LoungeRoom() {
       void channelRef.current?.disconnect()
       channelRef.current = null
     }
-  }, [identity])
+  }, [identity, loungeConfig, joinAttempt])
 
   const handleEquipped = useCallback((avatarKey: string) => {
     // 상점 장착 성공 → identity memo 재계산 → 씬 재부팅으로 즉시 반영
@@ -181,6 +244,38 @@ export function LoungeRoom() {
     )
   }
 
+  if (allFull && loungeConfig) {
+    return (
+      <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center bg-neutral-950 p-6 text-center text-white">
+        <div className="max-w-sm">
+          <p className="text-2xl">🈵</p>
+          <h1 className="mt-3 text-lg font-bold">라운지가 가득 찼어요</h1>
+          <p className="mt-2 text-sm leading-relaxed text-white/60">
+            지금 열려 있는 방 {loungeConfig.channelCap}개(방당 {loungeConfig.capacityPerChannel}
+            명)가 모두 만석이에요.
+            <br />방 개수는 <b className="text-white/85">아스날 경기장 레벨</b>(현재 Lv.
+            {loungeConfig.stadiumLevel})만큼 열려요 — 경기장에 기부해서 레벨을 올리면 새 방이
+            생겨요!
+          </p>
+          <div className="mt-5 flex justify-center gap-2">
+            <button
+              onClick={() => setJoinAttempt((n) => n + 1)}
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10"
+            >
+              다시 시도
+            </button>
+            <Link
+              href="/stadium"
+              className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+            >
+              경기장 키우러 가기
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative mx-auto h-[calc(100svh-3.5rem)] w-full max-w-[1280px] bg-neutral-950">
       <div ref={parentRef} className="h-full w-full" aria-label="팬 라운지" />
@@ -190,7 +285,7 @@ export function LoungeRoom() {
         </div>
       )}
       <MetaverseHud
-        locationLabel="🛋️ 팬 라운지"
+        locationLabel={roomIndex ? `🛋️ 팬 라운지 · ${roomIndex}번 방` : "🛋️ 팬 라운지"}
         actions={
           <button
             onClick={() => setShopOpen(true)}

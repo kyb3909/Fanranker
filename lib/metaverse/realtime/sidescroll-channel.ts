@@ -27,6 +27,44 @@ type BallStateCb = (state: SharedBallState) => void
 
 const BALL_SYNC_THROTTLE_MS = 200
 
+/**
+ * 방 정원 체크용 presence 프로브 — track 없이 구독해서 현재 인원만 세고 나온다.
+ * 라운지 방 샤딩(정원 초과 시 다음 방)에 사용. 실패/타임아웃 시 reject —
+ * 호출부에서 "realtime 다운 = 싱글플레이 폴백"으로 처리.
+ */
+export async function probeChannelOccupancy(
+  supabase: SupabaseClient,
+  channelName: string,
+  syncWaitMs = 2000
+): Promise<number> {
+  const ch = supabase.channel(channelName, { config: { private: true } })
+  try {
+    let sawSync = false
+    const synced = new Promise<void>((resolve) => {
+      ch.on("presence", { event: "sync" }, () => {
+        sawSync = true
+        resolve()
+      })
+    })
+    await new Promise<void>((resolve, reject) => {
+      ch.subscribe((status, err) => {
+        if (status === "SUBSCRIBED") resolve()
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+          reject(err instanceof Error ? err : new Error(`probe ${channelName} ${status}`))
+      })
+    })
+    // 첫 presence sync 까지 대기 (없으면 syncWaitMs 후 스냅샷 사용)
+    await Promise.race([synced, new Promise((r) => setTimeout(r, syncWaitMs))])
+    if (!sawSync) {
+      // sync 이벤트가 아직이면 잠깐 더 — 빈 방이면 어차피 0
+      await new Promise((r) => setTimeout(r, 300))
+    }
+    return Object.keys(ch.presenceState()).length
+  } finally {
+    await supabase.removeChannel(ch).catch(() => {})
+  }
+}
+
 export class SideScrollerChannel {
   private channel: RealtimeChannel | null = null
   private readonly supabase: SupabaseClient
