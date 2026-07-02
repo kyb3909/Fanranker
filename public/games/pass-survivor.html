@@ -68,15 +68,14 @@
   <div id="menu" class="overlay">
     <div class="panel">
       <div class="logo">PASS SURVIVOR<small>패스 서바이버</small></div>
-      <div class="sub">떼로 몰려오는 수비 사이에서 90분을 버텨라.<br>빠른 공은 무기다 — 약한 패스는 헌납이다.</div>
+      <div class="sub">떼로 몰려오는 수비를 패스로 쓸어버려라.<br>공은 무기다 — 하지만 잃으면 끝이다.</div>
       <div class="howto">
         <div><span class="k">WASD</span><b>이동</b> — 방향키도 된다</div>
-        <div><span class="k">마우스</span><b>조준</b> — 패스·슛 방향</div>
-        <div><span class="k">꾹</span><b>차징</b> — 강한 킥 준비, 대신 발이 느려진다</div>
-        <div><span class="k">놓기</span><b>킥</b> — 동료 방향이면 패스, 골대가 열렸으면 슛</div>
+        <div><span class="k">탭</span><b>스마트 패스</b> — 수비가 가장 붐비는 길로 자동 강패스</div>
+        <div><span class="k">⚡</span><b>원투</b> — 동료가 자동으로 리턴, 왕복 경로가 킬존이다</div>
+        <div><span class="k">꾹</span><b>차징 킥</b> — 마우스 조준 정밀 킥 · 골대가 열리면 슛</div>
         <div><span class="k">Space</span><b>태클</b> — 공이 없을 때 슬라이딩으로 공 탈취</div>
-        <div><span class="k">⚡</span><b>넉다운</b> — 충분히 빠른 공은 수비를 쓰러뜨린다</div>
-        <div><span class="k">⚠</span><b>지역 방어</b> — 수비는 구역을 지키고, 들어가면 밀착마크가 붙는다</div>
+        <div><span class="k">⚠</span><b>볼 로스트</b> — 차단당한 공을 시간 안에 못 찾으면 끝</div>
       </div>
       <br><button id="startBtn" class="btn">킥오프 ⚽</button>
       <div class="sub" style="margin-top:12px">세션 베스트 <b id="menuBest" style="color:#ffd54a">0</b></div>
@@ -121,23 +120,25 @@
 // ---------- CFG (PRD §17 + 확장) ----------
 const CFG = {
   WORLD_W:1600, WORLD_H:1000,
-  MATCH_REAL_SEC:600,
+  MATCH_REAL_SEC:300,
   PLAYER_SPEED:250, CHARGE_SLOW:0.55, CHARGE_T:0.6,
+  TAP_T:0.14,                       // 이보다 짧은 클릭 = 스마트 패스 (자동 조준 풀파워)
   BALL_MIN:380, BALL_MAX:950, BALL_FRICTION:300,
-  KNOCKDOWN_V:520, PIERCE_BASE:1, PIERCE_DECAY:0.12,
+  KNOCKDOWN_V:460, PIERCE_BASE:2, PIERCE_DECAY:0.12,
+  RETURN_SPD:640, LOB_R:80, LOB_R_LV:20,
   TACKLE_R:28, TACKLE_HOLD:0.2, STUN_TACKLED:0.5,
   SLIDE_SPEED:560, SLIDE_T:0.26, SLIDE_CD:0.7, SLIDE_REACH:22,
   LOOSE_TIMER:4.5, PICKUP_R:26, RECOV_CD:8.0, CLEAR_EXTEND:0.5, LOOSE_CAP:6.5,
   JOSTLE_SLOW:0.65, DEF_SEP_R:26, DEF_SEP_RATE:9,
   ZONE_R:255, ZONE_LEASH:345, ZONE_COLS:5, ZONE_ROWS:3, GUARD_SPD:0.8,
   SNAP_CONE:18, HOMING:2.2,
-  MATE_RETURN_T:1.2, MATE_DOWN_T:6.0, MATE_SPEED:205, MATE_RING:200,
+  MATE_RETURN_T:0.9, MATE_DOWN_T:6.0, MATE_SPEED:205, MATE_RING:200,
   MATE_LANE_CAP:110, MATE_ANG_GAP:0.9, MATE_SEP_R:30,
   GOAL_INTERVAL:30, GOAL_OPEN:12, GOAL_W:150, GK_REACT:0.25, GK_SPEED:170, GK_DIVE:520, GK_SAVE_R:27,
   GOAL_DIST_BASE:400,
   COMBO_WINDOW:3.0, COMBO_MAX:5.0, COMBO_DECAY:0.2,
   XP_BASE:120, XP_EXP:1.35,
-  SPAWN_BASE:10, SPAWN_PER_MIN:0.50, SPAWN_CAP:72,
+  SPAWN_BASE:14, SPAWN_PER_MIN:0.75, SPAWN_CAP:110,
   JOGGER_SPEED:175, TACKLER_SPEED:185,
   TK_SENSE:90, TK_DELAY:0.2, TK_DASH:480, TK_DASH_T:0.3, TK_RECOVER:1.0,
   NUTMEG_R:22, KD_DESPAWN:1.0, CLEAR_KICK:480,
@@ -408,7 +409,8 @@ const CARDS=[
   {id:'pierce', name:'관통',          desc:'넉다운 관통 +1체', max:5},
   {id:'magnet', name:'퍼스트터치 자석', desc:'공 수신·회수 반경 +20%', max:5},
   {id:'mate',   name:'팀메이트 영입',   desc:'동료 +1 (최대 3, 이후엔 동료 강화)', max:6},
-  {id:'onetwo', name:'원투 마스터',     desc:'리턴 +15% 가속, 리턴 패스 넉다운 보장', max:5},
+  {id:'onetwo', name:'원투 마스터',     desc:'리턴 패스 가속 +15%, 리턴 관통 +1', max:5},
+  {id:'lob',    name:'로빙 패스',       desc:'패스 받는 순간 주변 수비 광역 넉다운 (반경 +20/Lv)', max:5},
 ];
 
 function newGame(){
@@ -424,7 +426,7 @@ function newGame(){
     goal:null, goalTimer:CFG.GOAL_INTERVAL-8,
     charging:false, chargeT:0,
     score:0, combo:1, lastActT:-99, lastRecovT:-99, jostleT:0, level:1, xpNext:CFG.XP_BASE, pendingLv:0,
-    cardLv:{speed:0,control:0,quick:0,power:0,pierce:0,magnet:0,mate:0,onetwo:0},
+    cardLv:{speed:0,control:0,quick:0,power:0,pierce:0,magnet:0,mate:0,onetwo:0,lob:0},
     mateBuff:0, knockdowns:0, goals:0, passes:0, xpPrev:0,
     spawnTick:0, lvOpen:false,
   };
@@ -540,18 +542,63 @@ function releaseKick(aimX,aimY){
   sfx.kick(charge);
 }
 function mateReturnKick(mi){
+  // 원투 = 기본 공격 루프: 리턴 패스는 항상 넉다운 (kdOverride) — 왕복 경로가 킬존
   const m2=G.mates[mi], b=G.ball, p=G.player;
   let dx=p.x-m2.x, dy=p.y-m2.y;
   const dl=hyp(dx,dy)||1; dx/=dl; dy/=dl;
-  const spd=560*(1+0.15*G.cardLv.onetwo);
+  const spd=CFG.RETURN_SPD*(1+0.15*G.cardLv.onetwo);
   b.state='flight'; b.homing={kind:'player'};
   b.x=m2.x+dx*14; b.y=m2.y+dy*14;
   b.vx=dx*spd; b.vy=dy*spd;
   b.kickX=m2.x; b.kickY=m2.y;
-  b.pierce=CFG.PIERCE_BASE+G.cardLv.pierce;
-  b.kdOverride=G.cardLv.onetwo>=1;
+  b.pierce=CFG.PIERCE_BASE+G.cardLv.pierce+G.cardLv.onetwo;
+  b.kdOverride=true;
   b.shotGoal=false; b.nutSet=new Set();
   sfx.kick(.5);
+}
+// 탭 = 스마트 패스: 차징 없이 풀파워, 경로에 수비가 가장 많은 동료를 자동 조준.
+// (뱀서식 조작 단순화 — 이동 + 탭만으로 코어 루프가 돈다. 차징 킥은 정밀 조준/슛 용도로 유지)
+function smartPass(){
+  if(G.ball.state!=='P') return;
+  const p=G.player;
+  G.chargeT=chargeFull();               // 풀차지 취급
+  if(snapTargetIdx()===-2){             // 골대를 조준 중이면 탭도 슛
+    const aw=aimWorld(); releaseKick(aw.x,aw.y); return;
+  }
+  let best=-1, bs=-1;
+  const snap=snapTargetIdx();
+  for(let i=0;i<G.mates.length;i++){
+    const m2=G.mates[i];
+    if(m2.downT>0) continue;
+    let kills=0;
+    const dx=m2.x-p.x, dy=m2.y-p.y, L2=dx*dx+dy*dy;
+    for(const df of G.defs){
+      if(df.knocked||df.state==='RECOVER') continue;
+      const t=L2?clamp(((df.x-p.x)*dx+(df.y-p.y)*dy)/L2,0,1):0;
+      if(hyp(df.x-(p.x+dx*t),df.y-(p.y+dy*t))<26) kills++;
+    }
+    const s=kills*10+(i===snap?1:0);    // 동률이면 마우스 조준 방향 우선
+    if(s>bs){ bs=s; best=i; }
+  }
+  if(best>=0){ const m2=G.mates[best]; releaseKick(m2.x,m2.y); }
+  else { const aw=aimWorld(); releaseKick(aw.x,aw.y); }
+}
+// 로빙 패스 카드: 수신 순간 착지 지점 광역 넉다운
+function lobImpact(x,y){
+  if(!G.cardLv.lob) return;
+  const r=CFG.LOB_R+CFG.LOB_R_LV*G.cardLv.lob;
+  let hit=0;
+  for(const df of G.defs){
+    if(df.knocked) continue;
+    if(hyp(df.x-x,df.y-y)<r){ df.knocked=true; df.kdT=0; G.knockdowns++; hit++; }
+  }
+  if(hit){
+    action();
+    const pts=5*G.combo*hit; addScore(pts);
+    const s=S(x,y);
+    floater('임팩트 ×'+hit+' +'+Math.round(pts), s.x, s.y-50, {color:'#ffd54a',size:15});
+    spark(s.x,s.y,12,'#ffd54a'); sfx.knockdown(); shake(4,.15);
+  }
 }
 
 // ---------- 넉다운 / 쳐내기 / 알까기 ----------
@@ -880,6 +927,7 @@ function update(dt){
           const s=S(m2.x,m2.y);
           floater('+'+Math.round(pts)+' ×'+G.combo.toFixed(1), s.x, s.y-38, {color:'#8fd3ff',size:14});
           sfx.receive();
+          lobImpact(m2.x,m2.y);
         }
       } else if(hyp(b.x-p.x,b.y-p.y)<pickupR()&&p.stunT<=0){
         b.state='P'; b.homing=null; G.passes++;
@@ -888,6 +936,7 @@ function update(dt){
         const s=S(p.x,p.y);
         floater('+'+Math.round(pts)+' ×'+G.combo.toFixed(1), s.x, s.y-40, {color:'#8fd3ff',size:14});
         sfx.receive();
+        lobImpact(p.x,p.y);
       }
     }
     if(b.state==='free'||b.state==='loose'){
@@ -1093,7 +1142,7 @@ function update(dt){
     if(G.spawnPauseT<=0){
       const alive=G.defs.filter(d2=>!d2.knocked).length;
       const need=spawnTarget()-alive;
-      for(let i=0;i<Math.min(2,need);i++) spawnDef(false);
+      for(let i=0;i<Math.min(3,need);i++) spawnDef(false);
     }
   }
 
@@ -1320,7 +1369,7 @@ function render(){
   txt('Lv '+G.level, xx+xw+26, xy+4, 14, '#6cffb0','left',900);
   if(G.hintT>0&&!G.over){
     g.globalAlpha=clamp(G.hintT/2,0,1);
-    txt('수비 구역 사이의 틈을 찾아라 — 몰리면 패스, 그리고 빈 구역으로 뛰어라', W/2, H-70, 14, '#cfdceb','center',700);
+    txt('몰리면 탭! — 스마트 패스가 수비를 쓸어버린다. 리턴 받으면 또 탭!', W/2, H-70, 14, '#cfdceb','center',700);
     g.globalAlpha=1;
   }
 
@@ -1359,7 +1408,11 @@ cv.addEventListener('pointerdown',e=>{
 window.addEventListener('pointerup',e=>{
   pointer.down=false;
   if(app.screen!=='play'||!G||G.over||G.lvOpen) return;
-  if(G.charging&&G.ball.state==='P'){ const aw=aimWorld(); releaseKick(aw.x,aw.y); }
+  if(G.charging&&G.ball.state==='P'){
+    // 짧은 탭 = 스마트 패스 (자동 조준 풀파워) / 길게 = 기존 차징 킥
+    if(G.chargeT<CFG.TAP_T) smartPass();
+    else { const aw=aimWorld(); releaseKick(aw.x,aw.y); }
+  }
   G.charging=false;
 });
 const keys=new Set();
