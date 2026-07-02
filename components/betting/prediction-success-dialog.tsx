@@ -55,11 +55,17 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
   return (
     <div
       className="rounded-lg px-3.5 py-3"
-      style={{ background: "var(--wc-paper, #faf8f5)", border: "1px solid var(--wc-line, #eee)" }}
+      style={{
+        background: "var(--wc-paper, #f1f1f3)",
+        border: "1px solid var(--wc-line, #e2e5ea)",
+      }}
     >
-      <p className="mb-2 text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
+      <p className="mb-2 text-[13px] font-bold" style={{ color: "var(--wc-ink, #14161a)" }}>
         {entry.homeTeam} vs {entry.awayTeam}
-        <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "var(--wc-mute)" }}>
+        <span
+          className="ml-1.5 text-[11px] font-semibold"
+          style={{ color: "var(--wc-mute, #5c6470)" }}
+        >
           {getGameTypeLabel(entry.gameType)} · {entry.total.toLocaleString()}명 참여
         </span>
       </p>
@@ -73,7 +79,7 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
               <span
                 className="w-[88px] shrink-0 truncate text-[12px]"
                 style={{
-                  color: isMine ? "var(--wc-burgundy)" : "var(--wc-ink-2)",
+                  color: isMine ? "var(--wc-burgundy, #961e37)" : "var(--wc-ink-2, #494d56)",
                   fontWeight: isMine ? 700 : 500,
                 }}
               >
@@ -88,14 +94,14 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
                   className="h-full rounded-full"
                   style={{
                     width: `${pct}%`,
-                    background: isMine ? "var(--wc-burgundy)" : "rgba(0,0,0,0.22)",
+                    background: isMine ? "var(--wc-burgundy, #961e37)" : "rgba(0,0,0,0.22)",
                   }}
                 />
               </div>
               <span
                 className="w-[38px] shrink-0 text-right text-[12px] tabular-nums"
                 style={{
-                  color: isMine ? "var(--wc-burgundy)" : "var(--wc-mute)",
+                  color: isMine ? "var(--wc-burgundy, #961e37)" : "var(--wc-mute, #5c6470)",
                   fontWeight: isMine ? 700 : 500,
                 }}
               >
@@ -138,9 +144,12 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
             className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full"
             style={{ background: "rgba(47,125,91,0.15)" }}
           >
-            <Circle className="h-7 w-7" style={{ fill: "var(--wc-go)", color: "var(--wc-go)" }} />
+            <Circle
+              className="h-7 w-7"
+              style={{ fill: "var(--wc-go, #2f7d5b)", color: "var(--wc-go, #2f7d5b)" }}
+            />
           </div>
-          <DialogTitle className="text-xl" style={{ color: "var(--wc-go)" }}>
+          <DialogTitle className="text-xl" style={{ color: "var(--wc-go, #2f7d5b)" }}>
             예측 완료!
           </DialogTitle>
           <DialogDescription className="pt-1 text-center text-sm whitespace-pre-line">
@@ -168,23 +177,26 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                   })
                 }
                 className="flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 transition-colors hover:opacity-80"
-                style={{ background: "rgba(150,30,55,0.06)", border: "1px solid var(--wc-line)" }}
+                style={{
+                  background: "rgba(150,30,55,0.06)",
+                  border: "1px solid var(--wc-line, #e2e5ea)",
+                }}
               >
                 <span
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
-                  style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+                  style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
                 >
                   HOT
                 </span>
                 <span
                   className="min-w-0 flex-1 truncate text-[13px] font-semibold"
-                  style={{ color: "var(--wc-ink)" }}
+                  style={{ color: "var(--wc-ink, #14161a)" }}
                 >
                   {hotPost.title}
                 </span>
                 <span
                   className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums"
-                  style={{ color: "var(--wc-mute)" }}
+                  style={{ color: "var(--wc-mute, #5c6470)" }}
                 >
                   <span className="flex items-center gap-0.5">
                     <ThumbsUp className="h-3 w-3" />
@@ -206,7 +218,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                 })
               }
               className="flex w-full items-center justify-center rounded-lg py-2.5 text-[13px] font-bold transition-opacity hover:opacity-90"
-              style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+              style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
             >
               축구 게시판에서 이 경기 얘기하기 →
             </Link>
@@ -218,7 +230,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
             onClick={onClose}
             variant="outline"
             className="w-full px-8 sm:w-auto"
-            style={{ color: "var(--wc-ink-2)" }}
+            style={{ color: "var(--wc-ink-2, #494d56)" }}
           >
             닫기
           </Button>

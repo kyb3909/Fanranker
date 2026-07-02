@@ -39,11 +39,14 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
             }}
           >
             {alertModal.type === "error" ? (
-              <AlertCircle className="h-8 w-8" style={{ color: "var(--wc-burgundy)" }} />
+              <AlertCircle className="h-8 w-8" style={{ color: "var(--wc-burgundy, #961e37)" }} />
             ) : alertModal.type === "warning" ? (
-              <AlertCircle className="h-8 w-8" style={{ color: "var(--wc-warn)" }} />
+              <AlertCircle className="h-8 w-8" style={{ color: "var(--wc-warn, #c8842a)" }} />
             ) : (
-              <Circle className="h-8 w-8" style={{ fill: "var(--wc-go)", color: "var(--wc-go)" }} />
+              <Circle
+                className="h-8 w-8"
+                style={{ fill: "var(--wc-go, #2f7d5b)", color: "var(--wc-go, #2f7d5b)" }}
+              />
             )}
           </div>
           <DialogTitle
@@ -51,10 +54,10 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
             style={{
               color:
                 alertModal.type === "error"
-                  ? "var(--wc-burgundy)"
+                  ? "var(--wc-burgundy, #961e37)"
                   : alertModal.type === "warning"
-                    ? "var(--wc-warn)"
-                    : "var(--wc-go)",
+                    ? "var(--wc-warn, #c8842a)"
+                    : "var(--wc-go, #2f7d5b)",
             }}
           >
             {alertModal.title}
@@ -70,10 +73,10 @@ export function BettingAlertDialog({ alertModal, onClose }: BettingAlertDialogPr
             style={{
               background:
                 alertModal.type === "error"
-                  ? "var(--wc-burgundy)"
+                  ? "var(--wc-burgundy, #961e37)"
                   : alertModal.type === "warning"
-                    ? "var(--wc-warn)"
-                    : "var(--wc-go)",
+                    ? "var(--wc-warn, #c8842a)"
+                    : "var(--wc-go, #2f7d5b)",
               color: "white",
             }}
           >
