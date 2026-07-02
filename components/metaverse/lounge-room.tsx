@@ -55,6 +55,15 @@ export function LoungeRoom() {
   const [roomIndex, setRoomIndex] = useState<number | null>(null)
   const [allFull, setAllFull] = useState(false)
   const [joinAttempt, setJoinAttempt] = useState(0)
+  // 방 이동: 유저가 고른 방 (null = 자동 배정). 만석이면 자동 배정으로 폴백 + 안내.
+  const [desiredRoom, setDesiredRoom] = useState<number | null>(null)
+  // 현재 방 실시간 인원 (나 포함) — 연결된 채널 presence 에서 갱신
+  const [currentOccupancy, setCurrentOccupancy] = useState<number | null>(null)
+  const [switchMsg, setSwitchMsg] = useState<string | null>(null)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
+  // 방별 인원 스냅샷 (패널 열 때 프로브). -1 = 확인 실패
+  const [roomCounts, setRoomCounts] = useState<Record<number, number> | null>(null)
+  const [countsLoading, setCountsLoading] = useState(false)
 
   // 입장 준비: 프로필 닉네임 + 장착 아바타를 병렬 로드
   useEffect(() => {
@@ -130,26 +139,44 @@ export function LoungeRoom() {
 
         const supabase = createAnonClient()
 
-        // ---- 방 배정: 1번 방부터 자리가 있는 첫 방 ----
-        // 프로브 실패(realtime 다운)면 1번 방으로 진행 → 아래 connect 도 실패하면
-        // 기존과 동일한 싱글플레이 fallback.
+        // ---- 방 배정 ----
+        // 1) 유저가 방을 직접 골랐으면(desiredRoom) 그 방 우선 — 만석이면 안내 후 자동 배정
+        // 2) 자동: 1번 방부터 자리가 있는 첫 방
+        // 프로브 실패(realtime 다운)면 그냥 진행 → connect 도 실패하면 싱글플레이 fallback.
         let assigned = -1
         let realtimeDown = false
-        for (let i = 1; i <= loungeConfig.channelCap; i++) {
-          let occupancy = 0
+        if (desiredRoom && desiredRoom >= 1 && desiredRoom <= loungeConfig.channelCap) {
           try {
-            occupancy = await probeChannelOccupancy(
+            const occupancy = await probeChannelOccupancy(
               supabase,
-              `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${i}`
+              `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${desiredRoom}`
             )
+            if (occupancy < loungeConfig.capacityPerChannel) assigned = desiredRoom
+            else setSwitchMsg(`${desiredRoom}번 방이 가득 찼어요 — 자리가 있는 방으로 배정할게요`)
           } catch (err) {
             console.warn("[lounge] occupancy probe failed", err)
             realtimeDown = true
+            assigned = desiredRoom
           }
           if (cancelled) return
-          if (realtimeDown || occupancy < loungeConfig.capacityPerChannel) {
-            assigned = i
-            break
+        }
+        if (assigned < 0) {
+          for (let i = 1; i <= loungeConfig.channelCap; i++) {
+            let occupancy = 0
+            try {
+              occupancy = await probeChannelOccupancy(
+                supabase,
+                `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${i}`
+              )
+            } catch (err) {
+              console.warn("[lounge] occupancy probe failed", err)
+              realtimeDown = true
+            }
+            if (cancelled) return
+            if (realtimeDown || occupancy < loungeConfig.capacityPerChannel) {
+              assigned = i
+              break
+            }
           }
         }
         if (assigned < 0) {
@@ -178,6 +205,15 @@ export function LoungeRoom() {
 
         if (!parentRef.current) return
         setRoomIndex(assigned)
+        // 현재 방 실시간 인원: presence remote(나 제외) + 1
+        if (channelRef.current) {
+          setCurrentOccupancy(1)
+          channelRef.current.onRemoteChange((remote) => {
+            setCurrentOccupancy(remote.size + 1)
+          })
+        } else {
+          setCurrentOccupancy(null)
+        }
         gameRef.current = bootSideScrollerDemo({
           parent: parentRef.current,
           identity,
@@ -195,13 +231,66 @@ export function LoungeRoom() {
       gameRef.current = null
       void channelRef.current?.disconnect()
       channelRef.current = null
+      setCurrentOccupancy(null)
     }
-  }, [identity, loungeConfig, joinAttempt])
+  }, [identity, loungeConfig, joinAttempt, desiredRoom])
 
   const handleEquipped = useCallback((avatarKey: string) => {
     // 상점 장착 성공 → identity memo 재계산 → 씬 재부팅으로 즉시 반영
     setEquippedAvatarKey(avatarKey)
   }, [])
+
+  // 방 이동 안내 토스트 자동 소멸
+  useEffect(() => {
+    if (!switchMsg) return
+    const t = setTimeout(() => setSwitchMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [switchMsg])
+
+  // 방 목록 인원 스냅샷 — 패널 열 때 + 새로고침 버튼에서 호출 (병렬 프로브)
+  const refreshRoomCounts = useCallback(async () => {
+    if (!loungeConfig) return
+    setCountsLoading(true)
+    try {
+      const { probeChannelOccupancy } = await import("@/lib/metaverse/realtime/sidescroll-channel")
+      const supabase = createAnonClient()
+      const entries = await Promise.all(
+        Array.from({ length: loungeConfig.channelCap }, (_, k) => k + 1).map(async (i) => {
+          try {
+            return [
+              i,
+              await probeChannelOccupancy(supabase, `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${i}`),
+            ] as const
+          } catch {
+            return [i, -1] as const
+          }
+        })
+      )
+      setRoomCounts(Object.fromEntries(entries))
+    } finally {
+      setCountsLoading(false)
+    }
+  }, [loungeConfig])
+
+  const toggleSwitcher = useCallback(() => {
+    setSwitcherOpen((open) => {
+      if (!open) void refreshRoomCounts()
+      return !open
+    })
+  }, [refreshRoomCounts])
+
+  const handlePickRoom = useCallback(
+    (i: number) => {
+      setSwitcherOpen(false)
+      if (i === roomIndex) return
+      setSwitchMsg(`${i}번 방으로 이동 중…`)
+      setDesiredRoom(i)
+      // 같은 desiredRoom 을 다시 고른 경우(직전 이동이 만석 폴백된 뒤 재시도)에도
+      // 부팅 이펙트가 재실행되도록 attempt 를 함께 올린다 (같은 배치라 재부팅은 1회).
+      setJoinAttempt((n) => n + 1)
+    },
+    [roomIndex]
+  )
 
   if (!mounted || !isLoaded) {
     return (
@@ -285,16 +374,96 @@ export function LoungeRoom() {
         </div>
       )}
       <MetaverseHud
-        locationLabel={roomIndex ? `🛋️ 팬 라운지 · ${roomIndex}번 방` : "🛋️ 팬 라운지"}
+        locationLabel={
+          roomIndex
+            ? `🛋️ 팬 라운지 · ${roomIndex}번 방${
+                currentOccupancy && loungeConfig
+                  ? ` (${currentOccupancy}/${loungeConfig.capacityPerChannel})`
+                  : ""
+              }`
+            : "🛋️ 팬 라운지"
+        }
         actions={
-          <button
-            onClick={() => setShopOpen(true)}
-            className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
-          >
-            👕 유니폼 상점
-          </button>
+          <>
+            <button
+              onClick={toggleSwitcher}
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+            >
+              🚪 방 목록
+            </button>
+            <button
+              onClick={() => setShopOpen(true)}
+              className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+            >
+              👕 유니폼 상점
+            </button>
+          </>
         }
       />
+      {/* 방 이동 안내 토스트 */}
+      {switchMsg && (
+        <div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/12 bg-black/80 px-4 py-2 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-sm">
+          {switchMsg}
+        </div>
+      )}
+      {/* 방 목록 패널 — 방별 인원 + 클릭 이동 */}
+      {switcherOpen && loungeConfig && (
+        <div className="absolute top-14 right-3 z-30 w-60 rounded-xl border border-white/12 bg-black/85 p-3 shadow-xl backdrop-blur">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[12px] font-bold text-white/90">방 목록</span>
+            <button
+              onClick={() => void refreshRoomCounts()}
+              disabled={countsLoading}
+              className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+            >
+              {countsLoading ? "확인 중…" : "새로고침"}
+            </button>
+          </div>
+          <div className="space-y-1">
+            {Array.from({ length: loungeConfig.channelCap }, (_, k) => k + 1).map((i) => {
+              const isCurrent = i === roomIndex
+              const cnt = isCurrent ? currentOccupancy : roomCounts?.[i]
+              const isFull =
+                typeof cnt === "number" && cnt >= 0 && cnt >= loungeConfig.capacityPerChannel
+              return (
+                <button
+                  key={i}
+                  onClick={() => handlePickRoom(i)}
+                  disabled={isCurrent || isFull}
+                  className={
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors " +
+                    (isCurrent
+                      ? "bg-white/15 text-white"
+                      : isFull
+                        ? "cursor-not-allowed text-white/35"
+                        : "text-white/80 hover:bg-white/10")
+                  }
+                >
+                  <span>
+                    {i}번 방
+                    {isCurrent && (
+                      <span className="ml-1.5 rounded bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
+                        현재
+                      </span>
+                    )}
+                    {!isCurrent && isFull && (
+                      <span className="ml-1.5 rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold text-red-300">
+                        만석
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-white/60 tabular-nums">
+                    {cnt == null || cnt < 0 ? "–" : `${cnt}/${loungeConfig.capacityPerChannel}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-white/45">
+            방 개수는 아스날 경기장 레벨(Lv.{loungeConfig.stadiumLevel})만큼 열려요
+          </p>
+        </div>
+      )}
       {identity && (
         <>
           {/* Enter 로 입력 → 내 머리 위 말풍선 + 로그 패널 (Realtime broadcast) */}
