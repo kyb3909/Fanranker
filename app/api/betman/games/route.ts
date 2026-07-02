@@ -111,20 +111,15 @@ export async function GET(request: NextRequest) {
       .order("match_time", { ascending: true })
       .order("game_no", { ascending: true })
 
-    // --- 시간 필터 ---
-    // 이벤트 모드: 데일리 윈도우 무시 — 킥오프 전인 모든 이벤트 경기 노출.
-    // 프로토 규정(08:00~08:00 윈도우, 8시 정각 제외, 23:00 flip)은 KST 새벽~아침에
-    // 몰리는 월드컵 경기와 충돌: 8시 "정각" 킥오프는 양쪽 윈도우에서 다 빠져 영구
-    // 미노출, 새벽 킥오프는 23:00 flip 때 킥오프 전인데 조기 소멸 (2026-07-02 수정).
-    if (eventParam) {
-      query = query.gt("match_time", now.toISOString())
-    } else {
-      query = query
-        // 시작 경계 exclusive — 8시 "정각" 킥오프는 프로토 발매(08:00 오픈)에서
-        // 걸 수 없는 경기라 슬레이트에서 제외 (프로토 규정 추종, 2026-06-11)
-        .gt("match_time", windowStart.toISOString())
-        .lt("match_time", windowEnd.toISOString())
-    }
+    // --- 시간 필터: 데일리 윈도우 (당일 08:00 초과 ~ 익일 08:00 이하] ---
+    // 시작 경계 exclusive — 8시 "정각" 킥오프는 당일 프로토 발매(08:00 오픈)에서
+    // 걸 수 없는 경기 (프로토 규정 추종, 2026-06-11).
+    // 끝 경계 inclusive — 익일 08:00 "정각" 경기는 익일 발매에서 못 걸므로
+    // 전날 슬레이트의 마지막 경기로 포함 (2026-07-02, 포르투갈-크로아티아 16강이
+    // 양쪽 윈도우에서 다 빠져 영구 미노출됐던 버그 수정). 메인·이벤트 공통 규칙.
+    query = query
+      .gt("match_time", windowStart.toISOString())
+      .lte("match_time", windowEnd.toISOString())
 
     // 이벤트 경기 풀 분리 — 메인은 이벤트 코드 제외, 이벤트 모드는 해당 코드만
     if (includeCodes !== null) {
@@ -197,9 +192,8 @@ export async function GET(request: NextRequest) {
       }
       // 마감 = min(킥오프, 라운드 23:00) — 23:00 슬레이트 교체와 일치.
       // 베팅 자체는 23:00 리셋 직후부터 항상 가능 (밤 잠금 없음).
-      // 이벤트 모드는 윈도우/23:00 규칙을 안 쓰므로 마감 = 킥오프.
       const kickoff = getGameBetDeadline(game.match_time as string)
-      const betCloseAt = eventParam ? kickoff : kickoff < roundCloseAt ? kickoff : roundCloseAt
+      const betCloseAt = kickoff < roundCloseAt ? kickoff : roundCloseAt
       const now = new Date()
       const isBettable = now < betCloseAt
       return {
