@@ -421,6 +421,32 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
     sceneBridge.emit("pip:mode", { mini: isMini })
   }, [isMini])
 
+  // 미니 채팅 티커 — 미니 모드에서 오가는 채팅을 작게 표시 (최근 3개, 8초 후 소멸).
+  // ChatLogPanel 은 미니에서 언마운트되지만 chat:log:append 는 채널 콜백에서 계속 emit 됨.
+  const [miniChats, setMiniChats] = useState<
+    Array<{ key: number; nickname: string; text: string }>
+  >([])
+  useEffect(() => {
+    if (!isMini) {
+      setMiniChats([])
+      return
+    }
+    const timers = new Set<ReturnType<typeof setTimeout>>()
+    const unsub = sceneBridge.on("chat:log:append", ({ nickname, text }) => {
+      const key = Date.now() + Math.random()
+      setMiniChats((prev) => [...prev.slice(-2), { key, nickname, text }])
+      const t = setTimeout(() => {
+        timers.delete(t)
+        setMiniChats((prev) => prev.filter((m) => m.key !== key))
+      }, 8000)
+      timers.add(t)
+    })
+    return () => {
+      unsub()
+      for (const t of timers) clearTimeout(t)
+    }
+  }, [isMini])
+
   // 로딩 상태 — Phaser 부팅 안 함 (게스트 모드면 Clerk 결과 기다리지 않음)
   if (!mounted || (!isLoaded && !allowGuest)) {
     return (
@@ -542,6 +568,19 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
               ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
               : ""}
           </button>
+          {/* 미니 채팅 티커 — 최근 채팅이 작게 흐름 */}
+          {miniChats.length > 0 && (
+            <div className="pointer-events-none absolute right-1.5 bottom-8 left-1.5 z-20 space-y-0.5">
+              {miniChats.map((m) => (
+                <p
+                  key={m.key}
+                  className="truncate rounded bg-black/60 px-1.5 py-0.5 text-[10px] leading-tight text-white/90 backdrop-blur-sm"
+                >
+                  <span className="font-bold text-amber-300">{m.nickname}</span> {m.text}
+                </p>
+              ))}
+            </div>
+          )}
         </>
       )}
       {!isMini && (

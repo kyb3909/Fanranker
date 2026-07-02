@@ -349,7 +349,12 @@ export class IndoorMapScene extends Phaser.Scene {
     this.unsubChatOpen = sceneBridge.on("chat:input:open", () => {
       this.isChatInputOpen = true
       resetAllKeys()
-      if (this.input.keyboard) this.input.keyboard.enabled = false
+      if (this.input.keyboard) {
+        this.input.keyboard.enabled = false
+        // 글로벌 캡처도 해제 — enabled=false 만으로는 Space/화살표 preventDefault 가
+        // 살아있어 채팅 입력창에 띄어쓰기가 안 들어가는 버그 (2026-07-02 발견)
+        this.input.keyboard.disableGlobalCapture()
+      }
       const body = this.player.body as Phaser.Physics.Arcade.Body
       body.setAccelerationX(0)
       body.setVelocityX(0)
@@ -358,7 +363,10 @@ export class IndoorMapScene extends Phaser.Scene {
       this.isChatInputOpen = false
       // close 시점에도 reset — disable 동안 freeze 된 key state 가 stale 한 isDown 가지지 않도록.
       resetAllKeys()
-      if (this.input.keyboard) this.input.keyboard.enabled = true
+      if (this.input.keyboard) {
+        this.input.keyboard.enabled = true
+        this.input.keyboard.enableGlobalCapture()
+      }
     })
 
     // PIP 미니 모드 — 씬 키보드를 완전히 끊어 미니 창 상태에서 페이지 스크롤/타이핑을 방해하지 않는다.

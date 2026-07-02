@@ -18,11 +18,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
 import { useRouter } from "next/navigation"
 import { HighburyStage } from "./highbury-stage"
+
+const MINI_W = 360
+const MINI_H = 220
 
 type StadiumPipMode = "closed" | "full" | "mini"
 
@@ -82,17 +86,71 @@ function GlobalStadium() {
     return () => window.removeEventListener("resize", measure)
   }, [mode])
 
+  // 미니 창 드래그 — null 이면 기본 위치(우하단). 드래그 시작 시 실측 좌표로 전환.
+  const [miniPos, setMiniPos] = useState<{ x: number; y: number } | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ pointerId: number; dx: number; dy: number } | null>(null)
+
+  const clampPos = useCallback((x: number, y: number) => {
+    const w = Math.min(MINI_W, window.innerWidth - 32)
+    return {
+      x: Math.min(Math.max(x, 4), window.innerWidth - w - 4),
+      y: Math.min(Math.max(y, 4), window.innerHeight - MINI_H - 4),
+    }
+  }, [])
+
+  const onMiniPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // 버튼 클릭은 드래그로 취급하지 않음
+    if ((e.target as HTMLElement).closest("button")) return
+    const rect = wrapperRef.current?.getBoundingClientRect()
+    if (!rect) return
+    dragRef.current = {
+      pointerId: e.pointerId,
+      dx: e.clientX - rect.left,
+      dy: e.clientY - rect.top,
+    }
+    wrapperRef.current?.setPointerCapture(e.pointerId)
+    e.preventDefault()
+  }, [])
+
+  const onMiniPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== e.pointerId) return
+      setMiniPos(clampPos(e.clientX - drag.dx, e.clientY - drag.dy))
+    },
+    [clampPos]
+  )
+
+  const onMiniPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === e.pointerId) {
+      dragRef.current = null
+      wrapperRef.current?.releasePointerCapture(e.pointerId)
+    }
+  }, [])
+
   if (mode === "closed") return null
   const isFull = mode === "full"
 
   return (
     <div
+      ref={wrapperRef}
       className={
         isFull
           ? "fixed inset-x-0 z-40 mx-auto max-w-[1280px]"
-          : "fixed right-4 bottom-4 z-50 h-[220px] w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-white/20 shadow-2xl"
+          : "fixed z-50 h-[220px] w-[min(360px,calc(100vw-2rem))] cursor-move touch-none overflow-hidden rounded-xl border border-white/20 shadow-2xl"
       }
-      style={isFull ? { top: topOffset, bottom: 0 } : undefined}
+      style={
+        isFull
+          ? { top: topOffset, bottom: 0 }
+          : miniPos
+            ? { left: miniPos.x, top: miniPos.y }
+            : { right: 16, bottom: 16 }
+      }
+      onPointerDown={isFull ? undefined : onMiniPointerDown}
+      onPointerMove={isFull ? undefined : onMiniPointerMove}
+      onPointerUp={isFull ? undefined : onMiniPointerUp}
+      onPointerCancel={isFull ? undefined : onMiniPointerUp}
     >
       <HighburyStage
         allowGuest
