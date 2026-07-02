@@ -31,6 +31,7 @@ export class SideScrollerChannel {
   private channel: RealtimeChannel | null = null
   private readonly supabase: SupabaseClient
   private readonly identity: MetaversePlayerIdentity
+  private readonly channelName: string
   private lastPresenceAt = 0
   private pendingPresenceTimer: ReturnType<typeof setTimeout> | null = null
   private currentPresence = {
@@ -44,9 +45,14 @@ export class SideScrollerChannel {
   private readonly chatListeners = new Set<ChatCb>()
   private readonly ballListeners = new Set<BallStateCb>()
 
-  constructor(supabase: SupabaseClient, identity: MetaversePlayerIdentity) {
+  constructor(
+    supabase: SupabaseClient,
+    identity: MetaversePlayerIdentity,
+    channelName: string = METAVERSE.CHANNEL_SIDESCROLL
+  ) {
     this.supabase = supabase
     this.identity = identity
+    this.channelName = channelName
   }
 
   /** 초기 위치 세팅. connect 전에 호출 권장. */
@@ -58,7 +64,7 @@ export class SideScrollerChannel {
   async connect(): Promise<void> {
     if (this.channel) return
 
-    this.channel = this.supabase.channel(METAVERSE.CHANNEL_SIDESCROLL, {
+    this.channel = this.supabase.channel(this.channelName, {
       config: { private: true, presence: { key: this.identity.userId } },
     })
 

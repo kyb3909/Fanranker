@@ -41,6 +41,9 @@ export const METAVERSE = {
   CHANNEL_STADIUM_PREFIX: "metaverse:stadium:",
   // 사이드스크롤러 글로벌 방 — 누구나 들어가면 같이 보임. 추후 실제 방별로 확장 가능.
   CHANNEL_SIDESCROLL: "metaverse:sidescroll:default",
+  // 팬 라운지 (정식 채팅방, Clerk 로그인 전용) — 데모 방과 분리된 채널.
+  // 'metaverse:' prefix 유지 필수 — realtime.messages RLS 가 이 prefix 로 허용.
+  CHANNEL_LOUNGE: "metaverse:lounge:main",
   // Indoor presence (highbury 등 사이드뷰 실내 맵). 채팅은 RoomChannel(metaverse:chat:highbury)이 별도 처리.
   CHANNEL_INDOOR_HIGHBURY: "metaverse:indoor:highbury",
 
