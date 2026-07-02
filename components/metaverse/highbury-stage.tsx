@@ -276,17 +276,9 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
       style={{ top: "3.5rem", bottom: 0 }}
     >
       <div ref={parentRef} className="h-full w-full" aria-label="하이버리 메타버스" />
-      <MetaverseHud
-        locationLabel="🏟️ 하이버리"
-        actions={
-          <Link
-            href="/metaverse/uk"
-            className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/80 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80 hover:text-white"
-          >
-            ← 월드맵
-          </Link>
-        }
-      />
+      {/* 월드맵 링크 제거 (2026-07-02) — /metaverse/uk 는 프로덕션에서 이 페이지로
+          리다이렉트라 눌러도 제자리. 월드맵 체인은 폐기 방향. */}
+      <MetaverseHud locationLabel="🏟️ 하이버리 스타디움" />
       {/* 조작 안내 — 데스크톱(키보드)에서만. 터치 디바이스는 TouchControls 오버레이가 대체. */}
       <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
         A/D · ←→ 이동 · Space 점프 · 도어 앞에서 W/↑ 진입 · Enter 채팅

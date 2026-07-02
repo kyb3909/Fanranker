@@ -142,9 +142,9 @@ export default async function WorldcupGamesPage() {
           </div>
         )}
 
-        {/* 팬 라운지 입구 — 새벽 경기를 같이 보는 실시간 채팅방 (예측 → 소셜 동선) */}
+        {/* 스타디움 입구 — 새벽 경기를 같이 보는 실시간 아바타 공간 (예측 → 소셜 동선) */}
         <Link
-          href="/lounge"
+          href="/metaverse/highbury"
           className="mt-8 flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-transform hover:scale-[1.01]"
           style={{
             background: "#fff",
@@ -153,10 +153,10 @@ export default async function WorldcupGamesPage() {
           }}
         >
           <div className="flex min-w-0 items-center gap-3">
-            <span className="text-2xl">🛋️</span>
+            <span className="text-2xl">🏟️</span>
             <span className="min-w-0">
               <span className="block text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                팬 라운지
+                하이버리 스타디움
               </span>
               <span className="block truncate text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
                 내 아바타로 입장해서 다른 구너들과 실시간 채팅 — 새벽 경기, 같이 봐요

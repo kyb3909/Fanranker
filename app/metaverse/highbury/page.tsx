@@ -1,9 +1,10 @@
 import { HighburyStage } from "@/components/metaverse/highbury-stage"
 
 export const metadata = {
-  title: "하이버리 — 메타버스",
-  description: "아스날 하이버리 스타디움과 클락 엔드 내부 테스트",
-  robots: { index: false, follow: false },
+  title: "스타디움",
+  description:
+    "아스날 하이버리 스타디움 — 내 아바타로 입장해 경기장 안팎을 오가며 다른 팬들과 실시간 채팅.",
+  alternates: { canonical: "/metaverse/highbury" },
 }
 
 export default function HighburyPage() {

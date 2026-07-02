@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Crown, Gamepad2, Sofa } from "lucide-react"
+import { Compass, LayoutGrid, Crown, Gamepad2, Landmark } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -26,7 +26,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isWorldcup = pathname.startsWith("/worldcup")
   const isGames = pathname.startsWith("/games")
-  const isLounge = pathname.startsWith("/lounge")
+  const isStadiumWorld = pathname.startsWith("/metaverse") || pathname.startsWith("/lounge")
 
   return (
     <nav
@@ -98,10 +98,11 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             게임
           </span>
         </Link>
-        <Link href="/lounge">
-          <span className={baseClass} data-on={isLounge ? "true" : undefined}>
-            <Sofa className="h-[18px] w-[18px] shrink-0" />
-            라운지
+        {/* 스타디움 = 하이버리 메타버스 (아바타 입장 + 밖/안 전환 + 실시간 채팅) */}
+        <Link href="/metaverse/highbury">
+          <span className={baseClass} data-on={isStadiumWorld ? "true" : undefined}>
+            <Landmark className="h-[18px] w-[18px] shrink-0" />
+            스타디움
           </span>
         </Link>
         {/*
