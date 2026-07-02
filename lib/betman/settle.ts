@@ -153,6 +153,15 @@ export async function settlePredictions(
 ): Promise<SettleResult> {
   const actor = options.actor ?? "cron:settle"
   const auditRows: AuditRow[] = []
+  // 슬립 확정(won/lost) 시 유저에게 인앱 알림 — 스키마/UI(settlement_result)는
+  // migration 039 부터 존재했으나 발송이 미배선이었음 (2026-07-02 배선).
+  // metadata 는 notification-dropdown.tsx 가 읽는 is_correct / points_earned 형태.
+  const notificationRows: Array<{
+    user_id: string
+    type: "settlement_result"
+    actor_id: string
+    metadata: Record<string, unknown>
+  }> = []
 
   const result: SettleResult = {
     settled: 0,
@@ -326,6 +335,17 @@ export async function settlePredictions(
 
         if (wonSlip && wonSlip.length > 0) {
           result.slipsWon++
+          notificationRows.push({
+            user_id: currentSlip.user_id,
+            type: "settlement_result",
+            actor_id: currentSlip.user_id, // 시스템 알림 — actor NOT NULL 이라 본인으로
+            metadata: {
+              is_correct: true,
+              points_earned: payout,
+              settlement_status: "won",
+              slip_id: slipId,
+            },
+          })
           auditRows.push({
             event_type: "settle_slip",
             actor,
@@ -359,6 +379,17 @@ export async function settlePredictions(
 
         if (lostSlip && lostSlip.length > 0) {
           result.slipsLost++
+          notificationRows.push({
+            user_id: currentSlip.user_id,
+            type: "settlement_result",
+            actor_id: currentSlip.user_id,
+            metadata: {
+              is_correct: false,
+              points_earned: 0,
+              settlement_status: "lost",
+              slip_id: slipId,
+            },
+          })
           auditRows.push({
             event_type: "settle_slip",
             actor,
@@ -384,6 +415,17 @@ export async function settlePredictions(
       }
     } catch (slipErr) {
       result.errors.push(`slip=${slipId}: ${(slipErr as Error).message}`)
+    }
+  }
+
+  // 2.4 정산 결과 인앱 알림 batch INSERT — 실패해도 정산에는 영향 없음
+  if (notificationRows.length > 0) {
+    const { error: notifErr } = await supabase.from("notifications").insert(notificationRows)
+    if (notifErr) {
+      Sentry.captureException(notifErr, {
+        extra: { context: "settlement_notification_insert", rowCount: notificationRows.length },
+      })
+      result.errors.push(`notification insert failed: ${notifErr.message}`)
     }
   }
 
