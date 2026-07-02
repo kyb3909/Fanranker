@@ -42,11 +42,13 @@ interface HighburyStageProps {
    * 전부 숨기고 씬 키보드를 차단한다. 없으면(standalone, /metaverse/prototype 등)
    * 기존처럼 스스로 헤더 아래 풀스크린 fixed 로 렌더.
    */
-  pip?: { mode: "full" | "mini"; onExpand: () => void; onClose: () => void }
+  pip?: { mode: "full" | "mini"; active?: boolean; onExpand: () => void; onClose: () => void }
 }
 
 export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = {}) {
   const isMini = pip?.mode === "mini"
+  // 미니 활성 = 창 클릭됨 → 씬 키보드 살아남 (좌우 이동/점프 가능)
+  const miniActive = !!pip?.active
   const { isSignedIn, isLoaded } = useAuth()
   const { user } = useUser()
   const router = useRouter()
@@ -414,14 +416,16 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
     }
   }, [isMini])
 
-  // 씬 키보드 차단/복원 — 미니 창이 페이지 탐색(스크롤·타이핑)을 방해하지 않도록
-  const isMiniRef = useRef(isMini)
+  // 씬 키보드 차단/복원 — 미니 "비활성" 상태에서만 차단.
+  // 미니라도 활성(창 클릭)이면 키보드가 살아나 좌우 이동/점프 가능.
+  const keyboardBlocked = isMini && !miniActive
+  const isMiniRef = useRef(keyboardBlocked)
   useEffect(() => {
-    isMiniRef.current = isMini
-    sceneBridge.emit("pip:mode", { mini: isMini })
-  }, [isMini])
+    isMiniRef.current = keyboardBlocked
+    sceneBridge.emit("pip:mode", { mini: keyboardBlocked })
+  }, [keyboardBlocked])
 
-  // 미니 채팅 티커 — 미니 모드에서 오가는 채팅을 작게 표시 (최근 3개, 8초 후 소멸).
+  // 미니 채팅 로그 — 미니 모드에서 오가는 채팅 최근 4개를 상시 표시.
   // ChatLogPanel 은 미니에서 언마운트되지만 chat:log:append 는 채널 콜백에서 계속 emit 됨.
   const [miniChats, setMiniChats] = useState<
     Array<{ key: number; nickname: string; text: string }>
@@ -431,21 +435,25 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
       setMiniChats([])
       return
     }
-    const timers = new Set<ReturnType<typeof setTimeout>>()
     const unsub = sceneBridge.on("chat:log:append", ({ nickname, text }) => {
       const key = Date.now() + Math.random()
-      setMiniChats((prev) => [...prev.slice(-2), { key, nickname, text }])
-      const t = setTimeout(() => {
-        timers.delete(t)
-        setMiniChats((prev) => prev.filter((m) => m.key !== key))
-      }, 8000)
-      timers.add(t)
+      setMiniChats((prev) => [...prev.slice(-3), { key, nickname, text }])
     })
-    return () => {
-      unsub()
-      for (const t of timers) clearTimeout(t)
-    }
+    return () => unsub()
   }, [isMini])
+
+  // 미니 채팅 입력 — 포커스 동안 씬 키보드/전역 캡처 해제 (띄어쓰기·화살표가 입력창으로)
+  const [miniChatText, setMiniChatText] = useState("")
+  const handleMiniChatSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
+      const text = miniChatText.trim()
+      if (!text) return
+      sceneBridge.emit("chat:send", { text })
+      setMiniChatText("")
+    },
+    [miniChatText]
+  )
 
   // 로딩 상태 — Phaser 부팅 안 함 (게스트 모드면 Clerk 결과 기다리지 않음)
   if (!mounted || (!isLoaded && !allowGuest)) {
@@ -559,18 +567,23 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
               ✕
             </button>
           </div>
-          <button
-            onClick={pip.onExpand}
-            className="absolute bottom-1.5 left-1.5 z-20 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-sm"
-          >
-            🏟️ {roomIndex ? `${roomIndex}번 방` : "스타디움"}
-            {currentOccupancy && stadiumConfig
-              ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
-              : ""}
-          </button>
-          {/* 미니 채팅 티커 — 최근 채팅이 작게 흐름 */}
+          {/* 방 라벨 + 조작 상태 — 상단 좌측 */}
+          <div className="absolute top-1.5 left-1.5 z-20 flex items-center gap-1">
+            <span className="rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-sm">
+              🏟️ {roomIndex ? `${roomIndex}번 방` : "스타디움"}
+              {currentOccupancy && stadiumConfig
+                ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
+                : ""}
+            </span>
+            {miniActive && (
+              <span className="rounded-md bg-amber-400/90 px-1.5 py-1 text-[9px] font-bold text-black">
+                ←→ 이동 · Space 점프
+              </span>
+            )}
+          </div>
+          {/* 미니 채팅 로그 — 최근 채팅 상시 표시 */}
           {miniChats.length > 0 && (
-            <div className="pointer-events-none absolute right-1.5 bottom-8 left-1.5 z-20 space-y-0.5">
+            <div className="pointer-events-none absolute right-1.5 bottom-9 left-1.5 z-20 space-y-0.5">
               {miniChats.map((m) => (
                 <p
                   key={m.key}
@@ -581,6 +594,23 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
               ))}
             </div>
           )}
+          {/* 미니 채팅 입력 — 미니 상태에서도 바로 채팅 */}
+          <form onSubmit={handleMiniChatSubmit} className="absolute inset-x-0 bottom-0 z-20">
+            <input
+              type="text"
+              value={miniChatText}
+              onChange={(e) => setMiniChatText(e.target.value)}
+              onFocus={() => sceneBridge.emit("chat:input:open")}
+              onBlur={() => {
+                sceneBridge.emit("chat:input:close")
+                // 입력창을 떠나면 현재 활성 상태 기준으로 키보드 차단 재적용
+                sceneBridge.emit("pip:mode", { mini: isMiniRef.current })
+              }}
+              placeholder={miniActive ? "채팅 입력 후 Enter" : "클릭해서 채팅·조작 참여"}
+              maxLength={200}
+              className="w-full border-t border-white/15 bg-black/75 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/45 focus:bg-black/90 focus:outline-none"
+            />
+          </form>
         </>
       )}
       {!isMini && (

@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation"
 import { HighburyStage } from "./highbury-stage"
 
 const MINI_W = 360
-const MINI_H = 220
+const MINI_H = 240
 
 type StadiumPipMode = "closed" | "full" | "mini"
 
@@ -88,8 +88,31 @@ function GlobalStadium() {
 
   // 미니 창 드래그 — null 이면 기본 위치(우하단). 드래그 시작 시 실측 좌표로 전환.
   const [miniPos, setMiniPos] = useState<{ x: number; y: number } | null>(null)
+  // 미니 활성 상태 — 클릭(드래그 아닌)하면 활성: 씬 키보드가 살아나 좌우 이동/점프 가능.
+  // 창 밖을 클릭하면 비활성 → 키보드가 페이지로 돌아감 (스크롤/타이핑 안전).
+  const [miniActive, setMiniActive] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{ pointerId: number; dx: number; dy: number } | null>(null)
+  const dragRef = useRef<{
+    pointerId: number
+    dx: number
+    dy: number
+    sx: number
+    sy: number
+    moved: boolean
+  } | null>(null)
+
+  // 모드 전환 시 활성 초기화 + 미니 동안 바깥 클릭 감지
+  useEffect(() => {
+    setMiniActive(false)
+    if (mode !== "mini") return
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setMiniActive(false)
+      }
+    }
+    document.addEventListener("pointerdown", onDocPointerDown)
+    return () => document.removeEventListener("pointerdown", onDocPointerDown)
+  }, [mode])
 
   const clampPos = useCallback((x: number, y: number) => {
     const w = Math.min(MINI_W, window.innerWidth - 32)
@@ -100,14 +123,17 @@ function GlobalStadium() {
   }, [])
 
   const onMiniPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    // 버튼 클릭은 드래그로 취급하지 않음
-    if ((e.target as HTMLElement).closest("button")) return
+    // 버튼/입력창 클릭은 드래그로 취급하지 않음
+    if ((e.target as HTMLElement).closest("button, input")) return
     const rect = wrapperRef.current?.getBoundingClientRect()
     if (!rect) return
     dragRef.current = {
       pointerId: e.pointerId,
       dx: e.clientX - rect.left,
       dy: e.clientY - rect.top,
+      sx: e.clientX,
+      sy: e.clientY,
+      moved: false,
     }
     wrapperRef.current?.setPointerCapture(e.pointerId)
     e.preventDefault()
@@ -117,13 +143,18 @@ function GlobalStadium() {
     (e: React.PointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current
       if (!drag || drag.pointerId !== e.pointerId) return
+      // 4px 이상 움직여야 드래그 — 미만이면 클릭(활성화)으로 처리
+      if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return
+      drag.moved = true
       setMiniPos(clampPos(e.clientX - drag.dx, e.clientY - drag.dy))
     },
     [clampPos]
   )
 
   const onMiniPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId === e.pointerId) {
+    const drag = dragRef.current
+    if (drag?.pointerId === e.pointerId) {
+      if (!drag.moved) setMiniActive(true) // 제자리 클릭 = 조작 활성화
       dragRef.current = null
       wrapperRef.current?.releasePointerCapture(e.pointerId)
     }
@@ -138,7 +169,8 @@ function GlobalStadium() {
       className={
         isFull
           ? "fixed inset-x-0 z-40 mx-auto max-w-[1280px]"
-          : "fixed z-50 h-[220px] w-[min(360px,calc(100vw-2rem))] cursor-move touch-none overflow-hidden rounded-xl border border-white/20 shadow-2xl"
+          : "fixed z-50 h-[240px] w-[min(360px,calc(100vw-2rem))] cursor-move touch-none overflow-hidden rounded-xl border shadow-2xl " +
+            (miniActive ? "border-amber-400 ring-2 ring-amber-400/60" : "border-white/20")
       }
       style={
         isFull
@@ -156,6 +188,7 @@ function GlobalStadium() {
         allowGuest
         pip={{
           mode,
+          active: miniActive,
           onExpand: () => router.push("/metaverse/highbury"),
           onClose: close,
         }}
