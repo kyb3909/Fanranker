@@ -3,7 +3,6 @@ import nextDynamic from "next/dynamic"
 import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { getDailyWindow } from "@/lib/betman/daily-round"
 import { SectionHeader } from "@/components/section-header"
 import { BoardRecentPosts } from "@/components/board-recent-posts"
 
@@ -39,19 +38,19 @@ export default async function WorldcupGamesPage() {
 
   const leagueCodes = event?.league_codes ?? []
 
-  // 오늘 베팅 윈도우에 "이벤트 코드"의 예정 경기가 있을 때만 베팅을 연다.
+  // 킥오프 전인 "이벤트 코드" 예정 경기가 있을 때만 베팅을 연다.
   // 없으면 카운트다운만 — NBA 더미 시기엔 0건이라 카운트다운, 실제 월드컵 경기가
   // 등록되는 순간(코드 매칭) 자동으로 예측 화면이 열린다.
+  // 데일리 윈도우(08:00~08:00, 8시 정각 제외)는 이벤트에 적용하지 않음 — KST 새벽
+  // 킥오프 중심인 월드컵과 충돌 (games GET 이벤트 모드와 동일 규칙, 2026-07-02).
   let hasGamesToday = false
   if (event && event.status === "live" && leagueCodes.length > 0) {
-    const { start, end } = getDailyWindow()
     const { count } = await supabase
       .from("betman_games")
       .select("id", { count: "exact", head: true })
       .in("league_code", leagueCodes)
       .eq("status", "scheduled")
-      .gt("match_time", start.toISOString()) // 8시 정각 제외 — 메인 games GET 과 동일 규칙
-      .lt("match_time", end.toISOString())
+      .gt("match_time", new Date().toISOString())
     hasGamesToday = (count ?? 0) > 0
   }
   // 이벤트 시작(6.28 오후 1시 — 32강 확정 시점) 전엔 예측을 막는다. 축월드컵 경기가 미리 등록돼도

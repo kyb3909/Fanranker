@@ -219,16 +219,20 @@ export async function POST(request: NextRequest) {
 
     // Check all games are within the daily window (08:00 KST today ~ 08:00 KST tomorrow)
     // 시작 경계 exclusive: 8시 정각 킥오프는 프로토 발매 불가 경기라 베팅 차단 (GET 노출 제외와 일치)
-    const { start: windowStart, end: windowEnd } = getDailyWindow()
-    const outOfWindow = games.filter((g) => {
-      const t = new Date(g.match_time)
-      return t <= windowStart || t >= windowEnd
-    })
-    if (outOfWindow.length > 0) {
-      return NextResponse.json(
-        { error: "오늘의 베팅 윈도우 밖의 경기가 포함되어 있습니다." },
-        { status: 400 }
-      )
+    // 이벤트 슬립은 윈도우 검사 제외 — 킥오프 전이면 베팅 가능 (games GET 이벤트 모드와 일치).
+    // 메인 경기를 event_slug 로 우회하는 건 아래 이벤트 검증(league_code ∈ event codes)이 차단.
+    if (!event_slug) {
+      const { start: windowStart, end: windowEnd } = getDailyWindow()
+      const outOfWindow = games.filter((g) => {
+        const t = new Date(g.match_time)
+        return t <= windowStart || t >= windowEnd
+      })
+      if (outOfWindow.length > 0) {
+        return NextResponse.json(
+          { error: "오늘의 베팅 윈도우 밖의 경기가 포함되어 있습니다." },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate prediction type matches game type
