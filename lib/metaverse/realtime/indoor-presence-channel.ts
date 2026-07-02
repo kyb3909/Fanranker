@@ -40,6 +40,7 @@ export class IndoorPresenceChannel {
     action: "idle" as IndoorActionState,
   }
   private readonly listeners = new Set<RemoteChangeCb>()
+  private sawFirstSync = false
 
   constructor(supabase: SupabaseClient, identity: MetaversePlayerIdentity, channelName: string) {
     this.supabase = supabase
@@ -53,12 +54,20 @@ export class IndoorPresenceChannel {
     this.currentPresence.y = y
   }
 
-  async connect(): Promise<void> {
+  /**
+   * 채널 구독. opts.track=false 면 구독만 하고 내 presence 는 track 하지 않는다 —
+   * 방 정원 검사(입장 전 인원 확인) 용도. 자리 확인 후 `trackSelf()` 로 정식 입장.
+   */
+  async connect(opts: { track?: boolean } = {}): Promise<void> {
     if (this.channel) return
+    const track = opts.track !== false
     this.channel = this.supabase.channel(this.channelName, {
       config: { private: true, presence: { key: this.identity.userId } },
     })
-    this.channel.on("presence", { event: "sync" }, () => this.emitRemote())
+    this.channel.on("presence", { event: "sync" }, () => {
+      this.sawFirstSync = true
+      this.emitRemote()
+    })
     this.channel.on("presence", { event: "join" }, () => this.emitRemote())
     this.channel.on("presence", { event: "leave" }, () => this.emitRemote())
     await new Promise<void>((resolve, reject) => {
@@ -71,7 +80,7 @@ export class IndoorPresenceChannel {
       this.channel!.subscribe((status, err) => {
         if (status === "SUBSCRIBED") {
           clearTimeout(timer)
-          void this.publishImmediate()
+          if (track) void this.publishImmediate()
           resolve()
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           clearTimeout(timer)
@@ -79,6 +88,25 @@ export class IndoorPresenceChannel {
         }
       })
     })
+  }
+
+  /** connect({track:false}) 후 정식 입장 — 내 presence track 시작. */
+  async trackSelf(): Promise<void> {
+    await this.publishImmediate()
+  }
+
+  /** 첫 presence sync 대기 (이미 왔으면 즉시). 정원 검사 전 상태 수신 보장용. */
+  async waitFirstSync(timeoutMs = 2000): Promise<void> {
+    const start = Date.now()
+    while (!this.sawFirstSync && Date.now() - start < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 100))
+    }
+  }
+
+  /** 현재 채널에 track 된 인원 수 (나를 track 하기 전이면 = 기존 입장자 수). */
+  getOccupancy(): number {
+    if (!this.channel) return 0
+    return Object.keys(this.channel.presenceState()).length
   }
 
   async disconnect(): Promise<void> {

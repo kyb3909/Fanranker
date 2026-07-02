@@ -6,11 +6,15 @@
  * 같은 씬 인스턴스가 mapId 만 바꾸며 재시작 → 부드러운 페이드 전환.
  * 도어 위로 가서 ↑ / W 누르면 다음 맵으로 이동.
  *
- * 인증: 비로그인 차단 — `useAuth.isSignedIn` false 시 /sign-in 리다이렉트.
- * 채팅: 자기 메시지 echo (멀티 채널은 다음 단계에서 SideScrollerChannel 패턴 차용).
+ * 방 샤딩 (2026-07-02, 라운지에서 이식):
+ *  - 방당 정원 10명. 입장 시 room-1 부터 presence 프로브해 자리 있는 첫 방 배정.
+ *  - 개설 가능한 방 수 = 아스날 경기장 레벨 (/api/lounge/config) — 전부 만석이면
+ *    "경기장 레벨을 올리면 방이 늘어나요" 안내 (기부 루프 당위성).
+ *  - presence 채널 metaverse:indoor:highbury:room-N / 채팅 roomId highbury-N.
+ *  - 방 목록 패널에서 방별 인원 확인 + 클릭 이동.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
@@ -38,12 +42,70 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
   const { isSignedIn, isLoaded } = useAuth()
   const { user } = useUser()
   const router = useRouter()
+  // SSR 은 identity=null(게스트 ref 가 window 필요)이라 로딩 분기를 렌더하는데, 클라 첫
+  // 렌더는 identity 가 있어 본 화면을 그리면서 hydration mismatch 발생 → mounted 게이트.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  // 헤더 실측 높이 — GNB 가 헤더 아래 별도 행이라 총 높이가 3.5rem(56px)보다 큼(~94px).
+  // 고정 3.5rem 을 쓰면 스테이지 상단(HUD 버튼)이 GNB 행에 가려져 클릭 불가.
+  const [topOffset, setTopOffset] = useState(56)
+  useEffect(() => {
+    const measure = () => {
+      const h = document.querySelector("header")
+      if (h) setTopOffset(Math.ceil(h.getBoundingClientRect().bottom))
+    }
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [])
   const parentRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<{ destroy: (removeCanvas: boolean) => void } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
   /** Supabase profiles.nickname — Clerk username 보다 우선 (사이트 실제 닉네임). */
   const [profileNickname, setProfileNickname] = useState<string | null>(null)
+
+  // ---- 방 샤딩 상태 (라운지에서 이식) ----
+  const [stadiumConfig, setStadiumConfig] = useState<{
+    stadiumLevel: number
+    channelCap: number
+    capacityPerChannel: number
+  } | null>(null)
+  const [roomIndex, setRoomIndex] = useState<number | null>(null)
+  const [allFull, setAllFull] = useState(false)
+  const [joinAttempt, setJoinAttempt] = useState(0)
+  const [desiredRoom, setDesiredRoom] = useState<number | null>(null)
+  const [currentOccupancy, setCurrentOccupancy] = useState<number | null>(null)
+  const [switchMsg, setSwitchMsg] = useState<string | null>(null)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
+  const [roomCounts, setRoomCounts] = useState<Record<number, number> | null>(null)
+  const [countsLoading, setCountsLoading] = useState(false)
+
+  // 방 구성 로드 — 게스트 포함 전원 (공개 API). 실패 시 최소 구성 폴백.
+  useEffect(() => {
+    let cancelled = false
+    fetch("/api/lounge/config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return
+        setStadiumConfig({
+          stadiumLevel: Number(data?.stadiumLevel) || 1,
+          channelCap: Math.max(1, Number(data?.channelCap) || 1),
+          capacityPerChannel: Number(data?.capacityPerChannel) || METAVERSE.LOUNGE_ROOM_CAPACITY,
+        })
+      })
+      .catch(() => {
+        if (!cancelled)
+          setStadiumConfig({
+            stadiumLevel: 1,
+            channelCap: 1,
+            capacityPerChannel: METAVERSE.LOUNGE_ROOM_CAPACITY,
+          })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // 사이트 닉네임 로드 — /api/profile/me 의 nickname 우선 사용.
   useEffect(() => {
@@ -107,14 +169,14 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     return () => unsub()
   }, [])
 
-  // 멀티플레이 채팅 채널 — roomId "highbury" 글로벌 방. presence(접속자 수) + chat broadcast.
+  // 멀티플레이 채팅 채널 — 배정된 방(roomIndex)별 분리 (highbury-1, highbury-2 …).
   // 채널이 self-dispatch 까지 처리하므로 chat:log:append 는 onChatMessage 한 곳에서만 emit.
   useEffect(() => {
-    if (!identity) return
+    if (!identity || roomIndex === null) return
     let cancelled = false
     let channel: RoomChannel | null = null
     const supabase = createAnonClient()
-    const newChannel = new RoomChannel(supabase, identity, "highbury")
+    const newChannel = new RoomChannel(supabase, identity, `highbury-${roomIndex}`)
 
     const unsubSend = sceneBridge.on("chat:send", ({ text }) => {
       channel?.publishChat(text)
@@ -157,40 +219,106 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
       unsubSend()
       if (channel) void channel.disconnect()
     }
-  }, [identity])
+  }, [identity, roomIndex])
 
   useEffect(() => {
-    if (!parentRef.current || !identity) return
+    if (!parentRef.current || !identity || !stadiumConfig) return
     let cancelled = false
     let presenceChannel: IndoorPresenceChannel | null = null
+    setAllFull(false)
+    setRoomIndex(null)
     ;(async () => {
       try {
-        // presence 채널 — 다른 사용자 위치/액션 sync. 실패해도 싱글플레이로 부팅.
+        // createAnonClient 는 브라우저 싱글턴 (다중 인스턴스 = realtime 동시성 문제).
+        // 별도 프로브 채널을 열었다 닫으면 소켓이 내려가며 본 presence 구독과 경합하므로,
+        // 정원 검사는 "presence 채널 자체"로 한다: track 없이 구독 → 인원 확인 →
+        // 자리 있으면 trackSelf(정식 입장), 만석이면 disconnect 후 다음 방.
         const supabase = createAnonClient()
-        const newPresence = new IndoorPresenceChannel(
-          supabase,
-          identity,
-          METAVERSE.CHANNEL_INDOOR_HIGHBURY
-        )
-        try {
-          await newPresence.connect()
-          presenceChannel = newPresence
-        } catch (err) {
-          console.warn("[highbury] presence connect failed — 싱글플레이 mode", err)
-          presenceChannel = null
+        const roomChannelName = (i: number) => `${METAVERSE.CHANNEL_INDOOR_HIGHBURY}:room-${i}`
+
+        let assigned = -1
+        let realtimeDown = false
+        type EnterResult =
+          | { status: "entered"; ch: IndoorPresenceChannel }
+          | { status: "full" | "down"; ch: null }
+        const tryEnterRoom = async (i: number): Promise<EnterResult> => {
+          const ch = new IndoorPresenceChannel(supabase, identity, roomChannelName(i))
+          try {
+            await ch.connect({ track: false })
+          } catch (err) {
+            console.warn(`[highbury] room-${i} presence connect failed`, err)
+            await ch.disconnect().catch(() => {})
+            return { status: "down", ch: null }
+          }
+          await ch.waitFirstSync()
+          const occupancy = ch.getOccupancy()
+          if (occupancy >= stadiumConfig.capacityPerChannel) {
+            await ch.disconnect().catch(() => {})
+            return { status: "full", ch: null }
+          }
+          await ch.trackSelf()
+          return { status: "entered", ch }
         }
-        if (cancelled) {
-          void presenceChannel?.disconnect()
+
+        // 1) 직접 고른 방(desiredRoom) 우선 — 만석이면 안내 후 자동 배정
+        if (desiredRoom && desiredRoom >= 1 && desiredRoom <= stadiumConfig.channelCap) {
+          const r = await tryEnterRoom(desiredRoom)
+          if (cancelled) {
+            void r.ch?.disconnect()
+            return
+          }
+          if (r.status === "entered") {
+            presenceChannel = r.ch
+            assigned = desiredRoom
+          } else if (r.status === "full") {
+            setSwitchMsg(`${desiredRoom}번 방이 가득 찼어요 — 자리가 있는 방으로 배정할게요`)
+          } else {
+            realtimeDown = true
+            assigned = desiredRoom // realtime 다운 → 싱글플레이로 그 방 부팅
+          }
+        }
+        // 2) 자동: 1번 방부터 자리가 있는 첫 방
+        if (assigned < 0 && !realtimeDown) {
+          for (let i = 1; i <= stadiumConfig.channelCap; i++) {
+            const r = await tryEnterRoom(i)
+            if (cancelled) {
+              void r.ch?.disconnect()
+              return
+            }
+            if (r.status === "entered") {
+              presenceChannel = r.ch
+              assigned = i
+              break
+            }
+            if (r.status === "down") {
+              realtimeDown = true
+              assigned = i // 싱글플레이 폴백
+              break
+            }
+          }
+        }
+        if (assigned < 0) {
+          if (!cancelled) setAllFull(true)
           return
         }
+        if (realtimeDown) console.warn("[highbury] presence unavailable — 싱글플레이 mode")
 
         const { bootIndoorMap } = await import("@/lib/metaverse/boot")
         if (cancelled || !parentRef.current) return
+        setRoomIndex(assigned)
+        // 현재 방 실시간 인원 = 원격(나 제외) + 1
+        const activeChannel = presenceChannel
+        if (activeChannel) {
+          setCurrentOccupancy(1)
+          activeChannel.onRemoteChange((remote) => setCurrentOccupancy(remote.size + 1))
+        } else {
+          setCurrentOccupancy(null)
+        }
         gameRef.current = bootIndoorMap({
           parent: parentRef.current,
           identity,
           mapId: "highbury",
-          channel: presenceChannel,
+          channel: activeChannel,
         })
       } catch (err) {
         console.error("[highbury] boot failed", err)
@@ -202,8 +330,63 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
       gameRef.current?.destroy(true)
       gameRef.current = null
       void presenceChannel?.disconnect()
+      setCurrentOccupancy(null)
     }
-  }, [identity])
+  }, [identity, stadiumConfig, joinAttempt, desiredRoom])
+
+  // 방 이동 안내 토스트 자동 소멸
+  useEffect(() => {
+    if (!switchMsg) return
+    const t = setTimeout(() => setSwitchMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [switchMsg])
+
+  // 방 목록 인원 스냅샷 — 패널 열 때 + 새로고침 (병렬 프로브)
+  const refreshRoomCounts = useCallback(async () => {
+    if (!stadiumConfig) return
+    setCountsLoading(true)
+    try {
+      const { probeChannelOccupancy } = await import("@/lib/metaverse/realtime/sidescroll-channel")
+      const supabase = createAnonClient()
+      const entries = await Promise.all(
+        Array.from({ length: stadiumConfig.channelCap }, (_, k) => k + 1).map(async (i) => {
+          try {
+            return [
+              i,
+              await probeChannelOccupancy(
+                supabase,
+                `${METAVERSE.CHANNEL_INDOOR_HIGHBURY}:room-${i}`
+              ),
+            ] as const
+          } catch {
+            return [i, -1] as const
+          }
+        })
+      )
+      setRoomCounts(Object.fromEntries(entries))
+    } finally {
+      setCountsLoading(false)
+    }
+  }, [stadiumConfig])
+
+  const toggleSwitcher = useCallback(() => {
+    setSwitcherOpen((open) => {
+      if (!open) void refreshRoomCounts()
+      return !open
+    })
+  }, [refreshRoomCounts])
+
+  const handlePickRoom = useCallback(
+    (i: number) => {
+      setSwitcherOpen(false)
+      if (i === roomIndex) return
+      setSwitchMsg(`${i}번 방으로 이동 중…`)
+      setDesiredRoom(i)
+      // 같은 desiredRoom 재선택(직전 이동이 만석 폴백된 뒤 재시도)에도 재실행되도록
+      setJoinAttempt((n) => n + 1)
+    },
+    [roomIndex]
+  )
 
   // 페이지 진입 동안 body 스크롤 잠금 — GNB 외 다른 영역 스크롤바 제거.
   useEffect(() => {
@@ -220,7 +403,7 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
   }, [])
 
   // 로딩 상태 — Phaser 부팅 안 함 (게스트 모드면 Clerk 결과 기다리지 않음)
-  if (!isLoaded && !allowGuest) {
+  if (!mounted || (!isLoaded && !allowGuest)) {
     return (
       <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center bg-neutral-950 text-white">
         <div className="flex items-center gap-2 text-sm text-white/70">
@@ -261,6 +444,38 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     )
   }
 
+  if (allFull && stadiumConfig) {
+    return (
+      <div className="flex min-h-[calc(100svh-3.5rem)] items-center justify-center bg-neutral-950 p-6 text-center text-white">
+        <div className="max-w-sm">
+          <p className="text-2xl">🈵</p>
+          <h1 className="mt-3 text-lg font-bold">스타디움이 가득 찼어요</h1>
+          <p className="mt-2 text-sm leading-relaxed text-white/60">
+            지금 열려 있는 방 {stadiumConfig.channelCap}개(방당 {stadiumConfig.capacityPerChannel}
+            명)가 모두 만석이에요.
+            <br />방 개수는 <b className="text-white/85">아스날 경기장 레벨</b>(현재 Lv.
+            {stadiumConfig.stadiumLevel})만큼 열려요 — 경기장에 기부해서 레벨을 올리면 새 방이
+            생겨요!
+          </p>
+          <div className="mt-5 flex justify-center gap-2">
+            <button
+              onClick={() => setJoinAttempt((n) => n + 1)}
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10"
+            >
+              다시 시도
+            </button>
+            <Link
+              href="/stadium"
+              className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+            >
+              경기장 키우러 가기
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // identity 가 일시적으로 null 일 수 있음 (isSignedIn=true 인데 user 객체 늦게 도착)
   if (!identity) {
     return (
@@ -273,12 +488,94 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
   return (
     <div
       className="fixed inset-x-0 mx-auto max-w-[1280px] overflow-hidden bg-neutral-950"
-      style={{ top: "3.5rem", bottom: 0 }}
+      style={{ top: topOffset, bottom: 0 }}
     >
       <div ref={parentRef} className="h-full w-full" aria-label="하이버리 메타버스" />
       {/* 월드맵 링크 제거 (2026-07-02) — /metaverse/uk 는 프로덕션에서 이 페이지로
           리다이렉트라 눌러도 제자리. 월드맵 체인은 폐기 방향. */}
-      <MetaverseHud locationLabel="🏟️ 하이버리 스타디움" />
+      <MetaverseHud
+        locationLabel={
+          roomIndex
+            ? `🏟️ 하이버리 스타디움 · ${roomIndex}번 방${
+                currentOccupancy && stadiumConfig
+                  ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
+                  : ""
+              }`
+            : "🏟️ 하이버리 스타디움"
+        }
+        actions={
+          <button
+            onClick={toggleSwitcher}
+            className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+          >
+            🚪 방 목록
+          </button>
+        }
+      />
+      {/* 방 이동 안내 토스트 */}
+      {switchMsg && (
+        <div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/12 bg-black/80 px-4 py-2 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-sm">
+          {switchMsg}
+        </div>
+      )}
+      {/* 방 목록 패널 — 방별 인원 + 클릭 이동 */}
+      {switcherOpen && stadiumConfig && (
+        <div className="absolute top-14 right-3 z-30 w-60 rounded-xl border border-white/12 bg-black/85 p-3 shadow-xl backdrop-blur">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[12px] font-bold text-white/90">방 목록</span>
+            <button
+              onClick={() => void refreshRoomCounts()}
+              disabled={countsLoading}
+              className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+            >
+              {countsLoading ? "확인 중…" : "새로고침"}
+            </button>
+          </div>
+          <div className="space-y-1">
+            {Array.from({ length: stadiumConfig.channelCap }, (_, k) => k + 1).map((i) => {
+              const isCurrent = i === roomIndex
+              const cnt = isCurrent ? currentOccupancy : roomCounts?.[i]
+              const isFull =
+                typeof cnt === "number" && cnt >= 0 && cnt >= stadiumConfig.capacityPerChannel
+              return (
+                <button
+                  key={i}
+                  onClick={() => handlePickRoom(i)}
+                  disabled={isCurrent || isFull}
+                  className={
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors " +
+                    (isCurrent
+                      ? "bg-white/15 text-white"
+                      : isFull
+                        ? "cursor-not-allowed text-white/35"
+                        : "text-white/80 hover:bg-white/10")
+                  }
+                >
+                  <span>
+                    {i}번 방
+                    {isCurrent && (
+                      <span className="ml-1.5 rounded bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
+                        현재
+                      </span>
+                    )}
+                    {!isCurrent && isFull && (
+                      <span className="ml-1.5 rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold text-red-300">
+                        만석
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-white/60 tabular-nums">
+                    {cnt == null || cnt < 0 ? "–" : `${cnt}/${stadiumConfig.capacityPerChannel}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-white/45">
+            방 개수는 아스날 경기장 레벨(Lv.{stadiumConfig.stadiumLevel})만큼 열려요
+          </p>
+        </div>
+      )}
       {/* 조작 안내 — 데스크톱(키보드)에서만. 터치 디바이스는 TouchControls 오버레이가 대체. */}
       <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
         A/D · ←→ 이동 · Space 점프 · 도어 앞에서 W/↑ 진입 · Enter 채팅
