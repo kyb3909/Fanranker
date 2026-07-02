@@ -1,4 +1,4 @@
-import { HighburyStage } from "@/components/metaverse/highbury-stage"
+import { StadiumPageBinding } from "@/components/metaverse/stadium-pip"
 
 export const metadata = {
   title: "스타디움",
@@ -8,6 +8,8 @@ export const metadata = {
 }
 
 export default function HighburyPage() {
-  // 가입 없이 게스트로 진입 가능 (캣스날 오픈 체험용).
-  return <HighburyStage allowGuest />
+  // 스테이지는 AppShell 의 StadiumPipProvider(GlobalStadium)가 상주 렌더 —
+  // 이 페이지는 진입=풀스크린 / 이탈=미니 전환 바인딩만 담당 (PIP 패턴).
+  // 게스트 진입 허용은 GlobalStadium 쪽 allowGuest 로 유지.
+  return <StadiumPageBinding />
 }

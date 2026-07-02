@@ -361,6 +361,23 @@ export class IndoorMapScene extends Phaser.Scene {
       if (this.input.keyboard) this.input.keyboard.enabled = true
     })
 
+    // PIP 미니 모드 — 씬 키보드를 완전히 끊어 미니 창 상태에서 페이지 스크롤/타이핑을 방해하지 않는다.
+    this.unsubTouch.push(
+      sceneBridge.on("pip:mode", ({ mini }) => {
+        resetAllKeys()
+        if (this.input.keyboard) {
+          this.input.keyboard.enabled = !mini
+          if (mini) this.input.keyboard.disableGlobalCapture()
+          else this.input.keyboard.enableGlobalCapture()
+        }
+        const body = this.player?.body as Phaser.Physics.Arcade.Body | undefined
+        if (mini && body) {
+          body.setAccelerationX(0)
+          body.setVelocityX(0)
+        }
+      })
+    )
+
     // 모바일 터치 컨트롤 — TouchControls 오버레이가 emit. hold(move) + one-shot(jump/up/action).
     this.unsubTouch.push(
       sceneBridge.on("touch:move", ({ dir, active }) => {

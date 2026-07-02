@@ -13,6 +13,8 @@ import type { RoomChannel } from "@/lib/metaverse/realtime/room-channel"
 type BridgeEventMap = {
   "chat:input:open": undefined
   "chat:input:close": undefined
+  /** PIP 미니 모드 전환 — mini=true 면 씬 키보드 입력을 끊는다 (페이지 탐색 방해 방지) */
+  "pip:mode": { mini: boolean }
   /** 내 아바타가 Plot 경계 안으로 진입. roomId/ownerUserId 는 방이 있을 때만 세팅 */
   "plot:enter": {
     plotId: string

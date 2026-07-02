@@ -165,7 +165,13 @@ export function bootIndoorMap({
     game.scale.resize(parent.clientWidth * dpr, parent.clientHeight * dpr)
   }
   window.addEventListener("resize", onResize)
-  game.events.once("destroy", () => window.removeEventListener("resize", onResize))
+  // PIP 풀↔미니 전환처럼 window resize 없이 부모 크기만 바뀌는 경우 대응
+  const ro = new ResizeObserver(onResize)
+  ro.observe(parent)
+  game.events.once("destroy", () => {
+    window.removeEventListener("resize", onResize)
+    ro.disconnect()
+  })
   game.scene.start(INDOOR_MAP_SCENE_KEY, { identity, mapId, channel })
   return game
 }

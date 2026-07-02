@@ -36,9 +36,17 @@ import { createAnonClient } from "@/lib/supabase/client"
 interface HighburyStageProps {
   /** true 면 비로그인 게스트도 진입 가능 (테스트용 — /metaverse/prototype 등). 기본 false. */
   allowGuest?: boolean
+  /**
+   * PIP(전역 상주) 모드 — StadiumPipProvider(GlobalStadium)가 넘김.
+   * 있으면 컨테이너 포지셔닝은 부모(wrapper)가 담당하고, mini 일 땐 오버레이 UI 를
+   * 전부 숨기고 씬 키보드를 차단한다. 없으면(standalone, /metaverse/prototype 등)
+   * 기존처럼 스스로 헤더 아래 풀스크린 fixed 로 렌더.
+   */
+  pip?: { mode: "full" | "mini"; onExpand: () => void; onClose: () => void }
 }
 
-export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
+export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = {}) {
+  const isMini = pip?.mode === "mini"
   const { isSignedIn, isLoaded } = useAuth()
   const { user } = useUser()
   const router = useRouter()
@@ -320,6 +328,9 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
           mapId: "highbury",
           channel: activeChannel,
         })
+        // 부팅 완료 시점이 미니 모드일 수 있음 (부팅 중 페이지 이탈) — 씬 create 이후에
+        // 현재 모드를 재통지해 키보드 상태를 맞춘다.
+        setTimeout(() => sceneBridge.emit("pip:mode", { mini: isMiniRef.current }), 800)
       } catch (err) {
         console.error("[highbury] boot failed", err)
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
@@ -388,8 +399,9 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
     [roomIndex]
   )
 
-  // 페이지 진입 동안 body 스크롤 잠금 — GNB 외 다른 영역 스크롤바 제거.
+  // 풀스크린 동안 body 스크롤 잠금 — 미니 모드에선 페이지 스크롤이 살아야 하므로 해제.
   useEffect(() => {
+    if (isMini) return
     const html = document.documentElement
     const body = document.body
     const prevHtml = html.style.overflow
@@ -400,7 +412,14 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
       html.style.overflow = prevHtml
       body.style.overflow = prevBody
     }
-  }, [])
+  }, [isMini])
+
+  // 씬 키보드 차단/복원 — 미니 창이 페이지 탐색(스크롤·타이핑)을 방해하지 않도록
+  const isMiniRef = useRef(isMini)
+  useEffect(() => {
+    isMiniRef.current = isMini
+    sceneBridge.emit("pip:mode", { mini: isMini })
+  }, [isMini])
 
   // 로딩 상태 — Phaser 부팅 안 함 (게스트 모드면 Clerk 결과 기다리지 않음)
   if (!mounted || (!isLoaded && !allowGuest)) {
@@ -487,111 +506,151 @@ export function HighburyStage({ allowGuest = false }: HighburyStageProps = {}) {
 
   return (
     <div
-      className="fixed inset-x-0 mx-auto max-w-[1280px] overflow-hidden bg-neutral-950"
-      style={{ top: topOffset, bottom: 0 }}
+      className={
+        pip
+          ? "relative h-full w-full overflow-hidden bg-neutral-950"
+          : "fixed inset-x-0 mx-auto max-w-[1280px] overflow-hidden bg-neutral-950"
+      }
+      style={pip ? undefined : { top: topOffset, bottom: 0 }}
     >
       <div ref={parentRef} className="h-full w-full" aria-label="하이버리 메타버스" />
-      {/* 월드맵 링크 제거 (2026-07-02) — /metaverse/uk 는 프로덕션에서 이 페이지로
-          리다이렉트라 눌러도 제자리. 월드맵 체인은 폐기 방향. */}
-      <MetaverseHud
-        locationLabel={
-          roomIndex
-            ? `🏟️ 하이버리 스타디움 · ${roomIndex}번 방${
-                currentOccupancy && stadiumConfig
-                  ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
-                  : ""
-              }`
-            : "🏟️ 하이버리 스타디움"
-        }
-        actions={
-          <button
-            onClick={toggleSwitcher}
-            className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
-          >
-            🚪 방 목록
-          </button>
-        }
-      />
-      {/* 방 이동 안내 토스트 */}
-      {switchMsg && (
-        <div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/12 bg-black/80 px-4 py-2 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-sm">
-          {switchMsg}
-        </div>
-      )}
-      {/* 방 목록 패널 — 방별 인원 + 클릭 이동 */}
-      {switcherOpen && stadiumConfig && (
-        <div className="absolute top-14 right-3 z-30 w-60 rounded-xl border border-white/12 bg-black/85 p-3 shadow-xl backdrop-blur">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[12px] font-bold text-white/90">방 목록</span>
+      {/* 미니 모드 크롬 — 확대/닫기 + 현재 방 라벨. 오버레이 UI 는 풀 모드에서만. */}
+      {isMini && pip && (
+        <>
+          <div className="absolute top-1.5 right-1.5 z-20 flex gap-1">
             <button
-              onClick={() => void refreshRoomCounts()}
-              disabled={countsLoading}
-              className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+              onClick={pip.onExpand}
+              aria-label="스타디움 크게 보기"
+              className="rounded-md bg-black/70 px-2 py-1 text-[11px] font-bold text-white/90 backdrop-blur-sm transition-colors hover:bg-black/90"
             >
-              {countsLoading ? "확인 중…" : "새로고침"}
+              ⤢
+            </button>
+            <button
+              onClick={pip.onClose}
+              aria-label="스타디움 나가기"
+              className="rounded-md bg-black/70 px-2 py-1 text-[11px] font-bold text-white/90 backdrop-blur-sm transition-colors hover:bg-black/90"
+            >
+              ✕
             </button>
           </div>
-          <div className="space-y-1">
-            {Array.from({ length: stadiumConfig.channelCap }, (_, k) => k + 1).map((i) => {
-              const isCurrent = i === roomIndex
-              const cnt = isCurrent ? currentOccupancy : roomCounts?.[i]
-              const isFull =
-                typeof cnt === "number" && cnt >= 0 && cnt >= stadiumConfig.capacityPerChannel
-              return (
-                <button
-                  key={i}
-                  onClick={() => handlePickRoom(i)}
-                  disabled={isCurrent || isFull}
-                  className={
-                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors " +
-                    (isCurrent
-                      ? "bg-white/15 text-white"
-                      : isFull
-                        ? "cursor-not-allowed text-white/35"
-                        : "text-white/80 hover:bg-white/10")
-                  }
-                >
-                  <span>
-                    {i}번 방
-                    {isCurrent && (
-                      <span className="ml-1.5 rounded bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
-                        현재
-                      </span>
-                    )}
-                    {!isCurrent && isFull && (
-                      <span className="ml-1.5 rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold text-red-300">
-                        만석
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-white/60 tabular-nums">
-                    {cnt == null || cnt < 0 ? "–" : `${cnt}/${stadiumConfig.capacityPerChannel}`}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-          <p className="mt-2 text-[10px] leading-relaxed text-white/45">
-            방 개수는 아스날 경기장 레벨(Lv.{stadiumConfig.stadiumLevel})만큼 열려요
-          </p>
-        </div>
+          <button
+            onClick={pip.onExpand}
+            className="absolute bottom-1.5 left-1.5 z-20 rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-sm"
+          >
+            🏟️ {roomIndex ? `${roomIndex}번 방` : "스타디움"}
+            {currentOccupancy && stadiumConfig
+              ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
+              : ""}
+          </button>
+        </>
       )}
-      {/* 조작 안내 — 데스크톱(키보드)에서만. 터치 디바이스는 TouchControls 오버레이가 대체. */}
-      <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
-        A/D · ←→ 이동 · Space 점프 · 도어 앞에서 W/↑ 진입 · Enter 채팅
-      </div>
-      {/* 모바일 터치 조작 — pointer:coarse 에서만 렌더 */}
-      <TouchControls />
-      {/* 채팅 — 로컬 echo (혼자 보낸 메시지만 패널에 누적) */}
-      <ChatOverlay canSend={true} />
-      <ChatLogPanel identity={identity} />
-      {/* 다른 유저 클릭 시 뮤트/신고 팝오버 — 현재는 single-player 라 발동 X, 멀티 채널 추가 시 작동 */}
-      <UserActionPopover identity={identity} />
-      <ReportUserDialog
-        target={reportTarget}
-        identity={identity}
-        onClose={() => setReportTarget(null)}
-      />
+      {!isMini && (
+        <>
+          {/* 월드맵 링크 제거 (2026-07-02) — /metaverse/uk 는 프로덕션에서 이 페이지로
+          리다이렉트라 눌러도 제자리. 월드맵 체인은 폐기 방향. */}
+          <MetaverseHud
+            locationLabel={
+              roomIndex
+                ? `🏟️ 하이버리 스타디움 · ${roomIndex}번 방${
+                    currentOccupancy && stadiumConfig
+                      ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
+                      : ""
+                  }`
+                : "🏟️ 하이버리 스타디움"
+            }
+            actions={
+              <button
+                onClick={toggleSwitcher}
+                className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
+              >
+                🚪 방 목록
+              </button>
+            }
+          />
+          {/* 방 이동 안내 토스트 */}
+          {switchMsg && (
+            <div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/12 bg-black/80 px-4 py-2 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-sm">
+              {switchMsg}
+            </div>
+          )}
+          {/* 방 목록 패널 — 방별 인원 + 클릭 이동 */}
+          {switcherOpen && stadiumConfig && (
+            <div className="absolute top-14 right-3 z-30 w-60 rounded-xl border border-white/12 bg-black/85 p-3 shadow-xl backdrop-blur">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[12px] font-bold text-white/90">방 목록</span>
+                <button
+                  onClick={() => void refreshRoomCounts()}
+                  disabled={countsLoading}
+                  className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+                >
+                  {countsLoading ? "확인 중…" : "새로고침"}
+                </button>
+              </div>
+              <div className="space-y-1">
+                {Array.from({ length: stadiumConfig.channelCap }, (_, k) => k + 1).map((i) => {
+                  const isCurrent = i === roomIndex
+                  const cnt = isCurrent ? currentOccupancy : roomCounts?.[i]
+                  const isFull =
+                    typeof cnt === "number" && cnt >= 0 && cnt >= stadiumConfig.capacityPerChannel
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handlePickRoom(i)}
+                      disabled={isCurrent || isFull}
+                      className={
+                        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors " +
+                        (isCurrent
+                          ? "bg-white/15 text-white"
+                          : isFull
+                            ? "cursor-not-allowed text-white/35"
+                            : "text-white/80 hover:bg-white/10")
+                      }
+                    >
+                      <span>
+                        {i}번 방
+                        {isCurrent && (
+                          <span className="ml-1.5 rounded bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
+                            현재
+                          </span>
+                        )}
+                        {!isCurrent && isFull && (
+                          <span className="ml-1.5 rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold text-red-300">
+                            만석
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-white/60 tabular-nums">
+                        {cnt == null || cnt < 0
+                          ? "–"
+                          : `${cnt}/${stadiumConfig.capacityPerChannel}`}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-white/45">
+                방 개수는 아스날 경기장 레벨(Lv.{stadiumConfig.stadiumLevel})만큼 열려요
+              </p>
+            </div>
+          )}
+          {/* 조작 안내 — 데스크톱(키보드)에서만. 터치 디바이스는 TouchControls 오버레이가 대체. */}
+          <div className="pointer-events-none absolute right-3 bottom-3 hidden rounded-md bg-black/65 px-3 py-1.5 text-[10px] text-white/70 shadow-lg backdrop-blur-sm [@media(pointer:fine)]:block">
+            A/D · ←→ 이동 · Space 점프 · 도어 앞에서 W/↑ 진입 · Enter 채팅
+          </div>
+          {/* 모바일 터치 조작 — pointer:coarse 에서만 렌더 */}
+          <TouchControls />
+          {/* 채팅 — 로컬 echo (혼자 보낸 메시지만 패널에 누적) */}
+          <ChatOverlay canSend={true} />
+          <ChatLogPanel identity={identity} />
+          {/* 다른 유저 클릭 시 뮤트/신고 팝오버 — 현재는 single-player 라 발동 X, 멀티 채널 추가 시 작동 */}
+          <UserActionPopover identity={identity} />
+          <ReportUserDialog
+            target={reportTarget}
+            identity={identity}
+            onClose={() => setReportTarget(null)}
+          />
+        </>
+      )}
     </div>
   )
 }
