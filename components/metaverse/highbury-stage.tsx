@@ -245,6 +245,9 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
         // 자리 있으면 trackSelf(정식 입장), 만석이면 disconnect 후 다음 방.
         const supabase = createAnonClient()
         const roomChannelName = (i: number) => `${METAVERSE.CHANNEL_INDOOR_HIGHBURY}:room-${i}`
+        // Phaser 청크(~1.3MB) 다운로드를 방 배정(presence 연결 1~2s)과 병렬로 —
+        // 순차 실행 시 그만큼 로딩이 늘어난다 (2026-07-02 로딩 개선).
+        const bootModulePromise = import("@/lib/metaverse/boot")
 
         let assigned = -1
         let realtimeDown = false
@@ -313,7 +316,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
         }
         if (realtimeDown) console.warn("[highbury] presence unavailable — 싱글플레이 mode")
 
-        const { bootIndoorMap } = await import("@/lib/metaverse/boot")
+        const { bootIndoorMap } = await bootModulePromise
         if (cancelled || !parentRef.current) return
         setRoomIndex(assigned)
         // 현재 방 실시간 인원 = 원격(나 제외) + 1

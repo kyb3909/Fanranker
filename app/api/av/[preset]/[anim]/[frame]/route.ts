@@ -24,8 +24,11 @@ export function GET(
         status: 200,
         headers: {
           "Content-Type": mime,
-          // 에셋 갱신 시 gandalf-avatar.ts 의 ?v= 버전을 올려서 무효화
-          "Cache-Control": "public, max-age=31536000, immutable",
+          // 에셋 갱신 시 gandalf-avatar.ts 의 ?v= 버전을 올려서 무효화.
+          // s-maxage 필수 — 없으면 Vercel CDN 이 함수 응답을 캐시하지 않아 프레임
+          // 270개가 유저·첫방문마다 전부 서버리스 함수를 때림 (스타디움 로딩 병목,
+          // 2026-07-02 실측: 프레임 완료까지 7.5s 중 상당분).
+          "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
         },
       })
     }
