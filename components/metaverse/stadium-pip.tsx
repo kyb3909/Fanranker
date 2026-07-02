@@ -123,8 +123,13 @@ function GlobalStadium() {
   }, [])
 
   const onMiniPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    // 버튼/입력창 클릭은 드래그로 취급하지 않음
-    if ((e.target as HTMLElement).closest("button, input")) return
+    // 채팅 입력창 클릭 = 곧바로 조작 활성 (입력 blur 후 방향키가 게임으로 가도록)
+    if ((e.target as HTMLElement).closest("input")) {
+      setMiniActive(true)
+      return
+    }
+    // 버튼 클릭은 드래그/활성 취급하지 않음
+    if ((e.target as HTMLElement).closest("button")) return
     const rect = wrapperRef.current?.getBoundingClientRect()
     if (!rect) return
     dragRef.current = {

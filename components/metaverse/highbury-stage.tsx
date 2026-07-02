@@ -447,6 +447,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
 
   // 미니 채팅 입력 — 포커스 동안 씬 키보드/전역 캡처 해제 (띄어쓰기·화살표가 입력창으로)
   const [miniChatText, setMiniChatText] = useState("")
+  const miniChatInputRef = useRef<HTMLInputElement>(null)
   const handleMiniChatSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
@@ -454,6 +455,9 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
       if (!text) return
       sceneBridge.emit("chat:send", { text })
       setMiniChatText("")
+      // 전송 후 입력창 blur — 키보드를 게임으로 돌려줘서 바로 이동 가능하게.
+      // (blur 핸들러가 chat:input:close + pip:mode 재적용을 처리)
+      miniChatInputRef.current?.blur()
     },
     [miniChatText]
   )
@@ -600,6 +604,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
           {/* 미니 채팅 입력 — 미니 상태에서도 바로 채팅 */}
           <form onSubmit={handleMiniChatSubmit} className="absolute inset-x-0 bottom-0 z-20">
             <input
+              ref={miniChatInputRef}
               type="text"
               value={miniChatText}
               onChange={(e) => setMiniChatText(e.target.value)}
