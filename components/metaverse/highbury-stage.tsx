@@ -22,6 +22,7 @@ import { Loader2 } from "lucide-react"
 import type { MetaversePlayerIdentity } from "@/lib/metaverse/types"
 import { MALE_BASIC_AVATAR_KEY } from "@/lib/metaverse/avatar/presets"
 import { MetaverseHud } from "./metaverse-hud"
+import { LiveBillboard } from "./live-billboard"
 import { TouchControls } from "./touch-controls"
 import { ChatOverlay } from "./chat-overlay"
 import { ChatLogPanel } from "./chat-log-panel"
@@ -644,6 +645,8 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
               </button>
             }
           />
+          {/* 전광판 — 캣스날 라이브 감지 시 자동 표시 (평소엔 없음) */}
+          <LiveBillboard />
           {/* 방 이동 안내 토스트 */}
           {switchMsg && (
             <div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/12 bg-black/80 px-4 py-2 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-sm">
