@@ -285,7 +285,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
             presenceChannel = r.ch
             assigned = desiredRoom
           } else if (r.status === "full") {
-            setSwitchMsg(`${desiredRoom}번 방이 가득 찼어요 — 자리가 있는 방으로 배정할게요`)
+            setSwitchMsg(`${desiredRoom}채널이 가득 찼어요 — 자리가 있는 채널로 배정할게요`)
           } else {
             realtimeDown = true
             assigned = desiredRoom // realtime 다운 → 싱글플레이로 그 방 부팅
@@ -397,7 +397,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
     (i: number) => {
       setSwitcherOpen(false)
       if (i === roomIndex) return
-      setSwitchMsg(`${i}번 방으로 이동 중…`)
+      setSwitchMsg(`${i}채널로 이동 중…`)
       setDesiredRoom(i)
       // 같은 desiredRoom 재선택(직전 이동이 만석 폴백된 뒤 재시도)에도 재실행되도록
       setJoinAttempt((n) => n + 1)
@@ -578,7 +578,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
           {/* 방 라벨 + 조작 상태 — 상단 좌측 */}
           <div className="absolute top-1.5 left-1.5 z-20 flex items-center gap-1">
             <span className="rounded-md bg-black/70 px-2 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-sm">
-              🏟️ {roomIndex ? `${roomIndex}번 방` : "스타디움"}
+              🏟️ {roomIndex ? `${roomIndex}채널` : "스타디움"}
               {currentOccupancy && stadiumConfig
                 ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
                 : ""}
@@ -629,7 +629,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
           <MetaverseHud
             locationLabel={
               roomIndex
-                ? `🏟️ 하이버리 스타디움 · ${roomIndex}번 방${
+                ? `🏟️ 하이버리 스타디움 · ${roomIndex}채널${
                     currentOccupancy && stadiumConfig
                       ? ` (${currentOccupancy}/${stadiumConfig.capacityPerChannel})`
                       : ""
@@ -641,7 +641,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
                 onClick={toggleSwitcher}
                 className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
               >
-                🚪 방 목록
+                🚪 채널 목록
               </button>
             }
           />
@@ -657,7 +657,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
           {switcherOpen && stadiumConfig && (
             <div className="absolute top-14 right-3 z-30 w-60 rounded-xl border border-white/12 bg-black/85 p-3 shadow-xl backdrop-blur">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[12px] font-bold text-white/90">방 목록</span>
+                <span className="text-[12px] font-bold text-white/90">채널 목록</span>
                 <button
                   onClick={() => void refreshRoomCounts()}
                   disabled={countsLoading}
@@ -687,7 +687,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
                       }
                     >
                       <span>
-                        {i}번 방
+                        {i}채널
                         {isCurrent && (
                           <span className="ml-1.5 rounded bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
                             현재
@@ -709,7 +709,7 @@ export function HighburyStage({ allowGuest = false, pip }: HighburyStageProps = 
                 })}
               </div>
               <p className="mt-2 text-[10px] leading-relaxed text-white/45">
-                방 개수는 아스날 경기장 레벨(Lv.{stadiumConfig.stadiumLevel})만큼 열려요
+                채널 개수는 아스날 경기장 레벨(Lv.{stadiumConfig.stadiumLevel})만큼 열려요
               </p>
             </div>
           )}

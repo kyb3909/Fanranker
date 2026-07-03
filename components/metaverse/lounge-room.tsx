@@ -152,7 +152,7 @@ export function LoungeRoom() {
               `${METAVERSE.CHANNEL_LOUNGE_PREFIX}${desiredRoom}`
             )
             if (occupancy < loungeConfig.capacityPerChannel) assigned = desiredRoom
-            else setSwitchMsg(`${desiredRoom}번 방이 가득 찼어요 — 자리가 있는 방으로 배정할게요`)
+            else setSwitchMsg(`${desiredRoom}채널이 가득 찼어요 — 자리가 있는 채널로 배정할게요`)
           } catch (err) {
             console.warn("[lounge] occupancy probe failed", err)
             realtimeDown = true
@@ -283,7 +283,7 @@ export function LoungeRoom() {
     (i: number) => {
       setSwitcherOpen(false)
       if (i === roomIndex) return
-      setSwitchMsg(`${i}번 방으로 이동 중…`)
+      setSwitchMsg(`${i}채널로 이동 중…`)
       setDesiredRoom(i)
       // 같은 desiredRoom 을 다시 고른 경우(직전 이동이 만석 폴백된 뒤 재시도)에도
       // 부팅 이펙트가 재실행되도록 attempt 를 함께 올린다 (같은 배치라 재부팅은 1회).
@@ -376,7 +376,7 @@ export function LoungeRoom() {
       <MetaverseHud
         locationLabel={
           roomIndex
-            ? `🛋️ 팬 라운지 · ${roomIndex}번 방${
+            ? `🛋️ 팬 라운지 · ${roomIndex}채널${
                 currentOccupancy && loungeConfig
                   ? ` (${currentOccupancy}/${loungeConfig.capacityPerChannel})`
                   : ""
@@ -389,7 +389,7 @@ export function LoungeRoom() {
               onClick={toggleSwitcher}
               className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[11px] font-semibold text-white/90 shadow-lg backdrop-blur-sm transition-all hover:scale-[1.03] hover:border-white/30 hover:bg-black/80"
             >
-              🚪 방 목록
+              🚪 채널 목록
             </button>
             <button
               onClick={() => setShopOpen(true)}
@@ -410,7 +410,7 @@ export function LoungeRoom() {
       {switcherOpen && loungeConfig && (
         <div className="absolute top-14 right-3 z-30 w-60 rounded-xl border border-white/12 bg-black/85 p-3 shadow-xl backdrop-blur">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[12px] font-bold text-white/90">방 목록</span>
+            <span className="text-[12px] font-bold text-white/90">채널 목록</span>
             <button
               onClick={() => void refreshRoomCounts()}
               disabled={countsLoading}
@@ -440,7 +440,7 @@ export function LoungeRoom() {
                   }
                 >
                   <span>
-                    {i}번 방
+                    {i}채널
                     {isCurrent && (
                       <span className="ml-1.5 rounded bg-emerald-500/25 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
                         현재
@@ -460,7 +460,7 @@ export function LoungeRoom() {
             })}
           </div>
           <p className="mt-2 text-[10px] leading-relaxed text-white/45">
-            방 개수는 아스날 경기장 레벨(Lv.{loungeConfig.stadiumLevel})만큼 열려요
+            채널 개수는 아스날 경기장 레벨(Lv.{loungeConfig.stadiumLevel})만큼 열려요
           </p>
         </div>
       )}
