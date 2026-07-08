@@ -4,7 +4,11 @@ import { ArrowLeft } from "lucide-react"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { SectionHeader } from "@/components/section-header"
-import { WORLDCUP_SCORING_STARTS_AT } from "@/lib/worldcup/scoring"
+import {
+  WORLDCUP_SCORING_STARTS_AT,
+  WORLDCUP_SCORING_SNAPSHOT_AT,
+  WORLDCUP_SNAPSHOT_NOTE,
+} from "@/lib/worldcup/scoring"
 import {
   LeaderboardClient,
   type LbGroup,
@@ -12,6 +16,7 @@ import {
   type LbRanking,
   type LbMyInfo,
 } from "@/components/worldcup/leaderboard-client"
+import { WorldcupSnapshotNotice } from "@/components/worldcup/worldcup-snapshot-notice"
 
 const EVENT_SLUG = "worldcup-2026"
 
@@ -68,6 +73,18 @@ export default async function WorldcupLeaderboardPage() {
   let profiles: ProfileRow[] = []
 
   if (event) {
+    // 32강 하한 + (설정 시) 스냅샷 상한 — 순위를 특정 라운드 종료 시점으로 고정한다.
+    let slipsQuery = supabase
+      .from("prediction_slips")
+      .select("user_id, stake, total_odds, status")
+      .eq("event_id", event.id)
+      // 32강부터 정식 집계 — 그 이전 슬립은 순위에 반영하지 않는다.
+      .gte("created_at", WORLDCUP_SCORING_STARTS_AT)
+    if (WORLDCUP_SCORING_SNAPSHOT_AT) {
+      // 스냅샷 상한 이후 슬립 제외 → 화면상 순위가 "이 시점까지"로 고정 (막바지 참여 독려).
+      slipsQuery = slipsQuery.lte("created_at", WORLDCUP_SCORING_SNAPSHOT_AT)
+    }
+
     const [{ data: g }, { data: r }, { data: s }] = await Promise.all([
       supabase
         .from("event_groups")
@@ -76,12 +93,7 @@ export default async function WorldcupLeaderboardPage() {
         .eq("slug", "gooner") // 아스날 전용 — kop/blues DB 행이 남아있어도 리더보드엔 구너만
         .order("sort_order"),
       supabase.from("event_registrations").select("user_id, group_id").eq("event_id", event.id),
-      supabase
-        .from("prediction_slips")
-        .select("user_id, stake, total_odds, status")
-        .eq("event_id", event.id)
-        // 32강부터 정식 집계 — 그 이전 슬립은 순위에 반영하지 않는다.
-        .gte("created_at", WORLDCUP_SCORING_STARTS_AT),
+      slipsQuery,
     ])
     groups = (g ?? []) as GroupRow[]
     registrations = (r ?? []) as RegistrationRow[]
@@ -212,6 +224,7 @@ export default async function WorldcupLeaderboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
+      <WorldcupSnapshotNotice />
       <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
         <Link
           href="/worldcup"
@@ -223,7 +236,7 @@ export default async function WorldcupLeaderboardPage() {
         <SectionHeader
           label="LEADERBOARD"
           title="리더보드"
-          description="구너 전체 평균과 실시간 TOP 10 순위, 그리고 내 순위를 확인하세요. 정식 집계는 32강부터 반영됩니다."
+          description="구너 전체 평균과 TOP 10 순위, 그리고 내 순위를 확인하세요. 정식 집계는 32강부터 반영됩니다."
           style={{ marginTop: 16 }}
         />
 
@@ -242,6 +255,7 @@ export default async function WorldcupLeaderboardPage() {
           groupAvg={groupAvgArr}
           rankings={top10BySlug}
           myInfo={myInfo}
+          note={WORLDCUP_SNAPSHOT_NOTE}
         />
       </div>
     </div>

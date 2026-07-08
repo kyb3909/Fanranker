@@ -43,11 +43,19 @@ interface LeaderboardClientProps {
   /** 그룹별 TOP 10 순위 (공개). */
   rankings?: Record<string, LbRanking[]>
   myInfo: LbMyInfo | null
+  /** 하단 안내 문구 (스냅샷 공개 정책 등). */
+  note?: string
 }
 
 const fmtProfit = (n: number) => `${n >= 0 ? "+" : ""}${n.toLocaleString()}`
 
-export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: LeaderboardClientProps) {
+export function LeaderboardClient({
+  groups,
+  groupAvg,
+  rankings,
+  myInfo,
+  note,
+}: LeaderboardClientProps) {
   const groupAvgBySlug = useMemo(() => new Map(groupAvg.map((g) => [g.slug, g])), [groupAvg])
 
   // 그룹 카드 정렬 — rank 순 (avgProfit 내림차순)
@@ -293,7 +301,7 @@ export function LeaderboardClient({ groups, groupAvg, rankings, myInfo }: Leader
       )}
 
       <p className="text-center text-[11px]" style={{ color: "var(--wc-mute)" }}>
-        실시간 구너 평균과 순위. 정식 집계는 32강부터 반영됩니다.
+        {note ?? "구너 평균과 순위. 정식 집계는 32강부터 반영됩니다."}
       </p>
     </div>
   )
