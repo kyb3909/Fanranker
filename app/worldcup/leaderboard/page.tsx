@@ -16,7 +16,6 @@ import {
   type LbRanking,
   type LbMyInfo,
 } from "@/components/worldcup/leaderboard-client"
-import { WorldcupSnapshotNotice } from "@/components/worldcup/worldcup-snapshot-notice"
 
 const EVENT_SLUG = "worldcup-2026"
 
@@ -224,7 +223,6 @@ export default async function WorldcupLeaderboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
-      <WorldcupSnapshotNotice />
       <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
         <Link
           href="/worldcup"

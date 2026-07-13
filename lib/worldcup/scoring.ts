@@ -26,20 +26,18 @@ const SCORING_START_MS = new Date(WORLDCUP_SCORING_STARTS_AT).getTime()
  *   4. 결승 종료 후     → `null` 로 두면 상한 해제 = 전체 반영 (최종 순위 공개)
  *
  * betman 데일리 윈도우가 08:00 KST 경계이므로, 반영할 마지막 회차의 "익일 08:00"을 상한으로 둔다.
- * 현재값: 16강 마지막 베팅일이 2026-07-07(회차 끝 07-08 08:00)이고 8강이 07-08 시작 →
- * "2026-07-08T08:00:00+09:00" 이면 7/7까지(=16강) 포함, 7/8 이후(=8강) 제외.
- *
- * 8강 종료 후 공개(=8강 반영)하려면 8강 마지막 회차의 익일 08:00 으로 이 값을 앞당긴다.
- * 조정이 필요하면 이 값 한 줄만 바꾸면 리더보드가 따라간다.
+ * 현재값: `null` = 상한 해제 = **전체 실시간 반영**. 이벤트 막바지(4강 종료, 남은 경기 소수)로
+ * 스냅샷 지연 공개를 종료하고 리더보드를 실시간으로 되돌림 (2026-07-13).
+ * (이력: 07-08 = 16강까지 고정 → 다시 지연 공개가 필요하면 마지막 반영 회차의 익일 08:00 문자열로 세팅.)
  */
-export const WORLDCUP_SCORING_SNAPSHOT_AT: string | null = "2026-07-08T08:00:00+09:00"
+export const WORLDCUP_SCORING_SNAPSHOT_AT: string | null = null
 
 /**
  * 리더보드에 노출할 스냅샷 안내 문구 (단일 출처).
  * 마일스톤에서 `WORLDCUP_SCORING_SNAPSHOT_AT` 을 조정할 때 함께 갱신한다.
  */
 export const WORLDCUP_SNAPSHOT_NOTE =
-  "순위는 실시간이 아니라 라운드 종료 시점마다 공개돼요. 현재는 16강까지 반영 — 8강 순위 변동은 4강부터 공개됩니다."
+  "순위는 정산 결과에 따라 실시간으로 반영됩니다. 정식 집계는 32강부터."
 
 /** 슬립/예측이 정식 집계 대상인지 — created_at 이 집계 시작 시점 이후인가. */
 export function isWorldcupScoringSlip(createdAt: string | null | undefined): boolean {
