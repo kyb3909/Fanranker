@@ -5,6 +5,10 @@
       "schedule": "0 14 * * *"
     },
     {
+      "path": "/api/cron/discord-daily-digest",
+      "schedule": "5 14 * * *"
+    },
+    {
       "path": "/api/cron/betman-sync",
       "schedule": "*/30 * * * *"
     },

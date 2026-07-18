@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/supabase/admin"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
+import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
+import type { TipTapNode } from "@/types/post"
 
 export const dynamic = "force-dynamic"
 
@@ -32,6 +35,10 @@ interface DraftReservoirRow {
   status: string
   urls: { source?: string | null } | null
   draft: { title?: string; content?: unknown; tags?: string[] } | null
+  entities: {
+    teams?: { surface?: string | null; preferred_ko?: string | null }[]
+  } | null
+  tags: string[] | null
 }
 
 export async function POST(req: NextRequest) {
@@ -56,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   const { data: item } = await supabase
     .from("news_reservoir")
-    .select("id, status, urls, draft")
+    .select("id, status, urls, draft, entities, tags")
     .eq("id", id)
     .maybeSingle<DraftReservoirRow>()
   if (!item) return NextResponse.json({ error: "초안을 찾을 수 없습니다." }, { status: 404 })
@@ -119,6 +126,20 @@ export async function POST(req: NextRequest) {
       updated_at: now,
     })
     .eq("id", id)
+
+  // 디스코드 뉴스봇 채널 발송 — 웹훅 미설정 시 no-op, 실패해도 발행에는 영향 없음.
+  // 라우팅: 제목 + 태그 + 팀 엔티티로 팀 채널 결정 (두 팀 이상 매칭 시 종합).
+  const teamTexts = (item.entities?.teams ?? []).flatMap((t) => [t.surface, t.preferred_ko])
+  const teaser = extractTextFromTipTapJSON(finalContent as TipTapNode)
+    .slice(0, 200)
+    .trim()
+  await notifyNewsPublished({
+    channel: resolveNewsChannel([finalTitle, ...(item.tags ?? []), ...teamTexts]),
+    postId: post.id,
+    title: finalTitle,
+    teaser,
+    imageUrl: image,
+  })
 
   return NextResponse.json({ ok: true, status: "published", post_id: post.id })
 }

@@ -11,6 +11,14 @@ const serverSchema = z.object({
   FACEBOOK_ACCESS_TOKEN: z.string().optional(),
   // 운영 알림 디스코드 웹훅 (신고/검수/정산/크롤링 이슈 → 직원 채널). 미설정 시 알림 no-op.
   DISCORD_OPS_WEBHOOK_URL: z.string().url().optional(),
+  // 뉴스봇 디스코드 서버 웹훅 (유저 대상 — docs/DISCORD_NEWSBOT_DESIGN.md). 미설정 채널은 no-op.
+  DISCORD_NEWS_WEBHOOK_ARSENAL: z.string().url().optional(),
+  DISCORD_NEWS_WEBHOOK_LIVERPOOL: z.string().url().optional(),
+  DISCORD_NEWS_WEBHOOK_CHELSEA: z.string().url().optional(),
+  DISCORD_NEWS_WEBHOOK_FOOTBALL: z.string().url().optional(),
+  DISCORD_DIGEST_WEBHOOK_URL: z.string().url().optional(),
+  // 다이제스트 멘션 (옵트인 역할만 — 예: "<@&123>"). @everyone 금지.
+  DISCORD_DIGEST_MENTION: z.string().optional(),
   // Cloudflare Stream (영상 업로드 — direct creator upload). 둘 다 있어야 영상 업로드 활성화.
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
