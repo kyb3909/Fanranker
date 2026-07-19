@@ -34,6 +34,8 @@ interface HomeClientProps {
   initialRecentComments?: unknown[]
   initialGlobalNotices?: GlobalNotice[]
   initialSort?: SortType
+  /** 월드컵 이벤트 종료 여부 — true 면 배너가 "우승자 확인"으로 전환 */
+  worldcupConcluded?: boolean
 }
 
 export function HomeClient({
@@ -42,6 +44,7 @@ export function HomeClient({
   initialRecentComments,
   initialGlobalNotices,
   initialSort = "new",
+  worldcupConcluded = false,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -138,9 +141,9 @@ export function HomeClient({
               </span>
             </Link>
 
-            {/* 월드컵 이벤트 배너 (글쓰기와 카드 사이) */}
+            {/* 월드컵 이벤트 배너 (글쓰기와 카드 사이) — 종료 시 "우승자 확인"으로 전환 */}
             <Link
-              href="/worldcup"
+              href={worldcupConcluded ? "/worldcup/result" : "/worldcup"}
               className="flex items-center gap-3 rounded-xl px-[18px] py-[14px] no-underline transition-opacity hover:opacity-90"
               style={{
                 background:
@@ -160,14 +163,16 @@ export function HomeClient({
                   World Cup 2026 Event
                 </span>
                 <span className="mt-0.5 block text-[14.5px] font-bold">
-                  월드컵 승부예측 구너들의 대결 — 지금 참가하세요
+                  {worldcupConcluded
+                    ? "대회가 마무리되었습니다 — 우승자를 확인하세요"
+                    : "월드컵 승부예측 구너들의 대결 — 지금 참가하세요"}
                 </span>
               </span>
               <span
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12.5px] font-bold"
                 style={{ background: "rgba(255,255,255,.14)", padding: "7px 13px" }}
               >
-                참가 신청
+                {worldcupConcluded ? "우승자 확인" : "참가 신청"}
                 <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </span>
             </Link>

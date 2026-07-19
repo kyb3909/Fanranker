@@ -55,7 +55,14 @@ interface Ranked {
   accuracy: number
 }
 
-export default async function WorldcupResultPage() {
+export default async function WorldcupResultPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>
+}) {
+  const sp = await searchParams
+  // 개발 환경에서만 동작하는 미리보기 — 프로덕션에선 항상 false (status 게이트 우회 불가)
+  const previewMode = process.env.NODE_ENV !== "production" && sp?.preview === "1"
   const supabase = createServiceRoleClient()
 
   const { data: event } = await supabase
@@ -90,7 +97,8 @@ export default async function WorldcupResultPage() {
   }
 
   // 종료 전이면 안내만 (status='closed' 로 바꾸기 전엔 아무도 결과를 못 봄)
-  if (event.status !== "closed") {
+  // previewMode(개발 전용)면 게이트를 건너뛰고 실제 결과 레이아웃을 미리 렌더
+  if (event.status !== "closed" && !previewMode) {
     return (
       <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
         <div className="mx-auto max-w-[640px] px-6 py-16 text-center">
@@ -113,17 +121,29 @@ export default async function WorldcupResultPage() {
   }
 
   // 종료 후 — 참가자/슬립 fetch 후 종합 랭킹 집계
-  const [{ data: r }, { data: s }] = await Promise.all([
-    supabase.from("event_registrations").select("user_id").eq("event_id", event.id),
-    supabase
+  const { data: r } = await supabase
+    .from("event_registrations")
+    .select("user_id")
+    .eq("event_id", event.id)
+  const registrations = (r ?? []) as RegRow[]
+
+  // 슬립 전량 조회 — Supabase 는 1요청당 최대 1000행이라, 이벤트 슬립이 1000건을
+  // 넘으면 앞부분만 읽혀 점수가 축소 집계된다(순위 오류). id 순 페이지네이션으로 전부 읽는다.
+  const PAGE = 1000
+  const slips: SlipRow[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data: chunk } = await supabase
       .from("prediction_slips")
       .select("user_id, stake, total_odds, status")
       .eq("event_id", event.id)
       // 32강부터 정식 집계 — 리더보드와 동일 기준
-      .gte("created_at", WORLDCUP_SCORING_STARTS_AT),
-  ])
-  const registrations = (r ?? []) as RegRow[]
-  const slips = (s ?? []) as SlipRow[]
+      .gte("created_at", WORLDCUP_SCORING_STARTS_AT)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (!chunk || chunk.length === 0) break
+    slips.push(...(chunk as SlipRow[]))
+    if (chunk.length < PAGE) break
+  }
 
   // user → net profit / accuracy (결과 페이지·리더보드 공통 공식: 슬립 단위 net)
   const userStats = new Map<string, { profit: number; settled: number; won: number }>()
@@ -140,28 +160,38 @@ export default async function WorldcupResultPage() {
     userStats.set(slip.user_id, cur)
   }
 
-  // 참가자 전원을 net 점수로 정렬 → 상위 TOP_N
+  // 1) 닉네임 없이 먼저 net 점수로 정렬 → 상위 TOP_N 만 추림
+  //    (참가자 전원 프로필을 in() 으로 한 번에 조회하면 URL 길이 한계로 실패 →
+  //     닉네임이 전부 user_id 폴백으로 떨어지는 버그. 상위 N명만 조회한다.)
   const userIds = [...new Set(registrations.map((x) => x.user_id))]
-  const profiles: ProfileRow[] =
-    userIds.length > 0
-      ? (((await supabase.from("profiles").select("user_id, nickname").in("user_id", userIds))
-          .data ?? []) as ProfileRow[])
-      : []
-  const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
-
-  const ranked: Ranked[] = userIds
+  const rankedRaw = userIds
     .map((uid) => {
       const st = userStats.get(uid) ?? { profit: 0, settled: 0, won: 0 }
       return {
         user_id: uid,
-        nickname: profileMap.get(uid)?.nickname ?? uid.slice(0, 8),
         profit: Math.round(st.profit * 10) / 10,
         accuracy: st.settled > 0 ? Math.round((st.won / st.settled) * 1000) / 10 : 0,
       }
     })
     .sort((a, b) => b.profit - a.profit)
-    .map((u, i) => ({ ...u, rank: i + 1 }))
     .slice(0, TOP_N)
+
+  // 2) 상위 N명 프로필만 조회
+  const topIds = rankedRaw.map((u) => u.user_id)
+  const profiles: ProfileRow[] =
+    topIds.length > 0
+      ? (((await supabase.from("profiles").select("user_id, nickname").in("user_id", topIds))
+          .data ?? []) as ProfileRow[])
+      : []
+  const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
+
+  const ranked: Ranked[] = rankedRaw.map((u, i) => ({
+    rank: i + 1,
+    user_id: u.user_id,
+    nickname: profileMap.get(u.user_id)?.nickname ?? u.user_id.slice(0, 8),
+    profit: u.profit,
+    accuracy: u.accuracy,
+  }))
 
   const podium = ranked.slice(0, 3)
 

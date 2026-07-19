@@ -18,7 +18,7 @@ async function fetchAllHomeData(sort: SortType) {
   const supabase = createAnonClient()
 
   // 모든 데이터를 병렬로 가져오기
-  const [feedResult, categoriesResult, recentCommentsResult, globalNoticesResult] =
+  const [feedResult, categoriesResult, recentCommentsResult, globalNoticesResult, worldcupStatus] =
     await Promise.all([
       // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
       (async (): Promise<PostsResponse> => {
@@ -108,6 +108,13 @@ async function fetchAllHomeData(sort: SortType) {
       )
         .then(({ data }) => data ?? [])
         .catch(() => [] as unknown[]),
+
+      // 5) 월드컵 이벤트 상태 (배너 전환용 — closed 면 "우승자 확인")
+      Promise.resolve(
+        supabase.from("events").select("status").eq("slug", "worldcup-2026").maybeSingle()
+      )
+        .then(({ data }) => (data as { status?: string } | null)?.status ?? null)
+        .catch(() => null),
     ])
 
   return {
@@ -119,6 +126,7 @@ async function fetchAllHomeData(sort: SortType) {
       title: string
       content?: unknown
     }[],
+    worldcupConcluded: worldcupStatus === "closed",
   }
 }
 
@@ -147,6 +155,7 @@ export default async function Home({
         initialRecentComments={homeData.initialRecentComments}
         initialGlobalNotices={homeData.initialGlobalNotices}
         initialSort={initialSort}
+        worldcupConcluded={homeData.worldcupConcluded}
       />
     </Suspense>
   )
