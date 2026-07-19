@@ -1,12 +1,14 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { WORLDCUP_SCORING_STARTS_AT } from "@/lib/worldcup/scoring"
+import { WorldcupRecapBoard } from "@/components/worldcup/worldcup-recap-board"
 
 export const metadata: Metadata = {
   title: "월드컵 이벤트 결과 발표",
-  description: "구너 1위 발표.",
+  description: "종합 랭킹과 우승자 발표.",
   alternates: { canonical: "/worldcup/result" },
 }
 
@@ -14,25 +16,25 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 const EVENT_SLUG = "worldcup-2026"
+const TOP_N = 10
+
+// 상품 정의 (이번 발표 고정 — 1위 사인 유니폼 / 2·3위 시즌 유니폼)
+const RICE_JERSEY_IMG = "/worldcup/prize-rice-jersey.webp"
+const PRIZE_BY_RANK: Record<number, string> = {
+  1: "데클란 라이스 친필 사인 유니폼",
+  2: "아스날 2025-26 시즌 유니폼",
+  3: "아스날 2025-26 시즌 유니폼",
+}
+const MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" }
 
 interface EventRow {
   id: string
   name: string
   status: string
   end_at: string
-  prize_description: string | null
-}
-interface GroupRow {
-  id: string
-  slug: string
-  name: string
-  club_kor: string | null
-  color: string
-  sort_order: number
 }
 interface RegRow {
   user_id: string
-  group_id: string
 }
 interface SlipRow {
   user_id: string
@@ -45,12 +47,20 @@ interface ProfileRow {
   nickname: string | null
 }
 
+interface Ranked {
+  rank: number
+  user_id: string
+  nickname: string
+  profit: number
+  accuracy: number
+}
+
 export default async function WorldcupResultPage() {
   const supabase = createServiceRoleClient()
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, name, status, end_at, prize_description")
+    .select("id, name, status, end_at")
     .eq("slug", EVENT_SLUG)
     .maybeSingle<EventRow>()
 
@@ -79,7 +89,7 @@ export default async function WorldcupResultPage() {
     )
   }
 
-  // 종료 전이면 안내만
+  // 종료 전이면 안내만 (status='closed' 로 바꾸기 전엔 아무도 결과를 못 봄)
   if (event.status !== "closed") {
     return (
       <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
@@ -87,7 +97,7 @@ export default async function WorldcupResultPage() {
           <div className="wc-res-eb">RESULT</div>
           <h1 className="wc-res-h1">결과 발표 대기 중</h1>
           <p className="wc-res-sub mt-3">
-            이벤트가 아직 진행 중입니다. 종료 후 구너 1위를 발표해요.
+            이벤트가 아직 진행 중입니다. 정산이 마무리되면 종합 랭킹과 우승자를 발표해요.
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Link href="/worldcup/leaderboard" className="wc-hbtn wc-hbtn-primary">
@@ -102,34 +112,20 @@ export default async function WorldcupResultPage() {
     )
   }
 
-  // 종료 후 — 데이터 fetch + aggregate
-  const [{ data: g }, { data: r }, { data: s }] = await Promise.all([
-    supabase
-      .from("event_groups")
-      .select("id, slug, name, club_kor, color, sort_order")
-      .eq("event_id", event.id)
-      .order("sort_order"),
-    supabase.from("event_registrations").select("user_id, group_id").eq("event_id", event.id),
+  // 종료 후 — 참가자/슬립 fetch 후 종합 랭킹 집계
+  const [{ data: r }, { data: s }] = await Promise.all([
+    supabase.from("event_registrations").select("user_id").eq("event_id", event.id),
     supabase
       .from("prediction_slips")
       .select("user_id, stake, total_odds, status")
       .eq("event_id", event.id)
-      // 32강부터 정식 집계 — 우승자 산정도 리더보드와 동일 기준.
+      // 32강부터 정식 집계 — 리더보드와 동일 기준
       .gte("created_at", WORLDCUP_SCORING_STARTS_AT),
   ])
-  const groups = (g ?? []) as GroupRow[]
   const registrations = (r ?? []) as RegRow[]
   const slips = (s ?? []) as SlipRow[]
 
-  const userIds = [...new Set(registrations.map((x) => x.user_id))]
-  const profiles: ProfileRow[] =
-    userIds.length > 0
-      ? (((await supabase.from("profiles").select("user_id, nickname").in("user_id", userIds))
-          .data ?? []) as ProfileRow[])
-      : []
-  const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
-
-  // user → profit / accuracy
+  // user → net profit / accuracy (결과 페이지·리더보드 공통 공식: 슬립 단위 net)
   const userStats = new Map<string, { profit: number; settled: number; won: number }>()
   for (const slip of slips) {
     const cur = userStats.get(slip.user_id) ?? { profit: 0, settled: 0, won: 0 }
@@ -144,44 +140,30 @@ export default async function WorldcupResultPage() {
     userStats.set(slip.user_id, cur)
   }
 
-  // 그룹별 1위 + 그룹 평균
-  type Winner = {
-    group: GroupRow
-    user_id: string
-    nickname: string
-    profit: number
-    accuracy: number
-    members: number
-    avgProfit: number
-  }
-  const winners: Winner[] = []
-  for (const grp of groups) {
-    const grpRegs = registrations.filter((reg) => reg.group_id === grp.id)
-    if (grpRegs.length === 0) continue
+  // 참가자 전원을 net 점수로 정렬 → 상위 TOP_N
+  const userIds = [...new Set(registrations.map((x) => x.user_id))]
+  const profiles: ProfileRow[] =
+    userIds.length > 0
+      ? (((await supabase.from("profiles").select("user_id, nickname").in("user_id", userIds))
+          .data ?? []) as ProfileRow[])
+      : []
+  const profileMap = new Map(profiles.map((p) => [p.user_id, p]))
 
-    let topUser: { user_id: string; profit: number; accuracy: number } | null = null
-    let totalProfit = 0
-    for (const reg of grpRegs) {
-      const stat = userStats.get(reg.user_id) ?? { profit: 0, settled: 0, won: 0 }
-      totalProfit += stat.profit
-      const accuracy = stat.settled > 0 ? (stat.won / stat.settled) * 100 : 0
-      if (!topUser || stat.profit > topUser.profit) {
-        topUser = { user_id: reg.user_id, profit: stat.profit, accuracy }
+  const ranked: Ranked[] = userIds
+    .map((uid) => {
+      const st = userStats.get(uid) ?? { profit: 0, settled: 0, won: 0 }
+      return {
+        user_id: uid,
+        nickname: profileMap.get(uid)?.nickname ?? uid.slice(0, 8),
+        profit: Math.round(st.profit * 10) / 10,
+        accuracy: st.settled > 0 ? Math.round((st.won / st.settled) * 1000) / 10 : 0,
       }
-    }
-    if (!topUser) continue
-
-    const profile = profileMap.get(topUser.user_id)
-    winners.push({
-      group: grp,
-      user_id: topUser.user_id,
-      nickname: profile?.nickname ?? topUser.user_id.slice(0, 8),
-      profit: Math.round(topUser.profit * 10) / 10,
-      accuracy: Math.round(topUser.accuracy * 10) / 10,
-      members: grpRegs.length,
-      avgProfit: grpRegs.length > 0 ? Math.round((totalProfit / grpRegs.length) * 10) / 10 : 0,
     })
-  }
+    .sort((a, b) => b.profit - a.profit)
+    .map((u, i) => ({ ...u, rank: i + 1 }))
+    .slice(0, TOP_N)
+
+  const podium = ranked.slice(0, 3)
 
   return (
     <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
@@ -196,12 +178,13 @@ export default async function WorldcupResultPage() {
 
         <header className="wc-res-hero">
           <div className="wc-res-eb">FINAL RESULT</div>
-          <h1 className="wc-res-h1">{event.name} 결과</h1>
-          <p className="wc-res-sub">구너 1위 발표.</p>
+          <h1 className="wc-res-h1">{event.name} 결과 발표</h1>
+          <p className="wc-res-sub">
+            우승을 축하합니다! 🎉 함께해주신 모든 구너 여러분 감사합니다.
+          </p>
         </header>
 
-        {/* Podium */}
-        {winners.length === 0 ? (
+        {ranked.length === 0 ? (
           <div
             style={{
               background: "#fff",
@@ -217,37 +200,251 @@ export default async function WorldcupResultPage() {
             </p>
           </div>
         ) : (
-          <div className="wc-res-podium">
-            {winners.map((w) => (
-              <article
-                key={w.group.slug}
-                className="wc-rp-card"
-                style={{ ["--gp" as string]: "var(--wc-burgundy)" } as React.CSSProperties}
+          <>
+            {/* 우승자 유니폼 사진 */}
+            <div
+              className="mx-auto mt-2 mb-6 overflow-hidden"
+              style={{
+                maxWidth: 520,
+                borderRadius: 18,
+                border: "1px solid var(--wc-line)",
+                boxShadow: "var(--wc-shadow-1)",
+                background: "#fff",
+              }}
+            >
+              <Image
+                src={RICE_JERSEY_IMG}
+                alt="데클란 라이스 친필 사인 유니폼 (1위 상품)"
+                width={1040}
+                height={780}
+                sizes="(max-width: 640px) 100vw, 520px"
+                style={{ width: "100%", height: "auto", display: "block" }}
+                priority
+              />
+              <div
+                style={{
+                  padding: "12px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--wc-ink-2)",
+                  borderTop: "1px solid var(--wc-line)",
+                }}
               >
-                <span aria-hidden className="wc-rp-glow" />
-                <div className="wc-rp-trophy">🏆</div>
-                <div className="wc-rp-rank">구너 1위</div>
-                <div className="wc-rp-grp">{w.group.name}</div>
-                <div className="wc-rp-sub">{w.group.club_kor} 구너</div>
-                <div className="wc-rp-winner">{w.nickname}</div>
-                <div className="wc-rp-handle">{w.user_id.slice(0, 12)}…</div>
-                <div className="wc-rp-stats">
-                  <div>
-                    <b>
-                      {w.profit >= 0 ? "+" : ""}
-                      {w.profit}
-                    </b>
-                    <span>획득 점수</span>
+                🏆 1위 상품 — 데클란 라이스 친필 사인 유니폼
+              </div>
+            </div>
+
+            {/* 시상대 1·2·3위 */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 14,
+                marginBottom: 22,
+              }}
+            >
+              {podium.map((w) => (
+                <article
+                  key={w.user_id}
+                  style={{
+                    background: "#fff",
+                    border:
+                      w.rank === 1 ? "2px solid var(--wc-burgundy)" : "1px solid var(--wc-line)",
+                    borderRadius: 16,
+                    boxShadow: "var(--wc-shadow-1)",
+                    padding: "20px 18px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 32, lineHeight: 1 }}>{MEDAL[w.rank]}</div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "var(--wc-mute)",
+                      letterSpacing: 1,
+                      marginTop: 6,
+                    }}
+                  >
+                    {w.rank}위
                   </div>
-                  <div>
-                    <b>{w.accuracy}%</b>
-                    <span>적중률</span>
+                  <div
+                    style={{
+                      fontSize: 19,
+                      fontWeight: 900,
+                      color: "var(--wc-ink)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {w.nickname}
                   </div>
-                </div>
-                <div className="wc-rp-prize">{event.prize_description || "상품 증정"}</div>
-              </article>
-            ))}
-          </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 16,
+                      marginTop: 10,
+                      fontSize: 13,
+                    }}
+                  >
+                    <div>
+                      <b style={{ color: "var(--wc-burgundy)" }}>
+                        {w.profit >= 0 ? "+" : ""}
+                        {w.profit}
+                      </b>
+                      <span style={{ color: "var(--wc-mute)", marginLeft: 4 }}>점</span>
+                    </div>
+                    <div>
+                      <b style={{ color: "var(--wc-ink)" }}>{w.accuracy}%</b>
+                      <span style={{ color: "var(--wc-mute)", marginLeft: 4 }}>적중</span>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      background: "rgba(150,30,55,0.06)",
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: "var(--wc-burgundy)",
+                    }}
+                  >
+                    🎁 {PRIZE_BY_RANK[w.rank]}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* 상품 안내 + 연락 방법 */}
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid var(--wc-line)",
+                borderRadius: 14,
+                boxShadow: "var(--wc-shadow-1)",
+                padding: "16px 18px",
+                marginBottom: 22,
+              }}
+            >
+              <div
+                style={{ fontSize: 14, fontWeight: 800, color: "var(--wc-ink)", marginBottom: 8 }}
+              >
+                🎁 상품 안내
+              </div>
+              <ul
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.8,
+                  color: "var(--wc-ink-2)",
+                  paddingLeft: 18,
+                  listStyle: "disc",
+                }}
+              >
+                <li>
+                  <b>1위</b> — 데클란 라이스 친필 사인 유니폼
+                </li>
+                <li>
+                  <b>2·3위</b> — 아스날 2025-26 시즌 유니폼
+                </li>
+              </ul>
+              <p
+                style={{ fontSize: 12.5, color: "var(--wc-mute)", marginTop: 10, lineHeight: 1.7 }}
+              >
+                당첨자께는 <b>가입하신 이메일로 개별 연락</b>드려 배송 정보를 받겠습니다. 스팸함도
+                확인해 주세요.
+              </p>
+            </div>
+
+            {/* TOP 10 종합 랭킹 */}
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid var(--wc-line)",
+                borderRadius: 14,
+                boxShadow: "var(--wc-shadow-1)",
+                overflow: "hidden",
+                marginBottom: 22,
+              }}
+            >
+              <div
+                style={{
+                  padding: "13px 18px",
+                  borderBottom: "1px solid var(--wc-line)",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "var(--wc-ink)",
+                }}
+              >
+                종합 랭킹 TOP {TOP_N}
+              </div>
+              <div>
+                {ranked.map((u) => (
+                  <div
+                    key={u.user_id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "11px 18px",
+                      borderBottom: "1px solid var(--wc-line)",
+                      background: u.rank <= 3 ? "rgba(150,30,55,0.03)" : "#fff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 34,
+                        fontSize: 14,
+                        fontWeight: 900,
+                        color: u.rank <= 3 ? "var(--wc-burgundy)" : "var(--wc-mute)",
+                      }}
+                    >
+                      {MEDAL[u.rank] ?? u.rank}
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "var(--wc-ink)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {u.nickname}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        color: "var(--wc-mute)",
+                        width: 64,
+                        textAlign: "right",
+                      }}
+                    >
+                      {u.accuracy}%
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "var(--wc-burgundy)",
+                        width: 72,
+                        textAlign: "right",
+                      }}
+                    >
+                      {u.profit >= 0 ? "+" : ""}
+                      {u.profit}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 총 통계 보드 (주인장 vs 유저) */}
+            <WorldcupRecapBoard />
+          </>
         )}
 
         {/* 다음 이벤트 예고 */}
