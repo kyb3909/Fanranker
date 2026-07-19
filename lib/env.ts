@@ -19,6 +19,9 @@ const serverSchema = z.object({
   DISCORD_DIGEST_WEBHOOK_URL: z.string().url().optional(),
   // 다이제스트 멘션 (옵트인 역할만 — 예: "<@&123>"). @everyone 금지.
   DISCORD_DIGEST_MENTION: z.string().optional(),
+  // 역할 선택 버튼 인터랙션 (app/api/discord/interactions). 둘 다 있어야 버튼 동작.
+  DISCORD_BOT_TOKEN: z.string().optional(),
+  DISCORD_APP_PUBLIC_KEY: z.string().optional(),
   // Cloudflare Stream (영상 업로드 — direct creator upload). 둘 다 있어야 영상 업로드 활성화.
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
