@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Circle, MessageSquare, ThumbsUp } from "lucide-react"
+import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { fetcher } from "@/lib/swr"
 import { trackEvent } from "@/lib/analytics/events"
 import { getGameTypeLabel } from "@/types/betting"
@@ -226,6 +227,11 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
             </Link>
           </div>
         )}
+
+        {/* 검증된 최대 레버(예측 완료 직후) — 재소환 채널(디스코드) 유입 */}
+        <div className="min-w-0">
+          <DiscordInviteBanner variant="inline" placement="prediction_success" />
+        </div>
 
         <DialogFooter className="sm:justify-center">
           <Button

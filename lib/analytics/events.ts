@@ -27,6 +27,7 @@ type AnalyticsEvent =
   | { name: "metaverse_room_close"; params: { by: "owner" | "admin" | "cron" } }
   | { name: "metaverse_highbury_enter"; params: { is_guest: boolean } }
   | { name: "flair_team_selected"; params: { community: string; team_id: string } }
+  | { name: "discord_invite_click"; params: { placement: string } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

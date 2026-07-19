@@ -6,6 +6,7 @@ import Link from "@/components/ui/app-link"
 import { AdPlaceholder } from "@/components/sidebar/ad-placeholder"
 import { MonthlyPrizeBanner } from "@/components/sidebar/monthly-prize-banner"
 import { PollWidget } from "@/components/sidebar/poll-widget"
+import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 
 import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -110,6 +111,9 @@ export const ActivitySidebar = memo(function ActivitySidebar({
     <div ref={stickyRef} className="sticky space-y-4" style={{ top: `${stickyTop}px` }}>
       {/* ===== 이달의 상품 배너 (메인 페이지만) ===== */}
       {showPrize && <MonthlyPrizeBanner />}
+
+      {/* ===== 디스코드 초대 배너 ===== */}
+      <DiscordInviteBanner variant="sidebar" placement="sidebar" />
 
       {/* ===== 최근 댓글 섹션 ===== */}
       <div
