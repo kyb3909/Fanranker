@@ -4,7 +4,6 @@ import Link from "@/components/ui/app-link"
 import { ArrowLeft } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { WORLDCUP_SCORING_STARTS_AT } from "@/lib/worldcup/scoring"
-import { WorldcupRecapBoard } from "@/components/worldcup/worldcup-recap-board"
 
 export const metadata: Metadata = {
   title: "월드컵 이벤트 결과 발표",
@@ -471,8 +470,8 @@ export default async function WorldcupResultPage({
               </div>
             </div>
 
-            {/* 총 통계 보드 (대회 주최자 vs 유저) */}
-            <WorldcupRecapBoard />
+            {/* 결산 보드 — 다음 대회에서 보강 후 재노출 예정 (베팅 색채 정리 중)
+                <WorldcupRecapBoard /> */}
           </>
         )}
 

@@ -14,7 +14,6 @@ import { StatsTab } from "./stats-tab"
 import { MypageTab } from "./mypage-tab"
 import { BettingSlip } from "./betting-slip"
 import { WorldcupRulesCard } from "@/components/worldcup/worldcup-rules-card"
-import { WorldcupRecapBoard } from "@/components/worldcup/worldcup-recap-board"
 import { BettingAlertDialog } from "./betting-alert-dialog"
 import { PredictionSuccessDialog } from "./prediction-success-dialog"
 
@@ -108,8 +107,8 @@ export default function BettingPage({
 
       {!bettingOnly && activeTab === "stats" && (
         <>
-          {/* 월드컵 이벤트 결과 후기 — 이벤트 슬립 직접 집계 (메인 통계와 별개) */}
-          <WorldcupRecapBoard />
+          {/* 월드컵 결산 보드 — 다음 대회에서 보강 후 재노출 예정 (베팅 색채 정리 중)
+              <WorldcupRecapBoard /> */}
           <StatsTab stats={communityStats.stats} isLoading={communityStats.isLoading} />
         </>
       )}
