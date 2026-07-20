@@ -34,7 +34,7 @@ function mdLabel(d: string): string {
 }
 
 /**
- * 월드컵 이벤트 결과 후기 보드 — "주인장 vs 유저".
+ * 월드컵 이벤트 결과 후기 보드 — "대회 주최자 vs 유저".
  * 예측 통계 탭 상단에 노출. /api/event/worldcup/report 를 직접 fetch.
  * 정산 슬립이 없으면 아무것도 렌더하지 않는다.
  */
@@ -76,7 +76,7 @@ export function WorldcupRecapBoard() {
   const message = usersWinning
     ? "유저들이 앞섰습니다!"
     : houseWinning
-      ? "주인장이 웃고 있습니다…"
+      ? "대회 주최자가 웃고 있습니다…"
       : "끝까지 팽팽했어요!"
 
   return (
@@ -86,7 +86,7 @@ export function WorldcupRecapBoard() {
     >
       <div className="p-4 sm:p-5">
         <div className="mb-4 text-center">
-          <h3 className="text-foreground text-lg font-bold">주인장 vs 유저</h3>
+          <h3 className="text-foreground text-lg font-bold">대회 주최자 vs 유저</h3>
           <p className="text-muted-foreground mt-0.5 text-sm">
             {period
               ? `${mdLabel(period.start)}~${mdLabel(period.end)} · 월드컵 기간의 구너 예측 대결`
@@ -141,7 +141,7 @@ export function WorldcupRecapBoard() {
             className="mt-3 inline-block rounded-full px-4 py-1.5 text-sm font-bold text-white"
             style={{ background: "var(--wc-burgundy, #961e37)" }}
           >
-            주인장 {usersWinning ? "손실" : "수익"} {usersWinning ? "-" : "+"}
+            대회 주최자 {usersWinning ? "손실" : "수익"} {usersWinning ? "-" : "+"}
             {formatBalls(Math.abs(housePnl))} 볼
           </div>
         </div>

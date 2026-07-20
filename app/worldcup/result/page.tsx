@@ -381,8 +381,7 @@ export default async function WorldcupResultPage({
               <p
                 style={{ fontSize: 12.5, color: "var(--wc-mute)", marginTop: 10, lineHeight: 1.7 }}
               >
-                당첨자께는 <b>가입하신 이메일로 개별 연락</b>드려 배송 정보를 받겠습니다. 스팸함도
-                확인해 주세요.
+                당첨자께는 <b>가입하신 이메일로 개별 연락</b>드릴 예정입니다.
               </p>
             </div>
 
@@ -472,7 +471,7 @@ export default async function WorldcupResultPage({
               </div>
             </div>
 
-            {/* 총 통계 보드 (주인장 vs 유저) */}
+            {/* 총 통계 보드 (대회 주최자 vs 유저) */}
             <WorldcupRecapBoard />
           </>
         )}
