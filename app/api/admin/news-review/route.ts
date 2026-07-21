@@ -6,6 +6,7 @@ import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
+import { suggestFlairs } from "@/lib/news/suggest-flair"
 import type { TipTapNode } from "@/types/post"
 
 export const dynamic = "force-dynamic"
@@ -28,6 +29,8 @@ const BodySchema = z.object({
   action: z.enum(["publish", "reject", "save"]),
   title: z.string().min(1).max(300).optional(),
   content: z.unknown().optional(),
+  // 말머리(다중): 미전달(undefined)이면 제목 기반 자동 추천, 배열이면 그대로(빈 배열=없음)
+  flair_ids: z.array(z.string().uuid()).optional(),
 })
 
 interface DraftReservoirRow {
@@ -100,6 +103,29 @@ export async function POST(req: NextRequest) {
   const image = extractFirstImageSrcFromTipTapJSON(finalContent)
   const sourceUrl = item.urls?.source ?? null
 
+  // 말머리(다중) — 검수자가 지정(flair_ids)했으면 그대로, 미지정이면 제목 기반 자동 추천.
+  // 대표 말머리(posts.flair_id)는 첫 번째(팀 우선 정렬), 나머지는 post_flair_map 에 담는다.
+  let flairIds = parsed.data.flair_ids
+  if (flairIds === undefined) {
+    const { data: flairOpts } = await supabase
+      .from("post_flairs")
+      .select("id, name, team_id")
+      .eq("community_slug", FOOTBALL_SLUG)
+      .eq("is_active", true)
+    flairIds = suggestFlairs(finalTitle, flairOpts ?? []).flairIds
+  }
+  // 담벼락엔 대표 말머리 1개만 표시된다(posts.flair_id). 대표는 팀/리그를 우선하고
+  // 성격(이적/뉴스)은 뒤로 민다 — 검수자가 누른 순서와 무관하게 팀/리그가 대표가 되도록.
+  if (flairIds.length > 1) {
+    const { data: meta } = await supabase.from("post_flairs").select("id, name").in("id", flairIds)
+    const isKind = (fid: string) => {
+      const n = meta?.find((m) => m.id === fid)?.name
+      return n === "이적" || n === "뉴스"
+    }
+    flairIds = [...flairIds].sort((a, b) => Number(isKind(a)) - Number(isKind(b)))
+  }
+  const primaryFlairId = flairIds[0] ?? null
+
   const { data: post, error: postErr } = await supabase
     .from("posts")
     .insert({
@@ -110,11 +136,19 @@ export async function POST(req: NextRequest) {
       content: finalContent,
       ...(image ? { image } : {}),
       ...(sourceUrl ? { source_url: sourceUrl } : {}),
+      ...(primaryFlairId ? { flair_id: primaryFlairId } : {}),
     })
     .select("id")
     .single<{ id: string }>()
   if (postErr || !post) {
     return NextResponse.json({ error: "발행 실패", detail: postErr?.message }, { status: 500 })
+  }
+
+  // 다중 말머리 — post_flair_map 에 전체 기록 (대표 포함). 실패해도 발행은 유지.
+  if (flairIds.length > 0) {
+    await supabase
+      .from("post_flair_map")
+      .insert(flairIds.map((fid) => ({ post_id: post.id, flair_id: fid })))
   }
 
   await supabase

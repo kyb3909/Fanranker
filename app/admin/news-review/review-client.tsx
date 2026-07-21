@@ -25,14 +25,43 @@ export interface ReviewItem {
   originUrl: string | null
   scores: Record<string, unknown>
   createdAt: string
+  /** 제목 기반 자동 추천 말머리 id 목록 (검수자가 수정 가능) */
+  suggestedFlairIds: string[]
 }
 
-export function NewsReviewClient({ items: initial }: { items: ReviewItem[] }) {
+export interface FlairChoice {
+  id: string
+  name: string
+  color: string | null
+  team_id: string | null
+}
+
+export function NewsReviewClient({
+  items: initial,
+  flairs,
+}: {
+  items: ReviewItem[]
+  flairs: FlairChoice[]
+}) {
   const [items, setItems] = useState(initial)
   const [busy, setBusy] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [editContent, setEditContent] = useState<unknown>(null)
+  // 아이템별 선택된 말머리 (초기값 = 자동 추천). 발행 시 이 값이 전송됨.
+  const [flairSel, setFlairSel] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(initial.map((it) => [it.id, it.suggestedFlairIds]))
+  )
+
+  function toggleFlair(itemId: string, flairId: string) {
+    setFlairSel((s) => {
+      const cur = s[itemId] ?? []
+      return {
+        ...s,
+        [itemId]: cur.includes(flairId) ? cur.filter((x) => x !== flairId) : [...cur, flairId],
+      }
+    })
+  }
 
   function startEdit(it: ReviewItem) {
     setEditingId(it.id)
@@ -51,7 +80,13 @@ export function NewsReviewClient({ items: initial }: { items: ReviewItem[] }) {
       const res = await fetch("/api/admin/news-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, action, ...payload }),
+        body: JSON.stringify({
+          id,
+          action,
+          ...payload,
+          // 발행 시에만 선택된 말머리 전송 (미선택이면 빈 배열 = 말머리 없음)
+          ...(action === "publish" ? { flair_ids: flairSel[id] ?? [] } : {}),
+        }),
       })
       const d = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
@@ -138,6 +173,31 @@ export function NewsReviewClient({ items: initial }: { items: ReviewItem[] }) {
                 </a>
               )}
             </div>
+
+            {/* 말머리 선택 (다중) — 자동 추천이 기본 선택, 눌러서 토글 */}
+            {flairs.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-muted-foreground mr-0.5 text-[11px]">말머리</span>
+                {flairs.map((f) => {
+                  const on = (flairSel[it.id] ?? []).includes(f.id)
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => toggleFlair(it.id, f.id)}
+                      className="inline-flex h-6 items-center rounded px-2 text-[11.5px] font-bold transition-opacity hover:opacity-80"
+                      style={
+                        on
+                          ? { background: f.color ?? "#334155", color: "#fff" }
+                          : { background: "#eef0f3", color: "#64748b" }
+                      }
+                    >
+                      {f.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <div className="bg-background mt-3 max-h-[460px] overflow-auto rounded-lg border p-3">
               {editing ? (
