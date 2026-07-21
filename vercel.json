@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/sync-videos",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/news-expire-drafts",
+      "schedule": "0 * * * *"
     }
   ]
 }
