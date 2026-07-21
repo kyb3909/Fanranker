@@ -73,6 +73,19 @@ function log(...a) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// 한글 표기 교정 — gpt-4o-mini 가 자주 음차 오류를 내는 팀/선수명을 LLM 출력 후처리로 강제.
+// 프롬프트만으론 반복 오역이 남아서(예: Bournemouth→"보르넘"), 마지막에 결정적으로 치환한다.
+// 새 오표기를 발견하면 여기 한 줄만 추가하면 이후 전부 교정됨.
+const KOREAN_FIXES = [
+  [/보르넘|본머쓰|보른머스|본머프/g, "본머스"], // Bournemouth
+]
+function applyKoreanFixes(s) {
+  if (typeof s !== "string" || !s) return s
+  let out = s
+  for (const [re, to] of KOREAN_FIXES) out = out.replace(re, to)
+  return out
+}
+
 function loadSeen() {
   try {
     if (existsSync(SEEN_FILE)) return new Set(JSON.parse(readFileSync(SEEN_FILE, "utf8")))
@@ -182,6 +195,7 @@ worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·�
 
 - 톤: 한국어, 드라이한 팩트 와이어체("~라고 합니다", "~로 전해집니다"). AI 티 나는 감상/질문/평가 금지. 2~3문장.
 - 제목: "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진"). 출처는 기자/언론사/구단명. 불명확하면 "[레딧]".
+- 팀/선수 한글 표기는 한국 축구 미디어의 정착된 표기를 따른다 (예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
 - 미확정 루머는 단정하지 말 것.
 - credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
@@ -316,6 +330,8 @@ async function main() {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
         continue
       }
+      v.title = applyKoreanFixes(v.title)
+      v.summary = applyKoreanFixes(v.summary)
       if (DRY_RUN) {
         drafted++
         log(`[DRY] draft [${p.subreddit}/${p.id}] ${v.title}`)
