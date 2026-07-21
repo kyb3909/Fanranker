@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * news-scanner.mjs — r/soccer 이적설 스캐너 (B1: 결정적 스캔 + OpenAI 작성)
+ * news-scanner.mjs — 축구 뉴스 스캐너 (결정적 스캔 + OpenAI 작성)
  *
- * 흐름: r/soccer RSS(hot) → 잡담/오래됨/중복 컷 + 키워드 → OpenAI 가 판별+한국어 작성
+ * 흐름: 5대리그+인기클럽 서브레딧 RSS(hot) → 잡담/오래됨/중복 컷 → OpenAI 가
+ *      "축구 뉴스 vs 잡담"만 판별 + 한국어 작성 (신뢰도/중요도로 거르지 않음 — 사람 검수 몫)
  *      → 트윗이면 /api/oembed, 기사면 /api/og 로 보강 → /api/news/agent-draft 로 초안 적재.
  * 발행은 안 함. /admin/news-review 에서 사람이 검수·발행 (fail-closed).
+ * 소스 목록·상한: SUBREDDITS / SCANNER_MAX_LLM(기본 30) / SCANNER_THROTTLE_MS(기본 6000).
  *
  * 단일 파일·무의존(Node18+). reddit 은 JSON 차단 → curl + RSS(Atom) 로 우회(기존 크롤러 방식).
  * Vultr cron 에서 `node news-scanner.mjs`.
@@ -21,18 +23,37 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const CRON_SECRET = process.env.CRON_SECRET
 const SEEN_FILE = process.env.SEEN_FILE || "./news-scanner-seen.json"
 const MODEL = process.env.SCANNER_MODEL || "gpt-4o-mini"
+const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판별 로그만 (테스트용)
 
 const LOOKBACK_HOURS = 24 // 이보다 오래된 글은 무시 (신선도)
-const MAX_LLM_PER_RUN = 8 // run 당 OpenAI 호출 상한 (비용 가드)
-const RSS_LIMIT = 50
+const MAX_LLM_PER_RUN = Number(process.env.SCANNER_MAX_LLM || 30) // run 당 OpenAI 호출 상한 (비용 가드)
+const RSS_LIMIT = 40
+const THROTTLE_MS = Number(process.env.SCANNER_THROTTLE_MS || 6000) // 서브레딧 간 간격 (reddit rate limit 회피)
 const UA = "gongnori.fan news-scanner/1.0"
 // reddit 은 Node TLS 지문/JSON 을 차단 → curl + 브라우저 UA + RSS 로 우회 (기존 크롤러와 동일)
 const REDDIT_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
-// 이적설 가능성 키워드 (LLM 호출 전 1차 컷)
-const KEYWORDS =
-  /\b(transfer|sign(ing|ed|s)?|deal|bid|fee|medical|agreement|agreed|loan|contract|join|move|talks|here we go|release clause|personal terms|swoop|target|wages|verbal|€|£|\$\d|million)\b/i
+// 수집 소스: r/soccer 종합 + 5대리그 + 인기 클럽. 이적설만이 아니라 축구 뉴스 전반을 폭넓게 긁는다.
+// 관련성/품질 판단은 사람 검수(/admin/news-review)로 이관 — 여기서는 명백한 잡담만 컷.
+const SUBREDDITS = [
+  "soccer",
+  "PremierLeague",
+  "LaLiga",
+  "Bundesliga",
+  "seriea",
+  "ligue1",
+  "Gunners",
+  "LiverpoolFC",
+  "reddevils",
+  "chelseafc",
+  "MCFC",
+  "coys",
+  "ManchesterUnited",
+  "realmadrid",
+  "Barca",
+  "FCBayern",
+]
 
 // 잡담/스레드 컷
 const SKIP_AUTHORS = new Set(["AutoModerator", "2soccer2bot", "MatchThreadder"])
@@ -50,6 +71,7 @@ const SKIP_PATTERNS = [
 function log(...a) {
   console.log(`[${new Date().toISOString()}]`, ...a)
 }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function loadSeen() {
   try {
@@ -121,16 +143,16 @@ function parseAtomFeed(xml) {
   }
   return entries
 }
-function fetchReddit() {
-  const url = `https://www.reddit.com/r/soccer/hot.rss?limit=${RSS_LIMIT}`
+function fetchSubreddit(sub) {
+  const url = `https://www.reddit.com/r/${sub}/hot.rss?limit=${RSS_LIMIT}`
   let xml
   try {
     xml = curlText(url)
   } catch {
-    throw new Error("curl reddit 실패")
+    throw new Error(`curl reddit 실패 (r/${sub})`)
   }
-  if (!xml || !xml.includes("<entry")) throw new Error("RSS 차단/비정상 응답 (entry 없음)")
-  return parseAtomFeed(xml)
+  if (!xml || !xml.includes("<entry")) throw new Error(`RSS 차단/비정상 응답 (r/${sub})`)
+  return parseAtomFeed(xml).map((e) => ({ ...e, subreddit: sub }))
 }
 
 // ── 소스 분류 ───────────────────────────────────────────────────────
@@ -152,11 +174,16 @@ function isTweet(u) {
 /** OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON) */
 async function judgeAndWrite(post) {
   const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
-  const sys = `너는 한국 축구 커뮤니티의 이적시장 뉴스 에디터다. r/soccer 글 하나를 받아 판단한다.
-- 게시 기준: 실제 이적 관련 "새 소식"이고, 공신력 있는 출처(Fabrizio Romano, David Ornstein, 주요 언론 등)이거나 중요한 루머일 것. 단순 잡담/밈/경기 스레드/오래된 떡밥/사담은 worthy=false.
+  const sys = `너는 한국 축구 커뮤니티의 뉴스 에디터다. 레딧 축구 글 하나를 받아 "정보성 축구 소식인가 vs 순수 잡담인가"만 가른다. 기본값은 통과(worthy=true)이고, 애매하면 통과시킨다. 최종 취사선택은 사람 편집자가 검수에서 한다.
+
+worthy=true (폭넓게): 이적·영입·계약·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·공식 발표·구단/선수 근황·유망주·한국 선수 등 축구와 관련해 사실 정보가 담긴 것이면 전부. 무명 선수·유망주·미확정 루머·낮은 신뢰도도 관련 있으면 통과. 신뢰도/중요도가 낮다고 버리지 마라 — 그 판단은 사람 몫이다.
+
+worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·움짤, 정보 없는 단순 감탄/응원("wow", "amazing"), 개인 SNS 좋아요/반응 캡처, 라이브 경기 중계 스레드, 설문/의견 질문글, 오래된 떡밥 재탕. 애매하면 false 말고 true.
+
 - 톤: 한국어, 드라이한 팩트 와이어체("~라고 합니다", "~로 전해집니다"). AI 티 나는 감상/질문/평가 금지. 2~3문장.
-- 제목: "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진"). 출처는 기자/언론사명.
+- 제목: "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진"). 출처는 기자/언론사/구단명. 불명확하면 "[레딧]".
 - 미확정 루머는 단정하지 말 것.
+- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
   const user = `제목: ${post.title}
 출처유형: ${sourceKind}
@@ -237,29 +264,45 @@ async function postDraft(payload) {
 }
 
 async function main() {
-  if (!OPENAI_API_KEY || !CRON_SECRET) {
-    log("환경변수 누락: OPENAI_API_KEY / CRON_SECRET 필요")
+  if (!OPENAI_API_KEY || (!CRON_SECRET && !DRY_RUN)) {
+    log("환경변수 누락: OPENAI_API_KEY / CRON_SECRET 필요 (DRY_RUN 시 CRON_SECRET 생략 가능)")
     process.exit(1)
   }
   const seen = loadSeen()
   const cutoff = Date.now() - LOOKBACK_HOURS * 3600 * 1000
-  let entries
-  try {
-    entries = fetchReddit()
-  } catch (e) {
-    log("reddit fetch 실패:", e.message)
+
+  // 모든 소스에서 신규 후보 수집. 키워드(이적) 컷은 제거 — 축구 뉴스 전반을 폭넓게.
+  // 밈/스레드/사담만 SKIP_PATTERNS·SKIP_AUTHORS 로 1차 컷, 나머지 판단은 LLM+사람 검수.
+  const candidates = []
+  const dedup = new Set()
+  let fetchedSubs = 0
+  for (const sub of SUBREDDITS) {
+    let entries
+    try {
+      entries = fetchSubreddit(sub)
+      fetchedSubs++
+    } catch (e) {
+      log(`fetch 실패 (r/${sub}):`, e.message)
+      await sleep(THROTTLE_MS)
+      continue
+    }
+    for (const p of entries) {
+      if (!p.id || seen.has(p.id) || dedup.has(p.id)) continue // 크로스포스트 중복 방지
+      if (SKIP_AUTHORS.has(p.author)) continue
+      if (SKIP_PATTERNS.some((re) => re.test(p.title))) continue
+      if (p.published && new Date(p.published).getTime() < cutoff) continue
+      dedup.add(p.id)
+      candidates.push(p)
+    }
+    await sleep(THROTTLE_MS)
+  }
+  if (fetchedSubs === 0) {
+    log("모든 소스 fetch 실패 — reddit 차단 의심")
     process.exit(1)
   }
-
-  const candidates = entries.filter((p) => {
-    if (!p.id || seen.has(p.id)) return false
-    if (SKIP_AUTHORS.has(p.author)) return false
-    if (SKIP_PATTERNS.some((re) => re.test(p.title))) return false
-    if (p.published && new Date(p.published).getTime() < cutoff) return false
-    if (!KEYWORDS.test(p.title)) return false
-    return true
-  })
-  log(`RSS ${entries.length}개 → 후보 ${candidates.length}개 (LLM 상한 ${MAX_LLM_PER_RUN})`)
+  log(
+    `${fetchedSubs}/${SUBREDDITS.length}개 소스 → 신규 후보 ${candidates.length}개 (LLM 상한 ${MAX_LLM_PER_RUN})`
+  )
 
   let drafted = 0
   let llmCalls = 0
@@ -270,7 +313,12 @@ async function main() {
     try {
       const v = await judgeAndWrite(p)
       if (!v?.worthy) {
-        log(`skip [${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
+        log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
+        continue
+      }
+      if (DRY_RUN) {
+        drafted++
+        log(`[DRY] draft [${p.subreddit}/${p.id}] ${v.title}`)
         continue
       }
       let mediaNode = null
@@ -289,16 +337,16 @@ async function main() {
         origin_url: p.permalink || undefined,
         tags: Array.isArray(v.tags) ? v.tags.slice(0, 10) : [],
         scores: { credibility: v.credibility, importance: v.importance },
-        dedupe_key: `soccer:${p.id}`,
+        dedupe_key: `reddit:${p.id}`,
       })
       if (r.ok) {
         drafted++
-        log(`draft ✓ [${p.id}] ${v.title}${r.d?.deduped ? " (중복)" : ""}`)
+        log(`draft ✓ [${p.subreddit}/${p.id}] ${v.title}${r.d?.deduped ? " (중복)" : ""}`)
       } else {
-        log(`draft ✗ [${p.id}] ${r.status}`, r.d?.error || "")
+        log(`draft ✗ [${p.subreddit}/${p.id}] ${r.status}`, r.d?.error || "")
       }
     } catch (e) {
-      log(`error [${p.id}]`, e.message)
+      log(`error [${p.subreddit}/${p.id}]`, e.message)
     }
   }
 
