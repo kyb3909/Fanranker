@@ -185,8 +185,14 @@ function isTweet(u) {
 }
 
 /** OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON) */
-async function judgeAndWrite(post) {
+async function judgeAndWrite(post, examples = []) {
   const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
+  // few-shot — 검수자가 실제로 고친 사례를 예시로 주입해 표기/스타일을 학습시킨다.
+  const fewshot = examples.length
+    ? `\n\n## 최근 검수 교정 예시 (원본 → 발행본)\n검수자가 아래처럼 다듬었다. 같은 표기·스타일(특히 팀·선수·기자명 한글 표기)을 따르라:\n${examples
+        .map((e) => `- "${e.from}" → "${e.to}"`)
+        .join("\n")}`
+    : ""
   const sys = `너는 한국 축구 커뮤니티의 뉴스 에디터다. 레딧 축구 글 하나를 받아 "정보성 축구 소식인가 vs 순수 잡담인가"만 가른다. 기본값은 통과(worthy=true)이고, 애매하면 통과시킨다. 최종 취사선택은 사람 편집자가 검수에서 한다.
 
 worthy=true (폭넓게): 이적·영입·계약·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·공식 발표·구단/선수 근황·유망주·한국 선수 등 축구와 관련해 사실 정보가 담긴 것이면 전부. 무명 선수·유망주·미확정 루머·낮은 신뢰도도 관련 있으면 통과. 신뢰도/중요도가 낮다고 버리지 마라 — 그 판단은 사람 몫이다.
@@ -197,7 +203,7 @@ worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·�
 - 제목: "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진"). 출처는 기자/언론사/구단명. 불명확하면 "[레딧]".
 - 팀/선수 한글 표기는 한국 축구 미디어의 정착된 표기를 따른다 (예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
 - 미확정 루머는 단정하지 말 것.
-- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.
+- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${fewshot}
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
   const user = `제목: ${post.title}
 출처유형: ${sourceKind}
@@ -266,6 +272,22 @@ function buildContent(summary, mediaNode) {
   return { type: "doc", content: content.length ? content : [{ type: "paragraph" }] }
 }
 
+/** few-shot 학습용 — 검수자가 제목을 고친 최근 사례(원본→발행본) 조회 */
+async function fetchCorrectionExamples() {
+  if (!CRON_SECRET) return []
+  try {
+    const res = await fetch(`${BASE_URL}/api/news/correction-examples`, {
+      headers: { Authorization: `Bearer ${CRON_SECRET}` },
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return []
+    const d = await res.json().catch(() => ({}))
+    return Array.isArray(d?.examples) ? d.examples : []
+  } catch {
+    return []
+  }
+}
+
 async function postDraft(payload) {
   const res = await fetch(`${BASE_URL}/api/news/agent-draft`, {
     method: "POST",
@@ -318,6 +340,10 @@ async function main() {
     `${fetchedSubs}/${SUBREDDITS.length}개 소스 → 신규 후보 ${candidates.length}개 (LLM 상한 ${MAX_LLM_PER_RUN})`
   )
 
+  // 검수 교정 예시 로드 (few-shot 학습) — 실패해도 스캔은 계속
+  const corrections = await fetchCorrectionExamples()
+  if (corrections.length) log(`검수 교정 예시 ${corrections.length}건 로드 (few-shot)`)
+
   let drafted = 0
   let llmCalls = 0
   for (const p of candidates) {
@@ -325,7 +351,7 @@ async function main() {
     seen.add(p.id) // 한 번 본 글은 worthy 여부 무관 재처리 안 함 (비용/중복 방지)
     llmCalls++
     try {
-      const v = await judgeAndWrite(p)
+      const v = await judgeAndWrite(p, corrections)
       if (!v?.worthy) {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
         continue
