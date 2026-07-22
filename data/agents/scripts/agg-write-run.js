@@ -1,44 +1,40 @@
 // data/agents/scripts/agg-write-run.js
 //
-// 커뮤니티 애그리게이터 3단계: LLM 재작성 + 페르소나 배정 (T1)
+// 커뮤니티 애그리게이터 3단계: LLM 재작성 (T1) — 라이브 발행용.
 // fetched → drafted | rejected
 //
-// 원제목/발췌를 재료로 어그로 제목 + 페르소나 말투 소개문을 생성.
-// 정치/사건사고/민감 연예 이슈는 여기서 2차 컷 (scout 키워드 필터가 놓친 것).
+// 학습 하니스(agg-train)와 동일한 코어(core/agg-gen.js)를 사용한다:
+// 페르소나 사전배정 + 구조 룰렛 + 캐릭터 시트 + 교정 few-shot 주입.
+// 즉 agg-train 으로 학습시킨 결과가 그대로 이 발행 품질이 된다.
 //
 // 사용:
 //   node data/agents/scripts/agg-write-run.js
 //   node data/agents/scripts/agg-write-run.js --dry-run --limit=3
 
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import supabase from '../../crawlers/core/db.js'
 import { chatWithRetry } from '../../crawlers/core/openai-client.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const CONFIG = JSON.parse(readFileSync(join(__dirname, '..', 'config', 'aggregator.json'), 'utf8'))
-const PROMPT = readFileSync(join(__dirname, '..', 'prompts', 'agg-rewriter.md'), 'utf8')
-const TIERS = JSON.parse(readFileSync(join(__dirname, '..', 'config', 'model-tiers.json'), 'utf8'))
+import {
+  WRITE_MODEL,
+  loadCorrections,
+  buildSystemPrompt,
+  pickPersona,
+  pickStructure,
+  generatePost,
+} from '../core/agg-gen.js'
 
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
 const limitArg = args.find((a) => a.startsWith('--limit='))
 const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : 10
 
-const MODEL = TIERS.tiers.T1.default.id
-const PERSONA_IDS = new Set(CONFIG.personas.map((p) => p.userId))
-const FALLBACK_PERSONA = 'user_persona_meme'
-// rehost 이미지의 공개 URL — 이미지 본체 글의 팩트 재구성을 위해 vision 입력으로 전달
-const SITE_ORIGIN = 'https://gongnori.fan'
-const MAX_VISION_IMAGES = 3
-
 function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-write] ${msg}\n`)
 }
 
 async function main() {
-  log(`model=${MODEL} dry=${dryRun} limit=${limit}`)
+  const corrections = loadCorrections()
+  const systemPrompt = buildSystemPrompt(corrections)
+  log(`model=${WRITE_MODEL} dry=${dryRun} limit=${limit} 교정주입=${corrections.pairs.length}`)
 
   const { data: items, error } = await supabase
     .from('agg_reservoir')
@@ -53,62 +49,28 @@ async function main() {
   }
   log(`대상 ${items.length}건`)
 
-  const personas = CONFIG.personas.map((p) => ({
-    user_id: p.userId,
-    nickname: p.nickname,
-    tone: p.tone,
-    topics: p.topics,
-  }))
-
   let drafted = 0
   let rejected = 0
   for (const item of items) {
-    const input = {
-      source_title: item.source_title,
-      category: item.category,
-      excerpt: (item.body_excerpt || '').slice(0, 1400),
-      media_types: [...new Set((item.media || []).map((m) => m.type))],
-      personas,
-    }
-
-    // 이미지 중심 글: rehost된 이미지를 직접 보여줘 팩트를 재구성하게 한다
-    const imageUrls = (item.media || [])
-      .filter((m) => m.type === 'image' && m.rehosted_url)
-      .slice(0, MAX_VISION_IMAGES)
-      .map((m) => `${SITE_ORIGIN}${m.rehosted_url}`)
-    const userContent = [
-      { type: 'text', text: JSON.stringify(input) },
-      ...imageUrls.map((url) => ({ type: 'image_url', image_url: { url } })),
-    ]
+    const persona = pickPersona(item)
+    const structure = pickStructure(item)
+    const personaId = persona.userId
 
     let out
     try {
-      const response = await chatWithRetry({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: PROMPT },
-          { role: 'user', content: userContent },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.7,
-        max_tokens: 700,
-      })
-      out = JSON.parse(response.choices[0].message.content)
+      out = await generatePost({ item, persona, structure, systemPrompt, chatWithRetry })
     } catch (e) {
       log(`  [ERR] LLM: ${e.message} — ${item.source_title.slice(0, 30)}`)
       continue
     }
 
-    const paragraphs = Array.isArray(out.paragraphs)
-      ? out.paragraphs.map((p) => String(p).trim()).filter(Boolean)
-      : []
+    const paragraphs = out.paragraphs
     const pass = out.decision === 'pass' && out.title && paragraphs.length > 0
-    const personaId = PERSONA_IDS.has(out.persona_user_id) ? out.persona_user_id : FALLBACK_PERSONA
 
     if (dryRun) {
       log(
         pass
-          ? `  [DRAFT] (${personaId}) ${out.title} — ${paragraphs.length}문단`
+          ? `  [DRAFT] (${persona.nickname}/${structure}) ${out.title} — ${paragraphs.length}문단`
           : `  [REJECT] ${item.source_title.slice(0, 30)} (${out.reject_reason})`
       )
       continue
@@ -116,7 +78,14 @@ async function main() {
 
     const audit = [
       ...(item.audit || []),
-      { at: new Date().toISOString(), stage: 'write', model: MODEL, decision: out.decision },
+      {
+        at: new Date().toISOString(),
+        stage: 'write',
+        model: WRITE_MODEL,
+        decision: out.decision,
+        persona: personaId,
+        structure,
+      },
     ]
 
     const { error: upErr } = await supabase

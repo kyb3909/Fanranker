@@ -11,6 +11,9 @@
     "agg:write": "node scripts/agg-write-run.js",
     "agg:publish": "node scripts/agg-publish-run.js",
     "agg:takedown": "node scripts/agg-takedown.js",
-    "agg:cycle": "node scripts/agg-scout-run.js && node scripts/agg-fetch-run.js && node scripts/agg-write-run.js"
+    "agg:cycle": "node scripts/agg-scout-run.js && node scripts/agg-fetch-run.js && node scripts/agg-write-run.js",
+    "agg:train": "node scripts/agg-train.js",
+    "agg:train:gen": "node scripts/agg-train.js gen",
+    "agg:train:learn": "node scripts/agg-train.js learn"
   }
 }

@@ -133,3 +133,7 @@ tests/e2e/reports/
 # E2E 환경 오버라이드 (로컬 Supabase 키 — 머신별)
 tests/e2e/.env.e2e
 aseprite-mcp/
+
+# 애그리게이터 학습 하니스 산출물 (교정본은 config/agg-corrections.json 로 커밋)
+workspace/agg-training/round-*.md
+workspace/agg-training/fixture.json
