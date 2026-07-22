@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
           temperature,
           created_at,
           flair_id,
-          post_flairs ( id, name, color )
+          post_flairs!flair_id ( id, name, color )
         `
         )
         .is("deleted_at", null)

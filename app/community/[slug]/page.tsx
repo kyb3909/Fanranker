@@ -51,7 +51,7 @@ async function fetchPosts(communitySlug: string, page: number = 1, flairId?: str
       is_notice,
       created_at,
       flair_id,
-      post_flairs ( id, name, color )
+      post_flairs!flair_id ( id, name, color )
     `,
       { count: "exact" }
     )
