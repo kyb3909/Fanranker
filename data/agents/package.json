@@ -5,6 +5,12 @@
   "type": "module",
   "description": "Newsroom-style multi-agent pipeline for football news (Phase A). See README.md.",
   "scripts": {
-    "seed:aliases": "node scripts/seed-aliases.js"
+    "seed:aliases": "node scripts/seed-aliases.js",
+    "agg:scout": "node scripts/agg-scout-run.js",
+    "agg:fetch": "node scripts/agg-fetch-run.js",
+    "agg:write": "node scripts/agg-write-run.js",
+    "agg:publish": "node scripts/agg-publish-run.js",
+    "agg:takedown": "node scripts/agg-takedown.js",
+    "agg:cycle": "node scripts/agg-scout-run.js && node scripts/agg-fetch-run.js && node scripts/agg-write-run.js"
   }
 }

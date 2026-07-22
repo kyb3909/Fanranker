@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "note": "커뮤니티 애그리게이터 설정. 소스별 수집 on/off + 정치 필터 + 페르소나 로스터. 문제(저작권 항의 등) 발생 시 해당 source enabled=false로 끄고 agg-takedown으로 일괄 삭제.",
+  "sources": {
+    "theqoo": {
+      "enabled": true,
+      "listUrl": "https://theqoo.net/hot",
+      "note": "더쿠 핫게 — 여돌/연예 떡밥 주력 소스"
+    },
+    "instiz": {
+      "enabled": false,
+      "listUrl": "https://www.instiz.net/pt",
+      "note": "Phase 2 — theqoo 파서 안정화 후"
+    },
+    "fmkorea": {
+      "enabled": false,
+      "listUrl": "https://www.fmkorea.com/best",
+      "note": "Phase 2 — Cloudflare 우회 필요할 수 있음, Vultr에서 확인"
+    },
+    "dcinside": {
+      "enabled": false,
+      "listUrl": "https://gall.dcinside.com/board/lists/?id=dcbest",
+      "note": "Phase 2"
+    }
+  },
+  "filter": {
+    "blockedCategories": ["정치", "사회", "시사", "북한"],
+    "blockedKeywords": [
+      "대통령",
+      "국회",
+      "의원",
+      "민주당",
+      "국민의힘",
+      "개혁신당",
+      "조국",
+      "탄핵",
+      "총선",
+      "대선",
+      "지방선거",
+      "정당",
+      "법무부",
+      "검찰",
+      "북한",
+      "김정은",
+      "시위",
+      "집회",
+      "노조",
+      "파업",
+      "혐오",
+      "페미",
+      "한남",
+      "일베",
+      "사망",
+      "자살",
+      "살인",
+      "성폭행",
+      "성추행",
+      "마약",
+      "음주운전",
+      "열애",
+      "결혼발표",
+      "이혼",
+      "불화",
+      "학폭",
+      "논란"
+    ],
+    "note": "정치/사건사고/민감 연예 이슈 차단. 열애·논란류는 명예훼손 리스크로 컷 (운영자 방침 변경 시 키워드 제거)."
+  },
+  "personas": [
+    {
+      "userId": "user_persona_dawn",
+      "nickname": "새벽두시반",
+      "tone": "음슴체. 덕후 특유의 호들갑 (\"미쳤다\", \"이거 실화임?\"). 이모지 가끔.",
+      "topics": ["여돌", "아이돌", "컴백", "티저", "무대", "직캠"],
+      "activeHours": [22, 23, 0, 1, 2]
+    },
+    {
+      "userId": "user_persona_light",
+      "nickname": "요즘뭐봄",
+      "tone": "해요체. 라이트한 소개 톤 (\"요즘 이게 그렇게 좋대요\").",
+      "topics": ["여돌", "예능", "OTT", "화제"],
+      "activeHours": [11, 12, 13, 14, 15, 16]
+    },
+    {
+      "userId": "user_persona_meme",
+      "nickname": "떡밥줍는사람",
+      "tone": "반말체. 짧고 건조하게 툭 던짐 (\"이거 웃긴데\", \"레전드다\").",
+      "topics": ["유머", "화제", "동물", "일상", "밈"],
+      "activeHours": [9, 10, 17, 18, 19, 20, 21]
+    },
+    {
+      "userId": "user_persona_gooner",
+      "nickname": "하이버리지박령",
+      "tone": "반말체. 아스날 팬 특유의 자조+애정.",
+      "topics": ["축구", "아스날", "EPL", "이적"],
+      "activeHours": [20, 21, 22, 23]
+    },
+    {
+      "userId": "user_persona_kbo",
+      "nickname": "퇴근하고직관",
+      "tone": "음슴체. 야구 직관러 톤.",
+      "topics": ["야구", "KBO"],
+      "activeHours": [18, 19, 20, 21, 22]
+    }
+  ],
+  "limits": {
+    "scoutPerRun": 30,
+    "publishPerPersonaPerDay": 2,
+    "dailyPublishCap": 8
+  },
+  "board": {
+    "communitySlug": "free-board"
+  }
+}
