@@ -16,6 +16,10 @@ import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { fetcher } from "@/lib/swr"
 import { trackEvent } from "@/lib/analytics/events"
 import { getGameTypeLabel } from "@/types/betting"
+import {
+  extractFirstImageSrcFromTipTapJSON,
+  extractFirstEmbedFromTipTapJSON,
+} from "@/lib/utils/tiptap-embeds"
 import type { PickDistributionEntry, PredictionSuccessState } from "@/types/betting"
 
 interface PredictionSuccessDialogProps {
@@ -26,8 +30,17 @@ interface PredictionSuccessDialogProps {
 interface HotPost {
   id: string
   title: string
+  content?: unknown
   comment_count: number | null
   vote_count: number | null
+}
+
+/** 게시글 본문에서 대표 썸네일 1장 추출 (이미지 → 임베드 썸네일 순). 없으면 null. */
+function postThumbnail(post: HotPost): string | null {
+  const img = extractFirstImageSrcFromTipTapJSON(post.content)
+  if (img) return img
+  const embed = extractFirstEmbedFromTipTapJSON(post.content)
+  return embed?.attrs?.thumbnail_url ?? null
 }
 
 const PICK_ORDER = ["home", "draw", "away", "over", "under"] as const
@@ -124,13 +137,17 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
  * 클릭은 GA4(prediction_modal_*)로 계측 → 매치 스레드(B안) 투자 판단 데이터.
  */
 export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDialogProps) {
+  // 활성 게시판(자유·축구 등) 인기글 — 종목 무관. 썸네일 있는 글을 우선 노출한다.
   const { data: hotData } = useSWR<{ posts: HotPost[] }>(
-    state.isOpen && state.showCommunity
-      ? "/api/posts?community_slug=football&sort=hot&limit=1"
-      : null,
+    state.isOpen && state.showCommunity ? "/api/posts?sort=hot&limit=8" : null,
     fetcher
   )
-  const hotPost = hotData?.posts?.[0]
+  const hotPosts = (() => {
+    const all = hotData?.posts ?? []
+    const withThumb = all.filter((p) => postThumbnail(p))
+    const withoutThumb = all.filter((p) => !postThumbnail(p))
+    return [...withThumb, ...withoutThumb].slice(0, 3)
+  })()
 
   return (
     <Dialog
@@ -168,62 +185,82 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
           </div>
         )}
 
-        {state.showCommunity && (
+        {state.showCommunity && hotPosts.length > 0 && (
           <div className="min-w-0 space-y-2">
-            {hotPost && (
-              <Link
-                href={`/post/${hotPost.id}`}
-                onClick={() =>
-                  trackEvent({
-                    name: "prediction_modal_post_click",
-                    params: { post_id: hotPost.id },
-                  })
-                }
-                className="flex min-w-0 items-center gap-2.5 rounded-lg px-3.5 py-2.5 transition-colors hover:opacity-80"
-                style={{
-                  background: "rgba(150,30,55,0.06)",
-                  border: "1px solid var(--wc-line, #e2e5ea)",
-                }}
-              >
-                <span
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
-                  style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
+            <p className="text-[12px] font-bold" style={{ color: "var(--wc-mute, #5c6470)" }}>
+              🔥 지금 인기 있는 글
+            </p>
+            {hotPosts.map((post) => {
+              const thumb = postThumbnail(post)
+              return (
+                <Link
+                  key={post.id}
+                  href={`/post/${post.id}`}
+                  onClick={() =>
+                    trackEvent({
+                      name: "prediction_modal_post_click",
+                      params: { post_id: post.id },
+                    })
+                  }
+                  className="flex min-w-0 items-center gap-2.5 rounded-lg p-2 transition-colors hover:opacity-80"
+                  style={{
+                    background: "rgba(150,30,55,0.06)",
+                    border: "1px solid var(--wc-line, #e2e5ea)",
+                  }}
                 >
-                  HOT
-                </span>
-                <span
-                  className="min-w-0 flex-1 truncate text-[13px] font-semibold"
-                  style={{ color: "var(--wc-ink, #14161a)" }}
-                >
-                  {hotPost.title}
-                </span>
-                <span
-                  className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums"
-                  style={{ color: "var(--wc-mute, #5c6470)" }}
-                >
-                  <span className="flex items-center gap-0.5">
-                    <ThumbsUp className="h-3 w-3" />
-                    {hotPost.vote_count ?? 0}
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={thumb}
+                      alt=""
+                      loading="lazy"
+                      className="h-14 w-14 shrink-0 rounded-md object-cover"
+                      style={{ background: "var(--wc-paper, #f1f1f3)" }}
+                    />
+                  ) : (
+                    <span
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md text-[10px] font-bold"
+                      style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
+                    >
+                      HOT
+                    </span>
+                  )}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span
+                      className="line-clamp-2 text-[13px] leading-snug font-semibold"
+                      style={{ color: "var(--wc-ink, #14161a)" }}
+                    >
+                      {post.title}
+                    </span>
+                    <span
+                      className="flex items-center gap-2 text-[11px] tabular-nums"
+                      style={{ color: "var(--wc-mute, #5c6470)" }}
+                    >
+                      <span className="flex items-center gap-0.5">
+                        <ThumbsUp className="h-3 w-3" />
+                        {post.vote_count ?? 0}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <MessageSquare className="h-3 w-3" />
+                        {post.comment_count ?? 0}
+                      </span>
+                    </span>
                   </span>
-                  <span className="flex items-center gap-0.5">
-                    <MessageSquare className="h-3 w-3" />
-                    {hotPost.comment_count ?? 0}
-                  </span>
-                </span>
-              </Link>
-            )}
+                </Link>
+              )
+            })}
             <Link
-              href="/community/football"
+              href="/"
               onClick={() =>
                 trackEvent({
                   name: "prediction_modal_board_click",
-                  params: { board: "football" },
+                  params: { board: "feed" },
                 })
               }
               className="flex w-full items-center justify-center rounded-lg py-2.5 text-[13px] font-bold transition-opacity hover:opacity-90"
               style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
             >
-              축구 게시판에서 이 경기 얘기하기 →
+              담벼락 구경하러 가기 →
             </Link>
           </div>
         )}

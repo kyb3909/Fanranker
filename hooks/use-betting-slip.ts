@@ -257,10 +257,11 @@ export function useBettingSlip(
         name: "prediction_submit",
         params: { sport: selectedSport || "unknown", stake: betAmount },
       })
-      // 완료 모달: 픽 분포 + 커뮤니티 유도. 축구(월드컵 포함)만 게시판 섹션 노출
-      // — 다른 종목 게시판은 온보딩 중 비활성(is_active off)이라 링크하지 않는다.
+      // 완료 모달: 픽 분포 + 인기글 썸네일 유도.
+      // 활성 게시판(자유·축구 등) 인기글을 종목 무관하게 노출 — 베팅 직후가 검증된 최대
+      // 콘텐츠 소비 레버라, 야구 베터도 담벼락으로 넘긴다 (구 축구 전용 게이트 제거 2026-07-23).
       const distribution = (data.pickDistribution ?? []) as PickDistributionEntry[]
-      const showCommunity = Boolean(eventSlug) || selectedSport === "축구"
+      const showCommunity = true
       setSuccessModal({
         isOpen: true,
         message: data.message || `${selectedBets.length}경기 예측이 성공적으로 등록되었습니다.`,
