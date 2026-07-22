@@ -81,7 +81,7 @@ function extractExcerpt(articleHtml) {
     .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 600)
+    .slice(0, 1600)
 }
 
 function extForContentType(ct, url) {

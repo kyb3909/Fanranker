@@ -105,6 +105,7 @@
   ],
   "limits": {
     "scoutPerRun": 30,
+    "freshnessMinutes": 90,
     "publishPerPersonaPerDay": 2,
     "dailyPublishCap": 8
   },

@@ -29,11 +29,21 @@ function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-publish] ${msg}\n`)
 }
 
-function buildTipTapDoc(intro, media) {
+/** 문단 배열 + 미디어 → TipTap doc.
+ *  레이아웃: 첫 문단 → 미디어 → 나머지 문단 (팩트 전달형 — 우리 글만 읽어도 내용 전달).
+ *  구버전 draft(intro 단일 문장)도 처리. */
+function buildTipTapDoc(rewritten, media) {
+  const paragraphs = Array.isArray(rewritten.paragraphs)
+    ? rewritten.paragraphs
+    : rewritten.intro
+      ? [rewritten.intro]
+      : []
+  const para = (text) => ({
+    type: 'paragraph',
+    content: [{ type: 'text', text: String(text).slice(0, 2000) }],
+  })
   const content = []
-  if (intro) {
-    content.push({ type: 'paragraph', content: [{ type: 'text', text: String(intro).slice(0, 1000) }] })
-  }
+  if (paragraphs[0]) content.push(para(paragraphs[0]))
   for (const m of media) {
     if (m.type === 'image' && m.rehosted_url) {
       content.push({ type: 'image', attrs: { src: m.rehosted_url } })
@@ -51,6 +61,7 @@ function buildTipTapDoc(intro, media) {
       content.push({ type: 'embed', attrs: { provider: 'x', url: m.url } })
     }
   }
+  for (const text of paragraphs.slice(1)) content.push(para(text))
   return { type: 'doc', content }
 }
 
@@ -114,9 +125,8 @@ async function main() {
       continue
     }
 
-    const content = buildTipTapDoc(rw.intro, item.media || [])
-    const mediaCount = content.content.length - (rw.intro ? 1 : 0)
-    log(`  PUBLISH (${rw.persona_user_id}, media ${mediaCount}) ${rw.title}`)
+    const content = buildTipTapDoc(rw, item.media || [])
+    log(`  PUBLISH (${rw.persona_user_id}, nodes ${content.content.length}) ${rw.title}`)
     if (dryRun) {
       published++
       continue

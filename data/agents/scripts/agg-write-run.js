@@ -29,6 +29,9 @@ const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : 10
 const MODEL = TIERS.tiers.T1.default.id
 const PERSONA_IDS = new Set(CONFIG.personas.map((p) => p.userId))
 const FALLBACK_PERSONA = 'user_persona_meme'
+// rehost 이미지의 공개 URL — 이미지 본체 글의 팩트 재구성을 위해 vision 입력으로 전달
+const SITE_ORIGIN = 'https://gongnori.fan'
+const MAX_VISION_IMAGES = 3
 
 function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-write] ${msg}\n`)
@@ -63,10 +66,20 @@ async function main() {
     const input = {
       source_title: item.source_title,
       category: item.category,
-      excerpt: (item.body_excerpt || '').slice(0, 400),
+      excerpt: (item.body_excerpt || '').slice(0, 1400),
       media_types: [...new Set((item.media || []).map((m) => m.type))],
       personas,
     }
+
+    // 이미지 중심 글: rehost된 이미지를 직접 보여줘 팩트를 재구성하게 한다
+    const imageUrls = (item.media || [])
+      .filter((m) => m.type === 'image' && m.rehosted_url)
+      .slice(0, MAX_VISION_IMAGES)
+      .map((m) => `${SITE_ORIGIN}${m.rehosted_url}`)
+    const userContent = [
+      { type: 'text', text: JSON.stringify(input) },
+      ...imageUrls.map((url) => ({ type: 'image_url', image_url: { url } })),
+    ]
 
     let out
     try {
@@ -74,11 +87,11 @@ async function main() {
         model: MODEL,
         messages: [
           { role: 'system', content: PROMPT },
-          { role: 'user', content: JSON.stringify(input) },
+          { role: 'user', content: userContent },
         ],
         response_format: { type: 'json_object' },
         temperature: 0.7,
-        max_tokens: 300,
+        max_tokens: 700,
       })
       out = JSON.parse(response.choices[0].message.content)
     } catch (e) {
@@ -86,13 +99,16 @@ async function main() {
       continue
     }
 
-    const pass = out.decision === 'pass' && out.title && out.intro
+    const paragraphs = Array.isArray(out.paragraphs)
+      ? out.paragraphs.map((p) => String(p).trim()).filter(Boolean)
+      : []
+    const pass = out.decision === 'pass' && out.title && paragraphs.length > 0
     const personaId = PERSONA_IDS.has(out.persona_user_id) ? out.persona_user_id : FALLBACK_PERSONA
 
     if (dryRun) {
       log(
         pass
-          ? `  [DRAFT] (${personaId}) ${out.title} — ${out.intro}`
+          ? `  [DRAFT] (${personaId}) ${out.title} — ${paragraphs.length}문단`
           : `  [REJECT] ${item.source_title.slice(0, 30)} (${out.reject_reason})`
       )
       continue
@@ -109,7 +125,7 @@ async function main() {
         pass
           ? {
               status: 'drafted',
-              rewritten: { title: out.title, intro: out.intro, persona_user_id: personaId },
+              rewritten: { title: out.title, paragraphs, persona_user_id: personaId },
               audit,
             }
           : {
