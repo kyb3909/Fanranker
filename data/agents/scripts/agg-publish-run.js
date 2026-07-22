@@ -25,13 +25,6 @@ const dryRun = args.includes('--dry-run')
 const limitArg = args.find((a) => a.startsWith('--limit='))
 const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : null
 
-const SOURCE_NAME = {
-  theqoo: '더쿠',
-  instiz: '인스티즈',
-  fmkorea: '에펨코리아',
-  dcinside: '디시인사이드',
-}
-
 function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-publish] ${msg}\n`)
 }
@@ -129,6 +122,8 @@ async function main() {
       continue
     }
 
+    // 출처는 공개 표기하지 않는다 (운영자 방침 2026-07-22).
+    // 원본 추적은 agg_reservoir.source_url(내부 전용)로만 — takedown은 post_id 매핑으로 동작.
     const { data: postRow, error: insErr } = await supabase
       .from('posts')
       .insert({
@@ -136,8 +131,6 @@ async function main() {
         community_slug: CONFIG.board.communitySlug,
         title: rw.title,
         content,
-        source_url: item.source_url,
-        source_name: SOURCE_NAME[item.source] || item.source,
       })
       .select('id')
       .single()
