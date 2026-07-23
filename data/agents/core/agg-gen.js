@@ -59,31 +59,41 @@ export function pickStructure(item, rnd = Math.random) {
   return STRUCTURES[Math.floor(rnd() * STRUCTURES.length)]
 }
 
-/** few-shot 렌더 — 최근 교정 쌍을 프롬프트 예시로 */
+/** few-shot 렌더 — 최근 교정 쌍 + 반려 소재 신호를 프롬프트 예시로 */
 function renderFewshot(corrections) {
+  const out = []
   const pairs = (corrections.pairs || []).slice(-MAX_FEWSHOT)
-  if (pairs.length === 0) return ''
-  const blocks = pairs.map((p, i) => {
-    const beforeBody = (p.before?.paragraphs || []).join(' / ')
-    const afterBody = (p.after?.paragraphs || []).join(' / ')
-    return [
-      `### 교정 예시 ${i + 1}${p.persona ? ` (페르소나: ${p.persona})` : ''}`,
-      `✗ 이렇게 쓰면 안 됨:`,
-      `  제목: ${p.before?.title || ''}`,
-      `  본문: ${beforeBody}`,
-      `✓ 이렇게 고쳐야 함:`,
-      `  제목: ${p.after?.title || ''}`,
-      `  본문: ${afterBody}`,
-      p.note ? `  메모: ${p.note}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n')
-  })
-  return [
-    '',
-    '## 교정 학습 예시 (운영자가 직접 고친 것 — 같은 실수 반복 금지)',
-    ...blocks,
-  ].join('\n')
+  if (pairs.length > 0) {
+    const blocks = pairs.map((p, i) => {
+      const beforeBody = (p.before?.paragraphs || []).join(' / ')
+      const afterBody = (p.after?.paragraphs || []).join(' / ')
+      return [
+        `### 교정 예시 ${i + 1}${p.persona ? ` (페르소나: ${p.persona})` : ''}`,
+        `✗ 이렇게 쓰면 안 됨:`,
+        `  제목: ${p.before?.title || ''}`,
+        `  본문: ${beforeBody}`,
+        `✓ 이렇게 고쳐야 함:`,
+        `  제목: ${p.after?.title || ''}`,
+        `  본문: ${afterBody}`,
+        p.note ? `  메모: ${p.note}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    })
+    out.push('', '## 교정 학습 예시 (운영자가 직접 고친 것 — 같은 실수 반복 금지)', ...blocks)
+  }
+  const rejects = (corrections.rejects || []).slice(-MAX_FEWSHOT)
+  if (rejects.length > 0) {
+    const rlist = rejects.map(
+      (r) => `- "${r.source_title}"${r.reason ? ` — 이유: ${r.reason}` : ''}`
+    )
+    out.push(
+      '',
+      '## 반려된 소재 유형 (운영자가 "이런 건 쓰지 말라"고 지정 — 유사하면 decision=reject)',
+      ...rlist
+    )
+  }
+  return out.join('\n')
 }
 
 /** 시스템 프롬프트 (few-shot 주입 완료본) */

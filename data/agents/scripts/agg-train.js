@@ -69,9 +69,12 @@ function renderReview(entries) {
   const lines = [
     `# 페르소나 글 학습 라운드`,
     ``,
-    `> 사용법: 각 글의 **✎ 제목 / ✎ 본문**을 직접 고치세요. 좋으면 그대로 두면 됩니다.`,
-    `> 고친 것만 정답으로 학습됩니다. 다 고쳤으면 저장 후:`,
-    `> \`node data/agents/scripts/agg-train.js learn --file=<이 파일 경로>\``,
+    `> 사용법:`,
+    `> - 글을 고치려면 **✎ 제목 / ✎ 본문**을 직접 수정하세요. 좋으면 그대로 두면 됩니다.`,
+    `> - 이 소재 자체가 부적절하면 **반려**: 그 글의 \`✎ 제목:\` 줄을 \`✎ 제목: [반려] 이유\` 로 바꾸세요.`,
+    `>   (반려한 소재의 특징은 "이런 건 애초에 쓰지 말라"고 학습됩니다.)`,
+    `> - 고친 것/반려한 것만 학습됩니다. 그대로 둔 글은 "이대로 좋다"로 통과.`,
+    `> - 다 했으면 저장 후: \`node data/agents/scripts/agg-train.js learn --file=<이 파일 경로>\``,
     ``,
   ]
   entries.forEach((e, i) => {
@@ -143,11 +146,12 @@ function parseEntry(block) {
   }
   const personaLine = grab('페르소나: ', '\n') || ''
   const persona = personaLine.split(' / ')[0].trim()
+  const sourceTitle = grab('소재: ', '\n')
   const aiTitle = grab('■ AI 제목\n', '\n\n■ AI 본문')
   const aiBody = grab('■ AI 본문\n', '\n\n┈┈┈')
   const fixTitle = grab('✎ 제목: ', '\n')
   const fixBody = grab('✎ 본문:\n', null)
-  return { persona, aiTitle, aiBody, fixTitle, fixBody: fixBody ? fixBody.trim() : null }
+  return { persona, sourceTitle, aiTitle, aiBody, fixTitle, fixBody: fixBody ? fixBody.trim() : null }
 }
 
 function cmdLearn() {
@@ -158,11 +162,23 @@ function cmdLearn() {
   const path = join(REPO_ROOT, fileArg.replace(/^.*community[\\/]/, ''))
   const raw = readFileSync(existsSync(fileArg) ? fileArg : path, 'utf8')
   const store = loadCorrections()
-  let added = 0
+  if (!Array.isArray(store.rejects)) store.rejects = []
+  let corrected = 0
+  let rejectedN = 0
   const blocks = raw.match(ENTRY_RE) || []
   for (const block of blocks) {
     const e = parseEntry(block)
     if (!e.aiTitle || e.fixTitle === null || e.fixBody === null) continue
+
+    // 반려: ✎ 제목이 [반려] 로 시작 → 소재 부적합 신호로 학습
+    const rejectMatch = e.fixTitle.trim().match(/^\[반려\]\s*(.*)$/)
+    if (rejectMatch) {
+      store.rejects.push({ source_title: e.sourceTitle || '', reason: rejectMatch[1] || '' })
+      rejectedN++
+      log(`  반려: "${(e.sourceTitle || '').slice(0, 30)}" (${rejectMatch[1] || '이유없음'})`)
+      continue
+    }
+
     const titleChanged = e.fixTitle.trim() !== e.aiTitle.trim()
     const bodyChanged = e.fixBody.trim() !== (e.aiBody || '').trim()
     if (!titleChanged && !bodyChanged) continue // 그대로 둔 것 = 학습 안 함
@@ -172,16 +188,18 @@ function cmdLearn() {
       after: { title: e.fixTitle, paragraphs: e.fixBody.split(/\n\n+/) },
       note: '',
     })
-    added++
-    log(`  학습: (${e.persona}) "${e.aiTitle.slice(0, 24)}" → "${e.fixTitle.slice(0, 24)}"`)
+    corrected++
+    log(`  교정: (${e.persona}) "${e.aiTitle.slice(0, 24)}" → "${e.fixTitle.slice(0, 24)}"`)
   }
   saveCorrections(store)
-  log(`교정 ${added}건 추가 → 누적 ${store.pairs.length}건. 다음 gen 부터 반영됩니다.`)
+  log(
+    `교정 ${corrected}건 / 반려 ${rejectedN}건 추가 → 누적 교정 ${store.pairs.length}·반려 ${store.rejects.length}건. 다음 gen 부터 반영됩니다.`
+  )
 }
 
 function cmdStatus() {
   const store = loadCorrections()
-  log(`누적 교정 ${store.pairs.length}건`)
+  log(`누적 교정 ${store.pairs.length}건 / 반려 ${(store.rejects || []).length}건`)
   const byPersona = {}
   for (const p of store.pairs) byPersona[p.persona] = (byPersona[p.persona] || 0) + 1
   for (const [k, v] of Object.entries(byPersona)) log(`  ${k}: ${v}`)
