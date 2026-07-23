@@ -102,8 +102,8 @@ export function buildSystemPrompt(corrections = loadCorrections()) {
   return base.replace('<!-- FEWSHOT -->', renderFewshot(corrections))
 }
 
-/** OpenAI messages 조립 */
-export function buildMessages({ item, persona, structure, systemPrompt }) {
+/** OpenAI messages 조립. catchphrase 는 30% 확률로만 노출 — 매 글 꼬리표로 붙는 스팸 방지 (모델은 입력에 있으면 못 참는다) */
+export function buildMessages({ item, persona, structure, systemPrompt, rnd = Math.random }) {
   const input = {
     source_title: item.source_title,
     category: item.category,
@@ -114,7 +114,7 @@ export function buildMessages({ item, persona, structure, systemPrompt }) {
       nickname: persona.nickname,
       tone: persona.tone,
       topics: persona.topics,
-      catchphrases: persona.catchphrases,
+      catchphrases: rnd() < 0.3 ? persona.catchphrases : [],
       avoid: persona.avoid,
       sentenceHabit: persona.sentenceHabit,
       angleStyle: persona.angleStyle,
