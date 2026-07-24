@@ -31,10 +31,21 @@ function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-write] ${msg}\n`)
 }
 
+const DRAFTED_BACKPRESSURE = 30 // 검수 대기가 이만큼 쌓이면 write 스킵 (검수 없이 LLM 비용만 쌓이는 것 방지)
+
 async function main() {
   const corrections = loadCorrections()
   const systemPrompt = buildSystemPrompt(corrections)
   log(`model=${WRITE_MODEL} dry=${dryRun} limit=${limit} 교정주입=${corrections.pairs.length}`)
+
+  const { count: draftedPending } = await supabase
+    .from('agg_reservoir')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'drafted')
+  if ((draftedPending ?? 0) >= DRAFTED_BACKPRESSURE) {
+    log(`검수 대기 ${draftedPending}건 ≥ ${DRAFTED_BACKPRESSURE} — write 스킵 (백프레셔)`)
+    return
+  }
 
   const { data: items, error } = await supabase
     .from('agg_reservoir')
