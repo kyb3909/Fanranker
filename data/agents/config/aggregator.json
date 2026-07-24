@@ -21,6 +21,20 @@
       "enabled": false,
       "listUrl": "https://gall.dcinside.com/board/lists/?id=dcbest",
       "note": "Phase 2"
+    },
+    "reddit": {
+      "enabled": true,
+      "subreddits": [
+        "interestingasfuck",
+        "Damnthatsinteresting",
+        "BeAmazed",
+        "nextfuckinglevel",
+        "aww",
+        "AnimalsBeingDerps",
+        "oddlysatisfying"
+      ],
+      "perSub": 3,
+      "note": "흥미/신기/동물 비주얼 서브레딧 (agg v2 Phase 2). RSS+curl 수집(JSON API 는 TLS 차단) — hot 정렬 + 24h 윈도우, 직접 이미지 글만. 영문 캡션이 핵심인 memes/funny 는 번역이 안 먹혀 제외."
     }
   },
   "filter": {
@@ -64,7 +78,36 @@
       "학폭",
       "논란"
     ],
-    "note": "정치/사건사고/민감 연예 이슈 차단. 열애·논란류는 명예훼손 리스크로 컷 (운영자 방침 변경 시 키워드 제거)."
+    "blockedKeywordsEn": [
+      "politic",
+      "politics",
+      "political",
+      "trump",
+      "biden",
+      "election",
+      "israel",
+      "gaza",
+      "palestine",
+      "palestinian",
+      "ukraine",
+      "russia",
+      "war",
+      "shooting",
+      "shot",
+      "gun",
+      "police",
+      "protest",
+      "riot",
+      "death",
+      "dead",
+      "died",
+      "killed",
+      "murder",
+      "suicide",
+      "nsfw",
+      "onlyfans"
+    ],
+    "note": "정치/사건사고/민감 연예 이슈 차단. 열애·논란류는 명예훼손 리스크로 컷 (운영자 방침 변경 시 키워드 제거). En 목록은 reddit 등 영문 소스용 — 단어 경계(\\b) 매칭."
   },
   "personas": [
     {

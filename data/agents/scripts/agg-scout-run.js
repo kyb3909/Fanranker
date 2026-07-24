@@ -42,9 +42,15 @@ function decodeEntities(s) {
 
 /** 정치/민감 필터. true = 차단 */
 function isBlocked(title, category) {
-  const { blockedCategories, blockedKeywords } = CONFIG.filter
+  const { blockedCategories, blockedKeywords, blockedKeywordsEn } = CONFIG.filter
   if (category && blockedCategories.some((c) => category.includes(c))) return true
-  return blockedKeywords.some((k) => title.includes(k))
+  if (blockedKeywords.some((k) => title.includes(k))) return true
+  // 영문 소스(reddit)용 — 단어 경계 매칭 (substring이면 "war"가 "award"를 잡음)
+  if (blockedKeywordsEn?.length) {
+    const re = new RegExp(`\\b(${blockedKeywordsEn.join('|')})\\b`, 'i')
+    if (re.test(title)) return true
+  }
+  return false
 }
 
 /* ── 시의성 필터 ──
@@ -96,6 +102,50 @@ async function fetchList(sourceKey, sourceCfg) {
   return res.text()
 }
 
+/* ── Reddit (비주얼 서브레딧) ──
+ * Reddit 은 Node fetch 의 TLS 핑거프린트를 차단 (JSON API 403) — 기존 뉴스 크롤러의
+ * RSS+curl 파서(crawlers/core/reddit-fetcher.js)를 재사용한다. RSS 라 score 필터는 없음
+ * (hot 정렬 자체가 품질 프록시). 직접 이미지 링크(i.redd.it 등)가 있는 글만 수집 —
+ * 갤러리/영상은 RSS 에서 식별 불가라 스킵. fetch 단계는 reddit 이면 rehost 만 수행. */
+async function scoutReddit(cfg) {
+  const { fetchRedditPosts } = await import('../../crawlers/core/reddit-fetcher.js')
+  const items = []
+  let first = true
+  for (const sub of cfg.subreddits || []) {
+    // 연속 요청은 레이트리밋(RSS blocked)에 걸림 — 서브레딧 간 5초 간격
+    if (!first) await new Promise((r) => setTimeout(r, 5000))
+    first = false
+    try {
+      let posts
+      try {
+        posts = await fetchRedditPosts({ subreddit: sub, max_articles: cfg.perSub || 3 })
+      } catch {
+        // 간헐 차단 — 10초 후 1회 재시도
+        await new Promise((r) => setTimeout(r, 10000))
+        posts = await fetchRedditPosts({ subreddit: sub, max_articles: cfg.perSub || 3 })
+      }
+      let picked = 0
+      for (const p of posts) {
+        if (p.media_type !== 'image' || !p.link_url) continue // 비주얼 소스 — 이미지 글만
+        items.push({
+          source: 'reddit',
+          source_url: p.external_url,
+          source_title: p.original_title,
+          category: `r/${sub}`,
+          _skipFresh: true, // RSS 파서가 24h 윈도우 필터 수행
+          _media: [{ type: 'image', url: p.link_url }],
+          _excerpt: p.original_title,
+        })
+        picked++
+      }
+      log(`  reddit r/${sub}: ${picked}건 (이미지 글만)`)
+    } catch (e) {
+      log(`  [ERR] reddit r/${sub}: ${e.message}`)
+    }
+  }
+  return items
+}
+
 async function main() {
   log(`dry=${dryRun} source=${sourceArg ?? 'all-enabled'}`)
 
@@ -103,6 +153,10 @@ async function main() {
   for (const [key, cfg] of Object.entries(CONFIG.sources)) {
     if (sourceArg && key !== sourceArg) continue
     if (!sourceArg && !cfg.enabled) continue
+    if (key === 'reddit') {
+      collected.push(...(await scoutReddit(cfg)))
+      continue
+    }
     const parser = PARSERS[key]
     if (!parser) {
       log(`  [SKIP] ${key}: 파서 미구현`)
@@ -122,7 +176,7 @@ async function main() {
   let blocked = 0
   let stale = 0
   for (const item of collected) {
-    if (!isFresh(item._timeText || '')) {
+    if (!item._skipFresh && !isFresh(item._timeText || '')) {
       stale++
       if (dryRun) log(`  [STALE] (${item._timeText}) ${item.source_title.slice(0, 40)}`)
       continue
@@ -145,8 +199,11 @@ async function main() {
   const { default: supabase } = await import('../../crawlers/core/db.js')
   let inserted = 0
   for (const item of passed) {
+    // reddit 은 scout 에서 media/excerpt 까지 확보 — fetch 단계는 rehost 만 수행
+    const { _media, _excerpt, _skipFresh, ...rest } = item
     const { error } = await supabase.from('agg_reservoir').insert({
-      ...item,
+      ...rest,
+      ...(_media ? { media: _media, body_excerpt: _excerpt } : {}),
       status: 'ingested',
       audit: [{ at: new Date().toISOString(), stage: 'scout', category: item.category }],
     })

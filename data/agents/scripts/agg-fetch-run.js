@@ -117,7 +117,7 @@ async function main() {
 
   const { data: items, error } = await supabase
     .from('agg_reservoir')
-    .select('id, source, source_url, source_title, audit')
+    .select('id, source, source_url, source_title, body_excerpt, media, audit')
     .eq('status', 'ingested')
     .order('created_at', { ascending: true })
     .limit(limit)
@@ -130,14 +130,22 @@ async function main() {
 
   for (const item of items) {
     try {
-      const res = await fetch(item.source_url, {
-        headers: { 'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9' },
-      })
-      if (!res.ok) throw new Error(`detail HTTP ${res.status}`)
-      const html = await res.text()
-      const article = extractArticle(item.source, html)
-      const media = extractMedia(article)
-      const excerpt = extractExcerpt(article)
+      let media
+      let excerpt
+      if (item.source === 'reddit') {
+        // scout 이 hot.json 에서 media/excerpt 를 이미 확보 — 여기선 rehost 만
+        media = item.media || []
+        excerpt = item.body_excerpt || item.source_title
+      } else {
+        const res = await fetch(item.source_url, {
+          headers: { 'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9' },
+        })
+        if (!res.ok) throw new Error(`detail HTTP ${res.status}`)
+        const html = await res.text()
+        const article = extractArticle(item.source, html)
+        media = extractMedia(article)
+        excerpt = extractExcerpt(article)
+      }
 
       log(`  ${item.source_title.slice(0, 40)} — media ${media.length} (img ${media.filter((x) => x.type === 'image').length})`)
       if (dryRun) {

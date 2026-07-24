@@ -1,15 +1,17 @@
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 const REDDIT_BASE = 'https://www.reddit.com'
 
 /**
  * Fetch URL using curl (bypasses Node.js TLS fingerprint blocking).
+ * execFileSync(인자 배열) — 셸 인용이 없어 Linux(Vultr)/Windows(로컬 테스트) 동일 동작.
  */
 function curlFetch(url) {
   try {
-    const result = execSync(
-      `curl -s -L -H 'User-Agent: ${USER_AGENT}' --max-time 15 '${url}'`,
+    const result = execFileSync(
+      'curl',
+      ['-s', '-L', '-H', `User-Agent: ${USER_AGENT}`, '--max-time', '15', url],
       { encoding: 'utf-8', maxBuffer: 5 * 1024 * 1024 }
     )
     return result
