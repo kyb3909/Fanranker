@@ -37,6 +37,38 @@ export function saveCorrections(store) {
   writeFileSync(CORRECTIONS_PATH, JSON.stringify(store, null, 2))
 }
 
+/** 교정/반려를 DB(agg_training_entries)에서 실시간 로드 — 검수 페이지의 교정·반려가
+ *  learn/커밋/배포 없이 다음 생성부터 바로 반영된다. 파일 저장소(learn 으로 회수된 과거분)
+ *  뒤에 미회수(learned_at IS NULL) DB 분을 시간순으로 이어 붙인다. DB 실패 시 파일만. */
+export async function loadCorrectionsLive(supabase) {
+  const base = loadCorrections()
+  if (!Array.isArray(base.rejects)) base.rejects = []
+  try {
+    const { data, error } = await supabase
+      .from('agg_training_entries')
+      .select('persona, source_title, ai_title, ai_body, fix_title, fix_body, reject_reason, status, reviewed_at')
+      .in('status', ['corrected', 'rejected'])
+      .is('learned_at', null)
+      .order('reviewed_at', { ascending: true })
+    if (error) throw new Error(error.message)
+    for (const e of data || []) {
+      if (e.status === 'corrected' && e.fix_title && e.fix_body) {
+        base.pairs.push({
+          persona: e.persona,
+          before: { title: e.ai_title, paragraphs: (e.ai_body || '').split(/\n\n+/) },
+          after: { title: e.fix_title, paragraphs: (e.fix_body || '').split(/\n\n+/) },
+          note: '',
+        })
+      } else if (e.status === 'rejected') {
+        base.rejects.push({ source_title: e.source_title, reason: e.reject_reason || '' })
+      }
+    }
+  } catch {
+    // DB 조회 실패 — 파일 저장소만으로 진행
+  }
+  return base
+}
+
 /** 소재 → 페르소나 배정 (topics/카테고리 키워드 매칭, 없으면 유머 담당) */
 export function pickPersona(item) {
   const text = `${item.source_title || ''} ${item.category || ''}`.toLowerCase()

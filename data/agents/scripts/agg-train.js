@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 import {
   CONFIG,
   loadCorrections,
+  loadCorrectionsLive,
   saveCorrections,
   buildSystemPrompt,
   pickPersona,
@@ -76,7 +77,7 @@ async function loadFixture() {
 async function cmdGen() {
   const { chatWithRetry } = await import('../../crawlers/core/openai-client.js')
   const fixture = await loadFixture()
-  const corrections = loadCorrections()
+  const corrections = await loadCorrectionsLive(await db())
   const systemPrompt = buildSystemPrompt(corrections)
   log(
     `생성 시작 — 소재 ${fixture.length}건, 누적 교정 ${corrections.pairs.length}·반려 ${(corrections.rejects || []).length}건 주입`

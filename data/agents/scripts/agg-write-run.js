@@ -16,7 +16,7 @@ import { chatWithRetry } from '../../crawlers/core/openai-client.js'
 import {
   CONFIG,
   WRITE_MODEL,
-  loadCorrections,
+  loadCorrectionsLive,
   buildSystemPrompt,
   pickPersona,
   pickStructure,
@@ -35,9 +35,12 @@ function log(msg) {
 const DRAFTED_BACKPRESSURE = 30 // 검수 대기가 이만큼 쌓이면 write 스킵 (검수 없이 LLM 비용만 쌓이는 것 방지)
 
 async function main() {
-  const corrections = loadCorrections()
+  // 검수 페이지의 교정/반려가 learn 없이 바로 반영되도록 DB 라이브 로드
+  const corrections = await loadCorrectionsLive(supabase)
   const systemPrompt = buildSystemPrompt(corrections)
-  log(`model=${WRITE_MODEL} dry=${dryRun} limit=${limit} 교정주입=${corrections.pairs.length}`)
+  log(
+    `model=${WRITE_MODEL} dry=${dryRun} limit=${limit} 교정주입=${corrections.pairs.length}·반려 ${(corrections.rejects || []).length}`
+  )
 
   const { count: draftedPending } = await supabase
     .from('agg_reservoir')
