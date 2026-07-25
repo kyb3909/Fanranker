@@ -133,7 +133,7 @@ export function TransferBoardClient({ initialItems }: { initialItems: TransferIt
                     <div className="min-w-0 flex-1">
                       <p className="text-[14px] leading-snug font-medium">{it.headline}</p>
                       <p className="text-muted-foreground mt-0.5 flex items-center gap-2 text-[11.5px]">
-                        <span className="truncate">{it.source}</span>
+                        {it.source && <span className="truncate">{it.source}</span>}
                         {it.sourceUrl && (
                           <a
                             href={it.sourceUrl}
