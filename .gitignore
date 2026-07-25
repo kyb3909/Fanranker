@@ -137,3 +137,6 @@ aseprite-mcp/
 # 애그리게이터 학습 하니스 산출물 (교정본은 config/agg-corrections.json 로 커밋)
 workspace/agg-training/round-*.md
 workspace/agg-training/fixture.json
+
+# 로컬 권한 승인 기록 — 토큰 등 비밀이 섞일 수 있어 커밋 금지 (2026-07-26 푸시 보호 적발)
+.claude/settings.local.json
