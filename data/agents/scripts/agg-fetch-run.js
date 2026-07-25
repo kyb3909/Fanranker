@@ -40,7 +40,7 @@ function extractArticle(source, html) {
     const m = html.match(/<article itemprop="articleBody">([\s\S]*?)<\/article>/)
     if (m) return m[1]
   }
-  if (source === 'instiz') {
+  if (source.startsWith('instiz')) {
     const m = html.match(/id="memo_content_1"([\s\S]*?)<\/td>/)
     if (m) return m[1]
   }

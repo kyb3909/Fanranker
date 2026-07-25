@@ -30,6 +30,7 @@ interface Draft {
 const SOURCE_LABEL: Record<string, string> = {
   theqoo: "더쿠",
   instiz: "인스티즈",
+  instiz_enter: "인스티즈 연예",
   fmkorea: "펨코",
   dcinside: "DC",
   reddit: "Reddit",

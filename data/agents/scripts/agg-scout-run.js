@@ -102,47 +102,56 @@ async function fetchList(sourceKey, sourceCfg) {
   return res.text()
 }
 
-/* ── 인스티즈 /pt (여돌 이미지 글 전용) ──
- * 목록 row: <span class="list_category">유머·감동</span> ... <td class="rNNN listsubject">
- *   <a href="https://www.instiz.net/pt/NNN?..."><span class="texthead_notice"><i class="fa-...-image..."></i> 제목<span class="cmt3">
- * 이미지 아이콘(fa-image) 있는 글 + 제목이 여돌 키워드에 걸리는 글만 수집.
- * 목록에 시각이 없어 freshness 는 스킵 — source_url 멱등으로 재수집 방지. */
-async function scoutInstiz(cfg) {
-  // 메인 목록 row: <td class="listsubject rNNN"><a href=".../pt/NNN?page=1">
-  //   <div class="sbj"><i class="fa-...image..."></i> 제목<span class="cmt2">N</span>...</div>
-  //   <div class="list_subtitle"><div ... class="listno regdate">20:38 <span...>l</span> 조회 1025</div>
-  // 시각(HH:MM)이 있어 theqoo 와 같은 freshness 필터를 탄다 (날짜 표기 = 오늘 글 아님).
+/* ── 인스티즈 게시판 공통 (config sources 의 type:"instiz" — /pt 이슈판, /name_enter 연예판) ──
+ * 목록 row: <td class="listsubject rNNN"><a href=".../<board>/NNN?page=1">
+ *   <div class="sbj"><i class="fa-...image..."></i> 제목<span class="cmt2">N</span>...</div>
+ *   <div class="list_subtitle"><div ... class="listno regdate">20:38 <span...>l</span> 조회 1025</div>
+ * 이미지 아이콘 글 + 여돌 키워드만. 시각(HH:MM)으로 theqoo 와 같은 freshness 필터를 탄다. */
+async function scoutInstiz(key, cfg) {
   const rowRe =
-    /<td class="listsubject r\d+">\s*<a\s+href="(https:\/\/www\.instiz\.net\/pt\/\d+)[^"]*">\s*<div class="sbj">([\s\S]*?)<\/div><div class="list_subtitle"><div[^>]*class="listno regdate">\s*([^<\s]+)/g
-  const res = await fetch(cfg.listUrl, {
-    headers: { 'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9' },
-  })
-  if (!res.ok) throw new Error(`instiz HTTP ${res.status}`)
-  const html = await res.text()
+    /<td class="listsubject r\d+">\s*<a\s+href="(https:\/\/www\.instiz\.net\/[a-z_0-9]+\/\d+)[^"]*">\s*<div class="sbj">([\s\S]*?)<\/div><div class="list_subtitle"><div[^>]*class="listno regdate">\s*([^<\s]+)/g
   const items = []
-  let m
-  while ((m = rowRe.exec(html)) !== null) {
-    if (items.length >= (cfg.perRun || 6)) break
-    const url = m[1]
-    const inner = m[2]
-    const timeText = m[3].trim()
-    if (!/fa-image/.test(inner)) continue // 이미지 글만
-    const title = decodeEntities(
-      inner
-        .replace(/<span class="cmt2"[\s\S]*$/, '') // 댓글 수 배지 제거
-        .replace(/<[^>]+>/g, '')
-    ).trim()
-    if (!title) continue
-    if (!(cfg.keywords || []).some((k) => title.includes(k))) continue // 여돌 키워드만
-    items.push({
-      source: 'instiz',
-      source_url: url,
-      source_title: title,
-      category: '여돌',
-      _timeText: timeText,
+  const seen = new Set()
+  const pages = cfg.pages || 1
+  let scanned = 0
+  for (let p = 1; p <= pages && items.length < (cfg.perRun || 6); p++) {
+    if (p > 1) await new Promise((r) => setTimeout(r, 1200))
+    const res = await fetch(`${cfg.listUrl}${p > 1 ? `?page=${p}` : ''}`, {
+      headers: { 'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9' },
     })
+    if (!res.ok) throw new Error(`${key} p${p} HTTP ${res.status}`)
+    const html = await res.text()
+    let m
+    let lastTime = ''
+    while ((m = rowRe.exec(html)) !== null) {
+      const url = m[1]
+      const inner = m[2]
+      const timeText = m[3].trim()
+      lastTime = timeText
+      if (seen.has(url)) continue // 페이지 간 중복 행 (연예판은 흐름이 빨라 밀림)
+      seen.add(url)
+      scanned++
+      if (items.length >= (cfg.perRun || 6)) continue
+      if (!/fa-image/.test(inner)) continue // 이미지 글만
+      const title = decodeEntities(
+        inner
+          .replace(/<span class="cmt2"[\s\S]*$/, '') // 댓글 수 배지 제거
+          .replace(/<[^>]+>/g, '')
+      ).trim()
+      if (!title) continue
+      if (!(cfg.keywords || []).some((k) => title.includes(k))) continue // 여돌 키워드만
+      items.push({
+        source: key,
+        source_url: url,
+        source_title: title,
+        category: '여돌',
+        _timeText: timeText,
+      })
+    }
+    // 페이지 끝 행이 이미 freshness 밖이면 더 깊이 갈 필요 없음
+    if (lastTime && !isFresh(lastTime)) break
   }
-  log(`  instiz: ${items.length}건 (여돌 키워드 + 이미지 글)`)
+  log(`  ${key}: ${items.length}건 (여돌 키워드 + 이미지 글, ${scanned}행 스캔)`)
   return items
 }
 
@@ -201,11 +210,11 @@ async function main() {
       collected.push(...(await scoutReddit(cfg)))
       continue
     }
-    if (key === 'instiz') {
+    if (cfg.type === 'instiz') {
       try {
-        collected.push(...(await scoutInstiz(cfg)))
+        collected.push(...(await scoutInstiz(key, cfg)))
       } catch (e) {
-        log(`  [ERR] instiz: ${e.message}`)
+        log(`  [ERR] ${key}: ${e.message}`)
       }
       continue
     }
