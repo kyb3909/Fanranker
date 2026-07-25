@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireAdmin } from "@/lib/supabase/admin"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { personaNickname, todayCounts, nextSlot, type AggMediaItem } from "@/lib/agg/publish"
 import aggConfig from "@/data/agents/config/aggregator.json"
 
 export const dynamic = "force-dynamic"
@@ -25,12 +26,6 @@ const BodySchema = z.object({
   reason: z.string().max(300).optional(),
 })
 
-interface MediaItem {
-  type: string
-  url: string
-  rehosted_url?: string | null
-}
-
 interface ReservoirRow {
   id: string
   source: string
@@ -39,61 +34,8 @@ interface ReservoirRow {
   body_excerpt: string | null
   status: string
   rewritten: { title?: string; paragraphs?: string[]; intro?: string; persona_user_id?: string }
-  media: MediaItem[] | null
+  media: AggMediaItem[] | null
   audit: unknown[] | null
-}
-
-/** 문단 배열 + 미디어 → TipTap doc (agg-publish-run.js 와 동일 레이아웃: 첫 문단 → 미디어 → 나머지) */
-function buildTipTapDoc(paragraphs: string[], media: MediaItem[]) {
-  const para = (text: string) => ({
-    type: "paragraph",
-    content: [{ type: "text", text: String(text).slice(0, 2000) }],
-  })
-  const content: Record<string, unknown>[] = []
-  if (paragraphs[0]) content.push(para(paragraphs[0]))
-  for (const m of media) {
-    if (m.type === "image" && m.rehosted_url) {
-      content.push({ type: "image", attrs: { src: m.rehosted_url } })
-    } else if (m.type === "youtube") {
-      const yt = m.url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
-      content.push({
-        type: "embed",
-        attrs: {
-          provider: "youtube",
-          url: m.url,
-          thumbnail_url: yt ? `https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg` : undefined,
-        },
-      })
-    } else if (m.type === "x") {
-      content.push({ type: "embed", attrs: { provider: "x", url: m.url } })
-    }
-  }
-  for (const text of paragraphs.slice(1)) content.push(para(text))
-  return { type: "doc", content }
-}
-
-function personaNickname(userId: string): string {
-  return aggConfig.personas.find((p) => p.userId === userId)?.nickname ?? userId
-}
-
-/** KST 자정 기준 오늘 발행 수 (전체 + 페르소나별) */
-async function todayPublishCounts(supabase: ReturnType<typeof createServiceRoleClient>) {
-  const kstNow = new Date(Date.now() + 9 * 3600 * 1000)
-  const kstMidnightUtc = new Date(
-    Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - 9 * 3600 * 1000
-  ).toISOString()
-  const { data } = await supabase
-    .from("agg_reservoir")
-    .select("rewritten")
-    .eq("status", "published")
-    .gte("published_at", kstMidnightUtc)
-  const rows = (data ?? []) as { rewritten: { persona_user_id?: string } | null }[]
-  const byPersona: Record<string, number> = {}
-  for (const row of rows) {
-    const p = row.rewritten?.persona_user_id
-    if (p) byPersona[p] = (byPersona[p] || 0) + 1
-  }
-  return { total: rows.length, byPersona }
 }
 
 export async function POST(req: NextRequest) {
@@ -186,47 +128,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "제목/본문이 유효하지 않습니다." }, { status: 400 })
   }
 
-  // 일일 cap + 페르소나별 cap (agg-publish-run 과 동일 정책)
+  // 일일 cap + 페르소나별 cap — 오늘 발행분 + 큐 예약분 합산으로 검증
   const { dailyPublishCap, publishPerPersonaPerDay } = aggConfig.limits
-  const counts = await todayPublishCounts(supabase)
+  const counts = await todayCounts(supabase)
   if (counts.total >= dailyPublishCap) {
     return NextResponse.json(
-      { error: `오늘 발행 cap(${dailyPublishCap}건)에 도달했습니다.` },
+      { error: `오늘 발행 cap(${dailyPublishCap}건)에 도달했습니다 (예약분 포함).` },
       { status: 409 }
     )
   }
   if ((counts.byPersona[personaId] || 0) >= publishPerPersonaPerDay) {
     return NextResponse.json(
-      { error: `${nickname} 오늘 발행 cap(${publishPerPersonaPerDay}건)에 도달했습니다.` },
+      {
+        error: `${nickname} 오늘 발행 cap(${publishPerPersonaPerDay}건)에 도달했습니다 (예약분 포함).`,
+      },
       { status: 409 }
     )
   }
 
-  const content = buildTipTapDoc(finalParagraphs, item.media ?? [])
-  const { data: postRow, error: insErr } = await supabase
-    .from("posts")
-    .insert({
-      user_id: personaId,
-      community_slug: aggConfig.board.communitySlug,
-      title: finalTitle,
-      content,
-    })
-    .select("id")
-    .single<{ id: string }>()
-  if (insErr || !postRow) {
-    return NextResponse.json({ error: "발행 실패", detail: insErr?.message }, { status: 500 })
-  }
-
+  // 즉시 게시 대신 발행 큐 예약 (F17) — 몰아서 검수해도 담벼락엔 20~60분 간격으로 분산.
+  // 실제 게시는 /api/cron/agg-publish-queue (10분 주기)가 수행.
+  const scheduledAt = await nextSlot(supabase)
   await supabase
     .from("agg_reservoir")
     .update({
-      status: "published",
-      post_id: postRow.id,
-      published_at: now,
+      status: "approved",
+      scheduled_at: scheduledAt,
       rewritten: { ...rw, title: finalTitle, paragraphs: finalParagraphs },
       audit: [
         ...(item.audit ?? []),
-        { at: now, stage: "review", action: "publish", post_id: postRow.id },
+        { at: now, stage: "review", action: "approve", scheduled_at: scheduledAt },
       ],
     })
     .eq("id", id)
@@ -237,5 +168,5 @@ export async function POST(req: NextRequest) {
     await logTraining("corrected", { title: finalTitle, body: finalParagraphs.join("\n\n") })
   }
 
-  return NextResponse.json({ ok: true, status: "published", post_id: postRow.id, edited })
+  return NextResponse.json({ ok: true, status: "approved", scheduled_at: scheduledAt, edited })
 }

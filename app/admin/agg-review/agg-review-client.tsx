@@ -69,6 +69,7 @@ export function AggReviewClient({ items: initial }: { items: AggReviewItem[] }) 
         error?: string
         edited?: boolean
         code?: string
+        scheduled_at?: string
       }
       if (!res.ok) {
         // 다른 관리자가 이미 처리한 글 — 목록에서 치우고 계속 진행
@@ -81,14 +82,18 @@ export function AggReviewClient({ items: initial }: { items: AggReviewItem[] }) 
         return
       }
       setItems((prev) => prev.filter((it) => it.id !== id))
+      const slot = d.scheduled_at
+        ? new Date(d.scheduled_at).toLocaleTimeString("ko-KR", {
+            hour: "numeric",
+            minute: "2-digit",
+          })
+        : null
       toast({
-        title: action === "publish" ? "발행 완료" : "반려 완료",
+        title: action === "publish" ? `발행 예약됨${slot ? ` — ${slot} 게시` : ""}` : "반려 완료",
         description:
           action === "publish"
-            ? d.edited
-              ? "페르소나 이름으로 게시됐고, 교정이 학습 큐에 적재됐습니다."
-              : "페르소나 이름으로 게시됐습니다."
-            : "반려 사유가 학습 큐에 적재됐습니다.",
+            ? `큐가 20~60분 간격으로 자동 분산 게시합니다.${d.edited ? " 교정은 학습에 반영됩니다." : ""}`
+            : "반려 사유가 학습 신호로 적재됐습니다.",
       })
     } finally {
       setBusy(null)
