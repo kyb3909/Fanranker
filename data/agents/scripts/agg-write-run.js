@@ -32,7 +32,7 @@ function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-write] ${msg}\n`)
 }
 
-const DRAFTED_BACKPRESSURE = 30 // 검수 대기가 이만큼 쌓이면 write 스킵 (검수 없이 LLM 비용만 쌓이는 것 방지)
+const DRAFTED_BACKPRESSURE = 50 // 검수 대기가 이만큼 쌓이면 write 스킵 (검수 없이 LLM 비용만 쌓이는 것 방지)
 
 async function main() {
   // 검수 페이지의 교정/반려가 learn 없이 바로 반영되도록 DB 라이브 로드

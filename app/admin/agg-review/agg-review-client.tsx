@@ -65,8 +65,18 @@ export function AggReviewClient({ items: initial }: { items: AggReviewItem[] }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action, ...payload }),
       })
-      const d = (await res.json().catch(() => ({}))) as { error?: string; edited?: boolean }
+      const d = (await res.json().catch(() => ({}))) as {
+        error?: string
+        edited?: boolean
+        code?: string
+      }
       if (!res.ok) {
+        // 다른 관리자가 이미 처리한 글 — 목록에서 치우고 계속 진행
+        if (d.code === "already_processed") {
+          setItems((prev) => prev.filter((it) => it.id !== id))
+          toast({ title: "이미 처리됨", description: "다른 관리자가 방금 처리한 글입니다." })
+          return
+        }
         toast({ variant: "destructive", title: "오류", description: d.error || "처리 실패" })
         return
       }

@@ -123,8 +123,9 @@ export async function POST(req: NextRequest) {
     .maybeSingle<ReservoirRow>()
   if (!item) return NextResponse.json({ error: "초안을 찾을 수 없습니다." }, { status: 404 })
   if (item.status !== "drafted") {
+    // 다중 관리자 동시 검수 — 다른 관리자가 먼저 처리한 경우
     return NextResponse.json(
-      { error: `이미 처리된 초안입니다 (status=${item.status}).` },
+      { error: `이미 처리된 초안입니다 (status=${item.status}).`, code: "already_processed" },
       { status: 409 }
     )
   }

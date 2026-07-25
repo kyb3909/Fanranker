@@ -285,8 +285,8 @@
   "limits": {
     "scoutPerRun": 30,
     "freshnessMinutes": 90,
-    "publishPerPersonaPerDay": 2,
-    "dailyPublishCap": 8
+    "publishPerPersonaPerDay": 10,
+    "dailyPublishCap": 40
   },
   "board": {
     "communitySlug": "free-board"
