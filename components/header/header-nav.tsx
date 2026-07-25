@@ -3,7 +3,15 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Crown, Gamepad2, Landmark, ArrowRightLeft } from "lucide-react"
+import {
+  Compass,
+  LayoutGrid,
+  Crown,
+  Gamepad2,
+  Landmark,
+  ArrowRightLeft,
+  Popcorn,
+} from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -71,6 +79,13 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           <span className={baseClass} data-on={isFeed ? "true" : undefined}>
             <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
             담벼락
+          </span>
+        </Link>
+        {/* 떡밥 피드 — 풀스크린 스와이프 소비 모드 (2026-07-26). 페이지가 fixed 오버레이라 data-on 불필요 */}
+        <Link href="/snack">
+          <span className={baseClass}>
+            <Popcorn className="h-[18px] w-[18px] shrink-0" />
+            떡밥
           </span>
         </Link>
         <Link href="/explore">

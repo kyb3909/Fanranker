@@ -28,6 +28,9 @@ type AnalyticsEvent =
   | { name: "metaverse_highbury_enter"; params: { is_guest: boolean } }
   | { name: "flair_team_selected"; params: { community: string; team_id: string } }
   | { name: "discord_invite_click"; params: { placement: string } }
+  | { name: "snack_feed_open"; params: Record<string, never> }
+  | { name: "snack_feed_depth"; params: { depth: number } }
+  | { name: "snack_card_open_post"; params: { post_id: string } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

@@ -1,4 +1,5 @@
 import type { createServiceRoleClient } from "@/lib/supabase/server"
+import { notifyNewsPublished } from "@/lib/discord/news-notify"
 import aggConfig from "@/data/agents/config/aggregator.json"
 
 /**
@@ -127,5 +128,16 @@ export async function publishQueueItem(
       audit: [...(item.audit ?? []), { at: now, stage: "queue-publish", post_id: postRow.id }],
     })
     .eq("id", item.id)
+
+  // 디스코드 떡밥 채널 전파 — 티저+링크만 (웹훅 env 미설정 시 no-op, 실패해도 발행 유지)
+  const firstImage = (item.media ?? []).find((m) => m.type === "image" && m.rehosted_url)
+  await notifyNewsPublished({
+    channel: "snack",
+    postId: postRow.id,
+    title: rw.title,
+    teaser: paragraphs[0]?.slice(0, 200) ?? null,
+    imageUrl: firstImage?.rehosted_url ?? null,
+  })
+
   return { postId: postRow.id }
 }
