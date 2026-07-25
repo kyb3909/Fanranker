@@ -14,6 +14,7 @@
 import supabase from '../../crawlers/core/db.js'
 import { chatWithRetry } from '../../crawlers/core/openai-client.js'
 import {
+  CONFIG,
   WRITE_MODEL,
   loadCorrections,
   buildSystemPrompt,
@@ -49,7 +50,7 @@ async function main() {
 
   const { data: items, error } = await supabase
     .from('agg_reservoir')
-    .select('id, source_title, category, body_excerpt, media, audit')
+    .select('id, source, source_title, category, body_excerpt, media, audit')
     .eq('status', 'fetched')
     .order('created_at', { ascending: true })
     .limit(limit)
@@ -63,7 +64,13 @@ async function main() {
   let drafted = 0
   let rejected = 0
   for (const item of items) {
-    const persona = pickPersona(item)
+    // 소스에 personaPool 이 지정돼 있으면 (여돌 소스 → 여돌 페르소나) 풀에서 뽑고, 아니면 토픽 매칭
+    const pool = CONFIG.sources[item.source]?.personaPool
+    const persona = pool?.length
+      ? CONFIG.personas.find(
+          (p) => p.userId === pool[Math.floor(Math.random() * pool.length)]
+        ) || pickPersona(item)
+      : pickPersona(item)
     const structure = pickStructure(item)
     const personaId = persona.userId
 

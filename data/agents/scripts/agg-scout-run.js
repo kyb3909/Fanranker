@@ -102,6 +102,50 @@ async function fetchList(sourceKey, sourceCfg) {
   return res.text()
 }
 
+/* ── 인스티즈 /pt (여돌 이미지 글 전용) ──
+ * 목록 row: <span class="list_category">유머·감동</span> ... <td class="rNNN listsubject">
+ *   <a href="https://www.instiz.net/pt/NNN?..."><span class="texthead_notice"><i class="fa-...-image..."></i> 제목<span class="cmt3">
+ * 이미지 아이콘(fa-image) 있는 글 + 제목이 여돌 키워드에 걸리는 글만 수집.
+ * 목록에 시각이 없어 freshness 는 스킵 — source_url 멱등으로 재수집 방지. */
+async function scoutInstiz(cfg) {
+  // 메인 목록 row: <td class="listsubject rNNN"><a href=".../pt/NNN?page=1">
+  //   <div class="sbj"><i class="fa-...image..."></i> 제목<span class="cmt2">N</span>...</div>
+  //   <div class="list_subtitle"><div ... class="listno regdate">20:38 <span...>l</span> 조회 1025</div>
+  // 시각(HH:MM)이 있어 theqoo 와 같은 freshness 필터를 탄다 (날짜 표기 = 오늘 글 아님).
+  const rowRe =
+    /<td class="listsubject r\d+">\s*<a\s+href="(https:\/\/www\.instiz\.net\/pt\/\d+)[^"]*">\s*<div class="sbj">([\s\S]*?)<\/div><div class="list_subtitle"><div[^>]*class="listno regdate">\s*([^<\s]+)/g
+  const res = await fetch(cfg.listUrl, {
+    headers: { 'User-Agent': UA, 'Accept-Language': 'ko-KR,ko;q=0.9' },
+  })
+  if (!res.ok) throw new Error(`instiz HTTP ${res.status}`)
+  const html = await res.text()
+  const items = []
+  let m
+  while ((m = rowRe.exec(html)) !== null) {
+    if (items.length >= (cfg.perRun || 6)) break
+    const url = m[1]
+    const inner = m[2]
+    const timeText = m[3].trim()
+    if (!/fa-image/.test(inner)) continue // 이미지 글만
+    const title = decodeEntities(
+      inner
+        .replace(/<span class="cmt2"[\s\S]*$/, '') // 댓글 수 배지 제거
+        .replace(/<[^>]+>/g, '')
+    ).trim()
+    if (!title) continue
+    if (!(cfg.keywords || []).some((k) => title.includes(k))) continue // 여돌 키워드만
+    items.push({
+      source: 'instiz',
+      source_url: url,
+      source_title: title,
+      category: '여돌',
+      _timeText: timeText,
+    })
+  }
+  log(`  instiz: ${items.length}건 (여돌 키워드 + 이미지 글)`)
+  return items
+}
+
 /* ── Reddit (비주얼 서브레딧) ──
  * Reddit 은 Node fetch 의 TLS 핑거프린트를 차단 (JSON API 403) — 기존 뉴스 크롤러의
  * RSS+curl 파서(crawlers/core/reddit-fetcher.js)를 재사용한다. RSS 라 score 필터는 없음
@@ -155,6 +199,14 @@ async function main() {
     if (!sourceArg && !cfg.enabled) continue
     if (key === 'reddit') {
       collected.push(...(await scoutReddit(cfg)))
+      continue
+    }
+    if (key === 'instiz') {
+      try {
+        collected.push(...(await scoutInstiz(cfg)))
+      } catch (e) {
+        log(`  [ERR] instiz: ${e.message}`)
+      }
       continue
     }
     const parser = PARSERS[key]

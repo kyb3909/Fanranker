@@ -12,7 +12,13 @@
 //   node data/agents/scripts/agg-fetch-run.js --limit=5
 //   node data/agents/scripts/agg-fetch-run.js --dry-run   (rehost/DB 갱신 없이 추출 결과만)
 
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import supabase from '../../crawlers/core/db.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const CONFIG = JSON.parse(readFileSync(join(__dirname, '..', 'config', 'aggregator.json'), 'utf8'))
 
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
@@ -32,6 +38,10 @@ function log(msg) {
 function extractArticle(source, html) {
   if (source === 'theqoo') {
     const m = html.match(/<article itemprop="articleBody">([\s\S]*?)<\/article>/)
+    if (m) return m[1]
+  }
+  if (source === 'instiz') {
+    const m = html.match(/id="memo_content_1"([\s\S]*?)<\/td>/)
     if (m) return m[1]
   }
   return html
@@ -153,10 +163,19 @@ async function main() {
         continue
       }
 
+      // embedFirst 소스(여돌/홈마): X·유튜브 임베드가 있으면 이미지 rehost 스킵 —
+      // 홈마 원본을 퍼오지 않고 임베드(출처 노출)로만 소비한다.
+      const embedFirst =
+        CONFIG.sources[item.source]?.embedFirst && media.some((mm) => mm.type !== 'image')
+
       // 이미지 rehost (최대 MAX_IMAGES장)
       let imgCount = 0
       for (const mm of media) {
         if (mm.type !== 'image') continue
+        if (embedFirst) {
+          mm.skipped = 'embed_first'
+          continue
+        }
         if (imgCount >= MAX_IMAGES) {
           mm.skipped = true
           continue
