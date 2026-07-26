@@ -8,10 +8,10 @@ import { trackEvent } from "@/lib/analytics/events"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 
 /**
- * 카드뉴스 홈 피드 — 오버레이 카드형 (세로 스크롤, 풀스크린 스와이프 아님).
- * 카드 = 이미지 한 덩어리 + 하단 음영 위 제목/액션/베스트 댓글.
+ * 카드뉴스 홈 피드 — 에디토리얼 3단 위계 (Apple News 문법).
+ * 히어로(오버레이) 1장 → 미디엄(흰 프레임 + 상단 이미지) 2장 → 컴팩트 리스트.
+ * 오버레이는 톱뉴스 강조 전용, 나머지는 사이트 표면 토큰(wc-card)과 융화.
  * 좋아요는 떡밥 피드와 동일한 비로그인 로컬 반응 (서버 반영 없음).
- * 폭은 컨테이너 100% — 모바일 390px, 데스크톱 중앙 피드 컬럼 양쪽 대응.
  */
 
 const BURGUNDY = "#9F1239"
@@ -26,7 +26,8 @@ function badgeTier(source: string): BadgeTier {
   return "media"
 }
 
-/** 상단 태그 칩 공통 스타일 — frosted 다크 필 (BBC Sport/OneFootball 태그 문법) */
+/* ---------- 이미지 위 태그 칩 (히어로/미디엄 이미지 영역 공용) ---------- */
+
 const chipStyle: React.CSSProperties = {
   height: 24,
   padding: "0 10px",
@@ -41,7 +42,6 @@ const chipStyle: React.CSSProperties = {
   color: "rgba(255,255,255,.94)",
 }
 
-/** 출처 칩 — 오피셜=버건디 필, 1티어=골드 별, 언론=플레인 */
 function SourceChip({ source }: { source: string }) {
   const tier = badgeTier(source)
   if (tier === "official") {
@@ -77,18 +77,109 @@ function SourceChip({ source }: { source: string }) {
   )
 }
 
-/** 팀/말머리 칩 — 말머리 색 dot + 이름 */
 function FlairChip({ name, color }: { name: string; color: string | null }) {
   return (
     <span className="inline-flex items-center gap-1.5" style={chipStyle}>
       <span
         aria-hidden
         className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={{ background: color || "#9F1239" }}
+        style={{ background: color || BURGUNDY }}
       />
       {name}
     </span>
   )
+}
+
+/** 컴팩트 행 키커 — 흰 표면 위 텍스트 레이블 */
+function CompactKicker({ card }: { card: CardNewsItem }) {
+  const parts: React.ReactNode[] = []
+  if (card.source) {
+    const tier = badgeTier(card.source)
+    parts.push(
+      tier === "official" ? (
+        <span key="src" className="inline-flex items-center gap-0.5" style={{ color: BURGUNDY }}>
+          <Check className="h-3 w-3" strokeWidth={3.5} />
+          오피셜
+        </span>
+      ) : tier === "tier1" ? (
+        <span
+          key="src"
+          className="inline-flex items-center gap-0.5"
+          style={{ color: "var(--wc-ink)" }}
+        >
+          <Star className="h-2.5 w-2.5 fill-current" style={{ color: "#E3A82B" }} />
+          {card.source}
+        </span>
+      ) : (
+        <span key="src" style={{ color: "var(--wc-mute)" }}>
+          {card.source}
+        </span>
+      )
+    )
+  }
+  if (card.flair) {
+    parts.push(
+      <span
+        key="flair"
+        className="inline-flex items-center gap-1"
+        style={{ color: "var(--wc-mute)" }}
+      >
+        <span
+          aria-hidden
+          className="h-1 w-1 shrink-0 rounded-full"
+          style={{ background: card.flair.color || BURGUNDY }}
+        />
+        {card.flair.name}
+      </span>
+    )
+  }
+  if (parts.length === 0) return null
+  return (
+    <div
+      className="mb-1 flex items-center gap-2 text-[11px] font-bold"
+      style={{ letterSpacing: "0.03em" }}
+    >
+      {parts}
+    </div>
+  )
+}
+
+/* ---------- 공용 훅/스타일 ---------- */
+
+/** eased scrim — 투명→어두움 9스톱 (하드 엣지 없음) */
+const SCRIM =
+  "linear-gradient(to top, rgba(9,8,11,.86) 0%, rgba(9,8,11,.83) 8%, rgba(9,8,11,.76) 18%, rgba(9,8,11,.63) 32%, rgba(9,8,11,.46) 46%, rgba(9,8,11,.28) 62%, rgba(9,8,11,.12) 78%, rgba(9,8,11,.03) 90%, rgba(9,8,11,0) 100%)"
+
+/** 고스트 액션 — 아이콘+숫자, before 로 히트 영역 보정 */
+const ghostAction =
+  "before:content-[''] before:absolute before:-inset-2.5 relative inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors"
+
+/** 로컬 좋아요 (비로그인 즉각 반응 — 떡밥 피드와 동일 방식, 키만 분리) */
+function useLocalLike(id: string) {
+  const [liked, setLiked] = useState(false)
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("cardnews-likes") || "{}")
+      if (saved[id]) setLiked(true)
+    } catch {
+      // 무시
+    }
+  }, [id])
+  const toggle = useCallback(() => {
+    setLiked((prev) => {
+      const next = !prev
+      try {
+        const saved = JSON.parse(localStorage.getItem("cardnews-likes") || "{}")
+        if (next) saved[id] = true
+        else delete saved[id]
+        localStorage.setItem("cardnews-likes", JSON.stringify(saved))
+      } catch {
+        // 무시
+      }
+      return next
+    })
+  }, [id])
+  return { liked, toggle }
 }
 
 /* 브라우저 네이티브 FaceDetector (Chromium 계열) — 없거나 실패하면 상단 30% 크롭 fallback */
@@ -101,7 +192,6 @@ type FaceDetectorCtor = new (opts?: { fastMode?: boolean; maxDetectedFaces?: num
 
 const clampPct = (v: number) => Math.min(80, Math.max(20, v))
 
-/** 얼굴 중심 object-position — 감지 성공 시에만 값 반환, 나머지는 null(fallback 유지) */
 function useFaceFocus(imageUrl: string | null): string | null {
   const [pos, setPos] = useState<string | null>(null)
 
@@ -110,8 +200,8 @@ function useFaceFocus(imageUrl: string | null): string | null {
     const FD = (window as { FaceDetector?: FaceDetectorCtor }).FaceDetector
     if (!FD) return
     let cancelled = false
-    // 화면의 <img>에 crossOrigin 을 걸면 CORS 미허용 호스트에서 이미지 자체가 깨짐
-    // → 별도 프로브 이미지로만 감지 시도 (실패해도 화면 영향 없음)
+    // 화면 <img>에 crossOrigin 을 걸면 CORS 미허용 호스트에서 이미지가 깨짐
+    // → 별도 프로브 이미지로만 감지 (실패해도 화면 무영향)
     const probe = new Image()
     probe.crossOrigin = "anonymous"
     probe.src = imageUrl
@@ -138,52 +228,21 @@ function useFaceFocus(imageUrl: string | null): string | null {
   return pos
 }
 
-/**
- * eased scrim — 투명→어두움을 8스톱으로 완만하게 (하드 엣지 제거).
- * cubic ease-in 근사 스톱. 블러 없음 (mask+blur 는 bloom 아티팩트를 만듦).
- */
-const SCRIM =
-  "linear-gradient(to top, rgba(9,8,11,.86) 0%, rgba(9,8,11,.83) 8%, rgba(9,8,11,.76) 18%, rgba(9,8,11,.63) 32%, rgba(9,8,11,.46) 46%, rgba(9,8,11,.28) 62%, rgba(9,8,11,.12) 78%, rgba(9,8,11,.03) 90%, rgba(9,8,11,0) 100%)"
+function openPost(id: string) {
+  trackEvent({ name: "cardnews_card_open_post", params: { post_id: id } })
+}
 
-/** 고스트 액션 공통 — 필 배경 없이 아이콘+숫자, before 로 히트 영역 보정 */
-const ghostAction =
-  "before:content-[''] before:absolute before:-inset-2.5 relative inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors"
+/* ---------- 1) 히어로 — 오버레이 카드 (톱뉴스 1장 전용) ---------- */
 
-function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
-  const [liked, setLiked] = useState(false)
+function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
+  const { liked, toggle } = useLocalLike(card.id)
   const faceFocus = useFaceFocus(card.image)
-
-  // 로컬 하트 복원 (떡밥 피드와 동일 방식, 키만 분리)
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("cardnews-likes") || "{}")
-      if (saved[card.id]) setLiked(true)
-    } catch {
-      // 무시
-    }
-  }, [card.id])
-
-  const toggleLike = useCallback(() => {
-    setLiked((prev) => {
-      const next = !prev
-      try {
-        const saved = JSON.parse(localStorage.getItem("cardnews-likes") || "{}")
-        if (next) saved[card.id] = true
-        else delete saved[card.id]
-        localStorage.setItem("cardnews-likes", JSON.stringify(saved))
-      } catch {
-        // 무시
-      }
-      return next
-    })
-  }, [card.id])
 
   return (
     <article
-      className="group relative h-[264px] overflow-hidden rounded-2xl sm:h-[320px]"
+      className="group relative h-[300px] overflow-hidden rounded-2xl sm:h-[340px]"
       style={{ boxShadow: "0 2px 8px rgba(23,20,15,.10)" }}
     >
-      {/* 배경: 뉴스 이미지 or 회색 플레이스홀더. hover 시 미세 줌 (데스크톱 폴리시) */}
       {card.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -197,12 +256,10 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
         <div className="absolute inset-0 bg-gray-300" />
       )}
 
-      {/* eased scrim — 하단 62% 를 부드럽게 덮음 */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
         style={{ height: "62%", background: SCRIM }}
       />
-      {/* 상단 미세 음영 — 태그 칩 가독성용 */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-[1]"
         style={{
@@ -211,17 +268,13 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
         }}
       />
 
-      {/* 카드 전체 탭 영역 → 상세 */}
       <Link
         href={`/post/${card.id}?utm_source=cardnews`}
         className="absolute inset-0 z-[2]"
         aria-label={card.title}
-        onClick={() =>
-          trackEvent({ name: "cardnews_card_open_post", params: { post_id: card.id } })
-        }
+        onClick={() => openPost(card.id)}
       />
 
-      {/* 상단 태그 칩 — 출처 + 팀/말머리 */}
       {(card.source || card.flair) && (
         <div className="pointer-events-none absolute top-3 left-3 z-[3] flex flex-wrap items-center gap-1.5">
           {card.source && <SourceChip source={card.source} />}
@@ -229,25 +282,18 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
         </div>
       )}
 
-      {/* 하단 텍스트 블록 — 제목 / 메타 / 베스트 댓글 */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] px-4 pb-3.5">
         <h2
           className="line-clamp-2 text-white"
-          style={{
-            fontSize: 18,
-            fontWeight: 800,
-            lineHeight: 1.32,
-            letterSpacing: "-0.02em",
-          }}
+          style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.3, letterSpacing: "-0.02em" }}
         >
           {card.title}
         </h2>
 
-        {/* 메타 줄 — 고스트 아이콘 액션 + 시간 */}
         <div className="mt-2 flex items-center gap-4">
           <button
             type="button"
-            onClick={toggleLike}
+            onClick={toggle}
             className={`${ghostAction} pointer-events-auto ${
               liked ? "text-rose-400" : "text-white/85 hover:text-white"
             }`}
@@ -276,7 +322,6 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
           </span>
         </div>
 
-        {/* 베스트 댓글 — 박스 없이 헤어라인 위 한 줄 인용 */}
         {card.bestComment && card.commentCount > 0 && (
           <Link
             href={`/post/${card.id}?utm_source=cardnews#comments`}
@@ -302,6 +347,197 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
     </article>
   )
 }
+
+/* ---------- 2) 미디엄 — 흰 프레임 + 상단 이미지 (Apple News 기본 카드) ---------- */
+
+function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
+  const { liked, toggle } = useLocalLike(card.id)
+  const faceFocus = useFaceFocus(card.image)
+
+  return (
+    <article
+      className="group relative overflow-hidden rounded-xl"
+      style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+    >
+      <Link
+        href={`/post/${card.id}?utm_source=cardnews`}
+        className="absolute inset-0 z-[2]"
+        aria-label={card.title}
+        onClick={() => openPost(card.id)}
+      />
+
+      {card.image && (
+        <div className="relative aspect-video overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={card.image}
+            alt=""
+            loading={eager ? "eager" : "lazy"}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+            style={{ objectPosition: faceFocus ?? "50% 30%" }}
+          />
+          {(card.source || card.flair) && (
+            <div className="pointer-events-none absolute top-3 left-3 z-[1] flex flex-wrap items-center gap-1.5">
+              {card.source && <SourceChip source={card.source} />}
+              {card.flair && <FlairChip name={card.flair.name} color={card.flair.color} />}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="px-4 py-3">
+        {/* 이미지 없는 글은 텍스트 위 키커로 출처 표시 */}
+        {!card.image && <CompactKicker card={card} />}
+        <h2
+          className="line-clamp-2"
+          style={{
+            fontSize: 16.5,
+            fontWeight: 700,
+            lineHeight: 1.34,
+            letterSpacing: "-0.01em",
+            color: "var(--wc-ink)",
+          }}
+        >
+          {card.title}
+        </h2>
+
+        <div className="mt-2 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={toggle}
+            className={`${ghostAction} pointer-events-auto z-[3] ${
+              liked ? "text-rose-500" : "text-[var(--wc-mute)] hover:text-[var(--wc-burgundy)]"
+            }`}
+            aria-label="좋아요"
+            aria-pressed={liked}
+          >
+            <Heart
+              className={`h-[15px] w-[15px] transition-transform active:scale-125 ${liked ? "fill-current" : ""}`}
+            />
+            <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+          </button>
+          <Link
+            href={`/post/${card.id}?utm_source=cardnews#comments`}
+            className={`${ghostAction} pointer-events-auto z-[3] text-[var(--wc-mute)] hover:text-[var(--wc-burgundy)]`}
+            aria-label="댓글"
+          >
+            <MessageCircle className="h-[15px] w-[15px]" />
+            <span className="tabular-nums">{card.commentCount}</span>
+          </Link>
+          <span
+            className="ml-auto text-[12px] font-medium"
+            style={{ color: "var(--wc-mute)" }}
+            suppressHydrationWarning
+          >
+            {formatRelativeTime(new Date(card.createdAt))}
+          </span>
+        </div>
+
+        {card.bestComment && card.commentCount > 0 && (
+          <Link
+            href={`/post/${card.id}?utm_source=cardnews#comments`}
+            className="pointer-events-auto relative z-[3] mt-2.5 flex items-center gap-1.5 pt-2.5"
+            style={{ borderTop: "1px solid var(--wc-line)" }}
+          >
+            <span
+              className="shrink-0 text-[11px] font-extrabold"
+              style={{ color: "var(--wc-burgundy)" }}
+            >
+              BEST
+            </span>
+            <span
+              className="min-w-0 flex-1 truncate text-[12.5px]"
+              style={{ color: "var(--wc-mute)" }}
+            >
+              {card.bestComment}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--wc-mute)" }} />
+          </Link>
+        )}
+      </div>
+    </article>
+  )
+}
+
+/* ---------- 3) 컴팩트 — 텍스트 좌 + 썸네일 우 (밀도 담당) ---------- */
+
+function CompactCard({ card }: { card: CardNewsItem }) {
+  const { liked, toggle } = useLocalLike(card.id)
+  const faceFocus = useFaceFocus(card.image)
+
+  return (
+    <article
+      className="relative flex items-center gap-3 rounded-xl px-4 py-3"
+      style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+    >
+      <Link
+        href={`/post/${card.id}?utm_source=cardnews`}
+        className="absolute inset-0 z-[1]"
+        aria-label={card.title}
+        onClick={() => openPost(card.id)}
+      />
+
+      <div className="min-w-0 flex-1">
+        <CompactKicker card={card} />
+        <h2
+          className="line-clamp-2"
+          style={{
+            fontSize: 14.5,
+            fontWeight: 650,
+            lineHeight: 1.38,
+            letterSpacing: "-0.01em",
+            color: "var(--wc-ink)",
+          }}
+        >
+          {card.title}
+        </h2>
+        <div className="mt-1.5 flex items-center gap-3.5">
+          <button
+            type="button"
+            onClick={toggle}
+            className={`${ghostAction} pointer-events-auto z-[2] !text-[11.5px] ${
+              liked ? "text-rose-500" : "text-[var(--wc-mute)]"
+            }`}
+            aria-label="좋아요"
+            aria-pressed={liked}
+          >
+            <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
+            <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+          </button>
+          <span
+            className="inline-flex items-center gap-1 text-[11.5px] font-semibold"
+            style={{ color: "var(--wc-mute)" }}
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="tabular-nums">{card.commentCount}</span>
+          </span>
+          <span
+            className="text-[11.5px] font-medium"
+            style={{ color: "var(--wc-mute)" }}
+            suppressHydrationWarning
+          >
+            {formatRelativeTime(new Date(card.createdAt))}
+          </span>
+        </div>
+      </div>
+
+      {card.image && (
+        <div className="relative h-[76px] w-[104px] shrink-0 overflow-hidden rounded-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={card.image}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: faceFocus ?? "50% 30%" }}
+          />
+        </div>
+      )}
+    </article>
+  )
+}
+
+/* ---------- 피드 ---------- */
 
 export function CardNewsFeed({
   initialCards,
@@ -350,9 +586,15 @@ export function CardNewsFeed({
 
   return (
     <div className="flex flex-col gap-3">
-      {cards.map((card, i) => (
-        <NewsCard key={card.id} card={card} eager={i < 2} />
-      ))}
+      {cards.map((card, i) =>
+        i === 0 ? (
+          <HeroCard key={card.id} card={card} eager />
+        ) : i <= 2 ? (
+          <FramedCard key={card.id} card={card} eager={i < 2} />
+        ) : (
+          <CompactCard key={card.id} card={card} />
+        )
+      )}
       <div ref={sentinelRef} className="flex h-10 items-center justify-center">
         {loading && <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />}
         {!cursor && !loading && (
