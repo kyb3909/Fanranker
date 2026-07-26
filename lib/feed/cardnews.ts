@@ -13,6 +13,8 @@ export interface CardNewsItem {
   createdAt: string
   /** 최고 추천 댓글 한 줄 (없으면 null) */
   bestComment: string | null
+  /** 대표 말머리 (팀 우선) — 상단 태그 칩용 */
+  flair: { name: string; color: string | null } | null
 }
 
 const PAGE_SIZE = 20
@@ -38,7 +40,10 @@ export async function fetchCardNews(
 
   let query = supabase
     .from("posts")
-    .select("id, title, image, content, vote_count, comment_count, created_at")
+    .select(
+      // post_flairs 임베드는 !flair_id 힌트 필수 (post_flair_map 추가 후 관계 모호 — f15c802a 참조)
+      "id, title, image, content, vote_count, comment_count, created_at, post_flairs!flair_id ( name, color )"
+    )
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(PAGE_SIZE)
@@ -67,6 +72,8 @@ export async function fetchCardNews(
 
   const cards: CardNewsItem[] = rows.map((p) => {
     const m = p.title.match(SOURCE_RE)
+    // 생성 타입은 임베드를 배열로 추론하지만 단일 FK 관계라 런타임은 객체 — 둘 다 수용
+    const f = Array.isArray(p.post_flairs) ? p.post_flairs[0] : p.post_flairs
     return {
       id: p.id,
       title: m ? p.title.slice(m[0].length) : p.title,
@@ -77,6 +84,7 @@ export async function fetchCardNews(
       commentCount: p.comment_count ?? 0,
       createdAt: p.created_at,
       bestComment: bestOf.get(p.id) ?? null,
+      flair: f ? { name: f.name, color: f.color } : null,
     }
   })
 

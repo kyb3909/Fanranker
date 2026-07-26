@@ -26,17 +26,34 @@ function badgeTier(source: string): BadgeTier {
   return "media"
 }
 
-/** 제목 위 키커 라인 — 출처를 박스 뱃지 대신 매거진식 텍스트 레이블로 (Apple News 문법) */
-function SourceKicker({ source }: { source: string }) {
+/** 상단 태그 칩 공통 스타일 — frosted 다크 필 (BBC Sport/OneFootball 태그 문법) */
+const chipStyle: React.CSSProperties = {
+  height: 24,
+  padding: "0 10px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.02em",
+  background: "rgba(12,11,15,.5)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  border: "1px solid rgba(255,255,255,.16)",
+  color: "rgba(255,255,255,.94)",
+}
+
+/** 출처 칩 — 오피셜=버건디 필, 1티어=골드 별, 언론=플레인 */
+function SourceChip({ source }: { source: string }) {
   const tier = badgeTier(source)
-  const base: React.CSSProperties = {
-    fontSize: 11.5,
-    fontWeight: 800,
-    letterSpacing: "0.08em",
-  }
   if (tier === "official") {
     return (
-      <span className="inline-flex items-center gap-1" style={{ ...base, color: "#FFD96B" }}>
+      <span
+        className="inline-flex items-center gap-1"
+        style={{
+          ...chipStyle,
+          background: "rgba(159,18,57,.88)",
+          border: "1px solid rgba(255,255,255,.24)",
+        }}
+      >
         <Check className="h-3 w-3" strokeWidth={3.5} />
         오피셜
       </span>
@@ -44,16 +61,81 @@ function SourceKicker({ source }: { source: string }) {
   }
   if (tier === "tier1") {
     return (
-      <span
-        className="inline-flex items-center gap-1"
-        style={{ ...base, color: "rgba(255,255,255,.95)" }}
-      >
-        <Star className="h-2.5 w-2.5 fill-current" />
+      <span className="inline-flex items-center gap-1" style={chipStyle}>
+        <Star className="h-2.5 w-2.5 fill-current" style={{ color: "#FFD96B" }} />
         {source}
       </span>
     )
   }
-  return <span style={{ ...base, color: "rgba(255,255,255,.62)" }}>{source}</span>
+  return (
+    <span
+      className="inline-flex items-center"
+      style={{ ...chipStyle, color: "rgba(255,255,255,.78)" }}
+    >
+      {source}
+    </span>
+  )
+}
+
+/** 팀/말머리 칩 — 말머리 색 dot + 이름 */
+function FlairChip({ name, color }: { name: string; color: string | null }) {
+  return (
+    <span className="inline-flex items-center gap-1.5" style={chipStyle}>
+      <span
+        aria-hidden
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ background: color || "#9F1239" }}
+      />
+      {name}
+    </span>
+  )
+}
+
+/* 브라우저 네이티브 FaceDetector (Chromium 계열) — 없거나 실패하면 상단 30% 크롭 fallback */
+interface DetectedFaceBox {
+  boundingBox: { x: number; y: number; width: number; height: number }
+}
+type FaceDetectorCtor = new (opts?: { fastMode?: boolean; maxDetectedFaces?: number }) => {
+  detect: (el: HTMLImageElement) => Promise<DetectedFaceBox[]>
+}
+
+const clampPct = (v: number) => Math.min(80, Math.max(20, v))
+
+/** 얼굴 중심 object-position — 감지 성공 시에만 값 반환, 나머지는 null(fallback 유지) */
+function useFaceFocus(imageUrl: string | null): string | null {
+  const [pos, setPos] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!imageUrl) return
+    const FD = (window as { FaceDetector?: FaceDetectorCtor }).FaceDetector
+    if (!FD) return
+    let cancelled = false
+    // 화면의 <img>에 crossOrigin 을 걸면 CORS 미허용 호스트에서 이미지 자체가 깨짐
+    // → 별도 프로브 이미지로만 감지 시도 (실패해도 화면 영향 없음)
+    const probe = new Image()
+    probe.crossOrigin = "anonymous"
+    probe.src = imageUrl
+    probe.onload = async () => {
+      try {
+        const faces = await new FD({ fastMode: true, maxDetectedFaces: 4 }).detect(probe)
+        if (cancelled || faces.length === 0 || !probe.naturalWidth) return
+        const cx =
+          faces.reduce((s, f) => s + f.boundingBox.x + f.boundingBox.width / 2, 0) / faces.length
+        const cy =
+          faces.reduce((s, f) => s + f.boundingBox.y + f.boundingBox.height / 2, 0) / faces.length
+        setPos(
+          `${clampPct((cx / probe.naturalWidth) * 100)}% ${clampPct((cy / probe.naturalHeight) * 100)}%`
+        )
+      } catch {
+        // CORS/감지 실패 — fallback 유지
+      }
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [imageUrl])
+
+  return pos
 }
 
 /**
@@ -69,6 +151,7 @@ const ghostAction =
 
 function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
   const [liked, setLiked] = useState(false)
+  const faceFocus = useFaceFocus(card.image)
 
   // 로컬 하트 복원 (떡밥 피드와 동일 방식, 키만 분리)
   useEffect(() => {
@@ -108,6 +191,7 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
           alt=""
           loading={eager ? "eager" : "lazy"}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+          style={{ objectPosition: faceFocus ?? "50% 30%" }}
         />
       ) : (
         <div className="absolute inset-0 bg-gray-300" />
@@ -117,6 +201,14 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
         style={{ height: "62%", background: SCRIM }}
+      />
+      {/* 상단 미세 음영 — 태그 칩 가독성용 */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1]"
+        style={{
+          height: "24%",
+          background: "linear-gradient(to bottom, rgba(9,8,11,.36), rgba(9,8,11,0))",
+        }}
       />
 
       {/* 카드 전체 탭 영역 → 상세 */}
@@ -129,14 +221,16 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
         }
       />
 
-      {/* 하단 텍스트 블록 — kicker / 제목 / 메타 / 베스트 댓글 */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] px-4 pb-3.5">
-        {card.source && (
-          <div className="mb-1.5">
-            <SourceKicker source={card.source} />
-          </div>
-        )}
+      {/* 상단 태그 칩 — 출처 + 팀/말머리 */}
+      {(card.source || card.flair) && (
+        <div className="pointer-events-none absolute top-3 left-3 z-[3] flex flex-wrap items-center gap-1.5">
+          {card.source && <SourceChip source={card.source} />}
+          {card.flair && <FlairChip name={card.flair.name} color={card.flair.color} />}
+        </div>
+      )}
 
+      {/* 하단 텍스트 블록 — 제목 / 메타 / 베스트 댓글 */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] px-4 pb-3.5">
         <h2
           className="line-clamp-2 text-white"
           style={{
