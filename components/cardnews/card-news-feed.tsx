@@ -116,14 +116,6 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
       ) : (
         <div className="absolute inset-0 bg-gray-300" />
       )}
-      {/* 하단 음영 — 유리판 아래 깊이감용으로만 은은하게 */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: "linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(12,8,10,.45) 100%)",
-        }}
-      />
-
       {/* 카드 전체 탭 영역 → 상세 */}
       <Link
         href={`/post/${card.id}?utm_source=cardnews`}
@@ -136,17 +128,20 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
 
       {card.source && <SourceBadge source={card.source} />}
 
-      {/* 하단 콘텐츠 — 회색빛 반투명 유리판 위에 제목/액션/베스트 댓글 */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-2.5">
-        <div
-          className="rounded-xl p-3"
-          style={{
-            background: "rgba(38,36,42,.52)",
-            backdropFilter: "blur(14px) saturate(140%)",
-            WebkitBackdropFilter: "blur(14px) saturate(140%)",
-            border: "1px solid rgba(255,255,255,.12)",
-          }}
-        >
+      {/* 하단 콘텐츠 — 경계 없는 연한 반투명 스크림 (위는 투명, 아래로 갈수록 살짝 어두움.
+          mask 로 backdrop blur 도 같이 페이드 → 박스 느낌 없이 스며드는 형태) */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] px-3.5 pt-12 pb-3.5"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(16,14,18,0) 0%, rgba(16,14,18,.28) 45%, rgba(16,14,18,.48) 100%)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          maskImage: "linear-gradient(180deg, transparent 0%, black 40%)",
+          WebkitMaskImage: "linear-gradient(180deg, transparent 0%, black 40%)",
+        }}
+      >
+        <div>
           <h2
             className="line-clamp-2 text-white"
             style={{
