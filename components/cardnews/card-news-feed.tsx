@@ -24,7 +24,7 @@ import type { CardNewsItem } from "@/lib/feed/cardnews"
  * 좋아요는 떡밥 피드와 동일한 비로그인 로컬 반응 (서버 반영 없음).
  */
 
-const BURGUNDY = "#9F1239"
+const BURGUNDY = "var(--wc-burgundy)"
 const TIER1_SOURCES = ["로마노", "온스테인", "romano", "ornstein", "파브리지오", "fabrizio"]
 
 type BadgeTier = "official" | "tier1" | "media"
@@ -60,7 +60,7 @@ function SourceChip({ source }: { source: string }) {
         className="inline-flex items-center gap-1"
         style={{
           ...chipStyle,
-          background: "rgba(159,18,57,.88)",
+          background: "color-mix(in srgb, var(--wc-burgundy) 88%, transparent)",
           border: "1px solid rgba(255,255,255,.24)",
         }}
       >
@@ -407,7 +407,14 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] px-4 pb-3.5">
         <h2
           className="line-clamp-2 text-white"
-          style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.3, letterSpacing: "-0.02em" }}
+          style={{
+            fontSize: 19,
+            fontWeight: 800,
+            lineHeight: 1.3,
+            letterSpacing: "-0.02em",
+            wordBreak: "keep-all",
+            overflowWrap: "anywhere",
+          }}
         >
           {card.title}
         </h2>
@@ -425,7 +432,9 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
             <Heart
               className={`h-[15px] w-[15px] transition-transform active:scale-125 ${liked ? "fill-current" : ""}`}
             />
-            <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            {card.voteCount + (liked ? 1 : 0) > 0 && (
+              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            )}
           </button>
           <Link
             href={`/post/${card.id}?utm_source=cardnews#comments`}
@@ -433,7 +442,7 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
             aria-label="댓글"
           >
             <MessageCircle className="h-[15px] w-[15px]" />
-            <span className="tabular-nums">{card.commentCount}</span>
+            {card.commentCount > 0 && <span className="tabular-nums">{card.commentCount}</span>}
           </Link>
           <span
             className="ml-auto text-[12px] font-medium"
@@ -535,6 +544,8 @@ function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
             lineHeight: 1.34,
             letterSpacing: "-0.01em",
             color: "var(--wc-ink)",
+            wordBreak: "keep-all",
+            overflowWrap: "anywhere",
           }}
         >
           {card.title}
@@ -553,7 +564,9 @@ function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
             <Heart
               className={`h-[15px] w-[15px] transition-transform active:scale-125 ${liked ? "fill-current" : ""}`}
             />
-            <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            {card.voteCount + (liked ? 1 : 0) > 0 && (
+              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            )}
           </button>
           <Link
             href={`/post/${card.id}?utm_source=cardnews#comments`}
@@ -561,7 +574,7 @@ function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
             aria-label="댓글"
           >
             <MessageCircle className="h-[15px] w-[15px]" />
-            <span className="tabular-nums">{card.commentCount}</span>
+            {card.commentCount > 0 && <span className="tabular-nums">{card.commentCount}</span>}
           </Link>
           <span
             className="ml-auto text-[12px] font-medium"
@@ -626,6 +639,8 @@ function CompactCard({ card }: { card: CardNewsItem }) {
             lineHeight: 1.38,
             letterSpacing: "-0.01em",
             color: "var(--wc-ink)",
+            wordBreak: "keep-all",
+            overflowWrap: "anywhere",
           }}
         >
           {card.title}
@@ -641,14 +656,16 @@ function CompactCard({ card }: { card: CardNewsItem }) {
             aria-pressed={liked}
           >
             <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
-            <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            {card.voteCount + (liked ? 1 : 0) > 0 && (
+              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            )}
           </button>
           <span
             className="inline-flex items-center gap-1 text-[11.5px] font-semibold"
             style={{ color: "var(--wc-mute)" }}
           >
             <MessageCircle className="h-3.5 w-3.5" />
-            <span className="tabular-nums">{card.commentCount}</span>
+            {card.commentCount > 0 && <span className="tabular-nums">{card.commentCount}</span>}
           </span>
           <span
             className="text-[11.5px] font-medium"
@@ -737,12 +754,18 @@ export function CardNewsFeed({
     trackEvent({ name: "cardnews_feed_open", params: {} })
   }, [])
 
+  // 히어로 = 상위 5개 중 이미지 있는 첫 카드를 승격 (톱 자리 회색 플레이스홀더 방지).
+  // 이미지가 하나도 없으면 히어로 생략하고 프레임/컴팩트로만 구성.
+  const heroIdx = cards.findIndex((c, i) => i < 5 && !!c.image)
+  const ordered = heroIdx > 0 ? [cards[heroIdx], ...cards.filter((_, i) => i !== heroIdx)] : cards
+  const hasHero = heroIdx !== -1
+
   return (
     <div className="flex flex-col gap-3">
-      {cards.map((card, i) =>
-        i === 0 ? (
+      {ordered.map((card, i) =>
+        hasHero && i === 0 ? (
           <HeroCard key={card.id} card={card} eager />
-        ) : i <= 2 ? (
+        ) : i <= (hasHero ? 2 : 1) ? (
           <FramedCard key={card.id} card={card} eager={i < 2} />
         ) : (
           <CompactCard key={card.id} card={card} />

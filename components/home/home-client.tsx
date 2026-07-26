@@ -152,65 +152,70 @@ export function HomeClient({
             {/* 전체 공지 — 담벼락 최상단 고정 (관리자가 is_global_notice 로 설정) */}
             <GlobalNoticeBanner notices={initialGlobalNotices ?? []} />
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
-            {/* 인라인 글쓰기 프롬프트 — 작성 유도(상단) */}
-            <Link
-              href="/write"
-              className="flex items-center gap-3 rounded-xl px-4 py-3 no-underline transition-opacity hover:opacity-90"
-              style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
-            >
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
-                aria-hidden
+            {/* 인라인 글쓰기 프롬프트 — 게시판 탭에서만 (뉴스/베팅 소비 모드와 무관한 CTA) */}
+            {feedTab === "board" && (
+              <Link
+                href="/write"
+                className="flex items-center gap-3 rounded-xl px-4 py-3 no-underline transition-opacity hover:opacity-90"
+                style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
               >
-                <Pencil className="h-4 w-4" />
-              </span>
-              <span className="flex-1 text-[14px]" style={{ color: "var(--wc-mute)" }}>
-                오늘 무슨 공놀이 이야기? 한 줄 남겨보세요…
-              </span>
-              <span
-                className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-bold"
-                style={{ background: "var(--wc-burgundy)", color: "#fff" }}
-              >
-                글쓰기
-              </span>
-            </Link>
-
-            {/* 월드컵 이벤트 배너 (글쓰기와 카드 사이) — 종료 시 "우승자 확인"으로 전환 */}
-            <Link
-              href={worldcupConcluded ? "/worldcup/result" : "/worldcup"}
-              className="flex items-center gap-3 rounded-xl px-[18px] py-[14px] no-underline transition-opacity hover:opacity-90"
-              style={{
-                background:
-                  "linear-gradient(100deg, var(--wc-burgundy-deep, #771629), var(--wc-burgundy, #961e37))",
-                boxShadow: "var(--wc-shadow-2, 0 4px 16px rgba(150,30,55,.22))",
-                color: "#fff",
-              }}
-            >
-              <span style={{ fontSize: 20 }} aria-hidden>
-                🏆
-              </span>
-              <span className="min-w-0 flex-1">
                 <span
-                  className="block text-[11px] font-extrabold uppercase"
-                  style={{ letterSpacing: "0.14em", color: "var(--wc-gold, #FFD96B)" }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
+                  aria-hidden
                 >
-                  World Cup 2026 Event
+                  <Pencil className="h-4 w-4" />
                 </span>
-                <span className="mt-0.5 block text-[14.5px] font-bold">
-                  {worldcupConcluded
-                    ? "대회가 마무리되었습니다 — 우승자를 확인하세요"
-                    : "월드컵 승부예측 구너들의 대결 — 지금 참가하세요"}
+                <span className="flex-1 text-[14px]" style={{ color: "var(--wc-mute)" }}>
+                  오늘 무슨 공놀이 이야기? 한 줄 남겨보세요…
                 </span>
-              </span>
-              <span
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12.5px] font-bold"
-                style={{ background: "rgba(255,255,255,.14)", padding: "7px 13px" }}
+                <span
+                  className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-bold"
+                  style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+                >
+                  글쓰기
+                </span>
+              </Link>
+            )}
+
+            {/* 월드컵 이벤트 배너 — 종료 후 비로그인(신규 유입)에겐 숨김: 첫 화면 130px 회수.
+                참가했을 수 있는 로그인 유저에게만 "우승자 확인" 노출 */}
+            {(!worldcupConcluded || isSignedIn) && (
+              <Link
+                href={worldcupConcluded ? "/worldcup/result" : "/worldcup"}
+                className="flex items-center gap-3 rounded-xl px-[18px] py-[14px] no-underline transition-opacity hover:opacity-90"
+                style={{
+                  background:
+                    "linear-gradient(100deg, var(--wc-burgundy-deep, #771629), var(--wc-burgundy, #961e37))",
+                  boxShadow: "var(--wc-shadow-2, 0 4px 16px rgba(150,30,55,.22))",
+                  color: "#fff",
+                }}
               >
-                {worldcupConcluded ? "우승자 확인" : "참가 신청"}
-                <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              </span>
-            </Link>
+                <span style={{ fontSize: 20 }} aria-hidden>
+                  🏆
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    className="block text-[11px] font-extrabold uppercase"
+                    style={{ letterSpacing: "0.14em", color: "var(--wc-gold, #FFD96B)" }}
+                  >
+                    World Cup 2026 Event
+                  </span>
+                  <span className="mt-0.5 block text-[14.5px] font-bold">
+                    {worldcupConcluded
+                      ? "대회가 마무리되었습니다 — 우승자를 확인하세요"
+                      : "월드컵 승부예측 구너들의 대결 — 지금 참가하세요"}
+                  </span>
+                </span>
+                <span
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12.5px] font-bold"
+                  style={{ background: "rgba(255,255,255,.14)", padding: "7px 13px" }}
+                >
+                  {worldcupConcluded ? "우승자 확인" : "참가 신청"}
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                </span>
+              </Link>
+            )}
 
             {/* 메인 탭 스트립 — 카드뉴스/오늘의 경기 + 게시판 정렬(랜덤/온도순/최신순).
                 정렬 pill 을 누르면 게시판 탭으로 전환된다. (pill 스타일 유지 — 언더라인 통일 예외) */}

@@ -182,7 +182,8 @@ export function PostCardMeta({
           )}
         >
           <ThumbsUp className={cn("h-3.5 w-3.5", myVote === "up" && "fill-current")} />
-          <span className="font-medium tabular-nums">{voteCount}</span>
+          {/* 0 카운트는 숫자 숨김 (아이콘=행동 유도, 0의 행렬=죽은 사이트 신호) */}
+          {voteCount > 0 && <span className="font-medium tabular-nums">{voteCount}</span>}
         </button>
 
         <Link
@@ -191,17 +192,16 @@ export function PostCardMeta({
           className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 transition-colors hover:bg-[var(--wc-soft)] hover:text-[var(--wc-burgundy)] sm:min-h-0 sm:min-w-0 sm:py-1.5"
         >
           <MessageCircle className="h-3.5 w-3.5" />
-          <span className="font-medium tabular-nums">{comments}</span>
+          {comments > 0 && <span className="font-medium tabular-nums">{comments}</span>}
         </Link>
 
-        {/* 조회수 — 비상호작용 표시 (날짜·추천·댓글 다음) */}
-        <span
-          className="inline-flex items-center gap-1 px-2"
-          aria-label={`조회 ${viewCount ?? 0}회`}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          <span className="font-medium tabular-nums">{viewCount ?? 0}</span>
-        </span>
+        {/* 조회수 — 비상호작용 표시 (날짜·추천·댓글 다음). 0이면 통째로 숨김 */}
+        {(viewCount ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 px-2" aria-label={`조회 ${viewCount}회`}>
+            <Eye className="h-3.5 w-3.5" />
+            <span className="font-medium tabular-nums">{viewCount}</span>
+          </span>
+        )}
 
         {/* 데스크톱: hover/focus 시 노출 — 모바일: 상시 노출 */}
         <div className="flex items-center sm:opacity-0 sm:transition-opacity sm:duration-150 sm:group-hover:opacity-100 sm:focus-within:opacity-100">

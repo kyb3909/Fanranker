@@ -38,13 +38,13 @@ function toTwitterMedium(raw: string): string {
 }
 
 const CATEGORY_CHIP: Record<string, { bg: string; color: string; emoji?: string }> = {
-  축구: { bg: "#FDECEC", color: "#9F1239", emoji: "⚽" },
+  축구: { bg: "#FDECEC", color: "var(--wc-burgundy)", emoji: "⚽" },
   야구: { bg: "#EAF1FD", color: "#1E3A8A", emoji: "⚾" },
   농구: { bg: "#FDF1E5", color: "#9A3412", emoji: "🏀" },
   배구: { bg: "#F4EEFB", color: "#581C87", emoji: "🏐" },
   게임: { bg: "#EEF0FA", color: "#2D3A8C", emoji: "🎮" },
   애니: { bg: "#EAF4F4", color: "#0F5858", emoji: "🎌" },
-  음악: { bg: "#FDEFF3", color: "#9F1239", emoji: "🎵" },
+  음악: { bg: "#FDEFF3", color: "var(--wc-burgundy)", emoji: "🎵" },
 }
 const CHIP_FALLBACK = { bg: "#EFF2F4", color: "#3A3D45" }
 
@@ -178,6 +178,9 @@ export const PostCardContent = memo(function PostCardContent({
                 letterSpacing: "-0.02em",
                 lineHeight: 1.45,
                 marginBottom: 8,
+                // 한글 어절 중간 줄바꿈 방지 ("1억 유/로") + 긴 URL·영문 오버플로 방어
+                wordBreak: "keep-all",
+                overflowWrap: "anywhere",
               }}
             >
               {title}
