@@ -31,6 +31,8 @@ type AnalyticsEvent =
   | { name: "snack_feed_open"; params: Record<string, never> }
   | { name: "snack_feed_depth"; params: { depth: number } }
   | { name: "snack_card_open_post"; params: { post_id: string } }
+  | { name: "cardnews_feed_open"; params: Record<string, never> }
+  | { name: "cardnews_card_open_post"; params: { post_id: string } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {
