@@ -25,6 +25,9 @@ export interface CardNewsItem {
 const PAGE_SIZE = 20
 const SOURCE_RE = /^\[([^\]]{1,24})\]\s*/
 
+/** AI 뉴스룸 발행 계정 (news-review publish) — 카드뉴스는 이 계정 글만 큐레이션 */
+const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
+
 /** 댓글 미리보기용 — 태그 제거 + 한 줄 길이로 자름 */
 function toPreview(content: string): string {
   return content
@@ -50,6 +53,7 @@ export async function fetchCardNews(
       "id, title, image, content, vote_count, comment_count, created_at, post_flairs!flair_id ( name, color )"
     )
     .is("deleted_at", null)
+    .eq("user_id", NEWS_BOT_USER_ID)
     .order("created_at", { ascending: false })
     .limit(PAGE_SIZE)
   if (before) query = query.lt("created_at", before)
