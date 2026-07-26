@@ -24,10 +24,11 @@ const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
 )
-const TodayGames = dynamic(
-  () => import("@/components/home/today-games").then((m) => ({ default: m.TodayGames })),
-  { loading: () => <div className="wc-skeleton h-64 rounded-xl" /> }
-)
+// 오늘의 경기 탭 = 실제 베팅 화면 (bettingOnly — 4탭 헤더 없음, 하단 sticky 슬립이
+// 탭하면 바텀시트로 펼쳐짐). /worldcup 에서 검증된 모드 재사용.
+const BettingPage = dynamic(() => import("@/components/betting/betting-page"), {
+  loading: () => <div className="wc-skeleton h-64 rounded-xl" />,
+})
 
 /** 담벼락 메인 탭 — 카드뉴스(기본) / 오늘의 경기 / 게시판(기존 정렬 피드) */
 export type FeedTab = "cardnews" | "games" | "board"
@@ -287,7 +288,7 @@ export function HomeClient({
               />
             )}
 
-            {feedTab === "games" && <TodayGames />}
+            {feedTab === "games" && <BettingPage bettingOnly />}
 
             {feedTab === "board" && (
               <div className="space-y-2.5">
