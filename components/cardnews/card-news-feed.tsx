@@ -116,12 +116,11 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
       ) : (
         <div className="absolute inset-0 bg-gray-300" />
       )}
-      {/* 하단 음영 */}
+      {/* 하단 음영 — 유리판 아래 깊이감용으로만 은은하게 */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(12,8,10,.55) 68%, rgba(12,8,10,.88) 100%)",
+          background: "linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(12,8,10,.45) 100%)",
         }}
       />
 
@@ -137,76 +136,86 @@ function NewsCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
 
       {card.source && <SourceBadge source={card.source} />}
 
-      {/* 하단 콘텐츠 — 버튼/댓글바만 pointer-events 살림 */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3.5">
-        <h2
-          className="line-clamp-2 text-white"
+      {/* 하단 콘텐츠 — 회색빛 반투명 유리판 위에 제목/액션/베스트 댓글 */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-2.5">
+        <div
+          className="rounded-xl p-3"
           style={{
-            fontSize: 17.5,
-            fontWeight: 750,
-            lineHeight: 1.36,
-            letterSpacing: "-0.015em",
-            textShadow: "0 1px 10px rgba(0,0,0,.35)",
+            background: "rgba(38,36,42,.52)",
+            backdropFilter: "blur(14px) saturate(140%)",
+            WebkitBackdropFilter: "blur(14px) saturate(140%)",
+            border: "1px solid rgba(255,255,255,.12)",
           }}
         >
-          {card.title}
-        </h2>
+          <h2
+            className="line-clamp-2 text-white"
+            style={{
+              fontSize: 17.5,
+              fontWeight: 750,
+              lineHeight: 1.36,
+              letterSpacing: "-0.015em",
+              textShadow: "0 1px 10px rgba(0,0,0,.35)",
+            }}
+          >
+            {card.title}
+          </h2>
 
-        {/* 액션 줄 */}
-        <div className="mt-2.5 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleLike}
-            className={`${pillClass} pointer-events-auto bg-white/[.18] hover:bg-white/30 active:bg-white/30`}
-            aria-label="좋아요"
-            aria-pressed={liked}
-          >
-            <Heart
-              className={`h-4 w-4 transition-transform active:scale-125 ${
-                liked ? "fill-rose-400 text-rose-400" : ""
-              }`}
-            />
-            <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
-          </button>
-          <Link
-            href={`/post/${card.id}?utm_source=cardnews#comments`}
-            className={`${pillClass} pointer-events-auto bg-white/[.18] hover:bg-white/30 active:bg-white/30`}
-            aria-label="댓글"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="tabular-nums">{card.commentCount}</span>
-          </Link>
-          <span
-            className="ml-auto text-[12px]"
-            style={{ color: "rgba(255,255,255,.78)" }}
-            suppressHydrationWarning
-          >
-            {formatRelativeTime(new Date(card.createdAt))}
-          </span>
+          {/* 액션 줄 */}
+          <div className="mt-2.5 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleLike}
+              className={`${pillClass} pointer-events-auto bg-white/[.18] hover:bg-white/30 active:bg-white/30`}
+              aria-label="좋아요"
+              aria-pressed={liked}
+            >
+              <Heart
+                className={`h-4 w-4 transition-transform active:scale-125 ${
+                  liked ? "fill-rose-400 text-rose-400" : ""
+                }`}
+              />
+              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
+            </button>
+            <Link
+              href={`/post/${card.id}?utm_source=cardnews#comments`}
+              className={`${pillClass} pointer-events-auto bg-white/[.18] hover:bg-white/30 active:bg-white/30`}
+              aria-label="댓글"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="tabular-nums">{card.commentCount}</span>
+            </Link>
+            <span
+              className="ml-auto text-[12px]"
+              style={{ color: "rgba(255,255,255,.78)" }}
+              suppressHydrationWarning
+            >
+              {formatRelativeTime(new Date(card.createdAt))}
+            </span>
+          </div>
+
+          {/* 베스트 댓글 미리보기 — 댓글 있는 카드에만 */}
+          {card.bestComment && card.commentCount > 0 && (
+            <Link
+              href={`/post/${card.id}?utm_source=cardnews#comments`}
+              className="pointer-events-auto mt-2.5 flex items-center gap-2 rounded-[10px] backdrop-blur-[6px]"
+              style={{ background: "rgba(255,255,255,.14)", padding: "8px 11px" }}
+            >
+              <span
+                className="shrink-0 rounded bg-white px-1.5 py-0.5"
+                style={{ color: BURGUNDY, fontSize: 10.5, fontWeight: 800 }}
+              >
+                베스트
+              </span>
+              <span
+                className="min-w-0 flex-1 truncate text-[13px]"
+                style={{ color: "rgba(255,255,255,.92)" }}
+              >
+                {card.bestComment}
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/70" />
+            </Link>
+          )}
         </div>
-
-        {/* 베스트 댓글 미리보기 — 댓글 있는 카드에만 */}
-        {card.bestComment && card.commentCount > 0 && (
-          <Link
-            href={`/post/${card.id}?utm_source=cardnews#comments`}
-            className="pointer-events-auto mt-2.5 flex items-center gap-2 rounded-[10px] backdrop-blur-[6px]"
-            style={{ background: "rgba(255,255,255,.14)", padding: "8px 11px" }}
-          >
-            <span
-              className="shrink-0 rounded bg-white px-1.5 py-0.5"
-              style={{ color: BURGUNDY, fontSize: 10.5, fontWeight: 800 }}
-            >
-              베스트
-            </span>
-            <span
-              className="min-w-0 flex-1 truncate text-[13px]"
-              style={{ color: "rgba(255,255,255,.92)" }}
-            >
-              {card.bestComment}
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/70" />
-          </Link>
-        )}
       </div>
     </article>
   )
