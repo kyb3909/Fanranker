@@ -11,6 +11,8 @@ import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
+import { CardNewsFeed } from "@/components/cardnews/card-news-feed"
+import type { CardNewsItem } from "@/lib/feed/cardnews"
 import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
 // 사이드바는 SSR 프리페치 데이터로 즉시 렌더되므로 직접 import.
 // dynamic() 로 감싸면 하이드레이션 시 loading 스켈레톤(h-96)이 잠깐 떴다가 실제 사이드바로
@@ -22,6 +24,13 @@ const HotPostToast = dynamic(
   () => import("@/components/home/hot-post-toast").then((m) => ({ default: m.HotPostToast })),
   { ssr: false }
 )
+const TodayGames = dynamic(
+  () => import("@/components/home/today-games").then((m) => ({ default: m.TodayGames })),
+  { loading: () => <div className="wc-skeleton h-64 rounded-xl" /> }
+)
+
+/** 담벼락 메인 탭 — 카드뉴스(기본) / 오늘의 경기 / 게시판(기존 정렬 피드) */
+export type FeedTab = "cardnews" | "games" | "board"
 
 // 비로그인은 유니버설(전체 hot) — SSR 과 동일 키로 CLS/ISR 캐시 유지(클라 재요청 X).
 // 로그인은 개인화(팔로우 게시판 + 말머리 필터): 로그인 유저만 /api/posts 를 재요청하므로
@@ -34,8 +43,10 @@ interface HomeClientProps {
   initialRecentComments?: unknown[]
   initialGlobalNotices?: GlobalNotice[]
   initialSort?: SortType
+  initialTab?: FeedTab
   /** 월드컵 이벤트 종료 여부 — true 면 배너가 "우승자 확인"으로 전환 */
   worldcupConcluded?: boolean
+  initialCardNews?: { cards: CardNewsItem[]; nextCursor: string | null }
 }
 
 export function HomeClient({
@@ -44,27 +55,50 @@ export function HomeClient({
   initialRecentComments,
   initialGlobalNotices,
   initialSort = "new",
+  initialTab = "cardnews",
   worldcupConcluded = false,
+  initialCardNews,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [sortBy, setSortBy] = useState<SortType>(initialSort)
+  const [feedTab, setFeedTab] = useState<FeedTab>(initialTab)
 
-  // 정렬을 URL ?sort= 에 보존 → 새로고침·뒤로가기 시 선택한 정렬 유지
+  // 탭/정렬을 URL 에 보존 → 새로고침·뒤로가기 시 선택 유지
+  // 기본(카드뉴스)=파라미터 없음, 게임=?tab=games, 게시판=?tab=board[&sort=]
   useEffect(() => {
+    const t = searchParams.get("tab")
     const s = searchParams.get("sort")
+    if (t === "games") setFeedTab("games")
+    else if (t === "board" || s) setFeedTab("board")
+    else setFeedTab("cardnews")
     if (s === "new" || s === "hot" || s === "random") setSortBy(s)
   }, [searchParams])
 
+  const replaceUrl = (params: URLSearchParams) => {
+    const qs = params.toString()
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false })
+  }
+
+  const changeTab = (tab: FeedTab) => {
+    setFeedTab(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("sort")
+    if (tab === "cardnews") params.delete("tab")
+    else params.set("tab", tab)
+    replaceUrl(params)
+  }
+
   const changeSort = (key: SortType) => {
+    setFeedTab("board")
     setSortBy(key)
     const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", "board")
     if (key === "new")
       params.delete("sort") // 기본값(최신순)은 URL 깔끔하게
     else params.set("sort", key)
-    const qs = params.toString()
-    router.replace(qs ? `/?${qs}` : "/", { scroll: false })
+    replaceUrl(params)
   }
 
   // SWR로 팔로우 커뮤니티 로드 (community-sidebar와 캐시 공유)
@@ -177,46 +211,96 @@ export function HomeClient({
               </span>
             </Link>
 
-            {/* 정렬 스트립 — 랜덤/온도순/최신순. (담벼락은 pill 스타일 유지 — 언더라인 통일 예외) */}
-            <div className="mt-4 flex items-center gap-1.5" role="group" aria-label="게시물 정렬">
+            {/* 메인 탭 스트립 — 카드뉴스/오늘의 경기 + 게시판 정렬(랜덤/온도순/최신순).
+                정렬 pill 을 누르면 게시판 탭으로 전환된다. (pill 스타일 유지 — 언더라인 통일 예외) */}
+            <div
+              className="scrollbar-none mt-4 flex items-center gap-1.5 overflow-x-auto"
+              role="group"
+              aria-label="담벼락 보기 선택"
+            >
+              {(
+                [
+                  { tab: "cardnews", label: "카드뉴스" },
+                  { tab: "games", label: "오늘의 경기" },
+                ] as const
+              ).map(({ tab, label }) => {
+                const active = feedTab === tab
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => changeTab(tab)}
+                    aria-pressed={active}
+                    className={`inline-flex shrink-0 items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${!active ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
+                    style={{
+                      height: 34,
+                      padding: "0 14px",
+                      background: active ? "var(--wc-burgundy)" : "var(--wc-card)",
+                      color: active ? "white" : "var(--wc-mute)",
+                      border: active
+                        ? "1px solid var(--wc-burgundy)"
+                        : "1px solid var(--wc-line-2)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+              <span
+                aria-hidden
+                className="mx-0.5 h-4 w-px shrink-0"
+                style={{ background: "var(--wc-line-2)" }}
+              />
               {[
                 { key: "random" as const, label: "랜덤" },
                 { key: "hot" as const, label: "온도순" },
                 { key: "new" as const, label: "최신순" },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => changeSort(key)}
-                  aria-pressed={sortBy === key}
-                  className={`inline-flex items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${sortBy !== key ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
-                  style={{
-                    height: 34,
-                    padding: "0 14px",
-                    background: sortBy === key ? "var(--wc-burgundy)" : "var(--wc-card)",
-                    color: sortBy === key ? "white" : "var(--wc-mute)",
-                    border:
-                      sortBy === key
+              ].map(({ key, label }) => {
+                const active = feedTab === "board" && sortBy === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => changeSort(key)}
+                    aria-pressed={active}
+                    className={`inline-flex shrink-0 items-center rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors${!active ? "hover:bg-[var(--wc-soft)] hover:text-[var(--wc-ink)]" : ""}`}
+                    style={{
+                      height: 34,
+                      padding: "0 14px",
+                      background: active ? "var(--wc-burgundy)" : "var(--wc-card)",
+                      color: active ? "white" : "var(--wc-mute)",
+                      border: active
                         ? "1px solid var(--wc-burgundy)"
                         : "1px solid var(--wc-line-2)",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
 
             {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
-            <div className="space-y-2.5">
-              {/* 말머리 필터 — 로그인 사용자만. 팔로우 게시판 말머리 즐겨찾기/뮤트로 담벼락 개인화 */}
-              {isSignedIn && <FlairFilterBar followedSlugs={[...followedCommunities]} />}
-              <FeedSection
-                posts={posts}
-                isLoading={isLoading}
-                isLoadingMore={isLoadingMore}
-                loadMore={loadMore}
+            {feedTab === "cardnews" && (
+              <CardNewsFeed
+                initialCards={initialCardNews?.cards ?? []}
+                initialCursor={initialCardNews?.nextCursor ?? null}
               />
-            </div>
+            )}
+
+            {feedTab === "games" && <TodayGames />}
+
+            {feedTab === "board" && (
+              <div className="space-y-2.5">
+                {/* 말머리 필터 — 로그인 사용자만. 팔로우 게시판 말머리 즐겨찾기/뮤트로 담벼락 개인화 */}
+                {isSignedIn && <FlairFilterBar followedSlugs={[...followedCommunities]} />}
+                <FeedSection
+                  posts={posts}
+                  isLoading={isLoading}
+                  isLoadingMore={isLoadingMore}
+                  loadMore={loadMore}
+                />
+              </div>
+            )}
           </div>
 
           {/* Right Sidebar */}
