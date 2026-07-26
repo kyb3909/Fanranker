@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "@/components/ui/app-link"
-import { Heart, MessageCircle, ChevronRight, Check, Star, Loader2 } from "lucide-react"
+import {
+  Heart,
+  MessageCircle,
+  ChevronRight,
+  Check,
+  Star,
+  Loader2,
+  Youtube,
+  Instagram,
+  Play,
+} from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { trackEvent } from "@/lib/analytics/events"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
@@ -77,6 +87,85 @@ function SourceChip({ source }: { source: string }) {
   )
 }
 
+type MediaProvider = "youtube" | "instagram" | "x"
+
+/** 플랫폼 뱃지 칩 — "누르면 영상/트윗 나온다" 기대 형성용 */
+function PlatformChip({ provider }: { provider: MediaProvider }) {
+  if (provider === "youtube") {
+    return (
+      <span className="inline-flex items-center gap-1" style={chipStyle}>
+        <Youtube className="h-3.5 w-3.5" style={{ color: "#FF6B61" }} />
+        YouTube
+      </span>
+    )
+  }
+  if (provider === "instagram") {
+    return (
+      <span className="inline-flex items-center gap-1" style={chipStyle}>
+        <Instagram className="h-3 w-3" style={{ color: "#FF8FB0" }} />
+        Instagram
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center" style={chipStyle}>
+      <span className="text-[12px] leading-none font-black">𝕏</span>
+    </span>
+  )
+}
+
+/** 썸네일 없는 미디어 글의 배경 — 은은한 브랜드 톤 + 대형 아이콘 */
+function MediaPlaceholder({ provider }: { provider: MediaProvider }) {
+  if (provider === "instagram") {
+    return (
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg, #4F3B78 0%, #8E3B60 55%, #B85C38 100%)" }}
+      >
+        <Instagram className="h-12 w-12 text-white/35" />
+      </div>
+    )
+  }
+  if (provider === "x") {
+    return (
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{ background: "#15181C" }}
+      >
+        <span className="text-6xl font-black text-white/25">𝕏</span>
+      </div>
+    )
+  }
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{ background: "#1A1416" }}
+    >
+      <Youtube className="h-12 w-12 text-white/30" />
+    </div>
+  )
+}
+
+/** 유튜브 lite embed 재생 버튼 — 탭 전엔 이미지 한 장, 탭하면 그 자리에서 iframe 재생 */
+function PlayButton({ onPlay }: { onPlay: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onPlay}
+      aria-label="영상 재생"
+      className="pointer-events-auto absolute top-1/2 left-1/2 z-[3] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full transition-transform hover:scale-105"
+      style={{
+        background: "rgba(0,0,0,.55)",
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+        border: "1px solid rgba(255,255,255,.25)",
+      }}
+    >
+      <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+    </button>
+  )
+}
+
 function FlairChip({ name, color }: { name: string; color: string | null }) {
   return (
     <span className="inline-flex items-center gap-1.5" style={chipStyle}>
@@ -131,6 +220,23 @@ function CompactKicker({ card }: { card: CardNewsItem }) {
         />
         {card.flair.name}
       </span>
+    )
+  }
+  if (card.media) {
+    parts.push(
+      card.media.provider === "youtube" ? (
+        <Youtube key="media" className="h-3.5 w-3.5" style={{ color: "#E53E3E" }} />
+      ) : card.media.provider === "instagram" ? (
+        <Instagram key="media" className="h-3 w-3" style={{ color: "#C13584" }} />
+      ) : (
+        <span
+          key="media"
+          className="text-[11px] leading-none font-black"
+          style={{ color: "var(--wc-ink)" }}
+        >
+          𝕏
+        </span>
+      )
     )
   }
   if (parts.length === 0) return null
@@ -237,6 +343,8 @@ function openPost(id: string) {
 function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
   const { liked, toggle } = useLocalLike(card.id)
   const faceFocus = useFaceFocus(card.image)
+  const [playing, setPlaying] = useState(false)
+  const ytId = card.media?.provider === "youtube" ? card.media.videoId : undefined
 
   return (
     <article
@@ -252,6 +360,8 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
           style={{ objectPosition: faceFocus ?? "50% 30%" }}
         />
+      ) : card.media ? (
+        <MediaPlaceholder provider={card.media.provider} />
       ) : (
         <div className="absolute inset-0 bg-gray-300" />
       )}
@@ -275,11 +385,23 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
         onClick={() => openPost(card.id)}
       />
 
-      {(card.source || card.flair) && (
+      {(card.source || card.flair || card.media) && (
         <div className="pointer-events-none absolute top-3 left-3 z-[3] flex flex-wrap items-center gap-1.5">
           {card.source && <SourceChip source={card.source} />}
           {card.flair && <FlairChip name={card.flair.name} color={card.flair.color} />}
+          {card.media && <PlatformChip provider={card.media.provider} />}
         </div>
+      )}
+
+      {ytId && !playing && <PlayButton onPlay={() => setPlaying(true)} />}
+      {ytId && playing && (
+        <iframe
+          className="absolute inset-0 z-[4] h-full w-full"
+          src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen
+          title={card.title}
+        />
       )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] px-4 pb-3.5">
@@ -353,6 +475,8 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
 function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
   const { liked, toggle } = useLocalLike(card.id)
   const faceFocus = useFaceFocus(card.image)
+  const [playing, setPlaying] = useState(false)
+  const ytId = card.media?.provider === "youtube" ? card.media.videoId : undefined
 
   return (
     <article
@@ -366,21 +490,36 @@ function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
         onClick={() => openPost(card.id)}
       />
 
-      {card.image && (
+      {(card.image || card.media) && (
         <div className="relative aspect-video overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={card.image}
-            alt=""
-            loading={eager ? "eager" : "lazy"}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-            style={{ objectPosition: faceFocus ?? "50% 30%" }}
-          />
-          {(card.source || card.flair) && (
-            <div className="pointer-events-none absolute top-3 left-3 z-[1] flex flex-wrap items-center gap-1.5">
+          {card.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.image}
+              alt=""
+              loading={eager ? "eager" : "lazy"}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+              style={{ objectPosition: faceFocus ?? "50% 30%" }}
+            />
+          ) : (
+            card.media && <MediaPlaceholder provider={card.media.provider} />
+          )}
+          {(card.source || card.flair || card.media) && (
+            <div className="pointer-events-none absolute top-3 left-3 z-[3] flex flex-wrap items-center gap-1.5">
               {card.source && <SourceChip source={card.source} />}
               {card.flair && <FlairChip name={card.flair.name} color={card.flair.color} />}
+              {card.media && <PlatformChip provider={card.media.provider} />}
             </div>
+          )}
+          {ytId && !playing && <PlayButton onPlay={() => setPlaying(true)} />}
+          {ytId && playing && (
+            <iframe
+              className="absolute inset-0 z-[4] h-full w-full"
+              src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              title={card.title}
+            />
           )}
         </div>
       )}
@@ -521,16 +660,30 @@ function CompactCard({ card }: { card: CardNewsItem }) {
         </div>
       </div>
 
-      {card.image && (
+      {(card.image || card.media) && (
         <div className="relative h-[76px] w-[104px] shrink-0 overflow-hidden rounded-lg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={card.image}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ objectPosition: faceFocus ?? "50% 30%" }}
-          />
+          {card.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.image}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ objectPosition: faceFocus ?? "50% 30%" }}
+            />
+          ) : (
+            card.media && <MediaPlaceholder provider={card.media.provider} />
+          )}
+          {/* 유튜브 썸네일엔 미니 재생 표시 (재생은 상세/상위 카드 몫) */}
+          {card.media?.provider === "youtube" && card.image && (
+            <span
+              className="absolute top-1/2 left-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+              style={{ background: "rgba(0,0,0,.55)" }}
+              aria-hidden
+            >
+              <Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" />
+            </span>
+          )}
         </div>
       )}
     </article>
