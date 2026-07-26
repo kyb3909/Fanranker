@@ -288,7 +288,7 @@ export function HomeClient({
               />
             )}
 
-            {feedTab === "games" && <BettingPage bettingOnly />}
+            {feedTab === "games" && <BettingPage bettingOnly showFilters />}
 
             {feedTab === "board" && (
               <div className="space-y-2.5">

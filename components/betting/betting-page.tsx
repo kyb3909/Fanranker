@@ -7,7 +7,7 @@ import { useBettingSlip } from "@/hooks/use-betting-slip"
 import { useBettingRankings } from "@/hooks/use-betting-rankings"
 import { useBettingMyPage } from "@/hooks/use-betting-mypage"
 import { useBettingCommunityStats } from "@/hooks/use-betting-community-stats"
-import { BettingHeader } from "./betting-header"
+import { BettingHeader, SportLeagueFilter } from "./betting-header"
 import { BettingTab } from "./betting-tab"
 import { RankingTab } from "./ranking-tab"
 import { StatsTab } from "./stats-tab"
@@ -27,6 +27,8 @@ interface BettingPageProps {
   leagueCodes?: string[]
   /** 이벤트 모드 시 베팅 탭만 노출 (랭킹/통계/마이페이지 숨김). */
   bettingOnly?: boolean
+  /** bettingOnly 임베드에서 종목/리그 필터만 노출 (4탭 헤더 없이). */
+  showFilters?: boolean
   /** 좌측 sticky 레일 모드 — desktop(lg+)에서 슬립을 레일로, 모바일은 기존 하단 슬립 유지. */
   railMode?: boolean
 }
@@ -35,6 +37,7 @@ export default function BettingPage({
   eventSlug,
   leagueCodes,
   bettingOnly,
+  showFilters,
   railMode,
 }: BettingPageProps = {}) {
   const searchParams = useSearchParams()
@@ -77,6 +80,21 @@ export default function BettingPage({
       myPageTab={myPageTab}
       setMyPageTab={setMyPageTab}
     />
+  ) : showFilters ? (
+    // bettingOnly 임베드용 — 4탭 없이 종목/리그 필터 카드만
+    <div
+      className="mb-3 overflow-hidden rounded-md sm:mb-4"
+      style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
+    >
+      <SportLeagueFilter
+        sportFilter={matches.sportFilter}
+        setSportFilter={matches.setSportFilter}
+        selectedSport={slip.selectedSport}
+        leagueFilter={matches.leagueFilter}
+        setLeagueFilter={matches.setLeagueFilter}
+        availableLeagues={matches.availableLeagues}
+      />
+    </div>
   ) : null
 
   const tabsContent = (

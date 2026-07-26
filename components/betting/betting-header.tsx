@@ -25,6 +25,63 @@ interface BettingHeaderProps {
   setMyPageTab: (tab: "predictions" | "stats" | "gold" | "profile") => void
 }
 
+interface SportLeagueFilterProps {
+  sportFilter: "all" | "축구" | "야구" | "농구" | "배구"
+  setSportFilter: (filter: "all" | "축구" | "야구" | "농구" | "배구") => void
+  selectedSport: string | null
+  leagueFilter: "all" | string
+  setLeagueFilter: (filter: "all" | string) => void
+  availableLeagues: string[]
+}
+
+/** 베팅 탭 종목/리그 필터 rows — BettingHeader 내부 + bettingOnly 임베드(홈 담벼락)에서 공용 */
+export function SportLeagueFilter({
+  sportFilter,
+  setSportFilter,
+  selectedSport,
+  leagueFilter,
+  setLeagueFilter,
+  availableLeagues,
+}: SportLeagueFilterProps) {
+  return (
+    <>
+      <div className="wc-underline-tabs">
+        {SPORT_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
+            disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
+            className={sportFilter === tab.id ? "on" : ""}
+          >
+            {tab.id === "all" ? (
+              <LayoutGrid className="h-4 w-4" />
+            ) : (
+              <BoardIcon slug={tab.id} className="h-4 w-4" />
+            )}
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+      {sportFilter !== "all" && availableLeagues.length > 0 && (
+        <div className="wc-underline-tabs scroll">
+          {[
+            { id: "all", label: "전체" },
+            ...availableLeagues.map((l) => ({ id: l, label: l })),
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setLeagueFilter(tab.id)}
+              className={leagueFilter === tab.id ? "on" : ""}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 export function BettingHeader({
   activeTab,
   setActiveTab,
@@ -76,43 +133,14 @@ export function BettingHeader({
         >
           {/* 베팅: 종목 row + (선택시) 리그 row */}
           {activeTab === "betting" && (
-            <>
-              <div className="wc-underline-tabs">
-                {SPORT_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() =>
-                      setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")
-                    }
-                    disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
-                    className={sportFilter === tab.id ? "on" : ""}
-                  >
-                    {tab.id === "all" ? (
-                      <LayoutGrid className="h-4 w-4" />
-                    ) : (
-                      <BoardIcon slug={tab.id} className="h-4 w-4" />
-                    )}
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-              {sportFilter !== "all" && availableLeagues.length > 0 && (
-                <div className="wc-underline-tabs scroll">
-                  {[
-                    { id: "all", label: "전체" },
-                    ...availableLeagues.map((l) => ({ id: l, label: l })),
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setLeagueFilter(tab.id)}
-                      className={leagueFilter === tab.id ? "on" : ""}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
+            <SportLeagueFilter
+              sportFilter={sportFilter}
+              setSportFilter={setSportFilter}
+              selectedSport={selectedSport}
+              leagueFilter={leagueFilter}
+              setLeagueFilter={setLeagueFilter}
+              availableLeagues={availableLeagues}
+            />
           )}
 
           {/* 랭킹: 종목 row + 정렬 pill */}
