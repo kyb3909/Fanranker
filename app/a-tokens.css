@@ -137,3 +137,78 @@
     }
   }
 }
+
+/* ============================================================
+   승부예측 — 다크 픽 타일 (시안 A "다크 액션 존")
+   돈/픽이 걸린 인터랙션 영역만 다크로 덮는다. 베팅 로직·마크업은 건드리지 않고
+   .gn-pick-dark 스코프에서 표면 토큰만 재정의한다 → 되돌리려면 이 블록과
+   prediction-client 의 클래스 한 개만 지우면 원상복구.
+
+   ⚠️ @layer 밖에 둔다. wc-tokens.css 가 레이어 없는 CSS 라 @layer components 안에서는
+      특이도와 무관하게 진다. 선택자도 .worldcup-scope.gn-pick-dark 복합으로 올린다.
+   ============================================================ */
+
+.worldcup-scope.gn-pick-dark .wc-mrow {
+  background: var(--gn-night-soft);
+  box-shadow: none;
+  border: 1px solid var(--gn-night-line);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow.selected {
+  box-shadow: 0 0 0 2px var(--wc-burgundy);
+  border-color: var(--wc-burgundy);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-head {
+  /* 종목별 그라디언트(Tailwind background-image)를 끄고 다크 타일로 통일.
+     안 끄면 다크 카드 위에 밝은 띠만 남아 튄다. */
+  background-image: none;
+  background-color: var(--gn-night-tile);
+  border-bottom-color: var(--gn-night-line);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-head-time {
+  color: var(--gn-cream-dim);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-team {
+  color: var(--gn-cream);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-vs {
+  color: #8d8794;
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-block {
+  background: var(--gn-night-tile);
+  border-color: var(--gn-night-line);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-toggle {
+  border-color: var(--gn-night-line);
+  color: var(--gn-cream-dim);
+}
+.worldcup-scope.gn-pick-dark .wc-mrow-toggle:hover {
+  background: var(--gn-night-tile);
+  color: var(--gn-cream);
+}
+
+/* 픽 버튼 = 스코어보드 타일 */
+.worldcup-scope.gn-pick-dark .wc-odd {
+  background: var(--gn-night-tile);
+  border-color: var(--gn-night-line);
+}
+/* .wc-odd-l 은 팀명(픽 버튼의 주 텍스트)이다 — 크림으로 살린다 */
+.worldcup-scope.gn-pick-dark .wc-odd-l {
+  color: var(--gn-cream);
+  font-weight: 700;
+}
+.worldcup-scope.gn-pick-dark .wc-odd-n {
+  color: var(--gn-cream);
+}
+.worldcup-scope.gn-pick-dark .wc-odd:hover:not(:disabled):not(.on) {
+  background: #2b2431;
+  border-color: var(--wc-burgundy);
+}
+/* 선택됨 = 버건디 면 (다크 존이므로 면 허용) */
+.worldcup-scope.gn-pick-dark .wc-odd.on {
+  background: linear-gradient(180deg, var(--wc-burgundy), var(--gn-bg-700));
+  border-color: var(--wc-burgundy);
+  box-shadow: 0 6px 18px -6px rgba(150, 30, 55, 0.65);
+}
+.worldcup-scope.gn-pick-dark .wc-odd.on .wc-odd-l {
+  color: var(--gn-bg-100);
+}
