@@ -26,10 +26,12 @@ export function SiteFooter() {
         <span
           className="inline-block leading-none"
           style={{
-            fontFamily: "var(--font-pen, 'Nanum Pen Script', cursive)",
-            fontSize: 46,
+            // Paperlogy Black 900 — 이미 900 이라 font-weight 를 더 얹지 않는다
+            fontFamily: "var(--font-display-ko), var(--font-title)",
+            fontWeight: 900,
+            fontSize: 40,
+            letterSpacing: "-0.04em",
             color: "var(--gn-cream)",
-            transform: "rotate(-1.5deg)",
           }}
         >
           그깟 공놀이

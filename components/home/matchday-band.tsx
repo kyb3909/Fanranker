@@ -21,8 +21,9 @@ const SLIDE_MS = 6000
 const MAX_SLIDES = 3
 const MAX_ROWS = 4
 
-/** 붓글씨 장식 — 푸터(site-footer)와 동일하게 CSS 변수 직접 참조 */
-const PEN = "var(--font-pen, 'Nanum Pen Script', cursive)"
+/** 브랜드 헤드라인 — Paperlogy Black 900 (한글 디스플레이).
+ *  ⚠️ 이미 900 이라 font-weight 를 더 얹으면 합성 볼드로 뭉갠다. */
+const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
 function fmtKstTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("ko-KR", {
@@ -81,11 +82,13 @@ export function MatchdayBand({ cards }: MatchdayBandProps) {
             Matchday
           </span>
           <h2
-            className="text-[30px] leading-none sm:text-[36px]"
+            className="text-[26px] leading-none sm:text-[32px]"
             style={{
-              fontFamily: PEN,
+              // 폰트 자체가 900 — font-weight 를 얹으면 합성 볼드로 뭉갠다
+              fontFamily: DISPLAY,
+              fontWeight: 900,
               color: "var(--gn-cream)",
-              transform: "rotate(-1.2deg)",
+              letterSpacing: "-0.035em",
             }}
           >
             오늘의 메인 이벤트
@@ -298,8 +301,13 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
     >
       <div className="flex items-center justify-between">
         <h3
-          className="text-[26px] leading-none"
-          style={{ fontFamily: PEN, color: "var(--gn-cream)", transform: "rotate(-1deg)" }}
+          className="text-[21px] leading-none"
+          style={{
+            fontFamily: DISPLAY,
+            fontWeight: 900,
+            color: "var(--gn-cream)",
+            letterSpacing: "-0.035em",
+          }}
         >
           오늘의 경기
         </h3>

@@ -32,11 +32,13 @@
  * `absolute inset-0` 같은 배치 유틸이 .gn-thumb 의 position 에 먹히는 사고가 난다. */
 @layer components {
   /* 콘덴스드 + tabular — 시각·스코어·카운트다운 */
+  /* ⚠️ 숫자 "슬롯"에만 건다. 한글이 섞인 줄 전체에 걸면 한글이 폴백으로 떨어진다
+   *    (Barlow Condensed 는 라틴 전용) — 숫자만 <span class="gn-num"> 으로 분리할 것.
+   *    tnum 을 켜면 Barlow 숫자는 오히려 넓어지므로(456→520/1000em) 자간을 더하지 않는다. */
   .gn-num {
     font-family: var(--font-cond), var(--font-pretendard), sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
-    letter-spacing: 0.02em;
   }
 
   /* ── 다크 밴드 ── */

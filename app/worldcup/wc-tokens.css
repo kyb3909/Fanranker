@@ -1182,9 +1182,9 @@
   font-size: 14px;
   color: var(--wc-ink);
   padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.03);
-  border-left: 3px solid var(--gp);
-  border-radius: 0 6px 6px 0;
+  /* 위계는 배경 틴트로만 — 한쪽 면 색깔 액센트 보더 금지 */
+  background: color-mix(in srgb, var(--gp) 7%, transparent);
+  border-radius: 6px;
   margin: auto 0 12px;
   flex: 1;
   line-height: 1.5;
@@ -1427,7 +1427,8 @@
   border-radius: 12px;
   padding: 20px;
   box-shadow: var(--wc-shadow-1);
-  border-top: 4px solid var(--gp);
+  /* 한쪽 면 액센트 보더 금지 — 그룹 색은 전체 테두리로 두른다 */
+  border: 1px solid color-mix(in srgb, var(--gp) 32%, transparent);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1539,7 +1540,8 @@
   border-radius: 8px;
   padding: 14px;
   box-shadow: var(--wc-shadow-1);
-  border-left: 3px solid var(--gp);
+  /* 한쪽 면 액센트 보더 금지 — 그룹 색은 전체 테두리로 두른다 */
+  border: 1px solid color-mix(in srgb, var(--gp) 28%, transparent);
 }
 .worldcup-scope .wc-lbt-c-up {
   color: var(--wc-go);

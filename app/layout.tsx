@@ -2,7 +2,7 @@ import type React from "react"
 import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
 import localFont from "next/font/local"
-import { Nanum_Pen_Script, Barlow_Condensed } from "next/font/google"
+import { Barlow_Condensed } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -24,14 +24,21 @@ import "./worldcup/wc-tokens.css"
 // 전부 --gn-* / .gn-* 네임스페이스라 기존 --wc-* 라이트 토큰과 충돌하지 않는다.
 import "./a-tokens.css"
 
-// 본문/UI 한글 폰트: Pretendard Std Variable (KS X 1001 subset, ~286 KB).
-// 한국어 웹 텍스트 ~98% 커버, 누락 글리프는 시스템 폰트 폴백.
-// 풀 글리프 버전은 2 MB로 FCP 차단 — std로 교체 (orioncactus/pretendard pretendard-std 패키지).
+// 본문/UI 한글 폰트: Pretendard Variable — KS X 1001 한글(2,350자) + 라틴 서브셋, 302 KB.
+//
+// ⚠️ 2026-07-28 정정: 직전까지 여기 있던 파일은 Pretendard **Std**(라틴 전용)였다.
+//    cmap 검사 결과 한글 음절 0/11,172 → 285 KB 를 받아놓고 한글 본문은 전부
+//    시스템 폴백(맑은 고딕 / Apple SD Gothic Neo)으로 렌더되고 있었다.
+//    정품 Variable 1.3.9 로 교체하고 wght 축을 400–800 으로 클립 + 서브셋했다:
+//      instancer.instantiateVariableFont(f, {"wght": (400, 800)}, optimize=True)
+//      pyftsubset --text-file=<KS X 1001 + latin> --flavor=woff2 \
+//        --layout-features='kern,liga,tnum,pnum' --no-hinting
+//    (검증: fontTools 로 U+AC00 이 cmap 에 있는지 확인. 없으면 한글이 폴백된다)
 const pretendard = localFont({
   src: "../public/fonts/PretendardVariable.woff2",
   display: "swap",
   variable: "--font-pretendard",
-  weight: "45 920",
+  weight: "400 800",
   // size-adjust/ascent 폴백 메트릭 자동 생성 → Pretendard swap 시 본문 텍스트 리플로우(CLS) 최소화.
   adjustFontFallback: "Arial",
 })
@@ -40,29 +47,42 @@ const pretendard = localFont({
 // 본문 Pretendard와 듀얼 시스템 (NYT/Verge/Pitchfork 식 에디토리얼 톤).
 // font-title 클래스가 항상 font-bold(700) 만 사용하므로 Variable axis 불필요.
 // pyftsubset로 KS X 1001 한글(2,668자) + Latin + CJK 기호로 서브셋팅: 624KB → 173KB.
-// display: optional — 첫 렌더 블로킹 안 함, 캐시되면 적용 (헤딩 폰트 특성상 fallback 허용).
-// preload: false — 초기 critical path에서 제거. 헤딩 전용이라 LCP 영향 없음.
+// ⚠️ display 를 optional → swap 으로 바꿈 (2026-07-28). optional 은 캐시에 없으면
+//    아예 스왑하지 않아서, 첫 방문자에게는 제목 폰트가 통째로 적용되지 않았다.
+//    preload: false 는 유지 — 헤딩 전용이라 LCP 크리티컬 패스에서 뺀다.
 const suit = localFont({
   src: "../public/fonts/SUIT-700.woff2",
-  display: "optional",
+  display: "swap",
   variable: "--font-suit",
   weight: "700",
   preload: false,
 })
 
-const nanumPen = Nanum_Pen_Script({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-pen",
-  // 푸터 장식용 브러시 폰트 — optional 로 swap 리플로우(CLS) 제거 (첫 방문 fallback 허용).
-  display: "optional",
+// 붓글씨(Nanum Brush/Pen)는 제거했다 — next/font 타입이 latin 서브셋만 허용해서
+// 한글 헤드라인에 쓰면 글리프가 없어 통째로 폴백 산세리프로 렌더된다.
+// 그 자리는 아래 Paperlogy Black 이 맡는다.
+
+// 디스플레이(브랜드 헤드라인) 한글: Paperlogy Black 900 — OFL, self-host.
+// Gmarket Sans 파생의 꽉 찬 지오메트릭 네모꼴. SUIT/Pretendard 와 골격이 달라서
+// 크기를 안 키워도 "제목"으로 읽힌다. 다크 밴드 헤드라인·푸터 로고 등 짧은 문구 전용.
+// KS X 1001(2,350자) + 라틴 + 호환자모로 서브셋: 166 KB → 115 KB.
+//   pyftsubset Paperlogy-9Black.ttf --text-file=charset.txt --flavor=woff2 \
+//     --layout-features='' --no-hinting --desubroutinize
+// display: swap + preload 없음 — 장식 슬롯이라 첫 페인트를 막지 않는다.
+// ⚠️ 합성 볼드 금지: 이미 900 이므로 font-weight 를 더 얹지 말 것.
+const paperlogy = localFont({
+  src: "../public/fonts/Paperlogy-Black.woff2",
+  weight: "900",
+  variable: "--font-display-ko",
+  display: "swap",
   preload: false,
 })
 
 // 시각·스코어·카운트다운용 콘덴스드 라틴 (시안 A). 한글은 Pretendard 그대로.
 // 숫자 슬롯에만 쓰이므로 preload 없이 swap — 폭이 좁아 리플로우 영향도 작다.
 const barlowCondensed = Barlow_Condensed({
-  weight: ["600", "700", "800"],
+  // 700 한 웨이트만 — 600/800 은 실사용처가 없어 65.6 KB → 21.9 KB
+  weight: "700",
   subsets: ["latin"],
   variable: "--font-cond",
   display: "swap",
@@ -177,7 +197,7 @@ export default function RootLayout({
       <ClerkProvider localization={koLocalization} dynamic>
         <html
           lang="ko"
-          className={`${pretendard.variable} ${suit.variable} ${nanumPen.variable} ${barlowCondensed.variable}`}
+          className={`${pretendard.variable} ${suit.variable} ${barlowCondensed.variable} ${paperlogy.variable}`}
           suppressHydrationWarning
         >
           {/*

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>한글 디스플레이 폰트 비교 — gongnori.fan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Black+Han+Sans&family=Gasoek+One&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+@font-face {
+  font-family: "Paperlogy";
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-9Black.woff2") format("woff2");
+  font-weight: 900; font-display: swap;
+}
+@font-face {
+  font-family: "Aggro";
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Aggro/AggroB.woff2") format("woff2");
+  font-weight: 700; font-display: swap;
+}
+@font-face {
+  font-family: "MaruBuri";
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/MaruBuri/MaruBuri-Bold.woff2") format("woff2");
+  font-weight: 700; font-display: swap;
+}
+
+:root {
+  --burgundy: #961e37;
+  --night: #16141a;
+  --night-soft: #1f1c24;
+  --night-line: #363040;
+  --cream: #f5efe7;
+  --cream-dim: #b8b0a4;
+  --paper: #faf9f7;
+  --card: #fff;
+  --ink: #1c1a20;
+  --ink-3: #8d8794;
+  --line: #e8e5e0;
+  --live: #b7f34b;
+  --cond: "Barlow Condensed", sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
+  background: var(--paper); color: var(--ink);
+  font-size: 15px; line-height: 1.5; letter-spacing: -0.01em; word-break: keep-all;
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 24px; }
+
+.top { background: var(--card); border-bottom: 1px solid var(--line); }
+.top .wrap { padding-block: 24px 22px; }
+.eyebrow {
+  font-family: var(--cond); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--burgundy);
+}
+h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.03em; margin-top: 6px; }
+.lede { color: #55505c; font-size: 14.5px; margin-top: 8px; max-width: 70ch; }
+
+.list { padding-block: 28px 60px; display: flex; flex-direction: column; gap: 26px; }
+
+/* 후보 카드 */
+.cand { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.cand.pick { border-color: var(--burgundy); }
+.chead {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+}
+.cname { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.badge {
+  font-family: var(--cond); font-weight: 700; font-size: 11.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+  background: var(--burgundy); color: #fff;
+}
+.badge.plain { background: var(--paper); color: #55505c; border: 1px solid var(--line); }
+.cmeta { margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
+.cnote { padding: 12px 18px; font-size: 13.5px; color: #55505c; border-bottom: 1px solid var(--line); }
+.cnote b { color: var(--ink); }
+
+/* 다크 밴드 미리보기 — 실제 담벼락 상단과 동일 조건 */
+.band {
+  background:
+    radial-gradient(700px 300px at 80% -20%, rgba(150,30,55,.3), transparent 60%),
+    var(--night);
+  padding: 22px 18px 24px;
+}
+.band-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.kick {
+  font-family: var(--cond); font-weight: 700; font-size: 12.5px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: #f4dfe4;
+}
+.big { font-size: 38px; line-height: 1.05; color: var(--cream); letter-spacing: -0.035em; }
+.mid { font-size: 22px; line-height: 1.1; color: var(--cream); letter-spacing: -0.03em; margin-top: 14px; }
+.hl { font-size: 27px; line-height: 1.26; color: var(--cream); letter-spacing: -0.025em; margin-top: 14px; max-width: 22ch; }
+.dim { color: var(--cream-dim); font-size: 13.5px; margin-top: 10px; }
+.num-row { display: flex; align-items: baseline; gap: 10px; margin-top: 16px; }
+.num-lbl { font-size: 12.5px; color: var(--cream-dim); font-weight: 700; }
+.clock {
+  font-family: var(--cond); font-weight: 800; font-size: 34px; line-height: 1;
+  color: var(--cream); font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+}
+.cta {
+  display: inline-block; margin-top: 16px; padding: 11px 20px; border-radius: 11px;
+  background: var(--cream); color: var(--night); font-size: 15px; letter-spacing: -0.02em;
+}
+
+/* 라이트 존 미리보기 */
+.light { padding: 18px; background: var(--paper); }
+.light .sec { font-size: 24px; letter-spacing: -0.03em; }
+.light .body {
+  margin-top: 8px; font-size: 15px; color: #55505c; max-width: 62ch;
+  font-family: "Pretendard Variable", Pretendard, sans-serif; letter-spacing: -0.01em;
+}
+.light .body em { font-style: normal; color: var(--burgundy); font-weight: 800; }
+
+/* 후보별 디스플레이 폰트 스왑 */
+.f-paper .big, .f-paper .mid, .f-paper .hl, .f-paper .cta, .f-paper .sec { font-family: "Paperlogy", sans-serif; font-weight: 900; }
+.f-bhs   .big, .f-bhs .mid, .f-bhs .hl, .f-bhs .cta, .f-bhs .sec     { font-family: "Black Han Sans", sans-serif; font-weight: 400; }
+.f-aggro .big, .f-aggro .mid, .f-aggro .hl, .f-aggro .cta, .f-aggro .sec { font-family: "Aggro", sans-serif; font-weight: 700; }
+.f-gasoek .big, .f-gasoek .mid, .f-gasoek .hl, .f-gasoek .cta, .f-gasoek .sec { font-family: "Gasoek One", sans-serif; font-weight: 400; }
+.f-maru  .big, .f-maru .mid, .f-maru .hl, .f-maru .cta, .f-maru .sec  { font-family: "MaruBuri", serif; font-weight: 700; letter-spacing: -0.02em; }
+.f-pre   .big, .f-pre .mid, .f-pre .hl, .f-pre .cta, .f-pre .sec      { font-family: "Pretendard Variable", sans-serif; font-weight: 900; }
+
+@media (max-width: 720px) {
+  .big { font-size: 30px; }
+  .hl { font-size: 22px; }
+  .clock { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Type · Display Korean</div>
+    <h1>한글 디스플레이 폰트 후보 비교</h1>
+    <p class="lede">
+      담벼락 다크 밴드에 실제로 들어가는 문구로 비교합니다. 라틴 키커(<b>MATCHDAY</b>)와
+      숫자(<b>07:54:57</b>)는 어느 후보든 Barlow Condensed 로 고정이라 바뀌지 않습니다 —
+      바뀌는 건 <b>한글 헤드라인</b>뿐입니다. 붓글씨 계열은 next/font 에 한글 글리프가 없어
+      제외했습니다.
+    </p>
+  </div>
+</header>
+
+<main class="wrap list">
+
+  <!-- 1. Paperlogy — 현재 적용 -->
+  <section class="cand pick f-paper">
+    <div class="chead">
+      <span class="cname">Paperlogy Black 900</span>
+      <span class="badge">현재 적용</span>
+      <span class="cmeta">OFL · self-host · 서브셋 115 KB · 9웨이트</span>
+    </div>
+    <p class="cnote">
+      Gmarket Sans 파생의 꽉 찬 <b>지오메트릭 네모꼴</b>. 2024년 폰트라 아직 안 흔하고,
+      9웨이트라 나중에 서브헤드·캡션까지 한 패밀리로 내릴 수 있습니다.
+      단점은 성격이 <b>중립적</b>이라는 것 — 힙함을 폰트가 만들어주지 않고 크기 대비·다크 존이 일해야 합니다.
+    </p>
+    <div class="band">
+      <div class="band-row"><span class="kick">Matchday</span><span class="big">오늘의 메인 이벤트</span></div>
+      <div class="hl">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+      <p class="dim">구너들 심장 뛰는 소리 여기까지 들린다</p>
+      <div class="mid">오늘의 경기</div>
+      <div class="num-row"><span class="num-lbl">다음 킥오프까지</span><span class="clock">07:54:57</span></div>
+      <span class="cta">오늘 13경기 픽 걸러 가기 →</span>
+    </div>
+    <div class="light">
+      <div class="sec">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      <p class="body">본문은 어느 후보든 Pretendard 그대로입니다. 디스플레이가 본문과 <em>얼마나 다르게</em> 읽히는지가 판단 기준입니다.</p>
+    </div>
+  </section>
+
+  <!-- 2. Black Han Sans -->
+  <section class="cand f-bhs">
+    <div class="chead">
+      <span class="cname">Black Han Sans</span>
+      <span class="badge plain">리서치 1순위</span>
+      <span class="cmeta">OFL · next/font/google · 실전송 30~80 KB · 400 단일</span>
+    </div>
+    <p class="cnote">
+      배민 한나체 계열의 <b>스포츠 신문 1면</b> 체. 도입 비용이 사실상 0이고 전송량도 가장 적습니다.
+      단점은 <b>한국 웹에서 과포화</b> — "힙"이 아니라 "익숙"으로 읽힐 위험. 굵기가 하나뿐이라 확장도 막힙니다.
+    </p>
+    <div class="band">
+      <div class="band-row"><span class="kick">Matchday</span><span class="big">오늘의 메인 이벤트</span></div>
+      <div class="hl">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+      <p class="dim">구너들 심장 뛰는 소리 여기까지 들린다</p>
+      <div class="mid">오늘의 경기</div>
+      <div class="num-row"><span class="num-lbl">다음 킥오프까지</span><span class="clock">07:54:57</span></div>
+      <span class="cta">오늘 13경기 픽 걸러 가기 →</span>
+    </div>
+    <div class="light">
+      <div class="sec">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      <p class="body">본문은 어느 후보든 Pretendard 그대로입니다. 디스플레이가 본문과 <em>얼마나 다르게</em> 읽히는지가 판단 기준입니다.</p>
+    </div>
+  </section>
+
+  <!-- 3. 어그로체 -->
+  <section class="cand f-aggro">
+    <div class="chead">
+      <span class="cname">어그로체 Bold (SB Aggro)</span>
+      <span class="badge plain">톤 적중 1위</span>
+      <span class="cmeta">샌드박스 무료 · self-host 211 KB · ⚠ 라이선스 전문 미확인</span>
+    </div>
+    <p class="cnote">
+      각진 모서리 + 짧고 굵은 획. <b>순수 톤 매치만 보면 1등</b>입니다. 다만 어조가 매거진이 아니라
+      <b>예능·유튜브 썸네일</b> 쪽이라 brown breath 식 "조용한 힙"과는 결이 다릅니다.
+      공식 웹폰트가 없어 직접 변환해야 하고, 라이선스 PDF 전문을 확인하지 못했습니다 — 채택 시 제작사 확인이 필요합니다.
+    </p>
+    <div class="band">
+      <div class="band-row"><span class="kick">Matchday</span><span class="big">오늘의 메인 이벤트</span></div>
+      <div class="hl">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+      <p class="dim">구너들 심장 뛰는 소리 여기까지 들린다</p>
+      <div class="mid">오늘의 경기</div>
+      <div class="num-row"><span class="num-lbl">다음 킥오프까지</span><span class="clock">07:54:57</span></div>
+      <span class="cta">오늘 13경기 픽 걸러 가기 →</span>
+    </div>
+    <div class="light">
+      <div class="sec">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      <p class="body">본문은 어느 후보든 Pretendard 그대로입니다. 디스플레이가 본문과 <em>얼마나 다르게</em> 읽히는지가 판단 기준입니다.</p>
+    </div>
+  </section>
+
+  <!-- 4. MaruBuri — 매거진 세리프 방향 -->
+  <section class="cand f-maru">
+    <div class="chead">
+      <span class="cname">MaruBuri Bold</span>
+      <span class="badge plain">매거진 방향</span>
+      <span class="cmeta">OFL (NAVER) · self-host · 부리(명조)</span>
+    </div>
+    <p class="cnote">
+      유일하게 <b>세리프</b> 방향입니다. brown breath 같은 매거진 톤에 가장 가까운 무료 한글이고,
+      스포츠 사이트에서 세리프를 쓰면 나머지와 확실히 구별됩니다.
+      단점은 <b>다크 배경에서 획이 얇아 뭉갠다</b>는 것 — 아래 다크 밴드에서 직접 확인해보세요.
+    </p>
+    <div class="band">
+      <div class="band-row"><span class="kick">Matchday</span><span class="big">오늘의 메인 이벤트</span></div>
+      <div class="hl">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+      <p class="dim">구너들 심장 뛰는 소리 여기까지 들린다</p>
+      <div class="mid">오늘의 경기</div>
+      <div class="num-row"><span class="num-lbl">다음 킥오프까지</span><span class="clock">07:54:57</span></div>
+      <span class="cta">오늘 13경기 픽 걸러 가기 →</span>
+    </div>
+    <div class="light">
+      <div class="sec">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      <p class="body">본문은 어느 후보든 Pretendard 그대로입니다. 디스플레이가 본문과 <em>얼마나 다르게</em> 읽히는지가 판단 기준입니다.</p>
+    </div>
+  </section>
+
+  <!-- 5. Gasoek One -->
+  <section class="cand f-gasoek">
+    <div class="chead">
+      <span class="cname">Gasoek One</span>
+      <span class="badge plain">최대 임팩트</span>
+      <span class="cmeta">OFL · next/font/google · 400 단일</span>
+    </div>
+    <p class="cnote">
+      초헤비 <b>그래피티/포스터</b> 디스플레이. 임팩트는 가장 큽니다.
+      리서치에서는 "개성이 브랜드보다 커진다"는 이유로 실사용 비추천이 붙었습니다 — 판단은 직접.
+    </p>
+    <div class="band">
+      <div class="band-row"><span class="kick">Matchday</span><span class="big">오늘의 메인 이벤트</span></div>
+      <div class="hl">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+      <p class="dim">구너들 심장 뛰는 소리 여기까지 들린다</p>
+      <div class="mid">오늘의 경기</div>
+      <div class="num-row"><span class="num-lbl">다음 킥오프까지</span><span class="clock">07:54:57</span></div>
+      <span class="cta">오늘 13경기 픽 걸러 가기 →</span>
+    </div>
+    <div class="light">
+      <div class="sec">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      <p class="body">본문은 어느 후보든 Pretendard 그대로입니다. 디스플레이가 본문과 <em>얼마나 다르게</em> 읽히는지가 판단 기준입니다.</p>
+    </div>
+  </section>
+
+  <!-- 6. Pretendard 900 — 베이스라인 -->
+  <section class="cand f-pre">
+    <div class="chead">
+      <span class="cname">Pretendard Black 900</span>
+      <span class="badge plain">추가 전송 0 KB</span>
+      <span class="cmeta">이미 로드 중 (45–920 가변)</span>
+    </div>
+    <p class="cnote">
+      <b>새 폰트를 하나도 안 받는 선택지</b>입니다. 이미 가변 폰트로 900 까지 들어와 있어서 공짜입니다.
+      다른 후보들은 전부 "이걸 이기는가"에 답해야 합니다 — 이기지 못하면 용량만 늘리는 셈입니다.
+      단점은 본문과 <b>골격이 같아서</b> 크기만 커 보이고 성격이 안 바뀐다는 것.
+    </p>
+    <div class="band">
+      <div class="band-row"><span class="kick">Matchday</span><span class="big">오늘의 메인 이벤트</span></div>
+      <div class="hl">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+      <p class="dim">구너들 심장 뛰는 소리 여기까지 들린다</p>
+      <div class="mid">오늘의 경기</div>
+      <div class="num-row"><span class="num-lbl">다음 킥오프까지</span><span class="clock">07:54:57</span></div>
+      <span class="cta">오늘 13경기 픽 걸러 가기 →</span>
+    </div>
+    <div class="light">
+      <div class="sec">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      <p class="body">본문은 어느 후보든 Pretendard 그대로입니다. 디스플레이가 본문과 <em>얼마나 다르게</em> 읽히는지가 판단 기준입니다.</p>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
