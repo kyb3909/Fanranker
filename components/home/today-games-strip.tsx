@@ -9,7 +9,7 @@ import type { GroupedMatch } from "@/types/betting"
 
 /**
  * 담벼락 메인 "오늘의 경기" 일정 위젯 — 배당률 없이 시간·리그·팀만.
- * 예측(픽/난이도/배점)은 오늘의 경기 탭(?tab=games)에서.
+ * 예측(픽/슬립의 배점)은 /prediction 에서.
  */
 
 const MAX_ROWS = 4
@@ -62,7 +62,7 @@ export function TodayGamesStrip() {
           <span style={{ color: "var(--wc-burgundy)" }}>{matches.length}</span>
         </h2>
         <Link
-          href="/?tab=games"
+          href="/prediction"
           className="inline-flex items-center gap-1 text-[12px] font-bold"
           style={{ color: "var(--wc-burgundy)" }}
         >
@@ -78,7 +78,7 @@ export function TodayGamesStrip() {
             className="last:border-b-0"
           >
             <Link
-              href="/?tab=games"
+              href="/prediction"
               className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-[var(--wc-soft)]"
             >
               <span className="w-11 shrink-0 text-center">
@@ -109,7 +109,7 @@ export function TodayGamesStrip() {
         {rest > 0 && (
           <li>
             <Link
-              href="/?tab=games"
+              href="/prediction"
               className="block px-4 py-2 text-center text-[12px] font-semibold transition-colors hover:bg-[var(--wc-soft)]"
               style={{ color: "var(--wc-mute)" }}
             >

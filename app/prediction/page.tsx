@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 async function fetchSidebarData() {
   const supabase = createAnonClient()
 
-  const [categoriesResult, recentCommentsResult] = await Promise.all([
+  const [categoriesResult, recentCommentsResult, worldcupStatus] = await Promise.all([
     Promise.resolve(
       supabase
         .from("categories")
@@ -42,9 +42,20 @@ async function fetchSidebarData() {
     )
       .then(({ data }) => data ?? [])
       .catch(() => [] as unknown[]),
+
+    // 이벤트 슬롯 — 향후 이벤트도 events 테이블 status 기반으로 이 자리에서 안내
+    Promise.resolve(
+      supabase.from("events").select("status").eq("slug", "worldcup-2026").maybeSingle()
+    )
+      .then(({ data }) => (data as { status?: string } | null)?.status ?? null)
+      .catch(() => null),
   ])
 
-  return { initialCategories: categoriesResult, initialRecentComments: recentCommentsResult }
+  return {
+    initialCategories: categoriesResult,
+    initialRecentComments: recentCommentsResult,
+    worldcupStatus,
+  }
 }
 
 export default async function PredictionPage() {
@@ -55,6 +66,7 @@ export default async function PredictionPage() {
       <PredictionClient
         initialCategories={data.initialCategories}
         initialRecentComments={data.initialRecentComments}
+        worldcupStatus={data.worldcupStatus}
       />
     </Suspense>
   )

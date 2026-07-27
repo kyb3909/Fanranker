@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Crown } from "lucide-react"
+import { Compass, LayoutGrid, Target } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -24,7 +24,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
 
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
-  const isWorldcup = pathname.startsWith("/worldcup")
+  const isPrediction = pathname.startsWith("/prediction") || pathname.startsWith("/worldcup")
 
   return (
     <nav
@@ -80,19 +80,12 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             운동장
           </span>
         </Link>
-        {/*
-          경기 예측(/prediction)은 월드컵 이벤트에 집중하기 위해 메뉴에서 숨김.
-          라우트(/prediction/*)는 유지 — 직접 URL로만 접근 가능.
-        */}
         {/* 이적시장(/transfer)은 GNB 에서 내리고 축구 게시판 상단 채널 카드로 이동 (2026-07-27) */}
-        <Link href="/worldcup">
-          <span className={baseClass} data-on={isWorldcup ? "true" : undefined}>
-            <Crown className="h-[18px] w-[18px] shrink-0" />
-            월드컵 이벤트
-            <span
-              aria-hidden
-              className="wc-hdr-pulse ml-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-            />
+        {/* 승부예측 상시 메뉴 — 이벤트(월드컵 등)는 /prediction 상단 이벤트 슬롯에서 진행 */}
+        <Link href="/prediction">
+          <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
+            <Target className="h-[18px] w-[18px] shrink-0" />
+            승부예측
           </span>
         </Link>
         {/*

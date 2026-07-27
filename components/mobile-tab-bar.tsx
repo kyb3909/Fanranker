@@ -3,7 +3,7 @@
 import { Suspense } from "react"
 import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
-import { Compass, Crown, LayoutGrid, User } from "lucide-react"
+import { Compass, LayoutGrid, Target, User } from "lucide-react"
 
 const tabs = [
   {
@@ -19,11 +19,11 @@ const tabs = [
     match: (p: string) => p.startsWith("/explore") || p.startsWith("/community"),
   },
   {
-    // 경기 예측(/prediction)은 메뉴에서 숨기고 월드컵 이벤트로 대체 (라우트는 유지).
-    href: "/worldcup",
-    icon: Crown,
-    label: "월드컵",
-    match: (p: string) => p.startsWith("/worldcup"),
+    // 승부예측 상시 메뉴 — 이벤트(월드컵 등)는 /prediction 안 이벤트 슬롯에서 진행.
+    href: "/prediction",
+    icon: Target,
+    label: "승부예측",
+    match: (p: string) => p.startsWith("/prediction") || p.startsWith("/worldcup"),
   },
   {
     href: "/settings",

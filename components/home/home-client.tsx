@@ -9,7 +9,6 @@ import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
-import { useStickySidebar } from "@/hooks/use-sticky-sidebar"
 import { FeedSection } from "@/components/home/feed-section"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 import { TodayGamesStrip } from "@/components/home/today-games-strip"
@@ -67,8 +66,6 @@ export function HomeClient({
   const searchParams = useSearchParams()
   const [sortBy, setSortBy] = useState<SortType>(initialSort)
   const [feedTab, setFeedTab] = useState<FeedTab>(initialTab)
-  // 오늘의 떡밥 탭 상단 고정용 — 헤더 높이를 계산해 sticky top 산출
-  const { ref: gamesStickyRef, stickyTop: gamesStickyTop } = useStickySidebar()
 
   // 탭/정렬을 URL 에 보존 → 새로고침·뒤로가기 시 선택 유지
   // 기본(게시판 피드)=파라미터 없음(?sort= 만), 카드뉴스=?tab=cardnews, 게임=?tab=games
@@ -287,15 +284,9 @@ export function HomeClient({
             {/* 온보딩 배너 일단 숨김 — 월드컵 이벤트 집중 (복원: OnboardingBanner import + 렌더 복구) */}
 
             {feedTab === "cardnews" && (
-              <div>
-                {/* 오늘의 경기 — 스크롤해도 상단 고정 (헤더 높이만큼 offset) */}
-                <div
-                  ref={gamesStickyRef}
-                  className="bg-background sticky z-20 pb-3"
-                  style={{ top: gamesStickyTop }}
-                >
-                  <TodayGamesStrip />
-                </div>
+              <div className="space-y-3">
+                {/* 오늘의 경기 일정 — 고정 없이 상단 배치 (예측 상시 진입은 GNB 승부예측이 담당) */}
+                <TodayGamesStrip />
                 <CardNewsFeed
                   initialCards={initialCardNews?.cards ?? []}
                   initialCursor={initialCardNews?.nextCursor ?? null}
