@@ -1,12 +1,14 @@
 import type { ReactNode } from "react"
 
 interface SectionHeaderProps {
-  /** 상단 라벨 (버건디 eyebrow) — 없으면 생략 */
+  /** 상단 라벨 (라틴 대문자 키커) — 없으면 생략 */
   label?: string
   /** 큰 제목 */
   title: ReactNode
   /** 설명 한 줄 — 없으면 생략 */
   description?: ReactNode
+  /** 제목 우측 슬롯 (카운트·상태 등) */
+  aside?: ReactNode
   /** 제목 태그 레벨 (기본 h1) */
   as?: "h1" | "h2"
   /** 밴드에 추가할 클래스 (간격 등 미세 조정용) */
@@ -16,19 +18,26 @@ interface SectionHeaderProps {
 }
 
 /**
- * 페이지/섹션 상단 헤더를 흰색 밴드로 통일한다 (.wc-page-head).
+ * 페이지/섹션 상단 헤더 — 시안 A "매치데이"의 다크 존.
  *
- * 회색 캔버스(#eef0f3) 위에 "라벨 + 제목 + 설명"을 흰 면으로 올려 정돈한다.
- * 밴드 아래 콘텐츠(목록·카드)는 이 컴포넌트에 넣지 말고 회색 위 흰 카드로 둔다.
+ * 회색 캔버스 위에 다크 블록으로 "키커 + 제목 + 설명"을 올려 페이지 정체성을 선언한다.
+ * 밴드 아래 콘텐츠(목록·카드)는 이 컴포넌트에 넣지 말고 라이트 카드로 둔다 — 긴 글과
+ * 목록은 라이트가 읽기 좋다.
  *
- * 주의: 이미 흰 카드/패널 안에 들어 있는 헤더에는 쓰지 말 것 (중복 래핑 금지).
+ * 타이포 규약 (docs/design-review-2026-07-27/type-accent.md)
+ * - 키커: 라틴 대문자 + 콘덴스드(--font-cond), 자간 0.2em, 13px 상한.
+ *   크기로 겨루지 않고 자간으로만 존재한다.
+ * - 제목: 한글 디스플레이(--font-display-ko = 어그로체 Bold). 이미 Bold 라
+ *   font-weight 를 더 얹으면 합성 볼드로 뭉갠다.
+ * - 다크 위 얇은 획 보정: text-shadow 0.5px(blur 0)로 획만 보강. 순백은 쓰지 않는다.
  *
- * 색상 규약: 라벨 = 버건디(.wc-sec-eb), 제목 = ink, 설명 = ink-2 (옅은 회색 금지).
+ * 주의: 이미 다크 면 안에 들어 있는 헤더에는 쓰지 말 것 (중복 래핑 금지).
  */
 export function SectionHeader({
   label,
   title,
   description,
+  aside,
   as = "h1",
   className,
   style,
@@ -36,18 +45,37 @@ export function SectionHeader({
   const Title = as
   return (
     <div
-      className={`wc-page-head ${className ?? ""}`.trim()}
+      className={`gn-band overflow-hidden rounded-xl px-5 py-6 sm:px-7 sm:py-7 ${className ?? ""}`.trim()}
       style={{ marginBottom: 14, ...style }}
     >
-      {label && <div className="wc-sec-eb">{label}</div>}
-      <Title
-        className="font-title text-[28px] font-extrabold sm:text-[34px]"
-        style={{ letterSpacing: "-.03em", lineHeight: 1.15 }}
-      >
-        {title}
-      </Title>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <div className="min-w-0 flex-1">
+          {label && (
+            <div
+              className="gn-num text-[12px] font-bold uppercase"
+              style={{ letterSpacing: "0.2em", color: "var(--gn-bg-100)" }}
+            >
+              {label}
+            </div>
+          )}
+          <Title
+            className="mt-1.5 text-[26px] sm:text-[32px]"
+            style={{
+              fontFamily: "var(--font-display-ko), var(--font-title)",
+              fontWeight: 700,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.14,
+              color: "var(--gn-cream)",
+              textShadow: "0.5px 0 currentColor",
+            }}
+          >
+            {title}
+          </Title>
+        </div>
+        {aside && <div className="shrink-0">{aside}</div>}
+      </div>
       {description && (
-        <p className="mt-2 text-[14px]" style={{ color: "var(--wc-ink-2)", lineHeight: 1.6 }}>
+        <p className="mt-2.5 text-[14px]" style={{ color: "var(--gn-cream-dim)", lineHeight: 1.6 }}>
           {description}
         </p>
       )}

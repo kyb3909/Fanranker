@@ -20,9 +20,14 @@ import { trackEvent } from "@/lib/analytics/events"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 
 /**
- * 카드뉴스 홈 피드 — 에디토리얼 3단 위계 (Apple News 문법).
- * 히어로(오버레이) 1장 → 미디엄(흰 프레임 + 상단 이미지) 2장 → 컴팩트 리스트.
- * 오버레이는 톱뉴스 강조 전용, 나머지는 사이트 표면 토큰(wc-card)과 융화.
+ * 카드뉴스 홈 피드 — 전면 오버레이 카드 (사진 위 제목).
+ *
+ * 이전에는 히어로(오버레이) 1장 → 미디엄(흰 프레임) 2장 → 컴팩트 리스트의 3단
+ * 위계였으나, 오늘의 떡밥 전체를 오버레이 카드로 통일했다(2026-07-28).
+ * 시각 자료가 없는 글만 컴팩트 행으로 떨어진다 — 회색 판때기를 300px 높이로
+ * 세우는 건 카드뉴스가 아니라 빈 자리다.
+ * (흰 프레임 카드 FramedCard 는 같은 커밋에서 제거 — 필요하면 git history 참조)
+ *
  * 좋아요는 떡밥 피드와 동일한 비로그인 로컬 반응 (서버 반영 없음).
  */
 
@@ -417,9 +422,18 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
 
 /* ---------- 1) 히어로 — 오버레이 카드 (톱뉴스 1장 전용) ---------- */
 
-function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
+function HeroCard({
+  card,
+  eager,
+  detectFace = false,
+}: {
+  card: CardNewsItem
+  eager: boolean
+  /** 얼굴 인식은 카드마다 원본 이미지를 한 번 더 내려받는다 → 상단 카드에서만 켠다 */
+  detectFace?: boolean
+}) {
   const { liked, toggle } = useLocalLike(card.id)
-  const faceFocus = useFaceFocus(card.image)
+  const faceFocus = useFaceFocus(detectFace ? card.image : null)
   const [playing, setPlaying] = useState(false)
   const ytId = card.media?.provider === "youtube" ? card.media.videoId : undefined
 
@@ -551,118 +565,6 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
           </Link>
         )}
-      </div>
-    </article>
-  )
-}
-
-/* ---------- 2) 미디엄 — 흰 프레임 + 상단 이미지 (Apple News 기본 카드) ---------- */
-
-function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
-  const { liked, toggle } = useLocalLike(card.id)
-  const faceFocus = useFaceFocus(card.image)
-  const [playing, setPlaying] = useState(false)
-  const ytId = card.media?.provider === "youtube" ? card.media.videoId : undefined
-
-  return (
-    <article
-      className="group relative overflow-hidden rounded-xl"
-      style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
-    >
-      <Link
-        href={`/post/${card.id}?utm_source=cardnews`}
-        className="absolute inset-0 z-[2]"
-        aria-label={card.title}
-        onClick={() => openPost(card.id)}
-      />
-
-      {(card.image || card.media) && (
-        <div className="relative aspect-video overflow-hidden">
-          {card.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={card.image}
-              alt=""
-              loading={eager ? "eager" : "lazy"}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-              style={{ objectPosition: faceFocus ?? "50% 30%" }}
-            />
-          ) : (
-            card.media && <MediaPlaceholder provider={card.media.provider} />
-          )}
-          {(card.source || card.flair || card.media) && (
-            <div className="pointer-events-none absolute top-3 left-3 z-[3] flex flex-wrap items-center gap-1.5">
-              {card.source && <SourceChip source={card.source} />}
-              {card.flair && <FlairChip name={card.flair.name} color={card.flair.color} />}
-              {card.media && <PlatformChip provider={card.media.provider} />}
-            </div>
-          )}
-          {ytId && !playing && <PlayButton onPlay={() => setPlaying(true)} />}
-          {ytId && playing && (
-            <iframe
-              className="absolute inset-0 z-[4] h-full w-full"
-              src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              title={card.title}
-            />
-          )}
-        </div>
-      )}
-
-      <div className="px-4 py-3">
-        {/* 이미지 없는 글은 텍스트 위 키커로 출처 표시 */}
-        {!card.image && <CompactKicker card={card} />}
-        <h2
-          className="line-clamp-2"
-          style={{
-            fontSize: 16.5,
-            fontWeight: 700,
-            lineHeight: 1.34,
-            letterSpacing: "-0.01em",
-            color: "var(--wc-ink)",
-            wordBreak: "keep-all",
-            overflowWrap: "anywhere",
-          }}
-        >
-          {card.title}
-        </h2>
-
-        <div className="mt-2 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={toggle}
-            className={`${ghostAction} pointer-events-auto z-[3] ${
-              liked ? "text-rose-500" : "text-[var(--wc-mute)] hover:text-[var(--wc-burgundy)]"
-            }`}
-            aria-label="좋아요"
-            aria-pressed={liked}
-          >
-            <Heart
-              className={`h-[15px] w-[15px] transition-transform active:scale-125 ${liked ? "fill-current" : ""}`}
-            />
-            {card.voteCount + (liked ? 1 : 0) > 0 && (
-              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
-            )}
-          </button>
-          <Link
-            href={`/post/${card.id}?utm_source=cardnews#comments`}
-            className={`${ghostAction} pointer-events-auto z-[3] text-[var(--wc-mute)] hover:text-[var(--wc-burgundy)]`}
-            aria-label="댓글"
-          >
-            <MessageCircle className="h-[15px] w-[15px]" />
-            {card.commentCount > 0 && <span className="tabular-nums">{card.commentCount}</span>}
-          </Link>
-          <span
-            className="ml-auto text-[12px] font-medium"
-            style={{ color: "var(--wc-mute)" }}
-            suppressHydrationWarning
-          >
-            {formatRelativeTime(new Date(card.createdAt))}
-          </span>
-        </div>
-
-        <CommentPreview card={card} />
       </div>
     </article>
   )
@@ -812,19 +714,20 @@ export function CardNewsFeed({
     trackEvent({ name: "cardnews_feed_open", params: {} })
   }, [])
 
-  // 히어로 = 상위 5개 중 이미지 있는 첫 카드를 승격 (톱 자리 회색 플레이스홀더 방지).
-  // 이미지가 하나도 없으면 히어로 생략하고 프레임/컴팩트로만 구성.
+  // 톱 자리에 회색 플레이스홀더가 오지 않도록, 상위 5개 중 이미지 있는 첫 카드를 맨 앞으로.
   const heroIdx = cards.findIndex((c, i) => i < 5 && !!c.image)
   const ordered = heroIdx > 0 ? [cards[heroIdx], ...cards.filter((_, i) => i !== heroIdx)] : cards
-  const hasHero = heroIdx !== -1
 
   return (
     <div className="flex flex-col gap-3">
+      {/*
+        오늘의 떡밥은 전부 히어로(사진 위 제목) 카드로 간다.
+        시각 자료가 없는 글만 컴팩트 행으로 떨어뜨린다 — 회색 판때기를 300px 높이로
+        띄우는 건 카드뉴스가 아니라 빈 자리다.
+      */}
       {ordered.map((card, i) =>
-        hasHero && i === 0 ? (
-          <HeroCard key={card.id} card={card} eager />
-        ) : i <= (hasHero ? 2 : 1) ? (
-          <FramedCard key={card.id} card={card} eager={i < 2} />
+        card.image || card.media ? (
+          <HeroCard key={card.id} card={card} eager={i < 2} detectFace={i < 3} />
         ) : (
           <CompactCard key={card.id} card={card} />
         )

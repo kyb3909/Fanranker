@@ -18,6 +18,7 @@ import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import Link from "@/components/ui/app-link"
 import { getCreator } from "@/lib/constants/creators"
 import { CreatorBoard } from "@/components/creator/creator-board"
+import { SectionHeader } from "@/components/section-header"
 
 // ISR: 30초 캐시 + stale-while-revalidate
 export const revalidate = 30
@@ -371,6 +372,12 @@ export default async function CommunityPage({
           {/* 12컬럼 그리드: 조밀한 간격 */}
           <div className="grid grid-cols-12 gap-4 lg:gap-5">
             <div className="col-span-12 lg:col-span-9">
+              {/* 게시판 정체성 밴드 (시안 A 다크 존) — 채널 카드/목록은 아래 라이트로 유지 */}
+              <SectionHeader
+                label="Board"
+                title={info?.name || dbCategory?.name || slug}
+                description={communityDesc || undefined}
+              />
               {/* 하위 채널 목록 — wc-action-card 응용. 축구는 이적시장 상황판 카드를 맨 앞에 */}
               {((channels && channels.length > 0) || slug === "football") && (
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -381,7 +388,8 @@ export default async function CommunityPage({
                       style={{
                         background: "var(--wc-card)",
                         boxShadow: "var(--wc-shadow-1)",
-                        borderTop: "3px solid var(--wc-burgundy)",
+                        // 한쪽 면 액센트 보더 금지 — 전체 테두리로 두른다
+                        border: "1px solid var(--wc-line)",
                       }}
                     >
                       <span
@@ -411,7 +419,8 @@ export default async function CommunityPage({
                       style={{
                         background: "var(--wc-card)",
                         boxShadow: "var(--wc-shadow-1)",
-                        borderTop: "3px solid var(--wc-burgundy)",
+                        // 한쪽 면 액센트 보더 금지 — 전체 테두리로 두른다
+                        border: "1px solid var(--wc-line)",
                       }}
                     >
                       <span

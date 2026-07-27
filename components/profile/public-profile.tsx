@@ -251,7 +251,10 @@ export function PublicProfileView({ userId }: { userId: string }) {
                       className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
                       style={{
                         background: "var(--wc-paper)",
-                        ...(f.flair_color ? { borderLeft: `3px solid ${f.flair_color}` } : {}),
+                        // 한쪽 면 액센트 보더 금지 — 팀 색은 배경 틴트로만
+                        ...(f.flair_color
+                          ? { background: `color-mix(in srgb, ${f.flair_color} 8%, transparent)` }
+                          : {}),
                       }}
                     >
                       <span className="font-medium" style={{ color: "var(--wc-ink)" }}>
