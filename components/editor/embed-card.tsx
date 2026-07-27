@@ -510,9 +510,7 @@ function XRichEmbed({
         )}
 
         {/* 텍스트 영역 — 피드와 동일 구조 */}
-        <div
-          className={`bg-card px-3 py-2.5 ${!firstMedia ? "border-l-foreground/20 border-l-[3px]" : ""}`}
-        >
+        <div className="bg-card px-3 py-2.5">
           <div className="flex items-center gap-2">
             {data.author_avatar ? (
               <Image

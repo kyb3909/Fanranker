@@ -225,12 +225,11 @@
     position: relative;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-left: 2px solid var(--lime);
     border-radius: 6px;
     overflow: hidden;
     transition: border-color 0.15s, transform 0.15s;
   }
-  .card:hover { border-color: #34343f; border-left-color: var(--lime); transform: translateY(-2px); }
+  .card:hover { border-color: #34343f; transform: translateY(-2px); }
   .card.hero-card { grid-column: 1 / -1; display: grid; grid-template-columns: 1.25fr 1fr; }
   .card .thumb { aspect-ratio: 16 / 9; overflow: hidden; background: var(--surface-2); }
   .card.hero-card .thumb { aspect-ratio: auto; height: 100%; min-height: 220px; }
@@ -263,7 +262,6 @@
     font-size: 12.5px; color: var(--text-sub);
     background: var(--surface-2); border-radius: 5px;
     padding: 8px 10px;
-    border-left: 2px solid var(--magenta);
   }
   .comment-peek b { color: var(--text); font-weight: 600; }
   .card.text-only .body { padding: 18px 18px 16px; }

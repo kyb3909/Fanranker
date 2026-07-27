@@ -207,7 +207,7 @@ export function ReportQueue({
                   report.reporter_dismissed_rate
                 )
                 return (
-                  <TableRow key={report.id} className={isRed ? "border-l-primary border-l-4" : ""}>
+                  <TableRow key={report.id} className={isRed ? "bg-destructive/5" : ""}>
                     <TableCell>
                       {report.post_id ? (
                         <Link
