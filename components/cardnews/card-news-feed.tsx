@@ -6,6 +6,8 @@ import {
   Heart,
   MessageCircle,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Check,
   Star,
   Loader2,
@@ -338,6 +340,81 @@ function openPost(id: string) {
   trackEvent({ name: "cardnews_card_open_post", params: { post_id: id } })
 }
 
+/**
+ * 댓글 미리보기 (흰 표면 카드용) — 접힘: BEST 한 줄, 탭하면 상위 3개 인라인 펼침.
+ * 공방을 카드 안에서 맛보고 "모두 보기"로 상세 진입하는 참여 사다리.
+ */
+function CommentPreview({ card }: { card: CardNewsItem }) {
+  const [open, setOpen] = useState(false)
+  if (card.topComments.length === 0 || card.commentCount === 0) return null
+  const first = card.topComments[0]
+
+  return (
+    <div
+      className="pointer-events-auto relative z-[3] mt-2.5 pt-2.5"
+      style={{ borderTop: "1px solid var(--wc-line)" }}
+    >
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center gap-1.5 text-left"
+          aria-expanded={false}
+          aria-label="댓글 미리보기 펼치기"
+        >
+          <span
+            className="shrink-0 text-[11px] font-extrabold"
+            style={{ color: "var(--wc-burgundy)" }}
+          >
+            BEST
+          </span>
+          <span
+            className="min-w-0 flex-1 truncate text-[12.5px]"
+            style={{ color: "var(--wc-mute)" }}
+          >
+            {first.content}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--wc-mute)" }} />
+        </button>
+      ) : (
+        <div className="space-y-2">
+          {card.topComments.map((c, i) => (
+            <div key={i} className="flex gap-1.5">
+              <span className="shrink-0 text-[11.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                {c.nickname}
+              </span>
+              <span
+                className="line-clamp-2 min-w-0 flex-1 text-[12.5px] leading-snug"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                {c.content}
+              </span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between">
+            <Link
+              href={`/post/${card.id}?utm_source=cardnews#comments`}
+              className="text-[12px] font-bold"
+              style={{ color: "var(--wc-burgundy)" }}
+              onClick={() => openPost(card.id)}
+            >
+              댓글 {card.commentCount}개 모두 보기 →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="댓글 미리보기 접기"
+              className="p-1"
+            >
+              <ChevronUp className="h-3.5 w-3.5" style={{ color: "var(--wc-mute)" }} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ---------- 1) 히어로 — 오버레이 카드 (톱뉴스 1장 전용) ---------- */
 
 function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
@@ -453,7 +530,7 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
           </span>
         </div>
 
-        {card.bestComment && card.commentCount > 0 && (
+        {card.topComments.length > 0 && card.commentCount > 0 && (
           <Link
             href={`/post/${card.id}?utm_source=cardnews#comments`}
             className="pointer-events-auto mt-2.5 flex items-center gap-1.5 pt-2.5"
@@ -469,7 +546,7 @@ function HeroCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
               className="min-w-0 flex-1 truncate text-[12.5px]"
               style={{ color: "rgba(255,255,255,.85)" }}
             >
-              {card.bestComment}
+              {card.topComments[0].content}
             </span>
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
           </Link>
@@ -585,27 +662,7 @@ function FramedCard({ card, eager }: { card: CardNewsItem; eager: boolean }) {
           </span>
         </div>
 
-        {card.bestComment && card.commentCount > 0 && (
-          <Link
-            href={`/post/${card.id}?utm_source=cardnews#comments`}
-            className="pointer-events-auto relative z-[3] mt-2.5 flex items-center gap-1.5 pt-2.5"
-            style={{ borderTop: "1px solid var(--wc-line)" }}
-          >
-            <span
-              className="shrink-0 text-[11px] font-extrabold"
-              style={{ color: "var(--wc-burgundy)" }}
-            >
-              BEST
-            </span>
-            <span
-              className="min-w-0 flex-1 truncate text-[12.5px]"
-              style={{ color: "var(--wc-mute)" }}
-            >
-              {card.bestComment}
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--wc-mute)" }} />
-          </Link>
-        )}
+        <CommentPreview card={card} />
       </div>
     </article>
   )
@@ -675,6 +732,7 @@ function CompactCard({ card }: { card: CardNewsItem }) {
             {formatRelativeTime(new Date(card.createdAt))}
           </span>
         </div>
+        <CommentPreview card={card} />
       </div>
 
       {(card.image || card.media) && (

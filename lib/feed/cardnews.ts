@@ -14,8 +14,8 @@ export interface CardNewsItem {
   voteCount: number
   commentCount: number
   createdAt: string
-  /** 최고 추천 댓글 한 줄 (없으면 null) */
-  bestComment: string | null
+  /** 상위 댓글 미리보기 (추천순 최대 3개) — 카드 안 공방 미리보기용 */
+  topComments: { nickname: string; content: string }[]
   /** 대표 말머리 (팀 우선) — 상단 태그 칩용 */
   flair: { name: string; color: string | null } | null
   /** 본문 첫 임베드 (플랫폼 뱃지 + 유튜브 lite embed 용). 풀 임베드는 상세 페이지 몫 */
@@ -62,20 +62,34 @@ export async function fetchCardNews(
   if (error) throw error
   const rows = posts ?? []
 
-  // 댓글 있는 글만 베스트 댓글 조회 → post별 첫 행(최고 추천)만 사용
+  // 댓글 있는 글만 조회 → post별 추천순 상위 3개 + 작성자 닉네임 (공방 미리보기)
   const withComments = rows.filter((p) => (p.comment_count ?? 0) > 0).map((p) => p.id)
-  const bestOf = new Map<string, string>()
+  const topOf = new Map<string, { user_id: string; content: string }[]>()
+  const nickOf = new Map<string, string>()
   if (withComments.length > 0) {
     const { data: comments } = await supabase
       .from("comments")
-      .select("post_id, content")
+      .select("post_id, user_id, content")
       .in("post_id", withComments)
       .is("deleted_at", null)
       .order("vote_count", { ascending: false })
       .order("created_at", { ascending: true })
-      .limit(200)
+      .limit(300)
     for (const c of comments ?? []) {
-      if (!bestOf.has(c.post_id)) bestOf.set(c.post_id, toPreview(c.content))
+      const list = topOf.get(c.post_id) ?? []
+      if (list.length < 3) {
+        list.push({ user_id: c.user_id, content: c.content })
+        topOf.set(c.post_id, list)
+      }
+    }
+    // 닉네임 병합 (comments↔profiles 는 FK 임베드 불가 — 별도 조회)
+    const uids = [...new Set([...topOf.values()].flat().map((c) => c.user_id))]
+    if (uids.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, nickname")
+        .in("user_id", uids)
+      for (const p of profiles ?? []) nickOf.set(p.user_id, p.nickname)
     }
   }
 
@@ -108,7 +122,10 @@ export async function fetchCardNews(
       voteCount: p.vote_count ?? 0,
       commentCount: p.comment_count ?? 0,
       createdAt: p.created_at,
-      bestComment: bestOf.get(p.id) ?? null,
+      topComments: (topOf.get(p.id) ?? []).map((c) => ({
+        nickname: nickOf.get(c.user_id) ?? "익명",
+        content: toPreview(c.content),
+      })),
       flair: f ? { name: f.name, color: f.color } : null,
     }
   })
