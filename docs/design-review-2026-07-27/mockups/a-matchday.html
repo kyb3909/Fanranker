@@ -195,6 +195,47 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .hero-sub { font-size: 14px; color: var(--cream-dim); display: flex; gap: 14px; align-items: center; }
 .hero-sub .arrow { color: var(--bg-100); font-weight: 700; }
 
+/* ── TOP STORY 캐러셀 ── */
+.hero-track { position: absolute; inset: 0; }
+.slide {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s;
+}
+.slide.on { opacity: 1; visibility: visible; }
+.hero-nav {
+  position: absolute; z-index: 3; top: 18px; right: 18px;
+  display: flex; gap: 7px;
+}
+.hero-nav button {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(22,20,26,0.55); color: var(--cream);
+  border: 1px solid rgba(245,239,231,0.22);
+  display: grid; place-items: center;
+  backdrop-filter: blur(6px);
+  transition: background 0.15s, border-color 0.15s;
+}
+.hero-nav button:hover { background: var(--bg-500); border-color: var(--bg-500); }
+.hero-nav button:active { transform: scale(0.94); }
+.hero-nav svg { width: 17px; height: 17px; }
+.hero-dots {
+  position: absolute; z-index: 3; right: 22px; bottom: 22px;
+  display: flex; gap: 7px; align-items: center;
+}
+.hero-dots button {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(245,239,231,0.34);
+  transition: width 0.2s, background 0.2s;
+}
+.hero-dots button.on { width: 22px; border-radius: 999px; background: var(--cream); }
+.hero-count {
+  position: absolute; z-index: 3; right: 22px; bottom: 40px;
+  font-family: var(--disp); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.14em; color: var(--cream-dim);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 오늘의 경기 위젯 ── */
 .fixtures {
   background: var(--night-soft);
@@ -310,24 +351,69 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .pz-cta:active { transform: scale(0.98); }
 .pz-note { margin-top: 9px; font-size: 12px; color: var(--ink-3); text-align: center; }
 
-/* ============ 본문 (라이트) ============ */
+/* ============ 본문 (라이트) — 3컬럼: 현행 사이트 구조 유지 ============ */
 .main {
-  display: grid; grid-template-columns: 1fr 328px; gap: 28px;
+  display: grid; grid-template-columns: 218px minmax(0, 1fr) 300px; gap: 24px;
   /* padding-block 만 — `wrap main` 조합에서 .wrap 의 좌우 패딩 보존 */
-  padding-block: 34px 56px;
+  padding-block: 26px 56px;
+  align-items: start;
 }
 
-/* 섹션 헤더 */
-.sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
-.sec-brush {
-  font-family: var(--brush); font-size: 40px; line-height: 1;
-  transform: rotate(-1.5deg); color: var(--ink);
-  text-shadow: 0.5px 0 currentColor;
+/* ── 좌측 레일: 게시판 네비 + 광고 + 리소스 ── */
+.rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 80px; }
+.rail-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.rail-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
 }
-.sec-sub { font-size: 13.5px; color: var(--ink-3); font-weight: 600; }
+.rail-head b { font-size: 13.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; letter-spacing: -0.02em; }
+.rail-head svg { width: 16px; height: 16px; color: var(--bg-500); }
+.rail-head .srch { color: var(--ink-3); display: grid; place-items: center; }
+.rail-head .srch:hover { color: var(--ink); }
+.rail-group { padding: 8px 6px 10px; }
+.rail-label {
+  font-family: var(--disp); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase;
+  padding: 6px 10px 5px;
+}
+.rail-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 14px; font-weight: 700; color: var(--ink-2);
+}
+.rail-item:hover { background: var(--paper); color: var(--ink); }
+.rail-item.on { background: var(--bg-50); color: var(--bg-700); }
+.rail-item .ico {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--bg-50); color: var(--bg-500);
+}
+.rail-item.life .ico { background: var(--paper); color: var(--ink-2); }
+.rail-item .ico svg { width: 15px; height: 15px; }
+.rail-item .star { margin-left: auto; color: var(--line); display: grid; place-items: center; }
+.rail-item .star svg { width: 15px; height: 15px; }
+.rail-item .star.on { color: var(--bg-500); }
+.rail-item:hover .star { color: var(--ink-3); }
+.rail-links { padding: 6px; }
+.rail-links a { display: block; padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--ink-2); border-radius: 7px; }
+.rail-links a:hover { background: var(--paper); color: var(--ink); }
 
-/* 필터 탭 */
-.tabs { display: flex; gap: 8px; margin: 14px 0 18px; }
+/* 광고 슬롯 */
+.adbox {
+  background: var(--card); border: 1px dashed var(--line); border-radius: 12px;
+  height: 250px; display: grid; place-items: center; gap: 7px; align-content: center;
+  color: var(--ink-3); text-align: center;
+}
+.adbox .ad-pill {
+  font-family: var(--disp); font-weight: 700; font-size: 11px; letter-spacing: 0.16em;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 11px; text-transform: uppercase;
+}
+.adbox .ad-size { font-family: var(--disp); font-size: 12.5px; letter-spacing: 0.06em; }
+
+/* ── 피드 바: 정렬 탭 ── */
+.feedbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 7px; }
 .tab {
   padding: 7px 15px; border-radius: 999px;
   font-size: 13.5px; font-weight: 700;
@@ -336,11 +422,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .tab:hover { border-color: var(--ink-3); }
 .tab.on { background: var(--bg-500); border-color: var(--bg-500); color: #fff; }
+.feed-hint { margin-left: auto; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
 
-/* ── 카드 3티어 ── */
-.feed { display: flex; flex-direction: column; gap: 12px; }
-
-/* 공통 카드 */
+/* ── 피드 카드 ── */
+.feed { display: flex; flex-direction: column; gap: 10px; }
 .card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -349,12 +434,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .card:hover { box-shadow: 0 10px 28px -14px rgba(28,26,32,0.22); transform: translateY(-1px); }
 
-/* T2: 오피셜·1티어 — 좌측 3px 버건디 액센트 */
-.t2 { background: #fdfbfa; }
-.t2-in { display: grid; grid-template-columns: 1fr 168px; gap: 18px; padding: 18px 18px 16px 20px; }
-.t2-in.noimg { grid-template-columns: 1fr; }
-.t2 .thumb { border-radius: 9px; height: 118px; }
-.chiprow { display: flex; gap: 7px; align-items: center; margin-bottom: 9px; flex-wrap: wrap; }
+/* 칩 */
+.chiprow { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; flex-wrap: wrap; }
 .chip {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; font-weight: 800; letter-spacing: -0.01em;
@@ -363,36 +444,69 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .chip.tier1 { background: var(--bg-50); color: var(--bg-600); border: 1px solid var(--bg-100); }
 .chip.official { background: var(--bg-500); color: #fff; }
 .chip.src { background: var(--paper); color: var(--ink-2); border: 1px solid var(--line); font-weight: 700; }
-.t2 h3 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.38; }
-.t2 h3:hover { color: var(--bg-600); }
+.chip.flair { background: var(--bg-50); color: var(--bg-600); font-weight: 800; }
+
+/* 액션 바 (좋아요 · 댓글 · 시각) */
+.actbar {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 10px; font-size: 12.5px; color: var(--ink-3);
+}
+.actbar .act { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.actbar .act svg { width: 15px; height: 15px; }
+.actbar .act:hover { color: var(--bg-500); }
+.actbar .time { margin-left: auto; font-family: var(--disp); letter-spacing: 0.04em; }
+
+/* 카드뉴스형 (썸네일 큰 글) */
+.pcard { overflow: hidden; }
+.pcard .thumb { aspect-ratio: 16 / 9; }
+.pcard .chips-over { position: absolute; z-index: 2; top: 11px; left: 11px; margin: 0; }
+.pcard .chips-over .chip.src {
+  background: rgba(22,20,26,0.6); color: var(--cream);
+  border-color: rgba(245,239,231,0.2); backdrop-filter: blur(5px);
+}
+.pcard-body { padding: 13px 15px 12px; }
+.pcard h3 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.36; }
+.pcard h3:hover { color: var(--bg-600); }
+
+/* 댓글 미리보기 (인라인) */
 .cmt {
-  margin-top: 11px; padding: 9px 12px;
+  margin-top: 10px; padding: 9px 12px;
   background: var(--paper); border-radius: 8px;
   font-size: 13.5px; color: var(--ink-2);
   display: flex; gap: 8px; align-items: baseline;
 }
 .cmt b { color: var(--ink); flex-shrink: 0; }
 .cmt .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meta { display: flex; gap: 12px; margin-top: 11px; font-size: 12.5px; color: var(--ink-3); align-items: center; }
-.meta .dot::before { content: "·"; margin-right: 12px; }
 
-/* T3: 일반 row */
-.t3 { display: grid; grid-template-columns: 1fr 96px; gap: 16px; padding: 15px 16px; align-items: center; }
-.t3.noimg { grid-template-columns: 1fr; }
-.t3 .thumb { border-radius: 8px; height: 64px; }
-.t3 h3 { font-size: 15.5px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.4; }
-.t3 h3:hover { color: var(--bg-600); }
-.t3 .chiprow { margin-bottom: 6px; }
-.t3 .chip { font-size: 11.5px; padding: 3px 9px; }
-.t3 .meta { margin-top: 6px; }
+/* 일반 행 (우측 소형 썸네일) */
+.prow { display: grid; grid-template-columns: minmax(0,1fr) 92px; gap: 14px; padding: 13px 15px; align-items: center; }
+.prow.noimg { grid-template-columns: minmax(0,1fr); }
+.prow .thumb { border-radius: 8px; height: 64px; }
+.prow h3 { font-size: 15.5px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.4; }
+.prow h3:hover { color: var(--bg-600); }
+.prow .chip { font-size: 11.5px; padding: 3px 9px; }
+.prow .actbar { margin-top: 7px; }
 
 .feed-more {
-  margin-top: 8px; padding: 13px;
+  margin-top: 6px; padding: 13px;
   border: 1px dashed var(--line); border-radius: 12px;
   text-align: center; font-size: 14px; font-weight: 700; color: var(--ink-2);
   background: transparent; width: 100%;
 }
 .feed-more:hover { border-color: var(--bg-500); color: var(--bg-600); background: var(--bg-50); }
+
+/* 글쓰기 FAB */
+.fab {
+  position: fixed; right: 26px; bottom: 26px; z-index: 55;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--bg-500); color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 14px 32px -10px rgba(150,30,55,0.75);
+  transition: transform 0.12s, background 0.15s;
+}
+.fab:hover { background: var(--bg-600); }
+.fab:active { transform: scale(0.94); }
+.fab svg { width: 22px; height: 22px; }
 
 /* ============ 사이드바 (라이트) ============ */
 .side { display: flex; flex-direction: column; gap: 16px; }
@@ -486,10 +600,19 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .bottomtab svg { width: 22px; height: 22px; }
 
 /* ============ 반응형 ============ */
+@media (max-width: 1180px) {
+  /* 좌측 게시판 레일 접힘 — 현행 사이트와 동일하게 상위 브레이크포인트에서 숨김 */
+  .main { grid-template-columns: minmax(0, 1fr) 300px; }
+  .rail { display: none; }
+}
 @media (max-width: 1080px) {
   .me-grid { grid-template-columns: 1fr; }
   .hero { min-height: 380px; }
-  .main { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .side { flex-direction: row; flex-wrap: wrap; }
+  .side > * { flex: 1 1 280px; }
 }
 @media (max-width: 768px) {
   .gnb-menu { display: none; }
@@ -497,13 +620,16 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   body { padding-bottom: 64px; }
   .wrap { padding: 0 16px; }
   .hero h1 { font-size: 25px; }
-  .hero-body { padding-left: 88px; }
+  .hero-body { padding-left: 88px; padding-right: 20px; }
   .hero-plate { width: 92px; left: -36px; }
+  .hero-nav { top: 14px; right: 14px; }
+  .hero-count { display: none; }
   .me-title { font-size: 34px; }
   .me-date { display: none; }
-  .t2-in { grid-template-columns: 1fr; }
-  .t2 .thumb { height: 150px; order: -1; }
+  .side { flex-direction: column; }
+  .prow { grid-template-columns: minmax(0,1fr) 78px; }
   .countdown .clock { font-size: 32px; }
+  .fab { right: 16px; bottom: 78px; }
 }
 </style>
 </head>
@@ -518,7 +644,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     </a>
     <nav class="gnb-menu">
       <a href="a-matchday.html" class="on">담벼락</a>
-      <a href="p-stadium.html">운동장</a>
+      <a href="p-explore.html">운동장</a>
       <a href="p-prediction.html">승부예측</a>
     </nav>
     <div class="gnb-icons">
@@ -544,21 +670,73 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
     <div class="me-grid">
 
-      <!-- 히어로: 그날의 톱뉴스 (매치 포스터 문법) -->
-      <article class="hero">
-        <div class="thumb">
-          <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" loading="eager" />
+      <!-- 히어로: 그날의 톱뉴스 (매치 포스터 문법) — 좌우 이동 캐러셀 -->
+      <section class="hero" id="hero" aria-roledescription="carousel" aria-label="오늘의 톱스토리">
+        <div class="hero-track">
+
+          <article class="slide on" role="group" aria-roledescription="슬라이드" aria-label="1 / 3">
+            <div class="thumb">
+              <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" loading="eager" />
+            </div>
+            <div class="hero-body">
+              <span class="hero-tag">오늘의 톱뉴스 <em>디 애슬레틱</em></span>
+              <h1>아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</h1>
+              <p class="hero-sub">
+                <span>구너들 심장 뛰는 소리 여기까지 들린다</span>
+                <span class="arrow">떡밥 물러 가기 →</span>
+              </p>
+            </div>
+          </article>
+
+          <article class="slide" role="group" aria-roledescription="슬라이드" aria-label="2 / 3">
+            <div class="thumb">
+              <img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="페드로 네토" loading="lazy" />
+            </div>
+            <div class="hero-body">
+              <span class="hero-tag">오피셜 <em>첼시 FC</em></span>
+              <h1>첼시, 페드로 네토 판매 계획 없음 — 구단 공식 입장</h1>
+              <p class="hero-sub">
+                <span>이적설 3주 만에 구단이 직접 자름</span>
+                <span class="arrow">떡밥 물러 가기 →</span>
+              </p>
+            </div>
+          </article>
+
+          <article class="slide" role="group" aria-roledescription="슬라이드" aria-label="3 / 3">
+            <div class="thumb">
+              <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/23055800/james-trafford-mc-scaled-e1784800706287.jpg" alt="제임스 트래포드" loading="lazy" />
+            </div>
+            <div class="hero-body">
+              <span class="hero-tag">1티어 <em>디 애슬레틱</em></span>
+              <h1>리즈, 맨체스터 시티와 제임스 트래포드 영입 협상 중</h1>
+              <p class="hero-sub">
+                <span>골키퍼 자리 한 칸이 여름을 다 잡아먹는 중</span>
+                <span class="arrow">떡밥 물러 가기 →</span>
+              </p>
+            </div>
+          </article>
+
         </div>
+
+        <!-- 고정 장식: 슬라이드가 넘어가도 유지 -->
         <div class="hero-plate" aria-hidden="true"><span>TOP STORY</span></div>
-        <div class="hero-body">
-          <span class="hero-tag">오늘의 톱뉴스 <em>디 애슬레틱</em></span>
-          <h1>아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</h1>
-          <p class="hero-sub">
-            <span>구너들 심장 뛰는 소리 여기까지 들린다</span>
-            <span class="arrow">떡밥 물러 가기 →</span>
-          </p>
+
+        <div class="hero-nav">
+          <button id="heroPrev" aria-label="이전 톱스토리">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button id="heroNext" aria-label="다음 톱스토리">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
         </div>
-      </article>
+
+        <div class="hero-count num" id="heroCount" aria-hidden="true">01 / 03</div>
+        <div class="hero-dots" id="heroDots" role="tablist" aria-label="톱스토리 선택">
+          <button class="on" role="tab" aria-label="1번 톱스토리" aria-selected="true"></button>
+          <button role="tab" aria-label="2번 톱스토리" aria-selected="false"></button>
+          <button role="tab" aria-label="3번 톱스토리" aria-selected="false"></button>
+        </div>
+      </section>
 
       <!-- 오늘의 경기 위젯 + 다크 존 ② 배당 타일 -->
       <aside class="fixtures">
@@ -629,139 +807,225 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 <!-- ═══════════ 본문 (라이트) ═══════════ -->
 <div class="wrap main">
 
-  <!-- 피드: 오늘의 떡밥 -->
-  <main>
-    <div class="sec-head">
-      <span class="sec-brush">오늘의 떡밥</span>
-      <span class="sec-sub">출처는 우리가 깐깐하게 본다 — 별은 1티어, 체크는 오피셜</span>
+  <!-- 좌측 레일: 게시판 네비 (현행 사이트 그대로) -->
+  <aside class="rail">
+    <div class="rail-card">
+      <div class="rail-head">
+        <b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          게시판
+        </b>
+        <button class="srch" aria-label="게시판 검색">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+      </div>
+      <div class="rail-group">
+        <div class="rail-label">스포츠</div>
+        <a class="rail-item on" href="#">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m12 7 3.5 2.5-1.3 4h-4.4l-1.3-4Z"/></svg></span>
+          축구
+          <span class="star on" aria-label="팔로우 중"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg></span>
+        </a>
+        <div class="rail-label">라이프</div>
+        <a class="rail-item life" href="#">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg></span>
+          자유
+          <span class="star" aria-label="팔로우"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg></span>
+        </a>
+      </div>
     </div>
 
-    <div class="tabs">
-      <button class="tab on">전체</button>
-      <button class="tab">오피셜</button>
-      <button class="tab">이적시장</button>
-      <button class="tab">국내</button>
+    <div class="adbox">
+      <span class="ad-pill">광고</span>
+      <span class="ad-size">Medium Rectangle · 300×250</span>
+    </div>
+
+    <div class="rail-card">
+      <div class="rail-head"><b>리소스</b></div>
+      <div class="rail-links">
+        <a href="#">회사 소개</a>
+        <a href="#">이용약관</a>
+        <a href="#">게시물 운영정책</a>
+        <a href="#">개인정보처리방침</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 피드: 오늘의 떡밥 -->
+  <main>
+    <div class="feedbar">
+      <div class="tabs">
+        <button class="tab on">오늘의 떡밥</button>
+        <button class="tab">랜덤</button>
+        <button class="tab">온도순</button>
+        <button class="tab">최신순</button>
+      </div>
+      <span class="feed-hint">별은 1티어 · 체크는 오피셜</span>
     </div>
 
     <div class="feed">
 
-      <!-- T2 · 1티어 (Ornstein) -->
-      <article class="card t2">
-        <div class="t2-in">
-          <div>
-            <div class="chiprow">
-              <span class="chip tier1">★ 1티어</span>
-              <span class="chip src">David Ornstein</span>
-            </div>
-            <h3><a href="#">토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</a></h3>
-            <div class="cmt">
-              <b>몽몽이</b>
-              <span class="q">다른 기사를 보니까, 토트넘은 85m 파운드를 일시불로 준다고 하네요</span>
-            </div>
-            <div class="meta">
-              <span>좋아요 <b class="num">1</b></span>
-              <span class="dot">댓글 <b class="num">1</b></span>
-              <span class="dot num">7월 1일</span>
-            </div>
-          </div>
-          <div class="thumb">
-            <img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274" alt="마테우스 페르난데스" loading="lazy" />
-          </div>
-        </div>
-      </article>
-
-      <!-- T2 · 오피셜 (첼시) -->
-      <article class="card t2">
-        <div class="t2-in">
-          <div>
-            <div class="chiprow">
-              <span class="chip official">✓ 오피셜</span>
-              <span class="chip src">첼시 FC</span>
-            </div>
-            <h3><a href="#">첼시, 페드로 네토 판매 계획 없음</a></h3>
-            <div class="meta"><span class="num">7월 1일</span></div>
-          </div>
-          <div class="thumb">
-            <img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="페드로 네토" loading="lazy" />
-          </div>
-        </div>
-      </article>
-
-      <!-- T2 · 1티어 (로마노, 텍스트만) -->
-      <article class="card t2">
-        <div class="t2-in noimg">
-          <div>
-            <div class="chiprow">
-              <span class="chip tier1">★ 1티어</span>
-              <span class="chip src">Fabrizio Romano</span>
-            </div>
-            <h3><a href="#">로베르트 레반도프스키, 시카고 파이어 이적 확정</a></h3>
-            <div class="meta"><span class="num">7월 1일</span></div>
-          </div>
-        </div>
-      </article>
-
-      <!-- T3 rows -->
-      <article class="card t3">
-        <div>
-          <div class="chiprow"><span class="chip src">Marca</span></div>
-          <h3><a href="#">맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</a></h3>
-          <div class="meta"><span class="num">7월 1일</span></div>
-        </div>
+      <!-- 카드뉴스형 -->
+      <article class="card pcard">
         <div class="thumb">
-          <img src="https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg" alt="얀 디오만데" loading="lazy" />
+          <div class="chiprow chips-over">
+            <span class="chip tier1">★ 온스테인</span>
+            <span class="chip flair">아스날</span>
+          </div>
+          <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" loading="lazy" />
+        </div>
+        <div class="pcard-body">
+          <h3><a href="#">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</a></h3>
+          <div class="cmt">
+            <b>몽몽이</b>
+            <span class="q">이 금액이면 진짜 지르는 거 맞죠? 여름 내내 이 얘기만 도네요</span>
+          </div>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">12</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">4</span></button>
+            <span class="time">2일 전</span>
+          </div>
         </div>
       </article>
 
-      <article class="card t3">
+      <!-- 일반 행 (텍스트만) -->
+      <article class="card prow noimg">
         <div>
-          <div class="chiprow"><span class="chip src">RBFA</span></div>
+          <div class="chiprow">
+            <span class="chip src">플래텐부르크</span>
+            <span class="chip flair">맨시티</span>
+          </div>
+          <h3><a href="#">맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</a></h3>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">3</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">0</span></button>
+            <span class="time">2일 전</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- 카드뉴스형 · 오피셜 -->
+      <article class="card pcard">
+        <div class="thumb">
+          <div class="chiprow chips-over">
+            <span class="chip official">✓ 오피셜</span>
+            <span class="chip flair">첼시</span>
+          </div>
+          <img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="페드로 네토" loading="lazy" />
+        </div>
+        <div class="pcard-body">
+          <h3><a href="#">첼시, 페드로 네토 판매 계획 없음</a></h3>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">8</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">2</span></button>
+            <span class="time">2일 전</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- 일반 행들 -->
+      <article class="card prow">
+        <div>
+          <div class="chiprow">
+            <span class="chip official">✓ 오피셜</span>
+            <span class="chip flair">뉴스</span>
+          </div>
           <h3><a href="#">벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</a></h3>
-          <div class="meta"><span class="num">7월 1일</span></div>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">1</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">0</span></button>
+            <span class="time">2일 전</span>
+          </div>
         </div>
         <div class="thumb">
           <img src="https://drupal2018.assets.rbfa.be/s3fs-public/styles/image_850x475/public/2026-07/website_mvb.jpg?VersionId=EZykAQx98Mdt1iqlKGUJyqvjLtw4GGaT&h=73cf9c8b&itok=cKhFdd8R" alt="마르크 반 보멀" loading="lazy" />
         </div>
       </article>
 
-      <article class="card t3">
+      <article class="card prow">
         <div>
-          <div class="chiprow"><span class="chip src">가제타</span></div>
+          <div class="chiprow">
+            <span class="chip tier1">★ 로마노</span>
+            <span class="chip flair">뉴스</span>
+          </div>
           <h3><a href="#">이탈리아 축구 연맹, 안드레아 피를로 감독직 접촉</a></h3>
-          <div class="meta"><span class="num">7월 1일</span></div>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">2</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">1</span></button>
+            <span class="time">2일 전</span>
+          </div>
         </div>
         <div class="thumb">
           <img src="https://dimages2.gazzettaobjects.it/files/og_thumbnail/files/fp/uploads/2026/07/21/6a5fb272da411.r_d.1500-838-0.jpeg" alt="안드레아 피를로" loading="lazy" />
         </div>
       </article>
 
-      <article class="card t3">
+      <article class="card prow">
         <div>
-          <div class="chiprow"><span class="chip src">디 애슬레틱</span></div>
+          <div class="chiprow">
+            <span class="chip src">가제타</span>
+            <span class="chip flair">뉴스</span>
+          </div>
+          <h3><a href="#">과르디올라, 이탈리아 감독직 거절할 가능성 높아</a></h3>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">0</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">0</span></button>
+            <span class="time">4일 전</span>
+          </div>
+        </div>
+        <div class="thumb">
+          <img src="https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg" alt="과르디올라" loading="lazy" />
+        </div>
+      </article>
+
+      <article class="card prow">
+        <div>
+          <div class="chiprow">
+            <span class="chip src">Marca</span>
+            <span class="chip flair">레알</span>
+          </div>
+          <h3><a href="#">카마빙가, 레알 마드리드 떠나지 않겠다고 밝혀</a></h3>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">1</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">0</span></button>
+            <span class="time">4일 전</span>
+          </div>
+        </div>
+        <div class="thumb">
+          <img src="https://s.yimg.com/os/en/esteemed_kompany_articles_332/41683de89e8ef81449c3a489d5aa408c" alt="카마빙가" loading="lazy" />
+        </div>
+      </article>
+
+      <article class="card prow noimg">
+        <div>
+          <div class="chiprow">
+            <span class="chip src">텔레그래프</span>
+            <span class="chip flair">첼시</span>
+          </div>
+          <h3><a href="#">첼시, £3000만 보스니아 월드컵 스타 케림 알라이베고비치 영입 유력</a></h3>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">0</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">0</span></button>
+            <span class="time">4일 전</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card prow">
+        <div>
+          <div class="chiprow">
+            <span class="chip tier1">★ 온스테인</span>
+            <span class="chip flair">맨시티</span>
+          </div>
           <h3><a href="#">리즈, 맨체스터 시티와 제임스 트래포드 영입 협상 중</a></h3>
-          <div class="meta"><span class="num">7월 1일</span></div>
+          <div class="actbar">
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/></svg><span class="num">4</span></button>
+            <button class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg><span class="num">1</span></button>
+            <span class="time">4일 전</span>
+          </div>
         </div>
         <div class="thumb">
           <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/23055800/james-trafford-mc-scaled-e1784800706287.jpg" alt="제임스 트래포드" loading="lazy" />
-        </div>
-      </article>
-
-      <article class="card t3 noimg">
-        <div>
-          <div class="chiprow"><span class="chip src">Loïc Tanzi</span></div>
-          <h3><a href="#">디오망데, PSG와 5년 계약 합의 근접</a></h3>
-          <div class="meta"><span class="num">7월 1일</span></div>
-        </div>
-      </article>
-
-      <article class="card t3">
-        <div>
-          <div class="chiprow"><span class="chip src">Yahoo</span></div>
-          <h3><a href="#">인터 마이애미, 메시 결장 속 몬트리올 원정 승리</a></h3>
-          <div class="meta"><span class="num">7월 1일</span></div>
-        </div>
-        <div class="thumb">
-          <img src="https://s.yimg.com/os/en/esteemed_kompany_articles_332/41683de89e8ef81449c3a489d5aa408c" alt="인터 마이애미" loading="lazy" />
         </div>
       </article>
 
@@ -769,20 +1033,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     </div>
   </main>
 
-  <!-- 사이드바 -->
+  <!-- 우측 사이드바 -->
   <aside class="side">
-
-    <!-- 오늘의 설문 -->
-    <div class="widget">
-      <h4>오늘의 설문</h4>
-      <div class="w-sub">한 표가 여론이 된다</div>
-      <p class="poll-q">아스날 다음 영입 1순위는?</p>
-      <button class="poll-opt" data-poll><span>기마랑이스</span><span class="ring"></span></button>
-      <button class="poll-opt sel" data-poll><span>토날리</span><span class="ring"></span></button>
-      <button class="poll-opt" data-poll><span>마페</span><span class="ring"></span></button>
-      <button class="poll-opt" data-poll><span>부아디</span><span class="ring"></span></button>
-      <button class="poll-cta">투표하고 결과 보기</button>
-    </div>
 
     <!-- 디스코드 (인디고 회수 → 버건디 액센트) -->
     <div class="widget discord">
@@ -806,8 +1058,31 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       </ul>
     </div>
 
+    <!-- 오늘의 설문 -->
+    <div class="widget">
+      <h4>오늘의 설문</h4>
+      <div class="w-sub">한 표가 여론이 된다</div>
+      <p class="poll-q">아스날 다음 영입 1순위는?</p>
+      <button class="poll-opt" data-poll><span>기마랑이스</span><span class="ring"></span></button>
+      <button class="poll-opt sel" data-poll><span>토날리</span><span class="ring"></span></button>
+      <button class="poll-opt" data-poll><span>마페</span><span class="ring"></span></button>
+      <button class="poll-opt" data-poll><span>부아디</span><span class="ring"></span></button>
+      <button class="poll-cta">투표하고 결과 보기</button>
+    </div>
+
+    <!-- 광고 -->
+    <div class="adbox">
+      <span class="ad-pill">광고</span>
+      <span class="ad-size">Medium Rectangle · 300×250</span>
+    </div>
+
   </aside>
 </div>
+
+<!-- 글쓰기 FAB -->
+<a class="fab" href="p-write.html" aria-label="글쓰기">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+</a>
 
 <!-- ═══════════ 다크 존 ③ 푸터 브랜드 블록 ═══════════ -->
 <footer class="footer">
@@ -832,7 +1107,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
       담벼락
     </a>
-    <a href="p-stadium.html">
+    <a href="p-explore.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
       운동장
     </a>
@@ -876,6 +1151,52 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       btn.classList.add("sel");
     });
   });
+
+  // ── TOP STORY 캐러셀 ──
+  var hero = document.getElementById("hero");
+  var slides = hero.querySelectorAll(".slide");
+  var dots = document.getElementById("heroDots").querySelectorAll("button");
+  var countEl = document.getElementById("heroCount");
+  var idx = 0;
+  var timer;
+
+  function go(n) {
+    idx = (n + slides.length) % slides.length;
+    slides.forEach(function (s, i) { s.classList.toggle("on", i === idx); });
+    dots.forEach(function (d, i) {
+      d.classList.toggle("on", i === idx);
+      d.setAttribute("aria-selected", i === idx ? "true" : "false");
+    });
+    countEl.textContent = String(idx + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0");
+  }
+  function auto() { clearInterval(timer); timer = setInterval(function () { go(idx + 1); }, 6000); }
+
+  document.getElementById("heroPrev").addEventListener("click", function () { go(idx - 1); auto(); });
+  document.getElementById("heroNext").addEventListener("click", function () { go(idx + 1); auto(); });
+  dots.forEach(function (d, i) { d.addEventListener("click", function () { go(i); auto(); }); });
+
+  // 키보드 좌우 (히어로에 포커스가 들어왔을 때)
+  hero.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft") { go(idx - 1); auto(); }
+    if (e.key === "ArrowRight") { go(idx + 1); auto(); }
+  });
+
+  // 모바일 스와이프
+  var x0 = null;
+  hero.addEventListener("touchstart", function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+  hero.addEventListener("touchend", function (e) {
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 40) { go(dx < 0 ? idx + 1 : idx - 1); auto(); }
+    x0 = null;
+  });
+
+  // 마우스가 올라가 있는 동안은 자동 전환 정지 (읽는 중 넘어감 방지)
+  hero.addEventListener("mouseenter", function () { clearInterval(timer); });
+  hero.addEventListener("mouseleave", auto);
+
+  go(0);
+  auto();
 })();
 </script>
 </body>

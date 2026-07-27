@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>그깟 공놀이 — 운동장 (시안 A 매치데이)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   페이지 전용 — 운동장 (/explore)
+   구조는 현재 그대로:
+     좌 9칸 = 섹션 헤더 · 게시판 카드 그리드(최대 10, 현재 2) · 실시간 인기글
+     우 3칸 = 디스코드 배너 · 최근 댓글 · 오늘의 설문 · 광고
+   표면만 시안 A로: 다크 밴드(정체성 선언) + 밴드에 걸친 게시판 카드
+     + 라이트 목록 + 다크 푸터
+   🚫 한쪽 면 액센트 보더 없음 — 위계는 배경 틴트 / 칩 / 웨이트 / 전체 테두리로만
+   ============================================================ */
+
+/* ── 다크 밴드: 운동장 = 게시판 디렉토리 선언 ── */
+.band { overflow: visible; }        /* 게시판 카드가 밴드 하단에 걸치도록 */
+
+.eh { padding-block: 30px 26px; display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.eh-l { flex: 1; min-width: 260px; }
+.eh-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.eh-brush {
+  font-family: var(--brush); font-size: 48px; line-height: 1; color: var(--cream);
+  transform: rotate(-1.5deg); display: inline-block; text-shadow: 0.5px 0 currentColor;
+}
+.eh-kicker {
+  font-family: var(--disp); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.2em; color: var(--bg-100); text-transform: uppercase;
+}
+.eh-kicker b { color: var(--live); font-weight: 800; }   /* 라임 — 이 페이지 유일 1곳 */
+.eh-desc { font-size: 14.5px; color: var(--cream-dim); margin-top: 12px; max-width: 46ch; }
+.eh-r { flex-shrink: 0; text-align: right; }
+.eh-count {
+  font-family: var(--disp); font-weight: 800; font-size: 34px; line-height: 1;
+  color: var(--cream); letter-spacing: 0.02em; display: block;
+}
+.eh-count-lb {
+  font-family: var(--disp); font-weight: 600; font-size: 12px; letter-spacing: 0.18em;
+  color: var(--ink-3); text-transform: uppercase; margin-top: 5px; display: block;
+}
+
+/* ── 게시판 카드 그리드 — 밴드 하단에 걸침 ──
+   실데이터가 2개뿐이라 auto-fill 소형 칩으로 두면 화면에서 미아가 된다.
+   대신 카드 자체를 키워 밴드 위에 띄운다(그림자) → 개수가 아니라 무게로 채운다. */
+.bandgrid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; }
+.bgrid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 16px;
+  position: relative; z-index: 2; margin-bottom: -48px;
+}
+.bcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: 13px;
+  padding: 18px 18px 16px; display: flex; gap: 14px; align-items: flex-start;
+  color: var(--ink); box-shadow: 0 18px 38px -18px rgba(0, 0, 0, 0.62);
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+.bcard:hover {
+  transform: translateY(-4px); border-color: var(--bg-100);
+  box-shadow: 0 24px 48px -18px rgba(0, 0, 0, 0.55);
+}
+.b-ico {
+  width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--paper); border: 1px solid var(--line); color: var(--ink-2);
+}
+.b-ico svg { width: 21px; height: 21px; }
+/* 카테고리 색은 배경 틴트로만 (액센트 바 금지) */
+.b-ico.football { background: var(--bg-50); border-color: var(--bg-100); color: var(--bg-500); }
+.b-body { min-width: 0; flex: 1; }
+.b-name { display: block; font-size: 18px; font-weight: 800; letter-spacing: -0.025em; }
+.bcard:hover .b-name { color: var(--bg-600); }
+.b-desc {
+  display: block; font-size: 13px; font-weight: 600; color: var(--ink-3); margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.b-stat { display: flex; gap: 14px; margin-top: 11px; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+.b-stat b { font-family: var(--disp); font-weight: 800; font-size: 15px; color: var(--ink-2); margin-left: 5px; letter-spacing: 0.02em; }
+.b-go {
+  flex-shrink: 0; align-self: center; font-family: var(--disp); font-weight: 700;
+  font-size: 18px; color: var(--ink-3); transition: color 0.14s, transform 0.14s;
+}
+.bcard:hover .b-go { color: var(--bg-500); transform: translateX(3px); }
+
+/* ── 본문 2컬럼 ── */
+.main {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px;
+  padding-block: 80px 44px;         /* 세로만 — .wrap 의 좌우 24px 보존 */
+  align-items: start;
+}
+.main > main { min-width: 0; }
+
+/* ── 실시간 인기글 카드 ── */
+.hot { background: var(--card); border: 1px solid var(--line); border-radius: 13px; overflow: hidden; }
+.hot-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 15px 18px 13px; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+}
+.hot-head h2 { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; letter-spacing: -0.025em; }
+.hot-head h2 svg { width: 17px; height: 17px; color: var(--bg-500); }
+.hot-meta { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+
+/* 언더라인 탭 (GNB 와 같은 ::after 문법 — 액센트 "보더" 아님) */
+.utabs { display: flex; border-bottom: 1px solid var(--line); }
+.utabs button {
+  flex: 1; position: relative; padding: 12px 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 13.5px; font-weight: 700; color: var(--ink-3); transition: color 0.14s, background 0.14s;
+}
+.utabs button svg { width: 15px; height: 15px; }
+.utabs button:hover { color: var(--ink-2); background: var(--paper); }
+.utabs button.on { color: var(--bg-600); }
+.utabs button.on::after {
+  content: ""; position: absolute; left: 18%; right: 18%; bottom: -1px;
+  height: 3px; background: var(--bg-500); border-radius: 3px 3px 0 0;
+}
+
+/* 목록 행 */
+.hrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  padding: 13px 18px; border-bottom: 1px solid var(--line); transition: background 0.12s;
+}
+.hrow:last-child { border-bottom: 0; }
+.hrow:hover { background: var(--paper); }
+.h-t { min-width: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-bd { color: var(--bg-600); font-weight: 800; margin-right: 4px; }
+.hrow:hover .h-t { color: var(--bg-700); }
+.h-m { display: flex; gap: 13px; flex-shrink: 0; align-items: center; }
+.h-m span { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+.h-m span svg { width: 13px; height: 13px; }
+.h-m .num { font-family: var(--disp); font-weight: 700; font-size: 14px; letter-spacing: 0.02em; }
+.h-m .up { color: var(--bg-500); font-weight: 800; }
+
+/* ── 빈 상태 ──
+   "없습니다" 한 줄 대신, 이미 존재하는 동선 3개(게시판 이동 / 글쓰기 / 추천 누르기)로
+   되돌려 보내는 화면. 잔디 깎은 자국(mow line)만 아주 옅게. */
+.empty {
+  padding: 46px 24px 44px; text-align: center;
+  background-image: repeating-linear-gradient(90deg, rgba(28, 26, 32, 0.016) 0 44px, transparent 44px 88px);
+}
+.empty-mark {
+  width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%;
+  background: var(--bg-50); border: 1px solid var(--bg-100);
+  display: grid; place-items: center; color: var(--bg-500); position: relative;
+}
+.empty-mark::after {
+  content: ""; position: absolute; inset: -11px; border-radius: 50%;
+  border: 1px dashed var(--bg-100); opacity: 0.75;
+}
+.empty-mark svg { width: 30px; height: 30px; }
+.empty-t { font-size: 19px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.35; }
+.empty-d { font-size: 14px; color: var(--ink-2); margin-top: 9px; line-height: 1.6; max-width: 40ch; margin-inline: auto; }
+.empty-acts { display: flex; gap: 9px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+.empty-acts .cta-burg, .empty-acts .cta-ghost { font-size: 14px; }
+.empty-hint { margin-top: 18px; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+.empty-hint b { color: var(--bg-600); font-weight: 800; }
+
+/* ── 우: 사이드바 ── */
+.side { position: sticky; top: 84px; }
+.discord { display: flex; gap: 13px; align-items: flex-start; }
+.discord .d-ico {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  background: var(--bg-50); color: var(--bg-500); display: grid; place-items: center;
+}
+.discord .d-ico svg { width: 22px; height: 22px; }
+.discord p { font-size: 13.5px; font-weight: 700; line-height: 1.45; letter-spacing: -0.01em; }
+.discord .d-link { display: inline-block; margin-top: 7px; font-size: 13px; font-weight: 800; color: var(--bg-600); }
+.discord .d-link:hover { text-decoration: underline; }
+
+.recent li { list-style: none; padding: 9px 0; border-bottom: 1px solid var(--paper); }
+.recent li:last-child { border-bottom: 0; padding-bottom: 0; }
+.recent a { font-size: 13.5px; font-weight: 600; color: var(--ink-2); display: flex; gap: 7px; align-items: baseline; line-height: 1.4; }
+.recent a:hover { color: var(--bg-600); }
+.recent .cnt { font-family: var(--disp); font-weight: 800; color: var(--bg-500); flex-shrink: 0; }
+.recent .tt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent .bd { font-size: 11.5px; color: var(--ink-3); flex-shrink: 0; }
+
+.poll-q { font-size: 15.5px; font-weight: 800; line-height: 1.4; margin-bottom: 12px; letter-spacing: -0.02em; }
+.poll-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; text-align: left; padding: 10px 13px; margin-bottom: 7px;
+  border: 1px solid var(--line); border-radius: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink-2); transition: 0.12s;
+}
+.poll-opt:hover { border-color: var(--bg-500); color: var(--ink); }
+.poll-opt .ring { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); flex-shrink: 0; }
+.poll-opt.sel { border-color: var(--bg-500); background: var(--bg-50); color: var(--bg-700); }
+.poll-opt.sel .ring { border-color: var(--bg-500); background: radial-gradient(circle at center, var(--bg-500) 45%, transparent 50%); }
+.poll-cta { width: 100%; margin-top: 5px; background: var(--bg-500); color: #fff; font-weight: 800; font-size: 14px; padding: 11px; border-radius: 9px; }
+.poll-cta:hover { background: var(--bg-600); }
+
+.adbox {
+  border: 1px dashed var(--line); border-radius: 12px; background: var(--card);
+  height: 250px; display: grid; place-items: center; gap: 6px; text-align: center;
+}
+.adbox .lb { font-size: 11px; font-weight: 700; color: var(--ink-3); background: var(--paper); border-radius: 999px; padding: 3px 10px; }
+.adbox .sz { font-family: var(--disp); font-size: 13px; letter-spacing: 0.08em; color: var(--ink-3); }
+
+/* ── 비교용 섹션: 빈 상태 시안 (목업 전용 · 실제 페이지엔 없는 라벨) ── */
+.cmp { background: #f2efec; border-top: 1px solid var(--line); }
+.cmp-in { padding-block: 30px 38px; }
+.cmp-lab { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.cmp-badge {
+  font-family: var(--disp); font-weight: 800; font-size: 11.5px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-2);
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px;
+}
+.cmp-txt { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.cmp-body { max-width: 860px; }
+
+/* 글쓰기 FAB */
+.fab {
+  position: fixed; right: 26px; bottom: 26px; z-index: 55;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--bg-500); color: #fff; display: grid; place-items: center;
+  box-shadow: 0 12px 30px -10px rgba(150, 30, 55, 0.7); transition: 0.15s;
+}
+.fab:hover { background: var(--bg-600); transform: translateY(-2px); }
+.fab svg { width: 22px; height: 22px; }
+
+/* ── 반응형 ── */
+@media (max-width: 1080px) {
+  .bandgrid { grid-template-columns: minmax(0, 1fr); }
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; }
+}
+@media (max-width: 860px) {
+  .eh { padding-block: 22px 22px; }
+  .eh-brush { font-size: 38px; }
+  .eh-r { text-align: left; }
+  .eh-count { font-size: 26px; }
+  .bgrid { grid-template-columns: 1fr; margin-bottom: -42px; }
+  .bcard { padding: 15px 16px 14px; }
+  .main { padding-block: 68px 36px; }
+  .hot-head { padding: 13px 15px 11px; }
+  .utabs button { font-size: 13px; padding: 11px 4px; }
+  .hrow { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 12px 15px; }
+  .h-t { white-space: normal; }
+  .h-m { justify-content: flex-start; }
+  .empty { padding: 34px 16px 32px; }
+  .empty-acts .cta-burg, .empty-acts .cta-ghost { flex: 1; min-width: 132px; text-align: center; }
+  .cmp-body { max-width: none; }
+  .fab { display: none; }        /* 모바일: 하단 탭 글쓰기와 중복 */
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ GNB ═══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-in">
+    <a class="logo" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="logo-domain">gongnori.fan</span>
+    </a>
+    <nav class="gnb-menu">
+      <a href="a-matchday.html">담벼락</a>
+      <a href="p-explore.html" class="on">운동장</a>
+      <a href="p-prediction.html">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      </button>
+      <div class="avatar">몽</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 다크 밴드 — 섹션 헤더 + 게시판 카드 ═══════════ -->
+<section class="band grain">
+  <div class="wrap">
+
+    <div class="eh">
+      <div class="eh-l">
+        <div class="eh-head">
+          <span class="eh-brush">운동장</span>
+          <span class="eh-kicker">Explore <b>·</b> 게시판 디렉토리</span>
+        </div>
+        <p class="eh-desc">관심 있는 게시판을 찾아 팔로우해보세요. 팔로우한 게시판 글은 담벼락 위로 올라옵니다.</p>
+      </div>
+      <div class="eh-r">
+        <span class="eh-count num">2</span>
+        <span class="eh-count-lb">Open Boards</span>
+      </div>
+    </div>
+
+    <!-- 게시판 카드 그리드 (상위 카테고리만 · 최대 10 · 현재 실데이터 2) -->
+    <div class="bandgrid">
+      <div class="bgrid">
+        <a class="bcard" href="p-board.html">
+          <span class="b-ico football">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m12 7 4.2 3.1-1.6 5H9.4l-1.6-5Z"/><path d="M12 3v4M4.2 9.6 7.8 12M19.8 9.6 16.2 12M7.4 19.6 9.4 15.1M16.6 19.6 14.6 15.1"/></svg>
+          </span>
+          <span class="b-body">
+            <span class="b-name">축구</span>
+            <span class="b-desc">이적시장 떡밥부터 새벽 경기 후기까지</span>
+            <span class="b-stat">
+              <span>오늘 글<b class="num">37</b></span>
+              <span>전체<b class="num">1,284</b></span>
+            </span>
+          </span>
+          <span class="b-go">→</span>
+        </a>
+
+        <a class="bcard" href="p-board.html">
+          <span class="b-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z"/></svg>
+          </span>
+          <span class="b-body">
+            <span class="b-name">자유</span>
+            <span class="b-desc">축구 얘기 아니어도 됨 — 아무 말 대잔치</span>
+            <span class="b-stat">
+              <span>오늘 글<b class="num">6</b></span>
+              <span>전체<b class="num">212</b></span>
+            </span>
+          </span>
+          <span class="b-go">→</span>
+        </a>
+      </div>
+      <div aria-hidden="true"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ 본문 (라이트) ═══════════ -->
+<div class="wrap main">
+
+  <main>
+    <!-- 실시간 인기글 -->
+    <section class="hot">
+      <div class="hot-head">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+          실시간 인기글
+        </h2>
+        <span class="hot-meta">추천 1+ · 최근 7일</span>
+      </div>
+
+      <div class="utabs" id="sorts">
+        <button class="on">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>
+          추천순
+        </button>
+        <button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg>
+          댓글순
+        </button>
+        <button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+          조회순
+        </button>
+      </div>
+
+      <div id="hotlist">
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">58</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">31</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">3,241</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">24</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">12</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">1,908</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[자유]</b>월드컵 이벤트 예측 내역이 안 보이는데 저만 그런가요</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">17</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">4</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">842</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>아틀레티코 마드리드, 이강인 영입 마무리 단계. 이적료는 약 3500만 유로</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">14</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">18</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">1,133</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[자유]</b>한국 축구 빙고의 저주 7월 1일 기준</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">9</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">1</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">507</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">6</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">1</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">396</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[자유]</b>새벽 경기 보다가 출근한 사람 손</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">3</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">9</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">288</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>[오피셜] 벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">3</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">2</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">274</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[자유]</b>공놀이 볼 충전 몇 시에 되는지 헷갈리는 사람 정리해봄</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">2</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">6</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">241</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>부스케츠, 바르셀로나 코치로 복귀</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">2</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">5</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">203</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[축구]</b>알레한드로 가르나초, 아스톤 빌라로 조건부 의무 임대 이적 완료</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">1</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">9</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">187</b></span>
+          </span>
+        </a>
+
+        <a class="hrow" href="#">
+          <span class="h-t"><b class="h-bd">[자유]</b>여러분 최애 유니폼 인증 한 번 갑시다</span>
+          <span class="h-m">
+            <span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><b class="num">1</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg><b class="num">3</b></span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg><b class="num">156</b></span>
+          </span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── 우: 사이드바 ── -->
+  <aside class="side">
+
+    <div class="widget discord">
+      <div class="d-ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.3 5.3A16.8 16.8 0 0 0 15.1 4l-.2.4c1.5.4 2.9 1 4.2 1.9A13.7 13.7 0 0 0 7 6.3c1.3-.9 2.7-1.5 4.2-1.9L11 4c-1.5.3-2.9.7-4.2 1.3C4.3 9 3.6 12.6 4 16.2c1.5 1.1 3.2 1.9 5 2.4l1-1.6c-.6-.2-1.1-.5-1.6-.8l.4-.3a12 12 0 0 0 10.4 0l.4.3c-.5.3-1 .6-1.6.8l1 1.6c1.8-.5 3.5-1.3 5-2.4.5-4.2-.7-7.8-2.7-10.9ZM9.7 14.1c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Zm6.6 0c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Z"/></svg>
+      </div>
+      <div>
+        <p>디스코드로 소식 받기 — 축구 뉴스 · 매일 밤 오늘의 경기 알림</p>
+        <a class="d-link" href="#">공놀이봇 서버 입장 →</a>
+      </div>
+    </div>
+
+    <div class="widget">
+      <h4>최근 댓글 달린 게시물</h4>
+      <div class="w-sub">지금 얘기 도는 데가 여기다</div>
+      <ul class="recent">
+        <li><a href="#"><span class="cnt">[4]</span><span class="tt">월드컵 이벤트 예측 내역이</span><span class="bd">자유</span></a></li>
+        <li><a href="#"><span class="cnt">[1]</span><span class="tt">한국 축구 빙고의 저주 7월 1일 기준</span><span class="bd">자유</span></a></li>
+        <li><a href="#"><span class="cnt">[1]</span><span class="tt">[David Ornstein] 토트넘, 마테우스…</span><span class="bd">축구</span></a></li>
+      </ul>
+    </div>
+
+    <div class="widget">
+      <h4>오늘의 설문</h4>
+      <div class="w-sub">한 표가 여론이 된다</div>
+      <p class="poll-q">아스날 다음 영입 1순위는?</p>
+      <button class="poll-opt" data-poll><span>기마랑이스</span><span class="ring"></span></button>
+      <button class="poll-opt sel" data-poll><span>토날리</span><span class="ring"></span></button>
+      <button class="poll-opt" data-poll><span>마페</span><span class="ring"></span></button>
+      <button class="poll-opt" data-poll><span>부아디</span><span class="ring"></span></button>
+      <button class="poll-cta">투표하고 결과 보기</button>
+    </div>
+
+    <div class="adbox">
+      <span class="lb">광고</span>
+      <span class="sz num">MEDIUM RECTANGLE · 300×250</span>
+    </div>
+
+  </aside>
+</div>
+
+<!-- ═══════════ 비교용: 빈 상태 시안 ═══════════
+     현재 프로덕션에서 실제로 뜨는 화면. 위 목록이 찬 상태와 나란히 비교하려고
+     같은 파일 하단에 붙였다. (실제 페이지엔 이 라벨 스트립이 없다) -->
+<section class="cmp">
+  <div class="wrap cmp-in">
+    <div class="cmp-lab">
+      <span class="cmp-badge">Mockup Note</span>
+      <span class="cmp-txt">빈 상태 시안 — 최근 7일 추천글이 0건일 때. 위 카드와 같은 컴포넌트, 목록 자리만 교체된다.</span>
+    </div>
+
+    <div class="cmp-body">
+      <section class="hot">
+        <div class="hot-head">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+            실시간 인기글
+          </h2>
+          <span class="hot-meta">추천 1+ · 최근 7일</span>
+        </div>
+
+        <div class="utabs" id="sorts2">
+          <button class="on">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>
+            추천순
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/></svg>
+            댓글순
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+            조회순
+          </button>
+        </div>
+
+        <!-- 빈 상태: "없습니다" 대신 이미 존재하는 동선 3개로 돌려보낸다 -->
+        <div class="empty">
+          <div class="empty-mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 22V10l5-8a2.5 2.5 0 0 1 2.4 3.2L13.5 9H19a2 2 0 0 1 2 2.4l-1.6 8A2 2 0 0 1 17.4 21H7Z"/><path d="M7 10H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>
+          </div>
+          <p class="empty-t">이번 주엔 아직 아무도 추천을 안 눌렀다</p>
+          <p class="empty-d">여기 올라오는 조건은 딱 하나, 최근 7일 안에 추천 1개. 읽다가 괜찮은 글 있으면 추천 한 번 눌러주면 그 글이 바로 이 자리에 뜬다.</p>
+          <div class="empty-acts">
+            <a class="cta-burg" href="p-board.html">축구 게시판 보러 가기</a>
+            <a class="cta-ghost" href="p-board.html">자유 게시판 보러 가기</a>
+            <a class="cta-ghost" href="#">내가 첫 글 쓰기</a>
+          </div>
+          <p class="empty-hint">추천 <b>1개</b>면 충분하다 — 문턱은 이미 바닥에 붙어 있다</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 다크 푸터 ═══════════ -->
+<footer class="footer grain">
+  <div class="wrap">
+    <span class="f-logo">그깟 공놀이</span>
+    <div class="f-domain num">GONGNORI.FAN</div>
+    <p class="f-slogan">그깟 공놀이에 진심인 팬들의 놀이터</p>
+    <nav class="f-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <p class="f-copy">© 2026 GONGNORI.FAN — SEE YOU AT KICKOFF</p>
+  </div>
+</footer>
+
+<!-- ═══════════ 글쓰기 FAB ═══════════ -->
+<a class="fab" href="#" aria-label="글쓰기">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+</a>
+
+<!-- ═══════════ 모바일 하단 탭 ═══════════ -->
+<nav class="bottomtab">
+  <div class="bt-in">
+    <a href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      담벼락
+    </a>
+    <a href="p-explore.html" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+      운동장
+    </a>
+    <a href="p-prediction.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      승부예측
+    </a>
+    <a href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      글쓰기
+    </a>
+  </div>
+</nav>
+
+<script>
+/* 최소 JS: 정렬 탭 · 설문 선택 데모 */
+(function () {
+  function single(sel, cls) {
+    var els = document.querySelectorAll(sel);
+    els.forEach(function (b) {
+      b.addEventListener("click", function () {
+        els.forEach(function (x) { x.classList.remove(cls); });
+        b.classList.add(cls);
+      });
+    });
+  }
+  single("#sorts button", "on");
+  single("#sorts2 button", "on");
+  single("[data-poll]", "sel");
+})();
+</script>
+
+<!--
+제안: (구조 변경 아님 — 검토용 메모)
+
+1) 게시판이 2개뿐인 게 이 페이지의 진짜 문제다. 디자인으로는 "카드를 키워 밴드에
+   띄우는" 것까지가 한계다. 근본 해결은 (a) 축구의 하위 채널(이적시장·월드컵·캣스날)을
+   이 그리드에 함께 노출하거나, (b) 아직 안 연 게시판을 "준비 중" 상태로 미리 보여주는
+   것. (b)는 없는 기능을 그리는 셈이라 이번 목업에선 뺐다.
+
+2) 빈 상태에서 화면 절반이 비는 근본 원인은 "추천 1+ · 최근 7일"이라는 필터가
+   현재 트래픽 대비 너무 좁아서다. 조건을 못 채우면 목록 자체가 사라지는 all-or-nothing
+   구조인데, 폴백으로 "최근 7일 댓글 많은 글"을 대신 채우면 이 카드가 비는 날이 거의
+   없어진다. (새 컴포넌트 없이 같은 행 포맷 재사용 가능 — 다만 이건 로직 변경이라
+   이번 목업에는 반영하지 않음)
+
+3) 게시판 카드에서 /community/{slug} 로 나가는 게 유일한 출구다. 카드 안에 그 게시판의
+   최신 글 제목 1줄을 얹으면 "들어갈 이유"가 생긴다. 현재는 이름만 있어서 클릭 동기가
+   약하다.
+
+4) 모바일에서 현재는 xl 미만일 때 우측 사이드바를 통째로 숨긴다 → 디스코드 배너·설문·
+   광고가 모바일 유저에게 전혀 안 보인다. 이 목업은 본문 아래로 내리는 쪽을 택했다.
+   특히 디스코드 배너는 유입 채널이라 모바일에서 숨기는 손실이 크다.
+
+5) 섹션 헤더(EXPLORE / 운동장)를 다크 밴드로 올리면서, 우측 사이드바의 시작점이
+   "실시간 인기글" 카드와 같은 높이로 맞춰졌다. 현재 구현에서는 사이드바가 흰 섹션
+   헤더 옆에서 시작해 위쪽 정렬이 어긋나 보였다.
+-->
+</body>
+</html>

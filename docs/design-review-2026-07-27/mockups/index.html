@@ -55,15 +55,16 @@
 <div class="placeholder" id="ph">이 시안은 아직 생성 중입니다 — 잠시 후 탭을 다시 눌러보세요.</div>
 <script>
   const PAGES = [
-    { file: "a-matchday.html",       name: "홈 담벼락",   desc: "A 매치데이 — 오늘의 메인 이벤트 다크 밴드 + 카드 3티어" },
-    { file: "p-prediction.html",     name: "승부예측",   desc: "슬레이트 밴드 + 다크 픽 타일 + 슬립 레일" },
-    { file: "p-post.html",           name: "글 상세",     desc: "라이트 본문 — 읽기 가독성 우선, 다크는 푸터만" },
-    { file: "p-board.html",          name: "게시판",     desc: "게시판 헤더 밴드 + 채널 카드 그리드 + 글 목록" },
-    { file: "p-write.html",          name: "글쓰기",     desc: "집중 화면 — 스티키 툴바 + 발행 바" },
-    { file: "p-mypredictions.html",  name: "내 예측",     desc: "성적 대시보드 밴드 + 슬립 카드" },
-    { file: "p-snack.html",          name: "떡밥 피드",   desc: "풀스크린 다크 — 세로 스냅 소비 모드" },
-    { file: "p-search.html",         name: "검색",       desc: "검색 밴드 + 하이라이트 결과" },
-    { file: "p-stadium.html",        name: "운동장",     desc: "야간 조명 밴드 + 레벨 게이지 + 기여 랭킹" },
+    { file: "a-matchday.html",       name: "담벼락 /",         desc: "GNB① 홈 — 다크 밴드(톱스토리 캐러셀 + 오늘의 경기) + 현행 3컬럼 피드" },
+    { file: "p-explore.html",        name: "운동장 /explore",  desc: "GNB② 게시판 둘러보기 — 카드 그리드 + 실시간 인기글 (빈 상태 시안 포함)" },
+    { file: "p-prediction.html",     name: "승부예측",         desc: "GNB③ 슬레이트 밴드 + 다크 픽 타일 + 슬립 레일" },
+    { file: "p-board.html",          name: "개별 게시판",       desc: "/community/[slug] — 채널 카드 + 말머리 필터 + 글 목록" },
+    { file: "p-post.html",           name: "글 상세",           desc: "라이트 본문 — 읽기 가독성 우선, 다크는 푸터만" },
+    { file: "p-write.html",          name: "글쓰기",           desc: "집중 화면 — 스티키 툴바 + 발행 바" },
+    { file: "p-mypredictions.html",  name: "내 예측",           desc: "성적 대시보드 밴드 + 슬립 카드" },
+    { file: "p-search.html",         name: "검색",             desc: "검색 밴드 + 하이라이트 결과" },
+    { file: "p-snack.html",          name: "떡밥 (숨김)",       desc: "/snack — GNB 비노출. 풀스크린 다크 세로 스냅" },
+    { file: "p-stadium.html",        name: "스타디움 (숨김)",   desc: "/stadium — GNB 비노출. 야간 조명 밴드 + 레벨 게이지" },
   ];
   const VARIANTS = [
     { file: "a-matchday.html",   name: "A 매치데이",       desc: "✅ 채택 — 라이트 + 다크 3존, 버건디 클라레" },
