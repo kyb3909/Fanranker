@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Crown, ArrowRightLeft, Popcorn } from "lucide-react"
+import { Compass, LayoutGrid, Crown, ArrowRightLeft } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -71,13 +71,10 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             담벼락
           </span>
         </Link>
-        {/* 떡밥 피드 — 풀스크린 스와이프 소비 모드 (2026-07-26). 페이지가 fixed 오버레이라 data-on 불필요 */}
-        <Link href="/snack">
-          <span className={baseClass}>
-            <Popcorn className="h-[18px] w-[18px] shrink-0" />
-            떡밥
-          </span>
-        </Link>
+        {/*
+          떡밥(/snack 풀스크린 스와이프)은 홈 오늘의 떡밥 탭과 이름 충돌로 메뉴에서 숨김 (2026-07-27).
+          라우트는 유지 — 직접 URL로만 접근 가능.
+        */}
         <Link href="/explore">
           <span className={baseClass} data-on={isExplore ? "true" : undefined}>
             <Compass className="h-[18px] w-[18px] shrink-0" />
