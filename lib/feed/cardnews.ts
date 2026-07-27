@@ -131,7 +131,12 @@ export async function fetchCardNews(
   })
 
   return {
-    cards,
+    // 사진 없는 글은 떡밥에서 배제한다 (2026-07-28).
+    // 카드뉴스는 전면 오버레이(사진 위 제목)라 이미지가 없으면 카드가 성립하지 않는다.
+    // image 는 image 컬럼 → 본문 첫 이미지 → 유튜브 썸네일 순으로 이미 폴백되므로,
+    // 여기서 걸러지는 건 인스타/X 임베드만 있는 글과 순수 텍스트 글이다.
+    cards: cards.filter((c) => !!c.image),
+    // 커서는 필터 전 rows 기준 — 걸러진 글도 "읽은" 것으로 쳐야 다음 페이지가 밀리지 않는다.
     nextCursor: rows.length === PAGE_SIZE ? rows[rows.length - 1].created_at : null,
   }
 }

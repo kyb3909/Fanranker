@@ -680,18 +680,29 @@ export function CardNewsFeed({
   const [cursor, setCursor] = useState(initialCursor)
   const [loading, setLoading] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  /** 이미 실은 카드 id — 빈 페이지 건너뛰기 루프에서 동기적으로 중복을 걸러야 한다 */
+  const seenIds = useRef(new Set(initialCards.map((c) => c.id)))
 
   const loadMore = useCallback(async () => {
     if (loading || !cursor) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/feed/cardnews?before=${encodeURIComponent(cursor)}`)
-      const d = (await res.json()) as { cards: CardNewsItem[]; nextCursor: string | null }
-      setCards((prev) => {
-        const seen = new Set(prev.map((c) => c.id))
-        return [...prev, ...d.cards.filter((c) => !seen.has(c.id))]
-      })
-      setCursor(d.nextCursor)
+      // 서버가 사진 없는 글을 걸러내므로 한 페이지가 통째로 비어 돌아올 수 있다.
+      // 그대로 두면 sentinel 이 화면 밖에 남아 스크롤이 멈추므로, 새 카드가 하나도
+      // 없으면 커서를 따라 최대 3페이지까지 이어서 받는다.
+      let next: string | null = cursor
+      let added = 0
+      for (let hop = 0; hop < 3 && next && added === 0; hop++) {
+        const res = await fetch(`/api/feed/cardnews?before=${encodeURIComponent(next)}`)
+        const d = (await res.json()) as { cards: CardNewsItem[]; nextCursor: string | null }
+        // 중복 판정은 ref 로 — setCards 업데이터 안에서 센 값은 이 루프에서 못 읽는다
+        const fresh = d.cards.filter((c) => !seenIds.current.has(c.id))
+        fresh.forEach((c) => seenIds.current.add(c.id))
+        added = fresh.length
+        if (fresh.length) setCards((prev) => [...prev, ...fresh])
+        next = d.nextCursor
+      }
+      setCursor(next)
     } finally {
       setLoading(false)
     }
@@ -722,8 +733,8 @@ export function CardNewsFeed({
     <div className="flex flex-col gap-3">
       {/*
         오늘의 떡밥은 전부 히어로(사진 위 제목) 카드로 간다.
-        시각 자료가 없는 글만 컴팩트 행으로 떨어뜨린다 — 회색 판때기를 300px 높이로
-        띄우는 건 카드뉴스가 아니라 빈 자리다.
+        사진 없는 글은 서버(fetchCardNews)에서 이미 배제되므로 실제로는 전부 이 분기를
+        타지만, API 응답이 바뀌어도 회색 판때기가 300px 로 서지 않도록 컴팩트 폴백은 남긴다.
       */}
       {ordered.map((card, i) =>
         card.image || card.media ? (

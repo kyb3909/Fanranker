@@ -64,6 +64,11 @@
     position: relative;
     z-index: 1;
   }
+  /* 카드가 밴드 아래로 걸쳐 나가야 할 때 (운동장 게시판 카드).
+   * 그레인/그라디언트는 요소 박스 안에만 그려지므로 클리핑을 풀어도 새지 않는다. */
+  .gn-band-open {
+    overflow: visible;
+  }
 
   /* 다크 카드 / 타일 */
   .gn-dcard {
