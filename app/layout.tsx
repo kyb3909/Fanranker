@@ -2,7 +2,7 @@ import type React from "react"
 import { Suspense } from "react"
 import type { Metadata, Viewport } from "next"
 import localFont from "next/font/local"
-import { Nanum_Pen_Script } from "next/font/google"
+import { Nanum_Pen_Script, Barlow_Condensed } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -20,6 +20,9 @@ import "./globals.css"
 // 월드컵에서 추출된 에디토리얼 디자인 토큰. 모든 셀렉터가 .worldcup-scope prefix 라
 // 다른 페이지엔 영향 없음 — .worldcup-scope wrapper 가 있는 트리에서만 활성화.
 import "./worldcup/wc-tokens.css"
+// 시안 A "매치데이" 디자인 레이어 — 다크 존 팔레트 + 콘덴스드 숫자 + 썸네일 트리트먼트.
+// 전부 --gn-* / .gn-* 네임스페이스라 기존 --wc-* 라이트 토큰과 충돌하지 않는다.
+import "./a-tokens.css"
 
 // 본문/UI 한글 폰트: Pretendard Std Variable (KS X 1001 subset, ~286 KB).
 // 한국어 웹 텍스트 ~98% 커버, 누락 글리프는 시스템 폰트 폴백.
@@ -53,6 +56,16 @@ const nanumPen = Nanum_Pen_Script({
   variable: "--font-pen",
   // 푸터 장식용 브러시 폰트 — optional 로 swap 리플로우(CLS) 제거 (첫 방문 fallback 허용).
   display: "optional",
+  preload: false,
+})
+
+// 시각·스코어·카운트다운용 콘덴스드 라틴 (시안 A). 한글은 Pretendard 그대로.
+// 숫자 슬롯에만 쓰이므로 preload 없이 swap — 폭이 좁아 리플로우 영향도 작다.
+const barlowCondensed = Barlow_Condensed({
+  weight: ["600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-cond",
+  display: "swap",
   preload: false,
 })
 
@@ -164,7 +177,7 @@ export default function RootLayout({
       <ClerkProvider localization={koLocalization} dynamic>
         <html
           lang="ko"
-          className={`${pretendard.variable} ${suit.variable} ${nanumPen.variable}`}
+          className={`${pretendard.variable} ${suit.variable} ${nanumPen.variable} ${barlowCondensed.variable}`}
           suppressHydrationWarning
         >
           {/*

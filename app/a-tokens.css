@@ -1,0 +1,132 @@
+/*
+ * 시안 A "매치데이" 디자인 레이어 (docs/design-review-2026-07-27/ 채택안)
+ *
+ * 기존 --wc-* 토큰(라이트 베이스)은 그대로 두고, A가 추가하는 것만 정의한다:
+ *   1) 다크 존 팔레트 (--gn-night 계열) — 상단 밴드 / 픽 존 / 푸터
+ *   2) 콘덴스드 숫자 서체 유틸 (.gn-num)
+ *   3) 썸네일 일괄 트리트먼트 (.gn-thumb)
+ *
+ * 🚫 금지: 한쪽 면 색깔 액센트 보더 (border-left: Npx solid <색> 류).
+ *    위계는 배경 틴트 / 칩 / 타이포 웨이트 / 전체 테두리로만 만든다.
+ */
+
+:root {
+  /* 다크 존 */
+  --gn-night: #16141a;
+  --gn-night-soft: #1f1c24;
+  --gn-night-tile: #262230;
+  --gn-night-line: #363040;
+  --gn-cream: #f5efe7;
+  --gn-cream-dim: #b8b0a4;
+  /* 버건디 스케일 — --wc-burgundy(#961e37) 를 중심으로 확장 */
+  --gn-bg-50: #faf1f3;
+  --gn-bg-100: #f4dfe4;
+  --gn-bg-700: #771629;
+  --gn-bg-900: #4a0d19;
+  /* LIVE 전용 라임 — 화면당 1곳 */
+  --gn-live: #b7f34b;
+}
+
+/* 아래 유틸은 @layer components 안에 둔다.
+ * 레이어 없는 CSS 는 Tailwind 의 @layer utilities 를 특이도와 무관하게 이겨서,
+ * `absolute inset-0` 같은 배치 유틸이 .gn-thumb 의 position 에 먹히는 사고가 난다. */
+@layer components {
+  /* 콘덴스드 + tabular — 시각·스코어·카운트다운 */
+  .gn-num {
+    font-family: var(--font-cond), var(--font-pretendard), sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: 0.02em;
+  }
+
+  /* ── 다크 밴드 ── */
+  .gn-band {
+    position: relative;
+    overflow: hidden;
+    color: var(--gn-cream);
+    background:
+      radial-gradient(1100px 420px at 78% -10%, rgba(150, 30, 55, 0.28), transparent 60%),
+      radial-gradient(700px 300px at 8% 110%, rgba(150, 30, 55, 0.14), transparent 65%),
+      var(--gn-night);
+  }
+  /* 미세 그레인 — 다크 면의 밴딩 제거 */
+  .gn-band::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.05;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .gn-band > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 다크 카드 / 타일 */
+  .gn-dcard {
+    background: var(--gn-night-soft);
+    border: 1px solid var(--gn-night-line);
+    border-radius: 14px;
+  }
+  .gn-dtile {
+    background: var(--gn-night-tile);
+    border: 1px solid var(--gn-night-line);
+    border-radius: 11px;
+  }
+
+  /* ── 썸네일 일괄 트리트먼트: 채도 down + 하단 그라데이션 ── */
+  .gn-thumb {
+    position: relative;
+    overflow: hidden;
+    background: var(--gn-night-soft);
+  }
+  .gn-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.82) contrast(1.06) brightness(0.9);
+  }
+  .gn-thumb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(22, 20, 26, 0) 45%, rgba(22, 20, 26, 0.55) 100%);
+  }
+  /* 히어로용 — 하단 카피가 얹히므로 더 진하게 */
+  .gn-thumb-hero::after {
+    background: linear-gradient(
+      180deg,
+      rgba(22, 20, 26, 0.05) 20%,
+      rgba(22, 20, 26, 0.72) 68%,
+      rgba(22, 20, 26, 0.94) 100%
+    );
+  }
+
+  /* LIVE 도트 */
+  .gn-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gn-live);
+    animation: gn-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes gn-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.75);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gn-live-dot {
+      animation: none;
+    }
+  }
+}

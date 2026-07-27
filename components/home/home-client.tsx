@@ -12,6 +12,7 @@ import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 import { TodayGamesStrip } from "@/components/home/today-games-strip"
+import { MatchdayBand } from "@/components/home/matchday-band"
 import { CardNewsFeed } from "@/components/cardnews/card-news-feed"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
@@ -137,6 +138,9 @@ export function HomeClient({
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
+      {/* 오늘의 메인 이벤트 — 풀블리드 다크 밴드 (시안 A). 오늘의 떡밥 탭에서만.
+          게시판/오늘의 경기 탭은 목록 소비 모드라 밴드가 스크롤만 늘린다. */}
+      {feedTab === "cardnews" && <MatchdayBand cards={initialCardNews?.cards ?? []} />}
       <main
         id="main-content"
         className="mx-auto min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
@@ -286,8 +290,7 @@ export function HomeClient({
 
             {feedTab === "cardnews" && (
               <div className="space-y-3">
-                {/* 오늘의 경기 일정 — 고정 없이 상단 배치 (예측 상시 진입은 GNB 승부예측이 담당) */}
-                <TodayGamesStrip />
+                {/* 오늘의 경기 일정은 상단 MatchdayBand 가 담당 — 여기서 중복 렌더 X */}
                 <CardNewsFeed
                   initialCards={initialCardNews?.cards ?? []}
                   initialCursor={initialCardNews?.nextCursor ?? null}
