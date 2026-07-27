@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>시안 J — Y2K 스포츠 에디토리얼 · gongnori.fan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Black+Han+Sans&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #0d0d0f;
+    --burg: #961e37;
+    --burg-deep: #771629;
+    --burg-hot: #c02648;
+    --paper: #f4f1ec;
+    --line: #0d0d0f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .anton { font-family: "Anton", "Black Han Sans", sans-serif; font-weight: 400; letter-spacing: 0.01em; }
+  .bhs { font-family: "Black Han Sans", "Pretendard Variable", sans-serif; font-weight: 400; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+
+  /* ============ TOP MARQUEE TICKER ============ */
+  .ticker {
+    background: var(--ink);
+    color: #fff;
+    overflow: hidden;
+    white-space: nowrap;
+    border-bottom: 3px solid var(--burg);
+    position: relative;
+  }
+  .ticker-inner {
+    display: inline-flex;
+    align-items: center;
+    animation: marquee 32s linear infinite;
+    padding: 8px 0;
+  }
+  .ticker:hover .ticker-inner { animation-play-state: paused; }
+  .ticker-item {
+    font-family: "Anton", "Black Han Sans", sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .ticker-item .star { color: var(--burg-hot); font-size: 12px; }
+  .ticker-item .live {
+    background: var(--burg);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.15em;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ============ HEADER ============ */
+  header.gnb {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.94);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--ink);
+  }
+  .gnb-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+    gap: 24px;
+  }
+  .logo { display: flex; align-items: baseline; gap: 10px; }
+  .logo .brush {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 26px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    transform: skewX(-4deg);
+  }
+  .logo .brush em { font-style: normal; color: var(--burg); }
+  .logo .domain {
+    font-family: "Anton", sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--burg);
+    background: var(--paper);
+    padding: 3px 8px;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+  }
+  nav.main-nav { display: flex; gap: 4px; }
+  nav.main-nav a {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 16px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    transition: all .15s ease;
+    position: relative;
+  }
+  nav.main-nav a.on { background: var(--ink); color: #fff; }
+  nav.main-nav a:not(.on):hover { background: var(--paper); transform: translateY(-2px); }
+  .gnb-icons { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 38px; height: 38px;
+    display: grid; place-items: center;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: #fff;
+    transition: all .15s ease;
+    font-size: 15px;
+  }
+  .icon-btn:hover { background: var(--burg); color: #fff; border-color: var(--burg); transform: scale(1.08); }
+  .icon-btn.avatar { background: var(--burg); color: #fff; border-color: var(--ink); font-family: "Anton"; font-size: 13px; }
+
+  /* ============ HERO ============ */
+  .hero {
+    position: relative;
+    padding: 56px 0 90px;
+    overflow: hidden;
+  }
+  .hero-kicker {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 6px;
+  }
+  .hero-kicker .tag {
+    font-family: "Anton", sans-serif;
+    font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+    background: var(--ink); color: #fff;
+    padding: 5px 12px;
+  }
+  .hero-kicker .slogan {
+    font-size: 12px; font-weight: 600; color: #666;
+    letter-spacing: 0.04em;
+  }
+  .hero-stack { position: relative; }
+  .hero-outline {
+    font-family: "Anton", sans-serif;
+    font-size: clamp(90px, 14vw, 190px);
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--ink);
+    letter-spacing: -0.01em;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 0;
+    margin-top: -54px;
+    position: relative;
+  }
+  .hero-img {
+    position: relative;
+    background: var(--burg-deep);
+    border: 3px solid var(--ink);
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+  }
+  .hero-img img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(1) contrast(1.15) brightness(1.05);
+    mix-blend-mode: screen;
+  }
+  .hero-img .grain {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.06) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+  }
+  .hero-copy {
+    position: relative;
+    z-index: 3;
+    padding: 44px 0 0 0;
+    margin-left: -110px;
+  }
+  .hero-fill {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: clamp(38px, 4.6vw, 62px);
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+    background: #fff;
+    display: inline;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    padding: 2px 14px;
+    border: 3px solid var(--ink);
+    box-shadow: 8px 8px 0 var(--burg);
+  }
+  .hero-fill em { font-style: normal; color: var(--burg); }
+  .hero-sub {
+    margin-top: 30px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding-left: 118px;
+  }
+  .hero-src {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800;
+  }
+  .hero-src .pill {
+    background: var(--paper); border: 1.5px solid var(--ink);
+    padding: 3px 10px; border-radius: 999px;
+    font-family: "Anton"; letter-spacing: 0.08em; font-size: 11px;
+  }
+  .hero-sub p { font-size: 14px; line-height: 1.65; color: #444; max-width: 420px; font-weight: 500; }
+  .hero-cta {
+    margin-top: 8px;
+    display: inline-flex; align-items: center; gap: 10px;
+    align-self: flex-start;
+    background: var(--ink); color: #fff;
+    font-family: "Black Han Sans"; font-size: 15px;
+    padding: 12px 26px; border-radius: 999px;
+    border: 2px solid var(--ink);
+    transition: all .15s ease;
+  }
+  .hero-cta:hover { background: var(--burg); border-color: var(--burg); transform: scale(1.04); }
+  .hero-num {
+    position: absolute;
+    right: -8px; top: -74px;
+    font-family: "Anton";
+    font-size: 200px;
+    line-height: 1;
+    color: transparent;
+    -webkit-text-stroke: 1.5px rgba(150,30,55,.5);
+    z-index: 0;
+    user-select: none;
+  }
+
+  /* ============ BURGUNDY BAND — TODAY'S MATCH ============ */
+  .band-burg {
+    background: var(--burg);
+    color: #fff;
+    padding: 70px 0 80px;
+    position: relative;
+    overflow: hidden;
+    border-top: 4px solid var(--ink);
+    border-bottom: 4px solid var(--ink);
+  }
+  .band-burg::before {
+    content: "MATCHDAY MATCHDAY MATCHDAY";
+    position: absolute;
+    top: 12px; left: 0; right: 0;
+    font-family: "Anton";
+    font-size: 120px;
+    line-height: 1;
+    white-space: nowrap;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,.18);
+    pointer-events: none;
+  }
+  .band-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 36px; position: relative; z-index: 1;
+  }
+  .band-title { position: relative; }
+  .band-title .en {
+    font-family: "Anton";
+    font-size: 68px;
+    line-height: 0.95;
+    text-transform: uppercase;
+    color: transparent;
+    -webkit-text-stroke: 2px #fff;
+    display: block;
+  }
+  .band-title .ko {
+    font-family: "Black Han Sans";
+    font-size: 34px;
+    margin-top: -22px;
+    display: inline-block;
+    background: #fff; color: var(--burg);
+    padding: 2px 14px;
+    transform: rotate(-1.5deg);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  .band-date {
+    font-family: "Anton"; font-size: 15px; letter-spacing: 0.12em;
+    text-align: right; opacity: .9;
+  }
+  .band-date b { display: block; font-size: 34px; letter-spacing: 0.02em; }
+
+  .match-feature {
+    background: #fff;
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    box-shadow: 10px 10px 0 var(--burg-deep);
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    margin-bottom: 26px;
+  }
+  .mf-side {
+    padding: 34px 30px;
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
+  }
+  .mf-side.home { background: var(--paper); text-align: right; align-items: flex-end; }
+  .mf-side.away { text-align: left; align-items: flex-start; }
+  .mf-team {
+    font-family: "Black Han Sans";
+    font-size: clamp(28px, 3.4vw, 44px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  .mf-role { font-family: "Anton"; font-size: 11px; letter-spacing: 0.25em; color: var(--burg); text-transform: uppercase; }
+  .mf-center {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px 26px;
+    background: var(--ink); color: #fff;
+    gap: 4px;
+    min-width: 150px;
+  }
+  .mf-vs {
+    font-family: "Anton";
+    font-size: 46px;
+    line-height: 1;
+    color: transparent;
+    -webkit-text-stroke: 1.5px #fff;
+  }
+  .mf-time { font-family: "Anton"; font-size: 26px; letter-spacing: 0.05em; }
+  .mf-league {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.2em;
+    background: var(--burg); padding: 2px 10px; border-radius: 999px;
+  }
+
+  .pick-row {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 18px 20px 22px;
+    border-top: 2px dashed rgba(13,13,15,.25);
+    flex-wrap: wrap;
+  }
+  .pick-label {
+    font-family: "Anton"; font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--burg);
+    margin-right: 6px;
+  }
+  .pick-btn {
+    font-family: "Black Han Sans";
+    font-size: 15px;
+    padding: 11px 26px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    transition: transform .13s ease, background .13s ease, color .13s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .pick-btn small { font-family: "Anton"; font-size: 10px; letter-spacing: 0.18em; color: var(--burg); }
+  .pick-btn:hover { transform: scale(1.07); }
+  .pick-btn.selected {
+    background: var(--ink); color: #fff;
+    box-shadow: 4px 4px 0 var(--burg);
+  }
+  .pick-btn.selected small { color: var(--burg-hot); }
+
+  .match-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    position: relative; z-index: 1;
+  }
+  .match-mini {
+    background: var(--burg-deep);
+    border: 2px solid rgba(255,255,255,.85);
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .match-mini:hover { transform: translateY(-4px); background: var(--ink); }
+  .mm-top { display: flex; justify-content: space-between; align-items: center; }
+  .mm-time { font-family: "Anton"; font-size: 24px; }
+  .mm-league { font-size: 10px; font-weight: 800; letter-spacing: 0.2em; background: rgba(255,255,255,.15); padding: 3px 9px; border-radius: 999px; }
+  .mm-teams { font-family: "Black Han Sans"; font-size: 18px; line-height: 1.35; }
+  .mm-teams .vs { font-family: "Anton"; font-size: 12px; color: var(--burg-hot); padding: 0 6px; -webkit-text-stroke: 0; color: #ff98ae; }
+  .band-cta {
+    margin-top: 34px;
+    display: flex; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .band-cta a {
+    font-family: "Black Han Sans"; font-size: 18px;
+    background: #fff; color: var(--burg);
+    border: 3px solid var(--ink);
+    padding: 15px 44px;
+    border-radius: 999px;
+    box-shadow: 6px 6px 0 var(--ink);
+    transition: all .15s ease;
+  }
+  .band-cta a:hover { transform: scale(1.05) rotate(-1deg); background: var(--ink); color: #fff; }
+
+  /* ============ FEED — 오늘의 떡밥 ============ */
+  .feed { padding: 84px 0 70px; position: relative; }
+  .feed-head { position: relative; margin-bottom: 46px; }
+  .feed-head .outline {
+    font-family: "Anton";
+    font-size: clamp(80px, 11vw, 150px);
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--ink);
+    user-select: none;
+  }
+  .feed-head .ko {
+    position: absolute;
+    left: 210px; bottom: -8px;
+    font-family: "Black Han Sans";
+    font-size: 40px;
+    background: var(--burg); color: #fff;
+    padding: 4px 18px;
+    transform: rotate(1.4deg);
+    box-shadow: 6px 6px 0 var(--ink);
+    z-index: 2;
+  }
+  .feed-head .count {
+    position: absolute; right: 0; bottom: 4px;
+    font-family: "Anton"; font-size: 14px; letter-spacing: 0.15em;
+    color: var(--burg);
+  }
+
+  .feed-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 20px;
+  }
+  .card {
+    border: 2.5px solid var(--ink);
+    background: #fff;
+    display: flex; flex-direction: column;
+    transition: transform .16s ease, box-shadow .16s ease;
+    position: relative;
+  }
+  .card:hover { transform: translate(-3px, -3px); box-shadow: 7px 7px 0 var(--burg); }
+  .card .thumb { overflow: hidden; border-bottom: 2.5px solid var(--ink); position: relative; background: #ddd; }
+  .card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .card .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
+  .src-tag {
+    align-self: flex-start;
+    font-family: "Anton"; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    border: 1.5px solid var(--ink);
+    padding: 3px 9px; border-radius: 999px;
+    background: var(--paper);
+  }
+  .src-tag.tier1 { background: var(--ink); color: #fff; }
+  .src-tag.official { background: var(--burg); color: #fff; border-color: var(--burg); }
+  .card h3 {
+    font-family: "Black Han Sans";
+    font-size: 19px; line-height: 1.32; letter-spacing: -0.01em;
+    font-weight: 400;
+  }
+  .card .meta {
+    margin-top: auto;
+    font-size: 10.5px; font-weight: 700; color: #999;
+    letter-spacing: 0.05em;
+    display: flex; gap: 8px;
+  }
+  .card .meta b { color: var(--burg); }
+
+  /* big feature card */
+  .card.big { grid-column: span 7; }
+  .card.big .thumb { aspect-ratio: 16/8.5; }
+  .card.big .thumb img { filter: grayscale(1) contrast(1.15) brightness(1.05); mix-blend-mode: screen; }
+  .card.big .thumb { background: var(--burg-deep); }
+  .card.big .thumb .overlay-word {
+    position: absolute; left: 14px; bottom: 6px;
+    font-family: "Anton"; font-size: 66px; line-height: 1;
+    text-transform: uppercase;
+    color: transparent; -webkit-text-stroke: 1.5px #fff;
+    z-index: 2; pointer-events: none;
+  }
+  .card.big h3 { font-size: 28px; }
+  .card.big .comment {
+    background: var(--paper);
+    border-left: 4px solid var(--burg);
+    font-size: 12.5px; line-height: 1.55;
+    padding: 10px 14px;
+    color: #333;
+  }
+  .card.big .comment b { color: var(--burg); }
+
+  .card.tall { grid-column: span 5; grid-row: span 2; }
+  .card.tall .thumb { aspect-ratio: 16/11; }
+  .card.mid { grid-column: span 4; }
+  .card.mid .thumb { aspect-ratio: 16/9; }
+  .card.mini { grid-column: span 3; }
+  .card.mini .thumb { aspect-ratio: 16/10; }
+  .card.mini h3 { font-size: 15px; }
+
+  /* text-only loud card */
+  .card.shout { justify-content: center; background: var(--ink); color: #fff; border-color: var(--ink); }
+  .card.shout:hover { box-shadow: 7px 7px 0 var(--burg-hot); }
+  .card.shout .body { gap: 12px; padding: 22px; }
+  .card.shout .src-tag { background: transparent; color: #fff; border-color: #fff; }
+  .card.shout .src-tag.tier1 { background: var(--burg); border-color: var(--burg); }
+  .card.shout h3 { font-size: 24px; line-height: 1.28; }
+  .card.shout h3 em { font-style: normal; color: transparent; -webkit-text-stroke: 1px var(--burg-hot); font-family: "Anton"; letter-spacing: 0.02em; }
+  .card.shout .meta { color: rgba(255,255,255,.5); }
+  .card.shout.alt { background: #fff; color: var(--ink); border-color: var(--ink); }
+  .card.shout.alt h3 em { -webkit-text-stroke: 1px var(--burg); }
+  .card.shout.alt .src-tag { color: var(--ink); border-color: var(--ink); background: var(--paper); }
+  .card.shout.alt .meta { color: #999; }
+
+  /* ============ BLACK BAND — POLL + DISCORD ============ */
+  .band-black {
+    background: var(--ink);
+    color: #fff;
+    padding: 76px 0 84px;
+    position: relative;
+    overflow: hidden;
+    border-top: 4px solid var(--burg);
+    border-bottom: 4px solid var(--burg);
+  }
+  .band-black::after {
+    content: "VOTE ✦ VOTE ✦ VOTE ✦ VOTE ✦ VOTE ✦";
+    position: absolute;
+    bottom: 10px; left: 0; right: 0;
+    font-family: "Anton"; font-size: 90px; line-height: 1;
+    white-space: nowrap;
+    color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.12);
+    pointer-events: none;
+  }
+  .bb-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 56px;
+    position: relative; z-index: 1;
+    align-items: start;
+  }
+  .poll-head { position: relative; margin-bottom: 28px; }
+  .poll-head .en {
+    font-family: "Anton"; font-size: 56px; line-height: .95; text-transform: uppercase;
+    color: transparent; -webkit-text-stroke: 2px #fff;
+    display: block;
+  }
+  .poll-head .ko {
+    font-family: "Black Han Sans"; font-size: 26px;
+    display: inline-block;
+    margin-top: -14px;
+    background: var(--burg); color: #fff;
+    padding: 2px 12px;
+    transform: rotate(-1.2deg);
+  }
+  .poll-q { font-family: "Black Han Sans"; font-size: 30px; line-height: 1.25; margin-bottom: 22px; }
+  .poll-q em { font-style: normal; color: var(--burg-hot); }
+  .poll-opts { display: flex; flex-direction: column; gap: 10px; max-width: 460px; }
+  .poll-opt {
+    display: flex; align-items: center; justify-content: space-between;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: transparent;
+    color: #fff;
+    font-family: "Black Han Sans"; font-size: 16px;
+    padding: 13px 22px;
+    transition: all .14s ease;
+    text-align: left;
+  }
+  .poll-opt .num { font-family: "Anton"; font-size: 13px; letter-spacing: 0.1em; opacity: .6; }
+  .poll-opt:hover { transform: scale(1.03); border-color: var(--burg-hot); }
+  .poll-opt.selected {
+    background: #fff; color: var(--ink);
+    box-shadow: 5px 5px 0 var(--burg);
+  }
+  .poll-opt.selected .num { color: var(--burg); opacity: 1; }
+  .poll-note { margin-top: 14px; font-size: 11.5px; color: rgba(255,255,255,.55); font-weight: 600; letter-spacing: 0.04em; }
+
+  .discord-box {
+    border: 3px solid #fff;
+    background: var(--burg);
+    padding: 34px 32px 38px;
+    position: relative;
+    box-shadow: 10px 10px 0 var(--burg-deep);
+    transform: rotate(0.8deg);
+  }
+  .discord-box .badge {
+    position: absolute; top: -16px; right: 22px;
+    background: #fff; color: var(--ink);
+    font-family: "Anton"; font-size: 11px; letter-spacing: 0.2em;
+    padding: 6px 14px;
+    border: 2px solid var(--ink);
+    transform: rotate(3deg);
+  }
+  .discord-box h4 {
+    font-family: "Anton"; font-size: 44px; line-height: .95; text-transform: uppercase;
+    color: transparent; -webkit-text-stroke: 1.5px #fff;
+    margin-bottom: 14px;
+  }
+  .discord-box p {
+    font-family: "Black Han Sans"; font-size: 20px; line-height: 1.4;
+    margin-bottom: 22px;
+  }
+  .discord-box .cta {
+    display: inline-block;
+    background: #fff; color: var(--burg);
+    font-family: "Black Han Sans"; font-size: 15px;
+    padding: 12px 30px; border-radius: 999px;
+    border: 2px solid var(--ink);
+    transition: all .15s ease;
+  }
+  .discord-box .cta:hover { transform: scale(1.06); background: var(--ink); color: #fff; }
+
+  .recent-cmts { margin-top: 40px; }
+  .recent-cmts h5 {
+    font-family: "Anton"; font-size: 13px; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--burg-hot); margin-bottom: 14px;
+  }
+  .recent-cmts ul { list-style: none; display: flex; flex-direction: column; }
+  .recent-cmts li {
+    border-top: 1px solid rgba(255,255,255,.2);
+    padding: 11px 4px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    font-size: 14px; font-weight: 600;
+    transition: padding-left .15s ease, color .15s ease;
+  }
+  .recent-cmts li:hover { padding-left: 12px; color: var(--burg-hot); }
+  .recent-cmts li:last-child { border-bottom: 1px solid rgba(255,255,255,.2); }
+  .recent-cmts .cnt {
+    font-family: "Anton"; font-size: 13px;
+    background: var(--burg); padding: 2px 10px; border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  /* ============ FOOTER ============ */
+  footer.site {
+    background: #fff;
+    padding: 60px 0 110px;
+    position: relative;
+    overflow: hidden;
+  }
+  .foot-marquee {
+    font-family: "Anton";
+    font-size: clamp(60px, 9vw, 120px);
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: transparent;
+    -webkit-text-stroke: 1.5px rgba(150,30,55,.35);
+    margin-bottom: 40px;
+    user-select: none;
+  }
+  .foot-row {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; flex-wrap: wrap;
+  }
+  .foot-brand .brush { font-family: "Black Han Sans"; font-size: 30px; transform: skewX(-4deg); display: inline-block; }
+  .foot-brand .brush em { font-style: normal; color: var(--burg); }
+  .foot-brand p { margin-top: 8px; font-size: 12.5px; font-weight: 600; color: #777; }
+  .foot-links { display: flex; gap: 4px 22px; flex-wrap: wrap; }
+  .foot-links a {
+    font-size: 12.5px; font-weight: 700; color: #444;
+    padding-bottom: 2px; border-bottom: 1.5px solid transparent;
+    transition: all .13s ease;
+  }
+  .foot-links a:hover { color: var(--burg); border-bottom-color: var(--burg); }
+
+  /* ============ MOBILE TAB BAR ============ */
+  .tabbar {
+    display: none;
+    position: fixed;
+    left: 12px; right: 12px; bottom: 12px;
+    background: var(--ink); color: #fff;
+    border-radius: 999px;
+    border: 2px solid var(--burg);
+    z-index: 200;
+    padding: 8px 10px;
+    justify-content: space-around;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  }
+  .tabbar a {
+    font-family: "Black Han Sans"; font-size: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 12px; border-radius: 999px;
+  }
+  .tabbar a span.ic { font-size: 16px; }
+  .tabbar a.on { background: var(--burg); }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 1080px) {
+    .card.big { grid-column: span 12; }
+    .card.tall { grid-column: span 6; grid-row: auto; }
+    .card.mid { grid-column: span 6; }
+    .card.mini { grid-column: span 6; }
+    .bb-grid { grid-template-columns: 1fr; gap: 44px; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-copy { margin-left: 0; margin-top: -40px; padding-left: 18px; }
+    .hero-sub { padding-left: 18px; }
+    .hero-num { display: none; }
+  }
+  @media (max-width: 720px) {
+    .wrap { padding: 0 18px; }
+    nav.main-nav { display: none; }
+    .tabbar { display: flex; }
+    .match-feature { grid-template-columns: 1fr; }
+    .mf-side.home { text-align: left; align-items: flex-start; }
+    .mf-center { flex-direction: row; gap: 14px; padding: 14px; }
+    .match-list { grid-template-columns: 1fr; }
+    .feed-head .ko { left: 90px; font-size: 28px; }
+    .card.mini, .card.mid, .card.tall { grid-column: span 12; }
+    body { padding-bottom: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════ MARQUEE TICKER ══════════ -->
+<div class="ticker" aria-label="속보 티커">
+  <div class="ticker-inner">
+    <!-- set A -->
+    <span class="ticker-item"><span class="live">BREAKING</span> 페르난데스 → 토트넘 <span class="star">✦</span></span>
+    <span class="ticker-item">레반도프스키 → 시카고 <span class="star">✦</span></span>
+    <span class="ticker-item">반 보멀, 벨기에 사령탑 <span class="star">✦</span></span>
+    <span class="ticker-item">디오망데 ↔ PSG 5년 계약 근접 <span class="star">✦</span></span>
+    <span class="ticker-item">첼시 "네토 판매 계획 없음" <span class="star">✦</span></span>
+    <span class="ticker-item">아스날, 비니시우스 탐색 <span class="star">✦</span></span>
+    <span class="ticker-item">피를로, 이탈리아 대표팀 접촉 <span class="star">✦</span></span>
+    <!-- set B (duplicate for seamless loop) -->
+    <span class="ticker-item"><span class="live">BREAKING</span> 페르난데스 → 토트넘 <span class="star">✦</span></span>
+    <span class="ticker-item">레반도프스키 → 시카고 <span class="star">✦</span></span>
+    <span class="ticker-item">반 보멀, 벨기에 사령탑 <span class="star">✦</span></span>
+    <span class="ticker-item">디오망데 ↔ PSG 5년 계약 근접 <span class="star">✦</span></span>
+    <span class="ticker-item">첼시 "네토 판매 계획 없음" <span class="star">✦</span></span>
+    <span class="ticker-item">아스날, 비니시우스 탐색 <span class="star">✦</span></span>
+    <span class="ticker-item">피를로, 이탈리아 대표팀 접촉 <span class="star">✦</span></span>
+  </div>
+</div>
+
+<!-- ══════════ GNB ══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-row">
+    <a class="logo" href="#">
+      <span class="brush">그깟 <em>공놀이</em></span>
+      <span class="domain">gongnori.fan</span>
+    </a>
+    <nav class="main-nav">
+      <a href="#" class="on">담벼락</a>
+      <a href="#">운동장</a>
+      <a href="#">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">⌕</button>
+      <button class="icon-btn" aria-label="알림">🔔</button>
+      <button class="icon-btn avatar" aria-label="프로필">MJ</button>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-kicker">
+      <span class="tag">Today's Hot</span>
+      <span class="slogan">그깟 공놀이에 진심인 팬들의 놀이터</span>
+    </div>
+    <div class="hero-stack">
+      <div class="hero-outline">TRANSFER</div>
+      <div class="hero-num">07</div>
+      <div class="hero-grid">
+        <div class="hero-img">
+          <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" loading="lazy" />
+          <div class="grain"></div>
+        </div>
+        <div class="hero-copy">
+          <h1 class="hero-fill">아스날, <em>비니시우스</em> 영입 탐색</h1>
+          <div class="hero-sub">
+            <span class="hero-src"><span class="pill">The Athletic</span> 디 애슬레틱 단독</span>
+            <p>레알 마드리드 윙어를 향한 아스날의 관심이 수면 위로. 이번 여름 이적시장 최대 떡밥이 런던으로 향한다.</p>
+            <a class="hero-cta" href="#feed">떡밥 전체 보기 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ BURGUNDY BAND : TODAY'S MATCH ══════════ -->
+<section class="band-burg">
+  <div class="wrap">
+    <div class="band-head">
+      <div class="band-title">
+        <span class="en">Today's<br />Match</span>
+        <span class="ko">오늘의 경기</span>
+      </div>
+      <div class="band-date">MATCHDAY<b>07.27</b></div>
+    </div>
+
+    <!-- featured matchup tile -->
+    <div class="match-feature">
+      <div class="mf-side home">
+        <span class="mf-role">Home</span>
+        <span class="mf-team">FC서울</span>
+      </div>
+      <div class="mf-center">
+        <span class="mf-vs">VS</span>
+        <span class="mf-time">20:00</span>
+        <span class="mf-league">K리그1</span>
+      </div>
+      <div class="mf-side away">
+        <span class="mf-role">Away</span>
+        <span class="mf-team">전북 현대</span>
+      </div>
+      <div class="pick-row" id="pickRow">
+        <span class="pick-label">Your Pick</span>
+        <button class="pick-btn"><small>WIN</small>FC서울 승</button>
+        <button class="pick-btn selected"><small>DRAW</small>무승부</button>
+        <button class="pick-btn"><small>WIN</small>전북 현대 승</button>
+      </div>
+    </div>
+
+    <!-- other matches -->
+    <div class="match-list">
+      <div class="match-mini">
+        <div class="mm-top"><span class="mm-time">19:00</span><span class="mm-league">K리그1</span></div>
+        <div class="mm-teams">울산 HD <span class="vs">VS</span> 포항 스틸러스</div>
+      </div>
+      <div class="match-mini">
+        <div class="mm-top"><span class="mm-time">01:30</span><span class="mm-league">MLS</span></div>
+        <div class="mm-teams">뉴욕 시티 <span class="vs">VS</span> 토론토 FC</div>
+      </div>
+      <div class="match-mini">
+        <div class="mm-top"><span class="mm-time">03:30</span><span class="mm-league">MLS</span></div>
+        <div class="mm-teams">인터 마이애미 <span class="vs">VS</span> LA 갤럭시</div>
+      </div>
+    </div>
+
+    <div class="band-cta">
+      <a href="#">오늘 4경기, 네 픽을 던져 →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FEED : 오늘의 떡밥 ══════════ -->
+<section class="feed" id="feed">
+  <div class="wrap">
+    <div class="feed-head">
+      <div class="outline">FEED</div>
+      <div class="ko">오늘의 떡밥</div>
+      <div class="count">10 STORIES · 07.27</div>
+    </div>
+
+    <div class="feed-grid">
+
+      <!-- 1. Ornstein / Tottenham — BIG duotone feature -->
+      <article class="card big">
+        <div class="thumb">
+          <img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274" alt="마테우스 페르난데스" loading="lazy" />
+          <span class="overlay-word">DONE DEAL</span>
+        </div>
+        <div class="body">
+          <span class="src-tag tier1">★ David Ornstein · 1티어</span>
+          <h3>토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</h3>
+          <div class="comment"><b>몽몽이</b> 다른 기사를 보니까, 토트넘은 85m 파운드를 일시불로 준다고 하네요</div>
+          <div class="meta"><span>좋아요 <b>1</b></span><span>·</span><span>댓글 <b>1</b></span><span>·</span><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 3. Official / Chelsea — tall -->
+      <article class="card tall">
+        <div class="thumb">
+          <img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="페드로 네토" loading="lazy" />
+        </div>
+        <div class="body">
+          <span class="src-tag official">✓ 오피셜</span>
+          <h3>첼시, 페드로 네토 판매 계획 없음</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 7. Romano — text-only SHOUT -->
+      <article class="card shout mid">
+        <div class="body">
+          <span class="src-tag tier1">★ Fabrizio Romano</span>
+          <h3><em>HERE WE GO</em><br />로베르트 레반도프스키, 시카고 파이어 이적 확정</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 4. Marca / Man City — mid -->
+      <article class="card mid">
+        <div class="thumb">
+          <img src="https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg" alt="얀 디오만데" loading="lazy" />
+        </div>
+        <div class="body">
+          <span class="src-tag">Marca</span>
+          <h3>맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 5. RBFA / Van Bommel — mid -->
+      <article class="card mid">
+        <div class="thumb">
+          <img src="https://drupal2018.assets.rbfa.be/s3fs-public/styles/image_850x475/public/2026-07/website_mvb.jpg?VersionId=EZykAQx98Mdt1iqlKGUJyqvjLtw4GGaT&h=73cf9c8b&itok=cKhFdd8R" alt="마르크 반 보멀" loading="lazy" />
+        </div>
+        <div class="body">
+          <span class="src-tag">RBFA</span>
+          <h3>벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 6. Gazzetta / Pirlo — mini -->
+      <article class="card mini">
+        <div class="thumb">
+          <img src="https://dimages2.gazzettaobjects.it/files/og_thumbnail/files/fp/uploads/2026/07/21/6a5fb272da411.r_d.1500-838-0.jpeg" alt="안드레아 피를로" loading="lazy" />
+        </div>
+        <div class="body">
+          <span class="src-tag">가제타</span>
+          <h3>이탈리아 축구 연맹, 안드레아 피를로 감독직 접촉</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 8. Athletic / Trafford — mini -->
+      <article class="card mini">
+        <div class="thumb">
+          <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/23055800/james-trafford-mc-scaled-e1784800706287.jpg" alt="제임스 트래포드" loading="lazy" />
+        </div>
+        <div class="body">
+          <span class="src-tag">디 애슬레틱</span>
+          <h3>리즈, 맨체스터 시티와 제임스 트래포드 영입 협상 중</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 9. Tanzi — text-only SHOUT alt -->
+      <article class="card shout alt mini">
+        <div class="body">
+          <span class="src-tag">Loïc Tanzi</span>
+          <h3><em>PSG</em><br />디오망데, PSG와 5년 계약 합의 근접</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+      <!-- 10. Yahoo / Miami — mini -->
+      <article class="card mini">
+        <div class="thumb">
+          <img src="https://s.yimg.com/os/en/esteemed_kompany_articles_332/41683de89e8ef81449c3a489d5aa408c" alt="인터 마이애미" loading="lazy" />
+        </div>
+        <div class="body">
+          <span class="src-tag">Yahoo</span>
+          <h3>인터 마이애미, 메시 결장 속 몬트리올 원정 승리</h3>
+          <div class="meta"><span>7월 1일</span></div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ BLACK BAND : POLL + DISCORD + COMMENTS ══════════ -->
+<section class="band-black">
+  <div class="wrap bb-grid">
+
+    <div>
+      <div class="poll-head">
+        <span class="en">Today's<br />Poll</span>
+        <span class="ko">오늘의 설문</span>
+      </div>
+      <div class="poll-q">아스날 다음 영입 <em>1순위</em>는?</div>
+      <div class="poll-opts" id="pollOpts">
+        <button class="poll-opt"><span>기마랑이스</span><span class="num">01</span></button>
+        <button class="poll-opt selected"><span>토날리</span><span class="num">02</span></button>
+        <button class="poll-opt"><span>마페</span><span class="num">03</span></button>
+        <button class="poll-opt"><span>부아디</span><span class="num">04</span></button>
+      </div>
+      <div class="poll-note">투표는 로그인 후 참여할 수 있어요 · 결과는 누구나 볼 수 있어요</div>
+    </div>
+
+    <div>
+      <div class="discord-box">
+        <span class="badge">FREE ALERT</span>
+        <h4>Join the<br />Locker Room</h4>
+        <p>축구 뉴스·매일 밤 오늘의 경기 알림을 디스코드로</p>
+        <a class="cta" href="#">디스코드 입장 →</a>
+      </div>
+
+      <div class="recent-cmts">
+        <h5>Now Talking · 최근 댓글 달린 글</h5>
+        <ul>
+          <li><span>월드컵 이벤트 예측 내역이</span><span class="cnt">4</span></li>
+          <li><span>한국 축구 빙고의 저주 7월 1일 기준</span><span class="cnt">1</span></li>
+          <li><span>[David Ornstein] 토트넘, 마테우스…</span><span class="cnt">1</span></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer class="site">
+  <div class="wrap">
+    <div class="foot-marquee">GONGNORI.FAN ✦ 그깟 공놀이 ✦</div>
+    <div class="foot-row">
+      <div class="foot-brand">
+        <span class="brush">그깟 <em>공놀이</em></span>
+        <p>그깟 공놀이에 진심인 팬들의 놀이터</p>
+      </div>
+      <div class="foot-links">
+        <a href="#">회사 소개</a>
+        <a href="#">이용약관</a>
+        <a href="#">게시물 운영정책</a>
+        <a href="#">개인정보처리방침</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════ MOBILE TAB BAR ══════════ -->
+<nav class="tabbar">
+  <a href="#" class="on"><span class="ic">▦</span>담벼락</a>
+  <a href="#"><span class="ic">◍</span>운동장</a>
+  <a href="#"><span class="ic">◭</span>승부예측</a>
+  <a href="#"><span class="ic">✎</span>글쓰기</a>
+</nav>
+
+<script>
+  // 승/무/패 픽 토글 (데모)
+  document.querySelectorAll('#pickRow .pick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#pickRow .pick-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+  // 설문 선택 토글 (데모)
+  document.querySelectorAll('#pollOpts .poll-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#pollOpts .poll-opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+</script>
+
+</body>
+</html>

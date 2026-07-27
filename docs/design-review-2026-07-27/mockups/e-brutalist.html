@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>시안 E — 전광판 브루탈리즘 · gongnori.fan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* ============ 시안 E: 데이터 브루탈리즘 ============
+     색 3개: #fff / #0a0a0a / #961e37. 그림자 0, 라운딩 0.
+     보더 = 구조 노출. 행 = 정보 단위. 호버 = 블랙 반전. */
+  :root {
+    --ink: #0a0a0a;
+    --paper: #ffffff;
+    --brg: #961e37;
+    --brg-deep: #771629;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --disp: "Archivo Black", sans-serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0 !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.35;
+  }
+  img { max-width: 100%; display: block; filter: grayscale(100%) contrast(1.1); }
+  a { color: inherit; text-decoration: none; }
+  .mono { font-family: var(--mono); }
+  .wrap { max-width: 1280px; margin: 0 auto; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
+
+  /* ---------- 0. 유틸리티 바 ---------- */
+  .utilbar {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid var(--ink);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    padding: 0 16px; height: 32px;
+  }
+  .utilbar .dot { color: var(--brg); }
+
+  /* ---------- 마스트헤드 ---------- */
+  header.masthead {
+    display: grid; grid-template-columns: 1fr auto;
+    border-bottom: 2px solid var(--ink);
+  }
+  .logo-cell { padding: 20px 16px 14px; border-right: 2px solid var(--ink); }
+  .logo-cell .brand {
+    font-weight: 900; font-size: clamp(34px, 5vw, 56px);
+    letter-spacing: -0.04em; line-height: 0.95;
+  }
+  .logo-cell .brand .fan { color: var(--brg); }
+  .logo-cell .domain {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.25em;
+    margin-top: 8px; text-transform: uppercase;
+  }
+  nav.gnb { display: flex; align-items: stretch; }
+  nav.gnb a {
+    display: flex; align-items: center; padding: 0 22px;
+    border-left: 1px solid var(--ink);
+    font-weight: 700; font-size: 15px;
+  }
+  nav.gnb a.icon { font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; }
+  nav.gnb a.active { background: var(--ink); color: var(--paper); }
+  nav.gnb a:hover { background: var(--ink); color: var(--paper); }
+  nav.gnb a:hover .b, nav.gnb a.active .b { color: var(--paper); }
+
+  /* ---------- 섹션 헤더 공통 ---------- */
+  .sec-head {
+    display: flex; align-items: baseline; gap: 14px;
+    border-bottom: 2px solid var(--ink);
+    padding: 10px 16px;
+  }
+  .sec-head .idx { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: var(--brg); }
+  .sec-head h2 { font-size: 18px; font-weight: 900; letter-spacing: -0.02em; }
+  .sec-head .note { margin-left: auto; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
+
+  /* ---------- 01. 출발 전광판: 오늘의 경기 ---------- */
+  .board { background: var(--ink); color: var(--paper); border-bottom: 2px solid var(--ink); }
+  .board-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px; border-bottom: 1px solid var(--paper);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+  }
+  .board-head .idx { color: var(--brg); font-weight: 700; letter-spacing: 0.15em; }
+  .board-head .live { margin-left: auto; letter-spacing: 0.15em; }
+  .board-head .live::before { content: "●"; color: var(--brg); margin-right: 6px; }
+  .board-row {
+    display: grid;
+    grid-template-columns: 110px 110px 1fr 40px 1fr 130px;
+    align-items: center;
+    height: 48px; padding: 0 16px;
+    border-bottom: 1px solid var(--paper);
+    font-family: var(--mono); font-size: 15px;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+  }
+  .board-row:last-of-type { border-bottom: 0; }
+  .board-row:hover { background: var(--paper); color: var(--ink); }
+  .board-row:hover .b-status { color: var(--brg); }
+  .b-time { font-weight: 700; }
+  .b-lg { font-size: 11px; letter-spacing: 0.25em; }
+  .b-home { text-align: right; font-family: var(--sans); font-weight: 700; letter-spacing: 0.02em; font-size: 15px; }
+  .b-vs { text-align: center; color: var(--brg); font-weight: 700; font-size: 12px; }
+  .b-away { font-family: var(--sans); font-weight: 700; letter-spacing: 0.02em; font-size: 15px; }
+  .b-status { text-align: right; font-size: 11px; letter-spacing: 0.2em; color: var(--brg); }
+  /* 전광판 플립 감성: 시간 문자 셀 */
+  .flap { display: inline-flex; gap: 2px; }
+  .flap span {
+    display: inline-block; min-width: 1.05em; text-align: center;
+    background: var(--paper); color: var(--ink);
+    border: 1px solid var(--paper);
+    line-height: 1.5;
+  }
+  .board-row:hover .flap span { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .board-cta {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--brg); color: var(--paper);
+    padding: 0 16px; height: 44px;
+    font-weight: 900; font-size: 15px; letter-spacing: 0.02em;
+    cursor: pointer;
+  }
+  .board-cta .mono { font-size: 11px; letter-spacing: 0.2em; font-weight: 400; }
+  .board-cta:hover { background: var(--paper); color: var(--brg); }
+
+  /* ---------- 배당 선택 샘플 (숫자 없음, 팀명만) ---------- */
+  .pick-strip {
+    display: grid; grid-template-columns: 220px 1fr 1fr 1fr;
+    border-bottom: 2px solid var(--ink);
+  }
+  .pick-label {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 10px 16px; border-right: 2px solid var(--ink);
+  }
+  .pick-label .t { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--brg); font-weight: 700; }
+  .pick-label .g { font-weight: 900; font-size: 14px; margin-top: 2px; }
+  .pick-btn {
+    appearance: none; background: var(--paper); color: var(--ink);
+    border: 0; border-right: 1px solid var(--ink);
+    font-family: var(--sans); font-weight: 700; font-size: 15px;
+    height: 56px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .pick-btn:last-child { border-right: 0; }
+  .pick-btn .tag { font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em; }
+  .pick-btn:hover { background: var(--ink); color: var(--paper); }
+  .pick-btn.selected { background: var(--brg); color: var(--paper); }
+  .pick-btn.selected .tag::after { content: " ■ 선택됨"; letter-spacing: 0.1em; }
+
+  /* ---------- 메인 그리드 ---------- */
+  .main-grid { display: grid; grid-template-columns: 1fr 340px; }
+  .feed-col { border-right: 2px solid var(--ink); min-width: 0; }
+  .side-col { min-width: 0; }
+
+  /* ---------- 히어로 (떡밥 #2) ---------- */
+  .hero { border-bottom: 2px solid var(--ink); cursor: pointer; }
+  .hero .hero-img { border-bottom: 2px solid var(--ink); aspect-ratio: 21 / 9; overflow: hidden; }
+  .hero .hero-img img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-body { padding: 14px 16px 16px; }
+  .hero-kicker {
+    display: flex; gap: 10px; align-items: center;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; margin-bottom: 8px;
+  }
+  .hero-kicker .src { border: 1px solid var(--ink); padding: 2px 8px; font-weight: 700; }
+  .hero-kicker .no { color: var(--brg); font-weight: 700; }
+  .hero h1 {
+    font-weight: 900; font-size: clamp(28px, 3.6vw, 44px);
+    line-height: 1.02; letter-spacing: -0.035em;
+    text-transform: uppercase;
+  }
+  .hero .en-sub {
+    font-family: var(--disp); font-size: 12px; letter-spacing: 0.05em;
+    margin-top: 8px; color: var(--brg);
+  }
+  .hero-meta { margin-top: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; }
+  .hero:hover .hero-body { background: var(--ink); color: var(--paper); }
+  .hero:hover .en-sub { color: var(--paper); }
+  .hero:hover .hero-kicker .src { border-color: var(--paper); }
+  .hero:hover .hero-kicker .no { color: var(--paper); }
+
+  /* ---------- 떡밥 테이블 ---------- */
+  .feed-row {
+    display: grid;
+    grid-template-columns: 44px 40px 120px 1fr auto;
+    align-items: center;
+    min-height: 40px;
+    border-bottom: 1px solid var(--ink);
+    cursor: pointer;
+  }
+  .feed-row:hover { background: var(--ink); color: var(--paper); }
+  .f-no {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    text-align: center; letter-spacing: 0.05em;
+  }
+  .f-thumb { width: 40px; height: 40px; border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); overflow: hidden; }
+  .f-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .f-thumb.empty { display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 9px; }
+  .feed-row:hover .f-thumb { border-color: var(--paper); }
+  .f-src {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.04em; padding: 0 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .f-src .tier { color: var(--brg); }
+  .feed-row:hover .f-src .tier { color: var(--paper); }
+  .f-src .off { background: var(--brg); color: var(--paper); padding: 1px 4px; }
+  .f-title {
+    font-weight: 700; font-size: 14px; letter-spacing: -0.01em;
+    padding: 8px 12px 8px 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .f-meta {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+    padding: 0 14px; text-align: right; white-space: nowrap;
+  }
+  /* 댓글 서브행 */
+  .feed-sub {
+    display: flex; gap: 8px; align-items: baseline;
+    border-bottom: 1px solid var(--ink);
+    padding: 8px 16px 8px 60px;
+    font-size: 12.5px; cursor: pointer;
+  }
+  .feed-sub:hover { background: var(--ink); color: var(--paper); }
+  .feed-sub .arm { font-family: var(--mono); color: var(--brg); font-weight: 700; }
+  .feed-sub:hover .arm { color: var(--paper); }
+  .feed-sub .who { font-weight: 700; }
+  .feed-more {
+    display: block; width: 100%; text-align: center;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em;
+    padding: 12px 0; border: 0; background: var(--paper); color: var(--ink);
+    border-bottom: 2px solid var(--ink); cursor: pointer;
+  }
+  .feed-more:hover { background: var(--brg); color: var(--paper); }
+
+  /* ---------- 사이드바 ---------- */
+  .side-sec { border-bottom: 2px solid var(--ink); }
+  .side-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--ink);
+  }
+  .side-head .idx { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.15em; color: var(--brg); }
+  .side-head h3 { font-size: 14px; font-weight: 900; }
+  .poll-q { padding: 12px 14px 4px; font-weight: 900; font-size: 16px; letter-spacing: -0.02em; }
+  .poll-opt {
+    display: grid; grid-template-columns: 1fr 52px; align-items: center;
+    border-top: 1px solid var(--ink);
+    height: 40px; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .poll-opt:first-of-type { border-top: 0; margin-top: 10px; border-top: 1px solid var(--ink); }
+  .poll-opt .bar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--ink); opacity: 1;
+  }
+  .poll-opt .name { position: relative; padding: 0 14px; font-weight: 700; font-size: 14px; mix-blend-mode: difference; color: var(--paper); }
+  .poll-opt .pct { position: relative; font-family: var(--mono); font-size: 11px; font-weight: 700; text-align: right; padding-right: 14px; mix-blend-mode: difference; color: var(--paper); }
+  .poll-opt:hover .bar { background: var(--brg); }
+  .poll-foot { border-top: 1px solid var(--ink); padding: 8px 14px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; display: flex; justify-content: space-between; }
+  .poll-foot b { color: var(--brg); }
+
+  /* 디스코드 배너 — 브랜드 톤 재해석 */
+  .discord {
+    background: var(--ink); color: var(--paper);
+    padding: 16px 14px; cursor: pointer;
+  }
+  .discord .k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--brg); font-weight: 700; }
+  .discord h3 { font-size: 18px; font-weight: 900; line-height: 1.25; margin: 8px 0 12px; letter-spacing: -0.02em; }
+  .discord .join {
+    display: inline-block; border: 1px solid var(--paper);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+    padding: 8px 14px;
+  }
+  .discord:hover { background: var(--brg); }
+  .discord:hover .k { color: var(--paper); }
+
+  /* 최근 댓글 */
+  .cm-row {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    min-height: 40px; padding: 0 14px;
+    border-bottom: 1px solid var(--ink);
+    font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .cm-row:last-child { border-bottom: 0; }
+  .cm-row:hover { background: var(--ink); color: var(--paper); }
+  .cm-row .n { font-family: var(--mono); font-size: 11px; color: var(--brg); font-weight: 700; padding-left: 10px; }
+  .cm-row:hover .n { color: var(--paper); }
+  .cm-row .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 슬로건 블록 */
+  .slogan-block { padding: 18px 14px; }
+  .slogan-block .big {
+    font-weight: 900; font-size: 22px; line-height: 1.15; letter-spacing: -0.03em;
+  }
+  .slogan-block .big em { font-style: normal; color: var(--brg); }
+  .slogan-block .en { font-family: var(--disp); font-size: 10px; letter-spacing: 0.15em; margin-top: 10px; }
+
+  /* ---------- 푸터 ---------- */
+  footer { border-top: 2px solid var(--ink); }
+  .foot-grid { display: grid; grid-template-columns: 1fr auto; align-items: stretch; }
+  .foot-brand { padding: 20px 16px; border-right: 2px solid var(--ink); }
+  .foot-brand .b { font-weight: 900; font-size: 22px; letter-spacing: -0.03em; }
+  .foot-brand .s { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; margin-top: 6px; }
+  .foot-links { display: flex; align-items: stretch; }
+  .foot-links a {
+    display: flex; align-items: center; padding: 0 18px;
+    border-left: 1px solid var(--ink);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  }
+  .foot-links a:hover { background: var(--ink); color: var(--paper); }
+  .foot-base {
+    border-top: 2px solid var(--ink);
+    padding: 8px 16px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+    display: flex; justify-content: space-between;
+  }
+  .foot-base .r { color: var(--brg); }
+
+  /* ---------- 모바일 하단 탭 ---------- */
+  .mtab {
+    display: none;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--paper); border-top: 2px solid var(--ink);
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .mtab a {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    height: 52px; border-left: 1px solid var(--ink);
+    font-weight: 700; font-size: 12px;
+  }
+  .mtab a:first-child { border-left: 0; }
+  .mtab a .ic { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; }
+  .mtab a.on { background: var(--ink); color: var(--paper); }
+  .mtab a:hover { background: var(--ink); color: var(--paper); }
+
+  /* ---------- 반응형 ---------- */
+  @media (max-width: 1023px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .feed-col { border-right: 0; }
+    .side-col { border-top: 2px solid var(--ink); }
+  }
+  @media (max-width: 767px) {
+    body { padding-bottom: 52px; }
+    .wrap { border-left: 0; border-right: 0; }
+    header.masthead { grid-template-columns: 1fr; }
+    .logo-cell { border-right: 0; border-bottom: 2px solid var(--ink); }
+    nav.gnb { display: none; }
+    .mtab { display: grid; }
+    .board-row {
+      grid-template-columns: 84px 1fr 24px 1fr;
+      height: auto; padding: 8px 12px; row-gap: 2px;
+      font-size: 13px; letter-spacing: 0.1em;
+    }
+    .b-lg, .b-status { display: none; }
+    .pick-strip { grid-template-columns: 1fr; }
+    .pick-label { border-right: 0; border-bottom: 1px solid var(--ink); }
+    .pick-strip { grid-template-columns: 1fr 1fr 1fr; }
+    .pick-label { grid-column: 1 / -1; }
+    .feed-row { grid-template-columns: 34px 40px 1fr auto; }
+    .f-src { display: none; }
+    .feed-sub { padding-left: 34px; }
+    .foot-grid { grid-template-columns: 1fr; }
+    .foot-brand { border-right: 0; border-bottom: 2px solid var(--ink); }
+    .foot-links { flex-wrap: wrap; }
+    .foot-links a { padding: 10px 14px; border-left: 0; border-right: 1px solid var(--ink); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 유틸리티 바 -->
+  <div class="utilbar">
+    <span>2026.07.27 MON <span class="dot">●</span> SEOUL 27°C</span>
+    <span>GONGNORI DATA TERMINAL v2.0</span>
+    <span><span class="dot">●</span> 로그인 / LOGIN</span>
+  </div>
+
+  <!-- 마스트헤드 -->
+  <header class="masthead">
+    <div class="logo-cell">
+      <div class="brand">그깟 공놀이<span class="fan">.</span></div>
+      <div class="domain">GONGNORI<span style="color:var(--brg)">.</span>FAN — 그깟 공놀이에 진심인 팬들의 놀이터</div>
+    </div>
+    <nav class="gnb">
+      <a href="#" class="active">담벼락</a>
+      <a href="#">운동장</a>
+      <a href="#">승부예측</a>
+      <a href="#" class="icon" aria-label="검색">SRCH</a>
+      <a href="#" class="icon" aria-label="알림">NOTI<span class="b" style="color:var(--brg)">·1</span></a>
+      <a href="#" class="icon" aria-label="프로필">USER</a>
+    </nav>
+  </header>
+
+  <!-- 01 / 오늘의 경기 — 출발 전광판 -->
+  <section class="board" aria-label="오늘의 경기">
+    <div class="board-head">
+      <span class="idx">01 /</span>
+      <span>DEPARTURES — 오늘의 경기</span>
+      <span class="live">4 SCHEDULED</span>
+    </div>
+
+    <div class="board-row">
+      <span class="b-time flap"><span>0</span><span>1</span><span>:</span><span>3</span><span>0</span></span>
+      <span class="b-lg">MLS</span>
+      <span class="b-home">뉴욕 시티</span>
+      <span class="b-vs">VS</span>
+      <span class="b-away">토론토 FC</span>
+      <span class="b-status">예측 가능 →</span>
+    </div>
+    <div class="board-row">
+      <span class="b-time flap"><span>1</span><span>9</span><span>:</span><span>0</span><span>0</span></span>
+      <span class="b-lg">K리그1</span>
+      <span class="b-home">울산 HD</span>
+      <span class="b-vs">VS</span>
+      <span class="b-away">포항 스틸러스</span>
+      <span class="b-status">예측 가능 →</span>
+    </div>
+    <div class="board-row">
+      <span class="b-time flap"><span>2</span><span>0</span><span>:</span><span>0</span><span>0</span></span>
+      <span class="b-lg">K리그1</span>
+      <span class="b-home">FC서울</span>
+      <span class="b-vs">VS</span>
+      <span class="b-away">전북 현대</span>
+      <span class="b-status">예측 가능 →</span>
+    </div>
+    <div class="board-row">
+      <span class="b-time flap"><span>0</span><span>3</span><span>:</span><span>3</span><span>0</span></span>
+      <span class="b-lg">MLS</span>
+      <span class="b-home">인터 마이애미</span>
+      <span class="b-vs">VS</span>
+      <span class="b-away">LA 갤럭시</span>
+      <span class="b-status">예측 가능 →</span>
+    </div>
+
+    <div class="board-cta">
+      <span>오늘 경기, 결과를 걸어라</span>
+      <span class="mono">예측 참여 →</span>
+    </div>
+  </section>
+
+  <!-- 배당 선택 샘플: FC서울 vs 전북 현대 -->
+  <section class="pick-strip" aria-label="승무패 선택">
+    <div class="pick-label">
+      <span class="t">PICK / 20:00 K리그1</span>
+      <span class="g">FC서울 vs 전북 현대</span>
+    </div>
+    <button class="pick-btn" data-pick>
+      <span>FC서울</span>
+      <span class="tag">HOME</span>
+    </button>
+    <button class="pick-btn" data-pick>
+      <span>무승부</span>
+      <span class="tag">DRAW</span>
+    </button>
+    <button class="pick-btn selected" data-pick>
+      <span>전북 현대</span>
+      <span class="tag">AWAY</span>
+    </button>
+  </section>
+
+  <!-- 메인: 피드 + 사이드 -->
+  <div class="main-grid">
+
+    <!-- 02 / 오늘의 떡밥 -->
+    <main class="feed-col">
+      <div class="sec-head">
+        <span class="idx">02 /</span>
+        <h2>오늘의 떡밥</h2>
+        <span class="note">10 ROWS · SORT: LATEST</span>
+      </div>
+
+      <!-- 히어로: 디 애슬레틱 비니시우스 -->
+      <article class="hero">
+        <div class="hero-img">
+          <img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" loading="lazy" />
+        </div>
+        <div class="hero-body">
+          <div class="hero-kicker">
+            <span class="no">NO.02</span>
+            <span class="src">디 애슬레틱</span>
+            <span>7월 1일</span>
+          </div>
+          <h1>아스날, 레알 마드리드 윙어<br />비니시우스 주니어 영입 탐색</h1>
+          <div class="en-sub">ARSENAL × VINICIUS JR — TRANSFER RADAR</div>
+          <div class="hero-meta">좋아요 1 · 댓글 1</div>
+        </div>
+      </article>
+
+      <!-- 행 테이블 -->
+      <article class="feed-row">
+        <span class="f-no">01</span>
+        <span class="f-thumb"><img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274" alt="" loading="lazy" /></span>
+        <span class="f-src"><span class="tier">★</span>D.ORNSTEIN</span>
+        <span class="f-title">토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</span>
+        <span class="f-meta">좋아요 1 · 댓글 1 · 7월 1일</span>
+      </article>
+      <div class="feed-sub">
+        <span class="arm">└ RE:</span>
+        <span><span class="who">몽몽이</span> — 다른 기사를 보니까, 토트넘은 85m 파운드를 일시불로 준다고 하네요</span>
+      </div>
+
+      <article class="feed-row">
+        <span class="f-no">03</span>
+        <span class="f-thumb"><img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="" loading="lazy" /></span>
+        <span class="f-src"><span class="off">✓오피셜</span></span>
+        <span class="f-title">첼시, 페드로 네토 판매 계획 없음</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">04</span>
+        <span class="f-thumb"><img src="https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg" alt="" loading="lazy" /></span>
+        <span class="f-src">MARCA</span>
+        <span class="f-title">맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">05</span>
+        <span class="f-thumb"><img src="https://drupal2018.assets.rbfa.be/s3fs-public/styles/image_850x475/public/2026-07/website_mvb.jpg?VersionId=EZykAQx98Mdt1iqlKGUJyqvjLtw4GGaT&h=73cf9c8b&itok=cKhFdd8R" alt="" loading="lazy" /></span>
+        <span class="f-src">RBFA</span>
+        <span class="f-title">벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">06</span>
+        <span class="f-thumb"><img src="https://dimages2.gazzettaobjects.it/files/og_thumbnail/files/fp/uploads/2026/07/21/6a5fb272da411.r_d.1500-838-0.jpeg" alt="" loading="lazy" /></span>
+        <span class="f-src">가제타</span>
+        <span class="f-title">이탈리아 축구 연맹, 안드레아 피를로 감독직 접촉</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">07</span>
+        <span class="f-thumb empty">TXT</span>
+        <span class="f-src"><span class="tier">★</span>F.ROMANO</span>
+        <span class="f-title">로베르트 레반도프스키, 시카고 파이어 이적 확정</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">08</span>
+        <span class="f-thumb"><img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/23055800/james-trafford-mc-scaled-e1784800706287.jpg" alt="" loading="lazy" /></span>
+        <span class="f-src">디 애슬레틱</span>
+        <span class="f-title">리즈, 맨체스터 시티와 제임스 트래포드 영입 협상 중</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">09</span>
+        <span class="f-thumb empty">TXT</span>
+        <span class="f-src">L.TANZI</span>
+        <span class="f-title">디오망데, PSG와 5년 계약 합의 근접</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <article class="feed-row">
+        <span class="f-no">10</span>
+        <span class="f-thumb"><img src="https://s.yimg.com/os/en/esteemed_kompany_articles_332/41683de89e8ef81449c3a489d5aa408c" alt="" loading="lazy" /></span>
+        <span class="f-src">YAHOO</span>
+        <span class="f-title">인터 마이애미, 메시 결장 속 몬트리올 원정 승리</span>
+        <span class="f-meta">7월 1일</span>
+      </article>
+
+      <button class="feed-more">MORE ROWS ↓ 떡밥 더 보기</button>
+    </main>
+
+    <!-- 사이드바 -->
+    <aside class="side-col">
+
+      <!-- 03 / 오늘의 설문 -->
+      <section class="side-sec">
+        <div class="side-head">
+          <span class="idx">03 /</span>
+          <h3>오늘의 설문</h3>
+        </div>
+        <div class="poll-q">아스날 다음 영입 1순위는?</div>
+        <div class="poll-opt">
+          <span class="bar" style="width: 42%"></span>
+          <span class="name">기마랑이스</span>
+          <span class="pct">42%</span>
+        </div>
+        <div class="poll-opt">
+          <span class="bar" style="width: 31%"></span>
+          <span class="name">토날리</span>
+          <span class="pct">31%</span>
+        </div>
+        <div class="poll-opt">
+          <span class="bar" style="width: 17%"></span>
+          <span class="name">마페</span>
+          <span class="pct">17%</span>
+        </div>
+        <div class="poll-opt">
+          <span class="bar" style="width: 10%"></span>
+          <span class="name">부아디</span>
+          <span class="pct">10%</span>
+        </div>
+        <div class="poll-foot"><span><b>■</b> 투표하고 결과 보기</span><span>VOTE →</span></div>
+      </section>
+
+      <!-- 04 / 디스코드 -->
+      <section class="side-sec">
+        <div class="discord">
+          <div class="k">04 / CHANNEL</div>
+          <h3>축구 뉴스·매일 밤<br />오늘의 경기 알림을<br />디스코드로</h3>
+          <span class="join">JOIN DISCORD →</span>
+        </div>
+      </section>
+
+      <!-- 05 / 최근 댓글 -->
+      <section class="side-sec">
+        <div class="side-head">
+          <span class="idx">05 /</span>
+          <h3>최근 댓글 달린 글</h3>
+        </div>
+        <div class="cm-row"><span class="t">월드컵 이벤트 예측 내역이</span><span class="n">[4]</span></div>
+        <div class="cm-row"><span class="t">한국 축구 빙고의 저주 7월 1일 기준</span><span class="n">[1]</span></div>
+        <div class="cm-row"><span class="t">[David Ornstein] 토트넘, 마테우스…</span><span class="n">[1]</span></div>
+      </section>
+
+      <!-- 슬로건 -->
+      <section class="side-sec" style="border-bottom:0">
+        <div class="slogan-block">
+          <div class="big">그깟 공놀이에<br /><em>진심인</em> 팬들의<br />놀이터</div>
+          <div class="en">SERIOUS ABOUT THE SILLY GAME</div>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+
+  <!-- 푸터 -->
+  <footer>
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="b">그깟 공놀이 <span style="color:var(--brg)">/</span> <span class="mono" style="font-size:13px;letter-spacing:0.15em;">GONGNORI.FAN</span></div>
+        <div class="s">그깟 공놀이에 진심인 팬들의 놀이터</div>
+      </div>
+      <div class="foot-links">
+        <a href="#">회사 소개</a>
+        <a href="#">이용약관</a>
+        <a href="#">게시물 운영정책</a>
+        <a href="#">개인정보처리방침</a>
+      </div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 GONGNORI.FAN — ALL ROWS RESERVED</span>
+      <span class="r">■ E / DATA BRUTALISM</span>
+    </div>
+  </footer>
+
+</div>
+
+<!-- 모바일 하단 탭 -->
+<nav class="mtab" aria-label="모바일 탭">
+  <a href="#" class="on"><span class="ic">01</span>담벼락</a>
+  <a href="#"><span class="ic">02</span>운동장</a>
+  <a href="#"><span class="ic">03</span>승부예측</a>
+  <a href="#"><span class="ic">+</span>글쓰기</a>
+</nav>
+
+<script>
+  // 유일한 JS: 승/무/패 선택 상태 데모
+  const picks = document.querySelectorAll("[data-pick]");
+  picks.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      picks.forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+    });
+  });
+</script>
+</body>
+</html>

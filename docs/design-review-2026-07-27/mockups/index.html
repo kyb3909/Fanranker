@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>gongnori.fan 디자인 시안 뷰어</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; font-family: Pretendard, -apple-system, "Segoe UI", sans-serif; background: #111; }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: #191919; border-bottom: 1px solid #2c2c2c; flex-wrap: wrap;
+  }
+  .brand { color: #fff; font-weight: 800; font-size: 14px; white-space: nowrap; }
+  .brand span { color: #d4667e; }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  nav button {
+    appearance: none; border: 1px solid #3a3a3a; background: #222; color: #bbb;
+    padding: 6px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  nav button:hover { border-color: #961e37; color: #fff; }
+  nav button.active { background: #961e37; border-color: #961e37; color: #fff; }
+  nav button.missing { opacity: .35; }
+  .desc { color: #888; font-size: 12px; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+  .hint { color: #555; font-size: 11px; white-space: nowrap; }
+  iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+  .placeholder {
+    flex: 1; display: none; align-items: center; justify-content: center;
+    color: #777; font-size: 15px; background: #161616;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">그깟 공놀이 <span>시안 뷰어</span></div>
+  <nav id="nav"></nav>
+  <div class="desc" id="desc"></div>
+  <div class="hint">← → 키로 이동</div>
+</header>
+<iframe id="frame" title="시안 미리보기"></iframe>
+<div class="placeholder" id="ph">이 시안은 아직 생성 중입니다 — 잠시 후 탭을 다시 눌러보세요.</div>
+<script>
+  const MOCKUPS = [
+    { key: "A", file: "a-matchday.html",   name: "A 매치데이",        desc: "합의안 — 라이트 베이스 + 다크 3존, 버건디 클라레" },
+    { key: "B", file: "b-nightpitch.html", name: "B 나이트 피치",     desc: "전면 다크 — 케이 원안, 매치 포스터 히어로" },
+    { key: "C", file: "c-editorial.html",  name: "C 에디토리얼 크림", desc: "무신사 2025·매거진 — 크림 지면 + 잉크 + 흑백 사진" },
+    { key: "D", file: "d-terrace.html",    name: "D 테라스 그런지",   desc: "브라운브레스·팬진 — 테이프, 스탬프, 티켓 스터브" },
+    { key: "E", file: "e-brutalist.html",  name: "E 전광판 브루탈리즘", desc: "3색·표·모노스페이스 — 구조 노출, 행 반전 호버" },
+    { key: "F", file: "f-retrocard.html",  name: "F 레트로 풋볼 카드", desc: "파니니 카드 팩 — 홀로 카드, 스티커 앨범" },
+    { key: "G", file: "g-neon.html",       name: "G 네온 나이트 리그", desc: "다크 + 일렉트릭 라임 5% — 야간 풋살장 LED" },
+    { key: "H", file: "h-heritage.html",   name: "H 클럽 헤리티지",   desc: "100년 클럽 프로그램북 — 세리프, 크레스트, 그린+골드" },
+    { key: "I", file: "i-softmin.html",    name: "I 소프트 미니멀",   desc: "토스식 대조군 — 웜 그레이, 큰 라운딩, 친근함" },
+    { key: "J", file: "j-y2k.html",        name: "J Y2K 에디토리얼",  desc: "VERSUS·나이키 캠페인 — 아웃라인 타이포 오버랩, 마퀴 티커" },
+  ];
+  const nav = document.getElementById("nav");
+  const frame = document.getElementById("frame");
+  const ph = document.getElementById("ph");
+  const desc = document.getElementById("desc");
+  let cur = 0;
+
+  MOCKUPS.forEach((m, i) => {
+    const b = document.createElement("button");
+    b.textContent = m.name;
+    b.onclick = () => show(i);
+    nav.appendChild(b);
+    m.btn = b;
+  });
+
+  async function exists(file) {
+    try { const r = await fetch(file, { method: "HEAD", cache: "no-store" }); return r.ok; }
+    catch { return false; }
+  }
+
+  async function refreshAvailability() {
+    for (const m of MOCKUPS) m.btn.classList.toggle("missing", !(await exists(m.file)));
+  }
+
+  async function show(i) {
+    cur = i;
+    const m = MOCKUPS[i];
+    MOCKUPS.forEach((x) => x.btn.classList.toggle("active", x === m));
+    desc.textContent = m.desc;
+    if (await exists(m.file)) {
+      ph.style.display = "none";
+      frame.style.display = "block";
+      frame.src = m.file + "?t=" + Date.now();
+      m.btn.classList.remove("missing");
+    } else {
+      frame.style.display = "none";
+      ph.style.display = "flex";
+    }
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") show((cur + 1) % MOCKUPS.length);
+    if (e.key === "ArrowLeft") show((cur - 1 + MOCKUPS.length) % MOCKUPS.length);
+  });
+
+  refreshAvailability().then(async () => {
+    // 첫 진입: 존재하는 첫 시안으로
+    for (let i = 0; i < MOCKUPS.length; i++) {
+      if (await exists(MOCKUPS[i].file)) { show(i); return; }
+    }
+    show(0);
+  });
+</script>
+</body>
+</html>

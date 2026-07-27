@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>gongnori.fan — 시안 F · 레트로 풋볼 카드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Alfa+Slab+One&family=Black+Han+Sans&family=Special+Elite&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  :root {
+    --burgundy: #961e37;
+    --burgundy-deep: #771629;
+    --navy: #1F3A5F;
+    --navy-deep: #152a46;
+    --mustard: #D9A441;
+    --ivory: #F2EDE2;
+    --ivory-deep: #E8E0CE;
+    --card-white: #FBF8F1;
+    --ink: #26221B;
+    --ink-soft: #6B6455;
+    --line: #D8CFBB;
+    --holo: conic-gradient(from 20deg,
+      #e75a6f, #e6a23c, #e6d84a, #5abf7a, #4aa3d9, #7a6ed9, #c95ad0, #e75a6f);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, "Malgun Gothic", sans-serif;
+    background-color: var(--ivory);
+    /* 도트 하프톤 패턴 힌트 */
+    background-image:
+      radial-gradient(rgba(38,34,27,.055) 1px, transparent 1.4px),
+      radial-gradient(rgba(150,30,55,.03) 1px, transparent 1.4px);
+    background-size: 14px 14px, 22px 22px;
+    background-position: 0 0, 7px 11px;
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .slab { font-family: "Alfa Slab One", "Black Han Sans", serif; }
+  .block-latin { font-family: "Archivo Black", "Black Han Sans", sans-serif; }
+  .heavy-ko { font-family: "Black Han Sans", "Archivo Black", sans-serif; font-weight: 400; }
+  .stamp { font-family: "Special Elite", monospace; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  /* ============ HEADER ============ */
+  header.gnb {
+    position: sticky; top: 0; z-index: 60;
+    background: var(--burgundy);
+    background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.4px);
+    background-size: 10px 10px;
+    border-bottom: 4px solid var(--burgundy-deep);
+    box-shadow: 0 3px 0 rgba(38,34,27,.22);
+  }
+  .gnb-inner {
+    display: flex; align-items: center; gap: 28px;
+    height: 68px;
+  }
+  .logo { display: flex; align-items: baseline; gap: 10px; color: #fff; }
+  .logo .brush {
+    font-family: "Nanum Brush Script", cursive;
+    font-size: 34px; line-height: 1;
+    letter-spacing: -1px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,.25);
+  }
+  .logo .domain {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 11px; letter-spacing: .12em;
+    color: var(--mustard);
+    text-transform: lowercase;
+    transform: translateY(-2px);
+  }
+  nav.menu { display: flex; gap: 4px; flex: 1; }
+  nav.menu a {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 16px; letter-spacing: .04em;
+    color: rgba(255,255,255,.82);
+    padding: 8px 14px; border-radius: 6px;
+    border: 2px solid transparent;
+    transition: all .15s;
+  }
+  nav.menu a.on {
+    color: var(--burgundy);
+    background: var(--ivory);
+    border-color: var(--mustard);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.28);
+    transform: rotate(-1deg);
+  }
+  nav.menu a:not(.on):hover { color: #fff; border-color: rgba(255,255,255,.4); }
+  .gnb-icons { display: flex; gap: 8px; }
+  .gnb-icons button {
+    width: 38px; height: 38px; border-radius: 6px;
+    border: 2px solid rgba(255,255,255,.5);
+    background: transparent; color: #fff;
+    display: grid; place-items: center;
+    font-size: 16px;
+    transition: all .15s;
+  }
+  .gnb-icons button:hover { background: rgba(255,255,255,.14); }
+  .gnb-icons .avatar {
+    background: var(--mustard); border-color: var(--mustard);
+    color: var(--burgundy-deep); font-family: "Archivo Black", sans-serif; font-size: 13px;
+  }
+
+  /* ============ HERO — 카드 팩 개봉 ============ */
+  .hero {
+    padding: 52px 0 66px;
+    overflow: hidden;
+    border-bottom: 3px solid var(--line);
+    position: relative;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 460px;
+    gap: 48px; align-items: center;
+  }
+  .pack-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--navy); color: var(--mustard);
+    font-family: "Archivo Black", sans-serif;
+    font-size: 11px; letter-spacing: .22em;
+    padding: 7px 14px; border-radius: 4px;
+    box-shadow: 3px 3px 0 rgba(38,34,27,.2);
+    transform: rotate(-1.4deg);
+    margin-bottom: 22px;
+  }
+  .pack-label::before { content: "◆"; color: #fff; font-size: 8px; }
+  .hero h1 {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: clamp(34px, 4.4vw, 54px);
+    line-height: 1.14; letter-spacing: -.01em;
+    margin-bottom: 18px;
+  }
+  .hero h1 .hl {
+    color: var(--burgundy);
+    text-decoration: underline;
+    text-decoration-color: var(--mustard);
+    text-decoration-thickness: 6px;
+    text-underline-offset: 6px;
+  }
+  .hero p.sub {
+    color: var(--ink-soft); font-size: 16px; max-width: 460px;
+    margin-bottom: 28px;
+  }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-slab {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 16px; letter-spacing: .03em;
+    padding: 13px 26px; border-radius: 6px;
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    transition: all .12s;
+  }
+  .btn-slab:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
+  .btn-slab:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn-slab.primary { background: var(--burgundy); color: #fff; }
+  .btn-slab.ghost { background: var(--card-white); color: var(--ink); }
+
+  /* 팩 개봉 카드 스택 */
+  .pack-stage { position: relative; height: 470px; }
+  .pack-stage .foil {
+    position: absolute; inset: auto 8% 0 8%;
+    height: 78px; border-radius: 10px 10px 6px 6px;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,.16) 0 3px, transparent 3px 9px),
+      linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+    border: 3px solid var(--navy-deep);
+    box-shadow: 0 8px 0 rgba(38,34,27,.18);
+  }
+  .pack-stage .foil::after {
+    content: "GONGNORI PACK · SERIES 26";
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    color: var(--mustard);
+    font-family: "Archivo Black", sans-serif;
+    font-size: 11px; letter-spacing: .3em;
+  }
+  .tcard {
+    background: var(--card-white);
+    border-radius: 6px;
+    border: 3px solid var(--ink);
+    overflow: hidden;
+    box-shadow: 6px 8px 0 rgba(38,34,27,.24);
+  }
+  .pack-stage .back-card {
+    position: absolute; width: 250px;
+    left: 8px; top: 66px;
+    transform: rotate(-7deg);
+    opacity: .92;
+  }
+  .pack-stage .back-card .tc-frame { border-color: var(--navy); }
+  .pack-stage .hero-card {
+    position: absolute; width: 330px;
+    right: 12px; top: 8px;
+    transform: rotate(2.5deg);
+    z-index: 2;
+    transition: transform .25s;
+  }
+  .pack-stage .hero-card:hover { transform: rotate(1deg) translateY(-6px); }
+
+  /* 트레이딩 카드 내부 구조 */
+  .tc-frame { border: 7px solid var(--burgundy); border-radius: 3px; background: var(--card-white); position: relative; }
+  .tc-frame.navy { border-color: var(--navy); }
+  .tc-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 10px;
+    background: var(--burgundy); color: #fff;
+    font-family: "Archivo Black", sans-serif;
+    font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .navy > .tc-banner { background: var(--navy); }
+  .tc-banner .no { color: var(--mustard); font-family: "Special Elite", monospace; font-size: 12px; letter-spacing: .04em; }
+  .tc-photo { aspect-ratio: 4 / 3; overflow: hidden; background: var(--ivory-deep); border-bottom: 3px solid var(--ink); position: relative; }
+  .tc-photo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92) contrast(1.04); }
+  .tc-photo::after {
+    /* 인쇄 하프톤 오버레이 */
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(38,34,27,.14) .8px, transparent 1.2px);
+    background-size: 4px 4px; pointer-events: none; mix-blend-mode: multiply;
+  }
+  .tc-body { padding: 12px 14px 14px; }
+  .tc-source {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: "Archivo Black", "Black Han Sans", sans-serif;
+    font-size: 10px; letter-spacing: .08em;
+    color: var(--burgundy);
+    border: 2px solid currentColor; border-radius: 3px;
+    padding: 2px 8px; margin-bottom: 8px;
+    background: #fff;
+    transform: rotate(-.6deg);
+  }
+  .tc-source.navy-tag { color: var(--navy); }
+  .tc-source.official { color: #fff; background: var(--mustard); border-color: #b5852f; }
+  .tc-title {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 17px; line-height: 1.32; letter-spacing: 0;
+    margin-bottom: 8px;
+  }
+  .tc-meta { font-size: 12px; color: var(--ink-soft); display: flex; gap: 10px; }
+  .tc-meta b { color: var(--ink); font-weight: 700; }
+  .tc-comment {
+    margin-top: 10px; padding: 9px 11px;
+    background: var(--ivory);
+    border: 2px dashed var(--line); border-radius: 4px;
+    font-size: 12.5px; color: var(--ink-soft);
+  }
+  .tc-comment b { color: var(--burgundy); font-weight: 700; }
+
+  /* 홀로 카드 (1티어 소스) */
+  .holo-wrap {
+    padding: 5px; border-radius: 9px;
+    background: var(--holo);
+    box-shadow: 6px 8px 0 rgba(38,34,27,.24);
+    position: relative;
+  }
+  .holo-wrap .tcard { box-shadow: none; border-width: 2px; }
+  .holo-wrap::after {
+    content: "★ TIER 1";
+    position: absolute; top: -12px; right: 14px;
+    background: var(--ink); color: var(--mustard);
+    font-family: "Archivo Black", sans-serif; font-size: 9px; letter-spacing: .2em;
+    padding: 4px 10px; border-radius: 3px;
+    box-shadow: 2px 2px 0 rgba(38,34,27,.35);
+    transform: rotate(2deg);
+  }
+
+  /* ============ 섹션 헤더 공통 ============ */
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; }
+  .sec-head h2 {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 26px; letter-spacing: .01em;
+  }
+  .sec-head .en {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 10px; letter-spacing: .26em; color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .sec-head .rule { flex: 1; height: 3px; background: repeating-linear-gradient(90deg, var(--line) 0 12px, transparent 12px 20px); border-radius: 2px; }
+
+  /* ============ 오늘의 경기 — 스티커 앨범 ============ */
+  .album { padding: 54px 0 60px; border-bottom: 3px solid var(--line); }
+  .album-board {
+    background: var(--navy);
+    background-image:
+      radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.4px),
+      linear-gradient(180deg, rgba(255,255,255,.04), transparent 40%);
+    background-size: 12px 12px, 100% 100%;
+    border: 4px solid var(--navy-deep);
+    border-radius: 10px;
+    box-shadow: 0 8px 0 rgba(38,34,27,.2);
+    padding: 26px 26px 30px;
+  }
+  .album-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+  .album-title-row .t {
+    color: #fff; font-family: "Black Han Sans", sans-serif; font-size: 20px;
+  }
+  .album-title-row .t span { color: var(--mustard); }
+  .album-title-row .hint { color: rgba(255,255,255,.55); font-size: 12.5px; }
+  .slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .slot {
+    border: 2.5px dashed rgba(255,255,255,.35);
+    border-radius: 8px;
+    padding: 16px 14px 14px;
+    color: #fff; min-height: 190px;
+    display: flex; flex-direction: column;
+    position: relative;
+    transition: border-color .15s, background .15s;
+  }
+  .slot:hover { border-color: var(--mustard); background: rgba(255,255,255,.04); }
+  .slot .time {
+    font-family: "Special Elite", monospace;
+    font-size: 15px; color: var(--mustard); letter-spacing: .05em;
+  }
+  .slot .lg {
+    display: inline-block; margin-top: 4px; margin-bottom: 10px;
+    font-family: "Archivo Black", sans-serif; font-size: 9px; letter-spacing: .2em;
+    color: rgba(255,255,255,.6); text-transform: uppercase;
+  }
+  .slot .teams { font-family: "Black Han Sans", sans-serif; font-size: 15.5px; line-height: 1.4; }
+  .slot .vs { color: rgba(255,255,255,.4); font-size: 11px; font-family: "Archivo Black", sans-serif; margin: 1px 0; letter-spacing: .2em; }
+  .slot .cta-mini {
+    margin-top: auto; align-self: flex-start;
+    font-family: "Black Han Sans", sans-serif; font-size: 12.5px;
+    color: var(--navy-deep); background: var(--mustard);
+    border: 2px solid #b5852f; border-radius: 5px;
+    padding: 5px 12px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,.3);
+    transform: rotate(-1deg);
+    transition: transform .12s;
+  }
+  .slot .cta-mini:hover { transform: rotate(0deg) scale(1.04); }
+  .slot .empty-mark {
+    position: absolute; top: 10px; right: 12px;
+    font-family: "Special Elite", monospace;
+    font-size: 10px; color: rgba(255,255,255,.35);
+  }
+
+  /* 열린 슬롯 — 스티커 배당 버튼 */
+  .slot.open { border-style: solid; border-color: var(--mustard); background: rgba(255,255,255,.06); }
+  .sticker-row { display: flex; gap: 8px; margin-top: 12px; }
+  .sticker {
+    flex: 1; border-radius: 6px;
+    border: 2.5px solid rgba(255,255,255,.7);
+    background: rgba(255,255,255,.1);
+    color: #fff;
+    padding: 9px 4px 7px;
+    text-align: center;
+    transition: all .15s;
+  }
+  .sticker .who { font-family: "Black Han Sans", sans-serif; font-size: 12.5px; display: block; line-height: 1.25; }
+  .sticker .role { font-family: "Archivo Black", sans-serif; font-size: 8px; letter-spacing: .22em; color: rgba(255,255,255,.55); display: block; margin-top: 3px; }
+  .sticker:hover { background: rgba(255,255,255,.2); }
+  .sticker.picked {
+    background: var(--card-white); color: var(--burgundy);
+    border-color: #fff;
+    transform: rotate(-3deg) scale(1.06);
+    box-shadow: 3px 4px 0 rgba(0,0,0,.35);
+  }
+  .sticker.picked .role { color: var(--mustard); }
+  .sticker.picked::after {
+    content: "PICKED!";
+    display: block;
+    font-family: "Special Elite", monospace;
+    font-size: 8.5px; color: var(--burgundy);
+    margin-top: 2px; letter-spacing: .1em;
+  }
+  .album-cta-row { margin-top: 22px; display: flex; justify-content: center; }
+  .album-cta-row .btn-slab.mustard {
+    background: var(--mustard); color: var(--navy-deep);
+    border-color: var(--navy-deep); box-shadow: 4px 4px 0 var(--navy-deep);
+  }
+
+  /* ============ 메인 그리드 ============ */
+  .main-grid {
+    display: grid; grid-template-columns: minmax(0,1fr) 316px;
+    gap: 40px; padding: 54px 0 70px;
+  }
+
+  /* 피드 카드 그리드 */
+  .feed-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px; }
+  .feed-grid .tcard, .feed-grid .holo-wrap { transition: transform .18s; }
+  .feed-grid > a:hover .tcard, .feed-grid > a:hover.holo-wrap { transform: translateY(-4px) rotate(-.4deg); }
+  .feed-grid > a { display: block; }
+
+  /* 텍스트 온리 카드 */
+  .tc-textonly {
+    aspect-ratio: 4 / 2.1;
+    display: grid; place-items: center;
+    padding: 20px;
+    text-align: center;
+    background:
+      radial-gradient(rgba(150,30,55,.08) 1px, transparent 1.5px),
+      var(--ivory);
+    background-size: 9px 9px;
+    border-bottom: 3px solid var(--ink);
+  }
+  .tc-textonly .q {
+    font-family: "Alfa Slab One", serif;
+    font-size: 44px; color: var(--burgundy); opacity: .28; line-height: 1;
+  }
+  .tc-textonly .tx {
+    font-family: "Black Han Sans", sans-serif;
+    font-size: 16px; color: var(--ink); margin-top: 4px;
+  }
+
+  /* ============ 사이드바 ============ */
+  .side { display: flex; flex-direction: column; gap: 28px; }
+  .side-card {
+    background: var(--card-white);
+    border: 3px solid var(--ink);
+    border-radius: 8px;
+    box-shadow: 5px 6px 0 rgba(38,34,27,.2);
+    overflow: hidden;
+  }
+  .side-card .sc-head {
+    padding: 10px 14px;
+    background: var(--burgundy); color: #fff;
+    font-family: "Black Han Sans", sans-serif; font-size: 15px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .side-card .sc-head .en { font-family: "Archivo Black", sans-serif; font-size: 8.5px; letter-spacing: .2em; color: var(--mustard); }
+  .side-card .sc-body { padding: 14px; }
+
+  /* 설문 */
+  .poll-q { font-family: "Black Han Sans", sans-serif; font-size: 15.5px; margin-bottom: 12px; }
+  .poll-opt {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    background: var(--ivory);
+    border: 2px solid var(--line); border-radius: 5px;
+    padding: 9px 12px; margin-bottom: 8px;
+    font-size: 14px; font-weight: 600; color: var(--ink);
+    transition: all .13s;
+  }
+  .poll-opt .num {
+    font-family: "Special Elite", monospace; font-size: 12px;
+    color: var(--ink-soft); width: 18px;
+  }
+  .poll-opt:hover { border-color: var(--burgundy); background: #fff; }
+  .poll-opt.sel {
+    border-color: var(--burgundy); background: #fff;
+    box-shadow: 2px 2px 0 var(--burgundy);
+    transform: rotate(-.6deg);
+  }
+  .poll-opt.sel::after { content: "✓"; margin-left: auto; color: var(--burgundy); font-weight: 800; }
+  .poll-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* 디스코드 배너 — 브랜드 톤 재해석 */
+  .disc-banner {
+    background: var(--navy);
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 2px, transparent 2px 8px);
+    border: 3px solid var(--navy-deep);
+    border-radius: 8px;
+    box-shadow: 5px 6px 0 rgba(38,34,27,.2);
+    padding: 18px 16px;
+    color: #fff;
+    position: relative; overflow: hidden;
+  }
+  .disc-banner .badge {
+    display: inline-block;
+    font-family: "Archivo Black", sans-serif; font-size: 9px; letter-spacing: .22em;
+    background: var(--mustard); color: var(--navy-deep);
+    padding: 4px 10px; border-radius: 3px;
+    transform: rotate(-1.6deg);
+    margin-bottom: 10px;
+  }
+  .disc-banner p { font-family: "Black Han Sans", sans-serif; font-size: 16px; line-height: 1.4; margin-bottom: 13px; }
+  .disc-banner .join {
+    display: inline-block;
+    font-family: "Black Han Sans", sans-serif; font-size: 13.5px;
+    background: #fff; color: var(--navy);
+    border: 2px solid var(--navy-deep); border-radius: 5px;
+    padding: 7px 16px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.3);
+    transition: transform .12s;
+  }
+  .disc-banner .join:hover { transform: translateY(-2px) rotate(-1deg); }
+  .disc-banner .corner {
+    position: absolute; right: -18px; bottom: -20px;
+    font-family: "Alfa Slab One", serif; font-size: 84px;
+    color: rgba(255,255,255,.06); line-height: 1;
+    user-select: none;
+  }
+
+  /* 최근 댓글 */
+  .recent li {
+    list-style: none;
+    padding: 10px 2px;
+    border-bottom: 2px dashed var(--line);
+    font-size: 13.5px; font-weight: 600;
+    display: flex; gap: 8px; align-items: baseline;
+  }
+  .recent li:last-child { border-bottom: 0; }
+  .recent .cnt {
+    font-family: "Special Elite", monospace;
+    color: var(--burgundy); font-size: 12.5px; flex-shrink: 0;
+  }
+  .recent li:hover { color: var(--burgundy); cursor: pointer; }
+
+  /* ============ 푸터 ============ */
+  footer.ft {
+    background: var(--ink);
+    color: rgba(255,255,255,.65);
+    border-top: 6px solid var(--burgundy);
+    padding: 40px 0 90px;
+  }
+  .ft-inner { display: flex; justify-content: space-between; gap: 30px; flex-wrap: wrap; align-items: flex-start; }
+  .ft .logo .brush { font-size: 28px; text-shadow: none; }
+  .ft .slogan { font-size: 12.5px; margin-top: 6px; color: rgba(255,255,255,.45); }
+  .ft-links { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; }
+  .ft-links a:hover { color: var(--mustard); }
+  .ft .stamp-mark {
+    font-family: "Special Elite", monospace;
+    font-size: 11px; color: rgba(255,255,255,.3);
+    border: 1.5px solid rgba(255,255,255,.2); border-radius: 3px;
+    padding: 5px 10px; transform: rotate(-2deg);
+  }
+
+  /* ============ 모바일 하단 탭 ============ */
+  .mtab {
+    display: none;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+    background: var(--card-white);
+    border-top: 3px solid var(--ink);
+    box-shadow: 0 -4px 0 rgba(38,34,27,.12);
+  }
+  .mtab a {
+    flex: 1; text-align: center; padding: 9px 0 10px;
+    font-family: "Black Han Sans", sans-serif; font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .mtab a .ic { display: block; font-size: 17px; margin-bottom: 1px; }
+  .mtab a.on { color: var(--burgundy); }
+
+  /* ============ 반응형 ============ */
+  @media (max-width: 1080px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .pack-stage { height: 440px; max-width: 480px; margin: 0 auto; width: 100%; }
+    .main-grid { grid-template-columns: 1fr; }
+    .slot-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    nav.menu { display: none; }
+    .mtab { display: flex; }
+    .feed-grid { grid-template-columns: 1fr; }
+    .slot-grid { grid-template-columns: 1fr; }
+    .pack-stage { height: 420px; }
+    .pack-stage .hero-card { width: 280px; right: 0; }
+    .pack-stage .back-card { width: 210px; left: 0; }
+    .hero { padding: 36px 0 48px; }
+    footer.ft { padding-bottom: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ GNB ============ -->
+<header class="gnb">
+  <div class="wrap gnb-inner">
+    <a class="logo" href="#">
+      <span class="brush">그깟 공놀이</span>
+      <span class="domain">gongnori.fan</span>
+    </a>
+    <nav class="menu">
+      <a href="#" class="on">담벼락</a>
+      <a href="#">운동장</a>
+      <a href="#">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button aria-label="검색">⌕</button>
+      <button aria-label="알림">🔔</button>
+      <button class="avatar" aria-label="프로필">몽</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO — 카드 팩 개봉 ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pack-label">TODAY'S PACK — 2026.07.27</span>
+      <h1>오늘의 떡밥 팩,<br /><span class="hl">방금 개봉</span>했습니다</h1>
+      <p class="sub">그깟 공놀이에 진심인 팬들의 놀이터. 이적 오피셜부터 1티어 찌라시까지, 매일 새 카드 팩으로 도착합니다.</p>
+      <div class="hero-ctas">
+        <a href="#feed"><button class="btn-slab primary">오늘의 카드 열기</button></a>
+        <a href="#album"><button class="btn-slab ghost">예측 앨범 채우기</button></a>
+      </div>
+    </div>
+
+    <div class="pack-stage" aria-hidden="true">
+      <div class="foil"></div>
+
+      <!-- 뒤에 깔린 카드 -->
+      <div class="tcard back-card">
+        <div class="tc-frame navy">
+          <div class="tc-banner"><span>PREMIER LEAGUE</span><span class="no">#003</span></div>
+          <div class="tc-photo"><img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="" loading="lazy" /></div>
+          <div class="tc-body">
+            <span class="tc-source official">✓ 오피셜</span>
+            <div class="tc-title" style="font-size:15px;">첼시, 페드로 네토 판매 계획 없음</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 히어로 카드 (2.5° 회전) -->
+      <div class="tcard hero-card">
+        <div class="tc-frame">
+          <div class="tc-banner"><span>LA LIGA → PL</span><span class="no">#002</span></div>
+          <div class="tc-photo"><img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" /></div>
+          <div class="tc-body">
+            <span class="tc-source">디 애슬레틱</span>
+            <div class="tc-title">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</div>
+            <div class="tc-meta"><span>오늘의 히어로 카드</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 오늘의 경기 — 스티커 앨범 ============ -->
+<section class="album" id="album">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>오늘의 경기</h2>
+      <span class="en">Sticker Album — Fill The Slots</span>
+      <span class="rule"></span>
+    </div>
+
+    <div class="album-board">
+      <div class="album-title-row">
+        <div class="t">아직 <span>빈 자리가 3칸</span> 남았어요 — 픽을 붙여 앨범을 완성하세요</div>
+        <div class="hint">경기 시작 전까지 픽 스티커를 붙일 수 있어요</div>
+      </div>
+
+      <div class="slot-grid">
+        <!-- 열린 슬롯: 승/무/패 스티커 (선택됨 1개 포함) -->
+        <div class="slot open">
+          <span class="time">19:00</span>
+          <span class="lg">K LEAGUE 1</span>
+          <div class="teams">울산 HD<div class="vs">VS</div>포항 스틸러스</div>
+          <div class="sticker-row" data-pickgroup>
+            <button class="sticker picked"><span class="who">울산 HD</span><span class="role">HOME</span></button>
+            <button class="sticker"><span class="who">무승부</span><span class="role">DRAW</span></button>
+            <button class="sticker"><span class="who">포항</span><span class="role">AWAY</span></button>
+          </div>
+        </div>
+
+        <div class="slot">
+          <span class="empty-mark">EMPTY</span>
+          <span class="time">20:00</span>
+          <span class="lg">K LEAGUE 1</span>
+          <div class="teams">FC서울<div class="vs">VS</div>전북 현대</div>
+          <button class="cta-mini">+ 픽 붙이기</button>
+        </div>
+
+        <div class="slot">
+          <span class="empty-mark">EMPTY</span>
+          <span class="time">01:30</span>
+          <span class="lg">MLS</span>
+          <div class="teams">뉴욕 시티<div class="vs">VS</div>토론토 FC</div>
+          <button class="cta-mini">+ 픽 붙이기</button>
+        </div>
+
+        <div class="slot">
+          <span class="empty-mark">EMPTY</span>
+          <span class="time">03:30</span>
+          <span class="lg">MLS</span>
+          <div class="teams">인터 마이애미<div class="vs">VS</div>LA 갤럭시</div>
+          <button class="cta-mini">+ 픽 붙이기</button>
+        </div>
+      </div>
+
+      <div class="album-cta-row">
+        <button class="btn-slab mustard">오늘의 앨범 마저 채우러 가기 →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 피드 + 사이드바 ============ -->
+<main class="wrap main-grid" id="feed">
+  <section>
+    <div class="sec-head">
+      <h2>오늘의 떡밥</h2>
+      <span class="en">Card News — Series 26</span>
+      <span class="rule"></span>
+    </div>
+
+    <div class="feed-grid">
+
+      <!-- #001 홀로 카드 (1티어) -->
+      <a href="#" class="holo-wrap">
+        <div class="tcard">
+          <div class="tc-frame">
+            <div class="tc-banner"><span>Transfer · Spurs</span><span class="no">#001</span></div>
+            <div class="tc-photo"><img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source">★ David Ornstein</span>
+              <div class="tc-title">토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</div>
+              <div class="tc-meta"><span>좋아요 <b>1</b></span><span>댓글 <b>1</b></span><span>7월 1일</span></div>
+              <div class="tc-comment"><b>몽몽이</b> 다른 기사를 보니까, 토트넘은 85m 파운드를 일시불로 준다고 하네요</div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #003 오피셜 (네이비 프레임) -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame navy">
+            <div class="tc-banner"><span>Official · Chelsea</span><span class="no">#003</span></div>
+            <div class="tc-photo"><img src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source official">✓ 오피셜</span>
+              <div class="tc-title">첼시, 페드로 네토 판매 계획 없음</div>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #004 버건디 -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame">
+            <div class="tc-banner"><span>Transfer · Man City</span><span class="no">#004</span></div>
+            <div class="tc-photo"><img src="https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source">Marca</span>
+              <div class="tc-title">맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</div>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #005 네이비 -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame navy">
+            <div class="tc-banner"><span>National Team · Belgium</span><span class="no">#005</span></div>
+            <div class="tc-photo"><img src="https://drupal2018.assets.rbfa.be/s3fs-public/styles/image_850x475/public/2026-07/website_mvb.jpg?VersionId=EZykAQx98Mdt1iqlKGUJyqvjLtw4GGaT&h=73cf9c8b&itok=cKhFdd8R" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source navy-tag">RBFA</span>
+              <div class="tc-title">벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</div>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #006 버건디 -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame">
+            <div class="tc-banner"><span>Serie A · Italy</span><span class="no">#006</span></div>
+            <div class="tc-photo"><img src="https://dimages2.gazzettaobjects.it/files/og_thumbnail/files/fp/uploads/2026/07/21/6a5fb272da411.r_d.1500-838-0.jpeg" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source">가제타</span>
+              <div class="tc-title">이탈리아 축구 연맹, 안드레아 피를로 감독직 접촉</div>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #007 홀로 카드 (1티어, 텍스트 온리) -->
+      <a href="#" class="holo-wrap">
+        <div class="tcard">
+          <div class="tc-frame">
+            <div class="tc-banner"><span>Here We Go · MLS</span><span class="no">#007</span></div>
+            <div class="tc-textonly">
+              <div>
+                <div class="q">“</div>
+                <div class="tx">로베르트 레반도프스키,<br />시카고 파이어 이적 확정</div>
+              </div>
+            </div>
+            <div class="tc-body">
+              <span class="tc-source">★ 로마노</span>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #008 네이비 -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame navy">
+            <div class="tc-banner"><span>Transfer · Leeds</span><span class="no">#008</span></div>
+            <div class="tc-photo"><img src="https://static01.nyt.com/athletic/uploads/wp/2026/07/23055800/james-trafford-mc-scaled-e1784800706287.jpg" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source navy-tag">디 애슬레틱</span>
+              <div class="tc-title">리즈, 맨체스터 시티와 제임스 트래포드 영입 협상 중</div>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #009 텍스트 온리 (버건디) -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame">
+            <div class="tc-banner"><span>Transfer · PSG</span><span class="no">#009</span></div>
+            <div class="tc-textonly">
+              <div>
+                <div class="q">“</div>
+                <div class="tx">디오망데, PSG와<br />5년 계약 합의 근접</div>
+              </div>
+            </div>
+            <div class="tc-body">
+              <span class="tc-source">Loïc Tanzi</span>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- #010 네이비 -->
+      <a href="#">
+        <div class="tcard">
+          <div class="tc-frame navy">
+            <div class="tc-banner"><span>Match · MLS</span><span class="no">#010</span></div>
+            <div class="tc-photo"><img src="https://s.yimg.com/os/en/esteemed_kompany_articles_332/41683de89e8ef81449c3a489d5aa408c" alt="" loading="lazy" /></div>
+            <div class="tc-body">
+              <span class="tc-source navy-tag">Yahoo</span>
+              <div class="tc-title">인터 마이애미, 메시 결장 속 몬트리올 원정 승리</div>
+              <div class="tc-meta"><span>7월 1일</span></div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ============ 사이드바 ============ -->
+  <aside class="side">
+
+    <!-- 오늘의 설문 -->
+    <div class="side-card">
+      <div class="sc-head">오늘의 설문 <span class="en">Daily Poll</span></div>
+      <div class="sc-body">
+        <div class="poll-q">아스날 다음 영입 1순위는?</div>
+        <button class="poll-opt" data-poll><span class="num">01</span>기마랑이스</button>
+        <button class="poll-opt sel" data-poll><span class="num">02</span>토날리</button>
+        <button class="poll-opt" data-poll><span class="num">03</span>마페</button>
+        <button class="poll-opt" data-poll><span class="num">04</span>부아디</button>
+        <div class="poll-note">투표는 로그인 후 가능 · 결과는 누구나 볼 수 있어요</div>
+      </div>
+    </div>
+
+    <!-- 디스코드 배너 (브랜드 톤) -->
+    <div class="disc-banner">
+      <span class="badge">DAILY ALERT</span>
+      <p>축구 뉴스 · 매일 밤<br />오늘의 경기 알림을 디스코드로</p>
+      <a class="join" href="#">서버 입장하기 →</a>
+      <span class="corner">⚽</span>
+    </div>
+
+    <!-- 최근 댓글 -->
+    <div class="side-card">
+      <div class="sc-head">최근 댓글 달린 글 <span class="en">Fresh Talk</span></div>
+      <div class="sc-body">
+        <ul class="recent">
+          <li><span class="cnt">[4]</span>월드컵 이벤트 예측 내역이</li>
+          <li><span class="cnt">[1]</span>한국 축구 빙고의 저주 7월 1일 기준</li>
+          <li><span class="cnt">[1]</span>[David Ornstein] 토트넘, 마테우스…</li>
+        </ul>
+      </div>
+    </div>
+
+  </aside>
+</main>
+
+<!-- ============ 푸터 ============ -->
+<footer class="ft">
+  <div class="wrap ft-inner">
+    <div>
+      <a class="logo" href="#">
+        <span class="brush">그깟 공놀이</span>
+        <span class="domain">gongnori.fan</span>
+      </a>
+      <div class="slogan">그깟 공놀이에 진심인 팬들의 놀이터</div>
+    </div>
+    <nav class="ft-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <span class="stamp-mark">SERIES 26 · PRINTED IN SEOUL</span>
+  </div>
+</footer>
+
+<!-- ============ 모바일 하단 탭 ============ -->
+<nav class="mtab">
+  <a href="#" class="on"><span class="ic">🃏</span>담벼락</a>
+  <a href="#"><span class="ic">🏟️</span>운동장</a>
+  <a href="#album"><span class="ic">🎯</span>승부예측</a>
+  <a href="#"><span class="ic">✏️</span>글쓰기</a>
+</nav>
+
+<script>
+  // 배당 스티커: 그룹 내 단일 선택
+  document.querySelectorAll('[data-pickgroup]').forEach(function (group) {
+    group.querySelectorAll('.sticker').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        group.querySelectorAll('.sticker').forEach(function (b) { b.classList.remove('picked'); });
+        btn.classList.add('picked');
+      });
+    });
+  });
+
+  // 설문: 단일 선택 데모
+  var polls = document.querySelectorAll('[data-poll]');
+  polls.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      polls.forEach(function (b) { b.classList.remove('sel'); });
+      btn.classList.add('sel');
+    });
+  });
+</script>
+
+</body>
+</html>
