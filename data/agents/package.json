@@ -14,9 +14,12 @@
     "agg:cycle": "node scripts/agg-scout-run.js && node scripts/agg-fetch-run.js && node scripts/agg-write-run.js",
     "agg:train": "node scripts/agg-train.js",
     "agg:train:gen": "node scripts/agg-train.js gen",
-    "agg:train:learn": "node scripts/agg-train.js learn"
+    "agg:train:learn": "node scripts/agg-train.js learn",
+    "preview:extract": "node scripts/preview-extract-run.js",
+    "preview:publish": "node scripts/preview-publish-run.js"
   },
   "dependencies": {
+    "playwright": "^1.57.0",
     "sharp": "^0.34.5"
   }
 }
