@@ -26,9 +26,9 @@ export function SiteFooter() {
         <span
           className="inline-block leading-none"
           style={{
-            // Paperlogy Black 900 — 이미 900 이라 font-weight 를 더 얹지 않는다
+            // 어그로체 Bold(700) 단일 — 더 굵은 값을 얹으면 합성 볼드가 된다
             fontFamily: "var(--font-display-ko), var(--font-title)",
-            fontWeight: 900,
+            fontWeight: 700,
             fontSize: 40,
             letterSpacing: "-0.04em",
             color: "var(--gn-cream)",
@@ -37,7 +37,7 @@ export function SiteFooter() {
           그깟 공놀이
         </span>
         <div
-          className="gn-num mt-2 text-[13px] font-semibold"
+          className="gn-num mt-2 text-[13px] font-bold"
           style={{ letterSpacing: "0.2em", color: "var(--gn-bg-100)" }}
         >
           GONGNORI.FAN

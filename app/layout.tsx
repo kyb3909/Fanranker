@@ -60,19 +60,22 @@ const suit = localFont({
 
 // 붓글씨(Nanum Brush/Pen)는 제거했다 — next/font 타입이 latin 서브셋만 허용해서
 // 한글 헤드라인에 쓰면 글리프가 없어 통째로 폴백 산세리프로 렌더된다.
-// 그 자리는 아래 Paperlogy Black 이 맡는다.
+// 그 자리는 아래 어그로체 Bold 가 맡는다.
 
-// 디스플레이(브랜드 헤드라인) 한글: Paperlogy Black 900 — OFL, self-host.
-// Gmarket Sans 파생의 꽉 찬 지오메트릭 네모꼴. SUIT/Pretendard 와 골격이 달라서
-// 크기를 안 키워도 "제목"으로 읽힌다. 다크 밴드 헤드라인·푸터 로고 등 짧은 문구 전용.
-// KS X 1001(2,350자) + 라틴 + 호환자모로 서브셋: 166 KB → 115 KB.
-//   pyftsubset Paperlogy-9Black.ttf --text-file=charset.txt --flavor=woff2 \
+// 디스플레이(브랜드 헤드라인) 한글: 어그로체 Bold (SB Aggro) — 샌드박스 무료 배포.
+// 각진 모서리 + 짧고 굵은 획의 스포츠/스트리트 체. 본문(Pretendard)과 골격이 완전히
+// 달라서 크기를 안 키워도 "제목"으로 읽힌다. 다크 밴드 헤드라인·푸터 로고 등 짧은 문구 전용.
+// KS X 1001(2,350자) + 라틴 + 호환자모로 서브셋: 210 KB → 91 KB.
+//   pyftsubset AggroB.ttf --text-file=charset.txt --flavor=woff2 \
 //     --layout-features='' --no-hinting --desubroutinize
 // display: swap + preload 없음 — 장식 슬롯이라 첫 페인트를 막지 않는다.
-// ⚠️ 합성 볼드 금지: 이미 900 이므로 font-weight 를 더 얹지 말 것.
-const paperlogy = localFont({
-  src: "../public/fonts/Paperlogy-Black.woff2",
-  weight: "900",
+// ⚠️ 라이선스: 공식 페이지(sandbox.co.kr/font)가 "모든 사용자에게 무료 제공, 자유롭게
+//    수정·재배포 가능"으로 명시하나, 라이선스 PDF 전문은 확인하지 못했다(CID 인코딩).
+//    외부 배포 전 aggro-font@sandbox.co.kr 로 임베딩 조건 확인 권장.
+// ⚠️ 합성 볼드 금지: 이미 Bold 이므로 font-weight 를 더 얹지 말 것.
+const aggro = localFont({
+  src: "../public/fonts/Aggro-Bold.woff2",
+  weight: "700",
   variable: "--font-display-ko",
   display: "swap",
   preload: false,
@@ -197,7 +200,7 @@ export default function RootLayout({
       <ClerkProvider localization={koLocalization} dynamic>
         <html
           lang="ko"
-          className={`${pretendard.variable} ${suit.variable} ${barlowCondensed.variable} ${paperlogy.variable}`}
+          className={`${pretendard.variable} ${suit.variable} ${barlowCondensed.variable} ${aggro.variable}`}
           suppressHydrationWarning
         >
           {/*

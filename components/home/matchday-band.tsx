@@ -21,8 +21,8 @@ const SLIDE_MS = 6000
 const MAX_SLIDES = 3
 const MAX_ROWS = 4
 
-/** 브랜드 헤드라인 — Paperlogy Black 900 (한글 디스플레이).
- *  ⚠️ 이미 900 이라 font-weight 를 더 얹으면 합성 볼드로 뭉갠다. */
+/** 브랜드 헤드라인 — 어그로체 Bold (한글 디스플레이).
+ *  ⚠️ 이미 Bold 라 font-weight 를 더 얹으면 합성 볼드로 뭉갠다. */
 const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
 function fmtKstTime(iso: string): string {
@@ -84,9 +84,9 @@ export function MatchdayBand({ cards }: MatchdayBandProps) {
           <h2
             className="text-[26px] leading-none sm:text-[32px]"
             style={{
-              // 폰트 자체가 900 — font-weight 를 얹으면 합성 볼드로 뭉갠다
+              // 어그로체는 Bold(700) 단일 — 900 을 얹으면 브라우저가 합성 볼드로 뭉갠다
               fontFamily: DISPLAY,
-              fontWeight: 900,
+              fontWeight: 700,
               color: "var(--gn-cream)",
               letterSpacing: "-0.035em",
             }}
@@ -94,7 +94,7 @@ export function MatchdayBand({ cards }: MatchdayBandProps) {
             오늘의 메인 이벤트
           </h2>
           <span
-            className="gn-num ml-auto hidden text-[15px] font-semibold sm:block"
+            className="gn-num ml-auto hidden text-[15px] font-bold sm:block"
             style={{ letterSpacing: "0.1em", color: "var(--gn-cream-dim)" }}
             suppressHydrationWarning
           >
@@ -176,7 +176,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               </span>
             )}
             <h3
-              className="font-title max-w-[21ch] text-[22px] leading-[1.24] font-black sm:text-[31px]"
+              className="font-title max-w-[21ch] text-[22px] leading-[1.24] font-bold sm:text-[31px]"
               style={{ color: "var(--gn-cream)", letterSpacing: "-0.025em" }}
             >
               <Link href={`/post/${c.id}`} className="hover:underline">
@@ -213,7 +213,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
         }}
       >
         <span
-          className="gn-num absolute top-5 left-[42px] text-[15px] font-extrabold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[18px]"
+          className="gn-num absolute top-5 left-[42px] text-[15px] font-bold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[18px]"
           style={{
             transform: "skewX(8deg) rotate(90deg)",
             transformOrigin: "left top",
@@ -304,7 +304,7 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
           className="text-[21px] leading-none"
           style={{
             fontFamily: DISPLAY,
-            fontWeight: 900,
+            fontWeight: 700,
             color: "var(--gn-cream)",
             letterSpacing: "-0.035em",
           }}
@@ -312,7 +312,7 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
           오늘의 경기
         </h3>
         <span
-          className="gn-num text-[13px] font-semibold uppercase"
+          className="gn-num text-[13px] font-bold uppercase"
           style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.06em" }}
         >
           {matches.length} matches
@@ -328,7 +328,7 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
             다음 킥오프까지
           </span>
           <span
-            className="gn-num text-[34px] leading-none font-extrabold"
+            className="gn-num text-[34px] leading-none font-bold"
             style={{ color: "var(--gn-cream)" }}
             suppressHydrationWarning
           >
@@ -352,7 +352,7 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
                 {fmtKstTime(m.matchTime)}
               </span>
               <span
-                className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-semibold uppercase"
+                className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
                 style={{
                   border: "1px solid var(--gn-night-line)",
                   color: "var(--gn-cream-dim)",
@@ -363,10 +363,7 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
               </span>
               <span className="truncate text-[14px] font-bold" style={{ color: "var(--gn-cream)" }}>
                 {m.homeTeam}
-                <span
-                  className="gn-num mx-1.5 text-[11px] font-semibold"
-                  style={{ color: "#8d8794" }}
-                >
+                <span className="gn-num mx-1.5 text-[11px] font-bold" style={{ color: "#8d8794" }}>
                   VS
                 </span>
                 {m.awayTeam}
