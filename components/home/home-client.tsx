@@ -11,6 +11,7 @@ import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
+import { TodayGamesStrip } from "@/components/home/today-games-strip"
 import { CardNewsFeed } from "@/components/cardnews/card-news-feed"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
@@ -297,6 +298,8 @@ export function HomeClient({
 
             {feedTab === "board" && (
               <div className="space-y-2.5">
+                {/* 오늘의 경기 일정 (배당 없음) — 예측 탭으로의 데일리 훅 */}
+                <TodayGamesStrip />
                 {/* 말머리 필터 — 로그인 사용자만. 팔로우 게시판 말머리 즐겨찾기/뮤트로 담벼락 개인화 */}
                 {isSignedIn && <FlairFilterBar followedSlugs={[...followedCommunities]} />}
                 <FeedSection

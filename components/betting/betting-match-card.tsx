@@ -213,11 +213,11 @@ export function BettingMatchCard({
                   )
                 }
                 disabled={optDisabled}
-                aria-label={`${opt.label} 선택, 배점 ${opt.odds ? opt.odds.toFixed(2) : "없음"}`}
+                aria-label={`${opt.label} 선택`}
                 aria-pressed={isSelected}
               >
+                {/* 배당률/난이도 비노출 — 선택지는 팀명만, 배점은 슬립에서 공개 */}
                 <span className="wc-odd-l">{opt.label}</span>
-                <span className="wc-odd-n">{opt.odds ? opt.odds.toFixed(2) : "-"}</span>
               </button>
             )
           })}
