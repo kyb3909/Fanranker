@@ -30,6 +30,15 @@ const UA =
 const MAX_IMAGES = 5
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
+// WebP 변환용 sharp — 업로드 라우트(app/api/upload/image)와 동일한 설정(1200px, q80).
+// VPS 에 sharp 미설치면 원본 포맷 그대로 rehost 하고 경고만 남긴다 (파이프라인 중단 방지).
+let sharp = null
+try {
+  sharp = (await import('sharp')).default
+} catch {
+  /* fallback: 원본 그대로 업로드 */
+}
+
 function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [agg-fetch] ${msg}\n`)
 }
@@ -103,7 +112,7 @@ function extForContentType(ct, url) {
   return m ? m[1].toLowerCase().replace('jpeg', 'jpg') : 'jpg'
 }
 
-/** 이미지 다운로드 → storage 'posts' 버킷 rehost → /storage/posts/... 경로 반환 */
+/** 이미지 다운로드 → WebP 변환 → storage 'posts' 버킷 rehost → /storage/posts/... 경로 반환 */
 async function rehostImage(reservoirId, idx, imageUrl, referer) {
   const res = await fetch(imageUrl, {
     headers: { 'User-Agent': UA, Referer: referer },
@@ -113,11 +122,30 @@ async function rehostImage(reservoirId, idx, imageUrl, referer) {
   if (!ct.startsWith('image/')) throw new Error(`not image: ${ct}`)
   const buf = Buffer.from(await res.arrayBuffer())
   if (buf.length > MAX_IMAGE_BYTES) throw new Error(`too large: ${buf.length}`)
-  const ext = extForContentType(ct, imageUrl)
+
+  let outBuf = buf
+  let outCt = ct
+  let ext = extForContentType(ct, imageUrl)
+  if (sharp) {
+    try {
+      const isGif = ct.includes('gif')
+      outBuf = await sharp(buf, isGif ? { animated: true, pages: -1 } : undefined)
+        .resize(1200, undefined, { withoutEnlargement: true, fit: 'inside' })
+        .webp({ quality: 80 })
+        .toBuffer()
+      outCt = 'image/webp'
+      ext = 'webp'
+    } catch (e) {
+      log(`    [WARN] webp 변환 실패 (${e.message}) — 원본 포맷으로 rehost`)
+    }
+  } else {
+    log(`    [WARN] sharp 미설치 — 원본 포맷으로 rehost (data/agents 에서 npm install 필요)`)
+  }
+
   const path = `agg/${reservoirId}/${idx}.${ext}`
   const { error } = await supabase.storage
     .from('posts')
-    .upload(path, buf, { contentType: ct, upsert: true })
+    .upload(path, outBuf, { contentType: outCt, upsert: true })
   if (error) throw new Error(`upload: ${error.message}`)
   return `/storage/posts/${path}`
 }
