@@ -167,7 +167,11 @@ export default async function Home({
         initialGlobalNotices={homeData.initialGlobalNotices}
         initialSort={initialSort}
         initialTab={
-          params.tab === "games" ? "games" : params.tab === "cardnews" ? "cardnews" : "board"
+          params.tab === "games"
+            ? "games"
+            : params.tab === "board" || params.sort
+              ? "board" // 옛 ?sort= 링크는 게시판 탭으로
+              : "cardnews" // 기본 = 오늘의 떡밥
         }
         worldcupConcluded={homeData.worldcupConcluded}
         initialCardNews={homeData.initialCardNews}

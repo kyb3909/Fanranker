@@ -68,13 +68,14 @@ export function HomeClient({
   const [feedTab, setFeedTab] = useState<FeedTab>(initialTab)
 
   // 탭/정렬을 URL 에 보존 → 새로고침·뒤로가기 시 선택 유지
-  // 기본(게시판 피드)=파라미터 없음(?sort= 만), 카드뉴스=?tab=cardnews, 게임=?tab=games
+  // 기본(오늘의 떡밥)=파라미터 없음, 게시판=?tab=board[&sort=], 게임=?tab=games
   useEffect(() => {
     const t = searchParams.get("tab")
     const s = searchParams.get("sort")
     if (t === "games") setFeedTab("games")
-    else if (t === "cardnews") setFeedTab("cardnews")
-    else setFeedTab("board")
+    else if (t === "board" || s)
+      setFeedTab("board") // 옛 ?sort= 링크는 게시판으로
+    else setFeedTab("cardnews")
     if (s === "new" || s === "hot" || s === "random") setSortBy(s)
   }, [searchParams])
 
@@ -87,7 +88,7 @@ export function HomeClient({
     setFeedTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.delete("sort")
-    if (tab === "board") params.delete("tab")
+    if (tab === "cardnews") params.delete("tab")
     else params.set("tab", tab)
     replaceUrl(params)
   }
@@ -96,7 +97,7 @@ export function HomeClient({
     setFeedTab("board")
     setSortBy(key)
     const params = new URLSearchParams(searchParams.toString())
-    params.delete("tab")
+    params.set("tab", "board")
     if (key === "new")
       params.delete("sort") // 기본값(최신순)은 URL 깔끔하게
     else params.set("sort", key)
