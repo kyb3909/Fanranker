@@ -35,9 +35,7 @@ interface PredictionClientProps {
 
 export function PredictionClient({ initialRecentComments, worldcupStatus }: PredictionClientProps) {
   return (
-    /* gn-pick-dark: 경기 카드 / 픽 버튼만 다크 액션 존으로 (app/a-tokens.css 하단).
-       되돌리려면 이 클래스와 해당 CSS 블록만 지우면 된다 — 베팅 로직은 무관. */
-    <div className="worldcup-scope gn-pick-dark min-h-[100dvh]">
+    <div className="worldcup-scope min-h-[100dvh]">
       <main
         id="main-content"
         className="mx-auto min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
