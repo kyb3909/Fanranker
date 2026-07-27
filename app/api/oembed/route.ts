@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { sanitizeEmbedHtml } from "@/lib/sanitize-embed"
 import { apiError } from "@/lib/api-error"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 interface EmbedMedia {
   type: "photo" | "video"
@@ -54,6 +55,27 @@ const URL_PATTERNS = {
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/,
   x: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/,
   streamable: /(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:[eosm]\/)?([a-zA-Z0-9]+)/,
+}
+
+/**
+ * embed_cache 영구 캐시 — 외부 oEmbed 호출을 리소스당 사실상 1회로 줄인다.
+ * TTL 내 히트면 그대로 서빙, 만료면 재시도하되 실패 시 stale 서빙(외부 장애 격리).
+ */
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+function cacheKey(provider: string, url: string): string | null {
+  switch (provider) {
+    case "youtube":
+      return `youtube:${url.match(URL_PATTERNS.youtube)?.[1] ?? ""}`
+    case "instagram":
+      return `instagram:${url.match(URL_PATTERNS.instagram)?.[1] ?? ""}`
+    case "x": {
+      const m = url.match(URL_PATTERNS.x)
+      return m ? `x:${m[2]}` : null
+    }
+    default:
+      return null // streamable 은 외부 호출이 없어 캐시 불필요
+  }
 }
 
 /**
@@ -204,11 +226,78 @@ function buildInstagramBlockquote(permalink: string): string {
   return `<blockquote class="instagram-media" data-instgrm-permalink="${permalink}" data-instgrm-version="14" style="max-width:540px;min-width:326px;width:100%;"></blockquote>`
 }
 
+/** fxtwitter/vxtwitter 응답을 공통 형태로 정규화한 트윗 데이터 */
+interface TweetData {
+  text: string
+  screenName: string
+  displayName: string
+  avatar: string
+  media: EmbedMedia[]
+}
+
+async function fetchFromFxTwitter(statusId: string): Promise<TweetData | null> {
+  const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
+    headers: { "User-Agent": "gongnori.fan/1.0" },
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!res.ok) return null
+  const data = await res.json().catch(() => null)
+  const tweet = data?.tweet
+  if (!tweet) return null
+
+  const media: EmbedMedia[] = []
+  for (const photo of tweet.media?.photos ?? []) {
+    if (photo.url) media.push({ type: "photo", url: photo.url })
+  }
+  for (const video of tweet.media?.videos ?? []) {
+    if (video.url) media.push({ type: "video", url: video.url, thumbnail_url: video.thumbnail_url })
+  }
+  // native 미디어가 없고 링크 카드(기사 미리보기)가 있으면 카드 이미지를 사용
+  if (media.length === 0 && tweet.card?.image?.url) {
+    media.push({ type: "photo", url: tweet.card.image.url })
+  }
+
+  return {
+    text: tweet.text || "",
+    screenName: tweet.author?.screen_name || "",
+    displayName: tweet.author?.name || "",
+    avatar: tweet.author?.avatar_url || "",
+    media,
+  }
+}
+
+/** fxtwitter 장애 대비 미러 — 응답 스키마가 달라 별도 매핑 */
+async function fetchFromVxTwitter(statusId: string): Promise<TweetData | null> {
+  const res = await fetch(`https://api.vxtwitter.com/i/status/${statusId}`, {
+    headers: { "User-Agent": "gongnori.fan/1.0" },
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!res.ok) return null
+  const data = await res.json().catch(() => null)
+  if (!data || typeof data.text !== "string") return null
+
+  const media: EmbedMedia[] = []
+  for (const m of data.media_extended ?? []) {
+    if (!m?.url) continue
+    if (m.type === "image") media.push({ type: "photo", url: m.url })
+    else media.push({ type: "video", url: m.url, thumbnail_url: m.thumbnail_url })
+  }
+
+  return {
+    text: data.text || "",
+    screenName: data.user_screen_name || "",
+    displayName: data.user_name || "",
+    avatar: data.user_profile_image_url || "",
+    media,
+  }
+}
+
 /**
  * Fetch oEmbed data from X (Twitter)
  *
  * Twitter 공식 oEmbed/widgets.js가 완전히 죽어있으므로
- * fxtwitter.com API로 트윗 데이터를 가져와서 커스텀 카드 HTML 생성.
+ * fxtwitter → vxtwitter 폴백 체인으로 트윗 데이터를 가져와 커스텀 카드 HTML 생성.
+ * 둘 다 실패하면 throw — 빈 카드를 캐시하지 않고 stale 캐시로 폴백하기 위함.
  */
 async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<OEmbedResponse> {
   const match = url.match(URL_PATTERNS.x)
@@ -220,57 +309,28 @@ async function fetchXOEmbed(url: string, includeHtml: boolean = true): Promise<O
   const statusId = match[2]
   const originalUrl = url.startsWith("http") ? url : `https://${url}`
 
-  let tweetText = ""
-  let authorName = `@${username}`
-  let authorAvatar = ""
-  let mediaUrl = ""
-  let displayName = ""
-  const mediaItems: EmbedMedia[] = []
-
+  let tweet: TweetData | null = null
   try {
-    const res = await fetch(`https://api.fxtwitter.com/status/${statusId}`, {
-      headers: { "User-Agent": "gongnori.fan/1.0" },
-      signal: AbortSignal.timeout(5000),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      const tweet = data.tweet
-      if (tweet) {
-        tweetText = tweet.text || ""
-        authorName = `@${tweet.author?.screen_name || username}`
-        displayName = tweet.author?.name || ""
-        authorAvatar = tweet.author?.avatar_url || ""
-
-        if (tweet.media?.photos) {
-          for (const photo of tweet.media.photos) {
-            if (photo.url) mediaItems.push({ type: "photo", url: photo.url })
-          }
-        }
-        if (tweet.media?.videos) {
-          for (const video of tweet.media.videos) {
-            if (video.url) {
-              mediaItems.push({
-                type: "video",
-                url: video.url,
-                thumbnail_url: video.thumbnail_url,
-              })
-            }
-          }
-        }
-
-        // native 미디어가 없고 링크 카드(기사 미리보기)가 있으면 카드 이미지를 사용
-        // (예: 트윗이 BBC 기사를 링크 → X 에서 보이는 미리보기 사진)
-        if (mediaItems.length === 0 && tweet.card?.image?.url) {
-          mediaItems.push({ type: "photo", url: tweet.card.image.url })
-        }
-
-        mediaUrl =
-          mediaItems[0]?.type === "photo" ? mediaItems[0].url : mediaItems[0]?.thumbnail_url || ""
-      }
-    }
+    tweet = await fetchFromFxTwitter(statusId)
   } catch {
-    // fxtwitter 실패 시 기본값 사용
+    // 폴백으로 진행
   }
+  if (!tweet) {
+    try {
+      tweet = await fetchFromVxTwitter(statusId)
+    } catch {
+      // 아래에서 throw
+    }
+  }
+  if (!tweet) throw new Error(`Tweet fetch failed (fx+vx): ${statusId}`)
+
+  const tweetText = tweet.text
+  const authorName = `@${tweet.screenName || username}`
+  const displayName = tweet.displayName
+  const authorAvatar = tweet.avatar
+  const mediaItems = tweet.media
+  const mediaUrl =
+    mediaItems[0]?.type === "photo" ? mediaItems[0].url : (mediaItems[0]?.thumbnail_url ?? "")
 
   // 커스텀 카드 HTML 생성
   let cardHtml: string | undefined
@@ -373,19 +433,48 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch oEmbed data based on provider
-    let oembedData: OEmbedResponse
+    const respond = (data: OEmbedResponse) =>
+      NextResponse.json(includeHtml ? data : { ...data, html: undefined }, {
+        headers: {
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      })
 
+    // 1) DB 캐시 조회 — TTL 내면 외부 호출 없이 즉시 서빙, 만료면 stale 로 보관
+    const key = cacheKey(provider, url)
+    const supabase = key ? createServiceRoleClient() : null
+    let staleData: OEmbedResponse | null = null
+    if (key && supabase) {
+      try {
+        const { data: row } = await supabase
+          .from("embed_cache")
+          .select("data, fetched_at")
+          .eq("url", key)
+          .maybeSingle()
+        if (row?.data) {
+          const cached = row.data as unknown as OEmbedResponse
+          if (Date.now() - new Date(row.fetched_at as string).getTime() < CACHE_TTL_MS) {
+            return respond(cached)
+          }
+          staleData = cached
+        }
+      } catch {
+        // 캐시 조회 실패는 무시하고 라이브 fetch 로 진행
+      }
+    }
+
+    // 2) 라이브 fetch — 항상 html 포함으로 생성해 캐시하고, 서빙 시 includeHtml 로 조절
+    let oembedData: OEmbedResponse
     try {
       switch (provider) {
         case "youtube":
-          oembedData = await fetchYouTubeOEmbed(url, includeHtml)
+          oembedData = await fetchYouTubeOEmbed(url, true)
           break
         case "instagram":
-          oembedData = await fetchInstagramOEmbed(url, includeHtml)
+          oembedData = await fetchInstagramOEmbed(url, true)
           break
         case "x":
-          oembedData = await fetchXOEmbed(url, includeHtml)
+          oembedData = await fetchXOEmbed(url, true)
           break
         case "streamable":
           oembedData = buildStreamableEmbed(url)
@@ -394,6 +483,8 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ error: "Unsupported provider" }, { status: 422 })
       }
     } catch (error) {
+      // 3) 외부 장애 격리 — 만료된 캐시라도 있으면 그걸로 서빙 (빈 카드 방지)
+      if (staleData) return respond(staleData)
       return apiError("임베드 데이터를 가져오는 중 오류가 발생했습니다.", 500, error)
     }
 
@@ -406,11 +497,21 @@ export async function GET(request: NextRequest) {
     if (oembedData.title) oembedData.title = decodeHtmlEntities(oembedData.title)
     if (oembedData.author_name) oembedData.author_name = decodeHtmlEntities(oembedData.author_name)
 
-    return NextResponse.json(oembedData, {
-      headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-      },
-    })
+    // 4) 캐시 저장 (sanitize 이후) — 실패해도 서빙에는 영향 없음
+    if (key && supabase) {
+      try {
+        await supabase.from("embed_cache").upsert({
+          url: key,
+          provider,
+          data: oembedData as unknown as Record<string, unknown>,
+          fetched_at: new Date().toISOString(),
+        })
+      } catch {
+        // 무시
+      }
+    }
+
+    return respond(oembedData)
   } catch (error) {
     return apiError("Internal server error", 500, error)
   }
