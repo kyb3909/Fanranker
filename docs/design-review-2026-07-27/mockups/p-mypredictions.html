@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>내 예측 — 그깟 공놀이 · 시안 A 매치데이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   페이지 전용 — /my-predictions "내 예측"
+   구조는 현행 유지: 성적표 → 상태 탭 → 슬립 리스트 → 빈 상태
+   주인공 = 성적표 → 다크 밴드 전광판으로 승격
+   🚫 한쪽 면 액센트 바 없음. 상태 구분은 칩 + 배경 틴트만.
+   ============================================================ */
+
+/* 본문 컬럼 — 현행 max-w-800 단일 컬럼 유지 */
+.col { max-width: 800px; margin: 0 auto; }
+
+/* ── 뒤로가기 (밴드 안) ── */
+.backrow { display: flex; align-items: center; gap: 10px; padding-top: 18px; }
+.back {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center;
+  color: var(--cream-dim);
+  border: 1px solid var(--night-line);
+}
+.back:hover { color: var(--cream); border-color: var(--bg-500); background: rgba(150,30,55,0.18); }
+.back svg { width: 18px; height: 18px; }
+.backrow .band-kicker { margin-left: 2px; }
+
+/* ── 성적표 전광판 ── */
+.board { padding: 16px 0 30px; }
+.board-top {
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 22px;
+  padding: 6px 0 22px;
+}
+/* 적중률 = 이 페이지 최대 숫자 */
+.rate { display: flex; align-items: flex-start; gap: 4px; }
+.rate .v {
+  font-family: var(--disp); font-weight: 800;
+  font-size: 92px; line-height: 0.86; letter-spacing: 0.01em;
+  color: var(--cream); font-variant-numeric: tabular-nums;
+}
+.rate .pct { font-family: var(--disp); font-weight: 700; font-size: 30px; color: var(--bg-100); margin-top: 6px; }
+.rate-label {
+  font-family: var(--disp); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.24em; color: var(--cream-dim); text-transform: uppercase;
+  margin-top: 8px;
+}
+.board-mid { min-width: 0; }
+.board-mid .line1 { font-size: 12.5px; font-weight: 600; color: var(--cream-dim); margin-bottom: 6px; }
+.board-mid .title {
+  font-size: 27px; font-weight: 900; letter-spacing: -0.03em;
+  line-height: 1.12; color: var(--cream);
+}
+.board-mid .role { font-size: 13.5px; color: var(--cream-dim); margin-top: 5px; }
+
+/* 등급 도장 — 전체 테두리 원형 (한쪽 면 액센트 아님) */
+.stamp {
+  width: 86px; height: 86px; border-radius: 50%;
+  border: 2.5px solid var(--bg-100); color: var(--bg-100);
+  display: grid; place-items: center; align-content: center;
+  transform: rotate(-13deg); flex-shrink: 0;
+}
+.stamp .g { font-family: var(--disp); font-weight: 800; font-size: 40px; line-height: 1; }
+.stamp .l { font-family: var(--disp); font-weight: 700; font-size: 9px; letter-spacing: 0.18em; margin-top: 1px; }
+
+/* 통계 타일행 */
+.board-stats {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid var(--night-line);
+}
+.bs {
+  padding: 15px 8px; text-align: center;
+  border-left: 1px solid rgba(54,48,64,0.7);
+}
+.bs:first-child { border-left: 0; }
+.bs .v {
+  font-family: var(--disp); font-weight: 800; font-size: 26px; line-height: 1.05;
+  color: var(--cream); font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
+}
+.bs .v.pos { color: var(--bg-100); }
+.bs .k { font-size: 11.5px; color: var(--cream-dim); margin-top: 5px; font-weight: 600; }
+
+/* ── 본문 (라이트) ── */
+.sec-note { font-size: 12.5px; color: var(--ink-3); margin: 0 0 2px; }
+
+/* 슬립 카드 */
+.slips { display: flex; flex-direction: column; gap: 11px; }
+.slip { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+/* 상태 = 배경 틴트만 (액센트 바 금지) */
+.slip.win { background: #fdf6f7; border-color: #f0dfe3; }
+.slip.lose { background: #fbfaf9; }
+.slip.cancel { background: #fbfaf9; }
+
+.slip-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 13px 15px; width: 100%; text-align: left;
+}
+.slip-head:hover { background: rgba(28,26,32,0.02); }
+.sh-left { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.sport-ico {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: var(--bg-50); color: var(--bg-500);
+  display: grid; place-items: center; font-size: 17px;
+}
+.slip.lose .sport-ico, .slip.cancel .sport-ico { background: var(--paper); color: var(--ink-3); }
+.sh-title { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.sh-title b { font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em; }
+.round-badge {
+  font-family: var(--disp); font-weight: 600; font-size: 11.5px; letter-spacing: 0.06em;
+  background: var(--paper); border: 1px solid var(--line); color: var(--ink-2);
+  border-radius: 5px; padding: 2px 7px;
+}
+.sh-sub { display: flex; gap: 9px; font-size: 12.5px; color: var(--ink-3); margin-top: 3px; flex-wrap: wrap; }
+.sh-sub b { font-weight: 700; color: var(--ink-2); }
+.sh-right { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.chev { color: var(--ink-3); display: grid; place-items: center; transition: transform 0.16s; }
+.chev svg { width: 18px; height: 18px; }
+.slip.open .chev { transform: rotate(180deg); }
+
+/* 상태 칩 */
+.chip.win { background: var(--bg-500); color: #fff; }
+.chip.lose { background: var(--paper); color: var(--ink-3); border: 1px solid var(--line); font-weight: 700; }
+.chip.wait { background: var(--card); color: var(--ink-2); border: 1px solid var(--line); font-weight: 700; }
+.chip.cancel { background: var(--paper); color: var(--ink-3); border: 1px dashed var(--line); font-weight: 700; }
+.chip .ci { font-family: var(--disp); font-weight: 800; margin-right: 3px; }
+
+/* 펼친 상세 */
+.slip-body { display: none; border-top: 1px solid var(--line); }
+.slip.open .slip-body { display: block; }
+.game { padding: 14px 15px; border-top: 1px solid var(--line); }
+.game:first-child { border-top: 0; }
+.g-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--ink-3); margin-bottom: 5px;
+}
+.g-meta .lg { font-weight: 700; }
+.g-teams { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+.g-teams .vs { font-family: var(--disp); font-weight: 600; font-size: 12.5px; color: var(--ink-3); margin: 0 7px; }
+.g-tags { display: flex; align-items: center; gap: 6px; margin: 8px 0 9px; flex-wrap: wrap; }
+.g-tags .chip { font-size: 11.5px; padding: 3px 9px; }
+.oxi {
+  font-family: var(--disp); font-weight: 800; font-size: 15px;
+  width: 21px; height: 21px; border-radius: 50%;
+  display: grid; place-items: center; line-height: 1;
+}
+.oxi.o { background: var(--bg-500); color: #fff; }
+.oxi.x { background: var(--paper); color: var(--ink-3); border: 1px solid var(--line); }
+
+/* 픽 셀 (라이트 존) */
+.picks { display: grid; gap: 7px; }
+.picks.c3 { grid-template-columns: repeat(3, 1fr); }
+.picks.c2 { grid-template-columns: repeat(2, 1fr); }
+.pcell {
+  border-radius: 9px; padding: 10px 8px; text-align: center;
+  background: var(--paper); color: var(--ink-3);
+  font-size: 13px; font-weight: 700; letter-spacing: -0.01em;
+  border: 1px solid transparent;
+}
+/* 내 픽 (대기) */
+.pcell.mine { background: var(--bg-500); color: #fff; font-weight: 800; }
+/* 내 픽 + 적중 */
+.pcell.mine.hit { background: var(--bg-500); color: #fff; font-weight: 800; }
+/* 내 픽 + 미적중 */
+.pcell.mine.miss {
+  background: var(--paper); border-color: var(--line);
+  color: var(--ink-3); text-decoration: line-through; font-weight: 700;
+}
+/* 실제 결과 (내 픽 아님) — 전체 테두리 */
+.pcell.actual {
+  background: var(--bg-50); border: 2px solid var(--bg-500); color: var(--bg-600); font-weight: 800;
+}
+.pcell .tag {
+  display: block; font-family: var(--disp); font-weight: 700;
+  font-size: 9.5px; letter-spacing: 0.14em; margin-top: 3px; opacity: 0.85;
+}
+.pcell .mk { margin-right: 3px; font-weight: 800; }
+
+.g-score {
+  margin-top: 9px; padding: 7px 11px; border-radius: 7px;
+  background: var(--paper); font-size: 12.5px; color: var(--ink-2); font-weight: 600;
+}
+.g-score b { font-family: var(--disp); font-weight: 800; font-size: 15px; color: var(--ink); margin: 0 4px; }
+
+/* 슬립 푸터 — 정산/환불 = 표준 문장 구역 */
+.slip-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 13px 15px; background: var(--paper); border-top: 1px solid var(--line);
+}
+.sf-left { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.sf-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bg-500); flex-shrink: 0; }
+.sf-right { text-align: right; }
+.sf-right .k { display: block; font-size: 12px; color: var(--ink-3); }
+.sf-right .v { display: block; font-family: var(--disp); font-weight: 800; font-size: 21px; letter-spacing: 0.01em; margin-top: 1px; white-space: nowrap; }
+.sf-right .v.pos { color: var(--bg-600); }
+.sf-right .v.neu { color: var(--ink-3); }
+.sf-note { padding: 0 15px 13px; font-size: 12px; color: var(--ink-3); background: var(--paper); }
+
+/* 빈 상태 */
+.empty {
+  display: none;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 48px 24px 44px; text-align: center;
+}
+.empty.on { display: block; }
+.mascot {
+  width: 96px; height: 96px; margin: 0 auto 16px;
+  border-radius: 50%; background: var(--bg-50); border: 1px dashed var(--bg-100);
+  display: grid; place-items: center; color: var(--bg-500);
+}
+.mascot svg { width: 44px; height: 44px; }
+.empty h3 { font-size: 19px; font-weight: 800; letter-spacing: -0.03em; }
+.empty p { font-size: 14px; color: var(--ink-3); margin: 7px 0 18px; }
+.empty .cta-burg { display: inline-block; }
+
+.list-end {
+  margin-top: 12px; padding: 12px; text-align: center;
+  font-size: 13px; color: var(--ink-3); font-weight: 600;
+  border: 1px dashed var(--line); border-radius: 12px;
+}
+
+/* ── 모바일 ── */
+@media (max-width: 860px) {
+  /* 모바일: 1행 = 적중률 + 등급도장, 2행 = 칭호 (겹침 방지) */
+  .board-top { grid-template-columns: auto auto; justify-content: space-between; gap: 14px; row-gap: 14px; }
+  .board-mid { grid-column: 1 / -1; grid-row: 2; }
+  .stamp { width: 66px; height: 66px; align-self: center; }
+  .stamp .g { font-size: 30px; }
+  .rate .v { font-size: 66px; }
+  .rate .pct { font-size: 22px; }
+  .board-mid .title { font-size: 21px; }
+  .board-stats { grid-template-columns: repeat(3, 1fr); }
+  .bs { border-top: 1px solid rgba(54,48,64,0.7); }
+  .bs:nth-child(-n+3) { border-top: 0; }
+  .bs:nth-child(4) { border-left: 0; }
+  .picks.c3 { grid-template-columns: 1fr 1fr 1fr; }
+  .pcell { font-size: 12px; padding: 9px 5px; }
+  .slip-head { padding: 12px; }
+  .sf-right .v { font-size: 17px; }
+  .slip-foot { padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ GNB (a-matchday.html 과 동일) ═══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-in">
+    <a class="logo" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="logo-domain">gongnori.fan</span>
+    </a>
+    <nav class="gnb-menu">
+      <a href="a-matchday.html">담벼락</a>
+      <a href="p-stadium.html">운동장</a>
+      <a href="p-prediction.html" class="on">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      </button>
+      <div class="avatar">몽</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 다크 밴드 — 내 성적 전광판 (이 페이지의 주인공) ═══════════ -->
+<section class="band grain">
+  <div class="wrap">
+    <div class="col">
+
+      <div class="backrow">
+        <a class="back" href="p-prediction.html" aria-label="뒤로가기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </a>
+        <span class="band-kicker">My Predictions <b>·</b> 내 예측</span>
+      </div>
+
+      <div class="board">
+        <div class="board-top">
+          <div>
+            <div class="rate">
+              <span class="v num">72</span>
+              <span class="pct num">%</span>
+            </div>
+            <div class="rate-label">적중률</div>
+          </div>
+
+          <div class="board-mid">
+            <div class="line1">A등급 · 끝난 경기 <b class="num">18</b> · 대기 <b class="num">6</b></div>
+            <div class="title">⚽ 축잘알</div>
+            <div class="role">축구 예측 전문가 — 이 정도면 남의 슬립도 봐줄 만하다</div>
+          </div>
+
+          <div class="stamp">
+            <span class="g num">A</span>
+            <span class="l">GRADE</span>
+          </div>
+        </div>
+
+        <div class="board-stats">
+          <div class="bs"><div class="v num">24</div><div class="k">총 참여</div></div>
+          <div class="bs"><div class="v num">13 / 18</div><div class="k">맞힌 슬립</div></div>
+          <div class="bs"><div class="v num pos">+12.4%</div><div class="k">수익률</div></div>
+          <div class="bs"><div class="v num pos">+38.20</div><div class="k">획득 점수</div></div>
+          <div class="bs"><div class="v num">1,240</div><div class="k">보유 볼</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 본문 (라이트) ═══════════ -->
+<div class="wrap main">
+  <div class="col">
+
+    <div class="sec-head">
+      <span class="sec-brush">내가 건 픽들</span>
+      <span class="sec-sub">누가 살아남았나 봐라</span>
+    </div>
+    <p class="sec-note">슬립을 누르면 경기별 내 픽과 결과가 펼쳐진다.</p>
+
+    <!-- 상태 탭 -->
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="all">전체 <span class="num">24</span></button>
+      <button class="tab" data-tab="wait">대기중 <span class="num">6</span></button>
+      <button class="tab" data-tab="win">적중 <span class="num">13</span></button>
+      <button class="tab" data-tab="lose">미적중 <span class="num">5</span></button>
+    </div>
+
+    <div class="slips" id="slips">
+
+      <!-- ① 대기중 (펼침 기본) -->
+      <article class="slip open" data-state="wait">
+        <button class="slip-head" data-toggle>
+          <span class="sh-left">
+            <span class="sport-ico">⚽</span>
+            <span>
+              <span class="sh-title">
+                <b>축구</b>
+                <span class="round-badge num">2026년 30회차</span>
+              </span>
+              <span class="sh-sub">
+                <span><b class="num">3</b>경기</span>
+                <span>·</span>
+                <span><b class="num">100</b>볼 사용</span>
+                <span>·</span>
+                <span>배점 <b class="num">6.42</b>배</span>
+              </span>
+            </span>
+          </span>
+          <span class="sh-right">
+            <span class="chip wait"><span class="ci">◷</span>대기중</span>
+            <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          </span>
+        </button>
+
+        <div class="slip-body">
+          <div class="game">
+            <div class="g-meta"><span class="lg">K리그1</span><span class="num">7.27 20:00</span></div>
+            <div class="g-teams">FC서울<span class="vs">VS</span>전북 현대</div>
+            <div class="g-tags"><span class="chip src">승무패</span></div>
+            <div class="picks c3">
+              <div class="pcell mine">FC서울</div>
+              <div class="pcell">무</div>
+              <div class="pcell">전북 현대</div>
+            </div>
+          </div>
+
+          <div class="game">
+            <div class="g-meta"><span class="lg">K리그1</span><span class="num">7.27 19:00</span></div>
+            <div class="g-teams">울산 HD<span class="vs">VS</span>포항 스틸러스</div>
+            <div class="g-tags"><span class="chip src">핸디캡</span><span class="chip ghost">울산 -1</span></div>
+            <div class="picks c3">
+              <div class="pcell">울산 HD</div>
+              <div class="pcell">무</div>
+              <div class="pcell mine">포항 스틸러스</div>
+            </div>
+          </div>
+
+          <div class="game">
+            <div class="g-meta"><span class="lg">MLS</span><span class="num">7.28 03:30</span></div>
+            <div class="g-teams">인터 마이애미<span class="vs">VS</span>LA 갤럭시</div>
+            <div class="g-tags"><span class="chip src">언더오버</span><span class="chip ghost">기준 3.5</span></div>
+            <div class="picks c2">
+              <div class="pcell mine">오버</div>
+              <div class="pcell">언더</div>
+            </div>
+          </div>
+
+          <div class="slip-foot">
+            <span class="sf-left"><span class="sf-dot"></span><b class="num">100</b>볼 사용</span>
+            <span class="sf-right">
+              <span class="k">총 배점 <span class="num">6.42</span>배</span>
+              <span class="v num neu">예상 획득 점수 642.00</span>
+            </span>
+          </div>
+          <p class="sf-note">모든 경기 종료 후 정산됩니다. 경기가 취소되면 해당 슬립의 볼은 전액 환불됩니다.</p>
+        </div>
+      </article>
+
+      <!-- ② 적중 -->
+      <article class="slip win" data-state="win">
+        <button class="slip-head" data-toggle>
+          <span class="sh-left">
+            <span class="sport-ico">⚽</span>
+            <span>
+              <span class="sh-title">
+                <b>축구</b>
+                <span class="round-badge num">2026년 29회차</span>
+              </span>
+              <span class="sh-sub">
+                <span><b class="num">2</b>경기</span>
+                <span>·</span>
+                <span><b class="num">150</b>볼 사용</span>
+                <span>·</span>
+                <span>배점 <b class="num">3.18</b>배</span>
+              </span>
+            </span>
+          </span>
+          <span class="sh-right">
+            <span class="chip win"><span class="ci">✓</span>적중</span>
+            <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          </span>
+        </button>
+
+        <div class="slip-body">
+          <div class="game">
+            <div class="g-meta"><span class="lg">EPL</span><span class="num">7.24 23:30</span></div>
+            <div class="g-teams">아스날<span class="vs">VS</span>브라이턴</div>
+            <div class="g-tags"><span class="chip src">승무패</span><span class="oxi o">O</span></div>
+            <div class="picks c3">
+              <div class="pcell mine hit"><span class="mk">✓</span>아스날</div>
+              <div class="pcell">무</div>
+              <div class="pcell">브라이턴</div>
+            </div>
+            <div class="g-score">최종 아스날 <b class="num">2</b>-<b class="num">0</b> 브라이턴</div>
+          </div>
+
+          <div class="game">
+            <div class="g-meta"><span class="lg">K리그1</span><span class="num">7.24 19:30</span></div>
+            <div class="g-teams">김천 상무<span class="vs">VS</span>대전 하나</div>
+            <div class="g-tags"><span class="chip src">언더오버</span><span class="chip ghost">기준 2.5</span><span class="oxi o">O</span></div>
+            <div class="picks c2">
+              <div class="pcell mine hit"><span class="mk">✓</span>오버</div>
+              <div class="pcell">언더</div>
+            </div>
+            <div class="g-score">최종 김천 상무 <b class="num">3</b>-<b class="num">1</b> 대전 하나</div>
+          </div>
+
+          <div class="slip-foot">
+            <span class="sf-left"><span class="sf-dot"></span><b class="num">150</b>볼 사용</span>
+            <span class="sf-right">
+              <span class="k">총 배점 <span class="num">3.18</span>배</span>
+              <span class="v num pos">획득 점수 +477.00</span>
+            </span>
+          </div>
+          <p class="sf-note">정산이 완료되어 획득 점수가 반영되었습니다.</p>
+        </div>
+      </article>
+
+      <!-- ③ 미적중 -->
+      <article class="slip lose" data-state="lose">
+        <button class="slip-head" data-toggle>
+          <span class="sh-left">
+            <span class="sport-ico">🏀</span>
+            <span>
+              <span class="sh-title">
+                <b>농구</b>
+                <span class="round-badge num">2026년 29회차</span>
+              </span>
+              <span class="sh-sub">
+                <span><b class="num">2</b>경기</span>
+                <span>·</span>
+                <span><b class="num">80</b>볼 사용</span>
+                <span>·</span>
+                <span>배점 <b class="num">4.05</b>배</span>
+              </span>
+            </span>
+          </span>
+          <span class="sh-right">
+            <span class="chip lose"><span class="ci">✗</span>미적중</span>
+            <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          </span>
+        </button>
+
+        <div class="slip-body">
+          <div class="game">
+            <div class="g-meta"><span class="lg">NBA</span><span class="num">7.23 09:00</span></div>
+            <div class="g-teams">보스턴 셀틱스<span class="vs">VS</span>덴버 너기츠</div>
+            <div class="g-tags"><span class="chip src">승패</span><span class="oxi x">X</span></div>
+            <div class="picks c2">
+              <div class="pcell mine miss"><span class="mk">✗</span>보스턴 셀틱스</div>
+              <div class="pcell actual">덴버 너기츠<span class="tag">실제 결과</span></div>
+            </div>
+            <div class="g-score">최종 보스턴 셀틱스 <b class="num">98</b>-<b class="num">104</b> 덴버 너기츠</div>
+          </div>
+
+          <div class="game">
+            <div class="g-meta"><span class="lg">NBA</span><span class="num">7.23 11:30</span></div>
+            <div class="g-teams">마이애미 히트<span class="vs">VS</span>피닉스 선즈</div>
+            <div class="g-tags"><span class="chip src">핸디캡</span><span class="chip ghost">마이애미 +4.5</span><span class="oxi o">O</span></div>
+            <div class="picks c2">
+              <div class="pcell mine hit"><span class="mk">✓</span>마이애미 히트</div>
+              <div class="pcell">피닉스 선즈</div>
+            </div>
+            <div class="g-score">최종 마이애미 히트 <b class="num">112</b>-<b class="num">109</b> 피닉스 선즈</div>
+          </div>
+
+          <div class="slip-foot">
+            <span class="sf-left"><span class="sf-dot" style="background:var(--ink-3)"></span><b class="num">80</b>볼 사용</span>
+            <span class="sf-right">
+              <span class="k">총 배점 <span class="num">4.05</span>배</span>
+              <span class="v num neu">획득 점수 0</span>
+            </span>
+          </div>
+          <p class="sf-note">한 경기라도 빗나가면 슬립 전체가 미적중 처리됩니다.</p>
+        </div>
+      </article>
+
+      <!-- ④ 취소됨 (환불) — 표준 문장 구역 -->
+      <article class="slip cancel" data-state="wait">
+        <button class="slip-head" data-toggle>
+          <span class="sh-left">
+            <span class="sport-ico">🏐</span>
+            <span>
+              <span class="sh-title">
+                <b>배구</b>
+                <span class="round-badge num">2026년 28회차</span>
+              </span>
+              <span class="sh-sub">
+                <span><b class="num">1</b>경기</span>
+                <span>·</span>
+                <span><b class="num">50</b>볼 사용</span>
+                <span>·</span>
+                <span>배점 <b class="num">1.92</b>배</span>
+              </span>
+            </span>
+          </span>
+          <span class="sh-right">
+            <span class="chip cancel"><span class="ci">⊘</span>취소됨</span>
+            <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          </span>
+        </button>
+
+        <div class="slip-body">
+          <div class="game">
+            <div class="g-meta"><span class="lg">V리그</span><span class="num">7.21 19:00</span></div>
+            <div class="g-teams">대한항공<span class="vs">VS</span>우리카드</div>
+            <div class="g-tags"><span class="chip src">세트 핸디캡</span><span class="chip ghost">대한항공 -1.5</span></div>
+            <div class="picks c2">
+              <div class="pcell mine">대한항공</div>
+              <div class="pcell">우리카드</div>
+            </div>
+          </div>
+
+          <div class="slip-foot">
+            <span class="sf-left"><span class="sf-dot" style="background:var(--ink-3)"></span><b class="num">50</b>볼 사용</span>
+            <span class="sf-right">
+              <span class="k">환불 완료</span>
+              <span class="v num neu">+50볼</span>
+            </span>
+          </div>
+          <p class="sf-note">경기가 취소되어 사용한 볼 50볼이 전액 환불되었습니다.</p>
+        </div>
+      </article>
+
+      <div class="list-end">여기까지가 전부다 — 더 쌓으려면 오늘 밤 하나 더</div>
+    </div>
+
+    <!-- 빈 상태 (탭 필터 결과 0건일 때) -->
+    <div class="empty" id="empty">
+      <div class="mascot" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="m12 6.5 3.6 2.6-1.4 4.2h-4.4L8.4 9.1 12 6.5Z"/>
+          <path d="M12 3v3.5M4.2 9.4l4.2-.3M19.8 9.4l-4.2-.3M7.2 19.6l2.6-6.3M16.8 19.6l-2.6-6.3"/>
+        </svg>
+      </div>
+      <h3>아직 건 픽이 없다. 오늘 밤 하나 걸어봐</h3>
+      <p id="empty-sub">여기에 슬립이 쌓이면 성적표 숫자도 같이 올라간다.</p>
+      <a class="cta-burg" href="p-prediction.html">승부예측 하러 가기 →</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ 다크 푸터 (공통) ═══════════ -->
+<footer class="footer grain">
+  <div class="wrap">
+    <span class="f-logo">그깟 공놀이</span>
+    <div class="f-domain num">GONGNORI.FAN</div>
+    <p class="f-slogan">그깟 공놀이에 진심인 팬들의 놀이터</p>
+    <nav class="f-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <p class="f-copy">© 2026 GONGNORI.FAN — SEE YOU AT KICKOFF</p>
+  </div>
+</footer>
+
+<!-- ═══════════ 모바일 하단 탭 (공통) ═══════════ -->
+<nav class="bottomtab">
+  <div class="bt-in">
+    <a href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      담벼락
+    </a>
+    <a href="p-stadium.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+      운동장
+    </a>
+    <a href="p-prediction.html" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      승부예측
+    </a>
+    <a href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      글쓰기
+    </a>
+  </div>
+</nav>
+
+<script>
+/* 데모 JS: 슬립 펼치기 + 상태 탭 필터 (빈 상태 확인용) */
+(function () {
+  // 슬립 펼치기
+  document.querySelectorAll("[data-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      btn.closest(".slip").classList.toggle("open");
+    });
+  });
+
+  // 탭 필터
+  var slips = Array.prototype.slice.call(document.querySelectorAll(".slip"));
+  var empty = document.getElementById("empty");
+  var emptySub = document.getElementById("empty-sub");
+  var listEnd = document.querySelector(".list-end");
+  var labels = {
+    all: "여기에 슬립이 쌓이면 성적표 숫자도 같이 올라간다.",
+    wait: "결과 기다리는 픽이 없다. 오늘 경기는 아직 열려 있다.",
+    win: "적중 기록이 아직 없다. 한 방이면 성적표가 바뀐다.",
+    lose: "미적중이 없다 — 지금까진 깨끗하다."
+  };
+
+  document.querySelectorAll("#tabs .tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      document.querySelectorAll("#tabs .tab").forEach(function (t) { t.classList.remove("on"); });
+      tab.classList.add("on");
+      var key = tab.dataset.tab;
+      var shown = 0;
+      slips.forEach(function (s) {
+        var ok = key === "all" || s.dataset.state === key;
+        s.style.display = ok ? "" : "none";
+        if (ok) shown++;
+      });
+      var none = shown === 0;
+      empty.classList.toggle("on", none);
+      listEnd.style.display = none ? "none" : "";
+      emptySub.textContent = labels[key];
+    });
+  });
+})();
+</script>
+
+<!-- 제안: 성적표 밴드의 "보유 볼"은 현행 /my-predictions 에는 없는 값이다(성적 4지표만 존재).
+     상단 요약에 잔액을 넣으려면 /api/predictions/my 응답에 balance 를 얹거나 별도 훅이 필요하다.
+     골드는 출시 전 숨김 정책이라 의도적으로 제외했다. -->
+<!-- 제안: 탭 라벨 옆 건수(전체 24 / 대기중 6 …)는 현행에 없다. stats 로 이미 계산 가능한 값이라
+     붙이면 탭 전환 전에 어디에 뭐가 있는지 보인다. -->
+<!-- 제안: 현행 슬립 셀은 옵션별 배당률 숫자를 노출한다(prediction-slip-card.tsx).
+     시안 A 정책상 배당률 숫자를 지우고 팀명 + O/X + 슬립 단위 "배점/획득 점수"만 남겼다. -->
+</body>
+</html>

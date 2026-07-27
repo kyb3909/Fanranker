@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>[David Ornstein] 토트넘, 마테우스 페르난데스 영입 경쟁에서 승리 — 그깟 공놀이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   글 상세 (/post/[id]) — 시안 A "매치데이" 스킨
+   구조는 현행 그대로. 이 페이지의 다크 존은 푸터 단 하나.
+   본문은 끝까지 라이트 — 긴 글 가독성이 최우선.
+   ============================================================ */
+
+/* ── 레이아웃 ── */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 328px;
+  gap: 28px;
+  align-items: start;
+  padding-block: 20px 48px;
+}
+.main > main, .main > .side { min-width: 0; }
+
+/* ── 돌아가기 ── */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  padding: 8px 12px 8px 4px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: 0.14s;
+}
+.back:hover { color: var(--bg-600); background: var(--bg-50); }
+.back svg { width: 17px; height: 17px; }
+
+/* ── 글 본체 카드 ── */
+.post {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 26px 30px 20px;
+}
+
+/* 작성자 헤더 */
+.p-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.p-av {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--bg-500), var(--bg-900));
+  color: var(--cream); font-weight: 800; font-size: 13px;
+  display: grid; place-items: center; flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+.p-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.p-name {
+  font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 6px;
+}
+.p-name .botmark {
+  font-family: var(--disp); font-weight: 700; font-size: 10.5px;
+  letter-spacing: 0.14em; color: var(--bg-600);
+  background: var(--bg-50); border: 1px solid var(--bg-100);
+  border-radius: 4px; padding: 1px 5px;
+}
+.p-when {
+  font-family: var(--disp); font-weight: 600; font-size: 12.5px;
+  letter-spacing: 0.06em; color: var(--ink-3);
+}
+.p-head-r { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.board-chip {
+  font-size: 12px; font-weight: 800; padding: 5px 12px;
+  border-radius: 999px; background: var(--paper);
+  border: 1px solid var(--line); color: var(--ink-2);
+}
+.board-chip:hover { border-color: var(--bg-500); color: var(--bg-600); background: var(--bg-50); }
+.more-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center; color: var(--ink-3);
+}
+.more-btn:hover { background: var(--paper); color: var(--ink); }
+.more-btn svg { width: 18px; height: 18px; }
+
+/* 제목 — 크기 점프 */
+.p-title {
+  font-size: 31px; font-weight: 900;
+  letter-spacing: -0.035em; line-height: 1.26;
+  margin: 22px 0 14px;
+  text-wrap: balance;
+}
+.p-title .kicker { color: var(--bg-600); }
+
+/* 출처 줄 */
+.p-src { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-bottom: 22px; }
+.src-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; padding: 4px 11px;
+  border-radius: 999px; background: var(--card);
+  border: 1px solid var(--line); color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.src-link:hover { border-color: var(--bg-500); color: var(--bg-600); background: var(--bg-50); }
+.src-link svg { width: 13px; height: 13px; }
+
+/* ── 본문 타이포 (라이트 · 읽는 맛) ── */
+.p-body { font-size: 16.5px; line-height: 1.75; color: #262230; letter-spacing: -0.015em; }
+.p-body > * + * { margin-top: 20px; }
+.p-body p { text-wrap: pretty; }
+.p-body .lead {
+  font-size: 18px; font-weight: 700; line-height: 1.66;
+  color: var(--ink); letter-spacing: -0.025em;
+}
+.p-body strong { font-weight: 800; color: var(--ink); }
+.p-body a { color: var(--bg-600); font-weight: 700; box-shadow: inset 0 -1px 0 var(--bg-100); }
+.p-body a:hover { box-shadow: inset 0 -2px 0 var(--bg-500); }
+
+/* 인용 — 좌측 바 금지 → 배경 틴트 + 전체 테두리 */
+.p-body blockquote {
+  background: var(--bg-50);
+  border: 1px solid var(--bg-100);
+  border-radius: 12px;
+  padding: 18px 22px;
+  font-size: 16px; line-height: 1.7;
+  color: var(--bg-900); font-weight: 600;
+}
+.p-body blockquote cite {
+  display: block; margin-top: 9px; font-style: normal;
+  font-size: 12.5px; font-weight: 800; letter-spacing: 0.02em;
+  color: var(--bg-600);
+}
+
+/* 이미지 · 임베드 */
+.figure { margin-top: 22px; }
+.figure .thumb { border-radius: 12px; aspect-ratio: 16 / 10; }
+.figure .thumb img { object-position: 50% 22%; }
+.figure figcaption {
+  margin-top: 9px; font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-3); font-weight: 600;
+  display: flex; gap: 8px; align-items: baseline;
+}
+.figure figcaption b {
+  font-family: var(--disp); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.14em; color: var(--ink-2); flex-shrink: 0;
+  text-transform: uppercase;
+}
+.embed {
+  margin-top: 22px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper); padding: 15px 17px;
+  display: flex; gap: 13px; align-items: flex-start;
+}
+.embed .e-ico {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: var(--bg-50); color: var(--bg-500);
+  display: grid; place-items: center;
+}
+.embed .e-ico svg { width: 18px; height: 18px; }
+.embed .e-hand {
+  font-size: 12.5px; font-weight: 800; color: var(--ink-2);
+  font-family: var(--disp); letter-spacing: 0.06em;
+}
+.embed .e-txt { font-size: 14.5px; line-height: 1.6; font-weight: 600; margin-top: 3px; }
+
+/* ── 액션바 ── */
+.actions {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 26px; padding-top: 16px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.act {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 15px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card);
+  font-size: 13.5px; font-weight: 700; color: var(--ink-2);
+  transition: 0.14s;
+}
+.act svg { width: 16px; height: 16px; }
+.act .n { font-family: var(--disp); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.act:hover { border-color: var(--bg-500); color: var(--bg-600); background: var(--bg-50); }
+/* 추천 활성 = 버건디 면 (액션 1개만) */
+.act.on {
+  background: var(--bg-500); border-color: var(--bg-500); color: #fff;
+  box-shadow: 0 8px 20px -10px rgba(150,30,55,0.9);
+}
+.act.on:hover { background: var(--bg-600); color: #fff; }
+.act.icon { padding: 9px 12px; }
+.actions .spacer { margin-left: auto; }
+
+/* ── 댓글 ── */
+.comments {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 14px; padding: 24px 26px 10px; margin-top: 16px;
+}
+.c-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 15px; }
+.c-head .sec-brush { font-size: 26px; transform: rotate(-1.2deg); text-shadow: 0.5px 0 currentColor; }
+.c-head .cnt { font-family: var(--disp); font-weight: 800; font-size: 19px; color: var(--bg-500); }
+.c-head .hint { font-size: 12.5px; color: var(--ink-3); font-weight: 600; margin-left: auto; }
+
+/* 작성 폼 */
+.c-form {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper); padding: 4px 4px 0;
+  transition: 0.15s;
+}
+.c-form:focus-within {
+  border-color: var(--bg-500); background: var(--card);
+  box-shadow: 0 0 0 3px var(--bg-50);
+}
+.c-form textarea {
+  width: 100%; min-height: 86px; resize: vertical;
+  border: 0; outline: none; background: transparent;
+  padding: 13px 14px 6px; font-size: 14.5px; line-height: 1.65;
+}
+.c-form textarea::placeholder { color: var(--ink-3); }
+.c-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px 10px;
+}
+.sticker-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--ink-3);
+  padding: 7px 12px; border-radius: 999px; border: 1px solid transparent;
+}
+.sticker-btn svg { width: 16px; height: 16px; }
+.sticker-btn:hover { color: var(--bg-600); border-color: var(--bg-100); background: var(--bg-50); }
+.c-submit {
+  margin-left: auto; background: var(--bg-500); color: #fff;
+  font-weight: 800; font-size: 14px; padding: 10px 20px; border-radius: 10px;
+  transition: 0.14s;
+}
+.c-submit:hover { background: var(--bg-600); }
+.c-submit:active { transform: scale(0.98); }
+
+/* 댓글 목록 */
+.c-list { margin-top: 18px; }
+.cmt-item {
+  display: flex; gap: 12px; padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+/* BEST = 배경 틴트로만 구분 (액센트 바 금지) */
+.cmt-item.best {
+  background: var(--bg-50);
+  border: 1px solid var(--bg-100);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 8px;
+}
+.cmt-av {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #c07a4a, #7a4426);
+  color: var(--cream); font-weight: 800; font-size: 12px;
+  display: grid; place-items: center;
+}
+.cmt-b { flex: 1; min-width: 0; }
+.cmt-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cmt-top .who { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.cmt-top .when {
+  font-family: var(--disp); font-weight: 600; font-size: 12px;
+  letter-spacing: 0.06em; color: var(--ink-3);
+}
+.chip.best {
+  background: var(--bg-500); color: #fff;
+  font-family: var(--disp); letter-spacing: 0.12em; font-size: 11px; padding: 3px 9px;
+}
+.cmt-title {
+  display: inline-block; margin-top: 6px;
+  font-size: 11.5px; font-weight: 800; color: var(--bg-600);
+  background: var(--card); border: 1px solid var(--bg-100);
+  padding: 2px 8px; border-radius: 999px;
+}
+.cmt-body { margin-top: 9px; font-size: 15px; line-height: 1.7; color: var(--ink); letter-spacing: -0.015em; }
+.cmt-acts { display: flex; align-items: center; gap: 4px; margin-top: 11px; }
+.cmt-act {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-weight: 700; color: var(--ink-3);
+  padding: 5px 9px; border-radius: 8px;
+}
+.cmt-act:hover { color: var(--bg-600); background: rgba(150,30,55,0.06); }
+.cmt-act svg { width: 15px; height: 15px; }
+.cmt-score {
+  font-family: var(--disp); font-weight: 800; font-size: 14px;
+  color: var(--bg-600); min-width: 14px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cmt-acts .reply { margin-left: 6px; }
+
+/* ── 같은 게시판 최근 글 ── */
+.recentbox {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 14px; margin-top: 16px; overflow: hidden;
+}
+.rb-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 15px 20px; border-bottom: 1px solid var(--line);
+}
+.rb-head .t { font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em; }
+.rb-head .t em { font-style: normal; color: var(--bg-600); }
+.rb-head .more { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+.rb-head .more:hover { color: var(--bg-600); }
+.rb-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; border-bottom: 1px solid var(--paper);
+  font-size: 14px; font-weight: 600;
+}
+.rb-row:last-child { border-bottom: 0; }
+.rb-row:hover { background: var(--paper); }
+.rb-row .ti {
+  min-width: 0; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  letter-spacing: -0.015em;
+}
+.rb-row:hover .ti { color: var(--bg-600); }
+.rb-row .rb-meta {
+  margin-left: auto; display: flex; gap: 12px; flex-shrink: 0;
+  font-family: var(--disp); font-weight: 600; font-size: 13px;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+
+/* ── 사이드바 (라이트 유지) ── */
+.side { position: sticky; top: 84px; }
+.discord { display: flex; gap: 13px; align-items: flex-start; }
+.discord .d-ico {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  background: var(--bg-50); color: var(--bg-500);
+  display: grid; place-items: center;
+}
+.discord .d-ico svg { width: 22px; height: 22px; }
+.discord p { font-size: 13.5px; font-weight: 700; line-height: 1.45; letter-spacing: -0.01em; }
+.discord .d-link { display: inline-block; margin-top: 7px; font-size: 13px; font-weight: 800; color: var(--bg-600); }
+.discord .d-link:hover { text-decoration: underline; }
+.recent li { list-style: none; padding: 9px 0; border-bottom: 1px solid var(--paper); }
+.recent li:last-child { border-bottom: 0; padding-bottom: 0; }
+.recent a { font-size: 13.5px; font-weight: 600; color: var(--ink-2); display: flex; gap: 6px; line-height: 1.4; }
+.recent a:hover { color: var(--bg-600); }
+.recent .cnt { font-family: var(--disp); font-weight: 700; color: var(--bg-500); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.adslot {
+  border: 1px dashed var(--line); border-radius: 12px;
+  background: var(--card); height: 250px;
+  display: grid; place-items: center; align-content: center; gap: 8px;
+}
+.adslot .tag {
+  font-size: 11px; font-weight: 800; color: var(--ink-3);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+}
+.adslot .sz {
+  font-family: var(--disp); font-weight: 600; font-size: 13px;
+  letter-spacing: 0.08em; color: var(--ink-3);
+}
+
+/* ── 글쓰기 FAB ── */
+.fab {
+  position: fixed; right: 26px; bottom: 26px; z-index: 55;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--bg-500); color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 14px 30px -10px rgba(150,30,55,0.75);
+  transition: 0.15s;
+}
+.fab:hover { background: var(--bg-600); transform: translateY(-2px); }
+.fab svg { width: 22px; height: 22px; }
+
+/* ── 모바일 스티키 액션바 ── */
+.stickyact {
+  display: none;
+  position: fixed; left: 0; right: 0; bottom: 62px; z-index: 58;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  padding: 9px 16px calc(9px + env(safe-area-inset-bottom, 0px));
+}
+.stickyact .sa-in { display: flex; align-items: center; gap: 8px; }
+.stickyact .act { flex: 0 0 auto; }
+.stickyact .act.wide { flex: 1; justify-content: center; }
+
+/* ── 반응형 ── */
+@media (max-width: 1080px) {
+  .main { grid-template-columns: 1fr; }
+  .side { position: static; }
+}
+@media (max-width: 860px) {
+  .post { padding: 20px 18px 16px; border-radius: 12px; }
+  .comments { padding: 20px 16px 6px; }
+  .p-title { font-size: 24px; margin: 18px 0 12px; }
+  .p-body { font-size: 16px; }
+  .p-body .lead { font-size: 17px; }
+  .actions { display: none; }
+  .stickyact { display: block; }
+  .fab { display: none; }
+  body { padding-bottom: 124px; }
+  .rb-row .rb-meta { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ GNB (라이트) — 전 페이지 공통 ═══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-in">
+    <a class="logo" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="logo-domain">gongnori.fan</span>
+    </a>
+    <nav class="gnb-menu">
+      <a href="a-matchday.html" class="on">담벼락</a>
+      <a href="p-stadium.html">운동장</a>
+      <a href="p-prediction.html">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      </button>
+      <div class="avatar">몽</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 본문 (전부 라이트) ═══════════ -->
+<div class="wrap main">
+
+  <main>
+    <a class="back" href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      돌아가기
+    </a>
+
+    <!-- ── 글 본체 ── -->
+    <article class="post">
+
+      <!-- 작성자 헤더 -->
+      <div class="p-head">
+        <div class="p-av">봇</div>
+        <div class="p-who">
+          <span class="p-name">공놀이봇 <span class="botmark">BOT</span></span>
+          <span class="p-when">7월 1일 · 조회 1,204</span>
+        </div>
+        <div class="p-head-r">
+          <a class="board-chip" href="a-matchday.html">축구</a>
+          <button class="more-btn" aria-label="더보기">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 제목 -->
+      <h1 class="p-title"><span class="kicker">[David Ornstein]</span> 토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</h1>
+
+      <!-- 출처 -->
+      <div class="p-src">
+        <span class="chip tier1">★ 1티어</span>
+        <span class="chip official">✓ 오피셜 임박</span>
+        <span class="chip src">David Ornstein</span>
+        <a class="src-link" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14 21 3"/><path d="M21 3v7h-7"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+          출처: nytimes.com · 원문 보기
+        </a>
+      </div>
+
+      <!-- 본문 -->
+      <div class="p-body">
+        <p class="lead">토트넘이 마테우스 페르난데스를 8500만 파운드에 영입했다고 전해집니다.</p>
+
+        <p>사우샘프턴 미드필더 마테우스 페르난데스가 토트넘 홋스퍼로 향한다. 첼시와 뉴캐슬이 마지막까지 경쟁했으나, 토트넘이 <strong>선수 본인과 개인 조건에 먼저 합의</strong>하며 협상을 정리한 것으로 알려졌다.</p>
+
+        <blockquote>
+          토트넘이 페르난데스 영입 경쟁에서 승리했다. 구단 간 합의가 마무리 단계이며, 메디컬 일정은 이번 주 중으로 잡혔다.
+          <cite>David Ornstein · The Athletic</cite>
+        </blockquote>
+
+        <p>이적료는 옵션 포함 8500만 파운드 규모다. 사우샘프턴은 강등 이후 주축 자원 매각이 불가피한 상황이었고, 이번 거래로 여름 이적시장 수지를 크게 개선하게 됐다. 페르난데스는 지난 시즌 프리미어리그 <strong>34경기</strong>에 나서 팀 내 최다 출전을 기록했다.</p>
+
+        <figure class="figure">
+          <div class="thumb">
+            <img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274" alt="이적 관련 이미지" loading="eager" />
+          </div>
+          <figcaption><b>Photo</b> 토트넘은 이번 여름 중원 보강에 8500만 파운드를 투자하게 됐다 · 담벼락 목업용 이미지</figcaption>
+        </figure>
+
+        <p>토트넘은 중원 리빌딩을 이번 여름 최우선 과제로 잡았다. 페르난데스는 8번과 6번을 모두 소화할 수 있는 자원으로, 기존 자원과의 조합에서 <a href="#">전방 압박 라인</a>을 한 칸 끌어올리는 역할을 맡을 전망이다.</p>
+
+        <div class="embed">
+          <div class="e-ico">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 3H22l-6.8 7.8L23 21h-6.3l-4.9-6.4L6.2 21H3l7.3-8.3L2.6 3H9l4.4 5.8L18.9 3Zm-1.1 16.1h1.7L8.3 4.8H6.5l11.3 14.3Z"/></svg>
+          </div>
+          <div>
+            <span class="e-hand">@David_Ornstein</span>
+            <p class="e-txt">Mateus Fernandes to Tottenham. Deal agreed, medical scheduled. 🚨⚪ #THFC</p>
+          </div>
+        </div>
+
+        <p>남은 절차는 메디컬과 공식 발표뿐이다. 구단은 이번 주 안으로 계약 체결을 마무리할 계획이다.</p>
+      </div>
+
+      <!-- 액션바 -->
+      <div class="actions">
+        <button class="act on" aria-label="추천">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"/><path d="M7 10l4.2-7a2 2 0 0 1 3.7 1.3L14 9h4.9a2 2 0 0 1 2 2.5l-1.8 7A2 2 0 0 1 17 20H7"/></svg>
+          추천 <span class="n">1</span>
+        </button>
+        <button class="act icon" aria-label="비추천">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1Z"/><path d="M17 14l-4.2 7a2 2 0 0 1-3.7-1.3L10 15H5.1a2 2 0 0 1-2-2.5l1.8-7A2 2 0 0 1 7 4h10"/></svg>
+        </button>
+        <a class="act" href="#comments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-5a8.4 8.4 0 0 1 16.1-4.5Z"/></svg>
+          댓글 <span class="n">1</span>
+        </a>
+        <span class="spacer"></span>
+        <button class="act">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 2.2 4.6 5 .7-3.6 3.5.8 5-4.4-2.4L7.6 18l.8-5L4.8 9.3l5-.7Z"/></svg>
+          북마크
+        </button>
+        <button class="act icon" aria-label="공유">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.8 7.4-4.3M8.3 13.2l7.4 4.3"/></svg>
+        </button>
+      </div>
+    </article>
+
+    <!-- ── 댓글 ── -->
+    <section class="comments" id="comments">
+      <div class="c-head">
+        <span class="sec-brush">댓글</span>
+        <span class="cnt num">1</span>
+        <span class="hint">떡밥은 여기서 더 커진다</span>
+      </div>
+
+      <!-- 작성 폼 -->
+      <form class="c-form" onsubmit="return false">
+        <textarea placeholder="댓글을 입력하세요… (@스티커이름으로 스티커 검색)"></textarea>
+        <div class="c-bar">
+          <button type="button" class="sticker-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 1-9 9c0-.3 0-.7.1-1"/><path d="M13 21a9 9 0 0 0 8-8h-4a4 4 0 0 0-4 4Z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+            스티커
+          </button>
+          <button type="submit" class="c-submit">댓글 작성</button>
+        </div>
+      </form>
+
+      <!-- 댓글 목록 -->
+      <div class="c-list">
+        <article class="cmt-item best">
+          <div class="cmt-av">몽</div>
+          <div class="cmt-b">
+            <div class="cmt-top">
+              <span class="who">몽몽이</span>
+              <span class="chip best">BEST</span>
+              <span class="when num">7월 1일</span>
+            </div>
+            <span class="cmt-title">새내기 신입 팬</span>
+            <p class="cmt-body">다른 기사를 보니까, 토트넘은 85m 파운드를 일시불로 준다고 이야기를 했다고 하네요</p>
+            <div class="cmt-acts">
+              <button class="cmt-act" aria-label="추천">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+              </button>
+              <span class="cmt-score num">2</span>
+              <button class="cmt-act" aria-label="비추천">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+              </button>
+              <button class="cmt-act reply">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-5a8.4 8.4 0 0 1 16.1-4.5Z"/></svg>
+                답글
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── 같은 게시판 최근 글 ── -->
+    <section class="recentbox">
+      <div class="rb-head">
+        <span class="t"><em>축구</em> 최근 글</span>
+        <a class="more" href="a-matchday.html">더보기 →</a>
+      </div>
+      <a class="rb-row" href="#"><span class="ti">[플레텐부르크] 맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>1일 전</span></span></a>
+      <a class="rb-row" href="#"><span class="ti">[온스테인] 아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>1일 전</span></span></a>
+      <a class="rb-row" href="#"><span class="ti">[The Standard] 첼시, 페드로 네토 판매 계획 없음</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>2일 전</span></span></a>
+      <a class="rb-row" href="#"><span class="ti">[오피셜] 벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>2일 전</span></span></a>
+      <a class="rb-row" href="#"><span class="ti">[로마노] 이탈리아 축구 연맹, 안드레아 피를로 감독직 접촉</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>2일 전</span></span></a>
+      <a class="rb-row" href="#"><span class="ti">[가제타] 과르디올라, 이탈리아 감독직 거절할 가능성 높아</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>3일 전</span></span></a>
+      <a class="rb-row" href="#"><span class="ti">[Marca] 카마빙가, 레알 마드리드 떠나지 않겠다고 밝혀</span><span class="rb-meta"><span>♡ 0</span><span>💬 0</span><span>3일 전</span></span></a>
+    </section>
+  </main>
+
+  <!-- ── 사이드바 (라이트 유지) ── -->
+  <aside class="side">
+    <div class="widget discord">
+      <div class="d-ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.3 5.3A16.8 16.8 0 0 0 15.1 4l-.2.4c1.5.4 2.9 1 4.2 1.9A13.7 13.7 0 0 0 7 6.3c1.3-.9 2.7-1.5 4.2-1.9L11 4c-1.5.3-2.9.7-4.2 1.3C4.3 9 3.6 12.6 4 16.2c1.5 1.1 3.2 1.9 5 2.4l1-1.6c-.6-.2-1.1-.5-1.6-.8l.4-.3a12 12 0 0 0 10.4 0l.4.3c-.5.3-1 .6-1.6.8l1 1.6c1.8-.5 3.5-1.3 5-2.4.5-4.2-.7-7.8-2.7-10.9ZM9.7 14.1c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Zm6.6 0c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Z"/></svg>
+      </div>
+      <div>
+        <p>축구 뉴스 · 매일 밤 오늘의 경기 알림을 디스코드로</p>
+        <a class="d-link" href="#">공놀이봇 서버 입장 →</a>
+      </div>
+    </div>
+
+    <div class="widget">
+      <h4>방금 댓글 달린 글</h4>
+      <div class="w-sub">지금 얘기 도는 데가 여기다</div>
+      <ul class="recent">
+        <li><a href="#"><span class="cnt">[4]</span><span>월드컵 이벤트 예측 내역이</span></a></li>
+        <li><a href="#"><span class="cnt">[1]</span><span>한국 축구 빙고의 저주 7월 1일 기준</span></a></li>
+        <li><a href="#"><span class="cnt">[1]</span><span>[David Ornstein] 토트넘, 마테우스…</span></a></li>
+      </ul>
+    </div>
+
+    <div class="adslot">
+      <span class="tag">광고</span>
+      <span class="sz num">Medium Rectangle · 300×250</span>
+    </div>
+  </aside>
+</div>
+
+<!-- ═══════════ 다크 존 (이 페이지 유일) — 푸터 ═══════════ -->
+<footer class="footer grain">
+  <div class="wrap">
+    <span class="f-logo">그깟 공놀이</span>
+    <div class="f-domain num">GONGNORI.FAN</div>
+    <p class="f-slogan">그깟 공놀이에 진심인 팬들의 놀이터</p>
+    <nav class="f-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <p class="f-copy">© 2026 GONGNORI.FAN — SEE YOU AT KICKOFF</p>
+  </div>
+</footer>
+
+<!-- 글쓰기 FAB -->
+<a class="fab" href="#" aria-label="글쓰기">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+</a>
+
+<!-- 모바일 스티키 액션바 -->
+<div class="stickyact">
+  <div class="sa-in">
+    <button class="act on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"/><path d="M7 10l4.2-7a2 2 0 0 1 3.7 1.3L14 9h4.9a2 2 0 0 1 2 2.5l-1.8 7A2 2 0 0 1 17 20H7"/></svg>
+      <span class="n">1</span>
+    </button>
+    <button class="act icon" aria-label="비추천">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1Z"/><path d="M17 14l-4.2 7a2 2 0 0 1-3.7-1.3L10 15H5.1a2 2 0 0 1-2-2.5l1.8-7A2 2 0 0 1 7 4h10"/></svg>
+    </button>
+    <a class="act wide" href="#comments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-5a8.4 8.4 0 0 1 16.1-4.5Z"/></svg>
+      댓글 <span class="n">1</span>
+    </a>
+    <button class="act icon" aria-label="북마크">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 2.2 4.6 5 .7-3.6 3.5.8 5-4.4-2.4L7.6 18l.8-5L4.8 9.3l5-.7Z"/></svg>
+    </button>
+    <button class="act icon" aria-label="공유">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.8 7.4-4.3M8.3 13.2l7.4 4.3"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ 모바일 하단 탭 ═══════════ -->
+<nav class="bottomtab">
+  <div class="bt-in">
+    <a href="a-matchday.html" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      담벼락
+    </a>
+    <a href="p-stadium.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+      운동장
+    </a>
+    <a href="p-prediction.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      승부예측
+    </a>
+    <a href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      글쓰기
+    </a>
+  </div>
+</nav>
+
+<script>
+/* 상태 데모: 추천 토글 + 북마크 토글 */
+(function () {
+  document.querySelectorAll(".act").forEach(function (b) {
+    if (b.tagName !== "BUTTON") return;
+    b.addEventListener("click", function () { b.classList.toggle("on"); });
+  });
+})();
+</script>
+
+<!-- 제안: 액션바의 "공유"를 카카오/링크복사 2단 시트로 나누면 슬립·적중카드 공유 동선과 합칠 여지가 있음 (구조 변경이라 목업엔 미반영) -->
+<!-- 제안: 본문 하단 "같은 게시판 최근 글" 위에 '이 글 관련 오늘 경기' 1줄 브리지를 두면 뉴스→예측 전환 링크가 생김 (F14) -->
+</body>
+</html>

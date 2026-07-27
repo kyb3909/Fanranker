@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>그깟 공놀이 — 게시판 · 축구 (시안 A 매치데이)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   페이지 전용 — 게시판 (/community/football)
+   구조는 현재 그대로: 좌 게시판 사이드바 · 게시판 헤더 · 채널 카드
+   · 정렬 탭 · 글 목록 · 우 사이드바
+   표면만 시안 A로: 다크 밴드 헤더 + 라이트 리스트 + 다크 푸터
+   🚫 한쪽 면 액센트 보더 없음 (전부 전체 테두리 / 배경 틴트로)
+   ============================================================ */
+
+/* ── LIVE 티커 (다크 스트립) — 라임은 이 페이지에서 여기 1곳뿐 ── */
+.ticker {
+  background: var(--night);
+  color: var(--cream-dim);
+  border-bottom: 1px solid var(--night-line);
+}
+.ticker-in { display: flex; align-items: center; gap: 14px; height: 40px; overflow: hidden; }
+.live-pill {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  font-family: var(--disp); font-weight: 800; font-size: 13px;
+  letter-spacing: 0.16em; color: var(--live);
+}
+.live-pill::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--live); animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
+.ticker-txt {
+  font-size: 13.5px; font-weight: 600; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.ticker-txt b { color: var(--cream); font-weight: 800; }
+
+/* ── 다크 밴드: 게시판 헤더 ── */
+.band { overflow: visible; }              /* 채널 카드가 밴드 하단에 걸치도록 */
+.crumb {
+  padding-top: 20px; font-size: 12.5px; font-weight: 600; color: var(--ink-3);
+  display: flex; align-items: center; gap: 7px;
+}
+.crumb a:hover { color: var(--cream); }
+.crumb b { color: var(--cream-dim); font-weight: 700; }
+
+.bh { display: flex; align-items: flex-end; gap: 24px; padding: 12px 0 26px; flex-wrap: wrap; }
+.bh-l { flex: 1; min-width: 260px; }
+.bh-head { display: flex; align-items: baseline; gap: 14px; }
+.bh-brush {
+  font-family: var(--brush); font-size: 46px; line-height: 1; color: var(--cream);
+  transform: rotate(-1.5deg); display: inline-block; text-shadow: 0.5px 0 currentColor;
+}
+.bh-kicker {
+  font-family: var(--disp); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.2em; color: var(--bg-100); text-transform: uppercase;
+}
+.bh-desc { font-size: 14.5px; color: var(--cream-dim); margin-top: 10px; }
+.bh-stats { display: flex; gap: 20px; margin-top: 14px; flex-wrap: wrap; }
+.bh-stats span { font-size: 12.5px; font-weight: 600; color: var(--ink-3); letter-spacing: 0.02em; }
+.bh-stats b { font-family: var(--disp); font-weight: 800; font-size: 19px; color: var(--cream); margin-left: 6px; letter-spacing: 0.02em; }
+.bh-r { display: flex; gap: 9px; align-items: center; flex-shrink: 0; }
+.bh-r .cta-cream { width: auto; padding: 12px 22px; border-radius: 10px; }
+/* 다크 존이므로 버건디는 면으로 허용 */
+.sub-btn {
+  background: var(--bg-500); color: #fff; font-weight: 800; font-size: 15px;
+  padding: 12px 20px; border-radius: 10px; transition: 0.15s;
+}
+.sub-btn:hover { background: var(--bg-600); }
+.sub-btn:active { transform: scale(0.98); }
+.sub-btn.on { background: transparent; border: 1px solid var(--night-line); color: var(--cream-dim); }
+
+/* ── 채널 카드 그리드: 다크 밴드 하단에 걸침 ── */
+.chgrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  position: relative; z-index: 2; margin-bottom: -44px;
+}
+.chcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 15px 16px; display: flex; gap: 12px; align-items: center;
+  color: var(--ink);
+  box-shadow: 0 16px 34px -18px rgba(0,0,0,0.6);
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+.ch-body { min-width: 0; }
+.chcard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 44px -18px rgba(0,0,0,0.55);
+  border-color: var(--bg-100);
+}
+.ch-ico {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 20px;
+  background: var(--bg-50); border: 1px solid var(--bg-100);
+}
+.ch-name { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.chcard:hover .ch-name { color: var(--bg-600); }
+.ch-desc {
+  display: block; font-size: 12.5px; color: var(--ink-3); margin-top: 2px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── 3컬럼 본문 ── */
+.main {
+  display: grid; grid-template-columns: 196px minmax(0, 1fr) 292px; gap: 20px;
+  padding-block: 74px 48px; align-items: start;
+}
+.main > main { min-width: 0; }
+
+/* ── 좌: 게시판 사이드바 (라이트) ── */
+.bsb { position: sticky; top: 84px; }
+.bsb-box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 12px; }
+.bsb-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 10px; }
+.bsb-head h2 { font-family: var(--brush); font-size: 26px; line-height: 1; color: var(--ink); }
+.bsb-search {
+  width: 100%; border: 1px solid var(--line); border-radius: 9px;
+  padding: 8px 11px; font-size: 13px; background: var(--paper); margin-bottom: 12px;
+}
+.bsb-search::placeholder { color: var(--ink-3); }
+.bsb-search:focus { outline: none; border-color: var(--bg-500); background: var(--card); }
+.bsb-group {
+  font-family: var(--disp); font-weight: 700; font-size: 12px; letter-spacing: 0.16em;
+  color: var(--ink-3); text-transform: uppercase; padding: 12px 5px 6px;
+}
+.bsb-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 8px; border-radius: 9px; font-size: 14px; font-weight: 700;
+  color: var(--ink-2); transition: background 0.12s, color 0.12s;
+}
+.bsb-item:hover { background: var(--paper); color: var(--ink); }
+/* 활성 = 버건디 텍스트 + 연한 배경 틴트 (액센트 바 없음) */
+.bsb-item.on { background: var(--bg-50); color: var(--bg-600); }
+.bsb-emo { width: 20px; text-align: center; font-size: 14px; flex-shrink: 0; }
+.bsb-item .nm { flex: 1; text-align: left; }
+.bsb-caret { color: var(--ink-3); font-size: 11px; transition: transform 0.15s; }
+.bsb-item.open .bsb-caret { transform: rotate(90deg); }
+.star { color: #d8d3cc; font-size: 13px; line-height: 1; flex-shrink: 0; }
+.star:hover { color: var(--bg-500); }
+.star.fav { color: var(--bg-500); }
+.bsb-children { padding: 2px 0 4px 26px; display: flex; flex-direction: column; }
+.bsb-child {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: var(--ink-3);
+}
+.bsb-child:hover { background: var(--paper); color: var(--ink-2); }
+.bsb-child.on { background: var(--bg-50); color: var(--bg-600); font-weight: 700; }
+
+/* ── 가운데: 정렬 탭 + 글 목록 ── */
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.flairnav { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.arw {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid var(--line); background: var(--card);
+  display: grid; place-items: center; font-size: 12px; color: var(--ink-2);
+}
+.arw:hover { border-color: var(--bg-500); color: var(--bg-600); }
+.tabs.flairs { margin: 0; flex: 1; min-width: 0; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; scrollbar-width: none; }
+.tabs.flairs::-webkit-scrollbar { display: none; }
+.tabs.flairs .tab { flex-shrink: 0; }
+.write-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-2);
+  font-weight: 800; font-size: 13.5px; padding: 8px 15px; border-radius: 999px;
+}
+.write-btn:hover { border-color: var(--bg-500); color: var(--bg-600); background: var(--bg-50); }
+
+.sortrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.tabs.sorts { margin: 0; }
+.tabs.sorts .tab { padding: 6px 13px; font-size: 13px; }
+.total { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+.total b { font-family: var(--disp); font-weight: 800; font-size: 15px; color: var(--ink-2); margin: 0 3px; }
+
+/* 목록 = 카드 3티어 재사용 */
+.list { display: flex; flex-direction: column; gap: 7px; }
+.lrow { display: grid; grid-template-columns: 42px minmax(0, 1fr) 76px 58px 44px; gap: 10px; align-items: center; }
+.lhead {
+  padding: 0 16px 8px; font-family: var(--disp); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase;
+}
+.lhead > span:nth-child(1), .lhead > span:nth-child(3),
+.lhead > span:nth-child(4), .lhead > span:nth-child(5) { text-align: center; }
+.card.post { padding: 13px 16px; }
+.card.post.t2 { padding: 15px 16px; }
+.p-no { font-family: var(--disp); font-weight: 600; font-size: 15px; color: var(--ink-3); text-align: center; }
+.p-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.p-title h3 {
+  font-size: 15px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card.post.t2 .p-title h3 { font-size: 16px; font-weight: 800; }
+.p-title h3:hover { color: var(--bg-600); }
+.p-cmt { font-family: var(--disp); font-weight: 800; font-size: 13.5px; color: var(--bg-500); flex-shrink: 0; }
+.p-au { font-size: 13px; color: var(--ink-2); font-weight: 600; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-dt { font-family: var(--disp); font-size: 13.5px; color: var(--ink-3); text-align: center; letter-spacing: 0.02em; }
+.p-up { font-family: var(--disp); font-weight: 700; font-size: 15px; color: var(--ink-3); text-align: center; }
+.p-up.hot { color: var(--bg-500); }
+.chip.flair { background: var(--paper); color: var(--ink-2); border: 1px solid var(--line); font-weight: 700; font-size: 11.5px; padding: 3px 9px; flex-shrink: 0; }
+.chip.flair.hot { background: var(--bg-50); color: var(--bg-600); border-color: var(--bg-100); }
+
+/* 페이지네이션 */
+.pager { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 20px; flex-wrap: wrap; }
+.pg {
+  min-width: 34px; height: 34px; padding: 0 10px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--card);
+  font-family: var(--disp); font-weight: 700; font-size: 15px; color: var(--ink-2);
+  display: inline-grid; place-items: center;
+}
+.pg:hover { border-color: var(--bg-500); color: var(--bg-600); }
+.pg.on { background: var(--bg-500); border-color: var(--bg-500); color: #fff; }
+.pg.nx { font-family: inherit; font-size: 13px; font-weight: 700; }
+
+/* ── 우: 사이드바 ── */
+.side { position: sticky; top: 84px; }
+.discord { display: flex; gap: 13px; align-items: flex-start; }
+.discord .d-ico {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  background: var(--bg-50); color: var(--bg-500); display: grid; place-items: center;
+}
+.discord .d-ico svg { width: 22px; height: 22px; }
+.discord p { font-size: 13.5px; font-weight: 700; line-height: 1.45; letter-spacing: -0.01em; }
+.discord .d-link { display: inline-block; margin-top: 7px; font-size: 13px; font-weight: 800; color: var(--bg-600); }
+.discord .d-link:hover { text-decoration: underline; }
+
+.recent li { list-style: none; padding: 9px 0; border-bottom: 1px solid var(--paper); }
+.recent li:last-child { border-bottom: 0; padding-bottom: 0; }
+.recent a { font-size: 13.5px; font-weight: 600; color: var(--ink-2); display: flex; gap: 7px; align-items: baseline; line-height: 1.4; }
+.recent a:hover { color: var(--bg-600); }
+.recent .cnt { font-family: var(--disp); font-weight: 800; color: var(--bg-500); flex-shrink: 0; }
+.recent .tt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent .bd { font-size: 11.5px; color: var(--ink-3); flex-shrink: 0; }
+
+.poll-q { font-size: 15.5px; font-weight: 800; line-height: 1.4; margin-bottom: 12px; letter-spacing: -0.02em; }
+.poll-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; text-align: left; padding: 10px 13px; margin-bottom: 7px;
+  border: 1px solid var(--line); border-radius: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink-2); transition: 0.12s;
+}
+.poll-opt:hover { border-color: var(--bg-500); color: var(--ink); }
+.poll-opt .ring { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); flex-shrink: 0; }
+.poll-opt.sel { border-color: var(--bg-500); background: var(--bg-50); color: var(--bg-700); }
+.poll-opt.sel .ring { border-color: var(--bg-500); background: radial-gradient(circle at center, var(--bg-500) 45%, transparent 50%); }
+.poll-cta { width: 100%; margin-top: 5px; background: var(--bg-500); color: #fff; font-weight: 800; font-size: 14px; padding: 11px; border-radius: 9px; }
+.poll-cta:hover { background: var(--bg-600); }
+
+.adbox {
+  border: 1px dashed var(--line); border-radius: 12px; background: var(--card);
+  height: 250px; display: grid; place-items: center; gap: 6px; text-align: center;
+}
+.adbox .lb { font-size: 11px; font-weight: 700; color: var(--ink-3); background: var(--paper); border-radius: 999px; padding: 3px 10px; }
+.adbox .sz { font-family: var(--disp); font-size: 13px; letter-spacing: 0.08em; color: var(--ink-3); }
+
+/* 글쓰기 FAB */
+.fab {
+  position: fixed; right: 26px; bottom: 26px; z-index: 55;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--bg-500); color: #fff; display: grid; place-items: center;
+  box-shadow: 0 12px 30px -10px rgba(150,30,55,0.7); transition: 0.15s;
+}
+.fab:hover { background: var(--bg-600); transform: translateY(-2px); }
+.fab svg { width: 22px; height: 22px; }
+
+/* ── 반응형 ── */
+@media (max-width: 1120px) {
+  .main { grid-template-columns: 200px 1fr; }
+  .side { position: static; grid-column: 1 / -1; }
+  .chgrid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 860px) {
+  .main { grid-template-columns: 1fr; padding-top: 84px; }
+  .bsb { display: none; }                 /* 모바일: 게시판 트리는 하단 탭 동선으로 대체 */
+  .chgrid { grid-template-columns: 1fr; margin-bottom: -56px; }
+  .bh-brush { font-size: 36px; }
+  .bh { padding-bottom: 20px; }
+  .bh-r { width: 100%; }
+  .bh-r .cta-cream, .sub-btn { flex: 1; }
+  .lhead { display: none; }               /* 모바일: 컬럼 라벨 대신 행 안에서 메타 노출 */
+  .lrow { grid-template-columns: 1fr 52px; grid-template-areas: "title up" "meta up"; row-gap: 5px; }
+  .p-no { display: none; }
+  .p-title { grid-area: title; }
+  .p-title h3 { white-space: normal; }
+  .p-au { grid-area: meta; text-align: left; font-size: 12px; color: var(--ink-3); }
+  .p-dt { display: none; }
+  .p-up { grid-area: up; }
+  .fab { display: none; }                 /* 모바일: 하단 탭의 글쓰기와 중복 → FAB 숨김 */
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ GNB ═══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-in">
+    <a class="logo" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="logo-domain">gongnori.fan</span>
+    </a>
+    <nav class="gnb-menu">
+      <a href="a-matchday.html">담벼락</a>
+      <a href="p-stadium.html" class="on">운동장</a>
+      <a href="p-prediction.html">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      </button>
+      <div class="avatar">몽</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ LIVE 뉴스 티커 (라임은 이 페이지 유일) ═══════════ -->
+<div class="ticker">
+  <div class="wrap ticker-in">
+    <span class="live-pill">LIVE</span>
+    <span class="ticker-txt"><b>[온스테인]</b> 아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색 · <b>[로마노]</b> 로드리, 맨체스터 시티의 새로운 계약 제안 수령</span>
+  </div>
+</div>
+
+<!-- ═══════════ 다크 밴드 — 게시판 헤더 + 채널 카드 ═══════════ -->
+<section class="band grain">
+  <div class="wrap">
+
+    <nav class="crumb">
+      <a href="a-matchday.html">담벼락</a><span>›</span><a href="#">스포츠</a><span>›</span><b>축구</b>
+    </nav>
+
+    <div class="bh">
+      <div class="bh-l">
+        <div class="bh-head">
+          <span class="bh-brush">축구</span>
+          <span class="bh-kicker">Football Board</span>
+        </div>
+        <p class="bh-desc">이적시장 떡밥부터 새벽 경기 후기까지 — 축구 얘기는 여기서 다 끝낸다</p>
+        <div class="bh-stats">
+          <span>팔로워<b class="num">4,812</b></span>
+          <span>오늘 글<b class="num">37</b></span>
+          <span>전체 글<b class="num">1,284</b></span>
+        </div>
+      </div>
+      <div class="bh-r">
+        <button class="sub-btn">＋ 팔로우</button>
+        <button class="cta-cream">글쓰기</button>
+      </div>
+    </div>
+
+    <!-- 채널 카드 그리드 — 밴드 하단에 걸침 -->
+    <div class="chgrid">
+      <a class="chcard" href="#">
+        <span class="ch-ico">🔁</span>
+        <span class="ch-body">
+          <span class="ch-name">이적시장</span>
+          <span class="ch-desc">오피셜 · 루머 상황판</span>
+        </span>
+      </a>
+      <a class="chcard" href="#">
+        <span class="ch-ico">🏆</span>
+        <span class="ch-body">
+          <span class="ch-name">월드컵</span>
+          <span class="ch-desc">월드컵 대회 이야기 · 예측 잡담</span>
+        </span>
+      </a>
+      <a class="chcard" href="#">
+        <span class="ch-ico">🐱</span>
+        <span class="ch-body">
+          <span class="ch-name">캣스날</span>
+          <span class="ch-desc">아스날 팬들 수다방</span>
+        </span>
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ 본문 (라이트) ═══════════ -->
+<div class="wrap main">
+
+  <!-- ── 좌: 게시판 사이드바 ── -->
+  <aside class="bsb">
+    <div class="bsb-box">
+      <div class="bsb-head">
+        <h2>게시판</h2>
+        <button class="icon-btn" aria-label="게시판 검색" style="width:30px;height:30px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+      </div>
+      <input class="bsb-search" placeholder="게시판 검색..." />
+
+      <div class="bsb-group">스포츠</div>
+      <a class="bsb-item on open" href="#">
+        <span class="bsb-emo">⚽</span><span class="nm">축구</span>
+        <span class="star fav" title="즐겨찾기">★</span>
+        <span class="bsb-caret">›</span>
+      </a>
+      <div class="bsb-children">
+        <a class="bsb-child" href="#">🔁 이적시장</a>
+        <a class="bsb-child" href="#">🏆 월드컵</a>
+        <a class="bsb-child" href="#">🐱 캣스날</a>
+      </div>
+      <a class="bsb-item" href="#"><span class="bsb-emo">⚾</span><span class="nm">야구</span><span class="star fav">★</span><span class="bsb-caret">›</span></a>
+      <a class="bsb-item" href="#"><span class="bsb-emo">🏀</span><span class="nm">농구</span><span class="star">☆</span><span class="bsb-caret">›</span></a>
+      <a class="bsb-item" href="#"><span class="bsb-emo">🏐</span><span class="nm">배구</span><span class="star">☆</span><span class="bsb-caret">›</span></a>
+
+      <div class="bsb-group">라이프</div>
+      <a class="bsb-item" href="#"><span class="bsb-emo">🎮</span><span class="nm">게임</span><span class="star">☆</span><span class="bsb-caret">›</span></a>
+      <a class="bsb-item" href="#"><span class="bsb-emo">🎬</span><span class="nm">영화</span><span class="star">☆</span><span class="bsb-caret">›</span></a>
+      <a class="bsb-item" href="#"><span class="bsb-emo">🎵</span><span class="nm">음악</span><span class="star">☆</span><span class="bsb-caret">›</span></a>
+      <a class="bsb-item" href="#"><span class="bsb-emo">✨</span><span class="nm">아이돌</span><span class="star">☆</span><span class="bsb-caret">›</span></a>
+      <a class="bsb-item" href="#"><span class="bsb-emo">💬</span><span class="nm">자유</span><span class="star fav">★</span><span class="bsb-caret">›</span></a>
+    </div>
+  </aside>
+
+  <!-- ── 가운데: 정렬 탭 + 글 목록 ── -->
+  <main>
+
+    <!-- 말머리 필터 + 글쓰기 -->
+    <div class="toolbar">
+      <div class="flairnav">
+        <button class="arw" aria-label="이전 말머리">‹</button>
+        <div class="tabs flairs" id="flairs">
+          <button class="tab on">전체</button>
+          <button class="tab">아스날</button>
+          <button class="tab">맨유</button>
+          <button class="tab">맨시티</button>
+          <button class="tab">리버풀</button>
+          <button class="tab">첼시</button>
+          <button class="tab">토트넘</button>
+          <button class="tab">EPL</button>
+          <button class="tab">레알</button>
+          <button class="tab">바르샤</button>
+          <button class="tab">뮌헨</button>
+          <button class="tab">분데스</button>
+          <button class="tab">세리에</button>
+          <button class="tab">K리그</button>
+        </div>
+        <button class="arw" aria-label="다음 말머리">›</button>
+      </div>
+      <button class="write-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        글쓰기
+      </button>
+    </div>
+
+    <!-- 정렬 탭 -->
+    <div class="sortrow">
+      <div class="tabs sorts" id="sorts">
+        <button class="tab on">최신순</button>
+        <button class="tab">추천순</button>
+        <button class="tab">댓글순</button>
+      </div>
+      <span class="total">전체 <b class="num">1,284</b>개 · <b class="num">1</b>/<b class="num">6</b> 페이지</span>
+    </div>
+
+    <!-- 글 목록 -->
+    <div class="list">
+
+      <div class="lrow lhead">
+        <span>번호</span><span style="text-align:left">제목</span><span>글쓴이</span><span>날짜</span><span>추천</span>
+      </div>
+
+      <!-- 티어2 = 배경 틴트로만 구분 (액센트 바 금지) -->
+      <article class="card post t2 lrow">
+        <span class="p-no num">135</span>
+        <span class="p-title">
+          <span class="chip flair hot">맨시티</span>
+          <h3><a href="#">[플레텐부르크] 맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</a></h3>
+          <span class="p-cmt">[12]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">1일 전</span>
+        <span class="p-up num hot">24</span>
+      </article>
+
+      <article class="card post t2 lrow">
+        <span class="p-no num">134</span>
+        <span class="p-title">
+          <span class="chip flair hot">아스날</span>
+          <h3><a href="#">[온스테인] 아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</a></h3>
+          <span class="p-cmt">[31]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">1일 전</span>
+        <span class="p-up num hot">58</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">133</span>
+        <span class="p-title">
+          <span class="chip flair">첼시</span>
+          <h3><a href="#">[The Standard] 첼시, 페드로 네토 판매 계획 없음</a></h3>
+          <span class="p-cmt">[4]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">2일 전</span>
+        <span class="p-up num">6</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">132</span>
+        <span class="p-title">
+          <span class="chip flair">뉴스</span>
+          <h3><a href="#">[오피셜] 벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</a></h3>
+          <span class="p-cmt">[2]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">2일 전</span>
+        <span class="p-up num">3</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">131</span>
+        <span class="p-title">
+          <span class="chip flair">뉴스</span>
+          <h3><a href="#">[로마노] 이탈리아 축구 연맹, 안드레아 피를로 감독직 접촉</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">2일 전</span>
+        <span class="p-up num">1</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">130</span>
+        <span class="p-title">
+          <span class="chip flair">뉴스</span>
+          <h3><a href="#">[가제타] 과르디올라, 이탈리아 감독직 거절할 가능성 높아</a></h3>
+          <span class="p-cmt">[7]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">3일 전</span>
+        <span class="p-up num">9</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">129</span>
+        <span class="p-title">
+          <span class="chip flair">레알</span>
+          <h3><a href="#">[Marca] 카마빙가, 레알 마드리드 떠나지 않겠다고 밝혀</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">3일 전</span>
+        <span class="p-up num">2</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">128</span>
+        <span class="p-title">
+          <span class="chip flair">첼시</span>
+          <h3><a href="#">[텔레그래프] 첼시, £3000만 보스니아 월드컵 스타 케림 알라이베고비치 영입 근접</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">3일 전</span>
+        <span class="p-up num">0</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">127</span>
+        <span class="p-title">
+          <span class="chip flair">맨시티</span>
+          <h3><a href="#">[로마노] 로드리, 맨체스터 시티의 새로운 계약 제안 수령</a></h3>
+          <span class="p-cmt">[3]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">3일 전</span>
+        <span class="p-up num">5</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">126</span>
+        <span class="p-title">
+          <span class="chip flair">맨시티</span>
+          <h3><a href="#">[온스테인] 리즈, 맨체스터 시티와 제임스 트래포드 영입 협상 중</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">3일 전</span>
+        <span class="p-up num">1</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">125</span>
+        <span class="p-title">
+          <span class="chip flair">바르샤</span>
+          <h3><a href="#">[BeIN Sports] 부스케츠, 바르셀로나 코치로 복귀</a></h3>
+          <span class="p-cmt">[5]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">3일 전</span>
+        <span class="p-up num">8</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">124</span>
+        <span class="p-title">
+          <span class="chip flair">맨유</span>
+          <h3><a href="#">[The Athletic] 알레한드로 가르나초, 아스톤 빌라로 조건부 의무 임대 이적 완료</a></h3>
+          <span class="p-cmt">[9]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">4일 전</span>
+        <span class="p-up num">11</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">123</span>
+        <span class="p-title">
+          <span class="chip flair">첼시</span>
+          <h3><a href="#">[Kieran Gill] 가르나초, 아스톤 빌라 이적 시 총 패키지 5000만 유로 달성</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">4일 전</span>
+        <span class="p-up num">0</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">122</span>
+        <span class="p-title">
+          <span class="chip flair">맨시티</span>
+          <h3><a href="#">[샘 리] 아부쿠도리르 후산노프와 제레미 도쿠, 맨체스터 시티와 2031년까지 재계약</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">4일 전</span>
+        <span class="p-up num">2</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">121</span>
+        <span class="p-title">
+          <span class="chip flair">바르샤</span>
+          <h3><a href="#">[ELDesmarque] 페란 토레스, 바르셀로나 계약 갱신 제안 불만족으로 PSG 검토</a></h3>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">4일 전</span>
+        <span class="p-up num">1</span>
+      </article>
+
+      <article class="card post lrow">
+        <span class="p-no num">120</span>
+        <span class="p-title">
+          <span class="chip flair">이적</span>
+          <h3><a href="#">[Onze Mondial] 아틀레티코 마드리드, 이강인 영입 마무리 단계. 이적료는 약 3500만 유로</a></h3>
+          <span class="p-cmt">[18]</span>
+        </span>
+        <span class="p-au">공놀이봇</span>
+        <span class="p-dt num">4일 전</span>
+        <span class="p-up num hot">27</span>
+      </article>
+
+    </div>
+
+    <!-- 페이지네이션 -->
+    <nav class="pager">
+      <button class="pg on">1</button>
+      <button class="pg">2</button>
+      <button class="pg">3</button>
+      <button class="pg">4</button>
+      <button class="pg">5</button>
+      <button class="pg">6</button>
+      <button class="pg nx">Next ›</button>
+    </nav>
+  </main>
+
+  <!-- ── 우: 사이드바 ── -->
+  <aside class="side">
+
+    <div class="widget discord">
+      <div class="d-ico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.3 5.3A16.8 16.8 0 0 0 15.1 4l-.2.4c1.5.4 2.9 1 4.2 1.9A13.7 13.7 0 0 0 7 6.3c1.3-.9 2.7-1.5 4.2-1.9L11 4c-1.5.3-2.9.7-4.2 1.3C4.3 9 3.6 12.6 4 16.2c1.5 1.1 3.2 1.9 5 2.4l1-1.6c-.6-.2-1.1-.5-1.6-.8l.4-.3a12 12 0 0 0 10.4 0l.4.3c-.5.3-1 .6-1.6.8l1 1.6c1.8-.5 3.5-1.3 5-2.4.5-4.2-.7-7.8-2.7-10.9ZM9.7 14.1c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Zm6.6 0c-.9 0-1.6-.8-1.6-1.8s.7-1.8 1.6-1.8 1.6.8 1.6 1.8-.7 1.8-1.6 1.8Z"/></svg>
+      </div>
+      <div>
+        <p>축구 뉴스 · 매일 밤 오늘의 경기 알림을 디스코드로</p>
+        <a class="d-link" href="#">공놀이봇 서버 입장 →</a>
+      </div>
+    </div>
+
+    <div class="widget">
+      <h4>방금 댓글 달린 글</h4>
+      <div class="w-sub">지금 얘기 도는 데가 여기다</div>
+      <ul class="recent">
+        <li><a href="#"><span class="cnt">[4]</span><span class="tt">월드컵 이벤트 예측 내역이</span><span class="bd">자유</span></a></li>
+        <li><a href="#"><span class="cnt">[1]</span><span class="tt">한국 축구 빙고의 저주 7월 1일 기준</span><span class="bd">자유</span></a></li>
+        <li><a href="#"><span class="cnt">[1]</span><span class="tt">[David Ornstein] 토트넘, 마테우스…</span><span class="bd">축구</span></a></li>
+      </ul>
+    </div>
+
+    <div class="widget">
+      <h4>오늘의 설문</h4>
+      <div class="w-sub">한 표가 여론이 된다</div>
+      <p class="poll-q">아스날 다음 영입 1순위는?</p>
+      <button class="poll-opt" data-poll><span>기마랑이스</span><span class="ring"></span></button>
+      <button class="poll-opt sel" data-poll><span>토날리</span><span class="ring"></span></button>
+      <button class="poll-opt" data-poll><span>마페</span><span class="ring"></span></button>
+      <button class="poll-opt" data-poll><span>부아디</span><span class="ring"></span></button>
+      <button class="poll-cta">투표하고 결과 보기</button>
+    </div>
+
+    <div class="adbox">
+      <span class="lb">광고</span>
+      <span class="sz num">MEDIUM RECTANGLE · 300×250</span>
+    </div>
+
+  </aside>
+</div>
+
+<!-- ═══════════ 다크 푸터 ═══════════ -->
+<footer class="footer grain">
+  <div class="wrap">
+    <span class="f-logo">그깟 공놀이</span>
+    <div class="f-domain num">GONGNORI.FAN</div>
+    <p class="f-slogan">그깟 공놀이에 진심인 팬들의 놀이터</p>
+    <nav class="f-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <p class="f-copy">© 2026 GONGNORI.FAN — SEE YOU AT KICKOFF</p>
+  </div>
+</footer>
+
+<!-- ═══════════ 글쓰기 FAB ═══════════ -->
+<a class="fab" href="#" aria-label="글쓰기">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+</a>
+
+<!-- ═══════════ 모바일 하단 탭 ═══════════ -->
+<nav class="bottomtab">
+  <div class="bt-in">
+    <a href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      담벼락
+    </a>
+    <a href="p-stadium.html" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+      운동장
+    </a>
+    <a href="p-prediction.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      승부예측
+    </a>
+    <a href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      글쓰기
+    </a>
+  </div>
+</nav>
+
+<script>
+/* 최소 JS: 말머리 필터 · 정렬 탭 · 즐겨찾기 별 · 설문 선택 데모 */
+(function () {
+  function single(sel, cls) {
+    document.querySelectorAll(sel).forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll(sel).forEach(function (x) { x.classList.remove(cls); });
+        b.classList.add(cls);
+      });
+    });
+  }
+  single("#flairs .tab", "on");
+  single("#sorts .tab", "on");
+  single(".pager .pg:not(.nx)", "on");
+  single("[data-poll]", "sel");
+
+  document.querySelectorAll(".star").forEach(function (s) {
+    s.addEventListener("click", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var fav = s.classList.toggle("fav");
+      s.textContent = fav ? "★" : "☆";
+    });
+  });
+
+  /* 말머리 가로 스크롤 화살표 */
+  var strip = document.getElementById("flairs");
+  var arws = document.querySelectorAll(".arw");
+  if (arws[0]) arws[0].addEventListener("click", function () { strip.scrollBy({ left: -220, behavior: "smooth" }); });
+  if (arws[1]) arws[1].addEventListener("click", function () { strip.scrollBy({ left: 220, behavior: "smooth" }); });
+})();
+</script>
+
+<!--
+제안: (구조 변경 아님 — 검토용 메모)
+1) 글 목록의 "추천" 컬럼이 대부분 0이라 시각적 비중 대비 정보량이 낮다.
+   추천 0인 글은 숫자를 흐리게(현재 --ink-3 적용) 두고, 임계값 이상만 버건디로
+   올리는 지금 방식을 유지하되 장기적으로는 "댓글 수"를 앞세우는 편이 활동감이 산다.
+2) 봇 글(공놀이봇)이 목록 대부분을 차지한다. 글쓴이 컬럼에 사람/봇 구분 아이콘을
+   두면 "사람 글"을 찾는 동선이 짧아진다.
+3) 채널 카드(이적시장·월드컵·캣스날)는 현재 방문 시 항상 같은 자리에 노출된다.
+   최근 글이 있는 채널을 앞으로 정렬하면 같은 자리에서 신선도가 생긴다.
+-->
+</body>
+</html>

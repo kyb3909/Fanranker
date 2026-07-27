@@ -4,107 +4,125 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>gongnori.fan 디자인 시안 뷰어</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
-  body { display: flex; flex-direction: column; font-family: Pretendard, -apple-system, "Segoe UI", sans-serif; background: #111; }
-  header {
-    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
-    background: #191919; border-bottom: 1px solid #2c2c2c; flex-wrap: wrap;
+  body { display: flex; flex-direction: column; font-family: Pretendard, -apple-system, "Segoe UI", sans-serif; background: #0e0d10; }
+  header { background: #17161a; border-bottom: 1px solid #2a282f; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; flex-wrap: wrap; }
+  .row + .row { border-top: 1px solid #221f27; }
+  .grp {
+    font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 12px;
+    letter-spacing: .14em; color: #6f6a78; text-transform: uppercase;
+    width: 76px; flex-shrink: 0;
   }
-  .brand { color: #fff; font-weight: 800; font-size: 14px; white-space: nowrap; }
+  .brand { color: #fff; font-weight: 800; font-size: 14px; white-space: nowrap; margin-right: 4px; }
   .brand span { color: #d4667e; }
-  nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  nav { display: flex; gap: 5px; flex-wrap: wrap; }
   nav button {
-    appearance: none; border: 1px solid #3a3a3a; background: #222; color: #bbb;
+    appearance: none; border: 1px solid #35323c; background: #1f1d23; color: #b3aeba;
     padding: 6px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
-    cursor: pointer; transition: all .15s;
+    cursor: pointer; transition: all .14s; white-space: nowrap;
   }
   nav button:hover { border-color: #961e37; color: #fff; }
   nav button.active { background: #961e37; border-color: #961e37; color: #fff; }
-  nav button.missing { opacity: .35; }
-  .desc { color: #888; font-size: 12px; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
-  .hint { color: #555; font-size: 11px; white-space: nowrap; }
+  nav button.missing { opacity: .32; }
+  .desc { color: #7c7686; font-size: 12px; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; }
+  .hint { color: #4b4753; font-size: 11px; white-space: nowrap; }
   iframe { flex: 1; width: 100%; border: 0; background: #fff; }
-  .placeholder {
-    flex: 1; display: none; align-items: center; justify-content: center;
-    color: #777; font-size: 15px; background: #161616;
-  }
+  .placeholder { flex: 1; display: none; align-items: center; justify-content: center; color: #6f6a78; font-size: 15px; background: #131217; }
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">그깟 공놀이 <span>시안 뷰어</span></div>
-  <nav id="nav"></nav>
-  <div class="desc" id="desc"></div>
-  <div class="hint">← → 키로 이동</div>
+  <div class="row">
+    <div class="brand">그깟 공놀이 <span>시안 뷰어</span></div>
+    <div class="desc" id="desc"></div>
+    <div class="hint">← → 키로 이동</div>
+  </div>
+  <div class="row">
+    <div class="grp">채택 A · 페이지</div>
+    <nav id="nav-page"></nav>
+  </div>
+  <div class="row">
+    <div class="grp">시안 비교</div>
+    <nav id="nav-variant"></nav>
+  </div>
 </header>
 <iframe id="frame" title="시안 미리보기"></iframe>
 <div class="placeholder" id="ph">이 시안은 아직 생성 중입니다 — 잠시 후 탭을 다시 눌러보세요.</div>
 <script>
-  const MOCKUPS = [
-    { key: "A", file: "a-matchday.html",   name: "A 매치데이",        desc: "합의안 — 라이트 베이스 + 다크 3존, 버건디 클라레" },
-    { key: "B", file: "b-nightpitch.html", name: "B 나이트 피치",     desc: "전면 다크 — 케이 원안, 매치 포스터 히어로" },
-    { key: "C", file: "c-editorial.html",  name: "C 에디토리얼 크림", desc: "무신사 2025·매거진 — 크림 지면 + 잉크 + 흑백 사진" },
-    { key: "D", file: "d-terrace.html",    name: "D 테라스 그런지",   desc: "브라운브레스·팬진 — 테이프, 스탬프, 티켓 스터브" },
-    { key: "E", file: "e-brutalist.html",  name: "E 전광판 브루탈리즘", desc: "3색·표·모노스페이스 — 구조 노출, 행 반전 호버" },
-    { key: "F", file: "f-retrocard.html",  name: "F 레트로 풋볼 카드", desc: "파니니 카드 팩 — 홀로 카드, 스티커 앨범" },
-    { key: "G", file: "g-neon.html",       name: "G 네온 나이트 리그", desc: "다크 + 일렉트릭 라임 5% — 야간 풋살장 LED" },
-    { key: "H", file: "h-heritage.html",   name: "H 클럽 헤리티지",   desc: "100년 클럽 프로그램북 — 세리프, 크레스트, 그린+골드" },
-    { key: "I", file: "i-softmin.html",    name: "I 소프트 미니멀",   desc: "토스식 대조군 — 웜 그레이, 큰 라운딩, 친근함" },
-    { key: "J", file: "j-y2k.html",        name: "J Y2K 에디토리얼",  desc: "VERSUS·나이키 캠페인 — 아웃라인 타이포 오버랩, 마퀴 티커" },
+  const PAGES = [
+    { file: "a-matchday.html",       name: "홈 담벼락",   desc: "A 매치데이 — 오늘의 메인 이벤트 다크 밴드 + 카드 3티어" },
+    { file: "p-prediction.html",     name: "승부예측",   desc: "슬레이트 밴드 + 다크 픽 타일 + 슬립 레일" },
+    { file: "p-post.html",           name: "글 상세",     desc: "라이트 본문 — 읽기 가독성 우선, 다크는 푸터만" },
+    { file: "p-board.html",          name: "게시판",     desc: "게시판 헤더 밴드 + 채널 카드 그리드 + 글 목록" },
+    { file: "p-write.html",          name: "글쓰기",     desc: "집중 화면 — 스티키 툴바 + 발행 바" },
+    { file: "p-mypredictions.html",  name: "내 예측",     desc: "성적 대시보드 밴드 + 슬립 카드" },
+    { file: "p-snack.html",          name: "떡밥 피드",   desc: "풀스크린 다크 — 세로 스냅 소비 모드" },
+    { file: "p-search.html",         name: "검색",       desc: "검색 밴드 + 하이라이트 결과" },
+    { file: "p-stadium.html",        name: "운동장",     desc: "야간 조명 밴드 + 레벨 게이지 + 기여 랭킹" },
   ];
-  const nav = document.getElementById("nav");
+  const VARIANTS = [
+    { file: "a-matchday.html",   name: "A 매치데이",       desc: "✅ 채택 — 라이트 + 다크 3존, 버건디 클라레" },
+    { file: "b-nightpitch.html", name: "B 나이트 피치",     desc: "전면 다크 — 매치 포스터 히어로" },
+    { file: "c-editorial.html",  name: "C 에디토리얼 크림", desc: "무신사·매거진 — 크림 지면 + 흑백 사진" },
+    { file: "d-terrace.html",    name: "D 테라스 그런지",   desc: "팬진 — 테이프·스탬프·티켓 스터브" },
+    { file: "e-brutalist.html",  name: "E 브루탈리즘",     desc: "3색·표·모노스페이스 구조 노출" },
+    { file: "f-retrocard.html",  name: "F 레트로 카드",     desc: "파니니 카드 팩 — 홀로 카드" },
+    { file: "g-neon.html",       name: "G 네온 나이트",     desc: "다크 + 라임 5% 절제" },
+    { file: "h-heritage.html",   name: "H 헤리티지",       desc: "세리프·크레스트·그린+골드" },
+    { file: "i-softmin.html",    name: "I 소프트 미니멀",   desc: "토스식 대조군" },
+    { file: "j-y2k.html",        name: "J Y2K",           desc: "아웃라인 타이포·마퀴 티커" },
+  ];
+
   const frame = document.getElementById("frame");
   const ph = document.getElementById("ph");
   const desc = document.getElementById("desc");
-  let cur = 0;
+  const all = [];
 
-  MOCKUPS.forEach((m, i) => {
-    const b = document.createElement("button");
-    b.textContent = m.name;
-    b.onclick = () => show(i);
-    nav.appendChild(b);
-    m.btn = b;
-  });
+  function build(list, mountId) {
+    const mount = document.getElementById(mountId);
+    list.forEach((m) => {
+      const b = document.createElement("button");
+      b.textContent = m.name;
+      b.onclick = () => show(m);
+      mount.appendChild(b);
+      m.btn = b;
+      all.push(m);
+    });
+  }
+  build(PAGES, "nav-page");
+  build(VARIANTS, "nav-variant");
 
   async function exists(file) {
     try { const r = await fetch(file, { method: "HEAD", cache: "no-store" }); return r.ok; }
     catch { return false; }
   }
-
-  async function refreshAvailability() {
-    for (const m of MOCKUPS) m.btn.classList.toggle("missing", !(await exists(m.file)));
+  async function refresh() {
+    for (const m of all) m.btn.classList.toggle("missing", !(await exists(m.file)));
   }
-
-  async function show(i) {
-    cur = i;
-    const m = MOCKUPS[i];
-    MOCKUPS.forEach((x) => x.btn.classList.toggle("active", x === m));
+  async function show(m) {
+    all.forEach((x) => x.btn.classList.toggle("active", x.file === m.file && x === m));
     desc.textContent = m.desc;
     if (await exists(m.file)) {
-      ph.style.display = "none";
-      frame.style.display = "block";
+      ph.style.display = "none"; frame.style.display = "block";
       frame.src = m.file + "?t=" + Date.now();
       m.btn.classList.remove("missing");
     } else {
-      frame.style.display = "none";
-      ph.style.display = "flex";
+      frame.style.display = "none"; ph.style.display = "flex";
     }
   }
-
   document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowRight") show((cur + 1) % MOCKUPS.length);
-    if (e.key === "ArrowLeft") show((cur - 1 + MOCKUPS.length) % MOCKUPS.length);
+    const cur = all.findIndex((x) => x.btn.classList.contains("active"));
+    if (e.key === "ArrowRight") show(all[(cur + 1) % all.length]);
+    if (e.key === "ArrowLeft") show(all[(cur - 1 + all.length) % all.length]);
   });
-
-  refreshAvailability().then(async () => {
-    // 첫 진입: 존재하는 첫 시안으로
-    for (let i = 0; i < MOCKUPS.length; i++) {
-      if (await exists(MOCKUPS[i].file)) { show(i); return; }
-    }
-    show(0);
-  });
+  // 생성 중인 시안이 완성되면 탭이 자동으로 활성화되도록 주기적 확인
+  setInterval(refresh, 15000);
+  refresh().then(() => show(PAGES[0]));
 </script>
 </body>
 </html>

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>떡밥 피드 — 시안 A · 매치데이 | 그깟 공놀이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   /snack — 떡밥 피드 (풀스크린 세로 스와이프 소비 모드)
+
+   구조 유지: 한 화면 = 카드 1장 풀블리드 / 세로 스냅 스크롤 /
+   우측 액션 레일 / 하단 정보 영역 / 상단 미니 헤더 / 끝 카드.
+
+   이 페이지는 시안 A 중 "전면 다크가 정당한 유일한 페이지".
+   본문 긴 글이 없고 미디어가 주인공 → --night 베이스.
+   ============================================================ */
+
+:root {
+  --gold: #e0b44f;           /* ★ 1티어 별 — 다크 위 소스 신뢰도 신호 */
+  --glass: rgba(245, 239, 231, 0.09);
+  --glass-line: rgba(245, 239, 231, 0.17);
+  --glass-hi: rgba(245, 239, 231, 0.16);
+}
+
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body {
+  background: var(--night);
+  color: var(--cream);
+  padding-bottom: 0;             /* 공용 CSS의 모바일 하단 탭 여백 무효화 */
+}
+
+/* ============ 스테이지 (풀스크린 소비 모드) ============ */
+.snack {
+  position: fixed;
+  inset: 0;
+  background: var(--night);
+  z-index: 50;
+}
+
+/* ── 상단 미니 헤더 : 로고 + 닫기 (GNB 전체 대신) ── */
+.mini {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px 44px;
+  background: linear-gradient(
+    180deg,
+    rgba(22, 20, 26, 0.88) 0%,
+    rgba(22, 20, 26, 0.72) 26%,
+    rgba(22, 20, 26, 0.44) 52%,
+    rgba(22, 20, 26, 0.18) 74%,
+    rgba(22, 20, 26, 0) 100%
+  );
+  pointer-events: none;
+}
+.mini > * { pointer-events: auto; }
+.mini-brand { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.mini-brand .logo-brush {
+  color: var(--cream);
+  font-size: 27px;
+  text-shadow: 0.5px 0 currentColor;
+}
+.mini-tag {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bg-100);
+  border: 1px solid rgba(244, 223, 228, 0.28);
+  border-radius: 999px;
+  padding: 3px 10px 2px;
+  white-space: nowrap;
+}
+.close {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--cream);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  flex-shrink: 0;
+  transition: 0.15s;
+}
+.close:hover { background: var(--bg-500); border-color: var(--bg-500); }
+.close:active { transform: scale(0.94); }
+.close svg { width: 19px; height: 19px; }
+
+/* ── 스냅 스크롤 컨테이너 ── */
+.reel {
+  height: 100%;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+.reel::-webkit-scrollbar { display: none; }
+
+.slide {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+}
+
+/* 앰비언트: 데스크톱에서 스테이지 양옆을 같은 이미지의 블러 + 버건디 웨시로 채운다 */
+.ambient {
+  position: absolute; inset: -8%;
+  background-size: cover; background-position: center;
+  filter: blur(46px) saturate(0.72) brightness(0.5);
+  transform: scale(1.12);
+  opacity: 0.75;
+  z-index: 0;
+}
+.slide::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 1;
+  background:
+    radial-gradient(760px 460px at 12% 88%, rgba(150, 30, 55, 0.26), transparent 62%),
+    radial-gradient(680px 420px at 88% 8%, rgba(150, 30, 55, 0.18), transparent 62%);
+  pointer-events: none;
+}
+
+/* 카드 본체 = 세로 스테이지 (모바일에선 전체 폭) */
+.stage {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--night-soft);
+  box-shadow: 0 0 90px -20px rgba(0, 0, 0, 0.85);
+}
+
+/* 이미지 풀블리드 */
+.stage .shot {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  filter: saturate(0.86) contrast(1.06) brightness(0.92);
+}
+
+/* ── 하단 그라데이션 스크림 (9-stop, 밴딩 없이 부드럽게) ── */
+.scrim {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    0deg,
+    rgba(22, 20, 26, 0.97) 0%,
+    rgba(22, 20, 26, 0.94) 7%,
+    rgba(22, 20, 26, 0.88) 15%,
+    rgba(22, 20, 26, 0.79) 23%,
+    rgba(22, 20, 26, 0.66) 32%,
+    rgba(22, 20, 26, 0.5) 42%,
+    rgba(22, 20, 26, 0.31) 53%,
+    rgba(22, 20, 26, 0.13) 66%,
+    rgba(22, 20, 26, 0) 80%
+  );
+}
+/* 상단 미세 비네트 — 헤더 가독 보조 */
+.vig {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(22, 20, 26, 0.42), rgba(22, 20, 26, 0) 22%);
+}
+
+/* ── 하단 정보 영역 ── */
+.info {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 12;
+  padding: 0 108px 46px 24px;   /* 우측은 액션 레일 자리 */
+}
+.srcrow { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+/* 다크 위 글래스 칩 */
+.gchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 800; letter-spacing: -0.01em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: var(--cream);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.gchip.tier1 i { font-style: normal; color: var(--gold); font-size: 13px; line-height: 1; }
+/* ✓ 오피셜 = 버건디 필 (다크 존이므로 면 허용) */
+.gchip.official {
+  background: var(--bg-500);
+  border-color: var(--bg-500);
+  color: #fff;
+  backdrop-filter: none;
+}
+.gchip.src { font-weight: 700; color: var(--cream-dim); }
+
+.info h1 {
+  font-size: 29px;
+  font-weight: 900;
+  line-height: 1.24;
+  letter-spacing: -0.035em;
+  color: var(--cream);
+  text-wrap: balance;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
+}
+.info h1 a { display: block; }
+.info h1 a:hover { color: #fff; }
+.imeta {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--cream-dim);
+}
+.imeta .who { font-weight: 700; color: rgba(245, 239, 231, 0.82); }
+.imeta .sep { opacity: 0.45; }
+.iopen {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 15px;
+  font-size: 13.5px; font-weight: 800;
+  color: var(--cream);
+  background: var(--glass-hi);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 9px 15px;
+  border-radius: 999px;
+  transition: 0.15s;
+}
+.iopen:hover { background: var(--bg-500); border-color: var(--bg-500); }
+
+/* ── 우측 액션 레일 (원형 고스트 버튼) ── */
+.rail {
+  position: absolute;
+  right: 18px; bottom: 52px;
+  z-index: 14;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.act { display: grid; place-items: center; gap: 5px; }
+.act .orb {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--cream);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.13s, background 0.15s, border-color 0.15s;
+}
+.act:hover .orb { background: var(--glass-hi); border-color: rgba(245, 239, 231, 0.32); }
+.act:active .orb { transform: scale(0.9); }
+.act .orb svg { width: 23px; height: 23px; }
+.act .cnt {
+  font-family: var(--disp);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700; font-size: 13px;
+  letter-spacing: 0.04em;
+  color: rgba(245, 239, 231, 0.72);
+}
+/* 좋아요 활성 = 버건디 */
+.act.liked .orb {
+  background: var(--bg-500);
+  border-color: var(--bg-500);
+  box-shadow: 0 8px 24px -10px rgba(150, 30, 55, 0.95);
+}
+.act.liked .orb svg { fill: currentColor; }
+.act.liked .cnt { color: var(--bg-100); }
+@keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+.act.pop .orb { animation: pop 0.32s ease-out; }
+
+/* ── 스와이프 힌트 ── */
+.hint {
+  position: absolute;
+  left: 50%; top: 66px;
+  transform: translateX(-50%);
+  z-index: 16;
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--disp);
+  font-weight: 700; font-size: 12px; letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 231, 0.72);
+  background: rgba(22, 20, 26, 0.5);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 7px 14px;
+  border-radius: 999px;
+  transition: opacity 0.4s;
+}
+.hint .ar { display: inline-block; animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0); opacity: 0.55; } 50% { transform: translateY(3px); opacity: 1; } }
+.hint.off { opacity: 0; pointer-events: none; }
+
+/* ── 하단 진행 인디케이터 (현재 N / 총 M) ── */
+.prog {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  max-width: 604px;              /* 스테이지 폭에 물려 읽히게 */
+  margin: 0 auto;
+  padding: 0 22px 14px;
+  pointer-events: none;
+}
+.pbar { display: flex; gap: 4px; flex: 1; }
+.pseg {
+  height: 3px; flex: 1;
+  border-radius: 3px;
+  background: rgba(245, 239, 231, 0.18);
+  transition: background 0.25s;
+}
+.pseg.on { background: var(--bg-500); }
+.pseg.done { background: rgba(150, 30, 55, 0.5); }
+.pnum {
+  font-family: var(--disp);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700; font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--cream-dim);
+  white-space: nowrap;
+}
+.pnum b { color: var(--cream); font-weight: 800; }
+
+/* ── 끝 카드 ── */
+.endcard {
+  position: relative; z-index: 2;
+  height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 9px; text-align: center; padding: 0 26px;
+  background:
+    radial-gradient(760px 340px at 50% 30%, rgba(150, 30, 55, 0.3), transparent 62%),
+    var(--night);
+}
+.endcard .e-brush {
+  font-family: var(--brush);
+  font-size: 46px; line-height: 1;
+  color: var(--cream);
+  transform: rotate(-1.5deg);
+  text-shadow: 0.5px 0 currentColor;
+}
+.endcard p { font-size: 14px; color: var(--cream-dim); }
+.endcard .e-cta {
+  margin-top: 16px;
+  display: inline-block;
+  background: var(--cream); color: var(--night);
+  font-weight: 800; font-size: 15px;
+  padding: 12px 26px; border-radius: 999px;
+  transition: 0.15s;
+}
+.endcard .e-cta:hover { box-shadow: 0 10px 26px -8px rgba(245, 239, 231, 0.5); }
+.endcard .e-cta:active { transform: scale(0.97); }
+.endcard .e-sub {
+  margin-top: 18px;
+  font-family: var(--disp); font-weight: 600; font-size: 12px;
+  letter-spacing: 0.2em; color: #6c6478; text-transform: uppercase;
+}
+
+/* ── 모바일: 하단 탭 숨김(소비 모드), 스테이지 전체 폭 ── */
+@media (max-width: 860px) {
+  .bottomtab { display: none !important; }
+  .stage { max-width: none; box-shadow: none; }
+  .ambient { display: none; }
+  .info { padding: 0 84px 44px 18px; }
+  .info h1 { font-size: 23px; }
+  .iopen { margin-top: 12px; padding: 8px 13px; font-size: 13px; }
+  .rail { right: 12px; bottom: 48px; gap: 13px; }
+  .act .orb { width: 46px; height: 46px; }
+  .act .orb svg { width: 21px; height: 21px; }
+  .mini { padding: 11px 14px 40px; }
+  .mini-brand .logo-brush { font-size: 24px; }
+  .hint { top: 58px; font-size: 11px; padding: 6px 12px; }
+  .endcard .e-brush { font-size: 38px; }
+}
+@media (max-width: 380px) {
+  .mini-tag { display: none; }
+  .info h1 { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+
+<div class="snack">
+
+  <!-- ═══════ 상단 미니 헤더 (풀스크린 소비 모드 → GNB 전체 대신) ═══════ -->
+  <header class="mini">
+    <a class="mini-brand" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="mini-tag">떡밥 피드</span>
+    </a>
+    <a class="close" href="a-matchday.html" aria-label="닫고 담벼락으로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </a>
+  </header>
+
+  <!-- ═══════ 세로 스냅 스크롤 스트림 ═══════ -->
+  <div class="reel" id="reel">
+
+    <!-- ① 비니시우스 / 아스날 -->
+    <section class="slide" data-i="1">
+      <div class="ambient" style="background-image:url('https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg')"></div>
+      <div class="stage">
+        <img class="shot" style="object-position:50% 16%" src="https://static01.nyt.com/athletic/uploads/wp/2026/07/25075335/GettyImages-2275755314-scaled-e1784980440726.jpg" alt="비니시우스 주니어" />
+        <div class="vig"></div>
+        <div class="scrim"></div>
+
+        <div class="info">
+          <div class="srcrow">
+            <span class="gchip src">디 애슬레틱</span>
+            <span class="gchip">이적시장</span>
+          </div>
+          <h1><a href="#">아스날, 레알 마드리드 윙어 비니시우스 주니어 영입 탐색</a></h1>
+          <div class="imeta">
+            <span class="who">공놀이봇</span>
+            <span class="sep">·</span>
+            <span class="num">7월 1일</span>
+          </div>
+          <a class="iopen" href="#">떡밥 물러 가기 <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="rail">
+          <button class="act" data-like aria-label="좋아요">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4l1.4 1.4L12 21.4l7.4-7.4 1.4-1.4a5.2 5.2 0 0 0 0-7Z"/></svg></span>
+            <span class="cnt" data-cnt="24">24</span>
+          </button>
+          <a class="act" href="#" aria-label="댓글">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.5-.7L3 21l1.9-5.2A8.2 8.2 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4Z"/></svg></span>
+            <span class="cnt">8</span>
+          </a>
+          <button class="act" data-share aria-label="공유">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+            <span class="cnt">공유</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ② 페드로 네토 / 첼시 — ✓ 오피셜 -->
+    <section class="slide" data-i="2">
+      <div class="ambient" style="background-image:url('https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200')"></div>
+      <div class="stage">
+        <img class="shot" style="object-position:50% 22%" src="https://static.standard.co.uk/2025/11/18/13/15/pedro-neto.jpeg?width=1200" alt="페드로 네토" loading="lazy" />
+        <div class="vig"></div>
+        <div class="scrim"></div>
+
+        <div class="info">
+          <div class="srcrow">
+            <span class="gchip official">✓ 오피셜</span>
+            <span class="gchip src">첼시 FC</span>
+          </div>
+          <h1><a href="#">첼시, 페드로 네토 판매 계획 없음</a></h1>
+          <div class="imeta">
+            <span class="who">공놀이봇</span>
+            <span class="sep">·</span>
+            <span class="num">7월 1일</span>
+          </div>
+          <a class="iopen" href="#">떡밥 물러 가기 <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="rail">
+          <button class="act" data-like aria-label="좋아요">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4l1.4 1.4L12 21.4l7.4-7.4 1.4-1.4a5.2 5.2 0 0 0 0-7Z"/></svg></span>
+            <span class="cnt" data-cnt="9">9</span>
+          </button>
+          <a class="act" href="#" aria-label="댓글">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.5-.7L3 21l1.9-5.2A8.2 8.2 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4Z"/></svg></span>
+            <span class="cnt">3</span>
+          </a>
+          <button class="act" data-share aria-label="공유">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+            <span class="cnt">공유</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ 마테우스 페르난데스 / 토트넘 — ★ 1티어 -->
+    <section class="slide" data-i="3">
+      <div class="ambient" style="background-image:url('https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274')"></div>
+      <div class="stage">
+        <img class="shot" style="object-position:50% 30%" src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:e35lo4qxz5vo6n5k3m7v5fox/bafkreih4g5kd3rh3qstews7p3j4q3omaew5jkbdcl24n6nz2iim3j3l274" alt="마테우스 페르난데스" loading="lazy" />
+        <div class="vig"></div>
+        <div class="scrim"></div>
+
+        <div class="info">
+          <div class="srcrow">
+            <span class="gchip tier1"><i>★</i> 1티어</span>
+            <span class="gchip src">David Ornstein</span>
+          </div>
+          <h1><a href="#">토트넘, 마테우스 페르난데스 영입 경쟁에서 승리</a></h1>
+          <div class="imeta">
+            <span class="who">몽몽이</span>
+            <span class="sep">·</span>
+            <span class="num">7월 1일</span>
+          </div>
+          <a class="iopen" href="#">떡밥 물러 가기 <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="rail">
+          <button class="act liked" data-like aria-label="좋아요">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4l1.4 1.4L12 21.4l7.4-7.4 1.4-1.4a5.2 5.2 0 0 0 0-7Z"/></svg></span>
+            <span class="cnt" data-cnt="31">32</span>
+          </button>
+          <a class="act" href="#" aria-label="댓글">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.5-.7L3 21l1.9-5.2A8.2 8.2 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4Z"/></svg></span>
+            <span class="cnt">12</span>
+          </a>
+          <button class="act" data-share aria-label="공유">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+            <span class="cnt">공유</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 얀 디오만데 / 맨체스터 시티 -->
+    <section class="slide" data-i="4">
+      <div class="ambient" style="background-image:url('https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg')"></div>
+      <div class="stage">
+        <img class="shot" style="object-position:50% 24%" src="https://objetos-xlk.estaticos-marca.com/files/article_main_microformat/uploads/2026/07/22/6a60bb3c6e939.jpeg" alt="얀 디오만데" loading="lazy" />
+        <div class="vig"></div>
+        <div class="scrim"></div>
+
+        <div class="info">
+          <div class="srcrow">
+            <span class="gchip src">Marca</span>
+            <span class="gchip">이적시장</span>
+          </div>
+          <h1><a href="#">맨체스터 시티, 얀 디오만데에 1억 유로 입찰 준비 중</a></h1>
+          <div class="imeta">
+            <span class="who">경기 프리뷰</span>
+            <span class="sep">·</span>
+            <span class="num">7월 1일</span>
+          </div>
+          <a class="iopen" href="#">떡밥 물러 가기 <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="rail">
+          <button class="act" data-like aria-label="좋아요">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4l1.4 1.4L12 21.4l7.4-7.4 1.4-1.4a5.2 5.2 0 0 0 0-7Z"/></svg></span>
+            <span class="cnt" data-cnt="17">17</span>
+          </button>
+          <a class="act" href="#" aria-label="댓글">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.5-.7L3 21l1.9-5.2A8.2 8.2 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4Z"/></svg></span>
+            <span class="cnt">5</span>
+          </a>
+          <button class="act" data-share aria-label="공유">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+            <span class="cnt">공유</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ 마르크 반 보멀 / 벨기에 -->
+    <section class="slide" data-i="5">
+      <div class="ambient" style="background-image:url('https://drupal2018.assets.rbfa.be/s3fs-public/styles/image_850x475/public/2026-07/website_mvb.jpg?VersionId=EZykAQx98Mdt1iqlKGUJyqvjLtw4GGaT&h=73cf9c8b&itok=cKhFdd8R')"></div>
+      <div class="stage">
+        <img class="shot" style="object-position:50% 30%" src="https://drupal2018.assets.rbfa.be/s3fs-public/styles/image_850x475/public/2026-07/website_mvb.jpg?VersionId=EZykAQx98Mdt1iqlKGUJyqvjLtw4GGaT&h=73cf9c8b&itok=cKhFdd8R" alt="마르크 반 보멀" loading="lazy" />
+        <div class="vig"></div>
+        <div class="scrim"></div>
+
+        <div class="info">
+          <div class="srcrow">
+            <span class="gchip official">✓ 오피셜</span>
+            <span class="gchip src">RBFA</span>
+          </div>
+          <h1><a href="#">벨기에, 마르크 반 보멀을 새로운 국가대표팀 감독으로 임명</a></h1>
+          <div class="imeta">
+            <span class="who">공놀이봇</span>
+            <span class="sep">·</span>
+            <span class="num">7월 1일</span>
+          </div>
+          <a class="iopen" href="#">떡밥 물러 가기 <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="rail">
+          <button class="act" data-like aria-label="좋아요">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4l1.4 1.4L12 21.4l7.4-7.4 1.4-1.4a5.2 5.2 0 0 0 0-7Z"/></svg></span>
+            <span class="cnt" data-cnt="6">6</span>
+          </button>
+          <a class="act" href="#" aria-label="댓글">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.5-.7L3 21l1.9-5.2A8.2 8.2 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4Z"/></svg></span>
+            <span class="cnt">2</span>
+          </a>
+          <button class="act" data-share aria-label="공유">
+            <span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+            <span class="cnt">공유</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 끝 카드 -->
+    <section class="slide" data-i="6" data-end>
+      <div class="endcard">
+        <span class="e-brush">오늘의 떡밥 끝</span>
+        <p>매시간 새 떡밥이 채워진다</p>
+        <a class="e-cta" href="a-matchday.html">담벼락 구경 가기</a>
+        <div class="e-sub">See you at kickoff</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 스와이프 힌트 -->
+  <div class="hint" id="hint">
+    <span class="ar" aria-hidden="true">↑</span>
+    <span>쭉쭉 넘겨</span>
+    <span class="ar" aria-hidden="true">↓</span>
+  </div>
+
+  <!-- 하단 진행 인디케이터 -->
+  <div class="prog">
+    <div class="pbar" id="pbar"></div>
+    <div class="pnum num"><b id="pcur">01</b> / <span id="ptot">06</span></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var reel = document.getElementById("reel");
+  var slides = reel.querySelectorAll(".slide");
+  var total = slides.length;
+  var pbar = document.getElementById("pbar");
+  var pcur = document.getElementById("pcur");
+  var hint = document.getElementById("hint");
+
+  document.getElementById("ptot").textContent = String(total).padStart(2, "0");
+
+  // 진행 세그먼트 생성
+  for (var i = 0; i < total; i++) {
+    var s = document.createElement("span");
+    s.className = "pseg" + (i === 0 ? " on" : "");
+    pbar.appendChild(s);
+  }
+  var segs = pbar.querySelectorAll(".pseg");
+
+  var cur = 0;
+  function sync() {
+    var idx = Math.round(reel.scrollTop / reel.clientHeight);
+    if (idx < 0) idx = 0;
+    if (idx > total - 1) idx = total - 1;
+    if (idx !== cur) {
+      cur = idx;
+      pcur.textContent = String(idx + 1).padStart(2, "0");
+      segs.forEach(function (s, n) {
+        s.className = "pseg" + (n === idx ? " on" : n < idx ? " done" : "");
+      });
+    }
+    if (reel.scrollTop > 40) hint.classList.add("off");
+  }
+  reel.addEventListener("scroll", sync, { passive: true });
+
+  // 좋아요 토글 (로컬 반응)
+  document.querySelectorAll("[data-like]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var cnt = btn.querySelector(".cnt");
+      var base = parseInt(cnt.getAttribute("data-cnt"), 10);
+      var on = btn.classList.toggle("liked");
+      cnt.textContent = String(base + (on ? 1 : 0));
+      btn.classList.remove("pop");
+      void btn.offsetWidth;
+      btn.classList.add("pop");
+    });
+  });
+
+  // 공유 (데모)
+  document.querySelectorAll("[data-share]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var c = btn.querySelector(".cnt");
+      var old = c.textContent;
+      c.textContent = "복사됨";
+      setTimeout(function () { c.textContent = old; }, 1400);
+    });
+  });
+
+  // 키보드 ↑↓ 스냅 이동
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    var next = cur + (e.key === "ArrowDown" ? 1 : -1);
+    if (next < 0 || next > total - 1) return;
+    reel.scrollTo({ top: next * reel.clientHeight, behavior: "smooth" });
+  });
+})();
+</script>
+
+<!--
+  제안 (구조 변경 아님 — 검토용 메모):
+  1) 풀스크린 소비 모드라 GNB/푸터/모바일 하단 탭을 의도적으로 넣지 않았다.
+     복귀 경로는 상단 X(→ 담벼락)와 끝 카드 CTA 두 곳. 공용 브리프 3항의
+     "GNB·푸터·모바일탭 복제"에 대한 이 페이지 한정 예외.
+  2) 데스크톱에선 스테이지를 560px 세로 프레임으로 두고 양옆을 같은 이미지의
+     블러(.ambient)로 채웠다. 현행 구현이 object-contain으로 이미 레터박스를
+     띄우고 있어 IA 변경이 아니라 그 여백을 브랜드 톤으로 채운 것.
+  3) 액션 레일에 공유 버튼을 포함했다(현행 구현은 좋아요·댓글 2개).
+     떡밥 피드의 목적이 외부 유입인 만큼 공유가 레일에 있어야 한다고 봤으나,
+     실제 반영은 별도 결정 사항.
+  4) 진행 인디케이터는 총량이 유한할 때만 정직하다. 실제로는 무한 로드이므로
+     "현재 N / 로드된 M" 의미로 읽히게 하거나, 세그먼트만 남기고 분모를 빼는 안 검토.
+-->
+</body>
+</html>

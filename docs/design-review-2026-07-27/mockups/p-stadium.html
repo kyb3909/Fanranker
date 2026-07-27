@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>운동장 — 그깟 공놀이 · 시안 A 매치데이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   p-stadium — 운동장 (시안 A 스킨)
+   구조는 현재 /stadium 그대로:
+   지역 선택 → 국가 지도(핀) → 경기장 정보 카드 → 경기장 방(룸)
+   → 투자 다이얼로그 / 기여자 랭킹 다이얼로그
+   바뀐 건 표면뿐 — 상단 다크 밴드(야간 조명), 게이지, .num 위계
+   ============================================================ */
+
+/* ── 상단 다크 밴드: 지도 무대 ── */
+.stage-band { padding-bottom: 30px; }
+.band-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.band-head .band-title { font-family: var(--brush); font-size: 46px; font-weight: 400;
+  line-height: 1; transform: rotate(-1.5deg); text-shadow: 0.5px 0 currentColor; margin: 10px 0 2px; }
+.band-head .band-sub { padding-bottom: 6px; }
+.band-loc { margin-left: auto; padding-bottom: 8px; font-family: var(--disp); font-weight: 600;
+  font-size: 14px; letter-spacing: 0.16em; color: var(--cream-dim); text-transform: uppercase; }
+
+/* ── 지역 선택 그리드 (다크 타일) ── */
+.region-lab { display: flex; align-items: baseline; gap: 10px; margin: 20px 0 10px; }
+.region-lab b { font-size: 14px; font-weight: 800; color: var(--cream); letter-spacing: -0.02em; }
+.region-lab span { font-size: 12.5px; color: var(--cream-dim); }
+.regions { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.rg { position: relative; overflow: hidden; padding: 0; text-align: left; transition: 0.15s; }
+.rg .rg-art { display: block; height: 62px; position: relative; overflow: hidden;
+  background: linear-gradient(170deg, #2b2836 0%, #232030 55%, #1e1c27 100%); }
+.rg .rg-art::before { content: ""; position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 7px),
+                    repeating-linear-gradient(90deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 7px); }
+.rg .rg-body { display: block; padding: 9px 11px 11px; }
+.rg .rg-name { font-size: 13.5px; font-weight: 800; color: var(--cream); letter-spacing: -0.02em; display: flex; align-items: center; gap: 6px; }
+.rg .rg-league { display: block; font-family: var(--disp); font-weight: 600; font-size: 11.5px; letter-spacing: 0.12em;
+  color: var(--cream-dim); text-transform: uppercase; margin-top: 2px; }
+.rg.on { border-color: var(--bg-500); box-shadow: 0 10px 26px -14px rgba(150,30,55,0.9); }
+.rg.on .rg-name { color: #fff; }
+.rg.on .rg-league { color: var(--bg-100); }
+.rg.on .rg-art { background: linear-gradient(170deg, #2c4a52 0%, #1d3b3a 46%, #2f4a34 100%); }
+.rg:hover { border-color: var(--bg-500); }
+.rg.lock { opacity: 0.42; cursor: not-allowed; }
+.rg.lock:hover { border-color: var(--night-line); }
+.rg .lockmark { position: absolute; top: 8px; right: 9px; color: var(--cream-dim); }
+.rg .lockmark svg { width: 15px; height: 15px; }
+
+/* ── 지도 무대 ── */
+.mapstage { position: relative; margin-top: 14px; height: 470px; border-radius: 16px;
+  overflow: hidden; border: 1px solid var(--night-line);
+  background: radial-gradient(700px 340px at 50% 0%, #1c2b38 0%, #141b25 55%, #10131a 100%); }
+.mapstage::after { /* 픽셀 그리드 (에셋 자리 표시) */
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 16px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 16px); }
+.land { position: absolute; left: 27%; top: 4%; width: 46%; height: 92%;
+  background: linear-gradient(165deg, #3c5a3f 0%, #2f4b36 40%, #38513a 70%, #2a412f 100%);
+  filter: drop-shadow(0 0 24px rgba(120,190,140,0.12));
+  clip-path: polygon(44% 2%,52% 7%,49% 15%,57% 19%,53% 27%,60% 31%,57% 39%,64% 45%,
+    61% 53%,70% 59%,74% 69%,87% 77%,88% 85%,75% 89%,63% 84%,55% 91%,
+    43% 86%,37% 74%,29% 66%,34% 56%,27% 48%,32% 38%,25% 30%,34% 22%,31% 12%,38% 6%); }
+.land::after { content: ""; position: absolute; inset: 0; opacity: 0.55;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 6px),
+                    repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 6px); }
+.isle { position: absolute; left: 12%; top: 34%; width: 15%; height: 30%;
+  background: linear-gradient(160deg, #33503a, #263d2c); opacity: 0.75;
+  clip-path: polygon(38% 4%,72% 14%,86% 40%,74% 72%,48% 94%,20% 76%,10% 40%,22% 16%); }
+.isle::after { content: ""; position: absolute; inset: 0; opacity: 0.5;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 6px); }
+.map-note { position: absolute; left: 16px; bottom: 14px; font-family: var(--disp); font-weight: 600;
+  font-size: 11.5px; letter-spacing: 0.16em; color: #5f6a78; text-transform: uppercase; }
+.map-zoom { position: absolute; right: 14px; bottom: 14px; display: flex; gap: 6px; }
+.map-zoom button { width: 32px; height: 32px; border-radius: 9px; background: rgba(31,28,36,0.82);
+  border: 1px solid var(--night-line); color: var(--cream-dim); font-family: var(--disp);
+  font-weight: 700; font-size: 17px; line-height: 1; }
+.map-zoom button:hover { color: var(--cream); border-color: var(--bg-500); }
+.map-back { position: absolute; left: 14px; top: 14px; width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(31,28,36,0.82); border: 1px solid var(--night-line); color: var(--cream-dim);
+  display: grid; place-items: center; }
+.map-back:hover { color: var(--cream); border-color: var(--bg-500); }
+.map-back svg { width: 18px; height: 18px; }
+
+/* 핀 */
+.pin { position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 3px; }
+.pin .dot { width: 15px; height: 15px; border-radius: 50%; background: var(--bg-500);
+  border: 2px solid var(--cream); box-shadow: 0 4px 12px -2px rgba(0,0,0,0.8); transition: 0.14s; }
+.pin .tag { font-family: var(--disp); font-weight: 700; font-size: 11.5px; letter-spacing: 0.08em;
+  color: var(--cream-dim); background: rgba(22,20,26,0.78); border: 1px solid var(--night-line);
+  border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+.pin:hover .dot { transform: scale(1.25); }
+.pin:hover .tag { color: var(--cream); }
+.pin.sel .dot { background: var(--cream); border-color: var(--bg-500); transform: scale(1.3);
+  box-shadow: 0 0 0 6px rgba(150,30,55,0.32); }
+.pin.sel .tag { color: #fff; background: var(--bg-500); border-color: var(--bg-500); }
+.pin.idle .dot { background: var(--night-tile); border-color: #6c6478; }
+
+/* 경기장 정보 카드 (핀 팝오버) */
+.infocard { position: absolute; width: 250px; transform: translate(-50%, -100%);
+  background: rgba(31,28,36,0.97); border: 1px solid var(--night-line); border-radius: 13px;
+  padding: 15px 16px 16px; box-shadow: 0 24px 50px -20px rgba(0,0,0,0.85); z-index: 4; }
+.infocard::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 12px; height: 12px;
+  transform: translateX(-50%) rotate(45deg); background: rgba(31,28,36,0.97);
+  border-right: 1px solid var(--night-line); border-bottom: 1px solid var(--night-line); }
+.ic-name { font-size: 15px; font-weight: 800; color: var(--cream); letter-spacing: -0.02em; }
+.ic-team { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--cream-dim); margin-top: 2px; }
+.ic-team .cdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ic-lv { display: flex; align-items: baseline; gap: 8px; margin: 13px 0 6px; }
+.ic-lv .lvmark { font-family: var(--disp); font-weight: 600; font-size: 12px; letter-spacing: 0.16em; color: var(--ink-3); }
+.ic-lv .lvnum { font-family: var(--disp); font-weight: 800; font-size: 38px; line-height: 0.85;
+  color: var(--cream); font-variant-numeric: tabular-nums; }
+.ic-lv .lvpct { margin-left: auto; font-family: var(--disp); font-weight: 700; font-size: 15px;
+  letter-spacing: 0.04em; color: var(--bg-100); font-variant-numeric: tabular-nums; }
+.gauge { height: 7px; border-radius: 999px; background: rgba(245,239,231,0.16); overflow: hidden; }
+.gauge i { display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--bg-600), var(--bg-500)); transition: width 0.5s ease-out; }
+.ic-cta { margin-top: 13px; }
+.ic-help { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); text-align: center; }
+
+/* ── 라이트 본문 공통 ── */
+.sec { margin-top: 34px; }
+.sec:first-child { margin-top: 0; }
+.sec-brush { flex-shrink: 0; white-space: nowrap; }
+
+/* ── 경기장 방(룸) ── */
+.roomcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.roombar { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.roombar .rb-back { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: var(--ink-3); }
+.roombar .rb-back:hover { background: var(--paper); color: var(--ink); }
+.roombar .rb-back svg { width: 17px; height: 17px; }
+.rb-team { display: flex; align-items: center; gap: 8px; }
+.rb-crest { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--bg-50); color: var(--bg-500); }
+.rb-crest svg { width: 16px; height: 16px; }
+.rb-name { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+.rb-lv { font-family: var(--disp); font-weight: 800; font-size: 15px; letter-spacing: 0.06em;
+  color: var(--bg-600); background: var(--bg-50); border: 1px solid var(--bg-100);
+  border-radius: 999px; padding: 2px 10px; font-variant-numeric: tabular-nums; }
+.rb-gauge { flex: 1; min-width: 120px; }
+.rb-gauge .gauge { height: 6px; background: var(--line); }
+.rb-stat { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.rb-stat svg { width: 16px; height: 16px; color: var(--ink-3); }
+.rb-stat b { font-family: var(--disp); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
+.rb-btns { display: flex; gap: 7px; }
+.rb-btns button { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; padding: 8px 13px; border-radius: 9px; }
+.rb-btns svg { width: 15px; height: 15px; }
+
+/* 픽셀아트 경기장 무대 (에셋 자리 CSS 플레이스홀더) */
+.pitchstage { position: relative; height: 404px; overflow: hidden;
+  background: radial-gradient(760px 300px at 50% -6%, #2a2340 0%, #191723 46%, #121017 100%); }
+.pitchstage::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.42;
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 8px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 8px); }
+.tower { position: absolute; top: 18px; width: 12px; height: 122px; background: #3a3446; }
+.tower::before { content: ""; position: absolute; left: -13px; top: -13px; width: 38px; height: 16px;
+  background: #d8cfbe; box-shadow: 0 0 26px 10px rgba(240,232,210,0.34); }
+.tower::after { content: ""; position: absolute; left: -70px; top: 0; width: 152px; height: 250px;
+  background: linear-gradient(180deg, rgba(255,247,224,0.16), transparent 72%);
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%); }
+.tower.t1 { left: 13%; } .tower.t2 { left: 33%; } .tower.t3 { left: 65%; } .tower.t4 { left: 85%; }
+.stand { position: absolute; bottom: 152px; height: 86px; background: linear-gradient(180deg, #3b3548, #262232); }
+.stand::after { content: ""; position: absolute; inset: 0; opacity: 0.6;
+  background-image: repeating-linear-gradient(0deg, rgba(245,239,231,0.1) 0 2px, transparent 2px 9px),
+                    repeating-linear-gradient(90deg, rgba(150,30,55,0.13) 0 3px, transparent 3px 10px); }
+.stand.left { left: 9%; width: 24%; clip-path: polygon(0 16%, 100% 0, 100% 100%, 0 100%); }
+.stand.right { right: 9%; width: 24%; clip-path: polygon(0 0, 100% 16%, 100% 100%, 0 100%); }
+.stand.back { left: 30%; right: 30%; bottom: 216px; height: 54px; clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%); }
+.pitch { position: absolute; left: 15%; right: 15%; bottom: 28px; height: 142px; border-radius: 50% / 22%;
+  background: repeating-linear-gradient(90deg, #2f6b3c 0 26px, #35773f 26px 52px);
+  box-shadow: 0 -14px 44px rgba(180,255,190,0.09), inset 0 0 0 3px rgba(245,239,231,0.28); }
+.pitch::after { content: ""; position: absolute; left: 50%; top: 50%; width: 66px; height: 40px;
+  transform: translate(-50%,-50%); border: 3px solid rgba(245,239,231,0.28); border-radius: 50%; }
+.pitch::before { content: ""; position: absolute; left: 50%; top: 8%; bottom: 8%; width: 3px;
+  transform: translateX(-50%); background: rgba(245,239,231,0.24); }
+.board { position: absolute; left: 50%; top: 26px; transform: translateX(-50%);
+  background: #0f0d14; border: 2px solid #3a3446; border-radius: 6px; padding: 7px 16px; text-align: center; }
+.board .b-lab { font-family: var(--disp); font-weight: 600; font-size: 10px; letter-spacing: 0.24em; color: #6f6880; }
+.board .b-lv { font-family: var(--disp); font-weight: 800; font-size: 26px; line-height: 1;
+  color: var(--cream); letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 14px rgba(245,239,231,0.5); }
+.avat { position: absolute; bottom: 62px; width: 12px; height: 20px; background: var(--cream);
+  box-shadow: 0 0 0 2px #16141a; }
+.avat i { position: absolute; left: 0; right: 0; top: -7px; height: 7px; background: var(--bg-500); box-shadow: 0 0 0 2px #16141a; }
+.avat.me i { background: var(--bg-100); }
+.ph-note { position: absolute; left: 14px; bottom: 10px; font-family: var(--disp); font-weight: 600;
+  font-size: 11px; letter-spacing: 0.16em; color: #575062; text-transform: uppercase; }
+
+/* 채팅 오버레이 */
+.chatwrap { position: absolute; left: 14px; bottom: 14px; width: min(400px, calc(100% - 28px)); }
+.chat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.online { display: inline-flex; align-items: center; gap: 6px; font-family: var(--disp); font-weight: 800;
+  font-size: 12.5px; letter-spacing: 0.12em; color: var(--live); background: rgba(22,20,26,0.72);
+  border: 1px solid var(--night-line); border-radius: 999px; padding: 3px 10px; }
+.online::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--live);
+  animation: blip 1.5s ease-in-out infinite; }
+@keyframes blip { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.chat-fold { font-size: 12px; font-weight: 700; color: var(--cream-dim); background: rgba(22,20,26,0.72);
+  border: 1px solid var(--night-line); border-radius: 999px; padding: 4px 11px; }
+.chat-fold:hover { color: var(--cream); }
+.chatbox { background: rgba(22,20,26,0.86); border: 1px solid var(--night-line); border-radius: 12px;
+  padding: 11px 12px; backdrop-filter: blur(6px); }
+.chatbox ul { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-bottom: 9px; }
+.chatbox li { font-size: 13px; color: var(--cream); letter-spacing: -0.01em; }
+.chatbox li b { color: var(--bg-100); font-weight: 800; margin-right: 6px; }
+.chatline { display: flex; gap: 8px; }
+.chatline input { flex: 1; background: var(--night-tile); border: 1px solid var(--night-line);
+  border-radius: 9px; padding: 9px 12px; font-size: 13.5px; color: var(--cream); outline: none; }
+.chatline input::placeholder { color: #6f6880; }
+.chatline input:focus { border-color: var(--bg-500); }
+.chatline button { width: 40px; border-radius: 9px; background: var(--bg-500); color: #fff; display: grid; place-items: center; }
+.chatline button svg { width: 17px; height: 17px; }
+
+/* ── 다이얼로그 2종 ── */
+.dlgrow { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.dlg-cap { display: flex; align-items: baseline; gap: 9px; margin-bottom: 9px; }
+.dlg-cap b { font-size: 13.5px; font-weight: 800; }
+.dlg-cap span { font-size: 12.5px; color: var(--ink-3); }
+
+/* 투자(보태기) — 포인트가 걸린 액션 = 다크 존 */
+.invest .iv-head { display: flex; align-items: center; gap: 9px; }
+.invest .iv-ico { width: 32px; height: 32px; border-radius: 9px; background: var(--night-tile);
+  border: 1px solid var(--night-line); color: var(--bg-100); display: grid; place-items: center; }
+.invest .iv-ico svg { width: 16px; height: 16px; }
+.invest h3 { font-size: 16px; font-weight: 800; color: var(--cream); letter-spacing: -0.02em; }
+.invest .iv-desc { font-size: 13px; color: var(--cream-dim); margin-top: 9px; }
+.iv-bal { display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px;
+  padding: 11px 13px; background: var(--night-tile); border: 1px solid var(--night-line); border-radius: 10px; }
+.iv-bal span { font-size: 12.5px; font-weight: 700; color: var(--cream-dim); }
+.iv-bal b { font-family: var(--disp); font-weight: 800; font-size: 24px; color: var(--cream); font-variant-numeric: tabular-nums; }
+.iv-bal b em { font-style: normal; font-size: 14px; color: var(--bg-100); margin-left: 2px; }
+.iv-lab { font-size: 12.5px; font-weight: 800; color: var(--cream-dim); margin: 14px 0 7px; }
+.iv-input { width: 100%; background: var(--night-tile); border: 1px solid var(--night-line);
+  border-radius: 10px; padding: 12px 14px; color: var(--cream); font-family: var(--disp);
+  font-weight: 800; font-size: 24px; letter-spacing: 0.04em; outline: none; font-variant-numeric: tabular-nums; }
+.iv-input:focus { border-color: var(--bg-500); }
+.iv-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 9px; }
+.iv-presets button { background: var(--night-tile); border: 1px solid var(--night-line); border-radius: 8px;
+  padding: 8px 0; font-family: var(--disp); font-weight: 700; font-size: 14px; color: var(--cream-dim);
+  letter-spacing: 0.04em; transition: 0.14s; }
+.iv-presets button:hover { border-color: var(--bg-500); color: var(--cream); }
+.iv-presets button.on { background: var(--bg-500); border-color: var(--bg-500); color: #fff; }
+.iv-note { margin-top: 10px; font-size: 11.5px; color: var(--ink-3); text-align: center; }
+.invest .cta-cream { margin-top: 13px; }
+
+/* 기여자 랭킹 — 라이트 카드 */
+.rank h3 { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.rank h3 svg { width: 17px; height: 17px; color: var(--bg-500); }
+.rank .rk-desc { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 13px; }
+.rk-list { list-style: none; }
+.rk-list li { display: grid; grid-template-columns: 34px 30px 1fr auto; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 10px; }
+.rk-list li + li { margin-top: 3px; }
+.rk-list li:hover { background: var(--paper); }
+.rk-list .rk-no { font-family: var(--disp); font-weight: 800; font-size: 24px; color: var(--ink-3);
+  text-align: center; line-height: 1; font-variant-numeric: tabular-nums; }
+.rk-list .rk-face { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--paper); border: 1px solid var(--line); font-size: 12px; font-weight: 800; color: var(--ink-2); }
+.rk-list .rk-nick { display: block; font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.rk-list .rk-title { display: block; font-size: 11.5px; color: var(--ink-3); font-weight: 600; margin-top: 1px; }
+.rk-list .rk-pt { font-family: var(--disp); font-weight: 800; font-size: 19px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rk-list .rk-pt em { font-style: normal; font-size: 12px; color: var(--ink-3); margin-left: 1px; }
+/* 1~3위 = 배경 틴트 + 타이포 (액센트 바 없음) */
+.rk-list li.top { background: var(--bg-50); }
+.rk-list li.top:hover { background: var(--bg-100); }
+.rk-list li.top .rk-no { color: var(--bg-500); }
+.rk-list li.top .rk-pt { color: var(--bg-600); }
+.rk-list li.top .rk-face { background: #fff; border-color: var(--bg-100); color: var(--bg-600); }
+.rk-list li.me { background: var(--paper); border: 1px dashed var(--line); }
+.rk-list li.me .rk-nick::after { content: " 나"; font-size: 11px; color: var(--bg-600); font-weight: 800; }
+.rk-empty { margin-top: 12px; padding: 16px; border: 1px dashed var(--line); border-radius: 10px;
+  text-align: center; font-size: 13px; color: var(--ink-3); font-weight: 600; }
+
+/* ── 반응형 ── */
+@media (max-width: 1024px) {
+  .regions { grid-template-columns: repeat(3, 1fr); }
+  .mapstage { height: 400px; }
+}
+@media (max-width: 860px) {
+  .band-head .band-title { font-size: 36px; }
+  .band-loc { display: none; }
+  .regions { grid-template-columns: repeat(2, 1fr); }
+  .mapstage { height: 340px; }
+  .infocard { width: 202px; padding: 12px 13px 13px; }
+  .infocard .ic-lv .lvnum { font-size: 30px; }
+  .pin .tag { font-size: 10.5px; }
+  /* 모바일 경기장: 채팅이 잔디를 덮지 않도록 무대를 위로 올린다 */
+  .pitchstage { height: 372px; }
+  .tower { top: 10px; height: 84px; }
+  .tower::after { height: 180px; }
+  .stand { bottom: 232px; height: 58px; }
+  .stand.back { bottom: 266px; height: 34px; }
+  .pitch { left: 8%; right: 8%; bottom: 152px; height: 86px; }
+  .avat { bottom: 170px; }
+  .board { top: 8px; padding: 5px 12px; }
+  .board .b-lv { font-size: 21px; }
+  .ph-note { display: none; }
+  .dlgrow { grid-template-columns: 1fr; }
+  .roombar { gap: 9px; }
+  .rb-gauge { order: 9; flex-basis: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ GNB ═══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-in">
+    <a class="logo" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="logo-domain">gongnori.fan</span>
+    </a>
+    <nav class="gnb-menu">
+      <a href="a-matchday.html">담벼락</a>
+      <a href="p-stadium.html" class="on">운동장</a>
+      <a href="p-prediction.html">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      </button>
+      <div class="avatar">몽</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 다크 밴드 = 지도 무대 (야간 조명) ═══════════ -->
+<section class="band grain stage-band">
+  <div class="wrap">
+    <div class="band-top">
+      <span class="band-kicker">Stadium Map <b>·</b> 부지부터 잔디까지</span>
+    </div>
+    <div class="band-head">
+      <div>
+        <h1 class="band-title">운동장</h1>
+        <p class="band-sub">니 팀 운동장은 니가 키운다 — 예측으로 번 포인트를 땅에 붓는다</p>
+      </div>
+      <span class="band-loc num">England · Premier League</span>
+    </div>
+
+    <!-- 지역 선택 (현재 구조 그대로: 6개, 잉글랜드만 활성) -->
+    <div class="region-lab"><b>지역을 선택하세요</b><span>나머지 리그는 곧 판 깔린다</span></div>
+    <div class="regions">
+      <button class="rg dtile on">
+        <span class="rg-art"></span>
+        <span class="rg-body">
+          <span class="rg-name">잉글랜드</span>
+          <span class="rg-league">Premier League</span>
+        </span>
+      </button>
+      <button class="rg dtile lock" disabled>
+        <span class="lockmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="rg-art"></span>
+        <span class="rg-body"><span class="rg-name">스페인</span><span class="rg-league">La Liga</span></span>
+      </button>
+      <button class="rg dtile lock" disabled>
+        <span class="lockmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="rg-art"></span>
+        <span class="rg-body"><span class="rg-name">이탈리아</span><span class="rg-league">Serie A</span></span>
+      </button>
+      <button class="rg dtile lock" disabled>
+        <span class="lockmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="rg-art"></span>
+        <span class="rg-body"><span class="rg-name">독일</span><span class="rg-league">Bundesliga</span></span>
+      </button>
+      <button class="rg dtile lock" disabled>
+        <span class="lockmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="rg-art"></span>
+        <span class="rg-body"><span class="rg-name">프랑스</span><span class="rg-league">Ligue 1</span></span>
+      </button>
+      <button class="rg dtile lock" disabled>
+        <span class="lockmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="rg-art"></span>
+        <span class="rg-body"><span class="rg-name">대한민국</span><span class="rg-league">K League</span></span>
+      </button>
+    </div>
+
+    <!-- 국가 지도 + 핀 + 경기장 정보 카드 -->
+    <div class="mapstage" id="mapstage">
+      <div class="land" aria-hidden="true"></div>
+      <div class="isle" aria-hidden="true"></div>
+
+      <button class="map-back" aria-label="지역 선택으로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      </button>
+
+      <!-- 핀: data-* 로 정보 카드 상태 전환 (상태 데모) -->
+      <button class="pin sel" style="left:66%; top:79%"
+        data-name="에미레이츠 스타디움" data-team="아스날" data-color="#ef0107" data-lv="10" data-pct="100">
+        <span class="tag">에미레이츠</span><span class="dot"></span>
+      </button>
+      <button class="pin" style="left:81%; top:71%"
+        data-name="토트넘 홋스퍼 스타디움" data-team="토트넘" data-color="#132257" data-lv="4" data-pct="72">
+        <span class="tag">홋스퍼</span><span class="dot"></span>
+      </button>
+      <button class="pin" style="left:59%; top:88%"
+        data-name="스탬퍼드 브리지" data-team="첼시" data-color="#034694" data-lv="3" data-pct="18">
+        <span class="tag">스탬퍼드</span><span class="dot"></span>
+      </button>
+      <button class="pin" style="left:38%; top:53%"
+        data-name="안필드" data-team="리버풀" data-color="#c8102e" data-lv="8" data-pct="54">
+        <span class="tag">안필드</span><span class="dot"></span>
+      </button>
+      <button class="pin" style="left:47%; top:59%"
+        data-name="에티하드 스타디움" data-team="맨체스터 시티" data-color="#6cabdd" data-lv="6" data-pct="31">
+        <span class="tag">에티하드</span><span class="dot"></span>
+      </button>
+      <button class="pin idle" style="left:49%; top:30%"
+        data-name="세인트 제임스 파크" data-team="뉴캐슬" data-color="#241f20" data-lv="0" data-pct="0">
+        <span class="tag">세인트 제임스</span><span class="dot"></span>
+      </button>
+
+      <!-- 경기장 정보 카드 -->
+      <div class="infocard" id="infocard" style="left:66%; top:calc(79% - 46px)">
+        <div class="ic-name" id="icName">에미레이츠 스타디움</div>
+        <div class="ic-team"><span class="cdot" id="icDot" style="background:#ef0107"></span><span id="icTeam">아스날</span></div>
+        <div class="ic-lv">
+          <span class="lvmark">LV.</span>
+          <span class="lvnum" id="icLv">10</span>
+          <span class="lvpct" id="icPct">100%</span>
+        </div>
+        <div class="gauge"><i id="icBar" style="width:100%"></i></div>
+        <div class="ic-cta" id="icCta">
+          <button class="cta-cream">경기장 입장</button>
+        </div>
+        <p class="ic-help" id="icHelp" hidden>투자하여 경기장 건설에 참여하세요</p>
+      </div>
+
+      <span class="map-note">Pixel map placeholder · 6 pins</span>
+      <div class="map-zoom">
+        <button aria-label="축소">−</button>
+        <button aria-label="확대">+</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 본문 (라이트) ═══════════ -->
+<div class="wrap">
+<div class="main">
+
+  <!-- 경기장 방 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-brush">경기장 입장</span>
+      <span class="sec-sub">조명 켜졌다 — 니가 부은 포인트가 서 있는 자리다</span>
+    </div>
+
+    <div class="roomcard" style="margin-top:14px">
+      <div class="roombar">
+        <button class="rb-back" aria-label="지도로">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </button>
+        <div class="rb-team">
+          <span class="rb-crest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+          </span>
+          <span class="rb-name">아스날</span>
+        </div>
+        <span class="rb-lv num">LV.10</span>
+        <div class="rb-gauge"><div class="gauge"><i style="width:100%"></i></div></div>
+        <div class="rb-stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <b>1,284</b>
+        </div>
+        <div class="rb-btns">
+          <button class="cta-ghost" aria-label="기여자 랭킹">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19h14"/><path d="m3 7 4.5 4L12 5l4.5 6L21 7l-2 9H5Z"/></svg>
+            랭킹
+          </button>
+          <button class="cta-burg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6 6 6-3 3-6-6Z"/><path d="m11 9-8 8 3 3 8-8"/></svg>
+            투자
+          </button>
+        </div>
+      </div>
+
+      <!-- 픽셀아트 경기장 무대 (에셋 자리) -->
+      <div class="pitchstage grain">
+        <div class="tower t1"></div><div class="tower t2"></div>
+        <div class="tower t3"></div><div class="tower t4"></div>
+        <div class="board"><div class="b-lab">STADIUM LEVEL</div><div class="b-lv">10</div></div>
+        <div class="stand back"></div>
+        <div class="stand left"></div>
+        <div class="stand right"></div>
+        <div class="pitch"></div>
+        <span class="avat me" style="left:47%"><i></i></span>
+        <span class="avat" style="left:53%"><i></i></span>
+        <span class="avat" style="left:37%; bottom:50px"><i></i></span>
+        <span class="avat" style="left:63%; bottom:54px"><i></i></span>
+        <span class="avat" style="left:69%; bottom:44px"><i></i></span>
+        <span class="ph-note">Pixel stadium placeholder</span>
+
+        <!-- 채팅 오버레이 -->
+        <div class="chatwrap">
+          <div class="chat-top">
+            <span class="online num">12 ONLINE</span>
+            <button class="chat-fold">채팅 접기</button>
+          </div>
+          <div class="chatbox">
+            <ul>
+              <li><b>몽몽이</b>오늘 잔디 상태 좋다</li>
+              <li><b>공놀이봇</b>아스날 경기장이 Lv.10로 업그레이드됐습니다!</li>
+              <li><b>경기 프리뷰</b>10단계 다 찍었는데 이제 뭐 하냐 ㅋㅋ</li>
+            </ul>
+            <div class="chatline">
+              <input type="text" placeholder="메시지를 입력하세요..." maxlength="100" />
+              <button aria-label="보내기">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 다이얼로그 2종 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-brush">보태기 &amp; 랭킹</span>
+      <span class="sec-sub">누가 제일 많이 부었나 봐라</span>
+    </div>
+
+    <div class="dlgrow" style="margin-top:14px">
+
+      <!-- 투자(보태기) 다이얼로그 — 포인트 액션 = 다크 존 -->
+      <div>
+        <div class="dlg-cap"><b>투자 다이얼로그</b><span>룸 상단 “투자” · 정보 카드 “부지 매입”에서 열림</span></div>
+        <div class="dcard invest">
+          <div class="iv-head">
+            <span class="iv-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6 6 6-3 3-6-6Z"/><path d="m11 9-8 8 3 3 8-8"/></svg>
+            </span>
+            <h3>경기장 키우기</h3>
+          </div>
+          <p class="iv-desc">예측으로 모은 포인트를 아스날 경기장에 보태보세요</p>
+
+          <div class="iv-bal">
+            <span>사용 가능</span>
+            <b class="num">12,480<em>pt</em></b>
+          </div>
+
+          <p class="iv-lab">보탤 포인트</p>
+          <input class="iv-input" id="ivAmt" type="text" value="3,120" inputmode="numeric" aria-label="보탤 포인트" />
+          <div class="iv-presets" id="ivPre">
+            <button data-amt="1,248">10%</button>
+            <button class="on" data-amt="3,120">25%</button>
+            <button data-amt="6,240">50%</button>
+            <button data-amt="12,480">전부</button>
+          </div>
+
+          <button class="cta-cream" id="ivCta">3,120pt 보태기</button>
+          <p class="iv-note">현금 결제 없이, 예측으로 얻은 포인트만 사용할 수 있어요.</p>
+        </div>
+      </div>
+
+      <!-- 기여자 랭킹 다이얼로그 -->
+      <div>
+        <div class="dlg-cap"><b>기여자 랭킹 다이얼로그</b><span>룸 상단 “랭킹”에서 열림</span></div>
+        <div class="widget rank">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+            아스날 기여자 랭킹
+          </h3>
+          <p class="rk-desc">누적 기여 점수 기준 (베팅 적중 수익 + flair 활동 점수 기부 합산)</p>
+          <ul class="rk-list">
+            <li class="top">
+              <span class="rk-no num">1</span>
+              <span class="rk-face">몽</span>
+              <span><span class="rk-nick">몽몽이</span><span class="rk-title">벵거의 후예</span></span>
+              <span class="rk-pt num">184,200<em>p</em></span>
+            </li>
+            <li class="top">
+              <span class="rk-no num">2</span>
+              <span class="rk-face">경</span>
+              <span><span class="rk-nick">경기 프리뷰</span><span class="rk-title">앙리</span></span>
+              <span class="rk-pt num">151,640<em>p</em></span>
+            </li>
+            <li class="top">
+              <span class="rk-no num">3</span>
+              <span class="rk-face">북</span>
+              <span><span class="rk-nick">북런던토박이</span><span class="rk-title">구너</span></span>
+              <span class="rk-pt num">98,410<em>p</em></span>
+            </li>
+            <li>
+              <span class="rk-no num">4</span>
+              <span class="rk-face">공</span>
+              <span><span class="rk-nick">공놀이봇</span><span class="rk-title">구너</span></span>
+              <span class="rk-pt num">72,050<em>p</em></span>
+            </li>
+            <li>
+              <span class="rk-no num">5</span>
+              <span class="rk-face">에</span>
+              <span><span class="rk-nick">에미레이츠막차</span><span class="rk-title">구너</span></span>
+              <span class="rk-pt num">64,900<em>p</em></span>
+            </li>
+            <li>
+              <span class="rk-no num">6</span>
+              <span class="rk-face">하</span>
+              <span><span class="rk-nick">하이버리유령</span><span class="rk-title">구너</span></span>
+              <span class="rk-pt num">51,320<em>p</em></span>
+            </li>
+            <li class="me">
+              <span class="rk-no num">7</span>
+              <span class="rk-face">몽</span>
+              <span><span class="rk-nick">몽몽이2</span><span class="rk-title">구너</span></span>
+              <span class="rk-pt num">43,780<em>p</em></span>
+            </li>
+          </ul>
+          <p class="rk-empty" hidden>아직 기여자가 없어요. 첫 번째가 되어보세요.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>
+</div>
+
+<!-- ═══════════ 다크 푸터 ═══════════ -->
+<footer class="footer grain">
+  <div class="wrap">
+    <span class="f-logo">그깟 공놀이</span>
+    <div class="f-domain num">GONGNORI.FAN</div>
+    <p class="f-slogan">그깟 공놀이에 진심인 팬들의 놀이터</p>
+    <nav class="f-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <p class="f-copy">© 2026 GONGNORI.FAN — SEE YOU AT KICKOFF</p>
+  </div>
+</footer>
+
+<!-- ═══════════ 모바일 하단 탭 ═══════════ -->
+<nav class="bottomtab">
+  <div class="bt-in">
+    <a href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      담벼락
+    </a>
+    <a href="p-stadium.html" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+      운동장
+    </a>
+    <a href="p-prediction.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      승부예측
+    </a>
+    <a href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      글쓰기
+    </a>
+  </div>
+</nav>
+
+<script>
+/* 상태 데모: 핀 선택 → 정보 카드 갱신 / 프리셋 → 보탤 포인트 */
+(function () {
+  var card = document.getElementById("infocard");
+  var elName = document.getElementById("icName"),
+      elTeam = document.getElementById("icTeam"),
+      elDot  = document.getElementById("icDot"),
+      elLv   = document.getElementById("icLv"),
+      elPct  = document.getElementById("icPct"),
+      elBar  = document.getElementById("icBar"),
+      elCta  = document.getElementById("icCta"),
+      elHelp = document.getElementById("icHelp");
+
+  document.querySelectorAll(".pin").forEach(function (pin) {
+    pin.addEventListener("click", function () {
+      document.querySelectorAll(".pin").forEach(function (p) { p.classList.remove("sel"); });
+      pin.classList.add("sel");
+
+      var lv = parseInt(pin.dataset.lv, 10), pct = parseInt(pin.dataset.pct, 10);
+      elName.textContent = pin.dataset.name;
+      elTeam.textContent = pin.dataset.team;
+      elDot.style.background = pin.dataset.color;
+      elLv.textContent = lv;
+      elPct.textContent = lv === 0 ? "미착공" : pct + "%";
+      elBar.style.width = pct + "%";
+
+      if (lv >= 10) {
+        elCta.innerHTML = '<button class="cta-cream">경기장 입장</button>';
+        elHelp.hidden = true;
+      } else {
+        elCta.innerHTML = '<button class="cta-cream">부지 매입</button>';
+        elHelp.hidden = false;
+      }
+
+      card.style.left = pin.style.left;
+      card.style.top = "calc(" + pin.style.top + " - 46px)";
+    });
+  });
+
+  var amt = document.getElementById("ivAmt"), cta = document.getElementById("ivCta");
+  document.querySelectorAll("#ivPre button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("#ivPre button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      amt.value = b.dataset.amt;
+      cta.textContent = b.dataset.amt + "pt 보태기";
+    });
+  });
+})();
+</script>
+
+<!--
+제안: (구조 변경 아니므로 목업엔 반영하지 않음 — 검토용 메모)
+1. 레벨 이름이 죽어 있다. lib/constants/stadium-levels.ts 에 10단계 한글명(빈 땅 → 월드클래스 스타디움)과
+   설명·이모지가 있고 API(level_info.name)로 클라이언트까지 내려오는데 화면엔 "Lv.7" 숫자만 뜬다.
+   정보 카드/룸 상단에 레벨명을 한 줄만 붙여도 성장 서사가 살아난다.
+2. 게이지가 %만 보여준다. level_info.next_level_points 도 이미 내려오는데 미표시 —
+   "다음 단계까지 12,400pt" 를 같이 보여주면 보태기 동기가 즉시 생긴다.
+3. "내 기여" UI 부재. GET /api/stadiums/my-contribution 이 구현돼 있고 문서에도 있는데 화면이 없다.
+   랭킹 리스트에서 내 행을 하이라이트(이 목업의 li.me)하거나 "내 순위 7위" 요약 한 줄이면 충분.
+4. 동사가 둘로 갈린다. 이 페이지는 "투자/부지 매입/보태기"(베팅 포인트), 마이페이지는 "기부"(flair 점수).
+   같은 total_points 풀로 합쳐지는데 이름이 달라서 랭킹 설명에 괄호 해설이 필요해졌다. 용어 통일 검토.
+5. 토사장 게이지는 CLAUDE.md 에만 있고 코드·DB·문자열 어디에도 없다 (미구현).
+   존재하지 않는 기능이라 목업에 넣지 않았다 — 문서를 고치거나 기능을 만들거나 둘 중 하나.
+6. 조작 힌트 부재. 룸에서 클릭 이동 / WASD·방향키가 동작하는데 화면 안내가 없다.
+-->
+</body>
+</html>

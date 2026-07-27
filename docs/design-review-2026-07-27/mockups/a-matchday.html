@@ -184,7 +184,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   font-weight: 800; font-size: 12.5px; letter-spacing: 0.02em;
   padding: 5px 12px; border-radius: 999px; margin-bottom: 14px;
 }
-.hero-tag em { font-style: normal; font-weight: 600; opacity: 0.85; border-left: 1px solid rgba(245,239,231,0.4); padding-left: 8px; }
+.hero-tag em { font-style: normal; font-weight: 600; opacity: 0.85; }
+.hero-tag em::before { content: "·"; margin: 0 6px 0 2px; opacity: 0.7; }
 .hero h1 {
   font-size: 33px; line-height: 1.24; font-weight: 900;
   letter-spacing: -0.025em; color: var(--cream);
@@ -312,7 +313,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 /* ============ 본문 (라이트) ============ */
 .main {
   display: grid; grid-template-columns: 1fr 328px; gap: 28px;
-  padding: 34px 0 56px;
+  /* padding-block 만 — `wrap main` 조합에서 .wrap 의 좌우 패딩 보존 */
+  padding-block: 34px 56px;
 }
 
 /* 섹션 헤더 */
@@ -515,9 +517,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       <span class="logo-domain">gongnori.fan</span>
     </a>
     <nav class="gnb-menu">
-      <a href="#" class="on">담벼락</a>
-      <a href="#">운동장</a>
-      <a href="#">승부예측</a>
+      <a href="a-matchday.html" class="on">담벼락</a>
+      <a href="p-stadium.html">운동장</a>
+      <a href="p-prediction.html">승부예측</a>
     </nav>
     <div class="gnb-icons">
       <button class="icon-btn" aria-label="검색">
@@ -826,19 +828,19 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 <!-- ═══════════ 모바일 하단 탭 ═══════════ -->
 <nav class="bottomtab">
   <div class="bt-in">
-    <a href="#" class="on">
+    <a href="a-matchday.html" class="on">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
       담벼락
     </a>
-    <a href="#">
+    <a href="p-stadium.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
       운동장
     </a>
-    <a href="#">
+    <a href="p-prediction.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
       승부예측
     </a>
-    <a href="#">
+    <a href="p-write.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       글쓰기
     </a>

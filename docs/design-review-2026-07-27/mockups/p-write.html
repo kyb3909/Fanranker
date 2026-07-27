@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>그깟 공놀이 — 글쓰기 (시안 A · 매치데이)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Nanum+Brush+Script&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="_a-system.css" />
+<style>
+/* ============================================================
+   /write — 글쓰기 (시안 A 스킨)
+   집중 화면 → 다크 밴드 없음. 얇은 라이트 컨텍스트 바만.
+   구조는 현행 그대로: 게시판 → 말머리 → 소스URL → 제목 → 본문 → 이미지 → 액션
+   ============================================================ */
+
+/* ── 컨텍스트 바 (다크 밴드 대체 — 얇은 라이트) ── */
+.ctxbar {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 64px; z-index: 40;
+}
+.ctx-in {
+  display: flex; align-items: center; gap: 12px;
+  height: 48px;
+}
+.ctx-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 700; color: var(--ink-2);
+  padding: 6px 10px 6px 7px; border-radius: 8px; margin-left: -7px;
+}
+.ctx-back:hover { background: var(--paper); color: var(--ink); }
+.ctx-back svg { width: 16px; height: 16px; }
+.ctx-div { width: 1px; height: 18px; background: var(--line); }
+.ctx-path {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--ink-3);
+  min-width: 0;
+}
+.ctx-path b { color: var(--bg-600); font-weight: 800; }
+.ctx-path .sep { color: var(--line); font-weight: 700; }
+.ctx-kicker {
+  margin-left: auto;
+  font-family: var(--disp); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── 폼 카드 ── */
+.wcol { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+.wmain { grid-column: span 9; }
+.formcard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px 26px;
+}
+.field { margin-bottom: 24px; }
+.flabel {
+  display: block;
+  font-size: 12.5px; font-weight: 800; color: var(--ink-2);
+  letter-spacing: -0.01em; margin-bottom: 8px;
+}
+.flabel .opt { color: var(--ink-3); font-weight: 600; }
+
+/* 공지 모드 배너 */
+.noticebar {
+  display: none;
+  align-items: center; gap: 8px;
+  background: var(--bg-50); color: var(--bg-600);
+  border: 1px solid var(--bg-100);
+  border-radius: 10px; padding: 11px 14px;
+  font-size: 13px; font-weight: 800; margin-bottom: 20px;
+}
+.noticebar.show { display: flex; }
+.noticebar svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* 게시판 셀렉트 */
+.selwrap { position: relative; }
+.selwrap select {
+  width: 100%; height: 44px;
+  padding: 0 40px 0 14px;
+  font-size: 14.5px; font-weight: 700;
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px;
+  appearance: none; outline: none; cursor: pointer;
+}
+.selwrap select:focus { border-color: var(--bg-500); box-shadow: 0 0 0 3px rgba(150,30,55,0.10); }
+.selwrap .caret {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--ink-3); pointer-events: none;
+}
+
+/* 말머리 칩 토글 */
+.flairs { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip.pick-chip {
+  background: var(--card); color: var(--ink-2);
+  border: 1px solid var(--line);
+  padding: 6px 13px; font-size: 12.5px; font-weight: 700;
+  transition: 0.14s;
+}
+.chip.pick-chip:hover { border-color: var(--ink-3); color: var(--ink); }
+.chip.pick-chip.on {
+  background: var(--bg-500); border-color: var(--bg-500);
+  color: #fff; font-weight: 800;
+}
+
+/* 소스 URL */
+.srcrow { display: flex; gap: 8px; }
+.srcfield { position: relative; flex: 1; }
+.srcfield svg.lk {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--ink-3); pointer-events: none;
+}
+.srcfield input {
+  width: 100%; height: 44px;
+  padding: 0 14px 0 36px;
+  font-size: 14px; font-weight: 500;
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px; outline: none;
+}
+.srcfield input::placeholder { color: var(--ink-3); font-weight: 500; }
+.srcfield input:focus { border-color: var(--bg-500); box-shadow: 0 0 0 3px rgba(150,30,55,0.10); }
+.srcrow .cta-ghost { flex-shrink: 0; padding: 0 18px; height: 44px; font-size: 14px; }
+.srcnote { font-size: 12.5px; color: var(--ink-3); margin-top: 7px; }
+.srcnote b { color: var(--ink-2); font-weight: 700; }
+
+/* 제목 — 큰 타이포 · 보더 없음 */
+.titlefield {
+  width: 100%;
+  padding: 6px 2px 12px;
+  font-family: inherit;
+  font-size: 27px; font-weight: 800; letter-spacing: -0.035em;
+  line-height: 1.25;
+  color: var(--ink); background: transparent;
+  border: none; border-bottom: 1px solid var(--line);
+  outline: none; transition: 0.15s;
+}
+.titlefield::placeholder { color: var(--ink-3); font-weight: 800; }
+.titlefield:focus { border-bottom-color: var(--bg-500); }
+
+/* ── 에디터 ── */
+/* ⚠️ overflow:hidden 금지 — 툴바 sticky 의 containing block 이 되어
+   툴바가 본문 위로 밀려 내려온다. 모서리는 자식에서 라운딩. */
+.editorbox {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card);
+  transition: 0.15s;
+}
+.editorbox.focused { border-color: var(--bg-500); box-shadow: 0 0 0 3px rgba(150,30,55,0.10); }
+.toolbar {
+  position: sticky; top: 112px; z-index: 30;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+  padding: 7px 8px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  border-radius: 11px 11px 0 0;
+}
+.tb {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center;
+  color: var(--ink-2); transition: 0.12s;
+  font-family: var(--disp); font-size: 14px; font-weight: 700;
+}
+.tb:hover { background: var(--bg-50); color: var(--bg-600); }
+.tb.on { background: var(--bg-50); color: var(--bg-600); box-shadow: inset 0 0 0 1px var(--bg-100); }
+.tb[disabled] { opacity: 0.35; cursor: default; }
+.tb[disabled]:hover { background: none; color: var(--ink-2); }
+.tb svg { width: 17px; height: 17px; }
+.tb .g { font-size: 15px; line-height: 1; }
+.tb .g.b { font-weight: 800; }
+.tb .g.i { font-style: italic; }
+.tb .g.u { text-decoration: underline; text-underline-offset: 2px; }
+.tb .g.s { text-decoration: line-through; }
+.tb .h { font-size: 13px; font-weight: 800; letter-spacing: -0.02em; }
+.tbdiv { width: 1px; height: 20px; background: var(--line); margin: 0 5px; }
+
+.editorbody {
+  min-height: 330px;
+  padding: 22px 20px 30px;
+  font-size: 16px; line-height: 1.85; color: var(--ink);
+  outline: none;
+}
+.editorbody p { margin: 0 0 14px; }
+.editorbody h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; margin: 22px 0 10px; }
+.editorbody blockquote {
+  border: 1px solid var(--line); background: var(--paper);
+  border-radius: 10px; padding: 12px 16px; margin: 0 0 14px;
+  color: var(--ink-2); font-size: 15px;
+}
+.editorbody ul { margin: 0 0 14px; padding-left: 20px; }
+.editorbody li { margin-bottom: 4px; }
+.editorbody .ph { color: var(--ink-3); }
+.embedcard {
+  border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden; margin: 0 0 16px; background: var(--paper);
+}
+.embedcard .eb-thumb { height: 148px; }
+.embedcard .eb-meta { padding: 11px 14px; }
+.embedcard .eb-t { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.embedcard .eb-s { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+
+/* ── 이미지 ── */
+.heroimg {
+  position: relative; width: 100%; max-width: 420px;
+  aspect-ratio: 16/9; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--line);
+}
+.heroimg .rm {
+  position: absolute; top: 8px; right: 8px;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: rgba(22,20,26,0.72); color: var(--cream);
+  display: grid; place-items: center; backdrop-filter: blur(4px);
+}
+.heroimg .rm:hover { background: var(--bg-500); }
+.heroimg .rm svg { width: 15px; height: 15px; }
+.imgcap { font-size: 12.5px; color: var(--ink-3); margin-bottom: 7px; }
+.dropzone {
+  margin-top: 14px;
+  border: 1px dashed #d9d5ce; border-radius: 12px;
+  background: var(--paper);
+  padding: 26px 20px; text-align: center;
+  display: grid; justify-items: center; gap: 7px;
+  transition: 0.14s; cursor: pointer;
+}
+.dropzone:hover { border-color: var(--bg-500); background: var(--bg-50); }
+.dropzone svg { width: 28px; height: 28px; color: var(--ink-3); }
+.dropzone .dz-1 { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.dropzone .dz-2 { font-size: 12.5px; color: var(--ink-3); }
+
+/* ── 하단 발행 바 (스티키) ── */
+.publishbar {
+  position: sticky; bottom: 0; z-index: 45;
+  margin-top: 22px;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 14px 14px;
+  margin-left: -24px; margin-right: -24px; margin-bottom: -26px;
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 12px;
+}
+.pb-left { display: flex; align-items: center; gap: 10px; }
+.pb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.noticetoggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--line); background: var(--card);
+  color: var(--ink-2); font-weight: 700; font-size: 13px;
+  padding: 9px 14px; border-radius: 10px; transition: 0.14s;
+}
+.noticetoggle:hover { border-color: var(--bg-500); color: var(--bg-600); background: var(--bg-50); }
+.noticetoggle.on {
+  background: var(--bg-500); border-color: var(--bg-500); color: #fff; font-weight: 800;
+}
+.noticetoggle svg { width: 15px; height: 15px; }
+.pb-hint { font-size: 12.5px; color: var(--ink-3); }
+.publishbar .cta-ghost { padding: 11px 18px; font-size: 14px; }
+.publishbar .cta-burg { padding: 12px 24px; font-size: 14.5px; }
+
+/* ── 반응형 ── */
+@media (max-width: 1024px) {
+  .wmain { grid-column: span 12; }
+}
+@media (max-width: 860px) {
+  .ctxbar { top: 64px; }
+  .ctx-kicker { display: none; }
+  .formcard { padding: 18px 16px 20px; border-radius: 12px; }
+  .titlefield { font-size: 23px; }
+  .toolbar { top: 112px; }
+  .publishbar {
+    margin-left: -16px; margin-right: -16px; margin-bottom: -20px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    bottom: 62px;
+  }
+  .pb-hint { display: none; }
+  .publishbar .cta-burg { padding: 12px 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ GNB (A와 동일) ═══════════ -->
+<header class="gnb">
+  <div class="wrap gnb-in">
+    <a class="logo" href="a-matchday.html">
+      <span class="logo-brush">그깟 공놀이</span>
+      <span class="logo-domain">gongnori.fan</span>
+    </a>
+    <nav class="gnb-menu">
+      <a href="a-matchday.html">담벼락</a>
+      <a href="p-stadium.html">운동장</a>
+      <a href="p-prediction.html">승부예측</a>
+    </nav>
+    <div class="gnb-icons">
+      <button class="icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      </button>
+      <div class="avatar">몽</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 얇은 컨텍스트 바 (다크 밴드 없음 — 집중 화면) ═══════════ -->
+<div class="ctxbar">
+  <div class="wrap ctx-in">
+    <a class="ctx-back" href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      뒤로
+    </a>
+    <span class="ctx-div"></span>
+    <div class="ctx-path">
+      담벼락 <span class="sep">›</span> 축구 <span class="sep">›</span> <b id="ctxBoard">아스날</b> <span class="sep">에 떡밥 푸는 중</span>
+    </div>
+    <span class="ctx-kicker">NEW POST</span>
+  </div>
+</div>
+
+<!-- ═══════════ 본문 (라이트 — 긴 글 가독성) ═══════════ -->
+<main class="main">
+  <div class="wrap wcol">
+    <div class="wmain">
+      <form class="formcard" onsubmit="return false;">
+
+        <!-- 공지 모드 배너 (공지 등록 토글 ON일 때만 노출) -->
+        <div class="noticebar" id="noticeBar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          이 글은 공지로 등록됩니다 — 게시판 상단 고정
+        </div>
+
+        <!-- ① 게시판 선택 -->
+        <div class="field">
+          <label class="flabel" for="community">게시판 선택</label>
+          <div class="selwrap">
+            <select id="community">
+              <option>⚽ 축구</option>
+              <option selected>　└ 🔴 아스날</option>
+              <option>　└ 🔵 첼시</option>
+              <option>　└ 🔴 리버풀</option>
+              <option>⚾ 야구</option>
+              <option>　└ 🐯 KIA 타이거즈</option>
+              <option>🏀 농구</option>
+              <option>🎤 컬처</option>
+              <option>💬 자유게시판</option>
+            </select>
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <!-- ② 말머리 -->
+        <div class="field">
+          <label class="flabel">말머리 <span class="opt">(선택)</span></label>
+          <div class="flairs" id="flairs">
+            <button type="button" class="chip pick-chip on">이적</button>
+            <button type="button" class="chip pick-chip">뉴스</button>
+            <button type="button" class="chip pick-chip">경기</button>
+            <button type="button" class="chip pick-chip">분석</button>
+            <button type="button" class="chip pick-chip">잡담</button>
+            <button type="button" class="chip pick-chip">질문</button>
+            <button type="button" class="chip pick-chip">짤방</button>
+          </div>
+        </div>
+
+        <!-- ③ 소스 URL -->
+        <div class="field">
+          <label class="flabel" for="source-url">소스 URL <span class="opt">(선택)</span></label>
+          <div class="srcrow">
+            <div class="srcfield">
+              <svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+              <input id="source-url" type="text" value="https://www.bbc.com/sport/football/articles/…" placeholder="뉴스나 기사 링크를 붙여넣으면 대표 이미지를 자동으로 가져와요" />
+            </div>
+            <button type="button" class="cta-ghost">가져오기</button>
+          </div>
+          <p class="srcnote">출처: <b>BBC Sport</b> — 대표 이미지와 3줄 요약을 본문에 넣었어요</p>
+        </div>
+
+        <!-- ④ 제목 -->
+        <div class="field">
+          <label class="flabel" for="title">제목</label>
+          <input class="titlefield" id="title" type="text" placeholder="무슨 떡밥인지 한 줄로" value="" />
+        </div>
+
+        <!-- ⑤ 내용 (TipTap) -->
+        <div class="field">
+          <label class="flabel" for="content">내용</label>
+          <div class="editorbox" id="editorBox">
+
+            <!-- 툴바 — 스티키, 활성 시 버건디 틴트 -->
+            <div class="toolbar" role="toolbar" aria-label="서식 도구">
+              <button type="button" class="tb" aria-label="실행 취소" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+              </button>
+              <button type="button" class="tb" aria-label="다시 실행">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7l3 2.7"/></svg>
+              </button>
+
+              <span class="tbdiv"></span>
+
+              <button type="button" class="tb tgl" aria-label="제목 1"><span class="h">H1</span></button>
+              <button type="button" class="tb tgl" aria-label="제목 2"><span class="h">H2</span></button>
+              <button type="button" class="tb tgl" aria-label="제목 3"><span class="h">H3</span></button>
+
+              <span class="tbdiv"></span>
+
+              <button type="button" class="tb tgl on" aria-label="굵게"><span class="g b">B</span></button>
+              <button type="button" class="tb tgl" aria-label="기울임"><span class="g i">I</span></button>
+              <button type="button" class="tb tgl" aria-label="밑줄"><span class="g u">U</span></button>
+              <button type="button" class="tb tgl" aria-label="취소선"><span class="g s">S</span></button>
+              <button type="button" class="tb tgl" aria-label="인라인 코드">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18-6-6 6-6"/><path d="m15 6 6 6-6 6"/></svg>
+              </button>
+
+              <span class="tbdiv"></span>
+
+              <button type="button" class="tb tgl" aria-label="왼쪽 정렬">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h11M3 18h15"/></svg>
+              </button>
+              <button type="button" class="tb tgl" aria-label="가운데 정렬">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M7 12h10M5 18h14"/></svg>
+              </button>
+              <button type="button" class="tb tgl" aria-label="오른쪽 정렬">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M10 12h11M6 18h15"/></svg>
+              </button>
+
+              <span class="tbdiv"></span>
+
+              <button type="button" class="tb tgl" aria-label="글머리 기호 목록">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+              </button>
+              <button type="button" class="tb tgl" aria-label="번호 매기기 목록">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h11M10 12h11M10 18h11"/><path d="M4 4h1v4M3 12h2.5L3 15.5h2.5M3 18h2v3H3v-1h2"/></svg>
+              </button>
+
+              <span class="tbdiv"></span>
+
+              <button type="button" class="tb tgl" aria-label="인용">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2v1a3 3 0 0 1-3 3"/><path d="M20 7h-4a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2v1a3 3 0 0 1-3 3"/></svg>
+              </button>
+              <button type="button" class="tb" aria-label="구분선">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h16"/></svg>
+              </button>
+
+              <span class="tbdiv"></span>
+
+              <button type="button" class="tb" aria-label="이미지 삽입">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5-6 6-3-3-4 4"/></svg>
+              </button>
+            </div>
+
+            <!-- 본문 -->
+            <div class="editorbody" contenteditable="true" spellcheck="false">
+              <p>아르테타가 겨울 이적시장 마지막 날 미드필더 보강을 확정했다는 얘기가 돌고 있다.</p>
+              <p>메디컬은 오늘 오전에 끝났고, 발표만 남았다는 게 현지 기자들 공통 톤이다.</p>
+              <blockquote>"딜은 마무리됐다. 서류 절차만 남았다." — 현지 기자</blockquote>
+              <p>영상 링크를 붙여넣으면 이렇게 카드로 바뀐다 ↓</p>
+              <div class="embedcard">
+                <div class="thumb eb-thumb"><img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=70" alt="" /></div>
+                <div class="eb-meta">
+                  <div class="eb-t">겨울 이적시장 마감일 하이라이트</div>
+                  <div class="eb-s">youtube.com</div>
+                </div>
+              </div>
+              <p class="ph">글을 입력하세요. YouTube, Instagram, X 링크를 붙여넣으면 자동으로 임베드돼요.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑥ 이미지 -->
+        <div class="field">
+          <label class="flabel">이미지</label>
+          <p class="imgcap">대표 이미지 (소스 URL·수정 시 기존 썸네일)</p>
+          <div class="heroimg thumb">
+            <img src="https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=900&q=70" alt="대표 이미지" />
+            <button type="button" class="rm" aria-label="대표 이미지 삭제">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <label class="dropzone" for="image-upload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5-6 6-3-3-4 4"/></svg>
+            <span class="dz-1">클릭하거나 드래그해서 본문에 이미지를 넣을 수 있어요</span>
+            <span class="dz-2">한 번에 최대 10장, 파일당 10MB까지 가능합니다</span>
+            <input id="image-upload" type="file" accept="image/*" multiple hidden />
+          </label>
+        </div>
+
+        <!-- ⑦ 하단 발행 바 (스티키) -->
+        <div class="publishbar">
+          <div class="pb-left">
+            <button type="button" class="noticetoggle" id="noticeToggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+              공지로 등록
+            </button>
+            <span class="pb-hint">발행하면 담벼락에 바로 올라간다</span>
+          </div>
+          <div class="pb-right">
+            <button type="button" class="cta-ghost" onclick="history.back()">취소</button>
+            <button type="submit" class="cta-burg" id="submitBtn">떡밥 풀기</button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- ═══════════ 다크 푸터 (A와 동일) ═══════════ -->
+<footer class="footer">
+  <div class="wrap">
+    <span class="f-logo">그깟 공놀이</span>
+    <div class="f-domain num">GONGNORI.FAN</div>
+    <p class="f-slogan">그깟 공놀이에 진심인 팬들의 놀이터</p>
+    <nav class="f-links">
+      <a href="#">회사 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">게시물 운영정책</a>
+      <a href="#">개인정보처리방침</a>
+    </nav>
+    <p class="f-copy">© 2026 GONGNORI.FAN — SEE YOU AT KICKOFF</p>
+  </div>
+</footer>
+
+<!-- ═══════════ 모바일 하단 탭 (A와 동일) ═══════════ -->
+<nav class="bottomtab">
+  <div class="bt-in">
+    <a href="a-matchday.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+      담벼락
+    </a>
+    <a href="p-stadium.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+      운동장
+    </a>
+    <a href="p-prediction.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+      승부예측
+    </a>
+    <a href="p-write.html" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      글쓰기
+    </a>
+  </div>
+</nav>
+
+<script>
+/* 상태 데모만: 말머리 토글 · 툴바 활성 · 게시판 컨텍스트 · 공지 모드 · 본문 포커스 링 */
+(function () {
+  // 말머리: 단일 선택 + 재클릭 해제 (현행 동작 동일)
+  document.querySelectorAll("#flairs .pick-chip").forEach(function (c) {
+    c.addEventListener("click", function () {
+      var was = c.classList.contains("on");
+      document.querySelectorAll("#flairs .pick-chip").forEach(function (x) { x.classList.remove("on"); });
+      if (!was) c.classList.add("on");
+    });
+  });
+
+  // 툴바 토글 버튼 활성 상태
+  document.querySelectorAll(".toolbar .tgl").forEach(function (b) {
+    b.addEventListener("click", function () { b.classList.toggle("on"); });
+  });
+
+  // 본문 포커스 링
+  var box = document.getElementById("editorBox");
+  var body = box.querySelector(".editorbody");
+  body.addEventListener("focus", function () { box.classList.add("focused"); });
+  body.addEventListener("blur", function () { box.classList.remove("focused"); });
+
+  // 게시판 선택 → 컨텍스트 바 반영
+  var sel = document.getElementById("community");
+  sel.addEventListener("change", function () {
+    document.getElementById("ctxBoard").textContent = sel.value.replace(/[　└\s]/g, "").replace(/^[^가-힣A-Za-z]+/, "");
+  });
+
+  // 공지 모드 (게시판 운영자에게만 노출되는 토글)
+  var nt = document.getElementById("noticeToggle");
+  var nb = document.getElementById("noticeBar");
+  var sb = document.getElementById("submitBtn");
+  nt.addEventListener("click", function () {
+    var on = nt.classList.toggle("on");
+    nb.classList.toggle("show", on);
+    sb.textContent = on ? "공지 등록" : "떡밥 풀기";
+  });
+})();
+</script>
+
+<!-- ============================================================
+  제안 (구조 변경 아님 — 검토용 메모)
+
+  제안 1: 임시저장(초안) 기능이 현재 없다. 긴 글을 쓰다 이탈하면 전부 날아간다.
+          하단 바 좌측에 `.cta-ghost` "임시저장"을 추가하고 localStorage 자동
+          저장 + "n분 전 저장됨" 표시를 붙이면 이 스킨 그대로 수용된다.
+  제안 2: 소스 URL 필드가 제목보다 위에 있어, 직접 쓰는 글에서는 첫 필드가
+          "퍼온 글" 맥락으로 읽힌다. 순서는 유지하되 접힌 상태(“링크 퍼오기”
+          토글) 기본값이 더 자연스러울 수 있다.
+  제안 3: 대표 이미지와 본문 이미지 업로드가 같은 "이미지" 섹션에 묶여 있어
+          역할 구분이 약하다. 라벨 텍스트만으로 구분 중 — 카드 2개로 분리 검토.
+  제안 4: 발행 전 미리보기가 없다. 임베드·이미지가 많은 글은 발행 후에야
+          레이아웃을 확인하게 된다.
+============================================================ -->
+
+</body>
+</html>
