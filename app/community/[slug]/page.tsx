@@ -371,10 +371,39 @@ export default async function CommunityPage({
           {/* 12컬럼 그리드: 조밀한 간격 */}
           <div className="grid grid-cols-12 gap-4 lg:gap-5">
             <div className="col-span-12 lg:col-span-9">
-              {/* 하위 채널 목록 — wc-action-card 응용 */}
-              {channels && channels.length > 0 && (
+              {/* 하위 채널 목록 — wc-action-card 응용. 축구는 이적시장 상황판 카드를 맨 앞에 */}
+              {((channels && channels.length > 0) || slug === "football") && (
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {channels.map((ch) => (
+                  {slug === "football" && (
+                    <Link
+                      href="/transfer"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-all hover:-translate-y-0.5"
+                      style={{
+                        background: "var(--wc-card)",
+                        boxShadow: "var(--wc-shadow-1)",
+                        borderTop: "3px solid var(--wc-burgundy)",
+                      }}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-base"
+                        style={{ background: "var(--wc-soft)" }}
+                      >
+                        🔁
+                      </span>
+                      <div className="min-w-0">
+                        <p
+                          className="truncate text-[13px] font-semibold"
+                          style={{ color: "var(--wc-ink)" }}
+                        >
+                          이적시장
+                        </p>
+                        <p className="truncate text-[11px]" style={{ color: "var(--wc-mute)" }}>
+                          오피셜·루머 상황판
+                        </p>
+                      </div>
+                    </Link>
+                  )}
+                  {(channels ?? []).map((ch) => (
                     <Link
                       key={ch.slug}
                       href={`/community/${ch.slug}`}
