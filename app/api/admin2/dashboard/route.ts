@@ -237,7 +237,8 @@ export async function GET() {
       key: "news-review",
       label: "AI 뉴스 검수",
       count: newsQueue.count ?? 0,
-      href: "/admin/news-review",
+      // 새 빠른 검수 화면으로 — 전량 표시 + 만료 임박 순 + 단축키 + 일괄 반려
+      href: "/admin2/news",
       severity: "normal",
       note: "48시간 지나면 자동 만료된다",
     },
