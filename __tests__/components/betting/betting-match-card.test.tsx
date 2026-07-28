@@ -164,11 +164,16 @@ describe("BettingMatchCard", () => {
     expect(screen.getByText("선택됨")).toBeDefined()
   })
 
-  it("displays odds values correctly", () => {
+  // 배당률 숫자는 UI 에 노출하지 않는다 (정책) — 픽 버튼은 팀명만, 배점은 슬립에서.
+  // 이 테스트는 "1.50/3.20/4.80 이 보인다"를 검증하던 구 테스트를 정책에 맞게 뒤집은 것이다.
+  it("does not expose odds numbers in the card (policy)", () => {
     render(<BettingMatchCard {...defaultProps} />)
-    expect(screen.getByText("1.50")).toBeDefined()
-    expect(screen.getByText("3.20")).toBeDefined()
-    expect(screen.getByText("4.80")).toBeDefined()
+    expect(screen.queryByText("1.50")).toBeNull()
+    expect(screen.queryByText("3.20")).toBeNull()
+    expect(screen.queryByText("4.80")).toBeNull()
+    // 픽 버튼은 팀명으로만 식별된다 (fixture: 서울 vs 수원)
+    expect(screen.getAllByText("서울").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("수원").length).toBeGreaterThan(0)
   })
 
   it("shows handicap badge when game type includes 핸디캡", () => {
