@@ -79,7 +79,7 @@ export function StickerCard({ sticker, isOwned, onPurchase }: StickerCardProps) 
               alignItems: "center",
               height: 20,
               padding: "0 6px",
-              borderRadius: 10,
+              borderRadius: 12,
               background: "var(--wc-soft)",
               color: "var(--wc-burgundy)",
               fontSize: 10.5,

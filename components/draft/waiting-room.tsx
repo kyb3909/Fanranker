@@ -330,7 +330,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             style={{
               background: "var(--draft-card)",
               border: "1px solid var(--draft-line)",
-              borderRadius: 14,
+              borderRadius: 16,
               padding: "20px 22px",
               boxShadow: "var(--draft-shadow-1)",
             }}
@@ -401,7 +401,7 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
         <div
           style={{
             background: "var(--draft-soft)",
-            borderRadius: 14,
+            borderRadius: 16,
             padding: "18px 20px",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
@@ -449,7 +449,7 @@ function SeatCard({
         border: `${seat ? 1.5 : 1}px ${seat ? "solid" : "dashed"} ${
           isMe ? "var(--draft-burgundy)" : seat ? "var(--draft-line)" : "var(--draft-rule)"
         }`,
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 18,
         minHeight: 130,
         display: "flex",

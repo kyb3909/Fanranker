@@ -61,7 +61,7 @@ export function TitleCard({ item, onPurchase }: TitleCardProps) {
         style={{
           height: 72,
           background: "var(--wc-paper)",
-          borderRadius: 10,
+          borderRadius: 12,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

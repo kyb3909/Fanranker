@@ -448,7 +448,7 @@ export function MultiDraftBoard({
                     style={{
                       flex: 1,
                       padding: "6px 4px",
-                      borderRadius: 6,
+                      borderRadius: 8,
                       background: active ? "var(--draft-ink)" : "transparent",
                       color: active ? "white" : "var(--draft-ink)",
                       border: "none",
@@ -603,7 +603,7 @@ export function MultiDraftBoard({
             style={{
               background: "var(--draft-card)",
               border: "1px solid var(--draft-line)",
-              borderRadius: 14,
+              borderRadius: 16,
               padding: 14,
             }}
           >
@@ -613,7 +613,7 @@ export function MultiDraftBoard({
           <div
             style={{
               background: "var(--draft-soft)",
-              borderRadius: 14,
+              borderRadius: 16,
               padding: 14,
             }}
           >

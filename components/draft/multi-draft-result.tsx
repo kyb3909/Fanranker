@@ -360,7 +360,7 @@ function TeamDetail({ data, formation }: { data: TeamData; formation: Formation 
         style={{
           background: "var(--draft-card)",
           border: "1px solid var(--draft-line)",
-          borderRadius: 14,
+          borderRadius: 16,
           padding: 18,
           boxShadow: "var(--draft-shadow-1)",
         }}
@@ -409,7 +409,7 @@ function ScoreCard({ score }: { score: ReturnType<typeof calcTeamScore> }) {
       style={{
         background: "var(--draft-card)",
         border: "1px solid var(--draft-line)",
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 18,
         boxShadow: "var(--draft-shadow-1)",
       }}
@@ -492,7 +492,7 @@ function StrengthWeakness({
     <div
       style={{
         background: "var(--draft-soft)",
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 16,
       }}
     >
@@ -588,7 +588,7 @@ function RosterList({ roster }: { roster: Player[] }) {
       style={{
         background: "var(--draft-card)",
         border: "1px solid var(--draft-line)",
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 14,
       }}
     >
@@ -669,7 +669,7 @@ function Standings({ teamData, myUserId }: { teamData: TeamData[]; myUserId: str
       style={{
         background: "var(--draft-card)",
         border: "1px solid var(--draft-line)",
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 18,
         boxShadow: "var(--draft-shadow-1)",
       }}
@@ -689,7 +689,7 @@ function Standings({ teamData, myUserId }: { teamData: TeamData[]; myUserId: str
                 gap: 12,
                 padding: "10px 14px",
                 background: isMe ? "var(--draft-burgundy-soft)" : "var(--draft-soft)",
-                borderRadius: 10,
+                borderRadius: 12,
               }}
             >
               <div

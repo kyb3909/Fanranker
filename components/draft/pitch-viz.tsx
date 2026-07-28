@@ -52,7 +52,7 @@ export function PitchViz({ formation, filled, onClickSlot, compact = false }: Pi
       style={{
         width: "100%",
         aspectRatio: compact ? "5/4" : "4/5",
-        borderRadius: 10,
+        borderRadius: 12,
         position: "relative",
         overflow: "hidden",
         background:

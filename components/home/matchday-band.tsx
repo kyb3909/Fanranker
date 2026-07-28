@@ -134,7 +134,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
 
   return (
     <div
-      className="relative flex min-h-[300px] items-end overflow-hidden rounded-[14px] sm:min-h-[420px]"
+      className="relative flex min-h-[300px] items-end overflow-hidden rounded-[16px] sm:min-h-[420px]"
       style={{ background: "var(--gn-night-soft)", boxShadow: "0 20px 50px -20px rgba(0,0,0,.7)" }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -376,7 +376,7 @@ function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
 
       <Link
         href="/prediction"
-        className="mt-4 flex items-center justify-center gap-1.5 rounded-[11px] py-3 text-[15px] font-extrabold transition-transform active:scale-[.98]"
+        className="mt-4 flex items-center justify-center gap-1.5 rounded-[12px] py-3 text-[15px] font-extrabold transition-transform active:scale-[.98]"
         style={{ background: "var(--gn-cream)", color: "var(--gn-night)" }}
       >
         {rest > 0 ? `오늘 ${matches.length}경기 픽 걸러 가기` : "오늘 픽 걸러 가기"}

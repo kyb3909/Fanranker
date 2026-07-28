@@ -10,7 +10,7 @@ export function NotFoundActions() {
     <div className="mt-7 flex items-center justify-center gap-3">
       <Link
         href="/"
-        className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center justify-center rounded-[10px] px-5 text-sm font-bold transition-colors"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center justify-center rounded-[12px] px-5 text-sm font-bold transition-colors"
       >
         담벼락으로 돌아가기
       </Link>
@@ -20,7 +20,7 @@ export function NotFoundActions() {
           if (window.history.length > 1) router.back()
           else router.push("/")
         }}
-        className="border-border bg-card text-foreground hover:bg-muted/50 inline-flex h-11 items-center justify-center rounded-[10px] border px-5 text-sm font-bold transition-colors"
+        className="border-border bg-card text-foreground hover:bg-muted/50 inline-flex h-11 items-center justify-center rounded-[12px] border px-5 text-sm font-bold transition-colors"
       >
         이전 페이지
       </button>

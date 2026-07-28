@@ -88,7 +88,7 @@
 .worldcup-scope .wc-page-head {
   background: #fff;
   border: 1px solid #f2efea;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 26px 24px;
   box-shadow: 0 2px 8px rgba(30, 30, 50, 0.05);
 }
@@ -112,7 +112,7 @@
   gap: 4px;
   align-items: center;
   background: var(--wc-card);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 6px;
   margin-bottom: 12px;
   box-shadow: var(--wc-shadow-1);
@@ -120,7 +120,7 @@
 .worldcup-scope .wc-games-tabs button {
   flex: 1;
   padding: 10px 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
   color: var(--wc-mute);
@@ -278,7 +278,7 @@
 /* ─── Match row (시안 .mrow) — 베팅 카드 ─────────────────── */
 .worldcup-scope .wc-mrow {
   background: var(--wc-card);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--wc-shadow-1);
   overflow: hidden;
   transition:
@@ -389,7 +389,7 @@
   margin: 12px 14px 14px;
   padding: 8px;
   background: rgba(47, 125, 91, 0.12);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--wc-go);
   font-size: 12px;
   font-weight: 600;
@@ -568,7 +568,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 11px;
+  border-radius: 12px;
   background: var(--wc-wine-tint);
   color: var(--wc-burgundy);
   font-size: 16px;
@@ -645,7 +645,7 @@
   box-shadow: var(--wc-shadow-1);
   color: var(--wc-ink);
   padding: 12px 6px 10px;
-  border-radius: 10px;
+  border-radius: 12px;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -959,7 +959,7 @@
   padding: 10px 20px;
   background: white;
   color: var(--wc-ink);
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 13px;
   transition: opacity 0.15s;
@@ -1045,7 +1045,7 @@
   padding: 10px 20px;
   background: var(--wc-burgundy);
   color: white;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 13px;
   transition: filter 0.15s;
@@ -1059,7 +1059,7 @@
   padding: 20px 24px;
   background: var(--wc-soft);
   border: 1.5px solid rgba(150, 30, 55, 0.35);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 .worldcup-scope .wc-reg-rules-h {
   font-weight: 800;
@@ -1114,7 +1114,7 @@
   position: relative;
   overflow: hidden;
   background: var(--wc-card);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 24px;
   cursor: pointer;
   transition:
@@ -1208,7 +1208,7 @@
   padding: 12px 14px;
   /* 위계는 배경 틴트로만 — 한쪽 면 색깔 액센트 보더 금지 */
   background: color-mix(in srgb, var(--gp) 7%, transparent);
-  border-radius: 6px;
+  border-radius: 8px;
   margin: auto 0 12px;
   flex: 1;
   line-height: 1.5;
@@ -1412,7 +1412,7 @@
   width: 100%;
   padding: 10px;
   background: var(--wc-soft);
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 13px;
   text-align: center;

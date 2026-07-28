@@ -486,7 +486,7 @@ export default function SignUpPage() {
           style={{
             background: "var(--wc-card, #ffffff)",
             border: "1px solid var(--wc-line)",
-            borderRadius: 14,
+            borderRadius: 16,
             boxShadow: "var(--wc-shadow-2)",
           }}
         >

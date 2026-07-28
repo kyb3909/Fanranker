@@ -74,12 +74,12 @@
   .gn-dcard {
     background: var(--gn-night-soft);
     border: 1px solid var(--gn-night-line);
-    border-radius: 14px;
+    border-radius: 16px;
   }
   .gn-dtile {
     background: var(--gn-night-tile);
     border: 1px solid var(--gn-night-line);
-    border-radius: 11px;
+    border-radius: 12px;
   }
 
   /* ── 썸네일 일괄 트리트먼트: 채도 down + 하단 그라데이션 ── */

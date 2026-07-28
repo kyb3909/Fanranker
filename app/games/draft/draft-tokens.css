@@ -122,7 +122,7 @@
 .draft-scope .draft-card {
   background: var(--draft-card);
   border: 1px solid var(--draft-line);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: var(--draft-shadow-1);
 }
 

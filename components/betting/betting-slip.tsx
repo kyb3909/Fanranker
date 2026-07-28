@@ -99,7 +99,7 @@ export function BettingSlip({
             marginTop: 16,
             padding: "10px 16px",
             background: "var(--wc-soft)",
-            borderRadius: 10,
+            borderRadius: 12,
             display: "flex",
             alignItems: "center",
             gap: 8,
@@ -222,7 +222,7 @@ export function BettingSlip({
               style={{
                 background: "#fff",
                 border: "1px solid var(--wc-line)",
-                borderRadius: 10,
+                borderRadius: 12,
                 padding: "10px 12px",
               }}
             >
@@ -334,7 +334,7 @@ export function BettingSlip({
             style={{
               height: 38,
               width: "100%",
-              borderRadius: 10,
+              borderRadius: 12,
               border: "1px solid var(--wc-line-2)",
               paddingRight: 40,
               paddingLeft: 12,
@@ -369,7 +369,7 @@ export function BettingSlip({
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
-            borderRadius: 10,
+            borderRadius: 12,
             overflow: "hidden",
             border: "1px solid var(--wc-line-2)",
           }}
@@ -428,7 +428,7 @@ export function BettingSlip({
         <div
           style={{
             background: "var(--wc-soft)",
-            borderRadius: 10,
+            borderRadius: 12,
             padding: "12px 14px",
             display: "flex",
             flexDirection: "column",
@@ -470,7 +470,7 @@ export function BettingSlip({
           style={{
             height: 48,
             width: "100%",
-            borderRadius: 10,
+            borderRadius: 12,
             background: "var(--wc-burgundy)",
             color: "#fff",
             fontSize: 15,

@@ -41,7 +41,7 @@ export default function CommunityError({ reset }: { error: Error; reset: () => v
             style={{
               height: 44,
               padding: "0 20px",
-              borderRadius: 10,
+              borderRadius: 12,
               fontSize: 14,
               fontWeight: 600,
               border: "1px solid var(--wc-line-2)",
@@ -57,7 +57,7 @@ export default function CommunityError({ reset }: { error: Error; reset: () => v
             style={{
               height: 44,
               padding: "0 20px",
-              borderRadius: 10,
+              borderRadius: 12,
               fontSize: 14,
               fontWeight: 700,
               background: "var(--wc-burgundy)",

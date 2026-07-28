@@ -358,7 +358,7 @@ function WriteContent() {
                       fontWeight: 700,
                       fontFamily: "var(--font-sans)",
                       border: "1px solid var(--wc-line-2)",
-                      borderRadius: 10,
+                      borderRadius: 12,
                       outline: "none",
                       background: "var(--wc-paper)",
                       color: "var(--wc-ink)",

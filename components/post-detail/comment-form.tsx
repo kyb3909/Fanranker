@@ -93,7 +93,7 @@ export function CommentForm({ onSubmit, isSubmitting, isAdmin = false }: Comment
             fontSize: 13.5,
             lineHeight: 1.55,
             border: "1px solid var(--wc-line-2)",
-            borderRadius: 10,
+            borderRadius: 12,
             background: "var(--wc-paper)",
             color: "var(--wc-ink)",
           }}

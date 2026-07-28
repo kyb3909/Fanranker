@@ -119,7 +119,7 @@ export const PostCardContent = memo(function PostCardContent({
                 >
                   <span
                     className="inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
-                    style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
+                    style={{ background: catChip.bg, color: catChip.color, borderRadius: 8 }}
                   >
                     <BoardIcon slug={category} className="h-3.5 w-3.5" />
                     {category}
@@ -128,7 +128,7 @@ export const PostCardContent = memo(function PostCardContent({
               ) : (
                 <span
                   className="inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
-                  style={{ background: catChip.bg, color: catChip.color, borderRadius: 6 }}
+                  style={{ background: catChip.bg, color: catChip.color, borderRadius: 8 }}
                 >
                   <BoardIcon slug={category} className="h-3.5 w-3.5" />
                   {category}
@@ -147,7 +147,7 @@ export const PostCardContent = memo(function PostCardContent({
               style={{
                 background: "#f2efea",
                 color: "var(--wc-mute)",
-                borderRadius: 6,
+                borderRadius: 8,
               }}
             >
               {flair.name}
@@ -156,7 +156,7 @@ export const PostCardContent = memo(function PostCardContent({
           {temperature != null && temperature > 0 && (
             <span
               className="tnum ml-auto inline-flex h-6 items-center gap-1 px-[9px] text-[11.5px] font-bold"
-              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)", borderRadius: 6 }}
+              style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)", borderRadius: 8 }}
             >
               🌡 {temperature}°
             </span>
@@ -310,7 +310,7 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
 
   if (error) {
     return (
-      <div className="bg-card overflow-hidden" style={{ borderRadius: 10 }}>
+      <div className="bg-card overflow-hidden" style={{ borderRadius: 12 }}>
         <div className="bg-muted text-muted-foreground/50 flex min-h-[120px] w-full items-center justify-center">
           <ImageOff className="h-8 w-8" />
         </div>

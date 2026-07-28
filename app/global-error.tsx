@@ -66,7 +66,7 @@ export default function GlobalError({
                 color: "#fff",
                 background: "#961E37",
                 border: "none",
-                borderRadius: 10,
+                borderRadius: 12,
                 cursor: "pointer",
               }}
             >

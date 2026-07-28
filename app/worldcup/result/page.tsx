@@ -332,7 +332,7 @@ export default async function WorldcupResultPage({
                     style={{
                       marginTop: 12,
                       padding: "8px 10px",
-                      borderRadius: 10,
+                      borderRadius: 12,
                       background: "rgba(150,30,55,0.06)",
                       fontSize: 12.5,
                       fontWeight: 700,
@@ -350,7 +350,7 @@ export default async function WorldcupResultPage({
               style={{
                 background: "#fff",
                 border: "1px solid var(--wc-line)",
-                borderRadius: 14,
+                borderRadius: 16,
                 boxShadow: "var(--wc-shadow-1)",
                 padding: "16px 18px",
                 marginBottom: 22,
@@ -389,7 +389,7 @@ export default async function WorldcupResultPage({
               style={{
                 background: "#fff",
                 border: "1px solid var(--wc-line)",
-                borderRadius: 14,
+                borderRadius: 16,
                 boxShadow: "var(--wc-shadow-1)",
                 overflow: "hidden",
                 marginBottom: 22,

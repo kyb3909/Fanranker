@@ -17,7 +17,7 @@ export function PositionBadge({ pos, size = "md" }: { pos: Position; size?: "sm"
       style={{
         width: px,
         height: px,
-        borderRadius: 6,
+        borderRadius: 8,
         background: POSITION_HEX[pos],
         color: "white",
         display: "inline-flex",
@@ -157,7 +157,7 @@ export function PlayerPoolCard({
     <div
       style={{
         background: "var(--draft-card)",
-        borderRadius: 14,
+        borderRadius: 16,
         border: `${pinned ? 2 : 1}px solid ${
           pinned ? "var(--draft-burgundy)" : "var(--draft-line)"
         }`,

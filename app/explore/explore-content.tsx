@@ -178,7 +178,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
                   <Link
                     key={cat.slug}
                     href={`/community/${cat.slug}`}
-                    className="group flex items-start gap-3.5 rounded-[13px] p-[18px] transition-transform hover:-translate-y-1"
+                    className="group flex items-start gap-3.5 rounded-[12px] p-[18px] transition-transform hover:-translate-y-1"
                     style={{
                       background: "var(--wc-card)",
                       border: "1px solid var(--wc-line)",
@@ -187,7 +187,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
                   >
                     <span
                       aria-hidden
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-[11px]"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-[12px]"
                       style={{ background: chip.bg, color: chip.color }}
                     >
                       <BoardIcon slug={cat.slug} className="h-[21px] w-[21px]" />

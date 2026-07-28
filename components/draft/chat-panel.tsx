@@ -292,7 +292,7 @@ function MessageRow({ msg, isMine }: { msg: ChatMessage; isMine: boolean }) {
           background: isMine ? "var(--draft-burgundy)" : "var(--draft-soft)",
           color: isMine ? "white" : "var(--draft-ink)",
           padding: "7px 12px",
-          borderRadius: 14,
+          borderRadius: 16,
           maxWidth: "80%",
           fontSize: 13,
           lineHeight: 1.4,
