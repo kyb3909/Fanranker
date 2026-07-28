@@ -1,96 +1,123 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { NextRequest } from "next/server"
 
-// Extract and test the pure logic from onboarding-guard.ts
+/**
+ * onboardingGuard — **실제 가드를 import 해서** 검증한다.
+ * (기존 파일은 ONBOARDING_EXCLUDED 복사본만 검증하는 미러 테스트였다 — test-gaps.md)
+ *
+ * 지키는 계약:
+ *   1. /onboarding·/sign-up·/api 등 제외 경로는 DB 조회 없이 통과 (무한 리다이렉트 방지)
+ *   2. 완료 쿠키(positive cache)가 있으면 DB 조회 생략
+ *   3. negative cache 는 없다 — 쿠키가 없으면 항상 DB 로 self-heal
+ *      (2026-06-20 /↔/sign-up 무한 루프 회귀의 재발 방지선)
+ *   4. 신규 유저(PGRST116)·미완료 유저 → /sign-up 리다이렉트
+ *   5. 완료 유저 → 통과 + onboarding_done 쿠키 24h 캐싱
+ *   6. DB 예외 → /sign-up 리다이렉트 (미완료 쪽으로 fail)
+ */
 
-const ONBOARDING_EXCLUDED = [
-  "/onboarding",
-  "/api/",
-  "/sign-up",
-  "/sign-in",
-  "/sso-callback",
-  "/terms",
-  "/privacy",
-  "/content-policy",
-  "/_next/",
-  "/favicon.ico",
-  "/design-demo",
-]
+const singleMock = vi.fn()
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => singleMock(),
+        }),
+      }),
+    }),
+  }),
+}))
 
-function isOnboardingExcluded(pathname: string): boolean {
-  return ONBOARDING_EXCLUDED.some((p) => pathname.startsWith(p))
+import { onboardingGuard } from "@/lib/middleware/onboarding-guard"
+
+const authAs = (userId: string | null) => vi.fn(async () => ({ userId }))
+
+function makeReq(path: string, cookie?: string): NextRequest {
+  return new NextRequest(new URL(path, "https://gongnori.fan"), {
+    headers: cookie ? { cookie } : undefined,
+  })
 }
 
-describe("onboarding-guard logic", () => {
-  describe("isOnboardingExcluded", () => {
-    it("excludes onboarding page itself", () => {
-      expect(isOnboardingExcluded("/onboarding")).toBe(true)
-      expect(isOnboardingExcluded("/onboarding/step2")).toBe(true)
-    })
-
-    it("excludes all API routes", () => {
-      expect(isOnboardingExcluded("/api/posts")).toBe(true)
-      expect(isOnboardingExcluded("/api/profile/me")).toBe(true)
-    })
-
-    it("excludes auth pages", () => {
-      expect(isOnboardingExcluded("/sign-up")).toBe(true)
-      expect(isOnboardingExcluded("/sign-in")).toBe(true)
-      expect(isOnboardingExcluded("/sso-callback")).toBe(true)
-    })
-
-    it("excludes legal pages", () => {
-      expect(isOnboardingExcluded("/terms")).toBe(true)
-      expect(isOnboardingExcluded("/privacy")).toBe(true)
-      expect(isOnboardingExcluded("/content-policy")).toBe(true)
-    })
-
-    it("excludes Next.js internals", () => {
-      expect(isOnboardingExcluded("/_next/static/chunks/main.js")).toBe(true)
-      expect(isOnboardingExcluded("/favicon.ico")).toBe(true)
-    })
-
-    it("does NOT exclude regular pages (should check onboarding)", () => {
-      expect(isOnboardingExcluded("/")).toBe(false)
-      expect(isOnboardingExcluded("/community/football")).toBe(false)
-      expect(isOnboardingExcluded("/post/some-id")).toBe(false)
-      expect(isOnboardingExcluded("/settings")).toBe(false)
-      expect(isOnboardingExcluded("/shop")).toBe(false)
-      expect(isOnboardingExcluded("/live")).toBe(false)
-      expect(isOnboardingExcluded("/games")).toBe(false)
-    })
+describe("onboardingGuard", () => {
+  beforeEach(() => {
+    singleMock.mockReset()
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co")
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
   })
 
-  // ──────────────────────────────────────────────────────────────
-  // 회귀: 가입 직후 /↔/sign-up 무한 리다이렉트 루프 → 빈 /sign-up(null) 화면 (2026-06-20)
-  //
-  // 과거 미들웨어는 `onboarding_status=incomplete` 쿠키(negative cache)가 있으면
-  // DB 재조회 없이 곧장 /sign-up 으로 단락했다. 온보딩 완료 직후 DB 는 완료지만
-  // 이 쿠키가 (동기화 실패·path 불일치 등으로) 남으면, /sign-up 은 "이미 완료"라
-  // null(빈 화면)을 그리고 다시 / 로 보내 무한 루프가 됐다.
-  //   → negative cache 를 제거. 완료 쿠키(positive cache)만 통과시키고,
-  //     그 외에는 항상 DB 로 판정해 self-heal 한다.
-  // ──────────────────────────────────────────────────────────────
-  describe("redirect-loop regression — no negative cache", () => {
-    type Cookies = { onboarding_done?: string; onboarding_status?: string }
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
 
-    // 미들웨어 결정 로직 미러 (onboarding-guard.ts 의 쿠키 단락 부분)
-    function middlewareShortCircuit(cookies: Cookies): "pass" | "check-db" {
-      if (cookies.onboarding_done) return "pass"
-      // incomplete 쿠키는 더 이상 단락하지 않는다 → 항상 DB 재확인.
-      return "check-db"
+  it("제외 경로는 auth·DB 를 건드리지 않는다 — /onboarding 자기 자신 포함 (루프 방지)", async () => {
+    const auth = authAs("user_1")
+    for (const path of ["/onboarding", "/onboarding/step2", "/api/posts", "/sign-up", "/sign-in"]) {
+      expect(await onboardingGuard(auth, makeReq(path))).toBeNull()
     }
+    expect(auth).not.toHaveBeenCalled()
+    expect(singleMock).not.toHaveBeenCalled()
+  })
 
-    it("완료 쿠키(done)가 있으면 DB 조회 없이 통과한다", () => {
-      expect(middlewareShortCircuit({ onboarding_done: "1" })).toBe("pass")
-    })
+  it("비로그인 유저는 검사 대상이 아니다", async () => {
+    const res = await onboardingGuard(authAs(null), makeReq("/community/football"))
+    expect(res).toBeNull()
+    expect(singleMock).not.toHaveBeenCalled()
+  })
 
-    it("incomplete 쿠키가 남아 있어도 단락하지 않고 DB 로 재확인한다 (self-heal)", () => {
-      // DB 가 완료라면 check-db 단계에서 통과 처리되므로 루프가 생기지 않는다.
-      expect(middlewareShortCircuit({ onboarding_status: "incomplete" })).toBe("check-db")
-    })
+  it("완료 쿠키가 있으면 DB 조회 없이 통과한다 (positive cache)", async () => {
+    const res = await onboardingGuard(authAs("user_1"), makeReq("/", "onboarding_done=1"))
+    expect(res).toBeNull()
+    expect(singleMock).not.toHaveBeenCalled()
+  })
 
-    it("쿠키가 전혀 없으면 DB 로 판정한다", () => {
-      expect(middlewareShortCircuit({})).toBe("check-db")
-    })
+  it("과거의 incomplete 쿠키가 남아 있어도 단락하지 않고 DB 로 재확인한다 (negative cache 금지 — 루프 회귀 방지)", async () => {
+    singleMock.mockResolvedValue({ data: { onboarding_completed: true }, error: null })
+    const res = await onboardingGuard(
+      authAs("user_1"),
+      makeReq("/", "onboarding_status=incomplete")
+    )
+    // DB 가 완료라고 하면 통과해야 한다 — 쿠키만 보고 /sign-up 으로 보내면 무한 루프
+    expect(res?.headers.get("location") ?? null).toBeNull()
+    expect(singleMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("신규 유저(프로필 없음, PGRST116) → /sign-up 리다이렉트", async () => {
+    singleMock.mockResolvedValue({ data: null, error: { code: "PGRST116" } })
+    const res = await onboardingGuard(authAs("user_new"), makeReq("/community/football"))
+    expect(new URL(res!.headers.get("location")!).pathname).toBe("/sign-up")
+  })
+
+  it("온보딩 미완료 유저 → /sign-up 리다이렉트", async () => {
+    singleMock.mockResolvedValue({ data: { onboarding_completed: false }, error: null })
+    const res = await onboardingGuard(authAs("user_1"), makeReq("/"))
+    expect(new URL(res!.headers.get("location")!).pathname).toBe("/sign-up")
+  })
+
+  it("완료 유저는 통과하고 onboarding_done 쿠키가 24시간으로 캐싱된다", async () => {
+    singleMock.mockResolvedValue({ data: { onboarding_completed: true }, error: null })
+    const res = await onboardingGuard(authAs("user_1"), makeReq("/"))
+
+    expect(res).not.toBeNull()
+    expect(res!.headers.get("location")).toBeNull() // 리다이렉트 아님
+    const cookie = res!.cookies.get("onboarding_done")
+    expect(cookie?.value).toBe("1")
+    expect(cookie?.maxAge).toBe(60 * 60 * 24)
+    expect(cookie?.httpOnly).toBe(true)
+  })
+
+  it("DB 조회가 예외를 던지면 /sign-up 으로 보낸다 (완료로 간주하지 않음)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    singleMock.mockRejectedValue(new Error("connection refused"))
+    const res = await onboardingGuard(authAs("user_1"), makeReq("/"))
+    expect(new URL(res!.headers.get("location")!).pathname).toBe("/sign-up")
+    errorSpy.mockRestore()
+  })
+
+  it("Supabase env 가 없으면 막지 않고 통과한다 (가용성 우선, 로그만)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "")
+    const res = await onboardingGuard(authAs("user_1"), makeReq("/"))
+    expect(res).toBeNull()
+    errorSpy.mockRestore()
   })
 })
