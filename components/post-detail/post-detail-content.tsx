@@ -301,8 +301,10 @@ export function PostDetailContent({
             <div>
               {typeof post.content === "string" ? (
                 <p
+                  className="max-w-[68ch]"
                   style={{
-                    fontSize: 15,
+                    // TipTap 본문(prose-base)과 같은 규격 — 두 분기가 달라 보이면 안 된다
+                    fontSize: 16,
                     lineHeight: 1.75,
                     color: "var(--wc-ink)",
                     wordBreak: "keep-all",
@@ -312,7 +314,7 @@ export function PostDetailContent({
                 </p>
               ) : (
                 // TipTap JSON 렌더링 (임베드 포함)
-                <TipTapContent content={post.content} />
+                <TipTapContent content={post.content} size="base" />
               )}
             </div>
             {/* Image — 본문에 이미 포함된 이미지는 중복 표시하지 않음 */}
