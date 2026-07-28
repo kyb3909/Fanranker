@@ -86,7 +86,7 @@ export function BoardRecentPosts({
                 {post.title}
               </span>
               <div
-                className="flex shrink-0 items-center gap-2.5 text-[11px] tabular-nums"
+                className="gn-num flex shrink-0 items-center gap-2.5 text-[11px]"
                 style={{ color: "var(--wc-mute)" }}
               >
                 <span className="flex items-center gap-0.5">

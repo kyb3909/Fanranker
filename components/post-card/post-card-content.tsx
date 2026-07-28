@@ -324,7 +324,9 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
         사용자 업로드 이미지는 aspect 비율 예측 불가 → 고정 16/9 컨테이너 + fill + object-cover.
         width/height prop 기반으로는 Next.js가 자연 비율 불일치 경고(지속 발생)를 피할 수 없음.
       */}
-      <div className="bg-muted relative flex aspect-video max-h-[480px] w-full items-center justify-center transition-opacity hover:opacity-95">
+      {/* gn-thumb: 밴드 히어로와 같은 사진 그레이드(채도 down + 하단 그라데이션).
+          본문 썸네일이 원본 그대로면 밴드와 다른 집안처럼 보인다. */}
+      <div className="gn-thumb bg-muted relative flex aspect-video max-h-[480px] w-full items-center justify-center transition-opacity hover:opacity-95">
         {canUseOptimizedFeedImage(src) ? (
           <Image
             src={src}

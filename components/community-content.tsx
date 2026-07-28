@@ -335,7 +335,7 @@ export const CommunityContent = memo(function CommunityContent({
                 >
                   {/* 데스크탑 레이아웃 */}
                   <div
-                    className="col-span-1 hidden text-center tabular-nums sm:block"
+                    className="gn-num col-span-1 hidden text-center sm:block"
                     style={{ color: "var(--wc-mute)" }}
                   >
                     {post.isNotice ? (
@@ -364,7 +364,7 @@ export const CommunityContent = memo(function CommunityContent({
                     </span>
                     {post.comments > 0 && (
                       <span
-                        className="flex-shrink-0 font-bold tabular-nums"
+                        className="gn-num flex-shrink-0 font-bold"
                         style={{ color: "var(--wc-warn)" }}
                       >
                         [{post.comments}]
@@ -384,7 +384,7 @@ export const CommunityContent = memo(function CommunityContent({
                     {post.timestamp}
                   </div>
                   <div
-                    className="col-span-1 hidden text-center tabular-nums sm:block"
+                    className="gn-num col-span-1 hidden text-center sm:block"
                     style={{ color: "var(--wc-ink)", fontWeight: 600 }}
                   >
                     {post.upvotes}
@@ -417,7 +417,7 @@ export const CommunityContent = memo(function CommunityContent({
                       </span>
                       {post.comments > 0 && (
                         <span
-                          className="shrink-0 font-bold tabular-nums"
+                          className="gn-num shrink-0 font-bold"
                           style={{ color: "var(--wc-warn)" }}
                         >
                           [{post.comments}]

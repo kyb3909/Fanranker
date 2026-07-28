@@ -175,7 +175,7 @@ export const ActivitySidebar = memo(function ActivitySidebar({
                     </p>
                     {post.comments > 0 && (
                       <span
-                        className="shrink-0 text-[11px] font-semibold tabular-nums"
+                        className="gn-num shrink-0 text-[11px] font-bold"
                         style={{ color: "var(--wc-mute)" }}
                       >
                         [{post.comments}]
