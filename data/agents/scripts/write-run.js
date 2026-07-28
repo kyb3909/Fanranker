@@ -68,6 +68,18 @@ function mediaNameKo(domain) {
   return MEDIA_NAME_KO[d] || d
 }
 
+// "오늘의 떡밥"(홈 카드뉴스) 자격 판정 — 장문 재구성은 떡밥행 아이템에만 적용한다
+// (운영 결정 2026-07-29: 게시판 목록용 일반 브리프는 3~6문장이면 충분, 카드로 떠서
+// 눌러 읽는 글만 원문 기반 상세 기사가 필요).
+// 카드 자격 = lib/feed/cardnews.ts 의 이미지 폴백이 성립하는 글:
+// youtube 소셜(썸네일 폴백) / image 소셜 / og_image. 인스타·X 임베드만 있는 글과
+// 순수 텍스트 글은 카드에서 걸러지므로 여기서도 짧은 브리프로 남긴다.
+function isForCardNews(item) {
+  const socials = item.urls?.socials || []
+  if (socials.some((s) => s?.type === 'youtube' || s?.type === 'image')) return true
+  return !!item.urls?.og_image
+}
+
 function draftHashOf(headline, body) {
   return createHash('sha1').update(headline + '\n' + body, 'utf8').digest('hex').slice(0, 16)
 }
@@ -152,8 +164,11 @@ async function main() {
       facts: {
         title: item.normalized?.title || item.raw.title,
         excerpt: item.normalized?.excerpt || item.raw.excerpt || '',
-        // 기사 본문 앞부분 (영어 원문). 있으면 writer 가 이걸로 살을 붙인다.
-        articleBody: (item.raw?.articleText || '').slice(0, 2800) || null,
+        // 기사 본문 앞부분 (영어 원문) — **오늘의 떡밥(카드뉴스)행 아이템에만** 주입.
+        // 카드 자격 없는 글은 articleBody 없이 기존 짧은 브리프(3~6문장)로 나간다.
+        articleBody: isForCardNews(item)
+          ? (item.raw?.articleText || '').slice(0, 2800) || null
+          : null,
         sourceMedia: mediaNameKo(item.source?.domain),
         credibility,
         unverified,
