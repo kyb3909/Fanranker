@@ -13,6 +13,7 @@ import { FeedSection } from "@/components/home/feed-section"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 import { TodayGamesStrip } from "@/components/home/today-games-strip"
 import { MatchdayBand } from "@/components/home/matchday-band"
+import { PageBand } from "@/components/page-band"
 import { CardNewsFeed } from "@/components/cardnews/card-news-feed"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
@@ -138,9 +139,16 @@ export function HomeClient({
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
-      {/* 오늘의 메인 이벤트 — 풀블리드 다크 밴드 (시안 A). 오늘의 떡밥 탭에서만.
-          게시판/오늘의 경기 탭은 목록 소비 모드라 밴드가 스크롤만 늘린다. */}
-      {feedTab === "cardnews" && <MatchdayBand cards={initialCardNews?.cards ?? []} />}
+      {/*
+        상단 밴드는 탭이 바뀌어도 유지한다 — 정렬 칩을 눌렀다고 밴드가 통째로 사라지면
+        같은 페이지로 안 읽힌다(530px → 0). 다만 목록 소비 탭에서 히어로 캐러셀까지
+        끌고 가면 스크롤만 늘어나므로, 다른 페이지와 동일한 공용 PageBand 로 낮춘다.
+      */}
+      {feedTab === "cardnews" ? (
+        <MatchdayBand cards={initialCardNews?.cards ?? []} />
+      ) : (
+        <PageBand kicker="Wall" title="담벼락" description="팔로우한 게시판 글이 여기로 모인다." />
+      )}
       <main
         id="main-content"
         className="mx-auto min-h-[80vh] max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
