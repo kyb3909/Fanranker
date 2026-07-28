@@ -119,9 +119,9 @@ export function BettingMatchCard({
     } as const
     const badgeNeutral = {
       ...badgeBase,
-      background: "var(--wc-card)",
+      // 마켓 라벨은 테두리 없이 배경 틴트로만 — 카드 안 테두리 개수를 줄인다
+      background: "var(--wc-soft)",
       color: "var(--wc-mute)",
-      border: "1px solid var(--wc-line-2)",
     } as const
     const badgeBurgundy = {
       ...badgeBase,

@@ -294,7 +294,7 @@
   /* background / color 는 sport 별로 className override 가능하도록 wc-tokens 에서는 정의 X.
    * 각 BettingMatchCard 에서 sportColors[sport] 의 Tailwind 클래스로 종목별 그라디언트
    * 띠 적용. */
-  padding: 8px 14px;
+  padding: 10px 14px;
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -317,7 +317,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 12px 14px;
+  padding: 14px;
   text-align: center;
   gap: 10px;
 }
@@ -335,32 +335,35 @@
   font-weight: 600;
 }
 .worldcup-scope .wc-mrow-block {
-  /* 베팅 경기 카드 내부 게임 블록 — wc-soft (회색) 대신 흰색.
-   * 카드 안에서 보더만으로 구분. */
-  background: var(--wc-card);
-  border-radius: 8px;
-  padding: 10px;
-  margin: 0 12px 8px;
-  border: 1px solid var(--wc-line);
+  /* 마켓 행 — 카드 안에 또 상자를 띄우지 않는다.
+   * 흰 카드 위 흰 블록(+테두리) 안에 흰 버튼(+테두리)이 3중으로 겹쳐 보이던 구성을
+   * 걷어내고, 위쪽 헤어라인 하나로만 구분한다. 모든 콘텐츠 좌측 인셋 = 14px 로 통일. */
+  background: transparent;
+  border-radius: 0;
+  padding: 12px 14px;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--wc-line);
 }
 .worldcup-scope .wc-mrow-block-h {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .worldcup-scope .wc-mrow-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: calc(100% - 24px);
-  margin: 0 12px 12px;
-  padding: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
   background: transparent;
-  border: 1px dashed var(--wc-line-2);
-  border-radius: 6px;
+  border: 0;
+  border-top: 1px solid var(--wc-line);
+  border-radius: 0;
   font-size: 12px;
   color: var(--wc-mute);
   cursor: pointer;
@@ -370,9 +373,8 @@
   min-height: 44px;
 }
 .worldcup-scope .wc-mrow-toggle:hover {
-  background: var(--wc-card);
+  background: var(--wc-soft);
   color: var(--wc-ink);
-  border-style: solid;
 }
 @media (min-width: 640px) {
   .worldcup-scope .wc-mrow-toggle {
@@ -384,7 +386,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin: 0 12px 12px;
+  margin: 12px 14px 14px;
   padding: 8px;
   background: rgba(47, 125, 91, 0.12);
   border-radius: 6px;
@@ -400,10 +402,10 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 10px 8px;
+  padding: 11px 8px;
   background: var(--wc-card);
-  border: 1px solid var(--wc-line-2);
-  border-radius: 6px;
+  border: 1px solid var(--wc-line);
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition:

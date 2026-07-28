@@ -68,7 +68,8 @@ export function BettingTab({
   onRefresh,
 }: BettingTabProps) {
   return (
-    <div className="space-y-2">
+    // 카드 사이 간격 8 → 10px: 카드 내부 인셋(14px)에 비해 붙어 있어 목록이 한 덩어리로 읽혔다
+    <div className="space-y-2.5">
       {/* Today's matches header + deadline countdown */}
 
       {/* Loading/Error/Refresh status */}
