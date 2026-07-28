@@ -68,10 +68,31 @@ const MEDIA_NAME_KO = {
   'thetimes.com': '더 타임스',
 }
 
+// DB 사전(news_alias_dictionary category='media')이 우선 — 운영자 교정을
+// edit_learner 가 여기 등록하면 코드 배포 없이 다음 발행부터 반영된다.
+// 위 하드코딩 맵은 DB 미조회/미등록 시 fallback.
+let mediaAliasFromDb = new Map()
+
+async function loadMediaAliases(supabaseClient) {
+  try {
+    const { data } = await supabaseClient
+      .from('news_alias_dictionary')
+      .select('preferred_ko, surfaces')
+      .in('category', ['media', 'term'])
+    for (const row of data || []) {
+      for (const s of row.surfaces || []) {
+        mediaAliasFromDb.set(String(s).toLowerCase(), row.preferred_ko)
+      }
+    }
+  } catch {
+    // 사전 조회 실패 시 하드코딩 fallback 으로 계속
+  }
+}
+
 function mediaNameKo(domain) {
   if (!domain) return 'unknown'
   const d = domain.replace(/^www\./, '').toLowerCase()
-  return MEDIA_NAME_KO[d] || d
+  return mediaAliasFromDb.get(d) || MEDIA_NAME_KO[d] || d
 }
 
 // "오늘의 떡밥"(홈 카드뉴스) 자격 판정 — 장문 재구성은 떡밥행 아이템에만 적용한다
@@ -117,6 +138,8 @@ async function main() {
   const maxOutputTokens = cfg.maxOutputTokens || 1500
 
   log(`model=${modelId} tier=${cfg.tier} dry=${dryRun}`)
+
+  await loadMediaAliases(supabase)
 
   const { data: items, error } = await supabase
     .from('news_reservoir')

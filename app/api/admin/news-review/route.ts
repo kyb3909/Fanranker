@@ -151,11 +151,25 @@ export async function POST(req: NextRequest) {
       .insert(flairIds.map((fid) => ({ post_id: post.id, flair_id: fid })))
   }
 
+  // 검수자가 제목/본문을 고쳐서 발행하면 수정 전 원본을 publish.pre_edit 에 보존한다.
+  // 교정 학습기(data/agents/scripts/learn-from-edits.js)가 원본↔발행본 diff 에서
+  // 표기 교정(선수명·매체명·음차)을 추출해 사전에 등록하는 재료다 — draft 는
+  // 아래에서 편집본으로 덮어쓰므로 여기 남기지 않으면 원본이 사라진다.
+  const wasEdited =
+    (editTitle !== undefined && editTitle?.trim() !== item.draft?.title) ||
+    (editContent !== undefined &&
+      JSON.stringify(sanitizeTipTapJSON(editContent)) !== JSON.stringify(item.draft?.content))
   await supabase
     .from("news_reservoir")
     .update({
       status: "published",
-      publish: { post_id: post.id, published_at: now },
+      publish: {
+        post_id: post.id,
+        published_at: now,
+        ...(wasEdited
+          ? { pre_edit: { title: item.draft?.title ?? null, content: item.draft?.content ?? null } }
+          : {}),
+      },
       draft: nextDraft,
       updated_at: now,
     })
