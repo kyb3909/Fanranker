@@ -30,6 +30,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      // server-only 는 클라이언트 조건에서 throw 하도록 만들어진 패키지다.
+      // vitest 는 node 환경이라 서버 모듈(lib/supabase/server.ts)을 import 하면 터진다.
+      // 테스트에서만 no-op 스텁으로 대체한다 (프로덕션 번들 무관).
+      "server-only": path.resolve(__dirname, "__tests__/_stubs/server-only.ts"),
     },
   },
 })

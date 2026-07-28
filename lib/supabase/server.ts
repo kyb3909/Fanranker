@@ -13,6 +13,13 @@
  * @see https://clerk.com/docs/guides/development/integrations/databases/supabase
  */
 
+// ⚠️ 클라이언트 번들 유입 차단.
+// 이 파일은 createServiceRoleClient() 를 export 한다 — 서비스 롤 키가 브라우저로 새면
+// RLS 를 통째로 우회하는 DB 전체 접근이 노출된다. 지금은 위반 0건이지만 안전망도 0이었다.
+// 서버 컴포넌트에 "use client" 한 줄만 추가돼도 조용히 번들에 들어갈 수 있었다.
+// 이 import 는 클라이언트 번들에 포함되는 순간 빌드를 실패시킨다.
+import "server-only"
+
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { env } from "@/lib/env"
