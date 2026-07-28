@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { requireStaff } from "@/lib/admin/roles"
+import { Admin2Nav } from "./nav"
 
 /**
  * /admin2 — 새 관리자 작업대 (검토용 병렬 버전).
@@ -41,6 +42,10 @@ export default async function Admin2Layout({ children }: { children: React.React
               기존 관리자 →
             </Link>
           )}
+        </div>
+        {/* 메뉴가 4개뿐이라 항상 펼쳐둔다 — 대기 건수를 그 자리에서 보여주는 게 핵심 */}
+        <div className="mx-auto max-w-5xl px-4 pb-2">
+          <Admin2Nav />
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-5">{children}</main>

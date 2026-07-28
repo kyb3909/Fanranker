@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import AggReviewPage from "@/app/admin/agg-review/page"
 
 export const metadata: Metadata = { title: "커뮤글 검수" }
@@ -20,9 +19,6 @@ export default function Admin2AggPage() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="text-base font-bold">커뮤글 검수</h1>
-        <Link href="/admin2" className="text-muted-foreground text-xs hover:underline">
-          ← 작업대
-        </Link>
       </div>
       <AggReviewPage />
     </div>

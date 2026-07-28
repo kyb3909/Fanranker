@@ -212,9 +212,6 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
             )}
           </p>
         </div>
-        <Link href="/admin2" className="text-muted-foreground text-xs hover:underline">
-          ← 작업대
-        </Link>
       </div>
 
       {/* ── 단축키 안내 + 일괄 작업 ──────────────────────────────────── */}

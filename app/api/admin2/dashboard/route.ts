@@ -224,7 +224,7 @@ export async function GET() {
       key: "reports",
       label: "신고",
       count: pendingReports.count ?? 0,
-      href: "/admin/content/reports",
+      href: "/admin2/reports",
       severity: "high",
       adminOnly: true,
       note: "처리(resolve) 누르면 카드·정지가 자동 적용된다",
