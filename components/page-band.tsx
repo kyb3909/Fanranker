@@ -43,7 +43,7 @@ export function PageBand({
 }: PageBandProps) {
   const Title = as
   return (
-    <section className={`gn-band${children ? "gn-band-open" : ""}`}>
+    <section className={children ? "gn-band gn-band-open" : "gn-band"}>
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
         <div
           className={`flex flex-wrap items-end gap-x-6 gap-y-3 pt-8 ${children ? "pb-6" : "pb-8"}`}
