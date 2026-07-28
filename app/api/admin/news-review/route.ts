@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { after } from "next/server"
 import { z } from "zod"
 import { requireAdmin } from "@/lib/supabase/admin"
 import { createServiceRoleClient } from "@/lib/supabase/server"
@@ -7,6 +8,7 @@ import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
 import { suggestFlairs } from "@/lib/news/suggest-flair"
+import { learnFromDeskEdit } from "@/lib/news/learn-corrections"
 import type { TipTapNode } from "@/types/post"
 
 export const dynamic = "force-dynamic"
@@ -189,5 +191,26 @@ export async function POST(req: NextRequest) {
     imageUrl: image,
   })
 
-  return NextResponse.json({ ok: true, status: "published", post_id: post.id })
+  // 데스킹 학습 — 검수자가 고친 표기(선수명·음차·매체명)를 사전에 반영해
+  // 다음 기사부터 자동 적용한다. 응답을 막지 않도록 after() 로 뒤로 미루고,
+  // 실패해도 발행에는 영향이 없다 (learnFromDeskEdit 는 throw 하지 않음).
+  if (wasEdited) {
+    after(async () => {
+      await learnFromDeskEdit(supabase, {
+        postId: post.id,
+        originalTitle: item.draft?.title ?? "",
+        originalContent: item.draft?.content ?? null,
+        finalTitle,
+        finalContent,
+      })
+    })
+  }
+
+  return NextResponse.json({
+    ok: true,
+    status: "published",
+    post_id: post.id,
+    // 검수자에게 "이 수정은 학습된다"를 알려주는 신호 (실제 결과는 after 에서 처리)
+    learning: wasEdited,
+  })
 }

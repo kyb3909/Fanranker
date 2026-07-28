@@ -88,7 +88,7 @@ export function NewsReviewClient({
           ...(action === "publish" ? { flair_ids: flairSel[id] ?? [] } : {}),
         }),
       })
-      const d = (await res.json().catch(() => ({}))) as { error?: string }
+      const d = (await res.json().catch(() => ({}))) as { error?: string; learning?: boolean }
       if (!res.ok) {
         toast({ variant: "destructive", title: "오류", description: d.error || "처리 실패" })
         return
@@ -106,7 +106,12 @@ export function NewsReviewClient({
         if (editingId === id) setEditingId(null)
         toast({
           title: action === "publish" ? "발행 완료" : "반려 완료",
-          description: action === "publish" ? "공놀이봇 이름으로 게시됐습니다." : undefined,
+          description:
+            action === "publish"
+              ? d.learning
+                ? "게시됐습니다. 고치신 표기를 학습해 다음 기사에 반영합니다."
+                : "공놀이봇 이름으로 게시됐습니다."
+              : undefined,
         })
       }
     } finally {
