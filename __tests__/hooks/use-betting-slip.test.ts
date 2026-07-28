@@ -1,565 +1,297 @@
-import { describe, it, expect } from "vitest"
-import type { SelectedBet, GroupedMatch, SportsGame } from "@/types/betting"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { renderHook, act } from "@testing-library/react"
+import type { GroupedMatch, SportsGame } from "@/types/betting"
 
-// ============================================================
-// Pure logic extracted from use-betting-slip.ts for testing
-// ============================================================
+/**
+ * useBettingSlip — **실제 훅을 renderHook 으로 렌더해서** 검증한다.
+ * (기존 파일은 훅을 import 하지 않고 로직 복사본 45케이스를 검증하는 미러였다 —
+ *  test-gaps.md P4. hooks/ 폴더 커버리지가 0.00% 였던 이유.)
+ *
+ * 지키는 계약:
+ *   1. totalOdds = 선택 배당의 곱, expectedReturn = floor(betAmount × totalOdds)
+ *   2. 같은 매치 다른 마켓 → 교체 / 같은 선택 재클릭 → 해제 / 같은 게임 다른 선택 → 변경
+ *   3. 단일 종목 슬립 — 타 종목 추가 거부
+ *   4. 시작된 경기·마감 지난 게임 선택 거부
+ *   5. 제출 전 검증(빈 슬립·0볼·MAX 10볼)은 fetch 자체를 막는다
+ *   6. 제출은 /api/sports/prediction 프록시 경로로만 (betman 직접 노출 금지) +
+ *      idempotency_key 포함
+ *   7. 성공 → 슬립/금액/종목 초기화 + 완료 모달, 실패 → 슬립 유지 + 에러 모달
+ */
 
-function calcTotalOdds(bets: SelectedBet[]): number {
-  return bets.reduce((acc, bet) => acc * (bet.odds || 1), 1)
-}
+vi.mock("@clerk/nextjs", () => ({
+  useAuth: () => ({ isSignedIn: false }), // 초기 잔액/프로필 fetch 이펙트 차단 (기본 10볼)
+}))
 
-function calcExpectedReturn(betAmount: number, totalOdds: number): number {
-  return Math.floor(betAmount * totalOdds)
-}
+const globalMutateMock = vi.fn()
+vi.mock("swr", () => ({
+  useSWRConfig: () => ({ mutate: globalMutateMock }),
+}))
 
-/** Core state updater for bet selection (mirrors setSelectedBets callback) */
-function applyBetSelection(
-  prev: SelectedBet[],
-  params: {
-    gameId: string
-    matchKey: string
-    selection: string
-    sport: string
-    gameType: string
-    handicap: number | null
-    overUnderLine: number | null
-    odds?: number
-  },
-  selectedSport: string | null
-): { bets: SelectedBet[]; sportChange?: string | null; blocked?: string } {
-  const { gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds } = params
+const trackEventMock = vi.fn()
+vi.mock("@/lib/analytics/events", () => ({
+  trackEvent: (...args: unknown[]) => trackEventMock(...args),
+}))
 
-  const existingGameBet = prev.find((b) => b.gameId === gameId)
-  const existingMatchBet = prev.find((b) => b.matchKey === matchKey)
+import { useBettingSlip } from "@/hooks/use-betting-slip"
 
-  // Toggle off same selection
-  if (existingGameBet) {
-    if (existingGameBet.selection === selection) {
-      const newBets = prev.filter((b) => b.gameId !== gameId)
-      return { bets: newBets, sportChange: newBets.length === 0 ? null : undefined }
-    }
-    return {
-      bets: prev.map((b) => (b.gameId === gameId ? { ...b, selection, odds } : b)),
-    }
-  }
+/* ────────── 픽스처 ────────── */
 
-  // Replace existing bet for same match
-  if (existingMatchBet) {
-    const newBets = prev.filter((b) => b.matchKey !== matchKey)
-    newBets.push({ gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds })
-    return { bets: newBets }
-  }
+const FUTURE = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+const PAST = new Date(Date.now() - 60 * 60 * 1000).toISOString()
 
-  // First bet — lock sport
-  if (prev.length === 0) {
-    return {
-      bets: [{ gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds }],
-      sportChange: sport,
-    }
-  }
-
-  // Cross-sport block
-  if (sport !== selectedSport) {
-    return { bets: prev, blocked: selectedSport || "" }
-  }
-
+function makeGame(id: string, over: Partial<SportsGame> = {}): SportsGame {
   return {
-    bets: [
-      ...prev,
-      { gameId, matchKey, selection, sport, gameType, handicap, overUnderLine, odds },
-    ],
-  }
-}
-
-/** Validation checks before prediction submission */
-function validateSubmission(
-  selectedBets: SelectedBet[],
-  betAmount: number,
-  userBalls: number
-): { valid: boolean; errorType?: string } {
-  if (selectedBets.length === 0) return { valid: false, errorType: "no_bets" }
-  if (betAmount <= 0) return { valid: false, errorType: "zero_amount" }
-  const MAX_BET = 10
-  if (betAmount > MAX_BET) return { valid: false, errorType: "max_exceeded" }
-  if (betAmount > userBalls) return { valid: false, errorType: "insufficient_balls" }
-  return { valid: true }
-}
-
-/** Match time validation */
-function isMatchPlayable(
-  match: GroupedMatch | undefined,
-  gameId: string,
-  now: Date
-): { playable: boolean; reason?: string } {
-  if (!match) return { playable: true }
-  if (new Date(match.matchTime) <= now) return { playable: false, reason: "match_started" }
-  const game = match.games.find((g) => g.id === gameId)
-  if (game?.bet_close_at && new Date(game.bet_close_at) <= now) {
-    return { playable: false, reason: "bet_closed" }
-  }
-  return { playable: true }
-}
-
-// ============================================================
-// Helpers
-// ============================================================
-
-function makeBet(overrides: Partial<SelectedBet> = {}): SelectedBet {
-  return {
-    gameId: "g1",
-    matchKey: "m1",
-    selection: "홈팀",
-    sport: "축구",
-    gameType: "일반",
-    handicap: null,
-    overUnderLine: null,
-    odds: 1.5,
-    ...overrides,
-  }
-}
-
-function makeMatch(overrides: Partial<GroupedMatch> = {}): GroupedMatch {
-  return {
-    matchKey: "m1",
-    sport: "축구",
-    leagueCode: "KL1",
-    homeTeam: "울산",
-    awayTeam: "전북",
-    matchTime: new Date(Date.now() + 3600000).toISOString(), // 1시간 뒤
-    venue: "울산문수",
-    games: [],
-    ...overrides,
-  }
-}
-
-function makeGame(overrides: Partial<SportsGame> = {}): SportsGame {
-  return {
-    id: "g1",
+    id,
     round_id: "r1",
     game_no: 1,
-    match_time: new Date(Date.now() + 3600000).toISOString(),
+    match_time: FUTURE,
     sport: "축구",
-    league_code: "KL1",
+    league_code: "EPL",
     game_type: "일반",
-    home_team_name: "울산",
-    away_team_name: "전북",
+    home_team_name: "아스날",
+    away_team_name: "리버풀",
     handicap: null,
     over_under_line: null,
-    venue: "울산문수",
-    status: "open",
-    ...overrides,
+    venue: "에미레이트",
+    status: "scheduled",
+    ...over,
   }
 }
 
-// ============================================================
-// Tests
-// ============================================================
-
-describe("calcTotalOdds", () => {
-  it("returns 1 for empty bets", () => {
-    expect(calcTotalOdds([])).toBe(1)
-  })
-
-  it("returns single bet odds", () => {
-    expect(calcTotalOdds([makeBet({ odds: 2.5 })])).toBe(2.5)
-  })
-
-  it("multiplies multiple bet odds", () => {
-    const bets = [makeBet({ odds: 1.5 }), makeBet({ odds: 2.0 }), makeBet({ odds: 3.0 })]
-    expect(calcTotalOdds(bets)).toBe(9.0)
-  })
-
-  it("treats undefined odds as 1", () => {
-    const bets = [makeBet({ odds: 2.0 }), makeBet({ odds: undefined })]
-    expect(calcTotalOdds(bets)).toBe(2.0)
-  })
-
-  it("handles fractional odds correctly", () => {
-    const bets = [makeBet({ odds: 1.85 }), makeBet({ odds: 2.1 })]
-    expect(calcTotalOdds(bets)).toBeCloseTo(3.885, 2)
-  })
-})
-
-describe("calcExpectedReturn", () => {
-  it("floors the result", () => {
-    expect(calcExpectedReturn(3, 1.85)).toBe(5) // 5.55 → 5
-  })
-
-  it("returns 0 for 0 bet amount", () => {
-    expect(calcExpectedReturn(0, 2.5)).toBe(0)
-  })
-
-  it("handles large odds", () => {
-    expect(calcExpectedReturn(10, 100.0)).toBe(1000)
-  })
-
-  it("floors down fractional returns", () => {
-    expect(calcExpectedReturn(1, 1.1)).toBe(1) // 1.1 → 1
-  })
-})
-
-// ============================================================
-// applyBetSelection
-// ============================================================
-
-describe("applyBetSelection", () => {
-  const defaultParams = {
-    gameId: "g1",
-    matchKey: "m1",
-    selection: "홈팀",
-    sport: "축구",
-    gameType: "일반",
-    handicap: null as number | null,
-    overUnderLine: null as number | null,
-    odds: 1.5,
+function makeMatch(
+  matchKey: string,
+  games: SportsGame[],
+  over: Partial<GroupedMatch> = {}
+): GroupedMatch {
+  return {
+    matchKey,
+    sport: games[0]?.sport ?? "축구",
+    leagueCode: "EPL",
+    homeTeam: "아스날",
+    awayTeam: "리버풀",
+    matchTime: FUTURE,
+    venue: "에미레이트",
+    games,
+    ...over,
   }
+}
 
-  describe("first bet", () => {
-    it("adds first bet and locks sport", () => {
-      const result = applyBetSelection([], defaultParams, null)
-      expect(result.bets).toHaveLength(1)
-      expect(result.bets[0].gameId).toBe("g1")
-      expect(result.sportChange).toBe("축구")
+const MATCHES: GroupedMatch[] = [
+  makeMatch("m1", [makeGame("g1"), makeGame("g1-half", { is_half_time: true })]),
+  makeMatch("m2", [makeGame("g2")]),
+  makeMatch("m3-baseball", [makeGame("g3", { sport: "야구" })], { sport: "야구" }),
+  makeMatch("m4-started", [makeGame("g4")], { matchTime: PAST }),
+  makeMatch("m5-closed", [makeGame("g5", { bet_close_at: PAST })]),
+]
+
+function setup(matches: GroupedMatch[] = MATCHES) {
+  const loadMatches = vi.fn()
+  const utils = renderHook(() => useBettingSlip(matches, loadMatches))
+  return { ...utils, loadMatches }
+}
+
+type SelectArgs = [string, string, string, string, string, number | null, number | null, number?]
+const select = (
+  gameId: string,
+  matchKey: string,
+  selection: string,
+  odds?: number,
+  sport = "축구"
+): SelectArgs => [gameId, matchKey, selection, sport, "일반", null, null, odds]
+
+/* ────────── 테스트 ────────── */
+
+describe("useBettingSlip", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  describe("배당·수익 계산", () => {
+    it("totalOdds 는 선택 배당의 곱이다", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.1)))
+      act(() => result.current.handleBetSelection(...select("g2", "m2", "away", 3.0)))
+      expect(result.current.totalOdds).toBeCloseTo(6.3)
     })
 
-    it("preserves all bet properties", () => {
-      const params = {
-        ...defaultParams,
-        handicap: 1.5,
-        overUnderLine: 2.5,
-        odds: 2.1,
-      }
-      const result = applyBetSelection([], params, null)
-      expect(result.bets[0]).toEqual(
-        expect.objectContaining({
-          gameId: "g1",
-          handicap: 1.5,
-          overUnderLine: 2.5,
-          odds: 2.1,
-        })
+    it("expectedReturn = floor(betAmount × totalOdds)", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 1.85)))
+      act(() => result.current.setBetAmount(3))
+      expect(result.current.expectedReturn).toBe(Math.floor(3 * 1.85)) // 5 — 내림, 반올림 아님
+    })
+
+    it("배당 없는 선택은 1 로 취급한다 (0 배당 슬립 금지)", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", undefined)))
+      expect(result.current.totalOdds).toBe(1)
+    })
+  })
+
+  describe("선택 규칙", () => {
+    it("첫 선택이 슬립의 종목을 잠근다", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      expect(result.current.selectedSport).toBe("축구")
+    })
+
+    it("같은 게임 같은 선택 재클릭 → 해제 + 종목 잠금 해제", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      expect(result.current.selectedBets).toHaveLength(0)
+      expect(result.current.selectedSport).toBeNull()
+    })
+
+    it("같은 게임 다른 선택 → 선택·배당이 교체된다 (중복 추가 아님)", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "away", 3.5)))
+      expect(result.current.selectedBets).toHaveLength(1)
+      expect(result.current.selectedBets[0]).toMatchObject({ selection: "away", odds: 3.5 })
+    })
+
+    it("같은 매치의 다른 마켓 선택 → 기존 베팅이 교체된다 (한 경기 한 픽)", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.handleBetSelection(...select("g1-half", "m1", "home", 1.5)))
+      expect(result.current.selectedBets).toHaveLength(1)
+      expect(result.current.selectedBets[0].gameId).toBe("g1-half")
+    })
+
+    it("다른 종목 추가 → 거부하고 경고 모달을 띄운다 (단일 종목 슬립)", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() =>
+        result.current.handleBetSelection(...select("g3", "m3-baseball", "home", 1.7, "야구"))
       )
+      expect(result.current.selectedBets).toHaveLength(1)
+      expect(result.current.selectedBets[0].sport).toBe("축구")
+      expect(result.current.alertModal.isOpen).toBe(true)
+      expect(result.current.alertModal.title).toContain("종목 조합 불가")
+    })
+
+    it("이미 시작된 경기는 선택할 수 없다", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g4", "m4-started", "home", 2.0)))
+      expect(result.current.selectedBets).toHaveLength(0)
+      expect(result.current.alertModal.isOpen).toBe(true)
+    })
+
+    it("bet_close_at 이 지난 게임은 선택할 수 없다", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g5", "m5-closed", "home", 2.0)))
+      expect(result.current.selectedBets).toHaveLength(0)
+      expect(result.current.alertModal.isOpen).toBe(true)
+    })
+
+    it("removeBet — 마지막 베팅 제거 시 종목 잠금도 풀린다", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.handleBetSelection(...select("g2", "m2", "away", 3.0)))
+      act(() => result.current.removeBet("g1"))
+      expect(result.current.selectedBets.map((b) => b.gameId)).toEqual(["g2"])
+      expect(result.current.selectedSport).toBe("축구")
+      act(() => result.current.removeBet("g2"))
+      expect(result.current.selectedSport).toBeNull()
+    })
+
+    it("clearAllBets — 슬립과 종목 잠금이 초기화된다", () => {
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.clearAllBets())
+      expect(result.current.selectedBets).toHaveLength(0)
+      expect(result.current.selectedSport).toBeNull()
+      expect(result.current.totalOdds).toBe(1)
     })
   })
 
-  describe("toggle off same selection", () => {
-    it("removes bet when clicking same selection", () => {
-      const existing = [makeBet({ gameId: "g1", selection: "홈팀" })]
-      const result = applyBetSelection(existing, { ...defaultParams, selection: "홈팀" }, "축구")
-      expect(result.bets).toHaveLength(0)
+  describe("제출 전 검증 — 실패 시 fetch 자체가 없어야 한다", () => {
+    it("빈 슬립 → 경고 모달 + 네트워크 미호출", async () => {
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+      const { result } = setup()
+      await act(() => result.current.handleSubmitPrediction())
+      expect(result.current.alertModal.isOpen).toBe(true)
+      expect(fetchMock).not.toHaveBeenCalled()
     })
 
-    it("clears sport when last bet is toggled off", () => {
-      const existing = [makeBet({ gameId: "g1", selection: "홈팀" })]
-      const result = applyBetSelection(existing, { ...defaultParams, selection: "홈팀" }, "축구")
-      expect(result.sportChange).toBeNull()
+    it("betAmount 0 이하 → 거부", async () => {
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.setBetAmount(0))
+      await act(() => result.current.handleSubmitPrediction())
+      expect(result.current.alertModal.isOpen).toBe(true)
+      expect(fetchMock).not.toHaveBeenCalled()
     })
 
-    it("keeps sport when other bets remain", () => {
-      const existing = [
-        makeBet({ gameId: "g1", selection: "홈팀", matchKey: "m1" }),
-        makeBet({ gameId: "g2", selection: "원정팀", matchKey: "m2" }),
-      ]
-      const result = applyBetSelection(existing, { ...defaultParams, selection: "홈팀" }, "축구")
-      expect(result.bets).toHaveLength(1)
-      expect(result.bets[0].gameId).toBe("g2")
-      expect(result.sportChange).toBeUndefined() // no change
-    })
-  })
-
-  describe("change selection for same game", () => {
-    it("updates selection without adding new bet", () => {
-      const existing = [makeBet({ gameId: "g1", selection: "홈팀" })]
-      const result = applyBetSelection(
-        existing,
-        { ...defaultParams, selection: "원정팀", odds: 2.0 },
-        "축구"
-      )
-      expect(result.bets).toHaveLength(1)
-      expect(result.bets[0].selection).toBe("원정팀")
-      expect(result.bets[0].odds).toBe(2.0)
+    it("MAX 10볼 초과 → 거부", async () => {
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.setBetAmount(11))
+      await act(() => result.current.handleSubmitPrediction())
+      expect(result.current.alertModal.title).toContain("베팅 금액 초과")
+      expect(fetchMock).not.toHaveBeenCalled()
     })
   })
 
-  describe("replace bet for same match (different game)", () => {
-    it("replaces old game bet with new game bet on same match", () => {
-      const existing = [makeBet({ gameId: "g1", matchKey: "m1", gameType: "일반" })]
-      const result = applyBetSelection(
-        existing,
-        { ...defaultParams, gameId: "g2", matchKey: "m1", gameType: "핸디캡" },
-        "축구"
-      )
-      expect(result.bets).toHaveLength(1)
-      expect(result.bets[0].gameId).toBe("g2")
-      expect(result.bets[0].gameType).toBe("핸디캡")
+  describe("제출", () => {
+    it("성공 — /api/sports/prediction 프록시로 idempotency_key 포함 POST, 슬립 초기화 + 완료 모달", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ message: "ok", pickDistribution: [{ label: "홈", pct: 60 }] }),
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      const { result, loadMatches } = setup()
+
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      act(() => result.current.setBetAmount(5))
+      await act(() => result.current.handleSubmitPrediction())
+
+      // 프록시 경로 계약 — betman 을 클라이언트에서 직접 부르면 안 된다
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(url).toBe("/api/sports/prediction")
+      const body = JSON.parse((init as RequestInit).body as string)
+      expect(body.predictions).toEqual([{ game_id: "g1", prediction: "home" }])
+      expect(body.betAmount).toBe(5)
+      expect(typeof body.idempotency_key).toBe("string")
+      expect(body.idempotency_key.length).toBeGreaterThan(0)
+
+      // 성공 후 상태 초기화 + 모달
+      expect(result.current.selectedBets).toHaveLength(0)
+      expect(result.current.selectedSport).toBeNull()
+      expect(result.current.betAmount).toBe(1)
+      expect(result.current.successModal.isOpen).toBe(true)
+      expect(result.current.successModal.distribution).toHaveLength(1)
+      expect(loadMatches).toHaveBeenCalled()
+      expect(globalMutateMock).toHaveBeenCalledWith("/api/tokens/balance")
     })
-  })
 
-  describe("cross-sport block", () => {
-    it("blocks bet from different sport", () => {
-      const existing = [makeBet({ sport: "축구" })]
-      const result = applyBetSelection(
-        existing,
-        { ...defaultParams, gameId: "g2", matchKey: "m2", sport: "야구" },
-        "축구"
-      )
-      expect(result.blocked).toBe("축구")
-      expect(result.bets).toEqual(existing) // unchanged
+    it("실패(res.ok=false) — 서버 에러 메시지로 에러 모달, 슬립은 유지된다", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: "볼이 부족합니다" }),
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      const { result } = setup()
+
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      await act(() => result.current.handleSubmitPrediction())
+
+      expect(result.current.alertModal.type).toBe("error")
+      expect(result.current.alertModal.message).toContain("볼이 부족합니다")
+      // 재시도할 수 있게 슬립이 남아 있어야 한다
+      expect(result.current.selectedBets).toHaveLength(1)
+      expect(result.current.successModal.isOpen).toBe(false)
+      expect(result.current.isSubmittingPrediction).toBe(false)
     })
-
-    it("allows bet from same sport", () => {
-      const existing = [makeBet({ sport: "축구" })]
-      const result = applyBetSelection(
-        existing,
-        { ...defaultParams, gameId: "g2", matchKey: "m2", sport: "축구" },
-        "축구"
-      )
-      expect(result.blocked).toBeUndefined()
-      expect(result.bets).toHaveLength(2)
-    })
-  })
-
-  describe("adding multiple bets", () => {
-    it("accumulates bets for same sport", () => {
-      const existing = [
-        makeBet({ gameId: "g1", matchKey: "m1" }),
-        makeBet({ gameId: "g2", matchKey: "m2" }),
-      ]
-      const result = applyBetSelection(
-        existing,
-        { ...defaultParams, gameId: "g3", matchKey: "m3" },
-        "축구"
-      )
-      expect(result.bets).toHaveLength(3)
-    })
-  })
-})
-
-// ============================================================
-// validateSubmission
-// ============================================================
-
-describe("validateSubmission", () => {
-  it("fails when no bets selected", () => {
-    const result = validateSubmission([], 5, 10)
-    expect(result.valid).toBe(false)
-    expect(result.errorType).toBe("no_bets")
-  })
-
-  it("fails when bet amount is 0", () => {
-    const result = validateSubmission([makeBet()], 0, 10)
-    expect(result.valid).toBe(false)
-    expect(result.errorType).toBe("zero_amount")
-  })
-
-  it("fails when bet amount is negative", () => {
-    const result = validateSubmission([makeBet()], -1, 10)
-    expect(result.valid).toBe(false)
-    expect(result.errorType).toBe("zero_amount")
-  })
-
-  it("fails when bet amount exceeds MAX_BET (10)", () => {
-    const result = validateSubmission([makeBet()], 11, 100)
-    expect(result.valid).toBe(false)
-    expect(result.errorType).toBe("max_exceeded")
-  })
-
-  it("passes at exactly MAX_BET", () => {
-    const result = validateSubmission([makeBet()], 10, 100)
-    expect(result.valid).toBe(true)
-  })
-
-  it("fails when bet amount exceeds user balance", () => {
-    const result = validateSubmission([makeBet()], 5, 3)
-    expect(result.valid).toBe(false)
-    expect(result.errorType).toBe("insufficient_balls")
-  })
-
-  it("passes at exactly user balance", () => {
-    const result = validateSubmission([makeBet()], 5, 5)
-    expect(result.valid).toBe(true)
-  })
-
-  it("passes valid submission", () => {
-    const result = validateSubmission([makeBet(), makeBet()], 3, 10)
-    expect(result.valid).toBe(true)
-    expect(result.errorType).toBeUndefined()
-  })
-})
-
-// ============================================================
-// isMatchPlayable
-// ============================================================
-
-describe("isMatchPlayable", () => {
-  it("returns playable when no match found", () => {
-    const result = isMatchPlayable(undefined, "g1", new Date())
-    expect(result.playable).toBe(true)
-  })
-
-  it("blocks when match has already started", () => {
-    const pastTime = new Date(Date.now() - 60000).toISOString() // 1분 전
-    const match = makeMatch({ matchTime: pastTime })
-    const result = isMatchPlayable(match, "g1", new Date())
-    expect(result.playable).toBe(false)
-    expect(result.reason).toBe("match_started")
-  })
-
-  it("blocks when match time is exactly now", () => {
-    const now = new Date()
-    const match = makeMatch({ matchTime: now.toISOString() })
-    const result = isMatchPlayable(match, "g1", now)
-    expect(result.playable).toBe(false)
-    expect(result.reason).toBe("match_started")
-  })
-
-  it("allows when match is in the future", () => {
-    const futureTime = new Date(Date.now() + 3600000).toISOString()
-    const match = makeMatch({ matchTime: futureTime })
-    const result = isMatchPlayable(match, "g1", new Date())
-    expect(result.playable).toBe(true)
-  })
-
-  it("blocks when bet_close_at has passed", () => {
-    const futureMatch = new Date(Date.now() + 3600000).toISOString()
-    const pastClose = new Date(Date.now() - 60000).toISOString()
-    const game = makeGame({ id: "g1", bet_close_at: pastClose })
-    const match = makeMatch({ matchTime: futureMatch, games: [game] })
-    const result = isMatchPlayable(match, "g1", new Date())
-    expect(result.playable).toBe(false)
-    expect(result.reason).toBe("bet_closed")
-  })
-
-  it("allows when bet_close_at is in the future", () => {
-    const futureTime = new Date(Date.now() + 3600000).toISOString()
-    const game = makeGame({ id: "g1", bet_close_at: futureTime })
-    const match = makeMatch({ matchTime: futureTime, games: [game] })
-    const result = isMatchPlayable(match, "g1", new Date())
-    expect(result.playable).toBe(true)
-  })
-
-  it("allows when game has no bet_close_at", () => {
-    const futureTime = new Date(Date.now() + 3600000).toISOString()
-    const game = makeGame({ id: "g1", bet_close_at: undefined })
-    const match = makeMatch({ matchTime: futureTime, games: [game] })
-    const result = isMatchPlayable(match, "g1", new Date())
-    expect(result.playable).toBe(true)
-  })
-
-  it("allows when gameId not found in match games", () => {
-    const futureTime = new Date(Date.now() + 3600000).toISOString()
-    const game = makeGame({ id: "g999" })
-    const match = makeMatch({ matchTime: futureTime, games: [game] })
-    const result = isMatchPlayable(match, "g1", new Date())
-    expect(result.playable).toBe(true)
-  })
-})
-
-// ============================================================
-// removeBet logic
-// ============================================================
-
-describe("removeBet", () => {
-  function applyRemoveBet(bets: SelectedBet[], gameId: string) {
-    const newBets = bets.filter((b) => b.gameId !== gameId)
-    return { bets: newBets, clearSport: newBets.length === 0 }
-  }
-
-  it("removes the specified bet", () => {
-    const bets = [makeBet({ gameId: "g1" }), makeBet({ gameId: "g2" })]
-    const result = applyRemoveBet(bets, "g1")
-    expect(result.bets).toHaveLength(1)
-    expect(result.bets[0].gameId).toBe("g2")
-  })
-
-  it("clears sport when last bet removed", () => {
-    const bets = [makeBet({ gameId: "g1" })]
-    const result = applyRemoveBet(bets, "g1")
-    expect(result.bets).toHaveLength(0)
-    expect(result.clearSport).toBe(true)
-  })
-
-  it("does not clear sport when bets remain", () => {
-    const bets = [makeBet({ gameId: "g1" }), makeBet({ gameId: "g2" })]
-    const result = applyRemoveBet(bets, "g1")
-    expect(result.clearSport).toBe(false)
-  })
-
-  it("does nothing when gameId not found", () => {
-    const bets = [makeBet({ gameId: "g1" })]
-    const result = applyRemoveBet(bets, "g999")
-    expect(result.bets).toHaveLength(1)
-  })
-})
-
-// ============================================================
-// Prediction payload construction
-// ============================================================
-
-describe("prediction payload construction", () => {
-  function buildPayload(
-    bets: SelectedBet[],
-    betAmount: number,
-    isJournalist: boolean,
-    analysisTitle: string,
-    analysisText: string
-  ) {
-    const predictionsArray = bets.map((bet) => ({
-      game_id: bet.gameId,
-      prediction: bet.selection,
-    }))
-    const payload: Record<string, unknown> = {
-      predictions: predictionsArray,
-      betAmount,
-      idempotency_key: "test-uuid",
-    }
-    if (isJournalist && analysisText.trim()) {
-      if (analysisTitle.trim()) payload.analysis_title = analysisTitle.trim()
-      payload.analysis_text = analysisText.trim()
-    }
-    return payload
-  }
-
-  it("maps bets to predictions array", () => {
-    const bets = [
-      makeBet({ gameId: "g1", selection: "홈팀" }),
-      makeBet({ gameId: "g2", selection: "원정팀" }),
-    ]
-    const payload = buildPayload(bets, 5, false, "", "")
-    expect(payload.predictions).toEqual([
-      { game_id: "g1", prediction: "홈팀" },
-      { game_id: "g2", prediction: "원정팀" },
-    ])
-    expect(payload.betAmount).toBe(5)
-  })
-
-  it("includes analysis for journalist with text", () => {
-    const payload = buildPayload([makeBet()], 1, true, "분석 제목", "분석 내용입니다")
-    expect(payload.analysis_title).toBe("분석 제목")
-    expect(payload.analysis_text).toBe("분석 내용입니다")
-  })
-
-  it("excludes analysis for non-journalist", () => {
-    const payload = buildPayload([makeBet()], 1, false, "제목", "내용")
-    expect(payload.analysis_title).toBeUndefined()
-    expect(payload.analysis_text).toBeUndefined()
-  })
-
-  it("excludes analysis when text is empty/whitespace", () => {
-    const payload = buildPayload([makeBet()], 1, true, "제목", "   ")
-    expect(payload.analysis_title).toBeUndefined()
-    expect(payload.analysis_text).toBeUndefined()
-  })
-
-  it("excludes title when title is empty but includes text", () => {
-    const payload = buildPayload([makeBet()], 1, true, "  ", "분석 내용")
-    expect(payload.analysis_title).toBeUndefined()
-    expect(payload.analysis_text).toBe("분석 내용")
-  })
-
-  it("trims analysis fields", () => {
-    const payload = buildPayload([makeBet()], 1, true, "  제목  ", "  내용  ")
-    expect(payload.analysis_title).toBe("제목")
-    expect(payload.analysis_text).toBe("내용")
   })
 })
