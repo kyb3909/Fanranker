@@ -402,6 +402,7 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
+  position: relative;
   padding: 11px 8px;
   background: var(--wc-card);
   border: 1px solid var(--wc-line);
@@ -411,8 +412,29 @@
   transition:
     background 0.15s,
     color 0.15s,
-    border-color 0.15s;
+    border-color 0.15s,
+    transform 0.08s;
   min-height: 56px;
+}
+/* 눌림 피드백 — 카드(hover translateY)와 달리 픽 버튼만 정적이라 반응이 없었다 */
+.worldcup-scope .wc-odd:active:not(:disabled) {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .worldcup-scope .wc-odd:active:not(:disabled) {
+    transform: none;
+  }
+}
+/* 선택 표시 — 채움만으로는 "눌렸다"가 약해 우상단 체크를 붙인다 */
+.worldcup-scope .wc-odd.on::after {
+  content: "✓";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.9);
 }
 .worldcup-scope .wc-odd:hover:not(:disabled):not(.on) {
   border-color: var(--wc-burgundy);
@@ -1756,4 +1778,63 @@
 }
 .worldcup-scope .wc-lb-tr .roi.down {
   color: var(--wc-down);
+}
+
+/* ─── Chip tabs — 페이지 내 "종속 필터" 문법 (담벼락 정렬 칩과 동일).
+ * 상위 네비게이션(wc-games-tabs 채움 탭)과 무게를 벌리기 위한 것이므로
+ * 카드로 감싸지 말고 캔버스 위에 그대로 둘 것. scope-free. */
+.wc-chip-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 12px;
+}
+.wc-chip-tabs::-webkit-scrollbar {
+  display: none;
+}
+.wc-chip-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--wc-mute, #5c6470);
+  background: var(--wc-card, #fff);
+  border: 1px solid var(--wc-line, #e2e5ea);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.wc-chip-tabs button svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+}
+.wc-chip-tabs button:hover:not(:disabled):not(.on) {
+  color: var(--wc-ink, #14161a);
+  border-color: var(--wc-line-2, #cfd4dc);
+}
+.wc-chip-tabs button.on {
+  background: var(--wc-burgundy, #961e37);
+  border-color: var(--wc-burgundy, #961e37);
+  color: #fff;
+}
+.wc-chip-tabs button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* 리그 행 — 종목보다 한 단계 더 낮춘다 */
+.wc-chip-tabs.sub button {
+  height: 28px;
+  padding: 0 11px;
+  font-size: 12.5px;
 }

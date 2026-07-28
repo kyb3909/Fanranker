@@ -81,11 +81,8 @@ export default function BettingPage({
       setMyPageTab={setMyPageTab}
     />
   ) : showFilters ? (
-    // bettingOnly 임베드용 — 4탭 없이 종목/리그 필터 카드만
-    <div
-      className="mb-3 overflow-hidden rounded-md sm:mb-4"
-      style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
-    >
+    // bettingOnly 임베드용 — 4탭 없이 종목/리그 칩만 (카드 래핑 없음)
+    <div className="mb-1">
       <SportLeagueFilter
         sportFilter={matches.sportFilter}
         setSportFilter={matches.setSportFilter}

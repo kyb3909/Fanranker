@@ -45,7 +45,8 @@ export function SportLeagueFilter({
 }: SportLeagueFilterProps) {
   return (
     <>
-      <div className="wc-underline-tabs">
+      {/* 종목 = 4탭 아래 종속 필터 → 칩 한 줄 (담벼락 정렬 칩과 같은 문법) */}
+      <div className="wc-chip-tabs" role="group" aria-label="종목 필터">
         {SPORT_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -63,7 +64,7 @@ export function SportLeagueFilter({
         ))}
       </div>
       {sportFilter !== "all" && availableLeagues.length > 0 && (
-        <div className="wc-underline-tabs scroll">
+        <div className="wc-chip-tabs sub" role="group" aria-label="리그 필터">
           {[
             { id: "all", label: "전체" },
             ...availableLeagues.map((l) => ({ id: l, label: l })),
@@ -98,7 +99,9 @@ export function BettingHeader({
   myPageTab,
   setMyPageTab,
 }: BettingHeaderProps) {
-  const hasSubFilters = activeTab === "betting" || activeTab === "ranking" || activeTab === "mypage"
+  // 베팅 종목 필터는 카드 밖 칩 한 줄로 강등 — 4탭(페이지 전환)과 같은 무게의 흰 카드가
+  // 두 장 쌓여 뭐가 상위인지 안 보였다. 카드 래핑은 랭킹/마이페이지 서브필터에만 남긴다.
+  const hasSubFilters = activeTab === "ranking" || activeTab === "mypage"
 
   return (
     <>
@@ -122,6 +125,18 @@ export function BettingHeader({
         ))}
       </div>
 
+      {/* 베팅 종목/리그 — 카드 없이 칩 한 줄 (4탭 아래 종속 필터임을 무게로 표시) */}
+      {activeTab === "betting" && (
+        <SportLeagueFilter
+          sportFilter={sportFilter}
+          setSportFilter={setSportFilter}
+          selectedSport={selectedSport}
+          leagueFilter={leagueFilter}
+          setLeagueFilter={setLeagueFilter}
+          availableLeagues={availableLeagues}
+        />
+      )}
+
       {/* 서브 필터 영역 — wc-underline-tabs (sub) + wc-lb-tabs (ranking sort pill) */}
       {hasSubFilters && (
         <div
@@ -131,18 +146,6 @@ export function BettingHeader({
             boxShadow: "var(--wc-shadow-1)",
           }}
         >
-          {/* 베팅: 종목 row + (선택시) 리그 row */}
-          {activeTab === "betting" && (
-            <SportLeagueFilter
-              sportFilter={sportFilter}
-              setSportFilter={setSportFilter}
-              selectedSport={selectedSport}
-              leagueFilter={leagueFilter}
-              setLeagueFilter={setLeagueFilter}
-              availableLeagues={availableLeagues}
-            />
-          )}
-
           {/* 랭킹: 종목 row + 정렬 pill */}
           {activeTab === "ranking" && (
             <>
