@@ -10,7 +10,7 @@ import { Loader2, Search as SearchIcon } from "lucide-react"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
-import { SectionHeader } from "@/components/section-header"
+import { PageBand } from "@/components/page-band"
 
 type SearchType = "nickname" | "id" | "title"
 
@@ -208,6 +208,8 @@ function SearchContent() {
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
+      {/* 담벼락·운동장과 같은 풀블리드 다크 밴드 */}
+      <PageBand kicker="Search" title="검색" description="제목·본문·닉네임으로 찾는다." />
       <main
         id="main-content"
         className="mx-auto max-w-full px-4 py-5 sm:max-w-[600px] sm:px-6 sm:py-6 lg:max-w-[1280px]"
@@ -218,9 +220,6 @@ function SearchContent() {
             <CommunitySidebar />
           </aside>
           <div className="col-span-12 space-y-4 lg:col-span-6">
-            {/* 검색 헤더 — 흰 밴드 */}
-            <SectionHeader label="SEARCH" title="검색" style={{ marginBottom: 0 }} />
-
             {/* 검색 폼 */}
             <form onSubmit={handleSubmit} className="space-y-2">
               <div style={{ display: "flex", gap: 8 }}>

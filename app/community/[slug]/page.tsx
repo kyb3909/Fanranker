@@ -18,7 +18,7 @@ import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import Link from "@/components/ui/app-link"
 import { getCreator } from "@/lib/constants/creators"
 import { CreatorBoard } from "@/components/creator/creator-board"
-import { SectionHeader } from "@/components/section-header"
+import { PageBand } from "@/components/page-band"
 
 // ISR: 30초 캐시 + stale-while-revalidate
 export const revalidate = 30
@@ -267,6 +267,8 @@ export default async function CommunityPage({
     }
     return (
       <div className="worldcup-scope wc-board-canvas min-h-[100dvh]">
+        {/* 담벼락·운동장과 같은 풀블리드 다크 밴드 — 그리드 바깥에 둬야 폭이 맞는다 */}
+        <PageBand kicker="Board" title={creatorBoardInfo.name} />
         <main
           id="main-content"
           className="container mx-auto max-w-[1280px] px-4 py-6"
@@ -364,6 +366,12 @@ export default async function CommunityPage({
       />
       {/* 메인 컨테이너: 1280px 최대, 중앙 정렬, 네이버 스타일 패딩 */}
       <div className="worldcup-scope wc-board-canvas min-h-[100dvh]">
+        {/* 담벼락·운동장과 같은 풀블리드 다크 밴드 — 그리드 바깥에 둬야 폭이 맞는다 */}
+        <PageBand
+          kicker="Board"
+          title={info?.name || dbCategory?.name || slug}
+          description={communityDesc || undefined}
+        />
         <main
           id="main-content"
           className="container mx-auto max-w-[1280px] px-4 py-6"
@@ -372,12 +380,6 @@ export default async function CommunityPage({
           {/* 12컬럼 그리드: 조밀한 간격 */}
           <div className="grid grid-cols-12 gap-4 lg:gap-5">
             <div className="col-span-12 lg:col-span-9">
-              {/* 게시판 정체성 밴드 (시안 A 다크 존) — 채널 카드/목록은 아래 라이트로 유지 */}
-              <SectionHeader
-                label="Board"
-                title={info?.name || dbCategory?.name || slug}
-                description={communityDesc || undefined}
-              />
               {/* 하위 채널 목록 — wc-action-card 응용. 축구는 이적시장 상황판 카드를 맨 앞에 */}
               {((channels && channels.length > 0) || slug === "football") && (
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">

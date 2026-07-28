@@ -16,6 +16,7 @@ import { BoardIcon } from "@/components/sidebar/board-icon"
 import Link from "@/components/ui/app-link"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { fetcher } from "@/lib/swr"
+import { PageBand, PageBandStat } from "@/components/page-band"
 
 interface Category {
   id: string
@@ -153,138 +154,98 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
         게시판 카드는 밴드 하단에 걸치게 띄운다: 실데이터가 2~3개뿐이라 작은 칩으로
         깔면 화면에서 미아가 된다. 개수가 아니라 무게로 채운다.
       */}
-      <section className="gn-band gn-band-open" aria-label="운동장">
-        <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3 pt-8 pb-6">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
-                <h1
-                  className="text-[34px] leading-none sm:text-[42px]"
-                  style={{
-                    fontFamily: "var(--font-display-ko), var(--font-title)",
-                    fontWeight: 700,
-                    letterSpacing: "-0.04em",
-                    color: "var(--gn-cream)",
-                    textShadow: "0.5px 0 currentColor",
-                  }}
-                >
-                  운동장
-                </h1>
-                <span
-                  className="gn-num text-[12.5px] font-bold uppercase"
-                  style={{ letterSpacing: "0.2em", color: "var(--gn-bg-100)" }}
-                >
-                  Explore · 게시판 디렉토리
-                </span>
-              </div>
-              <p
-                className="mt-3 max-w-[46ch] text-[14.5px]"
-                style={{ color: "var(--gn-cream-dim)" }}
-              >
-                관심 있는 게시판을 찾아 팔로우해보세요. 팔로우한 게시판 글은 담벼락 위로 올라옵니다.
-              </p>
-            </div>
-            {categories.length > 0 && (
-              <div className="shrink-0 text-right">
-                <span
-                  className="gn-num block text-[34px] leading-none font-bold"
-                  style={{ color: "var(--gn-cream)" }}
-                >
-                  {categories.length}
-                </span>
-                <span
-                  className="gn-num mt-1.5 block text-[12px] font-bold uppercase"
-                  style={{ letterSpacing: "0.18em", color: "#8d8794" }}
-                >
-                  Open Boards
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* 게시판 카드 — 밴드 아래로 48px 걸침 */}
-          {categories.length > 0 && (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-              <div
-                className="relative z-[2] mb-[-48px] grid gap-4"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(272px, 1fr))" }}
-              >
-                {categories.map((cat) => {
-                  const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
-                  const s = stats?.[cat.slug]
-                  return (
-                    <Link
-                      key={cat.slug}
-                      href={`/community/${cat.slug}`}
-                      className="group flex items-start gap-3.5 rounded-[13px] p-[18px] transition-transform hover:-translate-y-1"
-                      style={{
-                        background: "var(--wc-card)",
-                        border: "1px solid var(--wc-line)",
-                        boxShadow: "0 18px 38px -18px rgba(0,0,0,.62)",
-                      }}
+      <PageBand
+        kicker="Explore · 게시판 디렉토리"
+        title="운동장"
+        description="관심 있는 게시판을 찾아 팔로우해보세요. 팔로우한 게시판 글은 담벼락 위로 올라옵니다."
+        aside={
+          categories.length > 0 ? (
+            <PageBandStat value={categories.length} label="Open Boards" />
+          ) : undefined
+        }
+      >
+        {/* 게시판 카드 — 밴드 아래로 48px 걸침 */}
+        {categories.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div
+              className="relative z-[2] mb-[-48px] grid gap-4"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(272px, 1fr))" }}
+            >
+              {categories.map((cat) => {
+                const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
+                const s = stats?.[cat.slug]
+                return (
+                  <Link
+                    key={cat.slug}
+                    href={`/community/${cat.slug}`}
+                    className="group flex items-start gap-3.5 rounded-[13px] p-[18px] transition-transform hover:-translate-y-1"
+                    style={{
+                      background: "var(--wc-card)",
+                      border: "1px solid var(--wc-line)",
+                      boxShadow: "0 18px 38px -18px rgba(0,0,0,.62)",
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-[11px]"
+                      style={{ background: chip.bg, color: chip.color }}
                     >
+                      <BoardIcon slug={cat.slug} className="h-[21px] w-[21px]" />
+                    </span>
+                    <span className="min-w-0 flex-1">
                       <span
-                        aria-hidden
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-[11px]"
-                        style={{ background: chip.bg, color: chip.color }}
+                        className="font-title block text-[18px] font-extrabold"
+                        style={{ color: "var(--wc-ink)", letterSpacing: "-0.025em" }}
                       >
-                        <BoardIcon slug={cat.slug} className="h-[21px] w-[21px]" />
+                        {cat.name}
                       </span>
-                      <span className="min-w-0 flex-1">
+                      {cat.description && (
                         <span
-                          className="font-title block text-[18px] font-extrabold"
-                          style={{ color: "var(--wc-ink)", letterSpacing: "-0.025em" }}
+                          className="mt-0.5 block truncate text-[13px] font-semibold"
+                          style={{ color: "var(--wc-mute)" }}
                         >
-                          {cat.name}
+                          {cat.description}
                         </span>
-                        {cat.description && (
-                          <span
-                            className="mt-0.5 block truncate text-[13px] font-semibold"
-                            style={{ color: "var(--wc-mute)" }}
-                          >
-                            {cat.description}
+                      )}
+                      {s && (
+                        <span
+                          className="mt-2.5 flex gap-3.5 text-[12.5px] font-semibold"
+                          style={{ color: "var(--wc-mute)" }}
+                        >
+                          <span>
+                            오늘 글
+                            <b
+                              className="gn-num ml-1.5 text-[15px]"
+                              style={{ color: "var(--wc-ink-2)" }}
+                            >
+                              {s.today.toLocaleString()}
+                            </b>
                           </span>
-                        )}
-                        {s && (
-                          <span
-                            className="mt-2.5 flex gap-3.5 text-[12.5px] font-semibold"
-                            style={{ color: "var(--wc-mute)" }}
-                          >
-                            <span>
-                              오늘 글
-                              <b
-                                className="gn-num ml-1.5 text-[15px]"
-                                style={{ color: "var(--wc-ink-2)" }}
-                              >
-                                {s.today.toLocaleString()}
-                              </b>
-                            </span>
-                            <span>
-                              전체
-                              <b
-                                className="gn-num ml-1.5 text-[15px]"
-                                style={{ color: "var(--wc-ink-2)" }}
-                              >
-                                {s.total.toLocaleString()}
-                              </b>
-                            </span>
+                          <span>
+                            전체
+                            <b
+                              className="gn-num ml-1.5 text-[15px]"
+                              style={{ color: "var(--wc-ink-2)" }}
+                            >
+                              {s.total.toLocaleString()}
+                            </b>
                           </span>
-                        )}
-                      </span>
-                      <ArrowRight
-                        className="mt-3 h-[18px] w-[18px] shrink-0 self-center transition-transform group-hover:translate-x-1"
-                        style={{ color: "var(--wc-mute-2)" }}
-                        aria-hidden
-                      />
-                    </Link>
-                  )
-                })}
-              </div>
-              <div aria-hidden className="hidden lg:block" />
+                        </span>
+                      )}
+                    </span>
+                    <ArrowRight
+                      className="mt-3 h-[18px] w-[18px] shrink-0 self-center transition-transform group-hover:translate-x-1"
+                      style={{ color: "var(--wc-mute-2)" }}
+                      aria-hidden
+                    />
+                  </Link>
+                )
+              })}
             </div>
-          )}
-        </div>
-      </section>
+            <div aria-hidden className="hidden lg:block" />
+          </div>
+        )}
+      </PageBand>
 
       <main
         id="main-content"

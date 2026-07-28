@@ -82,7 +82,8 @@ export function MatchdayBand({ cards }: MatchdayBandProps) {
             Matchday
           </span>
           <h2
-            className="text-[26px] leading-none sm:text-[32px]"
+            /* PageBand 와 동일 스케일 — 페이지 제목(42) > 톱스토리 헤드라인(31) 위계 */
+            className="text-[30px] leading-none sm:text-[42px]"
             style={{
               // 어그로체는 Bold(700) 단일 — 900 을 얹으면 브라우저가 합성 볼드로 뭉갠다
               fontFamily: DISPLAY,
