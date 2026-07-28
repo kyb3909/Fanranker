@@ -362,3 +362,118 @@ describe("POST /api/betman/prediction — 볼 차감 계약", () => {
     expect(spendCalls()).toHaveLength(0)
   })
 })
+
+/**
+ * 입력 검증 계약 — 전부 볼 차감 전에 400 으로 끝나야 한다.
+ * (구 미러 테스트 betman-prediction.test.ts 43건이 복사본으로 검증하던 규칙을
+ *  실제 라우트 행동으로 이관. 미러는 삭제됨 — test-gaps.md)
+ */
+describe("POST /api/betman/prediction — 입력 검증 (차감 전 거부)", () => {
+  /** 검증 실패는 예외 없이: 400 + spend_tokens 0회 + 슬립 0개 */
+  async function expectRejected(body: unknown) {
+    const POST = await loadRoute()
+    const res = await POST(req(body) as never)
+    expect(res.status).toBe(400)
+    expect(spendCalls()).toHaveLength(0)
+    expect(supabaseMock.calls.slipInserts).toHaveLength(0)
+    return res
+  }
+
+  beforeEach(() => {
+    supabaseMock = makeSupabase()
+  })
+
+  it.each([
+    ["0", 0],
+    ["11 (MAX 10 초과)", 11],
+    ["소수", 1.5],
+  ])("betAmount %s → 400", async (_label, betAmount) => {
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "home" }], betAmount })
+  })
+
+  it("빈 predictions 배열 → 400", async () => {
+    await expectRejected({ predictions: [] })
+  })
+
+  it("enum 밖의 prediction 값 → 400", async () => {
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "banker" }] })
+  })
+
+  it("두 종목 혼합 슬립 → 400 (단일 종목 규칙)", async () => {
+    supabaseMock = makeSupabase({
+      games: [
+        baseGame({ id: "game-1", sport: "축구" }),
+        baseGame({ id: "game-2", sport: "야구", home_team_name: "LG", away_team_name: "두산" }),
+      ],
+    })
+    await expectRejected({
+      predictions: [
+        { game_id: "game-1", prediction: "home" },
+        { game_id: "game-2", prediction: "home" },
+      ],
+    })
+  })
+
+  it("같은 경기 중복 선택 → 400", async () => {
+    await expectRejected({
+      predictions: [
+        { game_id: "game-1", prediction: "home" },
+        { game_id: "game-1", prediction: "draw" },
+      ],
+    })
+  })
+
+  it("진행 중(in_progress) 경기 → 400", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ status: "in_progress" })] })
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "home" }] })
+  })
+
+  it("언더오버 경기에 home 선택 → 400", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ game_type: "언더오버" })] })
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "home" }] })
+  })
+
+  it("일반 경기에 over 선택 → 400", async () => {
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "over" }] })
+  })
+
+  it("농구 일반 경기에 draw 선택 → 400 (무승부 없음)", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ sport: "농구" })] })
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "draw" }] })
+  })
+
+  it("전반전 마켓(S 접두사) → 400", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ game_type: "S일반" })] })
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "home" }] })
+  })
+
+  it("서로 다른 daily round 의 경기 혼합 → 400", async () => {
+    supabaseMock = makeSupabase({
+      games: [
+        baseGame({ id: "game-1", daily_round_id: "dr-1" }),
+        baseGame({
+          id: "game-2",
+          daily_round_id: "dr-2",
+          home_team_name: "전북",
+          away_team_name: "울산",
+        }),
+      ],
+    })
+    await expectRejected({
+      predictions: [
+        { game_id: "game-1", prediction: "home" },
+        { game_id: "game-2", prediction: "home" },
+      ],
+    })
+  })
+
+  it("팀 미정 placeholder 경기 → 400", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ home_team_name: "미정" })] })
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "home" }] })
+  })
+
+  it("경기 시간 미정(match_time null) → 400 (NaN 마감 통과 버그 회귀 방지)", async () => {
+    supabaseMock = makeSupabase({ games: [baseGame({ match_time: null })] })
+    await expectRejected({ predictions: [{ game_id: "game-1", prediction: "home" }] })
+  })
+})

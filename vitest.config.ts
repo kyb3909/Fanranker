@@ -21,14 +21,14 @@ export default defineConfig({
         "lib/analytics/**",
         "hooks/use-toast.ts",
       ],
-      // 실측치(2026-07-29: stmts 11.22 / branch 11.21 / funcs 12.49 / lines 10.94)
+      // 실측치(2026-07-29: stmts 12.81 / branch 12.74 / funcs 14.88 / lines 12.51)
       // 바로 아래로 시작하는 래칫(ratchet) — 초록에서 시작해 떨어지면 빨개지게
       // 만드는 게 목적. 테스트가 늘 때마다 올리기만 하고, 절대 내리지 않는다.
       thresholds: {
-        statements: 11,
-        branches: 11,
-        functions: 12,
-        lines: 10.5,
+        statements: 12.5,
+        branches: 12.5,
+        functions: 14.5,
+        lines: 12,
       },
     },
   },

@@ -1,468 +1,184 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { renderHook, act } from "@testing-library/react"
 
-// ============================================================
-// Pure logic extracted from use-worldcup.ts
-// ============================================================
+/**
+ * useWorldcup — **실제 훅을 renderHook 으로 렌더해서** 검증한다.
+ * (기존 파일은 separateByes/shuffle 복사본만 검증하는 미러였다 — test-gaps.md P4 잔여분)
+ *
+ * 지키는 계약:
+ *   1. 시작: 짝수 → 전원 대진, 홀수 → 마지막 1명 부전승(다음 라운드 직행)
+ *   2. 투표 payload: session_id·round·match_index·양측 후보·winner_id
+ *   3. 라운드 진행: 매치 소진 시 다음 라운드 재편성 + current_round 증가
+ *   4. 최종 1인 → finish API + 통계 로드 + winner 확정
+ *   5. battleId 없으면 시작하지 않음, API 실패 시 로딩/투표 플래그 원복
+ */
 
-/** separateByes: 홀수이면 마지막 후보를 부전승으로 분리 */
-function separateByes<T>(arr: T[]): { paired: T[]; byes: T[] } {
-  if (arr.length % 2 === 0) return { paired: arr, byes: [] }
-  return { paired: arr.slice(0, -1), byes: [arr[arr.length - 1]] }
-}
+import { useWorldcup } from "@/hooks/use-worldcup"
 
-/** shuffleArray: Fisher-Yates 셔플 */
-function shuffleArray<T>(arr: T[]): T[] {
-  const shuffled = [...arr]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
-// ============================================================
-// Vote round progression logic (extracted from vote callback)
-// ============================================================
-
-interface Candidate {
-  id: string
-  name: string
-}
-
-interface RoundState {
-  roundCandidates: Candidate[]
-  nextRoundCandidates: Candidate[]
-  currentMatchIndex: number
-  currentRound: number
-}
-
-type VoteResult =
-  | { type: "next_match"; nextMatchIndex: number; nextPair: [Candidate, Candidate] }
-  | { type: "final_winner"; winner: Candidate }
-  | { type: "next_round"; newRoundCandidates: Candidate[]; newByes: Candidate[]; newRound: number }
-
-function processVote(state: RoundState, winnerId: string): VoteResult {
-  const pairStart = state.currentMatchIndex * 2
-  const a = state.roundCandidates[pairStart]
-  const b = state.roundCandidates[pairStart + 1]
-  const winnerCandidate = winnerId === a.id ? a : b
-
-  const newNextRound = [...state.nextRoundCandidates, winnerCandidate]
-  const nextIndex = state.currentMatchIndex + 1
-  const nextPairStart = nextIndex * 2
-
-  // 현재 라운드에 더 매치가 있는가?
-  if (nextPairStart + 1 < state.roundCandidates.length) {
-    return {
-      type: "next_match",
-      nextMatchIndex: nextIndex,
-      nextPair: [state.roundCandidates[nextPairStart], state.roundCandidates[nextPairStart + 1]],
-    }
-  }
-
-  // 최종 우승자
-  if (newNextRound.length === 1) {
-    return { type: "final_winner", winner: newNextRound[0] }
-  }
-
-  // 다음 라운드 (부전승 처리 — 셔플 없이 테스트)
-  const { paired, byes } = separateByes(newNextRound)
-  return {
-    type: "next_round",
-    newRoundCandidates: paired,
-    newByes: byes,
-    newRound: state.currentRound + 1,
-  }
-}
-
-// ============================================================
-// Helpers
-// ============================================================
-
-function makeCandidate(id: string, name?: string): Candidate {
-  return { id, name: name || `Candidate ${id}` }
-}
-
-function makeCandidates(count: number): Candidate[] {
-  return Array.from({ length: count }, (_, i) => makeCandidate(`c${i + 1}`))
-}
-
-// ============================================================
-// Tests: separateByes
-// ============================================================
-
-describe("separateByes", () => {
-  it("returns all as paired for even count", () => {
-    const items = [1, 2, 3, 4]
-    const result = separateByes(items)
-    expect(result.paired).toEqual([1, 2, 3, 4])
-    expect(result.byes).toEqual([])
-  })
-
-  it("separates last item as bye for odd count", () => {
-    const items = [1, 2, 3, 4, 5]
-    const result = separateByes(items)
-    expect(result.paired).toEqual([1, 2, 3, 4])
-    expect(result.byes).toEqual([5])
-  })
-
-  it("handles 1 item (all bye)", () => {
-    const result = separateByes(["solo"])
-    expect(result.paired).toEqual([])
-    expect(result.byes).toEqual(["solo"])
-  })
-
-  it("handles empty array", () => {
-    const result = separateByes([])
-    expect(result.paired).toEqual([])
-    expect(result.byes).toEqual([])
-  })
-
-  it("handles 2 items (no bye)", () => {
-    const result = separateByes(["a", "b"])
-    expect(result.paired).toEqual(["a", "b"])
-    expect(result.byes).toEqual([])
-  })
-
-  it("handles 3 items", () => {
-    const result = separateByes(["a", "b", "c"])
-    expect(result.paired).toEqual(["a", "b"])
-    expect(result.byes).toEqual(["c"])
-  })
+const candidate = (id: string) => ({
+  id,
+  battle_id: "battle-1",
+  name: `후보 ${id}`,
+  image_url: null,
+  seed: 0,
+  win_count: 0,
 })
 
-// ============================================================
-// Tests: shuffleArray
-// ============================================================
+const SESSION = { id: "session-1", battle_id: "battle-1", current_round: 1, status: "active" }
 
-describe("shuffleArray", () => {
-  it("does not mutate the original array", () => {
-    const original = [1, 2, 3, 4, 5]
-    const copy = [...original]
-    shuffleArray(original)
-    expect(original).toEqual(copy)
+/** URL prefix → 응답 매핑으로 fetch 목 구성. 호출 로그 반환 */
+function mockFetchByUrl(routes: Record<string, unknown>) {
+  const calls: Array<{ url: string; body: unknown }> = []
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url, body: init?.body ? JSON.parse(init.body as string) : null })
+    for (const [prefix, body] of Object.entries(routes)) {
+      if (url.startsWith(prefix)) return { ok: true, json: async () => body }
+    }
+    return { ok: true, json: async () => ({}) }
+  })
+  vi.stubGlobal("fetch", fetchMock)
+  return { fetchMock, calls }
+}
+
+async function start(result: { current: ReturnType<typeof useWorldcup> }, size?: number) {
+  await act(() => result.current.startWorldcup(size))
+}
+
+describe("useWorldcup", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // shuffle 을 항등으로 고정 — 대진 순서를 결정적으로
+    vi.spyOn(Math, "random").mockReturnValue(0.99)
   })
 
-  it("returns same length", () => {
-    const arr = [1, 2, 3, 4, 5, 6, 7, 8]
-    expect(shuffleArray(arr)).toHaveLength(8)
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
-  it("contains all original elements", () => {
-    const arr = [10, 20, 30, 40, 50]
-    const shuffled = shuffleArray(arr)
-    expect(shuffled.sort((a, b) => a - b)).toEqual([10, 20, 30, 40, 50])
+  it("battleId 가 없으면 시작하지 않는다", async () => {
+    const { fetchMock } = mockFetchByUrl({})
+    const { result } = renderHook(() => useWorldcup(null))
+    await start(result)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("returns empty array for empty input", () => {
-    expect(shuffleArray([])).toEqual([])
-  })
-
-  it("returns single element unchanged", () => {
-    expect(shuffleArray([42])).toEqual([42])
-  })
-})
-
-// ============================================================
-// Tests: processVote — round progression
-// ============================================================
-
-describe("processVote", () => {
-  describe("next match in current round", () => {
-    it("advances to next pair when more matches remain", () => {
-      // 4 candidates: match 0 = [c1,c2], match 1 = [c3,c4]
-      const candidates = makeCandidates(4)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [],
-        currentMatchIndex: 0,
-        currentRound: 1,
-      }
-      const result = processVote(state, "c1")
-      expect(result.type).toBe("next_match")
-      if (result.type === "next_match") {
-        expect(result.nextMatchIndex).toBe(1)
-        expect(result.nextPair[0].id).toBe("c3")
-        expect(result.nextPair[1].id).toBe("c4")
-      }
+  it("짝수(4명) 시작 → 전원 대진, 부전승 없음, 첫 페어 세팅", async () => {
+    mockFetchByUrl({
+      "/api/battles/worldcup/start": {
+        session: SESSION,
+        candidates: [candidate("a"), candidate("b"), candidate("c"), candidate("d")],
+      },
     })
+    const { result } = renderHook(() => useWorldcup("battle-1"))
+    await start(result)
 
-    it("selects correct winner from pair (second candidate)", () => {
-      const candidates = makeCandidates(4)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [],
-        currentMatchIndex: 0,
-        currentRound: 1,
-      }
-      // c2 wins — verify next round candidates
-      const result = processVote(state, "c2")
-      expect(result.type).toBe("next_match")
-    })
+    expect(result.current.roundCandidates).toHaveLength(4)
+    expect(result.current.nextRoundCandidates).toHaveLength(0)
+    expect(result.current.currentPair).not.toBeNull()
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.winner).toBeNull()
   })
 
-  describe("final winner", () => {
-    it("determines winner in 2-candidate final", () => {
-      const candidates = makeCandidates(2)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [],
-        currentMatchIndex: 0,
-        currentRound: 3,
-      }
-      const result = processVote(state, "c1")
-      expect(result.type).toBe("final_winner")
-      if (result.type === "final_winner") {
-        expect(result.winner.id).toBe("c1")
-      }
+  it("홀수(3명) 시작 → 마지막 1명은 부전승으로 다음 라운드 직행", async () => {
+    mockFetchByUrl({
+      "/api/battles/worldcup/start": {
+        session: SESSION,
+        candidates: [candidate("a"), candidate("b"), candidate("c")],
+      },
     })
+    const { result } = renderHook(() => useWorldcup("battle-1"))
+    await start(result)
 
-    it("selects second candidate as winner", () => {
-      const candidates = makeCandidates(2)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [],
-        currentMatchIndex: 0,
-        currentRound: 3,
-      }
-      const result = processVote(state, "c2")
-      expect(result.type).toBe("final_winner")
-      if (result.type === "final_winner") {
-        expect(result.winner.id).toBe("c2")
-      }
+    expect(result.current.roundCandidates).toHaveLength(2)
+    expect(result.current.nextRoundCandidates).toHaveLength(1)
+  })
+
+  it("투표 payload 계약 — session·round·match_index·양측·승자", async () => {
+    const { calls } = mockFetchByUrl({
+      "/api/battles/worldcup/start": {
+        session: SESSION,
+        candidates: [candidate("a"), candidate("b"), candidate("c"), candidate("d")],
+      },
+      "/api/battles/worldcup/stats": { stats: [] },
+    })
+    const { result } = renderHook(() => useWorldcup("battle-1"))
+    await start(result)
+
+    const [a, b] = result.current.currentPair!
+    await act(() => result.current.vote(a.id))
+
+    const voteCall = calls.find((c) => c.url.startsWith("/api/battles/worldcup/vote"))!
+    expect(voteCall.body).toMatchObject({
+      session_id: "session-1",
+      round: 1,
+      match_index: 0,
+      candidate_a_id: a.id,
+      candidate_b_id: b.id,
+      winner_id: a.id,
     })
   })
 
-  describe("next round transition", () => {
-    it("transitions to next round when current round complete with multiple winners", () => {
-      // Round with 4 candidates, last match (index 1)
-      const candidates = makeCandidates(4)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [makeCandidate("c1")], // winner from match 0
-        currentMatchIndex: 1,
-        currentRound: 1,
-      }
-      const result = processVote(state, "c3") // c3 wins match 1
-      expect(result.type).toBe("next_round")
-      if (result.type === "next_round") {
-        expect(result.newRound).toBe(2)
-        // 2 winners → even, no byes
-        expect(result.newRoundCandidates).toHaveLength(2)
-        expect(result.newByes).toHaveLength(0)
-      }
+  it("4강 풀 진행 — 라운드 재편성·current_round 증가·최종 finish + winner", async () => {
+    const { calls } = mockFetchByUrl({
+      "/api/battles/worldcup/start": {
+        session: SESSION,
+        candidates: [candidate("a"), candidate("b"), candidate("c"), candidate("d")],
+      },
+      "/api/battles/worldcup/stats": {
+        stats: [{ candidate_id: "a", name: "후보 a", image_url: null, win_count: 3 }],
+      },
     })
+    const { result } = renderHook(() => useWorldcup("battle-1"))
+    await start(result)
 
-    it("handles bye in next round with odd winners", () => {
-      // 6 candidates, 3 matches. After all 3 matches, 3 winners → 1 bye
-      const candidates = makeCandidates(6)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [makeCandidate("c1"), makeCandidate("c3")], // 2 prior winners
-        currentMatchIndex: 2, // last match
-        currentRound: 1,
-      }
-      const result = processVote(state, "c5") // c5 wins match 2
-      expect(result.type).toBe("next_round")
-      if (result.type === "next_round") {
-        expect(result.newRoundCandidates).toHaveLength(2) // paired
-        expect(result.newByes).toHaveLength(1) // bye
-        expect(result.newRound).toBe(2)
-      }
+    // 1라운드 매치 1: 첫 번째 후보 승
+    const m1winner = result.current.currentPair![0]
+    await act(() => result.current.vote(m1winner.id))
+    expect(result.current.currentMatchIndex).toBe(1)
+    expect(result.current.winner).toBeNull()
+
+    // 1라운드 매치 2 → 결승 라운드로 재편성
+    const m2winner = result.current.currentPair![0]
+    await act(() => result.current.vote(m2winner.id))
+    expect(result.current.roundCandidates).toHaveLength(2)
+    expect(result.current.session!.current_round).toBe(2)
+    expect(result.current.currentMatchIndex).toBe(0)
+
+    // 결승 → 우승 확정
+    const finalWinner = result.current.currentPair![0]
+    await act(() => result.current.vote(finalWinner.id))
+
+    expect(result.current.winner?.id).toBe(finalWinner.id)
+    const finishCall = calls.find((c) => c.url.startsWith("/api/battles/worldcup/finish"))!
+    expect(finishCall.body).toMatchObject({ session_id: "session-1", winner_id: finalWinner.id })
+    expect(result.current.stats).toHaveLength(1)
+    expect(result.current.isVoting).toBe(false)
+  })
+
+  it("시작 API 실패 → 로딩 플래그 해제, 상태 유지", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")))
+    const { result } = renderHook(() => useWorldcup("battle-1"))
+    await start(result)
+
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.currentPair).toBeNull()
+  })
+
+  it("투표 API 실패 → isVoting 원복, 매치 진행 안 됨", async () => {
+    const routes = mockFetchByUrl({
+      "/api/battles/worldcup/start": {
+        session: SESSION,
+        candidates: [candidate("a"), candidate("b"), candidate("c"), candidate("d")],
+      },
     })
+    const { result } = renderHook(() => useWorldcup("battle-1"))
+    await start(result)
 
-    it("increments current_round correctly", () => {
-      const candidates = makeCandidates(4)
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [makeCandidate("c1")],
-        currentMatchIndex: 1,
-        currentRound: 5,
-      }
-      const result = processVote(state, "c4")
-      if (result.type === "next_round") {
-        expect(result.newRound).toBe(6)
-      }
-    })
-  })
+    routes.fetchMock.mockRejectedValue(new Error("vote failed"))
+    await act(() => result.current.vote(result.current.currentPair![0].id))
 
-  describe("carries forward bye candidates", () => {
-    it("includes existing nextRoundCandidates (byes) when advancing", () => {
-      // 4 round candidates + 1 bye already waiting
-      const candidates = makeCandidates(4)
-      const bye = makeCandidate("bye1")
-      const state: RoundState = {
-        roundCandidates: candidates,
-        nextRoundCandidates: [bye], // bye from separateByes
-        currentMatchIndex: 1, // last match
-        currentRound: 1,
-      }
-      // c1 won match 0 (already in nextRound), c3 wins match 1
-      // But we need to simulate properly: nextRound already has bye + c1
-      const stateWithPriorWinner: RoundState = {
-        ...state,
-        nextRoundCandidates: [bye, makeCandidate("c1")],
-      }
-      const result = processVote(stateWithPriorWinner, "c3")
-      expect(result.type).toBe("next_round")
-      if (result.type === "next_round") {
-        // 3 candidates total (bye1, c1, c3) → 2 paired + 1 bye
-        const totalCandidates = result.newRoundCandidates.length + result.newByes.length
-        expect(totalCandidates).toBe(3)
-        expect(result.newByes).toHaveLength(1)
-      }
-    })
-  })
-})
-
-// ============================================================
-// Tests: Full tournament simulation
-// ============================================================
-
-describe("full tournament simulation", () => {
-  it("4-candidate tournament completes in 3 votes", () => {
-    const candidates = makeCandidates(4)
-    const { paired, byes } = separateByes(candidates)
-
-    let state: RoundState = {
-      roundCandidates: paired,
-      nextRoundCandidates: byes,
-      currentMatchIndex: 0,
-      currentRound: 1,
-    }
-
-    // Match 1: c1 vs c2 → c1 wins
-    let result = processVote(state, "c1")
-    expect(result.type).toBe("next_match")
-    if (result.type === "next_match") {
-      state = { ...state, currentMatchIndex: result.nextMatchIndex }
-      // nextRoundCandidates now has c1
-      state.nextRoundCandidates = [makeCandidate("c1")]
-    }
-
-    // Match 2: c3 vs c4 → c3 wins
-    result = processVote(state, "c3")
-    expect(result.type).toBe("next_round")
-    if (result.type === "next_round") {
-      state = {
-        roundCandidates: result.newRoundCandidates,
-        nextRoundCandidates: result.newByes,
-        currentMatchIndex: 0,
-        currentRound: result.newRound,
-      }
-    }
-
-    // Final: c1 vs c3 → c1 wins
-    result = processVote(state, "c1")
-    expect(result.type).toBe("final_winner")
-    if (result.type === "final_winner") {
-      expect(result.winner.id).toBe("c1")
-    }
-  })
-
-  it("8-candidate tournament completes in 7 votes", () => {
-    const candidates = makeCandidates(8)
-    const { paired, byes } = separateByes(candidates)
-
-    let state: RoundState = {
-      roundCandidates: paired,
-      nextRoundCandidates: byes,
-      currentMatchIndex: 0,
-      currentRound: 1,
-    }
-
-    let voteCount = 0
-    let finalWinner: Candidate | null = null
-
-    // Simulate: always pick first candidate
-    while (!finalWinner) {
-      const pairStart = state.currentMatchIndex * 2
-      const firstId = state.roundCandidates[pairStart].id
-      const result = processVote(state, firstId)
-      voteCount++
-
-      if (result.type === "next_match") {
-        state = {
-          ...state,
-          currentMatchIndex: result.nextMatchIndex,
-          nextRoundCandidates: [...state.nextRoundCandidates, state.roundCandidates[pairStart]],
-        }
-      } else if (result.type === "next_round") {
-        state = {
-          roundCandidates: result.newRoundCandidates,
-          nextRoundCandidates: result.newByes,
-          currentMatchIndex: 0,
-          currentRound: result.newRound,
-        }
-      } else {
-        finalWinner = result.winner
-      }
-    }
-
-    expect(voteCount).toBe(7) // 8 candidates = 7 matches
-    expect(finalWinner).toBeDefined()
-  })
-
-  it("3-candidate tournament handles bye correctly", () => {
-    const candidates = makeCandidates(3)
-    const { paired, byes } = separateByes(candidates)
-
-    expect(paired).toHaveLength(2) // c1, c2
-    expect(byes).toHaveLength(1) // c3 gets bye
-
-    let state: RoundState = {
-      roundCandidates: paired,
-      nextRoundCandidates: byes,
-      currentMatchIndex: 0,
-      currentRound: 1,
-    }
-
-    // Match 1: c1 vs c2 → c1 wins
-    let result = processVote(state, "c1")
-    // Now we have c3 (bye) + c1 (winner) = 2 → next round
-    expect(result.type).toBe("next_round")
-    if (result.type === "next_round") {
-      expect(result.newRoundCandidates).toHaveLength(2)
-      expect(result.newByes).toHaveLength(0)
-      state = {
-        roundCandidates: result.newRoundCandidates,
-        nextRoundCandidates: result.newByes,
-        currentMatchIndex: 0,
-        currentRound: result.newRound,
-      }
-    }
-
-    // Final: c3 vs c1 (or c1 vs c3) → pick first
-    result = processVote(state, state.roundCandidates[0].id)
-    expect(result.type).toBe("final_winner")
-  })
-})
-
-// ============================================================
-// Tests: Initial state
-// ============================================================
-
-describe("worldcup initial state", () => {
-  it("has correct default values", () => {
-    // Mirrors the useState default in useWorldcup
-    const defaultState = {
-      candidates: [],
-      session: null,
-      currentPair: null,
-      roundCandidates: [],
-      nextRoundCandidates: [],
-      currentMatchIndex: 0,
-      isLoading: true,
-      isVoting: false,
-      winner: null,
-      stats: [],
-    }
-    expect(defaultState.candidates).toEqual([])
-    expect(defaultState.session).toBeNull()
-    expect(defaultState.currentPair).toBeNull()
-    expect(defaultState.isLoading).toBe(true)
-    expect(defaultState.isVoting).toBe(false)
-    expect(defaultState.winner).toBeNull()
-    expect(defaultState.currentMatchIndex).toBe(0)
+    expect(result.current.isVoting).toBe(false)
+    expect(result.current.currentMatchIndex).toBe(0) // 진행 안 됨
   })
 })
