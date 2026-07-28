@@ -82,6 +82,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const KOREAN_FIXES = [
   [/보르넘|본머쓰|보른머스|본머프/g, "본머스"], // Bournemouth
 ]
+
+/**
+ * 레딧을 출처로 표기하지 않는다.
+ *
+ * 레딧은 소식을 **발견한 경로**이지 출처가 아니다. "[레딧] 아시아 투어 명단" 같은
+ * 제목은 우리가 남의 글을 퍼온 것처럼 보이게 만든다(사용자 지적 2026-07-29).
+ * 프롬프트로만 막으면 새는 걸 이미 겪었으므로(매체명 표기 사례) 코드에서 잘라낸다.
+ */
+function stripRedditAttribution(title) {
+  if (typeof title !== "string") return title
+  // 선두의 [레딧]/[Reddit]/[r/soccer] 류 제거 — 여러 번 붙어도 전부
+  let out = title.replace(/^\s*(?:\[\s*(?:레딧|reddit|r\/[a-z0-9_]+)\s*\]\s*)+/gi, "")
+  // "[레딧 - 로마노]" 처럼 안에 섞인 경우엔 레딧 부분만 덜어낸다
+  out = out.replace(/\[\s*(?:레딧|reddit)\s*[-·|]\s*/gi, "[")
+  return out.trim() || title.trim()
+}
 function applyKoreanFixes(s) {
   if (typeof s !== "string" || !s) return s
   let out = s
@@ -264,7 +280,11 @@ worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·�
   · 아래 "기사 원문"이 있으면 → **6~12문장, 500~1,000자**. 발언 인용, 이적료·계약 기간·경기 기록 같은 수치, 배경 경위, 다음 일정까지 원문에 있는 디테일을 충실히 옮긴다. 문단은 빈 줄로 나눈다. 두세 줄 요약으로 끝내지 마라.
   · 원문이 없으면(제목·링크뿐) → 기존대로 **2~3문장**. **재료가 없는데 길이를 채우려고 상상으로 살을 붙이는 것이 최악이다** — 짧은 게 맞다.
 - 기사 원문에 없는 사실은 절대 추가하지 않는다. 원문 말미의 무관한 조각(다른 경기 홍보·구독 안내)은 무시한다.
-- 제목: "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진"). 출처는 기자/언론사/구단명. 불명확하면 "[레딧]".
+- 제목: 출처가 **분명할 때만** "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진").
+  출처로 쓸 수 있는 것은 **기자·언론사·구단** 뿐이다.
+  ⛔ **레딧은 출처가 아니다.** 우리가 소식을 발견한 경로일 뿐이므로 "[레딧]", "[Reddit]",
+  "[r/soccer]" 같은 표기는 절대 쓰지 마라. 출처가 불명확하면 **대괄호 없이 제목만** 써라
+  (예: "아시아 투어 참가 선수 명단 공개").
 - 팀/선수 한글 표기는 한국 축구 미디어의 정착된 표기를 따른다 (예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
 - 미확정 루머는 단정하지 말 것.
 - credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${fewshot}
@@ -426,7 +446,7 @@ async function main() {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
         continue
       }
-      v.title = applyKoreanFixes(v.title)
+      v.title = stripRedditAttribution(applyKoreanFixes(v.title))
       v.summary = applyKoreanFixes(v.summary)
       if (DRY_RUN) {
         drafted++
