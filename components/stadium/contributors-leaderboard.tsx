@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { fetcher } from "@/lib/swr"
 import {
   Dialog,
   DialogContent,
@@ -26,8 +27,6 @@ interface Response {
   team_id: string
   leaderboard: Entry[]
 }
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 interface Props {
   open: boolean

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "30")
+    const limit = parseLimit(searchParams, { def: 30, max: 100 })
     const community = searchParams.get("community") || ""
     const offset = (page - 1) * limit
 

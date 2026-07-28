@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     // API 라우트에서는 Service Role 클라이언트를 사용하여 RLS를 우회합니다.
     const supabase = createServiceRoleClient()
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = parseInt(searchParams.get("offset") || "0", 10)
 
     // Get bookmarks with post data

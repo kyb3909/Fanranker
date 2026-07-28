@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { fetcher } from "@/lib/swr"
 import useSWR from "swr"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -34,8 +35,6 @@ interface MeTitlesResponse {
   flair_scores: FlairScore[]
   titles: TitleEntry[]
 }
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function FanIdentitySection() {
   const { data, isLoading, mutate } = useSWR<MeTitlesResponse>("/api/profile/me/titles", fetcher, {
