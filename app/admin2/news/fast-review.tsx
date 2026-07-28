@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
@@ -44,7 +44,6 @@ export interface DeskItem {
 }
 
 export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: FlairChoice[] }) {
-  const router = useRouter()
   const [queue, setQueue] = useState(items)
   const [cursor, setCursor] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
