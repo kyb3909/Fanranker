@@ -166,6 +166,22 @@ export async function POST(request: NextRequest) {
         if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt))
       }
       if (!refundOk) {
+        // 큐에 남긴다 — Sentry 만으로는 어드민이 찾을 수 없는 손실이 된다.
+        // 토큰 경로(lib/betman/refund-tokens.ts)는 이미 pending_refunds 에 큐잉하는데
+        // 골드 경로만 빠져 있었다. currency='gold' 로 통화를 명시해야
+        // 어드민 retry 가 refund_tokens(볼)로 잘못 지급하지 않는다.
+        const { error: queueError } = await supabase.from("pending_refunds").insert({
+          user_id: user.id,
+          amount: GOLD_COST,
+          currency: "gold",
+          description: `분석글 구매 실패 환불 (activity ${activity_id})`,
+          source: "buyer_gold_refund_retry_exhausted",
+          attempts: 3,
+          last_error: String(lastRefundError),
+        })
+        if (queueError) {
+          console.error("failed to enqueue buyer gold refund:", queueError)
+        }
         Sentry.captureMessage(
           `buyer refund failed after 3 retries — user is down ${GOLD_COST} gold`,
           {
@@ -175,6 +191,7 @@ export async function POST(request: NextRequest) {
               amount: GOLD_COST,
               activityId: activity_id,
               lastRefundError: String(lastRefundError),
+              queued: !queueError,
             },
           }
         )

@@ -90,6 +90,16 @@ export async function PATCH(request: NextRequest) {
     const nowIso = new Date().toISOString()
 
     if (action === "retry") {
+      // ⚠️ 이 분기는 refund_tokens(볼)만 호출한다. 골드 부채를 여기로 흘리면
+      //    통화가 뒤바뀐 지급이 된다 — 지금보다 나쁜 상태다. fail-closed 로 거부한다.
+      //    골드 자동 지급 경로(reward_gold)는 이 라우트에 테스트를 깐 뒤에 추가할 것.
+      //    그전까지 골드 건은 어드민이 수동 지급 후 action="resolve" 로 닫는다.
+      if (refund.currency && refund.currency !== "token") {
+        return apiBadRequest(
+          `${refund.currency} 환불은 자동 재시도를 지원하지 않습니다. 수동 지급 후 '처리 완료'로 닫아주세요.`
+        )
+      }
+
       // 토큰 환불 RPC 재시도
       const { error: rpcError } = await supabase.rpc("refund_tokens", {
         p_user_id: refund.user_id,
