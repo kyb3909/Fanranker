@@ -207,18 +207,25 @@ export function UserDetailTabs({ userId }: { userId: string }) {
                 {" · "}가입: {new Date(profile.created_at).toLocaleDateString("ko-KR")}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {["user", "moderator", "admin"].map((role) => (
-                <Button
-                  key={role}
-                  variant={profile.role === role ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleRoleChange(role)}
-                  disabled={actionLoading || profile.role === role}
-                >
-                  {role}
-                </Button>
-              ))}
+            {/* editor = 검수 전용 등급. /admin2 와 뉴스·커뮤글 검수만 가능하고
+                정산·환불·경제조정·권한변경에는 닿지 않는다 (lib/admin/roles.ts) */}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                {["user", "editor", "moderator", "admin"].map((role) => (
+                  <Button
+                    key={role}
+                    variant={profile.role === role ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleRoleChange(role)}
+                    disabled={actionLoading || profile.role === role}
+                  >
+                    {role}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-muted-foreground text-[11px]">
+                editor = 검수 전용 (돈·권한 조작 불가)
+              </p>
             </div>
           </div>
         </CardContent>

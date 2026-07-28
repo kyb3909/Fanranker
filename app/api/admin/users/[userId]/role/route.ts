@@ -5,7 +5,7 @@ import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
 const RoleSchema = z.object({
-  role: z.enum(["user", "moderator", "admin"]),
+  role: z.enum(["user", "editor", "moderator", "admin"]),
 })
 
 export async function PATCH(
@@ -25,7 +25,8 @@ export async function PATCH(
       return apiBadRequest("잘못된 요청 본문입니다.")
     }
     const parsed = RoleSchema.safeParse(body)
-    if (!parsed.success) return apiBadRequest("유효한 role이 필요합니다: user, moderator, admin")
+    if (!parsed.success)
+      return apiBadRequest("유효한 role이 필요합니다: user, editor, moderator, admin")
     const { role } = parsed.data
 
     // Self-demote 방지: admin이 자기 자신을 admin 외로 강등하면 어드민 패널 접근권 상실 →

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAdminApi } from "@/lib/admin/require-admin-api"
+import { requireStaffApi } from "@/lib/admin/roles"
 import { buildInsightInput, generateInsight, type Insight } from "@/lib/admin/insight"
 
 export const dynamic = "force-dynamic"
@@ -13,7 +13,7 @@ export const maxDuration = 120
  */
 
 export async function GET() {
-  const gate = await requireAdminApi()
+  const gate = await requireStaffApi()
   if (gate instanceof NextResponse) return gate
   const { supabase } = gate
 
@@ -31,7 +31,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const gate = await requireAdminApi()
+  const gate = await requireStaffApi()
   if (gate instanceof NextResponse) return gate
   const { supabase } = gate
 

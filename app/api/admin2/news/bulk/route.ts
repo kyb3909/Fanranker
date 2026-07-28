@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { requireAdminApi } from "@/lib/admin/require-admin-api"
+import { requireStaffApi } from "@/lib/admin/roles"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 
 export const dynamic = "force-dynamic"
@@ -22,7 +22,7 @@ const BodySchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
-  const gate = await requireAdminApi()
+  const gate = await requireStaffApi()
   if (gate instanceof NextResponse) return gate
   const { supabase, userId } = gate
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { after } from "next/server"
 import { z } from "zod"
-import { requireAdmin } from "@/lib/supabase/admin"
+import { requireStaff } from "@/lib/admin/roles"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
@@ -19,7 +19,7 @@ const FOOTBALL_CATEGORY_ID = "22105623-6c99-487d-975f-15073e0990fc"
 const FOOTBALL_SLUG = "football"
 
 /**
- * POST /api/admin/news-review  — 관리자 전용 (admin layout + requireAdmin 이중 보호).
+ * POST /api/admin/news-review  — admin·editor 허용 (레이아웃 + requireStaff 이중 보호). 검수는 editor 의 본업이다.
  * body: { id, action: "publish" | "reject" | "save", title?, content? }
  *  - publish: news_reservoir(drafted) → posts 발행(공놀이봇) + reservoir status=published
  *  - save   : 검수 중 수정본을 draft 에 저장 (발행 안 함)
@@ -48,7 +48,7 @@ interface DraftReservoirRow {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin()
+    await requireStaff()
   } catch {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
   }

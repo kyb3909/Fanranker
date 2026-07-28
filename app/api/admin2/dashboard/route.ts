@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAdminApi } from "@/lib/admin/require-admin-api"
+import { requireStaffApi } from "@/lib/admin/roles"
 import {
   freshness,
   fmtAge,
@@ -47,12 +47,14 @@ interface QueueItem {
   /** 이 큐가 밀리면 위험한 정도 */
   severity: "high" | "normal"
   note?: string
+  /** admin 만 처리 가능 — editor 에게는 내려보내지 않는다 (못 누르는 걸 보여주면 노이즈) */
+  adminOnly?: boolean
 }
 
 export async function GET() {
-  const gate = await requireAdminApi()
+  const gate = await requireStaffApi()
   if (gate instanceof NextResponse) return gate
-  const { supabase } = gate
+  const { supabase, role } = gate
 
   const now = Date.now()
   const dayAgo = new Date(now - 24 * H).toISOString()
@@ -224,6 +226,7 @@ export async function GET() {
       count: pendingReports.count ?? 0,
       href: "/admin/content/reports",
       severity: "high",
+      adminOnly: true,
       note: "처리(resolve) 누르면 카드·정지가 자동 적용된다",
     },
     {
@@ -232,6 +235,7 @@ export async function GET() {
       count: pendingMetaReports.count ?? 0,
       href: "/admin/content/metaverse-reports",
       severity: "high",
+      adminOnly: true,
     },
     {
       key: "news-review",
@@ -246,7 +250,7 @@ export async function GET() {
       key: "agg-review",
       label: "AI 커뮤글 검수",
       count: aggQueue.count ?? 0,
-      href: "/admin/agg-review",
+      href: "/admin2/agg",
       severity: "normal",
     },
     {
@@ -255,6 +259,7 @@ export async function GET() {
       count: pendingRefunds.count ?? 0,
       href: "/admin/refunds",
       severity: "high",
+      adminOnly: true,
       note: "골드 건은 수동 지급 후에 resolve 할 것",
     },
     {
@@ -263,6 +268,7 @@ export async function GET() {
       count: unsettledSlips.count ?? 0,
       href: "/admin/settlements",
       severity: "normal",
+      adminOnly: true,
       note: "15분 크론이 대부분 자동 처리 — 남는 건만 확인",
     },
     {
@@ -271,6 +277,7 @@ export async function GET() {
       count: pendingStickers.count ?? 0,
       href: "/admin/content/stickers",
       severity: "normal",
+      adminOnly: true,
     },
   ]
 
@@ -315,13 +322,19 @@ export async function GET() {
     /* 무시 */
   }
 
+  // editor 는 돈·신고에 손댈 수 없다 → 그 큐와 돈 경고를 아예 내려보내지 않는다.
+  // 못 누르는 숫자를 보여주면 "누가 처리하겠지"가 아니라 그냥 노이즈가 된다.
+  const isAdmin = role === "admin"
+  const visibleQueues = isAdmin ? queues : queues.filter((q) => !q.adminOnly)
+
   return NextResponse.json(
     {
       generatedAt: new Date().toISOString(),
+      role,
       overall: worstStatus(pipelines.map((p) => p.status)),
       pipelines,
-      queues,
-      money,
+      queues: visibleQueues,
+      money: isAdmin ? money : [],
       /** 어제 대비가 아니라 "오늘 내가 만든 결과" — 노동의 산출을 보여준다 */
       today: {
         publishedArticles: publishedToday.count ?? 0,

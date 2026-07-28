@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { requireAdmin } from "@/lib/supabase/admin"
+import { requireStaff } from "@/lib/admin/roles"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { personaNickname, todayCounts, nextSlot, type AggMediaItem } from "@/lib/agg/publish"
 import aggConfig from "@/data/agents/config/aggregator.json"
@@ -8,7 +8,7 @@ import aggConfig from "@/data/agents/config/aggregator.json"
 export const dynamic = "force-dynamic"
 
 /**
- * POST /api/admin/agg-review — 관리자 전용 (admin layout + requireAdmin 이중 보호).
+ * POST /api/admin/agg-review — admin·editor 허용 (레이아웃 + requireStaff 이중 보호). 검수는 editor 의 본업이다.
  * 애그리게이터 페르소나 초안 검수·발행 (agg_reservoir drafted → published | rejected).
  * data/agents/scripts/agg-publish-run.js 의 발행 로직 이식 — 페이지 단건 발행용.
  *
@@ -40,7 +40,7 @@ interface ReservoirRow {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin()
+    await requireStaff()
   } catch {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 })
   }

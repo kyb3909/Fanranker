@@ -37,6 +37,8 @@ interface MoneyItem {
 }
 interface Dashboard {
   generatedAt: string
+  /** admin = 전권 / editor = 검수만 (돈·신고 큐는 서버가 아예 안 내려준다) */
+  role: "admin" | "editor"
   overall: Status
   pipelines: Pipeline[]
   queues: QueueItem[]
@@ -242,7 +244,13 @@ export function Workbench() {
         </p>
       </Card>
 
-      <nav className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 px-1 pt-1 text-xs">
+      {/* 전부 admin 전용 화면이라 editor 에게는 숨긴다 — 눌러도 막히는 링크는 안 보여준다 */}
+      <nav
+        className={cn(
+          "text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 px-1 pt-1 text-xs",
+          data.role !== "admin" && "hidden"
+        )}
+      >
         <span className="text-foreground/70 font-medium">가끔 여는 곳:</span>
         <Link href="/admin/users" className="hover:underline">
           사용자
