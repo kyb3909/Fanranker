@@ -11,7 +11,7 @@
 //   import { fetchRedditViaRSS } from './reddit-fetch.js'
 //   const posts = await fetchRedditViaRSS('soccer', { maxArticles: 25 })
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -46,17 +46,21 @@ export async function fetchRedditViaRSS(
   const url = `${REDDIT_BASE}/r/${subreddit}/hot.rss?limit=${limit}`;
 
   // Reddit는 Node native fetch의 TLS fingerprint를 429로 throttle한다(IP 무관, home·datacenter 둘 다).
-  // curl은 통과 → Linux(Vultr 운영)는 curl 사용, Windows 로컬 dev는 native fetch fallback.
+  // curl은 통과 → 전 플랫폼 curl 우선. Windows cmd 인자 파싱 문제는 execFileSync
+  // (셸 미경유, 인자 배열 전달)로 회피 — 과거 execSync(문자열) 방식이 깨졌던 원인 제거.
+  // curl 자체가 없는 환경만 native fetch 로 fallback (그 경우 429 가능).
   let xml;
-  if (process.platform !== "win32") {
-    xml = execSync(
-      `curl -s -L -H 'User-Agent: ${USER_AGENT}' --max-time ${Math.ceil(timeoutMs / 1000)} '${url}'`,
+  try {
+    xml = execFileSync(
+      "curl",
+      ["-s", "-L", "-H", `User-Agent: ${USER_AGENT}`, "--max-time", String(Math.ceil(timeoutMs / 1000)), url],
       { encoding: "utf-8", maxBuffer: 5 * 1024 * 1024 }
     );
     if (!xml) {
       throw new Error(`Reddit RSS /r/${subreddit} curl returned empty`);
     }
-  } else {
+  } catch (curlErr) {
+    if (curlErr?.code !== "ENOENT") throw curlErr; // curl 있는데 실패 → 그대로 에러
     const res = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
       signal: AbortSignal.timeout(timeoutMs),
@@ -204,7 +208,7 @@ async function enrichWithDescription(entries) {
 // 본문 <p> 문단 수집 — readability 라이브러리 없이 정규식으로 최소 구현.
 // 목표는 완벽한 본문 복원이 아니라 "writer 에게 줄 팩트 재료 2,000여 자"다.
 const BOILERPLATE_P =
-  /cookie|subscri|newsletter|sign up|sign in|log in|all rights reserved|privacy policy|terms of (use|service)|follow us|download the app|advertis|getty images|©/i;
+  /cookie|subscri|newsletter|sign up|sign in|log in|all rights reserved|privacy policy|terms of (use|service)|follow us|download the app|advertis|getty images|©|enable javascript|update your browser|whitelist your extensions|verify (that )?you are|are you a robot|captcha|browser (check|settings)|ad blocker|please disable/i;
 
 export function extractArticleText(html) {
   // 스크립트/스타일/템플릿 블록 제거 후 <p> 만 수집

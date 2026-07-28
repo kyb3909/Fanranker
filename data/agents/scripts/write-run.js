@@ -31,6 +31,43 @@ function log(msg) {
   process.stdout.write(`[${new Date().toISOString()}] [writer] ${msg}\n`)
 }
 
+// "sports.yahoo.com에 따르면" 같은 도메인 노출 방지 — 통용되는 한글 매체명으로.
+// 매핑에 없는 도메인은 그대로 넘긴다 (모델이 아는 매체면 알아서 표기).
+const MEDIA_NAME_KO = {
+  'theathletic.com': '디 애슬레틱',
+  'theguardian.com': '가디언',
+  'bbc.com': 'BBC',
+  'bbc.co.uk': 'BBC',
+  'skysports.com': '스카이 스포츠',
+  'sports.yahoo.com': '야후 스포츠',
+  'yahoo.com': '야후 스포츠',
+  'independent.co.uk': '인디펜던트',
+  'telegraph.co.uk': '텔레그래프',
+  'nytimes.com': '뉴욕타임스',
+  'goal.com': '골닷컴',
+  'espn.com': 'ESPN',
+  'lequipe.fr': '레키프',
+  'marca.com': '마르카',
+  'as.com': 'AS',
+  'sport.es': '스포르트',
+  'mundodeportivo.com': '문도 데포르티보',
+  'fabrizioromano': '파브리치오 로마노',
+  'football.london': '풋볼 런던',
+  'liverpoolecho.co.uk': '리버풀 에코',
+  'manchestereveningnews.co.uk': '맨체스터 이브닝 뉴스',
+  'mirror.co.uk': '미러',
+  'dailymail.co.uk': '데일리 메일',
+  'thesun.co.uk': '더 선',
+  'times.co.uk': '더 타임스',
+  'thetimes.com': '더 타임스',
+}
+
+function mediaNameKo(domain) {
+  if (!domain) return 'unknown'
+  const d = domain.replace(/^www\./, '').toLowerCase()
+  return MEDIA_NAME_KO[d] || d
+}
+
 function draftHashOf(headline, body) {
   return createHash('sha1').update(headline + '\n' + body, 'utf8').digest('hex').slice(0, 16)
 }
@@ -117,7 +154,7 @@ async function main() {
         excerpt: item.normalized?.excerpt || item.raw.excerpt || '',
         // 기사 본문 앞부분 (영어 원문). 있으면 writer 가 이걸로 살을 붙인다.
         articleBody: (item.raw?.articleText || '').slice(0, 2800) || null,
-        sourceMedia: item.source?.domain || 'unknown',
+        sourceMedia: mediaNameKo(item.source?.domain),
         credibility,
         unverified,
       },
