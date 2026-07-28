@@ -1,98 +1,183 @@
-import { describe, it, expect } from "vitest"
-import { z } from "zod"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 
-// ============================================================
-// Schema extracted from app/api/tokens/spend/route.ts
-// ============================================================
+/**
+ * POST /api/tokens/spend — **라우트를 실제로 import 해서** 검증한다.
+ * (기존 파일은 스키마 복사본만 검증하는 미러였다 — test-gaps.md P5)
+ *
+ * 지키는 계약 — 전부 "볼이 어떻게 되는가"에 대한 것이다:
+ *   1. 검증 실패(비로그인·0/음수/소수 금액·깨진 body)는 RPC 호출 전에 끝난다
+ *   2. idempotency_key 중복 → 차감 없이 duplicate:true (멱등 계약)
+ *   3. spend_tokens 반환 키는 `remaining_balance` 다 (과거 실제 버그 지점 —
+ *      new_balance 로 읽으면 잔액이 undefined 로 새어나간다)
+ *   4. RPC 실패는 500, 잔액 부족은 400 + 현재 잔액 반환
+ */
 
-const TokenSpendSchema = z.object({
-  amount: z.number().int("토큰 양은 정수여야 합니다.").positive("토큰 양은 0보다 커야 합니다."),
-  description: z.string().optional(),
-  related_prediction_id: z.string().optional(),
-  idempotency_key: z.string().uuid().optional(),
+const currentUserMock = vi.fn()
+vi.mock("@clerk/nextjs/server", () => ({
+  currentUser: () => currentUserMock(),
+}))
+
+let supabaseMock: ReturnType<typeof makeSupabase>
+vi.mock("@/lib/supabase/server", () => ({
+  createServiceRoleClient: () => supabaseMock.client,
+}))
+
+/* ────────── Supabase 목 ────────── */
+
+interface Opts {
+  /** token_transactions 에 이미 있는 idempotency 트랜잭션 */
+  existingTxn?: { id: string } | null
+  /** user_tokens 현재 잔액 (중복 응답용) */
+  balance?: number
+  /** spend_tokens RPC 결과 */
+  spend?: { success: boolean; remaining_balance: number; error_message: string | null } | null
+  /** RPC 자체가 에러 */
+  rpcFails?: boolean
+}
+
+function makeSupabase(o: Opts = {}) {
+  const spend = o.spend ?? { success: true, remaining_balance: 7, error_message: null }
+  const calls = { rpc: [] as Array<{ fn: string; args: Record<string, unknown> }> }
+
+  const client = {
+    rpc: vi.fn((fn: string, args: Record<string, unknown>) => {
+      calls.rpc.push({ fn, args })
+      return {
+        single: async () =>
+          o.rpcFails
+            ? { data: null, error: { message: "rpc down" } }
+            : { data: spend, error: null },
+      }
+    }),
+    from: vi.fn((table: string) => {
+      if (table === "token_transactions") {
+        return {
+          select: () => ({
+            eq: function () {
+              return this
+            },
+            single: async () => ({ data: o.existingTxn ?? null, error: null }),
+          }),
+        }
+      }
+      if (table === "user_tokens") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({ data: { token_balance: o.balance ?? 42 }, error: null }),
+            }),
+          }),
+        }
+      }
+      throw new Error(`unexpected table: ${table}`)
+    }),
+  }
+
+  return { client, calls }
+}
+
+const req = (body: unknown) =>
+  ({
+    json: async () => body,
+    headers: new Headers(),
+    url: "https://gongnori.fan/api/tokens/spend",
+  }) as never
+
+const loadRoute = async () => (await import("@/app/api/tokens/spend/route")).POST
+
+const spendCalls = () => supabaseMock.calls.rpc.filter((c) => c.fn === "spend_tokens")
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.resetModules() // rate-limit 인메모리 카운터 초기화
+  currentUserMock.mockResolvedValue({ id: "user-1" })
+  supabaseMock = makeSupabase()
+  vi.spyOn(console, "error").mockImplementation(() => {})
 })
 
-// ============================================================
-// Idempotency duplicate detection logic
-// ============================================================
-
-interface ExistingTxn {
-  id: string
-}
-
-function hasProcessedIdempotencyKey(existing: ExistingTxn | null | undefined): boolean {
-  return !!existing?.id
-}
-
-describe("tokens/spend — TokenSpendSchema", () => {
-  it("accepts positive integer amount", () => {
-    expect(TokenSpendSchema.safeParse({ amount: 1 }).success).toBe(true)
-    expect(TokenSpendSchema.safeParse({ amount: 100 }).success).toBe(true)
+describe("POST /api/tokens/spend — 볼 차감 계약", () => {
+  it("비로그인 → 401, RPC 미호출", async () => {
+    currentUserMock.mockResolvedValue(null)
+    const POST = await loadRoute()
+    const res = await POST(req({ amount: 5 }))
+    expect(res.status).toBe(401)
+    expect(spendCalls()).toHaveLength(0)
   })
 
-  it("rejects zero amount", () => {
-    const r = TokenSpendSchema.safeParse({ amount: 0 })
-    expect(r.success).toBe(false)
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe("토큰 양은 0보다 커야 합니다.")
-    }
+  it.each([
+    ["0", 0],
+    ["음수", -3],
+    ["소수", 1.5],
+  ])("amount %s → 400, RPC 미호출", async (_label, amount) => {
+    const POST = await loadRoute()
+    const res = await POST(req({ amount }))
+    expect(res.status).toBe(400)
+    expect(spendCalls()).toHaveLength(0)
   })
 
-  it("rejects negative amount", () => {
-    const r = TokenSpendSchema.safeParse({ amount: -5 })
-    expect(r.success).toBe(false)
+  it("JSON 이 아닌 body → 400 (500 으로 새지 않음)", async () => {
+    const POST = await loadRoute()
+    const res = await POST({
+      json: async () => {
+        throw new SyntaxError("bad json")
+      },
+      headers: new Headers(),
+    } as never)
+    expect(res.status).toBe(400)
+    expect(spendCalls()).toHaveLength(0)
   })
 
-  it("rejects non-integer amount", () => {
-    const r = TokenSpendSchema.safeParse({ amount: 1.5 })
-    expect(r.success).toBe(false)
-    if (!r.success) {
-      expect(r.error.issues[0]?.message).toBe("토큰 양은 정수여야 합니다.")
-    }
-  })
+  it("idempotency_key 중복 → 차감 없이 기존 잔액으로 duplicate 응답 (멱등 계약)", async () => {
+    supabaseMock = makeSupabase({ existingTxn: { id: "txn-1" }, balance: 42 })
+    const POST = await loadRoute()
 
-  it("rejects missing amount", () => {
-    expect(TokenSpendSchema.safeParse({}).success).toBe(false)
-  })
-
-  it("rejects non-number amount", () => {
-    expect(TokenSpendSchema.safeParse({ amount: "1" }).success).toBe(false)
-    expect(TokenSpendSchema.safeParse({ amount: null }).success).toBe(false)
-  })
-
-  it("accepts optional description", () => {
-    expect(TokenSpendSchema.safeParse({ amount: 10, description: "베팅" }).success).toBe(true)
-  })
-
-  it("accepts optional related_prediction_id", () => {
-    expect(
-      TokenSpendSchema.safeParse({ amount: 10, related_prediction_id: "pred_abc" }).success
-    ).toBe(true)
-  })
-
-  it("accepts valid UUID idempotency_key", () => {
-    expect(
-      TokenSpendSchema.safeParse({
-        amount: 10,
-        idempotency_key: "123e4567-e89b-12d3-a456-426614174000",
-      }).success
-    ).toBe(true)
-  })
-
-  it("rejects non-UUID idempotency_key", () => {
-    expect(TokenSpendSchema.safeParse({ amount: 10, idempotency_key: "not-a-uuid" }).success).toBe(
-      false
+    const res = await POST(
+      req({ amount: 5, idempotency_key: "3f0a2b1c-1234-4abc-9def-000000000001" })
     )
-  })
-})
 
-describe("tokens/spend — idempotency detection", () => {
-  it("returns false for null/undefined existing txn", () => {
-    expect(hasProcessedIdempotencyKey(null)).toBe(false)
-    expect(hasProcessedIdempotencyKey(undefined)).toBe(false)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.duplicate).toBe(true)
+    expect(body.balance).toBe(42)
+    expect(spendCalls()).toHaveLength(0) // ← 두 번 차감되면 안 된다
   })
 
-  it("returns true when existing txn has id", () => {
-    expect(hasProcessedIdempotencyKey({ id: "txn_123" })).toBe(true)
+  it("성공 — spend_tokens 를 정확히 1회, p_amount=요청 금액으로 호출한다", async () => {
+    const POST = await loadRoute()
+    const res = await POST(req({ amount: 5, description: "test" }))
+
+    expect(res.status).toBe(200)
+    expect(spendCalls()).toHaveLength(1)
+    expect(spendCalls()[0].args).toMatchObject({ p_user_id: "user-1", p_amount: 5 })
+  })
+
+  it("성공 응답의 balance 는 RPC 의 remaining_balance 키에서 온다 (반환 키 계약)", async () => {
+    supabaseMock = makeSupabase({
+      spend: { success: true, remaining_balance: 3, error_message: null },
+    })
+    const POST = await loadRoute()
+    const res = await POST(req({ amount: 5 }))
+
+    const body = await res.json()
+    expect(body).toMatchObject({ success: true, balance: 3, spent: 5 })
+  })
+
+  it("잔액 부족(RPC success:false) → 400 + 현재 잔액·필요량 안내", async () => {
+    supabaseMock = makeSupabase({
+      spend: { success: false, remaining_balance: 2, error_message: "잔액이 부족합니다" },
+    })
+    const POST = await loadRoute()
+    const res = await POST(req({ amount: 5 }))
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body).toMatchObject({ error: "잔액이 부족합니다", balance: 2, required: 5 })
+  })
+
+  it("RPC 자체가 실패하면 500 (성공으로 새지 않음)", async () => {
+    supabaseMock = makeSupabase({ rpcFails: true })
+    const POST = await loadRoute()
+    const res = await POST(req({ amount: 5 }))
+    expect(res.status).toBe(500)
   })
 })
