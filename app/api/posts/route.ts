@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { revalidatePath } from "next/cache"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       .split(",")
       .filter((s) => UUID_RE.test(s)) // mute
     const sort = searchParams.get("sort") || "new" // 'hot', 'new', 'comments', 'recent_comments'
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
 
     // 팔로우 게시판 필터: 클라이언트에서 전달받은 slug 목록 사용

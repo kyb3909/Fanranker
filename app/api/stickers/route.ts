@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { currentUser } from "@clerk/nextjs/server"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const creatorId = searchParams.get("creator_id")
     const q = searchParams.get("q")
     const sort = searchParams.get("sort") || "popular"
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100)
+    const limit = parseLimit(searchParams, { def: 50, max: 100 })
     const offset = parseInt(searchParams.get("offset") || "0")
 
     const supabase = createAnonClient()

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
 import { apiError, apiBadRequest } from "@/lib/api-error"
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl
     const status = searchParams.get("status") || "pending"
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100)
+    const limit = parseLimit(searchParams, { def: 50, max: 100 })
     const offset = parseInt(searchParams.get("offset") || "0")
 
     let query = supabase

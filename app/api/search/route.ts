@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { createAnonClient } from "@/lib/supabase/server"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     const query = searchParams.get("q")
     const type = searchParams.get("type") || "title_content" // 'nickname' | 'id' | 'title' | 'title_content'
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
 
     if (!query || query.trim().length === 0) {

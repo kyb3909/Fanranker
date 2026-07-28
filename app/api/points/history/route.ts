@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { currentUser } from "@clerk/nextjs/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const boardSlug = searchParams.get("board_slug")
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10))
 
     const supabase = createServiceRoleClient()

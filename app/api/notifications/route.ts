@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized, checkRateLimit } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ unread_count: count || 0 })
     }
 
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = parseInt(searchParams.get("offset") || "0", 10)
     const unreadOnly = searchParams.get("unread_only") === "true"
 

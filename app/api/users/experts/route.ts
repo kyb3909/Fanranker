@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { createAnonClient } from "@/lib/supabase/server"
 import { apiError } from "@/lib/api-error"
 
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
 
     const sort = searchParams.get("sort") || "profit" // 'profit' | 'accuracy' | 'roi'
-    const limit = parseInt(searchParams.get("limit") || "20", 10)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = parseInt(searchParams.get("offset") || "0", 10)
 
     // Join profiles with user_prediction_stats to get expert users with their stats

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { createAnonClient } from "@/lib/supabase/server"
 import { auth } from "@clerk/nextjs/server"
 import { apiError } from "@/lib/api-error"
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const sport = searchParams.get("sport") || "전체"
     const sort = searchParams.get("sort") || "profit_rate"
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100)
+    const limit = parseLimit(searchParams, { def: 50, max: 100 })
     const offset = parseInt(searchParams.get("offset") || "0", 10)
     const minPredictions = parseInt(searchParams.get("min_predictions") || "1", 10)
 

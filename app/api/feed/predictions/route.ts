@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLimit } from "@/lib/api/parse-limit"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiUnauthorized } from "@/lib/api-error"
 import { createServiceRoleClient } from "@/lib/supabase/server"
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceRoleClient()
 
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50)
+    const limit = parseLimit(searchParams, { def: 20, max: 50 })
     const offset = parseInt(searchParams.get("offset") || "0")
 
     // 1. 팔로우하는 유저 목록
