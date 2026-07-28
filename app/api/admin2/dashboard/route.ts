@@ -161,9 +161,11 @@ export async function GET() {
   ])
 
   // ── 1. 파이프라인 ────────────────────────────────────────────────────
-  // 임계값 근거: betman 은 Vultr 2시간 주기(+ Vercel 30분 보조) → 3h warn / 6h down.
-  // 뉴스 스캐너는 15분 주기지만 밤에 소스가 조용할 수 있어 넉넉히 3h/8h.
-  // 티커 크롤러는 10분 주기 → 2h/6h.
+  // 임계값 근거 (각 파이프라인의 실제 주기에서 나온다):
+  //   betman  Vultr 2시간 주기(+ Vercel 30분 보조) → 3h warn / 6h down
+  //   스캐너  15분 주기지만 새벽엔 소스가 조용 → 넉넉히 4h / 10h (아래 주석 참조)
+  //   발행    사람 검수에 달림 → 24h / 72h
+  //   티커    10분 주기 → 2h / 6h
   const betmanErr = betmanSync.data?.last_error
   const pipelines: Pipeline[] = [
     {
