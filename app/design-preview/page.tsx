@@ -9,6 +9,7 @@
 import { createAnonClient } from "@/lib/supabase/server"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import { formatRelativeTime } from "@/lib/utils/date"
 import {
   extractFirstImageSrcFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
@@ -17,16 +18,6 @@ import { PreviewClient, type PreviewPost, type PreviewMedia } from "./preview-cl
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "담벼락 디자인 프리뷰", robots: { index: false } }
-
-function relTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return "방금"
-  if (m < 60) return `${m}분 전`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}시간 전`
-  return `${Math.floor(h / 24)}일 전`
-}
 
 function deriveMedia(content: unknown, image: string | null): PreviewMedia | undefined {
   if (typeof content === "string") {
@@ -85,7 +76,7 @@ export default async function DesignPreviewPage() {
       team: flair,
       author: nickById.get(p.user_id) ?? "익명",
       flair,
-      time: relTime(p.created_at as string),
+      time: formatRelativeTime(new Date(p.created_at as string)),
       title: p.title ?? "(제목 없음)",
       body: (body || "").replace(/\s+/g, " ").trim().slice(0, 160),
       media: deriveMedia(p.content, p.image as string | null),

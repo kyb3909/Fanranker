@@ -8,6 +8,7 @@ import { useUser } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import type { TalkBoardItem, ItemDetail } from "./news-talk-types"
 import { NEWS_DETAILS } from "./news-talk-types"
+import { formatRelativeTime } from "@/lib/utils/date"
 
 interface TickerComment {
   id: string
@@ -22,17 +23,6 @@ interface TickerDetailPanelProps {
   item: TalkBoardItem
   isOpen: boolean
   onClose: () => void
-}
-
-function formatTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return "방금 전"
-  if (minutes < 60) return `${minutes}분 전`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}시간 전`
-  const days = Math.floor(hours / 24)
-  return `${days}일 전`
 }
 
 /** Extract numeric DB id from "ticker-123" format */
@@ -309,7 +299,7 @@ export function TickerDetailPanel({ item, isOpen, onClose }: TickerDetailPanelPr
                       {comment.nickname}
                     </span>
                     <span className="text-muted-foreground text-[12px]">
-                      {formatTimeAgo(comment.created_at)}
+                      {formatRelativeTime(new Date(comment.created_at))}
                     </span>
                   </div>
                   <p className="text-foreground pl-[42px] text-[14px] leading-relaxed">
