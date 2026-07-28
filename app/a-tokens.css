@@ -48,8 +48,21 @@
     color: var(--gn-cream);
     background:
       radial-gradient(1100px 420px at 78% -10%, rgba(150, 30, 55, 0.28), transparent 60%),
+      /* 하단 웜 워시 — 기존 래디얼 2개는 위/좌하를 향해 밴드 아래 모서리가 순수
+         #16141a 로 죽는다. 즉 라이트로 넘어가는 지점이 밴드에서 가장 차가운 곳이다.
+         이 한 줄이 마지막 픽셀을 버건디 쪽으로 끌어와 색상 점프를 지우고 명도 점프만
+         남긴다 — 명도만 바뀌는 경계는 "존이 바뀌었다", 색상까지 바뀌면 "제품이 바뀌었다"로
+         읽힌다. 중심이 104% 라 밴드 높이가 141px 이든 530px 이든 하단만 물든다. */
+        radial-gradient(1500px 210px at 50% 104%, rgba(150, 30, 55, 0.34), transparent 70%),
       radial-gradient(700px 300px at 8% 110%, rgba(150, 30, 55, 0.14), transparent 65%),
       var(--gn-night);
+  }
+
+  /* 라이트 존 첫 132px 에 다크의 잔광 — 운동장 카드 그림자가 하던 역할을 전 페이지로.
+   * 인접 형제 선택자라 JSX 수정 0. 다크 면적은 1px 도 늘지 않는다. */
+  .gn-band + * {
+    background-image: linear-gradient(180deg, rgba(150, 30, 55, 0.06), rgba(150, 30, 55, 0) 132px);
+    background-repeat: no-repeat;
   }
   /* 미세 그레인 — 다크 면의 밴딩 제거 */
   .gn-band::before {
