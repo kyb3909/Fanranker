@@ -80,8 +80,9 @@ export function validateWriterResult(result) {
   if (result.body.length < 100) {
     return { ok: false, reason: `body too short (${result.body.length} chars, min 100)` }
   }
-  if (result.body.length > 800) {
-    return { ok: false, reason: `body too long (${result.body.length} chars, max 800)` }
+  // articleBody 입력이 있으면 500~1,000자 권장이라 상한을 1,300으로 (write-run 검증과 동일)
+  if (result.body.length > 1300) {
+    return { ok: false, reason: `body too long (${result.body.length} chars, max 1300)` }
   }
   return { ok: true }
 }

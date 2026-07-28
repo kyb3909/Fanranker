@@ -102,6 +102,7 @@ export async function fetchRedditViaRSS(
     num_comments: 0,
     flair: null,
     description: e.description || null,
+    article_text: e.articleText || null,
     og_image: e.ogImage || null,
   }));
 }
@@ -126,15 +127,18 @@ async function enrichWithDescription(entries) {
       try {
         const res = await fetch(entry.contentLink, {
           headers: { "User-Agent": USER_AGENT },
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(8000),
           redirect: "follow",
         });
         if (!res.ok) return;
 
-        // 첫 50KB만 읽어서 meta 태그 추출 (전체 다운로드 방지)
+        // 첫 450KB까지 읽어서 meta 태그 + 본문 문단 추출.
+        // 50KB → 450KB: 뉴스 사이트는 헤더/스크립트 프리앰블이 커서 본문 <p> 가
+        // 한참 뒤에 나온다 (BBC 실측: 첫 <p> 가 157KB 지점). 본문은 writer 의
+        // 팩트 재료라 여기서 놓치면 기사가 두 줄짜리로 나온다.
         const reader = res.body.getReader();
         let html = "";
-        while (html.length < 50000) {
+        while (html.length < 450000) {
           const { done, value } = await reader.read();
           if (done) break;
           html += new TextDecoder().decode(value);
@@ -183,11 +187,49 @@ async function enrichWithDescription(entries) {
             entry.ogImage = raw;
           }
         }
+
+        // 기사 본문 문단 추출 — writer 가 og:description(1~2문장)만 받으면
+        // 기사가 짧고 얕게 나온다. 본문 앞부분을 팩트 재료로 함께 넘긴다.
+        const articleText = extractArticleText(html);
+        if (articleText) {
+          entry.articleText = articleText;
+        }
       } catch {
         // timeout or network error — skip, description/ogImage stays null
       }
     })
   );
+}
+
+// 본문 <p> 문단 수집 — readability 라이브러리 없이 정규식으로 최소 구현.
+// 목표는 완벽한 본문 복원이 아니라 "writer 에게 줄 팩트 재료 2,000여 자"다.
+const BOILERPLATE_P =
+  /cookie|subscri|newsletter|sign up|sign in|log in|all rights reserved|privacy policy|terms of (use|service)|follow us|download the app|advertis|getty images|©/i;
+
+export function extractArticleText(html) {
+  // 스크립트/스타일/템플릿 블록 제거 후 <p> 만 수집
+  const stripped = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
+    .replace(/<template[\s\S]*?<\/template>/gi, "");
+
+  const paragraphs = [];
+  const pRegex = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  let m;
+  let total = 0;
+  while ((m = pRegex.exec(stripped)) !== null && total < 2800) {
+    const text = decodeHTML(m[1].replace(/<[^>]+>/g, " "))
+      .replace(/\s+/g, " ")
+      .trim();
+    // 네비게이션/캡션/약관 조각 걸러내기 — 짧거나 보일러플레이트면 스킵
+    if (text.length < 40 || BOILERPLATE_P.test(text)) continue;
+    paragraphs.push(text);
+    total += text.length;
+  }
+
+  if (paragraphs.length === 0) return null;
+  return paragraphs.join("\n").slice(0, 2800);
 }
 
 // ============================================================================

@@ -139,6 +139,8 @@ function toReservoirRow(entry, post) {
       title: post.original_title,
       // og:description 있으면 사용, 없으면 title fallback
       excerpt: post.description || post.original_title,
+      // 기사 본문 앞부분 (~2,800자) — writer 의 팩트 재료. 없으면 null.
+      articleText: post.article_text || null,
       lang: 'en',
     },
     scores: {

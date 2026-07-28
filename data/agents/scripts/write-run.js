@@ -46,9 +46,9 @@ function validateKorean(headline, body) {
   if (headline.length > 35) {
     return { ok: false, reason: `headline too long (${headline.length} chars)` }
   }
-  // 본문 길이: 100~800자 허용 (권장 300~600). Phase A는 입력이 title-only라
-  // 짧게 나오는 게 자연스러움. Phase B에서 article body fetch 추가하면 늘어남.
-  if (body.length < 100 || body.length > 800) {
+  // 본문 길이: 100~1300자 허용 (articleBody 있으면 권장 500~1000,
+  // title/excerpt 뿐이면 200~500 이 자연스러움 — 팩트 없이 늘리면 환각이다)
+  if (body.length < 100 || body.length > 1300) {
     return { ok: false, reason: `body length out of range (${body.length} chars)` }
   }
   return { ok: true }
@@ -115,6 +115,8 @@ async function main() {
       facts: {
         title: item.normalized?.title || item.raw.title,
         excerpt: item.normalized?.excerpt || item.raw.excerpt || '',
+        // 기사 본문 앞부분 (영어 원문). 있으면 writer 가 이걸로 살을 붙인다.
+        articleBody: (item.raw?.articleText || '').slice(0, 2800) || null,
         sourceMedia: item.source?.domain || 'unknown',
         credibility,
         unverified,
