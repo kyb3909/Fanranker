@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic"
  * - 크롤링 이슈: betman 동기화 지연 / 뉴스 크롤러(티커) 지연 (Vultr cron 이 죽으면 DB가
  *   안 갱신되므로 신선도로 감지 — 민감한 Vultr 스크립트를 건드리지 않음)
  * - 미정산 이슈: 경기 결과 나왔는데 pending 인 고아 예측 (settle-pending 안전망이 못 잡은 것)
+ * - 돈 정합성: 미해결 환불 큐 / 고아 슬립 / 배당 미기록 예측
+ *   (볼 차감 3단계에 트랜잭션 경계가 없다 — 구조를 바꾸는 대신 새는 순간 감지한다)
  *
  * 이상 없으면 알림 없음. 지속 이상은 30분마다 재알림(아웃티지 리마인드).
  */
@@ -88,6 +90,77 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     console.error("ops-monitor orphan check 실패:", e)
+  }
+
+  // ── 돈 정합성 (2026-07-28 추가) ─────────────────────────────────────────
+  // 볼 차감 → 슬립 → 예측 3단계에 트랜잭션 경계가 없다. 보상 로직(환불 재시도 + 큐)이
+  // 실제로 동작해 슬립 1,419건 동안 관측된 피해는 0건이었지만, 트래픽이 늘면 달라질 수
+  // 있다. 구조를 바꾸는 대신 새는 순간 바로 알 수 있게 감시만 둔다.
+  // 판정 근거는 docs/refactor/risk-map.md #2 와 그 조사 결과.
+
+  // 4) 미해결 환불 큐 — 자동 환불이 3회 재시도 후에도 실패해 사람이 처리해야 하는 건
+  try {
+    const { count } = await supabase
+      .from("pending_refunds")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+    if ((count ?? 0) > 0) {
+      issues.push({
+        name: "💰 미해결 환불 큐",
+        value: `${count}건 — 자동 환불 실패분. /admin/operations 에서 수동 처리 필요`,
+      })
+    }
+  } catch (e) {
+    console.error("ops-monitor pending_refunds check 실패:", e)
+  }
+
+  // 5) 고아 슬립 — 볼은 빠졌는데 예측이 안 달린 슬립.
+  //    시드 더미(dummy_*)와 이벤트 슬립은 제외하고, 환불/삭제 유예를 위해 1시간 지난 것만.
+  try {
+    const cutoff = new Date(Date.now() - H).toISOString()
+    const { data: recentSlips } = await supabase
+      .from("prediction_slips")
+      .select("id, user_id")
+      .is("event_id", null)
+      .lt("created_at", cutoff)
+      .gt("created_at", new Date(Date.now() - 24 * H).toISOString())
+    const realSlips = (recentSlips ?? []).filter((s) => !s.user_id?.startsWith("dummy"))
+    if (realSlips.length > 0) {
+      const { data: withPreds } = await supabase
+        .from("betman_predictions")
+        .select("slip_id")
+        .in(
+          "slip_id",
+          realSlips.map((s) => s.id)
+        )
+      const linked = new Set((withPreds ?? []).map((p) => p.slip_id))
+      const orphans = realSlips.filter((s) => !linked.has(s.id))
+      if (orphans.length > 0) {
+        issues.push({
+          name: "🧾 고아 슬립",
+          value: `최근 24시간 ${orphans.length}건 — 볼은 빠졌는데 예측 미저장. 환불 여부 확인 필요`,
+        })
+      }
+    }
+  } catch (e) {
+    console.error("ops-monitor orphan slip check 실패:", e)
+  }
+
+  // 6) locked_odds 누락 — 정산 시 경기 배당으로 폴백되지만, 경기 행이 지워지면 0점이 된다
+  try {
+    const { count } = await supabase
+      .from("betman_predictions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .or("locked_odds.is.null,locked_odds.eq.0")
+    if ((count ?? 0) > 0) {
+      issues.push({
+        name: "🎲 배당 미기록 예측",
+        value: `${count}건 — locked_odds 없음. 정산 시 경기 배당 폴백에 의존`,
+      })
+    }
+  } catch (e) {
+    console.error("ops-monitor locked_odds check 실패:", e)
   }
 
   if (issues.length > 0) {
