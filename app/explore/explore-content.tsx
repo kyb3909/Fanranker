@@ -249,7 +249,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
 
       <main
         id="main-content"
-        className="container mx-auto max-w-[1280px] px-4 pt-[72px] pb-10"
+        className="container mx-auto max-w-[1280px] px-4 pt-[72px] pb-10 sm:px-6"
         tabIndex={-1}
       >
         <div className="grid grid-cols-12 gap-6">

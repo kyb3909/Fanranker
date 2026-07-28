@@ -271,7 +271,7 @@ export default async function CommunityPage({
         <PageBand kicker="Board" title={creatorBoardInfo.name} />
         <main
           id="main-content"
-          className="container mx-auto max-w-[1280px] px-4 py-6"
+          className="container mx-auto max-w-[1280px] px-4 py-6 sm:px-6"
           tabIndex={-1}
         >
           <CreatorBoard creator={creator} />
@@ -374,7 +374,7 @@ export default async function CommunityPage({
         />
         <main
           id="main-content"
-          className="container mx-auto max-w-[1280px] px-4 py-6"
+          className="container mx-auto max-w-[1280px] px-4 py-6 sm:px-6"
           tabIndex={-1}
         >
           {/* 12컬럼 그리드: 조밀한 간격 */}

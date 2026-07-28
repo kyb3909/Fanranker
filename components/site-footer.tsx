@@ -22,7 +22,7 @@ export function SiteFooter() {
           "radial-gradient(800px 300px at 50% 130%, rgba(150,30,55,.22), transparent 65%), var(--gn-night)",
       }}
     >
-      <div className="mx-auto max-w-[1280px] px-4 py-12 text-center">
+      <div className="mx-auto max-w-[1280px] px-4 py-12 text-center sm:px-6">
         <span
           className="inline-block leading-none"
           style={{
