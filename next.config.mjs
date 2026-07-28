@@ -109,6 +109,29 @@ const nextConfig = {
         ],
       },
       {
+        /**
+         * 유저별 개인 응답 — 반드시 마지막에 둔다 (동일 키는 뒤 규칙이 이긴다).
+         *
+         * 위 read-only 규칙들은 메서드·인증 조건이 없어서, 자체 Cache-Control 을
+         * 세우지 않는 개인화 GET 라우트가 그대로 `public, s-maxage` 를 물려받았다.
+         * 로그인 유저의 응답이 CDN 에 캐시되면 다른 사용자에게 그대로 나갈 수 있다.
+         *   /api/feed/predictions  구매 여부(is_purchased)
+         *   /api/feed/snack        개인화 피드
+         *   /api/posts/my          내 글
+         *   /api/posts/[id]/bookmark, /vote   내 북마크·내 투표 상태
+         *
+         * ⚠️ 위 '/api/(posts|communities|profiles)' 패턴의 communities/profiles 는
+         *    실재하지 않는 경로다(헛도는 중). 이를 "오타 수정" 하면 캐시 범위가
+         *    넓어지므로 손대지 말 것.
+         */
+        source: '/api/(feed/predictions|feed/snack|posts/my)',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
+      {
+        source: '/api/posts/:id/(bookmark|vote)',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
+      {
         // CSP 위반 보고: 캐시 금지
         source: '/api/security/:path*',
         headers: [
