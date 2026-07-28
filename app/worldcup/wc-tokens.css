@@ -8,25 +8,25 @@
  */
 
 .worldcup-scope {
-  /* Core palette — Neutral cool gray (순수 회색, 중립 톤).
-   * 사용자 제시 팔레트 5색:
-   *   #F1F3F5 (soft) · #E4E7EC · #D2D6DD · #FFFFFF · #9B1F33 (burgundy)
-   * sky/blue 끼 없는 순수 cool gray — 가장 중립적, 깔끔.
-   * mute (텍스트) 도 cool gray 유지 (가독성). */
+  /* Core palette — Warm paper (2026-07-28 전환).
+   * 종전 쿨 스틸(#f1f1f3/#e2e5ea/#eceef2)은 상단 다크 밴드(웜: 크림·버건디)와
+   * 경계에서 색온도 부호가 뒤집혀 "밴드와 본문이 따로 노는" 인상의 원인이었다.
+   * 밝기는 유지하고 색상축만 웜으로 회전 — 대비/가독성 변화 없음.
+   * 진단: docs/design-review-2026-07-27/band-seam.md */
   --wc-burgundy: #961e37;
   --wc-burgundy-deep: #771629;
-  --wc-ink: #14161a;
-  --wc-paper: #f1f1f3;
+  --wc-ink: #1a1714;
+  --wc-paper: #faf9f7;
   --wc-card: #ffffff;
-  --wc-line: #e2e5ea;
-  --wc-line-2: #cfd4dc;
+  --wc-line: #e8e5e0;
+  --wc-line-2: #d8d3ca;
   --wc-mute: #5c6470;
   --wc-mute-2: #6b7280; /* WCAG AA: 4.8:1 on white (구 #8b93a0 = 3.09:1, 미달) */
-  --wc-soft: #eceef2; /* 소프트 서피스 — 쿨 뉴트럴(구 #f6e4e8 핑크/#f4f2ee 누런톤 교체) */
-  --wc-tint: #e1e4ea; /* 강조 서피스 — 사이드바 헤더 등 (쿨 뉴트럴) */
+  --wc-soft: #f2efea; /* 소프트 서피스 — 웜 페이퍼 (2026-07-28 쿨 스틸 #eceef2 에서 전환) */
+  --wc-tint: #e8e3db; /* 강조 서피스 — 사이드바 헤더 등 (웜 페이퍼) */
   --wc-ink-2: #494d56; /* 본문 보조 텍스트 (랜딩 리디자인) */
   --wc-wine-tint: #fbf2f4; /* 와인 faint fill — pill/step number */
-  --wc-canvas: #f1f1f3; /* 보드 페이지 캔버스 — 연회색 배경 위 흰 카드 */
+  --wc-canvas: #faf9f7; /* 보드 페이지 캔버스 — 연회색 배경 위 흰 카드 */
 
   /* Semantic accents */
   --wc-warn: #c8842a;
@@ -220,7 +220,7 @@
 /* ─── Skeleton (dynamic import loading) — paper 톤 일관 ─── */
 /* scope-free: AppShell 어디서나 사용 가능 (paper 톤 글로벌) */
 .wc-skeleton {
-  background: linear-gradient(180deg, var(--wc-soft, #eceef2), var(--wc-line, #e2e5ea));
+  background: linear-gradient(180deg, var(--wc-soft, #f2efea), var(--wc-line, #e8e5e0));
   border-radius: 12px;
   animation: wc-skeleton-pulse 1.6s ease-in-out infinite;
 }
@@ -242,7 +242,7 @@
   color: var(--wc-mute, #5c6470);
 }
 .wc-hdr-link:hover {
-  color: var(--wc-ink, #14161a);
+  color: var(--wc-ink, #1a1714);
 }
 .wc-hdr-link[data-on="true"] {
   color: var(--wc-burgundy, #961e37);
@@ -1808,7 +1808,7 @@
   cursor: pointer;
   color: var(--wc-mute, #5c6470);
   background: var(--wc-card, #fff);
-  border: 1px solid var(--wc-line, #e2e5ea);
+  border: 1px solid var(--wc-line, #e8e5e0);
   transition:
     background 0.15s,
     color 0.15s,
@@ -1820,8 +1820,8 @@
   stroke: currentColor;
 }
 .wc-chip-tabs button:hover:not(:disabled):not(.on) {
-  color: var(--wc-ink, #14161a);
-  border-color: var(--wc-line-2, #cfd4dc);
+  color: var(--wc-ink, #1a1714);
+  border-color: var(--wc-line-2, #d8d3ca);
 }
 .wc-chip-tabs button.on {
   background: var(--wc-burgundy, #961e37);

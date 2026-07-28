@@ -24,7 +24,7 @@
 :root {
   /* ===== KT BizMeka-inspired Clean Design System ===== */
   /* Background: 아주 살짝 회색 톤 - 카드와 구분 */
-  --background: #f1f1f3;
+  --background: #faf9f7;
   /* Primary Text: #111111 - 주요 텍스트 */
   --foreground: #111111;
 
@@ -40,23 +40,23 @@
   --primary-foreground: #ffffff;
 
   /* Secondary: 쿨 뉴트럴 — hover/chip 서피스 (구 #f6e4e8 핑크 교체) */
-  --secondary: #eceef2;
+  --secondary: #f2efea;
   --secondary-foreground: #222222;
 
   /* Muted: 쿨 뉴트럴 — bg-muted/40 등 (구 #f6e4e8 핑크 교체) */
-  --muted: #eceef2;
+  --muted: #f2efea;
   /* Secondary Text: steel mute */
   --muted-foreground: #5c6470;
 
-  --accent: #eceef2;
+  --accent: #f2efea;
   --accent-foreground: #222222;
 
   --destructive: oklch(0.45 0.18 15);
   --destructive-foreground: #ffffff;
 
   /* Border: steel line */
-  --border: #e2e5ea;
-  --input: #e2e5ea;
+  --border: #e8e5e0;
+  --input: #e8e5e0;
 
   /* Ring: wine #961E37 */
   --ring: #961e37;
@@ -152,7 +152,7 @@
   /* 피드 카드 제목 링크: 기본/visited 모두 --wc-ink 고정 */
   .gn-pin-title,
   .gn-pin-title:visited {
-    color: var(--wc-ink, #14161a);
+    color: var(--wc-ink, #1a1714);
     text-decoration: none;
   }
 
