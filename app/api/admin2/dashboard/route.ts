@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server"
 import { requireAdminApi } from "@/lib/admin/require-admin-api"
+import {
+  freshness,
+  fmtAge,
+  worstStatus,
+  PIPELINE_THRESHOLDS,
+  type PipelineStatus,
+} from "@/lib/admin/pipeline-status"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +24,8 @@ export const dynamic = "force-dynamic"
 
 const H = 3600_000
 
-type Status = "ok" | "warn" | "down"
+/** 신선도 판정·표기는 lib/admin/pipeline-status 로 분리 (임계값 계약은 거기서 테스트한다) */
+type Status = PipelineStatus
 
 interface Pipeline {
   key: string
@@ -39,28 +47,6 @@ interface QueueItem {
   /** 이 큐가 밀리면 위험한 정도 */
   severity: "high" | "normal"
   note?: string
-}
-
-function ageHours(iso: string | null | undefined): number | null {
-  if (!iso) return null
-  return (Date.now() - new Date(iso).getTime()) / H
-}
-
-/** 신선도 기준으로 status 판정. warn/down 임계는 각 파이프라인의 실제 주기에서 나온다. */
-function freshness(iso: string | null, warnH: number, downH: number): Status {
-  const age = ageHours(iso)
-  if (age === null) return "down"
-  if (age >= downH) return "down"
-  if (age >= warnH) return "warn"
-  return "ok"
-}
-
-function fmtAge(iso: string | null): string {
-  const age = ageHours(iso)
-  if (age === null) return "기록 없음"
-  if (age < 1) return `${Math.round(age * 60)}분 전`
-  if (age < 24) return `${age.toFixed(1)}시간 전`
-  return `${Math.floor(age / 24)}일 전`
 }
 
 export async function GET() {
@@ -171,7 +157,13 @@ export async function GET() {
     {
       key: "betman",
       label: "승부예측 경기 크롤링",
-      status: betmanErr ? "down" : freshness(betmanSync.data?.last_checked_at ?? null, 3, 6),
+      status: betmanErr
+        ? "down"
+        : freshness(
+            betmanSync.data?.last_checked_at ?? null,
+            PIPELINE_THRESHOLDS.betman.warn,
+            PIPELINE_THRESHOLDS.betman.down
+          ),
       lastAt: betmanSync.data?.last_checked_at ?? null,
       detail: betmanErr
         ? `마지막 동기화에서 오류: ${String(betmanErr).slice(0, 120)}`
@@ -185,7 +177,11 @@ export async function GET() {
       // 새벽에 레딧이 조용하면 유입이 끊길 수 있어 임계를 넉넉히(4h/10h) 잡았다.
       key: "news-scanner",
       label: "AI 뉴스 수집 (스캐너)",
-      status: freshness(latestDraft.data?.created_at ?? null, 4, 10),
+      status: freshness(
+        latestDraft.data?.created_at ?? null,
+        PIPELINE_THRESHOLDS.newsScanner.warn,
+        PIPELINE_THRESHOLDS.newsScanner.down
+      ),
       lastAt: latestDraft.data?.created_at ?? null,
       detail: `마지막 초안 유입 ${fmtAge(latestDraft.data?.created_at ?? null)} · 24시간 유입 ${
         draftedToday.count ?? 0
@@ -195,7 +191,11 @@ export async function GET() {
     {
       key: "bot-publish",
       label: "AI 기사 발행",
-      status: freshness(latestBotPost.data?.created_at ?? null, 24, 72),
+      status: freshness(
+        latestBotPost.data?.created_at ?? null,
+        PIPELINE_THRESHOLDS.botPublish.warn,
+        PIPELINE_THRESHOLDS.botPublish.down
+      ),
       lastAt: latestBotPost.data?.created_at ?? null,
       detail: `마지막 발행 ${fmtAge(latestBotPost.data?.created_at ?? null)} · 24시간 발행 ${
         publishedToday.count ?? 0
@@ -205,7 +205,11 @@ export async function GET() {
     {
       key: "ticker",
       label: "뉴스 티커 크롤러",
-      status: freshness(ticker.data?.updated_at ?? null, 2, 6),
+      status: freshness(
+        ticker.data?.updated_at ?? null,
+        PIPELINE_THRESHOLDS.ticker.warn,
+        PIPELINE_THRESHOLDS.ticker.down
+      ),
       lastAt: ticker.data?.updated_at ?? null,
       detail: `마지막 갱신 ${fmtAge(ticker.data?.updated_at ?? null)}`,
       hint: "Vultr /opt/crawlers/runner.js 10분 주기",
@@ -310,13 +314,10 @@ export async function GET() {
     /* 무시 */
   }
 
-  const worst = (arr: Status[]): Status =>
-    arr.includes("down") ? "down" : arr.includes("warn") ? "warn" : "ok"
-
   return NextResponse.json(
     {
       generatedAt: new Date().toISOString(),
-      overall: worst(pipelines.map((p) => p.status)),
+      overall: worstStatus(pipelines.map((p) => p.status)),
       pipelines,
       queues,
       money,

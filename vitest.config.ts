@@ -8,6 +8,12 @@ export default defineConfig({
     environment: "jsdom",
     include: ["__tests__/**/*.test.{ts,tsx}"],
     globals: true,
+    // 기본 5초는 라우트 통합 테스트에 부족하다 — 그 테스트들은 beforeEach 의
+    // resetModules 뒤 `await import("@/app/api/…/route")` 로 매번 의존성 그래프를
+    // 새로 로드하는데, 커버리지 계측이 붙으면 콜드 로드가 5초를 넘겨 플레이키하게
+    // 실패한다(실제 CI 실패 사례). 느린 테스트를 숨기려는 게 아니라 콜드 import
+    // 비용을 감안한 값 — 대다수 테스트는 여전히 ms 단위로 끝난다.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       // app/**(API 라우트)·middleware.ts 를 계측에 포함 — 돈 라우트 5종이 전부
