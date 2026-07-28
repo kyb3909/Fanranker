@@ -28,8 +28,10 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Unit tests
-        run: pnpm test
+      - name: Unit tests (coverage gate)
+        # test:coverage 로 임계값 게이트를 CI 에 태운다 — 임계값은 vitest.config.ts
+        # 의 래칫 방식 (실측 바로 아래에서 시작, 올리기만 함)
+        run: pnpm test:coverage
 
       - name: Build
         run: pnpm build

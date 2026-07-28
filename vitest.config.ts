@@ -10,20 +10,25 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: "v8",
-      include: ["lib/**/*.ts", "hooks/**/*.ts"],
+      // app/**(API 라우트)·middleware.ts 를 계측에 포함 — 돈 라우트 5종이 전부
+      // app/ 에 있는데 기존 include 밖이라 갭이 숫자로 안 보였다 (test-gaps.md P7).
+      include: ["lib/**/*.ts", "hooks/**/*.ts", "app/api/**/*.ts", "middleware.ts"],
       exclude: [
         "lib/supabase/**",
         "lib/ga4/**",
-        "lib/admin/**",
+        // lib/admin/** 제거 — requireAdminApi 는 39개 admin 라우트의 단일 관문인데
+        // 명시적 exclude 로 갭이 숨겨져 있었다. lib/api/** 는 존재하지 않는 스테일 항목이라 삭제.
         "lib/analytics/**",
-        "lib/api/**",
         "hooks/use-toast.ts",
       ],
+      // 실측치(2026-07-29: stmts 11.22 / branch 11.21 / funcs 12.49 / lines 10.94)
+      // 바로 아래로 시작하는 래칫(ratchet) — 초록에서 시작해 떨어지면 빨개지게
+      // 만드는 게 목적. 테스트가 늘 때마다 올리기만 하고, 절대 내리지 않는다.
       thresholds: {
-        statements: 25,
-        branches: 22,
-        functions: 22,
-        lines: 25,
+        statements: 11,
+        branches: 11,
+        functions: 12,
+        lines: 10.5,
       },
     },
   },
