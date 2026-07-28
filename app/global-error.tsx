@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import * as Sentry from "@sentry/nextjs"
 
 export default function GlobalError({
   error,
@@ -11,6 +12,8 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("[global-error]", error)
+    // 루트 레이아웃까지 무너진 치명 에러 — 유저는 흰 화면 직전까지 갔다
+    Sentry.captureException(error, { tags: { scope: "global-error-boundary" } })
   }, [error])
 
   const [imgError, setImgError] = useState(false)

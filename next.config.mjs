@@ -249,12 +249,12 @@ const nextConfig = {
   },
 }
 
-// Sentry 클라이언트 측 제거 (모바일 번들 165KB 감소). 서버/edge runtime 의 Sentry 는
-// instrumentation.ts 의 register() 에서 계속 init 함.
-// withSentryConfig 자체는 유지 — 서버 측 빌드 hook + source map 업로드(token 있을 때)
-// 가 필요하므로. SENTRY_AUTH_TOKEN 없으면 source map 업로드 단계 자동 skip.
-// disableClientWebpackPlugin: true 로 클라이언트 webpack 변환 단계 자체 비활성화 →
-// client 번들에 Sentry SDK 코드가 webpack 단에서 traceable 형태로 남는 것을 막음.
+// Sentry: 서버/edge 는 instrumentation.ts, 클라이언트는 instrumentation-client.ts
+// (에러 전용 경량 구성 — replay/tracing 없음. 과거 165KB 제거의 원흉은 replay 였고,
+// 이번 복원은 온보딩 사각지대(브라우저 에러 미수집)를 닫기 위한 것).
+// 클라이언트 webpack plugin 도 다시 켠다 — client 소스맵 업로드가 있어야
+// 브라우저 에러 스택이 minified 가 아닌 원본 코드로 보인다.
+// SENTRY_AUTH_TOKEN 없으면 source map 업로드 단계 자동 skip.
 export default withBundleAnalyzer(
   withSentryConfig(nextConfig, {
     org: process.env.SENTRY_ORG,
@@ -262,9 +262,14 @@ export default withBundleAnalyzer(
     silent: !process.env.CI,
     hideSourceMaps: true,
     authToken: process.env.SENTRY_AUTH_TOKEN,
-    // 클라이언트 빌드에서 Sentry webpack plugin 완전 비활성화.
-    // sentry.client.config.ts 가 비어있어도 SDK 자체는 import 될 수 있어
-    // 명시적으로 plugin 을 꺼서 클라이언트 번들에서 완전히 제외.
-    disableClientWebpackPlugin: true,
+    // 클라이언트는 에러 캡처 전용 — 안 쓰는 tracing/replay/디버그 코드를
+    // 번들에서 트리쉐이킹. (측정: 미적용 시 공용 First Load +113KB)
+    bundleSizeOptimizations: {
+      excludeDebugStatements: true,
+      excludeTracing: true,
+      excludeReplayShadowDom: true,
+      excludeReplayIframe: true,
+      excludeReplayWorker: true,
+    },
   })
 )

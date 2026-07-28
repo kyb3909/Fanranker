@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import * as Sentry from "@sentry/nextjs"
 
 export default function Error({
   error,
@@ -11,6 +12,8 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error("[error-boundary]", error)
+    // 페이지가 에러 화면으로 대체된 케이스 — 유저 여정이 여기서 끊겼다
+    Sentry.captureException(error, { tags: { scope: "route-error-boundary" } })
   }, [error])
 
   const [imgError, setImgError] = useState(false)
