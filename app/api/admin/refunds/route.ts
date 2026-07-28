@@ -10,6 +10,16 @@ export const dynamic = "force-dynamic"
 const patchSchema = z.object({
   refundId: z.string().min(1, "refundId가 필요합니다."),
   action: z.enum(["retry", "resolve"], { message: "잘못된 action입니다." }),
+  /**
+   * resolve 전용 — "실제로 지급했다"는 확인.
+   *
+   * resolve 는 돈을 1원도 움직이지 않고 큐에서만 지운다. 특히 골드 건은
+   * "수동 지급 → resolve" 2단계인데, 지급을 잊고 resolve 만 누르면 유저 돈이
+   * 증발하고 큐에서도 사라져 추적 수단이 없어진다. 그래서 명시적 확인을 강제한다.
+   */
+  paidConfirmed: z.boolean().optional(),
+  /** 어떻게 처리했는지 (감사 로그용) */
+  resolveNote: z.string().max(300).optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -73,7 +83,7 @@ export async function PATCH(request: NextRequest) {
     if (!parsed.success) {
       return apiBadRequest(parsed.error.errors[0]?.message || "잘못된 요청입니다.")
     }
-    const { refundId, action } = parsed.data
+    const { refundId, action, paidConfirmed, resolveNote } = parsed.data
 
     const { data: refund } = await supabase
       .from("pending_refunds")
@@ -128,7 +138,18 @@ export async function PATCH(request: NextRequest) {
         .update({ status: "resolved", resolved_at: nowIso })
         .eq("id", refundId)
     } else {
-      // resolve — 어드민이 다른 경로로 처리 완료 표시
+      // resolve — 어드민이 다른 경로로 처리 완료 표시.
+      // 돈은 움직이지 않으므로 "이미 지급했다"는 확인 없이는 닫지 못한다.
+      if (!paidConfirmed) {
+        return NextResponse.json(
+          {
+            error:
+              "실제 지급을 완료했는지 확인이 필요합니다. resolve 는 큐에서만 지울 뿐 돈을 지급하지 않습니다.",
+            requiresConfirmation: true,
+          },
+          { status: 400 }
+        )
+      }
       await supabase
         .from("pending_refunds")
         .update({ status: "resolved", resolved_at: nowIso })
@@ -140,7 +161,14 @@ export async function PATCH(request: NextRequest) {
       action: `refund_${action}`,
       targetType: "pending_refund",
       targetId: refundId,
-      details: { action, userId: refund.user_id, amount: refund.amount },
+      details: {
+        action,
+        userId: refund.user_id,
+        amount: refund.amount,
+        currency: refund.currency,
+        paidConfirmed: paidConfirmed ?? null,
+        resolveNote: resolveNote ?? null,
+      },
       ipAddress: getIpFromRequest(request),
     })
 

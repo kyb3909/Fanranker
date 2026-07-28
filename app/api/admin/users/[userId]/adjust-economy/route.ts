@@ -61,7 +61,9 @@ export async function POST(
         .eq("user_id", userId)
         .maybeSingle()
 
-      const newBalance = (current?.token_balance ?? 0) + amount
+      // 잔액은 0 아래로 내려가지 않는다. 예전엔 여기만 클램프가 없어서
+      // 거래기록(balance_after)은 0, 실제 잔액은 음수로 갈려 장부가 어긋났다.
+      const newBalance = Math.max(0, (current?.token_balance ?? 0) + amount)
 
       if (current) {
         const { error: updateErr } = await supabase
@@ -86,7 +88,7 @@ export async function POST(
         user_id: userId,
         amount,
         transaction_type: "admin_adjustment",
-        balance_after: Math.max(0, newBalance),
+        balance_after: newBalance,
         description: reason,
         idempotency_key,
       })
@@ -98,7 +100,8 @@ export async function POST(
         .eq("user_id", userId)
         .maybeSingle()
 
-      const newBalance = (current?.gold_balance ?? 0) + amount
+      // 볼과 동일 — 음수 잔액 금지 (장부 balance_after 와 일치)
+      const newBalance = Math.max(0, (current?.gold_balance ?? 0) + amount)
 
       if (current) {
         const { error: updateErr } = await supabase
@@ -121,7 +124,7 @@ export async function POST(
         user_id: userId,
         amount,
         transaction_type: "admin_adjustment",
-        balance_after: Math.max(0, newBalance),
+        balance_after: newBalance,
         description: reason,
         idempotency_key,
       })

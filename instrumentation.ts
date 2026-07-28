@@ -50,4 +50,24 @@ export async function register() {
   }
 }
 
-export const onRequestError = Sentry.captureRequestError
+/**
+ * 서버 에러 진입점 — Sentry 캡처 + 디스코드 알림.
+ *
+ * Next.js 가 서버 컴포넌트·라우트 핸들러의 미처리 에러를 여기로 보낸다. 지금까지는
+ * Sentry 로만 보냈는데, Sentry 는 열어봐야 알 수 있어서 사실상 사후 조사용이었다.
+ * 개막 트래픽에서 뭔가 터지면 **그 순간 알아야** 하므로 디스코드로도 민다
+ * (중복 억제·노이즈 필터는 lib/ops-error-alert.ts).
+ */
+export const onRequestError: typeof Sentry.captureRequestError = async (
+  error,
+  request,
+  context
+) => {
+  Sentry.captureRequestError(error, request, context)
+  // 알림은 요청 처리를 막지 않아야 하고, 실패해도 조용해야 한다
+  const { alertServerError } = await import("@/lib/ops-error-alert")
+  await alertServerError(error, {
+    path: request?.path,
+    kind: context?.routeType,
+  })
+}

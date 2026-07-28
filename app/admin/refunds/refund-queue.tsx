@@ -19,6 +19,8 @@ interface Refund {
   id: string
   user_id: string
   amount: number
+  /** 'token'(볼) | 'gold' — 골드 건은 자동 재시도가 안 되고 수동 지급이 필요하다 */
+  currency: string | null
   description: string | null
   source: string
   related_slip_id: string | null
@@ -63,12 +65,40 @@ export function RefundQueue({
   }
 
   const handleAction = async (refundId: string, action: "retry" | "resolve") => {
+    // resolve 는 큐에서만 지울 뿐 돈을 지급하지 않는다. 골드 건은 "수동 지급 →
+    // resolve" 2단계인데 지급을 잊고 닫으면 유저 돈이 증발하고 추적 수단도 사라진다.
+    let resolveNote: string | undefined
+    if (action === "resolve") {
+      const target = refunds.find((r) => r.id === refundId)
+      const amount = target ? `${target.amount} ${target.currency ?? "볼"}` : "해당 금액"
+      const note = window.prompt(
+        `⚠️ 이 버튼은 돈을 지급하지 않습니다. 큐에서 지우기만 합니다.\n\n` +
+          `${amount}을(를) 이미 다른 경로로 지급하셨습니까?\n` +
+          `지급했다면 처리 방법을 적어주세요 (예: 경제조정으로 수동 지급).\n` +
+          `취소하려면 Esc 를 누르세요.`
+      )
+      if (note === null) return // 취소
+      if (!note.trim()) {
+        toast({
+          variant: "destructive",
+          title: "처리 내용이 필요합니다",
+          description: "어떻게 지급했는지 적어야 큐를 닫을 수 있습니다.",
+        })
+        return
+      }
+      resolveNote = note.trim()
+    }
+
     setLoading(refundId)
     try {
       const res = await fetch("/api/admin/refunds", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refundId, action }),
+        body: JSON.stringify({
+          refundId,
+          action,
+          ...(action === "resolve" ? { paidConfirmed: true, resolveNote } : {}),
+        }),
       })
       const body = (await res.json()) as { error?: string }
       if (!res.ok) throw new Error(body.error ?? "오류 발생")

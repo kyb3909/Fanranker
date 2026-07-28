@@ -101,6 +101,13 @@ export function SettlementManagementTable() {
 
   const handleSettleByRound = async (dailyRoundId: string) => {
     if (settlingRound) return
+    // 정산은 유저 잔액에 볼을 지급한다 — 되돌리는 UI 가 없다
+    if (
+      !window.confirm(`이 라운드를 정산합니다.
+
+적중 유저에게 배당만큼 볼이 지급되며 되돌릴 수 없습니다. 계속할까요?`)
+    )
+      return
     setSettlingRound(dailyRoundId)
     try {
       const response = await fetch("/api/predictions/settle", {
@@ -127,6 +134,19 @@ export function SettlementManagementTable() {
     if (gameIds.length === 0) return
     const key = gameIds.join(",")
     if (processingIds.has(key)) return
+
+    // 여러 건을 한 번에 정산할 때만 확인을 받는다. 단건은 경기 행에서 결과를
+    // 눈으로 보고 누르는 흐름이라 마찰을 더하지 않는다.
+    if (
+      gameIds.length > 1 &&
+      !window.confirm(
+        `${gameIds.length}건을 한 번에 정산합니다.
+
+적중 유저에게 배당만큼 볼이 지급되며 되돌리는 화면이 없습니다.
+결과가 맞는지 확인하셨습니까?`
+      )
+    )
+      return
 
     setProcessingIds((prev) => new Set(prev).add(key))
     try {
