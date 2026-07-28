@@ -95,8 +95,10 @@ standings-*.html
 /console-debug.txt
 *.sh.tmp
 
-# Crawler node_modules
-data/crawlers/node_modules/
+# 서브 패키지 node_modules — data/ 하위는 각자 package.json 을 갖는 별도 워크스페이스라
+# 루트 /node_modules 규칙에 안 걸린다. 글로브로 한 번에 막는다
+# (data/agent-test 는 이 규칙이 없어 2,410 파일이 추적되고 있었다)
+data/*/node_modules/
 data/crawlers/logs/
 .gstack/
 
