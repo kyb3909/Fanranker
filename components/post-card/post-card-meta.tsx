@@ -266,7 +266,7 @@ function AvatarSm({ avatar, author }: { avatar: string; author: string }) {
   return (
     <Avatar className="h-[26px] w-[26px]">
       <AvatarImage src={avatar || "/placeholder.svg"} alt={author} />
-      <AvatarFallback className="text-[11px]" style={{ background: "#eceef2", color: "#961E37" }}>
+      <AvatarFallback className="text-[11px]" style={{ background: "#f2efea", color: "#961E37" }}>
         {author?.[0] ?? "?"}
       </AvatarFallback>
     </Avatar>
@@ -275,7 +275,7 @@ function AvatarSm({ avatar, author }: { avatar: string; author: string }) {
 
 function Hairline() {
   return (
-    <span aria-hidden style={{ color: "var(--wc-line-2, #cfd4dc)" }}>
+    <span aria-hidden style={{ color: "var(--wc-line-2, #d8d3ca)" }}>
       ·
     </span>
   )

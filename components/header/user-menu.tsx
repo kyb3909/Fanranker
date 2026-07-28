@@ -90,7 +90,7 @@ export function UserMenu() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold" style={{ color: "var(--wc-ink, #14161A)" }}>
+              <p className="truncate text-sm font-bold" style={{ color: "var(--wc-ink, #1a1714)" }}>
                 {displayName}
               </p>
               <p className="truncate text-xs" style={{ color: "var(--wc-mute, #5C6470)" }}>

@@ -172,7 +172,7 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
               style={{ gridTemplateColumns: "repeat(auto-fit, minmax(272px, 1fr))" }}
             >
               {categories.map((cat) => {
-                const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#EFF2F4", color: "#3A3D45" }
+                const chip = CAT_CHIP_MAP[cat.name] ?? { bg: "#f2efea", color: "#3A3D45" }
                 const s = stats?.[cat.slug]
                 return (
                   <Link

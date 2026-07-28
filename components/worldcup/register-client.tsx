@@ -311,7 +311,7 @@ export function RegisterClient() {
             width: 22,
             height: 22,
             borderRadius: 7,
-            border: `1.5px solid ${agreed ? "var(--wc-burgundy)" : "#cfd2d7"}`,
+            border: `1.5px solid ${agreed ? "var(--wc-burgundy)" : "#d8d3ca"}`,
             background: agreed ? "var(--wc-burgundy)" : "var(--wc-soft)",
             color: "#fff",
             display: "flex",

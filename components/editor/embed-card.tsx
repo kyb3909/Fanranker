@@ -23,7 +23,7 @@ function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" |
           <path d="M23 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.4-1C16.6 3.6 12 3.6 12 3.6s-4.6 0-7.7.3c-.5.1-1.5.1-2.4 1-.7.7-.9 2.3-.9 2.3S.8 9.1.8 11v1.8c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.6.3 7.6.3s4.6 0 7.7-.3c.5-.1 1.5-.1 2.4-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8V11c0-1.9-.2-3.8-.2-3.8zM9.7 15.1V8.4l6.2 3.4-6.2 3.3z" />
         </svg>
       ),
-      borderBottom: "1px solid var(--wc-line, #E2E5EA)",
+      borderBottom: "1px solid var(--wc-line, #e8e5e0)",
     },
     x: {
       bg: "#000000",
@@ -74,7 +74,7 @@ function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" |
           <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l7 4.5-7 4.5z" />
         </svg>
       ),
-      borderBottom: "1px solid var(--wc-line, #E2E5EA)",
+      borderBottom: "1px solid var(--wc-line, #e8e5e0)",
     },
   } as const
 

@@ -23,7 +23,7 @@ export function Header() {
       className="sticky top-0 z-50 w-full pt-[env(safe-area-inset-top)] backdrop-blur-xl"
       style={{
         background: "rgba(255, 255, 255, 0.92)",
-        borderBottom: "1px solid #e7e9ed",
+        borderBottom: "1px solid #e8e5e0",
         boxShadow: "0 1px 3px rgba(30, 30, 50, 0.04)",
       }}
     >

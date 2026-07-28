@@ -80,13 +80,13 @@ export function WorldcupRecapBoard() {
           {/* 말풍선 */}
           <div
             className="relative mx-auto mb-3 inline-block max-w-[280px] rounded-2xl border bg-white px-4 py-2.5 text-sm font-bold shadow-sm dark:bg-neutral-900"
-            style={{ borderColor: "var(--wc-line, #eadfe3)" }}
+            style={{ borderColor: "var(--wc-line, #f2efea)" }}
           >
             <span className="text-foreground">{message}</span>
             {/* 꼬리 */}
             <span
               className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-r border-b bg-white dark:bg-neutral-900"
-              style={{ borderColor: "var(--wc-line, #eadfe3)" }}
+              style={{ borderColor: "var(--wc-line, #f2efea)" }}
             />
           </div>
 

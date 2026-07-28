@@ -35,7 +35,7 @@ const CATEGORY_PASTEL: Record<string, string> = {
   음악: "#FDEFF3",
 }
 function getCategoryChipBg(name: string): string {
-  return CATEGORY_PASTEL[name] ?? "var(--secondary, #eceef2)"
+  return CATEGORY_PASTEL[name] ?? "var(--secondary, #f2efea)"
 }
 
 /** 게시판 라인 아이콘 색 — 파스텔 bg 와 톤 맞춘 진한 액센트. 미지정(영화/아이돌/자유/채널)은 와인. */

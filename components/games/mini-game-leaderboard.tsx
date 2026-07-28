@@ -82,7 +82,7 @@ export function MiniGameLeaderboard({ game }: { game: MiniGameId }) {
     <section
       aria-label="오늘의 순위"
       className="mt-4 rounded-lg border p-4"
-      style={{ borderColor: "var(--wc-line, #E2E5EA)", background: "var(--wc-card, #ffffff)" }}
+      style={{ borderColor: "var(--wc-line, #e8e5e0)", background: "var(--wc-card, #ffffff)" }}
     >
       <div className="mb-3 flex items-center gap-2">
         <Trophy className="h-4 w-4 text-amber-500" />

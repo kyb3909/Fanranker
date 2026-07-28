@@ -96,8 +96,8 @@ export function TransferBoardClient({ initialItems }: { initialItems: TransferIt
             className="h-8 rounded-full px-3 text-[13px] font-semibold transition-colors"
             style={
               filter === f.key
-                ? { background: "var(--wc-ink, #14161a)", color: "#fff" }
-                : { background: "var(--wc-paper, #f1f1f3)", color: "var(--wc-mute, #5c6470)" }
+                ? { background: "var(--wc-ink, #1a1714)", color: "#fff" }
+                : { background: "var(--wc-paper, #faf9f7)", color: "var(--wc-mute, #5c6470)" }
             }
           >
             {f.label}
@@ -114,10 +114,10 @@ export function TransferBoardClient({ initialItems }: { initialItems: TransferIt
       <div className="mt-4">
         {groups.map((group) => (
           <section key={group.label}>
-            <h2 className="text-muted-foreground sticky top-0 z-10 bg-[var(--wc-bg,#fafafa)] py-1.5 text-[12px] font-bold tracking-wide">
+            <h2 className="text-muted-foreground sticky top-0 z-10 bg-[var(--wc-bg,#f7f6f3)] py-1.5 text-[12px] font-bold tracking-wide">
               {group.label}
             </h2>
-            <ul className="divide-y" style={{ borderColor: "var(--wc-line, #e2e5ea)" }}>
+            <ul className="divide-y" style={{ borderColor: "var(--wc-line, #e8e5e0)" }}>
               {group.items.map((it) => {
                 const tier = TIER_META[it.tier]
                 return (

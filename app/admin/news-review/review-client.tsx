@@ -189,7 +189,7 @@ export function NewsReviewClient({
                       style={
                         on
                           ? { background: f.color ?? "#334155", color: "#fff" }
-                          : { background: "#eef0f3", color: "#64748b" }
+                          : { background: "#f2efea", color: "#64748b" }
                       }
                     >
                       {f.name}

@@ -13,7 +13,7 @@ export default async function CardNewsPage() {
   const { cards, nextCursor } = await fetchCardNews()
 
   return (
-    <div className="min-h-[100dvh]" style={{ background: "#F3F4F6" }}>
+    <div className="min-h-[100dvh]" style={{ background: "#f7f6f3" }}>
       <main id="main-content" className="mx-auto max-w-[600px] px-3 py-3" tabIndex={-1}>
         <h1 className="sr-only">카드뉴스 피드 — gongnori.fan</h1>
         <CardNewsFeed initialCards={cards} initialCursor={nextCursor} />

@@ -70,11 +70,11 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
     <div
       className="rounded-lg px-3.5 py-3"
       style={{
-        background: "var(--wc-paper, #f1f1f3)",
-        border: "1px solid var(--wc-line, #e2e5ea)",
+        background: "var(--wc-paper, #faf9f7)",
+        border: "1px solid var(--wc-line, #e8e5e0)",
       }}
     >
-      <p className="mb-2 text-[13px] font-bold" style={{ color: "var(--wc-ink, #14161a)" }}>
+      <p className="mb-2 text-[13px] font-bold" style={{ color: "var(--wc-ink, #1a1714)" }}>
         {entry.homeTeam} vs {entry.awayTeam}
         <span
           className="ml-1.5 text-[11px] font-semibold"
@@ -205,7 +205,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                   className="flex min-w-0 items-center gap-2.5 rounded-lg p-2 transition-colors hover:opacity-80"
                   style={{
                     background: "rgba(150,30,55,0.06)",
-                    border: "1px solid var(--wc-line, #e2e5ea)",
+                    border: "1px solid var(--wc-line, #e8e5e0)",
                   }}
                 >
                   {thumb ? (
@@ -215,7 +215,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                       alt=""
                       loading="lazy"
                       className="h-14 w-14 shrink-0 rounded-md object-cover"
-                      style={{ background: "var(--wc-paper, #f1f1f3)" }}
+                      style={{ background: "var(--wc-paper, #faf9f7)" }}
                     />
                   ) : (
                     <span
@@ -228,7 +228,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span
                       className="line-clamp-2 text-[13px] leading-snug font-semibold"
-                      style={{ color: "var(--wc-ink, #14161a)" }}
+                      style={{ color: "var(--wc-ink, #1a1714)" }}
                     >
                       {post.title}
                     </span>

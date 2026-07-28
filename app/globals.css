@@ -39,11 +39,11 @@
   --primary: #961e37;
   --primary-foreground: #ffffff;
 
-  /* Secondary: 쿨 뉴트럴 — hover/chip 서피스 (구 #f6e4e8 핑크 교체) */
+  /* Secondary: 쿨 뉴트럴 — hover/chip 서피스 (구 #f2efea 핑크 교체) */
   --secondary: #f2efea;
   --secondary-foreground: #222222;
 
-  /* Muted: 쿨 뉴트럴 — bg-muted/40 등 (구 #f6e4e8 핑크 교체) */
+  /* Muted: 쿨 뉴트럴 — bg-muted/40 등 (구 #f2efea 핑크 교체) */
   --muted: #f2efea;
   /* Secondary Text: steel mute */
   --muted-foreground: #5c6470;
@@ -65,16 +65,16 @@
   --chart-2: oklch(0.5 0.16 15);
   --chart-3: #444444;
   --chart-4: #999999;
-  --chart-5: #cccccc;
+  --chart-5: #d8d3ca;
   --radius: 0.5rem;
 
-  --sidebar: #fafafa;
+  --sidebar: #f7f6f3;
   --sidebar-foreground: #111111;
   --sidebar-primary: oklch(0.45 0.18 15);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f5f5f5;
+  --sidebar-accent: #f7f6f3;
   --sidebar-accent-foreground: #222222;
-  --sidebar-border: #eeeeee;
+  --sidebar-border: #f2efea;
   --sidebar-ring: oklch(0.45 0.18 15);
 }
 

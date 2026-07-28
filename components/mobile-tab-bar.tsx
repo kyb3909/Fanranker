@@ -48,7 +48,7 @@ function MobileTabBarContent() {
       aria-label="모바일 메뉴"
       style={{
         background: "rgba(255, 255, 255, 0.92)",
-        borderTop: "1px solid var(--wc-line, #E2E5EA)",
+        borderTop: "1px solid var(--wc-line, #e8e5e0)",
         boxShadow: "0 -4px 12px rgba(26, 20, 22, 0.05)",
       }}
     >

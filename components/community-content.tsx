@@ -200,11 +200,12 @@ export const CommunityContent = memo(function CommunityContent({
                           padding: "0 14px",
                           fontSize: 13,
                           fontWeight: 700,
-                          background: !activeFlairId ? "var(--wc-ink)" : "var(--wc-card)",
+                          // 활성 표시는 사이트 전역과 동일하게 버건디 (검정 잉크 X)
+                          background: !activeFlairId ? "var(--wc-burgundy)" : "var(--wc-card)",
                           color: !activeFlairId ? "white" : "var(--wc-mute)",
                           border: !activeFlairId
-                            ? "1px solid var(--wc-ink)"
-                            : "1px solid var(--wc-line-2)",
+                            ? "1px solid var(--wc-burgundy)"
+                            : "1px solid var(--wc-line)",
                         }}
                       >
                         전체
@@ -219,12 +220,13 @@ export const CommunityContent = memo(function CommunityContent({
                             padding: "0 14px",
                             fontSize: 13,
                             fontWeight: 700,
-                            backgroundColor: activeFlairId === f.id ? "var(--wc-ink)" : "#ffffff",
+                            backgroundColor:
+                              activeFlairId === f.id ? "var(--wc-burgundy)" : "var(--wc-card)",
                             color: activeFlairId === f.id ? "#ffffff" : "var(--wc-mute)",
                             border:
                               activeFlairId === f.id
-                                ? "1px solid var(--wc-ink)"
-                                : "1px solid var(--wc-line-2)",
+                                ? "1px solid var(--wc-burgundy)"
+                                : "1px solid var(--wc-line)",
                           }}
                         >
                           {f.name}

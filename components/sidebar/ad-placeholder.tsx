@@ -40,8 +40,8 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
       className={`${config.className} group relative flex flex-col items-center justify-center overflow-hidden rounded-xl`}
       style={{
         ...config.style,
-        background: "#F7F8FA",
-        border: "1px dashed var(--wc-line-2, #CFD4DC)",
+        background: "#f7f6f3",
+        border: "1px dashed var(--wc-line-2, #d8d3ca)",
         boxShadow: "var(--wc-shadow-1)",
       }}
     >
@@ -51,7 +51,7 @@ export function AdPlaceholder({ variant }: AdPlaceholderProps) {
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
           backgroundImage:
-            "linear-gradient(var(--wc-line-2, #CFD4DC) 1px, transparent 1px), linear-gradient(90deg, var(--wc-line-2, #CFD4DC) 1px, transparent 1px)",
+            "linear-gradient(var(--wc-line-2, #d8d3ca) 1px, transparent 1px), linear-gradient(90deg, var(--wc-line-2, #d8d3ca) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
           maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
           WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",

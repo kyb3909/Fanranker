@@ -36,8 +36,8 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
           <div
             className="flex items-center gap-2 px-4 py-3"
             style={{
-              background: "var(--wc-soft, #eceef2)",
-              borderBottom: "1px solid var(--wc-line, #E2E5EA)",
+              background: "var(--wc-soft, #f2efea)",
+              borderBottom: "1px solid var(--wc-line, #e8e5e0)",
             }}
           >
             <Target className="h-4 w-4" style={{ color: "var(--wc-burgundy, #961E37)" }} />
@@ -58,7 +58,7 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
             >
               {myRank.rank ?? "-"}
             </div>
-            <span className="text-sm font-bold" style={{ color: "var(--wc-ink, #14161A)" }}>
+            <span className="text-sm font-bold" style={{ color: "var(--wc-ink, #1a1714)" }}>
               {myRank.nickname || "나"}
             </span>
             <div
@@ -134,10 +134,10 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
           <div
             className="grid grid-cols-[2rem_1fr_3.5rem] items-center gap-1 px-3 py-2.5 text-[11px] font-bold uppercase sm:grid-cols-[2rem_1fr_3.5rem_3.5rem_3.5rem] sm:gap-2 sm:px-4"
             style={{
-              background: "var(--wc-soft, #eceef2)",
+              background: "var(--wc-soft, #f2efea)",
               color: "var(--wc-burgundy, #961E37)",
               letterSpacing: "0.06em",
-              borderBottom: "1px solid var(--wc-line, #E2E5EA)",
+              borderBottom: "1px solid var(--wc-line, #e8e5e0)",
             }}
           >
             <span className="text-center">#</span>

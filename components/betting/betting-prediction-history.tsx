@@ -71,7 +71,7 @@ export function BettingPredictionHistory({
         <div key={group.dateKey}>
           {/* 날짜 구분선 */}
           <div className="flex items-center gap-3 py-2">
-            <div className="flex-1" style={{ borderTop: "1px solid var(--wc-line, #E2E5EA)" }} />
+            <div className="flex-1" style={{ borderTop: "1px solid var(--wc-line, #e8e5e0)" }} />
             <span
               className="shrink-0 text-[11px] font-bold uppercase"
               style={{
@@ -81,7 +81,7 @@ export function BettingPredictionHistory({
             >
               {group.label}
             </span>
-            <div className="flex-1" style={{ borderTop: "1px solid var(--wc-line, #E2E5EA)" }} />
+            <div className="flex-1" style={{ borderTop: "1px solid var(--wc-line, #e8e5e0)" }} />
           </div>
           {/* 해당 날짜의 슬립들 */}
           <div className="space-y-2">

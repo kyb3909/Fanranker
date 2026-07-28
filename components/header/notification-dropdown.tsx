@@ -242,8 +242,8 @@ export function NotificationDropdown() {
         <div
           className="flex items-center justify-between p-4"
           style={{
-            background: "var(--wc-soft, #eceef2)",
-            borderBottom: "1px solid var(--wc-line, #E2E5EA)",
+            background: "var(--wc-soft, #f2efea)",
+            borderBottom: "1px solid var(--wc-line, #e8e5e0)",
           }}
         >
           <h3

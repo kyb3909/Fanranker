@@ -32,7 +32,7 @@ export default function SettingsPage() {
           }}
         >
           <User className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--wc-mute, #5C6470)" }} />
-          <h2 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink, #14161A)" }}>
+          <h2 className="mb-2 text-lg font-bold" style={{ color: "var(--wc-ink, #1a1714)" }}>
             로그인이 필요합니다
           </h2>
           <p className="mb-4 text-sm" style={{ color: "var(--wc-mute, #5C6470)" }}>

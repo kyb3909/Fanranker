@@ -247,7 +247,7 @@ const CHIP: Record<string, { bg: string; color: string; emoji: string }> = {
   농구: { bg: "#FDF1E5", color: "#9A3412", emoji: "🏀" },
   배구: { bg: "#F4EEFB", color: "#581C87", emoji: "🏐" },
 }
-const CHIP_FALLBACK = { bg: "#EFF2F4", color: "#3A3D45", emoji: "💬" }
+const CHIP_FALLBACK = { bg: "#f2efea", color: "#3A3D45", emoji: "💬" }
 
 export type PreviewMedia =
   | { kind: "image"; src: string }
@@ -334,7 +334,7 @@ function Toggle({
       className="rounded-full px-2.5 py-1 text-[12px] font-semibold transition-colors"
       style={{
         background: on ? "var(--wc-burgundy)" : "rgba(255,255,255,.1)",
-        color: on ? "#fff" : "#c9cfd8",
+        color: on ? "#fff" : "#d8d3ca",
       }}
     >
       {children}
@@ -491,7 +491,7 @@ function AfterCard({ p }: { p: PreviewPost }) {
         >
           <span
             className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold"
-            style={{ background: "#F6E4E8", color: "#961E37" }}
+            style={{ background: "#f2efea", color: "#961E37" }}
           >
             {p.author[0] ?? "?"}
           </span>
@@ -651,7 +651,7 @@ function BeforeCard({ p }: { p: PreviewPost }) {
         >
           <span
             className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[11px] font-bold"
-            style={{ background: "#F6E4E8", color: "#961E37" }}
+            style={{ background: "#f2efea", color: "#961E37" }}
           >
             {p.author[0] ?? "?"}
           </span>

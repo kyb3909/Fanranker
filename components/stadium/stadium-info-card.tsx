@@ -71,14 +71,14 @@ export function StadiumInfoCard({
             </div>
 
             {/* Progress section */}
-            <div className="mt-3 rounded-lg bg-[#f5f5f5] px-3 py-2">
+            <div className="mt-3 rounded-lg bg-[#f7f6f3] px-3 py-2">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-foreground font-bold">Lv.{pin.level}</span>
                 <span className="text-muted-foreground">
                   {pin.level === 0 ? "미착공" : `${Math.round(pin.progress_pct)}%`}
                 </span>
               </div>
-              <div className="mt-1.5 h-[6px] overflow-hidden rounded-full bg-[#e5e5e5]">
+              <div className="mt-1.5 h-[6px] overflow-hidden rounded-full bg-[#e8e5e0]">
                 <div
                   className="h-full rounded-full transition-all duration-700 ease-out"
                   style={{

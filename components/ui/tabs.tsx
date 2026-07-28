@@ -21,7 +21,7 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
       data-slot="tabs-list"
       className={cn(
         // 언더라인 탭 — 회색 박스(bg-muted) 제거, 하단 1px 구분선 + 균등분할
-        "flex w-full items-stretch border-b border-[#EDEFF2] px-3",
+        "flex w-full items-stretch border-b border-[#f2efea] px-3",
         className
       )}
       {...props}

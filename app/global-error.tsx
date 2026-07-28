@@ -25,7 +25,7 @@ export default function GlobalError({
             alignItems: "center",
             justifyContent: "center",
             padding: "1rem",
-            background: "#fafafa",
+            background: "#f7f6f3",
           }}
         >
           <div style={{ textAlign: "center", maxWidth: 360 }}>

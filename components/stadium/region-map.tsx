@@ -395,7 +395,7 @@ export function RegionMap({
           roundRect(ctx, lx, ly, lw, lh, 5)
           ctx.fill()
           ctx.shadowColor = "transparent"
-          ctx.strokeStyle = "#e5e5e5"
+          ctx.strokeStyle = "#e8e5e0"
           ctx.lineWidth = 1
           ctx.stroke()
 

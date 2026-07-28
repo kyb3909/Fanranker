@@ -72,7 +72,7 @@ export default async function WorldcupResultPage({
 
   if (!event) {
     return (
-      <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+      <div className="min-h-screen" style={{ background: "#f7f6f3" }}>
         <div className="mx-auto max-w-[640px] px-6 py-16">
           <div
             style={{
@@ -99,7 +99,7 @@ export default async function WorldcupResultPage({
   // previewMode(개발 전용)면 게이트를 건너뛰고 실제 결과 레이아웃을 미리 렌더
   if (event.status !== "closed" && !previewMode) {
     return (
-      <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+      <div className="min-h-screen" style={{ background: "#f7f6f3" }}>
         <div className="mx-auto max-w-[640px] px-6 py-16 text-center">
           <div className="wc-res-eb">RESULT</div>
           <h1 className="wc-res-h1">결과 발표 대기 중</h1>
@@ -195,7 +195,7 @@ export default async function WorldcupResultPage({
   const podium = ranked.slice(0, 3)
 
   return (
-    <div className="min-h-screen" style={{ background: "#f6f7f9" }}>
+    <div className="min-h-screen" style={{ background: "#f7f6f3" }}>
       <div className="mx-auto max-w-[1120px] px-6 pt-10 pb-16">
         <Link
           href="/worldcup"

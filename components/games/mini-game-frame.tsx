@@ -19,7 +19,7 @@ export function MiniGameFrame({ src, title }: { src: string; title: string }) {
       src={src}
       title={title}
       className="h-[calc(100dvh-200px)] min-h-[480px] w-full rounded-lg border"
-      style={{ borderColor: "var(--wc-line, #E2E5EA)" }}
+      style={{ borderColor: "var(--wc-line, #e8e5e0)" }}
       allow="fullscreen"
     />
   )

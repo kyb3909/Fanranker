@@ -60,7 +60,7 @@ export function BallBalance() {
             />
             <span
               className="text-sm font-bold tabular-nums"
-              style={{ color: "var(--wc-ink, #14161A)" }}
+              style={{ color: "var(--wc-ink, #1a1714)" }}
             >
               {balance}
             </span>

@@ -46,7 +46,7 @@ const CATEGORY_CHIP: Record<string, { bg: string; color: string; emoji?: string 
   애니: { bg: "#EAF4F4", color: "#0F5858", emoji: "🎌" },
   음악: { bg: "#FDEFF3", color: "var(--wc-burgundy)", emoji: "🎵" },
 }
-const CHIP_FALLBACK = { bg: "#EFF2F4", color: "#3A3D45" }
+const CHIP_FALLBACK = { bg: "#f2efea", color: "#3A3D45" }
 
 /** 미리보기 텍스트에서 http(s) URL 토큰 제거 (원본 데이터 불변) */
 function stripUrlTokens(text: string): string {
@@ -145,7 +145,7 @@ export const PostCardContent = memo(function PostCardContent({
             <span
               className="inline-flex h-6 items-center px-2 text-[11.5px] font-bold"
               style={{
-                background: "#eef0f3",
+                background: "#f2efea",
                 color: "var(--wc-mute)",
                 borderRadius: 6,
               }}
@@ -173,7 +173,7 @@ export const PostCardContent = memo(function PostCardContent({
               title={title}
               className="font-title line-clamp-2 text-[17.5px] transition-colors group-hover:text-[color:var(--wc-burgundy)] sm:text-[18px]"
               style={{
-                color: "var(--wc-ink, #14161a)",
+                color: "var(--wc-ink, #1a1714)",
                 fontWeight: 700,
                 letterSpacing: "-0.02em",
                 lineHeight: 1.45,
