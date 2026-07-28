@@ -432,9 +432,22 @@ async function main() {
 
   let drafted = 0
   let llmCalls = 0
+  let skippedNoSource = 0
   for (const p of candidates) {
     if (llmCalls >= MAX_LLM_PER_RUN) break
     seen.add(p.id) // 한 번 본 글은 worthy 여부 무관 재처리 안 함 (비용/중복 방지)
+
+    // ── 출처 없는 글은 기사로 만들지 않는다 (사용자 결정 2026-07-29) ──────────
+    // 레딧은 발견 경로일 뿐 출처가 아니다. 원문 기사도 기자 트윗도 없는 글
+    // (레딧 자체글·짤·하이라이트 영상)은 결국 "레딧글을 퍼온 것"이 된다.
+    // 실측: 대기 139건 중 34건(24%)이 여기 해당했고, 출처가 성립하는 104건은 남는다.
+    // LLM 호출 **전에** 걸러 비용도 아낀다.
+    if (!isExternalArticle(p.url) && !isTweet(p.url)) {
+      skippedNoSource++
+      log(`skip(출처없음) [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)}`)
+      continue
+    }
+
     llmCalls++
     try {
       // 외부 기사면 원문 본문을 먼저 확보한다 — 이게 있어야 장문 기사가 나온다.
@@ -487,7 +500,9 @@ async function main() {
   }
 
   saveSeen(seen)
-  log(`완료: 후보 ${candidates.length}, LLM ${llmCalls}회, 초안 ${drafted}건`)
+  log(
+    `완료: 후보 ${candidates.length}, 출처없음 제외 ${skippedNoSource}건, LLM ${llmCalls}회, 초안 ${drafted}건`
+  )
 }
 
 main().catch((e) => {
