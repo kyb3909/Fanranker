@@ -184,13 +184,25 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
     .not("raw->heat", "is", null)
     .limit(60)
 
+  // 화력 유효기간 3시간 — 스캐너(15분 주기)가 재측정을 멈춘 글 = 레딧 목록에서
+  // 빠진 글 = 식은 글. 마지막 측정값으로 히어로에 눌러앉지 않게 무효 처리한다.
+  const staleCutoff = Date.now() - 3 * 3600 * 1000
+
   const ranked = (hot ?? [])
     .map((r) => {
       const pub = r.publish as { post_id?: string } | null
-      const heat = (r.raw as { heat?: { score?: number; comments?: number } } | null)?.heat
-      return { postId: pub?.post_id, score: heat?.score ?? 0, comments: heat?.comments ?? 0 }
+      const heat = (r.raw as { heat?: { score?: number; comments?: number; at?: string } } | null)
+        ?.heat
+      const measuredAt = heat?.at ? new Date(heat.at).getTime() : 0
+      return {
+        postId: pub?.post_id,
+        score: measuredAt > staleCutoff ? (heat?.score ?? 0) : 0,
+        comments: measuredAt > staleCutoff ? (heat?.comments ?? 0) : 0,
+      }
     })
-    .filter((r): r is { postId: string; score: number; comments: number } => !!r.postId)
+    .filter(
+      (r): r is { postId: string; score: number; comments: number } => !!r.postId && r.score > 0
+    )
     // 화력 = 업보트 + 댓글×2 — 댓글이 "불타오름"의 더 강한 신호 (논쟁도 환호도 댓글로 남는다)
     .sort((a, b) => b.score + b.comments * 2 - (a.score + a.comments * 2))
     .slice(0, limit * 2) // 이미지 없는 글이 걸러질 수 있어 여유분

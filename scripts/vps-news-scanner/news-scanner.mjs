@@ -534,22 +534,28 @@ const HEAT_SUBREDDITS = [
 async function reportHeat() {
   if (!CRON_SECRET || DRY_RUN) return
 
-  const byKey = new Map() // 같은 글이 여러 소스에 뜨면 최고 점수 유지
+  // 두 신호를 합친다 (2026-07-30, 운영자 지적 "갓 올라온 글은 화력이 약하다" 반영):
+  //   top?t=day = 오늘 누적 점수 순위 → 검증된 대형 떡밥. 단 신작에 불리.
+  //   hot       = 레딧이 점수÷경과시간으로 계산한 순위 → 지금 막 불붙는 글이 바로 상위.
+  // 최종 = 둘 중 높은 쪽 — 급상승 신작도, 하루 종일 탄 대작도 다 잡힌다.
+  const byKey = new Map() // 같은 글이 여러 목록에 뜨면 최고 점수 유지
   for (const { sub, base } of HEAT_SUBREDDITS) {
-    try {
-      const xml = curlText(`https://www.reddit.com/r/${sub}/top.rss?t=day&limit=50`)
-      const entries = parseAtomFeed(xml)
-      entries.forEach((e, idx) => {
-        if (!e.id) return
-        const key = `reddit:${e.id}`
-        const score = Math.max(1, Math.round(base - idx * (base / 50)))
-        const prev = byKey.get(key)
-        if (!prev || prev.score < score) byKey.set(key, { dedupe_key: key, score, comments: 0 })
-      })
-    } catch {
-      /* 서브 하나 실패는 무시 — 다음 run 에서 다시 잰다 */
+    for (const listing of ["top.rss?t=day&limit=50", "hot.rss?limit=50"]) {
+      try {
+        const xml = curlText(`https://www.reddit.com/r/${sub}/${listing}`)
+        const entries = parseAtomFeed(xml)
+        entries.forEach((e, idx) => {
+          if (!e.id) return
+          const key = `reddit:${e.id}`
+          const score = Math.max(1, Math.round(base - idx * (base / 50)))
+          const prev = byKey.get(key)
+          if (!prev || prev.score < score) byKey.set(key, { dedupe_key: key, score, comments: 0 })
+        })
+      } catch {
+        /* 목록 하나 실패는 무시 — 다음 run 에서 다시 잰다 */
+      }
+      await sleep(THROTTLE_MS)
     }
-    await sleep(THROTTLE_MS)
   }
   const items = [...byKey.values()]
   if (items.length === 0) {
