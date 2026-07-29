@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
-import { todayCounts, nextSlot, personaNickname, type AggMediaItem } from "@/lib/agg/publish"
+import {
+  todayCounts,
+  nextSlot,
+  personaNickname,
+  hasPublishableMedia,
+  type AggMediaItem,
+} from "@/lib/agg/publish"
 import aggConfig from "@/data/agents/config/aggregator.json"
 
 export const dynamic = "force-dynamic"
@@ -31,14 +37,6 @@ interface DraftRow {
   media: AggMediaItem[] | null
   audit: unknown[] | null
   created_at: string
-}
-
-/** 게시 가능한 미디어가 있는가 — rehost 완료 이미지 또는 임베드(X/유튜브) */
-export function hasPublishableMedia(media: AggMediaItem[] | null): boolean {
-  if (!media) return false
-  return media.some(
-    (m) => (m.type === "image" && !!m.rehosted_url) || m.type === "x" || m.type === "youtube"
-  )
 }
 
 async function run(request: NextRequest) {

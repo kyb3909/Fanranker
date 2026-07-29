@@ -26,6 +26,17 @@ export function personaNickname(userId: string): string {
   return aggConfig.personas.find((p) => p.userId === userId)?.nickname ?? userId
 }
 
+/**
+ * 게시 가능한 미디어가 있는가 — rehost 완료 이미지 또는 임베드(X/유튜브).
+ * 자동승인 cron 의 품질 게이트: rehost 실패 이미지는 원본 핫링크 금지라 제외.
+ */
+export function hasPublishableMedia(media: AggMediaItem[] | null): boolean {
+  if (!media) return false
+  return media.some(
+    (m) => (m.type === "image" && !!m.rehosted_url) || m.type === "x" || m.type === "youtube"
+  )
+}
+
 /** 문단 배열 + 미디어 → TipTap doc (첫 문단 → 미디어 → 나머지 문단) */
 export function buildTipTapDoc(paragraphs: string[], media: AggMediaItem[]) {
   const para = (text: string) => ({

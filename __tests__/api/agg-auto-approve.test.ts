@@ -9,11 +9,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
  */
 
 let todayCountsResult = { total: 0, byPersona: {} as Record<string, number>, queued: 0 }
-vi.mock("@/lib/agg/publish", () => ({
-  todayCounts: async () => todayCountsResult,
-  nextSlot: async () => "2026-07-29T13:00:00.000Z",
-  personaNickname: (id: string) => id,
-}))
+// cap 집계·슬롯 계산만 목킹 — hasPublishableMedia(미디어 게이트)는 실물을 그대로 쓴다
+vi.mock("@/lib/agg/publish", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/agg/publish")>()
+  return {
+    ...mod,
+    todayCounts: async () => todayCountsResult,
+    nextSlot: async () => "2026-07-29T13:00:00.000Z",
+    personaNickname: (id: string) => id,
+  }
+})
 
 interface DraftRow {
   id: string
