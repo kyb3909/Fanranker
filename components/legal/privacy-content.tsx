@@ -19,10 +19,11 @@ export function PrivacyContent() {
           </ul>
         </div>
         <div className="bg-muted/30 mt-2 rounded-md p-3">
-          <p className="mb-1 font-medium">소셜 로그인 시 (자동 수집)</p>
+          <p className="mb-1 font-medium">소셜 로그인 시 (자동 수집 — 구글, 카카오 등)</p>
           <ul className="list-disc space-y-0.5 pl-5">
             <li>소셜 계정 고유 식별자 (OAuth ID)</li>
             <li>소셜 계정에 등록된 이름 또는 닉네임</li>
+            <li>소셜 계정에 등록된 이메일 주소</li>
           </ul>
         </div>
         <div className="bg-muted/30 mt-2 rounded-md p-3">

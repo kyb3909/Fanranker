@@ -123,7 +123,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
               </p>
             </div>
             <div className="bg-muted/40 rounded-lg p-2.5 text-center">
-              <p className="text-muted-foreground text-[11px]">총 배팅</p>
+              <p className="text-muted-foreground text-[11px]">총 예측</p>
               <p className="text-foreground text-sm font-semibold">
                 {formatBalls(overall.totalWagered)} 볼
               </p>

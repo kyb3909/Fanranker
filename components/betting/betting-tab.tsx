@@ -175,7 +175,7 @@ export function BettingTab({
           className="flex flex-col items-center justify-center py-12"
           style={{ color: "var(--wc-mute)" }}
         >
-          <p>베팅 가능한 경기가 없습니다.</p>
+          <p>예측 가능한 경기가 없습니다.</p>
         </div>
       )}
 

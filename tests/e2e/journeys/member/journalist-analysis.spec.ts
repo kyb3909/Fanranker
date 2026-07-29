@@ -25,7 +25,7 @@ for (let run = 1; run <= REPEAT; run++) {
 
     // 1) UI 액션: 배당 선택 → 슬립 펼치기 → 금액 + 분석글 입력 → 예측하기
     await page.locator('button:has-text("E2E 홈팀2.00")').click()
-    await page.getByRole("button", { name: /베팅 슬립 펼치기/ }).click()
+    await page.getByRole("button", { name: /예측 슬립 펼치기/ }).click()
     await page.locator('input[type="number"]').fill("1")
     await page.getByPlaceholder("분석글 제목 (선택)").fill(`E2E 분석 제목 r${run}`)
     await page.getByPlaceholder(/분석글을 작성하세요/).fill(analysisText)

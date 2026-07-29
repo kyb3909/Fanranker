@@ -535,7 +535,7 @@ export function BettingSlip({
             onClick={() => setIsSlipExpanded(!isSlipExpanded)}
             role="button"
             aria-expanded={isSlipExpanded}
-            aria-label={`베팅 슬립 ${isSlipExpanded ? "접기" : "펼치기"}, ${selectedBets.length}경기 선택됨`}
+            aria-label={`예측 슬립 ${isSlipExpanded ? "접기" : "펼치기"}, ${selectedBets.length}경기 선택됨`}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {

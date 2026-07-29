@@ -112,6 +112,29 @@ export function TermsContent() {
       </section>
 
       <section>
+        <h3 className="text-foreground mb-2 font-semibold">제6조의2 (승부 예측 서비스의 성격)</h3>
+        <ol className="list-decimal space-y-1 pl-5">
+          <li>
+            승부 예측은 무료로 지급되는 가상 포인트(볼)로만 참여하는 오락·커뮤니티 기능입니다. 볼의
+            구매는 불가능하며, 예측 결과에 따라 회원이 금전적 이익 또는 손실을 얻는 일이 없습니다.
+          </li>
+          <li>
+            예측 적중 시 지급되는 것은 서비스 내 점수·포인트에 한하며, 이는 현금·현물로 환전, 환급
+            또는 교환할 수 없습니다.
+          </li>
+          <li>
+            회사가 진행하는 경품 이벤트의 당첨 자격은 예측의 적중 여부나 성적이 아닌 서비스 이용
+            활동(참여 횟수 등)을 기준으로 하며, 당첨은 추첨으로 결정됩니다.
+          </li>
+          <li>
+            본 서비스는 「사행행위 등 규제 및 처벌 특례법」상의 사행행위 및 「국민체육진흥법」상의
+            체육진흥투표권 발행 사업에 해당하지 않으며, 회사는 어떠한 형태의 금전 베팅도 제공하거나
+            중개하지 않습니다.
+          </li>
+        </ol>
+      </section>
+
+      <section>
         <h3 className="text-foreground mb-2 font-semibold">제7조 (결제 및 환불)</h3>
         <ol className="list-decimal space-y-1 pl-5">
           <li>

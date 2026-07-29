@@ -299,7 +299,7 @@ export function PredictionSlipCard({
 
             <div className="mt-3 flex items-center justify-between border-t pt-3">
               <div className="text-muted-foreground text-xs">
-                배팅금: {stake.toLocaleString()}볼 | 총배점: {totalOdds}배
+                사용 볼: {stake.toLocaleString()}볼 | 총배점: {totalOdds}배
               </div>
               <div
                 className={`text-sm font-semibold ${
