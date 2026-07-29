@@ -64,7 +64,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
   const stats4 = [
     { label: "총 예측", value: String(total), color: "#fff" },
     { label: "맞힌 경기", value: `${winCount} / ${settled}`, color: "#fff" },
-    { label: "수익률", value: roiText, color: roiColor },
+    { label: "점수율", value: roiText, color: roiColor },
     { label: "획득 점수", value: scoreText, color: scoreColor },
   ]
 

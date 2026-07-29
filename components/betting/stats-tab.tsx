@@ -80,7 +80,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                   : "아직 팽팽해요!"}
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
-              주인장 {usersWinning ? "손실" : "수익"}:{" "}
+              주인장 {usersWinning ? "손실" : "획득"}:{" "}
               <span className="font-semibold">
                 {usersWinning ? "-" : "+"}
                 {formatBalls(Math.abs(housePnl))} 볼
@@ -91,7 +91,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
           {/* 대결 스탯 */}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="bg-muted/40 rounded-lg p-3 text-center">
-              <p className="text-muted-foreground text-xs">유저 평균 수익률</p>
+              <p className="text-muted-foreground text-xs">유저 평균 점수율</p>
               <p
                 className={`text-xl font-bold ${
                   (overall.avgProfitRate ?? 0) >= 0
@@ -123,7 +123,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
               </p>
             </div>
             <div className="bg-muted/40 rounded-lg p-2.5 text-center">
-              <p className="text-muted-foreground text-[11px]">총 예측</p>
+              <p className="text-muted-foreground text-[11px]">총 사용 볼</p>
               <p className="text-foreground text-sm font-semibold">
                 {formatBalls(overall.totalWagered)} 볼
               </p>
@@ -166,7 +166,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                         </span>
                       </span>
                       <span className="text-muted-foreground">
-                        수익률{" "}
+                        점수율{" "}
                         <span
                           className={`font-medium ${
                             (s.avgProfitRate ?? 0) >= 0

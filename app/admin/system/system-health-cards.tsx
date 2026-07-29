@@ -200,11 +200,11 @@ export function SystemHealthCards({ data }: { data: SystemHealthData }) {
               <span>{data.dailyRound.dailyId ?? "-"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">배팅 오픈</span>
+              <span className="text-muted-foreground">예측 오픈</span>
               <span>{formatKoreanTime(data.dailyRound.betOpenAt)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">배팅 마감</span>
+              <span className="text-muted-foreground">예측 마감</span>
               <span>{formatKoreanTime(data.dailyRound.betCloseAt)}</span>
             </div>
             <div className="flex justify-between">

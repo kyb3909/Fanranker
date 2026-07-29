@@ -281,7 +281,7 @@ export default function AdminStatsPage() {
                   <TableHead className="text-right">평균 수익률</TableHead>
                   <TableHead className="text-right">평균 적중률</TableHead>
                   <TableHead className="text-right">주인장 손익</TableHead>
-                  <TableHead className="text-right">배팅금</TableHead>
+                  <TableHead className="text-right">사용 볼</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

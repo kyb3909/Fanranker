@@ -64,7 +64,7 @@ export function SettlementManagementTable() {
   const handleCancelGame = async (game: UnsettledGame) => {
     if (
       !confirm(
-        `${game.home_team} vs ${game.away_team} 경기를 취소 처리하시겠습니까?\n베팅한 유저에게 토큰이 환불됩니다.`
+        `${game.home_team} vs ${game.away_team} 경기를 취소 처리하시겠습니까?\n예측한 유저에게 토큰이 환불됩니다.`
       )
     ) {
       return

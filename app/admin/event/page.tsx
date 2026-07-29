@@ -129,7 +129,7 @@ export default async function AdminEventPage() {
             >
               <option value="draft">draft (초안)</option>
               <option value="open">open (등록 받음)</option>
-              <option value="live">live (베팅 활성)</option>
+              <option value="live">live (예측 활성)</option>
               <option value="closed">closed (종료)</option>
             </select>
           </div>

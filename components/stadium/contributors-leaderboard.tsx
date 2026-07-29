@@ -58,7 +58,7 @@ export function ContributorsLeaderboard({
             {teamName} 기여자 랭킹
           </DialogTitle>
           <DialogDescription>
-            누적 기여 점수 기준 (예측 적중 수익 + flair 활동 점수 기부 합산)
+            누적 기여 점수 기준 (예측 적중 점수 + flair 활동 점수 기부 합산)
           </DialogDescription>
         </DialogHeader>
 
