@@ -73,6 +73,59 @@ export async function POST(req: NextRequest) {
     console.error("ops-monitor ticker check 실패:", e)
   }
 
+  // 2b) 뉴스 스캐너(기사 초안) 정지 — VPS /opt/news-scanner 15분 주기.
+  //     ⚠️ "cron 이 돈다 ≠ 파이프라인이 산다": 7-25 커뮤 크롤 정전은 cron 은 매시간
+  //     돌면서 스크립트만 4일간 죽어 있었고 아무 알림이 없었다. 그래서 프로세스가
+  //     아니라 **산출물(reservoir 신선도)** 을 본다. 자동발행까지 물려 있는 지금은
+  //     여기가 조용히 죽으면 사이트 콘텐츠가 조용히 마른다.
+  try {
+    const { data: last } = await supabase
+      .from("news_reservoir")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ created_at: string | null }>()
+    const ageH = last?.created_at
+      ? (Date.now() - new Date(last.created_at).getTime()) / H
+      : Infinity
+    if (ageH > 3) {
+      issues.push({
+        name: "📰 뉴스 스캐너 정지 의심",
+        value:
+          `새 기사 수집이 ${Number.isFinite(ageH) ? `${Math.round(ageH)}시간` : "무기한"} 없음 (평소 15분 주기). ` +
+          `VPS cron 이 죽었거나 스크립트 에러 — ssh 후 \`tail /opt/news-scanner/cron.log\` 확인. ` +
+          `이게 죽으면 뉴스 자동발행도 내보낼 초안이 없어 같이 멈춘다`,
+      })
+    }
+  } catch (e) {
+    console.error("ops-monitor news_reservoir check 실패:", e)
+  }
+
+  // 2c) 커뮤 크롤(떡밥 초안) 정지 — VPS 매시 :20. 새벽엔 원소스가 조용할 수 있어
+  //     임계값을 6시간으로 넉넉히 — 오탐으로 도배되면 진짜 알림도 무시된다.
+  try {
+    const { data: last } = await supabase
+      .from("agg_reservoir")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ created_at: string | null }>()
+    const ageH = last?.created_at
+      ? (Date.now() - new Date(last.created_at).getTime()) / H
+      : Infinity
+    if (ageH > 6) {
+      issues.push({
+        name: "🍿 커뮤 크롤 정지 의심",
+        value:
+          `새 떡밥 수집이 ${Number.isFinite(ageH) ? `${Math.round(ageH)}시간` : "무기한"} 없음 (평소 매시 :20). ` +
+          `ssh 후 \`tail /var/log/agg-cycle.log\` 확인 — 7-25 처럼 cron 은 돌아도 ` +
+          `스크립트가 죽어 있을 수 있다(그땐 설정 파일 BOM 이 원인이었다)`,
+      })
+    }
+  } catch (e) {
+    console.error("ops-monitor agg_reservoir check 실패:", e)
+  }
+
   // 3) 미정산 고아 — 경기 결과 확정 + 종료 1시간 경과인데 pending
   try {
     const cutoff = new Date(Date.now() - H).toISOString()

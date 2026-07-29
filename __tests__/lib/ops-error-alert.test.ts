@@ -13,7 +13,7 @@ vi.mock("@/lib/discord-notify", () => ({
   notifyDiscordOps: (...args: unknown[]) => notifyMock(...args),
 }))
 
-import { alertServerError, __resetErrorAlertCache } from "@/lib/ops-error-alert"
+import { alertServerError, diagnoseError, __resetErrorAlertCache } from "@/lib/ops-error-alert"
 
 describe("alertServerError", () => {
   beforeEach(() => {
@@ -104,5 +104,68 @@ describe("alertServerError", () => {
   it("Error 가 아닌 값이 던져져도 처리한다", async () => {
     await alertServerError("문자열 에러", { path: "/api/a" })
     expect(notifyMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * 진단기 계약: 알림은 로그 복사가 아니라 판단 재료다.
+ * 아는 패턴 → 원인·첫 대응 한국어 해석. 모르는 패턴 → null (억지 진단은 오진).
+ */
+describe("diagnoseError", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    __resetErrorAlertCache()
+    vi.stubEnv("DISCORD_OPS_WEBHOOK_URL", "https://discord.test/webhook")
+    vi.stubEnv("NODE_ENV", "production")
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("돈 경로 실패는 최우선으로 진단한다 (다른 패턴과 겹쳐도)", () => {
+    // "spend_tokens ... timeout" — 돈 규칙이 시간초과 규칙보다 먼저 이겨야 한다
+    const d = diagnoseError("spend_tokens RPC timed out")
+    expect(d?.cause).toContain("돈 경로")
+  })
+
+  it("스키마 불일치(PGRST200)를 마이그레이션 문제로 해석한다", () => {
+    const d = diagnoseError(
+      'PGRST200: Could not find a relationship between "posts" and "post_flairs"'
+    )
+    expect(d?.cause).toContain("스키마 불일치")
+    expect(d?.action).toContain("마이그레이션")
+  })
+
+  it("BOM/파싱 실패 유형을 알아본다 (7-25 크롤 정전 유형)", () => {
+    const d = diagnoseError(`Unexpected token '﻿', "..." is not valid JSON`)
+    expect(d?.cause).toContain("파싱 실패")
+  })
+
+  it("외부 연결 실패는 '우리 코드 아닐 확률'을 알려준다", () => {
+    const d = diagnoseError("fetch failed: ECONNREFUSED api.example.com")
+    expect(d?.cause).toContain("외부 서비스")
+  })
+
+  it("모르는 패턴은 진단하지 않는다", () => {
+    expect(diagnoseError("완전히 처음 보는 이상한 에러")).toBeNull()
+  })
+
+  it("진단이 있으면 알림에 원인 추정·첫 대응 필드가 실린다", async () => {
+    await alertServerError(new Error("duplicate key value violates unique constraint"), {
+      path: "/api/comments",
+    })
+    expect(notifyMock).toHaveBeenCalledTimes(1)
+    const call = notifyMock.mock.calls[0][0] as { fields: { name: string }[] }
+    const names = call.fields.map((f) => f.name)
+    expect(names).toContain("원인 추정")
+    expect(names).toContain("첫 대응")
+  })
+
+  it("진단이 없으면 필드를 억지로 만들지 않는다", async () => {
+    await alertServerError(new Error("처음 보는 에러"), { path: "/api/x" })
+    expect(notifyMock).toHaveBeenCalledTimes(1)
+    const call = notifyMock.mock.calls[0][0] as { fields: { name: string }[] }
+    expect(call.fields.map((f) => f.name)).not.toContain("원인 추정")
   })
 })
