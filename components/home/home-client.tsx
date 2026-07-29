@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { ArrowRight, Pencil } from "lucide-react"
+import { Pencil } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -191,44 +191,9 @@ export function HomeClient({
               </Link>
             )}
 
-            {/* 월드컵 이벤트 배너 — 종료 후 비로그인(신규 유입)에겐 숨김: 첫 화면 130px 회수.
-                참가했을 수 있는 로그인 유저에게만 "우승자 확인" 노출 */}
-            {(!worldcupConcluded || isSignedIn) && (
-              <Link
-                href={worldcupConcluded ? "/worldcup/result" : "/worldcup"}
-                className="flex items-center gap-3 rounded-xl px-[18px] py-[14px] no-underline transition-opacity hover:opacity-90"
-                style={{
-                  background:
-                    "linear-gradient(100deg, var(--wc-burgundy-deep, #771629), var(--wc-burgundy, #961e37))",
-                  boxShadow: "var(--wc-shadow-2, 0 4px 16px rgba(150,30,55,.22))",
-                  color: "#fff",
-                }}
-              >
-                <span style={{ fontSize: 20 }} aria-hidden>
-                  🏆
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className="block text-[11px] font-extrabold uppercase"
-                    style={{ letterSpacing: "0.14em", color: "var(--wc-gold, #FFD96B)" }}
-                  >
-                    World Cup 2026 Event
-                  </span>
-                  <span className="mt-0.5 block text-[14.5px] font-bold">
-                    {worldcupConcluded
-                      ? "대회가 마무리되었습니다 — 우승자를 확인하세요"
-                      : "월드컵 승부예측 구너들의 대결 — 지금 참가하세요"}
-                  </span>
-                </span>
-                <span
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12.5px] font-bold"
-                  style={{ background: "rgba(255,255,255,.14)", padding: "7px 13px" }}
-                >
-                  {worldcupConcluded ? "우승자 확인" : "참가 신청"}
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                </span>
-              </Link>
-            )}
+            {/* 월드컵 이벤트 배너 제거 (2026-07-29) — 1차 이벤트 아카이브 비공개에 따라
+                /worldcup 세그먼트 전체가 redirect 되므로 진입 배너도 내린다.
+                worldcupConcluded prop 은 시즌 이벤트 배너 재사용 대비로 유지. */}
 
             {/* 메인 탭 스트립 — 카드뉴스/오늘의 경기 + 게시판 정렬(랜덤/온도순/최신순).
                 정렬 pill 을 누르면 게시판 탭으로 전환된다. (pill 스타일 유지 — 언더라인 통일 예외) */}

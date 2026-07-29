@@ -1,3 +1,9 @@
+import {
+  BUSINESS_INFO,
+  isBusinessInfoConfigured,
+  isContactEmailConfigured,
+} from "@/lib/site-config"
+
 export function PrivacyContent() {
   return (
     <div className="text-foreground/90 space-y-6 text-[13px] leading-relaxed">
@@ -25,6 +31,10 @@ export function PrivacyContent() {
             <li>소셜 계정에 등록된 이름 또는 닉네임</li>
             <li>소셜 계정에 등록된 이메일 주소</li>
           </ul>
+          <p className="text-muted-foreground mt-1.5 text-[12px]">
+            카카오 로그인 도입 시 카카오(주)로부터 카카오계정 이메일, 닉네임, 프로필 사진을
+            제공받으며, 상세 항목은 로그인 화면의 동의 단계에서 고지됩니다.
+          </p>
         </div>
         <div className="bg-muted/30 mt-2 rounded-md p-3">
           <p className="mb-1 font-medium">서비스 이용 중 자동 수집</p>
@@ -129,9 +139,75 @@ export function PrivacyContent() {
                 <td className="border-border border px-3 py-2">Sentry (미국)</td>
                 <td className="border-border border px-3 py-2">오류 모니터링 (비식별 정보)</td>
               </tr>
+              <tr>
+                <td className="border-border border px-3 py-2">포트원 주식회사 (대한민국)</td>
+                <td className="border-border border px-3 py-2">결제 처리 대행</td>
+              </tr>
+              <tr>
+                <td className="border-border border px-3 py-2">Google LLC / Vercel Inc. (미국)</td>
+                <td className="border-border border px-3 py-2">
+                  서비스 이용 통계 분석 (Google Analytics, Vercel Analytics)
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section>
+        <h3 className="text-foreground mb-2 font-semibold">5-2. 개인정보의 국외 이전</h3>
+        <p className="mb-2">
+          회사는 서비스 제공을 위해 아래와 같이 개인정보를 국외로 이전합니다. 이전은 서비스 이용
+          시점에 정보통신망을 통해 이루어집니다.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="border-border w-full border text-[12px]">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="border-border border px-3 py-2 text-left">이전받는 자 (연락처)</th>
+                <th className="border-border border px-3 py-2 text-left">국가</th>
+                <th className="border-border border px-3 py-2 text-left">이전 항목</th>
+                <th className="border-border border px-3 py-2 text-left">보유·이용 기간</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border-border border px-3 py-2">Clerk, Inc. (privacy@clerk.com)</td>
+                <td className="border-border border px-3 py-2">미국</td>
+                <td className="border-border border px-3 py-2">이메일, OAuth 식별자, 닉네임</td>
+                <td className="border-border border px-3 py-2">회원 탈퇴 시까지</td>
+              </tr>
+              <tr>
+                <td className="border-border border px-3 py-2">
+                  Supabase, Inc. (privacy@supabase.io)
+                </td>
+                <td className="border-border border px-3 py-2">미국</td>
+                <td className="border-border border px-3 py-2">서비스 이용 기록, 게시물</td>
+                <td className="border-border border px-3 py-2">회원 탈퇴 시까지</td>
+              </tr>
+              <tr>
+                <td className="border-border border px-3 py-2">
+                  Vercel, Inc. (privacy@vercel.com)
+                </td>
+                <td className="border-border border px-3 py-2">미국</td>
+                <td className="border-border border px-3 py-2">접속 IP, 접속 로그</td>
+                <td className="border-border border px-3 py-2">3개월</td>
+              </tr>
+              <tr>
+                <td className="border-border border px-3 py-2">
+                  Functional Software, Inc. (Sentry)
+                </td>
+                <td className="border-border border px-3 py-2">미국</td>
+                <td className="border-border border px-3 py-2">오류 발생 시 비식별 진단 정보</td>
+                <td className="border-border border px-3 py-2">90일</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2">
+          이용자는 위 국외 이전을 거부할 수 있으며, 거부 시 회원가입 및 서비스 이용이 제한됩니다.
+          거부는 제10항의 개인정보 보호책임자에게 요청할 수 있습니다.
+        </p>
       </section>
 
       <section>
@@ -181,21 +257,35 @@ export function PrivacyContent() {
         <div className="bg-muted/30 rounded-md p-3">
           <ul className="space-y-1">
             <li>
-              <strong>회사명:</strong> 블루버드홀딩스
+              <strong>회사명:</strong> {BUSINESS_INFO.company}
             </li>
             <li>
               <strong>서비스명:</strong> 공놀이판 (gongnori.fan)
             </li>
+            {isBusinessInfoConfigured() && (
+              <li>
+                <strong>개인정보 보호책임자:</strong> {BUSINESS_INFO.ceo} (직책: 대표)
+              </li>
+            )}
             <li>
-              <strong>문의:</strong> 서비스 내 문의 기능 또는 고객센터
+              <strong>문의:</strong>{" "}
+              {isContactEmailConfigured() ? BUSINESS_INFO.contactEmail : "서비스 내 문의 기능"}
             </li>
           </ul>
         </div>
       </section>
 
+      <section>
+        <h3 className="text-foreground mb-2 font-semibold">11. 개인정보처리방침의 변경</h3>
+        <p>
+          본 방침이 변경되는 경우 시행 7일 전(이용자 권리에 중대한 변경이 있는 경우 30일 전)부터
+          서비스 내 공지사항을 통해 고지합니다.
+        </p>
+      </section>
+
       <section className="border-border border-t pt-4">
         <p className="text-muted-foreground text-[12px]">
-          본 개인정보처리방침은 2026년 3월 3일부터 시행합니다.
+          본 개인정보처리방침은 2026년 3월 3일 최초 시행, 2026년 7월 29일 개정·시행합니다.
         </p>
       </section>
     </div>

@@ -137,5 +137,5 @@ export function getBettingWindowStatus(): {
   message: string
   nextOpenAt?: string
 } {
-  return { isOpen: true, message: "베팅 가능" }
+  return { isOpen: true, message: "예측 가능" }
 }

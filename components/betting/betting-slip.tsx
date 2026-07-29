@@ -267,7 +267,7 @@ export function BettingSlip({
                 {groupedMatch.homeTeam} vs {groupedMatch.awayTeam}
               </div>
 
-              {/* 행 3: 선택 팀 + 배당 */}
+              {/* 행 3: 선택 팀 + 배점 */}
               <div
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
               >
@@ -424,7 +424,7 @@ export function BettingSlip({
           </div>
         )}
 
-        {/* CC4 — 배당 요약 박스 */}
+        {/* CC4 — 배점 요약 박스 */}
         <div
           style={{
             background: "var(--wc-soft)",

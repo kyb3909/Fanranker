@@ -135,7 +135,7 @@ export function useBettingSlip(
         }
         const game = match.games.find((g) => g.id === gameId)
         if (game?.bet_close_at && new Date(game.bet_close_at) <= now) {
-          showAlert("warning", "이미 시작된 경기입니다", "베팅 마감 시간이 지났습니다.")
+          showAlert("warning", "이미 시작된 경기입니다", "예측 마감 시간이 지났습니다.")
           return
         }
       }
@@ -216,12 +216,12 @@ export function useBettingSlip(
       return
     }
     if (betAmount <= 0) {
-      showAlert("warning", "베팅 금액 확인", "베팅할 볼 수를 입력해주세요.")
+      showAlert("warning", "사용할 볼 확인", "예측에 사용할 볼 수를 입력해주세요.")
       return
     }
     const MAX_BET = 10
     if (betAmount > MAX_BET) {
-      showAlert("warning", "베팅 금액 초과", `베팅 금액은 최대 ${MAX_BET}볼입니다.`)
+      showAlert("warning", "사용 볼 초과", `사용할 볼은 최대 ${MAX_BET}볼입니다.`)
       return
     }
     if (betAmount > userBalls) {

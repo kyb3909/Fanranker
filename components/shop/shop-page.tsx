@@ -45,7 +45,10 @@ const SHOP_TABS = [
   { id: "stickers" as ShopTab, label: "밈 스티커", icon: Sparkles, color: "text-amber-400" },
   { id: "titles" as ShopTab, label: "칭호", icon: Award, color: "text-violet-400" },
   { id: "pixel-art" as ShopTab, label: "픽셀아트", icon: Image, color: "text-emerald-400" },
-  { id: "gold" as ShopTab, label: "골드 충전", icon: Coins, color: "text-yellow-400" },
+  // 골드 충전 탭 숨김 (2026-06-18 골드 경제 숨김 정책 + 2026-07-29 카카오 심사 대비).
+  // 구매 버튼은 핸들러 없는 준비 화면이었으나 KRW 가격표 노출 자체가 "포인트 구매
+  // 경로 없음" 방어 논리와 어긋난다. 골드 오픈 시 이 줄 복원.
+  // { id: "gold" as ShopTab, label: "골드 충전", icon: Coins, color: "text-yellow-400" },
 ]
 
 const MOCK_TITLES: TitleItem[] = [
@@ -411,7 +414,7 @@ export default function ShopPage() {
             style={{ background: "var(--wc-soft)", border: "1px solid var(--wc-line)" }}
           >
             <p style={{ fontSize: 13, color: "var(--wc-mute)" }}>
-              골드는 승부예측 분석, 스티커, 칭호 구매에 사용됩니다. 결제 후 즉시 지급됩니다.
+              골드는 스티커, 칭호 등 꾸미기 아이템 구매에 사용됩니다. 결제 후 즉시 지급됩니다.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">

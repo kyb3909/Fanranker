@@ -238,7 +238,7 @@ describe("useBettingSlip", () => {
       act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
       act(() => result.current.setBetAmount(11))
       await act(() => result.current.handleSubmitPrediction())
-      expect(result.current.alertModal.title).toContain("베팅 금액 초과")
+      expect(result.current.alertModal.title).toContain("사용 볼 초과")
       expect(fetchMock).not.toHaveBeenCalled()
     })
   })

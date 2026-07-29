@@ -10,7 +10,7 @@ export const PLANS = {
     amount: 9900,
     currency: "KRW" as const,
     intervalDays: 30,
-    description: "전문가 분석 열람, 프리미엄 예측 정보, 광고 없는 경험",
+    description: "전문가 칼럼 열람, 광고 없는 경험",
   },
 } as const
 

@@ -412,7 +412,7 @@ function getMatchResultPill(result: string): { label: string; className: string 
   }
 }
 
-/** 배당률 셀 — 내 선택/정답 여부에 따라 하이라이트 */
+/** 배점 셀 — 내 선택/정답 여부에 따라 하이라이트 */
 function OddsCell({
   label,
   subLabel,

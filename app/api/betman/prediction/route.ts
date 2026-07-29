@@ -20,8 +20,8 @@ const predictionPostSchema = z.object({
   betAmount: z
     .number()
     .int()
-    .min(1, "베팅 금액은 1볼 이상이어야 합니다.")
-    .max(10, "베팅 금액은 최대 10볼입니다.")
+    .min(1, "예측에 사용할 볼은 1볼 이상이어야 합니다.")
+    .max(10, "예측에 사용할 볼은 최대 10볼입니다.")
     .optional(),
   analysis_title: z.string().max(100).optional(),
   analysis_text: z.string().max(5000).optional(),
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         .map((g) => `${g.home_team_name} vs ${g.away_team_name}`)
         .join(", ")
       return NextResponse.json(
-        { error: `경기 시간이 미정인 경기는 베팅할 수 없습니다: ${names}` },
+        { error: `경기 시간이 미정인 경기는 예측할 수 없습니다: ${names}` },
         { status: 400 }
       )
     }
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
     )
     if (placeholderGames.length > 0) {
       return NextResponse.json(
-        { error: "팀이 확정되지 않은 경기는 베팅할 수 없습니다." },
+        { error: "팀이 확정되지 않은 경기는 예측할 수 없습니다." },
         { status: 400 }
       )
     }
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         g.game_type !== "SSUM"
     )
     if (halfTimeGames.length > 0) {
-      return NextResponse.json({ error: "전반전 마켓은 베팅할 수 없습니다." }, { status: 400 })
+      return NextResponse.json({ error: "전반전 마켓은 예측할 수 없습니다." }, { status: 400 })
     }
 
     // Check per-game bet deadlines (must bet before kickoff)
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     if (closedGames.length > 0) {
       const names = closedGames.map((g) => `${g.home_team_name} vs ${g.away_team_name}`).join(", ")
       return NextResponse.json(
-        { error: `베팅 마감된 경기가 포함되어 있습니다: ${names}` },
+        { error: `예측 마감된 경기가 포함되어 있습니다: ${names}` },
         { status: 400 }
       )
     }
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
     })
     if (outOfWindow.length > 0) {
       return NextResponse.json(
-        { error: "오늘의 베팅 윈도우 밖의 경기가 포함되어 있습니다." },
+        { error: "오늘 예측 가능한 시간 밖의 경기가 포함되어 있습니다." },
         { status: 400 }
       )
     }
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
       if (!odds || odds <= 0) {
         return NextResponse.json(
           {
-            error: `배당률이 설정되지 않은 경기가 있습니다: ${game.home_team_name} vs ${game.away_team_name}`,
+            error: `배점이 설정되지 않은 경기가 있습니다: ${game.home_team_name} vs ${game.away_team_name}`,
           },
           { status: 400 }
         )
@@ -412,7 +412,7 @@ export async function POST(request: NextRequest) {
     if (slipError || !slip) {
       console.error("Failed to create slip:", slipError)
       await retryRefundTokens(supabase, user.id, stake, "슬립 생성 실패 환불")
-      return NextResponse.json({ error: "베팅 슬립 생성 중 오류가 발생했습니다." }, { status: 500 })
+      return NextResponse.json({ error: "예측 슬립 생성 중 오류가 발생했습니다." }, { status: 500 })
     }
 
     // ===== 예측 레코드 삽입 (슬립에 연결) =====
@@ -564,7 +564,7 @@ export async function POST(request: NextRequest) {
       predictions: insertedPredictions,
       ballsUsed: stake,
       remainingBalls: newBalance,
-      message: `${predictions.length}경기 조합 ${stake}볼 베팅 완료! (잔액: ${newBalance}볼)`,
+      message: `${predictions.length}경기 조합 ${stake}볼 예측 완료! (잔액: ${newBalance}볼)`,
       pickDistribution,
       isFirstSlip,
     })

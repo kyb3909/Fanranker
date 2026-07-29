@@ -234,6 +234,9 @@ export function TermsContent() {
         <p className="text-muted-foreground text-[12px]">
           <strong>부칙</strong>
           <br />본 약관은 2026년 3월 3일부터 시행합니다.
+          <br />
+          2026년 7월 29일 개정: 제6조의2(승부 예측 서비스의 성격) 신설 — 무료 포인트 전용·경품
+          이벤트의 활동 기준 추첨 원칙을 명문화. 개정 약관은 게시 즉시 시행합니다.
         </p>
       </section>
     </div>

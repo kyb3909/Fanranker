@@ -1,4 +1,9 @@
 import Link from "@/components/ui/app-link"
+import {
+  BUSINESS_INFO,
+  isBusinessInfoConfigured,
+  isContactEmailConfigured,
+} from "@/lib/site-config"
 
 /**
  * 사이트 공통 푸터 — 시안 A 의 다크 브랜드 블록 (다크 3존 중 마지막).
@@ -58,6 +63,22 @@ export function SiteFooter() {
             </Link>
           ))}
         </nav>
+
+        {/* 사업자 표시 (전자상거래법) — 운영자가 BUSINESS_INFO 실값을 채우면 노출된다.
+            플레이스홀더 상태로 내보내면 허위 표시라 미기재보다 나쁘다 → 게이트. */}
+        {isBusinessInfoConfigured() && (
+          <div className="mt-6 text-[11.5px] leading-relaxed" style={{ color: "#5b5565" }}>
+            <p>
+              상호: {BUSINESS_INFO.company} | 대표자: {BUSINESS_INFO.ceo} | 사업자등록번호:{" "}
+              {BUSINESS_INFO.regNo}
+            </p>
+            <p>
+              주소: {BUSINESS_INFO.address}
+              {isContactEmailConfigured() && <> | 문의: {BUSINESS_INFO.contactEmail}</>}
+            </p>
+            {BUSINESS_INFO.mailOrderNo && <p>통신판매업 신고번호: {BUSINESS_INFO.mailOrderNo}</p>}
+          </div>
+        )}
 
         <p className="gn-num mt-5 text-[12px]" style={{ letterSpacing: "0.1em", color: "#5b5565" }}>
           © {new Date().getFullYear()} GONGNORI.FAN — SEE YOU AT KICKOFF

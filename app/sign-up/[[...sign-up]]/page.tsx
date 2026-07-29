@@ -580,9 +580,10 @@ export default function SignUpPage() {
           )}
         </Card>
 
-        {/* Terms footer */}
+        {/* Terms footer — 가입 단계에서 체크박스로 명시 동의를 받으므로
+            "간주" 표현은 잉여이자 역효과(묵시 동의로 오독됨) → 안내형으로 교체 */}
         <p className="text-muted-foreground mt-4 text-center text-[11px] leading-relaxed">
-          가입하면{" "}
+          가입에는{" "}
           <Link
             href="/terms"
             className="text-primary hover:text-primary/80 underline underline-offset-2"
@@ -596,7 +597,7 @@ export default function SignUpPage() {
           >
             개인정보처리방침
           </Link>
-          에 동의한 것으로 간주됩니다.
+          에 대한 동의가 필요합니다.
         </p>
       </div>
     </div>

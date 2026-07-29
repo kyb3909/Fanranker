@@ -175,6 +175,6 @@ describe("getBettingWindowStatus", () => {
   it("always returns open status", () => {
     const status = getBettingWindowStatus()
     expect(status.isOpen).toBe(true)
-    expect(status.message).toBe("베팅 가능")
+    expect(status.message).toBe("예측 가능")
   })
 })

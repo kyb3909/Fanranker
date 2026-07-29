@@ -21,8 +21,11 @@ export function TermsStep({
 }: TermsStepProps) {
   const [termsOpen, setTermsOpen] = useState(true)
   const [privacyOpen, setPrivacyOpen] = useState(true)
+  // 만 14세 확인 — 약관 제4조의 가입 연령 제한을 화면에서 실제로 집행한다.
+  // 생년월일 수집은 하지 않는다(최소수집 원칙) — 체크 방식이 국내 커뮤니티 통상 관행.
+  const [ageConfirmed, setAgeConfirmed] = useState(false)
 
-  const canProceed = termsAgreed && privacyAgreed
+  const canProceed = termsAgreed && privacyAgreed && ageConfirmed
 
   return (
     <div className="p-6">
@@ -104,6 +107,27 @@ export function TermsStep({
               <PrivacyContent />
             </div>
           )}
+        </div>
+
+        {/* 만 14세 이상 확인 */}
+        <div className="border-border overflow-hidden rounded-lg border">
+          <div className="flex items-center gap-3 p-4">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={ageConfirmed}
+              onClick={() => setAgeConfirmed(!ageConfirmed)}
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                ageConfirmed ? "bg-primary border-primary text-white" : "border-input bg-background"
+              }`}
+            >
+              {ageConfirmed && <Check className="h-3.5 w-3.5" />}
+            </button>
+            <span>
+              <span className="text-foreground text-sm font-medium">만 14세 이상입니다</span>
+              <span className="text-muted-foreground ml-1 text-xs">(필수)</span>
+            </span>
+          </div>
         </div>
       </div>
 

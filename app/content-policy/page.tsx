@@ -147,7 +147,10 @@ export default function ContentPolicyPage() {
             <ul className="list-disc space-y-1 pl-5">
               <li>부적절한 게시물을 발견하면 신고 기능을 이용해 주세요.</li>
               <li>운영진이 접수된 신고를 검토하여 운영정책에 따라 조치합니다.</li>
-              <li>제재에 대한 이의가 있는 경우, 고객센터를 통해 이의제기할 수 있습니다.</li>
+              <li>
+                제재에 대한 이의가 있는 경우, 사이트 하단에 안내된 문의 이메일로 이의제기할 수
+                있습니다.
+              </li>
               <li>이의제기 접수 후 영업일 기준 7일 이내에 결과를 안내합니다.</li>
             </ul>
           </section>
@@ -156,7 +159,10 @@ export default function ContentPolicyPage() {
             <h2 className="text-foreground mb-2 text-lg font-semibold">5. 승부 예측 이용 규칙</h2>
             <ul className="list-disc space-y-1 pl-5">
               <li>승부 예측은 오락 목적으로 제공되며, 실제 금전 거래가 아닙니다.</li>
-              <li>볼(포인트)을 이용하여 예측에 참여하며, 적중 시 보상을 받습니다.</li>
+              <li>
+                볼(포인트)을 이용하여 예측에 참여하며, 적중 시 서비스 내 점수만 획득합니다. 점수는
+                현금·현물로 환전·교환할 수 없습니다.
+              </li>
               <li>
                 다중 계정을 이용한 예측 조작은 엄격히 금지되며, 적발 시 모든 관련 계정이 정지됩니다.
               </li>
