@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 1,
   "note": "커뮤니티 애그리게이터 설정. 소스별 수집 on/off + 정치 필터 + 페르소나 로스터. 문제(저작권 항의 등) 발생 시 해당 source enabled=false로 끄고 agg-takedown으로 일괄 삭제.",
   "sources": {

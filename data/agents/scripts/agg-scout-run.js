@@ -16,7 +16,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const CONFIG = JSON.parse(readFileSync(join(__dirname, '..', 'config', 'aggregator.json'), 'utf8'))
+// BOM 내성: Windows(PowerShell) 편집이 UTF-8 BOM 을 심으면 JSON.parse 가 죽는다.
+// 실제로 2026-07-25 커밋(3e40f7ad)의 BOM 이 VPS cron 을 4일간 통째로 죽였다.
+const CONFIG = JSON.parse(
+  readFileSync(join(__dirname, '..', 'config', 'aggregator.json'), 'utf8').replace(/^﻿/, '')
+)
 
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
