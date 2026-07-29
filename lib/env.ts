@@ -9,6 +9,9 @@ const serverSchema = z.object({
   CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),
   CRON_SECRET: z.string().min(1, "CRON_SECRET is required"),
   FACEBOOK_ACCESS_TOKEN: z.string().optional(),
+  // 콘텐츠 자동발행 킬스위치 — "off" 면 해당 cron 이 스킵 (배포 없이 즉시 정지)
+  NEWS_AUTO_PUBLISH: z.string().optional(),
+  AGG_AUTO_APPROVE: z.string().optional(),
   // 운영 알림 디스코드 웹훅 (신고/검수/정산/크롤링 이슈 → 직원 채널). 미설정 시 알림 no-op.
   DISCORD_OPS_WEBHOOK_URL: z.string().url().optional(),
   // 뉴스봇 디스코드 서버 웹훅 (유저 대상 — docs/DISCORD_NEWSBOT_DESIGN.md). 미설정 채널은 no-op.
