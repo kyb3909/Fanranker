@@ -178,6 +178,24 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  // 1차 월드컵 이벤트 아카이브 비공개 (2026-07-30) — layout 의 redirect() 는
+  // 스트리밍 렌더라 응답이 200 + 본문에 옛 콘텐츠가 실린 채 meta refresh 로만
+  // 이동한다(실측). 크롤러/심사봇에게 콘텐츠가 새므로 HTTP 레벨 307 로 격상.
+  // layout 쪽 redirect 는 이중 안전망으로 유지.
+  async redirects() {
+    return [
+      {
+        source: '/worldcup/:path*',
+        destination: '/prediction',
+        permanent: false,
+      },
+      {
+        source: '/worldcup',
+        destination: '/prediction',
+        permanent: false,
+      },
+    ]
+  },
   // Supabase Storage URL을 자체 도메인으로 프록시 (도메인 노출 방지)
   async rewrites() {
     return [
