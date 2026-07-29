@@ -91,7 +91,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
           {/* 대결 스탯 */}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="bg-muted/40 rounded-lg p-3 text-center">
-              <p className="text-muted-foreground text-xs">유저 평균 점수율</p>
+              <p className="text-muted-foreground text-xs">유저 평균 수익률</p>
               <p
                 className={`text-xl font-bold ${
                   (overall.avgProfitRate ?? 0) >= 0
@@ -166,7 +166,7 @@ export function StatsTab({ stats, isLoading }: StatsTabProps) {
                         </span>
                       </span>
                       <span className="text-muted-foreground">
-                        점수율{" "}
+                        수익률{" "}
                         <span
                           className={`font-medium ${
                             (s.avgProfitRate ?? 0) >= 0

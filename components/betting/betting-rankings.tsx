@@ -66,7 +66,7 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
               style={{ color: "var(--wc-mute, #5C6470)" }}
             >
               <span>
-                점수율{" "}
+                수익률{" "}
                 <span
                   className="font-bold tabular-nums"
                   style={{
@@ -142,9 +142,9 @@ export function BettingRankings({ rankings, myRank, isLoading }: BettingRankings
           >
             <span className="text-center">#</span>
             <span>유저</span>
-            <span className="text-right">점수율</span>
+            <span className="text-right">수익률</span>
             <span className="hidden text-right sm:block">적중률</span>
-            <span className="hidden text-right sm:block">순 점수</span>
+            <span className="hidden text-right sm:block">순수익</span>
           </div>
 
           {/* 랭킹 행 */}

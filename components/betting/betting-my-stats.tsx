@@ -63,7 +63,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                 {(myStats.summary.profit_rate || 0) >= 0 ? "+" : ""}
                 {(myStats.summary.profit_rate || 0).toFixed(1)}%
               </div>
-              <div className="text-muted-foreground mt-0.5 text-[10px]">점수율</div>
+              <div className="text-muted-foreground mt-0.5 text-[10px]">수익률</div>
             </div>
             <div className="bg-muted/40 rounded-lg p-2 text-center">
               <div className="text-primary text-lg font-bold">
@@ -80,7 +80,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                 {(myStats.summary.net_profit || 0) >= 0 ? "+" : ""}
                 {(myStats.summary.net_profit || 0).toFixed(2)}
               </div>
-              <div className="text-muted-foreground mt-0.5 text-[10px]">순 점수</div>
+              <div className="text-muted-foreground mt-0.5 text-[10px]">순수익</div>
             </div>
           </div>
           {/* Detail info */}
@@ -171,7 +171,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                         {(sport.profit_rate || 0) >= 0 ? "+" : ""}
                         {(sport.profit_rate || 0).toFixed(1)}%
                       </div>
-                      <div className="text-muted-foreground text-[10px]">점수율</div>
+                      <div className="text-muted-foreground text-[10px]">수익률</div>
                     </div>
                     <div className="bg-muted/40 rounded px-2 py-1.5 text-center">
                       <div className="text-primary text-xs font-bold">
@@ -188,7 +188,7 @@ export function BettingMyStats({ myStats, isLoading }: BettingMyStatsProps) {
                         {(sport.net_profit || 0) >= 0 ? "+" : ""}
                         {(sport.net_profit || 0).toFixed(2)}
                       </div>
-                      <div className="text-muted-foreground text-[10px]">순 점수</div>
+                      <div className="text-muted-foreground text-[10px]">순수익</div>
                     </div>
                   </div>
                 </div>

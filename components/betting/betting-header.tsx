@@ -174,9 +174,9 @@ export function BettingHeader({
               {/* 정렬 pill — wc-lb-tabs */}
               <div className="wc-lb-tabs justify-center px-3 py-2.5" style={{ marginBottom: 0 }}>
                 {[
-                  { id: "roi", label: "점수율", icon: TrendingUp },
+                  { id: "roi", label: "수익률", icon: TrendingUp },
                   { id: "winRate", label: "적중률", icon: Target },
-                  { id: "profit", label: "획득 점수", icon: Coins },
+                  { id: "profit", label: "순수익", icon: Coins },
                 ].map((filter) => (
                   <button
                     key={filter.id}
