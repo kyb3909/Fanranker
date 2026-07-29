@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { getGameBetDeadline, getDailyWindow, getTodayDailyId } from "@/lib/betman/daily-round"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { retryRefundTokens } from "@/lib/betman/refund-tokens"
+import { recordFunnelMilestone } from "@/lib/analytics/funnel"
 import { z } from "zod"
 
 const predictionItemSchema = z.object({
@@ -552,6 +553,11 @@ export async function POST(request: NextRequest) {
       console.error("Failed to compute pick distribution:", e)
     }
 
+    // ===== 온보딩 퍼널: 첫 슬립 =====
+    // "처음인지"는 서버만 알 수 있다(클라 이벤트는 매번 발사돼 최초 판정이 불가능).
+    // 실패해도 예측은 이미 성공했으므로 결과만 응답에 얹는다.
+    const isFirstSlip = await recordFunnelMilestone(user.id, "first_slip")
+
     return NextResponse.json({
       success: true,
       slipId: slip.id,
@@ -560,6 +566,7 @@ export async function POST(request: NextRequest) {
       remainingBalls: newBalance,
       message: `${predictions.length}경기 조합 ${stake}볼 베팅 완료! (잔액: ${newBalance}볼)`,
       pickDistribution,
+      isFirstSlip,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)

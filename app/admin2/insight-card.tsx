@@ -111,7 +111,7 @@ export function InsightCard() {
               </h3>
               <ul className="space-y-1.5">
                 {body.watch.map((w, i) => (
-                  <li key={i} className="border-l-2 border-amber-300 pl-2.5">
+                  <li key={i} className="rounded-md bg-amber-50 px-2.5 py-1.5">
                     <p className="text-sm font-medium">{w.title}</p>
                     <p className="text-muted-foreground text-xs leading-relaxed">{w.detail}</p>
                   </li>

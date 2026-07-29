@@ -3,6 +3,7 @@ import type { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { trackEvent } from "@/lib/analytics/events"
+import { channelParams, getAttribution } from "@/lib/analytics/attribution"
 import type { EditorState, EditorAction } from "@/hooks/use-write-form"
 
 /** 이미 우리 Storage에 있는 이미지인지 — 프록시 경로(/storage/) 또는 Supabase 도메인. */
@@ -113,6 +114,14 @@ export function useWriteSubmit(
         const result = await response.json()
         if (!editId) {
           trackEvent({ name: "first_post", params: { community: state.selectedCommunity } })
+          // first_post 는 이름과 달리 새 글마다 발사된다(기존 동작 유지 — GA4 이력 보존).
+          // 진짜 "게시판 첫 활동"은 서버 판정을 받은 이 이벤트다.
+          if (result?.is_first_post) {
+            trackEvent({
+              name: "first_community_action",
+              params: { kind: "post", ...channelParams(getAttribution()) },
+            })
+          }
         }
         router.push(editId ? `/post/${editId}` : `/post/${result.id}`)
       } catch (error) {

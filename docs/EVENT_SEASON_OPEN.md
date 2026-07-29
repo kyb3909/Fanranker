@@ -138,8 +138,8 @@ Related: user-main-design-20260328-135249.md (전체 런칭 설계 — 본 문�
 ## Dependencies (개발/운영 준비물)
 
 **개발 (P0 = 트래픽 받기 전 필수 / P1 = 이벤트 개시 전 필수 / P2 = 컷 가능)**
-1. P0 — Sentry 클라이언트 활성화 (현재 꺼짐: 신규 유저 에러 사각지대)
-2. P0 — 퍼널 계측: 랜딩 도달·가입 완료·첫 슬립·게시판 첫 활동 4개 이벤트 + 채널별 UTM
+1. ✅ P0 — Sentry 클라이언트 활성화 (2026-07-29 복원, 에러 전용 경량 구성)
+2. ✅ P0 — 퍼널 계측 (2026-07-29 구축) — 아래 "채널별 UTM 링크" 참조
 3. P1 — **카카오 로그인** (Clerk 커스텀 OAuth). ⚠️ 카카오 비즈앱 전환·검수 등 **외부 심사 리드타임 있음 — 즉시 착수.** 사용자가 언급한 "다음 로그인"은 별도 구현 없음(다음 계정은 카카오 계정으로 통합됨, 카카오 로그인이 이를 커버). **네이버 로그인은 P2 컷라인 아래** — 카카오+구글로 MVP 충분, 일정 여유 시에만.
 4. P1 — 이벤트 포인트 원장 (**신규 개발** — 신규 테이블 + 일일 상한 로직 + 삭제 회수 + 진행바 API. flair 트리거 재사용 아님, 참조만)
 5. P1 — 3팀 이벤트 구조 부활 (월드컵 event_groups kop/blues 재활성 또는 신규 이벤트 행 + 플레어 자동 등록 연동)
@@ -149,6 +149,35 @@ Related: user-main-design-20260328-135249.md (전체 런칭 설계 — 본 문�
 9. P2 — 한정 호칭 "창단 멤버" 시드 (가벼움, 사실상 확정 포함)
 10. P0 — 모바일 가입~첫 예측 플로우 QA (유튜브 유입 = 대부분 모바일)
 11. P1 — Supabase compute 증설 (이벤트 기간 Small/Medium, 기존 방침)
+
+### 채널별 UTM 링크 (2026-07-29 구축 완료)
+
+유튜버에게는 **채널마다 다른 링크**를 준다. `utm_source` 하나만 달라도 분리 집계된다.
+
+```
+https://gongnori.fan/?utm_source=cog&utm_medium=youtube&utm_campaign=season_open
+https://gongnori.fan/?utm_source=cog_liverpool&utm_medium=youtube&utm_campaign=season_open
+https://gongnori.fan/?utm_source=cog_chelsea&utm_medium=youtube&utm_campaign=season_open
+```
+
+- `utm_source` = 채널 식별자(리포트의 행 이름이 그대로 이 값이다). 공백·한글 없이.
+- 랜딩 경로를 바꿔도 됨 — 착지 경로별 전환 비교를 위해 `landing_path` 로 함께 저장된다.
+
+**동작 방식**: 첫 방문 때 채널을 브라우저에 고정(first touch)하고, 며칠 뒤 재방문해서
+가입해도 그 채널에 귀속시킨다. 가입 시점 URL 만 보면 대부분 direct 로 잡혀 유튜버
+기여가 증발하기 때문이다.
+
+**보는 곳**
+- `/admin2` 하단 **유입 채널 퍼널** 카드 — 채널별 가입 → 첫 예측 → 게시판 활동 → 둘 다
+- GA4 실시간: `landing_view` / `signup_complete` / `first_prediction` / `first_community_action`
+  (전부 `channel` 파라미터 포함)
+- 원장 테이블 `user_acquisition` — 채널별 잔존 등 임의 질의는 여기서 SQL 로
+
+**한계(알고 쓸 것)**
+- 랜딩 도달은 GA4 에만 있다. 비로그인 방문은 user_id 가 없어 DB 원장에 못 남는다.
+  즉 `/admin2` 표의 전환율은 **가입자 기준**이고, 랜딩→가입은 GA4 로 본다.
+- 계측 도입 이전 가입자는 전부 "귀속 불명"으로 잡힌다.
+- 브라우저를 바꾸거나 시크릿 모드로 가입하면 귀속이 끊긴다(localStorage 기반).
 
 **운영**
 - 상품 조달 (유니폼 정품+마킹, 스팀 코드, BBQ 쿠폰), 유튜버 3채널 협의(개막 노출 + 2주차 공개 영상), 매치데이 글 운영 인력/자동화 결정

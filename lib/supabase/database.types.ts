@@ -5224,6 +5224,57 @@ export type Database = {
           },
         ]
       }
+      user_acquisition: {
+        Row: {
+          created_at: string
+          first_comment_at: string | null
+          first_post_at: string | null
+          first_seen_at: string | null
+          first_slip_at: string | null
+          landing_path: string | null
+          referrer_host: string | null
+          signup_at: string | null
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_comment_at?: string | null
+          first_post_at?: string | null
+          first_seen_at?: string | null
+          first_slip_at?: string | null
+          landing_path?: string | null
+          referrer_host?: string | null
+          signup_at?: string | null
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_comment_at?: string | null
+          first_post_at?: string | null
+          first_seen_at?: string | null
+          first_slip_at?: string | null
+          landing_path?: string | null
+          referrer_host?: string | null
+          signup_at?: string | null
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       user_flair_scores: {
         Row: {
           flair_id: string
@@ -6250,6 +6301,10 @@ export type Database = {
       recalculate_post_comment_count: {
         Args: { post_id_param: string }
         Returns: number
+      }
+      record_funnel_milestone: {
+        Args: { p_step: string; p_user_id: string }
+        Returns: boolean
       }
       record_unique_view: {
         Args: { p_post_id: string; p_user_id: string }

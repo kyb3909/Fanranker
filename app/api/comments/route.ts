@@ -6,6 +6,7 @@ import { isUserSuspended } from "@/lib/check-suspension"
 import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { awardFlairKarma } from "@/lib/metaverse/karma-award"
 import { fetchVisibleComments } from "@/lib/comments/visible-comments"
+import { recordFunnelMilestone } from "@/lib/analytics/funnel"
 import { z } from "zod"
 
 const CommentCreateSchema = z
@@ -235,7 +236,10 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    return NextResponse.json(comment, { status: 201 })
+    // 온보딩 퍼널 4단계(게시판 첫 활동) — 댓글 쪽. 최초 여부는 DB 원장이 판정한다.
+    const isFirstComment = await recordFunnelMilestone(userId, "first_comment")
+
+    return NextResponse.json({ ...comment, is_first_comment: isFirstComment }, { status: 201 })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

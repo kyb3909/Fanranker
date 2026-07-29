@@ -10,6 +10,7 @@ import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { isAllowedImageUrl } from "@/lib/validate-image-url"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { canPostNotice } from "@/lib/board-moderator"
+import { recordFunnelMilestone } from "@/lib/analytics/funnel"
 import { z } from "zod"
 
 const MAX_CONTENT_SIZE = 100_000 // 100KB
@@ -377,7 +378,11 @@ export async function POST(request: NextRequest) {
       // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
     }
 
-    return NextResponse.json(data, { status: 201 })
+    // 온보딩 퍼널 4단계(게시판 첫 활동) — 글 쪽.
+    // 클라의 first_post 이벤트는 새 글마다 발사돼 "최초"가 아니다. 원장은 여기다.
+    const isFirstPost = await recordFunnelMilestone(userId, "first_post")
+
+    return NextResponse.json({ ...data, is_first_post: isFirstPost }, { status: 201 })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)
   }

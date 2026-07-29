@@ -6,6 +6,7 @@ import { Barlow_Condensed } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { GoogleAnalytics } from "@next/third-parties/google"
+import { AttributionTracker } from "@/components/analytics/attribution-tracker"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ClerkErrorBoundary } from "@/components/clerk-error-boundary"
 import { ProfileSync } from "@/components/profile/profile-sync"
@@ -267,6 +268,7 @@ export default function RootLayout({
             {process.env.NEXT_PUBLIC_GA_ID && (
               <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
             )}
+            <AttributionTracker />
           </body>
         </html>
       </ClerkProvider>

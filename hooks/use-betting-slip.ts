@@ -9,6 +9,7 @@ import type {
 } from "@/types/betting"
 import { useAlertModal } from "./use-alert-modal"
 import { trackEvent } from "@/lib/analytics/events"
+import { channelParams, getAttribution } from "@/lib/analytics/attribution"
 
 export function useBettingSlip(
   groupedMatches: GroupedMatch[],
@@ -257,6 +258,17 @@ export function useBettingSlip(
         name: "prediction_submit",
         params: { sport: selectedSport || "unknown", stake: betAmount },
       })
+      // 온보딩 퍼널 3단계. 최초 여부는 서버가 판정해 내려준다(DB 원장 기준).
+      if (data.isFirstSlip) {
+        trackEvent({
+          name: "first_prediction",
+          params: {
+            sport: selectedSport || "unknown",
+            game_count: selectedBets.length,
+            ...channelParams(getAttribution()),
+          },
+        })
+      }
       // 완료 모달: 픽 분포 + 인기글 썸네일 유도.
       // 활성 게시판(자유·축구 등) 인기글을 종목 무관하게 노출 — 베팅 직후가 검증된 최대
       // 콘텐츠 소비 레버라, 야구 베터도 담벼락으로 넘긴다 (구 축구 전용 게이트 제거 2026-07-23).

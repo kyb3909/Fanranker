@@ -10,6 +10,7 @@ import Link from "@/components/ui/app-link"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { trackEvent } from "@/lib/analytics/events"
+import { channelParams, getAttribution } from "@/lib/analytics/attribution"
 
 import {
   type Category,
@@ -414,8 +415,21 @@ export default function SignUpPage() {
       }
       */
 
-      // 4. Analytics: 가입 완료 이벤트
-      trackEvent({ name: "signup_complete", params: { method: signupMethod } })
+      // 4. Analytics: 가입 완료 이벤트 + 유입 채널 귀속 기록
+      //    귀속은 첫 방문 때 저장해둔 값이라 "며칠 뒤 재방문 가입"도 유튜버에게 붙는다.
+      //    계측 실패가 가입을 막으면 안 되므로 응답은 확인하지 않는다.
+      const attribution = getAttribution()
+      if (attribution) {
+        fetch("/api/attribution", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(attribution),
+        }).catch(() => {})
+      }
+      trackEvent({
+        name: "signup_complete",
+        params: { method: signupMethod, ...channelParams(attribution) },
+      })
 
       // 5. 환영 메시지 + 홈으로 이동 (toast가 보이도록 약간 딜레이)
       toast({

@@ -5,6 +5,25 @@ import { toast } from "@/hooks/use-toast"
 import { reportClientError } from "@/lib/client-error"
 import { countAllComments, transformComments } from "@/types/post-detail"
 import type { Comment } from "@/types/post-detail"
+import { trackEvent } from "@/lib/analytics/events"
+import { channelParams, getAttribution } from "@/lib/analytics/attribution"
+
+/**
+ * 온보딩 퍼널 4단계(게시판 첫 활동). 최초 여부는 서버가 DB 원장으로 판정해 내려준다 —
+ * 계측이 틀리면 유튜버 채널별 정착률이 통째로 거짓말이 되므로 클라 추정은 쓰지 않는다.
+ */
+async function trackFirstCommunityAction(response: Response) {
+  try {
+    const data = (await response.clone().json()) as { is_first_comment?: boolean }
+    if (!data?.is_first_comment) return
+    trackEvent({
+      name: "first_community_action",
+      params: { kind: "comment", ...channelParams(getAttribution()) },
+    })
+  } catch {
+    /* 계측 실패가 댓글 작성을 막지 않는다 */
+  }
+}
 
 export interface CommentsInitialData {
   comments: {
@@ -120,6 +139,7 @@ export function useComments(
         }
         throw new Error(error.error || "댓글 작성에 실패했습니다.")
       }
+      await trackFirstCommunityAction(response)
       await reloadComments()
     } catch (error) {
       reportClientError("comments.create", error)
@@ -164,6 +184,7 @@ export function useComments(
         }
         throw new Error(error.error || "답글 작성에 실패했습니다.")
       }
+      await trackFirstCommunityAction(response)
       await reloadComments()
       setReplyingTo(null)
     } catch (error) {

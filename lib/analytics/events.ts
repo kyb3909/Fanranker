@@ -6,9 +6,27 @@
  */
 
 type AnalyticsEvent =
-  | { name: "signup_complete"; params: { method: "email" | "google" | "kakao" } }
+  // ── 온보딩 퍼널 4단계 (시즌 오픈 이벤트 P0) ──
+  // 랜딩 도달 → 가입 완료 → 첫 슬립 → 게시판 첫 활동.
+  // channel 은 최초 터치 UTM(lib/analytics/attribution) — 유튜버별 기여를 보려면 필수.
+  | { name: "landing_view"; params: { channel: string; channel_campaign: string; path: string } }
+  | {
+      name: "signup_complete"
+      params: {
+        method: "email" | "google" | "kakao"
+        channel: string
+        channel_campaign: string
+      }
+    }
   | { name: "first_post"; params: { community: string } }
-  | { name: "first_prediction"; params: { sport: string; game_count: number } }
+  | {
+      name: "first_prediction"
+      params: { sport: string; game_count: number; channel: string; channel_campaign: string }
+    }
+  | {
+      name: "first_community_action"
+      params: { kind: "post" | "comment"; channel: string; channel_campaign: string }
+    }
   | { name: "board_view"; params: { board: string } }
   | { name: "prediction_submit"; params: { sport: string; stake: number } }
   // ── 예측 완료 모달 → 커뮤니티 전환 실험 (2026-07-02) ──
