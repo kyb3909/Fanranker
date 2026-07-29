@@ -67,6 +67,10 @@ export function HomeClient({
   const searchParams = useSearchParams()
   const [sortBy, setSortBy] = useState<SortType>(initialSort)
   const [feedTab, setFeedTab] = useState<FeedTab>(initialTab)
+  // 밴드 전환 애니메이션 게이트 — 첫 로드에는 안 붙인다(LCP 히어로가 opacity 0 에서
+  // 시작하면 LCP 가 늦어진다). 사용자가 탭을 한 번이라도 바꾼 뒤부터, 히어로↔PageBand
+  // 리마운트 시 gn-band-in 이 재생돼 530px→밴드 붕괴가 "전환"으로 읽힌다.
+  const [bandAnimReady, setBandAnimReady] = useState(false)
 
   // 탭/정렬을 URL 에 보존 → 새로고침·뒤로가기 시 선택 유지
   // 기본(오늘의 떡밥)=파라미터 없음, 게시판=?tab=board[&sort=], 게임=?tab=games
@@ -86,6 +90,7 @@ export function HomeClient({
   }
 
   const changeTab = (tab: FeedTab) => {
+    setBandAnimReady(true)
     setFeedTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.delete("sort")
@@ -137,16 +142,33 @@ export function HomeClient({
   )
 
   return (
-    <div className="worldcup-scope min-h-[100dvh]">
+    <div className={`worldcup-scope min-h-[100dvh] ${bandAnimReady ? "gn-band-entering" : ""}`}>
       {/*
         상단 밴드는 탭이 바뀌어도 유지한다 — 정렬 칩을 눌렀다고 밴드가 통째로 사라지면
         같은 페이지로 안 읽힌다(530px → 0). 다만 목록 소비 탭에서 히어로 캐러셀까지
         끌고 가면 스크롤만 늘어나므로, 다른 페이지와 동일한 공용 PageBand 로 낮춘다.
+        탭별 라벨: 게시판=담벼락 / 오늘의 경기=경기 안내 — games 탭이 "팔로우한 게시판
+        글" 설명을 달고 있던 불일치 수정 (2026-07-30 디자인 감리).
+        히어로↔PageBand 스왑은 gn-band-entering 마운트 전환(260ms)으로 붕괴감을 줄인다
+        — 첫 로드는 애니메이션 없음(LCP 보호), 탭 전환부터만.
       */}
       {feedTab === "cardnews" ? (
         <MatchdayBand cards={initialCardNews?.cards ?? []} />
+      ) : feedTab === "games" ? (
+        // 같은 DNA 의 축소 매치데이 밴드 — 히어로→"요약"으로 읽히고, 카운트다운이
+        // 경기 픽 화면과 문맥이 정확히 맞는다 (감리 실행안 B)
+        <MatchdayBand cards={[]} compact />
       ) : (
-        <PageBand kicker="Wall" title="담벼락" description="팔로우한 게시판 글이 여기로 모인다." />
+        <PageBand
+          as="h2" // sr-only h1(156행)과의 h1 중복 방지 — 문서 아웃라인 고정
+          kicker="Wall"
+          title="담벼락"
+          description={
+            isSignedIn
+              ? "팔로우한 게시판 글이 여기로 모인다."
+              : "지금 올라오는 게시판 글이 여기로 모인다."
+          }
+        />
       )}
       <main
         id="main-content"

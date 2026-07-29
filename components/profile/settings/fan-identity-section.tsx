@@ -176,8 +176,11 @@ export function FanIdentitySection() {
               <div
                 key={s.flair_id}
                 className="bg-muted/40 border-border space-y-2 rounded-lg border p-3"
+                // 좌측 액센트 보더 금지 규칙 — flair 색은 배경 틴트로만 표현
                 style={
-                  s.flair_color ? { borderLeftWidth: 3, borderLeftColor: s.flair_color } : undefined
+                  s.flair_color
+                    ? { background: `color-mix(in srgb, ${s.flair_color} 8%, transparent)` }
+                    : undefined
                 }
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs">

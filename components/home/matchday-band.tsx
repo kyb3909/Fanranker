@@ -48,9 +48,15 @@ function fmtKstDate(d: Date): string {
 
 interface MatchdayBandProps {
   cards: CardNewsItem[]
+  /**
+   * 컴팩트 변형 — 홈 "오늘의 경기" 탭용 (2026-07-30 디자인 감리 실행안 B).
+   * 히어로 캐러셀·경기 목록 없이 같은 DNA(키커·타이포·날짜 스탬프)의 한 줄 밴드만.
+   * 탭 전환 시 530px 히어로가 "다른 페이지"로 갈아엎어지는 대신 "요약됐다"로 읽힌다.
+   */
+  compact?: boolean
 }
 
-export function MatchdayBand({ cards }: MatchdayBandProps) {
+export function MatchdayBand({ cards, compact = false }: MatchdayBandProps) {
   const slides = useMemo(() => cards.filter((c) => !!c.image).slice(0, MAX_SLIDES), [cards])
 
   const { data } = useSWR<{ groupedGames?: GroupedMatch[] }>("/api/sports/games", fetcher, {
@@ -67,6 +73,47 @@ export function MatchdayBand({ cards }: MatchdayBandProps) {
       .filter((m) => m.homeTeam && m.awayTeam && m.homeTeam !== "미정" && m.awayTeam !== "미정")
       .sort((a, b) => a.matchTime.localeCompare(b.matchTime))
   }, [data])
+
+  // 훅 규칙상 조건 없이 호출 — full 밴드에서는 TodayFixtures 에 내려준다
+  const countdown = useCountdown(matches[0]?.matchTime)
+
+  if (compact) {
+    return (
+      <section className="gn-band" aria-label="오늘의 경기">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 pt-8 pb-8">
+            <span
+              className="gn-num text-[13px] font-bold uppercase"
+              style={{ letterSpacing: "0.2em", color: "var(--gn-bg-100)" }}
+            >
+              Matchday
+            </span>
+            <h2
+              className="text-[30px] leading-none sm:text-[42px]"
+              style={{
+                fontFamily: DISPLAY,
+                fontWeight: 700,
+                color: "var(--gn-cream)",
+                letterSpacing: "-0.035em",
+              }}
+            >
+              오늘의 경기
+            </h2>
+            {countdown && matches.length > 0 && (
+              <span
+                className="gn-num ml-auto hidden text-[15px] font-bold sm:block"
+                style={{ letterSpacing: "0.06em", color: "var(--gn-cream-dim)" }}
+                suppressHydrationWarning
+              >
+                다음 킥오프 <span style={{ color: "var(--gn-cream)" }}>{countdown}</span> ·{" "}
+                {matches.length}경기
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   // 밴드는 톱스토리도 경기도 없으면 통째로 숨긴다 (빈 다크 박스로 첫 화면 낭비 X)
   if (slides.length === 0 && matches.length === 0) return null
@@ -105,7 +152,7 @@ export function MatchdayBand({ cards }: MatchdayBandProps) {
 
         <div className="grid gap-4 pb-7 lg:grid-cols-[1.35fr_1fr]">
           {slides.length > 0 && <TopStoryCarousel slides={slides} />}
-          {matches.length > 0 && <TodayFixtures matches={matches} />}
+          {matches.length > 0 && <TodayFixtures matches={matches} countdown={countdown} />}
         </div>
       </div>
     </section>
@@ -290,10 +337,15 @@ function CarouselBtn({
 
 /* ─────────────────────────── 오늘의 경기 ─────────────────────────── */
 
-function TodayFixtures({ matches }: { matches: GroupedMatch[] }) {
+function TodayFixtures({
+  matches,
+  countdown,
+}: {
+  matches: GroupedMatch[]
+  countdown: string | null
+}) {
   const shown = matches.slice(0, MAX_ROWS)
   const rest = matches.length - shown.length
-  const countdown = useCountdown(matches[0]?.matchTime)
 
   return (
     <aside

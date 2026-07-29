@@ -155,9 +155,9 @@ function ExploreInner({ stats }: { stats?: Record<string, BoardStat> }) {
         깔면 화면에서 미아가 된다. 개수가 아니라 무게로 채운다.
       */}
       <PageBand
-        kicker="Explore · 게시판 디렉토리"
+        kicker="Explore" // 키커는 라틴 대문자만 (자간 0.2em 규약 — 한글 혼입 금지)
         title="운동장"
-        description="관심 있는 게시판을 찾아 팔로우해보세요. 팔로우한 게시판 글은 담벼락 위로 올라옵니다."
+        description="게시판 디렉토리. 관심 게시판을 팔로우하면 그 글이 담벼락으로 올라온다."
         aside={
           categories.length > 0 ? (
             <PageBandStat value={categories.length} label="Open Boards" />
