@@ -14,9 +14,16 @@ import { CommentEditForm } from "./comment-edit-form"
 import { CommentReplyForm } from "./comment-reply-form"
 import { TitleBadge } from "@/components/profile/title-badge"
 
+/** VS 쟁점 진영 표시 — user_id→option key 맵과 key→라벨. 투표한 유저의 댓글에만 칩 */
+export interface VsFactionInfo {
+  voterMap: Record<string, string>
+  labels: Record<string, string>
+}
+
 interface CommentItemProps {
   comment: Comment
   currentUserId?: string | null
+  vsFaction?: VsFactionInfo | null
   replyingTo: string | number | null
   replyText: string
   onReplyTextChange: (text: string) => void
@@ -37,6 +44,7 @@ const MAX_DEPTH = 5
 export const CommentItem = memo(function CommentItem({
   comment,
   currentUserId,
+  vsFaction,
   replyingTo,
   replyText,
   onReplyTextChange,
@@ -93,6 +101,29 @@ export const CommentItem = memo(function CommentItem({
                 <span className="text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
                   {comment.timestamp}
                 </span>
+                {(() => {
+                  // VS 진영 칩 — 쟁점 투표를 한 유저의 댓글에만. 좌측 보더 금지 규칙에
+                  // 따라 배경 틴트 칩으로 표현 (a=버건디 / b=네이비 계열).
+                  const key =
+                    vsFaction && comment.userId ? vsFaction.voterMap[comment.userId] : null
+                  const label = key ? vsFaction?.labels[key] : null
+                  if (!label) return null
+                  const isA = key === "a"
+                  return (
+                    <span
+                      className="rounded px-1.5 py-0.5 text-[10.5px] font-extrabold"
+                      style={{
+                        background: isA
+                          ? "color-mix(in srgb, #961e37 9%, transparent)"
+                          : "color-mix(in srgb, #2c4a6e 10%, transparent)",
+                        color: isA ? "var(--wc-burgundy)" : "#2c4a6e",
+                      }}
+                      title="오늘의 쟁점에서 이 진영에 투표했습니다"
+                    >
+                      {label}
+                    </span>
+                  )
+                })()}
                 {comment.isSecret && (
                   <span
                     className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10.5px] font-bold"
@@ -230,6 +261,7 @@ export const CommentItem = memo(function CommentItem({
               key={reply.id}
               comment={reply}
               currentUserId={currentUserId}
+              vsFaction={vsFaction}
               replyingTo={replyingTo}
               replyText={replyText}
               onReplyTextChange={onReplyTextChange}

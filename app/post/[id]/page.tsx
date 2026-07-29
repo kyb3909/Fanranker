@@ -7,6 +7,8 @@ import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
 import { auth } from "@clerk/nextjs/server"
 import { fetchVisibleComments } from "@/lib/comments/visible-comments"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { fetchVsPoll } from "@/lib/news/vs-issue"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -205,10 +207,17 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  const [recentPosts, commentsData] = await Promise.all([
+  const { userId: viewerId } = await auth()
+  const [recentPosts, commentsData, vsPoll] = await Promise.all([
     fetchBoardRecentPosts(postData.community_slug, id),
     fetchComments(id),
+    // VS 쟁점 폴 (뉴스 게시물에만 존재) — 없으면 null, 실패해도 글은 뜬다
+    fetchVsPoll(createServiceRoleClient(), id, null).catch(() => null),
   ])
+  // 내 투표는 별도 확인 (viewerId 가 있을 때만 — fetchVsPoll 결과에서 찾는다)
+  if (vsPoll && viewerId) {
+    vsPoll.myKey = vsPoll.voterMap[viewerId] ?? null
+  }
   const boardName = COMMUNITY_NAMES[postData.community_slug] || postData.community_slug
 
   // 데이터 변환 (반감기 적용 온도 포함)
@@ -268,7 +277,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               <BackButton fallbackHref={`/community/${postData.community_slug}`} />
 
               {/* Post Detail Content */}
-              <PostDetailContent post={post} initialCommentsData={commentsData} />
+              <PostDetailContent post={post} initialCommentsData={commentsData} vsPoll={vsPoll} />
 
               {/* Board Recent Posts */}
               <BoardRecentPosts

@@ -5,6 +5,7 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
 import { suggestFlairs } from "@/lib/news/suggest-flair"
 import { learnFromDeskEdit } from "@/lib/news/learn-corrections"
+import { createVsPollForPost } from "@/lib/news/vs-issue"
 import type { TipTapNode } from "@/types/post"
 
 /**
@@ -131,6 +132,12 @@ export async function publishNewsDraft(
     title: opts.title,
     teaser,
     imageUrl: image,
+  })
+
+  // VS 쟁점 폴 생성 — 기사에 찬반 대결 + 3줄 요약을 붙인다 (읽기→투표→댓글 계단).
+  // LLM 호출이라 after() 로 미룸. 실패/쟁점 없음이면 폴 없는 기사로 남는다 (무해).
+  after(async () => {
+    await createVsPollForPost(supabase, post.id, opts.title, opts.content)
   })
 
   // 데스킹 학습 — 검수자가 고친 표기(선수명·음차·매체명)를 사전에 반영해

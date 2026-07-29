@@ -22,6 +22,8 @@ import { TitleBadge } from "@/components/profile/title-badge"
 import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
+import { VsIssueWidget, IssueSummary } from "@/components/post-detail/vs-issue-widget"
+import type { VsPollData } from "@/lib/news/vs-issue"
 import { openReport } from "@/hooks/use-report-dialog"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
 import type { Post } from "@/types/post-detail"
@@ -55,9 +57,12 @@ interface InitialCommentsData {
 export function PostDetailContent({
   post,
   initialCommentsData,
+  vsPoll,
 }: {
   post: Post
   initialCommentsData?: InitialCommentsData
+  /** VS 쟁점 폴 (뉴스 게시물에만) — 3줄 요약 + 찬반 투표 + 댓글 진영 칩 */
+  vsPoll?: VsPollData | null
 }) {
   const router = useRouter()
   const { user } = useUser()
@@ -282,6 +287,9 @@ export function PostDetailContent({
             >
               {post.title}
             </h2>
+            {vsPoll?.summary && vsPoll.summary.length > 0 && (
+              <IssueSummary summary={vsPoll.summary} />
+            )}
             {sourceUrl && (
               <a
                 href={sourceUrl}
@@ -355,11 +363,22 @@ export function PostDetailContent({
         </div>
       </div>
 
+      {/* VS 쟁점 투표 — 본문을 읽고 내려온 지점에서 진영을 고르게 한다 */}
+      {vsPoll && <VsIssueWidget vs={vsPoll} />}
+
       {/* Comments Section */}
       <CommentSection
         postId={post.id}
         onCommentCountChange={handleCommentCountChange}
         initialData={initialCommentsData}
+        vsFaction={
+          vsPoll
+            ? {
+                voterMap: vsPoll.voterMap,
+                labels: Object.fromEntries(vsPoll.options.map((o) => [o.key, o.label])),
+              }
+            : null
+        }
       />
     </div>
   )

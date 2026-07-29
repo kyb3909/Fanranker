@@ -21,6 +21,7 @@ export async function GET() {
       .from("polls")
       .select("id, question, options, allow_reason, closes_at")
       .eq("is_active", true)
+      .is("post_id", null) // VS 쟁점 폴(게시물 연결)은 사이드바 위젯에서 제외
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()

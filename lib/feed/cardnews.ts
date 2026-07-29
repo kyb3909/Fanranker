@@ -20,6 +20,8 @@ export interface CardNewsItem {
   flair: { name: string; color: string | null } | null
   /** 본문 첫 임베드 (플랫폼 뱃지 + 유튜브 lite embed 용). 풀 임베드는 상세 페이지 몫 */
   media: { provider: "youtube" | "instagram" | "x"; url: string; videoId?: string } | null
+  /** VS 쟁점 (히어로 카드용) — 질문 + 양측 라벨 + 퍼센트. 폴 없으면 undefined */
+  vs?: { question: string; aLabel: string; bLabel: string; aPct: number; total: number }
 }
 
 const PAGE_SIZE = 20
@@ -227,5 +229,50 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
   )
   const cards = await buildCards(supabase, rows)
   // 히어로는 전면 이미지 카드 — 이미지 없는 글은 성립 안 함
-  return cards.filter((c) => !!c.image).slice(0, limit)
+  const heroes = cards.filter((c) => !!c.image).slice(0, limit)
+  await attachVsToCards(supabase, heroes)
+  return heroes
+}
+
+/** 히어로 카드에 VS 쟁점(질문+퍼센트) 부착 — 폴 없는 글은 그대로 둔다 */
+async function attachVsToCards(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  cards: CardNewsItem[]
+): Promise<void> {
+  if (cards.length === 0) return
+  const { data: polls } = await supabase
+    .from("polls")
+    .select("id, post_id, question, options, is_active")
+    .in(
+      "post_id",
+      cards.map((c) => c.id)
+    )
+    .eq("is_active", true)
+  if (!polls || polls.length === 0) return
+
+  const { data: votes } = await supabase
+    .from("poll_votes")
+    .select("poll_id, option_key")
+    .in(
+      "poll_id",
+      polls.map((p) => p.id)
+    )
+    .limit(5000)
+
+  for (const poll of polls) {
+    const card = cards.find((c) => c.id === poll.post_id)
+    const opts = (poll.options as { key: string; label: string }[]) ?? []
+    if (!card || opts.length < 2) continue
+    const pollVotes = (votes ?? []).filter((v) => v.poll_id === poll.id)
+    const aCount = pollVotes.filter((v) => v.option_key === opts[0].key).length
+    const total = pollVotes.length
+    card.vs = {
+      question: poll.question,
+      aLabel: opts[0].label,
+      bLabel: opts[1].label,
+      // 표가 없으면 50:50 (빈 게이지는 죽어 보인다)
+      aPct: total === 0 ? 50 : Math.round((aCount / total) * 100),
+      total,
+    }
+  }
 }

@@ -3613,7 +3613,9 @@ export type Database = {
           id: string
           is_active: boolean
           options: Json
+          post_id: string | null
           question: string
+          summary: Json | null
         }
         Insert: {
           allow_reason?: boolean
@@ -3623,7 +3625,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           options: Json
+          post_id?: string | null
           question: string
+          summary?: Json | null
         }
         Update: {
           allow_reason?: boolean
@@ -3633,7 +3637,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           options?: Json
+          post_id?: string | null
           question?: string
+          summary?: Json | null
         }
         Relationships: []
       }

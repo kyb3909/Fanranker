@@ -12,13 +12,21 @@ import { useComments } from "@/hooks/use-comments"
 import { useIsAdmin } from "@/hooks/use-is-admin"
 import type { CommentsInitialData } from "@/hooks/use-comments"
 
+import type { VsFactionInfo } from "./comment-item"
+
 interface CommentSectionProps {
   postId: string | number
+  vsFaction?: VsFactionInfo | null
   onCommentCountChange?: (count: number) => void
   initialData?: CommentsInitialData
 }
 
-export function CommentSection({ postId, onCommentCountChange, initialData }: CommentSectionProps) {
+export function CommentSection({
+  postId,
+  onCommentCountChange,
+  initialData,
+  vsFaction,
+}: CommentSectionProps) {
   const { user } = useUser()
   const isAdmin = useIsAdmin()
   const { isBlocked, toggleBlock } = useBlockedUsers()
@@ -122,6 +130,7 @@ export function CommentSection({ postId, onCommentCountChange, initialData }: Co
                   key={comment.id}
                   comment={comment}
                   currentUserId={user?.id}
+                  vsFaction={vsFaction}
                   replyingTo={replyingTo}
                   replyText={replyText}
                   onReplyTextChange={setReplyText}
