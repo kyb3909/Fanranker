@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
-import { fetchCardNews, type CardNewsItem } from "@/lib/feed/cardnews"
+import { fetchCardNews, fetchHeroCards, type CardNewsItem } from "@/lib/feed/cardnews"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
 
 // 홈페이지 ISR: 5분 캐시 + stale-while-revalidate.
@@ -26,6 +26,7 @@ async function fetchAllHomeData(sort: SortType) {
     globalNoticesResult,
     worldcupStatus,
     cardNewsResult,
+    heroResult,
   ] = await Promise.all([
     // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
     (async (): Promise<PostsResponse> => {
@@ -125,7 +126,19 @@ async function fetchAllHomeData(sort: SortType) {
       cards: [] as CardNewsItem[],
       nextCursor: null as string | null,
     })),
+
+    // 7) 히어로(Top Story) — 레딧 화력순. 화력 데이터 없으면 빈 배열 → 아래 폴백
+    fetchHeroCards().catch(() => [] as CardNewsItem[]),
   ])
+
+  // 히어로 확정: 화력순 우선, 부족분은 최신 이미지 카드로 채움 (중복 없이).
+  // 히어로에 오른 글은 아래 떡밥 피드에서 제외한다 — 같은 화면에 두 번 나오는 중복 제거.
+  const heroCards: CardNewsItem[] = [...heroResult]
+  for (const c of cardNewsResult.cards) {
+    if (heroCards.length >= 3) break
+    if (!heroCards.some((h) => h.id === c.id) && c.image) heroCards.push(c)
+  }
+  const heroIds = heroCards.map((h) => h.id)
 
   return {
     initialFeed: feedResult,
@@ -137,7 +150,12 @@ async function fetchAllHomeData(sort: SortType) {
       content?: unknown
     }[],
     worldcupConcluded: worldcupStatus === "closed",
-    initialCardNews: cardNewsResult,
+    initialCardNews: {
+      cards: cardNewsResult.cards.filter((c) => !heroIds.includes(c.id)),
+      nextCursor: cardNewsResult.nextCursor,
+    },
+    heroCards,
+    heroIds,
   }
 }
 
@@ -175,6 +193,7 @@ export default async function Home({
         }
         worldcupConcluded={homeData.worldcupConcluded}
         initialCardNews={homeData.initialCardNews}
+        heroCards={homeData.heroCards}
       />
     </Suspense>
   )

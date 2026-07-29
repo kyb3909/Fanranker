@@ -50,6 +50,11 @@ interface HomeClientProps {
   /** 월드컵 이벤트 종료 여부 — true 면 배너가 "우승자 확인"으로 전환 */
   worldcupConcluded?: boolean
   initialCardNews?: { cards: CardNewsItem[]; nextCursor: string | null }
+  /**
+   * 히어로(Top Story) 카드 — 레딧 화력순 (app/page.tsx 에서 확정).
+   * initialCardNews.cards 에서는 이미 제외돼 있어 히어로↔떡밥 중복이 없다.
+   */
+  heroCards?: CardNewsItem[]
 }
 
 export function HomeClient({
@@ -61,6 +66,7 @@ export function HomeClient({
   initialTab = "cardnews",
   worldcupConcluded = false,
   initialCardNews,
+  heroCards,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -153,7 +159,7 @@ export function HomeClient({
         — 첫 로드는 애니메이션 없음(LCP 보호), 탭 전환부터만.
       */}
       {feedTab === "cardnews" ? (
-        <MatchdayBand cards={initialCardNews?.cards ?? []} />
+        <MatchdayBand cards={heroCards ?? initialCardNews?.cards ?? []} />
       ) : feedTab === "games" ? (
         // 같은 DNA 의 축소 매치데이 밴드 — 히어로→"요약"으로 읽히고, 카운트다운이
         // 경기 픽 화면과 문맥이 정확히 맞는다 (감리 실행안 B)
@@ -288,6 +294,7 @@ export function HomeClient({
                 <CardNewsFeed
                   initialCards={initialCardNews?.cards ?? []}
                   initialCursor={initialCardNews?.nextCursor ?? null}
+                  excludeIds={heroCards?.map((h) => h.id)}
                 />
               </div>
             )}

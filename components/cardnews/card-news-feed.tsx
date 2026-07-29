@@ -672,16 +672,20 @@ function CompactCard({ card }: { card: CardNewsItem }) {
 export function CardNewsFeed({
   initialCards,
   initialCursor,
+  excludeIds,
 }: {
   initialCards: CardNewsItem[]
   initialCursor: string | null
+  /** 피드에서 제외할 글 id — 히어로(Top Story)에 이미 오른 글의 중복 노출 방지 */
+  excludeIds?: string[]
 }) {
   const [cards, setCards] = useState(initialCards)
   const [cursor, setCursor] = useState(initialCursor)
   const [loading, setLoading] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  /** 이미 실은 카드 id — 빈 페이지 건너뛰기 루프에서 동기적으로 중복을 걸러야 한다 */
-  const seenIds = useRef(new Set(initialCards.map((c) => c.id)))
+  /** 이미 실은 카드 id — 빈 페이지 건너뛰기 루프에서 동기적으로 중복을 걸러야 한다.
+   *  excludeIds(히어로 글)를 시드해두면 무한스크롤 뒷페이지에서도 자연히 걸러진다. */
+  const seenIds = useRef(new Set([...initialCards.map((c) => c.id), ...(excludeIds ?? [])]))
 
   const loadMore = useCallback(async () => {
     if (loading || !cursor) return

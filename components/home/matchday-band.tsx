@@ -225,7 +225,14 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
             )}
             <h3
               className="font-title max-w-[21ch] text-[22px] leading-[1.24] font-bold sm:text-[31px]"
-              style={{ color: "var(--gn-cream)", letterSpacing: "-0.025em" }}
+              style={{
+                color: "var(--gn-cream)",
+                letterSpacing: "-0.025em",
+                // 한글은 기본값이 글자 단위 줄바꿈이라 "로드리"가 "로/드리"로 갈라진다
+                // → 어절 단위로만 꺾는다. overflowWrap 은 초장문 안전판.
+                wordBreak: "keep-all",
+                overflowWrap: "break-word",
+              }}
             >
               <Link href={`/post/${c.id}`} className="hover:underline">
                 {c.title}

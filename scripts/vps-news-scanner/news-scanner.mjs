@@ -503,6 +503,70 @@ async function main() {
   log(
     `완료: 후보 ${candidates.length}, 출처없음 제외 ${skippedNoSource}건, LLM ${llmCalls}회, 초안 ${drafted}건`
   )
+
+  // 스캔 뒤 화력 재측정 — 실패해도 스캔 결과에는 영향 없음
+  try {
+    await reportHeat()
+  } catch (e) {
+    log("heat 실패(무시):", e.message)
+  }
+}
+
+// ── 레딧 화력 재측정 (홈 Top Story 랭킹용, 2026-07-30) ──────────────
+// 스캐너는 글이 갓 올라왔을 때 긁으므로 수집 시점엔 화력을 모른다 — "불타오름"은
+// 나중에 오르는 값이라 매 run(15분)마다 재측정해 사이트로 밀어넣는다
+// (POST /api/news/heat → news_reservoir.raw.heat → 홈 히어로 랭킹).
+//
+// ⚠️ 절대 점수(업보트 수)는 얻을 수 없다 — hot.json/old.reddit JSON 은 curl 로도
+//    차단됨을 실측(2026-07-30, HTML 차단 페이지 반환). 대신 **top.rss?t=day 의
+//    정렬 순서 = 오늘 점수 순위**이므로, 순위 기반 합성 점수를 쓴다. 히어로 선정에
+//    필요한 건 절대값이 아니라 순위다.
+// 서브 간 스케일: r/soccer(종합, 구독자 수백만)가 클럽 서브보다 화력 기준이 높다
+// → 가중 베이스로 보정. 어차피 상위 3개만 쓰므로 대략적 서열이면 충분하다.
+const HEAT_SUBREDDITS = [
+  { sub: "soccer", base: 300 },
+  { sub: "PremierLeague", base: 150 },
+  { sub: "Gunners", base: 100 },
+  { sub: "LiverpoolFC", base: 100 },
+  { sub: "chelseafc", base: 100 },
+]
+
+async function reportHeat() {
+  if (!CRON_SECRET || DRY_RUN) return
+
+  const byKey = new Map() // 같은 글이 여러 소스에 뜨면 최고 점수 유지
+  for (const { sub, base } of HEAT_SUBREDDITS) {
+    try {
+      const xml = curlText(`https://www.reddit.com/r/${sub}/top.rss?t=day&limit=50`)
+      const entries = parseAtomFeed(xml)
+      entries.forEach((e, idx) => {
+        if (!e.id) return
+        const key = `reddit:${e.id}`
+        const score = Math.max(1, Math.round(base - idx * (base / 50)))
+        const prev = byKey.get(key)
+        if (!prev || prev.score < score) byKey.set(key, { dedupe_key: key, score, comments: 0 })
+      })
+    } catch {
+      /* 서브 하나 실패는 무시 — 다음 run 에서 다시 잰다 */
+    }
+    await sleep(THROTTLE_MS)
+  }
+  const items = [...byKey.values()]
+  if (items.length === 0) {
+    log("heat: 수집 0건 (top.rss 차단?)")
+    return
+  }
+
+  // API 상한 200 — 화력 높은 순으로 자른다 (낮은 건 어차피 히어로 후보가 아님)
+  const top = items.sort((a, b) => b.score - a.score).slice(0, 200)
+  const res = await fetch(`${BASE_URL}/api/news/heat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
+    body: JSON.stringify({ items: top }),
+    signal: AbortSignal.timeout(20000),
+  })
+  const d = await res.json().catch(() => ({}))
+  log(`heat: 측정 ${items.length}건 → 발행글 매칭 ${d.updated ?? 0}건 (${res.status})`)
 }
 
 main().catch((e) => {

@@ -62,6 +62,39 @@ export async function fetchCardNews(
   if (error) throw error
   const rows = posts ?? []
 
+  const cards = await buildCards(supabase, rows)
+
+  return {
+    // 사진 없는 글은 떡밥에서 배제한다 (2026-07-28).
+    // 카드뉴스는 전면 오버레이(사진 위 제목)라 이미지가 없으면 카드가 성립하지 않는다.
+    // image 는 image 컬럼 → 본문 첫 이미지 → 유튜브 썸네일 순으로 이미 폴백되므로,
+    // 여기서 걸러지는 건 인스타/X 임베드만 있는 글과 순수 텍스트 글이다.
+    cards: cards.filter((c) => !!c.image),
+    // 커서는 필터 전 rows 기준 — 걸러진 글도 "읽은" 것으로 쳐야 다음 페이지가 밀리지 않는다.
+    nextCursor: rows.length === PAGE_SIZE ? rows[rows.length - 1].created_at : null,
+  }
+}
+
+/** 내부 행 타입 — posts select 결과 (fetchCardNews / fetchHeroCards 공유) */
+interface PostRow {
+  id: string
+  title: string
+  image: string | null
+  content: unknown
+  vote_count: number | null
+  comment_count: number | null
+  created_at: string
+  post_flairs:
+    | { name: string; color: string | null }
+    | { name: string; color: string | null }[]
+    | null
+}
+
+/** posts 행 → CardNewsItem 변환 (댓글 미리보기 + 닉네임 병합 포함) */
+async function buildCards(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  rows: PostRow[]
+): Promise<CardNewsItem[]> {
   // 댓글 있는 글만 조회 → post별 추천순 상위 3개 + 작성자 닉네임 (공방 미리보기)
   const withComments = rows.filter((p) => (p.comment_count ?? 0) > 0).map((p) => p.id)
   const topOf = new Map<string, { user_id: string; content: string }[]>()
@@ -93,7 +126,7 @@ export async function fetchCardNews(
     }
   }
 
-  const cards: CardNewsItem[] = rows.map((p) => {
+  return rows.map((p) => {
     const m = p.title.match(SOURCE_RE)
     // 생성 타입은 임베드를 배열로 추론하지만 단일 FK 관계라 런타임은 객체 — 둘 다 수용
     const f = Array.isArray(p.post_flairs) ? p.post_flairs[0] : p.post_flairs
@@ -129,14 +162,58 @@ export async function fetchCardNews(
       flair: f ? { name: f.name, color: f.color } : null,
     }
   })
+}
 
-  return {
-    // 사진 없는 글은 떡밥에서 배제한다 (2026-07-28).
-    // 카드뉴스는 전면 오버레이(사진 위 제목)라 이미지가 없으면 카드가 성립하지 않는다.
-    // image 는 image 컬럼 → 본문 첫 이미지 → 유튜브 썸네일 순으로 이미 폴백되므로,
-    // 여기서 걸러지는 건 인스타/X 임베드만 있는 글과 순수 텍스트 글이다.
-    cards: cards.filter((c) => !!c.image),
-    // 커서는 필터 전 rows 기준 — 걸러진 글도 "읽은" 것으로 쳐야 다음 페이지가 밀리지 않는다.
-    nextCursor: rows.length === PAGE_SIZE ? rows[rows.length - 1].created_at : null,
-  }
+/**
+ * 홈 히어로(Top Story) — 레딧에서 실제로 불타오른 순.
+ *
+ * 화력 = VPS 스캐너가 15분마다 재측정해 news_reservoir.raw.heat 에 넣는
+ * { score(업보트), comments } (POST /api/news/heat). 발행 48시간 내 글을
+ * 화력순으로 세운다. 화력 데이터가 아직 없으면(측정 전) 빈 배열 —
+ * 호출부(app/page.tsx)가 최신순 폴백으로 채운다.
+ */
+export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
+  const supabase = createServiceRoleClient()
+  const cutoff = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+
+  const { data: hot } = await supabase
+    .from("news_reservoir")
+    .select("publish, raw")
+    .eq("status", "published")
+    .gte("created_at", cutoff)
+    .not("raw->heat", "is", null)
+    .limit(60)
+
+  const ranked = (hot ?? [])
+    .map((r) => {
+      const pub = r.publish as { post_id?: string } | null
+      const heat = (r.raw as { heat?: { score?: number; comments?: number } } | null)?.heat
+      return { postId: pub?.post_id, score: heat?.score ?? 0, comments: heat?.comments ?? 0 }
+    })
+    .filter((r): r is { postId: string; score: number; comments: number } => !!r.postId)
+    // 화력 = 업보트 + 댓글×2 — 댓글이 "불타오름"의 더 강한 신호 (논쟁도 환호도 댓글로 남는다)
+    .sort((a, b) => b.score + b.comments * 2 - (a.score + a.comments * 2))
+    .slice(0, limit * 2) // 이미지 없는 글이 걸러질 수 있어 여유분
+
+  if (ranked.length === 0) return []
+
+  const { data: posts } = await supabase
+    .from("posts")
+    .select(
+      // post_flairs 임베드는 !flair_id 힌트 필수 (post_flair_map 추가 후 관계 모호 — f15c802a 참조)
+      "id, title, image, content, vote_count, comment_count, created_at, post_flairs!flair_id ( name, color )"
+    )
+    .in(
+      "id",
+      ranked.map((r) => r.postId)
+    )
+    .is("deleted_at", null)
+
+  const order = new Map(ranked.map((r, i) => [r.postId, i]))
+  const rows = ((posts ?? []) as unknown as PostRow[]).sort(
+    (a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99)
+  )
+  const cards = await buildCards(supabase, rows)
+  // 히어로는 전면 이미지 카드 — 이미지 없는 글은 성립 안 함
+  return cards.filter((c) => !!c.image).slice(0, limit)
 }
