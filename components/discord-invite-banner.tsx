@@ -58,7 +58,8 @@ export function DiscordInviteBanner({
         <DiscordMark className="h-8 w-8 shrink-0 text-white" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-bold text-white">{DISCORD_BANNER.title}</p>
-          <p className="mt-0.5 text-[12px] leading-snug text-white/85">{DISCORD_BANNER.desc}</p>
+          {/* white/85 는 blurple 위에서 3.8:1 로 AA 미달 — 불투명 white 는 4.6:1 통과 */}
+          <p className="mt-0.5 text-[12px] leading-snug text-white">{DISCORD_BANNER.desc}</p>
         </div>
       </div>
     </a>

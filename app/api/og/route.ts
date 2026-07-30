@@ -141,6 +141,10 @@ export async function GET(request: NextRequest) {
         absoluteImageUrl = null
       }
     }
+    // http og:image 는 CSP(img-src https:)에 막혀 렌더 자체가 안 됨 → https 로 승격
+    if (absoluteImageUrl?.startsWith("http://")) {
+      absoluteImageUrl = absoluteImageUrl.replace(/^http:\/\//, "https://")
+    }
 
     // 본문 5줄 요약 (요청 시 + 저렴 모델). 실패해도 메타는 정상 반환.
     let summary: string[] | null = null
