@@ -54,15 +54,22 @@ interface MatchdayBandProps {
    * 탭 전환 시 530px 히어로가 "다른 페이지"로 갈아엎어지는 대신 "요약됐다"로 읽힌다.
    */
   compact?: boolean
+  /**
+   * SSR 프리페치된 경기 데이터 (app/page.tsx) — 첫 HTML 에 경기 목록을 실어
+   * 하이드레이션 후 밴드가 자라며 본문을 밀어내는 CLS(모바일 0.17)를 제거한다.
+   * null 이면 기존처럼 클라이언트 SWR 로만 로드 (fail-open).
+   */
+  initialGames?: { groupedGames?: GroupedMatch[] } | null
 }
 
-export function MatchdayBand({ cards, compact = false }: MatchdayBandProps) {
+export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayBandProps) {
   const slides = useMemo(() => cards.filter((c) => !!c.image).slice(0, MAX_SLIDES), [cards])
 
   const { data } = useSWR<{ groupedGames?: GroupedMatch[] }>("/api/sports/games", fetcher, {
     refreshInterval: 5 * 60 * 1000,
     revalidateOnFocus: false,
     dedupingInterval: 60_000,
+    fallbackData: initialGames ?? undefined,
   })
 
   // 아직 시작 안 한 경기만, 킥오프 순

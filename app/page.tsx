@@ -4,6 +4,7 @@ import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
 import { fetchCardNews, fetchHeroCards, type CardNewsItem } from "@/lib/feed/cardnews"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
+import type { GroupedMatch } from "@/types/betting"
 
 // 홈페이지 ISR: 5분 캐시 + stale-while-revalidate.
 // 새 글 작성 시 /api/posts POST가 revalidatePath("/")로 즉시 갱신.
@@ -27,6 +28,7 @@ async function fetchAllHomeData(sort: SortType) {
     worldcupStatus,
     cardNewsResult,
     heroResult,
+    gamesResult,
   ] = await Promise.all([
     // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
     (async (): Promise<PostsResponse> => {
@@ -129,6 +131,20 @@ async function fetchAllHomeData(sort: SortType) {
 
     // 7) 히어로(Top Story) — 레딧 화력순. 화력 데이터 없으면 빈 배열 → 아래 폴백
     fetchHeroCards().catch(() => [] as CardNewsItem[]),
+
+    // 8) 오늘의 경기 (매치데이 밴드) — SSR 로 실어 하이드레이션 후 밴드가 자라며
+    //    본문을 밀어내는 CLS(모바일 0.17)를 제거. 라우트 로직 추출 대신 자체 API 를
+    //    재사용(60s 캐시). 빌드/장애 시 null → 밴드가 기존처럼 클라 SWR 로 폴백.
+    (async (): Promise<{ groupedGames?: GroupedMatch[] } | null> => {
+      try {
+        const base = process.env.NEXT_PUBLIC_SITE_URL || "https://gongnori.fan"
+        const res = await fetch(`${base}/api/sports/games`, { next: { revalidate: 60 } })
+        if (!res.ok) return null
+        return (await res.json()) as { groupedGames?: GroupedMatch[] }
+      } catch {
+        return null
+      }
+    })(),
   ])
 
   // 히어로 확정: 화력순 우선, 부족분은 최신 이미지 카드로 채움 (중복 없이).
@@ -156,6 +172,7 @@ async function fetchAllHomeData(sort: SortType) {
     },
     heroCards,
     heroIds,
+    initialGames: gamesResult,
   }
 }
 
@@ -194,6 +211,7 @@ export default async function Home({
         worldcupConcluded={homeData.worldcupConcluded}
         initialCardNews={homeData.initialCardNews}
         heroCards={homeData.heroCards}
+        initialGames={homeData.initialGames}
       />
     </Suspense>
   )
