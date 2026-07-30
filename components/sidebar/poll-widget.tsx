@@ -19,11 +19,13 @@ interface PollEntry {
  * 원탭 투표 → 즉시 결과 → 선택적 "왜?" 한 줄(글쓰기 온램프).
  * 활성 폴이 없으면 아무것도 렌더하지 않음.
  *
- * 2026-07-30 복수 폴 지원 — /api/polls/active 가 { polls: [...] } 배열을 주고,
- * 폴마다 독립 상태의 PollCard 로 렌더한다 (동시 설문 2~3개).
+ * 2026-07-30 복수 폴 로테이션 — /api/polls/active 가 { polls: [...] } 배열(최대 3)
+ * 을 주고, 위젯은 **페이지 로드마다 랜덤으로 1개만** 보여준다 (운영자 지시:
+ * 나란히 다 보여주지 말고 번갈아가며 — 매 방문이 새 설문일 수 있어 재방문 재미).
+ * 클라이언트 fetch 후 선택이라 SSR 하이드레이션 불일치 없음.
  */
 export const PollWidget = memo(function PollWidget() {
-  const [entries, setEntries] = useState<PollEntry[]>([])
+  const [entry, setEntry] = useState<PollEntry | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -31,7 +33,9 @@ export const PollWidget = memo(function PollWidget() {
     fetch("/api/polls/active")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { polls?: PollEntry[] } | null) => {
-        if (alive && d?.polls) setEntries(d.polls)
+        if (alive && d?.polls && d.polls.length > 0) {
+          setEntry(d.polls[Math.floor(Math.random() * d.polls.length)])
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -42,7 +46,7 @@ export const PollWidget = memo(function PollWidget() {
     }
   }, [])
 
-  if (!loaded || entries.length === 0) return null
+  if (!loaded || !entry) return null
 
   return (
     <div
@@ -62,14 +66,7 @@ export const PollWidget = memo(function PollWidget() {
         </h3>
       </div>
 
-      {entries.map((entry, i) => (
-        <div
-          key={entry.poll.id}
-          style={i > 0 ? { borderTop: "1px solid var(--wc-line)" } : undefined}
-        >
-          <PollCard initial={entry} />
-        </div>
-      ))}
+      <PollCard key={entry.poll.id} initial={entry} />
     </div>
   )
 })
