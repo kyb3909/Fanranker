@@ -180,7 +180,7 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
 
   const { data: hot } = await supabase
     .from("news_reservoir")
-    .select("publish, raw")
+    .select("publish, raw, created_at")
     .eq("status", "published")
     .gte("created_at", cutoff)
     .not("raw->heat", "is", null)
@@ -200,13 +200,22 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
         postId: pub?.post_id,
         score: measuredAt > staleCutoff ? (heat?.score ?? 0) : 0,
         comments: measuredAt > staleCutoff ? (heat?.comments ?? 0) : 0,
+        publishedAt: r.created_at as string,
       }
     })
     .filter(
-      (r): r is { postId: string; score: number; comments: number } => !!r.postId && r.score > 0
+      (r): r is { postId: string; score: number; comments: number; publishedAt: string } =>
+        !!r.postId && r.score > 0
     )
-    // 화력 = 업보트 + 댓글×2 — 댓글이 "불타오름"의 더 강한 신호 (논쟁도 환호도 댓글로 남는다)
-    .sort((a, b) => b.score + b.comments * 2 - (a.score + a.comments * 2))
+    // 화력 = 업보트 + 댓글×2. ⚠️ 버킷팅(÷30) — 측정마다 순위가 몇 점씩 출렁여
+    // 히어로 순서가 15분마다 뒤집히던 문제(2026-07-30 운영자 지적). 비슷한 화력은
+    // 같은 버킷으로 묶고 발행 시각으로 타이브레이크 → 순서가 안정된다.
+    .sort((a, b) => {
+      const bucketA = Math.round((a.score + a.comments * 2) / 30)
+      const bucketB = Math.round((b.score + b.comments * 2) / 30)
+      if (bucketB !== bucketA) return bucketB - bucketA
+      return b.publishedAt.localeCompare(a.publishedAt)
+    })
     .slice(0, limit * 2) // 이미지 없는 글이 걸러질 수 있어 여유분
 
   if (ranked.length === 0) return []

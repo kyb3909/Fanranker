@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
-import {
-  publishNewsDraft,
-  hasVisualContent,
-  NEWS_BOT_USER_ID,
-  type NewsReservoirItem,
-} from "@/lib/news/publish"
+import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
+import { publishNewsDraft, NEWS_BOT_USER_ID, type NewsReservoirItem } from "@/lib/news/publish"
 
 export const dynamic = "force-dynamic"
 
@@ -44,8 +40,16 @@ async function run(request: NextRequest) {
   const authError = verifyCronSecret(request)
   if (authError) return authError
 
-  if (process.env.NEWS_AUTO_PUBLISH === "off") {
-    return NextResponse.json({ ok: true, skipped: "NEWS_AUTO_PUBLISH=off" })
+  // ⚠️ 2026-07-30 운영자 정지 — 기본값을 꺼짐으로 뒤집음 (opt-in).
+  // 사유: 무검수 발행분에서 오타·영어 미번역·이미지 없는 글이 그대로 나감.
+  // 검수(빠른검수 화면)가 품질 게이트였는데 자동발행이 그걸 우회한 것.
+  // 재개 조건: 발행 전 품질 게이트(LLM 한국어/오타 검사 + 실제 이미지 필수)를
+  // 붙인 뒤 Vercel env NEWS_AUTO_PUBLISH=on 으로만 재개.
+  if (process.env.NEWS_AUTO_PUBLISH !== "on") {
+    return NextResponse.json({
+      ok: true,
+      skipped: "자동발행 정지 (opt-in — env NEWS_AUTO_PUBLISH=on 필요)",
+    })
   }
 
   const supabase = createServiceRoleClient()
@@ -83,7 +87,9 @@ async function run(request: NextRequest) {
     const title = row.draft?.title?.trim()
     const content = sanitizeTipTapJSON(row.draft?.content)
     if (!title || !content) continue
-    if (!hasVisualContent(content)) continue // 사진/임베드 없는 기사는 사람 검수로만
+    // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
+    // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
+    if (!extractFirstImageSrcFromTipTapJSON(content)) continue
 
     const result = await publishNewsDraft(supabase, row, { title, content, auto: true })
     if (result.error) {
