@@ -48,6 +48,9 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
   // 표가 없으면 50:50 으로 그린다 (빈 게이지는 죽어 보인다)
   const aPct = total === 0 ? 50 : Math.round((aCount / total) * 100)
   const bPct = 100 - aPct
+  // 소표본(10표 미만)엔 % 를 숨긴다 — 1표가 "0% vs 100%" 로 그려지는 순간
+  // 콜드스타트 장치가 유령 사이트 증거로 뒤집힌다 (2026-07-30 워룸)
+  const showPct = total >= 10
 
   async function vote(optionKey: string) {
     if (busy || myKey === optionKey) return
@@ -140,27 +143,32 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
         {optionBtn(b, B_COLOR, "color-mix(in srgb, #2c4a6e 8%, white)")}
       </div>
 
-      {/* 게이지 — 결과 항상 공개 */}
+      {/* 게이지 — 결과 항상 공개 (소표본은 % 숨김) */}
       <div
         className="mt-3 flex h-8 overflow-hidden rounded-lg text-[13px] font-extrabold text-white"
         role="img"
-        aria-label={`${a.label} ${aPct}%, ${b.label} ${bPct}%`}
+        aria-label={
+          showPct ? `${a.label} ${aPct}%, ${b.label} ${bPct}%` : `참여 ${total}명 — 집계 중`
+        }
       >
         <div
           className="flex items-center pl-2.5 transition-[width] duration-500"
           style={{ width: `${aPct}%`, background: A_COLOR, minWidth: 34 }}
         >
-          {aPct}%
+          {showPct && `${aPct}%`}
         </div>
         <div
           className="flex items-center justify-end pr-2.5 transition-[width] duration-500"
           style={{ width: `${bPct}%`, background: B_COLOR, minWidth: 34 }}
         >
-          {bPct}%
+          {showPct && `${bPct}%`}
         </div>
       </div>
       <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute, #8a8378)" }}>
-        참여 {total.toLocaleString()}명{!isSignedIn && " · 투표는 로그인 후"}
+        {total === 0
+          ? "아직 표가 없어요 — 첫 표를 던져보세요"
+          : `참여 ${total.toLocaleString()}명${showPct ? "" : " · 집계 중"}`}
+        {!isSignedIn && " · 투표는 로그인 후"}
         {myKey && " · 댓글을 남기면 내 진영 표시가 붙는다"}
       </p>
     </section>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import useSWR from "swr"
@@ -261,11 +262,16 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                   </span>
                   <span style={{ wordBreak: "keep-all" }}>{c.vs.question}</span>
                 </span>
+                {/* 소표본(10표 미만) % 숨김 — 카드/상세 위젯과 동일 규칙 (2026-07-30 워룸) */}
                 <span
                   className="flex h-[22px] overflow-hidden rounded-md text-[11px] font-extrabold"
                   style={{ color: "var(--gn-cream)" }}
                   role="img"
-                  aria-label={`${c.vs.aLabel} ${c.vs.aPct}%, ${c.vs.bLabel} ${100 - c.vs.aPct}%`}
+                  aria-label={
+                    c.vs.total >= 10
+                      ? `${c.vs.aLabel} ${c.vs.aPct}%, ${c.vs.bLabel} ${100 - c.vs.aPct}%`
+                      : `${c.vs.aLabel} 대 ${c.vs.bLabel} — 집계 중`
+                  }
                 >
                   <span
                     className="flex items-center pl-2"
@@ -276,7 +282,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                         "linear-gradient(100deg, var(--wc-burgundy-deep,#771629), var(--wc-burgundy,#961e37))",
                     }}
                   >
-                    {c.vs.aPct}%
+                    {c.vs.total >= 10 && `${c.vs.aPct}%`}
                   </span>
                   <span
                     className="flex items-center justify-end pr-2"
@@ -286,7 +292,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                       background: "linear-gradient(100deg, #2c4a6e, #1f3550)",
                     }}
                   >
-                    {100 - c.vs.aPct}%
+                    {c.vs.total >= 10 && `${100 - c.vs.aPct}%`}
                   </span>
                 </span>
                 <span className="mt-1 flex justify-between text-[11px] font-bold">
@@ -299,9 +305,18 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               className="mt-3 flex items-center gap-3 text-[13.5px]"
               style={{ color: "var(--gn-cream-dim)" }}
             >
-              <span className="gn-num">
-                댓글 {c.commentCount} · 추천 {c.voteCount}
-              </span>
+              {/* 0 카운트는 노출하지 않는다 (피드 count>0 규칙과 통일, 2026-07-30 워룸
+                  — "댓글 0 · 추천 0" 전시는 유령 사이트 각인만 남긴다) */}
+              {(c.commentCount > 0 || c.voteCount > 0) && (
+                <span className="gn-num">
+                  {[
+                    c.commentCount > 0 ? `댓글 ${c.commentCount}` : null,
+                    c.voteCount > 0 ? `추천 ${c.voteCount}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
               <Link
                 href={`/post/${c.id}`}
                 className="inline-flex items-center gap-1 font-bold"
@@ -415,6 +430,8 @@ function TodayFixtures({
   matches: GroupedMatch[]
   countdown: string | null
 }) {
+  // SSR/하이드레이션 첫 렌더에서는 undefined → 게스트 문구로 시작, 로그인 확인 후 전환
+  const { isSignedIn } = useAuth()
   const shown = matches.slice(0, MAX_ROWS)
   const rest = matches.length - shown.length
 
@@ -502,11 +519,19 @@ function TodayFixtures({
         className="mt-4 flex items-center justify-center gap-1.5 rounded-[12px] py-3 text-[15px] font-extrabold transition-transform active:scale-[.98]"
         style={{ background: "var(--gn-cream)", color: "var(--gn-night)" }}
       >
-        {rest > 0 ? `오늘 ${matches.length}경기 픽 걸러 가기` : "오늘 픽 걸러 가기"}
+        {!isSignedIn
+          ? "가입하면 무료 10볼 — 오늘 픽 걸러 가기"
+          : rest > 0
+            ? `오늘 ${matches.length}경기 픽 걸러 가기`
+            : "오늘 픽 걸러 가기"}
         <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>
       <p className="mt-2 text-center text-[12px]" style={{ color: "#8d8794" }}>
-        매일 밤 11시 볼 충전 — 오늘 안 걸면 내일의 내가 아쉬워함
+        {/* 비로그인에겐 가치 제안, 로그인에겐 리마인더 (2026-07-30 워룸: CTA 전부 미래형·
+            가입 이유 0개 문제의 밴드 몫) */}
+        {!isSignedIn
+          ? "가입은 1분 — 매일 밤 11시 무료 볼 충전"
+          : "매일 밤 11시 볼 충전 — 오늘 안 걸면 내일의 내가 아쉬워함"}
       </p>
     </aside>
   )

@@ -93,11 +93,13 @@ const barlowCondensed = Barlow_Condensed({
   preload: false,
 })
 
+// 게이트 문구는 금지형("~이 필요해요") 대신 혜택형 — 가입할 이유를 문 앞에서 말한다
+// (2026-07-30 워룸: 가치 제안이 사이트에 0개였던 문제의 일부)
 const koLocalization = {
   signIn: {
     start: {
       title: "로그인",
-      subtitle: "계속하려면 로그인이 필요해요",
+      subtitle: "매일 무료 10볼로 오늘 경기를 예측해 보세요",
       actionText: "계정이 없으신가요?",
       actionLink: "가입하기",
     },
@@ -105,7 +107,7 @@ const koLocalization = {
   signUp: {
     start: {
       title: "회원가입",
-      subtitle: "계속하려면 가입이 필요해요",
+      subtitle: "가입 즉시 매일 무료 10볼 — 오늘 경기부터 픽을 걸 수 있어요",
       actionText: "이미 계정이 있으신가요?",
       actionLink: "로그인",
     },
@@ -156,7 +158,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_CONFIG.description,
+    title: SITE_CONFIG.title,
     description: SITE_CONFIG.description,
     images: ["/opengraph-image"],
   },

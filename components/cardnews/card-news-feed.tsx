@@ -271,8 +271,13 @@ const SCRIM =
 const ghostAction =
   "-m-2.5 p-2.5 relative inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors"
 
-/** 로컬 좋아요 (비로그인 즉각 반응 — 떡밥 피드와 동일 방식, 키만 분리) */
+/**
+ * 카드 좋아요 — 비로그인은 로컬 즉각 반응(기존), 로그인은 **실제 vote API** 동기화.
+ * 2026-07-30 워룸: 가장 마찰 낮은 참여 장치가 localStorage 전용이라 서버에 아무것도
+ * 안 쌓였고, 그게 "추천 0" 전시가 구조적으로 재생산되던 뿌리였다.
+ */
 function useLocalLike(id: string) {
+  const { isSignedIn } = useAuth()
   const [liked, setLiked] = useState(false)
   useEffect(() => {
     try {
@@ -295,7 +300,16 @@ function useLocalLike(id: string) {
       }
       return next
     })
-  }, [id])
+    // 로그인 유저는 서버에도 반영 (API 도 토글이라 로컬 토글과 방향이 맞는다).
+    // 실패해도 UI 는 로컬 상태 유지 — 좋아요는 비핵심 경로라 조용히 넘어간다.
+    if (isSignedIn) {
+      fetch(`/api/posts/${id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "up" }),
+      }).catch(() => {})
+    }
+  }, [id, isSignedIn])
   return { liked, toggle }
 }
 
@@ -501,6 +515,9 @@ function VsCardStrip({ vs }: { vs: NonNullable<CardNewsItem["vs"]> }) {
   const bPct = 100 - aPct
   const mineA = myKey === vs.aKey
   const mineB = myKey === vs.bKey
+  // 소표본(10표 미만) % 숨김 — 1표가 "0% vs 100%" 로 그려지면 콜드스타트 장치가
+  // 유령 사이트 증거로 뒤집힌다 (2026-07-30 워룸, 상세 위젯과 동일 규칙)
+  const showPct = total >= 10
 
   return (
     <div
@@ -522,7 +539,11 @@ function VsCardStrip({ vs }: { vs: NonNullable<CardNewsItem["vs"]> }) {
       <div
         className="flex h-8 overflow-hidden rounded-lg text-[12px] font-extrabold text-white"
         role="group"
-        aria-label={`${vs.aLabel} ${aPct}%, ${vs.bLabel} ${bPct}%`}
+        aria-label={
+          showPct
+            ? `${vs.aLabel} ${aPct}%, ${vs.bLabel} ${bPct}%`
+            : `${vs.aLabel} 대 ${vs.bLabel} — 집계 중`
+        }
       >
         <button
           type="button"
@@ -536,7 +557,8 @@ function VsCardStrip({ vs }: { vs: NonNullable<CardNewsItem["vs"]> }) {
             background: mineA ? "#b8324e" : "rgba(150,30,55,.88)",
           }}
         >
-          {aPct}%{mineA && <Check className="h-3 w-3" strokeWidth={3.5} />}
+          {showPct && `${aPct}%`}
+          {mineA && <Check className="h-3 w-3" strokeWidth={3.5} />}
         </button>
         <button
           type="button"
@@ -551,16 +573,14 @@ function VsCardStrip({ vs }: { vs: NonNullable<CardNewsItem["vs"]> }) {
           }}
         >
           {mineB && <Check className="h-3 w-3" strokeWidth={3.5} />}
-          {bPct}%
+          {showPct && `${bPct}%`}
         </button>
       </div>
       <div className="mt-1 flex items-center justify-between text-[11px] font-bold">
         <span style={{ color: "#e8a0b0", wordBreak: "keep-all" }}>{vs.aLabel}</span>
-        {total > 0 && (
-          <span className="font-medium" style={{ color: "rgba(255,255,255,.55)" }}>
-            {total.toLocaleString()}명 참여
-          </span>
-        )}
+        <span className="font-medium" style={{ color: "rgba(255,255,255,.55)" }}>
+          {total > 0 ? `${total.toLocaleString()}명 참여` : "첫 표를 던져보세요"}
+        </span>
         <span style={{ color: "#9db8d8", wordBreak: "keep-all" }}>{vs.bLabel}</span>
       </div>
     </div>

@@ -144,13 +144,15 @@ export function SignInMenu() {
   return (
     <Popover>
       <PopoverTrigger asChild>
+        {/* 아이콘 단독(36px)이 사이트 유일의 가입 진입점이었다 (2026-07-30 워룸)
+            — 텍스트 pill 로 바꿔 "여기서 시작한다"가 보이게 한다 */}
         <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 rounded-full"
+          className="h-9 rounded-full px-4 text-[13px] font-bold text-white hover:opacity-90"
+          style={{ background: "var(--wc-burgundy, #961e37)" }}
           aria-label="로그인 메뉴"
         >
-          <User className="h-[18px] w-[18px]" aria-hidden="true" />
+          <User className="h-[15px] w-[15px]" aria-hidden="true" />
+          로그인
         </Button>
       </PopoverTrigger>
 
@@ -169,7 +171,9 @@ export function SignInMenu() {
             draggable={false}
           />
           <h2 className="text-foreground text-xl font-bold">로그인</h2>
-          <p className="text-muted-foreground mt-1 text-sm">계속하려면 로그인이 필요해요</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            가입하면 매일 무료 10볼 — 오늘 경기부터 픽을 걸 수 있어요
+          </p>
         </div>
 
         <div className="px-6 pb-4">

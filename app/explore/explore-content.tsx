@@ -369,11 +369,12 @@ function HotEmptyState({ boards }: { boards: Category[] }) {
       >
         <ThumbsUp className="h-6 w-6" />
       </span>
+      {/* "아무도 추천을 안 눌렀다"는 활동 부재 자백 — 다음 액션 안내로 교체 (2026-07-30 워룸) */}
       <p
         className="font-title mt-4 text-[17px] font-extrabold"
         style={{ color: "var(--wc-ink)", letterSpacing: "-0.02em" }}
       >
-        이번 주엔 아직 아무도 추천을 안 눌렀다
+        이번 주 인기글, 지금 추천으로 정해진다
       </p>
       <p
         className="mx-auto mt-2 max-w-[42ch] text-[13.5px]"
