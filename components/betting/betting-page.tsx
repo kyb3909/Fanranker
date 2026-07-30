@@ -31,6 +31,8 @@ interface BettingPageProps {
   showFilters?: boolean
   /** 좌측 sticky 레일 모드 — desktop(lg+)에서 슬립을 레일로, 모바일은 기존 하단 슬립 유지. */
   railMode?: boolean
+  /** SSR 프리페치된 경기 데이터 — 첫 HTML 부터 경기 카드 렌더 (빈 스켈레톤 제거) */
+  initialGames?: unknown | null
 }
 
 export default function BettingPage({
@@ -39,6 +41,7 @@ export default function BettingPage({
   bettingOnly,
   showFilters,
   railMode,
+  initialGames,
 }: BettingPageProps = {}) {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get("tab")
@@ -51,7 +54,7 @@ export default function BettingPage({
     "predictions"
   )
 
-  const matches = useBettingMatches(eventSlug)
+  const matches = useBettingMatches(eventSlug, { initialGames })
   const slip = useBettingSlip(matches.groupedMatches, matches.loadMatches, { eventSlug })
 
   // 이벤트 모드: league_code 화이트리스트 필터 (UI 단계, 서버에서도 검증)
@@ -99,6 +102,7 @@ export default function BettingPage({
       {(activeTab === "betting" || bettingOnly) && (
         <BettingTab
           lastUpdated={matches.lastUpdated}
+          deadlineCountdown={matches.deadlineCountdown}
           isLoading={matches.isLoading}
           error={matches.error}
           filteredMatches={effectiveFilteredMatches}
@@ -154,6 +158,7 @@ export default function BettingPage({
     onRemoveBet: slip.removeBet,
     onClearAllBets: slip.clearAllBets,
     onSubmit: slip.handleSubmitPrediction,
+    isSignedIn: slip.isSignedIn ?? false,
     isJournalist: slip.isJournalist,
     analysisTitle: slip.analysisTitle,
     setAnalysisTitle: slip.setAnalysisTitle,

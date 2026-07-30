@@ -4,7 +4,17 @@ import { getMsUntilReset } from "@/lib/betman/daily-round"
 import type { TodayInfo, GroupedMatch } from "@/types/betting"
 import { fetcher } from "@/lib/swr"
 
-export function useBettingMatches(eventSlug?: string) {
+export function useBettingMatches(
+  eventSlug?: string,
+  options?: {
+    /**
+     * SSR 프리페치된 경기 데이터 (홈/prediction page.tsx) — 첫 HTML 부터 경기 카드를
+     * 렌더해 "빈 스켈레톤 39개" 첫인상을 없앤다 (2026-07-30 워룸). 필터 기본값
+     * (전체 종목·비이벤트) 키에만 적용 — 필터를 바꾸면 평소처럼 클라 fetch.
+     */
+    initialGames?: unknown | null
+  }
+) {
   const [sportFilter, setSportFilterRaw] = useState<"all" | "축구" | "야구" | "농구" | "배구">(
     "all"
   )
@@ -32,6 +42,10 @@ export function useBettingMatches(eventSlug?: string) {
     refreshInterval: 5 * 60 * 1000,
     revalidateOnFocus: true,
     dedupingInterval: 10_000,
+    // fallbackData 는 훅 인스턴스의 모든 키에 적용되므로, 필터 기본 상태에서만 —
+    // 종목 필터 키에 전체 데이터가 폴백으로 잘못 비치는 걸 막는다.
+    fallbackData:
+      sportFilter === "all" && !eventSlug ? (options?.initialGames ?? undefined) : undefined,
   })
 
   // Derive values directly from SWR data

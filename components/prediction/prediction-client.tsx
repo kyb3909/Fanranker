@@ -29,9 +29,15 @@ interface PredictionClientProps {
   initialRecentComments?: unknown[]
   /** 이벤트 슬롯 — worldcup-2026 status (active=참가 배너, closed=결과 배너, null=슬롯 숨김) */
   worldcupStatus?: string | null
+  /** SSR 프리페치된 경기 데이터 — 첫 HTML 부터 경기 카드 렌더 (빈 스켈레톤 39개 제거) */
+  initialGames?: unknown | null
 }
 
-export function PredictionClient({ initialRecentComments, worldcupStatus }: PredictionClientProps) {
+export function PredictionClient({
+  initialRecentComments,
+  worldcupStatus,
+  initialGames,
+}: PredictionClientProps) {
   return (
     <div className="worldcup-scope min-h-[100dvh]">
       {/* 담벼락·운동장과 같은 풀블리드 다크 밴드 — 본문 그리드 바깥에 둬야 폭이 맞는다 */}
@@ -51,7 +57,7 @@ export function PredictionClient({ initialRecentComments, worldcupStatus }: Pred
             {/* 월드컵 이벤트 슬롯 제거 (2026-07-29) — 1차 이벤트 아카이브 비공개
                 (/worldcup 전체 redirect). 슬롯 구조는 시즌 이벤트에서 재사용 예정이라
                 worldcupStatus prop 은 유지. */}
-            <BettingPage railMode />
+            <BettingPage railMode initialGames={initialGames} />
           </div>
 
           <aside className="col-span-3 hidden lg:block">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { useAuth } from "@clerk/nextjs"
+import { useAuth, useClerk } from "@clerk/nextjs"
 import { useSWRConfig } from "swr"
 import type {
   SelectedBet,
@@ -18,6 +18,7 @@ export function useBettingSlip(
 ) {
   const eventSlug = options?.eventSlug
   const { isSignedIn } = useAuth()
+  const clerk = useClerk()
   const { mutate: globalMutate } = useSWRConfig()
   const { alertModal, showAlert, closeAlert } = useAlertModal()
 
@@ -211,6 +212,12 @@ export function useBettingSlip(
   }, [])
 
   const handleSubmitPrediction = useCallback(async () => {
+    // 비로그인 제출 = 로그인 모달 (2026-07-30 워룸 1순위) — 이전엔 401 을 그대로
+    // "예측 실패" 에러 모달로 보여줘 유입→첫 예측 퍼널의 마지막 계단이 dead-end 였다.
+    if (!isSignedIn) {
+      clerk.openSignIn()
+      return
+    }
     if (selectedBets.length === 0) {
       showAlert("warning", "경기를 선택해주세요", "예측할 경기를 먼저 선택해주세요.")
       return
@@ -303,6 +310,8 @@ export function useBettingSlip(
       setIsSubmittingPrediction(false)
     }
   }, [
+    isSignedIn,
+    clerk,
     selectedBets,
     selectedSport,
     betAmount,
@@ -325,6 +334,8 @@ export function useBettingSlip(
     betAmount,
     setBetAmount,
     userBalls,
+    /** 슬립 UI 가 비로그인 상태에서 가짜 잔고 대신 로그인 안내를 보여주기 위한 플래그 */
+    isSignedIn,
     totalOdds,
     expectedReturn,
     isSubmittingPrediction,

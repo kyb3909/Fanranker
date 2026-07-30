@@ -30,6 +30,11 @@ interface BettingSlipProps {
   setAnalysisText?: (text: string) => void
   /** rail: 좌측 sticky 레일 (항상 펼침, 접기 헤더 없음) */
   variant?: "rail"
+  /**
+   * 비로그인이면 가짜 잔고 대신 "로그인하면 매일 10볼" 안내 + CTA 를 로그인 유도로.
+   * (2026-07-30 워룸 — 이전엔 잔고 10을 보여주고 제출은 에러로 끝났다)
+   */
+  isSignedIn?: boolean
 }
 
 export function BettingSlip({
@@ -52,6 +57,7 @@ export function BettingSlip({
   analysisText = "",
   setAnalysisText,
   variant,
+  isSignedIn = true,
 }: BettingSlipProps) {
   const isRail = variant === "rail"
   const [mascotError, setMascotError] = useState(false)
@@ -106,7 +112,9 @@ export function BettingSlip({
             fontSize: 13,
           }}
         >
-          <span style={{ color: "var(--wc-mute)" }}>오늘 사용 가능한 볼</span>
+          <span style={{ color: "var(--wc-mute)" }}>
+            {isSignedIn ? "오늘 사용 가능한 볼" : "가입하면 매일"}
+          </span>
           <span
             style={{
               display: "flex",
@@ -125,7 +133,7 @@ export function BettingSlip({
                 color: "var(--wc-burgundy)",
               }}
             />
-            {userBalls.toLocaleString()}개
+            {isSignedIn ? `${userBalls.toLocaleString()}개` : "무료 10개"}
           </span>
         </div>
       </div>
@@ -158,11 +166,11 @@ export function BettingSlip({
       : label
   }
 
+  // 비로그인은 잔고 조건 없이 클릭 가능해야 한다 — 클릭이 로그인 모달로 이어지는 게 퍼널
   const canSubmit =
     !isSubmitting &&
     selectedBets.length > 0 &&
-    betAmount > 0 &&
-    !selectedBets.some((b) => !b.odds || b.odds <= 0)
+    (!isSignedIn || (betAmount > 0 && !selectedBets.some((b) => !b.odds || b.odds <= 0)))
 
   // CC1–CC5 내부 컨텐츠
   const innerContent = (
@@ -303,7 +311,9 @@ export function BettingSlip({
             fontSize: 13,
           }}
         >
-          <span style={{ color: "var(--wc-mute)" }}>보유 볼</span>
+          <span style={{ color: "var(--wc-mute)" }}>
+            {isSignedIn ? "보유 볼" : "가입하면 매일"}
+          </span>
           <span
             style={{
               display: "flex",
@@ -316,7 +326,7 @@ export function BettingSlip({
             <Circle
               style={{ width: 12, height: 12, fill: "var(--wc-ink)", color: "var(--wc-ink)" }}
             />
-            {userBalls.toLocaleString()}
+            {isSignedIn ? userBalls.toLocaleString() : "무료 10볼"}
           </span>
         </div>
 
@@ -486,6 +496,8 @@ export function BettingSlip({
         >
           {isSubmitting ? (
             <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" />
+          ) : !isSignedIn ? (
+            "로그인하고 무료 10볼로 예측하기"
           ) : (
             `${selectedBets.length}경기 ${betAmount.toLocaleString()}볼 예측하기`
           )}

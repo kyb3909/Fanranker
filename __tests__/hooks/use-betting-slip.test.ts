@@ -18,8 +18,15 @@ import type { GroupedMatch, SportsGame } from "@/types/betting"
  *   7. 성공 → 슬립/금액/종목 초기화 + 완료 모달, 실패 → 슬립 유지 + 에러 모달
  */
 
+// 로그인 상태는 테스트별로 전환 가능 (기본 true — 제출 플로우 검증용).
+// 비로그인 제출은 openSignIn 으로 이어지는 게 계약 (2026-07-30 워룸: 401 에러 모달 dead-end 수리).
+const { openSignInMock, authState } = vi.hoisted(() => ({
+  openSignInMock: vi.fn(),
+  authState: { isSignedIn: true },
+}))
 vi.mock("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: false }), // 초기 잔액/프로필 fetch 이펙트 차단 (기본 10볼)
+  useAuth: () => ({ isSignedIn: authState.isSignedIn }),
+  useClerk: () => ({ openSignIn: openSignInMock }),
 }))
 
 const globalMutateMock = vi.fn()
@@ -90,6 +97,11 @@ function setup(matches: GroupedMatch[] = MATCHES) {
   return { ...utils, loadMatches }
 }
 
+/** 슬립 제출 호출만 골라낸다 — 로그인 상태에선 마운트 시 잔액/프로필 fetch 가 선행되므로 */
+function predictionCalls(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls.filter((c) => c[0] === "/api/sports/prediction")
+}
+
 type SelectArgs = [string, string, string, string, string, number | null, number | null, number?]
 const select = (
   gameId: string,
@@ -104,6 +116,9 @@ const select = (
 describe("useBettingSlip", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authState.isSignedIn = true
+    // 마운트 시 잔액/프로필 fetch 이펙트가 조용히 no-op 되도록 기본 스텁 (개별 테스트가 덮어씀)
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }))
   })
 
   afterEach(() => {
@@ -211,43 +226,62 @@ describe("useBettingSlip", () => {
   })
 
   describe("제출 전 검증 — 실패 시 fetch 자체가 없어야 한다", () => {
-    it("빈 슬립 → 경고 모달 + 네트워크 미호출", async () => {
-      const fetchMock = vi.fn()
+    it("빈 슬립 → 경고 모달 + 제출 미호출", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) })
       vi.stubGlobal("fetch", fetchMock)
       const { result } = setup()
       await act(() => result.current.handleSubmitPrediction())
       expect(result.current.alertModal.isOpen).toBe(true)
-      expect(fetchMock).not.toHaveBeenCalled()
+      expect(predictionCalls(fetchMock)).toHaveLength(0)
     })
 
     it("betAmount 0 이하 → 거부", async () => {
-      const fetchMock = vi.fn()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) })
       vi.stubGlobal("fetch", fetchMock)
       const { result } = setup()
       act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
       act(() => result.current.setBetAmount(0))
       await act(() => result.current.handleSubmitPrediction())
       expect(result.current.alertModal.isOpen).toBe(true)
-      expect(fetchMock).not.toHaveBeenCalled()
+      expect(predictionCalls(fetchMock)).toHaveLength(0)
     })
 
     it("MAX 10볼 초과 → 거부", async () => {
-      const fetchMock = vi.fn()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) })
       vi.stubGlobal("fetch", fetchMock)
       const { result } = setup()
       act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
       act(() => result.current.setBetAmount(11))
       await act(() => result.current.handleSubmitPrediction())
       expect(result.current.alertModal.title).toContain("사용 볼 초과")
+      expect(predictionCalls(fetchMock)).toHaveLength(0)
+    })
+
+    it("비로그인 제출 → 로그인 모달 (에러 모달 X, 네트워크 미호출)", async () => {
+      authState.isSignedIn = false
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+      const { result } = setup()
+      act(() => result.current.handleBetSelection(...select("g1", "m1", "home", 2.0)))
+      await act(() => result.current.handleSubmitPrediction())
+      expect(openSignInMock).toHaveBeenCalled()
+      expect(result.current.alertModal.isOpen).toBe(false)
       expect(fetchMock).not.toHaveBeenCalled()
     })
   })
 
   describe("제출", () => {
     it("성공 — /api/sports/prediction 프록시로 idempotency_key 포함 POST, 슬립 초기화 + 완료 모달", async () => {
-      const fetchMock = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ message: "ok", pickDistribution: [{ label: "홈", pct: 60 }] }),
+      // URL 분기 — 로그인 상태 마운트 시 잔액/프로필 fetch 가 같은 목을 타므로,
+      // 잔액이 0 으로 덮여 "볼 부족" 거부가 나지 않게 balance 를 명시한다.
+      const fetchMock = vi.fn().mockImplementation((url: string) => {
+        if (url === "/api/tokens/balance")
+          return Promise.resolve({ ok: true, json: async () => ({ balance: 10 }) })
+        if (url === "/api/profile/me") return Promise.resolve({ ok: true, json: async () => ({}) })
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "ok", pickDistribution: [{ label: "홈", pct: 60 }] }),
+        })
       })
       vi.stubGlobal("fetch", fetchMock)
       const { result, loadMatches } = setup()
@@ -257,7 +291,9 @@ describe("useBettingSlip", () => {
       await act(() => result.current.handleSubmitPrediction())
 
       // 프록시 경로 계약 — betman 을 클라이언트에서 직접 부르면 안 된다
-      const [url, init] = fetchMock.mock.calls[0]
+      const calls = predictionCalls(fetchMock)
+      expect(calls).toHaveLength(1)
+      const [url, init] = calls[0]
       expect(url).toBe("/api/sports/prediction")
       const body = JSON.parse((init as RequestInit).body as string)
       expect(body.predictions).toEqual([{ game_id: "g1", prediction: "home" }])

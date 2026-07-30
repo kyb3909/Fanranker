@@ -1,8 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
+import { PollWidget } from "@/components/sidebar/poll-widget"
+import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import {
   Heart,
   MessageCircle,
@@ -902,19 +904,33 @@ export function CardNewsFeed({
         사진 없는 글은 서버(fetchCardNews)에서 이미 배제되므로 실제로는 전부 이 분기를
         타지만, API 응답이 바뀌어도 회색 판때기가 300px 로 서지 않도록 컴팩트 폴백은 남긴다.
       */}
-      {ordered.map((card, i) =>
-        card.image || card.media ? (
-          <HeroCard
-            key={card.id}
-            card={card}
-            eager={i < 2}
-            detectFace={i < 3}
-            showVs={vsAllowed.has(card.id)}
-          />
-        ) : (
-          <CompactCard key={card.id} card={card} />
-        )
-      )}
+      {ordered.map((card, i) => (
+        <Fragment key={card.id}>
+          {card.image || card.media ? (
+            <HeroCard
+              card={card}
+              eager={i < 2}
+              detectFace={i < 3}
+              showVs={vsAllowed.has(card.id)}
+            />
+          ) : (
+            <CompactCard card={card} />
+          )}
+          {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
+              폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정
+              (2026-07-30 워룸). 3번째 카드 뒤 폴 1개, 9번째 뒤 디스코드 1개 — 도배 금지. */}
+          {i === 2 && (
+            <div className="lg:hidden">
+              <PollWidget />
+            </div>
+          )}
+          {i === 8 && (
+            <div className="lg:hidden">
+              <DiscordInviteBanner variant="sidebar" placement="mobile_cardnews_feed" />
+            </div>
+          )}
+        </Fragment>
+      ))}
       <div ref={sentinelRef} className="flex h-10 items-center justify-center">
         {loading && <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />}
         {!cursor && !loading && (

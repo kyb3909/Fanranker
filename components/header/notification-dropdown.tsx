@@ -49,16 +49,10 @@ export function NotificationDropdown() {
     handleCountChange(unreadCount)
   }, [unreadCount, handleCountChange])
 
-  // 최초 방문 시 알림 권한 요청 (조용히)
-  useEffect(() => {
-    if (permission === "default") {
-      // 사용자가 사이트를 5초 이상 사용한 후 요청
-      const timer = setTimeout(() => {
-        requestPermission()
-      }, 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [permission, requestPermission])
+  // ⚠️ 방문 5초 후 알림 권한 자동 요청은 제거 (2026-07-30 워룸 판정).
+  // 맥락 없는 권한 팝업은 대부분 거부되고, denied 는 영구적이라 미래 웹푸시 채널이
+  // 유저 단위로 소각된다. 권한 요청은 사용자가 알림 벨을 직접 열었을 때만(아래
+  // requestPermission 소비처) 맥락과 함께 한다.
 
   async function loadNotifications() {
     setIsLoading(true)

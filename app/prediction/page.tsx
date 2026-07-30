@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 async function fetchSidebarData() {
   const supabase = createAnonClient()
 
-  const [categoriesResult, recentCommentsResult, worldcupStatus] = await Promise.all([
+  const [categoriesResult, recentCommentsResult, worldcupStatus, gamesResult] = await Promise.all([
     Promise.resolve(
       supabase
         .from("categories")
@@ -49,12 +49,26 @@ async function fetchSidebarData() {
     )
       .then(({ data }) => (data as { status?: string } | null)?.status ?? null)
       .catch(() => null),
+
+    // 오늘의 경기 SSR 프리페치 (홈 page.tsx 와 동일 패턴, 2026-07-30 워룸) —
+    // "픽 걸러 가기" 직후가 빈 스켈레톤 39개였다. 실패 시 null → 기존 클라 fetch 폴백.
+    (async (): Promise<unknown | null> => {
+      try {
+        const base = process.env.NEXT_PUBLIC_SITE_URL || "https://gongnori.fan"
+        const res = await fetch(`${base}/api/sports/games`, { next: { revalidate: 60 } })
+        if (!res.ok) return null
+        return await res.json()
+      } catch {
+        return null
+      }
+    })(),
   ])
 
   return {
     initialCategories: categoriesResult,
     initialRecentComments: recentCommentsResult,
     worldcupStatus,
+    initialGames: gamesResult,
   }
 }
 
@@ -67,6 +81,7 @@ export default async function PredictionPage() {
         initialCategories={data.initialCategories}
         initialRecentComments={data.initialRecentComments}
         worldcupStatus={data.worldcupStatus}
+        initialGames={data.initialGames}
       />
     </Suspense>
   )

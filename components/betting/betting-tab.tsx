@@ -39,6 +39,8 @@ function SportsEventSchema({ match }: { match: GroupedMatch }) {
 
 interface BettingTabProps {
   lastUpdated: Date | null
+  /** 가장 이른 예측 마감까지 카운트다운 (use-betting-matches 가 1초 갱신) */
+  deadlineCountdown?: string | null
   isLoading: boolean
   error: string | null
   filteredMatches: GroupedMatch[]
@@ -59,6 +61,7 @@ interface BettingTabProps {
 
 export function BettingTab({
   lastUpdated,
+  deadlineCountdown,
   isLoading,
   error,
   filteredMatches,
@@ -78,6 +81,21 @@ export function BettingTab({
         style={{ color: "var(--wc-mute)" }}
       >
         <div className="flex items-center gap-2">
+          {/* 마감 카운트다운 (2026-07-30 워룸) — 훅이 1초마다 계산해오던 값의 첫 소비처.
+              MLB 처럼 킥오프가 새벽이어도 마감은 전날 23:00(데일리 플립)이라, 이 신호가
+              없으면 유저가 마감을 놓친다. */}
+          {deadlineCountdown && deadlineCountdown !== "마감됨" && (
+            <span
+              className="inline-flex items-center rounded-md px-2 py-[3px] text-[12px] font-bold"
+              style={{
+                background: "color-mix(in srgb, var(--wc-burgundy) 8%, transparent)",
+                color: "var(--wc-burgundy)",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              가장 빠른 마감 {deadlineCountdown} 전
+            </span>
+          )}
           {lastUpdated && (
             <span style={{ fontSize: 12, letterSpacing: "0.04em" }}>
               업데이트 · {lastUpdated.toLocaleTimeString("ko-KR")}
