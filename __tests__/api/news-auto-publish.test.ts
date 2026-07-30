@@ -130,7 +130,8 @@ describe("GET /api/cron/news-auto-publish", () => {
   beforeEach(() => {
     vi.resetModules()
     process.env.CRON_SECRET = "test-secret"
-    delete process.env.NEWS_AUTO_PUBLISH
+    // 2026-07-30 opt-in 전환 — 발행 동작 테스트는 명시적으로 켠다
+    process.env.NEWS_AUTO_PUBLISH = "on"
     drafts = []
     botPublishedToday = 0
     inserted.length = 0
@@ -181,14 +182,29 @@ describe("GET /api/cron/news-auto-publish", () => {
     expect(body.published).toBe(1)
   })
 
-  it("킬스위치 NEWS_AUTO_PUBLISH=off 면 스킵한다", async () => {
-    process.env.NEWS_AUTO_PUBLISH = "off"
+  it("기본값은 정지 — env NEWS_AUTO_PUBLISH=on 없이는 발행하지 않는다 (opt-in)", async () => {
+    delete process.env.NEWS_AUTO_PUBLISH
     drafts = [draft("a", visualDoc)]
 
     const body = await (await call()).json()
 
-    expect(body.skipped).toContain("off")
+    expect(body.skipped).toContain("정지")
     expect(inserted).toHaveLength(0)
+  })
+
+  it("임베드만 있고 실제 이미지가 없는 초안은 발행하지 않는다 (2026-07-30 강화)", async () => {
+    const embedOnlyDoc = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "본문" }] },
+        { type: "embed", attrs: { provider: "x", url: "https://x.com/a/status/1" } },
+      ],
+    }
+    drafts = [draft("a", embedOnlyDoc)]
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(0)
   })
 
   it("CRON_SECRET 없는 요청은 401", async () => {
