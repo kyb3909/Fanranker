@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { isContentFreeText } from "@/lib/news/content-quality"
 
 const TipTapContent = dynamic(
   () => import("@/components/editor/tiptap-content").then((m) => m.TipTapContent),
@@ -376,6 +377,11 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                           : `${item.hoursLeft.toFixed(0)}시간 남음`}
                       </span>
                       <span>· 본문 {item.bodyLength}자</span>
+                      {isContentFreeText(item.body ?? "") && (
+                        <span className="font-semibold text-red-600">
+                          · 무내용 의심(원문 추출 실패)
+                        </span>
+                      )}
                       {!item.image && (
                         <span className="text-amber-600">· 사진 없음(떡밥 제외)</span>
                       )}

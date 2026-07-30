@@ -3,7 +3,12 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
-import { publishNewsDraft, NEWS_BOT_USER_ID, type NewsReservoirItem } from "@/lib/news/publish"
+import {
+  publishNewsDraft,
+  isContentFreeDraft,
+  NEWS_BOT_USER_ID,
+  type NewsReservoirItem,
+} from "@/lib/news/publish"
 
 export const dynamic = "force-dynamic"
 
@@ -90,6 +95,9 @@ async function run(request: NextRequest) {
     // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
     // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
     if (!extractFirstImageSrcFromTipTapJSON(content)) continue
+    // 무내용 초안 차단 (2026-07-30) — 원문 0자로 생성돼 "세부 사항은 기사에서 확인"류
+    // 필러만 있는 글 (hermes-reddit-1vank7k 사례). 80자 미만·자기지시 문구 = 자동발행 금지.
+    if (isContentFreeDraft(content)) continue
 
     const result = await publishNewsDraft(supabase, row, { title, content, auto: true })
     if (result.error) {

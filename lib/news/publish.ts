@@ -1,6 +1,7 @@
 import { after } from "next/server"
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { rehostExternalImage, isSelfHostedImageUrl } from "@/lib/images/rehost"
+import { isContentFreeText } from "@/lib/news/content-quality"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
@@ -197,6 +198,15 @@ export async function publishNewsDraft(
   }
 
   return { postId: post.id }
+}
+
+/**
+ * 무내용 초안 판정 — 원문 0자로 생성돼 "세부 사항은 기사에서 확인할 수 있습니다"류
+ * 필러만 있는 초안 (2026-07-30 hermes-reddit-1vank7k 사례). 본문이 이런 글은
+ * 자동발행 금지 + 검수 화면에서도 경고 대상. 판정 규칙은 lib/news/content-quality 공유.
+ */
+export function isContentFreeDraft(content: unknown): boolean {
+  return isContentFreeText(extractTextFromTipTapJSON(content as TipTapNode))
 }
 
 /**

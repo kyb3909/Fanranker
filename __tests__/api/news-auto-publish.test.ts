@@ -92,10 +92,13 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }))
 
+// 본문은 무내용 게이트(80자 미만 차단)를 넘도록 실제 기사 분량으로
+const LONG_BODY =
+  "아스날이 에미레이트 스타디움에서 열린 프리미어리그 홈 경기에서 리버풀을 상대로 2-0 승리를 거뒀다. 전반 23분 사카가 선제골을 넣었고, 후반 78분 마르티넬리가 쐐기골을 추가하며 승점 3점을 확보했다."
 const visualDoc = {
   type: "doc",
   content: [
-    { type: "paragraph", content: [{ type: "text", text: "본문" }] },
+    { type: "paragraph", content: [{ type: "text", text: LONG_BODY }] },
     { type: "image", attrs: { src: "https://example.com/a.jpg" } },
   ],
 }
@@ -201,6 +204,29 @@ describe("GET /api/cron/news-auto-publish", () => {
       ],
     }
     drafts = [draft("a", embedOnlyDoc)]
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(0)
+  })
+
+  it("무내용 초안(80자 미만·자기지시 필러)은 이미지가 있어도 발행하지 않는다 (2026-07-30)", async () => {
+    const contentFreeDoc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "FIFA가 새로운 월드컵 스핀오프의 출시를 가속화할 계획이라고 보도되었습니다. 이와 관련된 세부 사항은 기사에서 확인할 수 있습니다. 관계자들은 이번 계획이 향후 일정에 영향을 줄 것으로 보고 있습니다.",
+            },
+          ],
+        },
+        { type: "image", attrs: { src: "https://example.com/a.jpg" } },
+      ],
+    }
+    drafts = [draft("a", contentFreeDoc)]
 
     const body = await (await call()).json()
 
