@@ -1,5 +1,6 @@
 import { after } from "next/server"
 import type { createServiceRoleClient } from "@/lib/supabase/server"
+import { rehostExternalImage, isSelfHostedImageUrl } from "@/lib/images/rehost"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
@@ -50,6 +51,35 @@ export interface PublishNewsOptions {
 }
 
 /**
+ * 본문 TipTap 트리의 외부 이미지 src 를 우리 Storage 로 재호스팅해 바꿔 쓴다 (in-place 아님 — 복사본 반환).
+ * 외부 핫링크는 원본 해상도(수 MB)·핫링크 차단·서드파티 쿠키(FIFA 사례)를 그대로 피드에 실어 나르므로
+ * 발행 시점에 WebP 1200px 로 내린다. 개별 실패는 원본 유지(fail-open) — 이미지 때문에 발행을 막지 않는다.
+ */
+async function rehostContentImages(content: unknown): Promise<unknown> {
+  if (!content || typeof content !== "object") return content
+  const clone = structuredClone(content)
+  const walk = async (node: unknown): Promise<void> => {
+    if (!node || typeof node !== "object") return
+    const n = node as { type?: string; attrs?: { src?: string }; content?: unknown[] }
+    if (n.type === "image" && typeof n.attrs?.src === "string") {
+      const src = n.attrs.src
+      if (/^https?:\/\//i.test(src) && !isSelfHostedImageUrl(src)) {
+        try {
+          n.attrs.src = await rehostExternalImage(src, NEWS_BOT_USER_ID)
+        } catch (e) {
+          console.error("[news-publish] 이미지 재호스팅 실패, 원본 유지:", src, e)
+        }
+      }
+    }
+    if (Array.isArray(n.content)) {
+      for (const child of n.content) await walk(child)
+    }
+  }
+  await walk(clone)
+  return clone
+}
+
+/**
  * news_reservoir 초안 1건을 posts 로 발행한다.
  * 성공 시 reservoir status=published + publish 메타 기록까지 완료.
  */
@@ -59,7 +89,8 @@ export async function publishNewsDraft(
   opts: PublishNewsOptions
 ): Promise<{ postId?: string; error?: string }> {
   const now = new Date().toISOString()
-  const image = extractFirstImageSrcFromTipTapJSON(opts.content)
+  const content = await rehostContentImages(opts.content)
+  const image = extractFirstImageSrcFromTipTapJSON(content)
   const sourceUrl = item.urls?.source ?? null
 
   // 말머리(다중) — 지정(flairIds)이 있으면 그대로, 미지정이면 제목 기반 자동 추천.
@@ -92,7 +123,7 @@ export async function publishNewsDraft(
       category_id: FOOTBALL_CATEGORY_ID,
       community_slug: FOOTBALL_SLUG,
       title: opts.title,
-      content: opts.content,
+      content,
       ...(image ? { image } : {}),
       ...(sourceUrl ? { source_url: sourceUrl } : {}),
       ...(primaryFlairId ? { flair_id: primaryFlairId } : {}),
@@ -122,14 +153,14 @@ export async function publishNewsDraft(
         ...(opts.auto ? { auto: true } : {}),
         ...(opts.preEdit ? { pre_edit: opts.preEdit } : {}),
       },
-      draft: { ...(item.draft ?? {}), title: opts.title, content: opts.content },
+      draft: { ...(item.draft ?? {}), title: opts.title, content },
       updated_at: now,
     })
     .eq("id", item.id)
 
   // 디스코드 뉴스봇 채널 발송 — 웹훅 미설정 시 no-op, 실패해도 발행에는 영향 없음.
   const teamTexts = (item.entities?.teams ?? []).flatMap((t) => [t.surface, t.preferred_ko])
-  const teaser = extractTextFromTipTapJSON(opts.content as TipTapNode)
+  const teaser = extractTextFromTipTapJSON(content as TipTapNode)
     .slice(0, 200)
     .trim()
   await notifyNewsPublished({
@@ -160,7 +191,7 @@ export async function publishNewsDraft(
         originalTitle: preEdit.title ?? "",
         originalContent: preEdit.content ?? null,
         finalTitle: opts.title,
-        finalContent: opts.content,
+        finalContent: content,
       })
     })
   }

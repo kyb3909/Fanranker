@@ -264,9 +264,10 @@ function CompactKicker({ card }: { card: CardNewsItem }) {
 const SCRIM =
   "linear-gradient(to top, rgba(9,8,11,.86) 0%, rgba(9,8,11,.83) 8%, rgba(9,8,11,.76) 18%, rgba(9,8,11,.63) 32%, rgba(9,8,11,.46) 46%, rgba(9,8,11,.28) 62%, rgba(9,8,11,.12) 78%, rgba(9,8,11,.03) 90%, rgba(9,8,11,0) 100%)"
 
-/** 고스트 액션 — 아이콘+숫자, before 로 히트 영역 보정 */
+/** 고스트 액션 — 아이콘+숫자. 히트 영역은 실제 padding 으로 확보 (-m 이 layout 상쇄 —
+ * pseudo(::before) hit area 는 target-size 접근성 감사가 인정하지 않아 실박스로 전환) */
 const ghostAction =
-  "before:content-[''] before:absolute before:-inset-2.5 relative inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors"
+  "-m-2.5 p-2.5 relative inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors"
 
 /** 로컬 좋아요 (비로그인 즉각 반응 — 떡밥 피드와 동일 방식, 키만 분리) */
 function useLocalLike(id: string) {

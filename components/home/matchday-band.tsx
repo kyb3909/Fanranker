@@ -210,6 +210,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               src={c.image as string}
               alt=""
               loading={i === 0 ? "eager" : "lazy"}
+              fetchPriority={i === 0 ? "high" : undefined}
               style={{ objectPosition: "50% 22%" }}
             />
           </div>
@@ -339,19 +340,26 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               <ChevronRight className="h-[17px] w-[17px]" aria-hidden />
             </CarouselBtn>
           </div>
-          <div className="absolute right-5 bottom-5 z-[3] flex items-center gap-[7px]">
+          {/* 도트 비주얼은 8px 유지, 버튼 실박스는 h-6 + gap-4 로 터치 타깃 24px 확보
+              (인접 중심 간격 ≥24px — pseudo hit area 는 target-size 감사가 인정 안 함) */}
+          <div className="absolute right-5 bottom-5 z-[3] flex items-center gap-4">
             {slides.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => go(i)}
                 aria-label={`${i + 1}번 톱스토리`}
                 aria-current={i === idx}
-                className="h-2 rounded-full transition-all"
-                style={{
-                  width: i === idx ? 22 : 8,
-                  background: i === idx ? "var(--gn-cream)" : "rgba(245,239,231,.34)",
-                }}
-              />
+                className="flex h-6 items-center"
+              >
+                <span
+                  aria-hidden
+                  className="h-2 rounded-full transition-all"
+                  style={{
+                    width: i === idx ? 22 : 8,
+                    background: i === idx ? "var(--gn-cream)" : "rgba(245,239,231,.34)",
+                  }}
+                />
+              </button>
             ))}
           </div>
         </>
