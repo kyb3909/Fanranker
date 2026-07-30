@@ -9,6 +9,7 @@ import { auth } from "@clerk/nextjs/server"
 import { fetchVisibleComments } from "@/lib/comments/visible-comments"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { fetchVsPoll } from "@/lib/news/vs-issue"
+import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -248,6 +249,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     sourceName: postData.source_name,
   }
 
+  // 본문 서버 HTML — 첫 HTML 부터 본문을 실어 검색엔진·저속망에 도달시킨다
+  // (문자열 본문은 클라이언트가 <p> 로 직접 그리므로 JSON 본문만)
+  const contentHtml =
+    typeof postData.content === "object" ? renderTipTapToHTML(postData.content) : null
+
   return (
     <>
       <script
@@ -277,7 +283,12 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               <BackButton fallbackHref={`/community/${postData.community_slug}`} />
 
               {/* Post Detail Content */}
-              <PostDetailContent post={post} initialCommentsData={commentsData} vsPoll={vsPoll} />
+              <PostDetailContent
+                post={post}
+                initialCommentsData={commentsData}
+                vsPoll={vsPoll}
+                contentHtml={contentHtml}
+              />
 
               {/* Board Recent Posts */}
               <BoardRecentPosts

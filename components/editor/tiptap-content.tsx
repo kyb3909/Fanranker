@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import { createSharedTipTapExtensions } from "@/lib/tiptap/extensions/shared"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,8 @@ export interface TipTapContentProps {
    *   한 줄에 85자가 넘어가 눈이 줄을 놓친다
    */
   size?: "sm" | "base"
+  /** 에디터 마운트 완료 신호 — 서버 정적 HTML → 인터랙티브 렌더로의 교대 타이밍 */
+  onReady?: () => void
 }
 
 /**
@@ -24,7 +26,7 @@ export interface TipTapContentProps {
  * Renders TipTap JSON content in read-only mode.
  * Used for displaying posts with embedded content.
  */
-export function TipTapContent({ content, className, size = "sm" }: TipTapContentProps) {
+export function TipTapContent({ content, className, size = "sm", onReady }: TipTapContentProps) {
   const displayContent = useMemo(() => transformBareImageUrlsInTipTapJSON(content), [content])
 
   const editor = useEditor({
@@ -43,6 +45,11 @@ export function TipTapContent({ content, className, size = "sm" }: TipTapContent
       },
     },
   })
+
+  // 에디터가 실제로 서면 부모에게 알린다 — 정적 HTML 을 그때 내리게 (이중 렌더 방지)
+  useEffect(() => {
+    if (editor) onReady?.()
+  }, [editor, onReady])
 
   if (!editor) {
     return null

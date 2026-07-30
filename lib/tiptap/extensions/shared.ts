@@ -1,48 +1,17 @@
 /**
- * 에디터·뷰어가 공유하는 TipTap extension 집합
+ * 에디터·뷰어(클라이언트)가 공유하는 TipTap extension 집합.
+ *
+ * 목록 구성은 shared-core 한 곳에 있다 — 여기서는 React NodeView 붙은 Embed 만
+ * 주입한다. 서버 렌더(lib/tiptap/render-html)는 embed-base 를 주입해 같은 목록을
+ * 쓴다 (@tiptap/react 는 RSC 에서 못 뜨기 때문에 이 분리가 필요).
  *
  * 에디터(tiptap-editor.tsx)는 이 배열에 편집 전용 extension(Placeholder,
  * EmbedPaste)을 덧붙인다. 뷰어(tiptap-content.tsx)는 이 배열만 사용.
- *
- * 중요: 에디터가 생성할 수 있는 모든 노드/마크를 뷰어가 렌더할 수 있어야 한다.
- * StarterKit 3.15+는 Underline을 기본 포함하므로 별도 Underline extension을
- * 추가하지 않는다(중복 시 tiptap warn: "Duplicate extension names: ['underline']").
- * TextAlign은 StarterKit에 포함되지 않으므로 별도 추가.
  */
 
-import StarterKit from "@tiptap/starter-kit"
-import TextAlign from "@tiptap/extension-text-align"
-import TiptapImage from "@tiptap/extension-image"
-import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table"
 import { Embed } from "./embed"
-import { Video } from "./video"
-
-interface SharedExtensionsOptions {
-  /** 에디터에서만 필요 (붙여넣기된 base64 이미지 허용 여부). 뷰어는 의미 없음. */
-  imageAllowBase64?: boolean
-}
+import { createTipTapExtensionsWith, type SharedExtensionsOptions } from "./shared-core"
 
 export function createSharedTipTapExtensions(options: SharedExtensionsOptions = {}) {
-  return [
-    StarterKit,
-    TextAlign.configure({ types: ["heading", "paragraph"] }),
-    // a11y: 사용자 입력 시 alt 빈 string 인 경우가 많음. 빈 alt 면 의미 있는 fallback
-    // ("게시물 이미지") 으로 채움. 스크린리더가 "이미지"라고만 읽지 않게.
-    TiptapImage.extend({
-      renderHTML({ HTMLAttributes, node }) {
-        const alt = (node?.attrs?.alt as string) || HTMLAttributes.alt || "게시물 이미지"
-        return ["img", { ...HTMLAttributes, alt }]
-      },
-    }).configure({
-      HTMLAttributes: { class: "tiptap-image" },
-      allowBase64: options.imageAllowBase64 ?? false,
-    }),
-    Embed.configure({ HTMLAttributes: { class: "embed-node" } }),
-    Video,
-    // 표 — 에디터/뷰어 공통. resizable=false(읽기 전용 뷰어 + 단순 입력). prose 가 표 스타일 담당.
-    Table.configure({ resizable: false }),
-    TableRow,
-    TableHeader,
-    TableCell,
-  ]
+  return createTipTapExtensionsWith(Embed, options)
 }

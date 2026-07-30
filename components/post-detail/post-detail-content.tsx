@@ -31,7 +31,9 @@ import type { Post } from "@/types/post-detail"
 const TipTapContent = dynamic(
   () =>
     import("@/components/editor/tiptap-content").then((mod) => ({ default: mod.TipTapContent })),
-  { ssr: false, loading: () => <div className="bg-muted h-32 animate-pulse rounded" /> }
+  // 스켈레톤 제거 — 본문은 서버 HTML(contentHtml)이 이미 그리고 있다. 스켈레톤을
+  // 남기면 정적 본문 아래 회색 박스가 같이 떠서 이중으로 보인다.
+  { ssr: false, loading: () => null }
 )
 
 interface InitialCommentsData {
@@ -58,17 +60,26 @@ export function PostDetailContent({
   post,
   initialCommentsData,
   vsPoll,
+  contentHtml,
 }: {
   post: Post
   initialCommentsData?: InitialCommentsData
   /** VS 쟁점 폴 (뉴스 게시물에만) — 3줄 요약 + 찬반 투표 + 댓글 진영 칩 */
   vsPoll?: VsPollData | null
+  /**
+   * 서버에서 미리 렌더한 본문 HTML (lib/tiptap/render-html) — 첫 HTML 부터 본문이
+   * 실리게 해 SEO 절단·스켈레톤 첫인상을 없앤다 (2026-07-30 워룸). 클라이언트
+   * TipTap 이 서면(onReady) 이쪽을 내려 임베드 인터랙션으로 교대한다.
+   */
+  contentHtml?: string | null
 }) {
   const router = useRouter()
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
   const { toggleBlock } = useBlockedUsers()
   const [commentCount, setCommentCount] = useState(0)
+  const [rteReady, setRteReady] = useState(false)
+  const handleRteReady = useCallback(() => setRteReady(true), [])
 
   // 조회수 증가 (서버가 IP 기반 1시간 중복 제한 처리)
   usePostViewTracker(post.id)
@@ -321,8 +332,18 @@ export function PostDetailContent({
                   {post.content}
                 </p>
               ) : (
-                // TipTap JSON 렌더링 (임베드 포함)
-                <TipTapContent content={post.content} size="base" />
+                // TipTap JSON 렌더링 (임베드 포함) — 서버 HTML 이 있으면 그걸 먼저
+                // 보여주고, 클라이언트 에디터가 서면 교대 (스켈레톤 구간 제거)
+                <>
+                  {contentHtml && !rteReady && (
+                    <div
+                      className="prose prose-base max-w-[68ch]"
+                      // 저장 시 sanitize 된 JSON → generateHTML 이스케이프 출력이라 안전
+                      dangerouslySetInnerHTML={{ __html: contentHtml }}
+                    />
+                  )}
+                  <TipTapContent content={post.content} size="base" onReady={handleRteReady} />
+                </>
               )}
             </div>
             {/* Image — 본문에 이미 포함된 이미지는 중복 표시하지 않음 */}
