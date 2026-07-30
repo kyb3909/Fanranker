@@ -21,9 +21,24 @@ export interface TransferItem {
   score: number
 }
 
-/** 오피셜 마커 — 제목에 있으면 등급 최상위 */
+/**
+ * 오피셜 마커 — "완료됐다"를 직접 말하는 강한 표현만 (2026-07-31 보수화).
+ * 이전 룰은 `completed`("completed 60% of our project"), `official`("unofficial"),
+ * `입단`("입단 임박") 같은 부분 매칭으로 진행형 루머까지 오피셜을 달았다 —
+ * 신뢰 라벨이 오염되면 상황판 전체의 신뢰가 무너진다.
+ */
 const OFFICIAL_RE =
-  /here we go|official|오피셜|공식 발표|공식 확정|완전 이적|입단|이적 완료|계약 체결|메디컬 통과|has signed|done deal|completed|unveil/i
+  /here we go|\bofficial\b|\[오피셜\]|오피셜\s*[:)\]]|공식\s*발표|공식\s*확정|이적\s*확정|입단\s*확정|영입\s*확정|이적\s*완료|메디컬\s*통과|has signed|done deal|completed\s+(?:a\s+|the\s+)?(?:permanent\s+)?(?:transfer|move|deal)|transfer\s+completed|unveiled/i
+
+/** 부정 신호 — 오피셜 마커를 인용·부정하는 제목 ("'오피셜' 공식발표 완전 무의미" 사례) */
+const NEGATION_RE = /무의미|미정|불발|취소|무산|아직/
+
+/**
+ * 진행형/루머 신호 — 있으면 오피셜 금지 (강한 완료 마커·부정 검사 이후에 적용).
+ * "임박·추진·협상·finalising·working on" 은 아무리 유력해도 완료가 아니다.
+ */
+const HEDGE_RE =
+  /루머|이적설|찌라시|임박|가능성|추진|검토|협상|접촉|경쟁|관심|후보|거론|희망|원해|원한다|난항|보류|\?|rumou?r|reportedly|close to|closing in|poised|edging|verge|in talks|negotiat|approach|interest|linked|race for|working on|finalising|finalizing|targets?\b|could\b|would\b/i
 
 /** Tier1 기자/매체 — [브래킷] 출처 또는 본문 매칭. 루머라도 사실상 유력 보도로 취급 */
 const TIER1_RE =
@@ -139,14 +154,22 @@ export function classifyTier(row: {
   original_title: string | null
   headline_kr: string | null
   link_url: string | null
+  source_id?: string | null
 }): TransferTier {
   const text = `${row.original_title ?? ""} ${row.headline_kr ?? ""}`
   // 구단 공식 사이트 발 소식 = 오피셜
   const host = hostOf(row.link_url)
   if (host && CLUB_HOSTS.test(host)) return "official"
-  if (OFFICIAL_RE.test(text)) return "official"
-  // 네이버 등 국내 매체의 transfer 카테고리 = 완료/확정 보도 성격
-  if (row.category === "transfer") return "official"
+  // 오피셜 마커를 인용·부정하는 제목은 마커가 있어도 오피셜 금지
+  if (!NEGATION_RE.test(text)) {
+    if (OFFICIAL_RE.test(text)) return "official"
+    // 진행형 신호가 있으면 아래 폴백 승격도 막는다
+    if (!HEDGE_RE.test(text)) {
+      // 국내 매체(naver)의 transfer 카테고리는 완료 보도 성격 — 단 reddit 의
+      // transfer 플레어는 진행 건에도 붙어 (예: "working on £60m deal") 제외.
+      if (row.category === "transfer" && row.source_id?.startsWith("naver")) return "official"
+    }
+  }
   if (TIER1_RE.test(text)) return "tier1"
   return "rumor"
 }

@@ -313,6 +313,49 @@ function useLocalLike(id: string) {
   return { liked, toggle }
 }
 
+/** 이적시장 상황판 진입 카드 — 라이트 존 규칙(카드 다크 금지) 준수, 배경 틴트로만 구분 */
+function TransferPromoCard() {
+  return (
+    <Link
+      href="/transfer?utm_source=home_cardnews"
+      className="block rounded-2xl px-4 py-3.5 no-underline transition-opacity hover:opacity-90"
+      style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+      onClick={() => trackEvent({ name: "board_view", params: { board: "transfer_promo" } })}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[18px]"
+          style={{
+            background: "color-mix(in srgb, var(--wc-burgundy) 9%, transparent)",
+          }}
+        >
+          🔁
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className="block text-[14.5px] font-extrabold"
+            style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+          >
+            이적시장 상황판
+          </span>
+          <span
+            className="mt-0.5 block text-[12.5px]"
+            style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
+          >
+            오피셜 · Here we go · 루머를 신뢰 등급으로 — 실시간 타임라인
+          </span>
+        </span>
+        <ChevronRight
+          className="h-4 w-4 shrink-0"
+          style={{ color: "var(--wc-mute)" }}
+          aria-hidden
+        />
+      </div>
+    </Link>
+  )
+}
+
 /* 브라우저 네이티브 FaceDetector (Chromium 계열) — 없거나 실패하면 상단 30% 크롭 fallback */
 interface DetectedFaceBox {
   boundingBox: { x: number; y: number; width: number; height: number }
@@ -944,6 +987,9 @@ export function CardNewsFeed({
               <PollWidget />
             </div>
           )}
+          {/* 이적시장 상황판 — 가장 강한 비로그인 축구 자산인데 홈에 진입로가 0개였다
+              (2026-07-30 워룸). 오피셜 뱃지 룰 보수화(2026-07-31) 선행 후 노출. */}
+          {i === 5 && <TransferPromoCard />}
           {i === 8 && (
             <div className="lg:hidden">
               <DiscordInviteBanner variant="sidebar" placement="mobile_cardnews_feed" />
