@@ -374,6 +374,64 @@ async function fetchCorrectionExamples() {
   }
 }
 
+// ── VS 쟁점 2단 판정 (2026-07-31, 3인 회의 VS-RESULT 스펙) ──────────────
+// ⚠️ "쟁점을 만들어라"라고 지시하지 않는다 — 생성을 명령받은 LLM 은 항상 생성한다
+// (실측: 백필 12건 중 10건 통과, 다수가 억지). 대신 "갈릴 지점이 있는가"를
+// 먼저 판정시키고 신뢰도를 받는다. 판정이 과업이고 생성은 그 다음이다.
+const VS_JUDGE_PROMPT = `너는 한국 축구 커뮤니티의 데스크 에디터다. 기사를 읽고 두 단계로 판단한다.
+
+[1단계 — 판정] 이 기사에 독자 의견이 실제로 갈릴 지점이 있는가?
+다음은 쟁점이 "없는" 기사다 (has_issue=false 로 판정할 것):
+- 수익/매출/재정 발표 ("레알 마드리드 12억 유로 수익") — 사실 보고일 뿐 갈등 없음
+- 순위표/일정/결과 정리, 단순 부상·결장 소식
+- 소스 1개짜리 통상 이적설 ("A팀이 B선수에 관심") — "영입 찬성인가?"는 모든 이적설에
+  붙는 복붙형 질문이라 쟁점이 아니다
+- 공식 발표의 단순 전달 (계약 연장, 데뷔 등)
+쟁점이 "있는" 기사의 예: 레전드의 은퇴(유산 평가 갈림), 구단주/감독 거취 논란,
+징계·판정 논란, 팬덤이 실제로 둘로 갈라져 싸울 사안.
+confidence: 판정 확신도 0.0~1.0. 애매하면 낮게.
+
+[2단계 — 생성] has_issue=true 일 때만:
+- question: 30자 이내, 반드시 의문형으로 끝남 (~인가? / ~할까? / ~맞나?). "~이다?" 금지
+- option_a/option_b: 각 14자 이내 구어체 단정문. 양쪽 모두 팬이 실제로 할 법한
+  합리적 주장. 선수/감독의 신체·가족·사망 소재 금지
+- summary: 기사 핵심 팩트 3줄 (각 40자 이내, 감상 금지)
+
+JSON만: {"has_issue":bool,"confidence":0.0,"question":"...","option_a":"...","option_b":"...","summary":["...","...","..."]}`
+
+async function judgeVsIssue(title, summaryText) {
+  if (!OPENAI_API_KEY || !summaryText || summaryText.length < 30) return null
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(20000),
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: VS_JUDGE_PROMPT },
+        { role: "user", content: `제목: ${title}\n\n본문:\n${summaryText.slice(0, 1500)}` },
+      ],
+    }),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  const j = JSON.parse(data.choices[0].message.content)
+  if (!j.has_issue || typeof j.confidence !== "number" || j.confidence < 0.4) return null
+  if (!j.question || !j.option_a || !j.option_b || !Array.isArray(j.summary)) return null
+  // 어미 하드 제약 — 반드시 "?"로 끝나되, "~다?"(평서문+물음표) 형태는 금지
+  const q = String(j.question).trim()
+  if (!q.endsWith("?") || /다\?$/.test(q)) return null
+  return {
+    question: q.slice(0, 80),
+    option_a: String(j.option_a).slice(0, 24),
+    option_b: String(j.option_b).slice(0, 24),
+    summary: j.summary.slice(0, 3).map((s) => String(s).slice(0, 80)),
+    confidence: Math.max(0, Math.min(1, j.confidence)),
+  }
+}
+
 async function postDraft(payload) {
   const res = await fetch(`${BASE_URL}/api/news/agent-draft`, {
     method: "POST",
@@ -479,6 +537,13 @@ async function main() {
         mediaNode = imageNode
         if (ogSummary && (summary || "").length < 40) summary = ogSummary
       }
+      // VS 쟁점 제안 (2단 판정) — 실패해도 초안은 나간다
+      let vs
+      try {
+        vs = await judgeVsIssue(v.title, summary || "")
+      } catch {
+        vs = null
+      }
       const r = await postDraft({
         title: v.title,
         content: buildContent(summary, mediaNode),
@@ -487,6 +552,7 @@ async function main() {
         tags: Array.isArray(v.tags) ? v.tags.slice(0, 10) : [],
         scores: { credibility: v.credibility, importance: v.importance },
         dedupe_key: `reddit:${p.id}`,
+        ...(vs ? { vs } : {}),
       })
       if (r.ok) {
         drafted++

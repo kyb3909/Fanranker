@@ -30,6 +30,16 @@ const BodySchema = z.object({
   scores: z.record(z.unknown()).optional(),
   /** 중복 방지 키 (예: "soccer:<reddit_post_id>") */
   dedupe_key: z.string().min(1).max(200),
+  /** VS 쟁점 제안 (스캐너 2단 판정) — 검수 화면에서 확인 후 발행 시 폴 생성 */
+  vs: z
+    .object({
+      question: z.string().min(1).max(80),
+      option_a: z.string().min(1).max(24),
+      option_b: z.string().min(1).max(24),
+      summary: z.array(z.string().max(80)).length(3),
+      confidence: z.number().min(0).max(1),
+    })
+    .optional(),
 })
 
 function slugId(dedupeKey: string): string {
@@ -93,7 +103,7 @@ export async function POST(req: NextRequest) {
     scores: d.scores ?? {},
     dedupe_key: d.dedupe_key,
     status: "drafted",
-    draft: { title: d.title, content, tags: d.tags ?? [] },
+    draft: { title: d.title, content, tags: d.tags ?? [], ...(d.vs ? { vs: d.vs } : {}) },
     audit: { created_by: "hermes-agent", created_at: now },
   })
   if (error) {

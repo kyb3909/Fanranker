@@ -22,6 +22,15 @@ const BodySchema = z.object({
   content: z.unknown().optional(),
   // 말머리(다중): 미전달(undefined)이면 제목 기반 자동 추천, 배열이면 그대로(빈 배열=없음)
   flair_ids: z.array(z.string().uuid()).optional(),
+  // VS 쟁점 결정 — enabled 미전달이면 confidence 기본값(0.7↑ 켜짐)을 따른다
+  vs: z
+    .object({
+      enabled: z.boolean().optional(),
+      question: z.string().min(1).max(80).optional(),
+      optionA: z.string().min(1).max(24).optional(),
+      optionB: z.string().min(1).max(24).optional(),
+    })
+    .optional(),
 })
 
 type DraftReservoirRow = NewsReservoirItem & { status: string }
@@ -92,6 +101,7 @@ export async function POST(req: NextRequest) {
     title: finalTitle,
     content: finalContent,
     flairIds: parsed.data.flair_ids,
+    vs: parsed.data.vs,
     preEdit: wasEdited
       ? { title: item.draft?.title ?? null, content: item.draft?.content ?? null }
       : null,

@@ -20,8 +20,17 @@ export interface CardNewsItem {
   flair: { name: string; color: string | null } | null
   /** 본문 첫 임베드 (플랫폼 뱃지 + 유튜브 lite embed 용). 풀 임베드는 상세 페이지 몫 */
   media: { provider: "youtube" | "instagram" | "x"; url: string; videoId?: string } | null
-  /** VS 쟁점 (히어로 카드용) — 질문 + 양측 라벨 + 퍼센트. 폴 없으면 undefined */
-  vs?: { question: string; aLabel: string; bLabel: string; aPct: number; total: number }
+  /** VS 쟁점 — 질문 + 양측 + 퍼센트. 카드에서 바로 투표 가능 (폴 없으면 undefined) */
+  vs?: {
+    pollId: string
+    question: string
+    aKey: string
+    aLabel: string
+    bKey: string
+    bLabel: string
+    aPct: number
+    total: number
+  }
 }
 
 const PAGE_SIZE = 20
@@ -65,6 +74,9 @@ export async function fetchCardNews(
   const rows = posts ?? []
 
   const cards = await buildCards(supabase, rows)
+  // 떡밥 카드에서 바로 투표 (안 1, 2026-07-31) — 쇼윈도 표면이라 높은 바:
+  // confidence >= 0.7 이고 켜진 폴만 (본문 하단은 켜진 것 전부 — fetchVsPoll 몫)
+  await attachVsToCards(supabase, cards)
 
   return {
     // 사진 없는 글은 떡밥에서 배제한다 (2026-07-28).
@@ -249,15 +261,18 @@ async function attachVsToCards(
   cards: CardNewsItem[]
 ): Promise<void> {
   if (cards.length === 0) return
-  const { data: polls } = await supabase
+  const { data: pollRows } = await supabase
     .from("polls")
-    .select("id, post_id, question, options, is_active")
+    .select("id, post_id, question, options, is_active, confidence")
     .in(
       "post_id",
       cards.map((c) => c.id)
     )
     .eq("is_active", true)
-  if (!polls || polls.length === 0) return
+  // 쇼윈도(피드/히어로) 바: confidence 0.7 미만은 본문에서만.
+  // confidence null = 초기 백필분 — 사람 손정리를 거친 것만 남으므로 통과.
+  const polls = (pollRows ?? []).filter((p) => p.confidence === null || Number(p.confidence) >= 0.7)
+  if (polls.length === 0) return
 
   const { data: votes } = await supabase
     .from("poll_votes")
@@ -276,8 +291,11 @@ async function attachVsToCards(
     const aCount = pollVotes.filter((v) => v.option_key === opts[0].key).length
     const total = pollVotes.length
     card.vs = {
+      pollId: poll.id,
       question: poll.question,
+      aKey: opts[0].key,
       aLabel: opts[0].label,
+      bKey: opts[1].key,
       bLabel: opts[1].label,
       // 표가 없으면 50:50 (빈 게이지는 죽어 보인다)
       aPct: total === 0 ? 50 : Math.round((aCount / total) * 100),

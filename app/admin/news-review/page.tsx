@@ -10,7 +10,12 @@ const EXPIRE_HOURS = 48
 
 interface Row {
   id: string
-  draft: { title?: string; content?: unknown; tags?: string[] } | null
+  draft: {
+    title?: string
+    content?: unknown
+    tags?: string[]
+    vs?: { question: string; option_a: string; option_b: string; confidence: number } | null
+  } | null
   urls: { source?: string | null; origin?: string | null } | null
   scores: Record<string, unknown> | null
   created_at: string
@@ -93,6 +98,7 @@ export default async function NewsReviewPage() {
       credibility: Number(r.scores?.credibility ?? 0) || null,
       importance: Number(r.scores?.importance ?? 0) || null,
       suggestedFlairIds: suggestFlairs(title, suggestOpts).flairIds,
+      vs: r.draft?.vs ?? null,
     }
   })
 

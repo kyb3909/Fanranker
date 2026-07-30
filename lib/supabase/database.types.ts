@@ -3608,10 +3608,12 @@ export type Database = {
         Row: {
           allow_reason: boolean
           closes_at: string | null
+          confidence: number | null
           created_at: string
           created_by: string | null
           id: string
           is_active: boolean
+          off_reason: string | null
           options: Json
           post_id: string | null
           question: string
@@ -3620,10 +3622,12 @@ export type Database = {
         Insert: {
           allow_reason?: boolean
           closes_at?: string | null
+          confidence?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
+          off_reason?: string | null
           options: Json
           post_id?: string | null
           question: string
@@ -3632,10 +3636,12 @@ export type Database = {
         Update: {
           allow_reason?: boolean
           closes_at?: string | null
+          confidence?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
+          off_reason?: string | null
           options?: Json
           post_id?: string | null
           question?: string

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
+import { trackEvent } from "@/lib/analytics/events"
 import type { VsPollData } from "@/lib/news/vs-issue"
 
 /**
@@ -21,6 +22,21 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
   const [myKey, setMyKey] = useState(vs.myKey)
   const [counts, setCounts] = useState(vs.counts)
   const [busy, setBusy] = useState(false)
+
+  // 노출 계측 — 세션당 폴별 1회 (카드 표면과 같은 dedupe 키를 공유해 이중 집계 방지 안 함:
+  // surface 가 다르면 다른 노출이다. 키를 surface 별로 분리)
+  useEffect(() => {
+    try {
+      const seen = JSON.parse(sessionStorage.getItem("vs-seen-post") || "{}")
+      if (!seen[vs.pollId]) {
+        seen[vs.pollId] = 1
+        sessionStorage.setItem("vs-seen-post", JSON.stringify(seen))
+        trackEvent({ name: "vs_impression", params: { poll_id: vs.pollId, surface: "post" } })
+      }
+    } catch {
+      trackEvent({ name: "vs_impression", params: { poll_id: vs.pollId, surface: "post" } })
+    }
+  }, [vs.pollId])
 
   const a = vs.options[0]
   const b = vs.options[1]
@@ -56,6 +72,10 @@ export function VsIssueWidget({ vs }: { vs: VsPollData }) {
         body: JSON.stringify({ optionKey }),
       })
       if (!res.ok) throw new Error()
+      trackEvent({
+        name: "vs_vote",
+        params: { poll_id: vs.pollId, option_key: optionKey, surface: "post" },
+      })
     } catch {
       setMyKey(prevKey)
       setCounts(prevCounts)

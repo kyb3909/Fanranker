@@ -5,7 +5,11 @@ import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
 import { suggestFlairs } from "@/lib/news/suggest-flair"
 import { learnFromDeskEdit } from "@/lib/news/learn-corrections"
-import { createVsPollForPost } from "@/lib/news/vs-issue"
+import {
+  createVsPollFromDraft,
+  type VsDraftProposal,
+  type VsReviewDecision,
+} from "@/lib/news/vs-issue"
 import type { TipTapNode } from "@/types/post"
 
 /**
@@ -24,7 +28,7 @@ export const FOOTBALL_SLUG = "football"
 export interface NewsReservoirItem {
   id: string
   urls: { source?: string | null } | null
-  draft: { title?: string; content?: unknown; tags?: string[] } | null
+  draft: { title?: string; content?: unknown; tags?: string[]; vs?: VsDraftProposal } | null
   entities: {
     teams?: { surface?: string | null; preferred_ko?: string | null }[]
   } | null
@@ -41,6 +45,8 @@ export interface PublishNewsOptions {
   preEdit?: { title: string | null; content: unknown } | null
   /** 자동발행 여부 — publish.auto 로 기록해 자동/수동 발행을 사후 구분·회수 가능하게 */
   auto?: boolean
+  /** 검수 화면의 VS 결정 (켜기/끄기/문구 수정). 미전달이면 confidence 기본값 */
+  vs?: VsReviewDecision | null
 }
 
 /**
@@ -134,11 +140,15 @@ export async function publishNewsDraft(
     imageUrl: image,
   })
 
-  // VS 쟁점 폴 생성 — 기사에 찬반 대결 + 3줄 요약을 붙인다 (읽기→투표→댓글 계단).
-  // LLM 호출이라 after() 로 미룸. 실패/쟁점 없음이면 폴 없는 기사로 남는다 (무해).
-  after(async () => {
-    await createVsPollForPost(supabase, post.id, opts.title, opts.content)
-  })
+  // VS 쟁점 폴 — 스캐너가 초안 단계에서 판정·제안한 것(draft.vs)을 검수 결정과 합쳐
+  // 확정한다 (2026-07-31, 3인 회의: 발행 시 LLM 생성 제거 — 사람 눈이 노출 전에
+  // 지나가는 구조). 제안이 없으면 폴 없는 기사로 남는다.
+  const vsProposal = item.draft?.vs
+  if (vsProposal) {
+    after(async () => {
+      await createVsPollFromDraft(supabase, post.id, vsProposal, opts.vs)
+    })
+  }
 
   // 데스킹 학습 — 검수자가 고친 표기(선수명·음차·매체명)를 사전에 반영해
   // 다음 기사부터 자동 적용. 응답을 막지 않도록 after() 로 미루고 실패해도 무해.

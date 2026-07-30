@@ -50,6 +50,16 @@ export interface DeskItem {
   credibility: number | null
   importance: number | null
   suggestedFlairIds: string[]
+  /** 스캐너의 VS 쟁점 제안 — confidence >= 0.7 이면 기본 켜짐(fail-open) */
+  vs: { question: string; option_a: string; option_b: string; confidence: number } | null
+}
+
+/** 검수자의 VS 결정 (항목별) — 미결정이면 confidence 기본값을 따른다 */
+interface VsDecision {
+  enabled?: boolean
+  question?: string
+  optionA?: string
+  optionB?: string
 }
 
 export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: FlairChoice[] }) {
@@ -64,6 +74,9 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
   const [editTitle, setEditTitle] = useState("")
   const [editContent, setEditContent] = useState<unknown>(null)
   const [flairSel, setFlairSel] = useState<Record<string, string[]>>({})
+  const [vsDecisions, setVsDecisions] = useState<Record<string, VsDecision>>({})
+  /** VS 문구 인라인 수정 중인 항목 id */
+  const [vsEditing, setVsEditing] = useState<string | null>(null)
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({})
 
   const current = queue[cursor]
@@ -110,6 +123,9 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                   title: override?.title ?? item.title,
                   content: override?.content ?? item.content,
                   ...(action === "publish" ? { flair_ids: flairsFor(item) } : {}),
+                  ...(action === "publish" && item.vs && vsDecisions[item.id]
+                    ? { vs: vsDecisions[item.id] }
+                    : {}),
                 }
               : {}),
           }),
@@ -454,6 +470,102 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                     </div>
                   )}
                 </div>
+
+                {/* ── VS 쟁점 인라인 카드 — fail-open (기본 켜짐, 1클릭 끄기) ──
+                    3인 회의 결정: 아무것도 안 하면 confidence 0.7↑은 켜진 채 발행.
+                    바쁘면 무시해도 좋은 방향(발행)으로 떨어진다. */}
+                {item.vs &&
+                  (() => {
+                    const dec = vsDecisions[item.id] ?? {}
+                    const defaultOn = item.vs.confidence >= 0.7
+                    const isOn = dec.enabled ?? defaultOn
+                    const q = dec.question ?? item.vs.question
+                    const oa = dec.optionA ?? item.vs.option_a
+                    const ob = dec.optionB ?? item.vs.option_b
+                    const isVsEditing = vsEditing === item.id
+                    const setDec = (patch: VsDecision) =>
+                      setVsDecisions((prev) => ({
+                        ...prev,
+                        [item.id]: { ...prev[item.id], ...patch },
+                      }))
+                    return (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-2 rounded-lg border px-3 py-2 text-xs"
+                        style={{
+                          background: isOn ? "rgba(150,30,55,0.05)" : "var(--wc-soft, #f5f2ec)",
+                          opacity: isOn ? 1 : 0.75,
+                        }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className="rounded px-1.5 py-0.5 text-[10px] font-extrabold"
+                            style={{
+                              background: isOn ? "rgba(150,30,55,0.15)" : "rgba(0,0,0,0.08)",
+                              color: isOn ? "var(--wc-burgundy, #961e37)" : "#777",
+                            }}
+                          >
+                            VS 쟁점 {isOn ? "켜짐" : defaultOn ? "꺼짐(수동)" : "제안"}
+                          </span>
+                          <span className="text-muted-foreground tabular-nums">
+                            신뢰도 {item.vs.confidence.toFixed(2)}
+                          </span>
+                          {!isVsEditing ? (
+                            <>
+                              <span className="font-semibold">{q}</span>
+                              <span className="text-muted-foreground">
+                                「{oa}」 vs 「{ob}」
+                              </span>
+                              <span className="ml-auto flex gap-1.5">
+                                <button
+                                  onClick={() => setDec({ enabled: !isOn })}
+                                  disabled={busy}
+                                  className="rounded border px-2 py-1 text-[11px] disabled:opacity-50"
+                                >
+                                  {isOn ? "끄기" : "켜기"}
+                                </button>
+                                <button
+                                  onClick={() => setVsEditing(item.id)}
+                                  disabled={busy}
+                                  className="rounded border px-2 py-1 text-[11px] disabled:opacity-50"
+                                >
+                                  문구수정
+                                </button>
+                              </span>
+                            </>
+                          ) : (
+                            <span className="flex flex-1 flex-wrap items-center gap-1.5">
+                              <input
+                                defaultValue={q}
+                                onChange={(e) => setDec({ question: e.target.value })}
+                                maxLength={80}
+                                className="min-w-[220px] flex-1 rounded border px-2 py-1 text-[12px]"
+                                placeholder="쟁점 질문 (의문형)"
+                              />
+                              <input
+                                defaultValue={oa}
+                                onChange={(e) => setDec({ optionA: e.target.value })}
+                                maxLength={24}
+                                className="w-[110px] rounded border px-2 py-1 text-[12px]"
+                              />
+                              <input
+                                defaultValue={ob}
+                                onChange={(e) => setDec({ optionB: e.target.value })}
+                                maxLength={24}
+                                className="w-[110px] rounded border px-2 py-1 text-[12px]"
+                              />
+                              <button
+                                onClick={() => setVsEditing(null)}
+                                className="rounded border px-2 py-1 text-[11px]"
+                              >
+                                완료
+                              </button>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                 {/* ── 본문 — 펼친 항목만. 제목만 보고 발행할 수는 없다 ────────── */}
                 {isOpen && (

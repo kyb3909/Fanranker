@@ -51,6 +51,10 @@ type AnalyticsEvent =
   | { name: "snack_card_open_post"; params: { post_id: string } }
   | { name: "cardnews_feed_open"; params: Record<string, never> }
   | { name: "cardnews_card_open_post"; params: { post_id: string } }
+  // ── VS 쟁점 계측 (VS-RESULT 결정 1·2·5의 표본 — 안 1과 반드시 동행) ──
+  // confidence 는 poll_id → polls.confidence 조인으로 붙인다 (이벤트엔 안 실음)
+  | { name: "vs_impression"; params: { poll_id: string; surface: "card" | "post" } }
+  | { name: "vs_vote"; params: { poll_id: string; option_key: string; surface: "card" | "post" } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

@@ -138,6 +138,78 @@ export async function createVsPollForPost(
   }
 }
 
+/** 스캐너가 초안에 실어 보내는 VS 제안 (news_reservoir.draft.vs) */
+export interface VsDraftProposal {
+  question: string
+  option_a: string
+  option_b: string
+  summary: string[]
+  confidence: number
+}
+
+/** 검수 화면의 결정 — enabled 미지정이면 confidence 기본값을 따른다 */
+export interface VsReviewDecision {
+  enabled?: boolean
+  question?: string
+  optionA?: string
+  optionB?: string
+}
+
+/** 신뢰도 기본 켜짐 임계 (가설 — 2주 실측으로 교체 예정, VS-RESULT.md 결정 2) */
+export const VS_AUTO_ON_CONFIDENCE = 0.7
+
+/**
+ * 초안의 VS 제안 + 검수 결정 → 폴 생성 (2026-07-31, 발행 시 LLM 호출 제거).
+ *
+ * 기본값 정책 (3인 회의 결론 — fail-open):
+ *   confidence >= 0.7 → 검수자가 안 끄면 켜진 채 발행
+ *   0.4~0.7          → 제안 상태(꺼짐)로 저장 — 검수에서 켰을 때만 노출
+ * 검수 결정(enabled/문구 수정)이 오면 그것이 우선한다. 절대 throw 하지 않는다.
+ */
+export async function createVsPollFromDraft(
+  supabase: ServiceClient,
+  postId: string,
+  proposal: VsDraftProposal,
+  decision?: VsReviewDecision | null
+): Promise<void> {
+  try {
+    if (decision?.enabled === false && !decision.question) {
+      // 검수자가 명시적으로 껐고 문구 수정도 없으면 — 제안 자체를 기록할 가치는 있다
+      // (off_reason 없이 is_active=false 로 저장 → 사후 켜기 가능, 기각 데이터로도 활용)
+    }
+    const { data: existing } = await supabase
+      .from("polls")
+      .select("id")
+      .eq("post_id", postId)
+      .maybeSingle()
+    if (existing) return
+
+    const question = (decision?.question ?? proposal.question).trim()
+    const optionA = (decision?.optionA ?? proposal.option_a).trim()
+    const optionB = (decision?.optionB ?? proposal.option_b).trim()
+    if (!question || !optionA || !optionB) return
+
+    const isActive = decision?.enabled ?? proposal.confidence >= VS_AUTO_ON_CONFIDENCE
+
+    const { error } = await supabase.from("polls").insert({
+      question: question.slice(0, 80),
+      options: [
+        { key: "a", label: optionA.slice(0, 24) },
+        { key: "b", label: optionB.slice(0, 24) },
+      ],
+      summary: proposal.summary.slice(0, 3),
+      post_id: postId,
+      is_active: isActive,
+      confidence: proposal.confidence,
+      allow_reason: false, // "왜?"는 댓글이 담당 — 입력 이원화 방지
+      created_by: "system_vs",
+    })
+    if (error) console.error("[vs-issue] 폴 저장 실패:", error.message)
+  } catch (e) {
+    console.error("[vs-issue] 생성 예외:", e)
+  }
+}
+
 /** 게시물의 VS 폴 + 집계 + 내 투표 조회 (상세 페이지 서버 렌더용) */
 export interface VsPollData {
   pollId: string
