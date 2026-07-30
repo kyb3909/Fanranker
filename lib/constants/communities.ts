@@ -122,6 +122,11 @@ export const ALL_COMMUNITIES: CommunityInfo[] = [...SPORTS_COMMUNITIES, ...LIFE_
 /** Canonical community slug → Korean display name mapping */
 export const COMMUNITY_NAMES: Record<string, string> = {
   ...Object.fromEntries(ALL_COMMUNITIES.map((c) => [c.slug, c.name])),
+  // 크리에이터 보드 (lib/constants/creators.ts 와 동기) — 최근 댓글 등 이름 표기용
+  catsenal: "캣스날",
+  chelookey: "첼루키",
+  cog: "코그",
+  libig: "리버풀빅클럽이야",
   // Legacy slugs (마이그레이션 호환)
   "overseas-football": "축구",
   "domestic-football": "축구",

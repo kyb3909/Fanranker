@@ -30,6 +30,34 @@ export const CREATORS: Record<string, CreatorInfo> = {
     description: "아스날 팬 유튜버 캣스날 채널",
     avatar: "/creators/catsenal.jpg",
   },
+  // ── 시즌 오픈 이벤트 공략 채널 (2026-07-31 추가) — 첼루키(첼시)·리빅(리버풀)·코그(공동) ──
+  chelookey: {
+    creatorId: "chelookey",
+    slug: "chelookey",
+    name: "첼루키",
+    handle: "@chelookey",
+    channelId: "UCovqkt9CC5WoSdDUxql0MTg",
+    description: "첼시 팬 유튜버 첼루키 채널",
+    avatar: "/creators/chelookey.jpg",
+  },
+  cog: {
+    creatorId: "cog",
+    slug: "cog",
+    name: "코그 COG",
+    handle: "@코그COG",
+    channelId: "UCCl0K-E1YdBE-B9o5OR5DrA",
+    description: "첼루키 × 리빅 공동 채널 코그",
+    avatar: "/creators/cog.jpg",
+  },
+  libig: {
+    creatorId: "libig",
+    slug: "libig",
+    name: "리버풀빅클럽이야",
+    handle: "@Life4_Kop",
+    channelId: "UC0CZYapctCIZxmC-FRUbrVA",
+    description: "리버풀 팬 유튜버 리빅(리버풀빅클럽이야) 채널",
+    avatar: "/creators/libig.jpg",
+  },
 }
 
 /** 보드 slug → 크리에이터 정보 (크리에이터 보드가 아니면 null). */
