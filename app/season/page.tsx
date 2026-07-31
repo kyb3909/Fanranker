@@ -23,6 +23,13 @@ export const dynamic = "force-dynamic"
 
 const EVENT_SLUG = "season-open-2026"
 
+/** 구단 크레스트 (Wikimedia 공식 원본 래스터) — 운영 판단으로 표시 (2026-07-31) */
+const CRESTS: Record<string, string> = {
+  kop: "/season/crest-liverpool.png",
+  blues: "/season/crest-chelsea.png",
+  gooner: "/season/crest-arsenal.png",
+}
+
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */
 const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
@@ -154,6 +161,7 @@ export default async function SeasonEventPage({
     club_kor: g.club_kor,
     color: g.color,
     motto: g.motto ?? "",
+    crest: CRESTS[g.slug] ?? null,
     regCount:
       (countByGroup.get(g.id) ?? 0) > 0
         ? (countByGroup.get(g.id) ?? 0)
@@ -344,30 +352,44 @@ export default async function SeasonEventPage({
                       "linear-gradient(to top, rgba(9,8,11,.72) 0%, rgba(9,8,11,.12) 45%, rgba(9,8,11,0) 70%)",
                   }}
                 />
-                <div className="absolute right-0 bottom-0 left-0 grid grid-cols-3 pb-3.5">
+                <div className="absolute inset-0 grid grid-cols-3 items-center pt-2 pb-3.5">
                   {pickerGroups.map((g) => (
-                    <div key={g.slug} className="flex flex-col items-center gap-0.5">
-                      <span
-                        style={{
-                          fontFamily: DISPLAY,
-                          fontWeight: 700,
-                          fontSize: "clamp(20px, 2vw, 28px)",
-                          color: "rgba(245,239,231,.96)",
-                          letterSpacing: "-0.01em",
-                          textShadow: "0 2px 14px rgba(0,0,0,.75)",
-                        }}
-                      >
-                        {g.name}
-                      </span>
-                      <span
-                        className="text-[10.5px] font-bold"
-                        style={{
-                          color: "rgba(245,239,231,.72)",
-                          textShadow: "0 1px 8px rgba(0,0,0,.8)",
-                        }}
-                      >
-                        {g.club_kor}
-                      </span>
+                    <div key={g.slug} className="flex h-full flex-col items-center justify-between">
+                      <div className="flex flex-1 items-center">
+                        {CRESTS[g.slug] && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={CRESTS[g.slug]}
+                            alt=""
+                            className="h-[92px] w-[92px] object-contain lg:h-[112px] lg:w-[112px]"
+                            style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))" }}
+                            loading="eager"
+                          />
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span
+                          style={{
+                            fontFamily: DISPLAY,
+                            fontWeight: 700,
+                            fontSize: "clamp(20px, 2vw, 28px)",
+                            color: "rgba(245,239,231,.96)",
+                            letterSpacing: "-0.01em",
+                            textShadow: "0 2px 14px rgba(0,0,0,.75)",
+                          }}
+                        >
+                          {g.name}
+                        </span>
+                        <span
+                          className="text-[10.5px] font-bold"
+                          style={{
+                            color: "rgba(245,239,231,.72)",
+                            textShadow: "0 1px 8px rgba(0,0,0,.8)",
+                          }}
+                        >
+                          {g.club_kor}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

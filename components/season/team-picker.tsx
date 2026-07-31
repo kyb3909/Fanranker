@@ -13,6 +13,8 @@ export interface SeasonGroup {
   club_kor: string
   color: string
   motto: string
+  /** 구단 크레스트 이미지 경로 (없으면 미표시) */
+  crest?: string | null
   /** 팀별 등록자 수 — 실시간 공개 항목 (순위·성적은 주 1회만) */
   regCount: number
 }
@@ -103,18 +105,29 @@ export function TeamPicker({
             }}
           >
             <div style={{ height: 8, background: g.color }} aria-hidden />
-            <div style={{ padding: "18px 16px 14px" }}>
-              <div className="flex items-baseline justify-between gap-2">
-                <span
-                  className="text-[24px] leading-none"
-                  style={{
-                    fontFamily: "var(--font-display-ko), var(--font-title)",
-                    fontWeight: 700,
-                    color: g.color,
-                    letterSpacing: "-.01em",
-                  }}
-                >
-                  {g.club_kor}
+            <div style={{ padding: "16px 16px 14px" }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2.5">
+                  {g.crest && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={g.crest}
+                      alt=""
+                      className="h-10 w-10 shrink-0 object-contain"
+                      loading="lazy"
+                    />
+                  )}
+                  <span
+                    className="text-[24px] leading-none"
+                    style={{
+                      fontFamily: "var(--font-display-ko), var(--font-title)",
+                      fontWeight: 700,
+                      color: g.color,
+                      letterSpacing: "-.01em",
+                    }}
+                  >
+                    {g.club_kor}
+                  </span>
                 </span>
                 <span
                   className="rounded-full px-2 py-[3px] text-[11px] font-bold text-white"
