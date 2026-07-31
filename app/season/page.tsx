@@ -282,7 +282,9 @@ export default async function SeasonEventPage({
                         ? "오픈 준비 중"
                         : started
                           ? "진행 중"
-                          : "오픈 예정"}
+                          : registrationOpen
+                            ? "사전 등록 중"
+                            : "오픈 예정"}
                   </span>
                 </p>
 
