@@ -30,6 +30,16 @@ const CRESTS: Record<string, string> = {
   gooner: "/season/crest-arsenal.png",
 }
 
+/**
+ * 히어로 크레스트 광학 보정 [기본px, lg px] — 같은 박스여도 원형(첼시)은 면적이 꽉 차
+ * 방패형보다 커 보이고 옆 패널을 침범해 보인다. 원형만 한 단계 줄인다.
+ */
+const CREST_HERO_PX: Record<string, [number, number]> = {
+  kop: [92, 112],
+  blues: [74, 90],
+  gooner: [88, 106],
+}
+
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */
 const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
@@ -361,8 +371,12 @@ export default async function SeasonEventPage({
                           <img
                             src={CRESTS[g.slug]}
                             alt=""
-                            className="h-[92px] w-[92px] object-contain lg:h-[112px] lg:w-[112px]"
-                            style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))" }}
+                            className="object-contain"
+                            style={{
+                              height: `clamp(${CREST_HERO_PX[g.slug]?.[0] ?? 92}px, 9vw, ${CREST_HERO_PX[g.slug]?.[1] ?? 112}px)`,
+                              width: `clamp(${CREST_HERO_PX[g.slug]?.[0] ?? 92}px, 9vw, ${CREST_HERO_PX[g.slug]?.[1] ?? 112}px)`,
+                              filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))",
+                            }}
                             loading="eager"
                           />
                         )}
