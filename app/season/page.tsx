@@ -72,7 +72,17 @@ const NOTICES = [
   "포인트 수치·응모 기준점은 이벤트 오픈 시 확정 공지됩니다.",
 ]
 
-export default async function SeasonEventPage() {
+export default async function SeasonEventPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>
+}) {
+  // 운영자 미리보기 (?preview=1) — 월드컵 result 페이지와 같은 패턴.
+  // draft 상태에서도 "오픈된 모습"을 확인한다. 화면만 바뀌고 등록 API 는 여전히
+  // draft 를 거부하므로 실제 참가는 불가. 표본 숫자는 미리보기 리본으로 명시.
+  const params = await searchParams
+  const preview = params.preview === "1"
+
   const supabase = createServiceRoleClient()
 
   const { data: event } = await supabase
@@ -129,21 +139,32 @@ export default async function SeasonEventPage() {
     }
   }
 
+  // 미리보기 표본 숫자 — 실데이터가 있으면 실데이터 우선
+  const previewCounts: Record<string, number> = { kop: 138, blues: 121, gooner: 147 }
+
   const pickerGroups: SeasonGroup[] = (groups ?? []).map((g) => ({
     slug: g.slug,
     name: g.name,
     club_kor: g.club_kor,
     color: g.color,
     motto: g.motto ?? "",
-    regCount: countByGroup.get(g.id) ?? 0,
+    regCount:
+      (countByGroup.get(g.id) ?? 0) > 0
+        ? (countByGroup.get(g.id) ?? 0)
+        : preview
+          ? (previewCounts[g.slug] ?? 0)
+          : 0,
   }))
+  const previewTotalRegs =
+    preview && totalRegs === 0 ? Object.values(previewCounts).reduce((a, b) => a + b, 0) : totalRegs
+  const previewSlipCount = preview && (slipCount ?? 0) === 0 ? 2431 : (slipCount ?? 0)
 
-  const isDraft = event.status === "draft"
+  const isDraft = event.status === "draft" && !preview
   const isClosed = event.status === "closed"
   const registrationOpen =
     !isDraft && !isClosed && new Date(event.registration_closes_at) > new Date()
 
-  const msToStart = new Date(event.start_at).getTime() - Date.now()
+  const msToStart = preview ? -1 : new Date(event.start_at).getTime() - Date.now()
   const dday = Math.floor(Math.max(0, msToStart) / (1000 * 60 * 60 * 24))
   const ddayLabel = isClosed
     ? "종료"
@@ -163,6 +184,14 @@ export default async function SeasonEventPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
+      {preview && (
+        <div
+          className="px-4 py-2 text-center text-[12.5px] font-bold text-white"
+          style={{ background: "var(--wc-ink)" }}
+        >
+          미리보기 모드 — 표시된 참가·예측 숫자는 표본입니다 (실제 등록은 오픈 후 가능)
+        </div>
+      )}
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="mx-auto w-full max-w-[840px] px-4 pt-8 sm:px-6">
         <div className="wc-panel flex flex-col items-center text-center">
@@ -270,23 +299,25 @@ export default async function SeasonEventPage() {
             className="mb-[24px] flex w-full flex-wrap items-center justify-center gap-x-6 gap-y-1 rounded-xl px-4 py-3 text-[13px] font-bold"
             style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
           >
-            {totalRegs > 0 && (
+            {previewTotalRegs > 0 && (
               <>
                 <span>
                   총 참가{" "}
-                  <b style={{ color: "var(--wc-burgundy)" }}>{totalRegs.toLocaleString()}명</b>
+                  <b style={{ color: "var(--wc-burgundy)" }}>
+                    {previewTotalRegs.toLocaleString()}명
+                  </b>
                 </span>
                 <span aria-hidden style={{ opacity: 0.4 }}>
                   |
                 </span>
               </>
             )}
-            {(slipCount ?? 0) > 0 && (
+            {previewSlipCount > 0 && (
               <>
                 <span>
                   누적 예측{" "}
                   <b style={{ color: "var(--wc-burgundy)" }}>
-                    {(slipCount ?? 0).toLocaleString()}건
+                    {previewSlipCount.toLocaleString()}건
                   </b>
                 </span>
                 <span aria-hidden style={{ opacity: 0.4 }}>
