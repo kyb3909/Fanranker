@@ -102,24 +102,29 @@ export function TeamPicker({
               overflow: "hidden",
             }}
           >
-            <div style={{ height: 6, background: g.color }} aria-hidden />
-            <div style={{ padding: "16px 16px 14px" }}>
-              <div className="flex items-center justify-between gap-2">
+            <div style={{ height: 8, background: g.color }} aria-hidden />
+            <div style={{ padding: "18px 16px 14px" }}>
+              <div className="flex items-baseline justify-between gap-2">
                 <span
-                  className="text-[17px] font-extrabold"
-                  style={{ color: "var(--wc-ink)", letterSpacing: "-.02em" }}
+                  className="text-[24px] leading-none"
+                  style={{
+                    fontFamily: "var(--font-display-ko), var(--font-title)",
+                    fontWeight: 700,
+                    color: g.color,
+                    letterSpacing: "-.01em",
+                  }}
                 >
-                  {g.name}
+                  {g.club_kor}
                 </span>
                 <span
                   className="rounded-full px-2 py-[3px] text-[11px] font-bold text-white"
                   style={{ background: g.color }}
                 >
-                  {g.club_kor}
+                  {g.name}
                 </span>
               </div>
               <p
-                className="mt-1 text-[12.5px]"
+                className="mt-1.5 text-[12.5px] font-semibold"
                 style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
               >
                 {g.motto}
