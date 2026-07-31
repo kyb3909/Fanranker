@@ -36,7 +36,7 @@ const CRESTS: Record<string, string> = {
  */
 const CREST_HERO_PX: Record<string, [number, number]> = {
   kop: [92, 112],
-  blues: [74, 90],
+  blues: [64, 78],
   gooner: [88, 106],
 }
 
