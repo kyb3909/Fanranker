@@ -30,25 +30,21 @@ const CRESTS: Record<string, string> = {
   gooner: "/season/crest-arsenal.png",
 }
 
-/**
- * 히어로 크레스트 광학 보정 [기본px, lg px] — 같은 박스여도 원형(첼시)은 면적이 꽉 차
- * 방패형보다 커 보이고 옆 패널을 침범해 보인다. 원형만 한 단계 줄인다.
- */
+/** 히어로 크레스트 크기 [기본px, lg px] — 세 팀 동일 (2026-07-31 운영자 확정) */
 const CREST_HERO_PX: Record<string, [number, number]> = {
   kop: [92, 112],
-  blues: [64, 78],
-  gooner: [88, 106],
+  blues: [92, 112],
+  gooner: [92, 112],
 }
 
 /**
- * 히어로 크레스트 수평 오프셋 — 콜라주 패널 경계가 사선(/)이라 크레스트 높이에서는
- * 경계가 균등 3분할보다 오른쪽에 있다. 3등분 중앙에 그대로 두면 아스날이 첼시(파랑)
- * 영역을 침범해 보임 → 각 크레스트를 해당 색 패널의 중심으로 밀어 정렬.
+ * 히어로 크레스트 수평 오프셋 — 콜라주 패널이 사선이라 필요 시 색 패널 중심으로
+ * 미세 정렬. 균등 3분할 애셋(2026-07-31 재생성) 기준 기본 0.
  */
 const CREST_HERO_SHIFT: Record<string, number> = {
-  kop: -6,
-  blues: 4,
-  gooner: 22,
+  kop: 0,
+  blues: 0,
+  gooner: 0,
 }
 
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */

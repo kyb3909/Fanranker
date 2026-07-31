@@ -113,8 +113,7 @@ export function TeamPicker({
                     <img
                       src={g.crest}
                       alt=""
-                      // 원형 크레스트(첼시)는 같은 박스에서 커 보여 한 단계 축소 (광학 보정)
-                      className={`shrink-0 object-contain ${g.slug === "blues" ? "h-8 w-8" : "h-10 w-10"}`}
+                      className="h-10 w-10 shrink-0 object-contain"
                       loading="lazy"
                     />
                   )}
