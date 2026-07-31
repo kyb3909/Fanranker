@@ -30,6 +30,13 @@ const CRESTS: Record<string, string> = {
   gooner: "/season/crest-arsenal.png",
 }
 
+/** 팀 카드 선수 포스터 (그런지 일러스트 — 특정 인물 아님, 초상권 회피) */
+const PLAYERS: Record<string, string> = {
+  kop: "/season/player-kop.webp",
+  blues: "/season/player-blues.webp",
+  gooner: "/season/player-gooner.webp",
+}
+
 /** 히어로 크레스트 크기 [기본px, lg px] — 세 팀 동일 (2026-07-31 운영자 확정) */
 const CREST_HERO_PX: Record<string, [number, number]> = {
   kop: [92, 112],
@@ -179,6 +186,7 @@ export default async function SeasonEventPage({
     color: g.color,
     motto: g.motto ?? "",
     crest: CRESTS[g.slug] ?? null,
+    player: PLAYERS[g.slug] ?? null,
     regCount:
       (countByGroup.get(g.id) ?? 0) > 0
         ? (countByGroup.get(g.id) ?? 0)

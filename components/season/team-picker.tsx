@@ -15,6 +15,8 @@ export interface SeasonGroup {
   motto: string
   /** 구단 크레스트 이미지 경로 (없으면 미표시) */
   crest?: string | null
+  /** 선수 포스터 일러스트 (그런지 스타일, 특정 인물 아님) — 카드 우측에 배치 */
+  player?: string | null
   /** 팀별 등록자 수 — 실시간 공개 항목 (순위·성적은 주 1회만) */
   regCount: number
 }
@@ -96,58 +98,80 @@ export function TeamPicker({
             onClick={() => join(g.slug)}
             disabled={busy !== null || locked}
             aria-pressed={mine}
-            className="rounded-xl text-left transition-transform active:scale-[.99] disabled:cursor-not-allowed"
+            className="relative min-h-[210px] rounded-xl text-left transition-transform active:scale-[.99] disabled:cursor-not-allowed"
             style={{
               background: "#fff",
               border: mine ? `2px solid ${g.color}` : "1px solid var(--wc-line)",
               opacity: locked ? 0.45 : 1,
               overflow: "hidden",
+              boxShadow: "var(--wc-shadow-1)",
             }}
           >
-            <div style={{ height: 8, background: g.color }} aria-hidden />
-            <div style={{ padding: "16px 16px 14px" }}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2.5">
-                  {g.crest && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={g.crest}
-                      alt=""
-                      className="h-10 w-10 shrink-0 object-contain"
-                      loading="lazy"
-                    />
-                  )}
-                  <span
-                    className="text-[24px] leading-none"
-                    style={{
-                      fontFamily: "var(--font-display-ko), var(--font-title)",
-                      fontWeight: 700,
-                      color: g.color,
-                      letterSpacing: "-.01em",
-                    }}
-                  >
-                    {g.club_kor}
-                  </span>
-                </span>
-                <span
-                  className="rounded-full px-2 py-[3px] text-[11px] font-bold text-white"
-                  style={{ background: g.color }}
-                >
-                  {g.name}
-                </span>
+            <div
+              className="relative z-[2]"
+              style={{ height: 8, background: g.color }}
+              aria-hidden
+            />
+
+            {/* 우측 선수 포스터 패널 — 그런지 일러스트(특정 인물 아님)가 흰 카드로
+                녹아들게 좌측 엣지를 화이트 그라데이션으로 블렌드 */}
+            {g.player && (
+              <div
+                aria-hidden
+                className="absolute top-[8px] right-0 bottom-0 w-[46%] overflow-hidden"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.player} alt="" className="h-full w-full object-cover" loading="lazy" />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #fff 0%, rgba(255,255,255,.55) 14%, rgba(255,255,255,0) 38%)",
+                  }}
+                />
               </div>
+            )}
+
+            <div className="relative z-[1] flex h-[calc(100%-8px)] flex-col p-4 pr-[42%]">
+              {g.crest && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={g.crest}
+                  alt=""
+                  className="mb-2 h-11 w-11 object-contain"
+                  loading="lazy"
+                />
+              )}
+              <span
+                className="text-[27px] leading-none"
+                style={{
+                  fontFamily: "var(--font-display-ko), var(--font-title)",
+                  fontWeight: 700,
+                  color: g.color,
+                  letterSpacing: "-.01em",
+                }}
+              >
+                {g.club_kor}
+              </span>
+              <span
+                className="mt-1 text-[11px] font-extrabold tracking-[0.12em] uppercase"
+                style={{ color: "var(--wc-mute-2)" }}
+              >
+                {g.name}
+              </span>
               <p
                 className="mt-1.5 text-[12.5px] font-semibold"
-                style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
+                style={{ color: "var(--wc-mute)", wordBreak: "keep-all", lineHeight: 1.5 }}
               >
                 {g.motto}
               </p>
+
               <div
-                className="mt-3 flex items-center justify-between text-[12.5px] font-bold"
+                className="mt-auto flex flex-wrap items-center justify-between gap-1 pt-3 text-[12.5px] font-bold"
                 style={{ color: "var(--wc-mute-2)" }}
               >
                 {/* 0 카운트 비노출 규칙 (워룸) — 참가자가 생기기 전엔 모집 문구로 */}
-                <span className="tnum">
+                <span className="tnum" style={{ wordBreak: "keep-all" }}>
                   {g.regCount > 0
                     ? `${g.regCount.toLocaleString()}명 참가 중`
                     : "선착순 아님, 자존심순"}
@@ -159,7 +183,7 @@ export function TeamPicker({
                     <Check className="h-3.5 w-3.5" strokeWidth={3} /> 내 팀
                   </span>
                 ) : joined ? null : (
-                  <span style={{ color: "var(--wc-burgundy)" }}>
+                  <span style={{ color: "var(--wc-burgundy)", wordBreak: "keep-all" }}>
                     {registrationOpen ? "이 팀으로 참가 →" : "오픈 예정"}
                   </span>
                 )}
