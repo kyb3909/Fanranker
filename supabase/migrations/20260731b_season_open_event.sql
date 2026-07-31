@@ -25,9 +25,9 @@ insert into event_groups (event_id, slug, name, club_kor, color, motto, source_c
 select e.id, g.slug, g.name, g.club_kor, g.color, g.motto, g.source_channel, g.sort_order
 from events e,
   (values
-    ('kop', 'Kop', '리버풀', '#C8102E', '너는 절대 혼자 걷지 않는다', 'libig', 1),
-    ('blues', 'Blues', '첼시', '#034694', '자존심은 파랗다', 'chelookey', 2),
-    ('gooner', 'Gooner', '아스날', '#EF0107', '북런던은 빨갛다', 'catsenal', 3)
+    ('kop', 'Kop', '리버풀', '#C8102E', 'You''ll Never Walk Alone', 'libig', 1),
+    ('blues', 'Blues', '첼시', '#034694', 'Pride of London', 'chelookey', 2),
+    ('gooner', 'Gooner', '아스날', '#EF0107', 'Victoria Concordia Crescit', 'catsenal', 3)
   ) as g(slug, name, club_kor, color, motto, source_channel, sort_order)
 where e.slug = 'season-open-2026'
 on conflict (event_id, slug) do nothing;

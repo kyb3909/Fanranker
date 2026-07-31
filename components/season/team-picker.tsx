@@ -107,19 +107,10 @@ export function TeamPicker({
               boxShadow: "var(--wc-shadow-1)",
             }}
           >
-            <div
-              className="relative z-[2]"
-              style={{ height: 8, background: g.color }}
-              aria-hidden
-            />
-
             {/* 우측 선수 포스터 패널 — 그런지 일러스트(특정 인물 아님)가 흰 카드로
                 녹아들게 좌측 엣지를 화이트 그라데이션으로 블렌드 */}
             {g.player && (
-              <div
-                aria-hidden
-                className="absolute top-[8px] right-0 bottom-0 w-[46%] overflow-hidden"
-              >
+              <div aria-hidden className="absolute inset-y-0 right-0 w-[46%] overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={g.player} alt="" className="h-full w-full object-cover" loading="lazy" />
                 <div
@@ -132,7 +123,7 @@ export function TeamPicker({
               </div>
             )}
 
-            <div className="relative z-[1] flex h-[calc(100%-8px)] flex-col p-4 pr-[42%]">
+            <div className="relative z-[1] flex h-full flex-col p-4 pr-[42%]">
               {g.crest && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -153,14 +144,9 @@ export function TeamPicker({
               >
                 {g.club_kor}
               </span>
-              <span
-                className="mt-1 text-[11px] font-extrabold tracking-[0.12em] uppercase"
-                style={{ color: "var(--wc-mute-2)" }}
-              >
-                {g.name}
-              </span>
+              {/* 공식 캐치프레이즈 원문 (2026-07-31 운영자 확정) */}
               <p
-                className="mt-1.5 text-[12.5px] font-semibold"
+                className="mt-2 text-[12px] font-semibold italic"
                 style={{ color: "var(--wc-mute)", wordBreak: "keep-all", lineHeight: 1.5 }}
               >
                 {g.motto}
