@@ -40,6 +40,17 @@ const CREST_HERO_PX: Record<string, [number, number]> = {
   gooner: [88, 106],
 }
 
+/**
+ * 히어로 크레스트 수평 오프셋 — 콜라주 패널 경계가 사선(/)이라 크레스트 높이에서는
+ * 경계가 균등 3분할보다 오른쪽에 있다. 3등분 중앙에 그대로 두면 아스날이 첼시(파랑)
+ * 영역을 침범해 보임 → 각 크레스트를 해당 색 패널의 중심으로 밀어 정렬.
+ */
+const CREST_HERO_SHIFT: Record<string, number> = {
+  kop: -6,
+  blues: 4,
+  gooner: 22,
+}
+
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */
 const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
@@ -375,6 +386,7 @@ export default async function SeasonEventPage({
                             style={{
                               height: `clamp(${CREST_HERO_PX[g.slug]?.[0] ?? 92}px, 9vw, ${CREST_HERO_PX[g.slug]?.[1] ?? 112}px)`,
                               width: `clamp(${CREST_HERO_PX[g.slug]?.[0] ?? 92}px, 9vw, ${CREST_HERO_PX[g.slug]?.[1] ?? 112}px)`,
+                              transform: `translateX(${CREST_HERO_SHIFT[g.slug] ?? 0}px)`,
                               filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))",
                             }}
                             loading="eager"
