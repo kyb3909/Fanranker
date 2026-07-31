@@ -195,7 +195,16 @@ export default async function SeasonEventPage({
       {/* ══ 다크 히어로 — 매치데이 밴드 문법 (선언 영역이라 다크 허용) ══ */}
       <section className="gn-band" aria-label="시즌 오픈 팬덤 대항전">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-b-[16px]">
+          <div
+            className="relative overflow-hidden rounded-b-[16px]"
+            style={{
+              // 생성 애셋: 버건디 스플래터 + 군중 실루엣 그런지 (2026-07-31, 시안 A 질감)
+              backgroundImage:
+                "linear-gradient(rgba(22,20,26,.42), rgba(22,20,26,.58)), url(/season/hero-bg.webp)",
+              backgroundSize: "cover",
+              backgroundPosition: "center bottom",
+            }}
+          >
             {/* 스큐 버건디 플레이트 + 세로 라벨 — 매치데이 밴드의 TOP STORY 문법 */}
             <div
               aria-hidden
@@ -314,50 +323,54 @@ export default async function SeasonEventPage({
                 )}
               </div>
 
-              {/* ── 우: 3색 팀 패널 콜라주 (엠블럼 없이 컬러+타이포로 대결 구도) ── */}
+              {/* ── 우: 3색 깃발 콜라주 (생성 애셋 — 엠블럼 없이 컬러·군중·깃발로
+                  대결 구도, 팬덤명 타이포는 HTML 오버레이) ── */}
               <div
                 aria-hidden
-                className="hidden min-h-[280px] gap-0 overflow-hidden rounded-[14px] lg:flex"
-                style={{
-                  transform: "skewX(-6deg) translateX(12px)",
-                  border: "1px solid var(--gn-night-line)",
-                }}
+                className="relative mt-1 min-h-[190px] overflow-hidden rounded-[14px] lg:mt-0 lg:min-h-[300px]"
+                style={{ border: "1px solid var(--gn-night-line)" }}
               >
-                {pickerGroups.map((g) => (
-                  <div
-                    key={g.slug}
-                    className="relative flex flex-1 flex-col items-center justify-center gap-2 px-2"
-                    style={{
-                      background: `linear-gradient(170deg, ${g.color} 0%, color-mix(in srgb, ${g.color} 55%, #16141a) 100%)`,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: DISPLAY,
-                        fontWeight: 700,
-                        fontSize: 30,
-                        color: "rgba(245,239,231,.95)",
-                        transform: "skewX(6deg)",
-                        letterSpacing: "-0.01em",
-                      }}
-                    >
-                      {g.name}
-                    </span>
-                    <span
-                      className="text-center text-[11px] font-bold"
-                      style={{
-                        color: "rgba(245,239,231,.72)",
-                        transform: "skewX(6deg)",
-                        wordBreak: "keep-all",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {g.club_kor}
-                      <br />
-                      {g.motto}
-                    </span>
-                  </div>
-                ))}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/season/hero-collage.webp"
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="eager"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(9,8,11,.72) 0%, rgba(9,8,11,.12) 45%, rgba(9,8,11,0) 70%)",
+                  }}
+                />
+                <div className="absolute right-0 bottom-0 left-0 grid grid-cols-3 pb-3.5">
+                  {pickerGroups.map((g) => (
+                    <div key={g.slug} className="flex flex-col items-center gap-0.5">
+                      <span
+                        style={{
+                          fontFamily: DISPLAY,
+                          fontWeight: 700,
+                          fontSize: "clamp(20px, 2vw, 28px)",
+                          color: "rgba(245,239,231,.96)",
+                          letterSpacing: "-0.01em",
+                          textShadow: "0 2px 14px rgba(0,0,0,.75)",
+                        }}
+                      >
+                        {g.name}
+                      </span>
+                      <span
+                        className="text-[10.5px] font-bold"
+                        style={{
+                          color: "rgba(245,239,231,.72)",
+                          textShadow: "0 1px 8px rgba(0,0,0,.8)",
+                        }}
+                      >
+                        {g.club_kor}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
