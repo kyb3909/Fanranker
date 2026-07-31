@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { HeroCountdown } from "@/components/season/hero-countdown"
 import { TeamPicker, type SeasonGroup } from "@/components/season/team-picker"
+import { fetchSeasonSlipCount } from "@/lib/event/season-stats"
 
 export const metadata: Metadata = {
   title: "시즌 오픈 팬덤 대항전",
@@ -156,11 +157,46 @@ export default async function SeasonEventPage({
   }
   const totalRegs = (regs ?? []).length
 
-  // 이벤트 슬립 누적 수 — 실시간 공개 항목
-  const { count: slipCount } = await supabase
-    .from("prediction_slips")
-    .select("*", { count: "exact", head: true })
+  // 이벤트 슬립 누적 수 — 동적 귀속 RPC (등록자·기간 내·EPL 슬립, pending 포함)
+  const slipCount = await fetchSeasonSlipCount(supabase)
+
+  // 주간 팬덤 순위 — 최신 스냅샷 묶음만 (공개 정책: 실시간 재계산 노출 금지)
+  const { data: latestSnap } = await supabase
+    .from("event_leaderboard_snapshots")
+    .select("captured_at")
     .eq("event_id", event.id)
+    .order("captured_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  let weeklyStandings: {
+    slug: string
+    avgSkill: number
+    qualifiedCount: number
+  }[] = []
+  let weeklyCapturedAt: string | null = null
+  if (latestSnap?.captured_at) {
+    weeklyCapturedAt = latestSnap.captured_at
+    const { data: snapRows } = await supabase
+      .from("event_leaderboard_snapshots")
+      .select("group_id, skill_score, total_in_group")
+      .eq("event_id", event.id)
+      .eq("captured_at", latestSnap.captured_at)
+    const agg = new Map<string, { sum: number; n: number }>()
+    for (const r of snapRows ?? []) {
+      const a = agg.get(r.group_id) ?? { sum: 0, n: 0 }
+      a.sum += Number(r.skill_score) || 0
+      a.n += 1
+      agg.set(r.group_id, a)
+    }
+    weeklyStandings = [...agg.entries()]
+      .map(([groupId, a]) => ({
+        slug: (groups ?? []).find((g) => g.id === groupId)?.slug ?? "",
+        avgSkill: a.n > 0 ? a.sum / a.n : 0,
+        qualifiedCount: a.n,
+      }))
+      .filter((s) => s.slug)
+      .sort((x, y) => y.avgSkill - x.avgSkill)
+  }
 
   const user = await currentUser()
   let myGroupSlug: string | null = null
@@ -525,6 +561,79 @@ export default async function SeasonEventPage({
             </div>
           ))}
         </div>
+
+        {/* 주간 팬덤 순위 발표 — 매주 월요일 스냅샷만 노출 (실시간 비공개 정책) */}
+        <section className="mt-12">
+          <div className="mb-[18px] text-center">
+            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+              Weekly standings
+            </div>
+            <h2
+              className="text-[24px] font-extrabold sm:text-[28px]"
+              style={{ letterSpacing: "-.03em" }}
+            >
+              이번 주 팬덤 순위
+            </h2>
+            <p className="mt-[8px] text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+              {weeklyCapturedAt
+                ? `${fmtDate(weeklyCapturedAt)} 발표 — 다음 발표는 다음 주 월요일`
+                : "첫 발표는 개막 후 첫 월요일 자정에 올라옵니다"}
+            </p>
+          </div>
+          {weeklyStandings.length > 0 ? (
+            <div
+              className="overflow-hidden rounded-xl"
+              style={{ border: "1px solid var(--wc-line)", background: "#fff" }}
+            >
+              {weeklyStandings.map((s, i) => {
+                const g = pickerGroups.find((p) => p.slug === s.slug)
+                if (!g) return null
+                return (
+                  <div
+                    key={s.slug}
+                    className="flex items-center gap-3.5 px-4 py-3.5"
+                    style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : "none" }}
+                  >
+                    <span
+                      className="gn-num w-7 text-center text-[20px] font-bold"
+                      style={{ color: i === 0 ? "var(--wc-burgundy)" : "var(--wc-mute-2)" }}
+                    >
+                      {i + 1}
+                    </span>
+                    {g.crest && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={g.crest} alt="" className="h-8 w-8 object-contain" loading="lazy" />
+                    )}
+                    <span className="flex-1 text-[16px] font-extrabold" style={{ color: g.color }}>
+                      {g.club_kor}
+                    </span>
+                    <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
+                      유효 참여 {s.qualifiedCount.toLocaleString()}명
+                    </span>
+                    <span
+                      className="tnum text-[15px] font-extrabold"
+                      style={{ color: "var(--wc-ink)" }}
+                    >
+                      예측력 {s.avgSkill.toFixed(2)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div
+              className="rounded-xl px-5 py-6 text-center text-[13.5px] font-semibold"
+              style={{
+                border: "1px dashed var(--wc-line-2)",
+                color: "var(--wc-mute)",
+                background: "#fff",
+                wordBreak: "keep-all",
+              }}
+            >
+              아직 발표 전입니다 — 개막하면 매주 월요일, 세 팬덤의 예측력 평균이 여기서 갈립니다.
+            </div>
+          )}
+        </section>
 
         {/* 순위 규칙 — 예측력 */}
         <section className="mt-12">
