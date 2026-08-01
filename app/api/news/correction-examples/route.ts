@@ -1,22 +1,34 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import type { TipTapNode } from "@/types/post"
 
 export const dynamic = "force-dynamic"
 
 /**
  * GET/POST /api/news/correction-examples  (CRON_SECRET)
  *
- * 뉴스 스캐너 few-shot 학습용 — 검수자가 발행 시 제목을 고친 사례(원본 raw.title ≠
- * 발행본 draft.title)를 최근순으로 반환한다. 스캐너가 이걸 프롬프트에 주입해
- * "이렇게 다듬어진다"를 학습 → 다음 생성부터 같은 표기/스타일을 따르게 한다.
+ * 뉴스 스캐너 few-shot 학습용 — 검수자의 수정을 두 층위로 반환한다:
+ *  - examples: 제목 교정 쌍 (원본 raw.title ≠ 최종 draft.title) — 표기/제목 스타일
+ *  - articles: **기사 전체 재작성 쌍** (draft.original ≠ 최종 draft) — 구조·톤·정보 밀도.
+ *    검수자가 봇 초안을 기사체로 다시 쓴 사례를 통째로 보여줘 "이렇게 써라"를 흉내내게
+ *    한다. 발행본만이 아니라 "고치고 반려"(rejected + 편집)도 포함 — 기사 자체는
+ *    버려졌어도 다시 쓴 문장은 최고의 교보재다.
  *
  * 고칠수록 예시가 쌓여 원본 품질이 올라가는 자기개선 루프.
  */
 interface ReservoirRow {
   raw: { title?: string } | null
-  draft: { title?: string } | null
+  draft: {
+    title?: string
+    content?: unknown
+    original?: { title?: string; content?: unknown }
+  } | null
+  status: string
 }
+
+const norm = (s: string) => s.replace(/\s+/g, " ").trim()
 
 async function handler(req: NextRequest) {
   const authError = verifyCronSecret(req)
@@ -25,18 +37,42 @@ async function handler(req: NextRequest) {
   const supabase = createServiceRoleClient()
   const { data } = await supabase
     .from("news_reservoir")
-    .select("raw, draft, updated_at")
-    .eq("status", "published")
+    .select("raw, draft, status, updated_at")
+    .in("status", ["published", "rejected"])
     .filter("source->>type", "eq", "hermes")
     .order("updated_at", { ascending: false })
-    .limit(80)
+    .limit(120)
 
-  const examples = ((data as ReservoirRow[]) ?? [])
+  const rows = (data as ReservoirRow[]) ?? []
+
+  // 제목 교정 쌍 — 발행본만 (반려 제목은 어차피 안 나간 것이라 표기 근거로 약하다)
+  const examples = rows
+    .filter((r) => r.status === "published")
     .map((r) => ({ from: r.raw?.title?.trim() ?? "", to: r.draft?.title?.trim() ?? "" }))
     .filter((e) => e.from && e.to && e.from !== e.to)
     .slice(0, 12)
 
-  return NextResponse.json({ examples })
+  // 기사 재작성 쌍 — 봇 원본(draft.original)이 보존된 것 중 본문이 실제로 바뀐 것.
+  // 프롬프트 예산상 최근 2건만, 각 측 길이 제한.
+  const articles = rows
+    .flatMap((r) => {
+      const orig = r.draft?.original
+      if (!orig?.content || !r.draft?.content) return []
+      const before = norm(extractTextFromTipTapJSON(orig.content as TipTapNode))
+      const after = norm(extractTextFromTipTapJSON(r.draft.content as TipTapNode))
+      if (!before || !after || before === after || after.length < 100) return []
+      return [
+        {
+          beforeTitle: (orig.title ?? "").trim(),
+          before: before.slice(0, 700),
+          afterTitle: (r.draft.title ?? "").trim(),
+          after: after.slice(0, 1200),
+        },
+      ]
+    })
+    .slice(0, 2)
+
+  return NextResponse.json({ examples, articles })
 }
 
 export const GET = handler

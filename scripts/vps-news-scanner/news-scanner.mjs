@@ -264,13 +264,24 @@ async function fetchArticleBody(url) {
  * OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON)
  * material: { kind: "article"|"tweet", text, author? } — 확보한 원문 재료 (없으면 null)
  */
-async function judgeAndWrite(post, examples = [], material = null) {
+async function judgeAndWrite(post, corrections = { examples: [], articles: [] }, material = null) {
   const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
   // few-shot — 검수자가 실제로 고친 사례를 예시로 주입해 표기/스타일을 학습시킨다.
+  const { examples = [], articles = [] } = corrections
   const fewshot = examples.length
     ? `\n\n## 최근 검수 교정 예시 (원본 → 발행본)\n검수자가 아래처럼 다듬었다. 같은 표기·스타일(특히 팀·선수·기자명 한글 표기)을 따르라:\n${examples
         .map((e) => `- "${e.from}" → "${e.to}"`)
         .join("\n")}`
+    : ""
+  // 기사 재작성 few-shot — 검수자가 봇 초안을 통째로 다시 쓴 사례. 문장 구조·문단
+  // 배치·정보 밀도를 이 최종본처럼 쓰라고 지시한다 (표기 사전보다 상위의 스타일 학습).
+  const styleshot = articles.length
+    ? `\n\n## 검수자가 기사를 다시 쓴 예시 ${articles.length}건 (봇 초안 → 검수자 최종본)\n검수자는 봇 초안을 아래 "최종본"처럼 고쳐 쓴다. 처음부터 최종본의 문장 구조·문단 흐름·정보 밀도로 써라 (내용은 당연히 지금 글의 재료에서만):\n${articles
+        .map(
+          (a, i) =>
+            `[예시 ${i + 1} — 봇 초안]\n${a.beforeTitle ? `제목: ${a.beforeTitle}\n` : ""}${a.before}\n[예시 ${i + 1} — 검수자 최종본]\n${a.afterTitle ? `제목: ${a.afterTitle}\n` : ""}${a.after}`
+        )
+        .join("\n\n")}`
     : ""
   const sys = `너는 한국 축구 커뮤니티의 뉴스 에디터다. 레딧 축구 글 하나를 받아 "정보성 축구 소식인가 vs 순수 잡담인가"만 가른다. 기본값은 통과(worthy=true)이고, 애매하면 통과시킨다. 최종 취사선택은 사람 편집자가 검수에서 한다.
 
@@ -291,7 +302,7 @@ worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·�
   (예: "아시아 투어 참가 선수 명단 공개").
 - 팀/선수 한글 표기는 한국 축구 미디어의 정착된 표기를 따른다 (예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
 - 미확정 루머는 단정하지 말 것.
-- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${fewshot}
+- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${fewshot}${styleshot}
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
   const user = `제목: ${post.title}
 출처유형: ${sourceKind}
@@ -377,19 +388,27 @@ function buildContent(summary, mediaNode) {
   return { type: "doc", content: content.length ? content : [{ type: "paragraph" }] }
 }
 
-/** few-shot 학습용 — 검수자가 제목을 고친 최근 사례(원본→발행본) 조회 */
+/**
+ * few-shot 학습용 — 검수자의 수정 사례 조회.
+ * examples: 제목 교정 쌍 / articles: 기사 전체 재작성 쌍(봇 초안 → 검수자 최종본).
+ * articles 는 검수자가 "고치고 반려"·수정 발행으로 다시 쓴 기사에서 나온다 —
+ * 구조·톤을 통째로 흉내내는 게 목적.
+ */
 async function fetchCorrectionExamples() {
-  if (!CRON_SECRET) return []
+  if (!CRON_SECRET) return { examples: [], articles: [] }
   try {
     const res = await fetch(`${BASE_URL}/api/news/correction-examples`, {
       headers: { Authorization: `Bearer ${CRON_SECRET}` },
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) return []
+    if (!res.ok) return { examples: [], articles: [] }
     const d = await res.json().catch(() => ({}))
-    return Array.isArray(d?.examples) ? d.examples : []
+    return {
+      examples: Array.isArray(d?.examples) ? d.examples : [],
+      articles: Array.isArray(d?.articles) ? d.articles : [],
+    }
   } catch {
-    return []
+    return { examples: [], articles: [] }
   }
 }
 
@@ -505,7 +524,10 @@ async function main() {
 
   // 검수 교정 예시 로드 (few-shot 학습) — 실패해도 스캔은 계속
   const corrections = await fetchCorrectionExamples()
-  if (corrections.length) log(`검수 교정 예시 ${corrections.length}건 로드 (few-shot)`)
+  if (corrections.examples.length || corrections.articles.length)
+    log(
+      `검수 few-shot 로드 — 제목 교정 ${corrections.examples.length}건 / 기사 재작성 ${corrections.articles.length}건`
+    )
 
   let drafted = 0
   let llmCalls = 0
@@ -572,6 +594,10 @@ async function main() {
       const r = await postDraft({
         title: v.title,
         content: buildContent(summary, mediaNode),
+        // 원문 재료를 초안에 보존 — 검수자가 원문과 대조하며 고칠 수 있게
+        source_text: material
+          ? `[${material.kind === "tweet" ? `트윗 · ${material.author || "작성자 미상"}` : "기사 발췌"}]\n${material.text}`.slice(0, 4000)
+          : undefined,
         source_url: p.url && /^https?:/.test(p.url) ? p.url : undefined,
         origin_url: p.permalink || undefined,
         tags: Array.isArray(v.tags) ? v.tags.slice(0, 10) : [],

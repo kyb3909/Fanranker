@@ -23,6 +23,8 @@ const BodySchema = z.object({
   content: z.unknown(),
   /** 원문 소스 URL (트윗/기사) */
   source_url: z.string().url().optional(),
+  /** 원문 재료 텍스트 (기사 발췌/트윗 전문) — 검수자가 원문과 비교하며 고칠 수 있게 보존 */
+  source_text: z.string().max(4000).optional(),
   /** 발견 출처 (r/soccer 글 등) */
   origin_url: z.string().url().optional(),
   tags: z.array(z.string()).max(20).optional(),
@@ -99,7 +101,11 @@ export async function POST(req: NextRequest) {
     id,
     source: { type: "hermes", origin_url: d.origin_url ?? null, source_url: d.source_url ?? null },
     urls: { source: d.source_url ?? null, origin: d.origin_url ?? null },
-    raw: { title: d.title, dedupe_key: d.dedupe_key },
+    raw: {
+      title: d.title,
+      dedupe_key: d.dedupe_key,
+      ...(d.source_text ? { source_text: d.source_text } : {}),
+    },
     scores: d.scores ?? {},
     dedupe_key: d.dedupe_key,
     status: "drafted",

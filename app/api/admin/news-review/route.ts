@@ -142,6 +142,10 @@ export async function POST(req: NextRequest) {
     finalTitle !== original.title ||
     JSON.stringify(finalContent) !== JSON.stringify(original.content)
 
+  // publishNewsDraft 가 draft 를 다시 저장하므로, original 을 심어두면 발행 후에도
+  // "봇 원본 → 검수 최종" 쌍이 reservoir 에 남는다 (correction-examples 재작성 few-shot 재료)
+  if (wasEdited) item.draft = nextDraft
+
   const result = await publishNewsDraft(supabase, item, {
     title: finalTitle,
     content: finalContent,

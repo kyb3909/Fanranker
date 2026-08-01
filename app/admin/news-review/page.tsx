@@ -16,6 +16,7 @@ interface Row {
     tags?: string[]
     vs?: { question: string; option_a: string; option_b: string; confidence: number } | null
   } | null
+  raw: { source_text?: string } | null
   urls: { source?: string | null; origin?: string | null } | null
   scores: Record<string, unknown> | null
   created_at: string
@@ -75,7 +76,7 @@ export default async function NewsReviewPage() {
   // 정렬은 **오래된 것부터**: 먼저 사라질 것을 먼저 보여준다(만료 임박 우선).
   const { data } = await supabase
     .from("news_reservoir")
-    .select("id, draft, urls, scores, created_at")
+    .select("id, draft, raw, urls, scores, created_at")
     .eq("status", "drafted")
     .filter("source->>type", "eq", "hermes") // Hermes 에이전트 초안만 (TS 파이프라인 초안과 분리)
     .order("created_at", { ascending: true })
@@ -92,6 +93,7 @@ export default async function NewsReviewPage() {
       bodyLength: body.length,
       image: firstImage(r.draft?.content),
       content: r.draft?.content ?? null,
+      sourceText: r.raw?.source_text ?? null,
       sourceUrl: r.urls?.source ?? null,
       createdAt: r.created_at,
       hoursLeft: Math.max(0, EXPIRE_HOURS - (Date.now() - createdMs) / 3600_000),

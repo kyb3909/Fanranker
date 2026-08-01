@@ -44,6 +44,8 @@ export interface DeskItem {
   bodyLength: number
   image: string | null
   content: unknown
+  /** 스캐너가 참고한 원문 재료 (기사 발췌/트윗 전문) — 검수자가 대조하며 고치라고 */
+  sourceText: string | null
   sourceUrl: string | null
   createdAt: string
   /** 자동 만료까지 남은 시간 */
@@ -584,6 +586,16 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                 {/* ── 본문 — 펼친 항목만. 제목만 보고 발행할 수는 없다 ────────── */}
                 {isOpen && (
                   <div onClick={(e) => e.stopPropagation()} className="mt-3">
+                    {item.sourceText && (
+                      <details className="bg-muted/50 mb-2 rounded-lg border" open={isEditing}>
+                        <summary className="text-muted-foreground cursor-pointer px-3 py-2 text-xs font-medium select-none">
+                          원문 재료 — 스캐너가 참고한 소스 (대조하며 고치세요)
+                        </summary>
+                        <p className="text-muted-foreground max-h-[300px] overflow-auto px-3 pb-3 text-xs leading-relaxed whitespace-pre-wrap">
+                          {item.sourceText}
+                        </p>
+                      </details>
+                    )}
                     <div className="bg-background max-h-[460px] overflow-auto rounded-lg border p-3">
                       {isEditing ? (
                         <TipTapEditor content={item.content} onChange={setEditContent} />
