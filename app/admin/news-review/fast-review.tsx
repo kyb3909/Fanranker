@@ -392,6 +392,12 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                           · 무내용 의심(원문 추출 실패)
                         </span>
                       )}
+                      {item.sourceText && item.sourceText.length > 800 && item.bodyLength < 300 && (
+                        <span className="font-semibold text-amber-600">
+                          · 원문 대비 부실 — 원문 {item.sourceText.length.toLocaleString()}자를{" "}
+                          {item.bodyLength}자로 퉁침
+                        </span>
+                      )}
                       {!item.image && (
                         <span className="text-amber-600">· 사진 없음(떡밥 제외)</span>
                       )}

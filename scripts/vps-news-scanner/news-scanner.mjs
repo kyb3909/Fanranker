@@ -233,6 +233,44 @@ function extractArticleText(html) {
 }
 
 /**
+ * JSON-LD(NewsArticle.articleBody) 에서 기사 전문 추출 — <p> 추출이 막히는
+ * JS렌더/독특한 마크업 사이트도 SEO 용으로 이건 심어두는 경우가 많다.
+ * 실측 44% 였던 본문 확보율을 끌어올리는 1차 보강.
+ */
+function extractJsonLdBody(html) {
+  const found = []
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let m
+  while ((m = re.exec(html)) !== null) {
+    try {
+      const stack = [JSON.parse(m[1].trim())]
+      while (stack.length) {
+        const cur = stack.pop()
+        if (!cur || typeof cur !== "object") continue
+        if (typeof cur.articleBody === "string" && cur.articleBody.trim().length > 200) {
+          found.push(cur.articleBody.trim())
+        }
+        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v)
+      }
+    } catch {
+      /* 깨진 JSON-LD 는 흔하다 — 무시 */
+    }
+  }
+  if (!found.length) return null
+  const best = found.sort((a, b) => b.length - a.length)[0]
+  return decodeHTML(best).replace(/[ \t]+/g, " ").trim().slice(0, 2800)
+}
+
+/** og:description — 최후의 재료. 짧지만(150~300자) 제목뿐인 것보단 낫다 */
+function extractOgDescription(html) {
+  const m =
+    /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i.exec(html) ||
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i.exec(html)
+  const text = m ? decodeHTML(m[1]).trim() : null
+  return text && text.length >= 80 ? text : null
+}
+
+/**
  * 기사 URL → 본문 앞부분(~2,800자). 실패(페이월·JS렌더·차단)하면 null —
  * 그 경우 기존처럼 짧은 기사로 나간다 (팩트 없이 길이를 늘리면 환각이다).
  */
@@ -254,7 +292,11 @@ async function fetchArticleBody(url) {
       html += new TextDecoder().decode(value)
     }
     reader.cancel()
-    return extractArticleText(html)
+    // 확보량 우선: <p> 추출 ↔ JSON-LD 중 긴 쪽 → 둘 다 실패 시 og:description
+    const fromP = extractArticleText(html)
+    const fromLd = extractJsonLdBody(html)
+    const best = (fromLd?.length ?? 0) > (fromP?.length ?? 0) ? fromLd : fromP
+    return best ?? extractOgDescription(html)
   } catch {
     return null
   }
@@ -264,7 +306,12 @@ async function fetchArticleBody(url) {
  * OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON)
  * material: { kind: "article"|"tweet", text, author? } — 확보한 원문 재료 (없으면 null)
  */
-async function judgeAndWrite(post, corrections = { examples: [], articles: [] }, material = null) {
+async function judgeAndWrite(
+  post,
+  corrections = { examples: [], articles: [] },
+  material = null,
+  retryNote = ""
+) {
   const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
   // few-shot — 검수자가 실제로 고친 사례를 예시로 주입해 표기/스타일을 학습시킨다.
   const { examples = [], articles = [] } = corrections
@@ -291,7 +338,7 @@ worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·�
 
 - 톤: 한국어, 드라이한 팩트 와이어체("~라고 합니다", "~로 전해집니다"). AI 티 나는 감상/질문/평가 금지.
 - 분량은 **주어진 재료의 양**으로 정한다. 어떤 경우든 **최소 5문장**을 목표로 하되, 문장 수를 채우려고 재료에 없는 사실을 지어내는 것이 최악이다:
-  · 아래 "기사 원문"이 있으면 → **6~12문장, 500~1,000자**. 발언 인용, 이적료·계약 기간·경기 기록 같은 수치, 배경 경위, 다음 일정까지 원문에 있는 디테일을 충실히 옮긴다. 문단은 빈 줄로 나눈다. 두세 줄 요약으로 끝내지 마라.
+  · 아래 "기사 원문"이 있으면 → **6~12문장, 500~1,000자**. 발언 인용, 이적료·계약 기간·경기 기록 같은 수치, 배경 경위, 다음 일정까지 원문에 있는 디테일을 충실히 옮긴다. 문단은 빈 줄로 나눈다. **두세 줄 요약으로 퉁치는 것은 실패다** — 원문에 디테일이 있는데 안 옮긴 것이므로. (원문이 300자 미만으로 짧게만 확보됐으면 그 범위에서 4~6문장.)
   · 아래 "트윗 원문"이 있으면 → 트윗에서 **주요 내용을 전부 추출**해 **5~8문장**으로 쓴다. 누가(기자/구단) 무엇을 전했는지, 트윗 속 수치(이적료·계약 기간·조항)·발언 인용·경위·"Here we go" 류 확정 신호까지 빠짐없이 옮긴다. 트윗에 있는 정보를 한 조각도 버리지 마라. 마지막 문장으로 이 소식의 맥락(어느 팀 상황과 관련되는지)을 트윗·제목에 실재하는 범위에서 한 줄 정리한다.
   · 원문 확보에 실패했으면(제목·링크뿐) → 제목에 실재하는 정보만으로 가능한 만큼 쓴다(보통 2~4문장). 상상으로 살을 붙이지 마라 — 이때만은 짧은 게 맞다.
 - 기사/트윗 원문에 없는 사실은 절대 추가하지 않는다. 원문 말미의 무관한 조각(다른 경기 홍보·구독 안내)은 무시한다.
@@ -312,7 +359,7 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
       : material?.kind === "tweet"
         ? `\n\n## 트윗 원문 (작성자: ${material.author || "미상"})\n${material.text}`
         : ""
-  }`
+  }${retryNote ? `\n\n## 재작성 지시\n${retryNote}` : ""}`
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -559,10 +606,25 @@ async function main() {
         : tweetData?.text
           ? { kind: "tweet", text: tweetData.text, author: tweetData.author }
           : null
-      const v = await judgeAndWrite(p, corrections, material)
+      let v = await judgeAndWrite(p, corrections, material)
       if (!v?.worthy) {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
         continue
+      }
+      // 성의 가드 — 재료가 넉넉한데(700자↑) 두세 줄로 퉁친 출력은 1회 재작성시킨다.
+      // (프롬프트 지시만으론 가끔 새는 걸 실측으로 확인 → 결정적 길이 검사로 강제)
+      if (material && material.text.length >= 700 && (v.summary || "").length < 350) {
+        log(
+          `retry(짧음) [${p.subreddit}/${p.id}] 재료 ${material.text.length}자 → 기사 ${(v.summary || "").length}자`
+        )
+        llmCalls++
+        const retry = await judgeAndWrite(
+          p,
+          corrections,
+          material,
+          `직전 초안(${(v.summary || "").length}자)은 원문 디테일을 버리고 요약으로 퉁쳤다 — 실패다. 원문에 있는 인용·수치·경위·일정을 옮겨 6문장 이상, 500자 이상으로 다시 써라. 원문에 없는 내용 추가는 여전히 금지.`
+        )
+        if (retry?.worthy && (retry.summary || "").length > (v.summary || "").length) v = retry
       }
       v.title = stripRedditAttribution(applyKoreanFixes(v.title))
       v.summary = applyKoreanFixes(v.summary)
