@@ -30,7 +30,14 @@ export const FOOTBALL_SLUG = "football"
 export interface NewsReservoirItem {
   id: string
   urls: { source?: string | null } | null
-  draft: { title?: string; content?: unknown; tags?: string[]; vs?: VsDraftProposal } | null
+  draft: {
+    title?: string
+    content?: unknown
+    tags?: string[]
+    vs?: VsDraftProposal
+    /** 봇 원본 스냅샷 — 검수 편집("수정 저장")이 draft 를 덮기 전에 보존. 교정 학습의 기준점 */
+    original?: { title?: string; content?: unknown }
+  } | null
   entities: {
     teams?: { surface?: string | null; preferred_ko?: string | null }[]
   } | null

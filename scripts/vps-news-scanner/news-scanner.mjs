@@ -260,8 +260,11 @@ async function fetchArticleBody(url) {
   }
 }
 
-/** OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON) */
-async function judgeAndWrite(post, examples = [], articleBody = null) {
+/**
+ * OpenAI: 게시할 만한 신선한 주요 이적설인지 판별 + 한국어 초안 작성 (JSON)
+ * material: { kind: "article"|"tweet", text, author? } — 확보한 원문 재료 (없으면 null)
+ */
+async function judgeAndWrite(post, examples = [], material = null) {
   const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
   // few-shot — 검수자가 실제로 고친 사례를 예시로 주입해 표기/스타일을 학습시킨다.
   const fewshot = examples.length
@@ -276,10 +279,11 @@ worthy=true (폭넓게): 이적·영입·계약·부상·복귀·감독 선임/�
 worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·움짤, 정보 없는 단순 감탄/응원("wow", "amazing"), 개인 SNS 좋아요/반응 캡처, 라이브 경기 중계 스레드, 설문/의견 질문글, 오래된 떡밥 재탕. 애매하면 false 말고 true.
 
 - 톤: 한국어, 드라이한 팩트 와이어체("~라고 합니다", "~로 전해집니다"). AI 티 나는 감상/질문/평가 금지.
-- 분량은 **주어진 재료의 양**으로 정한다:
+- 분량은 **주어진 재료의 양**으로 정한다. 어떤 경우든 **최소 5문장**을 목표로 하되, 문장 수를 채우려고 재료에 없는 사실을 지어내는 것이 최악이다:
   · 아래 "기사 원문"이 있으면 → **6~12문장, 500~1,000자**. 발언 인용, 이적료·계약 기간·경기 기록 같은 수치, 배경 경위, 다음 일정까지 원문에 있는 디테일을 충실히 옮긴다. 문단은 빈 줄로 나눈다. 두세 줄 요약으로 끝내지 마라.
-  · 원문이 없으면(제목·링크뿐) → 기존대로 **2~3문장**. **재료가 없는데 길이를 채우려고 상상으로 살을 붙이는 것이 최악이다** — 짧은 게 맞다.
-- 기사 원문에 없는 사실은 절대 추가하지 않는다. 원문 말미의 무관한 조각(다른 경기 홍보·구독 안내)은 무시한다.
+  · 아래 "트윗 원문"이 있으면 → 트윗에서 **주요 내용을 전부 추출**해 **5~8문장**으로 쓴다. 누가(기자/구단) 무엇을 전했는지, 트윗 속 수치(이적료·계약 기간·조항)·발언 인용·경위·"Here we go" 류 확정 신호까지 빠짐없이 옮긴다. 트윗에 있는 정보를 한 조각도 버리지 마라. 마지막 문장으로 이 소식의 맥락(어느 팀 상황과 관련되는지)을 트윗·제목에 실재하는 범위에서 한 줄 정리한다.
+  · 원문 확보에 실패했으면(제목·링크뿐) → 제목에 실재하는 정보만으로 가능한 만큼 쓴다(보통 2~4문장). 상상으로 살을 붙이지 마라 — 이때만은 짧은 게 맞다.
+- 기사/트윗 원문에 없는 사실은 절대 추가하지 않는다. 원문 말미의 무관한 조각(다른 경기 홍보·구독 안내)은 무시한다.
 - 제목: 출처가 **분명할 때만** "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진").
   출처로 쓸 수 있는 것은 **기자·언론사·구단** 뿐이다.
   ⛔ **레딧은 출처가 아니다.** 우리가 소식을 발견한 경로일 뿐이므로 "[레딧]", "[Reddit]",
@@ -292,15 +296,19 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
   const user = `제목: ${post.title}
 출처유형: ${sourceKind}
 링크: ${post.url || "(없음/self)"}${
-    articleBody ? `\n\n## 기사 원문 (영어, 발췌)\n${articleBody}` : ""
+    material?.kind === "article"
+      ? `\n\n## 기사 원문 (영어, 발췌)\n${material.text}`
+      : material?.kind === "tweet"
+        ? `\n\n## 트윗 원문 (작성자: ${material.author || "미상"})\n${material.text}`
+        : ""
   }`
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(articleBody ? 60000 : 30000),
+    signal: AbortSignal.timeout(material ? 60000 : 30000),
     body: JSON.stringify({
-      model: articleBody ? MODEL_LONG : MODEL,
+      model: material ? MODEL_LONG : MODEL,
       temperature: 0.4,
       response_format: { type: "json_object" },
       messages: [
@@ -314,8 +322,13 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
   return JSON.parse(data.choices[0].message.content)
 }
 
-/** 트윗 → oembed 임베드 노드 */
-async function buildTweetEmbed(url) {
+/**
+ * 트윗 → oembed 한 번으로 임베드 노드 + **트윗 본문 텍스트**를 같이 뽑는다.
+ * 왜: 트윗 소스는 지금까지 재료 없이(제목뿐) LLM 에 갔고, 그 결과가 2~3문장
+ * 껍데기 기사였다. oembed html 의 blockquote 안에 트윗 전문이 있으므로
+ * 그걸 기사 재료로 공급한다 (기사 원문과 같은 원리 — 실재 팩트만 옮긴다).
+ */
+async function fetchTweetData(url) {
   const res = await fetch(`${BASE_URL}/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`, {
     headers: { "User-Agent": UA },
     signal: AbortSignal.timeout(15000),
@@ -323,15 +336,21 @@ async function buildTweetEmbed(url) {
   if (!res.ok) return null
   const d = await res.json().catch(() => null)
   if (!d?.html) return null
+  // /api/oembed 는 트윗 전문을 title 로 돌려준다 (프로덕션 실측 — Romano 트윗 전문 확인)
+  const text = String(d.title || "").trim()
   return {
-    type: "embed",
-    attrs: {
-      url: d.url || url,
-      html: d.html,
-      provider: d.provider || "x",
-      title: d.title || null,
-      thumbnail_url: d.thumbnail_url || null,
-      author_name: d.author_name || null,
+    text: text.length >= 20 ? text : null,
+    author: d.author_name || null,
+    node: {
+      type: "embed",
+      attrs: {
+        url: d.url || url,
+        html: d.html,
+        provider: d.provider || "x",
+        title: d.title || null,
+        thumbnail_url: d.thumbnail_url || null,
+        author_name: d.author_name || null,
+      },
     },
   }
 }
@@ -508,11 +527,17 @@ async function main() {
 
     llmCalls++
     try {
-      // 외부 기사면 원문 본문을 먼저 확보한다 — 이게 있어야 장문 기사가 나온다.
-      // "오늘의 떡밥"(홈 카드뉴스)에 뜨는 건 이미지가 붙는 기사형이라, 장문이 필요한
-      // 대상과 원문을 가져올 수 있는 대상이 자연히 일치한다. 트윗/셀프글은 대상 아님.
+      // 작성 전에 원문 재료를 확보한다 — 이게 있어야 5문장 이상 기사가 나온다.
+      // 외부 기사 = 본문 <p> 추출, 트윗 = oembed 로 트윗 전문 (임베드 노드도 같이 얻어
+      // 아래에서 재사용 — oembed 이중 호출 방지).
+      const tweetData = isTweet(p.url) ? await fetchTweetData(p.url) : null
       const articleBody = isExternalArticle(p.url) ? await fetchArticleBody(p.url) : null
-      const v = await judgeAndWrite(p, corrections, articleBody)
+      const material = articleBody
+        ? { kind: "article", text: articleBody }
+        : tweetData?.text
+          ? { kind: "tweet", text: tweetData.text, author: tweetData.author }
+          : null
+      const v = await judgeAndWrite(p, corrections, material)
       if (!v?.worthy) {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
         continue
@@ -522,8 +547,8 @@ async function main() {
       if (DRY_RUN) {
         drafted++
         log(
-          `[DRY] draft [${p.subreddit}/${p.id}] ${v.title} — 본문 ${
-            articleBody ? `${articleBody.length}자 확보` : "없음"
+          `[DRY] draft [${p.subreddit}/${p.id}] ${v.title} — 재료 ${
+            material ? `${material.kind} ${material.text.length}자` : "없음"
           } / 기사 ${(v.summary || "").length}자\n${v.summary}\n`
         )
         continue
@@ -531,7 +556,7 @@ async function main() {
       let mediaNode = null
       let summary = v.summary
       if (isTweet(p.url)) {
-        mediaNode = await buildTweetEmbed(p.url)
+        mediaNode = tweetData?.node ?? null
       } else if (isExternalArticle(p.url)) {
         const { imageNode, ogSummary } = await buildArticleOg(p.url)
         mediaNode = imageNode

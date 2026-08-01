@@ -71,15 +71,23 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // 교정 학습의 기준점 = 봇 원본. "수정 저장"이 draft 를 덮어도 첫 편집 전 스냅샷
+  // (draft.original)이 남아 있어, 저장→발행/반려 순서와 무관하게 diff 가 항상 잡힌다.
+  const original = item.draft?.original ?? {
+    title: item.draft?.title,
+    content: item.draft?.content,
+  }
+
   if (action === "reject") {
-    // "고치고 반려" — 수정본이 왔고 실제로 바뀌었으면, 기사는 버려도 교정은 학습.
+    // "고치고 반려" — 수정본이 왔고 원본과 실제로 다르면, 기사는 버려도 교정은 학습.
     // 수정본을 draft 에도 남겨 배치 안전망(learn-from-edits)이 재발견할 수 있게 한다.
-    const rejectTitle = editTitle?.trim()
-    const rejectContent = editContent !== undefined ? sanitizeTipTapJSON(editContent) : null
+    const rejectTitle = editTitle?.trim() ?? item.draft?.title
+    const rejectContent =
+      editContent !== undefined ? sanitizeTipTapJSON(editContent) : item.draft?.content
     const rejectEdited =
-      (rejectTitle !== undefined && rejectTitle !== item.draft?.title) ||
-      (rejectContent !== null &&
-        JSON.stringify(rejectContent) !== JSON.stringify(item.draft?.content))
+      (rejectTitle !== undefined && rejectTitle !== original.title) ||
+      (rejectContent !== undefined &&
+        JSON.stringify(rejectContent) !== JSON.stringify(original.content))
 
     await supabase
       .from("news_reservoir")
@@ -90,8 +98,9 @@ export async function POST(req: NextRequest) {
           ? {
               draft: {
                 ...(item.draft ?? {}),
-                title: rejectTitle ?? item.draft?.title,
-                content: rejectContent ?? item.draft?.content,
+                title: rejectTitle,
+                content: rejectContent,
+                original,
               },
             }
           : {}),
@@ -99,14 +108,13 @@ export async function POST(req: NextRequest) {
       .eq("id", id)
 
     if (rejectEdited) {
-      const original = item.draft
       after(async () => {
         await learnFromDeskEdit(supabase, {
           postId: `reservoir:${id}`,
-          originalTitle: original?.title ?? "",
-          originalContent: original?.content ?? null,
-          finalTitle: rejectTitle ?? original?.title ?? "",
-          finalContent: rejectContent ?? original?.content ?? null,
+          originalTitle: original.title ?? "",
+          originalContent: original.content ?? null,
+          finalTitle: rejectTitle ?? "",
+          finalContent: rejectContent ?? null,
         })
       })
     }
@@ -119,7 +127,8 @@ export async function POST(req: NextRequest) {
   if (!finalTitle || !finalContent) {
     return NextResponse.json({ error: "제목/본문이 유효하지 않습니다." }, { status: 400 })
   }
-  const nextDraft = { ...(item.draft ?? {}), title: finalTitle, content: finalContent }
+  // 저장 시에도 original 을 함께 심어 봇 원본이 유실되지 않게 한다
+  const nextDraft = { ...(item.draft ?? {}), title: finalTitle, content: finalContent, original }
 
   // 수정 저장만 (발행 안 함)
   if (action === "save") {
@@ -128,11 +137,10 @@ export async function POST(req: NextRequest) {
   }
 
   // publish — 발행 본체는 lib/news/publish 공용 로직 (자동발행 cron 과 공유).
-  // 검수자가 제목/본문을 고쳤으면 수정 전 원본(pre_edit)을 넘겨 교정 학습을 태운다.
+  // 최종본이 봇 원본과 다르면(이번 편집이든 이전 "수정 저장"이든) 교정 학습을 태운다.
   const wasEdited =
-    (editTitle !== undefined && editTitle?.trim() !== item.draft?.title) ||
-    (editContent !== undefined &&
-      JSON.stringify(sanitizeTipTapJSON(editContent)) !== JSON.stringify(item.draft?.content))
+    finalTitle !== original.title ||
+    JSON.stringify(finalContent) !== JSON.stringify(original.content)
 
   const result = await publishNewsDraft(supabase, item, {
     title: finalTitle,
@@ -140,7 +148,7 @@ export async function POST(req: NextRequest) {
     flairIds: parsed.data.flair_ids,
     vs: parsed.data.vs,
     preEdit: wasEdited
-      ? { title: item.draft?.title ?? null, content: item.draft?.content ?? null }
+      ? { title: original.title ?? null, content: original.content ?? null }
       : null,
   })
   if (result.error || !result.postId) {
