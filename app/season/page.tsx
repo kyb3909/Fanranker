@@ -5,7 +5,13 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { HeroCountdown } from "@/components/season/hero-countdown"
 import { TeamPicker, type SeasonGroup } from "@/components/season/team-picker"
-import { fetchSeasonSlipCount } from "@/lib/event/season-stats"
+import {
+  fetchSeasonSlipCount,
+  fetchSeasonPointsForUser,
+  POINTS_THRESHOLD,
+  MIN_COMMUNITY_ACTIONS,
+  type SeasonPoints,
+} from "@/lib/event/season-stats"
 
 export const metadata: Metadata = {
   title: "시즌 오픈 팬덤 대항전",
@@ -200,6 +206,7 @@ export default async function SeasonEventPage({
 
   const user = await currentUser()
   let myGroupSlug: string | null = null
+  let myPoints: SeasonPoints | null = null
   if (user) {
     const { data: myReg } = await supabase
       .from("event_registrations")
@@ -209,6 +216,7 @@ export default async function SeasonEventPage({
       .maybeSingle()
     if (myReg) {
       myGroupSlug = (groups ?? []).find((g) => g.id === myReg.group_id)?.slug ?? null
+      myPoints = await fetchSeasonPointsForUser(supabase, user.id)
     }
   }
 
@@ -534,6 +542,80 @@ export default async function SeasonEventPage({
           myGroupSlug={myGroupSlug}
           registrationOpen={registrationOpen}
         />
+
+        {/* 내 응모 진행 — 등록자에게만 (예측 완료 직후 주입 동선의 목적지, 설계 §4) */}
+        {myPoints && (
+          <div
+            className="mt-4 rounded-xl px-5 py-4"
+            style={{
+              background: "#fff",
+              border: "1px solid var(--wc-line)",
+              boxShadow: "var(--wc-shadow-1)",
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[14.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                내 응모 진행
+              </span>
+              {myPoints.qualified ? (
+                <span
+                  className="rounded-full px-2.5 py-[3px] text-[11.5px] font-bold text-white"
+                  style={{ background: "var(--wc-go, #2e7d4f)" }}
+                >
+                  ✓ 추첨 응모 자격 달성
+                </span>
+              ) : (
+                <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                  {myPoints.totalPoints < POINTS_THRESHOLD &&
+                    `응모까지 ${POINTS_THRESHOLD - myPoints.totalPoints}점`}
+                  {myPoints.totalPoints < POINTS_THRESHOLD &&
+                    myPoints.communityActions < MIN_COMMUNITY_ACTIONS &&
+                    " · "}
+                  {myPoints.communityActions < MIN_COMMUNITY_ACTIONS &&
+                    `커뮤니티 활동 ${MIN_COMMUNITY_ACTIONS - myPoints.communityActions}회 남음`}
+                </span>
+              )}
+            </div>
+            <div
+              className="mt-2.5 h-2.5 overflow-hidden rounded-full"
+              style={{ background: "var(--wc-soft)" }}
+              role="progressbar"
+              aria-valuenow={Math.min(myPoints.totalPoints, POINTS_THRESHOLD)}
+              aria-valuemax={POINTS_THRESHOLD}
+            >
+              <div
+                className="h-full rounded-full transition-[width]"
+                style={{
+                  width: `${Math.min(100, (myPoints.totalPoints / POINTS_THRESHOLD) * 100)}%`,
+                  background:
+                    "linear-gradient(90deg, var(--wc-burgundy), var(--gn-bg-700, #771629))",
+                }}
+              />
+            </div>
+            <div
+              className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-semibold"
+              style={{ color: "var(--wc-mute-2)" }}
+            >
+              <span className="tnum" style={{ color: "var(--wc-ink)" }}>
+                {myPoints.totalPoints} / {POINTS_THRESHOLD}점
+              </span>
+              <span className="tnum">
+                커뮤니티 활동 {Math.min(myPoints.communityActions, MIN_COMMUNITY_ACTIONS)}/
+                {MIN_COMMUNITY_ACTIONS}
+              </span>
+              {myPoints.predictionPoints > 0 && (
+                <span className="tnum">예측 +{myPoints.predictionPoints}</span>
+              )}
+              {myPoints.postPoints > 0 && <span className="tnum">글 +{myPoints.postPoints}</span>}
+              {myPoints.commentPoints > 0 && (
+                <span className="tnum">댓글 +{myPoints.commentPoints}</span>
+              )}
+              {myPoints.votePoints > 0 && (
+                <span className="tnum">받은 추천 +{myPoints.votePoints}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 기간·참여·보상 3열 정보 행 (시안 A 하단 문법) */}
         <div

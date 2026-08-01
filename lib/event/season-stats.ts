@@ -57,3 +57,65 @@ export async function fetchSeasonSlipCount(supabase: ServiceClient): Promise<num
   if (error) return 0
   return (data as number) ?? 0
 }
+
+/* ── 활동 포인트 (경품 응모 자격) ─────────────────────────────── */
+
+/** 응모 기준점 — 설계 문서 미정 항목의 기본값 (운영 확정 시 이 상수만 변경) */
+export const POINTS_THRESHOLD = 30
+/** 응모 조건: 커뮤니티 활동(글+댓글) 최소 횟수 — 예측만으로는 응모 불가 (설계 §1) */
+export const MIN_COMMUNITY_ACTIONS = 3
+
+export interface SeasonPoints {
+  userId: string
+  totalPoints: number
+  predictionPoints: number
+  postPoints: number
+  commentPoints: number
+  votePoints: number
+  communityActions: number
+  /** 응모 자격 충족 여부 */
+  qualified: boolean
+}
+
+function mapPointsRow(r: {
+  user_id: string
+  total_points: number
+  prediction_points: number
+  post_points: number
+  comment_points: number
+  vote_points: number
+  community_actions: number
+}): SeasonPoints {
+  return {
+    userId: r.user_id,
+    totalPoints: r.total_points,
+    predictionPoints: r.prediction_points,
+    postPoints: r.post_points,
+    commentPoints: r.comment_points,
+    votePoints: r.vote_points,
+    communityActions: r.community_actions,
+    qualified: r.total_points >= POINTS_THRESHOLD && r.community_actions >= MIN_COMMUNITY_ACTIONS,
+  }
+}
+
+/** 단일 유저 포인트 (미등록이면 null) — /season 진행바·마이페이지용 */
+export async function fetchSeasonPointsForUser(
+  supabase: ServiceClient,
+  userId: string
+): Promise<SeasonPoints | null> {
+  const { data, error } = await supabase.rpc("season_event_points", {
+    p_event_slug: SEASON_EVENT_SLUG,
+    p_user_id: userId,
+  })
+  if (error || !data || (data as unknown[]).length === 0) return null
+  return mapPointsRow((data as Parameters<typeof mapPointsRow>[0][])[0])
+}
+
+/** 전체 등록자 포인트 — 추첨 자격자 집계·검수용 */
+export async function fetchAllSeasonPoints(supabase: ServiceClient): Promise<SeasonPoints[]> {
+  const { data, error } = await supabase.rpc("season_event_points", {
+    p_event_slug: SEASON_EVENT_SLUG,
+  })
+  if (error) throw new Error(`season_event_points RPC 실패: ${error.message}`)
+  return ((data ?? []) as Parameters<typeof mapPointsRow>[0][]).map(mapPointsRow)
+}
