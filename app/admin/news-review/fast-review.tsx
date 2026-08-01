@@ -119,6 +119,7 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
           body: JSON.stringify({
             id: item.id,
             action,
+            // reject 는 기본 몸통 없음 — 단, 편집본과 함께 오면 "고치고 반려"(학습만)
             ...(action !== "reject"
               ? {
                   title: override?.title ?? item.title,
@@ -128,7 +129,9 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                     ? { vs: vsDecisions[item.id] }
                     : {}),
                 }
-              : {}),
+              : override
+                ? { title: override.title, content: override.content }
+                : {}),
           }),
         })
         const d = (await res.json().catch(() => ({}))) as { error?: string; learning?: boolean }
@@ -160,6 +163,11 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
           toast({
             title: "발행 완료",
             description: d.learning ? "고치신 표기를 학습해 다음 기사에 반영합니다." : undefined,
+          })
+        } else if (action === "reject" && d.learning) {
+          toast({
+            title: "반려 + 학습",
+            description: "기사는 버리고, 고치신 표기만 사전에 반영합니다.",
           })
         }
       } finally {
@@ -612,6 +620,19 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                             className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
                           >
                             수정본 발행
+                          </button>
+                          <button
+                            onClick={() =>
+                              void act(item, "reject", {
+                                title: editTitle,
+                                content: editContent ?? item.content,
+                              })
+                            }
+                            disabled={busy || !editTitle.trim()}
+                            title="기사는 발행하지 않고, 고친 표기만 사전에 학습시킵니다"
+                            className="rounded border border-red-300 px-3 py-1.5 text-xs text-red-700 disabled:opacity-50"
+                          >
+                            고치고 반려 (학습만)
                           </button>
                           <button
                             onClick={() => setEditing(null)}

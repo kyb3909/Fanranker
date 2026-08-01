@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import { z } from "zod"
 import { requireStaff } from "@/lib/admin/roles"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { publishNewsDraft, type NewsReservoirItem } from "@/lib/news/publish"
+import { learnFromDeskEdit } from "@/lib/news/learn-corrections"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +13,9 @@ export const dynamic = "force-dynamic"
  * body: { id, action: "publish" | "reject" | "save", title?, content? }
  *  - publish: news_reservoir(drafted) → posts 발행(공놀이봇) + reservoir status=published
  *  - save   : 검수 중 수정본을 draft 에 저장 (발행 안 함)
- *  - reject : reservoir status=rejected (발행 안 함)
+ *  - reject : reservoir status=rejected (발행 안 함). title/content 가 함께 오면
+ *             "고치고 반려" — 기사는 버리되 교정만 표기 사전에 학습시킨다
+ *             (심한 오타 기사를 발행 없이 가르치는 경로).
  *  - title/content 가 오면(검수 편집) 그 수정본으로 저장/발행한다.
  */
 const BodySchema = z.object({
@@ -69,11 +72,45 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "reject") {
+    // "고치고 반려" — 수정본이 왔고 실제로 바뀌었으면, 기사는 버려도 교정은 학습.
+    // 수정본을 draft 에도 남겨 배치 안전망(learn-from-edits)이 재발견할 수 있게 한다.
+    const rejectTitle = editTitle?.trim()
+    const rejectContent = editContent !== undefined ? sanitizeTipTapJSON(editContent) : null
+    const rejectEdited =
+      (rejectTitle !== undefined && rejectTitle !== item.draft?.title) ||
+      (rejectContent !== null &&
+        JSON.stringify(rejectContent) !== JSON.stringify(item.draft?.content))
+
     await supabase
       .from("news_reservoir")
-      .update({ status: "rejected", updated_at: now })
+      .update({
+        status: "rejected",
+        updated_at: now,
+        ...(rejectEdited
+          ? {
+              draft: {
+                ...(item.draft ?? {}),
+                title: rejectTitle ?? item.draft?.title,
+                content: rejectContent ?? item.draft?.content,
+              },
+            }
+          : {}),
+      })
       .eq("id", id)
-    return NextResponse.json({ ok: true, status: "rejected" })
+
+    if (rejectEdited) {
+      const original = item.draft
+      after(async () => {
+        await learnFromDeskEdit(supabase, {
+          postId: `reservoir:${id}`,
+          originalTitle: original?.title ?? "",
+          originalContent: original?.content ?? null,
+          finalTitle: rejectTitle ?? original?.title ?? "",
+          finalContent: rejectContent ?? original?.content ?? null,
+        })
+      })
+    }
+    return NextResponse.json({ ok: true, status: "rejected", learning: rejectEdited })
   }
 
   // save/publish 공통 — 검수 편집본(title/content)이 오면 그걸, 아니면 기존 draft 사용
