@@ -31,8 +31,6 @@ const TABS = [
   { href: "/admin2/news", label: "뉴스 검수", queueKey: "news-review", exact: false },
   { href: "/admin2/agg", label: "커뮤글 검수", queueKey: "agg-review", exact: false },
   { href: "/admin2/reports", label: "신고", queueKey: "reports", exact: false },
-  // 추첨은 대기 건수 개념이 없다 (매주 1회 실행) — 뱃지 없이 탭만
-  { href: "/admin2/draw", label: "주간 추첨", queueKey: null as string | null, exact: false },
 ]
 
 export function Admin2Nav() {

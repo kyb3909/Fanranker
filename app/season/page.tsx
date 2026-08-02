@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { HeroCountdown } from "@/components/season/hero-countdown"
 import { TeamPicker, type SeasonGroup } from "@/components/season/team-picker"
+import { WeeklyDrawReveal } from "@/components/season/weekly-draw-reveal"
 import {
   fetchSeasonSlipCount,
   fetchSeasonPointsForUser,
@@ -193,6 +194,28 @@ export default async function SeasonEventPage({
       .filter((s) => s.slug)
       .sort((x, y) => y.avgSkill - x.avgSkill)
   }
+
+  // 이번 주 당첨자 — 최신 1회차만. 굴러가는 동안 보일 이름은 후보 중 일부만 쓴다
+  // (전원을 클라이언트로 내리면 응모자 명단이 통째로 노출된다)
+  const { data: drawRow } = await supabase
+    .from("season_weekly_draws")
+    .select("week_start, winners, candidate_count, candidates")
+    .eq("event_id", event.id)
+    .not("drawn_at", "is", null)
+    .order("week_start", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const weeklyDraw = drawRow?.winners
+    ? {
+        week_start: drawRow.week_start as string,
+        winners: drawRow.winners as { user_id: string; nickname: string }[],
+        candidate_count: drawRow.candidate_count as number,
+        poolNames: ((drawRow.candidates ?? []) as { nickname: string }[])
+          .slice(0, 40)
+          .map((c) => c.nickname),
+      }
+    : null
 
   const user = await currentUser()
   let myGroupSlug: string | null = null
@@ -719,6 +742,19 @@ export default async function SeasonEventPage({
               }}
             >
               아직 발표 전입니다 — 개막하면 매주 월요일, 두 팬덤의 예측력 평균이 여기서 갈립니다.
+            </div>
+          )}
+
+          {/* 이번 주 당첨자 — 추첨은 백단 cron 이 끝냈고 여기서는 연출로 공개만 한다.
+              이름을 한 줄로 나열하면 공지가 되지만, 칸이 하나씩 멈추면 발표가 된다. */}
+          {weeklyDraw && (
+            <div className="mt-4">
+              <WeeklyDrawReveal
+                weekStart={weeklyDraw.week_start}
+                winners={weeklyDraw.winners}
+                candidateCount={weeklyDraw.candidate_count}
+                poolNames={weeklyDraw.poolNames}
+              />
             </div>
           )}
         </section>
