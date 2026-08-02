@@ -4382,6 +4382,62 @@ export type Database = {
         }
         Relationships: []
       }
+      season_weekly_draws: {
+        Row: {
+          announced_post_id: string | null
+          candidate_count: number
+          candidates: Json
+          candidates_hash: string | null
+          created_at: string
+          drawn_at: string | null
+          drawn_by: string | null
+          event_id: string
+          id: string
+          snapshot_at: string | null
+          week_start: string
+          winner_count: number
+          winners: Json | null
+        }
+        Insert: {
+          announced_post_id?: string | null
+          candidate_count?: number
+          candidates?: Json
+          candidates_hash?: string | null
+          created_at?: string
+          drawn_at?: string | null
+          drawn_by?: string | null
+          event_id: string
+          id?: string
+          snapshot_at?: string | null
+          week_start: string
+          winner_count?: number
+          winners?: Json | null
+        }
+        Update: {
+          announced_post_id?: string | null
+          candidate_count?: number
+          candidates?: Json
+          candidates_hash?: string | null
+          created_at?: string
+          drawn_at?: string | null
+          drawn_by?: string | null
+          event_id?: string
+          id?: string
+          snapshot_at?: string | null
+          week_start?: string
+          winner_count?: number
+          winners?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_weekly_draws_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seeded_reddit_posts: {
         Row: {
           community_slug: string

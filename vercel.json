@@ -61,8 +61,8 @@
       "schedule": "0 15 * * 0"
     },
     {
-      "path": "/api/cron/season-chicken-draw",
-      "schedule": "10 14 * * *"
+      "path": "/api/cron/season-weekly-draw-snapshot",
+      "schedule": "5 15 * * 0"
     }
   ]
 }
