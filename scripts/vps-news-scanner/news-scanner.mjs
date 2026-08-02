@@ -6,7 +6,11 @@
  *      "축구 뉴스 vs 잡담"만 판별 + 한국어 작성 (신뢰도/중요도로 거르지 않음 — 사람 검수 몫)
  *      → 트윗이면 /api/oembed, 기사면 /api/og 로 보강 → /api/news/agent-draft 로 초안 적재.
  * 발행은 안 함. /admin/news-review 에서 사람이 검수·발행 (fail-closed).
- * 소스 목록·상한: SUBREDDITS / SCANNER_MAX_LLM(기본 30) / SCANNER_THROTTLE_MS(기본 6000).
+ * 소스 목록·상한: SUBREDDITS / SCANNER_MAX_LLM(기본 30) / SCANNER_THROTTLE_MS(기본 65000).
+ *
+ * ⚠️ 레딧 무인증 예산 = **IP 당 60초에 요청 1건** (2026-08-02 실측, 아래 REDDIT_RATE 주석).
+ *    그래서 매 run 전량 순회가 불가능하다 → run 당 일부만 긁고 다음 run 이 이어받는
+ *    **회차 로테이션**(rotation.json 커서)으로 45분에 전 소스를 커버한다.
  *
  * 단일 파일·무의존(Node18+). reddit 은 JSON 차단 → curl + RSS(Atom) 로 우회(기존 크롤러 방식).
  * Vultr cron 에서 `node news-scanner.mjs`.
@@ -31,7 +35,25 @@ const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판�
 const LOOKBACK_HOURS = 24 // 이보다 오래된 글은 무시 (신선도)
 const MAX_LLM_PER_RUN = Number(process.env.SCANNER_MAX_LLM || 30) // run 당 OpenAI 호출 상한 (비용 가드)
 const RSS_LIMIT = 40
-const THROTTLE_MS = Number(process.env.SCANNER_THROTTLE_MS || 6000) // 서브레딧 간 간격 (reddit rate limit 회피)
+
+/**
+ * REDDIT_RATE — 무인증 레딧 RSS 는 IP 당 60초에 요청 1건이다.
+ *
+ * 2026-08-02 VPS 실측: 첫 요청 200 + `x-ratelimit-used: 1 / remaining: 0.0 / reset: 48`,
+ * 직후 요청은 전부 429(본문 0바이트). 6초 간격으로 16개를 돌던 기존 코드가 매 run
+ * "2/16개 소스" 였던 원인 — 서브레딧이 막힌 게 아니라 96초 순회 중 60초 경계를 한 번만
+ * 넘었을 뿐이다(그래서 성공 자리가 첼시↔맨시티로 돌아다녔다).
+ *
+ * 예산 계산: cron 15분 = 요청 15건. 화력 측정과 나눠 쓰고 cron 겹침 여유를 남겨 12건으로
+ * 잡는다(12 × 65초 = 13분). 근본 해결은 OAuth(oauth.reddit.com, 100건/분) 전환.
+ */
+const THROTTLE_MS = Number(process.env.SCANNER_THROTTLE_MS || 65000) // 요청 간격 (60초 창 + 여유)
+const SCAN_SUBS_PER_RUN = Number(process.env.SCANNER_SUBS_PER_RUN || 5) // r/soccer 는 별도 고정
+// 단계별 벽시계 상한 — 429 재시도가 겹쳐 run 이 늘어져도 cron(15분)을 침범하지 않게 자른다.
+// 스캔 6건(6.5분) + 화력 6건(6.5분) = 13분이 정상 경로, 여기에 여유를 둔 컷오프.
+const RUN_STARTED_AT = Date.now()
+const SCAN_DEADLINE_MS = Number(process.env.SCANNER_SCAN_DEADLINE_MS || 7.5 * 60 * 1000)
+const HEAT_DEADLINE_MS = Number(process.env.SCANNER_HEAT_DEADLINE_MS || 14 * 60 * 1000)
 const UA = "gongnori.fan news-scanner/1.0"
 // reddit 은 Node TLS 지문/JSON 을 차단 → curl + 브라우저 UA + RSS 로 우회 (기존 크롤러와 동일)
 const REDDIT_UA =
@@ -57,6 +79,10 @@ const SUBREDDITS = [
   "Barca",
   "FCBayern",
 ]
+
+// r/soccer 는 종합·최대 물량이라 매 run 고정, 나머지는 회차 순환 (REDDIT_RATE 참조).
+const ALWAYS_SUB = "soccer"
+const ROTATING_SUBS = SUBREDDITS.filter((s) => s !== ALWAYS_SUB)
 
 // 잡담/스레드 컷
 const SKIP_AUTHORS = new Set(["AutoModerator", "2soccer2bot", "MatchThreadder"])
@@ -121,13 +147,85 @@ function saveSeen(seen) {
   }
 }
 
+// ── 회차 로테이션 커서 ──────────────────────────────────────────────
+// 레딧 예산상 매 run 전량 순회가 불가능하므로(REDDIT_RATE), 이번 run 이 어디까지 긁었는지
+// 파일에 남겨 다음 run 이 이어받는다. 유실돼도 0부터 다시 도는 것뿐이라 치명적이지 않다.
+const ROTATION_FILE =
+  process.env.SCANNER_ROTATION_FILE || SEEN_FILE.replace(/[^/\\]+$/, "rotation.json")
+
+function loadRotation() {
+  try {
+    if (existsSync(ROTATION_FILE)) {
+      const r = JSON.parse(readFileSync(ROTATION_FILE, "utf8"))
+      return { scan: Number(r.scan) || 0, heat: Number(r.heat) || 0 }
+    }
+  } catch (e) {
+    log("rotation load 실패:", e.message)
+  }
+  return { scan: 0, heat: 0 }
+}
+function saveRotation(r) {
+  try {
+    writeFileSync(ROTATION_FILE, JSON.stringify(r))
+  } catch (e) {
+    log("rotation save 실패:", e.message)
+  }
+}
+/** list 에서 cursor 부터 count 개를 순환 추출 */
+function pickRotating(list, cursor, count) {
+  const n = Math.min(count, list.length)
+  const out = []
+  for (let i = 0; i < n; i++) out.push(list[(cursor + i) % list.length])
+  return out
+}
+
 // ── reddit RSS (Atom) ───────────────────────────────────────────────
-function curlText(url) {
-  return execFileSync(
-    "curl",
-    ["-s", "-L", "-H", `User-Agent: ${REDDIT_UA}`, "--max-time", "20", url],
-    { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 }
-  )
+// 헤더 덤프 경로 — 429 판별과 x-ratelimit-reset 회수용. 단일 프로세스라 고정 경로로 충분.
+// (VPS curl 7.81 은 `-w %header{}` 미지원 → -D 파일 경유)
+const HEADER_FILE = "/tmp/news-scanner-headers.txt"
+
+/** 레딧 1회 요청 — 본문뿐 아니라 상태코드·리셋까지 돌려준다 (429 를 조용히 삼키지 않기 위함) */
+function curlReddit(url) {
+  let body = ""
+  try {
+    body = execFileSync(
+      "curl",
+      ["-s", "-L", "-D", HEADER_FILE, "-H", `User-Agent: ${REDDIT_UA}`, "--max-time", "20", url],
+      { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 }
+    )
+  } catch {
+    return { status: 0, body: "", reset: null }
+  }
+  let status = 0
+  let reset = null
+  try {
+    const dump = readFileSync(HEADER_FILE, "utf8")
+    // -L 로 리다이렉트되면 헤더 블록이 여러 개 — 마지막(최종 응답)만 본다
+    const blocks = dump.split(/\r?\n\r?\n/).filter((b) => /^HTTP\//m.test(b))
+    const last = blocks[blocks.length - 1] || dump
+    const sm = last.match(/^HTTP\/[\d.]+\s+(\d{3})/m)
+    if (sm) status = Number(sm[1])
+    const rm = last.match(/^x-ratelimit-reset:\s*([\d.]+)/im)
+    if (rm) reset = Math.ceil(Number(rm[1]))
+  } catch {
+    /* 헤더를 못 읽으면 본문 유무로만 판단 */
+  }
+  return { status, body, reset }
+}
+
+/**
+ * 429 면 레딧이 알려준 reset 초만큼 자고 1회 재시도.
+ * 고정 간격만으론 다른 프로세스(크롤러 등)와 겹쳤을 때 회복이 안 돼서 필요하다.
+ */
+async function redditFetch(url, label) {
+  let r = curlReddit(url)
+  if (r.status === 429) {
+    const waitMs = Math.min(r.reset ?? 60, 120) * 1000 + 2000
+    log(`429 (${label}) — reset ${r.reset ?? "?"}초, ${Math.round(waitMs / 1000)}초 대기 후 재시도`)
+    await sleep(waitMs)
+    r = curlReddit(url)
+  }
+  return r
 }
 function extractTag(xml, tag) {
   const m = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`))
@@ -175,15 +273,12 @@ function parseAtomFeed(xml) {
   }
   return entries
 }
-function fetchSubreddit(sub) {
+async function fetchSubreddit(sub) {
   const url = `https://www.reddit.com/r/${sub}/hot.rss?limit=${RSS_LIMIT}`
-  let xml
-  try {
-    xml = curlText(url)
-  } catch {
-    throw new Error(`curl reddit 실패 (r/${sub})`)
-  }
-  if (!xml || !xml.includes("<entry")) throw new Error(`RSS 차단/비정상 응답 (r/${sub})`)
+  const { status, body: xml } = await redditFetch(url, `r/${sub}`)
+  if (status === 429) throw new Error(`레이트리밋 429 (r/${sub}) — 재시도도 실패`)
+  if (!xml || !xml.includes("<entry"))
+    throw new Error(`비정상 응답 (r/${sub}, HTTP ${status || "?"})`)
   return parseAtomFeed(xml).map((e) => ({ ...e, subreddit: sub }))
 }
 
@@ -536,19 +631,32 @@ async function main() {
   const seen = loadSeen()
   const cutoff = Date.now() - LOOKBACK_HOURS * 3600 * 1000
 
+  // 이번 run 이 긁을 소스 = r/soccer 고정 + 나머지에서 회차 순환 (REDDIT_RATE).
+  // 15개를 5개씩 나눠 도므로 3 run(45분)이면 전 소스 커버 — LOOKBACK_HOURS(24h) 안이라 유실 없음.
+  const rotation = loadRotation()
+  const scanSubs = [ALWAYS_SUB, ...pickRotating(ROTATING_SUBS, rotation.scan, SCAN_SUBS_PER_RUN)]
+  rotation.scan = (rotation.scan + SCAN_SUBS_PER_RUN) % ROTATING_SUBS.length
+  saveRotation(rotation) // 실패해도 다음 run 이 도니 먼저 저장해 중복 순회를 막는다
+  log(`이번 회차 소스 ${scanSubs.length}개: ${scanSubs.map((s) => `r/${s}`).join(", ")}`)
+
   // 모든 소스에서 신규 후보 수집. 키워드(이적) 컷은 제거 — 축구 뉴스 전반을 폭넓게.
   // 밈/스레드/사담만 SKIP_PATTERNS·SKIP_AUTHORS 로 1차 컷, 나머지 판단은 LLM+사람 검수.
   const candidates = []
   const dedup = new Set()
   let fetchedSubs = 0
-  for (const sub of SUBREDDITS) {
+  const scanDeadline = RUN_STARTED_AT + SCAN_DEADLINE_MS
+  for (const [i, sub] of scanSubs.entries()) {
+    if (Date.now() > scanDeadline) {
+      log(`시간 예산 초과 — 남은 ${scanSubs.length - i}개는 다음 회차로`)
+      break
+    }
     let entries
     try {
-      entries = fetchSubreddit(sub)
+      entries = await fetchSubreddit(sub)
       fetchedSubs++
     } catch (e) {
       log(`fetch 실패 (r/${sub}):`, e.message)
-      await sleep(THROTTLE_MS)
+      if (i < scanSubs.length - 1) await sleep(THROTTLE_MS)
       continue
     }
     for (const p of entries) {
@@ -559,14 +667,14 @@ async function main() {
       dedup.add(p.id)
       candidates.push(p)
     }
-    await sleep(THROTTLE_MS)
+    if (i < scanSubs.length - 1) await sleep(THROTTLE_MS)
   }
   if (fetchedSubs === 0) {
     log("모든 소스 fetch 실패 — reddit 차단 의심")
     process.exit(1)
   }
   log(
-    `${fetchedSubs}/${SUBREDDITS.length}개 소스 → 신규 후보 ${candidates.length}개 (LLM 상한 ${MAX_LLM_PER_RUN})`
+    `${fetchedSubs}/${scanSubs.length}개 소스 → 신규 후보 ${candidates.length}개 (LLM 상한 ${MAX_LLM_PER_RUN})`
   )
 
   // 검수 교정 예시 로드 (few-shot 학습) — 실패해도 스캔은 계속
@@ -685,7 +793,7 @@ async function main() {
 
   // 스캔 뒤 화력 재측정 — 실패해도 스캔 결과에는 영향 없음
   try {
-    await reportHeat()
+    await reportHeat(rotation)
   } catch (e) {
     log("heat 실패(무시):", e.message)
   }
@@ -702,40 +810,60 @@ async function main() {
 //    필요한 건 절대값이 아니라 순위다.
 // 서브 간 스케일: r/soccer(종합, 구독자 수백만)가 클럽 서브보다 화력 기준이 높다
 // → 가중 베이스로 보정. 어차피 상위 3개만 쓰므로 대략적 서열이면 충분하다.
-const HEAT_SUBREDDITS = [
+// 앞 2개는 매 run 고정(히어로 선정을 사실상 좌우하는 큰 소스), 클럽은 1개씩 순환 —
+// 레딧 예산이 1분 1건이라 5개 × 2목록 = 10건을 매 run 돌 수 없다(REDDIT_RATE).
+// 클럽 3개 순환이라 45분에 한 바퀴, "3시간 미측정=식음" 무효 기준 안에 넉넉히 든다.
+const HEAT_FIXED = [
   { sub: "soccer", base: 300 },
   { sub: "PremierLeague", base: 150 },
+]
+const HEAT_ROTATING = [
   { sub: "Gunners", base: 100 },
   { sub: "LiverpoolFC", base: 100 },
   { sub: "chelseafc", base: 100 },
 ]
 
-async function reportHeat() {
+async function reportHeat(rotation) {
   if (!CRON_SECRET || DRY_RUN) return
+  const targets = [...HEAT_FIXED, ...pickRotating(HEAT_ROTATING, rotation?.heat ?? 0, 1)]
+  if (rotation) {
+    rotation.heat = ((rotation.heat ?? 0) + 1) % HEAT_ROTATING.length
+    saveRotation(rotation)
+  }
 
   // 두 신호를 합친다 (2026-07-30, 운영자 지적 "갓 올라온 글은 화력이 약하다" 반영):
   //   top?t=day = 오늘 누적 점수 순위 → 검증된 대형 떡밥. 단 신작에 불리.
   //   hot       = 레딧이 점수÷경과시간으로 계산한 순위 → 지금 막 불붙는 글이 바로 상위.
   // 최종 = 둘 중 높은 쪽 — 급상승 신작도, 하루 종일 탄 대작도 다 잡힌다.
   const byKey = new Map() // 같은 글이 여러 목록에 뜨면 최고 점수 유지
-  for (const { sub, base } of HEAT_SUBREDDITS) {
-    for (const listing of ["top.rss?t=day&limit=50", "hot.rss?limit=50"]) {
-      try {
-        const xml = curlText(`https://www.reddit.com/r/${sub}/${listing}`)
-        const entries = parseAtomFeed(xml)
-        entries.forEach((e, idx) => {
-          if (!e.id) return
-          const key = `reddit:${e.id}`
-          const score = Math.max(1, Math.round(base - idx * (base / 50)))
-          const prev = byKey.get(key)
-          if (!prev || prev.score < score) byKey.set(key, { dedupe_key: key, score, comments: 0 })
-        })
-      } catch {
-        /* 목록 하나 실패는 무시 — 다음 run 에서 다시 잰다 */
-      }
-      await sleep(THROTTLE_MS)
+  const jobs = targets.flatMap(({ sub, base }) =>
+    ["top.rss?t=day&limit=50", "hot.rss?limit=50"].map((listing) => ({ sub, base, listing }))
+  )
+  const heatDeadline = RUN_STARTED_AT + HEAT_DEADLINE_MS
+  for (const [i, { sub, base, listing }] of jobs.entries()) {
+    if (Date.now() > heatDeadline) {
+      log(`heat: 시간 예산 초과 — 남은 ${jobs.length - i}건은 다음 회차로`)
+      break
     }
+    try {
+      const { body: xml } = await redditFetch(
+        `https://www.reddit.com/r/${sub}/${listing}`,
+        `heat r/${sub}`
+      )
+      const entries = parseAtomFeed(xml)
+      entries.forEach((e, idx) => {
+        if (!e.id) return
+        const key = `reddit:${e.id}`
+        const score = Math.max(1, Math.round(base - idx * (base / 50)))
+        const prev = byKey.get(key)
+        if (!prev || prev.score < score) byKey.set(key, { dedupe_key: key, score, comments: 0 })
+      })
+    } catch {
+      /* 목록 하나 실패는 무시 — 다음 run 에서 다시 잰다 */
+    }
+    if (i < jobs.length - 1) await sleep(THROTTLE_MS)
   }
+  log(`heat 대상: ${targets.map((t) => `r/${t.sub}`).join(", ")}`)
   const items = [...byKey.values()]
   if (items.length === 0) {
     log("heat: 수집 0건 (top.rss 차단?)")
