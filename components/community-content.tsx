@@ -17,6 +17,7 @@ import { useAuth } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
 import { useCanPostNotice } from "@/hooks/use-board-moderator"
+import { trackEvent } from "@/lib/analytics/events"
 
 interface Flair {
   id: string
@@ -87,6 +88,13 @@ export const CommunityContent = memo(function CommunityContent({
   const canPostNotice = useCanPostNotice(communitySlug)
   const [isFollowing, setIsFollowing] = useState(false)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
+
+  // 게시판 진입 계측 — 이벤트 타입만 정의돼 있고 실제로는 한 번도 안 쏘던 것을 연결 (2026-08-02).
+  // 홈(isMainContent)은 게시판 진입이 아니므로 제외. 페이지네이션 이동도 같은 게시판이라 1회만.
+  useEffect(() => {
+    if (isMainContent || !communitySlug) return
+    trackEvent({ name: "board_view", params: { board: communitySlug } })
+  }, [isMainContent, communitySlug])
 
   // flair 가로 스크롤 ref + 화살표 핸들러
   const flairScrollRef = useRef<HTMLDivElement>(null)

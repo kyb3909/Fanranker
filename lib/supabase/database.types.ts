@@ -3736,6 +3736,7 @@ export type Database = {
           id: string
           ip_hash: string
           post_id: string
+          user_id: string | null
           viewed_at: string | null
         }
         Insert: {
@@ -3743,6 +3744,7 @@ export type Database = {
           id?: string
           ip_hash: string
           post_id: string
+          user_id?: string | null
           viewed_at?: string | null
         }
         Update: {
@@ -3750,6 +3752,7 @@ export type Database = {
           id?: string
           ip_hash?: string
           post_id?: string
+          user_id?: string | null
           viewed_at?: string | null
         }
         Relationships: [
@@ -6232,7 +6235,11 @@ export type Database = {
         Returns: undefined
       }
       increment_post_view_count: {
-        Args: { ip_address_param: string; post_id_param: string }
+        Args: {
+          ip_address_param: string
+          post_id_param: string
+          user_id_param?: string | null
+        }
         Returns: boolean
       }
       increment_prediction_count: {

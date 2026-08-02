@@ -27,7 +27,12 @@ type AnalyticsEvent =
       name: "first_community_action"
       params: { kind: "post" | "comment"; channel: string; channel_campaign: string }
     }
+  // ── 콘텐츠 소비 계측 (언론사 계약 협상 지표 — 2026-08-02) ──
+  // 파트너가 묻는 건 "예측 참여자 수"가 아니라 "기사를 몇 명이 읽고 얼마나 머무나"다.
+  // board_view = 게시판 진입, post_read = 15초 이상 실제로 화면에 띄워둔 "읽음".
+  // 단순 조회(post_views)는 스쳐간 것까지 세므로 둘을 나눠 본다.
   | { name: "board_view"; params: { board: string } }
+  | { name: "post_read"; params: { post_id: string } }
   | { name: "prediction_submit"; params: { sport: string; stake: number } }
   // ── 예측 완료 모달 → 커뮤니티 전환 실험 (2026-07-02) ──
   | { name: "prediction_success_modal"; params: { game_count: number; has_community: boolean } }
