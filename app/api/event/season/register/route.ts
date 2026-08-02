@@ -7,7 +7,8 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 /**
  * POST /api/event/season/register — 시즌 오픈 팬덤 대항전 참가 등록.
  *
- * 월드컵 register 와 동일 골격이되 3팀(kop/blues/gooner) 허용.
+ * 월드컵 register 와 동일 골격이되 2팀(kop/blues) 허용.
+ * 2026-08-02: 대결이 리빅 vs 첼루키 2인으로 확정되어 gooner 제거 (등록 0건 상태에서 정리).
  * - Clerk 로그인 필수, UNIQUE (event_id, user_id) — 팀 변경 불가 (설계 §3)
  * - traffic_source: 클라이언트가 최초 터치 UTM(channel)을 실어 보냄 — 유튜버별 귀속
  */
@@ -15,7 +16,7 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 const EVENT_SLUG = "season-open-2026"
 
 const RegisterSchema = z.object({
-  group_slug: z.enum(["kop", "blues", "gooner"]),
+  group_slug: z.enum(["kop", "blues"]),
   traffic_source: z.string().min(1).max(64).nullable().optional(),
 })
 

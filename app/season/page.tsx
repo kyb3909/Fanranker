@@ -16,7 +16,7 @@ import {
 export const metadata: Metadata = {
   title: "시즌 오픈 팬덤 대항전",
   description:
-    "리버풀 vs 첼시 vs 아스날 — 시즌 개막 4주, 팬덤의 자존심을 건 승부예측 대항전. 활동하면 유니폼·치킨 추첨 자격이 생깁니다.",
+    "리버풀 vs 첼시 — 시즌 개막 4주, 팬덤의 자존심을 건 승부예측 대항전. 활동하면 경품 추첨 자격이 생깁니다.",
   alternates: { canonical: "/season" },
   openGraph: {
     title: "시즌 오픈 팬덤 대항전 | gongnori.fan",
@@ -34,21 +34,18 @@ const EVENT_SLUG = "season-open-2026"
 const CRESTS: Record<string, string> = {
   kop: "/season/crest-liverpool.png",
   blues: "/season/crest-chelsea.png",
-  gooner: "/season/crest-arsenal.png",
 }
 
 /** 팀 카드 선수 포스터 (그런지 일러스트 — 특정 인물 아님, 초상권 회피) */
 const PLAYERS: Record<string, string> = {
   kop: "/season/player-kop.webp",
   blues: "/season/player-blues.webp",
-  gooner: "/season/player-gooner.webp",
 }
 
-/** 히어로 크레스트 크기 [기본px, lg px] — 세 팀 동일 (2026-07-31 운영자 확정) */
+/** 히어로 크레스트 크기 [기본px, lg px] — 양 팀 동일 (2026-07-31 운영자 확정) */
 const CREST_HERO_PX: Record<string, [number, number]> = {
   kop: [92, 112],
   blues: [92, 112],
-  gooner: [92, 112],
 }
 
 /**
@@ -58,7 +55,6 @@ const CREST_HERO_PX: Record<string, [number, number]> = {
 const CREST_HERO_SHIFT: Record<string, number> = {
   kop: 0,
   blues: 0,
-  gooner: 0,
 }
 
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */
@@ -80,7 +76,7 @@ const STEPS = [
   {
     num: "01",
     title: "팀 선택 참가",
-    body: "리버풀·첼시·아스날 중 내 팀을 고르면 끝. 다른 팀 팬도 셋 중 하나를 골라 참전할 수 있어요. 이벤트 중 팀 변경은 불가.",
+    body: "리버풀·첼시 중 내 팀을 고르면 끝. 다른 팀 팬도 둘 중 하나를 골라 참전할 수 있어요. 이벤트 중 팀 변경은 불가.",
   },
   {
     num: "02",
@@ -90,25 +86,19 @@ const STEPS = [
   {
     num: "03",
     title: "팬덤 순위 발표",
-    body: "팀 순위는 매주 월요일에 공개됩니다. 4주 뒤 승리 팬덤에게는 미스터리 상품이 걸려 있어요.",
+    body: "팀 순위는 매주 월요일에 공개됩니다. 4주 뒤 승리 팬덤에게는 시즌 유니폼 5장이 걸려 있어요.",
   },
 ] as const
 
+/** 2026-08-02 확정 구성 — 상세·근거는 workspace/RESULT-0802-prizes.md */
 const PRIZES = [
-  ["유니폼", "이번 시즌 유니폼 (선택한 팀 것)", "5명", "활동 포인트 달성자 중 추첨"],
-  ["스팀 기프트카드", "5만원권", "10명", "활동 포인트 달성자 중 추첨"],
-  [
-    "데일리 치킨",
-    "매일 밤 11시, 그날 댓글 쓴 사람 중 추첨",
-    "매일 1명",
-    "그날 댓글 1개 이상 = 응모권 1장",
-  ],
-  ["미스터리 상품", "2주차에 공개", "1명", "승리 팬덤의 예측 상위 20명 중 추첨"],
-  ["한정 호칭 '창단 멤버'", "프로필에 영구 표시", "전원", "응모 기준 달성자 전원"],
+  ["팬덤 1위 사인 상품", "리버풀·첼시 각 1명 (정품 확인서 포함)", "2명", "팬덤별 예측력 1위"],
+  ["시즌 유니폼", "승리 팬덤에게 (선택한 팀 것)", "5명", "활동 포인트 달성자 중 추첨"],
+  ["스팀 기프트카드", "5만원권 — 매주 월요일 발표", "매주 5명 (4주 20명)", "그 주 활동 기준 추첨"],
 ] as const
 
 const NOTICES = [
-  "경품은 이벤트 기간 내 활동 포인트 기준으로 추첨하며, 예측 성적 순위에 따라 확정 지급되지 않습니다.",
+  "사인 상품은 팬덤별 예측력 1위에게 지급하며, 그 외 경품은 활동 포인트 기준 추첨으로 정해집니다.",
   "예측만으로는 응모할 수 없습니다 — 커뮤니티 활동(댓글·글)이 최소 3회 필요합니다.",
   "한 번 선택한 팀은 이벤트 종료까지 변경할 수 없습니다.",
   "이벤트 기간 중 삭제된 글·댓글의 포인트는 회수되며, 무성의한 도배는 검수 후 당첨이 취소될 수 있습니다.",
@@ -221,7 +211,7 @@ export default async function SeasonEventPage({
   }
 
   // 미리보기 표본 숫자 — 실데이터가 있으면 실데이터 우선
-  const previewCounts: Record<string, number> = { kop: 138, blues: 121, gooner: 147 }
+  const previewCounts: Record<string, number> = { kop: 138, blues: 121 }
 
   const pickerGroups: SeasonGroup[] = (groups ?? []).map((g) => ({
     slug: g.slug,
@@ -402,19 +392,26 @@ export default async function SeasonEventPage({
                 )}
               </div>
 
-              {/* ── 우: 3색 깃발 콜라주 (생성 애셋 — 엠블럼 없이 컬러·군중·깃발로
-                  대결 구도, 팬덤명 타이포는 HTML 오버레이) ── */}
+              {/* ── 우: 깃발 콜라주 (생성 애셋 — 엠블럼 없이 컬러·군중·깃발로
+                  대결 구도, 팬덤명 타이포는 HTML 오버레이) ──
+                  원본은 빨강|파랑|빨강 3분할이다. 대결이 2팀으로 줄면서(2026-08-02)
+                  **왼쪽 2패널만** 쓴다 — background-size 150% 로 원본을 컨테이너 1.5배 폭에
+                  펼치면 패널 하나가 정확히 컨테이너의 50% 가 되어 빨강|파랑 = Kop|Blues 로 맞는다.
+                  (object-cover 는 종횡비에 따라 가로 크롭이 달라져 칸이 안 맞는다) */}
               <div
                 aria-hidden
                 className="relative mt-1 min-h-[190px] overflow-hidden rounded-[14px] lg:mt-0 lg:min-h-[300px]"
                 style={{ border: "1px solid var(--gn-night-line)" }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/season/hero-collage.webp"
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                  loading="eager"
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: "url(/season/hero-collage.webp)",
+                    // 원본 3패널 중 팀 수만큼만 보이게: 전체를 (3/N)배 폭으로 펼친다 (2팀 → 150%)
+                    backgroundSize: `${(3 / Math.max(pickerGroups.length, 1)) * 100}% 100%`,
+                    backgroundPosition: "left center",
+                    backgroundRepeat: "no-repeat",
+                  }}
                 />
                 <div
                   className="absolute inset-0"
@@ -423,7 +420,12 @@ export default async function SeasonEventPage({
                       "linear-gradient(to top, rgba(9,8,11,.72) 0%, rgba(9,8,11,.12) 45%, rgba(9,8,11,0) 70%)",
                   }}
                 />
-                <div className="absolute inset-0 grid grid-cols-3 items-center pt-2 pb-3.5">
+                <div
+                  className="absolute inset-0 grid items-center pt-2 pb-3.5"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.max(pickerGroups.length, 1)}, minmax(0, 1fr))`,
+                  }}
+                >
                   {pickerGroups.map((g) => (
                     <div key={g.slug} className="flex h-full flex-col items-center justify-between">
                       <div className="flex flex-1 items-center">
@@ -523,7 +525,7 @@ export default async function SeasonEventPage({
             className="mb-1.5 text-[12px] font-extrabold"
             style={{ color: "var(--wc-burgundy)", letterSpacing: "0.18em" }}
           >
-            ★ ★ ★&nbsp;&nbsp;3개 팬덤, 4주간의 승부&nbsp;&nbsp;★ ★ ★
+            ★ ★ ★&nbsp;&nbsp;두 팬덤, 4주간의 승부&nbsp;&nbsp;★ ★ ★
           </p>
           <h2
             className="text-[26px] sm:text-[30px]"
@@ -625,7 +627,11 @@ export default async function SeasonEventPage({
           {[
             ["대항전 기간", "4주간", `${fmtDate(event.start_at)} ~ ${fmtDate(event.end_at)}`],
             ["참여 방법", "예측하고, 떠들어라", "매일 무료 볼 10개 + 매치데이 댓글이 응모권"],
-            ["보상 안내", "활동하면 추첨 자격", "유니폼·스팀·매일 밤 치킨 — 예측만으론 응모 불가"],
+            [
+              "보상 안내",
+              "활동하면 추첨 자격",
+              "사인 상품·유니폼·매주 스팀 — 예측만으론 응모 불가",
+            ],
           ].map(([k, t, d]) => (
             <div key={k} className="px-5 py-4" style={{ background: "var(--wc-card, #fff)" }}>
               <p className="mb-1 text-[11.5px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
@@ -712,7 +718,7 @@ export default async function SeasonEventPage({
                 wordBreak: "keep-all",
               }}
             >
-              아직 발표 전입니다 — 개막하면 매주 월요일, 세 팬덤의 예측력 평균이 여기서 갈립니다.
+              아직 발표 전입니다 — 개막하면 매주 월요일, 두 팬덤의 예측력 평균이 여기서 갈립니다.
             </div>
           )}
         </section>
@@ -875,7 +881,7 @@ export default async function SeasonEventPage({
       </main>
 
       <div className="pb-[56px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-        세 팬덤의 자존심이 여기서 갈립니다 — 당신의 팀은 어디입니까
+        두 팬덤의 자존심이 여기서 갈립니다 — 당신의 팀은 어디입니까
       </div>
     </div>
   )
