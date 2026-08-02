@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
     }
 
     for (const r of reports) {
+      if (isKnownUnactionable(r)) continue
+
       Sentry.captureMessage("csp-violation", {
         level: "warning",
         tags: {
@@ -46,6 +48,30 @@ export async function POST(request: NextRequest) {
     // 보고 자체가 실패해도 클라이언트엔 아무 영향 없어야 함
     return new NextResponse(null, { status: 204 })
   }
+}
+
+/**
+ * Sentry 로 올리지 않을 위반 — 이미 원인을 알고 있고, 정책을 고치기 전엔 사라지지 않는 것들.
+ *
+ * 2026-08-02 /benchmark 실측: 페이지뷰마다 위반 리포트가 5건씩 올라가고 있었고
+ * (= Sentry 이벤트 5건/뷰), 전부 `blocked-uri: inline` 이었다.
+ *   · style-src inline → React `style={{...}}`. 정책에 'unsafe-inline' 을 넣어 해소함.
+ *   · script-src inline → **Next.js 가 하이드레이션·RSC 스트리밍용으로 주입하는 프레임워크
+ *     스크립트.** 없애려면 nonce 기반 CSP(미들웨어에서 nonce 발급 → Next 가 자동 부착)가
+ *     필요하다. 그 작업 전까지는 매 페이지뷰마다 반드시 발생하므로, 관측 가치가 0 인데
+ *     Sentry 쿼터만 태우고 진짜 에러를 묻는다.
+ *
+ * **외부 호스트가 차단된 위반은 그대로 보고한다** — 그게 침입·서드파티 변경의 실제 신호다.
+ * 여기서 거르는 건 "우리 정책 모양이 코드와 안 맞는다"는, 이미 아는 사실뿐이다.
+ *
+ * nonce CSP 를 도입하면 이 함수를 지워야 한다.
+ */
+function isKnownUnactionable(r: CspReport): boolean {
+  const blocked = (r.blockedUri ?? "").toLowerCase()
+  if (blocked !== "inline" && blocked !== "self") return false
+
+  const directive = (r.effectiveDirective ?? r.violatedDirective ?? "").toLowerCase()
+  return directive.startsWith("script-src") || directive.startsWith("style-src")
 }
 
 interface CspReport {
