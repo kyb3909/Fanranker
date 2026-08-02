@@ -5,15 +5,25 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 })
 
-// 현재 enforcing CSP와 동일한 외부 호스트 whitelist. `'unsafe-inline'` / `'unsafe-eval'`만 제거.
+// 현재 enforcing CSP와 동일한 외부 호스트 whitelist. `'unsafe-eval'`만 제거.
 // Report-Only로 위반을 수집하며 점진적으로 enforce 전환 준비.
 // 전환 체크리스트: `app/api/security/csp-report`로 들어온 위반을 1~2주 관측 →
 // nonce/hash 필요한 인라인 스크립트를 식별 → `Content-Security-Policy`도 동일 정책으로 교체.
+//
+// ⚠️ style-src 는 `'unsafe-inline'` 을 유지한다 (2026-08-02).
+//    벤치마크 실측: 모든 페이지뷰마다 style-src 위반 리포트가 정확히 5건씩 발생했고,
+//    원인은 전부 React `style={{...}}` 인라인 스타일이었다. 이 코드베이스는 인라인 스타일을
+//    광범위하게 쓰므로 **구조적으로 clean 해질 수 없다** — 관측을 계속해도 enforce 전환이라는
+//    목표에 도달하지 못한다. 그런데 비용은 계속 나갔다: csp-report 핸들러가 위반마다
+//    Sentry.captureMessage 를 올려 **페이지뷰 1회당 Sentry 이벤트 5건**을 태우고 있었다
+//    (쿼터 소모 + 진짜 에러 매몰).
+//    XSS 위험은 script-src 에 있지 style-src 에 있지 않으므로, script-src 만 strict 로 남긴다.
+//    인라인 스타일을 전부 클래스로 걷어낸 뒤에 다시 조이는 것이 순서다.
 const STRICT_CSP_REPORT_ONLY = [
   "default-src 'self'",
   "script-src 'self' https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.cdninstagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.sentry.io https://va.vercel-scripts.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
   "worker-src 'self' blob:",
-  "style-src 'self' https://cdn.jsdelivr.net https://clerk.gongnori.fan",
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://clerk.gongnori.fan",
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob: https:",
   "font-src 'self' data: https://cdn.jsdelivr.net",
