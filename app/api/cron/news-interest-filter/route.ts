@@ -88,7 +88,7 @@ async function cronGet(request: NextRequest) {
 
     const { data: drafts } = await supabase
       .from("news_reservoir")
-      .select("id, draft, decision")
+      .select("id, draft, decision, urls")
       .eq("status", "drafted")
       .order("created_at", { ascending: false })
       .limit(50)
@@ -110,8 +110,16 @@ async function cronGet(request: NextRequest) {
     for (const row of pending) {
       const title = (row.draft as { title?: string })?.title ?? ""
       // ── 여자 축구 — 서비스 커버리지 밖, 클럽명 가드보다 먼저 검사해야 한다
-      // ("아스날 위민" 이 클럽 keep 에 걸리면 안 됨). 운영자 확정 2026-08-04.
-      if (isWomensFootball(title, (row.draft as { summary?: string })?.summary)) {
+      // ("아스날 위민" 이 클럽 keep 에 걸리면 안 됨). 한국어 제목에선 성별 표기가
+      // 지워지는 실사고(몰리 바트립)가 있어 출처 URL·영문 원제까지 검사. 2026-08-04.
+      if (
+        isWomensFootball(
+          title,
+          (row.draft as { summary?: string })?.summary,
+          (row.urls as { source?: string } | null)?.source,
+          (row.draft as { original?: { title?: string } })?.original?.title
+        )
+      ) {
         dropped++
         report.push({ title, verdict: "reject(여자 축구)" })
         if (!dry) {

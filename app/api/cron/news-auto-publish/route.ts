@@ -150,8 +150,10 @@ async function run(request: NextRequest) {
     // 개인 블로그·뉴스레터 출처는 자동발행 금지 (2026-08-04 Substack 실사고)
     if (row.urls?.source && PERSONAL_BLOG_RE.test(row.urls.source)) continue
     // 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04). 관심도 필터가 1차
-    // 반려하지만 필터 사이클 전에 발행되는 걸 막는 이중 방어.
-    if (isWomensFootball(title)) continue
+    // 반려하지만 필터 사이클 전에 발행되는 걸 막는 이중 방어. 한국어 번역 제목에선
+    // 성별 표기가 지워지는 실사고(몰리 바트립 — 구단 URL 에만 women 표기)가 있어
+    // **출처 URL·영문 원제까지** 함께 검사한다.
+    if (isWomensFootball(title, row.urls?.source, row.draft?.original?.title)) continue
     // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
     // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
     const firstImage = extractFirstImageSrcFromTipTapJSON(content)

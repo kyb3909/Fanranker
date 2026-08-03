@@ -211,8 +211,12 @@ export async function fetchTransferFeed(
   return (
     ((data ?? []) as TickerRow[])
       .filter((r) => r.headline_kr)
-      // 여자 축구 제외 (운영자 확정 2026-08-04) — 뉴스 파이프라인과 동일 기준
-      .filter((r) => !WOMENS_FOOTBALL_RE.test(`${r.headline_kr} ${r.original_title ?? ""}`))
+      // 여자 축구 제외 (운영자 확정 2026-08-04) — 뉴스 파이프라인과 동일 기준.
+      // 한국어 제목에선 성별 표기가 지워지는 실사고(몰리 바트립)가 있어 URL 까지 검사.
+      .filter(
+        (r) =>
+          !WOMENS_FOOTBALL_RE.test(`${r.headline_kr} ${r.original_title ?? ""} ${r.link_url ?? ""}`)
+      )
       .map((r) => ({
         id: r.id,
         headline: r.headline_kr as string,
