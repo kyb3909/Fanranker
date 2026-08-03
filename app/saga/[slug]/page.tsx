@@ -7,6 +7,7 @@ import { aggregateMainVotes } from "@/lib/saga/votes"
 import { SagaMainVote } from "@/components/saga/main-vote"
 import { CommentSection } from "@/components/post-detail/comment-section"
 import { SagaViewTracker } from "@/components/saga/saga-view-tracker"
+import { SeasonWiki } from "./season-wiki"
 import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
 
 /** KST 날짜 마디 라벨 — "8월 2일" */
@@ -127,6 +128,11 @@ export default async function SagaDetailPage({
   const data = await fetchSaga(slug)
   if (!data) notFound()
   const { saga, entries, articlesByEntry, vote } = data
+
+  // 시즌 위키 — transfer 상세와 화면 문법이 달라(스테퍼·투표 없음) 통째로 분기
+  if (saga.saga_type === "season") {
+    return <SeasonWiki saga={saga as unknown as Parameters<typeof SeasonWiki>[0]["saga"]} />
+  }
 
   const flow = STAGE_FLOW[saga.saga_type]
   const idx = stageIndex(saga.saga_type, saga.stage)

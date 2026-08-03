@@ -1,0 +1,171 @@
+import "server-only"
+
+import type { createServiceRoleClient } from "@/lib/supabase/server"
+import fplPlayers from "@/public/data/fpl-players.json"
+
+type ServiceClient = ReturnType<typeof createServiceRoleClient>
+
+/**
+ * 시즌 위키 데이터 조립 (D4: 팀+시즌 문서) — 전부 기존 데이터의 재조립이라 수집 0.
+ *
+ * - 스쿼드: fpl-players.json (EPL 전 선수 한글명·포지션)
+ * - 순위: standings_cache(epl) — 시즌 전엔 직전 시즌 최종 순위가 남아 있으므로
+ *   fetched_at 을 함께 반환해 화면이 "기준일"을 표시한다
+ * - 일정·결과: betman_games 한글 팀명 매칭 (마켓별 중복행 → 경기 단위 dedup)
+ * - 관련 이적 사가: 엔트리 헤드라인에 팀명이 등장하는 transfer 사가 (휴리스틱 —
+ *   이적 사가 identity 에 클럽이 없어서(D2) 텍스트 매칭이 v1 의 접합면)
+ */
+
+export interface SeasonSubject {
+  team_id: string
+  team_kr: string
+  team_fpl: string
+  aliases: string[]
+  season: string
+}
+
+export interface SquadPlayer {
+  name: string
+  nameKo: string
+  position: string
+}
+
+export interface SeasonStanding {
+  rank: number
+  played: number
+  win: number
+  draw: number
+  loss: number
+  points: number
+  goalDiff: number
+  fetchedAt: string
+}
+
+export interface SeasonMatch {
+  matchTime: string
+  home: string
+  away: string
+  homeScore: number | null
+  awayScore: number | null
+  status: string
+  leagueCode: string | null
+}
+
+export interface RelatedSaga {
+  slug: string
+  title: string
+  stage: string
+  status: string
+  outcome: string | null
+  entry_count: number
+}
+
+// fpl-players.json 의 실제 포지션 값: GK / DF / MF / FW
+const POSITION_ORDER = ["GK", "DF", "MF", "FW"] as const
+const POSITION_LABEL: Record<string, string> = {
+  GK: "골키퍼",
+  DF: "수비수",
+  MF: "미드필더",
+  FW: "공격수",
+}
+
+export function loadSquad(
+  teamFpl: string
+): { position: string; label: string; players: SquadPlayer[] }[] {
+  const players = (
+    fplPlayers as { name: string; nameKo: string; team: string; position: string }[]
+  ).filter((p) => p.team === teamFpl)
+  return POSITION_ORDER.map((pos) => ({
+    position: pos,
+    label: POSITION_LABEL[pos] ?? pos,
+    players: players
+      .filter((p) => p.position === pos)
+      .map((p) => ({ name: p.name, nameKo: p.nameKo, position: p.position })),
+  })).filter((g) => g.players.length > 0)
+}
+
+export async function fetchStanding(
+  supabase: ServiceClient,
+  teamKr: string
+): Promise<SeasonStanding | null> {
+  const { data } = await supabase
+    .from("standings_cache")
+    .select("data, fetched_at")
+    .eq("league_id", "epl")
+    .maybeSingle()
+  if (!data) return null
+  const rows = (data.data ?? []) as Record<string, unknown>[]
+  const idx = rows.findIndex((r) => r["팀명"] === teamKr)
+  if (idx < 0) return null
+  const r = rows[idx]
+  return {
+    rank: idx + 1,
+    played: Number(r["경기"] ?? 0),
+    win: Number(r["승"] ?? 0),
+    draw: Number(r["무"] ?? 0),
+    loss: Number(r["패"] ?? 0),
+    points: Number(r["승점"] ?? 0),
+    goalDiff: Number(r["골득실"] ?? 0),
+    fetchedAt: data.fetched_at as string,
+  }
+}
+
+export async function fetchMatches(
+  supabase: ServiceClient,
+  aliases: string[]
+): Promise<SeasonMatch[]> {
+  const names = aliases.filter((a) => /[가-힣]/.test(a)) // betman 은 한글 표기
+  if (names.length === 0) return []
+  const orExpr = names.map((n) => `home_team_name.eq.${n},away_team_name.eq.${n}`).join(",")
+  const { data } = await supabase
+    .from("betman_games")
+    .select(
+      "match_time, home_team_name, away_team_name, home_score, away_score, status, league_code"
+    )
+    .or(orExpr)
+    .order("match_time", { ascending: false })
+    .limit(120)
+
+  // 마켓/전반전 중복행 → 경기 단위 dedup (시간+홈+원정)
+  const seen = new Set<string>()
+  const matches: SeasonMatch[] = []
+  for (const g of data ?? []) {
+    const dedupKey = `${g.match_time}|${g.home_team_name}|${g.away_team_name}`
+    if (seen.has(dedupKey)) continue
+    seen.add(dedupKey)
+    matches.push({
+      matchTime: g.match_time as string,
+      home: g.home_team_name as string,
+      away: g.away_team_name as string,
+      homeScore: g.home_score as number | null,
+      awayScore: g.away_score as number | null,
+      status: g.status as string,
+      leagueCode: g.league_code as string | null,
+    })
+    if (matches.length >= 20) break
+  }
+  return matches
+}
+
+export async function fetchRelatedTransferSagas(
+  supabase: ServiceClient,
+  aliases: string[]
+): Promise<RelatedSaga[]> {
+  const orExpr = aliases.map((a) => `headline.ilike.%${a}%`).join(",")
+  const { data: entries } = await supabase
+    .from("saga_entries")
+    .select("saga_id")
+    .or(orExpr)
+    .limit(200)
+  const ids = [...new Set((entries ?? []).map((e) => e.saga_id as string))]
+  if (ids.length === 0) return []
+
+  const { data: sagas } = await supabase
+    .from("sagas")
+    .select("slug, title, stage, status, outcome, entry_count")
+    .in("id", ids)
+    .eq("saga_type", "transfer")
+    .order("last_event_at", { ascending: false })
+    .limit(20)
+  return (sagas ?? []) as RelatedSaga[]
+}

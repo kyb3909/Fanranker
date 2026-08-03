@@ -43,7 +43,10 @@ export default async function SagaIndexPage() {
     )
     .order("last_event_at", { ascending: false })
     .limit(50)
-  const sagas = (data ?? []) as unknown as SagaRow[]
+  const all = (data ?? []) as unknown as SagaRow[]
+  // 시즌 위키는 상단 고정 스트립 — 이적설 범프에 묻히면 팀 허브 역할을 못 한다
+  const seasons = all.filter((s) => s.saga_type === "season")
+  const sagas = all.filter((s) => s.saga_type !== "season")
 
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
@@ -54,6 +57,38 @@ export default async function SagaIndexPage() {
       />
 
       <main className="mx-auto max-w-[860px] px-4 pt-6 pb-16 sm:px-6">
+        {/* 팀 시즌 위키 스트립 — 이벤트 유입(Kop/Blues)의 팀 허브 착지 */}
+        {seasons.length > 0 && (
+          <div className="mb-5">
+            <p
+              className="mb-2 text-[12px] font-extrabold tracking-wide"
+              style={{ color: "var(--wc-mute)" }}
+            >
+              팀 시즌 문서
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {seasons.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/saga/${s.slug}`}
+                  className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md"
+                  style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+                >
+                  <p className="text-[11px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
+                    SEASON WIKI
+                  </p>
+                  <p
+                    className="mt-0.5 text-[15px] font-extrabold"
+                    style={{ color: "var(--wc-ink)" }}
+                  >
+                    {s.title}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {sagas.length === 0 ? (
           <p className="py-16 text-center text-[14px]" style={{ color: "var(--wc-mute)" }}>
             아직 열린 사가가 없습니다 — 이적시장이 움직이면 여기부터 채워집니다.

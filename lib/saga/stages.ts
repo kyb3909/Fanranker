@@ -28,6 +28,9 @@ export const STAGE_LABEL: Record<string, string> = {
   done: "오피셜",
   collapsed: "결렬",
   stayed: "잔류",
+  // season 플로우 (팀 시즌 위키 문서)
+  active: "시즌 진행 중",
+  archived: "아카이브",
 }
 
 export function isValidStage(type: SagaType, stage: string): boolean {
