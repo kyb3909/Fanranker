@@ -7,12 +7,12 @@ export const dynamic = "force-dynamic"
 /**
  * GET/POST /api/cron/news-expire-drafts  (CRON_SECRET, vercel.json 매시간)
  *
- * 검수 대기(drafted) 중인 뉴스 초안이 생성 후 48시간을 넘기면 자동 반려한다.
- * 뉴스는 신선도가 생명이라, 이틀 지난 소식은 발행 가치가 없다고 보고 큐에서 내린다.
+ * 검수 대기(drafted) 중인 뉴스 초안이 생성 후 24시간을 넘기면 자동 반려한다
+ * (48h → 24h, 2026-08-04 운영자: "24시간 전 기사는 시의성 잃어버리니 지워지게").
  * 수동 반려와 구분되게 decision 에 reviewer:"auto" / reason:"expired" 기록.
  * status='drafted' 인 것만 대상 — 이미 발행/반려된 건 건드리지 않는다.
  */
-const EXPIRE_HOURS = 48
+const EXPIRE_HOURS = 24
 
 async function handler(req: NextRequest) {
   const authError = verifyCronSecret(req)
