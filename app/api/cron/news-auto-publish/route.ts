@@ -11,6 +11,7 @@ import {
 } from "@/lib/news/publish"
 import { inspectDraft, unknownPlayerNames } from "@/lib/news/quality-gate"
 import { classifyTier } from "@/lib/saga/tier"
+import { titleSimilarity } from "@/lib/saga/cluster"
 
 export const dynamic = "force-dynamic"
 
@@ -31,8 +32,9 @@ export const dynamic = "force-dynamic"
 
 /** 하루 발행 총량 상한 (자동+수동 합산, KST 자정 기준). 물량 목표 = 하루 뉴스 20 */
 const DAILY_CAP = 20
-/** 자동발행만의 일일 상한 — 재개 첫 주 소량 운영 (2026-08-04, 오류율 보고 확대) */
-const AUTO_DAILY_CAP = 5
+/** 자동발행만의 일일 상한 — 5로 시작했으나 중복 차단 게이트가 붙으며 실공급이
+ *  얇아져 10으로 (2026-08-04). 오류율 문제 시 다시 축소 */
+const AUTO_DAILY_CAP = 10
 /** 회당 발행 상한 — 30분 주기 × 2건 = 최대 96건/일 이론치를 DAILY_CAP 이 자른다 */
 const PER_RUN_CAP = 2
 /** 초안 신선도 (시간) */
@@ -110,6 +112,16 @@ async function run(request: NextRequest) {
     .select("preferred_ko, hangul_alts")
     .eq("category", "player")
 
+  // 중복 차단 재료 — 최근 48시간 발행 제목 (실사고 2026-08-04: 레딧에 같은 소식이
+  // 여러 개 올라와 '헨더슨 첼시 합류'가 3번 발행됨)
+  const { data: recentPosts } = await supabase
+    .from("posts")
+    .select("title")
+    .eq("user_id", NEWS_BOT_USER_ID)
+    .is("deleted_at", null)
+    .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
+  const recentTitles = (recentPosts ?? []).map((p) => p.title as string)
+
   const budget = Math.min(
     PER_RUN_CAP,
     DAILY_CAP - (publishedToday ?? 0),
@@ -139,6 +151,27 @@ async function run(request: NextRequest) {
     // 검사관 불통과 이력 → 재검사 안 함 (사람 검수 대기 중 — 비용·루프 방지)
     const priorGate = (row.decision?.auto_gate ?? null) as { pass?: boolean } | null
     if (priorGate?.pass === false) continue
+
+    // 중복 차단 — 최근 발행 기사와 제목이 비슷하면 같은 소식의 재탕
+    const dup = recentTitles.find((t) => titleSimilarity(t, title) >= 0.5)
+    if (dup) {
+      await supabase
+        .from("news_reservoir")
+        .update({
+          decision: {
+            ...(row.decision ?? {}),
+            auto_gate: {
+              pass: false,
+              reasons: [`중복 기사 (기발행: ${dup.slice(0, 40)})`],
+              at: new Date().toISOString(),
+            },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      gated.push(`${row.id}: 중복`)
+      continue
+    }
 
     // 신뢰 계층화 — 이적 맥락 + 루머 티어는 자동발행 금지 (오보가 최악의 사고)
     const tier = classifyTier({
@@ -180,6 +213,8 @@ async function run(request: NextRequest) {
     }
     published++
     publishedIds.push(result.postId!)
+    // 같은 run 안의 다음 후보도 방금 발행분과 중복 검사되도록
+    recentTitles.push(title)
   }
 
   return NextResponse.json({
