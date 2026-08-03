@@ -9,11 +9,18 @@ import { CommentSection } from "@/components/post-detail/comment-section"
 import { SagaViewTracker } from "@/components/saga/saga-view-tracker"
 import { SeasonWiki } from "./season-wiki"
 import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
+import { SAGA_DEADLINE_KST } from "@/lib/saga/config"
 
 /** KST 날짜 마디 라벨 — "8월 2일" */
 function kstDateLabel(iso: string): string {
   const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000)
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`
+}
+
+/** 이적시장 마감 D-day — 마감 후에는 표시하지 않는다 */
+function ddayLabel(): string | null {
+  const days = Math.ceil((new Date(SAGA_DEADLINE_KST).getTime() - Date.now()) / 86400_000)
+  return days > 0 ? `D-${days}` : null
 }
 
 // 사가는 이벤트가 붙을 때마다 자란다 — 짧은 재검증
@@ -58,12 +65,12 @@ async function fetchSaga(slug: string) {
   const supabase = createServiceRoleClient()
   const { data: saga } = await supabase.from("sagas").select("*").eq("slug", slug).maybeSingle()
   if (!saga) return null
-  // 연혁은 시간순 — 오래된 사건이 위, 새 기사는 아래로 붙는다 (드라마를 처음부터 읽는 방향)
+  // 연대기는 최신 기록부터 — 재방문자가 "새 소식"을 맨 위에서 만난다 (목업 승인 2026-08-04)
   const { data: entries } = await supabase
     .from("saga_entries")
     .select("id, headline, summary, tier, stage_after, origin, echoes, occurred_at")
     .eq("saga_id", saga.id)
-    .order("occurred_at", { ascending: true })
+    .order("occurred_at", { ascending: false })
 
   // 연결된 발행 기사 — 떡밥에서 타고 들어온 기사를 해당 엔트리 자리에 펼치기 위함
   const { data: links } = await supabase
@@ -114,7 +121,11 @@ export async function generateMetadata({
 }
 
 const TIER_LABEL = { official: "오피셜", tier1: "유력", rumor: "루머" } as const
-const TIER_COLOR = { official: "#0E7A3C", tier1: "var(--wc-burgundy)", rumor: "#946A12" } as const
+const TIER_STYLE = {
+  official: { color: "#0E7A3C", bg: "rgba(14,122,60,.08)" },
+  tier1: { color: "var(--wc-burgundy, #8B1E3F)", bg: "rgba(139,30,63,.07)" },
+  rumor: { color: "#946A12", bg: "rgba(148,106,18,.09)" },
+} as const
 
 export default async function SagaDetailPage({
   params,
@@ -137,10 +148,12 @@ export default async function SagaDetailPage({
   const flow = STAGE_FLOW[saga.saga_type]
   const idx = stageIndex(saga.saga_type, saga.stage)
   const closed = saga.status === "closed"
+  const dday = ddayLabel()
+  // 헤더 신뢰 칩 = 가장 최신 기록의 등급
+  const headTier = entries[0]?.tier ?? "rumor"
 
   // 떡밥에서 타고 들어온 기사 — 스크롤로 찾아가게 하지 않고 **헤더 바로 아래**에
-  // 펼쳐서 놓는다 (PM 토론 2026-08-04 #2: 클릭한 뉴스가 첫 화면에 있어야 한다.
-  // 시간순 연표에선 최신 기사가 항상 맨 아래라 착지가 구조적으로 어긋났었다)
+  // 펼쳐서 놓는다 (PM 토론 2026-08-04 #2: 클릭한 뉴스가 첫 화면에 있어야 한다)
   const fromArticle = from
     ? [...articlesByEntry.values()].flat().find((a) => a.postId === from)
     : undefined
@@ -158,75 +171,112 @@ export default async function SagaDetailPage({
           </div>
         )}
 
-        {/* ── 헤더: 제목 + 단계 스테퍼 + 메인 투표 (PRD §4.1 레이아웃) ── */}
+        {/* ── 헤더: 제목 + 도트 스테퍼 + 신뢰 칩·D-day (목업 2026-08-04) ── */}
         <header
-          className="rounded-2xl px-5 py-5 sm:px-6"
+          className="rounded-2xl px-5 py-6 sm:px-7"
           style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
         >
           <h1
-            className="text-[22px] font-extrabold sm:text-[26px]"
+            className="text-[24px] font-extrabold sm:text-[28px]"
             style={{ color: "var(--wc-ink)", letterSpacing: "-.02em", wordBreak: "keep-all" }}
           >
             {saga.title}
           </h1>
           {saga.summary && (
             <p
-              className="mt-1.5 text-[14px]"
+              className="mt-1.5 text-[14.5px]"
               style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
             >
               {saga.summary}
             </p>
           )}
 
-          {/* 단계 스테퍼 — "지금 어디까지 왔나" 상시 표시 (PRD §7) */}
-          <ol className="mt-4 flex items-center gap-1" aria-label="진행 단계">
+          {/* 도트 스테퍼 — 노선도식. 지나온 단계는 채운 도트 + 버건디 연결선 (PRD §7) */}
+          <ol className="mt-6 flex items-start" aria-label="진행 단계">
             {flow.map((st, i) => {
-              const active = closed ? saga.outcome === "done" : i <= idx
+              const reached = closed ? saga.outcome === "done" : i <= idx
               const current = !closed && i === idx
               return (
-                <li key={st} className="flex flex-1 flex-col items-center gap-1.5">
+                <li key={st} className="relative flex flex-1 flex-col items-center gap-2">
+                  {i > 0 && (
+                    <span
+                      className="absolute top-[26px] right-1/2 left-[-50%] h-0.5"
+                      style={{ background: reached ? "var(--wc-burgundy)" : "var(--wc-line)" }}
+                      aria-hidden
+                    />
+                  )}
                   <span
-                    className="h-1.5 w-full rounded-full"
-                    style={{ background: active ? "var(--wc-burgundy)" : "var(--wc-line)" }}
-                  />
-                  <span
-                    className="text-[10.5px] font-bold"
+                    className="text-[11px]"
                     style={{
-                      color: current ? "var(--wc-burgundy)" : "var(--wc-mute)",
-                      fontWeight: current ? 800 : 600,
+                      color: reached ? "var(--wc-burgundy)" : "var(--wc-mute)",
+                      fontWeight: current ? 800 : 700,
                     }}
                   >
                     {STAGE_LABEL[st] ?? st}
                   </span>
+                  <span
+                    className="relative z-10 rounded-full"
+                    style={{
+                      width: current ? 14 : 11,
+                      height: current ? 14 : 11,
+                      background: reached ? "var(--wc-burgundy)" : "#D4D4D8",
+                      boxShadow: current ? "0 0 0 4px rgba(139,30,63,.15)" : undefined,
+                    }}
+                    aria-hidden
+                  />
                 </li>
               )
             })}
           </ol>
-          {closed && saga.outcome && saga.outcome !== "done" && (
-            <p className="mt-2 text-[12.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
-              이 사가는 &ldquo;{STAGE_LABEL[saga.outcome] ?? saga.outcome}&rdquo;로 종결됐습니다.
-            </p>
-          )}
 
-          {/* 메인 투표 — 1탭 참전. 기사 경유 진입이면 투표는 기사 직후로 내려간다
-              (읽기 → 참전 순서 — PM 토론 #2) */}
-          {!fromArticle && (
-            <div className="mt-5">
-              <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
-            </div>
-          )}
+          <div className="mt-5 flex items-center gap-2.5">
+            <span
+              className="rounded-md border px-2 py-0.5 text-[12px] font-extrabold"
+              style={{
+                borderColor: TIER_STYLE[headTier].color,
+                color: TIER_STYLE[headTier].color,
+                background: TIER_STYLE[headTier].bg,
+              }}
+            >
+              {TIER_LABEL[headTier]}
+            </span>
+            {dday && !closed && (
+              <span className="text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                이적시장 마감{" "}
+                <span style={{ color: "var(--wc-burgundy)", fontWeight: 800 }}>{dday}</span>
+              </span>
+            )}
+            {closed && saga.outcome && saga.outcome !== "done" && (
+              <span className="text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
+                &ldquo;{STAGE_LABEL[saga.outcome] ?? saga.outcome}&rdquo;로 종결
+              </span>
+            )}
+          </div>
         </header>
 
-        {/* ── 타고 들어온 기사 — 첫 화면에 펼쳐진 채 + 직후에 투표 ── */}
+        {/* ── 메인 투표 — 독립 카드. 기사 경유 진입이면 기사 직후로 (읽기 → 참전 순서) ── */}
+        {!fromArticle && (
+          <div className="mt-4">
+            <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
+          </div>
+        )}
+
+        {/* ── 타고 들어온 기사 — "지금 읽는 중" 칩과 함께 첫 화면에 펼쳐진 채 ── */}
         {fromArticle && fromArticle.contentHtml && (
           <>
             <section
-              className="mt-4 rounded-2xl px-5 py-4 sm:px-6"
+              className="mt-4 rounded-2xl px-5 py-5 sm:px-7"
               style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
               aria-label="기사"
             >
+              <span
+                className="inline-flex rounded-full px-2.5 py-1 text-[11.5px] font-extrabold"
+                style={{ background: "rgba(139,30,63,.08)", color: "var(--wc-burgundy)" }}
+              >
+                지금 읽는 중
+              </span>
               <h2
-                className="text-[17px] font-extrabold"
+                className="mt-2 text-[18px] font-extrabold"
                 style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
               >
                 {fromArticle.title}
@@ -236,170 +286,196 @@ export default async function SagaDetailPage({
                 dangerouslySetInnerHTML={{ __html: fromArticle.contentHtml }}
               />
             </section>
-            <div
-              className="mt-3 rounded-2xl px-5 py-4 sm:px-6"
-              style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
-            >
+            <div className="mt-4">
               <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
             </div>
           </>
         )}
 
-        {/* ── 연표 — 시간순(위→아래) 세로 레일 + 날짜 마디. 클러스터 1개 = 엔트리 1개 (D9) ── */}
-        <section className="mt-6" aria-label="연표">
-          <h2 className="mb-3 text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            타임라인 <span style={{ color: "var(--wc-mute)" }}>{entries.length}</span>
+        {/* ── 사가 연대기 — 최신 기록부터, 날짜 마디에 도트 (목업 2026-08-04) ── */}
+        <section className="mt-8" aria-label="사가 연대기">
+          <h2 className="mb-4 text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+            사가 연대기{" "}
+            <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
+              최신 기록부터
+            </span>
           </h2>
           <div className="relative">
             {/* 세로 레일 — 사가가 자랄수록 아래로 길어진다 */}
             <span
-              className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full"
+              className="absolute top-2 bottom-2 left-[5px] w-0.5 rounded-full"
               style={{ background: "var(--wc-line)" }}
               aria-hidden
             />
-            <div className="flex flex-col gap-4">
-              {entries.map((e, i) => (
-                <div key={e.id} className="relative pl-7">
-                  {/* 노드 점 — 오피셜은 채워진 점 */}
-                  <span
-                    className="absolute top-[30px] left-0 h-4 w-4 rounded-full border-2"
-                    style={{
-                      borderColor: TIER_COLOR[e.tier],
-                      background:
-                        e.tier === "official" ? TIER_COLOR[e.tier] : "var(--wc-card, #fff)",
-                    }}
-                    aria-hidden
-                  />
-                  {/* 날짜 마디 — 날짜가 바뀔 때만 */}
-                  {(i === 0 ||
-                    kstDateLabel(entries[i - 1].occurred_at) !== kstDateLabel(e.occurred_at)) && (
-                    <p
-                      className="mb-1.5 text-[12px] font-extrabold tracking-wide"
-                      style={{ color: "var(--wc-mute)" }}
-                    >
-                      {kstDateLabel(e.occurred_at)}
-                    </p>
-                  )}
-                  <article
-                    className="rounded-xl px-4 py-3.5"
-                    style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
-                  >
-                    <div className="flex items-center gap-2 text-[11.5px] font-bold">
-                      <span style={{ color: TIER_COLOR[e.tier] }}>{TIER_LABEL[e.tier]}</span>
-                      {e.stage_after && (
+            <div className="flex flex-col gap-3">
+              {entries.map((e, i) => {
+                const newDate =
+                  i === 0 ||
+                  kstDateLabel(entries[i - 1].occurred_at) !== kstDateLabel(e.occurred_at)
+                return (
+                  <div key={e.id} className="relative pl-7">
+                    {newDate && (
+                      <>
                         <span
-                          className="rounded px-1 py-px"
-                          style={{ background: "rgba(139,30,63,.07)", color: "var(--wc-burgundy)" }}
+                          className="absolute top-[5px] left-0 h-3 w-3 rounded-full"
+                          style={{ background: "var(--wc-ink)" }}
+                          aria-hidden
+                        />
+                        <p
+                          className="mb-2 text-[13.5px] font-extrabold"
+                          style={{ color: "var(--wc-ink)" }}
                         >
-                          → {STAGE_LABEL[e.stage_after] ?? e.stage_after}
-                        </span>
-                      )}
-                      <span
-                        className="ml-auto"
-                        style={{ color: "var(--wc-mute)" }}
-                        suppressHydrationWarning
-                      >
-                        {formatRelativeTime(new Date(e.occurred_at))}
-                      </span>
-                    </div>
-                    <h3
-                      className="mt-1 text-[14.5px] font-bold"
-                      style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                          {kstDateLabel(e.occurred_at)}
+                        </p>
+                      </>
+                    )}
+                    <article
+                      className="overflow-hidden rounded-xl"
+                      style={{
+                        background: "var(--wc-card, #fff)",
+                        boxShadow: "var(--wc-shadow-1)",
+                      }}
                     >
-                      {e.headline}
-                    </h3>
-                    {e.summary && (
-                      <p
-                        className="mt-1 text-[13px]"
-                        style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
-                      >
-                        {e.summary}
-                      </p>
-                    )}
-                    <p className="mt-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
-                      {e.origin.reporter ? `${e.origin.reporter} · ` : ""}
-                      <a
-                        href={e.origin.url}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        className="underline underline-offset-2"
-                      >
-                        {e.origin.outlet}
-                      </a>
-                    </p>
-                    {/* 연결된 발행 기사 본문 — 떡밥에서 타고 들어온 기사(?from=)는 펼쳐진 채,
-                    나머지는 "기사 펼쳐보기"로 접혀 있다 (2026-08-03 오너) */}
-                    {(articlesByEntry.get(e.id) ?? []).map(
-                      (a) =>
-                        a.contentHtml && (
-                          <details
-                            key={a.postId}
-                            open={a.postId === from && !fromArticle?.contentHtml}
-                            data-article
-                            className="group mt-2"
+                      <div className="px-4 py-3.5">
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-extrabold"
+                            style={{
+                              color: TIER_STYLE[e.tier].color,
+                              background: TIER_STYLE[e.tier].bg,
+                            }}
                           >
-                            <summary
-                              className="cursor-pointer list-none text-[12.5px] font-bold select-none"
-                              style={{ color: "var(--wc-burgundy)" }}
+                            {TIER_LABEL[e.tier]}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <h3
+                              className="text-[14.5px] leading-snug font-bold"
+                              style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
                             >
-                              <span className="group-open:hidden">
-                                📰 기사 펼쳐보기 — {a.title}
-                              </span>
-                              <span className="hidden group-open:inline">▲ 기사 접기</span>
-                            </summary>
-                            {/* 펼치면 카드뉴스 카드 그대로 — 제목 + 본문(이미지 포함) */}
-                            <div
-                              className="mt-2 overflow-hidden rounded-xl px-4 py-3.5"
-                              style={{
-                                background: "var(--wc-card, #fff)",
-                                boxShadow: "var(--wc-shadow-1)",
-                              }}
-                            >
-                              <h4
-                                className="text-[15px] font-extrabold"
-                                style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                              {e.headline}
+                            </h3>
+                            {e.summary && (
+                              <p
+                                className="mt-1 text-[13px]"
+                                style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
                               >
-                                {a.title}
-                              </h4>
-                              <div
-                                className="prose prose-base mt-2 max-w-none"
-                                dangerouslySetInnerHTML={{ __html: a.contentHtml }}
-                              />
-                            </div>
-                          </details>
-                        )
-                    )}
-                    {e.echoes.length > 0 && (
-                      <details className="mt-1.5">
-                        <summary
-                          className="cursor-pointer text-[12px] font-bold"
+                                {e.summary}
+                              </p>
+                            )}
+                          </div>
+                          {/* 출처 — 데스크톱은 우측 상단, 모바일은 아래 메타 줄 (폭 확보) */}
+                          <a
+                            href={e.origin.url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="hidden shrink-0 text-[12px] font-bold whitespace-nowrap underline-offset-2 hover:underline sm:block"
+                            style={{ color: "var(--wc-mute)" }}
+                          >
+                            {e.origin.outlet} ↗
+                          </a>
+                        </div>
+                        <div
+                          className="mt-1.5 flex items-center gap-2 text-[11.5px] font-bold"
                           style={{ color: "var(--wc-mute)" }}
                         >
-                          이 소식을 전한 매체 {e.echoes.length}곳
-                        </summary>
-                        <ul className="mt-1 flex flex-col gap-0.5 pl-1 text-[12px]">
-                          {e.echoes.map((echo, i) => (
-                            <li key={i}>
-                              <a
-                                href={echo.url}
-                                target="_blank"
-                                rel="noopener noreferrer nofollow"
-                                className="underline underline-offset-2"
-                                style={{ color: "var(--wc-mute)" }}
+                          {e.stage_after && (
+                            <span
+                              className="rounded px-1 py-px whitespace-nowrap"
+                              style={{
+                                background: "rgba(139,30,63,.07)",
+                                color: "var(--wc-burgundy)",
+                              }}
+                            >
+                              → {STAGE_LABEL[e.stage_after] ?? e.stage_after}
+                            </span>
+                          )}
+                          <span suppressHydrationWarning>
+                            {formatRelativeTime(new Date(e.occurred_at))}
+                          </span>
+                          <a
+                            href={e.origin.url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="underline underline-offset-2 sm:hidden"
+                          >
+                            {e.origin.reporter ? `${e.origin.reporter} · ` : ""}
+                            {e.origin.outlet} ↗
+                          </a>
+                        </div>
+
+                        {/* 연결된 발행 기사 본문 — ?from= 기사는 헤더 아래 펼쳐지므로 여기선 접힘 */}
+                        {(articlesByEntry.get(e.id) ?? []).map(
+                          (a) =>
+                            a.contentHtml && (
+                              <details
+                                key={a.postId}
+                                open={a.postId === from && !fromArticle?.contentHtml}
+                                data-article
+                                className="group mt-2"
                               >
-                                {/* 제목에 이미 [출처] 브래킷이 있으면 중복 표기하지 않는다 */}
-                                {echo.title.startsWith("[")
-                                  ? echo.title
-                                  : `[${echo.outlet}] ${echo.title}`}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                  </article>
-                </div>
-              ))}
+                                <summary
+                                  className="cursor-pointer list-none text-[12.5px] font-bold select-none"
+                                  style={{ color: "var(--wc-burgundy)" }}
+                                >
+                                  <span className="group-open:hidden">
+                                    기사 펼쳐보기 — {a.title}
+                                  </span>
+                                  <span className="hidden group-open:inline">기사 접기</span>
+                                </summary>
+                                <div className="mt-2">
+                                  <h4
+                                    className="text-[15px] font-extrabold"
+                                    style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                                  >
+                                    {a.title}
+                                  </h4>
+                                  <div
+                                    className="prose prose-base mt-2 max-w-none"
+                                    dangerouslySetInnerHTML={{ __html: a.contentHtml }}
+                                  />
+                                </div>
+                              </details>
+                            )
+                        )}
+                      </div>
+
+                      {/* 에코 — 카드 하단 풀폭 접힘 바 */}
+                      {e.echoes.length > 0 && (
+                        <details
+                          className="group border-t"
+                          style={{ borderColor: "var(--wc-line)" }}
+                        >
+                          <summary
+                            className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-[12.5px] font-bold select-none"
+                            style={{ color: "var(--wc-mute)" }}
+                          >
+                            외신 {e.echoes.length}곳이 받아씀
+                            <span className="transition-transform group-open:rotate-180">⌄</span>
+                          </summary>
+                          <ul className="flex flex-col gap-1 px-4 pb-3 text-[12px]">
+                            {e.echoes.map((echo, j) => (
+                              <li key={j}>
+                                <a
+                                  href={echo.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer nofollow"
+                                  className="underline underline-offset-2"
+                                  style={{ color: "var(--wc-mute)" }}
+                                >
+                                  {/* 제목에 이미 [출처] 브래킷이 있으면 중복 표기하지 않는다 */}
+                                  {echo.title.startsWith("[")
+                                    ? echo.title
+                                    : `[${echo.outlet}] ${echo.title}`}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </article>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </section>

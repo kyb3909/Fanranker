@@ -54,6 +54,8 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
   // 부분집합인 선수가 **정확히 하나** 있으면 새로 만들지 않고 그 문서에 쌓는다
   if (input.type === "transfer") {
     const newPlayerKey = normalizePlayerKey(String(input.subject.player_key ?? ""))
+    // 빈 선수 키가 "-in-2026s" 유령 사가를 만든 실사고 (2026-08-04) — 생성 자체를 거부
+    if (!newPlayerKey) throw new Error("saga create rejected: empty player key")
     const { data: candidates } = await supabase
       .from("sagas")
       .select("*")

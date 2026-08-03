@@ -5,12 +5,19 @@ import { useAuth, useClerk } from "@clerk/nextjs"
 import { trackEvent } from "@/lib/analytics/events"
 
 /**
- * 사가 메인 투표 위젯 — "나간다 vs 남는다" 1탭 참전 (PRD §4.2).
+ * 사가 메인 투표 카드 — "나간다 vs 남는다" 1탭 참전 (PRD §4.2).
+ *
+ * 2026-08-04 리디자인 (design-references/saga-transfer-mockup-2026-08-04 목업 승인):
+ * 독립 카드 + "팬들은 어떻게 보고 있나" 헤딩 + 큰 % 타이포 + 진영 컬러 아웃라인 버튼.
+ * 0명일 때는 50:50 가짜 게이지 대신 첫 투표 유도 문구.
  *
  * 비로그인은 clerk.openSignIn() (vs-issue-widget 패턴 — 에러 모달 dead-end 금지).
  * 재투표(스탠스 변경) 허용 — 서버가 append-only 원장에 기록하므로 여론 시계열이 남고,
  * 댓글의 스탠스 스냅샷(D10)은 작성 시점 값이라 소환의 무결성은 깨지지 않는다.
  */
+
+const GO_COLOR = "var(--wc-burgundy, #8B1E3F)"
+const STAY_COLOR = "#2B4C7E"
 
 interface Props {
   slug: string
@@ -85,11 +92,11 @@ export function SagaMainVote({ slug, closed, initial, labels }: Props) {
         onClick={() => vote(choice)}
         disabled={closed || busy}
         aria-pressed={mine}
-        className="flex-1 rounded-lg border px-3 py-2 text-[13.5px] font-extrabold transition-colors disabled:opacity-50"
+        className="flex-1 rounded-lg border-[1.5px] py-2.5 text-[14px] font-extrabold transition-colors disabled:opacity-50"
         style={{
-          borderColor: mine ? color : "var(--wc-line)",
+          borderColor: color,
           background: mine ? `color-mix(in srgb, ${color} 8%, transparent)` : "transparent",
-          color: mine ? color : "var(--wc-ink)",
+          color,
         }}
       >
         {label}
@@ -99,36 +106,58 @@ export function SagaMainVote({ slug, closed, initial, labels }: Props) {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between text-[12.5px] font-extrabold">
-        <span style={{ color: "var(--wc-burgundy)" }}>
-          {goLabel} {goPct}%
-        </span>
-        <span style={{ color: "var(--wc-mute)" }}>{agg.total}명 참여</span>
-        <span style={{ color: "#1D4ED8" }}>
-          {stayLabel} {100 - goPct}%
-        </span>
-      </div>
-      <div className="mt-1.5 flex h-2.5 overflow-hidden rounded-full">
-        <span
-          className="transition-all duration-300"
-          style={{ width: `${goPct}%`, background: "var(--wc-burgundy)" }}
-        />
-        <span
-          className="transition-all duration-300"
-          style={{ width: `${100 - goPct}%`, background: "#1D4ED8", opacity: 0.75 }}
-        />
-      </div>
+    <section
+      className="rounded-2xl px-5 py-5 sm:px-6"
+      style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+      aria-label="여론 투표"
+    >
+      <h2 className="text-[16px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+        팬들은 어떻게 보고 있나
+      </h2>
+
+      {agg.total === 0 ? (
+        <p className="mt-3 text-[13.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+          아직 투표가 없습니다 — 첫 표를 던져보세요.
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-[24px] font-extrabold sm:text-[28px]" style={{ color: GO_COLOR }}>
+              {goLabel} {goPct}%
+            </span>
+            <span
+              className="text-[24px] font-extrabold sm:text-[28px]"
+              style={{ color: STAY_COLOR }}
+            >
+              {stayLabel} {100 - goPct}%
+            </span>
+          </div>
+          <div className="mt-2 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+            <span
+              className="rounded-l-full transition-all duration-300"
+              style={{ width: `${goPct}%`, background: GO_COLOR }}
+            />
+            <span
+              className="flex-1 rounded-r-full transition-all duration-300"
+              style={{ background: STAY_COLOR }}
+            />
+          </div>
+          <p className="mt-2 text-center text-[12px]" style={{ color: "var(--wc-mute)" }}>
+            {agg.total.toLocaleString()}명 참여
+          </p>
+        </>
+      )}
+
       {closed ? (
-        <p className="mt-2 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
+        <p className="mt-3 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
           종결된 사가 — 투표가 마감됐습니다.
         </p>
       ) : (
-        <div className="mt-3 flex gap-2">
-          {btn("go", goLabel, "var(--wc-burgundy)")}
-          {btn("stay", stayLabel, "#1D4ED8")}
+        <div className="mt-3 flex gap-3">
+          {btn("go", goLabel, GO_COLOR)}
+          {btn("stay", stayLabel, STAY_COLOR)}
         </div>
       )}
-    </div>
+    </section>
   )
 }
