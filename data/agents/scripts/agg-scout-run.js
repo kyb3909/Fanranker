@@ -167,20 +167,24 @@ async function scoutInstiz(key, cfg) {
 async function scoutReddit(cfg) {
   const { fetchRedditPosts } = await import('../../crawlers/core/reddit-fetcher.js')
   const items = []
-  let first = true
-  for (const sub of cfg.subreddits || []) {
-    // 연속 요청은 레이트리밋(RSS blocked)에 걸림 — 서브레딧 간 5초 간격
-    if (!first) await new Promise((r) => setTimeout(r, 5000))
-    first = false
+
+  // 레딧 무인증 예산 = IP 당 60초 1건 (reddit-fetcher.js 주석 참조). 매시 7개 전체를
+  // 돌면 news-scanner cron 과 예산을 놓고 싸우다 전멸한다(실제로 매 run "신규 0건"이었다).
+  // → 시간 기반 무상태 로테이션: 매 run 2개씩. 2와 7이 서로소라 7시간이면 전체 순회
+  //   (서브당 평균 3.5시간 간격 — RSS 24h 신선도 컷 안이라 유실 없음).
+  //   상태 파일 없이 시간으로 커서를 정하므로 재실행·크래시에도 어긋나지 않는다.
+  const all = cfg.subreddits || []
+  const perRun = Math.min(cfg.subsPerRun || 2, all.length || 1)
+  const start = all.length ? (Math.floor(Date.now() / 3_600_000) * perRun) % all.length : 0
+  const subs = Array.from({ length: Math.min(perRun, all.length) }, (_, i) => all[(start + i) % all.length])
+  if (subs.length < all.length) {
+    log(`  reddit 이번 회차 ${subs.map((s) => 'r/' + s).join(', ')} (전체 ${all.length}개 로테이션)`)
+  }
+
+  for (const sub of subs) {
+    // 요청 간격·429 재시도는 reddit-fetcher 의 redditGet 게이트가 처리한다
     try {
-      let posts
-      try {
-        posts = await fetchRedditPosts({ subreddit: sub, max_articles: cfg.perSub || 3 })
-      } catch {
-        // 간헐 차단 — 10초 후 1회 재시도
-        await new Promise((r) => setTimeout(r, 10000))
-        posts = await fetchRedditPosts({ subreddit: sub, max_articles: cfg.perSub || 3 })
-      }
+      const posts = await fetchRedditPosts({ subreddit: sub, max_articles: cfg.perSub || 3 })
       let picked = 0
       for (const p of posts) {
         if (p.media_type !== 'image' || !p.link_url) continue // 비주얼 소스 — 이미지 글만

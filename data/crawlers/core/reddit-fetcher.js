@@ -4,20 +4,51 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 const REDDIT_BASE = 'https://www.reddit.com'
 
 /**
+ * 레딧 무인증 예산 = **IP 당 60초에 요청 1건** (2026-08-02 news-scanner 에서 실측:
+ * 첫 요청 200 + x-ratelimit-remaining:0, 직후 전부 429). 기존의 "서브레딧 간 5초"는
+ * 예산에 한참 못 미쳐 매 run 전멸했다 — 로그의 "RSS blocked by Reddit"는 서브레딧
+ * 차단이 아니라 그 순간 예산이 없었다는 뜻이다.
+ *
+ * 같은 IP 의 news-scanner cron(15분마다 12건, 65초 페이싱)과 예산을 나눠 쓰므로
+ * 여기도 같은 규칙을 따른다: 요청 간 최소 65초 + 429 면 게이트가 한 바퀴 쉰 뒤 1회 재시도.
+ */
+const REDDIT_MIN_GAP_MS = 65_000
+let lastRedditAt = 0
+
+const sleepMs = ms => new Promise(r => setTimeout(r, ms))
+
+/**
  * Fetch URL using curl (bypasses Node.js TLS fingerprint blocking).
  * execFileSync(인자 배열) — 셸 인용이 없어 Linux(Vultr)/Windows(로컬 테스트) 동일 동작.
+ * 상태코드를 함께 돌려준다 — 429(예산 소진)와 진짜 차단을 구분해야 재시도 전략이 선다.
  */
-function curlFetch(url) {
+function curlFetchWithStatus(url) {
   try {
-    const result = execFileSync(
+    const raw = execFileSync(
       'curl',
-      ['-s', '-L', '-H', `User-Agent: ${USER_AGENT}`, '--max-time', '15', url],
+      ['-s', '-L', '-H', `User-Agent: ${USER_AGENT}`, '--max-time', '20', '-w', '\n__STATUS__:%{http_code}', url],
       { encoding: 'utf-8', maxBuffer: 5 * 1024 * 1024 }
     )
-    return result
+    const m = raw.match(/\n__STATUS__:(\d{3})$/)
+    return { status: m ? Number(m[1]) : 0, body: m ? raw.slice(0, m.index) : raw }
   } catch {
     throw new Error(`curl failed for ${url}`)
   }
+}
+
+/** 레딧 전용 GET — 프로세스 내 요청 간격을 강제하고, 429 는 1회 자동 재시도 */
+async function redditGet(url) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const wait = lastRedditAt + REDDIT_MIN_GAP_MS - Date.now()
+    if (wait > 0) await sleepMs(wait)
+    lastRedditAt = Date.now()
+    const res = curlFetchWithStatus(url)
+    if (res.status !== 429) return res
+    // 429 → 다음 루프의 게이트가 65초를 쉬어 준다 (별도 대기 불필요)
+  }
+  const err = new Error('rate-limited (429 twice)')
+  err.rateLimited = true
+  throw err
 }
 
 /**
@@ -33,6 +64,9 @@ export async function fetchRedditPosts(source) {
   try {
     return await fetchViaRSS(source)
   } catch (rssErr) {
+    // 예산 소진(429)이면 JSON 도 반드시 429 다 — 폴백이 예산만 더 태우고
+    // 다음 요청의 429 확률을 올린다. 레이트리밋은 그대로 올린다.
+    if (rssErr.rateLimited) throw rssErr
     console.log(`  RSS failed (${rssErr.message}), trying JSON API...`)
   }
 
@@ -48,8 +82,8 @@ async function fetchViaRSS(source) {
   const limit = Math.min((source.max_articles || 10) * 3, 50) // fetch more to filter
   const url = `${REDDIT_BASE}/r/${source.subreddit}/hot.rss?limit=${limit}`
 
-  const xml = curlFetch(url)
-  if (!xml || xml.includes('<body class=theme-beta>')) {
+  const { body: xml } = await redditGet(url)
+  if (!xml || xml.includes('<body class=theme-beta>') || !xml.includes('<entry')) {
     throw new Error(`RSS blocked by Reddit`)
   }
   const entries = parseAtomFeed(xml)
@@ -205,7 +239,7 @@ function decodeHTML(str) {
 async function fetchViaJSON(source) {
   const url = `${REDDIT_BASE}/r/${source.subreddit}/hot.json?limit=50`
 
-  const raw = curlFetch(url)
+  const { body: raw } = await redditGet(url)
   if (!raw || raw.includes('<body class=theme-beta>')) {
     throw new Error('JSON API blocked by Reddit')
   }
