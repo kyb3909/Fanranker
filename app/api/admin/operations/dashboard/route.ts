@@ -41,6 +41,9 @@ export async function GET() {
       { count: usersThisWeek },
       { count: usersPrevWeek },
       { data: abnormalTokenBalances },
+      { count: pendingNewsReview },
+      { count: pendingAggReview },
+      { count: pendingSagaReview },
     ] = await Promise.all([
       // alerts
       supabase
@@ -108,6 +111,19 @@ export async function GET() {
         .gt("token_balance", 5000)
         .order("token_balance", { ascending: false })
         .limit(10),
+      // 검수 큐 대기 — 사이드바 뱃지 (2026-08-04, "쌓이면 안 된다"가 보이게)
+      supabase
+        .from("news_reservoir")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "drafted"),
+      supabase
+        .from("agg_reservoir")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "drafted"),
+      supabase
+        .from("saga_reservoir")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "queued"),
     ])
 
     const tokenLeaders = await attachNicknames(supabase, abnormalTokenBalances ?? [])
@@ -134,6 +150,9 @@ export async function GET() {
         betmanLastSync,
         unsettledGames: unsettledGames ?? 0,
         cronFailures: recentCrawlerFails?.length ?? 0,
+        pendingNewsReview: pendingNewsReview ?? 0,
+        pendingAggReview: pendingAggReview ?? 0,
+        pendingSagaReview: pendingSagaReview ?? 0,
       },
       daily: {
         newUsersToday: newUsersToday ?? 0,

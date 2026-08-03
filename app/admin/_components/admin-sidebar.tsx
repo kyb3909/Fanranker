@@ -55,7 +55,15 @@ interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  badge?: "reports" | "stickers" | "matches" | "metaverseReports" | "refunds"
+  badge?:
+    | "reports"
+    | "stickers"
+    | "matches"
+    | "metaverseReports"
+    | "refunds"
+    | "newsReview"
+    | "aggReview"
+    | "sagaReview"
 }
 
 interface NavGroup {
@@ -102,9 +110,9 @@ const navGroups: NavGroup[] = [
         badge: "metaverseReports",
       },
       { title: "뉴스룸 큐", href: "/admin/content/newsroom", icon: Inbox },
-      { title: "AI 뉴스 검수", href: "/admin/news-review", icon: Sparkles },
-      { title: "AI 커뮤글 검수", href: "/admin/agg-review", icon: Bot },
-      { title: "사가 검수", href: "/admin/saga-review", icon: BookOpen },
+      { title: "AI 뉴스 검수", href: "/admin/news-review", icon: Sparkles, badge: "newsReview" },
+      { title: "AI 커뮤글 검수", href: "/admin/agg-review", icon: Bot, badge: "aggReview" },
+      { title: "사가 검수", href: "/admin/saga-review", icon: BookOpen, badge: "sagaReview" },
       { title: "AI 글 학습", href: "/admin/agg-training", icon: GraduationCap },
       { title: "설문조사", href: "/admin/content/polls", icon: BarChart3 },
     ],
@@ -140,6 +148,9 @@ export function AdminSidebar() {
       unsettledGames: number
       pendingMetaverseReports: number
       pendingRefunds: number
+      pendingNewsReview: number
+      pendingAggReview: number
+      pendingSagaReview: number
     }
   }>("/api/admin/operations/dashboard", fetcher, {
     refreshInterval: 60_000,
@@ -151,6 +162,9 @@ export function AdminSidebar() {
     matches: data?.alerts?.unsettledGames ?? 0,
     metaverseReports: data?.alerts?.pendingMetaverseReports ?? 0,
     refunds: data?.alerts?.pendingRefunds ?? 0,
+    newsReview: data?.alerts?.pendingNewsReview ?? 0,
+    aggReview: data?.alerts?.pendingAggReview ?? 0,
+    sagaReview: data?.alerts?.pendingSagaReview ?? 0,
   }
 
   return (

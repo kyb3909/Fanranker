@@ -6,11 +6,12 @@ import { fetcher } from "@/lib/swr"
 import { toast } from "@/hooks/use-toast"
 
 /**
- * /admin2/saga — 사가 검수 큐 (W3). 발행의 유일한 경로 (HITL 게이트).
+ * 사가 검수 큐 — 발행의 유일한 경로 (HITL 게이트).
+ * /admin/saga-review 와 /admin2/saga 가 이 화면 하나를 공유한다.
  *
- * 한 항목 = 기사 하나. 추출기가 채운 선수/방향/단계/한글 헤드라인을 확인·수정 후
- * [발행]하면 사가 문서에 엔트리로 붙는다 (같은 이벤트가 이미 있으면 에코로 접힘).
- * 디자인은 추후 개편 예정 — 지금은 기능 검증용 최소 화면.
+ * 가독성 개편 (2026-08-04 운영자): 큐를 "새 사가가 생기는 건"과 "기존 사가에
+ * 쌓이는 건"으로 나눈다 — 검수자가 조심할 곳(오식별→잘못된 새 문서)과 술술
+ * 넘겨도 되는 곳이 첫눈에 갈리게. 발행될 한국어 헤드라인이 화면의 주인공.
  */
 
 const STAGE_OPTIONS = [
@@ -52,7 +53,14 @@ interface SagaInfo {
   status: string
 }
 
-const TIER_LABEL = { official: "🟢오피셜", tier1: "🔵티어1", rumor: "⚪루머" } as const
+const TIER_STYLE = {
+  official: { label: "오피셜", bg: "#0E7A3C", fg: "#fff" },
+  tier1: { label: "티어1", bg: "#7a1e3c", fg: "#fff" },
+  rumor: { label: "루머", bg: "#f3ede2", fg: "#946A12" },
+} as const
+
+const inputCls =
+  "w-full rounded-md border px-2.5 py-1.5 text-[13.5px] focus:ring-2 focus:ring-rose-200 focus:outline-none"
 
 function RowCard({
   row,
@@ -99,8 +107,8 @@ function RowCard({
       }
       if (action === "publish") {
         toast({
-          title: data.folded ? "에코로 접힘" : "발행됨",
-          description: `${data.saga.title} (/saga/${data.saga.slug})`,
+          title: data.folded ? "받아쓰기로 접힘 ✅" : "발행됨 ✅",
+          description: `${data.saga.title}`,
         })
       } else {
         toast({ title: "반려됨" })
@@ -111,89 +119,106 @@ function RowCard({
     }
   }
 
-  const conf = ex?.confidence ?? 0
+  const tier = TIER_STYLE[ex?.tier ?? "rumor"]
+  const conf = Math.round((ex?.confidence ?? 0) * 100)
+
   return (
-    <div className="rounded-lg border p-3 text-sm">
-      <div className="flex items-start gap-2">
-        <span className="shrink-0 text-xs">{TIER_LABEL[ex?.tier ?? "rumor"]}</span>
-        <p className="min-w-0 flex-1 font-medium break-words">{row.title}</p>
+    <div className="rounded-xl border bg-white p-4 shadow-sm">
+      {/* 1줄: 신뢰도·출처 칩 */}
+      <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
         <span
-          className={`shrink-0 rounded px-1 text-[11px] tabular-nums ${conf < 0.6 ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"}`}
+          className="rounded-full px-2 py-0.5 font-bold"
+          style={{ background: tier.bg, color: tier.fg }}
         >
-          {Math.round(conf * 100)}%
+          {tier.label}
+        </span>
+        <span
+          className={`rounded-full px-2 py-0.5 font-bold ${conf < 60 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}
+        >
+          확신 {conf}%
+        </span>
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">
+          {row.source?.kind === "rss" ? (row.source.outlet ?? "RSS") : "티커"}
+        </span>
+        <span className="ml-auto text-gray-400">
+          {new Date(row.occurred_at).toLocaleString("ko-KR", {
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
       </div>
-      <p className="text-muted-foreground mt-0.5 text-xs">
-        {row.source?.kind === "rss" ? `RSS · ${row.source.outlet}` : "티커"} ·{" "}
-        {new Date(row.occurred_at).toLocaleString("ko-KR")} ·{" "}
+
+      {/* 발행될 헤드라인 — 이 화면의 주인공. 이대로 타임라인에 실린다 */}
+      <input
+        value={headline}
+        onChange={(e) => setHeadline(e.target.value)}
+        placeholder="한국어 헤드라인을 입력하세요 (필수)"
+        className="mt-2.5 w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-[15.5px] font-bold focus:border-rose-300 focus:outline-none"
+      />
+      {/* 원문 — 대조용 */}
+      <p className="mt-1.5 text-[12.5px] leading-snug break-words text-gray-500">
+        원문: {row.title}{" "}
         <a
           href={row.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline underline-offset-2"
+          className="whitespace-nowrap text-rose-700 underline underline-offset-2"
         >
-          원문
+          열기 ↗
         </a>
       </p>
 
-      {/* 신규 생성 마찰 (PM 토론 #3) — 오추출의 폭발 반경은 "잘못된 새 문서 생성"에
-          집중되므로, 기존 사가에 쌓이는 건은 가볍게, 새 문서가 열리는 건만 경고 */}
-      {!saga && (
-        <p className="mt-1.5 rounded bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800">
-          ⚠️ 발행하면 <b>새 사가 문서가 생성</b>됩니다 — 선수명(오식별 주의)·방향을 확인하세요
-        </p>
-      )}
-      {saga && (
-        <p className="mt-1.5 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
-          기존 사가에 쌓임:{" "}
+      {/* 어느 문서로 가는가 */}
+      {saga ? (
+        <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-[12.5px] text-emerald-800">
+          ✅ 기존 문서에 쌓임 →{" "}
           <a
             href={`/saga/${saga.slug}`}
             target="_blank"
-            className="font-bold underline"
             rel="noreferrer"
+            className="font-bold underline underline-offset-2"
           >
             {saga.title}
           </a>{" "}
-          (엔트리 {saga.entry_count} · {saga.status})
+          <span className="text-emerald-600">(기록 {saga.entry_count}건)</span>
+        </p>
+      ) : (
+        <p className="mt-2 rounded-lg bg-blue-50 px-3 py-1.5 text-[12.5px] font-bold text-blue-800">
+          🆕 발행하면 새 사가 문서가 생깁니다 — 아래 선수명·방향을 꼭 확인하세요
         </p>
       )}
 
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <label className="flex flex-col gap-0.5 text-xs">
-          선수 (영문 키)
-          <input
-            value={player}
-            onChange={(e) => setPlayer(e.target.value)}
-            className="rounded border px-1.5 py-1"
-          />
+      {/* 수정 필드 — 한 줄 그리드 */}
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+          선수 (영문)
+          <input value={player} onChange={(e) => setPlayer(e.target.value)} className={inputCls} />
         </label>
-        <label className="flex flex-col gap-0.5 text-xs">
-          한글 표기
+        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+          선수 (한글)
           <input
             value={playerKr}
             onChange={(e) => setPlayerKr(e.target.value)}
-            className="rounded border px-1.5 py-1"
-            placeholder="(사전 미등재)"
+            placeholder="사전 미등재"
+            className={inputCls}
           />
         </label>
-        <label className="flex flex-col gap-0.5 text-xs">
+        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
           방향
           <select
             value={direction}
             onChange={(e) => setDirection(e.target.value as "in" | "out")}
-            className="rounded border px-1.5 py-1"
+            className={inputCls}
           >
-            <option value="in">IN (영입 드라마)</option>
-            <option value="out">OUT (순수 이탈)</option>
+            <option value="in">IN — 영입 드라마</option>
+            <option value="out">OUT — 순수 이탈</option>
           </select>
         </label>
-        <label className="flex flex-col gap-0.5 text-xs">
-          단계 신호
-          <select
-            value={stage}
-            onChange={(e) => setStage(e.target.value)}
-            className="rounded border px-1.5 py-1"
-          >
+        <label className="flex flex-col gap-1 text-[11.5px] font-bold text-gray-500">
+          단계
+          <select value={stage} onChange={(e) => setStage(e.target.value)} className={inputCls}>
             {STAGE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -202,27 +227,21 @@ function RowCard({
           </select>
         </label>
       </div>
-      <label className="mt-2 flex flex-col gap-0.5 text-xs">
-        한국어 헤드라인 (타임라인에 이대로 실림)
-        <input
-          value={headline}
-          onChange={(e) => setHeadline(e.target.value)}
-          className="rounded border px-1.5 py-1"
-        />
-      </label>
 
-      <div className="mt-2 flex gap-2">
+      {/* 액션 — 발행이 주 동작 */}
+      <div className="mt-3 flex gap-2">
         <button
           onClick={() => act("publish")}
           disabled={busy || !player || !headline}
-          className="bg-foreground text-background rounded px-3 py-1 text-xs font-bold disabled:opacity-40"
+          className="flex-1 rounded-lg py-2.5 text-[14px] font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-40 sm:flex-none sm:px-8"
+          style={{ background: "#961e37" }}
         >
           발행
         </button>
         <button
           onClick={() => act("reject")}
           disabled={busy}
-          className="rounded border px-3 py-1 text-xs disabled:opacity-40"
+          className="rounded-lg border px-5 py-2.5 text-[13.5px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
         >
           반려
         </button>
@@ -239,37 +258,59 @@ export default function SagaReviewPage() {
   )
   const sagaByKey = new Map((data?.sagas ?? []).map((s) => [s.identity_key, s]))
   const queue = data?.queue ?? []
+  const withSaga = queue.filter((r) => r.saga_hint && sagaByKey.has(r.saga_hint))
+  const newSaga = queue.filter((r) => !(r.saga_hint && sagaByKey.has(r.saga_hint)))
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-base font-bold">
-          사가 검수 <span className="text-muted-foreground">{queue.length}</span>
+        <h1 className="text-lg font-extrabold">
+          사가 검수 <span className="font-bold text-gray-400">{queue.length}건 대기</span>
         </h1>
         <a
           href="/saga"
           target="_blank"
-          className="text-xs underline underline-offset-2"
+          className="text-[12.5px] font-bold text-rose-700 underline underline-offset-2"
           rel="noreferrer"
         >
-          /saga 보기
+          /saga 보기 ↗
         </a>
       </div>
+
       {queue.length === 0 && (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-          대기 중인 항목이 없습니다 — 수집(30분)·추출(15분) cron 이 채웁니다.
+        <p className="rounded-xl border border-dashed p-10 text-center text-[14px] text-gray-400">
+          대기 중인 항목이 없습니다 — 수집(30분)·추출(15분) 크론이 채웁니다.
         </p>
       )}
-      <div className="flex flex-col gap-2">
-        {queue.map((row) => (
-          <RowCard
-            key={row.id}
-            row={row}
-            saga={row.saga_hint ? sagaByKey.get(row.saga_hint) : undefined}
-            onDone={() => mutate()}
-          />
-        ))}
-      </div>
+
+      {newSaga.length > 0 && (
+        <section className="space-y-2.5">
+          <h2 className="text-[13.5px] font-extrabold text-blue-800">
+            🆕 새 사가가 생기는 건 <span className="text-blue-500">{newSaga.length}</span>
+            <span className="ml-2 font-bold text-gray-400">— 선수 이름이 맞는지 확인</span>
+          </h2>
+          {newSaga.map((row) => (
+            <RowCard key={row.id} row={row} saga={undefined} onDone={() => mutate()} />
+          ))}
+        </section>
+      )}
+
+      {withSaga.length > 0 && (
+        <section className="space-y-2.5">
+          <h2 className="text-[13.5px] font-extrabold text-emerald-800">
+            기존 사가에 쌓이는 건 <span className="text-emerald-500">{withSaga.length}</span>
+            <span className="ml-2 font-bold text-gray-400">— 헤드라인만 훑고 발행</span>
+          </h2>
+          {withSaga.map((row) => (
+            <RowCard
+              key={row.id}
+              row={row}
+              saga={row.saga_hint ? sagaByKey.get(row.saga_hint) : undefined}
+              onDone={() => mutate()}
+            />
+          ))}
+        </section>
+      )}
     </div>
   )
 }
