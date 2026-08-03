@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
+import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
@@ -120,6 +121,8 @@ export async function GET(request: NextRequest) {
     const skipped: string[] = []
 
     for (const name of names) {
+      // 클럽명 오탐 차단 (실사고: '리버풀'이 선수로 추출돼 '헨더슨'으로 치환됨)
+      if (isClubName(name)) continue
       const compact = name.replace(/\s+/g, "")
       if (preferredSet.has(compact)) continue // 이미 정표기
       const viaAlt = altToPreferred.get(name)
@@ -153,7 +156,11 @@ export async function GET(request: NextRequest) {
       }
       const winner = verifiedCache.get(name)
       if (winner === null || winner === undefined) skipped.push(`${name} (근거 부족)`)
-      else if (winner !== name) pairs.push([name, winner])
+      else if (winner !== name) {
+        // 교정 타당성 — 음차 차이만 허용, 다른 단어로의 교체·풀네임 축약은 거부
+        if (plausibleCorrection(name, winner)) pairs.push([name, winner])
+        else skipped.push(`${name} → ${winner} (교정 타당성 불통과)`)
+      }
     }
 
     if (pairs.length === 0) {

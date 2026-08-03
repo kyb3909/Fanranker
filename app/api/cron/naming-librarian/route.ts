@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
 import { normalizePlayerKey, isSamePlayerKey } from "@/lib/saga/identity"
 import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/canonical"
+import { isClubName } from "@/lib/naming/pick"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -107,6 +108,10 @@ async function cronGet(request: Request) {
     // ── 검증·등재 (일일 상한) ──
     let registered = 0
     for (const [name, { context }] of [...targets].slice(0, DAILY_NAME_CAP)) {
+      if (isClubName(name)) {
+        fixes.push({ name, result: "클럽명 오탐 — 무시" })
+        continue
+      }
       const v = await verifySpelling(name, context)
       if (!v.winner || !v.romanized) {
         fixes.push({ name, result: `보류 (${v.reason})` })

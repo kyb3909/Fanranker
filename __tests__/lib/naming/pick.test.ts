@@ -1,5 +1,27 @@
 import { describe, it, expect } from "vitest"
-import { pickWinner } from "@/lib/naming/pick"
+import { pickWinner, isClubName, plausibleCorrection } from "@/lib/naming/pick"
+
+describe("가드 — 클럽명·교정 타당성 (2026-08-04 실사고: 리버풀→헨더슨 치환)", () => {
+  it("클럽명은 선수 검증 대상이 아님", () => {
+    expect(isClubName("리버풀")).toBe(true)
+    expect(isClubName("맨체스터 유나이티드")).toBe(true)
+    expect(isClubName("조던 헨더슨")).toBe(false)
+  })
+
+  it("음차 차이는 타당 (갓포→각포, 추아미니→추아메니)", () => {
+    expect(plausibleCorrection("코디 갓포", "코디 각포")).toBe(true)
+    expect(plausibleCorrection("추아미니", "추아메니")).toBe(true)
+    expect(plausibleCorrection("다이젠 마에다", "마에다 다이젠")).toBe(true)
+  })
+
+  it("다른 단어로의 교체는 거부 (리버풀→헨더슨)", () => {
+    expect(plausibleCorrection("리버풀", "헨더슨")).toBe(false)
+  })
+
+  it("풀네임→성 축약은 거부 (로베르토 아얄라→아얄라)", () => {
+    expect(plausibleCorrection("로베르토 아얄라", "아얄라")).toBe(false)
+  })
+})
 
 describe("pickWinner — 네이버 검색량 기반 표기 판정", () => {
   it("압도적 다수 표기 채택 (기마랑이스 케이스)", () => {
