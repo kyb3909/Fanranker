@@ -126,6 +126,12 @@ export async function linkArticleToSaga(
       },
       occurredAt: article.occurredAt ?? new Date().toISOString(),
     })
+
+    // 기사↔사가 연결 원장 — 떡밥 카드가 이 매핑으로 /saga/[slug] 로 직행한다
+    await supabase
+      .from("saga_article_links")
+      .upsert({ post_id: article.postId, saga_id: result.sagaId }, { onConflict: "post_id" })
+
     return { sagaSlug: result.sagaSlug, folded: result.folded }
   } catch (e) {
     console.error("사가 연동 실패 (발행은 정상):", e)

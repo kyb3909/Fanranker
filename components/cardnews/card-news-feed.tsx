@@ -449,8 +449,13 @@ function CompactCard({ card }: { card: CardNewsItem }) {
       className="relative flex items-center gap-3 rounded-xl px-4 py-3"
       style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
     >
+      {/* 이적설 사가가 붙은 기사는 위키로 직행 (2026-08-03 오너 — "게시물이 아니라 위키로") */}
       <Link
-        href={`/post/${card.id}?utm_source=cardnews`}
+        href={
+          card.sagaSlug
+            ? `/saga/${card.sagaSlug}?utm_source=cardnews`
+            : `/post/${card.id}?utm_source=cardnews`
+        }
         className="absolute inset-0 z-[1]"
         aria-label={card.title}
         onClick={() => openPost(card.id)}

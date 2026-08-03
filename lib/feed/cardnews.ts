@@ -22,6 +22,8 @@ export interface CardNewsItem {
   flair: { name: string; color: string | null } | null
   /** 본문 첫 임베드 (플랫폼 뱃지 + 유튜브 lite embed 용). 풀 임베드는 상세 페이지 몫 */
   media: { provider: "youtube" | "instagram" | "x"; url: string; videoId?: string } | null
+  /** 연결된 이적설 사가 slug — 있으면 카드 클릭이 /saga/[slug] 로 간다 (2026-08-03 오너) */
+  sagaSlug?: string | null
   /** VS 쟁점 — 질문 + 양측 + 퍼센트. 카드에서 바로 투표 가능 (폴 없으면 undefined) */
   vs?: {
     pollId: string
@@ -94,6 +96,7 @@ export async function fetchCardNews(
   // 떡밥 카드에서 바로 투표 (안 1, 2026-07-31) — 쇼윈도 표면이라 높은 바:
   // confidence >= 0.7 이고 켜진 폴만 (본문 하단은 켜진 것 전부 — fetchVsPoll 몫)
   await attachVsToCards(supabase, cards)
+  await attachSagaLinks(supabase, cards)
 
   return {
     // 사진 없는 글은 떡밥에서 배제한다 (2026-07-28 규칙 유지).
@@ -233,7 +236,33 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
   // 히어로는 전면 이미지 카드 — 이미지 없는 글은 성립 안 함
   const heroes = cards.filter((c) => !!c.image).slice(0, limit)
   await attachVsToCards(supabase, heroes)
+  await attachSagaLinks(supabase, heroes)
   return heroes
+}
+
+/** 이적설 사가가 연결된 기사에 slug 부착 — 카드 클릭 목적지가 위키로 바뀐다 */
+async function attachSagaLinks(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  cards: CardNewsItem[]
+): Promise<void> {
+  if (cards.length === 0) return
+  const { data: links } = await supabase
+    .from("saga_article_links")
+    .select("post_id, sagas ( slug )")
+    .in(
+      "post_id",
+      cards.map((c) => c.id)
+    )
+  if (!links?.length) return
+  const bySlugOf = new Map(
+    links.map((l) => [
+      l.post_id as string,
+      (l.sagas as unknown as { slug: string } | null)?.slug ?? null,
+    ])
+  )
+  for (const card of cards) {
+    card.sagaSlug = bySlugOf.get(card.id) ?? null
+  }
 }
 
 /** 히어로 카드에 VS 쟁점(질문+퍼센트) 부착 — 폴 없는 글은 그대로 둔다 */
