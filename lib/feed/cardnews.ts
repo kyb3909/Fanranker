@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { classifyTier } from "@/lib/saga/tier"
 import {
   extractFirstImageSrcFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
@@ -93,6 +94,9 @@ export async function fetchCardNews(
     )
     .is("deleted_at", null)
     .eq("user_id", NEWS_BOT_USER_ID)
+    // 24시간 창 (2026-08-04 운영자: 하루 지난 기사는 시의성 상실 — 떡밥에서 내림.
+    // 삭제가 아니라 노출 제외 — 기사는 사가·시즌 실록의 사료로 영구 보존)
+    .gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString())
     .order("created_at", { ascending: false })
     .limit(FEED_LIMIT)
   if (error) throw error
@@ -245,9 +249,65 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
     .limit(limit * 2) // 이미지 없는 글이 걸러질 수 있어 여유분
 
   // 한국 매체 출처 제외 — 떡밥과 같은 정책 (운영자가 직접 핀 걸어도 일관 적용)
-  const rows = ((posts ?? []) as unknown as PostRow[]).filter(
+  let rows = ((posts ?? []) as unknown as PostRow[]).filter(
     (r) => !isKoreanSource(r.source_url ?? null)
   )
+
+  // ── 자동 선정 규칙 (2026-08-04 운영자: "무작위면 안 된다, 규칙을 정하자") ──
+  // 핀이 부족하면 최근 24시간 기사 중 점수순으로 채운다:
+  //   팬 반응(댓글×3 + 추천×2) + 이적설 사가 연결 +5 + 오피셜 +3, 동점이면 최신순.
+  // 운영자 핀은 언제나 이 규칙보다 위 (핀 = 수동 오버라이드).
+  if (rows.length < limit) {
+    const { data: recent } = await supabase
+      .from("posts")
+      .select(
+        "id, user_id, title, image, content, vote_count, comment_count, created_at, source_url, post_flairs!flair_id ( name, color )"
+      )
+      .is("deleted_at", null)
+      .eq("user_id", NEWS_BOT_USER_ID)
+      .not("image", "is", null)
+      .gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(30)
+
+    const pinnedIds = new Set(rows.map((r) => r.id))
+    const candidates = ((recent ?? []) as unknown as PostRow[]).filter(
+      (r) => !pinnedIds.has(r.id) && !isKoreanSource(r.source_url ?? null)
+    )
+
+    // 사가 연결 여부 (빅 이적 소식 우대)
+    const { data: links } = candidates.length
+      ? await supabase
+          .from("saga_article_links")
+          .select("post_id, sagas!inner ( saga_type )")
+          .in(
+            "post_id",
+            candidates.map((c) => c.id)
+          )
+      : { data: [] }
+    const sagaLinked = new Set(
+      (links ?? [])
+        .filter((l) => (l.sagas as unknown as { saga_type: string })?.saga_type === "transfer")
+        .map((l) => l.post_id as string)
+    )
+
+    const score = (r: PostRow) =>
+      (r.comment_count ?? 0) * 3 +
+      (r.vote_count ?? 0) * 2 +
+      (sagaLinked.has(r.id) ? 5 : 0) +
+      (classifyTier({
+        category: null,
+        original_title: r.title,
+        headline_kr: r.title,
+        link_url: r.source_url ?? null,
+        source_id: null,
+      }) === "official"
+        ? 3
+        : 0)
+
+    candidates.sort((a, b) => score(b) - score(a) || b.created_at.localeCompare(a.created_at))
+    rows = [...rows, ...candidates].slice(0, limit)
+  }
   if (rows.length === 0) return []
 
   const cards = await buildCards(supabase, rows)
