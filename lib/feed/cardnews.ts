@@ -40,6 +40,18 @@ export interface CardNewsItem {
 /** 떡밥 자격 시간창 — 이보다 오래된 글은 피드에서 내린다 (2026-08-03 운영자: 36시간) */
 /** 봇 발행량(하루 ~20건)이면 최근분이 한 번에 다 담긴다 — 커서 페이지네이션 불필요 */
 const FEED_LIMIT = 60
+
+/**
+ * 한국 매체 출처 판정 — 떡밥에 넣지 않는다 (2026-08-04 운영자: "한국 뉴스에서
+ * 퍼온 건 안 넣을 거야"). .kr TLD + 네이버/다음 + .com 을 쓰는 국내 매체.
+ * 현재 파이프라인(레딧 스캐너)은 전부 해외 원문이라 지금은 0건 — 미래 유입 가드.
+ */
+const KOREAN_SOURCE_RE =
+  /\.kr(\/|$)|naver\.com|daum\.net|chosun\.com|donga\.com|newsis\.com|joongang\.co|hankyung\.com|starnewskorea\.com/i
+
+function isKoreanSource(sourceUrl: string | null): boolean {
+  return !!sourceUrl && KOREAN_SOURCE_RE.test(sourceUrl)
+}
 const SOURCE_RE = /^\[([^\]]{1,24})\]\s*/
 
 /** AI 뉴스룸 발행 계정 (news-review publish) — 카드뉴스는 이 계정 글만 큐레이션 */
@@ -77,14 +89,16 @@ export async function fetchCardNews(
     .from("posts")
     .select(
       // post_flairs 임베드는 !flair_id 힌트 필수 (post_flair_map 추가 후 관계 모호 — f15c802a 참조)
-      "id, user_id, title, image, content, vote_count, comment_count, temperature, created_at, post_flairs!flair_id ( name, color )"
+      "id, user_id, title, image, content, vote_count, comment_count, temperature, created_at, source_url, post_flairs!flair_id ( name, color )"
     )
     .is("deleted_at", null)
     .eq("user_id", NEWS_BOT_USER_ID)
     .order("created_at", { ascending: false })
     .limit(FEED_LIMIT)
   if (error) throw error
-  const fetched = (posts ?? []) as unknown as PostRow[]
+  const fetched = ((posts ?? []) as unknown as PostRow[]).filter(
+    (r) => !isKoreanSource(r.source_url ?? null)
+  )
 
   // 끓는 글(≥0.5)은 온도순으로 앞에, 식은 글은 최신순 그대로
   const hot = fetched
@@ -117,6 +131,7 @@ interface PostRow {
   vote_count: number | null
   comment_count: number | null
   temperature: number | null
+  source_url?: string | null
   created_at: string
   post_flairs:
     | { name: string; color: string | null }
@@ -222,14 +237,17 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
     .from("posts")
     .select(
       // post_flairs 임베드는 !flair_id 힌트 필수 (post_flair_map 추가 후 관계 모호 — f15c802a 참조)
-      "id, user_id, title, image, content, vote_count, comment_count, created_at, post_flairs!flair_id ( name, color )"
+      "id, user_id, title, image, content, vote_count, comment_count, created_at, source_url, post_flairs!flair_id ( name, color )"
     )
     .is("deleted_at", null)
     .not("hero_pinned_at", "is", null)
     .order("hero_pinned_at", { ascending: false })
     .limit(limit * 2) // 이미지 없는 글이 걸러질 수 있어 여유분
 
-  const rows = (posts ?? []) as unknown as PostRow[]
+  // 한국 매체 출처 제외 — 떡밥과 같은 정책 (운영자가 직접 핀 걸어도 일관 적용)
+  const rows = ((posts ?? []) as unknown as PostRow[]).filter(
+    (r) => !isKoreanSource(r.source_url ?? null)
+  )
   if (rows.length === 0) return []
 
   const cards = await buildCards(supabase, rows)
