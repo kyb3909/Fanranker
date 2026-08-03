@@ -17,8 +17,23 @@ export const dynamic = "force-dynamic"
  * 인증: CRON_SECRET Bearer 필수.
  * 멱등: dedupe_key 기준 (같은 루머 재호출 시 중복 생성 안 함).
  */
+/**
+ * 영문 제목 차단 (운영자 지시 2026-08-03) — [기자]/[매체] 브래킷을 뗀 제목 본문에
+ * 한글이 2음절 미만이면 거부. 스캐너에도 같은 가드가 있지만(1회 재작성 후 skip)
+ * 여기는 최후 방어선 — 어떤 수집 경로가 추가돼도 영어 제목은 DB에 못 들어온다.
+ * (실사례: "[BBC] Alan Shearer: Challenging times ahead ..." 가 초안까지 통과했었다)
+ */
+const koreanTitle = (t: string) =>
+  (t.replace(/^\s*(?:\[[^\]]{1,24}\]\s*)+/, "").match(/[가-힣]/g) || []).length >= 2
+
 const BodySchema = z.object({
-  title: z.string().min(1).max(300),
+  title: z
+    .string()
+    .min(1)
+    .max(300)
+    .refine(koreanTitle, {
+      message: "제목 본문이 한국어가 아닙니다 (브래킷 출처 제외 한글 2음절 이상 필요)",
+    }),
   /** TipTap doc JSON (Hermes 가 플레이북 형식대로 생성: 요약 문단 + 트윗/영상 embed 노드 + 출처 링크) */
   content: z.unknown(),
   /** 원문 소스 URL (트윗/기사) */

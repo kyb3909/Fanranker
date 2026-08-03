@@ -124,6 +124,21 @@ function stripRedditAttribution(title) {
   out = out.replace(/\[\s*(?:레딧|reddit)\s*[-·|]\s*/gi, "[")
   return out.trim() || title.trim()
 }
+/**
+ * 제목이 한국어로 작성됐는지 — 앞머리 [기자]/[매체] 브래킷을 떼고 한글 음절 수로 판정.
+ *
+ * 왜 코드 가드인가: 프롬프트에 한국어 지시가 있어도 LLM 이 가끔 원문 영어 제목을
+ * 그대로 흘린다 (실사례 2026-08-02: "[BBC] Alan Shearer: Challenging times ahead ...").
+ * 자동발행 정지 사유 중 하나가 "영어 미번역 기사"였으므로(2026-07-30) 결정적으로 막는다.
+ * 기자명·매체명 브래킷과 제목 속 고유명사 영문은 허용 — 검사 대상은 브래킷 뒤 본문뿐.
+ */
+function isKoreanTitle(title) {
+  if (typeof title !== "string") return false
+  const body = title.replace(/^\s*(?:\[[^\]]{1,24}\]\s*)+/, "")
+  const hangul = (body.match(/[가-힣]/g) || []).length
+  return hangul >= 2
+}
+
 function applyKoreanFixes(s) {
   if (typeof s !== "string" || !s) return s
   let out = s
@@ -439,6 +454,9 @@ worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·�
 - 기사/트윗 원문에 없는 사실은 절대 추가하지 않는다. 원문 말미의 무관한 조각(다른 경기 홍보·구독 안내)은 무시한다.
 - 제목: 출처가 **분명할 때만** "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진").
   출처로 쓸 수 있는 것은 **기자·언론사·구단** 뿐이다.
+  ⛔ **제목 본문은 반드시 한국어로 쓴다.** 원문 영어 제목을 그대로 옮기는 것 금지
+  (예: "[BBC] Challenging times ahead for Newcastle" ❌ → "[BBC] 뉴캐슬, 하우 감독 떠난 뒤 험로 예고" ⭕).
+  대괄호 안 기자·매체명과 선수·클럽 고유명사의 영문 표기만 허용된다.
   ⛔ **레딧은 출처가 아니다.** 우리가 소식을 발견한 경로일 뿐이므로 "[레딧]", "[Reddit]",
   "[r/soccer]" 같은 표기는 절대 쓰지 마라. 출처가 불명확하면 **대괄호 없이 제목만** 써라
   (예: "아시아 투어 참가 선수 명단 공개").
@@ -736,6 +754,26 @@ async function main() {
       }
       v.title = stripRedditAttribution(applyKoreanFixes(v.title))
       v.summary = applyKoreanFixes(v.summary)
+      // 영문 제목 가드 (운영자 지시 2026-08-03) — 1회 강제 재작성, 실패 시 초안 자체를 안 만든다
+      if (!isKoreanTitle(v.title)) {
+        log(`retry(영문제목) [${p.subreddit}/${p.id}] "${v.title?.slice(0, 60)}"`)
+        llmCalls++
+        const retry = await judgeAndWrite(
+          p,
+          corrections,
+          material,
+          `직전 초안의 제목("${v.title}")이 영어다 — 실패다. 제목 본문을 반드시 한국어로 다시 써라. 대괄호 안 기자·매체명과 선수·클럽 고유명사만 영문 허용.`
+        )
+        if (retry?.worthy) {
+          retry.title = stripRedditAttribution(applyKoreanFixes(retry.title))
+          retry.summary = applyKoreanFixes(retry.summary)
+          if (isKoreanTitle(retry.title)) v = retry
+        }
+        if (!isKoreanTitle(v.title)) {
+          log(`skip(영문제목) [${p.subreddit}/${p.id}] 재작성도 영어 — 초안 미생성`)
+          continue
+        }
+      }
       if (DRY_RUN) {
         drafted++
         log(
