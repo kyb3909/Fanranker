@@ -32,6 +32,8 @@ export interface DrawCandidate {
 export interface DrawWinner {
   user_id: string
   nickname: string
+  /** 발표 화면에서 팀 색 점을 찍어 "우리 쪽에서 몇 명 나왔나"가 읽히게 한다 */
+  group_slug: string
 }
 
 /**
@@ -110,7 +112,9 @@ export function drawWinners(candidates: DrawCandidate[], n: number): DrawWinner[
     const j = i + randomInt(pool.length - i)
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
-  return pool.slice(0, take).map((c) => ({ user_id: c.user_id, nickname: c.nickname }))
+  return pool
+    .slice(0, take)
+    .map((c) => ({ user_id: c.user_id, nickname: c.nickname, group_slug: c.group_slug }))
 }
 
 /* ── 크리에이터 주간 맞대결 ──────────────────────────────────── */

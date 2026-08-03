@@ -769,6 +769,9 @@ export default async function SeasonEventPage({
                 duelScores={weeklyDraw.duelScores}
                 duelWinnerSlug={weeklyDraw.duelWinnerSlug}
                 uniformWinner={weeklyDraw.uniformWinner}
+                groupColors={Object.fromEntries(
+                  (groups ?? []).map((g) => [g.slug, g.color ?? "#8b1e3f"])
+                )}
               />
             </div>
           )}

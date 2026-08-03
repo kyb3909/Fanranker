@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 interface Winner {
   user_id: string
   nickname: string
+  group_slug?: string
 }
 
 interface DuelScore {
@@ -36,6 +37,8 @@ interface Props {
   duelScores?: DuelScore[]
   duelWinnerSlug?: string | null
   uniformWinner?: Winner | null
+  /** 팬덤 slug → 팀 컬러. 당첨자 카드에 점으로 찍어 소속이 한눈에 읽히게 한다 */
+  groupColors?: Record<string, string>
 }
 
 const ROLL_TICK_MS = 70
@@ -50,6 +53,7 @@ export function WeeklyDrawReveal({
   duelScores,
   duelWinnerSlug,
   uniformWinner,
+  groupColors,
 }: Props) {
   const names = poolNames?.length ? poolNames : winners.map((w) => w.nickname)
 
@@ -165,6 +169,17 @@ export function WeeklyDrawReveal({
                 transform: isLocked ? "scale(1)" : "scale(.97)",
               }}
             >
+              {/* 팀 색 점 — 확정된 뒤에만. 굴러가는 동안 보이면 결과를 미리 흘린다 */}
+              {isLocked && w.group_slug && groupColors?.[w.group_slug] && (
+                <span
+                  aria-hidden
+                  className="mb-1.5 block h-1.5 w-1.5 rounded-full"
+                  style={{
+                    background: groupColors[w.group_slug],
+                    boxShadow: `0 0 10px ${groupColors[w.group_slug]}`,
+                  }}
+                />
+              )}
               <span
                 className="text-center leading-tight font-extrabold break-keep"
                 style={{
