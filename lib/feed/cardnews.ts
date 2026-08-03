@@ -271,17 +271,19 @@ async function attachSagaLinks(
   if (cards.length === 0) return
   const { data: links } = await supabase
     .from("saga_article_links")
-    .select("post_id, sagas ( slug )")
+    .select("post_id, sagas ( slug, saga_type )")
     .in(
       "post_id",
       cards.map((c) => c.id)
     )
   if (!links?.length) return
+  // transfer 사가만 카드 라우팅 — 시즌 위키 연결 기사(인터뷰 등)는 기사로 간다
+  // (시즌 문서엔 기사 본문 펼침이 없어서 착지가 어긋남 — PM 토론 #2 교훈)
   const bySlugOf = new Map(
-    links.map((l) => [
-      l.post_id as string,
-      (l.sagas as unknown as { slug: string } | null)?.slug ?? null,
-    ])
+    links.map((l) => {
+      const saga = l.sagas as unknown as { slug: string; saga_type: string } | null
+      return [l.post_id as string, saga?.saga_type === "transfer" ? saga.slug : null]
+    })
   )
   for (const card of cards) {
     card.sagaSlug = bySlugOf.get(card.id) ?? null

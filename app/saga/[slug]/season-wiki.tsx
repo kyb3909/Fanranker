@@ -60,7 +60,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
     fetchStanding(supabase, subject.team_kr),
     fetchMatches(supabase, aliases, subject.season),
   ])
-  const chronicle = await fetchTeamChronicle(supabase, aliases, subject.season, matches)
+  const chronicle = await fetchTeamChronicle(supabase, saga.id, aliases, subject.season, matches)
   const upcoming = matches
     .filter((m) => m.status !== "completed")
     .sort((a, b) => a.matchTime.localeCompare(b.matchTime))[0]
@@ -143,7 +143,9 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                           borderColor:
                             ev.kind === "match"
                               ? "var(--wc-ink-2, #494d56)"
-                              : (TIER_COLOR[ev.tier] ?? "var(--wc-mute)"),
+                              : ev.kind === "transfer"
+                                ? (TIER_COLOR[ev.tier] ?? "var(--wc-mute)")
+                                : "var(--wc-mute)",
                           background:
                             ev.kind === "transfer" && ev.tier === "official"
                               ? TIER_COLOR.official
@@ -162,8 +164,10 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
 
                       {ev.kind === "match" ? (
                         <MatchEvent ev={ev} teamNames={teamNames} />
-                      ) : (
+                      ) : ev.kind === "transfer" ? (
                         <TransferEvent ev={ev} />
+                      ) : (
+                        <ArticleEvent ev={ev} />
                       )}
                     </div>
                   )
@@ -249,6 +253,24 @@ function MatchEvent({
         </span>
       </div>
     </article>
+  )
+}
+
+function ArticleEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "article" }> }) {
+  return (
+    <Link href={`/post/${ev.postId}?utm_source=season_wiki`} className="block">
+      <article className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md" style={card}>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-[12px]">📰</span>
+          <p
+            className="min-w-0 flex-1 text-[13.5px] font-semibold"
+            style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+          >
+            {ev.title}
+          </p>
+        </div>
+      </article>
+    </Link>
   )
 }
 

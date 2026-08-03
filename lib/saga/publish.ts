@@ -97,13 +97,43 @@ export async function upsertSagaEntry(
  * 사가 엔트리는 무검수 자동 발행이 아니다. 이적 기사가 아니거나 선수를 못 찾으면
  * 조용히 아무것도 안 한다 — 발행 경로를 절대 막지 않는다 (실패 무해).
  */
+/**
+ * 비이적 기사(인터뷰·경기 반응 등) → 팀 시즌 위키 연대기에 사료로 연결.
+ * 제목에 시즌 사가의 팀 별칭이 등장하면 연결 — LLM 없이 텍스트 매칭 (제목은
+ * 한국어라 팀명이 그대로 박혀 있다). 첫 매칭 팀 하나만 (post_id 가 PK).
+ */
+export async function linkArticleToSeasonWiki(
+  supabase: ServiceClient,
+  article: { postId: string; title: string }
+): Promise<string | null> {
+  const { data: seasons } = await supabase
+    .from("sagas")
+    .select("id, slug, subject")
+    .eq("saga_type", "season")
+    .eq("status", "active")
+  for (const s of seasons ?? []) {
+    const aliases = ((s.subject as { aliases?: string[] })?.aliases ?? []).filter(Boolean)
+    if (aliases.some((a) => article.title.includes(a))) {
+      await supabase
+        .from("saga_article_links")
+        .upsert({ post_id: article.postId, saga_id: s.id }, { onConflict: "post_id" })
+      return s.slug as string
+    }
+  }
+  return null
+}
+
 export async function linkArticleToSaga(
   supabase: ServiceClient,
   article: { postId: string; title: string; sourceUrl: string | null; occurredAt?: string }
 ): Promise<{ sagaSlug: string; folded: boolean } | null> {
   try {
     const [ex] = await extractTransferBatch([{ title: article.title }])
-    if (!ex?.is_transfer || !ex.player) return null
+    if (!ex?.is_transfer || !ex.player) {
+      // 이적 기사가 아니면 시즌 위키 연대기 연결 시도 (인터뷰·경기 반응 사료)
+      await linkArticleToSeasonWiki(supabase, article)
+      return null
+    }
 
     const { data: aliasRows } = await supabase
       .from("news_alias_dictionary")

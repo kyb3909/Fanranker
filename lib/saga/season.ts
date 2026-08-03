@@ -171,9 +171,11 @@ export type ChronicleEvent =
       sagaSlug: string
       sagaTitle: string
     }
+  | { kind: "article"; occurredAt: string; postId: string; title: string }
 
 export async function fetchTeamChronicle(
   supabase: ServiceClient,
+  seasonSagaId: string,
   aliases: string[],
   season: string,
   completedMatches: SeasonMatch[]
@@ -204,6 +206,24 @@ export async function fetchTeamChronicle(
     if (m.status !== "completed" || m.homeScore === null) continue
     events.push({ kind: "match", occurredAt: m.matchTime, match: m })
   }
+
+  // 이 시즌 문서에 직접 연결된 기사 사료 (인터뷰·경기 반응 — 발행 훅이 연결)
+  const { data: articleLinks } = await supabase
+    .from("saga_article_links")
+    .select("post_id, posts ( title, created_at )")
+    .eq("saga_id", seasonSagaId)
+    .limit(200)
+  for (const l of articleLinks ?? []) {
+    const post = l.posts as unknown as { title: string; created_at: string } | null
+    if (!post) continue
+    events.push({
+      kind: "article",
+      occurredAt: post.created_at,
+      postId: l.post_id as string,
+      title: post.title,
+    })
+  }
+
   // 실록은 시간순 — 오래된 사건이 위, 새 사료는 아래로 붙는다
   events.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
   return events
