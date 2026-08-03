@@ -33,6 +33,17 @@ const STYLE =
   "No text, no letters, no numbers, no logos, no emblems, no crests, no recognizable faces."
 
 const ASSETS = {
+  "duel-banner": {
+    file: "duel-banner.webp",
+    size: "1536x1024",
+    prompt:
+      "Two anonymous silhouetted rival figures facing each other in profile from opposite sides, " +
+      "the LEFT figure backlit in deep crimson red light and smoke, the RIGHT figure backlit in royal blue light and smoke. " +
+      "Between them, floating in the center, a single plain white football jersey glowing with golden light " +
+      "(completely blank — no badge, no number, no text on it), like a trophy both sides want. " +
+      "Tension and energy crackling in the middle where red and blue light collide. " +
+      STYLE,
+  },
   hero: {
     file: "hero-collage.webp",
     size: "1536x1024",

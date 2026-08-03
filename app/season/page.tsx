@@ -866,6 +866,75 @@ export default async function SeasonEventPage({
           </div>
         </section>
 
+        {/* 주간 맞대결 선언 밴드 — 유니폼의 행방 (다크 = 선언 영역이라 허용).
+            생성 애셋(duel-banner.webp, gpt-image-2): 빨강 vs 파랑 실루엣 사이에 무지
+            유니폼이 전리품처럼 떠 있는 구도 — "유니폼이 어느 팬덤으로 갈지는 대표들의
+            승부에 달렸다"를 카피 없이도 읽히게 한다. 크리에이터 실명은 협업 합의 전이라
+            "양 팀 대표 유튜버"로만 지칭 (2026-08-03). */}
+        <section className="mt-12" aria-label="주간 맞대결 — 유니폼의 행방">
+          <div
+            className="relative overflow-hidden rounded-2xl"
+            style={{ border: "1px solid var(--wc-line)", background: "#0b0a0e" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/season/duel-banner.webp"
+              alt=""
+              className="w-full object-cover"
+              style={{ aspectRatio: "16 / 10", objectPosition: "center 38%" }}
+              loading="lazy"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(9,8,11,.92) 0%, rgba(9,8,11,.55) 26%, rgba(9,8,11,0) 55%)",
+              }}
+            />
+            <div className="absolute right-0 bottom-0 left-0 px-5 pb-6 text-center sm:pb-8">
+              {/* 버건디는 뒤의 금색 빛기둥에 묻힌다 — 크림 + 그림자로 대비 확보 */}
+              <p
+                className="text-[11px] font-extrabold"
+                style={{
+                  color: "rgba(245,239,231,.85)",
+                  letterSpacing: "0.2em",
+                  textShadow: "0 1px 10px rgba(0,0,0,.9)",
+                }}
+              >
+                WEEKLY DUEL
+              </p>
+              <h2
+                className="mt-1.5"
+                style={{
+                  fontFamily: DISPLAY,
+                  fontWeight: 700,
+                  fontSize: "clamp(22px, 3.2vw, 34px)",
+                  color: "rgba(245,239,231,.97)",
+                  letterSpacing: "-0.01em",
+                  textShadow: "0 2px 20px rgba(0,0,0,.8)",
+                  wordBreak: "keep-all",
+                }}
+              >
+                이번 주 유니폼, 어느 팬덤으로 가는가
+              </h2>
+              <p
+                className="mx-auto mt-2.5 max-w-[560px] text-[13.5px] sm:text-[14.5px]"
+                style={{
+                  lineHeight: 1.6,
+                  color: "rgba(245,239,231,.78)",
+                  wordBreak: "keep-all",
+                }}
+              >
+                양 팀을 대표하는 유튜버가 매주 승부예측으로 맞붙습니다. 이긴 쪽 팬덤에서 유니폼
+                주인공이 나옵니다 — 우리 대표가 이겨야 우리 쪽에 기회가 옵니다.
+              </p>
+              <p className="mt-2 text-[12px] font-bold" style={{ color: "rgba(245,239,231,.5)" }}>
+                결과는 매주 월요일, 팬덤 순위와 함께 발표
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* 상품 안내 — 활동 기준 추첨 (컴플라이언스: 순위 직결 아님) */}
         <section className="mt-12">
           <div className="mb-[20px] text-center">
