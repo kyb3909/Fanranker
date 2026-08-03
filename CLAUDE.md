@@ -181,3 +181,9 @@ production 사이트 회귀 자동 감지 + 사이클 운영 시스템.
 - test: pnpm test
 - deadcode: pnpm exec knip
 - circular: pnpm exec madge --circular .
+
+## Saga Engine
+- 스펙: docs/saga/SAGA_ENGINE_PRD.md — §3 결정 로그는 재논의 금지
+- 작업 전 필수: docs/saga/P0_AUDIT.md 확인 (P0 오딧 2026-08-03 완료 — §5 초안 스키마보다 오딧 문서가 우선)
+- 현재 페이즈: Phase A (TransferSaga, ~2026-08-31 데드라인 데이 · 대량 정산 9/1 09:00 KST)
+- 원칙: audit-first / 페이즈 게이트(Playwright 스모크+마이그레이션 리허설) / 테이블은 saga_type 제네릭 / 런타임 멀티에이전트 금지 / VPS 무수정(티커 2차 소비 + Vercel RSS)
