@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { formatRelativeTime } from "@/lib/utils/date"
 import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/stages"
+import { aggregateMainVotes } from "@/lib/saga/votes"
+import { SagaMainVote } from "@/components/saga/main-vote"
 import { CommentSection } from "@/components/post-detail/comment-section"
 
 // 사가는 이벤트가 붙을 때마다 자란다 — 짧은 재검증
@@ -45,22 +47,12 @@ async function fetchSaga(slug: string) {
     .select("id, headline, summary, tier, stage_after, origin, echoes, occurred_at")
     .eq("saga_id", saga.id)
     .order("occurred_at", { ascending: false })
-  // 메인 투표 집계 — append-only 원장에서 유저별 최신 선택만 (P0_AUDIT §2-3)
-  const { data: votes } = await supabase
-    .from("saga_votes")
-    .select("user_id, choice, created_at")
-    .eq("saga_id", saga.id)
-    .eq("scope", "main")
-    .order("created_at", { ascending: false })
-    .limit(5000)
-  const latest = new Map<string, string>()
-  for (const v of votes ?? []) if (!latest.has(v.user_id)) latest.set(v.user_id, v.choice)
-  const go = [...latest.values()].filter((c) => c === "go").length
-  const total = latest.size
+  // 메인 투표 집계 — lib/saga/votes (append-only 원장에서 유저별 최신 선택만)
+  const vote = await aggregateMainVotes(supabase, saga.id)
   return {
     saga: saga as unknown as SagaRow,
     entries: (entries ?? []) as unknown as EntryRow[],
-    vote: { go, stay: total - go, total },
+    vote,
   }
 }
 
@@ -93,8 +85,6 @@ export default async function SagaDetailPage({ params }: { params: Promise<{ slu
   const flow = STAGE_FLOW[saga.saga_type]
   const idx = stageIndex(saga.saga_type, saga.stage)
   const closed = saga.status === "closed"
-  const goPct = vote.total === 0 ? 50 : Math.round((vote.go / vote.total) * 100)
-
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
       <main className="mx-auto max-w-[760px] px-4 pt-6 pb-16 sm:px-6">
@@ -159,17 +149,9 @@ export default async function SagaDetailPage({ params }: { params: Promise<{ slu
             </p>
           )}
 
-          {/* 메인 투표 게이지 (읽기) — 투표 버튼은 클라 위젯이 담당(다음 슬라이스) */}
+          {/* 메인 투표 — 1탭 참전. SSR 집계로 첫 페인트, 스탠스는 위젯이 하이드레이션 */}
           <div className="mt-5">
-            <div className="flex items-center justify-between text-[12.5px] font-extrabold">
-              <span style={{ color: "var(--wc-burgundy)" }}>나간다 {goPct}%</span>
-              <span style={{ color: "var(--wc-mute)" }}>{vote.total}명 참여</span>
-              <span style={{ color: "#1D4ED8" }}>남는다 {100 - goPct}%</span>
-            </div>
-            <div className="mt-1.5 flex h-2.5 overflow-hidden rounded-full">
-              <span style={{ width: `${goPct}%`, background: "var(--wc-burgundy)" }} />
-              <span style={{ width: `${100 - goPct}%`, background: "#1D4ED8", opacity: 0.75 }} />
-            </div>
+            <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
           </div>
         </header>
 
