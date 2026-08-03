@@ -156,6 +156,59 @@ export async function fetchMatches(
   return matches
 }
 
+/**
+ * 팀 연대기 — 실록처럼 시간순 한 줄기 (2026-08-04 운영자: "세종실록 써 내려가듯이").
+ * 사료 = 완료된 경기 + 이 팀이 얽힌 이적 사가 엔트리. 시즌 경계(7/1) 이후만.
+ */
+export type ChronicleEvent =
+  | { kind: "match"; occurredAt: string; match: SeasonMatch }
+  | {
+      kind: "transfer"
+      occurredAt: string
+      headline: string
+      tier: string
+      stageAfter: string | null
+      sagaSlug: string
+      sagaTitle: string
+    }
+
+export async function fetchTeamChronicle(
+  supabase: ServiceClient,
+  aliases: string[],
+  season: string,
+  completedMatches: SeasonMatch[]
+): Promise<ChronicleEvent[]> {
+  const orExpr = aliases.map((a) => `headline.ilike.%${a}%`).join(",")
+  const { data: entries } = await supabase
+    .from("saga_entries")
+    .select("headline, tier, stage_after, occurred_at, sagas!inner ( slug, title, saga_type )")
+    .or(orExpr)
+    .gte("occurred_at", seasonStartIso(season))
+    .limit(300)
+
+  const events: ChronicleEvent[] = []
+  for (const e of entries ?? []) {
+    const saga = e.sagas as unknown as { slug: string; title: string; saga_type: string }
+    if (saga.saga_type !== "transfer") continue
+    events.push({
+      kind: "transfer",
+      occurredAt: e.occurred_at as string,
+      headline: e.headline as string,
+      tier: e.tier as string,
+      stageAfter: e.stage_after as string | null,
+      sagaSlug: saga.slug,
+      sagaTitle: saga.title,
+    })
+  }
+  for (const m of completedMatches) {
+    if (m.status !== "completed" || m.homeScore === null) continue
+    events.push({ kind: "match", occurredAt: m.matchTime, match: m })
+  }
+  // 실록은 시간순 — 오래된 사건이 위, 새 사료는 아래로 붙는다
+  events.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+  return events
+}
+
 export async function fetchRelatedTransferSagas(
   supabase: ServiceClient,
   aliases: string[]
