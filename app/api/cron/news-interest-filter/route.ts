@@ -3,6 +3,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isClubName } from "@/lib/naming/pick"
+import { isWomensFootball } from "@/lib/news/quality-gate"
 
 export const maxDuration = 120
 export const dynamic = "force-dynamic"
@@ -108,6 +109,29 @@ async function cronGet(request: NextRequest) {
     const guarded: typeof pending = []
     for (const row of pending) {
       const title = (row.draft as { title?: string })?.title ?? ""
+      // ── 여자 축구 — 서비스 커버리지 밖, 클럽명 가드보다 먼저 검사해야 한다
+      // ("아스날 위민" 이 클럽 keep 에 걸리면 안 됨). 운영자 확정 2026-08-04.
+      if (isWomensFootball(title, (row.draft as { summary?: string })?.summary)) {
+        dropped++
+        report.push({ title, verdict: "reject(여자 축구)" })
+        if (!dry) {
+          await supabase
+            .from("news_reservoir")
+            .update({
+              status: "rejected",
+              decision: {
+                ...(row.decision ?? {}),
+                action: "reject",
+                reason: "womens_football",
+                reviewer: "auto",
+                interest: { keep: false, guard: "womens", at: new Date().toISOString() },
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", row.id)
+        }
+        continue
+      }
       if (isClubName(title)) {
         kept++
         if (!dry) {

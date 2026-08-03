@@ -14,6 +14,7 @@ import {
   inspectImage,
   unknownPlayerNames,
   PERSONAL_BLOG_RE,
+  isWomensFootball,
 } from "@/lib/news/quality-gate"
 import { classifyTier } from "@/lib/saga/tier"
 import { titleSimilarity } from "@/lib/saga/cluster"
@@ -148,6 +149,9 @@ async function run(request: NextRequest) {
     if (!title || !content) continue
     // 개인 블로그·뉴스레터 출처는 자동발행 금지 (2026-08-04 Substack 실사고)
     if (row.urls?.source && PERSONAL_BLOG_RE.test(row.urls.source)) continue
+    // 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04). 관심도 필터가 1차
+    // 반려하지만 필터 사이클 전에 발행되는 걸 막는 이중 방어.
+    if (isWomensFootball(title)) continue
     // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
     // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
     const firstImage = extractFirstImageSrcFromTipTapJSON(content)

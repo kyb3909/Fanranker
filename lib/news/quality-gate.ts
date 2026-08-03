@@ -135,6 +135,18 @@ export const PERSONAL_BLOG_RE =
   /substack\.com|medium\.com|blogspot\.|wordpress\.com|tistory\.com|note\.com|ghost\.io|beehiiv\.com/i
 
 /**
+ * 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04 "여자 축구 뉴스는 완전 제외").
+ * 제목·요약 키워드 기반 기계 가드 — LLM 판단에 맡기지 않는다 (기계 가드 우선 원칙).
+ * 대회명(WSL·NWSL·UWCL)·리그 표기·성별 표기(영/한/독/서) 커버.
+ */
+export const WOMENS_FOOTBALL_RE =
+  /여자\s*축구|여자\s*팀|여자부|여자\s*대표팀|여성\s*축구|여축|위민|우먼|women'?s?\b|\bwoman\b|\bWSL\b|\bNWSL\b|\bUWCL\b|frauen|femenin[ao]|féminin/i
+
+export function isWomensFootball(...texts: (string | null | undefined)[]): boolean {
+  return WOMENS_FOOTBALL_RE.test(texts.filter(Boolean).join(" "))
+}
+
+/**
  * 표기 사전 게이트 — 기사 속 선수 한글 표기가 사전에 없으면 자동발행 제외.
  * 환각 음차("기마랑에")·오식별("Luis Hall") 차단. 사전은 검수·교정 학습으로
  * 계속 자라므로 커버리지는 시간이 해결한다. 미등재 = 사람 검수로 강등일 뿐.

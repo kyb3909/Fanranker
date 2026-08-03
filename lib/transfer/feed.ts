@@ -1,4 +1,5 @@
 import type { createServiceRoleClient } from "@/lib/supabase/server"
+import { WOMENS_FOOTBALL_RE } from "@/lib/news/quality-gate"
 
 /**
  * 이적시장 상황판 데이터 (비로그인 공개 페이지 /transfer).
@@ -207,24 +208,28 @@ export async function fetchTransferFeed(
     .order("posted_at", { ascending: false })
     .limit(limit)
 
-  return ((data ?? []) as TickerRow[])
-    .filter((r) => r.headline_kr)
-    .map((r) => ({
-      id: r.id,
-      headline: r.headline_kr as string,
-      originalTitle: r.original_title,
-      tier: classifyTier(r),
-      // 원 소스 해석 체인: 기자명 브래킷 → naver author 언론사 → 링크 도메인 매체.
-      // 야후·레딧 등 유통 채널은 출처로 표시하지 않는다 (운영자 방침 2026-07-26).
-      source:
-        bracketSource(r.original_title) ??
-        outletFromAuthor(r.author) ??
-        outletFromUrl(r.link_url) ??
-        "",
-      sourceUrl: r.link_url || r.external_url,
-      redditUrl: r.external_url,
-      postedAt: r.posted_at,
-      importance: r.importance ?? 0,
-      score: r.score ?? 0,
-    }))
+  return (
+    ((data ?? []) as TickerRow[])
+      .filter((r) => r.headline_kr)
+      // 여자 축구 제외 (운영자 확정 2026-08-04) — 뉴스 파이프라인과 동일 기준
+      .filter((r) => !WOMENS_FOOTBALL_RE.test(`${r.headline_kr} ${r.original_title ?? ""}`))
+      .map((r) => ({
+        id: r.id,
+        headline: r.headline_kr as string,
+        originalTitle: r.original_title,
+        tier: classifyTier(r),
+        // 원 소스 해석 체인: 기자명 브래킷 → naver author 언론사 → 링크 도메인 매체.
+        // 야후·레딧 등 유통 채널은 출처로 표시하지 않는다 (운영자 방침 2026-07-26).
+        source:
+          bracketSource(r.original_title) ??
+          outletFromAuthor(r.author) ??
+          outletFromUrl(r.link_url) ??
+          "",
+        sourceUrl: r.link_url || r.external_url,
+        redditUrl: r.external_url,
+        postedAt: r.posted_at,
+        importance: r.importance ?? 0,
+        score: r.score ?? 0,
+      }))
+  )
 }
