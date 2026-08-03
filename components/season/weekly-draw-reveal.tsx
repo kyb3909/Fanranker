@@ -18,6 +18,12 @@ interface Winner {
   nickname: string
 }
 
+interface DuelScore {
+  group_slug: string
+  nickname: string
+  skill_score: number
+}
+
 interface Props {
   weekStart: string
   winners: Winner[]
@@ -26,6 +32,10 @@ interface Props {
   poolNames?: string[]
   /** 칸 하나가 멈추는 간격 (ms) */
   stagger?: number
+  /** 크리에이터 주간 맞대결 — 없으면 섹션 미표시 */
+  duelScores?: DuelScore[]
+  duelWinnerSlug?: string | null
+  uniformWinner?: Winner | null
 }
 
 const ROLL_TICK_MS = 70
@@ -37,6 +47,9 @@ export function WeeklyDrawReveal({
   candidateCount,
   poolNames,
   stagger = 900,
+  duelScores,
+  duelWinnerSlug,
+  uniformWinner,
 }: Props) {
   const names = poolNames?.length ? poolNames : winners.map((w) => w.nickname)
 
@@ -166,6 +179,68 @@ export function WeeklyDrawReveal({
           )
         })}
       </div>
+
+      {/* 크리에이터 주간 맞대결 — 스팀 추첨과 같은 월요일에 함께 발표된다 */}
+      {duelScores && duelScores.length > 0 && (
+        <div
+          className="mt-5 rounded-xl px-4 py-4"
+          style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)" }}
+        >
+          <p
+            className="mb-3 text-center text-[10.5px] font-extrabold"
+            style={{ color: "rgba(245,239,231,.5)", letterSpacing: "0.16em" }}
+          >
+            THIS WEEK&apos;S DUEL
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            {duelScores.map((s, i) => {
+              const won = duelWinnerSlug === s.group_slug
+              return (
+                <div key={s.group_slug} className="flex items-center gap-3">
+                  {i > 0 && (
+                    <span
+                      className="text-[12px] font-bold"
+                      style={{ color: "rgba(245,239,231,.3)" }}
+                    >
+                      VS
+                    </span>
+                  )}
+                  <div className="text-center">
+                    <span
+                      className="block font-extrabold"
+                      style={{
+                        fontSize: "clamp(15px, 1.5vw, 19px)",
+                        color: won ? "#fff" : "rgba(245,239,231,.45)",
+                        textShadow: won ? "0 2px 14px rgba(139,30,63,.8)" : "none",
+                      }}
+                    >
+                      {s.nickname}
+                    </span>
+                    <span
+                      className="mt-0.5 block text-[10.5px] font-bold tabular-nums"
+                      style={{ color: won ? "rgba(245,239,231,.75)" : "rgba(245,239,231,.3)" }}
+                    >
+                      {s.skill_score.toFixed(2)}
+                      {won && " · WIN"}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-center text-[12px]" style={{ color: "rgba(245,239,231,.62)" }}>
+            {uniformWinner ? (
+              <>
+                승리 팬덤 유니폼 — <b style={{ color: "#fff" }}>{uniformWinner.nickname}</b>님
+              </>
+            ) : duelWinnerSlug ? (
+              "승리 팬덤에 응모 자격자가 없어 이번 주 유니폼은 이월 없이 미지급"
+            ) : (
+              "이번 주는 승부가 갈리지 않았습니다"
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="mt-4 text-center">
         <button

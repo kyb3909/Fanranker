@@ -199,7 +199,9 @@ export default async function SeasonEventPage({
   // (전원을 클라이언트로 내리면 응모자 명단이 통째로 노출된다)
   const { data: drawRow } = await supabase
     .from("season_weekly_draws")
-    .select("week_start, winners, candidate_count, candidates")
+    .select(
+      "week_start, winners, candidate_count, candidates, duel_scores, duel_winner_group_id, uniform_winner"
+    )
     .eq("event_id", event.id)
     .not("drawn_at", "is", null)
     .order("week_start", { ascending: false })
@@ -214,6 +216,16 @@ export default async function SeasonEventPage({
         poolNames: ((drawRow.candidates ?? []) as { nickname: string }[])
           .slice(0, 40)
           .map((c) => c.nickname),
+        duelScores: (drawRow.duel_scores ?? []) as {
+          group_slug: string
+          nickname: string
+          skill_score: number
+        }[],
+        duelWinnerSlug:
+          ((drawRow.duel_scores ?? []) as { group_slug: string; group_id: string }[]).find(
+            (s) => s.group_id === drawRow.duel_winner_group_id
+          )?.group_slug ?? null,
+        uniformWinner: drawRow.uniform_winner as { user_id: string; nickname: string } | null,
       }
     : null
 
@@ -754,6 +766,9 @@ export default async function SeasonEventPage({
                 winners={weeklyDraw.winners}
                 candidateCount={weeklyDraw.candidate_count}
                 poolNames={weeklyDraw.poolNames}
+                duelScores={weeklyDraw.duelScores}
+                duelWinnerSlug={weeklyDraw.duelWinnerSlug}
+                uniformWinner={weeklyDraw.uniformWinner}
               />
             </div>
           )}

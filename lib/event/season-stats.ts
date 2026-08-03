@@ -27,11 +27,22 @@ export interface SeasonStandings {
   userGroup: Map<string, string>
 }
 
-export async function computeSeasonStandings(supabase: ServiceClient): Promise<SeasonStandings> {
-  const { data, error } = await supabase.rpc("season_event_slips", {
+/**
+ * 성적 집계. `range` 를 주면 그 구간만, 안 주면 이벤트 전 기간(누적).
+ *
+ * 구간 집계가 필요한 이유: 크리에이터 주간 맞대결은 **그 주 성적**으로 가린다.
+ * 누적으로 판정하면 1주차 승자가 계속 이겨서 2~4주차 긴장이 죽는다.
+ */
+export async function computeSeasonStandings(
+  supabase: ServiceClient,
+  range?: { from: Date; to: Date }
+): Promise<SeasonStandings> {
+  const { data, error } = await supabase.rpc("season_event_slips_range", {
     p_event_slug: SEASON_EVENT_SLUG,
+    p_from: range?.from.toISOString() ?? null,
+    p_to: range?.to.toISOString() ?? null,
   })
-  if (error) throw new Error(`season_event_slips RPC 실패: ${error.message}`)
+  if (error) throw new Error(`season_event_slips_range RPC 실패: ${error.message}`)
 
   const rows = (data ?? []) as {
     user_id: string

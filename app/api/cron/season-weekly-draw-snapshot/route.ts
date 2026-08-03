@@ -6,6 +6,7 @@ import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
 import {
   buildCandidates,
   drawWinners,
+  resolveWeeklyDuel,
   fetchOpenSeasonEvent,
   hashCandidates,
   kstWeekStart,
@@ -78,16 +79,51 @@ async function run(request: NextRequest) {
     const winners = drawWinners(candidates, WEEKLY_WINNER_COUNT)
     const names = winners.map((w) => w.nickname).join(", ")
 
+    // ── 크리에이터 주간 맞대결 ──
+    // 그 주(직전 월요일 00:00 ~ 이번 월요일 00:00 KST) 범위 성적으로 승부를 가리고,
+    // 이긴 팬덤의 응모 자격 충족자 중 1명에게 유니폼을 준다.
+    // 스팀 추첨 당첨자와 중복되지 않게 제외한다 — 같은 날 두 개를 받으면 말이 나온다.
+    // weekStart 는 이번 주 월요일(KST). 심판 구간은 그 직전 7일이다.
+    const weekEnd = new Date(`${weekStart}T00:00:00+09:00`)
+    const weekFrom = new Date(weekEnd.getTime() - 7 * 24 * 3600 * 1000)
+    const duel = await resolveWeeklyDuel(supabase, { from: weekFrom, to: weekEnd })
+
+    let uniformWinner: { user_id: string; nickname: string } | null = null
+    if (duel.winner) {
+      const steamIds = new Set(winners.map((w) => w.user_id))
+      const pool = candidates.filter(
+        (c) => !steamIds.has(c.user_id) && c.group_slug === duel.winner!.group_slug
+      )
+      uniformWinner = drawWinners(pool, 1)[0] ?? null
+    }
+
     const { data: post } = await supabase
       .from("posts")
       .insert({
         user_id: NEWS_BOT_USER_ID,
         category_id: FREE_BOARD_CATEGORY_ID,
         community_slug: FREE_BOARD_SLUG,
-        title: `🎁 이번 주 추첨 결과 — ${winners.length}명 당첨!`,
+        title: uniformWinner
+          ? `🎁 이번 주 결과 — ${duel.winner?.nickname}님 승리, 유니폼은 ${uniformWinner.nickname}님!`
+          : `🎁 이번 주 추첨 결과 — ${winners.length}명 당첨!`,
         content: {
           type: "doc",
           content: [
+            ...(duel.winner
+              ? [
+                  {
+                    type: "paragraph",
+                    content: [
+                      {
+                        type: "text",
+                        text: uniformWinner
+                          ? `이번 주 맞대결은 ${duel.winner.nickname}님이 가져갔습니다. 승리 팬덤에서 추첨한 유니폼 주인공은 ${uniformWinner.nickname}님입니다. 축하드립니다!`
+                          : `이번 주 맞대결은 ${duel.winner.nickname}님이 가져갔습니다. 다만 승리 팬덤에 응모 자격을 갖춘 분이 없어 이번 주 유니폼은 나가지 않았습니다.`,
+                      },
+                    ],
+                  },
+                ]
+              : []),
             {
               type: "paragraph",
               content: [
@@ -123,6 +159,9 @@ async function run(request: NextRequest) {
       winner_count: WEEKLY_WINNER_COUNT,
       drawn_at: now.toISOString(),
       announced_post_id: post?.id ?? null,
+      duel_winner_group_id: duel.winner?.group_id ?? null,
+      duel_scores: duel.scores,
+      uniform_winner: uniformWinner,
     }
 
     const { error } = existing
@@ -135,6 +174,12 @@ async function run(request: NextRequest) {
       weekStart,
       candidateCount: candidates.length,
       winners: winners.map((w) => w.nickname),
+      duel: {
+        winner: duel.winner?.group_slug ?? null,
+        reason: duel.reason ?? null,
+        scores: duel.scores.map((s) => `${s.group_slug}:${s.skill_score.toFixed(3)}`),
+      },
+      uniformWinner: uniformWinner?.nickname ?? null,
     })
   } catch (error) {
     return apiError("서버 오류가 발생했습니다.", 500, error)

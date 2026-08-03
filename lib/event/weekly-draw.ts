@@ -2,7 +2,11 @@ import "server-only"
 
 import { createHash, randomInt } from "node:crypto"
 import type { createServiceRoleClient } from "@/lib/supabase/server"
-import { fetchAllSeasonPoints, SEASON_EVENT_SLUG } from "@/lib/event/season-stats"
+import {
+  computeSeasonStandings,
+  fetchAllSeasonPoints,
+  SEASON_EVENT_SLUG,
+} from "@/lib/event/season-stats"
 
 /**
  * 주간 경품 추첨 — 후보 확정(cron)과 추첨 실행(어드민)이 공유하는 로직.
@@ -21,6 +25,8 @@ export interface DrawCandidate {
   nickname: string
   total_points: number
   community_actions: number
+  /** 소속 팬덤 — 맞대결 승리 팬덤에서만 뽑는 유니폼 추첨에 필요 */
+  group_slug: string
 }
 
 export interface DrawWinner {
@@ -70,12 +76,25 @@ export async function buildCandidates(supabase: ServiceClient): Promise<DrawCand
     for (const p of data ?? []) nickById.set(p.user_id, p.nickname ?? "이름 없는 팬")
   }
 
+  // 소속 팬덤 — 유니폼 추첨이 승리 팬덤으로 한정되므로 후보에 실어둔다
+  const groupByUser = new Map<string, string>()
+  const { data: regs } = await supabase
+    .from("event_registrations")
+    .select("user_id, event_groups!inner(slug)")
+  for (const r of (regs ?? []) as unknown as {
+    user_id: string
+    event_groups: { slug: string }
+  }[]) {
+    groupByUser.set(r.user_id, r.event_groups.slug)
+  }
+
   return qualified
     .map((q) => ({
       user_id: q.userId,
       nickname: nickById.get(q.userId) ?? "이름 없는 팬",
       total_points: q.totalPoints,
       community_actions: q.communityActions,
+      group_slug: groupByUser.get(q.userId) ?? "",
     }))
     .sort((a, b) => a.user_id.localeCompare(b.user_id))
 }
@@ -92,6 +111,102 @@ export function drawWinners(candidates: DrawCandidate[], n: number): DrawWinner[
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
   return pool.slice(0, take).map((c) => ({ user_id: c.user_id, nickname: c.nickname }))
+}
+
+/* ── 크리에이터 주간 맞대결 ──────────────────────────────────── */
+
+export interface DuelScore {
+  group_slug: string
+  group_id: string
+  captain_user_id: string
+  nickname: string
+  skill_score: number
+  settled_slips: number
+}
+
+export interface DuelResult {
+  scores: DuelScore[]
+  /** 승자 팬덤. 무승부·주장 미설정·정산 슬립 0 이면 null (그 주는 유니폼 미지급) */
+  winner: DuelScore | null
+  reason?: string
+}
+
+/**
+ * 그 주 범위 성적으로 주장끼리 승부를 가린다.
+ *
+ * 무승부·미참가는 승자 없음으로 처리한다 — 억지로 한쪽을 올리면 "왜 쟤가 이겼냐"가 되고,
+ * 그 주 유니폼은 다음 주로 넘기지 않고 그냥 안 나간다(운영이 단순해야 분쟁이 없다).
+ * 정산된 슬립이 0 인 주장은 "예측을 안 한 것"이므로 상대가 슬립을 냈다면 상대가 이긴다.
+ */
+export async function resolveWeeklyDuel(
+  supabase: ServiceClient,
+  range: { from: Date; to: Date }
+): Promise<DuelResult> {
+  const { data: groups } = await supabase
+    .from("event_groups")
+    .select("id, slug, captain_user_id")
+    .not("captain_user_id", "is", null)
+
+  const captains = (groups ?? []) as { id: string; slug: string; captain_user_id: string }[]
+  if (captains.length < 2) {
+    return {
+      scores: [],
+      winner: null,
+      reason: "주장이 2명 미만 (event_groups.captain_user_id 미설정)",
+    }
+  }
+
+  const { users } = await computeSeasonStandings(supabase, range)
+  const byUser = new Map(users.map((u) => [u.userId, u]))
+
+  const nickById = new Map<string, string>()
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("user_id, nickname")
+    .in(
+      "user_id",
+      captains.map((c) => c.captain_user_id)
+    )
+  for (const p of profiles ?? []) nickById.set(p.user_id, p.nickname ?? "이름 없는 팬")
+
+  const scores: DuelScore[] = captains.map((c) => {
+    const u = byUser.get(c.captain_user_id)
+    return {
+      group_slug: c.slug,
+      group_id: c.id,
+      captain_user_id: c.captain_user_id,
+      nickname: nickById.get(c.captain_user_id) ?? "이름 없는 팬",
+      skill_score: u?.skillScore ?? 0,
+      settled_slips: u?.settledSlips ?? 0,
+    }
+  })
+
+  return { scores, ...decideDuelWinner(scores) }
+}
+
+/**
+ * 점수만 보고 승자를 정한다 (순수 함수 — 판정 규칙을 테스트로 고정하기 위해 분리).
+ *
+ * · 그 주 정산된 슬립이 0 인 주장은 "예측을 안 한 것"이라 후보에서 빠진다.
+ *   상대가 냈다면 상대가 이긴다 — 안 하고 비기는 걸 막는다.
+ * · 동점·양쪽 미참가는 **승자 없음**. 억지로 한쪽을 올리면 "왜 쟤가 이겼냐"가 되고,
+ *   그 주 유니폼은 이월하지 않고 그냥 안 나간다(운영이 단순해야 분쟁이 없다).
+ */
+export function decideDuelWinner(scores: DuelScore[]): {
+  winner: DuelScore | null
+  reason?: string
+} {
+  const played = scores.filter((s) => s.settled_slips > 0)
+  if (played.length === 0) {
+    return { winner: null, reason: "양쪽 다 그 주 정산된 예측이 없음" }
+  }
+
+  const sorted = [...played].sort((a, b) => b.skill_score - a.skill_score)
+  if (sorted.length > 1 && sorted[0].skill_score === sorted[1].skill_score) {
+    return { winner: null, reason: "동점" }
+  }
+
+  return { winner: sorted[0] }
 }
 
 /** 이벤트 행 조회 (없거나 미오픈이면 null) */

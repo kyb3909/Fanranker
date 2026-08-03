@@ -1,13 +1,19 @@
 import { describe, it, expect } from "vitest"
-import { kstWeekStart, hashCandidates, drawWinners } from "@/lib/event/weekly-draw"
-import type { DrawCandidate } from "@/lib/event/weekly-draw"
+import {
+  kstWeekStart,
+  hashCandidates,
+  drawWinners,
+  decideDuelWinner,
+} from "@/lib/event/weekly-draw"
+import type { DrawCandidate, DuelScore } from "@/lib/event/weekly-draw"
 
-const cand = (n: number): DrawCandidate[] =>
+const cand = (n: number, groupSlug = "kop"): DrawCandidate[] =>
   Array.from({ length: n }, (_, i) => ({
     user_id: `user_${String(i).padStart(3, "0")}`,
     nickname: `팬${i}`,
     total_points: 30 + i,
     community_actions: 3,
+    group_slug: groupSlug,
   }))
 
 describe("kstWeekStart — 회차 식별자는 KST 월요일", () => {
@@ -79,5 +85,48 @@ describe("drawWinners — 추첨", () => {
       expect(c).toBeGreaterThan(1500)
       expect(c).toBeLessThan(2100)
     }
+  })
+})
+
+const duel = (slug: string, skill: number, slips: number): DuelScore => ({
+  group_slug: slug,
+  group_id: `g-${slug}`,
+  captain_user_id: `cap-${slug}`,
+  nickname: slug === "kop" ? "리빅" : "첼루키",
+  skill_score: skill,
+  settled_slips: slips,
+})
+
+describe("decideDuelWinner — 주간 맞대결 판정", () => {
+  it("예측력이 높은 쪽이 이긴다", () => {
+    const r = decideDuelWinner([duel("kop", 1.2, 5), duel("blues", 0.8, 5)])
+    expect(r.winner?.group_slug).toBe("kop")
+  })
+
+  it("음수 점수라도 덜 나쁜 쪽이 이긴다", () => {
+    const r = decideDuelWinner([duel("kop", -0.9, 3), duel("blues", -0.2, 3)])
+    expect(r.winner?.group_slug).toBe("blues")
+  })
+
+  it("그 주 예측을 안 한 주장은 진다 (안 하고 비기기 방지)", () => {
+    const r = decideDuelWinner([duel("kop", 0, 0), duel("blues", -5, 2)])
+    expect(r.winner?.group_slug).toBe("blues")
+  })
+
+  it("양쪽 다 예측이 없으면 승자 없음", () => {
+    const r = decideDuelWinner([duel("kop", 0, 0), duel("blues", 0, 0)])
+    expect(r.winner).toBeNull()
+    expect(r.reason).toContain("정산된 예측이 없음")
+  })
+
+  it("동점이면 승자 없음 — 유니폼은 그 주에 안 나간다", () => {
+    const r = decideDuelWinner([duel("kop", 0.5, 4), duel("blues", 0.5, 4)])
+    expect(r.winner).toBeNull()
+    expect(r.reason).toBe("동점")
+  })
+
+  it("한쪽만 주장이 설정돼 있어도 그쪽이 이긴다", () => {
+    const r = decideDuelWinner([duel("kop", 0.3, 2)])
+    expect(r.winner?.group_slug).toBe("kop")
   })
 })
