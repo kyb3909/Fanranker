@@ -175,7 +175,8 @@ export async function publishNewsDraft(
   await notifyNewsPublished({
     channel: resolveNewsChannel([opts.title, ...(item.tags ?? []), ...teamTexts]),
     postId: post.id,
-    title: opts.title,
+    // 자동발행분은 디스코드에서 한눈에 구분 — 사후 감시(오류 발견→회수)의 눈
+    title: opts.auto ? `🤖 ${opts.title}` : opts.title,
     teaser,
     imageUrl: image,
   })

@@ -9,6 +9,8 @@ import {
   NEWS_BOT_USER_ID,
   type NewsReservoirItem,
 } from "@/lib/news/publish"
+import { inspectDraft, unknownPlayerNames } from "@/lib/news/quality-gate"
+import { classifyTier } from "@/lib/saga/tier"
 
 export const dynamic = "force-dynamic"
 
@@ -29,10 +31,16 @@ export const dynamic = "force-dynamic"
 
 /** 하루 발행 총량 상한 (자동+수동 합산, KST 자정 기준). 물량 목표 = 하루 뉴스 20 */
 const DAILY_CAP = 20
+/** 자동발행만의 일일 상한 — 재개 첫 주 소량 운영 (2026-08-04, 오류율 보고 확대) */
+const AUTO_DAILY_CAP = 5
 /** 회당 발행 상한 — 30분 주기 × 2건 = 최대 96건/일 이론치를 DAILY_CAP 이 자른다 */
 const PER_RUN_CAP = 2
 /** 초안 신선도 (시간) */
 const MAX_AGE_HOURS = 24
+
+/** 이적 맥락 신호 — 이것이 있으면서 티어가 루머면 자동발행 금지 (오보 리스크는 사람만) */
+const TRANSFER_CONTEXT_RE =
+  /이적|영입|임대|방출|결별|재계약|입단|오퍼|제안|bid|transfer|sign|loan|deal|move/i
 
 function kstMidnightUtcIso(): string {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000)
@@ -69,10 +77,25 @@ async function run(request: NextRequest) {
     return NextResponse.json({ ok: true, published: 0, skipped: `일일 상한 ${DAILY_CAP} 도달` })
   }
 
+  // 오늘 자동발행분 — 소량 재개 상한은 자동분만 따로 센다
+  const { count: autoToday } = await supabase
+    .from("news_reservoir")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "published")
+    .contains("publish", { auto: true })
+    .gte("updated_at", kstMidnightUtcIso())
+  if ((autoToday ?? 0) >= AUTO_DAILY_CAP) {
+    return NextResponse.json({
+      ok: true,
+      published: 0,
+      skipped: `자동 상한 ${AUTO_DAILY_CAP} 도달`,
+    })
+  }
+
   const freshCutoff = new Date(Date.now() - MAX_AGE_HOURS * 3600 * 1000).toISOString()
   const { data: drafts, error } = await supabase
     .from("news_reservoir")
-    .select("id, status, urls, draft, entities, tags, created_at")
+    .select("id, status, urls, draft, entities, tags, decision, created_at")
     .eq("status", "drafted")
     .gte("created_at", freshCutoff)
     .order("created_at", { ascending: false }) // 최신 우선 — 뉴스는 신선한 것부터
@@ -81,12 +104,26 @@ async function run(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const budget = Math.min(PER_RUN_CAP, DAILY_CAP - (publishedToday ?? 0))
+  // 표기 사전 (선수) — 미등재 선수명 기사는 자동발행 제외 (환각 음차 차단)
+  const { data: dict } = await supabase
+    .from("news_alias_dictionary")
+    .select("preferred_ko, hangul_alts")
+    .eq("category", "player")
+
+  const budget = Math.min(
+    PER_RUN_CAP,
+    DAILY_CAP - (publishedToday ?? 0),
+    AUTO_DAILY_CAP - (autoToday ?? 0)
+  )
   let published = 0
   const publishedIds: string[] = []
+  const gated: string[] = []
   const errors: string[] = []
 
-  for (const row of (drafts ?? []) as (NewsReservoirItem & { status: string })[]) {
+  for (const row of (drafts ?? []) as (NewsReservoirItem & {
+    status: string
+    decision: Record<string, unknown> | null
+  })[]) {
     if (published >= budget) break
 
     const title = row.draft?.title?.trim()
@@ -98,6 +135,42 @@ async function run(request: NextRequest) {
     // 무내용 초안 차단 (2026-07-30) — 원문 0자로 생성돼 "세부 사항은 기사에서 확인"류
     // 필러만 있는 글 (hermes-reddit-1vank7k 사례). 80자 미만·자기지시 문구 = 자동발행 금지.
     if (isContentFreeDraft(content)) continue
+
+    // 검사관 불통과 이력 → 재검사 안 함 (사람 검수 대기 중 — 비용·루프 방지)
+    const priorGate = (row.decision?.auto_gate ?? null) as { pass?: boolean } | null
+    if (priorGate?.pass === false) continue
+
+    // 신뢰 계층화 — 이적 맥락 + 루머 티어는 자동발행 금지 (오보가 최악의 사고)
+    const tier = classifyTier({
+      category: null,
+      original_title: title,
+      headline_kr: title,
+      link_url: row.urls?.source ?? null,
+      source_id: null,
+    })
+    if (tier === "rumor" && TRANSFER_CONTEXT_RE.test(title)) continue
+
+    // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등
+    const verdict = await inspectDraft(title, content)
+    let failReasons = verdict.pass ? [] : verdict.reasons
+    if (verdict.pass && verdict.playerNamesKr.length > 0) {
+      const unknown = unknownPlayerNames(verdict.playerNamesKr, dict ?? [])
+      if (unknown.length > 0) failReasons = [`사전 미등재 선수명: ${unknown.join(", ")}`]
+    }
+    if (failReasons.length > 0) {
+      await supabase
+        .from("news_reservoir")
+        .update({
+          decision: {
+            ...(row.decision ?? {}),
+            auto_gate: { pass: false, reasons: failReasons, at: new Date().toISOString() },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      gated.push(`${row.id}: ${failReasons.join(" / ")}`)
+      continue
+    }
 
     const result = await publishNewsDraft(supabase, row, { title, content, auto: true })
     if (result.error) {
@@ -114,6 +187,8 @@ async function run(request: NextRequest) {
     published,
     postIds: publishedIds,
     todayTotal: (publishedToday ?? 0) + published,
+    autoToday: (autoToday ?? 0) + published,
+    ...(gated.length > 0 ? { gated } : {}),
     ...(errors.length > 0 ? { errors } : {}),
   })
 }
