@@ -3,9 +3,9 @@
   "note": "커뮤니티 애그리게이터 설정. 소스별 수집 on/off + 정치 필터 + 페르소나 로스터. 문제(저작권 항의 등) 발생 시 해당 source enabled=false로 끄고 agg-takedown으로 일괄 삭제.",
   "sources": {
     "theqoo": {
-      "enabled": true,
+      "enabled": false,
       "listUrl": "https://theqoo.net/hot",
-      "note": "더쿠 핫게 — 여돌/연예 떡밥 주력 소스"
+      "note": "2026-08-03 비활성 (운영자): 7/24부터 목록 요청 403 이 144회 연속 — IP 차단 추정, 성공 기록 0. 운영 방향도 스포츠 중심으로 확정. 재활성하려면 차단 원인(UA/쿠키/Cloudflare)부터 확인할 것."
     },
     "instiz": {
       "enabled": true,
