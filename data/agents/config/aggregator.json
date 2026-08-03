@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "커뮤니티 애그리게이터 설정. 소스별 수집 on/off + 정치 필터 + 페르소나 로스터. 문제(저작권 항의 등) 발생 시 해당 source enabled=false로 끄고 agg-takedown으로 일괄 삭제.",
+  "note": "커뮤니티 애그리게이터 설정. 소스별 수집 on/off + 정치 필터 + 페르소나 로스터. 문제(저작권 항의 등) 발생 시 해당 source enabled=false로 끄고 agg-takedown으로 일괄 삭제. ⚠️2026-08-03 운영자 결정: 스포츠 중심 전환으로 전 소스 비활성(theqoo=403 전멸, instiz·reddit 비주얼=방향 불일치) — 수집은 멈추고 파이프라인·검수 큐는 유지. 재개는 enabled=true 후 VPS pull.",
   "sources": {
     "theqoo": {
       "enabled": false,
@@ -8,7 +8,7 @@
       "note": "2026-08-03 비활성 (운영자): 7/24부터 목록 요청 403 이 144회 연속 — IP 차단 추정, 성공 기록 0. 운영 방향도 스포츠 중심으로 확정. 재활성하려면 차단 원인(UA/쿠키/Cloudflare)부터 확인할 것."
     },
     "instiz": {
-      "enabled": true,
+      "enabled": false,
       "type": "instiz",
       "listUrl": "https://www.instiz.net/pt",
       "perRun": 6,
@@ -56,7 +56,7 @@
       "note": "여돌 이미지 글 전용 (제목 키워드 + 이미지 아이콘 글만, agg v2). 홈마 리스크: X 임베드 있으면 임베드만 쓰고 이미지 rehost 스킵(embedFirst), 없으면 rehost 후 검수 판단. 일반인 사진은 write 프롬프트에서 reject."
     },
     "instiz_enter": {
-      "enabled": true,
+      "enabled": false,
       "type": "instiz",
       "listUrl": "https://www.instiz.net/name_enter",
       "perRun": 8,
@@ -128,7 +128,7 @@
       "note": "Phase 2"
     },
     "reddit": {
-      "enabled": true,
+      "enabled": false,
       "subreddits": [
         "interestingasfuck",
         "Damnthatsinteresting",
