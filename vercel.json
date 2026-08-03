@@ -83,6 +83,10 @@
     {
       "path": "/api/cron/hero-editor",
       "schedule": "22,52 * * * *"
+    },
+    {
+      "path": "/api/cron/news-interest-filter",
+      "schedule": "14 * * * *"
     }
   ]
 }
