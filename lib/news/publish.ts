@@ -12,6 +12,7 @@ import {
   type VsDraftProposal,
   type VsReviewDecision,
 } from "@/lib/news/vs-issue"
+import { linkArticleToSaga } from "@/lib/saga/publish"
 import type { TipTapNode } from "@/types/post"
 
 /**
@@ -177,6 +178,18 @@ export async function publishNewsDraft(
     title: opts.title,
     teaser,
     imageUrl: image,
+  })
+
+  // 이적설 사가 연동 — 이적 기사면 해당 선수의 사가 위키에 엔트리로 쌓인다 (없으면
+  // 사가 자동 생성). 기사 발행 = 사람 검수 통과 시점이므로 무검수 자동발행이 아니다.
+  // 이적 기사가 아니면 내부에서 no-op, 실패해도 발행에는 영향 없음.
+  after(async () => {
+    await linkArticleToSaga(supabase, {
+      postId: post.id,
+      title: opts.title,
+      sourceUrl,
+      occurredAt: now,
+    })
   })
 
   // VS 쟁점 폴 — 스캐너가 초안 단계에서 판정·제안한 것(draft.vs)을 검수 결정과 합쳐
