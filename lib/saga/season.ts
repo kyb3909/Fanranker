@@ -110,9 +110,16 @@ export async function fetchStanding(
   }
 }
 
+/** "2026-27" → 그 시즌의 시작 경계 (7/1) — 프리시즌 친선전부터 이 문서 소속 */
+export function seasonStartIso(season: string): string {
+  const year = Number(season.slice(0, 4)) || new Date().getFullYear()
+  return `${year}-07-01T00:00:00Z`
+}
+
 export async function fetchMatches(
   supabase: ServiceClient,
-  aliases: string[]
+  aliases: string[],
+  season: string
 ): Promise<SeasonMatch[]> {
   const names = aliases.filter((a) => /[가-힣]/.test(a)) // betman 은 한글 표기
   if (names.length === 0) return []
@@ -123,6 +130,8 @@ export async function fetchMatches(
       "match_time, home_team_name, away_team_name, home_score, away_score, status, league_code"
     )
     .or(orExpr)
+    // 시즌 문서엔 그 시즌 경기만 — 지난 시즌 경기가 섞여 나오면 문서가 아니라 잡탕이다
+    .gte("match_time", seasonStartIso(season))
     .order("match_time", { ascending: false })
     .limit(120)
 

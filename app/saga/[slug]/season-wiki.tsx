@@ -7,6 +7,7 @@ import {
   fetchStanding,
   fetchMatches,
   fetchRelatedTransferSagas,
+  seasonStartIso,
   type SeasonSubject,
 } from "@/lib/saga/season"
 
@@ -40,9 +41,12 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
   const subject = saga.subject
   const [standing, matches, relatedSagas] = await Promise.all([
     fetchStanding(supabase, subject.team_kr),
-    fetchMatches(supabase, subject.aliases ?? [subject.team_kr]),
+    fetchMatches(supabase, subject.aliases ?? [subject.team_kr], subject.season),
     fetchRelatedTransferSagas(supabase, subject.aliases ?? [subject.team_kr]),
   ])
+  // 순위 캐시가 시즌 시작 전 것이면 = 지난 시즌 최종 순위 (새 크롤이 돌면 자동 교체)
+  const standingIsLastSeason =
+    !!standing && new Date(standing.fetchedAt) < new Date(seasonStartIso(subject.season))
   const squad = loadSquad(subject.team_fpl)
   const teamNames = new Set(subject.aliases ?? [subject.team_kr])
 
@@ -73,7 +77,9 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                 {standing.points}
               </span>
               <span className="text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
-                기준 {fmtDate(standing.fetchedAt)}
+                {standingIsLastSeason
+                  ? "지난 시즌 최종 — 개막 후 자동 갱신"
+                  : `기준 ${fmtDate(standing.fetchedAt)}`}
               </span>
             </div>
           )}
@@ -122,75 +128,82 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
           </section>
         )}
 
-        {/* ── 일정·결과 ── */}
-        {matches.length > 0 && (
-          <section className="mt-5 rounded-2xl px-5 py-4 sm:px-6" style={card} aria-label="일정">
-            <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-              일정 · 결과
-            </h2>
-            <div className="mt-2 overflow-x-auto">
-              <table className="w-full text-[13px]" style={{ color: "var(--wc-ink)" }}>
-                <tbody>
-                  {matches.map((m, i) => {
-                    const done = m.status === "completed" && m.homeScore !== null
-                    const isHome = teamNames.has(m.home)
-                    const our = isHome ? m.homeScore : m.awayScore
-                    const their = isHome ? m.awayScore : m.homeScore
-                    const wdl =
-                      done && our !== null && their !== null
-                        ? our > their
-                          ? "승"
-                          : our < their
-                            ? "패"
-                            : "무"
-                        : null
-                    return (
-                      <tr
-                        key={i}
-                        style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : undefined }}
-                      >
-                        <td
-                          className="py-1.5 pr-2 whitespace-nowrap tabular-nums"
-                          style={{ color: "var(--wc-mute)" }}
+        {/* ── 일정·결과 — 이 시즌(7/1~) 경기만 ── */}
+        <section className="mt-5 rounded-2xl px-5 py-4 sm:px-6" style={card} aria-label="일정">
+          <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+            일정 · 결과
+          </h2>
+          {matches.length === 0 && (
+            <p className="mt-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
+              아직 이번 시즌 경기가 없습니다 — EPL 개막 8월 22일. 경기가 잡히면 자동으로 채워집니다.
+            </p>
+          )}
+          {matches.length > 0 && (
+            <>
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full text-[13px]" style={{ color: "var(--wc-ink)" }}>
+                  <tbody>
+                    {matches.map((m, i) => {
+                      const done = m.status === "completed" && m.homeScore !== null
+                      const isHome = teamNames.has(m.home)
+                      const our = isHome ? m.homeScore : m.awayScore
+                      const their = isHome ? m.awayScore : m.homeScore
+                      const wdl =
+                        done && our !== null && their !== null
+                          ? our > their
+                            ? "승"
+                            : our < their
+                              ? "패"
+                              : "무"
+                          : null
+                      return (
+                        <tr
+                          key={i}
+                          style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : undefined }}
                         >
-                          {fmtDate(m.matchTime)}
-                        </td>
-                        <td
-                          className="py-1.5 pr-2 text-[11.5px] whitespace-nowrap"
-                          style={{ color: "var(--wc-mute)" }}
-                        >
-                          {m.leagueCode ?? ""}
-                        </td>
-                        <td className="py-1.5 text-right font-semibold">{m.home}</td>
-                        <td className="px-2 py-1.5 text-center font-extrabold whitespace-nowrap tabular-nums">
-                          {done ? `${m.homeScore} : ${m.awayScore}` : "vs"}
-                        </td>
-                        <td className="py-1.5 font-semibold">{m.away}</td>
-                        <td className="py-1.5 pl-2">
-                          {wdl && (
-                            <span
-                              className="rounded px-1 text-[11px] font-extrabold"
-                              style={{
-                                color:
-                                  wdl === "승"
-                                    ? "#0E7A3C"
-                                    : wdl === "패"
-                                      ? "var(--wc-burgundy)"
-                                      : "var(--wc-mute)",
-                              }}
-                            >
-                              {wdl}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
+                          <td
+                            className="py-1.5 pr-2 whitespace-nowrap tabular-nums"
+                            style={{ color: "var(--wc-mute)" }}
+                          >
+                            {fmtDate(m.matchTime)}
+                          </td>
+                          <td
+                            className="py-1.5 pr-2 text-[11.5px] whitespace-nowrap"
+                            style={{ color: "var(--wc-mute)" }}
+                          >
+                            {m.leagueCode ?? ""}
+                          </td>
+                          <td className="py-1.5 text-right font-semibold">{m.home}</td>
+                          <td className="px-2 py-1.5 text-center font-extrabold whitespace-nowrap tabular-nums">
+                            {done ? `${m.homeScore} : ${m.awayScore}` : "vs"}
+                          </td>
+                          <td className="py-1.5 font-semibold">{m.away}</td>
+                          <td className="py-1.5 pl-2">
+                            {wdl && (
+                              <span
+                                className="rounded px-1 text-[11px] font-extrabold"
+                                style={{
+                                  color:
+                                    wdl === "승"
+                                      ? "#0E7A3C"
+                                      : wdl === "패"
+                                        ? "var(--wc-burgundy)"
+                                        : "var(--wc-mute)",
+                                }}
+                              >
+                                {wdl}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
 
         {/* ── 스쿼드 (fpl 시드 — 한글명·포지션) ── */}
         {squad.length > 0 && (
