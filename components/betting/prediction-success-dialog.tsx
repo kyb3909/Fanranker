@@ -15,6 +15,7 @@ import { Circle, MessageSquare, ThumbsUp } from "lucide-react"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { fetcher } from "@/lib/swr"
 import { trackEvent } from "@/lib/analytics/events"
+import { STAGE_LABEL } from "@/lib/saga/stages"
 import { getGameTypeLabel } from "@/types/betting"
 import {
   extractFirstImageSrcFromTipTapJSON,
@@ -33,6 +34,13 @@ interface HotPost {
   content?: unknown
   comment_count: number | null
   vote_count: number | null
+}
+
+interface ActiveSaga {
+  slug: string
+  title: string
+  stage: string
+  entry_count: number
 }
 
 /** 게시글 본문에서 대표 썸네일 1장 추출 (이미지 → 임베드 썸네일 순). 없으면 null. */
@@ -142,6 +150,12 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
     state.isOpen && state.showCommunity ? "/api/posts?sort=hot&limit=8" : null,
     fetcher
   )
+  // 진행 중 이적 사가 — 예측 직후는 "다음 베팅거리"를 찾는 순간 (PM 토론 #4)
+  const { data: sagaData } = useSWR<{ sagas: ActiveSaga[] }>(
+    state.isOpen ? "/api/saga/active" : null,
+    fetcher
+  )
+  const activeSagas = (sagaData?.sagas ?? []).slice(0, 2)
   const hotPosts = (() => {
     const all = hotData?.posts ?? []
     const withThumb = all.filter((p) => postThumbnail(p))
@@ -181,6 +195,52 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
           <div className="max-h-[280px] min-w-0 space-y-2 overflow-y-auto">
             {state.distribution.map((entry) => (
               <DistributionCard key={`${entry.gameId}-${entry.myPick}`} entry={entry} />
+            ))}
+          </div>
+        )}
+
+        {/* 이적 사가 주입 — 예측을 막 끝낸 사람에게 "다음 논쟁거리"를 쥐여준다.
+            나간다/남는다 투표가 예측과 같은 근육이라 전환 마찰이 가장 낮은 표면 */}
+        {activeSagas.length > 0 && (
+          <div className="min-w-0 space-y-2">
+            <p className="text-[12px] font-bold" style={{ color: "var(--wc-mute, #5c6470)" }}>
+              ⚔️ 지금 뜨거운 이적 사가 — 나간다 vs 남는다
+            </p>
+            {activeSagas.map((s) => (
+              <Link
+                key={s.slug}
+                href={`/saga/${s.slug}?utm_source=prediction_modal`}
+                onClick={() =>
+                  trackEvent({
+                    name: "prediction_modal_saga_click",
+                    params: { saga_slug: s.slug },
+                  })
+                }
+                className="flex min-w-0 items-center gap-2.5 rounded-lg p-2.5 transition-colors hover:opacity-80"
+                style={{
+                  background: "rgba(150,30,55,0.06)",
+                  border: "1px solid var(--wc-line, #e8e5e0)",
+                }}
+              >
+                <span
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold"
+                  style={{ background: "var(--wc-burgundy, #961e37)", color: "#fff" }}
+                >
+                  {STAGE_LABEL[s.stage] ?? s.stage}
+                </span>
+                <span
+                  className="min-w-0 flex-1 truncate text-[13px] font-semibold"
+                  style={{ color: "var(--wc-ink, #1a1714)" }}
+                >
+                  {s.title}
+                </span>
+                <span
+                  className="shrink-0 text-[11px] tabular-nums"
+                  style={{ color: "var(--wc-mute, #5c6470)" }}
+                >
+                  기록 {s.entry_count}
+                </span>
+              </Link>
             ))}
           </div>
         )}

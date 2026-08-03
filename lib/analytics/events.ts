@@ -38,6 +38,8 @@ type AnalyticsEvent =
   | { name: "prediction_success_modal"; params: { game_count: number; has_community: boolean } }
   | { name: "prediction_modal_post_click"; params: { post_id: string } }
   | { name: "prediction_modal_board_click"; params: { board: string } }
+  // 예측 직후 → 사가 주입 (PM 토론 2026-08-04 #4 — 콘텐츠 전환 최대 레버 실험)
+  | { name: "prediction_modal_saga_click"; params: { saga_slug: string } }
   | { name: "search"; params: { query: string } }
   // ── 메타버스 이벤트 ──
   | { name: "metaverse_enter"; params: { is_guest: boolean } }
