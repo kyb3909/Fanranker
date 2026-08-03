@@ -18,6 +18,7 @@ import { useUser } from "@clerk/nextjs"
 import { toast } from "@/hooks/use-toast"
 import { reportClientError } from "@/lib/client-error"
 import { usePostViewTracker } from "@/hooks/use-post-view-tracker"
+import { HeroPinButton } from "./hero-pin-button"
 import { TitleBadge } from "@/components/profile/title-badge"
 import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
@@ -381,6 +382,11 @@ export function PostDetailContent({
             initialIsUpvoted={post.isUpvoted}
             commentCount={commentCount}
           />
+
+          {/* 관리자 전용 — 홈 히어로 수동 큐레이션 (권한 없으면 null 렌더) */}
+          <div className="mt-2">
+            <HeroPinButton postId={String(post.id)} />
+          </div>
         </div>
       </div>
 

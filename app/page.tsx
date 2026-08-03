@@ -129,7 +129,8 @@ async function fetchAllHomeData(sort: SortType) {
       nextCursor: null as string | null,
     })),
 
-    // 7) 히어로(Top Story) — 레딧 화력순. 화력 데이터 없으면 빈 배열 → 아래 폴백
+    // 7) 히어로(Top Story) — 운영자 수동 큐레이션(hero_pinned_at, 2026-08-03).
+    //    핀이 하나도 없으면 빈 배열 → 아래 최신 이미지 카드 폴백 (빈 히어로 방지)
     fetchHeroCards().catch(() => [] as CardNewsItem[]),
 
     // 8) 오늘의 경기 (매치데이 밴드) — SSR 로 실어 하이드레이션 후 밴드가 자라며
@@ -147,12 +148,16 @@ async function fetchAllHomeData(sort: SortType) {
     })(),
   ])
 
-  // 히어로 확정: 화력순 우선, 부족분은 최신 이미지 카드로 채움 (중복 없이).
+  // 히어로 확정: 운영자 핀 우선. **핀이 하나라도 있으면 그것만** 올린다(채워넣기 없음 —
+  // "메인은 내가 선택한 것만", 2026-08-03). 핀이 0개일 때만 최신 이미지 카드로 3장을
+  // 채운다 — 핀 지정 전 홈 히어로가 통째로 비는 것 방지.
   // 히어로에 오른 글은 아래 떡밥 피드에서 제외한다 — 같은 화면에 두 번 나오는 중복 제거.
   const heroCards: CardNewsItem[] = [...heroResult]
-  for (const c of cardNewsResult.cards) {
-    if (heroCards.length >= 3) break
-    if (!heroCards.some((h) => h.id === c.id) && c.image) heroCards.push(c)
+  if (heroCards.length === 0) {
+    for (const c of cardNewsResult.cards) {
+      if (heroCards.length >= 3) break
+      if (c.image) heroCards.push(c)
+    }
   }
   const heroIds = heroCards.map((h) => h.id)
 

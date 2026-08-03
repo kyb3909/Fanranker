@@ -99,31 +99,6 @@ function SourceChip({ source }: { source: string }) {
 
 type MediaProvider = "youtube" | "instagram" | "x"
 
-/** 플랫폼 뱃지 칩 — "누르면 영상/트윗 나온다" 기대 형성용 */
-function PlatformChip({ provider }: { provider: MediaProvider }) {
-  if (provider === "youtube") {
-    return (
-      <span className="inline-flex items-center gap-1" style={chipStyle}>
-        <Youtube className="h-3.5 w-3.5" style={{ color: "#FF6B61" }} />
-        YouTube
-      </span>
-    )
-  }
-  if (provider === "instagram") {
-    return (
-      <span className="inline-flex items-center gap-1" style={chipStyle}>
-        <Instagram className="h-3 w-3" style={{ color: "#FF8FB0" }} />
-        Instagram
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center" style={chipStyle}>
-      <span className="text-[12px] leading-none font-black">𝕏</span>
-    </span>
-  )
-}
-
 /** 썸네일 없는 미디어 글의 배경 — 은은한 브랜드 톤 + 대형 아이콘 */
 function MediaPlaceholder({ provider }: { provider: MediaProvider }) {
   if (provider === "instagram") {
@@ -153,26 +128,6 @@ function MediaPlaceholder({ provider }: { provider: MediaProvider }) {
     >
       <Youtube className="h-12 w-12 text-white/30" />
     </div>
-  )
-}
-
-/** 유튜브 lite embed 재생 버튼 — 탭 전엔 이미지 한 장, 탭하면 그 자리에서 iframe 재생 */
-function PlayButton({ onPlay }: { onPlay: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onPlay}
-      aria-label="영상 재생"
-      className="pointer-events-auto absolute top-1/2 left-1/2 z-[3] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full transition-transform hover:scale-105"
-      style={{
-        background: "rgba(0,0,0,.55)",
-        backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)",
-        border: "1px solid rgba(255,255,255,.25)",
-      }}
-    >
-      <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
-    </button>
   )
 }
 
@@ -483,308 +438,6 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
 
 /* ---------- VS 쟁점 인카드 투표 (안 1, 2026-07-31) ---------- */
 
-/**
- * 카드 하단 VS 스트립 — 상세 진입 없이 이 자리에서 1탭 투표.
- * confidence >= 0.7 폴만 여기까지 온다 (서버 attachVsToCards 가 거른다).
- * 노출/투표 계측이 이 피처의 존재 이유 절반 — 반드시 이벤트와 동행한다.
- */
-function VsCardStrip({ vs }: { vs: NonNullable<CardNewsItem["vs"]> }) {
-  const { isSignedIn } = useAuth()
-  const clerk = useClerk()
-  const [myKey, setMyKey] = useState<string | null>(null)
-  const [aPct, setAPct] = useState(vs.aPct)
-  const [total, setTotal] = useState(vs.total)
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    // 내 투표 복원 (로컬 — 카드 표면은 게스트 친화가 우선, 서버 진실은 상세가 담당)
-    try {
-      const saved = JSON.parse(localStorage.getItem("vs-votes") || "{}")
-      if (saved[vs.pollId]) setMyKey(saved[vs.pollId])
-    } catch {
-      // 무시
-    }
-    // 노출 계측 — 세션당 폴별 1회 (스크롤 재진입 중복 방지)
-    try {
-      const seen = JSON.parse(sessionStorage.getItem("vs-seen") || "{}")
-      if (!seen[vs.pollId]) {
-        seen[vs.pollId] = 1
-        sessionStorage.setItem("vs-seen", JSON.stringify(seen))
-        trackEvent({ name: "vs_impression", params: { poll_id: vs.pollId, surface: "card" } })
-      }
-    } catch {
-      trackEvent({ name: "vs_impression", params: { poll_id: vs.pollId, surface: "card" } })
-    }
-  }, [vs.pollId])
-
-  async function vote(optionKey: string) {
-    if (busy || myKey === optionKey) return
-    if (!isSignedIn) {
-      clerk.openSignIn()
-      return
-    }
-    setBusy(true)
-    const prev = myKey
-    setMyKey(optionKey)
-    try {
-      const res = await fetch(`/api/polls/${vs.pollId}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ optionKey }),
-      })
-      if (!res.ok) throw new Error()
-      const d = (await res.json()) as { results: Record<string, number>; total: number }
-      const aCount = d.results[vs.aKey] ?? 0
-      setTotal(d.total)
-      setAPct(d.total === 0 ? 50 : Math.round((aCount / d.total) * 100))
-      try {
-        const saved = JSON.parse(localStorage.getItem("vs-votes") || "{}")
-        saved[vs.pollId] = optionKey
-        localStorage.setItem("vs-votes", JSON.stringify(saved))
-      } catch {
-        // 무시
-      }
-      trackEvent({
-        name: "vs_vote",
-        params: { poll_id: vs.pollId, option_key: optionKey, surface: "card" },
-      })
-    } catch {
-      setMyKey(prev)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const bPct = 100 - aPct
-  const mineA = myKey === vs.aKey
-  const mineB = myKey === vs.bKey
-  // 소표본(10표 미만) % 숨김 — 1표가 "0% vs 100%" 로 그려지면 콜드스타트 장치가
-  // 유령 사이트 증거로 뒤집힌다 (2026-07-30 워룸, 상세 위젯과 동일 규칙)
-  const showPct = total >= 10
-
-  return (
-    <div
-      className="pointer-events-auto mt-2.5 pt-2.5"
-      style={{ borderTop: "1px solid rgba(255,255,255,.14)" }}
-    >
-      <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold text-white/90">
-        <span
-          className="shrink-0 rounded px-1 py-[1px] text-[10px] font-black tracking-wide"
-          style={{ background: "rgba(255,255,255,.18)" }}
-          aria-hidden
-        >
-          VS
-        </span>
-        <span className="min-w-0 truncate" style={{ wordBreak: "keep-all" }}>
-          {vs.question}
-        </span>
-      </div>
-      <div
-        className="flex h-8 overflow-hidden rounded-lg text-[12px] font-extrabold text-white"
-        role="group"
-        aria-label={
-          showPct
-            ? `${vs.aLabel} ${aPct}%, ${vs.bLabel} ${bPct}%`
-            : `${vs.aLabel} 대 ${vs.bLabel} — 집계 중`
-        }
-      >
-        <button
-          type="button"
-          onClick={() => vote(vs.aKey)}
-          disabled={busy}
-          aria-pressed={mineA}
-          className="flex items-center gap-1 pl-2.5 transition-[width] duration-500 disabled:opacity-80"
-          style={{
-            width: `${aPct}%`,
-            minWidth: 44,
-            background: mineA ? "#b8324e" : "rgba(150,30,55,.88)",
-          }}
-        >
-          {showPct && `${aPct}%`}
-          {mineA && <Check className="h-3 w-3" strokeWidth={3.5} />}
-        </button>
-        <button
-          type="button"
-          onClick={() => vote(vs.bKey)}
-          disabled={busy}
-          aria-pressed={mineB}
-          className="flex items-center justify-end gap-1 pr-2.5 transition-[width] duration-500 disabled:opacity-80"
-          style={{
-            width: `${bPct}%`,
-            minWidth: 44,
-            background: mineB ? "#3a5f8f" : "rgba(44,74,110,.88)",
-          }}
-        >
-          {mineB && <Check className="h-3 w-3" strokeWidth={3.5} />}
-          {showPct && `${bPct}%`}
-        </button>
-      </div>
-      <div className="mt-1 flex items-center justify-between text-[11px] font-bold">
-        <span style={{ color: "#e8a0b0", wordBreak: "keep-all" }}>{vs.aLabel}</span>
-        <span className="font-medium" style={{ color: "rgba(255,255,255,.55)" }}>
-          {total > 0 ? `${total.toLocaleString()}명 참여` : "첫 표를 던져보세요"}
-        </span>
-        <span style={{ color: "#9db8d8", wordBreak: "keep-all" }}>{vs.bLabel}</span>
-      </div>
-    </div>
-  )
-}
-
-/* ---------- 1) 히어로 — 오버레이 카드 (톱뉴스 1장 전용) ---------- */
-
-function HeroCard({
-  card,
-  eager,
-  detectFace = false,
-  showVs = false,
-}: {
-  card: CardNewsItem
-  eager: boolean
-  /** 얼굴 인식은 카드마다 원본 이미지를 한 번 더 내려받는다 → 상단 카드에서만 켠다 */
-  detectFace?: boolean
-  /** VS 인카드 투표 — 피드 상한(첫 화면 1개, 이후 5장당 1개)은 부모가 판단해 내려준다 */
-  showVs?: boolean
-}) {
-  const { liked, toggle } = useLocalLike(card.id)
-  const faceFocus = useFaceFocus(detectFace ? card.image : null)
-  const [playing, setPlaying] = useState(false)
-  const ytId = card.media?.provider === "youtube" ? card.media.videoId : undefined
-
-  return (
-    <article
-      className="group relative h-[300px] overflow-hidden rounded-2xl sm:h-[340px]"
-      style={{ boxShadow: "0 2px 8px rgba(23,20,15,.10)" }}
-    >
-      {card.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={card.image}
-          alt=""
-          loading={eager ? "eager" : "lazy"}
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-          style={{ objectPosition: faceFocus ?? "50% 30%" }}
-        />
-      ) : card.media ? (
-        <MediaPlaceholder provider={card.media.provider} />
-      ) : (
-        <div className="absolute inset-0 bg-gray-300" />
-      )}
-
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
-        style={{ height: "62%", background: SCRIM }}
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1]"
-        style={{
-          height: "24%",
-          background: "linear-gradient(to bottom, rgba(9,8,11,.36), rgba(9,8,11,0))",
-        }}
-      />
-
-      <Link
-        href={`/post/${card.id}?utm_source=cardnews`}
-        className="absolute inset-0 z-[2]"
-        aria-label={card.title}
-        onClick={() => openPost(card.id)}
-      />
-
-      {(card.source || card.flair || card.media) && (
-        <div className="pointer-events-none absolute top-3 left-3 z-[3] flex flex-wrap items-center gap-1.5">
-          {card.source && <SourceChip source={card.source} />}
-          {card.flair && <FlairChip name={card.flair.name} color={card.flair.color} />}
-          {card.media && <PlatformChip provider={card.media.provider} />}
-        </div>
-      )}
-
-      {ytId && !playing && <PlayButton onPlay={() => setPlaying(true)} />}
-      {ytId && playing && (
-        <iframe
-          className="absolute inset-0 z-[4] h-full w-full"
-          src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
-          allow="autoplay; encrypted-media; picture-in-picture"
-          allowFullScreen
-          title={card.title}
-        />
-      )}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] px-4 pb-3.5">
-        <h2
-          className="line-clamp-2 text-white"
-          style={{
-            fontSize: 19,
-            fontWeight: 800,
-            lineHeight: 1.3,
-            letterSpacing: "-0.02em",
-            wordBreak: "keep-all",
-            overflowWrap: "anywhere",
-          }}
-        >
-          {card.title}
-        </h2>
-
-        <div className="mt-2 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={toggle}
-            className={`${ghostAction} pointer-events-auto ${
-              liked ? "text-rose-400" : "text-white/85 hover:text-white"
-            }`}
-            aria-label="좋아요"
-            aria-pressed={liked}
-          >
-            <Heart
-              className={`h-[15px] w-[15px] transition-transform active:scale-125 ${liked ? "fill-current" : ""}`}
-            />
-            {card.voteCount + (liked ? 1 : 0) > 0 && (
-              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
-            )}
-          </button>
-          <Link
-            href={`/post/${card.id}?utm_source=cardnews#comments`}
-            className={`${ghostAction} pointer-events-auto text-white/85 hover:text-white`}
-            aria-label="댓글"
-          >
-            <MessageCircle className="h-[15px] w-[15px]" />
-            {card.commentCount > 0 && <span className="tabular-nums">{card.commentCount}</span>}
-          </Link>
-          <span
-            className="ml-auto text-[12px] font-medium"
-            style={{ color: "rgba(255,255,255,.6)" }}
-            suppressHydrationWarning
-          >
-            {formatRelativeTime(new Date(card.createdAt))}
-          </span>
-        </div>
-
-        {/* VS 스트립과 BEST 행은 자리를 다툰다 — 투표가 더 강한 참여 사다리라 VS 우선 */}
-        {showVs && card.vs && <VsCardStrip vs={card.vs} />}
-        {!(showVs && card.vs) && card.topComments.length > 0 && card.commentCount > 0 && (
-          <Link
-            href={`/post/${card.id}?utm_source=cardnews#comments`}
-            className="pointer-events-auto mt-2.5 flex items-center gap-1.5 pt-2.5"
-            style={{ borderTop: "1px solid rgba(255,255,255,.14)" }}
-          >
-            <span
-              className="shrink-0 text-[11px] font-extrabold"
-              style={{ color: "rgba(255,255,255,.55)" }}
-            >
-              BEST
-            </span>
-            <span
-              className="min-w-0 flex-1 truncate text-[12.5px]"
-              style={{ color: "rgba(255,255,255,.85)" }}
-            >
-              {card.topComments[0].content}
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
-          </Link>
-        )}
-      </div>
-    </article>
-  )
-}
-
 /* ---------- 3) 컴팩트 — 텍스트 좌 + 썸네일 우 (밀도 담당) ---------- */
 
 function CompactCard({ card }: { card: CardNewsItem }) {
@@ -820,6 +473,15 @@ function CompactCard({ card }: { card: CardNewsItem }) {
           {card.title}
         </h2>
         <div className="mt-1.5 flex items-center gap-3.5">
+          {/* 글쓴이 — 운영자 요청 (2026-08-03): 제목·글쓴이·좋아요·댓글 구성 */}
+          {card.author && (
+            <span
+              className="max-w-[92px] truncate text-[11.5px] font-semibold"
+              style={{ color: "var(--wc-mute)" }}
+            >
+              {card.author}
+            </span>
+          )}
           <button
             type="button"
             onClick={toggle}
@@ -944,41 +606,17 @@ export function CardNewsFeed({
     trackEvent({ name: "cardnews_feed_open", params: {} })
   }, [])
 
-  // 톱 자리에 회색 플레이스홀더가 오지 않도록, 상위 5개 중 이미지 있는 첫 카드를 맨 앞으로.
-  const heroIdx = cards.findIndex((c, i) => i < 5 && !!c.image)
-  const ordered = heroIdx > 0 ? [cards[heroIdx], ...cards.filter((_, i) => i !== heroIdx)] : cards
-
-  // VS 카드 상한 — 첫 화면 1개, 이후 최소 5장 간격 (폴 도배는 참여가 아니라 소음)
-  const vsAllowed = new Set<string>()
-  {
-    let last = -99
-    ordered.forEach((c, i) => {
-      if (c.vs && i - last >= 5) {
-        vsAllowed.add(c.id)
-        last = i
-      }
-    })
-  }
-
   return (
     <div className="flex flex-col gap-3">
       {/*
-        오늘의 떡밥은 전부 히어로(사진 위 제목) 카드로 간다.
-        사진 없는 글은 서버(fetchCardNews)에서 이미 배제되므로 실제로는 전부 이 분기를
-        타지만, API 응답이 바뀌어도 회색 판때기가 300px 로 서지 않도록 컴팩트 폴백은 남긴다.
+        오늘의 떡밥 = 전부 컴팩트 카드 (2026-08-03 운영자 확정 — 이전 기안 채택).
+        좌: 제목·글쓴이·좋아요·댓글수 / 우: 썸네일. 전면 오버레이(HeroCard)는 홈 상단
+        히어로(운영자 큐레이션) 전용으로만 남는다. 정렬은 서버(fetchCardNews)가
+        온도순으로 내려주므로 여기서 재배열하지 않는다.
       */}
-      {ordered.map((card, i) => (
+      {cards.map((card, i) => (
         <Fragment key={card.id}>
-          {card.image || card.media ? (
-            <HeroCard
-              card={card}
-              eager={i < 2}
-              detectFace={i < 3}
-              showVs={vsAllowed.has(card.id)}
-            />
-          ) : (
-            <CompactCard card={card} />
-          )}
+          <CompactCard card={card} />
           {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
               폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정
               (2026-07-30 워룸). 3번째 카드 뒤 폴 1개, 9번째 뒤 디스코드 1개 — 도배 금지. */}

@@ -40,7 +40,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const supabase = createServiceRoleClient()
     const { data: post } = await supabase
       .from("posts")
-      .select("community_slug, is_notice")
+      .select("community_slug, is_notice, hero_pinned_at")
       .eq("id", id)
       .single()
     if (!post) {
@@ -49,6 +49,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         isNotice: false,
         canGlobalNotice: false,
         isGlobalNotice: false,
+        isHero: false,
       })
     }
     const canNotice = userId ? await canPostNotice(supabase, userId, post.community_slug) : false
@@ -59,6 +60,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       isNotice: !!post.is_notice,
       canGlobalNotice: canGlobal,
       isGlobalNotice,
+      // 히어로 고정 — 전체 공지와 같은 관리자 권한(canGlobalNotice)을 쓴다
+      isHero: !!post.hero_pinned_at,
     })
   } catch (e) {
     return apiError("서버 오류", 500, e)
@@ -69,10 +72,13 @@ const PatchSchema = z
   .object({
     is_notice: z.boolean().optional(),
     is_global_notice: z.boolean().optional(),
+    /** 홈 히어로(Top Story) 수동 고정 — 관리자 전용 (2026-08-03) */
+    is_hero: z.boolean().optional(),
   })
-  .refine((v) => v.is_notice !== undefined || v.is_global_notice !== undefined, {
-    message: "is_notice 또는 is_global_notice 가 필요합니다.",
-  })
+  .refine(
+    (v) => v.is_notice !== undefined || v.is_global_notice !== undefined || v.is_hero !== undefined,
+    { message: "is_notice / is_global_notice / is_hero 중 하나가 필요합니다." }
+  )
 
 /**
  * PATCH /api/posts/[id]/notice
@@ -104,7 +110,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return apiBadRequest("is_notice 또는 is_global_notice(boolean)가 필요합니다.")
     }
 
-    const update: { is_notice?: boolean; is_global_notice?: boolean } = {}
+    const update: {
+      is_notice?: boolean
+      is_global_notice?: boolean
+      hero_pinned_at?: string | null
+    } = {}
 
     // 게시판 공지 — admin / 글로벌 moderator / 해당 게시판 board MOD
     if (parsed.data.is_notice !== undefined) {
@@ -125,20 +135,37 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       update.is_global_notice = parsed.data.is_global_notice
     }
 
+    // 홈 히어로 고정 — 관리자 전용. timestamptz 라 "최근에 건 순"이 곧 히어로 순서
+    if (parsed.data.is_hero !== undefined) {
+      if (!(await isSiteAdmin(supabase, userId))) {
+        return NextResponse.json(
+          { error: "메인 고정은 관리자만 설정할 수 있습니다." },
+          { status: 403 }
+        )
+      }
+      update.hero_pinned_at = parsed.data.is_hero ? new Date().toISOString() : null
+    }
+
     const { error } = await supabase.from("posts").update(update).eq("id", id)
     if (error) return apiError(error.message, 500, error)
 
-    // 전체 공지는 담벼락에 노출되므로 홈 즉시 갱신
-    if (update.is_global_notice !== undefined) revalidatePath("/")
+    // 전체 공지·히어로는 홈에 노출되므로 즉시 갱신
+    if (update.is_global_notice !== undefined || update.hero_pinned_at !== undefined) {
+      revalidatePath("/")
+    }
 
     const action =
-      update.is_global_notice !== undefined
-        ? update.is_global_notice
-          ? "pin_global_post"
-          : "unpin_global_post"
-        : update.is_notice
-          ? "pin_post"
-          : "unpin_post"
+      update.hero_pinned_at !== undefined
+        ? update.hero_pinned_at
+          ? "pin_hero_post"
+          : "unpin_hero_post"
+        : update.is_global_notice !== undefined
+          ? update.is_global_notice
+            ? "pin_global_post"
+            : "unpin_global_post"
+          : update.is_notice
+            ? "pin_post"
+            : "unpin_post"
     await writeAuditLog({
       adminUserId: userId,
       action,
@@ -152,6 +179,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       success: true,
       isNotice: update.is_notice,
       isGlobalNotice: update.is_global_notice,
+      isHero: update.hero_pinned_at !== undefined ? !!update.hero_pinned_at : undefined,
     })
   } catch (e) {
     return apiError("서버 오류", 500, e)
