@@ -35,6 +35,35 @@ export async function aggregateMainVotes(
   return { go, stay: total - go, total }
 }
 
+/**
+ * 댓글 스탠스 스냅샷 (D10) — 댓글이 사가 앵커 글에 달렸으면 작성 시점의
+ * 메인 스탠스를 불변 기록한다. 나중에 투표를 바꿔도 이 값은 그대로 —
+ * "그때 니가 나간다랬잖아" 소환(W4)의 원장.
+ *
+ * 앵커가 아닌 일반 글이면 아무것도 하지 않는다(사가 코드가 댓글 경로를 오염시키지
+ * 않는 격리 원칙). 미투표 댓글도 stance null 로 행을 남긴다 — 참전율 계산용.
+ */
+export async function snapshotCommentStance(
+  supabase: ServiceClient,
+  postId: string,
+  commentId: string,
+  userId: string
+): Promise<void> {
+  const { data: saga } = await supabase
+    .from("sagas")
+    .select("id")
+    .eq("anchor_post_id", postId)
+    .maybeSingle()
+  if (!saga) return
+
+  const stance = await latestMainChoice(supabase, saga.id, userId)
+  await supabase.from("saga_comment_stances").insert({
+    comment_id: commentId,
+    saga_id: saga.id,
+    stance,
+  })
+}
+
 /** 유저의 현재 스탠스 (미투표면 null) — 위젯 하이라이트·댓글 스냅샷 공용 */
 export async function latestMainChoice(
   supabase: ServiceClient,

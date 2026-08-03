@@ -7,6 +7,7 @@ import { awardPoints, POINT_VALUES } from "@/lib/points"
 import { awardFlairKarma } from "@/lib/metaverse/karma-award"
 import { fetchVisibleComments } from "@/lib/comments/visible-comments"
 import { recordFunnelMilestone } from "@/lib/analytics/funnel"
+import { snapshotCommentStance } from "@/lib/saga/votes"
 import { z } from "zod"
 
 const CommentCreateSchema = z
@@ -234,6 +235,11 @@ export async function POST(request: NextRequest) {
         console.error("Failed to update comment cooldown:", err)
         // 쿨다운 업데이트 실패는 무시 (댓글 작성은 성공)
       }
+    )
+
+    // 사가 스탠스 스냅샷 (비동기, 실패 무시) — 앵커 글이 아니면 내부에서 no-op
+    snapshotCommentStance(supabase, post_id, String(comment.id), userId).catch((err: unknown) =>
+      console.error("Failed to snapshot saga stance:", err)
     )
 
     // 온보딩 퍼널 4단계(게시판 첫 활동) — 댓글 쪽. 최초 여부는 DB 원장이 판정한다.

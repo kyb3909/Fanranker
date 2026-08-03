@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { PostDetailContent } from "@/components/post-detail/post-detail-content"
 import { BoardRecentPosts } from "@/components/board-recent-posts"
@@ -206,6 +206,17 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
   if (!postData) {
     notFound()
+  }
+
+  // 사가 앵커 글은 문서 페이지가 정본 — 직접 URL 접근을 /saga/[slug]로 돌린다.
+  // 보드 slug 로 먼저 거르므로 일반 글에는 추가 쿼리 0회.
+  if (postData.community_slug === "saga") {
+    const { data: saga } = await createServiceRoleClient()
+      .from("sagas")
+      .select("slug")
+      .eq("anchor_post_id", id)
+      .maybeSingle()
+    if (saga) redirect(`/saga/${saga.slug}`)
   }
 
   const { userId: viewerId } = await auth()
