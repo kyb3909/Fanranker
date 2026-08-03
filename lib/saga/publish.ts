@@ -29,7 +29,13 @@ export interface SagaEntryDraft {
 export async function upsertSagaEntry(
   supabase: ServiceClient,
   d: SagaEntryDraft
-): Promise<{ sagaId: string; sagaSlug: string; sagaTitle: string; folded: boolean }> {
+): Promise<{
+  sagaId: string
+  sagaSlug: string
+  sagaTitle: string
+  folded: boolean
+  entryId: string | null
+}> {
   const subject = {
     player_key: normalizePlayerKey(d.player),
     player_name_kr: d.playerKr,
@@ -54,14 +60,16 @@ export async function upsertSagaEntry(
     .eq("cluster_key", clusterKey)
     .maybeSingle()
 
+  let entryId: string | null = null
   if (existingEntry) {
     const echoes = [
       ...((existingEntry.echoes as { outlet: string; url: string; title: string }[]) ?? []),
       { outlet: d.origin.outlet, url: d.origin.url, title: d.headline },
     ]
     await supabase.from("saga_entries").update({ echoes }).eq("id", existingEntry.id)
+    entryId = existingEntry.id
   } else {
-    await appendEntry(supabase, saga.id, "transfer", saga.stage, {
+    const entry = await appendEntry(supabase, saga.id, "transfer", saga.stage, {
       clusterKey,
       headline: d.headline,
       tier: d.tier,
@@ -69,9 +77,16 @@ export async function upsertSagaEntry(
       origin: d.origin,
       occurredAt: d.occurredAt,
     })
+    entryId = (entry as { id: string } | null)?.id ?? null
   }
 
-  return { sagaId: saga.id, sagaSlug: saga.slug, sagaTitle: saga.title, folded: !!existingEntry }
+  return {
+    sagaId: saga.id,
+    sagaSlug: saga.slug,
+    sagaTitle: saga.title,
+    folded: !!existingEntry,
+    entryId,
+  }
 }
 
 /**
@@ -127,10 +142,14 @@ export async function linkArticleToSaga(
       occurredAt: article.occurredAt ?? new Date().toISOString(),
     })
 
-    // 기사↔사가 연결 원장 — 떡밥 카드가 이 매핑으로 /saga/[slug] 로 직행한다
+    // 기사↔사가 연결 원장 — 떡밥 카드가 이 매핑으로 /saga/[slug] 로 직행하고,
+    // entry_id 로 타임라인의 해당 엔트리 자리에 기사 본문을 펼친다
     await supabase
       .from("saga_article_links")
-      .upsert({ post_id: article.postId, saga_id: result.sagaId }, { onConflict: "post_id" })
+      .upsert(
+        { post_id: article.postId, saga_id: result.sagaId, entry_id: result.entryId },
+        { onConflict: "post_id" }
+      )
 
     return { sagaSlug: result.sagaSlug, folded: result.folded }
   } catch (e) {

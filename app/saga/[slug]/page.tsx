@@ -6,6 +6,7 @@ import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/s
 import { aggregateMainVotes } from "@/lib/saga/votes"
 import { SagaMainVote } from "@/components/saga/main-vote"
 import { CommentSection } from "@/components/post-detail/comment-section"
+import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
 
 // 사가는 이벤트가 붙을 때마다 자란다 — 짧은 재검증
 export const revalidate = 30
@@ -38,6 +39,13 @@ interface EntryRow {
   occurred_at: string
 }
 
+/** 엔트리에 연결된 발행 기사 — 타임라인 자리에서 본문을 펼쳐 보여준다 */
+interface LinkedArticle {
+  postId: string
+  title: string
+  contentHtml: string | null
+}
+
 async function fetchSaga(slug: string) {
   const supabase = createServiceRoleClient()
   const { data: saga } = await supabase.from("sagas").select("*").eq("slug", slug).maybeSingle()
@@ -47,11 +55,34 @@ async function fetchSaga(slug: string) {
     .select("id, headline, summary, tier, stage_after, origin, echoes, occurred_at")
     .eq("saga_id", saga.id)
     .order("occurred_at", { ascending: false })
+
+  // 연결된 발행 기사 — 떡밥에서 타고 들어온 기사를 해당 엔트리 자리에 펼치기 위함
+  const { data: links } = await supabase
+    .from("saga_article_links")
+    .select("post_id, entry_id, posts ( title, content )")
+    .eq("saga_id", saga.id)
+  const articlesByEntry = new Map<string, LinkedArticle[]>()
+  for (const l of links ?? []) {
+    if (!l.entry_id) continue
+    const post = l.posts as unknown as { title: string; content: unknown } | null
+    if (!post) continue
+    const article: LinkedArticle = {
+      postId: l.post_id as string,
+      title: post.title,
+      contentHtml:
+        typeof post.content === "object" && post.content ? renderTipTapToHTML(post.content) : null,
+    }
+    const list = articlesByEntry.get(l.entry_id as string)
+    if (list) list.push(article)
+    else articlesByEntry.set(l.entry_id as string, [article])
+  }
+
   // 메인 투표 집계 — lib/saga/votes (append-only 원장에서 유저별 최신 선택만)
   const vote = await aggregateMainVotes(supabase, saga.id)
   return {
     saga: saga as unknown as SagaRow,
     entries: (entries ?? []) as unknown as EntryRow[],
+    articlesByEntry,
     vote,
   }
 }
@@ -76,11 +107,18 @@ export async function generateMetadata({
 const TIER_LABEL = { official: "오피셜", tier1: "티어1", rumor: "루머" } as const
 const TIER_COLOR = { official: "#0E7A3C", tier1: "var(--wc-burgundy)", rumor: "#946A12" } as const
 
-export default async function SagaDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SagaDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ from?: string }>
+}) {
   const { slug } = await params
+  const { from } = await searchParams
   const data = await fetchSaga(slug)
   if (!data) notFound()
-  const { saga, entries, vote } = data
+  const { saga, entries, articlesByEntry, vote } = data
 
   const flow = STAGE_FLOW[saga.saga_type]
   const idx = stageIndex(saga.saga_type, saga.stage)
@@ -210,6 +248,41 @@ export default async function SagaDetailPage({ params }: { params: Promise<{ slu
                     {e.origin.outlet}
                   </a>
                 </p>
+                {/* 연결된 발행 기사 본문 — 떡밥에서 타고 들어온 기사(?from=)는 펼쳐진 채,
+                    나머지는 "기사 펼쳐보기"로 접혀 있다 (2026-08-03 오너) */}
+                {(articlesByEntry.get(e.id) ?? []).map(
+                  (a) =>
+                    a.contentHtml && (
+                      <details key={a.postId} open={a.postId === from} className="group mt-2">
+                        <summary
+                          className="cursor-pointer list-none text-[12.5px] font-bold select-none"
+                          style={{ color: "var(--wc-burgundy)" }}
+                        >
+                          <span className="group-open:hidden">📰 기사 펼쳐보기 — {a.title}</span>
+                          <span className="hidden group-open:inline">▲ 기사 접기</span>
+                        </summary>
+                        {/* 펼치면 카드뉴스 카드 그대로 — 제목 + 본문(이미지 포함) */}
+                        <div
+                          className="mt-2 overflow-hidden rounded-xl px-4 py-3.5"
+                          style={{
+                            background: "var(--wc-card, #fff)",
+                            boxShadow: "var(--wc-shadow-1)",
+                          }}
+                        >
+                          <h4
+                            className="text-[15px] font-extrabold"
+                            style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                          >
+                            {a.title}
+                          </h4>
+                          <div
+                            className="prose prose-base mt-2 max-w-[68ch]"
+                            dangerouslySetInnerHTML={{ __html: a.contentHtml }}
+                          />
+                        </div>
+                      </details>
+                    )
+                )}
                 {e.echoes.length > 0 && (
                   <details className="mt-1.5">
                     <summary
@@ -228,7 +301,10 @@ export default async function SagaDetailPage({ params }: { params: Promise<{ slu
                             className="underline underline-offset-2"
                             style={{ color: "var(--wc-mute)" }}
                           >
-                            [{echo.outlet}] {echo.title}
+                            {/* 제목에 이미 [출처] 브래킷이 있으면 중복 표기하지 않는다 */}
+                            {echo.title.startsWith("[")
+                              ? echo.title
+                              : `[${echo.outlet}] ${echo.title}`}
                           </a>
                         </li>
                       ))}

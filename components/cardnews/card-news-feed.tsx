@@ -453,7 +453,7 @@ function CompactCard({ card }: { card: CardNewsItem }) {
       <Link
         href={
           card.sagaSlug
-            ? `/saga/${card.sagaSlug}?utm_source=cardnews`
+            ? `/saga/${card.sagaSlug}?utm_source=cardnews&from=${card.id}`
             : `/post/${card.id}?utm_source=cardnews`
         }
         className="absolute inset-0 z-[1]"
