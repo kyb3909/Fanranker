@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { identityKey, baseSlug } from "./identity"
+import { identityKey, baseSlug, isSamePlayerKey, normalizePlayerKey } from "./identity"
 import { nextStage, type SagaType } from "./stages"
 
 /**
@@ -48,6 +48,27 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
     .eq("identity_key", key)
     .maybeSingle()
   if (existing) return { saga: existing, created: false as const }
+
+  // 동일인 가드 (2026-08-04 운영자: "조던 헨더슨과 헨더슨이 다른 사가면 안 돼") —
+  // 키가 정확히 같지 않아도, 같은 윈도우·방향의 열린 사가 중 성이 같고 이름이
+  // 부분집합인 선수가 **정확히 하나** 있으면 새로 만들지 않고 그 문서에 쌓는다
+  if (input.type === "transfer") {
+    const newPlayerKey = normalizePlayerKey(String(input.subject.player_key ?? ""))
+    const { data: candidates } = await supabase
+      .from("sagas")
+      .select("*")
+      .eq("saga_type", "transfer")
+      .eq("window_key", input.windowKey)
+      .eq("status", "active")
+    const same = (candidates ?? []).filter((c) => {
+      const subj = c.subject as { player_key?: string; direction?: string }
+      return (
+        subj.direction === input.subject.direction &&
+        isSamePlayerKey(normalizePlayerKey(String(subj.player_key ?? "")), newPlayerKey)
+      )
+    })
+    if (same.length === 1) return { saga: same[0], created: false as const }
+  }
 
   // 앵커 보드의 category_id 조회 (마이그 20260804 가 시드)
   const { data: category } = await supabase

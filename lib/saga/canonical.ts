@@ -23,27 +23,60 @@ export interface CanonicalPlayer {
   matched: boolean
 }
 
-export type AliasIndex = Map<string, { key: string; ko: string }>
+interface AliasEntry {
+  key: string
+  ko: string
+}
 
-/** 사전 행 → surface 정규화 인덱스. romanized 자신도 surface 로 취급 */
+export interface AliasIndex {
+  exact: Map<string, AliasEntry>
+  /** 성(마지막 토큰) → 항목. 같은 성이 여러 명이면 null(충돌 — 병합 금지) */
+  bySurname: Map<string, AliasEntry | null>
+}
+
+const SURNAME_SKIP = new Set(["jr", "junior", "sr", "ii", "iii"])
+
+function surnameOf(key: string): string | null {
+  const tokens = key.split("-").filter((t) => t.length > 0 && !SURNAME_SKIP.has(t))
+  const last = tokens[tokens.length - 1]
+  return last && last.length >= 3 ? last : null
+}
+
+/** 사전 행 → surface 정규화 인덱스 + 성(姓) 인덱스. romanized 자신도 surface 취급 */
 export function buildAliasIndex(rows: AliasRow[]): AliasIndex {
-  const index: AliasIndex = new Map()
+  const exact = new Map<string, AliasEntry>()
+  const bySurname = new Map<string, AliasEntry | null>()
   for (const row of rows) {
     const key = normalizePlayerKey(row.romanized)
     if (!key) continue
     const entry = { key, ko: row.preferred_ko }
-    index.set(key, entry)
+    exact.set(key, entry)
     for (const s of row.surfaces ?? []) {
       const surface = normalizePlayerKey(s)
-      if (surface && !index.has(surface)) index.set(surface, entry)
+      if (surface && !exact.has(surface)) exact.set(surface, entry)
+    }
+    const surname = surnameOf(key)
+    if (surname) {
+      const prev = bySurname.get(surname)
+      // 같은 성이 서로 다른 선수를 가리키면 충돌 표시 — 성만으로는 병합하지 않는다
+      if (prev === undefined) bySurname.set(surname, entry)
+      else if (prev !== null && prev.key !== entry.key) bySurname.set(surname, null)
     }
   }
-  return index
+  return { exact, bySurname }
 }
 
 export function canonicalizePlayer(name: string, index: AliasIndex): CanonicalPlayer {
   const key = normalizePlayerKey(name)
-  const hit = index.get(key)
+  const hit = index.exact.get(key)
   if (hit) return { key: hit.key, ko: hit.ko, matched: true }
+
+  // 성(姓) 폴백 — "조던 헨더슨"과 "헨더슨"이 다른 사가가 되면 안 된다 (2026-08-04).
+  // 사전에서 그 성이 유일할 때만 (동성이인은 충돌 표시돼 있어 병합 안 함)
+  const surname = surnameOf(key)
+  if (surname) {
+    const bySur = index.bySurname.get(surname)
+    if (bySur) return { key: bySur.key, ko: bySur.ko, matched: true }
+  }
   return { key, ko: null, matched: false }
 }

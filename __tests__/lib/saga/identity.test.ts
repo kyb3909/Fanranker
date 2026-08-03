@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest"
-import { normalizePlayerKey, transferIdentityKey, identityKey, baseSlug } from "@/lib/saga/identity"
+import {
+  normalizePlayerKey,
+  transferIdentityKey,
+  identityKey,
+  baseSlug,
+  isSamePlayerKey,
+} from "@/lib/saga/identity"
+import { buildAliasIndex, canonicalizePlayer } from "@/lib/saga/canonical"
 import { STAGE_FLOW, STAGE_LABEL, stageIndex, nextStage } from "@/lib/saga/stages"
 
 describe("normalizePlayerKey", () => {
@@ -89,6 +96,53 @@ describe("baseSlug", () => {
 
   it("match: m-fixture", () => {
     expect(baseSlug("match", { fixture_id: 777 })).toBe("m-777")
+  })
+})
+
+describe("isSamePlayerKey — 성만 쓴 표기와 풀네임 병합 (2026-08-04)", () => {
+  it("조던 헨더슨 = 헨더슨 (한쪽이 부분집합)", () => {
+    expect(isSamePlayerKey("jordan-henderson", "henderson")).toBe(true)
+    expect(isSamePlayerKey("henderson", "jordan-henderson")).toBe(true)
+  })
+
+  it("성만 같고 이름이 다르면 남 (james vs jordan)", () => {
+    expect(isSamePlayerKey("james-henderson", "jordan-henderson")).toBe(false)
+  })
+
+  it("성이 다르면 남", () => {
+    expect(isSamePlayerKey("jordan-henderson", "jordan-pickford")).toBe(false)
+  })
+
+  it("jr 접미는 무시", () => {
+    expect(isSamePlayerKey("vinicius-jr", "vinicius")).toBe(true)
+  })
+})
+
+describe("canonicalizePlayer — 사전 성(姓) 폴백", () => {
+  const index = buildAliasIndex([
+    { romanized: "Jordan Henderson", preferred_ko: "조던 헨더슨", surfaces: ["헨더슨"] },
+    // 동성이인 — 성만으로는 병합 금지
+    { romanized: "Gabriel Silva", preferred_ko: "가브리엘 실바", surfaces: [] },
+    { romanized: "Thiago Silva", preferred_ko: "치아구 실바", surfaces: [] },
+  ])
+
+  it("풀네임 exact 매칭", () => {
+    expect(canonicalizePlayer("Jordan Henderson", index)).toMatchObject({
+      key: "jordan-henderson",
+      matched: true,
+    })
+  })
+
+  it("성만 와도 유일하면 병합 (Henderson → jordan-henderson)", () => {
+    expect(canonicalizePlayer("Henderson", index)).toMatchObject({
+      key: "jordan-henderson",
+      ko: "조던 헨더슨",
+      matched: true,
+    })
+  })
+
+  it("동성이인 성은 병합하지 않음 (Silva)", () => {
+    expect(canonicalizePlayer("Silva", index).matched).toBe(false)
   })
 })
 

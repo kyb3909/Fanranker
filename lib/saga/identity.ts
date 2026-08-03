@@ -44,6 +44,28 @@ export function identityKey(type: SagaType, subject: Record<string, unknown>): s
   }
 }
 
+/** 성(姓) 비교에서 무시할 접미 토큰 */
+const NAME_SUFFIXES = new Set(["jr", "junior", "sr", "ii", "iii"])
+
+function nameTokens(key: string): string[] {
+  return key.split("-").filter((t) => t.length > 0 && !NAME_SUFFIXES.has(t))
+}
+
+/**
+ * 같은 선수인가 — "jordan-henderson" 과 "henderson" 처럼 성이 같고 한쪽 토큰이
+ * 다른 쪽의 부분집합이면 동일 인물로 본다 (2026-08-04 운영자: "조던 헨더슨 기사와
+ * 헨더슨 기사가 다른 사가가 되면 안 돼"). "james-henderson" vs "jordan-henderson"
+ * 은 성만 같고 이름이 달라 부분집합이 아니므로 다른 사람.
+ */
+export function isSamePlayerKey(a: string, b: string): boolean {
+  const ta = nameTokens(a)
+  const tb = nameTokens(b)
+  if (ta.length === 0 || tb.length === 0) return false
+  if (ta[ta.length - 1] !== tb[tb.length - 1]) return false // 성이 다르면 남
+  const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta]
+  return short.every((t) => long.includes(t))
+}
+
 /** slug — URL 용. 멱등키와 달리 사람이 읽는 값이라 충돌 시 suffix 를 붙인다(create 쪽 몫) */
 export function baseSlug(type: SagaType, subject: Record<string, unknown>): string {
   if (type === "transfer") {
