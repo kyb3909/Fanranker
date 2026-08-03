@@ -39,7 +39,7 @@ export function TipTapContent({ content, className, size = "sm", onReady }: TipT
         class: cn(
           "prose",
           // 크기와 측정폭을 한 쌍으로 묶는다 — 따로 주면 max-w 유틸끼리 충돌한다
-          size === "base" ? "prose-base max-w-[68ch]" : "prose-sm max-w-none",
+          size === "base" ? "prose-base max-w-none" : "prose-sm max-w-none",
           className
         ),
       },

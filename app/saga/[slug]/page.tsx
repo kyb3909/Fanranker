@@ -232,7 +232,7 @@ export default async function SagaDetailPage({
                 {fromArticle.title}
               </h2>
               <div
-                className="prose prose-base mt-2 max-w-[68ch]"
+                className="prose prose-base mt-2 max-w-none"
                 dangerouslySetInnerHTML={{ __html: fromArticle.contentHtml }}
               />
             </section>
@@ -362,7 +362,7 @@ export default async function SagaDetailPage({
                                 {a.title}
                               </h4>
                               <div
-                                className="prose prose-base mt-2 max-w-[68ch]"
+                                className="prose prose-base mt-2 max-w-none"
                                 dangerouslySetInnerHTML={{ __html: a.contentHtml }}
                               />
                             </div>

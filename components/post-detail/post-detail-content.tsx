@@ -321,7 +321,7 @@ export function PostDetailContent({
             <div>
               {typeof post.content === "string" ? (
                 <p
-                  className="max-w-[68ch]"
+                  className="max-w-none"
                   style={{
                     // TipTap 본문(prose-base)과 같은 규격 — 두 분기가 달라 보이면 안 된다
                     fontSize: 16,
@@ -338,7 +338,7 @@ export function PostDetailContent({
                 <>
                   {contentHtml && !rteReady && (
                     <div
-                      className="prose prose-base max-w-[68ch]"
+                      className="prose prose-base max-w-none"
                       // 저장 시 sanitize 된 JSON → generateHTML 이스케이프 출력이라 안전
                       dangerouslySetInnerHTML={{ __html: contentHtml }}
                     />

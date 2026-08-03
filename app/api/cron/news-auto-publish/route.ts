@@ -9,7 +9,12 @@ import {
   NEWS_BOT_USER_ID,
   type NewsReservoirItem,
 } from "@/lib/news/publish"
-import { inspectDraft, unknownPlayerNames } from "@/lib/news/quality-gate"
+import {
+  inspectDraft,
+  inspectImage,
+  unknownPlayerNames,
+  PERSONAL_BLOG_RE,
+} from "@/lib/news/quality-gate"
 import { classifyTier } from "@/lib/saga/tier"
 import { titleSimilarity } from "@/lib/saga/cluster"
 
@@ -141,9 +146,12 @@ async function run(request: NextRequest) {
     const title = row.draft?.title?.trim()
     const content = sanitizeTipTapJSON(row.draft?.content)
     if (!title || !content) continue
+    // 개인 블로그·뉴스레터 출처는 자동발행 금지 (2026-08-04 Substack 실사고)
+    if (row.urls?.source && PERSONAL_BLOG_RE.test(row.urls.source)) continue
     // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
     // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
-    if (!extractFirstImageSrcFromTipTapJSON(content)) continue
+    const firstImage = extractFirstImageSrcFromTipTapJSON(content)
+    if (!firstImage) continue
     // 무내용 초안 차단 (2026-07-30) — 원문 0자로 생성돼 "세부 사항은 기사에서 확인"류
     // 필러만 있는 글 (hermes-reddit-1vank7k 사례). 80자 미만·자기지시 문구 = 자동발행 금지.
     if (isContentFreeDraft(content)) continue
@@ -189,6 +197,12 @@ async function run(request: NextRequest) {
     if (verdict.pass && verdict.playerNamesKr.length > 0) {
       const unknown = unknownPlayerNames(verdict.playerNamesKr, dict ?? [])
       if (unknown.length > 0) failReasons = [`사전 미등재 선수명: ${unknown.join(", ")}`]
+    }
+    // 이미지 적합성 (vision) — 배너·로고·광고 이미지 차단 (Substack 실사고)
+    if (failReasons.length === 0) {
+      const imgUrl = firstImage.startsWith("/") ? `https://gongnori.fan${firstImage}` : firstImage
+      const img = await inspectImage(imgUrl)
+      if (!img.pass) failReasons = [`이미지 부적합: ${img.reason}`]
     }
     if (failReasons.length > 0) {
       await supabase

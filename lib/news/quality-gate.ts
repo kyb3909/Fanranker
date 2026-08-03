@@ -88,6 +88,53 @@ export async function inspectDraft(title: string, content: unknown): Promise<Qua
 }
 
 /**
+ * 이미지 적합성 검사 (2026-08-04 실사고: Substack '구독하세요' 배너가 대표
+ * 이미지로 발행됨) — 축구 보도 사진인지 vision 으로 심사. fail-closed.
+ */
+export async function inspectImage(imageUrl: string): Promise<{ pass: boolean; reason: string }> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) return { pass: false, reason: "검사관 미가동" }
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `축구 뉴스 기사의 대표 이미지로 적절한지 판정하라.
+적절: 선수·감독·경기·경기장·구단 발표 사진, 유니폼 공개 등 실제 보도 사진
+부적절: 로고만 있는 카드, 뉴스레터/구독 배너, 광고, 스크린샷, 순수 텍스트 이미지, 무관한 사진
+JSON만: {"pass": boolean, "reason": "한 줄"}`,
+          },
+          {
+            role: "user",
+            content: [{ type: "image_url", image_url: { url: imageUrl, detail: "low" } }],
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(30000),
+    })
+    if (!res.ok) return { pass: false, reason: `이미지 검사 실패(HTTP ${res.status})` }
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
+      pass?: boolean
+      reason?: string
+    }
+    return { pass: parsed.pass === true, reason: String(parsed.reason ?? "").slice(0, 100) }
+  } catch {
+    return { pass: false, reason: "이미지 검사 실패(타임아웃)" }
+  }
+}
+
+/** 개인 블로그·뉴스레터 플랫폼 — 보도 매체가 아니므로 자동발행 금지 (사람 검수) */
+export const PERSONAL_BLOG_RE =
+  /substack\.com|medium\.com|blogspot\.|wordpress\.com|tistory\.com|note\.com|ghost\.io|beehiiv\.com/i
+
+/**
  * 표기 사전 게이트 — 기사 속 선수 한글 표기가 사전에 없으면 자동발행 제외.
  * 환각 음차("기마랑에")·오식별("Luis Hall") 차단. 사전은 검수·교정 학습으로
  * 계속 자라므로 커버리지는 시간이 해결한다. 미등재 = 사람 검수로 강등일 뿐.

@@ -13,6 +13,7 @@ import {
   type VsReviewDecision,
 } from "@/lib/news/vs-issue"
 import { linkArticleToSaga } from "@/lib/saga/publish"
+import { splitLongParagraphs } from "@/lib/tiptap/split-paragraphs"
 import type { TipTapNode } from "@/types/post"
 
 /**
@@ -98,7 +99,8 @@ export async function publishNewsDraft(
   opts: PublishNewsOptions
 ): Promise<{ postId?: string; error?: string }> {
   const now = new Date().toISOString()
-  const content = await rehostContentImages(opts.content)
+  // 긴 단일 문단 → 2~3문장 단위 문단 분할 (가독성, 2026-08-04 운영자)
+  const content = splitLongParagraphs(await rehostContentImages(opts.content))
   const image = extractFirstImageSrcFromTipTapJSON(content)
   const sourceUrl = item.urls?.source ?? null
 
