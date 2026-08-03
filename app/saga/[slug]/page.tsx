@@ -6,7 +6,14 @@ import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/s
 import { aggregateMainVotes } from "@/lib/saga/votes"
 import { SagaMainVote } from "@/components/saga/main-vote"
 import { CommentSection } from "@/components/post-detail/comment-section"
+import { ScrollToOpenArticle } from "@/components/saga/scroll-to-open"
 import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
+
+/** KST 날짜 마디 라벨 — "8월 2일" */
+function kstDateLabel(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000)
+  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`
+}
 
 // 사가는 이벤트가 붙을 때마다 자란다 — 짧은 재검증
 export const revalidate = 30
@@ -50,11 +57,12 @@ async function fetchSaga(slug: string) {
   const supabase = createServiceRoleClient()
   const { data: saga } = await supabase.from("sagas").select("*").eq("slug", slug).maybeSingle()
   if (!saga) return null
+  // 연혁은 시간순 — 오래된 사건이 위, 새 기사는 아래로 붙는다 (드라마를 처음부터 읽는 방향)
   const { data: entries } = await supabase
     .from("saga_entries")
     .select("id, headline, summary, tier, stage_after, origin, echoes, occurred_at")
     .eq("saga_id", saga.id)
-    .order("occurred_at", { ascending: false })
+    .order("occurred_at", { ascending: true })
 
   // 연결된 발행 기사 — 떡밥에서 타고 들어온 기사를 해당 엔트리 자리에 펼치기 위함
   const { data: links } = await supabase
@@ -193,128 +201,166 @@ export default async function SagaDetailPage({
           </div>
         </header>
 
-        {/* ── 연표 — 클러스터 1개 = 엔트리 1개, 받아쓰기는 접기 (D9) ── */}
+        {/* ── 연표 — 시간순(위→아래) 세로 레일 + 날짜 마디. 클러스터 1개 = 엔트리 1개 (D9) ── */}
         <section className="mt-6" aria-label="연표">
           <h2 className="mb-3 text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
             타임라인 <span style={{ color: "var(--wc-mute)" }}>{entries.length}</span>
           </h2>
-          <div className="flex flex-col gap-2.5">
-            {entries.map((e) => (
-              <article
-                key={e.id}
-                className="rounded-xl px-4 py-3.5"
-                style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
-              >
-                <div className="flex items-center gap-2 text-[11.5px] font-bold">
-                  <span style={{ color: TIER_COLOR[e.tier] }}>{TIER_LABEL[e.tier]}</span>
-                  {e.stage_after && (
-                    <span
-                      className="rounded px-1 py-px"
-                      style={{ background: "rgba(139,30,63,.07)", color: "var(--wc-burgundy)" }}
-                    >
-                      → {STAGE_LABEL[e.stage_after] ?? e.stage_after}
-                    </span>
-                  )}
+          <div className="relative">
+            {/* 세로 레일 — 사가가 자랄수록 아래로 길어진다 */}
+            <span
+              className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full"
+              style={{ background: "var(--wc-line)" }}
+              aria-hidden
+            />
+            <div className="flex flex-col gap-4">
+              {entries.map((e, i) => (
+                <div key={e.id} className="relative pl-7">
+                  {/* 노드 점 — 오피셜은 채워진 점 */}
                   <span
-                    className="ml-auto"
-                    style={{ color: "var(--wc-mute)" }}
-                    suppressHydrationWarning
-                  >
-                    {formatRelativeTime(new Date(e.occurred_at))}
-                  </span>
-                </div>
-                <h3
-                  className="mt-1 text-[14.5px] font-bold"
-                  style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-                >
-                  {e.headline}
-                </h3>
-                {e.summary && (
-                  <p
-                    className="mt-1 text-[13px]"
-                    style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
-                  >
-                    {e.summary}
-                  </p>
-                )}
-                <p className="mt-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
-                  {e.origin.reporter ? `${e.origin.reporter} · ` : ""}
-                  <a
-                    href={e.origin.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="underline underline-offset-2"
-                  >
-                    {e.origin.outlet}
-                  </a>
-                </p>
-                {/* 연결된 발행 기사 본문 — 떡밥에서 타고 들어온 기사(?from=)는 펼쳐진 채,
-                    나머지는 "기사 펼쳐보기"로 접혀 있다 (2026-08-03 오너) */}
-                {(articlesByEntry.get(e.id) ?? []).map(
-                  (a) =>
-                    a.contentHtml && (
-                      <details key={a.postId} open={a.postId === from} className="group mt-2">
-                        <summary
-                          className="cursor-pointer list-none text-[12.5px] font-bold select-none"
-                          style={{ color: "var(--wc-burgundy)" }}
-                        >
-                          <span className="group-open:hidden">📰 기사 펼쳐보기 — {a.title}</span>
-                          <span className="hidden group-open:inline">▲ 기사 접기</span>
-                        </summary>
-                        {/* 펼치면 카드뉴스 카드 그대로 — 제목 + 본문(이미지 포함) */}
-                        <div
-                          className="mt-2 overflow-hidden rounded-xl px-4 py-3.5"
-                          style={{
-                            background: "var(--wc-card, #fff)",
-                            boxShadow: "var(--wc-shadow-1)",
-                          }}
-                        >
-                          <h4
-                            className="text-[15px] font-extrabold"
-                            style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-                          >
-                            {a.title}
-                          </h4>
-                          <div
-                            className="prose prose-base mt-2 max-w-[68ch]"
-                            dangerouslySetInnerHTML={{ __html: a.contentHtml }}
-                          />
-                        </div>
-                      </details>
-                    )
-                )}
-                {e.echoes.length > 0 && (
-                  <details className="mt-1.5">
-                    <summary
-                      className="cursor-pointer text-[12px] font-bold"
+                    className="absolute top-[30px] left-0 h-4 w-4 rounded-full border-2"
+                    style={{
+                      borderColor: TIER_COLOR[e.tier],
+                      background:
+                        e.tier === "official" ? TIER_COLOR[e.tier] : "var(--wc-card, #fff)",
+                    }}
+                    aria-hidden
+                  />
+                  {/* 날짜 마디 — 날짜가 바뀔 때만 */}
+                  {(i === 0 ||
+                    kstDateLabel(entries[i - 1].occurred_at) !== kstDateLabel(e.occurred_at)) && (
+                    <p
+                      className="mb-1.5 text-[12px] font-extrabold tracking-wide"
                       style={{ color: "var(--wc-mute)" }}
                     >
-                      이 소식을 전한 매체 {e.echoes.length}곳
-                    </summary>
-                    <ul className="mt-1 flex flex-col gap-0.5 pl-1 text-[12px]">
-                      {e.echoes.map((echo, i) => (
-                        <li key={i}>
-                          <a
-                            href={echo.url}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            className="underline underline-offset-2"
-                            style={{ color: "var(--wc-mute)" }}
+                      {kstDateLabel(e.occurred_at)}
+                    </p>
+                  )}
+                  <article
+                    className="rounded-xl px-4 py-3.5"
+                    style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+                  >
+                    <div className="flex items-center gap-2 text-[11.5px] font-bold">
+                      <span style={{ color: TIER_COLOR[e.tier] }}>{TIER_LABEL[e.tier]}</span>
+                      {e.stage_after && (
+                        <span
+                          className="rounded px-1 py-px"
+                          style={{ background: "rgba(139,30,63,.07)", color: "var(--wc-burgundy)" }}
+                        >
+                          → {STAGE_LABEL[e.stage_after] ?? e.stage_after}
+                        </span>
+                      )}
+                      <span
+                        className="ml-auto"
+                        style={{ color: "var(--wc-mute)" }}
+                        suppressHydrationWarning
+                      >
+                        {formatRelativeTime(new Date(e.occurred_at))}
+                      </span>
+                    </div>
+                    <h3
+                      className="mt-1 text-[14.5px] font-bold"
+                      style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                    >
+                      {e.headline}
+                    </h3>
+                    {e.summary && (
+                      <p
+                        className="mt-1 text-[13px]"
+                        style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
+                      >
+                        {e.summary}
+                      </p>
+                    )}
+                    <p className="mt-1.5 text-[12px]" style={{ color: "var(--wc-mute)" }}>
+                      {e.origin.reporter ? `${e.origin.reporter} · ` : ""}
+                      <a
+                        href={e.origin.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="underline underline-offset-2"
+                      >
+                        {e.origin.outlet}
+                      </a>
+                    </p>
+                    {/* 연결된 발행 기사 본문 — 떡밥에서 타고 들어온 기사(?from=)는 펼쳐진 채,
+                    나머지는 "기사 펼쳐보기"로 접혀 있다 (2026-08-03 오너) */}
+                    {(articlesByEntry.get(e.id) ?? []).map(
+                      (a) =>
+                        a.contentHtml && (
+                          <details
+                            key={a.postId}
+                            open={a.postId === from}
+                            data-article
+                            className="group mt-2"
                           >
-                            {/* 제목에 이미 [출처] 브래킷이 있으면 중복 표기하지 않는다 */}
-                            {echo.title.startsWith("[")
-                              ? echo.title
-                              : `[${echo.outlet}] ${echo.title}`}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </article>
-            ))}
+                            <summary
+                              className="cursor-pointer list-none text-[12.5px] font-bold select-none"
+                              style={{ color: "var(--wc-burgundy)" }}
+                            >
+                              <span className="group-open:hidden">
+                                📰 기사 펼쳐보기 — {a.title}
+                              </span>
+                              <span className="hidden group-open:inline">▲ 기사 접기</span>
+                            </summary>
+                            {/* 펼치면 카드뉴스 카드 그대로 — 제목 + 본문(이미지 포함) */}
+                            <div
+                              className="mt-2 overflow-hidden rounded-xl px-4 py-3.5"
+                              style={{
+                                background: "var(--wc-card, #fff)",
+                                boxShadow: "var(--wc-shadow-1)",
+                              }}
+                            >
+                              <h4
+                                className="text-[15px] font-extrabold"
+                                style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                              >
+                                {a.title}
+                              </h4>
+                              <div
+                                className="prose prose-base mt-2 max-w-[68ch]"
+                                dangerouslySetInnerHTML={{ __html: a.contentHtml }}
+                              />
+                            </div>
+                          </details>
+                        )
+                    )}
+                    {e.echoes.length > 0 && (
+                      <details className="mt-1.5">
+                        <summary
+                          className="cursor-pointer text-[12px] font-bold"
+                          style={{ color: "var(--wc-mute)" }}
+                        >
+                          이 소식을 전한 매체 {e.echoes.length}곳
+                        </summary>
+                        <ul className="mt-1 flex flex-col gap-0.5 pl-1 text-[12px]">
+                          {e.echoes.map((echo, i) => (
+                            <li key={i}>
+                              <a
+                                href={echo.url}
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                className="underline underline-offset-2"
+                                style={{ color: "var(--wc-mute)" }}
+                              >
+                                {/* 제목에 이미 [출처] 브래킷이 있으면 중복 표기하지 않는다 */}
+                                {echo.title.startsWith("[")
+                                  ? echo.title
+                                  : `[${echo.outlet}] ${echo.title}`}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </article>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
+
+        {from && <ScrollToOpenArticle />}
 
         {/* ── 댓글 — 앵커 포스트 경유로 기존 시스템 전부 재사용 (P0 오딧) ── */}
         <section className="mt-8" aria-label="댓글">
