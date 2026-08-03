@@ -4,6 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
 import { normalizePlayerKey, isSamePlayerKey } from "@/lib/saga/identity"
+import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/canonical"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -37,13 +38,23 @@ async function cronGet(request: Request) {
     const supabase = createServiceRoleClient()
     const fixes: Fix[] = []
 
-    // ── 기존 사전 로드 (중복 등재 방지) ──
+    // ── 기존 사전 로드 (중복 등재 방지) — 성(姓) 폴백까지 포함한 정식 매칭 사용
+    // (1차 가동 실사고: 'Henderson'이 '조던 헨더슨' 등재를 못 보고 중복 등재됨)
     const { data: dict } = await supabase
       .from("news_alias_dictionary")
-      .select("romanized, preferred_ko")
+      .select("romanized, preferred_ko, surfaces, hangul_alts")
       .eq("category", "player")
+    const aliasIndex = buildAliasIndex((dict ?? []) as AliasRow[])
     const knownKeys = new Set((dict ?? []).map((d) => normalizePlayerKey(d.romanized)))
-    const knownKo = new Set((dict ?? []).map((d) => d.preferred_ko.replace(/\s+/g, "")))
+    const knownKo = new Set(
+      (dict ?? [])
+        .flatMap((d) => [d.preferred_ko, ...(d.hangul_alts ?? [])])
+        .map((s) => s.replace(/\s+/g, ""))
+    )
+    const isKnown = (name: string) =>
+      /[가-힣]/.test(name)
+        ? knownKo.has(name.replace(/\s+/g, ""))
+        : canonicalizePlayer(name, aliasIndex).matched
 
     // ── 수집: 미등재 이름 후보 ──
     const targets = new Map<string, { context?: string }>() // key = 원 표기
@@ -76,7 +87,7 @@ async function cronGet(request: Request) {
       .limit(50)
     for (const row of queueRows ?? []) {
       const ex = row.extracted as { player?: string | null; player_kr?: string | null } | null
-      if (ex?.player && !ex.player_kr && !knownKeys.has(normalizePlayerKey(ex.player))) {
+      if (ex?.player && !ex.player_kr && !isKnown(ex.player)) {
         targets.set(ex.player, { context: row.title as string })
       }
     }
