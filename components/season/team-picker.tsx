@@ -87,7 +87,12 @@ export function TeamPicker({
   }
 
   return (
-    <div className="grid w-full gap-3 sm:grid-cols-3">
+    // 팀 수를 하드코딩하지 않는다 — 3팀이 2팀이 되면서(2026-08-03) grid-cols-3 이
+    // 빈 칸을 남겨 좌측 쏠림으로 보였다. 칸 수는 팀 수를 따라가고, 2팀일 땐 카드가
+    // 과하게 넓어지지 않게 폭을 묶어 중앙 정렬한다.
+    <div
+      className={`grid w-full gap-3 ${groups.length === 2 ? "mx-auto sm:max-w-[880px] sm:grid-cols-2" : "sm:grid-cols-3"}`}
+    >
       {groups.map((g) => {
         const mine = joined === g.slug
         const locked = !!joined && !mine

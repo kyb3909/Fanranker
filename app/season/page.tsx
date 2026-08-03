@@ -329,7 +329,10 @@ export default async function SeasonEventPage({
               </span>
             </div>
 
-            <div className="relative grid gap-8 py-9 pl-[64px] sm:py-12 sm:pl-[110px] lg:grid-cols-[1.05fr_.95fr] lg:gap-4">
+            {/* pl 은 스큐 플레이트의 "위쪽" 폭 기준 — skewX(-8deg) 가 상단을 오른쪽으로
+                ~tan(8°)×(높이/2) ≈ 37px 밀어내므로, 플레이트 명목 폭(118px)만 보고 잡으면
+                첫 줄 텍스트가 경사면과 겹친다 (2026-08-03 운영자 발견) */}
+            <div className="relative grid gap-8 py-9 pl-[72px] sm:py-12 sm:pl-[140px] lg:grid-cols-[1.05fr_.95fr] lg:gap-4">
               {/* ── 좌: 선언 ── */}
               <div>
                 <p
@@ -442,8 +445,11 @@ export default async function SeasonEventPage({
                   className="absolute inset-0"
                   style={{
                     backgroundImage: "url(/season/hero-collage.webp)",
-                    // 원본 3패널 중 팀 수만큼만 보이게: 전체를 (3/N)배 폭으로 펼친다 (2팀 → 150%)
-                    backgroundSize: `${(3 / Math.max(pickerGroups.length, 1)) * 100}% 100%`,
+                    // 원본 3패널 중 팀 수만큼만 보이게: 전체를 (3/N)배 폭으로 펼친다 (2팀 → 150%).
+                    // ×1.1 오버스캔: 패널 경계가 너덜너덜한 사선이라 정확히 2/3 에서 자르면
+                    // 상단 우측에 3번째(빨강) 패널이 비쳐 나온다 (2026-08-03 운영자 발견) —
+                    // 조금 더 당겨 경계 앞에서 자른다.
+                    backgroundSize: `${(3 / Math.max(pickerGroups.length, 1)) * 100 * 1.1}% 100%`,
                     backgroundPosition: "left center",
                     backgroundRepeat: "no-repeat",
                   }}
