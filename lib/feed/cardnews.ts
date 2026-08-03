@@ -70,13 +70,10 @@ function toPreview(content: string): string {
 /**
  * 카드뉴스 피드 데이터 (2026-08-03 운영자 개편).
  *
- * - 시간 창 없음 (36h 제한은 2026-08-03 운영자 지시로 해제 — 발행량이 회복될 때까지
- *   빈 피드보다 오래된 떡밥이 낫다). 최신 60건이 모수.
- * - **정렬**: 실제로 끓는 글(온도 ≥ 0.5 — 댓글이 붙고 있는 글)만 온도순으로 위에 올리고,
- *   나머지는 최신순. 전면 온도순으로 하면 다 식은 피드에서 0.1° 닷새 전 글이 0° 어제
- *   글보다 위로 오는 왜곡이 생긴다 (2026-08-03 실데이터 확인).
- * - **단일 페이지**: 순위가 매분 변해 커서 페이지네이션이 성립하지 않는다 —
- *   한 번에 담고 커서는 항상 null. `before` 는 기존 API 계약 호환용 — 값이 오면 빈 페이지.
+ * - **24시간 창 + 순수 최신순** (2026-08-04 운영자 확정): 떡밥은 "오늘 소식이
+ *   시간 순서대로" — 그게 전부다. 온도·점수 개입 없음 (뜨거운 글은 히어로가 담당).
+ * - **단일 페이지**: 24h 물량이면 한 번에 다 담긴다. `before` 는 기존 API 계약
+ *   호환용 — 값이 오면 빈 페이지.
  */
 export async function fetchCardNews(
   before?: string | null
@@ -104,11 +101,9 @@ export async function fetchCardNews(
     (r) => !isKoreanSource(r.source_url ?? null)
   )
 
-  // 끓는 글(≥0.5)은 온도순으로 앞에, 식은 글은 최신순 그대로
-  const hot = fetched
-    .filter((r) => (r.temperature ?? 0) >= 0.5)
-    .sort((a, b) => (b.temperature ?? 0) - (a.temperature ?? 0))
-  const rows = [...hot, ...fetched.filter((r) => (r.temperature ?? 0) < 0.5)]
+  // 순수 최신순 (2026-08-04 운영자: "떡밥이 왜 시간순이 아니냐" — 온도 우선 배치는
+  // 시간축을 깨서 혼란만 줬다. 끓는 글은 히어로(편집장 픽)가 이미 집어 올린다)
+  const rows = fetched
 
   const cards = await buildCards(supabase, rows)
   // 떡밥 카드에서 바로 투표 (안 1, 2026-07-31) — 쇼윈도 표면이라 높은 바:
