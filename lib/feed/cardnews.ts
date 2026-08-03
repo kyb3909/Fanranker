@@ -240,11 +240,16 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
   return heroes
 }
 
-/** 이적설 사가가 연결된 기사에 slug 부착 — 카드 클릭 목적지가 위키로 바뀐다 */
+/**
+ * 이적설 사가가 연결된 기사에 slug 부착 — 카드 클릭 목적지가 위키로 바뀐다.
+ * 킬 스위치: env SAGA_CARD_ROUTING=off 면 부착하지 않음 → 카드는 전부 기존
+ * /post 로 간다 (사가 라우팅의 소비처가 여기 한 곳뿐이라 이 스위치로 전체가 꺼짐).
+ */
 async function attachSagaLinks(
   supabase: ReturnType<typeof createServiceRoleClient>,
   cards: CardNewsItem[]
 ): Promise<void> {
+  if (process.env.SAGA_CARD_ROUTING === "off") return
   if (cards.length === 0) return
   const { data: links } = await supabase
     .from("saga_article_links")

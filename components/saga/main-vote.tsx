@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
+import { trackEvent } from "@/lib/analytics/events"
 
 /**
  * 사가 메인 투표 위젯 — "나간다 vs 남는다" 1탭 참전 (PRD §4.2).
@@ -70,6 +71,7 @@ export function SagaMainVote({ slug, closed, initial, labels }: Props) {
       }
       setAgg({ go: d.go, stay: d.stay, total: d.total })
       setMyChoice(d.myChoice)
+      trackEvent({ name: "saga_vote", params: { saga_slug: slug, choice } })
     } finally {
       setBusy(false)
     }

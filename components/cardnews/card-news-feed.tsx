@@ -357,8 +357,8 @@ function useFaceFocus(imageUrl: string | null): string | null {
   return pos
 }
 
-function openPost(id: string) {
-  trackEvent({ name: "cardnews_card_open_post", params: { post_id: id } })
+function openPost(id: string, destination: "post" | "saga" = "post") {
+  trackEvent({ name: "cardnews_card_open_post", params: { post_id: id, destination } })
 }
 
 /**
@@ -458,7 +458,7 @@ function CompactCard({ card }: { card: CardNewsItem }) {
         }
         className="absolute inset-0 z-[1]"
         aria-label={card.title}
-        onClick={() => openPost(card.id)}
+        onClick={() => openPost(card.id, card.sagaSlug ? "saga" : "post")}
       />
 
       <div className="min-w-0 flex-1">

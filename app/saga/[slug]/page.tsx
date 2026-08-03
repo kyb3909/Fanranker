@@ -6,7 +6,7 @@ import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/s
 import { aggregateMainVotes } from "@/lib/saga/votes"
 import { SagaMainVote } from "@/components/saga/main-vote"
 import { CommentSection } from "@/components/post-detail/comment-section"
-import { ScrollToOpenArticle } from "@/components/saga/scroll-to-open"
+import { SagaViewTracker } from "@/components/saga/saga-view-tracker"
 import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
 
 /** KST 날짜 마디 라벨 — "8월 2일" */
@@ -131,6 +131,13 @@ export default async function SagaDetailPage({
   const flow = STAGE_FLOW[saga.saga_type]
   const idx = stageIndex(saga.saga_type, saga.stage)
   const closed = saga.status === "closed"
+
+  // 떡밥에서 타고 들어온 기사 — 스크롤로 찾아가게 하지 않고 **헤더 바로 아래**에
+  // 펼쳐서 놓는다 (PM 토론 2026-08-04 #2: 클릭한 뉴스가 첫 화면에 있어야 한다.
+  // 시간순 연표에선 최신 기사가 항상 맨 아래라 착지가 구조적으로 어긋났었다)
+  const fromArticle = from
+    ? [...articlesByEntry.values()].flat().find((a) => a.postId === from)
+    : undefined
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
       <main className="mx-auto max-w-[760px] px-4 pt-6 pb-16 sm:px-6">
@@ -195,11 +202,42 @@ export default async function SagaDetailPage({
             </p>
           )}
 
-          {/* 메인 투표 — 1탭 참전. SSR 집계로 첫 페인트, 스탠스는 위젯이 하이드레이션 */}
-          <div className="mt-5">
-            <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
-          </div>
+          {/* 메인 투표 — 1탭 참전. 기사 경유 진입이면 투표는 기사 직후로 내려간다
+              (읽기 → 참전 순서 — PM 토론 #2) */}
+          {!fromArticle && (
+            <div className="mt-5">
+              <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
+            </div>
+          )}
         </header>
+
+        {/* ── 타고 들어온 기사 — 첫 화면에 펼쳐진 채 + 직후에 투표 ── */}
+        {fromArticle && fromArticle.contentHtml && (
+          <>
+            <section
+              className="mt-4 rounded-2xl px-5 py-4 sm:px-6"
+              style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+              aria-label="기사"
+            >
+              <h2
+                className="text-[17px] font-extrabold"
+                style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+              >
+                {fromArticle.title}
+              </h2>
+              <div
+                className="prose prose-base mt-2 max-w-[68ch]"
+                dangerouslySetInnerHTML={{ __html: fromArticle.contentHtml }}
+              />
+            </section>
+            <div
+              className="mt-3 rounded-2xl px-5 py-4 sm:px-6"
+              style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
+            >
+              <SagaMainVote slug={saga.slug} closed={closed} initial={vote} />
+            </div>
+          </>
+        )}
 
         {/* ── 연표 — 시간순(위→아래) 세로 레일 + 날짜 마디. 클러스터 1개 = 엔트리 1개 (D9) ── */}
         <section className="mt-6" aria-label="연표">
@@ -290,7 +328,7 @@ export default async function SagaDetailPage({
                         a.contentHtml && (
                           <details
                             key={a.postId}
-                            open={a.postId === from}
+                            open={a.postId === from && !fromArticle?.contentHtml}
                             data-article
                             className="group mt-2"
                           >
@@ -360,7 +398,7 @@ export default async function SagaDetailPage({
           </div>
         </section>
 
-        {from && <ScrollToOpenArticle />}
+        <SagaViewTracker slug={saga.slug} fromPostId={from} />
 
         {/* ── 댓글 — 앵커 포스트 경유로 기존 시스템 전부 재사용 (P0 오딧) ── */}
         <section className="mt-8" aria-label="댓글">

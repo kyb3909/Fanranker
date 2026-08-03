@@ -55,7 +55,12 @@ type AnalyticsEvent =
   | { name: "snack_feed_depth"; params: { depth: number } }
   | { name: "snack_card_open_post"; params: { post_id: string } }
   | { name: "cardnews_feed_open"; params: Record<string, never> }
-  | { name: "cardnews_card_open_post"; params: { post_id: string } }
+  // destination: 사가 연결 기사는 위키로 직행한다 (2026-08-04 PM 토론 #1 — 전환 분모 분리)
+  | { name: "cardnews_card_open_post"; params: { post_id: string; destination: "post" | "saga" } }
+  // ── 사가 계측 (PM 토론 2026-08-04 — "성공해도 증명할 숫자가 없다" 수리) ──
+  // from_card: 떡밥 카드 경유 진입 여부. 체류·재방문은 GA4 표준 지표가 페이지 단위로 잡는다
+  | { name: "saga_view"; params: { saga_slug: string; from_card: boolean } }
+  | { name: "saga_vote"; params: { saga_slug: string; choice: string } }
   // ── VS 쟁점 계측 (VS-RESULT 결정 1·2·5의 표본 — 안 1과 반드시 동행) ──
   // confidence 는 poll_id → polls.confidence 조인으로 붙인다 (이벤트엔 안 실음)
   | { name: "vs_impression"; params: { poll_id: string; surface: "card" | "post" } }

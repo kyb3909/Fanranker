@@ -136,6 +136,13 @@ function RowCard({
         </a>
       </p>
 
+      {/* 신규 생성 마찰 (PM 토론 #3) — 오추출의 폭발 반경은 "잘못된 새 문서 생성"에
+          집중되므로, 기존 사가에 쌓이는 건은 가볍게, 새 문서가 열리는 건만 경고 */}
+      {!saga && (
+        <p className="mt-1.5 rounded bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800">
+          ⚠️ 발행하면 <b>새 사가 문서가 생성</b>됩니다 — 선수명(오식별 주의)·방향을 확인하세요
+        </p>
+      )}
       {saga && (
         <p className="mt-1.5 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
           기존 사가에 쌓임:{" "}
