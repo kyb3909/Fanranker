@@ -29,6 +29,8 @@ export interface ExtractedTransfer {
   clubs: string[]
   /** 단계 신호 — lib/saga/stages.ts transfer 플로우 값 또는 null(신호 없음) */
   stage_signal: "interest" | "contact" | "bid" | "negotiation" | "medical" | "done" | null
+  /** 타임라인 엔트리용 한국어 한 줄 헤드라인 (드라이 톤) — 검수 화면에서 수정 가능 */
+  headline_ko: string | null
   /** 0~1 — 낮으면 검수 화면에서 눈에 띄게 */
   confidence: number
 }
@@ -49,6 +51,7 @@ const SYSTEM_PROMPT = `너는 축구 이적 뉴스 분류기다. 번호 매겨�
        "X, 재계약 거부하고 결별 수순" (목적지 없음) → out
 - clubs: 언급된 클럽 영문명 배열. 첫 번째 = 영입 추진(목적지) 클럽, 없으면 소속 클럽
 - stage_signal: "interest"(관심·후보 거론) | "contact"(접촉·문의) | "bid"(공식 제안·오퍼, 거절 포함) | "negotiation"(개인합의·클럽간 협상) | "medical"(메디컬 예정·진행) | "done"(오피셜·완료) | null(신호 없음)
+- headline_ko: 기사 내용을 한국어 한 줄로 (40자 이내, 팩트만, 감상·물음표 금지. 예: "갈라타사라이, 토트넘의 6,000만 유로 제안 거절"). is_transfer=false 면 null
 - confidence: 0~1
 
 JSON만 출력: {"items": [{"i": 1, ...}, {"i": 2, ...}, ...]}`
@@ -116,6 +119,10 @@ function sanitize(raw: unknown): ExtractedTransfer | null {
     direction: r.direction === "out" ? "out" : "in",
     clubs: Array.isArray(r.clubs) ? r.clubs.filter((c): c is string => typeof c === "string") : [],
     stage_signal: stage,
+    headline_ko:
+      typeof r.headline_ko === "string" && r.headline_ko.trim()
+        ? r.headline_ko.trim().slice(0, 80)
+        : null,
     confidence: typeof r.confidence === "number" ? Math.max(0, Math.min(1, r.confidence)) : 0.5,
   }
 }

@@ -93,16 +93,22 @@ async function cronGet(request: Request) {
     }
 
     // ── 3. 멱등 적재 ──
-    let inserted = 0
-    for (let i = 0; i < rows.length; i += 100) {
-      const chunk = rows.slice(i, i + 100)
-      const { data, error } = await supabase
+    // ignoreDuplicates upsert 는 .select() 로 삽입분을 돌려주지 않는다 (첫 실행 실측:
+    // 47건 들어갔는데 0 보고) — 전후 총건수 차이로 센다
+    const countAll = async () => {
+      const { count } = await supabase
         .from("saga_reservoir")
-        .upsert(chunk, { onConflict: "source_url", ignoreDuplicates: true })
-        .select("id")
-      if (error) throw error
-      inserted += data?.length ?? 0
+        .select("id", { count: "exact", head: true })
+      return count ?? 0
     }
+    const before = await countAll()
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await supabase
+        .from("saga_reservoir")
+        .upsert(rows.slice(i, i + 100), { onConflict: "source_url", ignoreDuplicates: true })
+      if (error) throw error
+    }
+    const inserted = (await countAll()) - before
 
     return NextResponse.json({
       ok: true,

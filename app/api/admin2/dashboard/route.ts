@@ -71,6 +71,7 @@ export async function GET() {
     pendingStickers,
     newsQueue,
     aggQueue,
+    sagaQueue,
     pendingRefunds,
     unsettledSlips,
     publishedToday,
@@ -127,6 +128,10 @@ export async function GET() {
       .from("agg_reservoir")
       .select("id", { count: "exact", head: true })
       .eq("status", "drafted"),
+    supabase
+      .from("saga_reservoir")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued"),
     supabase
       .from("pending_refunds")
       .select("id", { count: "exact", head: true })
@@ -252,6 +257,14 @@ export async function GET() {
       count: aggQueue.count ?? 0,
       href: "/admin2/agg",
       severity: "normal",
+    },
+    {
+      key: "saga-review",
+      label: "사가 검수",
+      count: sagaQueue.count ?? 0,
+      href: "/admin2/saga",
+      severity: "normal",
+      note: "발행하면 사가 문서 타임라인에 실린다 — 이 큐가 유일한 발행 경로",
     },
     {
       key: "refunds",
