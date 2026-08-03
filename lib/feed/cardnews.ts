@@ -253,10 +253,40 @@ export async function fetchHeroCards(limit = 3): Promise<CardNewsItem[]> {
     (r) => !isKoreanSource(r.source_url ?? null)
   )
 
-  // ── 자동 선정 규칙 (2026-08-04 운영자: "무작위면 안 된다, 규칙을 정하자") ──
-  // 핀이 부족하면 최근 24시간 기사 중 점수순으로 채운다:
-  //   팬 반응(댓글×3 + 추천×2) + 이적설 사가 연결 +5 + 오피셜 +3, 동점이면 최신순.
-  // 운영자 핀은 언제나 이 규칙보다 위 (핀 = 수동 오버라이드).
+  // ── 2순위: 편집장 에이전트 픽 (hero-editor cron, 30분 주기) ──
+  // 에이전트가 "눈길·논쟁 유발·다양성" 편집 기준으로 고른 3장 + 선정 이유 기록.
+  // 6시간 넘게 갱신이 없으면(에이전트 정지) 무시하고 아래 규칙 폴백으로.
+  if (rows.length < limit) {
+    const { data: pick } = await supabase
+      .from("agent_picks")
+      .select("payload, updated_at")
+      .eq("kind", "hero")
+      .maybeSingle()
+    const fresh =
+      pick && Date.now() - new Date(pick.updated_at as string).getTime() < 6 * 3600 * 1000
+    const pickIds = fresh
+      ? ((pick.payload as { picks?: { id: string }[] })?.picks ?? []).map((p) => p.id)
+      : []
+    if (pickIds.length > 0) {
+      const { data: picked } = await supabase
+        .from("posts")
+        .select(
+          "id, user_id, title, image, content, vote_count, comment_count, created_at, source_url, post_flairs!flair_id ( name, color )"
+        )
+        .in("id", pickIds)
+        .is("deleted_at", null)
+      const byId = new Map(((picked ?? []) as unknown as PostRow[]).map((p) => [p.id, p]))
+      const pinnedIds = new Set(rows.map((r) => r.id))
+      for (const id of pickIds) {
+        const p = byId.get(id)
+        if (p && !pinnedIds.has(id) && !isKoreanSource(p.source_url ?? null)) rows.push(p)
+      }
+      rows = rows.slice(0, limit)
+    }
+  }
+
+  // ── 3순위: 점수 규칙 폴백 (에이전트 정지·픽 소진 시에도 홈은 산다) ──
+  // 팬 반응(댓글×3 + 추천×2) + 이적설 사가 연결 +5 + 오피셜 +3, 동점이면 최신순.
   if (rows.length < limit) {
     const { data: recent } = await supabase
       .from("posts")
