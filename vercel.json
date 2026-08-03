@@ -75,6 +75,10 @@
     {
       "path": "/api/cron/saga-deadline",
       "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/naming-librarian",
+      "schedule": "40 15 * * *"
     }
   ]
 }
