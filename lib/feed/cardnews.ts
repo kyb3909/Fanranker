@@ -36,8 +36,7 @@ export interface CardNewsItem {
 }
 
 /** 떡밥 자격 시간창 — 이보다 오래된 글은 피드에서 내린다 (2026-08-03 운영자: 36시간) */
-const FEED_WINDOW_HOURS = 36
-/** 36시간 × 봇 발행량(하루 ~20건)이면 한 번에 다 담긴다 — 커서 페이지네이션 불필요 */
+/** 봇 발행량(하루 ~20건)이면 최근분이 한 번에 다 담긴다 — 커서 페이지네이션 불필요 */
 const FEED_LIMIT = 60
 const SOURCE_RE = /^\[([^\]]{1,24})\]\s*/
 
@@ -56,12 +55,13 @@ function toPreview(content: string): string {
 /**
  * 카드뉴스 피드 데이터 (2026-08-03 운영자 개편).
  *
- * - **36시간 창**: 그보다 오래된 떡밥은 내린다 — 떡밥은 신선도가 생명.
- * - **온도순**: posts.temperature(pg_cron 매분 갱신 — 댓글이 계속 달리는 글이 높음)
- *   내림차순. "계속 싸우고 있는 글"이 위로 온다.
- * - **단일 페이지**: 36h × 봇 발행량이면 60건 안에 다 들어온다. 온도순은 커서
- *   페이지네이션이 성립하지 않으므로(순위가 매분 변함) 한 번에 담고 커서는 항상 null.
- *   `before` 인자는 기존 API 계약 호환용으로만 남긴다 — 값이 오면 빈 페이지 반환.
+ * - 시간 창 없음 (36h 제한은 2026-08-03 운영자 지시로 해제 — 발행량이 회복될 때까지
+ *   빈 피드보다 오래된 떡밥이 낫다). 최신 60건이 모수.
+ * - **정렬**: 실제로 끓는 글(온도 ≥ 0.5 — 댓글이 붙고 있는 글)만 온도순으로 위에 올리고,
+ *   나머지는 최신순. 전면 온도순으로 하면 다 식은 피드에서 0.1° 닷새 전 글이 0° 어제
+ *   글보다 위로 오는 왜곡이 생긴다 (2026-08-03 실데이터 확인).
+ * - **단일 페이지**: 순위가 매분 변해 커서 페이지네이션이 성립하지 않는다 —
+ *   한 번에 담고 커서는 항상 null. `before` 는 기존 API 계약 호환용 — 값이 오면 빈 페이지.
  */
 export async function fetchCardNews(
   before?: string | null
@@ -70,22 +70,25 @@ export async function fetchCardNews(
   if (before) return { cards: [], nextCursor: null }
 
   const supabase = createServiceRoleClient()
-  const windowStart = new Date(Date.now() - FEED_WINDOW_HOURS * 3600 * 1000).toISOString()
 
   const { data: posts, error } = await supabase
     .from("posts")
     .select(
       // post_flairs 임베드는 !flair_id 힌트 필수 (post_flair_map 추가 후 관계 모호 — f15c802a 참조)
-      "id, user_id, title, image, content, vote_count, comment_count, created_at, post_flairs!flair_id ( name, color )"
+      "id, user_id, title, image, content, vote_count, comment_count, temperature, created_at, post_flairs!flair_id ( name, color )"
     )
     .is("deleted_at", null)
     .eq("user_id", NEWS_BOT_USER_ID)
-    .gte("created_at", windowStart)
-    .order("temperature", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(FEED_LIMIT)
   if (error) throw error
-  const rows = (posts ?? []) as unknown as PostRow[]
+  const fetched = (posts ?? []) as unknown as PostRow[]
+
+  // 끓는 글(≥0.5)은 온도순으로 앞에, 식은 글은 최신순 그대로
+  const hot = fetched
+    .filter((r) => (r.temperature ?? 0) >= 0.5)
+    .sort((a, b) => (b.temperature ?? 0) - (a.temperature ?? 0))
+  const rows = [...hot, ...fetched.filter((r) => (r.temperature ?? 0) < 0.5)]
 
   const cards = await buildCards(supabase, rows)
   // 떡밥 카드에서 바로 투표 (안 1, 2026-07-31) — 쇼윈도 표면이라 높은 바:
@@ -110,6 +113,7 @@ interface PostRow {
   content: unknown
   vote_count: number | null
   comment_count: number | null
+  temperature: number | null
   created_at: string
   post_flairs:
     | { name: string; color: string | null }
