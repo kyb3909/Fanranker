@@ -63,6 +63,14 @@
     {
       "path": "/api/cron/season-weekly-draw-snapshot",
       "schedule": "5 15 * * 0"
+    },
+    {
+      "path": "/api/cron/saga-ingest",
+      "schedule": "12,42 * * * *"
+    },
+    {
+      "path": "/api/cron/saga-extract",
+      "schedule": "3,18,33,48 * * * *"
     }
   ]
 }
