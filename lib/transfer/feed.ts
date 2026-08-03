@@ -45,7 +45,7 @@ const TIER1_RE =
   /fabrizio\s*romano|\bromano\b|ornstein|plettenberg|di\s*marzio|\bmoretto\b|nicol[oò]\s*schira|\bschira\b|simon stone|bbc|sky sports|sky germany|the athletic|l'?[ée]quipe|guardian|reuters/i
 
 /** original_title 의 [출처] 브래킷 추출 — 기자명이 최우선 출처 */
-function bracketSource(originalTitle: string | null): string | null {
+export function bracketSource(originalTitle: string | null): string | null {
   const m = originalTitle?.match(/^\[([^\]]{2,40})\]/)
   return m ? m[1] : null
 }
@@ -113,7 +113,7 @@ function hostOf(url: string | null): string | null {
 }
 
 /** 링크/도메인에서 원 매체 해석. 애그리게이터는 null (표시 금지) */
-function outletFromUrl(url: string | null): string | null {
+export function outletFromUrl(url: string | null): string | null {
   const host = hostOf(url)
   if (!host) return null
   if (AGGREGATOR_HOSTS.test(host)) return null
@@ -138,7 +138,7 @@ function outletFromUrl(url: string | null): string | null {
 }
 
 /** author 필드 해석 — naver 소스는 author 가 원 언론사 도메인 (예: mk.co.kr) */
-function outletFromAuthor(author: string | null): string | null {
+export function outletFromAuthor(author: string | null): string | null {
   if (!author || author.startsWith("/u/")) return null
   const host = author.replace(/^www\./, "").toLowerCase()
   if (OUTLET_NAMES[host]) return OUTLET_NAMES[host]
