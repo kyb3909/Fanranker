@@ -280,7 +280,7 @@ function TransferEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "transfer" 
       <article className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md" style={card}>
         <div className="flex items-center gap-2 text-[11.5px] font-bold">
           <span style={{ color: TIER_COLOR[ev.tier] ?? "var(--wc-mute)" }}>
-            {ev.tier === "official" ? "오피셜" : ev.tier === "tier1" ? "티어1" : "루머"}
+            {ev.tier === "official" ? "오피셜" : ev.tier === "tier1" ? "유력" : "루머"}
           </span>
           {ev.stageAfter && (
             <span

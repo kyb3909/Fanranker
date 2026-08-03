@@ -55,7 +55,7 @@ interface SagaInfo {
 
 const TIER_STYLE = {
   official: { label: "오피셜", bg: "#0E7A3C", fg: "#fff" },
-  tier1: { label: "티어1", bg: "#7a1e3c", fg: "#fff" },
+  tier1: { label: "유력", bg: "#7a1e3c", fg: "#fff" },
   rumor: { label: "루머", bg: "#f3ede2", fg: "#946A12" },
 } as const
 

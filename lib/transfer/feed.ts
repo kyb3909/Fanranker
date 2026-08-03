@@ -22,13 +22,13 @@ export interface TransferItem {
 }
 
 /**
- * 오피셜 마커 — "완료됐다"를 직접 말하는 강한 표현만 (2026-07-31 보수화).
- * 이전 룰은 `completed`("completed 60% of our project"), `official`("unofficial"),
- * `입단`("입단 임박") 같은 부분 매칭으로 진행형 루머까지 오피셜을 달았다 —
- * 신뢰 라벨이 오염되면 상황판 전체의 신뢰가 무너진다.
+ * 오피셜 마커 — **공식 발표만** (2026-08-04 운영자 확정: "오피셜은 오직 공식 발표,
+ * 가능성 높은 건 전부 유력"). here we go·done deal·has signed 같은 기자발 확정
+ * 보도는 아무리 확실해도 유력(tier1) — 발표 주체가 구단/기관일 때만 오피셜.
+ * (\bofficial\b 단독 매칭은 "first official bid" 오분류 실사고로 제거)
  */
 const OFFICIAL_RE =
-  /here we go|\bofficial\b|\[오피셜\]|오피셜\s*[:)\]]|공식\s*발표|공식\s*확정|이적\s*확정|입단\s*확정|영입\s*확정|이적\s*완료|메디컬\s*통과|has signed|done deal|completed\s+(?:a\s+|the\s+)?(?:permanent\s+)?(?:transfer|move|deal)|transfer\s+completed|unveiled/i
+  /\[오피셜\]|오피셜\s*[:)\]]|공식\s*발표|공식\s*확정|공식\s*입장|이적\s*확정|입단\s*확정|영입\s*확정|이적\s*완료|계약\s*체결.*공식|officially\s+(?:announced|confirmed|unveiled)|is pleased to (?:announce|confirm)|club\s+(?:has\s+)?announced/i
 
 /** 부정 신호 — 오피셜 마커를 인용·부정하는 제목 ("'오피셜' 공식발표 완전 무의미" 사례) */
 const NEGATION_RE = /무의미|미정|불발|취소|무산|아직/
@@ -40,9 +40,12 @@ const NEGATION_RE = /무의미|미정|불발|취소|무산|아직/
 const HEDGE_RE =
   /루머|이적설|찌라시|임박|가능성|추진|검토|협상|접촉|경쟁|관심|후보|거론|희망|원해|원한다|난항|보류|\?|rumou?r|reportedly|close to|closing in|poised|edging|verge|in talks|negotiat|approach|interest|linked|race for|working on|finalising|finalizing|targets?\b|could\b|would\b/i
 
-/** Tier1 기자/매체 — [브래킷] 출처 또는 본문 매칭. 루머라도 사실상 유력 보도로 취급 */
+/**
+ * 유력(tier1) — 신뢰 기자/매체 보도 + 기자발 확정 표현(here we go·done deal 등).
+ * "가능성 높은 건 전부 유력" (2026-08-04) — 오피셜에서 강등된 확정 보도가 여기로.
+ */
 const TIER1_RE =
-  /fabrizio\s*romano|\bromano\b|ornstein|plettenberg|di\s*marzio|\bmoretto\b|nicol[oò]\s*schira|\bschira\b|simon stone|bbc|sky sports|sky germany|the athletic|l'?[ée]quipe|guardian|reuters/i
+  /fabrizio\s*romano|\bromano\b|ornstein|plettenberg|di\s*marzio|\bmoretto\b|nicol[oò]\s*schira|\bschira\b|simon stone|bbc|sky sports|sky germany|the athletic|l'?[ée]quipe|guardian|reuters|here we go|done deal|has signed|메디컬\s*통과|completed\s+(?:a\s+|the\s+)?(?:permanent\s+)?(?:transfer|move|deal)|transfer\s+completed|unveiled|합의\s*완료/i
 
 /** original_title 의 [출처] 브래킷 추출 — 기자명이 최우선 출처 */
 export function bracketSource(originalTitle: string | null): string | null {

@@ -113,7 +113,7 @@ export async function generateMetadata({
   }
 }
 
-const TIER_LABEL = { official: "오피셜", tier1: "티어1", rumor: "루머" } as const
+const TIER_LABEL = { official: "오피셜", tier1: "유력", rumor: "루머" } as const
 const TIER_COLOR = { official: "#0E7A3C", tier1: "var(--wc-burgundy)", rumor: "#946A12" } as const
 
 export default async function SagaDetailPage({

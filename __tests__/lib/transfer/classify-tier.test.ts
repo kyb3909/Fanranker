@@ -22,16 +22,18 @@ function tier(over: {
   })
 }
 
-describe("classifyTier — 오피셜은 완료를 직접 말할 때만", () => {
-  it("완료 마커: here we go / has signed / completed transfer / [오피셜] / 이적 확정", () => {
-    expect(tier({ original_title: "[Romano] Danny Welbeck to Chelsea, here we go!" })).toBe(
-      "official"
-    )
-    expect(
-      tier({ original_title: "Maxence Lacroix has completed a permanent transfer to Chelsea" })
-    ).toBe("official")
+describe("classifyTier — 오피셜은 공식 발표만 (2026-08-04 운영자 확정)", () => {
+  it("공식 발표 마커만 오피셜: [오피셜] / 이적 확정 / 공식 발표", () => {
     expect(tier({ original_title: "[오피셜]韓 축구 유럽파 공격수 탄생" })).toBe("official")
     expect(tier({ headline_kr: "이한범, 벨기에 명문 클뤼프 브뤼허 이적 확정" })).toBe("official")
+  })
+
+  it("기자발 확정 보도(here we go·completed transfer)는 아무리 확실해도 유력", () => {
+    // 정책 변경 (2026-08-04): "가능성 높은 건 다 유력, 오피셜은 공식 발표만"
+    expect(tier({ original_title: "[Romano] Danny Welbeck to Chelsea, here we go!" })).toBe("tier1")
+    expect(
+      tier({ original_title: "Maxence Lacroix has completed a permanent transfer to Chelsea" })
+    ).toBe("tier1")
   })
 
   it("구단 공식 도메인은 오피셜", () => {
