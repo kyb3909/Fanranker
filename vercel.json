@@ -87,6 +87,10 @@
     {
       "path": "/api/cron/news-interest-filter",
       "schedule": "14 * * * *"
+    },
+    {
+      "path": "/api/cron/news-learn-edits",
+      "schedule": "30 13 * * *"
     }
   ]
 }
