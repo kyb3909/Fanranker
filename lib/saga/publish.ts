@@ -123,6 +123,139 @@ export async function linkArticleToSeasonWiki(
   return null
 }
 
+/** 검수자가 지정한 사가 연결 (2026-08-04 운영자: "검수하면서 사가를 고르거나 새로 만든다") */
+export interface ArticleSagaChoice {
+  mode: "none" | "existing" | "new"
+  /** existing: 연결할 사가 id */
+  sagaId?: string
+  /** new: 영문/로마자 선수명 (사전 미등재 시 필수 — 한글만으론 키를 못 만든다) */
+  player?: string
+  /** new: 한글 표기 (표시용) */
+  playerKr?: string
+  /** new: 영입(in)/이탈(out) 드라마 */
+  direction?: "in" | "out"
+}
+
+function articleTierAndOrigin(article: {
+  postId: string
+  title: string
+  sourceUrl: string | null
+}) {
+  const tier = classifyTier({
+    category: null,
+    original_title: article.title,
+    headline_kr: article.title,
+    link_url: article.sourceUrl,
+    source_id: null,
+  })
+  const origin = resolveOrigin({
+    original_title: article.title,
+    author: null,
+    link_url: article.sourceUrl,
+    external_url: null,
+  })
+  return {
+    tier,
+    origin: {
+      reporter: origin.reporter,
+      outlet: origin.outlet,
+      url: origin.url ?? `/post/${article.postId}`,
+    },
+  }
+}
+
+/**
+ * 검수 화면의 사가 지정 연결 — LLM 추출을 거치지 않으므로 오연결이 없다.
+ * 자동 경로(linkArticleToSaga)와 달리 실패를 throw 한다: 검수자가 직접 고른
+ * 연결은 조용히 삼키면 안 되고, 호출부(발행 라우트)가 발행은 유지한 채
+ * 실패만 응답으로 보고한다.
+ */
+export async function linkArticleToSagaChosen(
+  supabase: ServiceClient,
+  article: { postId: string; title: string; sourceUrl: string | null; occurredAt?: string },
+  choice: ArticleSagaChoice
+): Promise<{ sagaSlug: string; sagaTitle: string } | null> {
+  if (choice.mode === "none") return null
+  const occurredAt = article.occurredAt ?? new Date().toISOString()
+  const { tier, origin } = articleTierAndOrigin(article)
+
+  if (choice.mode === "existing") {
+    if (!choice.sagaId) throw new Error("연결할 사가가 지정되지 않았습니다.")
+    const { data: saga } = await supabase
+      .from("sagas")
+      .select("id, slug, title, saga_type, subject")
+      .eq("id", choice.sagaId)
+      .maybeSingle()
+    if (!saga) throw new Error("사가를 찾을 수 없습니다.")
+
+    // 시즌 위키 — 연대기 사료로 연결만 (엔트리는 transfer 전용)
+    if (saga.saga_type === "season") {
+      await supabase
+        .from("saga_article_links")
+        .upsert({ post_id: article.postId, saga_id: saga.id }, { onConflict: "post_id" })
+      return { sagaSlug: saga.slug as string, sagaTitle: saga.title as string }
+    }
+
+    const subj = saga.subject as {
+      player_key?: string
+      player_name_kr?: string | null
+      direction?: string
+    }
+    if (!subj.player_key) throw new Error("사가 subject 에 선수 키가 없습니다.")
+    // 사가 자신의 subject 로 upsertSagaEntry — identity 가 그대로 일치해 같은 문서에
+    // 쌓이고, 에코 접힘(D9)·범프·stage 전이를 표준 경로 하나로 유지한다
+    const result = await upsertSagaEntry(supabase, {
+      player: subj.player_key,
+      playerKr: subj.player_name_kr ?? null,
+      direction: subj.direction === "out" ? "out" : "in",
+      stageSignal: null,
+      headline: article.title,
+      tier,
+      origin,
+      occurredAt,
+    })
+    await supabase
+      .from("saga_article_links")
+      .upsert(
+        { post_id: article.postId, saga_id: result.sagaId, entry_id: result.entryId },
+        { onConflict: "post_id" }
+      )
+    return { sagaSlug: result.sagaSlug, sagaTitle: result.sagaTitle }
+  }
+
+  // new — 검수자 입력 선수명으로 생성 (동일인 가드가 있어 기존 사가가 있으면 거기로 합류)
+  const { data: aliasRows } = await supabase
+    .from("news_alias_dictionary")
+    .select("romanized, preferred_ko, surfaces")
+    .eq("category", "player")
+  const canon = canonicalizePlayer(
+    (choice.player || choice.playerKr || "").trim(),
+    buildAliasIndex((aliasRows ?? []) as AliasRow[])
+  )
+  const player = canon.matched ? canon.key : (choice.player ?? "").trim()
+  const playerKr = canon.ko ?? choice.playerKr?.trim() ?? null
+  if (!normalizePlayerKey(player)) {
+    throw new Error("영문(로마자) 선수명이 필요합니다 — 한글 표기가 사전에 없습니다.")
+  }
+  const result = await upsertSagaEntry(supabase, {
+    player,
+    playerKr,
+    direction: choice.direction ?? "in",
+    stageSignal: null,
+    headline: article.title,
+    tier,
+    origin,
+    occurredAt,
+  })
+  await supabase
+    .from("saga_article_links")
+    .upsert(
+      { post_id: article.postId, saga_id: result.sagaId, entry_id: result.entryId },
+      { onConflict: "post_id" }
+    )
+  return { sagaSlug: result.sagaSlug, sagaTitle: result.sagaTitle }
+}
+
 export async function linkArticleToSaga(
   supabase: ServiceClient,
   article: { postId: string; title: string; sourceUrl: string | null; occurredAt?: string }

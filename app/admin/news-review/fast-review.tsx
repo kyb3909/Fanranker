@@ -36,6 +36,24 @@ export interface FlairChoice {
   team_id: string | null
 }
 
+export interface SagaOption {
+  id: string
+  title: string
+  saga_type: string
+  stage: string
+}
+
+/** 항목별 사가 연결 선택 — auto(기본)는 서버에 안 보내고 현행 LLM 추출에 맡긴다 */
+interface SagaPick {
+  mode: "auto" | "none" | "existing" | "new"
+  sagaId?: string
+  player?: string
+  playerKr?: string
+  direction: "in" | "out"
+}
+
+const SAGA_PICK_DEFAULT: SagaPick = { mode: "auto", direction: "in" }
+
 export interface DeskItem {
   id: string
   title: string
@@ -65,7 +83,15 @@ interface VsDecision {
   optionB?: string
 }
 
-export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: FlairChoice[] }) {
+export function FastReview({
+  items,
+  flairs,
+  sagas,
+}: {
+  items: DeskItem[]
+  flairs: FlairChoice[]
+  sagas: SagaOption[]
+}) {
   const [queue, setQueue] = useState(items)
   const [cursor, setCursor] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -77,6 +103,7 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
   const [editTitle, setEditTitle] = useState("")
   const [editContent, setEditContent] = useState<unknown>(null)
   const [flairSel, setFlairSel] = useState<Record<string, string[]>>({})
+  const [sagaSel, setSagaSel] = useState<Record<string, SagaPick>>({})
   const [vsDecisions, setVsDecisions] = useState<Record<string, VsDecision>>({})
   /** VS 문구 인라인 수정 중인 항목 id */
   const [vsEditing, setVsEditing] = useState<string | null>(null)
@@ -87,6 +114,11 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
   const flairsFor = useCallback(
     (item: DeskItem) => flairSel[item.id] ?? item.suggestedFlairIds,
     [flairSel]
+  )
+
+  const sagaPickFor = useCallback(
+    (item: DeskItem) => sagaSel[item.id] ?? SAGA_PICK_DEFAULT,
+    [sagaSel]
   )
 
   /** 처리 끝난 항목을 큐에서 빼고 커서를 제자리에 유지 (다음 항목이 그 자리로 올라온다) */
@@ -113,6 +145,20 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
       override?: { title?: string; content?: unknown }
     ) => {
       if (busy) return
+      const sagaPick = sagaPickFor(item)
+      if (
+        action === "publish" &&
+        sagaPick.mode === "new" &&
+        !sagaPick.player?.trim() &&
+        !sagaPick.playerKr?.trim()
+      ) {
+        toast({
+          variant: "destructive",
+          title: "사가 선수명 필요",
+          description: "새 사가를 만들려면 선수명을 입력하세요.",
+        })
+        return
+      }
       setBusy(true)
       try {
         const res = await fetch("/api/admin/news-review", {
@@ -127,6 +173,21 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                   title: override?.title ?? item.title,
                   content: override?.content ?? item.content,
                   ...(action === "publish" ? { flair_ids: flairsFor(item) } : {}),
+                  ...(action === "publish" && sagaPick.mode !== "auto"
+                    ? {
+                        saga: {
+                          mode: sagaPick.mode,
+                          ...(sagaPick.mode === "existing" ? { saga_id: sagaPick.sagaId } : {}),
+                          ...(sagaPick.mode === "new"
+                            ? {
+                                player: sagaPick.player?.trim() || undefined,
+                                player_kr: sagaPick.playerKr?.trim() || undefined,
+                                direction: sagaPick.direction,
+                              }
+                            : {}),
+                        },
+                      }
+                    : {}),
                   ...(action === "publish" && item.vs && vsDecisions[item.id]
                     ? { vs: vsDecisions[item.id] }
                     : {}),
@@ -136,7 +197,12 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                 : {}),
           }),
         })
-        const d = (await res.json().catch(() => ({}))) as { error?: string; learning?: boolean }
+        const d = (await res.json().catch(() => ({}))) as {
+          error?: string
+          learning?: boolean
+          saga?: { slug: string; title: string } | null
+          saga_error?: string
+        }
         if (!res.ok) {
           toast({ variant: "destructive", title: "실패", description: d.error ?? "처리 실패" })
           return
@@ -162,10 +228,18 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
 
         removeFromQueue([item.id])
         if (action === "publish") {
-          toast({
-            title: "발행 완료",
-            description: d.learning ? "고치신 표기를 학습해 다음 기사에 반영합니다." : undefined,
-          })
+          const parts = [
+            d.saga ? `사가 연결: ${d.saga.title}` : null,
+            d.learning ? "고치신 표기를 학습해 다음 기사에 반영합니다." : null,
+          ].filter(Boolean)
+          toast({ title: "발행 완료", description: parts.length ? parts.join(" · ") : undefined })
+          if (d.saga_error) {
+            toast({
+              variant: "destructive",
+              title: "사가 연결 실패 (발행은 완료)",
+              description: d.saga_error,
+            })
+          }
         } else if (action === "reject" && d.learning) {
           toast({
             title: "반려 + 학습",
@@ -176,7 +250,7 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
         setBusy(false)
       }
     },
-    [busy, flairsFor, removeFromQueue]
+    [busy, flairsFor, sagaPickFor, vsDecisions, removeFromQueue]
   )
 
   const bulkReject = useCallback(async () => {
@@ -453,6 +527,97 @@ export function FastReview({ items, flairs }: { items: DeskItem[]; flairs: Flair
                             </button>
                           )
                         })}
+                      </div>
+                    )}
+
+                    {/* ── 사가 연결 — 발행하면서 이 기사가 어느 사가로 갈지 지정
+                        (2026-08-04 운영자). 기본 '자동'은 현행 LLM 추출 그대로. ── */}
+                    {active && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]"
+                      >
+                        <span className="text-muted-foreground font-medium">사가</span>
+                        {(() => {
+                          const pick = sagaPickFor(item)
+                          const setPick = (patch: Partial<SagaPick>) =>
+                            setSagaSel((prev) => ({
+                              ...prev,
+                              [item.id]: { ...sagaPickFor(item), ...patch },
+                            }))
+                          return (
+                            <>
+                              <select
+                                value={pick.mode === "existing" ? (pick.sagaId ?? "") : pick.mode}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  if (v === "auto" || v === "none" || v === "new") {
+                                    setPick({ mode: v, sagaId: undefined })
+                                  } else {
+                                    setPick({ mode: "existing", sagaId: v })
+                                  }
+                                }}
+                                className="bg-background max-w-[300px] rounded border px-1.5 py-1"
+                              >
+                                <option value="auto">자동 연결 (AI 추출)</option>
+                                <option value="none">연결 안 함</option>
+                                <option value="new">＋ 새 사가 만들기</option>
+                                <optgroup label="이적 사가 (최근 활동순)">
+                                  {sagas
+                                    .filter((s) => s.saga_type === "transfer")
+                                    .map((s) => (
+                                      <option key={s.id} value={s.id}>
+                                        {s.title} · {s.stage}
+                                      </option>
+                                    ))}
+                                </optgroup>
+                                <optgroup label="팀 시즌 위키">
+                                  {sagas
+                                    .filter((s) => s.saga_type === "season")
+                                    .map((s) => (
+                                      <option key={s.id} value={s.id}>
+                                        {s.title}
+                                      </option>
+                                    ))}
+                                </optgroup>
+                              </select>
+                              {pick.mode === "new" && (
+                                <>
+                                  <input
+                                    value={pick.playerKr ?? ""}
+                                    onChange={(e) => setPick({ playerKr: e.target.value })}
+                                    placeholder="선수명 (한글)"
+                                    className="w-[110px] rounded border px-1.5 py-1"
+                                  />
+                                  <input
+                                    value={pick.player ?? ""}
+                                    onChange={(e) => setPick({ player: e.target.value })}
+                                    placeholder="영문/로마자"
+                                    className="w-[120px] rounded border px-1.5 py-1"
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      setPick({ direction: pick.direction === "in" ? "out" : "in" })
+                                    }
+                                    className={cn(
+                                      "rounded border px-2 py-1 font-medium",
+                                      pick.direction === "in"
+                                        ? "border-emerald-300 text-emerald-700"
+                                        : "border-red-300 text-red-700"
+                                    )}
+                                    title="영입(IN) / 이탈(OUT) 드라마 — 클릭해서 전환"
+                                  >
+                                    {pick.direction === "in" ? "IN 영입" : "OUT 이탈"}
+                                  </button>
+                                  <span className="text-muted-foreground">
+                                    한글이 사전에 없으면 영문 필수 · 같은 선수 사가가 있으면 자동
+                                    합류
+                                  </span>
+                                </>
+                              )}
+                            </>
+                          )
+                        })()}
                       </div>
                     )}
                   </div>

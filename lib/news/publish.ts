@@ -12,7 +12,11 @@ import {
   type VsDraftProposal,
   type VsReviewDecision,
 } from "@/lib/news/vs-issue"
-import { linkArticleToSaga } from "@/lib/saga/publish"
+import {
+  linkArticleToSaga,
+  linkArticleToSagaChosen,
+  type ArticleSagaChoice,
+} from "@/lib/saga/publish"
 import { splitLongParagraphs } from "@/lib/tiptap/split-paragraphs"
 import type { TipTapNode } from "@/types/post"
 
@@ -58,6 +62,8 @@ export interface PublishNewsOptions {
   auto?: boolean
   /** 검수 화면의 VS 결정 (켜기/끄기/문구 수정). 미전달이면 confidence 기본값 */
   vs?: VsReviewDecision | null
+  /** 검수자가 지정한 사가 연결. 미전달(null/undefined)이면 자동(LLM 추출) */
+  saga?: ArticleSagaChoice | null
 }
 
 /**
@@ -97,7 +103,13 @@ export async function publishNewsDraft(
   supabase: ServiceClient,
   item: NewsReservoirItem,
   opts: PublishNewsOptions
-): Promise<{ postId?: string; error?: string }> {
+): Promise<{
+  postId?: string
+  error?: string
+  /** 검수자 지정 연결의 결과 (자동 연결은 after 에서 처리돼 여기 없음) */
+  saga?: { slug: string; title: string } | null
+  sagaError?: string
+}> {
   const now = new Date().toISOString()
   // 긴 단일 문단 → 2~3문장 단위 문단 분할 (가독성, 2026-08-04 운영자)
   const content = splitLongParagraphs(await rehostContentImages(opts.content))
@@ -183,17 +195,32 @@ export async function publishNewsDraft(
     imageUrl: image,
   })
 
-  // 이적설 사가 연동 — 이적 기사면 해당 선수의 사가 위키에 엔트리로 쌓인다 (없으면
-  // 사가 자동 생성). 기사 발행 = 사람 검수 통과 시점이므로 무검수 자동발행이 아니다.
-  // 이적 기사가 아니면 내부에서 no-op, 실패해도 발행에는 영향 없음.
-  after(async () => {
-    await linkArticleToSaga(supabase, {
-      postId: post.id,
-      title: opts.title,
-      sourceUrl,
-      occurredAt: now,
+  // 이적설 사가 연동 — 검수자가 지정(opts.saga)했으면 추출 없이 동기 연결하고 결과를
+  // 응답에 담는다 (검수자가 즉시 확인). 미지정이면 자동: 이적 기사면 해당 선수의 사가
+  // 위키에 엔트리로 쌓이고(없으면 자동 생성), 아니면 no-op — 실패해도 발행 유지.
+  let sagaLinked: { slug: string; title: string } | null = null
+  let sagaError: string | undefined
+  if (opts.saga) {
+    try {
+      const linked = await linkArticleToSagaChosen(
+        supabase,
+        { postId: post.id, title: opts.title, sourceUrl, occurredAt: now },
+        opts.saga
+      )
+      if (linked) sagaLinked = { slug: linked.sagaSlug, title: linked.sagaTitle }
+    } catch (e) {
+      sagaError = e instanceof Error ? e.message : String(e)
+    }
+  } else {
+    after(async () => {
+      await linkArticleToSaga(supabase, {
+        postId: post.id,
+        title: opts.title,
+        sourceUrl,
+        occurredAt: now,
+      })
     })
-  })
+  }
 
   // VS 쟁점 폴 — 스캐너가 초안 단계에서 판정·제안한 것(draft.vs)을 검수 결정과 합쳐
   // 확정한다 (2026-07-31, 3인 회의: 발행 시 LLM 생성 제거 — 사람 눈이 노출 전에
@@ -220,7 +247,7 @@ export async function publishNewsDraft(
     })
   }
 
-  return { postId: post.id }
+  return { postId: post.id, saga: sagaLinked, ...(sagaError ? { sagaError } : {}) }
 }
 
 /**

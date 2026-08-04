@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { suggestFlairs, type FlairOption } from "@/lib/news/suggest-flair"
 import { SagaReviewQueue } from "@/components/admin/saga-review-queue"
-import { FastReview, type DeskItem, type FlairChoice } from "./fast-review"
+import { FastReview, type DeskItem, type FlairChoice, type SagaOption } from "./fast-review"
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "뉴스 검수 | 관리자" }
@@ -73,6 +73,16 @@ export default async function NewsReviewPage() {
     team_id: f.team_id,
   }))
 
+  // 활성 사가 목록 — 검수하면서 기사를 특정 사가에 붙이거나 새 사가를 만들 수 있게
+  // (2026-08-04 운영자). 최근 활동순 = 셀렉트에서 지금 뜨거운 사가가 위에 온다.
+  const { data: sagaRows } = await supabase
+    .from("sagas")
+    .select("id, title, saga_type, stage")
+    .eq("status", "active")
+    .order("last_event_at", { ascending: false })
+    .limit(200)
+  const sagas: SagaOption[] = (sagaRows as SagaOption[]) ?? []
+
   // 전량 조회 — 옛 화면은 50건 제한이라 나머지가 존재조차 안 보인 채 만료됐다.
   // 정렬은 **오래된 것부터**: 먼저 사라질 것을 먼저 보여준다(만료 임박 우선).
   const { data } = await supabase
@@ -107,7 +117,7 @@ export default async function NewsReviewPage() {
 
   return (
     <div className="mx-auto max-w-[900px] p-6">
-      <FastReview items={items} flairs={flairs} />
+      <FastReview items={items} flairs={flairs} sagas={sagas} />
       <p className="text-muted-foreground mt-4 text-xs">
         발행하면 <b>공놀이봇</b> 이름으로 축구 게시판에 올라갑니다. 말머리는 제목으로 자동 추천되며
         발행 전에 눌러서 바꿀 수 있고, 담벼락에는 <b>대표 1개(팀·리그 우선)</b>만 표시됩니다.

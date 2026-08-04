@@ -34,6 +34,17 @@ const BodySchema = z.object({
       optionB: z.string().min(1).max(24).optional(),
     })
     .optional(),
+  // 사가 연결 지정 — 미전달이면 자동(LLM 추출). none=연결 안 함 / existing=기존 사가 /
+  // new=새 사가 생성 (동일인 가드가 있어 같은 선수 사가가 있으면 거기로 합류)
+  saga: z
+    .object({
+      mode: z.enum(["none", "existing", "new"]),
+      saga_id: z.string().uuid().optional(),
+      player: z.string().max(80).optional(),
+      player_kr: z.string().max(40).optional(),
+      direction: z.enum(["in", "out"]).optional(),
+    })
+    .optional(),
 })
 
 type DraftReservoirRow = NewsReservoirItem & { status: string }
@@ -146,11 +157,21 @@ export async function POST(req: NextRequest) {
   // "봇 원본 → 검수 최종" 쌍이 reservoir 에 남는다 (correction-examples 재작성 few-shot 재료)
   if (wasEdited) item.draft = nextDraft
 
+  const sagaChoice = parsed.data.saga
   const result = await publishNewsDraft(supabase, item, {
     title: finalTitle,
     content: finalContent,
     flairIds: parsed.data.flair_ids,
     vs: parsed.data.vs,
+    saga: sagaChoice
+      ? {
+          mode: sagaChoice.mode,
+          sagaId: sagaChoice.saga_id,
+          player: sagaChoice.player,
+          playerKr: sagaChoice.player_kr,
+          direction: sagaChoice.direction,
+        }
+      : null,
     preEdit: wasEdited
       ? { title: original.title ?? null, content: original.content ?? null }
       : null,
@@ -165,5 +186,8 @@ export async function POST(req: NextRequest) {
     post_id: result.postId,
     // 검수자에게 "이 수정은 학습된다"를 알려주는 신호 (실제 결과는 after 에서 처리)
     learning: wasEdited,
+    // 검수자 지정 사가 연결 결과 (자동 연결은 응답 후 처리라 여기 없음)
+    saga: result.saga ?? null,
+    ...(result.sagaError ? { saga_error: result.sagaError } : {}),
   })
 }
