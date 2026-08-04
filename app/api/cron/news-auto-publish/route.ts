@@ -85,13 +85,16 @@ async function run(request: NextRequest) {
     return NextResponse.json({ ok: true, published: 0, skipped: `일일 상한 ${DAILY_CAP} 도달` })
   }
 
-  // 오늘 자동발행분 — 소량 재개 상한은 자동분만 따로 센다
+  // 오늘 자동발행분 — 소량 재개 상한은 자동분만 따로 센다.
+  // ⚠️ updated_at 기준이면 안 된다: 학습 배치(edit-learner)가 어제 발행분의 audit 만
+  // 건드려도 updated_at 이 튀어 오늘 상한을 유령으로 소진한다 (2026-08-04 실측 —
+  // 유령 포함 10/10 으로 자동발행 정지). 발행 시각으로 센다 (ISO 문자열 비교, 둘 다 UTC Z).
   const { count: autoToday } = await supabase
     .from("news_reservoir")
     .select("id", { count: "exact", head: true })
     .eq("status", "published")
     .contains("publish", { auto: true })
-    .gte("updated_at", kstMidnightUtcIso())
+    .gte("publish->>published_at", kstMidnightUtcIso())
   if ((autoToday ?? 0) >= AUTO_DAILY_CAP) {
     return NextResponse.json({
       ok: true,
