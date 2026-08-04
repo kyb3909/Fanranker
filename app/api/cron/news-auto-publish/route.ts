@@ -27,8 +27,8 @@ export const dynamic = "force-dynamic"
  * 게이트 (운영자 승인 2026-07-29):
  *   1. 시각 자료(이미지/임베드) 있는 초안만 — "사진 없음(떡밥 제외)" 기준과 동일
  *   2. 24시간 이내 초안만 — 뉴스는 시의성이 생명 (오래된 건 48h 자동반려가 처리)
- *   3. 하루 총량 상한 — 자동+수동 합산. 상한 도달 시 자동은 멈추고 수동만 가능
- *   4. 회당 상한 — 몰아서 발행하지 않고 하루에 걸쳐 분산
+ *   3. 회당 상한 — 몰아서 발행하지 않고 하루에 걸쳐 분산
+ *   (일일 총량·자동 상한은 2026-08-04 운영자 "무제한" 지시로 제거 — 품질 게이트가 문)
  *
  * 끄기: Vercel env NEWS_AUTO_PUBLISH=off (배포 없이 즉시).
  * 자동발행분은 reservoir publish.auto=true 로 표시 — 사후 구분·회수용.
@@ -36,12 +36,9 @@ export const dynamic = "force-dynamic"
  * 배치 학습기(hermes learn-news-edits, 매일 21시)가 diff 로 줍는다.
  */
 
-/** 하루 발행 총량 상한 (자동+수동 합산, KST 자정 기준). 물량 목표 = 하루 뉴스 20 */
-const DAILY_CAP = 20
-/** 자동발행만의 일일 상한 — 5로 시작했으나 중복 차단 게이트가 붙으며 실공급이
- *  얇아져 10으로 (2026-08-04). 오류율 문제 시 다시 축소 */
-const AUTO_DAILY_CAP = 10
-/** 회당 발행 상한 — 30분 주기 × 2건 = 최대 96건/일 이론치를 DAILY_CAP 이 자른다 */
+/** 회당 발행 상한 — 유일하게 남은 페이싱 장치. 일일 상한(총 20·자동 10)은 2026-08-04
+ *  운영자 "무제한으로" 지시로 제거 — 30분 주기 × 2건 = 이론 최대 96건/일이 실공급
+ *  (이미지 초안 ~80건/일)을 웃돌아 사실상 무제한이면서 몰아치기만 막는다 */
 const PER_RUN_CAP = 2
 /** 초안 신선도 (시간) */
 const MAX_AGE_HOURS = 24
@@ -75,33 +72,20 @@ async function run(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // 오늘 봇 발행 총량 (자동+수동) — posts 가 원장이라 reservoir 표기 방식과 무관하게 정확
+  // 오늘 발행량 집계 — 상한 아님, 응답 리포트용 (디스코드/로그에서 하루 흐름 관찰).
+  // 자동분은 publish.published_at 기준: updated_at 은 학습 배치(edit-learner)의 audit
+  // 갱신에도 튀어서 집계가 왜곡된다 (2026-08-04 실측).
   const { count: publishedToday } = await supabase
     .from("posts")
     .select("id", { count: "exact", head: true })
     .eq("user_id", NEWS_BOT_USER_ID)
     .gte("created_at", kstMidnightUtcIso())
-  if ((publishedToday ?? 0) >= DAILY_CAP) {
-    return NextResponse.json({ ok: true, published: 0, skipped: `일일 상한 ${DAILY_CAP} 도달` })
-  }
-
-  // 오늘 자동발행분 — 소량 재개 상한은 자동분만 따로 센다.
-  // ⚠️ updated_at 기준이면 안 된다: 학습 배치(edit-learner)가 어제 발행분의 audit 만
-  // 건드려도 updated_at 이 튀어 오늘 상한을 유령으로 소진한다 (2026-08-04 실측 —
-  // 유령 포함 10/10 으로 자동발행 정지). 발행 시각으로 센다 (ISO 문자열 비교, 둘 다 UTC Z).
   const { count: autoToday } = await supabase
     .from("news_reservoir")
     .select("id", { count: "exact", head: true })
     .eq("status", "published")
     .contains("publish", { auto: true })
     .gte("publish->>published_at", kstMidnightUtcIso())
-  if ((autoToday ?? 0) >= AUTO_DAILY_CAP) {
-    return NextResponse.json({
-      ok: true,
-      published: 0,
-      skipped: `자동 상한 ${AUTO_DAILY_CAP} 도달`,
-    })
-  }
 
   const freshCutoff = new Date(Date.now() - MAX_AGE_HOURS * 3600 * 1000).toISOString()
   const { data: drafts, error } = await supabase
@@ -131,11 +115,7 @@ async function run(request: NextRequest) {
     .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
   const recentTitles = (recentPosts ?? []).map((p) => p.title as string)
 
-  const budget = Math.min(
-    PER_RUN_CAP,
-    DAILY_CAP - (publishedToday ?? 0),
-    AUTO_DAILY_CAP - (autoToday ?? 0)
-  )
+  const budget = PER_RUN_CAP
   let published = 0
   const publishedIds: string[] = []
   const gated: string[] = []
