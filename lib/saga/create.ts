@@ -49,9 +49,11 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
     .maybeSingle()
   if (existing) return { saga: existing, created: false as const }
 
-  // 동일인 가드 (2026-08-04 운영자: "조던 헨더슨과 헨더슨이 다른 사가면 안 돼") —
-  // 키가 정확히 같지 않아도, 같은 윈도우·방향의 열린 사가 중 성이 같고 이름이
-  // 부분집합인 선수가 **정확히 하나** 있으면 새로 만들지 않고 그 문서에 쌓는다
+  // 동일인 가드 (2026-08-04 운영자: "조던 헨더슨과 헨더슨이 다른 사가면 안 돼",
+  // "기존에 저 선수 사가가 있으면 거기로 가야 해" — 포럼의 선수당 스레드 1개 원칙) —
+  // 같은 윈도우의 열린 사가 중 성이 같고 이름이 부분집합인 선수가 있으면 새로 만들지
+  // 않고 그 문서에 쌓는다. **방향(in/out)이 달라도 같은 선수면 같은 문서다**
+  // (래시퍼드 out/in 분열 실사고 — 나간다는 소식과 어디로 간다는 소식은 한 드라마).
   if (input.type === "transfer") {
     const newPlayerKey = normalizePlayerKey(String(input.subject.player_key ?? ""))
     // 빈 선수 키가 "-in-2026s" 유령 사가를 만든 실사고 (2026-08-04) — 생성 자체를 거부
@@ -63,13 +65,24 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
       .eq("window_key", input.windowKey)
       .eq("status", "active")
     const same = (candidates ?? []).filter((c) => {
-      const subj = c.subject as { player_key?: string; direction?: string }
-      return (
-        subj.direction === input.subject.direction &&
-        isSamePlayerKey(normalizePlayerKey(String(subj.player_key ?? "")), newPlayerKey)
-      )
+      const subj = c.subject as { player_key?: string }
+      return isSamePlayerKey(normalizePlayerKey(String(subj.player_key ?? "")), newPlayerKey)
     })
     if (same.length === 1) return { saga: same[0], created: false as const }
+    if (same.length > 1) {
+      // 후보끼리도 전부 동일인이면(과거 방향 분열 잔재) 최근 활동 문서로 —
+      // 동일인이 아닌 후보가 섞였으면(동성이인, 예: Jordan/Dean Henderson) 병합 포기
+      const keys = same.map((c) =>
+        normalizePlayerKey(String((c.subject as { player_key?: string }).player_key ?? ""))
+      )
+      const allSame = keys.every((k) => isSamePlayerKey(k, keys[0]))
+      if (allSame) {
+        const pick = [...same].sort(
+          (a, b) => new Date(b.last_event_at).getTime() - new Date(a.last_event_at).getTime()
+        )[0]
+        return { saga: pick, created: false as const }
+      }
+    }
   }
 
   // 앵커 보드의 category_id 조회 (마이그 20260804 가 시드)
