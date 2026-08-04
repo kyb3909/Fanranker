@@ -17,7 +17,6 @@ import {
   isWomensFootball,
 } from "@/lib/news/quality-gate"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
-import { classifyTier } from "@/lib/saga/tier"
 import { titleSimilarity } from "@/lib/saga/cluster"
 
 export const dynamic = "force-dynamic"
@@ -43,10 +42,6 @@ export const dynamic = "force-dynamic"
 const PER_RUN_CAP = 2
 /** 초안 신선도 (시간) */
 const MAX_AGE_HOURS = 24
-
-/** 이적 맥락 신호 — 이것이 있으면서 티어가 루머면 자동발행 금지 (오보 리스크는 사람만) */
-const TRANSFER_CONTEXT_RE =
-  /이적|영입|임대|방출|결별|재계약|입단|오퍼|제안|bid|transfer|sign|loan|deal|move/i
 
 function kstMidnightUtcIso(): string {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000)
@@ -171,35 +166,11 @@ async function run(request: NextRequest) {
       continue
     }
 
-    // 신뢰 계층화 — 이적 맥락 + 루머 티어는 자동발행 금지 (오보가 최악의 사고)
-    const tier = classifyTier({
-      category: null,
-      original_title: title,
-      headline_kr: title,
-      link_url: row.urls?.source ?? null,
-      source_id: null,
-    })
-    // ⚠️ 이 규칙이 실측상 최대 탈락 사유다 (여름 이적시장엔 기사 대부분이 이적 루머 —
-    // 2026-08-04 큐 67건 중 31건). 사유를 기록하지 않으면 운영자 눈엔 "쌓이기만 하고
-    // 발행이 안 됨"으로만 보이므로, 다른 게이트와 똑같이 사유를 남긴다.
-    if (tier === "rumor" && TRANSFER_CONTEXT_RE.test(title)) {
-      await supabase
-        .from("news_reservoir")
-        .update({
-          decision: {
-            ...(row.decision ?? {}),
-            auto_gate: {
-              pass: false,
-              reasons: ["루머 티어 + 이적 맥락 — 오보 리스크로 사람 검수 전용"],
-              at: new Date().toISOString(),
-            },
-          },
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", row.id)
-      gated.push(`${row.id}: 루머+이적`)
-      continue
-    }
+    // 루머 티어 + 이적 맥락 차단은 2026-08-04 운영자 확정으로 **제거**했다
+    // ("오보 어차피 루머니까 상관 없어"). 여름 이적시장엔 축구 기사 대부분이 이적
+    // 루머라 이 규칙 하나가 큐의 46%(67건 중 31건)를 잡아먹고 있었다.
+    // 남은 문: 검사관(본문·이미지)·표기 사전·중복·개인 블로그·여자 축구.
+    // 사가 쪽 D7(미확정 루머 noindex + 배너)은 그대로 유효하다.
 
     // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등
     const verdict = await inspectDraft(title, content)
