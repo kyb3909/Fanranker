@@ -16,6 +16,7 @@ import {
   PERSONAL_BLOG_RE,
   isWomensFootball,
 } from "@/lib/news/quality-gate"
+import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { classifyTier } from "@/lib/saga/tier"
 import { titleSimilarity } from "@/lib/saga/cluster"
 
@@ -178,14 +179,35 @@ async function run(request: NextRequest) {
       link_url: row.urls?.source ?? null,
       source_id: null,
     })
-    if (tier === "rumor" && TRANSFER_CONTEXT_RE.test(title)) continue
+    // ⚠️ 이 규칙이 실측상 최대 탈락 사유다 (여름 이적시장엔 기사 대부분이 이적 루머 —
+    // 2026-08-04 큐 67건 중 31건). 사유를 기록하지 않으면 운영자 눈엔 "쌓이기만 하고
+    // 발행이 안 됨"으로만 보이므로, 다른 게이트와 똑같이 사유를 남긴다.
+    if (tier === "rumor" && TRANSFER_CONTEXT_RE.test(title)) {
+      await supabase
+        .from("news_reservoir")
+        .update({
+          decision: {
+            ...(row.decision ?? {}),
+            auto_gate: {
+              pass: false,
+              reasons: ["루머 티어 + 이적 맥락 — 오보 리스크로 사람 검수 전용"],
+              at: new Date().toISOString(),
+            },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      gated.push(`${row.id}: 루머+이적`)
+      continue
+    }
 
     // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등
     const verdict = await inspectDraft(title, content)
     let failReasons = verdict.pass ? [] : verdict.reasons
     if (verdict.pass && verdict.playerNamesKr.length > 0) {
       const unknown = unknownPlayerNames(verdict.playerNamesKr, dict ?? [])
-      if (unknown.length > 0) failReasons = [`사전 미등재 선수명: ${unknown.join(", ")}`]
+      // 접두사는 상수 — 사전 후보 화면이 이 문자열을 파싱해 1클릭 등재를 제안한다
+      if (unknown.length > 0) failReasons = [`${UNKNOWN_PLAYER_PREFIX}${unknown.join(", ")}`]
     }
     // 이미지 적합성 (vision) — 배너·로고·광고 이미지 차단 (Substack 실사고)
     if (failReasons.length === 0) {
