@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 30
 
 /**
- * /admin2/saga 검수 큐 API (W3) — HITL 이 사가 발행의 유일한 경로 (PRD 게이트).
+ * /admin2/saga 검수 큐 API (W3) — 운영자 수동 검수·발행 경로.
  *
  *  GET  : queued 항목 + 각 항목의 saga_hint 에 걸리는 기존 사가 (있으면 표시)
  *  POST : { id, action: 'publish' | 'reject', edits? } — 본체는 lib/saga/publish.ts
@@ -35,7 +35,7 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth
   const { supabase } = auth
 
-  const { data: queue } = await supabase
+  const { data: queue, error: queueError } = await supabase
     .from("saga_reservoir")
     .select(
       "id, source_url, source, title, headline_kr, extracted, saga_hint, cluster_key, occurred_at, created_at"
@@ -43,15 +43,23 @@ export async function GET() {
     .eq("status", "queued")
     .order("occurred_at", { ascending: false })
     .limit(200)
+  if (queueError) {
+    console.error("[admin2/saga] queued 목록 조회 실패", queueError)
+    return NextResponse.json({ error: "사가 검수 큐 조회 실패" }, { status: 500 })
+  }
 
   // saga_hint 로 기존 사가 붙이기 — "이미 열린 문서에 쌓이는 건인지" 표시용
   const hints = [...new Set((queue ?? []).map((q) => q.saga_hint).filter(Boolean))] as string[]
-  const { data: sagas } = hints.length
+  const { data: sagas, error: sagasError } = hints.length
     ? await supabase
         .from("sagas")
         .select("identity_key, slug, title, stage, entry_count, status")
         .in("identity_key", hints)
-    : { data: [] }
+    : { data: [], error: null }
+  if (sagasError) {
+    console.error("[admin2/saga] 기존 사가 조회 실패", sagasError)
+    return NextResponse.json({ error: "기존 사가 조회 실패" }, { status: 500 })
+  }
 
   return NextResponse.json({ queue: queue ?? [], sagas: sagas ?? [] })
 }
@@ -67,21 +75,29 @@ export async function POST(request: NextRequest) {
   }
   const { id, action, edits } = parsed.data
 
-  const { data: row } = await supabase
+  const { data: row, error: rowError } = await supabase
     .from("saga_reservoir")
     .select("id, source_url, source, title, headline_kr, extracted, occurred_at")
     .eq("id", id)
     .eq("status", "queued")
     .maybeSingle()
+  if (rowError) {
+    console.error("[admin2/saga] 큐 항목 조회 실패", rowError)
+    return NextResponse.json({ error: "큐 항목 조회 실패" }, { status: 500 })
+  }
   if (!row) {
     return NextResponse.json({ error: "큐에 없는 항목입니다 (이미 처리됨?)" }, { status: 404 })
   }
 
   if (action === "reject") {
-    await supabase
+    const { error: rejectError } = await supabase
       .from("saga_reservoir")
       .update({ status: "rejected", updated_at: new Date().toISOString() })
       .eq("id", id)
+    if (rejectError) {
+      console.error("[admin2/saga] 큐 항목 반려 실패", rejectError)
+      return NextResponse.json({ error: "큐 항목 반려 실패" }, { status: 500 })
+    }
     return NextResponse.json({ ok: true })
   }
 

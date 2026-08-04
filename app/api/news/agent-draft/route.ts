@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createHash } from "node:crypto"
 import { z } from "zod"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { notifyDiscordOps } from "@/lib/discord-notify"
+import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
 
 export const dynamic = "force-dynamic"
 
@@ -27,13 +29,9 @@ const koreanTitle = (t: string) =>
   (t.replace(/^\s*(?:\[[^\]]{1,24}\]\s*)+/, "").match(/[가-힣]/g) || []).length >= 2
 
 const BodySchema = z.object({
-  title: z
-    .string()
-    .min(1)
-    .max(300)
-    .refine(koreanTitle, {
-      message: "제목 본문이 한국어가 아닙니다 (브래킷 출처 제외 한글 2음절 이상 필요)",
-    }),
+  title: z.string().min(1).max(300).refine(koreanTitle, {
+    message: "제목 본문이 한국어가 아닙니다 (브래킷 출처 제외 한글 2음절 이상 필요)",
+  }),
   /** TipTap doc JSON (Hermes 가 플레이북 형식대로 생성: 요약 문단 + 트윗/영상 embed 노드 + 출처 링크) */
   content: z.unknown(),
   /** 원문 소스 URL (트윗/기사) */
@@ -101,20 +99,62 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceRoleClient()
   const id = slugId(d.dedupe_key)
   const now = new Date().toISOString()
+  const runId = newsCandidateRunId("agent-draft")
+  const source = {
+    type: "hermes",
+    origin_url: d.origin_url ?? null,
+    source_url: d.source_url ?? null,
+  }
+  const contentHash = createHash("sha256")
+    .update(JSON.stringify({ title: d.title, content, source_url: d.source_url ?? null }))
+    .digest("hex")
 
   // 멱등: 같은 id(=dedupe) 가 이미 있으면 건너뜀
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("news_reservoir")
     .select("id, status")
     .eq("id", id)
     .maybeSingle<{ id: string; status: string }>()
+  if (existingError) {
+    return NextResponse.json(
+      { error: "중복 확인 실패", detail: existingError.message },
+      { status: 500 }
+    )
+  }
   if (existing) {
-    return NextResponse.json({ ok: true, id, status: existing.status, deduped: true })
+    // 중복 관측 자체가 이미 published/rejected 된 후보의 최신 상태를 되돌리면 안 된다.
+    const existingState =
+      existing.status === "published"
+        ? "published"
+        : existing.status === "rejected"
+          ? "rejected"
+          : "drafted"
+    const ledgerRecorded = await recordNewsCandidateEvents(supabase, [
+      {
+        candidate_id: id,
+        reservoir_id: id,
+        dedupe_key: d.dedupe_key,
+        canonical_url: d.source_url,
+        source,
+        content_hash: contentHash,
+        to_state: existingState,
+        actor: "agent-draft",
+        reason_code: "duplicate_input_existing_reservoir",
+        run_id: runId,
+      },
+    ])
+    return NextResponse.json({
+      ok: true,
+      id,
+      status: existing.status,
+      deduped: true,
+      observability: ledgerRecorded ? "ok" : "degraded",
+    })
   }
 
   const { error } = await supabase.from("news_reservoir").insert({
     id,
-    source: { type: "hermes", origin_url: d.origin_url ?? null, source_url: d.source_url ?? null },
+    source,
     urls: { source: d.source_url ?? null, origin: d.origin_url ?? null },
     raw: {
       title: d.title,
@@ -131,6 +171,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "적재 실패", detail: error.message }, { status: 500 })
   }
 
+  const ledgerRecorded = await recordNewsCandidateEvents(supabase, [
+    {
+      candidate_id: id,
+      reservoir_id: id,
+      dedupe_key: d.dedupe_key,
+      canonical_url: d.source_url,
+      source,
+      content_hash: contentHash,
+      to_state: "drafted",
+      actor: "agent-draft",
+      reason_code: "draft_created",
+      details: { has_source_text: Boolean(d.source_text), has_visual_proposal: Boolean(d.vs) },
+      run_id: runId,
+    },
+  ])
+
   // 운영 알림 — 새 검수 대기 기사 (디스코드 웹훅 미설정 시 no-op)
   await notifyDiscordOps({
     level: "info",
@@ -140,5 +196,13 @@ export async function POST(req: NextRequest) {
     fields: d.source_url ? [{ name: "원문", value: d.source_url }] : undefined,
   })
 
-  return NextResponse.json({ ok: true, id, status: "drafted" }, { status: 201 })
+  return NextResponse.json(
+    {
+      ok: true,
+      id,
+      status: "drafted",
+      observability: ledgerRecorded ? "ok" : "degraded",
+    },
+    { status: 201 }
+  )
 }

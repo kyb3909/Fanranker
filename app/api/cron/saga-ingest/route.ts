@@ -28,7 +28,7 @@ async function cronGet(request: Request) {
     const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
 
     // ── 1. 티커 2차 소비 (transfer/rumor, football, 최근 24h) ──
-    const { data: ticker } = await supabase
+    const { data: ticker, error: tickerError } = await supabase
       .from("news_ticker_items")
       .select(
         "id, original_title, headline_kr, category, link_url, external_url, author, source_id, posted_at"
@@ -38,6 +38,9 @@ async function cronGet(request: Request) {
       .gte("posted_at", cutoff)
       .order("posted_at", { ascending: false })
       .limit(200)
+    if (tickerError) {
+      return NextResponse.json({ ok: false, error: tickerError.message }, { status: 500 })
+    }
 
     const rows: {
       source_url: string
@@ -96,9 +99,10 @@ async function cronGet(request: Request) {
     // ignoreDuplicates upsert 는 .select() 로 삽입분을 돌려주지 않는다 (첫 실행 실측:
     // 47건 들어갔는데 0 보고) — 전후 총건수 차이로 센다
     const countAll = async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from("saga_reservoir")
         .select("id", { count: "exact", head: true })
+      if (error) throw error
       return count ?? 0
     }
     const before = await countAll()

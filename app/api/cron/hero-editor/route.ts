@@ -30,7 +30,7 @@ async function cronGet(request: Request) {
     const supabase = createServiceRoleClient()
 
     // 후보: 최근 24h, 이미지 있는 봇 기사
-    const { data: posts } = await supabase
+    const { data: posts, error: postsError } = await supabase
       .from("posts")
       .select("id, title, image, comment_count, vote_count, created_at")
       .eq("user_id", NEWS_BOT)
@@ -39,17 +39,23 @@ async function cronGet(request: Request) {
       .gte("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(25)
+    if (postsError) {
+      return NextResponse.json({ ok: false, error: postsError.message }, { status: 500 })
+    }
     if (!posts || posts.length === 0) {
       return NextResponse.json({ ok: true, skipped: "후보 없음" })
     }
 
-    const { data: links } = await supabase
+    const { data: links, error: linksError } = await supabase
       .from("saga_article_links")
       .select("post_id, sagas!inner ( saga_type )")
       .in(
         "post_id",
         posts.map((p) => p.id)
       )
+    if (linksError) {
+      return NextResponse.json({ ok: false, error: linksError.message }, { status: 500 })
+    }
     const sagaLinked = new Set(
       (links ?? [])
         .filter((l) => (l.sagas as unknown as { saga_type: string })?.saga_type === "transfer")
@@ -105,11 +111,14 @@ JSON만: {"picks": [{"id": "...", "reason": "..."}, ...]} — 정확히 3개, id
       return NextResponse.json({ ok: false, skipped: "유효한 픽 없음 — 기존 유지" })
     }
 
-    await supabase.from("agent_picks").upsert({
+    const { error: pickError } = await supabase.from("agent_picks").upsert({
       kind: "hero",
       payload: { picks, decided_at: new Date().toISOString() },
       updated_at: new Date().toISOString(),
     })
+    if (pickError) {
+      return NextResponse.json({ ok: false, error: pickError.message }, { status: 500 })
+    }
 
     return NextResponse.json({ ok: true, picks })
   }

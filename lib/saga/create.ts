@@ -183,7 +183,7 @@ export async function appendEntry(
     .select("id", { count: "exact", head: true })
     .eq("saga_id", sagaId)
 
-  await supabase
+  const { error: sagaUpdateError } = await supabase
     .from("sagas")
     .update({
       stage,
@@ -194,6 +194,7 @@ export async function appendEntry(
       ...(input.stageAfter === "done" ? { is_confirmed: true } : {}),
     })
     .eq("id", sagaId)
+  if (sagaUpdateError) throw new Error(`사가 상태 갱신 실패: ${sagaUpdateError.message}`)
 
   return entry
 }

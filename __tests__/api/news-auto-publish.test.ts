@@ -3,8 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 /**
  * 뉴스 자동발행 cron — 검수 없이 담벼락에 나가는 유일한 경로.
  * 여기서 잠그는 계약:
- *   · 사진/임베드 없는 초안은 자동으로 나가지 않는다 (사람 검수로만)
- *   · 일일 총량 상한(자동+수동 합산) 도달 시 멈춘다
+ *   · 실제 이미지 없는 초안은 자동으로 나가지 않는다 (사람 검수로만)
+ *   · 일일 상한은 없고 회당 2건 페이싱만 적용한다
+ *   · 자동 스킵 사유를 응답에 집계해 무기록 탈락을 막는다
  *   · 킬스위치 env 로 배포 없이 끌 수 있다
  *   · 자동발행분은 publish.auto=true 로 표시된다 (사후 회수용)
  */
@@ -25,32 +26,67 @@ vi.mock("@/lib/news/learn-corrections", () => ({
 vi.mock("@/lib/news/suggest-flair", () => ({
   suggestFlairs: () => ({ flairIds: [] }),
 }))
+vi.mock("@/lib/cron/log-run", () => ({
+  withCronLog: (_name: string, handler: (request: Request) => Promise<Response>) => handler,
+}))
+vi.mock("@/lib/news/quality-gate", () => ({
+  inspectDraft: vi.fn().mockResolvedValue({ pass: true, reasons: [], playerNamesKr: [] }),
+  inspectImage: vi.fn().mockResolvedValue({ pass: true, reason: "ok" }),
+  unknownPlayerNames: vi.fn().mockReturnValue([]),
+  PERSONAL_BLOG_RE: /substack\.com/i,
+  isWomensFootball: (...texts: (string | null | undefined)[]) =>
+    /women|여자\s*축구/i.test(texts.filter(Boolean).join(" ")),
+}))
+vi.mock("@/lib/saga/cluster", () => ({ titleSimilarity: () => 0 }))
+vi.mock("@/lib/images/rehost", () => ({
+  isSelfHostedImageUrl: () => true,
+  rehostExternalImage: vi.fn(async (src: string) => src),
+}))
+vi.mock("@/lib/saga/publish", () => ({
+  linkArticleToSaga: vi.fn().mockResolvedValue(null),
+  linkArticleToSagaChosen: vi.fn().mockResolvedValue(null),
+}))
+vi.mock("@/lib/news/vs-issue", () => ({
+  createVsPollFromDraft: vi.fn().mockResolvedValue(null),
+}))
 
 interface DraftRow {
   id: string
   status: string
-  urls: null
-  draft: { title?: string; content?: unknown }
+  urls: { source?: string | null } | null
+  draft: { title?: string; content?: unknown; original?: { title?: string } }
   entities: null
   tags: null
+  decision: Record<string, unknown> | null
   created_at: string
 }
 
 let drafts: DraftRow[] = []
 let botPublishedToday = 0
+let autoPublishedToday = 0
 const inserted: Record<string, unknown>[] = []
 const reservoirUpdates: Array<{ id: string; patch: Record<string, unknown> }> = []
 
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
+    rpc: vi.fn().mockResolvedValue({ data: 1, error: null }),
     from: (table: string) => {
       if (table === "posts") {
         return {
-          select: () => ({
-            eq: () => ({
-              gte: async () => ({ count: botPublishedToday, error: null }),
-            }),
-          }),
+          select: (_columns: string, options?: { head?: boolean }) =>
+            options?.head
+              ? {
+                  eq: () => ({
+                    gte: async () => ({ count: botPublishedToday, error: null }),
+                  }),
+                }
+              : {
+                  eq: () => ({
+                    is: () => ({
+                      gte: async () => ({ data: [], error: null }),
+                    }),
+                  }),
+                },
           insert: (row: Record<string, unknown>) => {
             inserted.push(row)
             return {
@@ -63,19 +99,33 @@ vi.mock("@/lib/supabase/server", () => ({
       }
       if (table === "news_reservoir") {
         return {
-          select: () => ({
-            eq: () => ({
-              gte: () => ({
-                order: () => ({ limit: async () => ({ data: drafts, error: null }) }),
-              }),
-            }),
-          }),
+          select: (_columns: string, options?: { head?: boolean }) =>
+            options?.head
+              ? {
+                  eq: () => ({
+                    contains: () => ({
+                      gte: async () => ({ count: autoPublishedToday, error: null }),
+                    }),
+                  }),
+                }
+              : {
+                  eq: () => ({
+                    gte: () => ({
+                      order: () => ({ limit: async () => ({ data: drafts, error: null }) }),
+                    }),
+                  }),
+                },
           update: (patch: Record<string, unknown>) => ({
             eq: async (_col: string, id: string) => {
               reservoirUpdates.push({ id, patch })
               return { error: null }
             },
           }),
+        }
+      }
+      if (table === "news_alias_dictionary") {
+        return {
+          select: () => ({ eq: async () => ({ data: [], error: null }) }),
         }
       }
       if (table === "post_flairs" || table === "post_flair_map") {
@@ -115,6 +165,7 @@ function draft(id: string, content: unknown): DraftRow {
     draft: { title: `기사 ${id}`, content },
     entities: null,
     tags: null,
+    decision: null,
     created_at: new Date().toISOString(),
   }
 }
@@ -137,16 +188,18 @@ describe("GET /api/cron/news-auto-publish", () => {
     process.env.NEWS_AUTO_PUBLISH = "on"
     drafts = []
     botPublishedToday = 0
+    autoPublishedToday = 0
     inserted.length = 0
     reservoirUpdates.length = 0
   })
 
-  it("사진/임베드 있는 초안만 발행하고 auto=true 로 표시한다", async () => {
+  it("실제 이미지가 있는 초안만 발행하고 auto=true 로 표시한다", async () => {
     drafts = [draft("a", visualDoc), draft("b", textOnlyDoc)]
 
     const body = await (await call()).json()
 
     expect(body.published).toBe(1)
+    expect(body.observability).toBe("ok")
     expect(inserted).toHaveLength(1)
     const patch = reservoirUpdates.find((u) => u.id === "a")?.patch as {
       status: string
@@ -166,23 +219,15 @@ describe("GET /api/cron/news-auto-publish", () => {
     expect(body.published).toBe(2)
   })
 
-  it("일일 총량 상한 도달 시 아무것도 발행하지 않는다", async () => {
-    botPublishedToday = 20
-    drafts = [draft("a", visualDoc)]
+  it("기발행 수량과 무관하게 회당 상한 2건만 적용한다", async () => {
+    botPublishedToday = 50
+    autoPublishedToday = 40
+    drafts = [draft("a", visualDoc), draft("b", visualDoc), draft("c", visualDoc)]
 
     const body = await (await call()).json()
 
-    expect(body.published).toBe(0)
-    expect(inserted).toHaveLength(0)
-  })
-
-  it("상한 직전이면 남은 만큼만 발행한다", async () => {
-    botPublishedToday = 19
-    drafts = [draft("a", visualDoc), draft("b", visualDoc)]
-
-    const body = await (await call()).json()
-
-    expect(body.published).toBe(1)
+    expect(body.published).toBe(2)
+    expect(inserted).toHaveLength(2)
   })
 
   it("기본값은 정지 — env NEWS_AUTO_PUBLISH=on 없이는 발행하지 않는다 (opt-in)", async () => {
@@ -208,6 +253,7 @@ describe("GET /api/cron/news-auto-publish", () => {
     const body = await (await call()).json()
 
     expect(body.published).toBe(0)
+    expect(body.skipCounts.no_image).toBe(1)
   })
 
   it("무내용 초안(80자 미만·자기지시 필러)은 이미지가 있어도 발행하지 않는다 (2026-07-30)", async () => {
@@ -231,6 +277,7 @@ describe("GET /api/cron/news-auto-publish", () => {
     const body = await (await call()).json()
 
     expect(body.published).toBe(0)
+    expect(body.skipCounts.content_free).toBe(1)
   })
 
   it("CRON_SECRET 없는 요청은 401", async () => {

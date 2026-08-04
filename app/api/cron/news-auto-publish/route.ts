@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import {
@@ -17,6 +18,12 @@ import {
   isWomensFootball,
 } from "@/lib/news/quality-gate"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
+import {
+  newsCandidateRunId,
+  recordNewsCandidateEvents,
+  type NewsCandidateEvent,
+  type NewsCandidateState,
+} from "@/lib/news/candidate-ledger"
 import { titleSimilarity } from "@/lib/saga/cluster"
 
 export const dynamic = "force-dynamic"
@@ -26,7 +33,7 @@ export const dynamic = "force-dynamic"
  *
  * 게이트 (운영자 승인 2026-07-29):
  *   1. 시각 자료(이미지/임베드) 있는 초안만 — "사진 없음(떡밥 제외)" 기준과 동일
- *   2. 24시간 이내 초안만 — 뉴스는 시의성이 생명 (오래된 건 48h 자동반려가 처리)
+ *   2. 24시간 이내 초안만 — 뉴스는 시의성이 생명 (오래된 건 24h 자동반려가 처리)
  *   3. 회당 상한 — 몰아서 발행하지 않고 하루에 걸쳐 분산
  *   (일일 총량·자동 상한은 2026-08-04 운영자 "무제한" 지시로 제거 — 품질 게이트가 문)
  *
@@ -67,6 +74,7 @@ async function run(request: NextRequest) {
   }
 
   const supabase = createServiceRoleClient()
+  const ledgerRunId = newsCandidateRunId("news-auto-publish")
 
   // 오늘 발행량 집계 — 상한 아님, 응답 리포트용 (디스코드/로그에서 하루 흐름 관찰).
   // 자동분은 publish.published_at 기준: updated_at 은 학습 배치(edit-learner)의 audit
@@ -116,6 +124,21 @@ async function run(request: NextRequest) {
   const publishedIds: string[] = []
   const gated: string[] = []
   const errors: string[] = []
+  const skipped: string[] = []
+  const skipCounts: Record<string, number> = {}
+  const ledgerEvents: NewsCandidateEvent[] = []
+  const noteSkip = (id: string, reason: string, state: NewsCandidateState = "held") => {
+    skipCounts[reason] = (skipCounts[reason] ?? 0) + 1
+    skipped.push(`${id}: ${reason}`)
+    ledgerEvents.push({
+      candidate_id: id,
+      reservoir_id: id,
+      to_state: state,
+      actor: "news-auto-publish",
+      reason_code: reason,
+      run_id: ledgerRunId,
+    })
+  }
 
   for (const row of (drafts ?? []) as (NewsReservoirItem & {
     status: string
@@ -125,30 +148,48 @@ async function run(request: NextRequest) {
 
     const title = row.draft?.title?.trim()
     const content = sanitizeTipTapJSON(row.draft?.content)
-    if (!title || !content) continue
+    if (!title || !content) {
+      noteSkip(row.id, "invalid_draft")
+      continue
+    }
     // 개인 블로그·뉴스레터 출처는 자동발행 금지 (2026-08-04 Substack 실사고)
-    if (row.urls?.source && PERSONAL_BLOG_RE.test(row.urls.source)) continue
+    if (row.urls?.source && PERSONAL_BLOG_RE.test(row.urls.source)) {
+      noteSkip(row.id, "personal_blog")
+      continue
+    }
     // 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04). 관심도 필터가 1차
     // 반려하지만 필터 사이클 전에 발행되는 걸 막는 이중 방어. 한국어 번역 제목에선
     // 성별 표기가 지워지는 실사고(몰리 바트립 — 구단 URL 에만 women 표기)가 있어
     // **출처 URL·영문 원제까지** 함께 검사한다.
-    if (isWomensFootball(title, row.urls?.source, row.draft?.original?.title)) continue
+    if (isWomensFootball(title, row.urls?.source, row.draft?.original?.title)) {
+      noteSkip(row.id, "womens_football")
+      continue
+    }
     // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
     // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
     const firstImage = extractFirstImageSrcFromTipTapJSON(content)
-    if (!firstImage) continue
+    if (!firstImage) {
+      noteSkip(row.id, "no_image", "needs_human")
+      continue
+    }
     // 무내용 초안 차단 (2026-07-30) — 원문 0자로 생성돼 "세부 사항은 기사에서 확인"류
     // 필러만 있는 글 (hermes-reddit-1vank7k 사례). 80자 미만·자기지시 문구 = 자동발행 금지.
-    if (isContentFreeDraft(content)) continue
+    if (isContentFreeDraft(content)) {
+      noteSkip(row.id, "content_free")
+      continue
+    }
 
     // 검사관 불통과 이력 → 재검사 안 함 (사람 검수 대기 중 — 비용·루프 방지)
     const priorGate = (row.decision?.auto_gate ?? null) as { pass?: boolean } | null
-    if (priorGate?.pass === false) continue
+    if (priorGate?.pass === false) {
+      noteSkip(row.id, "prior_gate_rejected", "needs_human")
+      continue
+    }
 
     // 중복 차단 — 최근 발행 기사와 제목이 비슷하면 같은 소식의 재탕
     const dup = recentTitles.find((t) => titleSimilarity(t, title) >= 0.5)
     if (dup) {
-      await supabase
+      const { error: gateWriteError } = await supabase
         .from("news_reservoir")
         .update({
           decision: {
@@ -162,6 +203,28 @@ async function run(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", row.id)
+      if (gateWriteError) {
+        errors.push(`${row.id}: 중복 게이트 기록 실패 — ${gateWriteError.message}`)
+        ledgerEvents.push({
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "retry_wait",
+          actor: "news-auto-publish",
+          reason_code: "duplicate_gate_write_failed",
+          details: { error: gateWriteError.message },
+          run_id: ledgerRunId,
+        })
+      } else {
+        ledgerEvents.push({
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "duplicate",
+          actor: "news-auto-publish",
+          reason_code: "recent_title_match",
+          details: { matched_title: dup.slice(0, 120) },
+          run_id: ledgerRunId,
+        })
+      }
       gated.push(`${row.id}: 중복`)
       continue
     }
@@ -173,6 +236,14 @@ async function run(request: NextRequest) {
     // 사가 쪽 D7(미확정 루머 noindex + 배너)은 그대로 유효하다.
 
     // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등
+    ledgerEvents.push({
+      candidate_id: row.id,
+      reservoir_id: row.id,
+      to_state: "fact_checking",
+      actor: "news-auto-publish",
+      reason_code: "quality_gate_started",
+      run_id: ledgerRunId,
+    })
     const verdict = await inspectDraft(title, content)
     let failReasons = verdict.pass ? [] : verdict.reasons
     if (verdict.pass && verdict.playerNamesKr.length > 0) {
@@ -187,7 +258,7 @@ async function run(request: NextRequest) {
       if (!img.pass) failReasons = [`이미지 부적합: ${img.reason}`]
     }
     if (failReasons.length > 0) {
-      await supabase
+      const { error: gateWriteError } = await supabase
         .from("news_reservoir")
         .update({
           decision: {
@@ -197,6 +268,28 @@ async function run(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", row.id)
+      if (gateWriteError) {
+        errors.push(`${row.id}: 품질 게이트 기록 실패 — ${gateWriteError.message}`)
+        ledgerEvents.push({
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "retry_wait",
+          actor: "news-auto-publish",
+          reason_code: "quality_gate_write_failed",
+          details: { reasons: failReasons, error: gateWriteError.message },
+          run_id: ledgerRunId,
+        })
+      } else {
+        ledgerEvents.push({
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "needs_human",
+          actor: "news-auto-publish",
+          reason_code: "quality_gate_rejected",
+          details: { reasons: failReasons },
+          run_id: ledgerRunId,
+        })
+      }
       gated.push(`${row.id}: ${failReasons.join(" / ")}`)
       continue
     }
@@ -205,6 +298,15 @@ async function run(request: NextRequest) {
     if (result.error) {
       // 실패 항목은 drafted 로 남는다 — 다음 run 재시도 또는 수동 검수로 처리 가능
       errors.push(`${row.id}: ${result.error}`)
+      ledgerEvents.push({
+        candidate_id: row.id,
+        reservoir_id: row.id,
+        to_state: "retry_wait",
+        actor: "news-auto-publish",
+        reason_code: "publish_failed",
+        details: { error: result.error },
+        run_id: ledgerRunId,
+      })
       continue
     }
     published++
@@ -213,19 +315,30 @@ async function run(request: NextRequest) {
     recentTitles.push(title)
   }
 
+  if (skipped.length > 0 || gated.length > 0 || errors.length > 0) {
+    console.info("[news-auto-publish] 처리 요약", {
+      skipped: skipCounts,
+      gated: gated.length,
+      errors,
+    })
+  }
+  const ledgerRecorded = await recordNewsCandidateEvents(supabase, ledgerEvents)
+
   return NextResponse.json({
     ok: errors.length === 0,
     published,
     postIds: publishedIds,
     todayTotal: (publishedToday ?? 0) + published,
     autoToday: (autoToday ?? 0) + published,
+    observability: ledgerRecorded ? "ok" : "degraded",
+    ...(skipped.length > 0 ? { skipped, skipCounts } : {}),
     ...(gated.length > 0 ? { gated } : {}),
     ...(errors.length > 0 ? { errors } : {}),
   })
 }
 
 export async function GET(request: NextRequest) {
-  return run(request)
+  return withCronLog("news-auto-publish", run)(request)
 }
 export async function POST(request: NextRequest) {
   return run(request)

@@ -8,8 +8,8 @@ import { FastReview, type DeskItem, type FlairChoice, type SagaOption } from "./
 export const dynamic = "force-dynamic"
 export const metadata = { title: "뉴스 검수 | 관리자" }
 
-/** 초안은 48시간 뒤 news-expire-drafts 크론이 자동 반려한다 */
-const EXPIRE_HOURS = 48
+/** 초안은 24시간 뒤 news-expire-drafts 크론이 자동 반려한다 */
+const EXPIRE_HOURS = 24
 
 interface Row {
   id: string

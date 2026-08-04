@@ -63,6 +63,7 @@ async function cronGet(request: Request) {
     let autoPublished = 0
     let discarded = 0
     let failed = 0
+    let autoHeld = 0
 
     for (let i = 0; i < pending.length; i += BATCH) {
       const chunk = pending.slice(i, i + BATCH)
@@ -75,11 +76,16 @@ async function cronGet(request: Request) {
         const ex = results[j]
         if (!ex) {
           failed++ // 배치 에러 — 상태 유지, 다음 회차 재시도
+          const { error: logError } = await supabase
+            .from("saga_reservoir")
+            .update({ error: "extract_failed", updated_at: new Date().toISOString() })
+            .eq("id", row.id)
+          if (logError) console.error("[saga-extract] 추출 실패 기록 실패", row.id, logError)
           continue
         }
 
         if (!ex.is_transfer || !ex.player) {
-          await supabase
+          const { error: discardError } = await supabase
             .from("saga_reservoir")
             .update({
               status: "discarded",
@@ -88,6 +94,11 @@ async function cronGet(request: Request) {
               updated_at: new Date().toISOString(),
             })
             .eq("id", row.id)
+          if (discardError) {
+            failed++
+            console.error("[saga-extract] discard 상태 기록 실패", row.id, discardError)
+            continue
+          }
           discarded++
           continue
         }
@@ -114,26 +125,36 @@ async function cronGet(request: Request) {
         })
         const clusterKey = `${normalizePlayerKey(ex.player)}:${ex.stage_signal ?? "news"}:${kstDay(row.occurred_at)}`
 
-        await supabase
+        const headlineKo = ex.headline_ko ?? row.headline_kr
+        const autoHoldReasons = [
+          ...(!canon.matched ? ["unknown_player"] : []),
+          ...((ex.confidence ?? 0) < AUTO_PUBLISH_MIN_CONFIDENCE ? ["low_confidence"] : []),
+          ...(!headlineKo ? ["no_korean_headline"] : []),
+          ...(isWomensFootball(row.title, row.headline_kr, row.source_url)
+            ? ["womens_football"]
+            : []),
+        ]
+
+        const { error: queueError } = await supabase
           .from("saga_reservoir")
           .update({
             status: "queued",
             extracted: { ...ex, tier },
             saga_hint: hint,
             cluster_key: clusterKey,
-            error: null,
+            error: autoHoldReasons.length > 0 ? `auto_hold:${autoHoldReasons.join(",")}` : null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", row.id)
+        if (queueError) {
+          failed++
+          console.error("[saga-extract] queued 상태 기록 실패", row.id, queueError)
+          continue
+        }
         queued++
 
         // ── 자동 발행 (2026-08-04) — 조건 미달은 큐에 남아 통합 검수 화면으로
-        const headlineKo = ex.headline_ko ?? row.headline_kr
-        const autoEligible =
-          canon.matched &&
-          (ex.confidence ?? 0) >= AUTO_PUBLISH_MIN_CONFIDENCE &&
-          !!headlineKo &&
-          !isWomensFootball(row.title, row.headline_kr, row.source_url)
+        const autoEligible = autoHoldReasons.length === 0
         if (autoEligible) {
           try {
             await publishReservoirItem(supabase, {
@@ -146,9 +167,21 @@ async function cronGet(request: Request) {
               occurred_at: row.occurred_at,
             })
             autoPublished++
-          } catch {
+          } catch (e) {
             // 발행 실패(빈 키 가드·동일인 충돌 등)는 큐에 남긴다 — 사람 검수 폴백
+            failed++
+            const message = e instanceof Error ? e.message : String(e)
+            const { error: logError } = await supabase
+              .from("saga_reservoir")
+              .update({
+                error: `auto_publish_failed:${message}`.slice(0, 500),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", row.id)
+            console.error("[saga-extract] 자동 발행 실패", row.id, message, logError ?? "")
           }
+        } else {
+          autoHeld++
         }
       }
     }
@@ -158,6 +191,7 @@ async function cronGet(request: Request) {
       processed: pending.length,
       queued,
       autoPublished,
+      autoHeld,
       discarded,
       failed,
     })

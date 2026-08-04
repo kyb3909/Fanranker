@@ -4,6 +4,11 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isClubName } from "@/lib/naming/pick"
 import { isWomensFootball } from "@/lib/news/quality-gate"
+import {
+  newsCandidateRunId,
+  recordNewsCandidateEvents,
+  type NewsCandidateEvent,
+} from "@/lib/news/candidate-ledger"
 
 export const maxDuration = 120
 export const dynamic = "force-dynamic"
@@ -58,7 +63,10 @@ async function judge(titles: string[]): Promise<({ keep: boolean; reason: string
       }),
       signal: AbortSignal.timeout(45000),
     })
-    if (!res.ok) return titles.map(() => null)
+    if (!res.ok) {
+      console.error("[news-interest-filter] LLM HTTP", res.status)
+      return titles.map(() => null)
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       items?: { i?: number; keep?: boolean; reason?: string }[]
@@ -73,7 +81,8 @@ async function judge(titles: string[]): Promise<({ keep: boolean; reason: string
       }
     }
     return titles.map((_, i) => byIndex.get(i + 1) ?? null)
-  } catch {
+  } catch (e) {
+    console.error("[news-interest-filter] 판정 실패", e)
     return titles.map(() => null)
   }
 }
@@ -85,13 +94,18 @@ async function cronGet(request: NextRequest) {
   {
     const dry = request.nextUrl.searchParams.get("dry") === "1"
     const supabase = createServiceRoleClient()
+    const ledgerRunId = newsCandidateRunId("news-interest-filter")
+    const ledgerEvents: NewsCandidateEvent[] = []
 
-    const { data: drafts } = await supabase
+    const { data: drafts, error: draftError } = await supabase
       .from("news_reservoir")
       .select("id, draft, decision, urls")
       .eq("status", "drafted")
       .order("created_at", { ascending: false })
       .limit(50)
+    if (draftError) {
+      return NextResponse.json({ ok: false, error: draftError.message }, { status: 500 })
+    }
 
     // 이미 심사한 항목 제외
     const pending = (drafts ?? []).filter(
@@ -101,6 +115,8 @@ async function cronGet(request: NextRequest) {
 
     let dropped = 0
     let kept = 0
+    let failed = 0
+    const errors: string[] = []
     const report: { title: string; verdict: string }[] = []
 
     // ── 철벽 가드: 제목에 EPL·빅클럽명이 있으면 LLM 심사 없이 무조건 유지 ──
@@ -123,7 +139,7 @@ async function cronGet(request: NextRequest) {
         dropped++
         report.push({ title, verdict: "reject(여자 축구)" })
         if (!dry) {
-          await supabase
+          const { error } = await supabase
             .from("news_reservoir")
             .update({
               status: "rejected",
@@ -137,13 +153,34 @@ async function cronGet(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("id", row.id)
+          if (error) {
+            errors.push(`${row.id}: 여자 축구 반려 기록 실패 — ${error.message}`)
+            ledgerEvents.push({
+              candidate_id: row.id,
+              reservoir_id: row.id,
+              to_state: "retry_wait",
+              actor: "news-interest-filter",
+              reason_code: "rejection_write_failed",
+              details: { error: error.message },
+              run_id: ledgerRunId,
+            })
+          } else {
+            ledgerEvents.push({
+              candidate_id: row.id,
+              reservoir_id: row.id,
+              to_state: "rejected",
+              actor: "news-interest-filter",
+              reason_code: "womens_football",
+              run_id: ledgerRunId,
+            })
+          }
         }
         continue
       }
       if (isClubName(title)) {
         kept++
         if (!dry) {
-          await supabase
+          const { error } = await supabase
             .from("news_reservoir")
             .update({
               decision: {
@@ -153,6 +190,27 @@ async function cronGet(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("id", row.id)
+          if (error) {
+            errors.push(`${row.id}: 클럽 가드 기록 실패 — ${error.message}`)
+            ledgerEvents.push({
+              candidate_id: row.id,
+              reservoir_id: row.id,
+              to_state: "retry_wait",
+              actor: "news-interest-filter",
+              reason_code: "interest_keep_write_failed",
+              details: { error: error.message },
+              run_id: ledgerRunId,
+            })
+          } else {
+            ledgerEvents.push({
+              candidate_id: row.id,
+              reservoir_id: row.id,
+              to_state: "assigned",
+              actor: "news-interest-filter",
+              reason_code: "club_guard_keep",
+              run_id: ledgerRunId,
+            })
+          }
         }
       } else {
         guarded.push(row)
@@ -167,26 +225,61 @@ async function cronGet(request: NextRequest) {
       for (let j = 0; j < chunk.length; j++) {
         const row = chunk[j]
         const v = verdicts[j]
-        if (!v) continue // 판정 실패 = 유지 (다음 회차 재시도)
+        if (!v) {
+          failed++ // 판정 실패 = 유지 (다음 회차 재시도)
+          if (!dry) {
+            ledgerEvents.push({
+              candidate_id: row.id,
+              reservoir_id: row.id,
+              to_state: "retry_wait",
+              actor: "news-interest-filter",
+              reason_code: "interest_judgement_failed",
+              run_id: ledgerRunId,
+            })
+          }
+          continue
+        }
 
         const nowIso = new Date().toISOString()
         if (v.keep) {
           kept++
           if (!dry) {
             // keep 마킹 — 재심사 방지 (반려 아님)
-            await supabase
+            const { error } = await supabase
               .from("news_reservoir")
               .update({
                 decision: { ...(row.decision ?? {}), interest: { keep: true, at: nowIso } },
                 updated_at: nowIso,
               })
               .eq("id", row.id)
+            if (error) {
+              errors.push(`${row.id}: 관심 유지 기록 실패 — ${error.message}`)
+              ledgerEvents.push({
+                candidate_id: row.id,
+                reservoir_id: row.id,
+                to_state: "retry_wait",
+                actor: "news-interest-filter",
+                reason_code: "interest_keep_write_failed",
+                details: { error: error.message },
+                run_id: ledgerRunId,
+              })
+            } else {
+              ledgerEvents.push({
+                candidate_id: row.id,
+                reservoir_id: row.id,
+                to_state: "assigned",
+                actor: "news-interest-filter",
+                reason_code: "interest_keep",
+                details: { reason: v.reason },
+                run_id: ledgerRunId,
+              })
+            }
           }
         } else {
           dropped++
           report.push({ title: titles[j], verdict: v.reason })
           if (!dry) {
-            await supabase
+            const { error } = await supabase
               .from("news_reservoir")
               .update({
                 status: "rejected",
@@ -200,12 +293,47 @@ async function cronGet(request: NextRequest) {
                 updated_at: nowIso,
               })
               .eq("id", row.id)
+            if (error) {
+              errors.push(`${row.id}: 관심도 반려 기록 실패 — ${error.message}`)
+              ledgerEvents.push({
+                candidate_id: row.id,
+                reservoir_id: row.id,
+                to_state: "retry_wait",
+                actor: "news-interest-filter",
+                reason_code: "rejection_write_failed",
+                details: { error: error.message },
+                run_id: ledgerRunId,
+              })
+            } else {
+              ledgerEvents.push({
+                candidate_id: row.id,
+                reservoir_id: row.id,
+                to_state: "rejected",
+                actor: "news-interest-filter",
+                reason_code: "low_interest",
+                details: { reason: v.reason },
+                run_id: ledgerRunId,
+              })
+            }
           }
         }
       }
     }
 
-    return NextResponse.json({ ok: true, dry, judged: pending.length, kept, dropped, report })
+    const ledgerRecorded = dry ? true : await recordNewsCandidateEvents(supabase, ledgerEvents)
+
+    return NextResponse.json({
+      ok: errors.length === 0,
+      dry,
+      attempted: pending.length,
+      judged: kept + dropped,
+      kept,
+      dropped,
+      failed,
+      observability: ledgerRecorded ? "ok" : "degraded",
+      report,
+      ...(errors.length > 0 ? { errors } : {}),
+    })
   }
 }
 

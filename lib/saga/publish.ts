@@ -62,11 +62,22 @@ export async function upsertSagaEntry(
 
   let entryId: string | null = null
   if (existingEntry) {
-    const echoes = [
-      ...((existingEntry.echoes as { outlet: string; url: string; title: string }[]) ?? []),
-      { outlet: d.origin.outlet, url: d.origin.url, title: d.headline },
-    ]
-    await supabase.from("saga_entries").update({ echoes }).eq("id", existingEntry.id)
+    const currentEchoes =
+      (existingEntry.echoes as { outlet: string; url: string; title: string }[]) ?? []
+    const alreadyFolded = currentEchoes.some(
+      (echo) => echo.url === d.origin.url && echo.title === d.headline
+    )
+    if (!alreadyFolded) {
+      const echoes = [
+        ...currentEchoes,
+        { outlet: d.origin.outlet, url: d.origin.url, title: d.headline },
+      ]
+      const { error: echoError } = await supabase
+        .from("saga_entries")
+        .update({ echoes })
+        .eq("id", existingEntry.id)
+      if (echoError) throw new Error(`사가 에코 추가 실패: ${echoError.message}`)
+    }
     entryId = existingEntry.id
   } else {
     const entry = await appendEntry(supabase, saga.id, "transfer", saga.stage, {
@@ -389,7 +400,7 @@ export async function publishReservoirItem(
   const day = new Date(new Date(row.occurred_at).getTime() + 9 * 3600 * 1000)
     .toISOString()
     .slice(0, 10)
-  await supabase
+  const { error: reservoirError } = await supabase
     .from("saga_reservoir")
     .update({
       status: "published",
@@ -402,6 +413,7 @@ export async function publishReservoirItem(
       updated_at: new Date().toISOString(),
     })
     .eq("id", row.id)
+  if (reservoirError) throw new Error(`사가 저수지 발행 상태 기록 실패: ${reservoirError.message}`)
 
   return { sagaSlug: result.sagaSlug, sagaTitle: result.sagaTitle, folded: result.folded }
 }

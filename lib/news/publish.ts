@@ -18,6 +18,7 @@ import {
   type ArticleSagaChoice,
 } from "@/lib/saga/publish"
 import { splitLongParagraphs } from "@/lib/tiptap/split-paragraphs"
+import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
 import type { TipTapNode } from "@/types/post"
 
 /**
@@ -159,14 +160,17 @@ export async function publishNewsDraft(
 
   // 다중 말머리 — post_flair_map 에 전체 기록 (대표 포함). 실패해도 발행은 유지.
   if (flairIds.length > 0) {
-    await supabase
+    const { error: flairMapError } = await supabase
       .from("post_flair_map")
       .insert(flairIds.map((fid) => ({ post_id: post.id, flair_id: fid })))
+    if (flairMapError) {
+      console.error("[news-publish] 다중 말머리 기록 실패 (발행 유지):", post.id, flairMapError)
+    }
   }
 
   // 수정 전 원본(pre_edit)은 교정 학습기(learn-from-edits)가 원본↔발행본 diff 에서
   // 표기 교정을 추출하는 재료 — draft 는 편집본으로 덮어쓰므로 여기 남기지 않으면 사라진다.
-  await supabase
+  const { error: reservoirError } = await supabase
     .from("news_reservoir")
     .update({
       status: "published",
@@ -180,6 +184,31 @@ export async function publishNewsDraft(
       updated_at: now,
     })
     .eq("id", item.id)
+  if (reservoirError) {
+    // 포스트는 이미 만들어졌으므로 여기서 실패 응답을 반환하면 호출부 재시도로 중복 글이
+    // 생긴다. 발행은 유지하되 운영자가 즉시 복구할 수 있도록 치명 로그를 남긴다.
+    console.error(
+      "[news-publish] CRITICAL: 글 발행 후 저수지 상태 기록 실패",
+      { reservoirId: item.id, postId: post.id },
+      reservoirError
+    )
+  }
+  await recordNewsCandidateEvents(supabase, [
+    {
+      candidate_id: item.id,
+      reservoir_id: item.id,
+      canonical_url: sourceUrl ?? undefined,
+      to_state: reservoirError ? "partially_published" : "published",
+      actor: opts.auto ? "news-auto-publish" : "news-desk",
+      reason_code: reservoirError ? "reservoir_update_failed" : "post_published",
+      details: {
+        post_id: post.id,
+        auto: Boolean(opts.auto),
+        ...(reservoirError ? { error: reservoirError.message } : {}),
+      },
+      run_id: newsCandidateRunId(opts.auto ? "news-auto-publish" : "news-desk"),
+    },
+  ])
 
   // 디스코드 뉴스봇 채널 발송 — 웹훅 미설정 시 no-op, 실패해도 발행에는 영향 없음.
   const teamTexts = (item.entities?.teams ?? []).flatMap((t) => [t.surface, t.preferred_ko])

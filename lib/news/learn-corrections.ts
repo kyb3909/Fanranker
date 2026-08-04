@@ -84,13 +84,17 @@ async function upsertCorrection(
   if (existing && existing.length > 0) {
     const row = existing[0] as { id: string; surfaces: string[] | null }
     if ((row.surfaces ?? []).includes(surface)) return "known"
-    await supabase
+    const { error } = await supabase
       .from("news_alias_dictionary")
       .update({
         surfaces: [...(row.surfaces ?? []), surface],
         updated_at: new Date().toISOString(),
       })
       .eq("id", row.id)
+    if (error) {
+      console.error("[desk-learn] surface 추가 실패:", error)
+      return "error"
+    }
     return "surface_added"
   }
 
@@ -103,7 +107,7 @@ async function upsertCorrection(
 
   if (stale && stale.length > 0) {
     const row = stale[0] as { id: string; surfaces: string[] | null }
-    await supabase
+    const { error } = await supabase
       .from("news_alias_dictionary")
       .update({
         preferred_ko: c.correct,
@@ -111,6 +115,10 @@ async function upsertCorrection(
         updated_at: new Date().toISOString(),
       })
       .eq("id", row.id)
+    if (error) {
+      console.error("[desk-learn] 대표 표기 교정 실패:", error)
+      return "error"
+    }
     return "entry_corrected"
   }
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
 
 export const dynamic = "force-dynamic"
 
@@ -43,8 +45,27 @@ async function handler(req: NextRequest) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, expired: data?.length ?? 0, cutoff: cutoffIso })
+  const runId = newsCandidateRunId("news-expire-drafts")
+  const ledgerRecorded = await recordNewsCandidateEvents(
+    supabase,
+    (data ?? []).map((row) => ({
+      candidate_id: row.id as string,
+      reservoir_id: row.id as string,
+      to_state: "expired" as const,
+      actor: "news-expire-drafts",
+      reason_code: "stale_draft_24h",
+      details: { cutoff: cutoffIso, expired_hours: EXPIRE_HOURS },
+      run_id: runId,
+    }))
+  )
+
+  return NextResponse.json({
+    ok: true,
+    expired: data?.length ?? 0,
+    cutoff: cutoffIso,
+    observability: ledgerRecorded ? "ok" : "degraded",
+  })
 }
 
-export const GET = handler
+export const GET = withCronLog("news-expire-drafts", handler)
 export const POST = handler

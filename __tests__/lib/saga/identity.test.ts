@@ -116,6 +116,15 @@ describe("isSamePlayerKey — 성만 쓴 표기와 풀네임 병합 (2026-08-04)
   it("jr 접미는 무시", () => {
     expect(isSamePlayerKey("vinicius-jr", "vinicius")).toBe(true)
   })
+
+  it("하이픈 복합 성은 마지막 토큰만 같은 다른 선수와 합치지 않는다", () => {
+    expect(isSamePlayerKey("james-ward-prowse", "ward-prowse")).toBe(true)
+    expect(isSamePlayerKey("james-ward-prowse", "matt-prowse")).toBe(false)
+  })
+
+  it("빈 키는 동일인으로 취급하지 않는다", () => {
+    expect(isSamePlayerKey("", "henderson")).toBe(false)
+  })
 })
 
 describe("canonicalizePlayer — 사전 성(姓) 폴백", () => {
