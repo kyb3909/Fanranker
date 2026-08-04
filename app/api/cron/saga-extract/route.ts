@@ -7,6 +7,8 @@ import { classifyTier } from "@/lib/saga/tier"
 import { identityKey, normalizePlayerKey } from "@/lib/saga/identity"
 import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/canonical"
 import { SAGA_WINDOW_KEY } from "@/lib/saga/config"
+import { publishReservoirItem } from "@/lib/saga/publish"
+import { isWomensFootball } from "@/lib/news/quality-gate"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -16,13 +18,21 @@ export const dynamic = "force-dynamic"
  *
  * 상태 전이:
  *   비이적/선수 미식별 → 'discarded' (error 에 사유)
- *   추출 성공        → 'queued' + extracted/saga_hint/cluster_key (검수 화면 재료)
+ *   추출 성공        → 'queued' → **자동 발행 시도** (2026-08-04 운영자: "사가는
+ *                      자동으로 생성이 되어야 해")
  * 배치 실패는 상태를 건드리지 않는다 — 다음 회차가 재시도.
- * 발행 없음 — HITL 검수(/admin2/saga, W3)가 유일한 발행 경로.
+ *
+ * 자동 발행 조건 (전부 충족해야 — 하나라도 아니면 큐에 남아 사람 검수):
+ *   1. 사전 등재 선수 (canonicalizePlayer 매칭) — 미등재는 새 사가 오식별 위험
+ *   2. 추출 확신도 ≥ 0.7
+ *   3. 한국어 헤드라인 존재 (headline_ko 또는 headline_kr)
+ *   4. 여자 축구 아님 (제목·헤드라인·URL 검사)
+ * 멱등성은 upsertSagaEntry 의 cluster_key UNIQUE 가 보장 (중복 = 에코 접힘).
  */
 
 const BATCH = 20
 const MAX_ROWS = 40 // 60s 안에 LLM 2콜
+const AUTO_PUBLISH_MIN_CONFIDENCE = 0.7
 
 function kstDay(iso: string): string {
   return new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
@@ -50,6 +60,7 @@ async function cronGet(request: Request) {
     const aliasIndex = buildAliasIndex((aliasRows ?? []) as AliasRow[])
 
     let queued = 0
+    let autoPublished = 0
     let discarded = 0
     let failed = 0
 
@@ -115,10 +126,41 @@ async function cronGet(request: Request) {
           })
           .eq("id", row.id)
         queued++
+
+        // ── 자동 발행 (2026-08-04) — 조건 미달은 큐에 남아 통합 검수 화면으로
+        const headlineKo = ex.headline_ko ?? row.headline_kr
+        const autoEligible =
+          canon.matched &&
+          (ex.confidence ?? 0) >= AUTO_PUBLISH_MIN_CONFIDENCE &&
+          !!headlineKo &&
+          !isWomensFootball(row.title, row.headline_kr, row.source_url)
+        if (autoEligible) {
+          try {
+            await publishReservoirItem(supabase, {
+              id: row.id,
+              source_url: row.source_url,
+              source: (row.source ?? null) as Record<string, unknown> | null,
+              title: row.title,
+              headline_kr: row.headline_kr,
+              extracted: { ...ex, tier },
+              occurred_at: row.occurred_at,
+            })
+            autoPublished++
+          } catch {
+            // 발행 실패(빈 키 가드·동일인 충돌 등)는 큐에 남긴다 — 사람 검수 폴백
+          }
+        }
       }
     }
 
-    return NextResponse.json({ ok: true, processed: pending.length, queued, discarded, failed })
+    return NextResponse.json({
+      ok: true,
+      processed: pending.length,
+      queued,
+      autoPublished,
+      discarded,
+      failed,
+    })
   }
 }
 

@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { suggestFlairs, type FlairOption } from "@/lib/news/suggest-flair"
+import { SagaReviewQueue } from "@/components/admin/saga-review-queue"
 import { FastReview, type DeskItem, type FlairChoice } from "./fast-review"
 
 export const dynamic = "force-dynamic"
@@ -112,6 +113,8 @@ export default async function NewsReviewPage() {
         발행 전에 눌러서 바꿀 수 있고, 담벼락에는 <b>대표 1개(팀·리그 우선)</b>만 표시됩니다.
         제목·본문을 고쳐서 발행하면 그 표기가 사전에 학습돼 다음 기사에 반영됩니다.
       </p>
+      {/* 사가 검수 — 별도 페이지에서 통합 (2026-08-04 운영자: "검수는 하나로") */}
+      <SagaReviewQueue />
     </div>
   )
 }

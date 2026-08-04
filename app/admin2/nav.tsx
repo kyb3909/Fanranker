@@ -30,7 +30,6 @@ const TABS = [
   { href: "/admin2", label: "작업대", queueKey: null as string | null, exact: true },
   { href: "/admin2/news", label: "뉴스 검수", queueKey: "news-review", exact: false },
   { href: "/admin2/agg", label: "커뮤글 검수", queueKey: "agg-review", exact: false },
-  { href: "/admin2/saga", label: "사가 검수", queueKey: "saga-review", exact: false },
   { href: "/admin2/reports", label: "신고", queueKey: "reports", exact: false },
 ]
 

@@ -222,7 +222,7 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
               style={{ objectPosition: "50% 22%" }}
             />
           </div>
-          <div className="relative z-[2] w-full p-5 pl-[64px] sm:p-8 sm:pl-[110px]">
+          <div className="relative z-[2] w-full p-5 sm:p-8">
             {(c.source || c.flair) && (
               <span
                 className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-[5px] text-[12.5px] font-extrabold"
@@ -301,13 +301,11 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                 </span>
               </Link>
             )}
-            <p
-              className="mt-3 flex items-center gap-3 text-[13.5px]"
-              style={{ color: "var(--gn-cream-dim)" }}
-            >
-              {/* 0 카운트는 노출하지 않는다 (피드 count>0 규칙과 통일, 2026-07-30 워룸
-                  — "댓글 0 · 추천 0" 전시는 유령 사이트 각인만 남긴다) */}
-              {(c.commentCount > 0 || c.voteCount > 0) && (
+            {/* 0 카운트는 노출하지 않는다 (피드 count>0 규칙과 통일, 2026-07-30 워룸
+                — "댓글 0 · 추천 0" 전시는 유령 사이트 각인만 남긴다). CTA 링크는
+                2026-08-04 운영자 지시로 제거 — 제목 링크가 내비게이션을 담당한다. */}
+            {(c.commentCount > 0 || c.voteCount > 0) && (
+              <p className="mt-3 text-[13.5px]" style={{ color: "var(--gn-cream-dim)" }}>
                 <span className="gn-num">
                   {[
                     c.commentCount > 0 ? `댓글 ${c.commentCount}` : null,
@@ -316,41 +314,11 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
-              )}
-              <Link
-                href={`/post/${c.id}`}
-                className="inline-flex items-center gap-1 font-bold"
-                style={{ color: "var(--gn-bg-100)" }}
-              >
-                {c.vs ? "참전하러 가기" : "떡밥 물러 가기"}
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-              </Link>
-            </p>
+              </p>
+            )}
           </div>
         </article>
       ))}
-
-      {/* 고정 장식 플레이트 — 슬라이드가 바뀌어도 유지 */}
-      <div
-        aria-hidden
-        className="absolute top-0 bottom-0 -left-8 w-[74px] opacity-90 sm:-left-9 sm:w-[118px]"
-        style={{
-          background: "linear-gradient(180deg, var(--wc-burgundy), var(--gn-bg-700))",
-          transform: "skewX(-8deg)",
-        }}
-      >
-        <span
-          className="gn-num absolute top-5 left-[42px] text-[15px] font-bold whitespace-nowrap opacity-90 sm:top-6 sm:left-[54px] sm:text-[18px]"
-          style={{
-            transform: "skewX(8deg) rotate(90deg)",
-            transformOrigin: "left top",
-            letterSpacing: "0.34em",
-            color: "var(--gn-cream)",
-          }}
-        >
-          TOP STORY
-        </span>
-      </div>
 
       {slides.length > 1 && (
         <>
