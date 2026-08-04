@@ -57,9 +57,9 @@ export async function inspectDraft(title: string, content: unknown): Promise<Qua
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        // 검사관은 작성(4o-mini)보다 한 급 위 — 하루 ≤5건이라 비용 무시 가능
-        model: "gpt-4o",
-        temperature: 0,
+        // 검사관은 작성(4o-mini)보다 한 급 위 — 하루 ≤5건이라 비용 무시 가능.
+        // GPT-5 계열은 temperature 미지원(기본 1만 허용) — 넣으면 400 → fail-closed 전건 반려
+        model: "gpt-5.6-terra",
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -99,8 +99,7 @@ export async function inspectImage(imageUrl: string): Promise<{ pass: boolean; r
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o",
-        temperature: 0,
+        model: "gpt-5.6-terra",
         response_format: { type: "json_object" },
         messages: [
           {
