@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { suggestFlairs, type FlairOption } from "@/lib/news/suggest-flair"
 import { SagaReviewQueue } from "@/components/admin/saga-review-queue"
+import { PublishedFixes } from "@/components/admin/published-fixes"
 import { FastReview, type DeskItem, type FlairChoice, type SagaOption } from "./fast-review"
 
 export const dynamic = "force-dynamic"
@@ -125,6 +126,8 @@ export default async function NewsReviewPage() {
       </p>
       {/* 사가 검수 — 별도 페이지에서 통합 (2026-08-04 운영자: "검수는 하나로") */}
       <SagaReviewQueue />
+      {/* 발행 후 교정 — 기사·사가 연표·사가 이름. 고치면 표기 학습으로 이어진다 */}
+      <PublishedFixes />
     </div>
   )
 }
