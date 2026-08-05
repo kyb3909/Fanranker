@@ -134,12 +134,20 @@ export const PERSONAL_BLOG_RE =
   /substack\.com|medium\.com|blogspot\.|wordpress\.com|tistory\.com|note\.com|ghost\.io|beehiiv\.com/i
 
 /**
- * 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04 "여자 축구 뉴스는 완전 제외").
- * 제목·요약 키워드 기반 기계 가드 — LLM 판단에 맡기지 않는다 (기계 가드 우선 원칙).
+ * 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04 "여자 축구 뉴스는 완전 제외",
+ * 2026-08-05 재확인 "전혀 수요 없어"). 제목·요약 키워드 기반 기계 가드 —
+ * LLM 판단에 맡기지 않는다 (기계 가드 우선 원칙).
  * 대회명(WSL·NWSL·UWCL)·리그 표기·성별 표기(영/한/독/서) 커버.
+ *
+ * ⚠️ `위민`·`우먼`은 **앞 글자가 한글이면 안 잡는다.** 한국어에는 띄어쓰기 외에 낱말
+ * 경계가 없어서 통짜로 잡으면 음차된 사람 이름을 그대로 문다 — 2026-08-05 실사고:
+ * 아스날 유망주 Max Dowman("맥스 **도우먼**")이 들어간 BBC 남자 프리미어리그 기사가
+ * `우먼` 하나로 통째로 반려됐다. "아스날 위민"처럼 실제 여자팀 표기는 앞에 공백이
+ * 오므로 이 제한으로 놓치지 않는다. 다른 항목은 그대로 둔다 — 정책을 푸는 게 아니라
+ * 남자 기사가 잘못 걸리는 것만 막는 수정이다.
  */
 export const WOMENS_FOOTBALL_RE =
-  /여자\s*축구|여자\s*팀|여자부|여자\s*대표팀|여성\s*축구|여축|위민|우먼|women'?s?\b|\bwoman\b|\bWSL\b|\bNWSL\b|\bUWCL\b|frauen|femenin[ao]|féminin/i
+  /여자\s*축구|여자\s*팀|여자부|여자\s*대표팀|여성\s*축구|여축|(?<![가-힣])(?:위민|우먼)|women'?s?\b|\bwoman\b|\bWSL\b|\bNWSL\b|\bUWCL\b|frauen|femenin[ao]|féminin/i
 
 export function isWomensFootball(...texts: (string | null | undefined)[]): boolean {
   return WOMENS_FOOTBALL_RE.test(texts.filter(Boolean).join(" "))
