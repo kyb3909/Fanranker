@@ -119,17 +119,42 @@ async function run(request: NextRequest) {
     .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
   const recentTitles = (recentPosts ?? []).map((p) => p.title as string)
 
+  // 이미 원장에 같은 판정이 찍힌 후보는 재기록하지 않는다 (2026-08-05 실측: 24시간
+  // 이벤트 744건 중 601건이 정체 후보 52개의 needs_human 재기록 — 11~12회/후보).
+  // 매 회차 같은 30건 window 를 다시 스캔하므로 상태가 안 변한 후보는 계속 다시 찍혔다.
+  // "아무 일도 안 일어났다"는 append-only 감사의 기록 대상이 아니다 — 정체는 상태
+  // (news_candidates.state + updated_at)로 보고, 회차별 집계는 cron 응답으로 본다.
+  const draftIds = (drafts ?? []).map((row) => row.id as string)
+  const { data: knownStates } = draftIds.length
+    ? await supabase
+        .from("news_candidates")
+        .select("candidate_id, state, last_reason_code")
+        .in("candidate_id", draftIds)
+    : { data: [] as { candidate_id: string; state: string; last_reason_code: string | null }[] }
+  const lastVerdict = new Map(
+    (knownStates ?? []).map((row) => [
+      row.candidate_id,
+      `${row.state}:${row.last_reason_code ?? ""}`,
+    ])
+  )
+
   const budget = PER_RUN_CAP
   let published = 0
+  let ledgerHealthy = true
   const publishedIds: string[] = []
   const gated: string[] = []
   const errors: string[] = []
   const skipped: string[] = []
   const skipCounts: Record<string, number> = {}
+  let repeatedVerdicts = 0
   const ledgerEvents: NewsCandidateEvent[] = []
   const noteSkip = (id: string, reason: string, state: NewsCandidateState = "held") => {
     skipCounts[reason] = (skipCounts[reason] ?? 0) + 1
     skipped.push(`${id}: ${reason}`)
+    if (lastVerdict.get(id) === `${state}:${reason}`) {
+      repeatedVerdicts++
+      return
+    }
     ledgerEvents.push({
       candidate_id: id,
       reservoir_id: id,
@@ -235,15 +260,22 @@ async function run(request: NextRequest) {
     // 남은 문: 검사관(본문·이미지)·표기 사전·중복·개인 블로그·여자 축구.
     // 사가 쪽 D7(미확정 루머 noindex + 배너)은 그대로 유효하다.
 
-    // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등
-    ledgerEvents.push({
-      candidate_id: row.id,
-      reservoir_id: row.id,
-      to_state: "fact_checking",
-      actor: "news-auto-publish",
-      reason_code: "quality_gate_started",
-      run_id: ledgerRunId,
-    })
+    // 품질 검사관 (작성과 별도 LLM) — fail-closed, 불통과는 사유와 함께 강등.
+    // ⚠️ 이 전이만 즉시 기록한다. publishNewsDraft 가 발행 성공 시 published 를 자체
+    // flush 하므로, 여기서 배치 배열에 담으면 run 끝 flush 가 published 를 덮어
+    // 발행된 후보가 fact_checking 으로 남는다 (2026-08-05 실측 8건). 순서를 지키려면
+    // "검사 시작"은 검사 전에 원장에 닿아야 한다 — 진행 중 상태의 의미와도 맞다.
+    ledgerHealthy =
+      (await recordNewsCandidateEvents(supabase, [
+        {
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "fact_checking",
+          actor: "news-auto-publish",
+          reason_code: "quality_gate_started",
+          run_id: ledgerRunId,
+        },
+      ])) && ledgerHealthy
     const verdict = await inspectDraft(title, content)
     let failReasons = verdict.pass ? [] : verdict.reasons
     if (verdict.pass && verdict.playerNamesKr.length > 0) {
@@ -318,11 +350,12 @@ async function run(request: NextRequest) {
   if (skipped.length > 0 || gated.length > 0 || errors.length > 0) {
     console.info("[news-auto-publish] 처리 요약", {
       skipped: skipCounts,
+      repeatedVerdicts,
       gated: gated.length,
       errors,
     })
   }
-  const ledgerRecorded = await recordNewsCandidateEvents(supabase, ledgerEvents)
+  ledgerHealthy = (await recordNewsCandidateEvents(supabase, ledgerEvents)) && ledgerHealthy
 
   return NextResponse.json({
     ok: errors.length === 0,
@@ -330,8 +363,10 @@ async function run(request: NextRequest) {
     postIds: publishedIds,
     todayTotal: (publishedToday ?? 0) + published,
     autoToday: (autoToday ?? 0) + published,
-    observability: ledgerRecorded ? "ok" : "degraded",
+    observability: ledgerHealthy ? "ok" : "degraded",
     ...(skipped.length > 0 ? { skipped, skipCounts } : {}),
+    // 판정이 그대로라 원장에 다시 안 남긴 수 — 정체 규모를 회차마다 보이게 유지
+    ...(repeatedVerdicts > 0 ? { repeatedVerdicts } : {}),
     ...(gated.length > 0 ? { gated } : {}),
     ...(errors.length > 0 ? { errors } : {}),
   })

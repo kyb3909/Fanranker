@@ -91,6 +91,10 @@
     {
       "path": "/api/cron/news-learn-edits",
       "schedule": "30 13 * * *"
+    },
+    {
+      "path": "/api/cron/news-assignment-desk",
+      "schedule": "19 * * * *"
     }
   ]
 }

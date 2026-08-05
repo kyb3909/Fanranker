@@ -8,6 +8,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
  *   · 자동 스킵 사유를 응답에 집계해 무기록 탈락을 막는다
  *   · 킬스위치 env 로 배포 없이 끌 수 있다
  *   · 자동발행분은 publish.auto=true 로 표시된다 (사후 회수용)
+ *   · 후보 원장의 마지막 상태가 실제 결과와 일치한다 (2026-08-05 순서 역전 회귀)
+ *   · 판정이 안 바뀐 정체 후보를 매 회차 다시 기록하지 않는다
  */
 
 vi.mock("next/server", async (importOriginal) => {
@@ -64,13 +66,27 @@ interface DraftRow {
 let drafts: DraftRow[] = []
 let botPublishedToday = 0
 let autoPublishedToday = 0
+let knownCandidates: { candidate_id: string; state: string; last_reason_code: string | null }[] = []
 const inserted: Record<string, unknown>[] = []
 const reservoirUpdates: Array<{ id: string; patch: Record<string, unknown> }> = []
+/** 원장 RPC 로 실제로 흘러간 전이 — 호출 순서대로 평탄화해 순서 계약을 검증한다 */
+const ledgerEvents: { candidate_id: string; to_state: string; reason_code?: string }[] = []
 
 vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleClient: () => ({
-    rpc: vi.fn().mockResolvedValue({ data: 1, error: null }),
+    rpc: async (
+      _name: string,
+      args: { p_events: { candidate_id: string; to_state: string; reason_code?: string }[] }
+    ) => {
+      ledgerEvents.push(...args.p_events)
+      return { data: args.p_events.length, error: null }
+    },
     from: (table: string) => {
+      if (table === "news_candidates") {
+        return {
+          select: () => ({ in: async () => ({ data: knownCandidates, error: null }) }),
+        }
+      }
       if (table === "posts") {
         return {
           select: (_columns: string, options?: { head?: boolean }) =>
@@ -189,8 +205,10 @@ describe("GET /api/cron/news-auto-publish", () => {
     drafts = []
     botPublishedToday = 0
     autoPublishedToday = 0
+    knownCandidates = []
     inserted.length = 0
     reservoirUpdates.length = 0
+    ledgerEvents.length = 0
   })
 
   it("실제 이미지가 있는 초안만 발행하고 auto=true 로 표시한다", async () => {
@@ -278,6 +296,43 @@ describe("GET /api/cron/news-auto-publish", () => {
 
     expect(body.published).toBe(0)
     expect(body.skipCounts.content_free).toBe(1)
+  })
+
+  it("발행에 성공하면 원장의 마지막 전이가 published 다 (검사 시작이 뒤늦게 덮지 않는다)", async () => {
+    // 2026-08-05 실측 회귀: quality_gate_started 를 회차 끝 배치로 밀면
+    // publishNewsDraft 가 먼저 flush 한 published 를 덮어써서, 발행된 후보가
+    // fact_checking 으로 남았다 (8건).
+    drafts = [draft("a", visualDoc)]
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(1)
+    const trail = ledgerEvents.filter((e) => e.candidate_id === "a").map((e) => e.to_state)
+    expect(trail).toEqual(["fact_checking", "published"])
+  })
+
+  it("판정이 그대로인 정체 후보는 원장에 다시 기록하지 않는다 (이벤트 증폭 차단)", async () => {
+    drafts = [draft("a", textOnlyDoc)]
+    knownCandidates = [{ candidate_id: "a", state: "needs_human", last_reason_code: "no_image" }]
+
+    const body = await (await call()).json()
+
+    // 회차별 집계는 유지 — 정체 규모를 운영자가 계속 본다
+    expect(body.skipCounts.no_image).toBe(1)
+    expect(body.repeatedVerdicts).toBe(1)
+    expect(ledgerEvents.filter((e) => e.candidate_id === "a")).toHaveLength(0)
+  })
+
+  it("판정이 바뀐 후보는 정상적으로 새 전이를 남긴다", async () => {
+    drafts = [draft("a", textOnlyDoc)]
+    knownCandidates = [{ candidate_id: "a", state: "drafted", last_reason_code: "draft_created" }]
+
+    const body = await (await call()).json()
+
+    expect(body.repeatedVerdicts).toBeUndefined()
+    expect(ledgerEvents.filter((e) => e.candidate_id === "a")).toEqual([
+      expect.objectContaining({ to_state: "needs_human", reason_code: "no_image" }),
+    ])
   })
 
   it("CRON_SECRET 없는 요청은 401", async () => {
