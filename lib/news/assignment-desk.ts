@@ -38,8 +38,29 @@ import { titleSimilarity } from "@/lib/saga/cluster"
  *       LLM 이 판단할 재료가 없었다(기마랑이스 3건·비니시우스 6건 전부 assign).
  *       duplicate 는 LLM 에서 빼고 제목 유사도 규칙으로 내렸다 — "규칙 판정은 LLM 에
  *       맡기지 않는다" 원칙과도 맞고 중복분은 호출 자체를 안 한다.
+ *  · 2026-08-05.3 — v2 를 40건에 돌린 결과 실패율이 2.5% → 15% 로 올라 그 원인만 고쳤다.
+ *    ① v2 의 non_football 경고가 desk 목록과 섞여, 모델이 desk 에 사유 코드를 넣었다
+ *       (`desk 값 밖: non_football` 2건). desk 는 6개 중 하나이고 축구가 아니어도
+ *       general 이라는 걸 desk 섹션에 직접 못박았다.
+ *    ② `decision=assign 인데 배정 사유 없음` 4건 — v1 에서 조용히 통과하던 모순이
+ *       드러난 것이라 검증은 유지하고, 사유가 안 떠오르면 decision 을 바꾸라는 탈출구를
+ *       프롬프트에 줬다. 계약 위반의 재시도 상한도 2회로 줄였다(temperature 0 이라
+ *       다시 물어도 같은 답 — ASSIGNMENT_CONTRACT_MAX_ATTEMPTS 주석 참조).
+ *  · 2026-08-05.4 — v3 의 desk 오류는 사라졌으나(2건→0) 계약 실패 7건이 남았고 **전부**
+ *    `assign + low_interest` 였다. 모델이 "배정하되 주목도 낮음"을 말하려는 건데 스키마가
+ *    low_interest 를 반려 전용으로 묶어 막고 있었다. 관심도는 결정이 아니라 서술이므로
+ *    배정·보류에서도 허용한다. 오차단 위험이 실제로 사는 non_football·womens_football·
+ *    minor_league 는 반려 전용으로 그대로 둔다 — 여기까지 풀면 v2 에서 고친 게 되돌아간다.
+ *  · 2026-08-05.5 — **v2 의 ② 수정이 애초에 틀렸다.** low_interest 가설(v4)도 빗나갔고,
+ *    실패 원문을 저장하고 나서야 진짜 이유가 보였다:
+ *      {"decision":"hold","reason_codes":["non_football"]}
+ *      {"decision":"assign","reason_codes":["admin_notice"]}
+ *    모델은 이 코드를 "반려 사유"가 아니라 "이 기사가 어떤 종류인가"로 쓴다. 강제 매칭이
+ *    멀쩡한 판정 12~13%를 죽이고 있었다. 강제를 걷고 관측(mismatched)만 남긴다.
+ *    오차단은 사유 코드 위생이 아니라 rejectPublishedRate 로 직접 잰다.
+ *    v2·v3 의 진짜 성과(desk 혼동 제거·reject 보수화·중복 규칙)는 그대로 유지된다.
  */
-export const ASSIGNMENT_PROMPT_VERSION = "assignment-desk@2026-08-05.2"
+export const ASSIGNMENT_PROMPT_VERSION = "assignment-desk@2026-08-05.5"
 
 /** 판정 모델. GPT-5 계열이 아니므로 temperature 사용 가능 (supportsTemperature 참조) */
 export const ASSIGNMENT_MODEL = "gpt-4o-mini"
@@ -52,6 +73,14 @@ export const ASSIGNMENT_DUPLICATE_THRESHOLD = 0.5
 
 /** 회복 가능 실패를 몇 번까지 다시 볼 것인가 — 넘으면 dead_letter */
 export const ASSIGNMENT_MAX_ATTEMPTS = 3
+
+/**
+ * 계약 위반(응답 스키마 불일치)의 재시도 상한. 일반 실패보다 훨씬 짧다 —
+ * temperature 0 이라 같은 입력에 거의 같은 답이 온다. 프롬프트를 고쳐야 풀리는 문제지
+ * 재시도로 풀리는 문제가 아니고, 3번 두들기면 헛돈만 쓴다. 한 번만 더 보고 접는다
+ * (prompt_version 을 올리면 같은 후보가 다시 열린다 — 그게 정상 복구 경로다).
+ */
+export const ASSIGNMENT_CONTRACT_MAX_ATTEMPTS = 2
 
 export const ASSIGNMENT_DESKS = [
   "transfer",
@@ -106,6 +135,13 @@ export const REJECT_REASON_CODES = [
   "low_interest",
   "stale",
 ] as const
+
+/**
+ * 관심도 서술 — 결정이 아니다. "배정하되 주목도 낮음"은 정상 판정이므로 반려 전용으로
+ * 묶으면 안 된다 (v3 계약 실패 7건이 전부 `assign + low_interest` 였다).
+ * 반려 전용으로 남겨야 하는 건 오차단 위험이 실제로 사는 사유들뿐이다.
+ */
+const INTEREST_LEVEL_REASON_CODES = ["low_interest"] as const
 
 /** 판정 사유. 자유 문장 대신 닫힌 집합이어야 분포를 집계하고 회귀를 감지할 수 있다. */
 export const ASSIGNMENT_REASON_CODES = [
@@ -170,6 +206,12 @@ export type AssignmentCallResult =
       error: string
       latencyMs: number
       usage: AssignmentUsage
+      /**
+       * 계약 위반 시 모델이 실제로 뱉은 값. 이게 없으면 "왜 계약을 어겼는지"를 영영
+       * 알 수 없다 — 실제로 v4 에서 원인 가설이 틀렸는데 확인할 방법이 없었다.
+       * 저작권상 기사 본문이 아니라 **판정 필드만** 담는다.
+       */
+      raw?: string
     }
 
 const DESK_SET = new Set<string>(ASSIGNMENT_DESKS)
@@ -180,17 +222,26 @@ const CHECK_SET = new Set<string>(ASSIGNMENT_CHECKS)
 const REASON_SET = new Set<string>(ASSIGNMENT_REASON_CODES)
 
 /**
- * 결정별로 허용되는 사유 그룹.
+ * 결정별로 **기대되는** 사유 그룹. 강제가 아니라 관측용이다.
  *
- * 배정해놓고 반려 사유를 다는 판정은 근거가 흔들린 신호다 (2026-08-05 shadow 실측:
- * decision=assign 인데 reason 이 low_interest·non_football 인 행 2건). 그대로 두면
- * 사유 분포 통계가 오염되고, 나중에 이 사유로 실집행을 열면 엉뚱한 걸 버린다.
+ * v2 에서 이걸 강제로 걸었다가 v3·v4 에서 판정의 12~13%를 잃었다. 모델이 뱉은 원문을
+ * 보고 나서야 이유를 알았다:
+ *   {"decision":"hold","reason_codes":["non_football"]}
+ *   {"decision":"assign","reason_codes":["admin_notice"]}
+ * 모델은 이 코드들을 "반려 사유"가 아니라 **"이 기사가 어떤 종류인가"라는 서술**로 쓴다.
+ * "행정 공지지만 배정한다"는 멀쩡한 판단인데 강제 매칭이 그걸 실패로 만들었다.
  *
- * 보류·중복은 "배정 가치는 있는데 지금은 아님"이 정상이라 배정 근거를 함께 허용한다.
+ * 결정이 뭔지는 decision 이 말하고, 오차단 위험은 rejectPublishedRate 로 직접 잰다.
+ * 사유 코드 위생으로 그걸 대신 지키려 한 게 애초에 틀렸다. 어긋남은 mismatched 로
+ * 기록만 하고 행은 살린다 — 이 저장소의 원칙도 "잘못 버리는 게 더 나쁘다"이다.
  */
-const ALLOWED_REASONS_BY_DECISION: Record<AssignmentDecision, Set<string>> = {
-  assign: new Set<string>(ASSIGN_REASON_CODES),
-  hold: new Set<string>([...HOLD_REASON_CODES, ...ASSIGN_REASON_CODES]),
+const EXPECTED_REASONS_BY_DECISION: Record<AssignmentDecision, Set<string>> = {
+  assign: new Set<string>([...ASSIGN_REASON_CODES, ...INTEREST_LEVEL_REASON_CODES]),
+  hold: new Set<string>([
+    ...HOLD_REASON_CODES,
+    ...ASSIGN_REASON_CODES,
+    ...INTEREST_LEVEL_REASON_CODES,
+  ]),
   duplicate: new Set<string>([...DUPLICATE_REASON_CODES, ...ASSIGN_REASON_CODES]),
   reject: new Set<string>(REJECT_REASON_CODES),
 }
@@ -208,6 +259,9 @@ const SYSTEM_PROMPT = `너는 한국 축구 팬 커뮤니티(EPL 중심)의 어�
 - injury: 부상·수술·복귀 일정
 - saga: 이미 진행 중인 이적 스레드의 후속 보도
 - general: 위에 안 맞는 축구 소식
+
+⚠️ desk 는 **반드시 위 6개 중 하나**다. 축구가 아니라고 판단해도 desk 는 general 이고,
+그 판단은 reason_codes 에 non_football 로 적는다. desk 에 사유 코드를 넣지 마라.
 
 ## priority (0~100) — 한국 독자 기준 주목도
 90+ 빅클럽 오피셜·한국인 선수 / 70~89 스타 선수 이적설·빅매치 / 40~69 일반 EPL 소식
@@ -242,11 +296,15 @@ image_required / player_dictionary / duplicate_scan / source_tier / body_consist
 ## reason_codes — 아래에서 고른다 (1~3개)
 배정: big_club, korean_player, star_player, official_announcement, injury_update, match_report, saga_followup, transfer_rumor
 보류: unclear_source, thin_source, personal_blog, korean_media, content_free
-반려: minor_league, admin_notice, non_football, womens_football, low_interest, stale
+반려: minor_league, admin_notice, non_football, womens_football, stale
+어느 쪽이든 가능: low_interest (주목도가 낮다는 서술 — 배정하면서 써도 된다)
 
 ⚠️ **사유는 decision 과 같은 줄에서만 고른다.** assign 인데 low_interest, assign 인데
 non_football 같은 조합은 금지다 — 배정해놓고 반려 사유를 달면 판정을 믿을 수 없다.
 보류는 배정 근거를 함께 써도 된다(예: big_club + unclear_source).
+
+**assign 을 골랐는데 배정 줄에서 쓸 사유가 안 떠오르면, 사유를 반려 줄에서 가져오지 말고
+decision 을 hold 나 reject 로 바꿔라.** 판정과 사유가 어긋나면 그 행은 통째로 버려진다.
 
 ## 운영 규칙 (반드시 지킨다)
 - **이적 루머는 반려 사유가 아니다.** 여름 이적시장 기사 대부분이 루머다 — transfer_rumor 로 배정하되 risk 를 올려라
@@ -416,15 +474,17 @@ export function parseAssignmentVerdict(raw: unknown, model: string): AssignmentP
   const rawReasons = Array.isArray(r.reason_codes) ? r.reason_codes.map(String) : []
   const checks = [...new Set(rawChecks.filter((c) => CHECK_SET.has(c)))] as AssignmentCheck[]
 
-  // 결정과 안 맞는 사유는 버린다. 모르는 값(오타·환각)과는 따로 세야 프롬프트 회귀를
-  // 진단할 수 있다 — 전자는 "모델이 계약을 모른다", 후자는 "판정이 흔들린다"로 원인이 다르다.
-  const allowed = ALLOWED_REASONS_BY_DECISION[decision as AssignmentDecision]
-  const reasons = [...new Set(rawReasons.filter((c) => allowed.has(c)))] as AssignmentReasonCode[]
+  // 아는 사유는 결정과 어긋나도 살린다 (위 EXPECTED_REASONS_BY_DECISION 주석 참조).
+  // 어긋남은 버리지 않고 mismatched 로 세기만 한다 — 프롬프트가 흔들리는지 보는 신호지
+  // 판정을 무효로 만들 근거는 아니다.
+  const reasons = [
+    ...new Set(rawReasons.filter((c) => REASON_SET.has(c))),
+  ] as AssignmentReasonCode[]
 
-  // 사유가 하나도 안 남으면 "왜 그렇게 판정했는지 모르는 행"이 된다 — 그건 침묵 실패다.
-  if (reasons.length === 0) {
-    return { ok: false, error: `decision=${decision} 에 맞는 reason_code 없음` }
-  }
+  // 아는 사유가 하나도 없으면 "왜 그렇게 판정했는지 모르는 행"이 된다 — 그건 침묵 실패다.
+  if (reasons.length === 0) return { ok: false, error: "알려진 reason_code 없음" }
+
+  const expected = EXPECTED_REASONS_BY_DECISION[decision as AssignmentDecision]
 
   return {
     ok: true,
@@ -444,8 +504,8 @@ export function parseAssignmentVerdict(raw: unknown, model: string): AssignmentP
     dropped: {
       checks: rawChecks.filter((c) => !CHECK_SET.has(c)),
       reasonCodes: rawReasons.filter((c) => !REASON_SET.has(c)),
-      /** 아는 사유지만 이 결정과 모순이라 버린 것 (assign 인데 low_interest 류) */
-      mismatched: rawReasons.filter((c) => REASON_SET.has(c) && !allowed.has(c)),
+      /** 아는 사유지만 이 결정에서 기대되지 않은 것 — 버리지 않고 세기만 한다 */
+      mismatched: reasons.filter((c) => !expected.has(c)),
     },
   }
 }
@@ -464,6 +524,9 @@ export function classifyAssignmentFailure(input: {
   if (kind === "http" && httpStatus !== undefined) {
     const transient = httpStatus === 429 || httpStatus === 408 || httpStatus >= 500
     if (!transient) return "dead_letter"
+  }
+  if (kind === "contract") {
+    return attempt >= ASSIGNMENT_CONTRACT_MAX_ATTEMPTS ? "dead_letter" : "retry_wait"
   }
   return attempt >= ASSIGNMENT_MAX_ATTEMPTS ? "dead_letter" : "retry_wait"
 }
@@ -518,7 +581,7 @@ export async function requestAssignment(
     outcome: "llm_error" | "invalid_output",
     kind: AssignmentFailureKind,
     error: string,
-    extra?: { httpStatus?: number; usage?: AssignmentUsage }
+    extra?: { httpStatus?: number; usage?: AssignmentUsage; raw?: string }
   ): AssignmentCallResult => ({
     ok: false,
     outcome,
@@ -527,6 +590,7 @@ export async function requestAssignment(
     latencyMs: Date.now() - started,
     usage: extra?.usage ?? EMPTY_USAGE,
     ...(extra?.httpStatus !== undefined ? { httpStatus: extra.httpStatus } : {}),
+    ...(extra?.raw ? { raw: extra.raw.slice(0, 600) } : {}),
   })
 
   let payload: unknown
@@ -576,7 +640,12 @@ export async function requestAssignment(
   }
 
   const parsed = parseAssignmentVerdict(raw, model)
-  if (!parsed.ok) return fail("invalid_output", "contract", parsed.error, { usage })
+  if (!parsed.ok) {
+    return fail("invalid_output", "contract", parsed.error, {
+      usage,
+      raw: JSON.stringify(raw),
+    })
+  }
 
   return {
     ok: true,

@@ -173,7 +173,7 @@ const textOnlyDoc = {
   content: [{ type: "paragraph", content: [{ type: "text", text: "글만 있는 기사" }] }],
 }
 
-function draft(id: string, content: unknown): DraftRow {
+function draft(id: string, content: unknown, ageHours = 0): DraftRow {
   return {
     id,
     status: "drafted",
@@ -182,7 +182,7 @@ function draft(id: string, content: unknown): DraftRow {
     entities: null,
     tags: null,
     decision: null,
-    created_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - ageHours * 3600 * 1000).toISOString(),
   }
 }
 
@@ -333,6 +333,38 @@ describe("GET /api/cron/news-auto-publish", () => {
     expect(ledgerEvents.filter((e) => e.candidate_id === "a")).toEqual([
       expect.objectContaining({ to_state: "needs_human", reason_code: "no_image" }),
     ])
+  })
+
+  it("만료 임박 초안을 신선한 초안보다 먼저 발행한다 (스타베이션 차단)", async () => {
+    // 2026-08-05 실측: 만료된 30건 전부가 자동발행에게 한 번도 스캔되지 않았다.
+    // 최신순으로만 훑으면 회당 상한에서 끊겨 오래된 것이 매번 밀리다 죽는다.
+    drafts = [
+      draft("fresh1", visualDoc, 0),
+      draft("fresh2", visualDoc, 1),
+      draft("expiring", visualDoc, 22), // 만료(24h)까지 2시간
+    ]
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(2)
+    const publishedIds = reservoirUpdates
+      .filter((u) => (u.patch as { status?: string }).status === "published")
+      .map((u) => u.id)
+    expect(publishedIds).toContain("expiring")
+    // 가장 신선한 것도 함께 나간다 — 임박분 우선이 곧 FIFO 는 아니다
+    expect(publishedIds).toContain("fresh1")
+    expect(publishedIds).not.toContain("fresh2")
+  })
+
+  it("임박분이 없으면 기존대로 최신 우선을 지킨다 (뉴스 신선도)", async () => {
+    drafts = [draft("newest", visualDoc, 0), draft("older", visualDoc, 6)]
+
+    await call()
+
+    const order = reservoirUpdates
+      .filter((u) => (u.patch as { status?: string }).status === "published")
+      .map((u) => u.id)
+    expect(order[0]).toBe("newest")
   })
 
   it("CRON_SECRET 없는 요청은 401", async () => {

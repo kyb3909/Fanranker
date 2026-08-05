@@ -49,6 +49,20 @@ export const dynamic = "force-dynamic"
 const PER_RUN_CAP = 2
 /** 초안 신선도 (시간) */
 const MAX_AGE_HOURS = 24
+/**
+ * 회차마다 훑는 초안 수. 30이었는데 실제 대기열이 90~100건이라 **창 밖 후보는 조회조차
+ * 되지 않았다** — 2026-08-05 실측: 만료된 30건 전부가 자동발행에게 한 번도 스캔되지 않은
+ * 채 24시간을 넘겨 죽었고, 검사관까지 간 건 0건이었다. 품질 때문에 떨어진 게 아니라
+ * 쳐다보지도 못한 것이다(BBC 비니시우스 기사 사례).
+ * 스캔은 대부분 LLM 없는 값싼 필터라 창을 넓히는 비용은 조회 1회뿐이다.
+ */
+const DRAFT_WINDOW = 120
+/**
+ * 만료까지 이만큼 남으면 '임박'으로 보고 먼저 처리한다. 회차 주기가 30분이라 4시간이면
+ * 8번의 기회가 남은 셈 — 이보다 짧게 잡으면 이미 늦고, 길게 잡으면 큐 전체가 임박군이
+ * 되어 신선도 우선이 무의미해진다.
+ */
+const EXPIRY_SOON_HOURS = 4
 
 function kstMidnightUtcIso(): string {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000)
@@ -98,10 +112,28 @@ async function run(request: NextRequest) {
     .eq("status", "drafted")
     .gte("created_at", freshCutoff)
     .order("created_at", { ascending: false }) // 최신 우선 — 뉴스는 신선한 것부터
-    .limit(30)
+    .limit(DRAFT_WINDOW)
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // 창만 넓혀서는 부족하다. 회당 발행 상한에서 break 하므로 최신순으로만 훑으면
+  // 뒤쪽(오래된 것)은 매 회차 밀리다가 그대로 만료된다 — 실측된 손실이 정확히 이 모양이다.
+  // 그래서 **만료 임박분을 먼저** 처리한다. 임박군 안에서는 진짜 곧 죽는 것부터(오래된 순),
+  // 그 밖에서는 기존대로 최신 우선(뉴스 신선도)을 유지한다.
+  const urgentCutoff = Date.now() - (MAX_AGE_HOURS - EXPIRY_SOON_HOURS) * 3600 * 1000
+  const at = (row: { created_at: string }) => new Date(row.created_at).getTime()
+  const queue = [
+    ...((drafts ?? []) as (NewsReservoirItem & {
+      status: string
+      decision: Record<string, unknown> | null
+      created_at: string
+    })[]),
+  ].sort((a, b) => {
+    const [ua, ub] = [at(a) <= urgentCutoff, at(b) <= urgentCutoff]
+    if (ua !== ub) return ua ? -1 : 1
+    return ua ? at(a) - at(b) : at(b) - at(a)
+  })
 
   // 표기 사전 (선수) — 미등재 선수명 기사는 자동발행 제외 (환각 음차 차단)
   const { data: dict } = await supabase
@@ -124,7 +156,7 @@ async function run(request: NextRequest) {
   // 매 회차 같은 30건 window 를 다시 스캔하므로 상태가 안 변한 후보는 계속 다시 찍혔다.
   // "아무 일도 안 일어났다"는 append-only 감사의 기록 대상이 아니다 — 정체는 상태
   // (news_candidates.state + updated_at)로 보고, 회차별 집계는 cron 응답으로 본다.
-  const draftIds = (drafts ?? []).map((row) => row.id as string)
+  const draftIds = queue.map((row) => row.id)
   const { data: knownStates } = draftIds.length
     ? await supabase
         .from("news_candidates")
@@ -165,10 +197,7 @@ async function run(request: NextRequest) {
     })
   }
 
-  for (const row of (drafts ?? []) as (NewsReservoirItem & {
-    status: string
-    decision: Record<string, unknown> | null
-  })[]) {
+  for (const row of queue) {
     if (published >= budget) break
 
     const title = row.draft?.title?.trim()
@@ -364,7 +393,15 @@ async function run(request: NextRequest) {
     todayTotal: (publishedToday ?? 0) + published,
     autoToday: (autoToday ?? 0) + published,
     observability: ledgerHealthy ? "ok" : "degraded",
-    ...(skipped.length > 0 ? { skipped, skipCounts } : {}),
+    // 창이 120으로 넓어져 개별 목록은 100건을 넘길 수 있다 — 사유별 집계(skipCounts)가
+    // 전량이고 목록은 표본이다. 잘랐다는 사실을 응답에 남겨 오독을 막는다.
+    ...(skipped.length > 0
+      ? {
+          skipped: skipped.slice(0, 25),
+          ...(skipped.length > 25 ? { skippedTruncated: skipped.length - 25 } : {}),
+          skipCounts,
+        }
+      : {}),
     // 판정이 그대로라 원장에 다시 안 남긴 수 — 정체 규모를 회차마다 보이게 유지
     ...(repeatedVerdicts > 0 ? { repeatedVerdicts } : {}),
     ...(gated.length > 0 ? { gated } : {}),

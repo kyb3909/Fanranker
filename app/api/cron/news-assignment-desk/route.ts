@@ -293,7 +293,12 @@ async function run(request: NextRequest) {
       cached_tokens: result.usage.cachedTokens,
       estimated_cost_usd: estimateAssignmentCostUsd(ASSIGNMENT_MODEL, result.usage),
       error: result.error,
-      details: { kind: result.kind, ...(result.httpStatus ? { http: result.httpStatus } : {}) },
+      details: {
+        kind: result.kind,
+        ...(result.httpStatus ? { http: result.httpStatus } : {}),
+        // 계약 위반이면 모델 원문을 남긴다 — 안 남기면 다음 프롬프트 수정이 또 추측이 된다
+        ...(result.raw ? { raw: result.raw } : {}),
+      },
     })
   }
 

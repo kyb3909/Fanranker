@@ -164,32 +164,39 @@ describe("parseAssignmentVerdict — 계약 검증", () => {
     expect(result.ok).toBe(false)
   })
 
-  // v2 — 2026-08-05 shadow 실측: assign 인데 low_interest·non_football 인 행이 통과했다.
-  it("배정 결정에 반려 사유가 섞이면 버리고 mismatched 로 보고한다", () => {
+  // v5 — v2 에서 결정↔사유 강제 매칭을 걸었다가 멀쩡한 판정 12~13%를 잃었다.
+  // 모델은 이 코드들을 반려 사유가 아니라 기사 종류 서술로 쓴다. 관측만 하고 살린다.
+  it("결정과 어긋나는 사유는 버리지 않고 mismatched 로 세기만 한다", () => {
     const result = parseAssignmentVerdict(
-      { ...VALID_VERDICT, decision: "assign", reason_codes: ["big_club", "low_interest"] },
+      { ...VALID_VERDICT, decision: "assign", reason_codes: ["big_club", "admin_notice"] },
       "gpt-4o-mini"
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.verdict.reason_codes).toEqual(["big_club"])
-    expect(result.dropped.mismatched).toEqual(["low_interest"])
+    expect(result.verdict.reason_codes).toEqual(["big_club", "admin_notice"])
+    expect(result.dropped.mismatched).toEqual(["admin_notice"])
   })
 
-  it("배정 사유가 반려 사유뿐이면 실패한다 — 배정인지 반려인지 모르는 판정이다", () => {
+  it("사유가 서술뿐이어도 판정을 살린다 — 실제 실패 원문 회귀", () => {
+    // {"decision":"hold","reason_codes":["non_football"]} — 2026-08-05 실측
     const result = parseAssignmentVerdict(
-      { ...VALID_VERDICT, decision: "assign", reason_codes: ["non_football"] },
+      { ...VALID_VERDICT, decision: "hold", format: "hold", reason_codes: ["non_football"] },
       "gpt-4o-mini"
     )
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.verdict.decision).toBe("hold")
+    expect(result.dropped.mismatched).toEqual(["non_football"])
   })
 
-  it("반려 결정에 배정 사유만 달리면 실패한다", () => {
+  it("기대와 맞는 사유는 mismatched 에 안 들어간다", () => {
     const result = parseAssignmentVerdict(
-      { ...VALID_VERDICT, decision: "reject", reason_codes: ["big_club"] },
+      { ...VALID_VERDICT, decision: "assign", priority: 25, reason_codes: ["low_interest"] },
       "gpt-4o-mini"
     )
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.dropped.mismatched).toEqual([])
   })
 
   it("보류는 배정 근거를 함께 쓸 수 있다 (빅클럽인데 출처가 불명한 경우)", () => {
@@ -239,7 +246,13 @@ describe("classifyAssignmentFailure — 재시도 대기와 영구 실패 구분
   it("네트워크·파싱·계약 실패는 재시도 대상이다", () => {
     expect(classifyAssignmentFailure({ kind: "network", attempt: 1 })).toBe("retry_wait")
     expect(classifyAssignmentFailure({ kind: "parse", attempt: 1 })).toBe("retry_wait")
-    expect(classifyAssignmentFailure({ kind: "contract", attempt: 2 })).toBe("retry_wait")
+    expect(classifyAssignmentFailure({ kind: "contract", attempt: 1 })).toBe("retry_wait")
+  })
+
+  it("계약 위반은 더 빨리 접는다 — temperature 0 이라 다시 물어도 같은 답이다", () => {
+    expect(classifyAssignmentFailure({ kind: "contract", attempt: 2 })).toBe("dead_letter")
+    // 같은 회차수라도 네트워크 실패는 아직 재시도 가치가 있다
+    expect(classifyAssignmentFailure({ kind: "network", attempt: 2 })).toBe("retry_wait")
   })
 
   it("재시도 상한에 닿으면 dead_letter 로 내린다 (무한 재시도 금지)", () => {
@@ -373,6 +386,8 @@ describe("requestAssignment", () => {
     expect(result.outcome).toBe("invalid_output")
     expect(result.kind).toBe("contract")
     expect(result.usage.inputTokens).toBe(800)
+    // 모델 원문을 안 남기면 다음 프롬프트 수정이 추측이 된다 (v4 에서 실제로 그랬다)
+    expect(result.raw).toContain("esports")
   })
 
   it("네트워크 예외는 llm_error/network 로 분류한다", async () => {
