@@ -77,10 +77,6 @@
       "schedule": "5 0 * * *"
     },
     {
-      "path": "/api/cron/naming-librarian",
-      "schedule": "40 15 * * *"
-    },
-    {
       "path": "/api/cron/hero-editor",
       "schedule": "22,52 * * * *"
     },

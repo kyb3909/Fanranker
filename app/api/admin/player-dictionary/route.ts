@@ -17,7 +17,16 @@ export const dynamic = "force-dynamic"
  * 실측 병목 1위(24h 게이트 반려의 48%)를 사람 손 한 번으로 푸는 문 (2026-08-04).
  *
  * 자동 등재는 하지 않는다: 사전 오염은 이후 모든 기사에 전파된다. 후보 추출·유사
- * 항목 제안까지만 자동, 확정은 사람.
+ * 항목 제안까지만 자동, 확정은 사람. 무인 등재하던 사서(naming-librarian) cron 은
+ * 2026-08-06 오너 결정("확정은 사람 클릭" 원칙 집행)으로 폐지 — 이 화면이 유일한
+ * 등재 경로다. 사서가 은퇴 레전드·감독까지 선수로 등재한 오염 실사고가 폐지 근거.
+ *
+ * 후보 소스 2곳:
+ *   A. 뉴스 게이트 — auto_gate 반려 사유의 미등재 한글 이름
+ *   B. 사가 검수 큐 — auto_hold:unknown_player 로 잠든 항목의 한글 표기
+ *      (사가 점검 F4: 이 화면이 news_reservoir 전용이라 사가 쪽 후보를 못 보던 사각.
+ *       영문 표기뿐인 항목은 제외 — "신규 등재"가 이름을 그대로 대표 표기로 쓰므로
+ *       영문이 사전 대표값이 되는 사고를 막는다. 그쪽은 /admin2/saga 수동 검수 몫)
  */
 
 const LOOKBACK_DAYS = 7
@@ -28,22 +37,42 @@ export async function GET() {
   const { supabase } = auth
 
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000).toISOString()
-  const { data: rows } = await supabase
-    .from("news_reservoir")
-    .select("draft, decision")
-    .gte("created_at", since)
-    .not("decision->auto_gate", "is", null)
-    .limit(500)
+  const [{ data: rows }, { data: sagaHolds }] = await Promise.all([
+    supabase
+      .from("news_reservoir")
+      .select("draft, decision")
+      .gte("created_at", since)
+      .not("decision->auto_gate", "is", null)
+      .limit(500),
+    supabase
+      .from("saga_reservoir")
+      .select("title, extracted")
+      .eq("status", "queued")
+      .eq("error", "auto_hold:unknown_player")
+      .limit(200),
+  ])
 
-  const parsed = parseUnknownNames(
-    ((rows ?? []) as { draft: { title?: string } | null; decision: Record<string, unknown> }[])
-      .map((r) => {
-        const gate = (r.decision?.auto_gate ?? {}) as { reasons?: unknown }
-        const reasons = Array.isArray(gate.reasons) ? gate.reasons.map(String) : []
-        return { reasons, title: r.draft?.title ?? "" }
-      })
-      .filter((r) => r.reasons.some((x) => x.startsWith(UNKNOWN_PLAYER_PREFIX)))
+  const newsRows = (
+    (rows ?? []) as { draft: { title?: string } | null; decision: Record<string, unknown> }[]
   )
+    .map((r) => {
+      const gate = (r.decision?.auto_gate ?? {}) as { reasons?: unknown }
+      const reasons = Array.isArray(gate.reasons) ? gate.reasons.map(String) : []
+      return { reasons, title: r.draft?.title ?? "" }
+    })
+    .filter((r) => r.reasons.some((x) => x.startsWith(UNKNOWN_PLAYER_PREFIX)))
+
+  // 사가 큐 후보를 뉴스 게이트와 같은 사유 형태로 접어 한 파서로 처리한다
+  const sagaRows = ((sagaHolds ?? []) as { title: string | null; extracted: unknown }[])
+    .map((r) => {
+      const playerKr = (r.extracted as { player_kr?: string | null } | null)?.player_kr?.trim()
+      return playerKr && /[가-힣]/.test(playerKr)
+        ? { reasons: [`${UNKNOWN_PLAYER_PREFIX}${playerKr}`], title: r.title ?? "" }
+        : null
+    })
+    .filter((r): r is { reasons: string[]; title: string } => r !== null)
+
+  const parsed = parseUnknownNames([...newsRows, ...sagaRows])
 
   const { data: dict } = await supabase
     .from("news_alias_dictionary")

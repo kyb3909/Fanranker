@@ -43,7 +43,8 @@
 
 - **크롤 소스(§11 Q2)**: Phase A = `news_ticker_items` 2차 소비 + 해외 RSS(르퀴프·BBC 등)만.
   국내 매체는 안정화 후. → **VPS 수정 0** (레딧 쿼터·수동배포 드리프트 회피)
-- **대량 정산 시각(§11 Q4)**: **9/1 09:00 KST** (영국 마감 이후 여유, 발표는 아침 시간대)
+- ~~**대량 정산 시각(§11 Q4)**: **9/1 09:00 KST** (영국 마감 이후 여유, 발표는 아침 시간대)~~
+  → **오너 재확정(2026-08-06): 정산 취소 (PRD D15).** 9/1 09:00 KST 는 saga-deadline 로그 종결 기준으로만 유지
 - 미결: Q3 API-Football 예산(Phase B 전), Q5 EPL 외 확장
 
 ## 4. 확정 스키마 방향 (마이그레이션 2본)
@@ -110,6 +111,6 @@ RLS: sagas·saga_entries 공개 읽기(`for select using (true)`), 나머지 정
 | W1 | A1 코어: saga_core 마이그, lib/saga 기반, /saga 인덱스+상세, CommentSection+스탠스 스냅샷, 메인 투표 | e2e saga.spec + identity vitest + 마이그 리허설 |
 | W2 | A2 전반: saga_reservoir, extract/cluster/tier, RSS 어댑터, ingest/extract cron, fpl→alias 시드, **300건 드라이런** | 클러스터 vitest(로마노 15건→1) + 리포트 검수. **통과 전 자동 발행 금지** |
 | W3 | A2 후반: admin2/saga 검수, 발행 트랜잭션, cron 등록, 신빙성 투표+echoes | 실데이터 사가 3건 발행 = **MVP** |
-| W4 | A5: notifications 마이그, saga-deadline(9/1 09:00 KST)·saga-settle, 호칭 헬퍼, 여론 그래프, 소환 v0 | 정산 2회 멱등 검증 |
+| W4 | A5: notifications 마이그 ✅, saga-deadline(로그 종결) ✅ / ~~saga-settle, 호칭 헬퍼, 소환 v0~~ (PRD D15로 취소, 2026-08-06) | ~~정산 2회 멱등 검증~~ 취소 |
 
 W4 이후 컷: 댓글 스탠스 뱃지 렌더(A3 일부), A4 이적센터 홈(기존 /transfer 가 당분간 대행), /transfer→/saga redirect.
