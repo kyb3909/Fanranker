@@ -189,6 +189,10 @@ async function run(request: NextRequest) {
     ])
   )
 
+  // 중복 판정 재료 — 이번 회차에서 이미 본 제목. 이미 판정이 끝난 후보의 제목으로
+  // 씨를 뿌려야 회차가 갈려도 같은 소식을 중복으로 잡는다. 다만 조회 창(candidateIds)
+  // 밖의 후보는 여기 안 들어오므로 창을 넘는 중복은 여전히 못 잡는다 — 알려진 한계다.
+  const seenTitles: string[] = []
   const started = Date.now()
   const rows: AssignmentRowInsert[] = []
   const skipCounts: Record<string, number> = {}
@@ -229,13 +233,17 @@ async function run(request: NextRequest) {
     const contentHash = assignmentContentHash(input)
     const key = `${candidateId}:${contentHash}`
     if (settledKeys.has(key)) {
+      // 판정이 끝난 후보라도 제목은 중복 재료로 남긴다 — 안 그러면 이미 다룬 소식의
+      // 재탕이 매 회차 새 후보로 보인다.
+      seenTitles.push(title)
       noteSkip("already_assessed")
       continue
     }
     const attempt = (attempts.get(key) ?? 0) + 1
 
     // 규칙으로 답이 정해진 후보는 LLM 을 부르지 않는다 (비용 + 정책 일관성)
-    const ruled = preAssign(input)
+    const ruled = preAssign(input, seenTitles)
+    seenTitles.push(title)
     if (ruled) {
       rows.push(verdictRow({ candidateId, runId, contentHash, attempt }, ruled, { latencyMs: 0 }))
       continue

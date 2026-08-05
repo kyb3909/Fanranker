@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { isContentFreeText } from "@/lib/news/content-quality"
 import { PERSONAL_BLOG_RE, isWomensFootball } from "@/lib/news/quality-gate"
+import { titleSimilarity } from "@/lib/saga/cluster"
 
 /**
  * 어사인먼트 데스크 (Phase 2 — shadow 전용).
@@ -27,14 +28,27 @@ import { PERSONAL_BLOG_RE, isWomensFootball } from "@/lib/news/quality-gate"
  * 이력:
  *  · 2026-08-05.1 — 최초. desk 6종 / reason code 20종 / check 7종.
  *    루머를 반려 사유에서 뺐다 (2026-08-04 운영자 확정: "오보 어차피 루머니까 상관 없어").
+ *  · 2026-08-05.2 — 첫 shadow 40건 실측에서 나온 결함 3종 수정.
+ *    ① 오차단: "월드컵 개최 도시들, FIFA 지불 거부"를 non_football 로 반려했는데 실제로는
+ *       발행된 기사였다(reject 4건 중 1건 = 25%). non_football 을 "다른 종목"으로 좁히고
+ *       reject 자체를 훨씬 보수적으로 못박았다.
+ *    ② 계약 모순: decision=assign 인데 reason 이 low_interest·non_football 인 행이 통과했다.
+ *       배정해놓고 반려 사유를 다는 판정은 근거를 못 믿는다 → 그룹 정합성 검증 추가.
+ *    ③ 중복 판정 불능: 후보를 1건씩 독립 호출하면서 decision 에 duplicate 를 넣어둬,
+ *       LLM 이 판단할 재료가 없었다(기마랑이스 3건·비니시우스 6건 전부 assign).
+ *       duplicate 는 LLM 에서 빼고 제목 유사도 규칙으로 내렸다 — "규칙 판정은 LLM 에
+ *       맡기지 않는다" 원칙과도 맞고 중복분은 호출 자체를 안 한다.
  */
-export const ASSIGNMENT_PROMPT_VERSION = "assignment-desk@2026-08-05.1"
+export const ASSIGNMENT_PROMPT_VERSION = "assignment-desk@2026-08-05.2"
 
 /** 판정 모델. GPT-5 계열이 아니므로 temperature 사용 가능 (supportsTemperature 참조) */
 export const ASSIGNMENT_MODEL = "gpt-4o-mini"
 
-/** LLM 없이 결정론 규칙만으로 끝난 판정의 model 값 */
-export const ASSIGNMENT_RULE_MODEL = "rule:v1"
+/** LLM 없이 결정론 규칙만으로 끝난 판정의 model 값. 규칙이 바뀌면 함께 올린다. */
+export const ASSIGNMENT_RULE_MODEL = "rule:v2"
+
+/** 같은 소식으로 접는 제목 유사도 임계 — auto-publish 중복 게이트와 같은 값 */
+export const ASSIGNMENT_DUPLICATE_THRESHOLD = 0.5
 
 /** 회복 가능 실패를 몇 번까지 다시 볼 것인가 — 넘으면 dead_letter */
 export const ASSIGNMENT_MAX_ATTEMPTS = 3
@@ -62,9 +76,8 @@ export const ASSIGNMENT_CHECKS = [
   "saga_link",
 ] as const
 
-/** 판정 사유. 자유 문장 대신 닫힌 집합이어야 분포를 집계하고 회귀를 감지할 수 있다. */
-export const ASSIGNMENT_REASON_CODES = [
-  // 배정 근거
+/** 배정 근거 */
+export const ASSIGN_REASON_CODES = [
   "big_club",
   "korean_player",
   "star_player",
@@ -73,21 +86,33 @@ export const ASSIGNMENT_REASON_CODES = [
   "match_report",
   "saga_followup",
   "transfer_rumor",
-  // 보류 근거
+] as const
+/** 보류 근거 */
+export const HOLD_REASON_CODES = [
   "unclear_source",
   "thin_source",
   "personal_blog",
   "korean_media",
   "content_free",
-  // 중복
-  "duplicate_recent",
-  // 반려 근거
+] as const
+/** 중복 근거 (규칙 판정 전용 — LLM 은 이 결정을 내리지 않는다) */
+export const DUPLICATE_REASON_CODES = ["duplicate_recent"] as const
+/** 반려 근거 */
+export const REJECT_REASON_CODES = [
   "minor_league",
   "admin_notice",
   "non_football",
   "womens_football",
   "low_interest",
   "stale",
+] as const
+
+/** 판정 사유. 자유 문장 대신 닫힌 집합이어야 분포를 집계하고 회귀를 감지할 수 있다. */
+export const ASSIGNMENT_REASON_CODES = [
+  ...ASSIGN_REASON_CODES,
+  ...HOLD_REASON_CODES,
+  ...DUPLICATE_REASON_CODES,
+  ...REJECT_REASON_CODES,
 ] as const
 
 export type AssignmentDesk = (typeof ASSIGNMENT_DESKS)[number]
@@ -134,7 +159,7 @@ export type AssignmentCallResult =
       usage: AssignmentUsage
       latencyMs: number
       /** 계약 밖 값이라 버린 것들 — 프롬프트 회귀 감지용 */
-      dropped: { checks: string[]; reasonCodes: string[] }
+      dropped: { checks: string[]; reasonCodes: string[]; mismatched: string[] }
     }
   | {
       ok: false
@@ -153,6 +178,22 @@ const FORMAT_SET = new Set<string>(ASSIGNMENT_FORMATS)
 const DECISION_SET = new Set<string>(ASSIGNMENT_DECISIONS)
 const CHECK_SET = new Set<string>(ASSIGNMENT_CHECKS)
 const REASON_SET = new Set<string>(ASSIGNMENT_REASON_CODES)
+
+/**
+ * 결정별로 허용되는 사유 그룹.
+ *
+ * 배정해놓고 반려 사유를 다는 판정은 근거가 흔들린 신호다 (2026-08-05 shadow 실측:
+ * decision=assign 인데 reason 이 low_interest·non_football 인 행 2건). 그대로 두면
+ * 사유 분포 통계가 오염되고, 나중에 이 사유로 실집행을 열면 엉뚱한 걸 버린다.
+ *
+ * 보류·중복은 "배정 가치는 있는데 지금은 아님"이 정상이라 배정 근거를 함께 허용한다.
+ */
+const ALLOWED_REASONS_BY_DECISION: Record<AssignmentDecision, Set<string>> = {
+  assign: new Set<string>(ASSIGN_REASON_CODES),
+  hold: new Set<string>([...HOLD_REASON_CODES, ...ASSIGN_REASON_CODES]),
+  duplicate: new Set<string>([...DUPLICATE_REASON_CODES, ...ASSIGN_REASON_CODES]),
+  reject: new Set<string>(REJECT_REASON_CODES),
+}
 
 /** 마감 상한 — 뉴스 후보에 24시간을 넘는 마감은 의미가 없다(만료가 먼저 온다) */
 const MAX_DEADLINE_MINUTES = 1440
@@ -178,20 +219,34 @@ low 공식 발표·확정 보도 / medium 기자발 단독·미확정 / high 출
 ## format
 breaking_brief 속보 단신 / standard 일반 기사 / saga_update 사가 엔트리 / hold 지금은 작성 보류
 
-## decision
+## decision — assign 이 기본값이다
 - assign: 처리한다
-- hold: 지금은 보류(자료 부족·출처 불명 등). **애매하면 reject 가 아니라 hold** — 잘못 버리는 게 더 나쁘다
-- duplicate: 이미 다룬 소식의 재탕으로 보임
-- reject: 우리 독자에게 명백히 무가치
+- hold: 지금은 보류(출처 불명·자료 부족). **애매하면 reject 가 아니라 hold** — 잘못 버리는 게 훨씬 나쁘다
+- reject: 아래 넷 중 하나가 **명백할 때만**. 조금이라도 걸리면 hold 로 내려라
+  · 여자 축구
+  · 축구가 아닌 다른 종목(농구·야구·테니스·e스포츠 등)
+  · 무명 하부리그·마이너 리그의 소소한 이적/임대
+  · 팬이 볼 이유가 전혀 없는 순수 행정 공지
+
+⚠️ **non_football 은 "다른 종목"일 때만 쓴다.** FIFA·UEFA·프리미어리그·월드컵·구단이
+관련되면 행정·법정·사건사고·스폰서십이라도 **전부 축구다.** 이걸 반려하면 실제로 나갔어야 할
+기사를 버린다(실사고: "월드컵 개최 도시들, FIFA 지불 거부에 대응"을 non_football 로 반려).
+
+## 중복은 판정하지 마라
+같은 소식이 여러 건 들어오는지는 규칙이 따로 판정한다. 너는 이 후보 하나만 보고 있으므로
+중복 여부를 알 수 없다. 추측하지 말고 이 후보 자체의 가치로만 판정하라.
 
 ## required_checks — 후속 단계가 반드시 돌려야 할 검증 (없으면 빈 배열)
 image_required / player_dictionary / duplicate_scan / source_tier / body_consistency / translation / saga_link
 
-## reason_codes — 아래 목록에서만 고른다 (1~3개)
+## reason_codes — 아래에서 고른다 (1~3개)
 배정: big_club, korean_player, star_player, official_announcement, injury_update, match_report, saga_followup, transfer_rumor
 보류: unclear_source, thin_source, personal_blog, korean_media, content_free
-중복: duplicate_recent
 반려: minor_league, admin_notice, non_football, womens_football, low_interest, stale
+
+⚠️ **사유는 decision 과 같은 줄에서만 고른다.** assign 인데 low_interest, assign 인데
+non_football 같은 조합은 금지다 — 배정해놓고 반려 사유를 달면 판정을 믿을 수 없다.
+보류는 배정 근거를 함께 써도 된다(예: big_club + unclear_source).
 
 ## 운영 규칙 (반드시 지킨다)
 - **이적 루머는 반려 사유가 아니다.** 여름 이적시장 기사 대부분이 루머다 — transfer_rumor 로 배정하되 risk 를 올려라
@@ -243,9 +298,17 @@ function verdict(partial: Omit<AssignmentVerdict, "model" | "prompt_version">, m
  * 정책이라 LLM 의 판단 재량에 둘 이유가 없다("규칙 판정은 LLM 에 맡기지 않는다").
  * 규칙은 quality-gate 와 **같은 상수**를 쓴다 — 복제하면 한쪽만 고쳐지는 드리프트가 난다.
  *
+ * 중복도 여기서 본다. 후보를 1건씩 독립 호출하는 구조라 LLM 은 다른 후보를 볼 수 없어
+ * 중복을 원리적으로 못 잡았다 (2026-08-05 실측: 기마랑이스 3건·비니시우스 6건이 전부
+ * assign). 제목 유사도는 auto-publish 중복 게이트와 같은 함수·같은 임계를 쓴다.
+ *
+ * @param seenTitles 이 후보보다 먼저 본 제목들. 비어 있으면 중복 판정을 건너뛴다.
  * @returns 규칙으로 끝났으면 판정, 아니면 null(= LLM 호출 필요)
  */
-export function preAssign(input: AssignmentInput): AssignmentVerdict | null {
+export function preAssign(
+  input: AssignmentInput,
+  seenTitles: string[] = []
+): AssignmentVerdict | null {
   if (isWomensFootball(input.title, input.body.slice(0, 400), input.sourceUrl)) {
     return verdict(
       {
@@ -291,11 +354,34 @@ export function preAssign(input: AssignmentInput): AssignmentVerdict | null {
       ASSIGNMENT_RULE_MODEL
     )
   }
+  // 정책 반려·보류를 먼저 본다 — 여자 축구 기사가 둘 들어오면 '중복'이 아니라 '여자 축구'다.
+  const duplicateOf = seenTitles.find(
+    (seen) => titleSimilarity(seen, input.title) >= ASSIGNMENT_DUPLICATE_THRESHOLD
+  )
+  if (duplicateOf) {
+    return verdict(
+      {
+        desk: "general",
+        priority: 10,
+        risk: "low",
+        format: "hold",
+        required_checks: ["duplicate_scan"],
+        deadline_minutes: 0,
+        decision: "duplicate",
+        reason_codes: ["duplicate_recent"],
+      },
+      ASSIGNMENT_RULE_MODEL
+    )
+  }
   return null
 }
 
 export type AssignmentParseResult =
-  | { ok: true; verdict: AssignmentVerdict; dropped: { checks: string[]; reasonCodes: string[] } }
+  | {
+      ok: true
+      verdict: AssignmentVerdict
+      dropped: { checks: string[]; reasonCodes: string[]; mismatched: string[] }
+    }
   | { ok: false; error: string }
 
 /**
@@ -329,12 +415,16 @@ export function parseAssignmentVerdict(raw: unknown, model: string): AssignmentP
   const rawChecks = Array.isArray(r.required_checks) ? r.required_checks.map(String) : []
   const rawReasons = Array.isArray(r.reason_codes) ? r.reason_codes.map(String) : []
   const checks = [...new Set(rawChecks.filter((c) => CHECK_SET.has(c)))] as AssignmentCheck[]
-  const reasons = [
-    ...new Set(rawReasons.filter((c) => REASON_SET.has(c))),
-  ] as AssignmentReasonCode[]
+
+  // 결정과 안 맞는 사유는 버린다. 모르는 값(오타·환각)과는 따로 세야 프롬프트 회귀를
+  // 진단할 수 있다 — 전자는 "모델이 계약을 모른다", 후자는 "판정이 흔들린다"로 원인이 다르다.
+  const allowed = ALLOWED_REASONS_BY_DECISION[decision as AssignmentDecision]
+  const reasons = [...new Set(rawReasons.filter((c) => allowed.has(c)))] as AssignmentReasonCode[]
 
   // 사유가 하나도 안 남으면 "왜 그렇게 판정했는지 모르는 행"이 된다 — 그건 침묵 실패다.
-  if (reasons.length === 0) return { ok: false, error: "알려진 reason_code 없음" }
+  if (reasons.length === 0) {
+    return { ok: false, error: `decision=${decision} 에 맞는 reason_code 없음` }
+  }
 
   return {
     ok: true,
@@ -354,6 +444,8 @@ export function parseAssignmentVerdict(raw: unknown, model: string): AssignmentP
     dropped: {
       checks: rawChecks.filter((c) => !CHECK_SET.has(c)),
       reasonCodes: rawReasons.filter((c) => !REASON_SET.has(c)),
+      /** 아는 사유지만 이 결정과 모순이라 버린 것 (assign 인데 low_interest 류) */
+      mismatched: rawReasons.filter((c) => REASON_SET.has(c) && !allowed.has(c)),
     },
   }
 }

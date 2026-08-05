@@ -86,6 +86,32 @@ describe("preAssign — 결정론 선판정", () => {
   it("정상 후보는 규칙으로 끝내지 않고 LLM 에 넘긴다", () => {
     expect(preAssign(input())).toBeNull()
   })
+
+  it("먼저 본 제목과 비슷하면 LLM 없이 중복으로 접는다 (v2 — 1건씩 호출하면 LLM 은 못 잡는다)", () => {
+    const seen = ["[Lee Ryder] 뉴캐슬, 아스날과 브루노 기마랑이스 7500만 파운드 이적 논의"]
+    const verdict = preAssign(
+      input({ title: "[Chronicle Live] 뉴캐슬, 아스날과 브루노 기마랑이스 7500만 파운드 협상" }),
+      seen
+    )
+
+    expect(verdict?.decision).toBe("duplicate")
+    expect(verdict?.reason_codes).toEqual(["duplicate_recent"])
+    expect(verdict?.model).toBe(ASSIGNMENT_RULE_MODEL)
+  })
+
+  it("먼저 본 제목과 무관하면 중복이 아니다", () => {
+    const verdict = preAssign(input({ title: "토트넘, 미키 무어 임대 이적 추진" }), [
+      "뉴캐슬, 브루노 기마랑이스 7500만 파운드 협상",
+    ])
+    expect(verdict).toBeNull()
+  })
+
+  it("여자 축구가 중복보다 우선한다 (같은 소식 둘이어도 사유는 정책 반려다)", () => {
+    const verdict = preAssign(input({ title: "바르셀로나 여자팀, 맨체스터 시티와 친선전" }), [
+      "바르셀로나 여자팀, 맨체스터 시티와 친선전 확정",
+    ])
+    expect(verdict?.reason_codes).toEqual(["womens_football"])
+  })
 })
 
 describe("parseAssignmentVerdict — 계약 검증", () => {
@@ -126,12 +152,60 @@ describe("parseAssignmentVerdict — 계약 검증", () => {
     if (!result.ok) return
     expect(result.verdict.reason_codes).toEqual(["big_club"])
     expect(result.verdict.required_checks).toEqual([])
-    expect(result.dropped).toEqual({ checks: ["astrology"], reasonCodes: ["vibes"] })
+    expect(result.dropped).toEqual({
+      checks: ["astrology"],
+      reasonCodes: ["vibes"],
+      mismatched: [],
+    })
   })
 
   it("사유가 하나도 안 남으면 실패한다 — 이유 모를 판정은 침묵 실패다", () => {
     const result = parseAssignmentVerdict({ ...VALID_VERDICT, reason_codes: ["vibes"] }, "m")
     expect(result.ok).toBe(false)
+  })
+
+  // v2 — 2026-08-05 shadow 실측: assign 인데 low_interest·non_football 인 행이 통과했다.
+  it("배정 결정에 반려 사유가 섞이면 버리고 mismatched 로 보고한다", () => {
+    const result = parseAssignmentVerdict(
+      { ...VALID_VERDICT, decision: "assign", reason_codes: ["big_club", "low_interest"] },
+      "gpt-4o-mini"
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.verdict.reason_codes).toEqual(["big_club"])
+    expect(result.dropped.mismatched).toEqual(["low_interest"])
+  })
+
+  it("배정 사유가 반려 사유뿐이면 실패한다 — 배정인지 반려인지 모르는 판정이다", () => {
+    const result = parseAssignmentVerdict(
+      { ...VALID_VERDICT, decision: "assign", reason_codes: ["non_football"] },
+      "gpt-4o-mini"
+    )
+    expect(result.ok).toBe(false)
+  })
+
+  it("반려 결정에 배정 사유만 달리면 실패한다", () => {
+    const result = parseAssignmentVerdict(
+      { ...VALID_VERDICT, decision: "reject", reason_codes: ["big_club"] },
+      "gpt-4o-mini"
+    )
+    expect(result.ok).toBe(false)
+  })
+
+  it("보류는 배정 근거를 함께 쓸 수 있다 (빅클럽인데 출처가 불명한 경우)", () => {
+    const result = parseAssignmentVerdict(
+      {
+        ...VALID_VERDICT,
+        decision: "hold",
+        format: "hold",
+        reason_codes: ["big_club", "unclear_source"],
+      },
+      "gpt-4o-mini"
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.verdict.reason_codes).toEqual(["big_club", "unclear_source"])
+    expect(result.dropped.mismatched).toEqual([])
   })
 
   it("객체가 아닌 응답은 실패한다", () => {

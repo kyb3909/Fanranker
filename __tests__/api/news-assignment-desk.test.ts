@@ -201,9 +201,24 @@ describe("GET /api/cron/news-assignment-desk", () => {
     expect(body.llmCalls).toBe(0)
     expect(inserted[0]).toMatchObject({
       outcome: "reject",
-      model: "rule:v1",
+      model: "rule:v2",
       estimated_cost_usd: 0,
     })
+  })
+
+  it("같은 소식의 재탕은 LLM 없이 중복으로 접는다 (v2 — 회차 안 제목 누적)", async () => {
+    seed("a", "뉴캐슬, 아스날과 브루노 기마랑이스 7500만 파운드 이적 협상")
+    seed("b", "[Lee Ryder] 뉴캐슬, 아스날과 브루노 기마랑이스 7500만 파운드 협상 논의")
+    const fetchMock = stubLlm(OK_PAYLOAD)
+
+    const body = await (await call()).json()
+
+    // 첫 건만 LLM, 두 번째는 규칙으로 중복 처리 → 호출 1회 절감
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(body.ruleCalls).toBe(1)
+    const dup = inserted.find((r) => r.outcome === "duplicate")
+    expect(dup).toMatchObject({ candidate_id: "b", model: "rule:v2", status: "ok" })
+    expect(dup?.reason_codes).toEqual(["duplicate_recent"])
   })
 
   it("같은 (후보, 내용, 프롬프트 버전)이 이미 종착이면 다시 판정하지 않는다", async () => {
