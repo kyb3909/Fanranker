@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireStaffApi } from "@/lib/admin/roles"
 import { unknownPlayerNames } from "@/lib/news/quality-gate"
+import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
 import {
   parseUnknownNames,
   suggestExisting,
@@ -135,7 +136,10 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", target.id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true, merged_into: target.preferred_ko })
+    // 이 이름 때문에만 막혀 있던 초안을 재검사 대상으로 되돌린다 — 등재가 미래 기사에만
+    // 미치고 계기가 된 기사는 만료로 죽던 구멍(2026-08-06 실측, needs_human 47%의 일부)
+    const recheck = await requeueDraftsUnblockedByDictionary(supabase)
+    return NextResponse.json({ ok: true, merged_into: target.preferred_ko, recheck })
   }
 
   if (body.mode === "promote") {
@@ -161,7 +165,8 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", target.id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true, promoted_from: oldKo })
+    const recheck = await requeueDraftsUnblockedByDictionary(supabase)
+    return NextResponse.json({ ok: true, promoted_from: oldKo, recheck })
   }
 
   // new — 같은 한글 표기가 이미 있으면 중복 생성하지 않는다
@@ -184,5 +189,6 @@ export async function POST(req: NextRequest) {
     notes: `desk-registered at=${new Date().toISOString()}`,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  const recheck = await requeueDraftsUnblockedByDictionary(supabase)
+  return NextResponse.json({ ok: true, recheck })
 }
