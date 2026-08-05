@@ -68,6 +68,7 @@ interface DraftRow {
 let drafts: DraftRow[] = []
 let botPublishedToday = 0
 let autoPublishedToday = 0
+let recentPostRows: { title: string; source_url: string | null }[] = []
 let knownCandidates: { candidate_id: string; state: string; last_reason_code: string | null }[] = []
 const inserted: Record<string, unknown>[] = []
 const reservoirUpdates: Array<{ id: string; patch: Record<string, unknown> }> = []
@@ -101,7 +102,7 @@ vi.mock("@/lib/supabase/server", () => ({
               : {
                   eq: () => ({
                     is: () => ({
-                      gte: async () => ({ data: [], error: null }),
+                      gte: async () => ({ data: recentPostRows, error: null }),
                     }),
                   }),
                 },
@@ -207,6 +208,7 @@ describe("GET /api/cron/news-auto-publish", () => {
     drafts = []
     botPublishedToday = 0
     autoPublishedToday = 0
+    recentPostRows = []
     knownCandidates = []
     inserted.length = 0
     reservoirUpdates.length = 0
@@ -397,6 +399,66 @@ describe("GET /api/cron/news-auto-publish", () => {
       decision?: { auto_gate?: { reasons?: string[] } }
     }
     expect(gatePatch?.decision?.auto_gate?.reasons).toEqual(["이미지 부적합: 로고만 있는 카드"])
+  })
+
+  it("같은 원문 URL 은 제목이 달라도 중복 차단한다 (2026-08-06 가디언 이중 발행 실사고)", async () => {
+    recentPostRows = [
+      {
+        title: "[The Guardian] 비니시우스, 무리뉴 감독과의 훈련 소감",
+        source_url: "https://www.theguardian.com/football/2026/aug/04/arsenal-target-vinicius",
+      },
+    ]
+    drafts = [
+      {
+        ...draft("a", visualDoc),
+        // 제목은 전혀 다르게, URL 은 www/쿼리만 다르게 — 정규화가 잡아야 한다
+        urls: {
+          source:
+            "https://theguardian.com/football/2026/aug/04/arsenal-target-vinicius?utm_source=x",
+        },
+        draft: { title: "완전히 다른 표현의 제목입니다", content: visualDoc },
+      },
+    ]
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(0)
+    expect(inserted).toHaveLength(0)
+    const patch = reservoirUpdates.find((u) => u.id === "a")?.patch as {
+      decision: { auto_gate: { reasons: string[] } }
+    }
+    expect(patch.decision.auto_gate.reasons[0]).toContain("동일 원문 URL")
+    expect(ledgerEvents).toContainEqual(
+      expect.objectContaining({
+        candidate_id: "a",
+        to_state: "duplicate",
+        reason_code: "same_source_url",
+      })
+    )
+  })
+
+  it("같은 run 안에서 같은 URL 두 초안이면 첫 건만 발행한다", async () => {
+    const url = "https://www.theguardian.com/football/2026/aug/04/same-article"
+    drafts = [
+      { ...draft("a", visualDoc), urls: { source: url } },
+      {
+        ...draft("b", visualDoc),
+        urls: { source: url },
+        draft: { title: "표현을 바꿔 쓴 같은 기사", content: visualDoc },
+      },
+    ]
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(1)
+    expect(inserted).toHaveLength(1)
+    expect(ledgerEvents).toContainEqual(
+      expect.objectContaining({
+        candidate_id: "b",
+        to_state: "duplicate",
+        reason_code: "same_source_url",
+      })
+    )
   })
 
   it("만료 임박 초안을 신선한 초안보다 먼저 발행한다 (스타베이션 차단)", async () => {

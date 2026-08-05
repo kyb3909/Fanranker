@@ -72,6 +72,20 @@ function kstMidnightUtcIso(): string {
   ).toISOString()
 }
 
+/**
+ * 중복 판정용 원문 URL 정규화 — 호스트(www 제거)+경로만. 쿼리스트링(utm 등)·프래그먼트·
+ * 대소문자·꼬리 슬래시 차이로 같은 기사가 다른 URL 로 보이는 것을 막는다.
+ * 파싱 불가면 원문 소문자 그대로 — 비교 실패로 중복이 새는 것보다 낫다.
+ */
+function canonicalSourceUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return `${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`.toLowerCase()
+  } catch {
+    return url.trim().toLowerCase()
+  }
+}
+
 async function run(request: NextRequest) {
   const authError = verifyCronSecret(request)
   if (authError) return authError
@@ -142,15 +156,23 @@ async function run(request: NextRequest) {
     .select("preferred_ko, hangul_alts")
     .eq("category", "player")
 
-  // 중복 차단 재료 — 최근 48시간 발행 제목 (실사고 2026-08-04: 레딧에 같은 소식이
-  // 여러 개 올라와 '헨더슨 첼시 합류'가 3번 발행됨)
+  // 중복 차단 재료 — 최근 48시간 발행 제목 + 원문 URL (실사고 2026-08-04: 레딧에 같은
+  // 소식이 여러 개 올라와 '헨더슨 첼시 합류'가 3번 발행됨 / 2026-08-06: 같은 가디언
+  // 원문의 초안 3벌 중 제목을 바꿔 쓴 1벌이 유사도 0.40 으로 제목 게이트를 빠져나가
+  // 같은 기사가 2번 발행됨 — 같은 URL 은 제목이 아무리 달라도 같은 기사다)
   const { data: recentPosts } = await supabase
     .from("posts")
-    .select("title")
+    .select("title, source_url")
     .eq("user_id", NEWS_BOT_USER_ID)
     .is("deleted_at", null)
     .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
   const recentTitles = (recentPosts ?? []).map((p) => p.title as string)
+  const recentUrls = new Set(
+    (recentPosts ?? [])
+      .map((p) => p.source_url as string | null)
+      .filter((u): u is string => Boolean(u))
+      .map(canonicalSourceUrl)
+  )
 
   // 이미 원장에 같은 판정이 찍힌 후보는 재기록하지 않는다 (2026-08-05 실측: 24시간
   // 이벤트 744건 중 601건이 정체 후보 52개의 needs_human 재기록 — 11~12회/후보).
@@ -241,7 +263,52 @@ async function run(request: NextRequest) {
       continue
     }
 
-    // 중복 차단 — 최근 발행 기사와 제목이 비슷하면 같은 소식의 재탕
+    // 중복 차단 1 — **같은 원문 URL 은 제목이 아무리 달라도 같은 기사다** (결정론, 최우선).
+    // 2026-08-06 실사고: 같은 가디언 원문의 초안 3벌 중 표현을 바꿔 쓴 1벌이 제목
+    // 유사도(0.40 < 0.5)를 빠져나가 같은 기사가 11초 간격으로 2번 발행됐다.
+    const srcCanonical = row.urls?.source ? canonicalSourceUrl(row.urls.source) : null
+    if (srcCanonical && recentUrls.has(srcCanonical)) {
+      const { error: gateWriteError } = await supabase
+        .from("news_reservoir")
+        .update({
+          decision: {
+            ...(row.decision ?? {}),
+            auto_gate: {
+              pass: false,
+              reasons: [`중복 기사 (동일 원문 URL 기발행)`],
+              at: new Date().toISOString(),
+            },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      if (gateWriteError) {
+        errors.push(`${row.id}: URL 중복 게이트 기록 실패 — ${gateWriteError.message}`)
+        ledgerEvents.push({
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "retry_wait",
+          actor: "news-auto-publish",
+          reason_code: "duplicate_gate_write_failed",
+          details: { error: gateWriteError.message },
+          run_id: ledgerRunId,
+        })
+      } else {
+        ledgerEvents.push({
+          candidate_id: row.id,
+          reservoir_id: row.id,
+          to_state: "duplicate",
+          actor: "news-auto-publish",
+          reason_code: "same_source_url",
+          details: { url: srcCanonical },
+          run_id: ledgerRunId,
+        })
+      }
+      gated.push(`${row.id}: URL 중복`)
+      continue
+    }
+
+    // 중복 차단 2 — 최근 발행 기사와 제목이 비슷하면 같은 소식의 재탕 (다른 URL 대비)
     const dup = recentTitles.find((t) => titleSimilarity(t, title) >= 0.5)
     if (dup) {
       const { error: gateWriteError } = await supabase
@@ -394,8 +461,9 @@ async function run(request: NextRequest) {
     }
     published++
     publishedIds.push(result.postId!)
-    // 같은 run 안의 다음 후보도 방금 발행분과 중복 검사되도록
+    // 같은 run 안의 다음 후보도 방금 발행분과 중복 검사되도록 (제목 + 원문 URL)
     recentTitles.push(title)
+    if (srcCanonical) recentUrls.add(srcCanonical)
   }
 
   if (skipped.length > 0 || gated.length > 0 || errors.length > 0) {
