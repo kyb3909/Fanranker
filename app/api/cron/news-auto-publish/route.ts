@@ -10,6 +10,7 @@ import {
   NEWS_BOT_USER_ID,
   type NewsReservoirItem,
 } from "@/lib/news/publish"
+import { rehostExternalImage } from "@/lib/images/rehost"
 import {
   inspectDraft,
   inspectImage,
@@ -315,7 +316,28 @@ async function run(request: NextRequest) {
     // 이미지 적합성 (vision) — 배너·로고·광고 이미지 차단 (Substack 실사고)
     if (failReasons.length === 0) {
       const imgUrl = firstImage.startsWith("/") ? `https://gongnori.fan${firstImage}` : firstImage
-      const img = await inspectImage(imgUrl)
+      let img = await inspectImage(imgUrl)
+      // 인프라 실패는 판정이 아니다 (2026-08-06 실측: 이미지 반려 7건 중 5건이 가디언
+      // 계열 HTTP 400 — 원본 서버가 OpenAI 페처를 차단). 우리 스토리지로 복사한 사본으로
+      // 한 번 더 검사한다 — 원본이 막혀도 사본은 열린다.
+      if (!img.pass && img.infra && /^https?:\/\//i.test(firstImage)) {
+        try {
+          const rehosted = await rehostExternalImage(firstImage, NEWS_BOT_USER_ID)
+          if (rehosted !== firstImage) {
+            img = await inspectImage(
+              rehosted.startsWith("/") ? `https://gongnori.fan${rehosted}` : rehosted
+            )
+          }
+        } catch (e) {
+          console.error("[news-auto-publish] 검사용 이미지 재호스팅 실패", row.id, e)
+        }
+      }
+      if (!img.pass && img.infra) {
+        // 여전히 검사 불가 — "부적합" 낙인(auto_gate) 없이 다음 회차 재시도.
+        // 판정을 못 받은 기사가 사람 검수 무덤으로 떨어져 만료되는 것을 막는다.
+        noteSkip(row.id, "image_check_unavailable", "retry_wait")
+        continue
+      }
       if (!img.pass) failReasons = [`이미지 부적합: ${img.reason}`]
     }
     if (failReasons.length > 0) {

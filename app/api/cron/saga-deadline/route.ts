@@ -25,21 +25,36 @@ async function cronGet(request: Request) {
   }
 
   const supabase = createServiceRoleClient()
-  const { data: closed, error } = await supabase
+  const now = new Date().toISOString()
+
+  // outcome 은 stage 로 갈린다 (PRD §4.2: done=성사 / stayed=마감 미성사).
+  // 2026-08-06 점검 실측: stage 필터 없이 전건 stayed 로 찍으면 이미 성사된 사가
+  // 15건(살라·이한범 등)의 영구 기록이 "잔류"로 뒤집힐 예정이었다 — 성사분 먼저 분리.
+  const { data: closedDone, error: doneError } = await supabase
     .from("sagas")
-    .update({
-      status: "closed",
-      outcome: "stayed",
-      closed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .update({ status: "closed", outcome: "done", closed_at: now, updated_at: now })
     .eq("saga_type", "transfer")
     .eq("window_key", SAGA_WINDOW_KEY)
     .eq("status", "active")
+    .eq("stage", "done")
+    .select("slug")
+  if (doneError) return NextResponse.json({ error: doneError.message }, { status: 500 })
+
+  const { data: closedStayed, error } = await supabase
+    .from("sagas")
+    .update({ status: "closed", outcome: "stayed", closed_at: now, updated_at: now })
+    .eq("saga_type", "transfer")
+    .eq("window_key", SAGA_WINDOW_KEY)
+    .eq("status", "active")
+    .neq("stage", "done")
     .select("slug")
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ ok: true, closed: (closed ?? []).map((s) => s.slug) })
+  return NextResponse.json({
+    ok: true,
+    closedDone: (closedDone ?? []).map((s) => s.slug),
+    closedStayed: (closedStayed ?? []).map((s) => s.slug),
+  })
 }
 
 export const GET = withCronLog("saga-deadline", cronGet)

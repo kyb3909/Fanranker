@@ -2,7 +2,7 @@ import "server-only"
 
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { identityKey, baseSlug, isSamePlayerKey, normalizePlayerKey } from "./identity"
-import { nextStage, type SagaType } from "./stages"
+import { confirmationPatch, nextStage, type SagaType } from "./stages"
 
 /**
  * 사가 생성·성장의 서버 전용 진입점 (Phase A W1).
@@ -190,8 +190,8 @@ export async function appendEntry(
       entry_count: count ?? 0,
       last_event_at: occurredAt,
       updated_at: new Date().toISOString(),
-      // 오피셜 확정 = noindex 해제 (D7)
-      ...(input.stageAfter === "done" ? { is_confirmed: true } : {}),
+      // D7 노출 전이 — 오피셜 완료에서만 열리고, 후퇴 신호에 다시 잠긴다 (stages.ts 규칙)
+      ...confirmationPatch(input.stageAfter ?? null, input.tier),
     })
     .eq("id", sagaId)
   if (sagaUpdateError) throw new Error(`사가 상태 갱신 실패: ${sagaUpdateError.message}`)

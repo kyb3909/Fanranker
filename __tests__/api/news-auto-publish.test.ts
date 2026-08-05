@@ -31,18 +31,20 @@ vi.mock("@/lib/news/suggest-flair", () => ({
 vi.mock("@/lib/cron/log-run", () => ({
   withCronLog: (_name: string, handler: (request: Request) => Promise<Response>) => handler,
 }))
+const inspectImageMock = vi.fn()
 vi.mock("@/lib/news/quality-gate", () => ({
   inspectDraft: vi.fn().mockResolvedValue({ pass: true, reasons: [], playerNamesKr: [] }),
-  inspectImage: vi.fn().mockResolvedValue({ pass: true, reason: "ok" }),
+  inspectImage: (url: string) => inspectImageMock(url),
   unknownPlayerNames: vi.fn().mockReturnValue([]),
   PERSONAL_BLOG_RE: /substack\.com/i,
   isWomensFootball: (...texts: (string | null | undefined)[]) =>
     /women|여자\s*축구/i.test(texts.filter(Boolean).join(" ")),
 }))
 vi.mock("@/lib/saga/cluster", () => ({ titleSimilarity: () => 0 }))
+const rehostMock = vi.fn(async (src: string, _userId?: string) => src)
 vi.mock("@/lib/images/rehost", () => ({
   isSelfHostedImageUrl: () => true,
-  rehostExternalImage: vi.fn(async (src: string) => src),
+  rehostExternalImage: (src: string, userId: string) => rehostMock(src, userId),
 }))
 vi.mock("@/lib/saga/publish", () => ({
   linkArticleToSaga: vi.fn().mockResolvedValue(null),
@@ -209,6 +211,8 @@ describe("GET /api/cron/news-auto-publish", () => {
     inserted.length = 0
     reservoirUpdates.length = 0
     ledgerEvents.length = 0
+    inspectImageMock.mockReset().mockResolvedValue({ pass: true, reason: "ok" })
+    rehostMock.mockReset().mockImplementation(async (src: string) => src)
   })
 
   it("실제 이미지가 있는 초안만 발행하고 auto=true 로 표시한다", async () => {
@@ -333,6 +337,66 @@ describe("GET /api/cron/news-auto-publish", () => {
     expect(ledgerEvents.filter((e) => e.candidate_id === "a")).toEqual([
       expect.objectContaining({ to_state: "needs_human", reason_code: "no_image" }),
     ])
+  })
+
+  it("이미지 검사 인프라 실패는 재호스팅 사본으로 재검사해 발행한다 (가디언 400 실사고)", async () => {
+    drafts = [draft("a", visualDoc)]
+    // 원본 URL 검사는 400(인프라), 재호스팅 사본 검사는 통과
+    inspectImageMock
+      .mockResolvedValueOnce({ pass: false, reason: "이미지 검사 실패(HTTP 400)", infra: true })
+      .mockResolvedValueOnce({ pass: true, reason: "ok" })
+    rehostMock.mockResolvedValue("/storage/posts/bot/rehosted.webp")
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(1)
+    expect(rehostMock).toHaveBeenCalledWith("https://example.com/a.jpg", expect.any(String))
+    // 두 번째 검사는 사본 URL 로
+    expect(inspectImageMock).toHaveBeenLastCalledWith(
+      "https://gongnori.fan/storage/posts/bot/rehosted.webp"
+    )
+  })
+
+  it("사본 검사까지 불가하면 '부적합' 낙인 없이 다음 회차로 미룬다 (판정≠실패)", async () => {
+    drafts = [draft("a", visualDoc)]
+    inspectImageMock.mockResolvedValue({
+      pass: false,
+      reason: "이미지 검사 실패(HTTP 400)",
+      infra: true,
+    })
+    rehostMock.mockRejectedValue(new Error("download blocked"))
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(0)
+    expect(body.skipCounts.image_check_unavailable).toBe(1)
+    // 반려 기록(auto_gate)을 찍지 않는다 — 찍으면 사람 검수 무덤으로 떨어져 만료된다
+    expect(reservoirUpdates).toHaveLength(0)
+    expect(ledgerEvents).toContainEqual(
+      expect.objectContaining({
+        candidate_id: "a",
+        to_state: "retry_wait",
+        reason_code: "image_check_unavailable",
+      })
+    )
+    // 종착이 needs_human 이 아니다 — 검사 시작(fact_checking) 후 재시도 대기로만 남는다
+    expect(ledgerEvents.map((e) => e.to_state)).toEqual(["fact_checking", "retry_wait"])
+    errorSpy.mockRestore()
+  })
+
+  it("진짜 부적합 판정(infra 아님)은 기존대로 반려 기록을 남긴다", async () => {
+    drafts = [draft("a", visualDoc)]
+    inspectImageMock.mockResolvedValue({ pass: false, reason: "로고만 있는 카드" })
+
+    const body = await (await call()).json()
+
+    expect(body.published).toBe(0)
+    expect(rehostMock).not.toHaveBeenCalled()
+    const gatePatch = reservoirUpdates.find((u) => u.id === "a")?.patch as {
+      decision?: { auto_gate?: { reasons?: string[] } }
+    }
+    expect(gatePatch?.decision?.auto_gate?.reasons).toEqual(["이미지 부적합: 로고만 있는 카드"])
   })
 
   it("만료 임박 초안을 신선한 초안보다 먼저 발행한다 (스타베이션 차단)", async () => {

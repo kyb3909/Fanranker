@@ -51,3 +51,23 @@ export function nextStage(type: SagaType, current: string, incoming: string | nu
   if (!incoming || !isValidStage(type, incoming)) return current
   return incoming
 }
+
+/**
+ * D7 노출 전이(is_confirmed) — noindex 해제·루머 배너 제거를 여는 유일한 규칙.
+ *
+ * 2026-08-06 점검 실측: done 신호만으로 열던 기존 규칙 아래 루머 보도뿐인 사가 8건이
+ * 검색 개방됐고, done 찍고 협상으로 후퇴한 3건(기마랑이스 포함)이 배너 없이 남았다.
+ * D7 의 취지는 명예훼손 가드다 — **열림은 어렵게(오피셜 완료에서만), 닫힘은 쉽게
+ * (비-done 신호가 오면 즉시 재잠금)**. done+비오피셜은 현 상태 유지 — 이미 오피셜로
+ * 열린 문서를 뒤늦은 루머 에코가 재잠금하지 않도록.
+ */
+export function confirmationPatch(
+  stageAfter: string | null,
+  tier: string
+): { is_confirmed?: boolean } {
+  if (stageAfter === "done") {
+    return tier === "official" ? { is_confirmed: true } : {}
+  }
+  if (stageAfter) return { is_confirmed: false }
+  return {}
+}

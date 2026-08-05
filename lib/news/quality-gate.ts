@@ -90,10 +90,22 @@ export async function inspectDraft(title: string, content: unknown): Promise<Qua
 /**
  * 이미지 적합성 검사 (2026-08-04 실사고: Substack '구독하세요' 배너가 대표
  * 이미지로 발행됨) — 축구 보도 사진인지 vision 으로 심사. fail-closed.
+ *
+ * `infra=true` 는 **판정이 아니라 검사 실패**다 (원본 접근 차단·타임아웃·키 부재).
+ * 2026-08-06 오반려율 실측: 이미지 반려 7건 중 5건이 가디언 계열의 HTTP 400 —
+ * 검사관이 이미지를 보지도 못했는데 "부적합" 낙인이 찍혀 기사가 만료로 죽었다.
+ * 호출부는 infra 실패를 부적합과 절대 같은 결과로 취급하면 안 된다.
  */
-export async function inspectImage(imageUrl: string): Promise<{ pass: boolean; reason: string }> {
+export interface ImageVerdict {
+  pass: boolean
+  reason: string
+  /** true = 검사 자체가 불가했음(판정 없음). 재시도·우회 대상이지 반려 사유가 아니다 */
+  infra?: boolean
+}
+
+export async function inspectImage(imageUrl: string): Promise<ImageVerdict> {
   const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return { pass: false, reason: "검사관 미가동" }
+  if (!apiKey) return { pass: false, reason: "검사관 미가동", infra: true }
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -117,7 +129,9 @@ JSON만: {"pass": boolean, "reason": "한 줄"}`,
       }),
       signal: AbortSignal.timeout(30000),
     })
-    if (!res.ok) return { pass: false, reason: `이미지 검사 실패(HTTP ${res.status})` }
+    if (!res.ok) {
+      return { pass: false, reason: `이미지 검사 실패(HTTP ${res.status})`, infra: true }
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
       pass?: boolean
@@ -125,7 +139,7 @@ JSON만: {"pass": boolean, "reason": "한 줄"}`,
     }
     return { pass: parsed.pass === true, reason: String(parsed.reason ?? "").slice(0, 100) }
   } catch {
-    return { pass: false, reason: "이미지 검사 실패(타임아웃)" }
+    return { pass: false, reason: "이미지 검사 실패(타임아웃)", infra: true }
   }
 }
 
