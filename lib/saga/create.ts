@@ -2,7 +2,7 @@ import "server-only"
 
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { identityKey, baseSlug, isSamePlayerKey, normalizePlayerKey } from "./identity"
-import { confirmationPatch, nextStage, type SagaType } from "./stages"
+import { confirmationPatch, gatedStageSignal, nextStage, type SagaType } from "./stages"
 
 /**
  * 사가 생성·성장의 서버 전용 진입점 (Phase A W1).
@@ -177,7 +177,10 @@ export async function appendEntry(
     .single()
   if (error) throw new Error(`엔트리 추가 실패: ${error.message}`)
 
-  const stage = nextStage(sagaType, currentStage, input.stageAfter ?? null)
+  // 오피셜 단계 게이트: official 티어가 아닌 완료 주장은 단계를 못 움직인다.
+  // 엔트리의 stage_after 에는 원 신호가 남는다 — "이 보도가 완료라고 주장했다"는 기록.
+  const effectiveSignal = gatedStageSignal(input.stageAfter ?? null, input.tier)
+  const stage = nextStage(sagaType, currentStage, effectiveSignal)
   const { count } = await supabase
     .from("saga_entries")
     .select("id", { count: "exact", head: true })
@@ -190,8 +193,9 @@ export async function appendEntry(
       entry_count: count ?? 0,
       last_event_at: occurredAt,
       updated_at: new Date().toISOString(),
-      // D7 노출 전이 — 오피셜 완료에서만 열리고, 후퇴 신호에 다시 잠긴다 (stages.ts 규칙)
-      ...confirmationPatch(input.stageAfter ?? null, input.tier),
+      // D7 노출 전이 — 오피셜 완료에서만 열리고, 후퇴 신호에 다시 잠긴다 (stages.ts 규칙).
+      // 게이트 통과 신호 기준: 루머의 done 주장은 null 로 강등돼 노출 상태도 못 건드린다.
+      ...confirmationPatch(effectiveSignal, input.tier),
     })
     .eq("id", sagaId)
   if (sagaUpdateError) throw new Error(`사가 상태 갱신 실패: ${sagaUpdateError.message}`)

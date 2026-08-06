@@ -53,6 +53,21 @@ export function nextStage(type: SagaType, current: string, incoming: string | nu
 }
 
 /**
+ * done(오피셜) 단계 게이트 — **오피셜 단계 진입은 official 티어 보도에서만**
+ * (2026-08-06 오너: "오피셜은 말 그대로 완전 확정이라는 이야기가 나와야만 가능해").
+ *
+ * 실사고: AS 의 "아스날 내부, 영입 확정으로 간주" 기사에서 LLM 이 done 신호를 뽑았고,
+ * stage 전이가 티어를 보지 않아 비니시우스 사가가 "오피셜" 단계로 올라갔다. 루머·유력
+ * 보도의 완료 주장은 엔트리(stage_after 원값)에는 그대로 기록되지만, **사가 단계를
+ * 움직이지는 못한다** — 신호를 null 로 강등해 현 단계에 머문다. 진짜 오피셜이 나오면
+ * 그때 done 으로 전진한다.
+ */
+export function gatedStageSignal(stageAfter: string | null, tier: string): string | null {
+  if (stageAfter === "done" && tier !== "official") return null
+  return stageAfter
+}
+
+/**
  * D7 노출 전이(is_confirmed) — noindex 해제·루머 배너 제거를 여는 유일한 규칙.
  *
  * 2026-08-06 점검 실측: done 신호만으로 열던 기존 규칙 아래 루머 보도뿐인 사가 8건이
