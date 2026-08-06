@@ -30,6 +30,17 @@ type ScoreCandidate = {
 const GAME_SELECT =
   "id, game_no, game_type, sport, result, status, home_win_odds, away_win_odds, draw_odds, over_odds, under_odds, odd_odds, even_odds, daily_round_id"
 
+/**
+ * 스코어 유추 백필 안전 마진 (2026-08-06, gauntlet R2 / 단계 0-3).
+ * 기존에는 match_time < now 만 보고 스코어→결과를 확정했는데, 킥오프 직후의 경기는
+ * "라이브 중간 스코어"일 수 있다 — 그걸로 completed+result 를 박으면 오정산 위험.
+ * 축구 연장+승부차기·야구 연장을 감안해 킥오프 후 2.5시간 지난 경기만 대상으로 한다.
+ */
+const SAFE_FINISH_MS = 2.5 * 60 * 60 * 1000
+
+/** 쓰기 실행 여부 — 기본 드라이런, `--apply` 를 붙여야 실제 반영 (단계 0-3) */
+const APPLY = process.argv.includes("--apply")
+
 function hasMissingResult(game: Pick<MissingGameRow, "result">) {
   return game.result === null || game.result === ""
 }
@@ -211,12 +222,13 @@ async function crawlMissingRounds(
 }
 
 async function backfillByExistingScores(supabase: ReturnType<typeof createServiceClient>) {
-  const nowIso = new Date().toISOString()
+  // 킥오프+2.5h 안전 마진 — 라이브 중간 스코어를 최종 결과로 오인하지 않기 위함 (SAFE_FINISH_MS 주석)
+  const cutoffIso = new Date(Date.now() - SAFE_FINISH_MS).toISOString()
 
   const { data, error } = await supabase
     .from("betman_games")
     .select("id, game_type, status, result, home_score, away_score, handicap, over_under_line")
-    .lt("match_time", nowIso)
+    .lt("match_time", cutoffIso)
     .in("status", ["scheduled", "in_progress", "completed"])
     .or("result.is.null,result.eq.")
     .not("home_score", "is", null)
@@ -243,6 +255,12 @@ async function backfillByExistingScores(supabase: ReturnType<typeof createServic
 
     if (!finalResult) {
       unresolved++
+      continue
+    }
+
+    if (!APPLY) {
+      // 드라이런: 반영했을 건수만 센다
+      updated++
       continue
     }
 
@@ -356,6 +374,21 @@ async function settleAllPendingAvailable(supabase: ReturnType<typeof createServi
     }
   }
 
+  if (!APPLY) {
+    // 드라이런: 정산 가능 건수만 보고 (돈이 움직이는 구간이라 특히 --apply 필수)
+    console.log(`[dry-run] 정산 생략 — 대상 픽 ${targetPreds.length}건`)
+    return {
+      pendingPredictions: pendingPredictions.length,
+      settleableGames: settleableGames.length,
+      settled: 0,
+      correct: 0,
+      wrong: 0,
+      cancelled: 0,
+      errors: [] as string[],
+      wouldSettle: targetPreds.length,
+    }
+  }
+
   const settleResult = await settlePredictions(
     supabase as never,
     settleableGames as never,
@@ -386,6 +419,10 @@ function getNumericOption(name: string, fallback: number): number {
 async function main() {
   const supabase = createServiceClient()
 
+  if (!APPLY) {
+    console.log("[dry-run] 기본 드라이런 모드 — 실제 반영은 --apply 를 붙여 실행 (단계 0-3)")
+  }
+
   const beforeMissing = await countMissingPastGames(supabase)
   console.log(
     `[start] backfill candidates: total=${beforeMissing.total}, result=${beforeMissing.missingResult}, score=${beforeMissing.missingScore}`
@@ -398,7 +435,13 @@ async function main() {
   console.log(`[crawl] scan-window: days=${days}, round-limit=${roundLimit}`)
   console.log(`[crawl] target rounds: ${targetGmTs.length > 0 ? targetGmTs.join(", ") : "(none)"}`)
 
-  const crawlResult = await crawlMissingRounds(supabase, targetGmTs)
+  // 크롤 단계는 fetchAndApplyResults 가 내부에서 바로 DB 를 쓰므로 드라이런에서는 통째로 생략
+  const crawlResult = APPLY
+    ? await crawlMissingRounds(supabase, targetGmTs)
+    : { updated: 0, cancelled: 0, errors: [] as string[] }
+  if (!APPLY && targetGmTs.length > 0) {
+    console.log(`[dry-run] crawl 생략 — 대상 ${targetGmTs.length}개 회차`)
+  }
 
   const scoreBackfill = await backfillByExistingScores(supabase)
 
@@ -407,6 +450,7 @@ async function main() {
   const afterMissing = await countMissingPastGames(supabase)
 
   const summary = {
+    mode: APPLY ? "apply" : "dry-run",
     beforeMissing,
     afterMissing,
     crawl: {
