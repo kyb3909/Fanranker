@@ -91,6 +91,10 @@
     {
       "path": "/api/cron/news-assignment-desk",
       "schedule": "19 * * * *"
+    },
+    {
+      "path": "/api/cron/standings-refresh",
+      "schedule": "0 23 * * *"
     }
   ]
 }
