@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { settlePredictions } from "@/lib/betman/settle"
 import { deriveResultFromScore } from "@/lib/betman/result-mapper"
+import { shouldBlockResultChange, describeBlockReason } from "@/lib/betman/result-guard"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { apiError, apiBadRequest } from "@/lib/api-error"
 import { z } from "zod"
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const { data: targetGames, error: targetGamesError } = await supabase
       .from("betman_games")
-      .select("id, game_no, game_type, handicap, over_under_line")
+      .select("id, game_no, game_type, handicap, over_under_line, result, status")
       .eq("round_id", roundId)
       .in("game_no", targetGameNos)
 
@@ -72,10 +73,28 @@ export async function POST(request: NextRequest) {
 
     const gameByNo = new Map((targetGames || []).map((g) => [g.game_no, g]))
 
+    // 정산 후 결과 덮어쓰기 가드 (R1 / 단계 0-1, 2026-08-06):
+    // VPS 재수신·백필이 이미 정산된 경기의 result 를 바꾸면 지급 기록과 어긋난다.
+    // settled 픽이 있는 경기의 결과 변경분은 건너뛰고 나머지는 정상 처리 — lib/betman/result-guard.ts.
+    const targetGameIds = (targetGames || []).map((g) => g.id)
+    const settledGameIds = new Set<string>()
+    if (targetGameIds.length > 0) {
+      const { data: settledPicks, error: settledError } = await supabase
+        .from("betman_predictions")
+        .select("game_id")
+        .in("game_id", targetGameIds)
+        .eq("status", "settled")
+      if (settledError) {
+        return apiError("정산 픽 조회 실패", 500, settledError)
+      }
+      for (const p of settledPicks || []) settledGameIds.add(p.game_id)
+    }
+
     let updated = 0
     let cancelled = 0
     let derived = 0
     let unresolved = 0
+    let blocked = 0
     const errors: string[] = []
 
     for (const r of results) {
@@ -105,6 +124,23 @@ export async function POST(request: NextRequest) {
       if ((!finalResult || finalResult === "") && r.status === "completed") {
         unresolved++
         errors.push(`game_no=${r.game_no}: 완료 상태이지만 결과를 확정하지 못함`)
+      }
+
+      const verdict = shouldBlockResultChange({
+        hasSettledPicks: settledGameIds.has(gameMeta.id),
+        currentResult: gameMeta.result,
+        currentStatus: gameMeta.status,
+        incomingResult: finalResult && finalResult !== "" ? finalResult : null,
+        incomingStatus: r.status,
+      })
+
+      if (verdict.blocked && verdict.reason) {
+        blocked++
+        errors.push(
+          `game_no=${r.game_no}: ${describeBlockReason(verdict.reason)} 차단 ` +
+            `(현재 result=${gameMeta.result ?? "없음"}, 수신 result=${finalResult || "없음"})`
+        )
+        continue
       }
 
       const updateData: Record<string, unknown> = {
@@ -208,6 +244,7 @@ export async function POST(request: NextRequest) {
       cancelled,
       derived,
       unresolved,
+      blocked,
       total: results.length,
       autoSettle: settleResult
         ? {
@@ -222,8 +259,8 @@ export async function POST(request: NextRequest) {
           ? [...errors, ...settleErrors, ...(settleResult?.errors || [])]
           : undefined,
       message: `${updated}건 업데이트, ${cancelled}건 취소${derived > 0 ? `, ${derived}건 결과 유추` : ""}${
-        settleResult ? `, ${settleResult.settled}건 자동 정산` : ""
-      }`,
+        blocked > 0 ? `, ${blocked}건 가드 차단(정산 완료)` : ""
+      }${settleResult ? `, ${settleResult.settled}건 자동 정산` : ""}`,
     })
   } catch (e) {
     return apiError("서버 오류가 발생했습니다.", 500, e)
