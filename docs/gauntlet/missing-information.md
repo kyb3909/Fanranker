@@ -20,6 +20,7 @@
 | I-1 | Vultr VPS crontab 실태 — standings-scraper가 어디서 돌다 3/11에 왜 멈췄나, preview 계열 등록 여부 | R9 재발 방지·화석 정리 |
 | I-2 | pg_cron 6잡·Edge Function `betman-sync-watchdog`의 관리 주체·원본 소스 | R18 정본화 |
 | I-3 | API-Football 실제 요금·친선경기(Club Friendlies) 커버리지·평점 필드 유무 확인 | D-1 확정 재료 |
+| I-3b | **(실측 완료 2026-08-06) Soccerway 대조군**: 리포트 페이지(`/match/…/report/?mid=…`)는 라인업·이벤트·xG를 담지만 **SPA 껍데기 — 정적 fetch로 전 항목 ABSENT, headless 필수** (match-preview PRD 결론 재확인). URL 슬러그 순서 ≠ 홈/원정(아스날-팰리스 사례), 경기 식별자는 `mid` 해시. → "스크랩은 무료가 아니라 headless 인프라+유지보수로 지불" — D-1 비교 재료 | D-1·D-2 |
 | I-4 | fpl-players.json 원천·갱신 주기 (2026-27 스쿼드 정확도 = 시즌위키 스쿼드 정확도) | 이적 반영 시점 |
 | I-5 | `docs/PROJECT.md`의 betman-sync.yml 등 낡은 서술 정리 (실물 워크플로 부재 확인됨) | 문서 신뢰 |
 
