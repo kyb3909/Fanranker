@@ -39,6 +39,29 @@ export interface SagaGroup {
 
 const TIER_RANK: Record<TransferTier, number> = { official: 0, tier1: 1, rumor: 2 }
 
+/**
+ * 같은 사가 안에서 **같은 원문 URL 을 이미 담은 엔트리**를 찾는다 (2026-08-06, 점검 F7).
+ *
+ * 실사고: 같은 ajansspor 기사가 발행 경로 2곳(기사 훅·저수지)에서 서로 다른 stage
+ * 신호로 추출돼 엔트리 2개가 됐다 — cluster_key 에 신호가 박혀 있어 같은 URL 이라도
+ * 신호가 갈리면 dedupe 지점이 없었다. 같은 기사 1건은 사건 1개다: origin 이든 echo 든
+ * 이 URL 을 이미 담은 엔트리가 있으면 새 엔트리 대신 그 엔트리에 접는다.
+ * 비교는 canonical(호스트+경로) 기준 — 호출부가 정규화 함수를 주입한다(뉴스 쪽과 공유).
+ */
+export function findEntryWithUrl<
+  T extends { origin: { url?: string | null } | null; echoes: { url?: string | null }[] | null },
+>(entries: T[], url: string, canonical: (u: string) => string): T | null {
+  const target = canonical(url)
+  for (const entry of entries) {
+    const originUrl = entry.origin?.url
+    if (originUrl && canonical(originUrl) === target) return entry
+    for (const echo of entry.echoes ?? []) {
+      if (echo.url && canonical(echo.url) === target) return entry
+    }
+  }
+  return null
+}
+
 /** 제목 토큰 Jaccard — 브래킷·구두점 제거 후 3글자 이상 토큰만 */
 export function titleSimilarity(a: string, b: string): number {
   const tok = (s: string) =>

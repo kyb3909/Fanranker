@@ -5,6 +5,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { notifyDiscordOps } from "@/lib/discord-notify"
+import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
 
 export const dynamic = "force-dynamic"
@@ -150,6 +151,47 @@ export async function POST(req: NextRequest) {
       deduped: true,
       observability: ledgerRecorded ? "ok" : "degraded",
     })
+  }
+
+  // "같은 원문 URL = 같은 기사" — 유입 시점 차단 (2026-08-06 가디언 실사고: 같은
+  // 기사가 레딧에 3번 올라와 dedupe_key 가 다른 초안 3벌이 생겼고, 그중 2벌이
+  // 발행까지 갔다). 살아있는 초안·발행분과 같은 원문이면 새 초안을 만들지 않는다.
+  // rejected·expired 는 제외 — 반려된 소식의 재보도는 새 초안으로 받는 게 맞다.
+  if (d.source_url) {
+    const canonical = canonicalSourceUrl(d.source_url)
+    const { data: recentRows } = await supabase
+      .from("news_reservoir")
+      .select("id, status, urls")
+      .in("status", ["drafted", "published"])
+      .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
+      .limit(400)
+    const dupRow = (recentRows ?? []).find((r) => {
+      const u = (r.urls as { source?: string | null } | null)?.source
+      return u ? canonicalSourceUrl(u) === canonical : false
+    })
+    if (dupRow) {
+      const ledgerRecorded = await recordNewsCandidateEvents(supabase, [
+        {
+          candidate_id: dupRow.id as string,
+          reservoir_id: dupRow.id as string,
+          canonical_url: d.source_url,
+          // 기존 후보의 최신 상태를 되돌리지 않는다 — 중복 관측만 남긴다
+          to_state: dupRow.status === "published" ? "published" : "drafted",
+          actor: "agent-draft",
+          reason_code: "duplicate_input_source_url",
+          details: { attempted_dedupe_key: d.dedupe_key },
+          run_id: runId,
+        },
+      ])
+      return NextResponse.json({
+        ok: true,
+        id: dupRow.id,
+        status: dupRow.status,
+        deduped: true,
+        reason: "source_url",
+        observability: ledgerRecorded ? "ok" : "degraded",
+      })
+    }
   }
 
   const { error } = await supabase.from("news_reservoir").insert({

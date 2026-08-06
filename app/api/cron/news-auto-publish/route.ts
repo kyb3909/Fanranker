@@ -11,6 +11,7 @@ import {
   type NewsReservoirItem,
 } from "@/lib/news/publish"
 import { rehostExternalImage } from "@/lib/images/rehost"
+import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import {
   inspectDraft,
   inspectImage,
@@ -70,20 +71,6 @@ function kstMidnightUtcIso(): string {
   return new Date(
     Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - 9 * 3600 * 1000
   ).toISOString()
-}
-
-/**
- * 중복 판정용 원문 URL 정규화 — 호스트(www 제거)+경로만. 쿼리스트링(utm 등)·프래그먼트·
- * 대소문자·꼬리 슬래시 차이로 같은 기사가 다른 URL 로 보이는 것을 막는다.
- * 파싱 불가면 원문 소문자 그대로 — 비교 실패로 중복이 새는 것보다 낫다.
- */
-function canonicalSourceUrl(url: string): string {
-  try {
-    const u = new URL(url)
-    return `${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`.toLowerCase()
-  } catch {
-    return url.trim().toLowerCase()
-  }
 }
 
 async function run(request: NextRequest) {

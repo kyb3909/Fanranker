@@ -2,6 +2,8 @@ import "server-only"
 
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { getOrCreateSaga, appendEntry } from "./create"
+import { findEntryWithUrl } from "./cluster"
+import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { resolveOrigin, classifyTier, type TransferTier } from "./tier"
 import { identityKey, normalizePlayerKey } from "./identity"
 import { SAGA_WINDOW_KEY } from "./config"
@@ -53,20 +55,37 @@ export async function upsertSagaEntry(
     .slice(0, 10)
   const clusterKey = `${normalizePlayerKey(d.player)}:${d.stageSignal ?? "news"}:${day}`
 
-  const { data: existingEntry } = await supabase
+  // 같은 URL 을 이미 담은 엔트리 우선 (점검 F7) — 같은 기사가 두 경로에서 다른
+  // stage 신호로 추출돼 엔트리 2개가 되는 것을 막는다. 그다음이 cluster_key 동일성.
+  const { data: sagaEntries } = await supabase
     .from("saga_entries")
-    .select("id, echoes")
+    .select("id, cluster_key, echoes, origin")
     .eq("saga_id", saga.id)
-    .eq("cluster_key", clusterKey)
-    .maybeSingle()
+  const urlMatch = findEntryWithUrl(
+    (sagaEntries ?? []) as {
+      id: string
+      cluster_key: string
+      echoes: { outlet: string; url: string; title: string }[] | null
+      origin: { url?: string | null } | null
+    }[],
+    d.origin.url,
+    canonicalSourceUrl
+  )
+  const existingEntry =
+    urlMatch ?? (sagaEntries ?? []).find((e) => e.cluster_key === clusterKey) ?? null
 
   let entryId: string | null = null
   if (existingEntry) {
     const currentEchoes =
       (existingEntry.echoes as { outlet: string; url: string; title: string }[]) ?? []
-    const alreadyFolded = currentEchoes.some(
-      (echo) => echo.url === d.origin.url && echo.title === d.headline
-    )
+    // 이미 origin 이 같은 URL 이면(같은 기사 재유입) 에코도 안 단다 — 완전 무시가 정답
+    const isSameOrigin =
+      (existingEntry as { origin?: { url?: string | null } | null }).origin?.url &&
+      canonicalSourceUrl((existingEntry as { origin: { url: string } }).origin.url) ===
+        canonicalSourceUrl(d.origin.url)
+    const alreadyFolded =
+      isSameOrigin ||
+      currentEchoes.some((echo) => echo.url === d.origin.url && echo.title === d.headline)
     if (!alreadyFolded) {
       const echoes = [
         ...currentEchoes,

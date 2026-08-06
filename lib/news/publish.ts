@@ -18,6 +18,7 @@ import {
   type ArticleSagaChoice,
 } from "@/lib/saga/publish"
 import { splitLongParagraphs } from "@/lib/tiptap/split-paragraphs"
+import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { newsCandidateRunId, recordNewsCandidateEvents } from "@/lib/news/candidate-ledger"
 import type { TipTapNode } from "@/types/post"
 
@@ -116,6 +117,40 @@ export async function publishNewsDraft(
   const content = splitLongParagraphs(await rehostContentImages(opts.content))
   const image = extractFirstImageSrcFromTipTapJSON(content)
   const sourceUrl = item.urls?.source ?? null
+
+  // ── "같은 원문 URL = 같은 기사" 최후 방어선 (2026-08-06 가디언 이중 발행 실사고) ──
+  // 자동발행은 자체 게이트가 먼저 거르지만, 여기는 **사람 검수 발행까지 포함한 모든
+  // 발행이 지나는 초크포인트**다. 살아있는 봇 글 중 같은 원문이 있으면 발행을 막는다.
+  // 원본 글을 지운 뒤라면(재발행 의도) deleted_at 필터에 안 걸려 정상 통과한다.
+  if (sourceUrl) {
+    const canonical = canonicalSourceUrl(sourceUrl)
+    const { data: recentSame } = await supabase
+      .from("posts")
+      .select("id, title, source_url")
+      .eq("user_id", NEWS_BOT_USER_ID)
+      .is("deleted_at", null)
+      .gte("created_at", new Date(Date.now() - 48 * 3600 * 1000).toISOString())
+    const dup = (recentSame ?? []).find(
+      (p) => p.source_url && canonicalSourceUrl(p.source_url as string) === canonical
+    )
+    if (dup) {
+      await recordNewsCandidateEvents(supabase, [
+        {
+          candidate_id: item.id,
+          reservoir_id: item.id,
+          canonical_url: sourceUrl,
+          to_state: "duplicate",
+          actor: opts.auto ? "news-auto-publish" : "news-desk",
+          reason_code: "same_source_url_blocked",
+          details: { existing_post: dup.id },
+          run_id: newsCandidateRunId(opts.auto ? "news-auto-publish" : "news-desk"),
+        },
+      ])
+      return {
+        error: `동일 원문 기사가 이미 발행되어 있습니다: "${String(dup.title).slice(0, 60)}" — 재발행하려면 기존 글을 먼저 내려주세요.`,
+      }
+    }
+  }
 
   // 말머리(다중) — 지정(flairIds)이 있으면 그대로, 미지정이면 제목 기반 자동 추천.
   // 대표 말머리(posts.flair_id)는 첫 번째(팀 우선 정렬), 나머지는 post_flair_map 에 담는다.
