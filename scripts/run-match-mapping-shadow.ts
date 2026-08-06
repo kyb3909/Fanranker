@@ -23,11 +23,14 @@ async function main() {
   const limit = limitArg ? Number(limitArg.slice(8)) || 15 : 15
   const discoverArg = process.argv.find((a) => a.startsWith("--discover="))
   const discoverLimit = discoverArg ? Number(discoverArg.slice(11)) || 0 : 6
+  const lookbackArg = process.argv.find((a) => a.startsWith("--lookback="))
+  const lookbackHours = lookbackArg ? Number(lookbackArg.slice(11)) || 24 : 24
 
   const supabase = createServiceClient()
   const summary = await runMatchMappingShadow(supabase, {
     limit,
     discoverLimit,
+    lookbackHours,
     runId: `manual-${new Date().toISOString()}`,
   })
 

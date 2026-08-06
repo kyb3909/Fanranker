@@ -349,6 +349,8 @@ export async function runMatchMappingShadow(
     discoverLimit?: number
     searcher?: TeamSearcher
     proposer?: QueryProposer
+    /** 과거 경기 스캔 범위(시간) — 기본 24h. 백필·리허설 시 넓혀 쓴다 */
+    lookbackHours?: number
   } = {}
 ): Promise<ShadowRunSummary> {
   const limit = options.limit ?? 15
@@ -377,7 +379,10 @@ export async function runMatchMappingShadow(
     .from("betman_games")
     .select("id, home_team_name, away_team_name, match_time, league_code")
     .eq("sport", "축구")
-    .gte("match_time", new Date(Date.now() - 24 * 3600_000).toISOString())
+    .gte(
+      "match_time",
+      new Date(Date.now() - (options.lookbackHours ?? 24) * 3600_000).toISOString()
+    )
     .lte("match_time", new Date(Date.now() + 8 * 24 * 3600_000).toISOString())
     .order("match_time", { ascending: true })
     .limit(200)
