@@ -1,7 +1,7 @@
 # 목표 아키텍처 — "세종실록" 3층 구조 (2026-08-06)
 
 - 방향타: 오너 비전 = **"기사는 흘러가지만 기록은 자산이 된다"** — 경기 평점·스탯·리뷰·이면 뉴스가 하나의 자라는 실록으로.
-- 제약: PRD 결정 로그(D1~D15) 준수. **D11 = 경기 데이터는 크롤링이 아닌 API** — 본 설계는 API-first 다 (Soccerway는 §6 오너 결정 대기, 기본안 폐기).
+- 제약: PRD 결정 로그(D1~**D16**) 준수. **D16 (2026-08-06 오너, D11 개정) = Soccerway 크롤 우선 + 무료 API 교차 보정** — 매치 발견은 정적 fetch, 라인업·기록 상세는 headless(기존 match-preview 인프라 부활, VPS), FT 후 무료 API로 스코어·득점자 대조(불일치→검수 큐). 유료 API는 파손·차단 시 폴백. ~~API-first~~ 문구는 이 개정으로 대체.
 - 원칙: 런타임 멀티에이전트 금지(단순 체인+결정론 검증+HITL) / fail-closed 품질·fail-open 연동 / 신규 검증은 dev-time 건틀릿.
 
 ## 1. 큰 그림 — 사초 3갈래 → 편찬 → 실록
@@ -25,13 +25,13 @@ fixtures·lineups·events·ratings    이적·사건·발언·사고 기사     
 
 ## 2. 권장 데이터 모델
 
-### 2.1 canonical ID 원칙 — "왕은 외부 API ID, 내부는 매핑 사전"
+### 2.1 canonical ID 원칙 — "왕은 Soccerway ID, 내부는 매핑 사전" (D16 반영)
 
-현재 팀 8·선수 3·리그 5·경기 4개 체계가 문자열 매칭으로 이어져 있다(probe-matchdata ③). 9번째 내부 체계를 발명하지 않는다 — **API 공급자의 ID(team_id/player_id/fixture_id/league_id)를 canonical로 삼고**, 기존 체계들은 매핑 사전으로 API ID에 접붙인다.
+현재 팀 8·선수 3·리그 5·경기 4개 체계가 문자열 매칭으로 이어져 있다(probe-matchdata ③). 9번째 내부 체계를 발명하지 않는다 — **Soccerway의 ID(팀 해시·선수 페이지 ID·경기 `mid`)를 canonical로 삼고**, 기존 체계들은 매핑 사전으로 접붙인다. 무료 API의 ID는 보정용 보조 컬럼(nullable)로 병기 — 폴백 전환 시 canonical 승격 가능하게.
 
-- **팀 사전** `team_dictionary` (신규): api_team_id PK, name_en, name_kr(대표), aliases_kr[] (betman 표기·네이버 표기·사가 alias 흡수), team_map_pin_id(스타디움 연계, nullable). 등재 흐름 = 선수 표기 사전과 동일: **후보 자동 제안, 확정은 사람 클릭** (검증된 패턴 재사용).
-- **선수 사전** = 기존 `news_alias_dictionary(category=player)`에 `api_player_id` 컬럼 추가 — 마스터 테이블 신설 대신 이미 910행 자산을 canonical에 접붙임. fpl json은 시드 소스로 강등.
-- **경기** = `betman_games.mapped_match_id`(이미 존재, 전행 NULL)에 **api_fixture_id 저장** — 스키마 신설 불요. mapped_league_id·mapped_*_team_id 동일.
+- **팀 사전** `team_dictionary` (신규): soccerway_team_id PK(해시 — 빌라 `W00wmLO0` 형식), name_en, name_kr(대표), aliases_kr[] (betman 표기·네이버 표기·사가 alias 흡수), free_api_team_id(보정용, nullable), team_map_pin_id(스타디움 연계, nullable). 등재 흐름 = 선수 표기 사전과 동일: **후보 자동 제안, 확정은 사람 클릭**.
+- **선수 사전** = 기존 `news_alias_dictionary(category=player)`에 `soccerway_player_id` 컬럼 추가 — 마스터 신설 대신 910행 자산에 접붙임. 라인업 크롤 시 선수 링크에서 ID 수확. fpl json은 시드 소스로 강등.
+- **경기** = `betman_games.mapped_match_id`(이미 존재, 전행 NULL)에 **soccerway `mid` 저장** — 스키마 신설 불요. 발견 경로: 날짜 목록 페이지 정적 fetch(실측 검증됨 — 빌라-뮌헨).
 
 ### 2.2 신규 테이블 5종 (경기 데이터 — 전부 append 지향)
 
@@ -62,15 +62,18 @@ fixtures·lineups·events·ratings    이적·사건·발언·사고 기사     
 ### 경기 운영 파이프라인 (현행 유지 + 정정 경로 보수)
 일정 수집→경기 생성(✅)→상태 추적(✅)→결과 확정→정산(CAS ✅)→중복 정산 검증(✅) **+ [수리] 정산 후 결과 변경 가드(R1) + 연기 상태 도입(R8, 정책 결정 후)**.
 
-### 경기 데이터 파이프라인 (신설 — API-first)
+### 경기 데이터 파이프라인 (신설 — D16: Soccerway 크롤 + 무료 API 보정)
 ```
-betman 경기 → [팀 사전] 팀 ID 해석 → API fixture 조회(팀2+날짜윈도) → 동일성 술어
-  (팀쌍 일치·킥오프 ±2h·대회) → mapped_match_id 기록 (모호하면 무매핑+검수 큐, fail-closed)
-  → 킥오프 후: lineups 수집 → FT: events·stats·ratings 수집 → 검증 술어(출전∩평점 등)
-  → MatchSaga 문서 생성(리뷰는 D14: 데이터+커뮤니티 반응에서 생성, 외부 텍스트 금지)
+betman 경기 → [팀 사전] 팀 해석 → Soccerway 날짜 페이지 정적 fetch → 매치 후보
+  → 동일성 술어(팀쌍 일치·킥오프 ±2h·대회) → mapped_match_id = soccerway mid
+    (모호하면 무매핑+검수 큐, fail-closed / 홈원정은 Soccerway 정본 — betman과 불일치 시 큐)
+  → 킥오프 전: [headless·VPS] 라인업 크롤 → FT 후: [headless] 이벤트·스탯 크롤
+  → [무료 API 1~2호출] 스코어·득점자 교차 대조 — 불일치는 자동 수정 없이 검수 큐
+  → 검증 술어(출전∩평점·선발∩벤치=∅ 등) → MatchSaga 문서(리뷰는 D14)
   → SeasonSaga 롤업(라운드 연혁·누적 스탯·폼)
 ```
-- 평점: 1차 = API 제공 rating 그대로(출처 표기). 자체 계산식(스탯 가중)은 2차 — 오너 결정(§missing-info).
+- headless 층은 기존 match-preview 인프라(`data/agents/scripts/preview-extract-run.js` 계열, Playwright·VPS) 부활·확장. 마크업 파손 감지 = 무료 API 대조 실패율 급증 → 알림 + 유료 API 폴백 검토(D16).
+- 평점: 1차 = **팬 평점(자체 — player_rating_votes)**. 데이터 평점은 무료 API 또는 자체 계산 후속(D-4 잔여).
 - 재시도 표준: `news_assignments` 패턴 이식 — 시도 원장 + retry_wait/dead_letter + (대상, 입력 해시)부분 유니크로 재호출 봉인.
 
 ## 4. 큐·재시도 구조 (표준화)

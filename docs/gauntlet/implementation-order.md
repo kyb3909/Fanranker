@@ -14,26 +14,28 @@
 | 0-5 | env zod 편입(OPENAI 등 12파일 키) + .env.example 갱신 | R17 | lib/env.ts | revert |
 | 0-6 | pg_cron 6잡·Edge Function 정본화(마이그레이션 파일로 기록) | R18 | 문서·마이그레이션(기록용) | 해당 없음(기록) |
 
-## 단계 1 — 오너 결정 (코드 0 — missing-information.md 의 결정 6건)
+## 단계 1 — 오너 결정 (잔여분 — missing-information.md)
 
-Q3 API 예산이 **단계 2 이후 전부의 선행 조건**. 결정 전에 할 수 있는 것은 0단계와 골든셋 라벨 준비뿐.
+~~Q3 API 예산~~ → **D16으로 해소 (2026-08-06): Soccerway 크롤 우선 + 무료 API 보정.** 잔여 결정: 무료 API 선택(I-3 실확인으로 추천 예정)·실록 편 구성(D-3)·정정 정책(D-5)·연기 정책(D-6).
 
-## 단계 2 — 신원(identity) 기반: 팀 사전 + 경기 매핑 (개막 전 목표)
+## 단계 2 — 신원(identity) 기반: 팀 사전 + 경기 매핑 (개막 전 목표, D16 반영)
 
 | 작업 | 선행 | 변경 범위 | 롤백 |
 |---|---|---|---|
-| team_dictionary 신설 + 후보 제안 화면(1클릭 등재 패턴 복제) | Q3 승인 | 마이그 1 + admin 화면 1 + lib | 테이블 drop (참조 없을 때) |
-| EPL+주요 리그 팀 시드(오너 확정 라벨) | 사전 화면 | 데이터만 | 행 삭제 |
-| **경기 매핑 파이프라인** — betman→API fixture, 동일성 술어, mapped_* 기록, 불일치 검수 큐 | 팀 사전 | cron 1 + lib + 시도 원장 테이블 1 | mapped_* NULL 복원(원장 보존) |
-| **매칭 골든셋 게이트 통과** (evaluation-plan G-매칭) — 통과 전 mapped_* 자동 기록은 shadow만 | 골든셋 라벨(오너) | — | — |
-| 홈/원정 대조 술어 가동 (불일치→검수 큐, 자동 스왑 금지) | 매핑 | 술어 1 | — |
+| team_dictionary 신설(soccerway 해시 PK) + 후보 제안 화면(1클릭 등재 패턴 복제) | — (D16 확정됨) | 마이그 1 + admin 화면 1 + lib | 테이블 drop (참조 없을 때) |
+| EPL+주요 리그 팀 시드(오너 확정 라벨) — 날짜 페이지 크롤로 해시 수확 | 사전 화면 | 데이터만 | 행 삭제 |
+| **경기 매핑 파이프라인** — betman→Soccerway 날짜 페이지(정적) 매치 발견, 동일성 술어, mapped_match_id=mid 기록, 불일치 검수 큐 | 팀 사전 | cron 1 + lib + 시도 원장 테이블 1 | mapped_* NULL 복원(원장 보존) |
+| **매칭 골든셋 게이트 통과** (G-매칭 50쌍) — 통과 전 자동 기록은 shadow만 | 골든셋 라벨(오너) | — | — |
+| 홈/원정 대조 술어 (Soccerway 정본, 불일치→검수 큐, 자동 스왑 금지) | 매핑 | 술어 1 | — |
 
-## 단계 3 — 경기 데이터 인제스트 (개막 직후 백필 포함)
+## 단계 3 — 경기 데이터 인제스트 (개막 직후 백필 포함, D16 반영)
 
 | 작업 | 선행 | 변경 범위 | 롤백 |
 |---|---|---|---|
 | fixtures/lineups/appearances/match_events/player_ratings 마이그 5종 (FK로 R14 원천 봉쇄) | 단계 2 | 마이그 | drop (참조 전) |
-| 인제스트 cron (킥오프 전 라인업 / FT 후 이벤트·스탯·평점) — retry_wait/dead_letter 표준 | 마이그 | cron 2 + lib | cron 해제 |
+| **headless 크롤 부활** — preview-extract 계열을 라인업·이벤트 추출로 확장 (VPS 배치 — VPS 변경은 오너 승인·별도 배포) | 마이그 | data/agents/scripts + VPS | 스크립트 미실행 |
+| 무료 API 보정 호출 (FT 후 스코어·득점자 대조 → 불일치 검수 큐) — I-3에서 API 선택 | 인제스트 | lib + cron 1 | 보정 생략(크롤 단독) |
+| 인제스트 수신 cron/API (VPS→Vercel, agent-draft 패턴) — retry_wait/dead_letter 표준 | 마이그 | cron 2 + lib | cron 해제 |
 | 검증 술어 상시화: 평점⊆출전, 선발∩벤치=∅, 이벤트 선수∈양팀 명단 | 인제스트 | 술어 | — |
 | **개막 후 백필** — 지난 라운드 소급 (PRD B1 "백필 가능"의 실행) | 게이트 통과 | 데이터만 | 원장 역재생 |
 
