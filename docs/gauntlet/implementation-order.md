@@ -20,13 +20,17 @@
 
 ## 단계 2 — 신원(identity) 기반: 팀 사전 + 경기 매핑 (개막 전 목표, D16 반영)
 
-| 작업 | 선행 | 변경 범위 | 롤백 |
-|---|---|---|---|
-| team_dictionary 신설(soccerway 해시 PK) + 후보 제안 화면(1클릭 등재 패턴 복제) | — (D16 확정됨) | 마이그 1 + admin 화면 1 + lib | 테이블 drop (참조 없을 때) |
-| EPL+주요 리그 팀 시드(오너 확정 라벨) — 날짜 페이지 크롤로 해시 수확 | 사전 화면 | 데이터만 | 행 삭제 |
-| **경기 매핑 파이프라인** — betman→Soccerway 날짜 페이지(정적) 매치 발견, 동일성 술어, mapped_match_id=mid 기록, 불일치 검수 큐 | 팀 사전 | cron 1 + lib + 시도 원장 테이블 1 | mapped_* NULL 복원(원장 보존) |
-| **매칭 골든셋 게이트 통과** (G-매칭 50쌍) — 통과 전 자동 기록은 shadow만 | 골든셋 라벨(오너) | — | — |
-| 홈/원정 대조 술어 (Soccerway 정본, 불일치→검수 큐, 자동 스왑 금지) | 매핑 | 술어 1 | — |
+**슬라이스 A ✅ 완료 (2026-08-07)** — 발견 경로는 실측으로 개정됨(I-3b): 날짜 페이지 정적 발견은 기각, **구성 URL(`/match/{해시}/{해시}/`) 정적 대조**가 정본 경로.
+
+| 작업 | 상태 | 비고 |
+|---|---|---|
+| team_dictionary + match_mapping_attempts 마이그 (`20260811_…`) | ✅ 적용 | RLS service-role 전용, 부분 유니크 멱등 |
+| 팀 시드 41팀 (EPL 핵심+빅클럽+UCL 예선 — 크럼 수확 + 구 URL 리다이렉트) | ✅ 반영 | ⚠️구 URL 은 id 만 봄 → expectedSlugs 가드 (666→bolton 착지 실측). 전부 status=proposed — 오너 확정은 admin 화면에서 |
+| 매핑 shadow 파이프라인 (`lib/soccerway/` + cron `match-mapping-shadow` 매시 :41) | ✅ | 술어: canonical 해시 집합 + 날짜 ±1일 + 단일 후보 (fail-closed). 템플릿 A(단일)·B(2연전 목록) 파서. betman_games 미기록 |
+| 첫 실전 검증 | ✅ | 페네르-슈투름(UCL 예선) 8행 proposed·flip=false·레그 정확 / team_unresolved 22건 = K리그2·J1·베티스 (사전 공백 자기 보고) |
+| **슬라이스 B**: admin 팀 사전 화면 (1클릭 등재 — unresolved 큐 소비 + confirmed 승격) | 다음 | 선수 사전 1클릭 패턴 복제 |
+| **매칭 골든셋 게이트** (G-매칭 50쌍 — shadow proposed 누적분에 오너 라벨) | 대기 | 통과 전 mapped_* 실기록 금지 |
+| soccerway `mid` 수확 (headless — 단계 3 VPS) | 대기 | 구성 URL 이 식별자 역할, mid 는 리포트 크롤용 |
 
 ## 단계 3 — 경기 데이터 인제스트 (개막 직후 백필 포함, D16 반영)
 

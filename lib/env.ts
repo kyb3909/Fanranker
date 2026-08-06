@@ -20,6 +20,8 @@ const serverSchema = z.object({
   SAGA_CARD_ROUTING: z.string().optional(),
   // 배정 데스크 모드 ("shadow" = 관찰만 / 미설정·"off" = 정지) — Phase 2
   NEWS_ASSIGNMENT_DESK: z.string().optional(),
+  // betman↔Soccerway 경기 매핑 shadow ("shadow" = 원장 기록만 / 미설정 = 정지) — 실록 단계 2
+  MATCH_MAPPING_SHADOW: z.string().optional(),
   // 어드민 인사이트 요약 모델 override (기본값은 코드에)
   ADMIN_INSIGHT_MODEL: z.string().optional(),
   // 네이버 오픈API (뉴스 표기 대조·검색)

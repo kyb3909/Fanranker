@@ -95,6 +95,10 @@
     {
       "path": "/api/cron/standings-refresh",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/match-mapping-shadow",
+      "schedule": "41 * * * *"
     }
   ]
 }
