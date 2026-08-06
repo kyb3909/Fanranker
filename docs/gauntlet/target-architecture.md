@@ -42,6 +42,7 @@ fixtures·lineups·events·ratings    이적·사건·발언·사고 기사     
 | `appearances` | (fixture_id, api_player_id) UNIQUE — minutes, position, is_starter | 평점의 유일한 유효 대상 |
 | `match_events` | (fixture_id, seq) — type(goal/card/sub…), minute, api_player_id | |
 | `player_ratings` | (fixture_id, api_player_id) UNIQUE + **FK→appearances** | **출전 없는 평점을 DB가 원천 봉쇄** (R14 선제). source(api\|computed), value, provenance |
+| `player_rating_votes` | (fixture_id, api_player_id, user_id) UNIQUE + **FK→appearances**, value 1~10, append-only | **팬 평점 (민심 층, 2026-08-06 오너 발제)** — API 평점 옆에 나란히. FT 후에만 오픈. 응원팀 flair 로 팬덤별 분화 집계. 핵심 노출 = 베트맨 정산 직후 모달(기존 예측완료 주입 패턴 재사용 — 사가 투표 0표 교훈: 버튼이 아니라 동선이 생명) |
 
 ### 2.3 provenance 표준 (source provenance 구조)
 
