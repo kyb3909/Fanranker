@@ -8,6 +8,7 @@ import {
   fetchMatches,
   fetchTeamChronicle,
   seasonStartIso,
+  seasonEndIso,
   type SeasonSubject,
   type ChronicleEvent,
 } from "@/lib/saga/season"
@@ -61,9 +62,13 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
     fetchMatches(supabase, aliases, subject.season),
   ])
   const chronicle = await fetchTeamChronicle(supabase, saga.id, aliases, subject.season, matches)
-  const upcoming = matches
-    .filter((m) => m.status !== "completed")
-    .sort((a, b) => a.matchTime.localeCompare(b.matchTime))[0]
+  // 지난 시즌 문서(완결)에는 현재 순위·다음 경기가 무의미 — 헤더 요약 숨김
+  const seasonOver = Date.now() >= new Date(seasonEndIso(subject.season)).getTime()
+  const upcoming = seasonOver
+    ? undefined
+    : matches
+        .filter((m) => m.status !== "completed")
+        .sort((a, b) => a.matchTime.localeCompare(b.matchTime))[0]
   const standingIsLastSeason =
     !!standing && new Date(standing.fetchedAt) < new Date(seasonStartIso(subject.season))
   const squad = loadSquad(subject.team_fpl)
@@ -85,7 +90,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
           >
             {saga.title}
           </h1>
-          {standing && (
+          {!seasonOver && standing && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
               <span className="font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
                 리그 {standing.rank}위
@@ -166,6 +171,8 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                         <MatchEvent ev={ev} teamNames={teamNames} />
                       ) : ev.kind === "transfer" ? (
                         <TransferEvent ev={ev} />
+                      ) : ev.kind === "entry" ? (
+                        <EntryEvent ev={ev} />
                       ) : (
                         <ArticleEvent ev={ev} />
                       )}
@@ -252,6 +259,36 @@ function MatchEvent({
           {m.leagueCode ?? ""}
         </span>
       </div>
+    </article>
+  )
+}
+
+/** 시즌 문서 자신의 엔트리 = 경기 카드 (D17 — "요약+라인업" 리뷰 카드가 이 자리에 쌓인다) */
+function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) {
+  return (
+    <article className="rounded-xl px-4 py-3" style={card}>
+      <p
+        className="text-[13.5px] font-semibold"
+        style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+      >
+        {ev.headline}
+      </p>
+      {ev.summary && (
+        <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
+          {ev.summary}
+        </p>
+      )}
+      {ev.url && (
+        <a
+          href={ev.url}
+          target="_blank"
+          rel="noreferrer nofollow"
+          className="mt-1 inline-block text-[11.5px] underline underline-offset-2"
+          style={{ color: "var(--wc-mute)" }}
+        >
+          경기 상세 ↗
+        </a>
+      )}
     </article>
   )
 }

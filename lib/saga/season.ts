@@ -116,6 +116,15 @@ export function seasonStartIso(season: string): string {
   return `${year}-07-01T00:00:00Z`
 }
 
+/**
+ * 시즌 종료 경계 (다음해 7/1, exclusive) — 지난 시즌 문서(예: 아스날 25-26 완전체
+ * 레퍼런스, 2026-08-07 오너)에 다음 시즌 프리시즌이 섞여 들어오는 것을 막는다.
+ */
+export function seasonEndIso(season: string): string {
+  const year = Number(season.slice(0, 4)) || new Date().getFullYear()
+  return `${year + 1}-07-01T00:00:00Z`
+}
+
 export async function fetchMatches(
   supabase: ServiceClient,
   aliases: string[],
@@ -132,6 +141,7 @@ export async function fetchMatches(
     .or(orExpr)
     // 시즌 문서엔 그 시즌 경기만 — 지난 시즌 경기가 섞여 나오면 문서가 아니라 잡탕이다
     .gte("match_time", seasonStartIso(season))
+    .lt("match_time", seasonEndIso(season))
     .order("match_time", { ascending: false })
     .limit(120)
 
@@ -172,6 +182,15 @@ export type ChronicleEvent =
       sagaTitle: string
     }
   | { kind: "article"; occurredAt: string; postId: string; title: string }
+  // 시즌 문서 자신의 엔트리 = 경기 카드 (D17 — 리뷰 카드가 연표에 쌓이는 최소 구현).
+  // betman 에 없는 경기(지난 시즌 백필·크롤 수집분)도 이 경로로 연대기에 실린다.
+  | {
+      kind: "entry"
+      occurredAt: string
+      headline: string
+      summary: string | null
+      url: string | null
+    }
 
 export async function fetchTeamChronicle(
   supabase: ServiceClient,
@@ -181,14 +200,34 @@ export async function fetchTeamChronicle(
   completedMatches: SeasonMatch[]
 ): Promise<ChronicleEvent[]> {
   const orExpr = aliases.map((a) => `headline.ilike.%${a}%`).join(",")
-  const { data: entries } = await supabase
-    .from("saga_entries")
-    .select("headline, tier, stage_after, occurred_at, sagas!inner ( slug, title, saga_type )")
-    .or(orExpr)
-    .gte("occurred_at", seasonStartIso(season))
-    .limit(300)
+  const [{ data: entries }, { data: ownEntries }] = await Promise.all([
+    supabase
+      .from("saga_entries")
+      .select("headline, tier, stage_after, occurred_at, sagas!inner ( slug, title, saga_type )")
+      .or(orExpr)
+      .gte("occurred_at", seasonStartIso(season))
+      .lt("occurred_at", seasonEndIso(season))
+      .limit(300),
+    // 이 시즌 문서 자신의 엔트리 (경기 카드 — D17)
+    supabase
+      .from("saga_entries")
+      .select("headline, summary, origin, occurred_at")
+      .eq("saga_id", seasonSagaId)
+      .order("occurred_at", { ascending: true })
+      .limit(150),
+  ])
 
   const events: ChronicleEvent[] = []
+  for (const e of ownEntries ?? []) {
+    const origin = (e.origin ?? {}) as { url?: string }
+    events.push({
+      kind: "entry",
+      occurredAt: e.occurred_at as string,
+      headline: e.headline as string,
+      summary: (e.summary as string | null) ?? null,
+      url: origin.url ?? null,
+    })
+  }
   for (const e of entries ?? []) {
     const saga = e.sagas as unknown as { slug: string; title: string; saga_type: string }
     if (saga.saga_type !== "transfer") continue
