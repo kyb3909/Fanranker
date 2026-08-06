@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { runDraftRoomCleanup } from "@/lib/draft/multi-engine"
 
 export const dynamic = "force-dynamic"
@@ -35,4 +36,4 @@ export async function POST(req: NextRequest) {
 }
 
 // Vercel cron는 GET 도 호출 가능하게 (CRON_SECRET header 동일 검증).
-export const GET = POST
+export const GET = withCronLog("draft-rooms-cleanup", (req: NextRequest) => POST(req))

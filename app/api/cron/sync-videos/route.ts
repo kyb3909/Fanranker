@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { XMLParser } from "fast-xml-parser"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { ALL_CREATORS } from "@/lib/constants/creators"
 
@@ -100,9 +101,7 @@ async function handle(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
-  return handle(request)
-}
+export const GET = withCronLog("sync-videos", handle)
 export async function POST(request: Request) {
   return handle(request)
 }

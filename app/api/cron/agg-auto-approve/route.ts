@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import {
   todayCounts,
   nextSlot,
@@ -121,9 +122,7 @@ async function run(request: NextRequest) {
   })
 }
 
-export async function GET(request: NextRequest) {
-  return run(request)
-}
+export const GET = withCronLog("agg-auto-approve", run)
 export async function POST(request: NextRequest) {
   return run(request)
 }

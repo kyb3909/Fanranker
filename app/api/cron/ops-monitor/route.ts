@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 
@@ -230,4 +231,5 @@ export async function POST(req: NextRequest) {
 }
 
 // Vercel cron 은 GET 호출 (CRON_SECRET 헤더 동일 검증)
-export const GET = POST
+// 감시자 자신도 감시 대상 — cron_run_log 기록 (2026-08-06, gauntlet R16 / 단계 0-4)
+export const GET = withCronLog("ops-monitor", (req: NextRequest) => POST(req))

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
 import {
@@ -31,9 +32,7 @@ const FREE_BOARD_SLUG = "free-board"
  * (event_id, week_start) unique + drawn_at 확인 — 재실행해도 이중 추첨 없음.
  */
 
-export async function GET(request: NextRequest) {
-  return run(request)
-}
+export const GET = withCronLog("season-weekly-draw-snapshot", run)
 export async function POST(request: NextRequest) {
   return run(request)
 }

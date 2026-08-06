@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { publishQueueItem, type AggQueueItem } from "@/lib/agg/publish"
 
 export const dynamic = "force-dynamic"
@@ -50,9 +51,7 @@ async function run(request: NextRequest) {
   return NextResponse.json({ ok: true, published, ...(errors.length ? { errors } : {}) })
 }
 
-export async function GET(request: NextRequest) {
-  return run(request)
-}
+export const GET = withCronLog("agg-publish-queue", run)
 
 export async function POST(request: NextRequest) {
   return run(request)
