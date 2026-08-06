@@ -263,8 +263,14 @@ function MatchEvent({
   )
 }
 
-/** 시즌 문서 자신의 엔트리 = 경기 카드 (D17 — "요약+라인업" 리뷰 카드가 이 자리에 쌓인다) */
+/**
+ * 시즌 문서 자신의 엔트리 = 경기 카드 (D17 리뷰 카드).
+ * "경기 리포트"를 누르면 카드 안에서 우리 리포트가 펼쳐진다 — 외부 링크로 내보내지
+ * 않는다 (2026-08-07 오너: "원래 링크로 가는 것이 아니라 경기 리포트를 작성해줘야해").
+ * 소커웨이는 하단 보조 출처 링크로만.
+ */
 function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) {
+  const paragraphs = (ev.summary ?? "").split(/\n{2,}/).filter((p) => p.trim())
   return (
     <article className="rounded-xl px-4 py-3" style={card}>
       <p
@@ -273,21 +279,38 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
       >
         {ev.headline}
       </p>
-      {ev.summary && (
-        <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-          {ev.summary}
-        </p>
-      )}
-      {ev.url && (
-        <a
-          href={ev.url}
-          target="_blank"
-          rel="noreferrer nofollow"
-          className="mt-1 inline-block text-[11.5px] underline underline-offset-2"
-          style={{ color: "var(--wc-mute)" }}
-        >
-          경기 상세 ↗
-        </a>
+      {paragraphs.length > 0 && (
+        <details className="group mt-1.5">
+          <summary
+            className="cursor-pointer list-none text-[12px] font-bold select-none"
+            style={{ color: "var(--wc-burgundy)" }}
+          >
+            <span className="group-open:hidden">경기 리포트 펼치기</span>
+            <span className="hidden group-open:inline">경기 리포트 접기</span>
+          </summary>
+          <div className="mt-2 flex flex-col gap-2">
+            {paragraphs.map((p, i) => (
+              <p
+                key={i}
+                className="text-[13px] leading-relaxed"
+                style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+              >
+                {p.trim()}
+              </p>
+            ))}
+            {ev.url && (
+              <a
+                href={ev.url}
+                target="_blank"
+                rel="noreferrer nofollow"
+                className="self-start text-[11px] underline underline-offset-2"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                원본 데이터 (Soccerway) ↗
+              </a>
+            )}
+          </div>
+        </details>
       )}
     </article>
   )

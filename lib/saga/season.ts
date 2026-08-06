@@ -218,8 +218,12 @@ export async function fetchTeamChronicle(
   ])
 
   const events: ChronicleEvent[] = []
+  const entryDatesKst = new Set<string>()
+  const kstDate = (iso: string) =>
+    new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
   for (const e of ownEntries ?? []) {
     const origin = (e.origin ?? {}) as { url?: string }
+    entryDatesKst.add(kstDate(e.occurred_at as string))
     events.push({
       kind: "entry",
       occurredAt: e.occurred_at as string,
@@ -243,6 +247,9 @@ export async function fetchTeamChronicle(
   }
   for (const m of completedMatches) {
     if (m.status !== "completed" || m.homeScore === null) continue
+    // 자기 엔트리(경기 카드)가 같은 날에 이미 있으면 betman 행은 중복 — 엔트리가 정본
+    // (한 팀이 하루 두 경기를 치르지 않으므로 날짜 충돌 = 같은 경기)
+    if (entryDatesKst.has(kstDate(m.matchTime))) continue
     events.push({ kind: "match", occurredAt: m.matchTime, match: m })
   }
 

@@ -41,6 +41,8 @@ interface SeasonMatchRow {
   oppGoals: string
   att: string | null
   url: string
+  /** 한국어 경기 리포트 (위키 시즌 리뷰 서술 + 팩트 기반 재작성, 2026-08-07) */
+  report?: string
 }
 
 const SUMMARY = [
@@ -64,6 +66,8 @@ function headlineFor(m: SeasonMatchRow): string {
 }
 
 function summaryFor(m: SeasonMatchRow): string | null {
+  // 리포트가 정본 (경기 전개·논란·기록 맥락 포함 — 2026-08-07 오너: "경기 리포트를 작성해줘야해")
+  if (m.report) return m.report
   const parts: string[] = []
   if (m.arsGoals) parts.push(`득점 — ${m.arsGoals}`)
   if (m.oppGoals) parts.push(`실점 — ${m.oppGoals}`)
