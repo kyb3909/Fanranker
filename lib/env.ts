@@ -12,6 +12,25 @@ const serverSchema = z.object({
   // 콘텐츠 자동발행 킬스위치 — "off" 면 해당 cron 이 스킵 (배포 없이 즉시 정지)
   NEWS_AUTO_PUBLISH: z.string().optional(),
   AGG_AUTO_APPROVE: z.string().optional(),
+  // LLM 파이프라인 공용 키 (뉴스 검사관·배정 데스크·요약·인사이트 등 12개 파일이 직접 참조).
+  // 미설정 시 각 기능이 스킵/보류로 동작 — required 로 올리면 로컬 dev 가 통째로 막혀 optional 유지.
+  // zod 편입 이유: 최대 사각지대였음 (gauntlet R17 / 단계 0-5, 2026-08-06)
+  OPENAI_API_KEY: z.string().optional(),
+  // 사가 카드 라우팅 킬스위치 ("off" = 발행 기사 → 사가 연동 정지)
+  SAGA_CARD_ROUTING: z.string().optional(),
+  // 배정 데스크 모드 ("shadow" = 관찰만 / 미설정·"off" = 정지) — Phase 2
+  NEWS_ASSIGNMENT_DESK: z.string().optional(),
+  // 어드민 인사이트 요약 모델 override (기본값은 코드에)
+  ADMIN_INSIGHT_MODEL: z.string().optional(),
+  // 네이버 오픈API (뉴스 표기 대조·검색)
+  NAVER_CLIENT_ID: z.string().optional(),
+  NAVER_CLIENT_SECRET: z.string().optional(),
+  // GA4 Data API (weekly-analytics cron) — 서비스 계정 3종 세트
+  GA4_PROPERTY_ID: z.string().optional(),
+  GA4_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
+  GA4_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
+  // 시즌 이벤트 알림 웹훅 (주간 추첨·듀얼 결과 → 디스코드)
+  DISCORD_EVENT_WEBHOOK_URL: z.string().url().optional(),
   // 운영 알림 디스코드 웹훅 (신고/검수/정산/크롤링 이슈 → 직원 채널). 미설정 시 알림 no-op.
   DISCORD_OPS_WEBHOOK_URL: z.string().url().optional(),
   // 뉴스봇 디스코드 서버 웹훅 (유저 대상 — docs/DISCORD_NEWSBOT_DESIGN.md). 미설정 채널은 no-op.
