@@ -3,20 +3,20 @@
 - 전제: 8/22 EPL 개막 · 8/31 데드라인 데이(로그 종결만 — D15) · 9월 Phase B(MatchSaga).
 - 원칙: 각 단계는 이전 단계 EVIDENCE 통과 후 진행. 자동 반영은 골든셋 게이트 전 금지.
 
-## 단계 0 — 즉시 수리 (결정 불요, 각 반나절 이하)
+## 단계 0 — 즉시 수리 ✅ **완료 (2026-08-06, `2a22e108..8af9ed07` 5커밋 push)** — EVIDENCE: `docs/evidence/EVIDENCE_stage0_2026-08-06.md`
 
 | # | 작업 | 근거 | 변경 범위 | 롤백 |
 |---|---|---|---|---|
-| 0-1 | **정산 후 결과 덮어쓰기 가드** — 결과 update에 settled 검사 추가(정정은 명시 플래그+audit 필수로만) | R1 | `admin/matches/result`·`betman/results` 라우트 2곳 | 가드 제거 revert |
-| 0-2 | **순위 재가동** — standings-scraper를 Vercel cron(일 1회)으로 이식 | R9 | vercel.json + 라우트 1 | cron 제거 |
-| 0-3 | 백필 스크립트 가드 — 킥오프+2h 미만 제외 + 드라이런 기본 | R2 | scripts 1 | revert |
-| 0-4 | withCronLog 7종 소급 + ops-monitor 자기 감시 | R16 | cron 라우트 7 | revert |
-| 0-5 | env zod 편입(OPENAI 등 12파일 키) + .env.example 갱신 | R17 | lib/env.ts | revert |
-| 0-6 | pg_cron 6잡·Edge Function 정본화(마이그레이션 파일로 기록) | R18 | 문서·마이그레이션(기록용) | 해당 없음(기록) |
+| 0-1 ✅ | **정산 후 결과 덮어쓰기 가드** — settled 픽 존재 시 결과 변경·취소 전환·상태 후퇴 차단 (D-5 전 전면 금지, 순수 판정 `lib/betman/result-guard.ts` + 테스트 17) | R1 | `admin/matches/result`·`betman/results` 라우트 2곳 | 가드 제거 revert |
+| 0-2 ✅ | **순위 재가동** — Vercel cron `standings-refresh` 매일 08:00 KST, 시즌 코드 실시간 isDefault 우선(핀 폴백) | R9 | vercel.json + 라우트 1 + lib 추출 | cron 제거 |
+| 0-3 ✅ | 백필 스크립트 가드 — 킥오프+2.5h 미만 제외 + 드라이런 기본(`--apply` 필수) | R2 | scripts 1 | revert |
+| 0-4 ✅ | withCronLog 7종 소급 (감시자 ops-monitor 포함) | R16 | cron 라우트 7 | revert |
+| 0-5 ✅ | env zod 편입(OPENAI 등 12키) + .env.example 갱신 | R17 | lib/env.ts | revert |
+| 0-6 ✅ | pg_cron 6잡·Edge Function 정본화 — `docs/PG_CRON_JOBS.md` (정본은 DB, 문서는 기록) | R18 | 문서 | 해당 없음(기록) |
 
 ## 단계 1 — 오너 결정 (잔여분 — missing-information.md)
 
-~~Q3 API 예산~~ → **D16으로 해소 (2026-08-06): Soccerway 크롤 우선 + 무료 API 보정.** 잔여 결정: 무료 API 선택(I-3 실확인으로 추천 예정)·실록 편 구성(D-3)·정정 정책(D-5)·연기 정책(D-6).
+~~Q3 API 예산~~ → **D16으로 해소 (2026-08-06): Soccerway 크롤 우선 + 무료 API 보정.** ~~무료 API 선택(I-3)~~ → **조사 완료 (2026-08-07): football-data.org free 우선 추천** — 현 시즌 EPL 스코어 무료 확정(12개 대회·10콜/분), D16 보정 역할에 충분. API-Football 은 오너 무료 키 등록 테스트(5분)로 현 시즌 접근 여부만 판별하면 끝 (상세 missing-information I-3). 잔여 결정: 실록 편 구성(D-3)·정정 정책(D-5)·연기 정책(D-6).
 
 ## 단계 2 — 신원(identity) 기반: 팀 사전 + 경기 매핑 (개막 전 목표, D16 반영)
 

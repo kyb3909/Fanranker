@@ -19,7 +19,7 @@
 |---|---|---|
 | I-1 | Vultr VPS crontab 실태 — standings-scraper가 어디서 돌다 3/11에 왜 멈췄나, preview 계열 등록 여부 | R9 재발 방지·화석 정리 |
 | I-2 | pg_cron 6잡·Edge Function `betman-sync-watchdog`의 관리 주체·원본 소스 | R18 정본화 |
-| I-3 | API-Football 실제 요금·친선경기(Club Friendlies) 커버리지·평점 필드 유무 확인 | D-1 확정 재료 |
+| I-3 | ~~API-Football 실제 요금·커버리지 확인~~ → **웹 조사 완료 (2026-08-07), 추천 = football-data.org free 우선**. ① football-data.org 무료: 12개 대회(EPL 포함) **현 시즌 확정 지원**, 10콜/분, 스코어·순위·시즌 득점왕 무료 — D16 보정 역할(FT 후 스코어 대조)에 충분. 라인업·경기별 상세는 €29/mo 유료라 없음 → 상세는 어차피 Soccerway 크롤 정본이 담당. ② API-Football 무료: 100콜/일·전 엔드포인트(events·lineups·ratings)지만 **"시즌 제한" 명시 — 현 시즌 포함 여부가 공개 문서로 확인 불가** (과거 2021-2023 제한 악명, pricing 페이지는 봇 차단). **잔여 오너 액션(5분)**: API-Football 무료 키 등록 후 `fixtures?league=39&season=2026` 1콜 — 현 시즌이 나오면 득점자·이벤트 대조까지 무료라 승격 후보, 안 나오면 football-data.org 단독 확정 | 해소(등록 테스트만 잔여) |
 | I-3b | **(실측 완료 2026-08-06) Soccerway 대조군**: 리포트 페이지(`/match/…/report/?mid=…`)는 라인업·이벤트·xG를 담지만 **SPA 껍데기 — 정적 fetch로 전 항목 ABSENT, headless 필수** (match-preview PRD 결론 재확인). URL 슬러그 순서 ≠ 홈/원정(아스날-팰리스 사례), 경기 식별자는 `mid` 해시. → "스크랩은 무료가 아니라 headless 인프라+유지보수로 지불" — D-1 비교 재료 | D-1·D-2 |
 | I-4 | fpl-players.json 원천·갱신 주기 (2026-27 스쿼드 정확도 = 시즌위키 스쿼드 정확도) | 이적 반영 시점 |
 | I-5 | `docs/PROJECT.md`의 betman-sync.yml 등 낡은 서술 정리 (실물 워크플로 부재 확인됨) | 문서 신뢰 |
