@@ -21,10 +21,13 @@ function createServiceClient() {
 async function main() {
   const limitArg = process.argv.find((a) => a.startsWith("--limit="))
   const limit = limitArg ? Number(limitArg.slice(8)) || 15 : 15
+  const discoverArg = process.argv.find((a) => a.startsWith("--discover="))
+  const discoverLimit = discoverArg ? Number(discoverArg.slice(11)) || 0 : 6
 
   const supabase = createServiceClient()
   const summary = await runMatchMappingShadow(supabase, {
     limit,
+    discoverLimit,
     runId: `manual-${new Date().toISOString()}`,
   })
 

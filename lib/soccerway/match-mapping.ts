@@ -22,6 +22,12 @@ import {
   type SoccerwayMatchCandidate,
   type SoccerwayMatchPageInfo,
 } from "./match-page"
+import {
+  leagueCountryHint,
+  proposeSearchQueries,
+  searchSoccerwayTeams,
+  type SoccerwayTeamCandidate,
+} from "./team-search"
 
 /**
  * 술어/파서 버전 — 규칙이 바뀌면 올린다. 버전이 오르면 전 경기 재평가가 열린다.
@@ -203,10 +209,130 @@ export interface ShadowRunSummary {
   teamUnresolved: number
   fetchError: number
   flips: number
+  /** 검색+경기 대조로 자동 발견·등재된 팀 수 (2026-08-07 discovery) */
+  discoveredTeams: number
   errors: string[]
 }
 
 type Fetcher = (url: string) => Promise<MatchPageFetchResult>
+type TeamSearcher = (query: string) => Promise<SoccerwayTeamCandidate[]>
+type QueryProposer = (nameKr: string, leagueCode: string | null) => Promise<string[]>
+
+/**
+ * 사전에 없는 팀의 자동 발견 (2026-08-07 운영자: "매핑하는 에이전트 구현").
+ *
+ * 흐름: 한글 팀명 → LLM 로마자 쿼리 후보 → Livesport 검색(남자 축구 팀, 국가 힌트
+ * 필터) → 후보 팀 해시들 → **상대팀과 짝지어 경기 페이지를 실제로 열어 날짜 대조**
+ * → 정확히 1개 조합만 성립할 때 그 팀을 사전에 등재(source=search_verified).
+ *
+ * 검증이 등재를 결정한다 — 검색 1위라서가 아니라, "그 팀으로 조립한 경기 페이지가
+ * betman 킥오프와 일치해서" 등재된다. 0개·2개 이상 성립이면 등재 없이
+ * team_unresolved 유지 (fail-closed).
+ */
+export async function discoverTeamsForGame(input: {
+  game: BetmanGameRow
+  home: TeamDictionaryRow | null
+  away: TeamDictionaryRow | null
+  searcher: TeamSearcher
+  proposer: QueryProposer
+  fetcher: Fetcher
+  pageCache: Map<string, MatchPageFetchResult>
+  candidateMemo: Map<string, SoccerwayTeamCandidate[]>
+  paceMs: number
+}): Promise<{
+  home: TeamDictionaryRow
+  away: TeamDictionaryRow
+  page: SoccerwayMatchPageInfo
+  finalUrl: string
+  judgement: MatchJudgement
+  discovered: TeamDictionaryRow[]
+} | null> {
+  const { game, fetcher, pageCache, paceMs } = input
+  const country = leagueCountryHint(game.league_code)
+
+  const candidatesFor = async (nameKr: string): Promise<SoccerwayTeamCandidate[]> => {
+    const key = nameKr.trim()
+    const memoized = input.candidateMemo.get(key)
+    if (memoized) return memoized
+    const queries = await input.proposer(key, game.league_code)
+    const found = new Map<string, SoccerwayTeamCandidate>()
+    for (const q of queries.slice(0, 2)) {
+      for (const c of await input.searcher(q)) {
+        if (country && c.country && c.country !== country) continue
+        if (!found.has(c.soccerwayTeamId)) found.set(c.soccerwayTeamId, c)
+      }
+      if (found.size >= 3) break
+    }
+    const list = [...found.values()].slice(0, 3)
+    input.candidateMemo.set(key, list)
+    return list
+  }
+
+  const asRow = (c: SoccerwayTeamCandidate, nameKr: string): TeamDictionaryRow => ({
+    soccerway_team_id: c.soccerwayTeamId,
+    slug: c.slug,
+    name_en: c.nameEn,
+    name_kr: nameKr.trim(),
+    aliases_kr: [],
+    status: "proposed",
+  })
+
+  const homeCands = input.home
+    ? [input.home]
+    : (await candidatesFor(game.home_team_name)).map((c) => asRow(c, game.home_team_name))
+  if (homeCands.length === 0) return null
+  const awayCands = input.away
+    ? [input.away]
+    : (await candidatesFor(game.away_team_name)).map((c) => asRow(c, game.away_team_name))
+  if (awayCands.length === 0) return null
+
+  const winners: {
+    home: TeamDictionaryRow
+    away: TeamDictionaryRow
+    page: SoccerwayMatchPageInfo
+    finalUrl: string
+    judgement: MatchJudgement
+  }[] = []
+  let tried = 0
+
+  for (const h of homeCands) {
+    for (const a of awayCands) {
+      if (tried >= 4 || winners.length > 1) break
+      if (h.soccerway_team_id === a.soccerway_team_id) continue
+      tried++
+
+      const url = buildMatchUrl(
+        { slug: h.slug, soccerwayTeamId: h.soccerway_team_id },
+        { slug: a.slug, soccerwayTeamId: a.soccerway_team_id }
+      )
+      let fetched = pageCache.get(url) ?? null
+      if (!fetched) {
+        try {
+          fetched = await fetcher(url)
+          pageCache.set(url, fetched)
+          if (paceMs > 0) await new Promise((r) => setTimeout(r, paceMs))
+        } catch {
+          continue // 발견 단계의 fetch 실패는 그 조합만 건너뛴다
+        }
+      }
+      if (fetched.httpStatus !== 200 || !fetched.html) continue
+      const page = parseMatchPage(fetched.html)
+      if (!page) continue
+      const judgement = judgeMatchPage(game, h, a, page)
+      if (judgement.outcome === "proposed") {
+        winners.push({ home: h, away: a, page, finalUrl: fetched.finalUrl, judgement })
+      }
+    }
+  }
+
+  if (winners.length !== 1) return null
+
+  const w = winners[0]
+  const discovered: TeamDictionaryRow[] = []
+  if (!input.home) discovered.push(w.home)
+  if (!input.away) discovered.push(w.away)
+  return { ...w, discovered }
+}
 
 /**
  * shadow 1회 실행: 다가오는 betman 축구 경기를 사전으로 해석해 soccerway 대조를
@@ -214,12 +340,24 @@ type Fetcher = (url: string) => Promise<MatchPageFetchResult>
  */
 export async function runMatchMappingShadow(
   supabase: SupabaseClient,
-  options: { limit?: number; runId?: string; fetcher?: Fetcher; paceMs?: number } = {}
+  options: {
+    limit?: number
+    runId?: string
+    fetcher?: Fetcher
+    paceMs?: number
+    /** 미등재 팀 자동 발견(검색+경기 대조) 시도 횟수 상한 — 0 이면 발견 비활성 */
+    discoverLimit?: number
+    searcher?: TeamSearcher
+    proposer?: QueryProposer
+  } = {}
 ): Promise<ShadowRunSummary> {
   const limit = options.limit ?? 15
   const runId = options.runId ?? `shadow-${Date.now()}`
   const fetcher = options.fetcher ?? fetchMatchPage
   const paceMs = options.paceMs ?? 400
+  const searcher = options.searcher ?? searchSoccerwayTeams
+  const proposer = options.proposer ?? proposeSearchQueries
+  let discoverBudget = options.discoverLimit ?? 6
 
   const summary: ShadowRunSummary = {
     scanned: 0,
@@ -230,6 +368,7 @@ export async function runMatchMappingShadow(
     teamUnresolved: 0,
     fetchError: 0,
     flips: 0,
+    discoveredTeams: 0,
     errors: [],
   }
 
@@ -264,7 +403,7 @@ export async function runMatchMappingShadow(
   const gameIds = targetGames.map((g) => g.id)
   const { data: priorRows, error: priorError } = await supabase
     .from("match_mapping_attempts")
-    .select("game_id, input_hash, predicate_version, status, attempt")
+    .select("game_id, input_hash, predicate_version, status, attempt, outcome")
     .in("game_id", gameIds)
     .eq("predicate_version", PREDICATE_VERSION)
 
@@ -273,18 +412,27 @@ export async function runMatchMappingShadow(
     return summary
   }
 
-  // (game, input_hash) 별 확정(ok/dead_letter) 여부와 시도 횟수
+  // (game, input_hash) 별 확정(ok/dead_letter) 여부와 시도 횟수.
+  // team_unresolved 확정은 따로 둔다 — 발견(discovery)이 켜져 있으면 재시도 대상이다.
+  // (해시는 사전이 바뀌어야 변하는데 사전을 바꾸는 것이 발견이라, unresolved 를
+  //  무조건 skip 하면 데드락 — 2026-08-07 스윕 실측: 이전 기록 4경기가 영영 잠김)
   const settled = new Set<string>()
+  const settledUnresolved = new Set<string>()
   const attemptCount = new Map<string, number>()
   for (const row of priorRows || []) {
     const key = `${row.game_id}|${row.input_hash}`
-    if (row.status === "ok" || row.status === "dead_letter") settled.add(key)
+    if (row.status === "ok" || row.status === "dead_letter") {
+      if (row.outcome === "team_unresolved") settledUnresolved.add(key)
+      else settled.add(key)
+    }
     attemptCount.set(key, Math.max(attemptCount.get(key) ?? 0, row.attempt))
   }
 
   let processed = 0
   // 같은 경기의 마켓별 행(승부/핸디캡/언더오버…)이 같은 URL 을 반복 fetch 하지 않도록 런 내 메모
   const pageCache = new Map<string, MatchPageFetchResult>()
+  // 발견 단계 메모 — 같은 팀명은 런 내 1회만 검색 (LLM·검색 API 보호)
+  const candidateMemo = new Map<string, SoccerwayTeamCandidate[]>()
   for (const game of targetGames) {
     if (processed >= limit) break
 
@@ -298,6 +446,12 @@ export async function runMatchMappingShadow(
     const key = `${game.id}|${inputHash}`
 
     if (settled.has(key)) {
+      summary.skipped++
+      continue
+    }
+    // unresolved 확정 행: 발견 예산이 남아 있을 때만 재도전, 아니면 skip
+    const isUnresolvedRetry = settledUnresolved.has(key)
+    if (isUnresolvedRetry && (discoverBudget <= 0 || (home && away))) {
       summary.skipped++
       continue
     }
@@ -317,6 +471,108 @@ export async function runMatchMappingShadow(
     }
 
     if (!home || !away) {
+      // ── 자동 발견: 검색 → 후보 → 경기 페이지 날짜 대조 → 1개 조합만 성립 시 등재 ──
+      let found: Awaited<ReturnType<typeof discoverTeamsForGame>> = null
+      if (discoverBudget > 0) {
+        discoverBudget--
+        try {
+          found = await discoverTeamsForGame({
+            game,
+            home,
+            away,
+            searcher,
+            proposer,
+            fetcher,
+            pageCache,
+            candidateMemo,
+            paceMs,
+          })
+        } catch (e) {
+          summary.errors.push(
+            `discovery 실패(game=${game.id}): ${e instanceof Error ? e.message : String(e)}`
+          )
+        }
+      }
+
+      if (found) {
+        // 발견된 팀을 사전에 등재 (이미 있으면 betman 표기를 별칭으로 흡수)
+        let registerFailed = false
+        for (const t of found.discovered) {
+          const { data: existing } = await supabase
+            .from("team_dictionary")
+            .select("soccerway_team_id, name_kr, aliases_kr")
+            .eq("soccerway_team_id", t.soccerway_team_id)
+            .maybeSingle()
+          if (existing) {
+            const merged = Array.from(
+              new Set([...(existing.aliases_kr ?? []), t.name_kr ?? ""].filter(Boolean))
+            )
+            const { error } = await supabase
+              .from("team_dictionary")
+              .update({ aliases_kr: merged, updated_at: new Date().toISOString() })
+              .eq("soccerway_team_id", t.soccerway_team_id)
+            if (error) {
+              summary.errors.push(`팀 별칭 흡수 실패(${t.slug}): ${error.message}`)
+              registerFailed = true
+            }
+          } else {
+            const { error } = await supabase.from("team_dictionary").insert({
+              soccerway_team_id: t.soccerway_team_id,
+              slug: t.slug,
+              name_en: t.name_en,
+              name_kr: t.name_kr,
+              aliases_kr: [],
+              status: "proposed",
+              source: "search_verified",
+              note: `경기 대조 검증: ${found.judgement.matched?.dateIso ?? "?"} ${found.finalUrl}`,
+            })
+            if (error) {
+              summary.errors.push(`팀 등재 실패(${t.slug}): ${error.message}`)
+              registerFailed = true
+            }
+          }
+          if (!registerFailed) {
+            dictionary.push(t) // 같은 런의 뒷 경기들이 바로 해석되도록
+            summary.discoveredTeams++
+          }
+        }
+
+        if (!registerFailed) {
+          // 해석이 완성됐으므로 input_hash 를 확정 해시로 재계산 — 다음 런의 skip 과 일치
+          const resolvedHash = mappingInputHash(
+            game,
+            found.home.soccerway_team_id,
+            found.away.soccerway_team_id
+          )
+          const { error } = await supabase.from("match_mapping_attempts").insert({
+            ...base,
+            input_hash: resolvedHash,
+            home_team_id: found.home.soccerway_team_id,
+            away_team_id: found.away.soccerway_team_id,
+            outcome: "proposed",
+            status: "ok",
+            candidate_url: found.page.canonicalUrl ?? found.finalUrl,
+            page_home_en: found.judgement.matched?.homeEn ?? null,
+            page_away_en: found.judgement.matched?.awayEn ?? null,
+            page_date: found.judgement.matched?.dateIso ?? null,
+            page_tournament: found.page.tournament,
+            home_away_flip: found.judgement.homeAwayFlip,
+          })
+          if (error) summary.errors.push(`insert 실패(game=${game.id}): ${error.message}`)
+          else {
+            summary.proposed++
+            if (found.judgement.homeAwayFlip === true) summary.flips++
+          }
+          continue
+        }
+      }
+
+      if (isUnresolvedRetry) {
+        // 재도전 실패 — unresolved 확정 행이 이미 있으므로(부분 유니크) 새 행은 안 쓴다
+        summary.teamUnresolved++
+        continue
+      }
+
       const unresolved = [
         ...(home ? [] : [game.home_team_name.trim()]),
         ...(away ? [] : [game.away_team_name.trim()]),
