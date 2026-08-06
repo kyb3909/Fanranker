@@ -3,7 +3,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
-import { normalizePlayerKey } from "@/lib/saga/identity"
+import { registerVerifiedPlayer } from "@/lib/news/naming-verify-loop"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 
@@ -134,20 +134,13 @@ export async function GET(request: NextRequest) {
       if (!verifiedCache.has(name)) {
         const v = await verifySpelling(name, post.title as string)
         if (v.winner && v.romanized) {
-          const romanKey = normalizePlayerKey(v.romanized)
-          await supabase.from("news_alias_dictionary").upsert(
-            {
-              id: `player_auto_${romanKey.replace(/-/g, "_")}`.slice(0, 60),
-              category: "player",
-              preferred_ko: v.winner,
-              romanized: v.romanized,
-              surfaces: [romanKey.replace(/-/g, " "), v.winner],
-              hangul_alts: v.winner !== name ? [name] : [],
-              confidence: 0.7,
-              notes: `소급 감사 등재 — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
-            },
-            { onConflict: "id", ignoreDuplicates: true }
-          )
+          // 등재 형태는 발행 게이트 루프와 공유 — lib/news/naming-verify-loop.ts
+          await registerVerifiedPlayer(supabase, {
+            articleName: name,
+            preferred: v.winner,
+            romanized: v.romanized,
+            notes: `소급 감사 등재 — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
+          })
           preferredSet.add(v.winner.replace(/\s+/g, ""))
           verifiedCache.set(name, v.winner)
         } else {
