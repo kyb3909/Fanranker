@@ -2,6 +2,11 @@ import { after } from "next/server"
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { rehostExternalImage, isSelfHostedImageUrl } from "@/lib/images/rehost"
 import { isContentFreeText } from "@/lib/news/content-quality"
+import {
+  applyNamingPairs,
+  applyNamingPairsToTipTap,
+  fetchNamingPairs,
+} from "@/lib/news/naming-normalize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
@@ -113,6 +118,21 @@ export async function publishNewsDraft(
   sagaError?: string
 }> {
   const now = new Date().toISOString()
+
+  // ── 선수 표기 전방 교정 (2026-08-07 '코디 갓포' 실사고) ──
+  // 사전이 아는 옛 표기(hangul_alts)를 대표 표기로 치환하고 발행한다. 게이트는
+  // "등재 여부"만 보므로 옛 표기도 통과하는데, 그 값을 그대로 실으면 안 된다.
+  // 결정론 치환만 — 미등재 이름의 네이버 검증은 소급 naming-audit 몫 (설계 근거는
+  // lib/news/naming-normalize.ts 주석).
+  const namingPairs = await fetchNamingPairs(supabase)
+  if (namingPairs.length > 0) {
+    opts = {
+      ...opts,
+      title: applyNamingPairs(opts.title, namingPairs),
+      content: applyNamingPairsToTipTap(opts.content, namingPairs),
+    }
+  }
+
   // 긴 단일 문단 → 2~3문장 단위 문단 분할 (가독성, 2026-08-04 운영자)
   const content = splitLongParagraphs(await rehostContentImages(opts.content))
   const image = extractFirstImageSrcFromTipTapJSON(content)
