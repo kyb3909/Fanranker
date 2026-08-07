@@ -4,7 +4,7 @@ import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { requireStaffApi } from "@/lib/admin/roles"
 import { sanitizeTipTapJSON } from "@/lib/tiptap/sanitize"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
-import { learnFromDeskEdit } from "@/lib/news/learn-corrections"
+import { learnFromDeskEdit, deskEditTextHash } from "@/lib/news/learn-corrections"
 import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
 
 export const dynamic = "force-dynamic"
@@ -21,6 +21,10 @@ export const dynamic = "force-dynamic"
  *   밤의 news-learn-edits cron 이 같은 diff 를 다시 봐도 사전 upsert 가 멱등이라 무해.
  * - 사가 한글명 교정 → 사전에 **무LLM 직접 등재** (player_key ↔ 한글, 결정론이라
  *   환각이 원천 불가능한 가장 안전한 학습 경로).
+ * - 수정 사유(note, 선택) → 학습기의 표기/사실 분류 근거로 주입 + reservoir audit 에
+ *   영속 (2026-08-07 운영자: "뭐가 문제였는지도 적으면서 수정하면 더 도움이 될까?").
+ *   사실 정정(클럽·금액 오류)은 표기 사전에 넣지 않고 audit factual 로만 남긴다.
+ *   학습 성공 시 cron 과 같은 해시 컨벤션의 edit_learner 항목을 남겨 이중 학습을 막는다.
  */
 
 const GET_KINDS = new Set(["articles", "sagas"])
@@ -62,12 +66,14 @@ const BodySchema = z.discriminatedUnion("kind", [
     post_id: z.string().uuid(),
     title: z.string().min(1).max(300),
     content: z.unknown(),
+    note: z.string().trim().max(500).optional(),
   }),
   z.object({
     kind: z.literal("entry"),
     entry_id: z.string().uuid(),
     headline: z.string().min(1).max(200),
     tier: z.enum(["official", "tier1", "rumor"]).optional(),
+    note: z.string().trim().max(500).optional(),
   }),
   z.object({
     kind: z.literal("saga"),
@@ -76,6 +82,13 @@ const BodySchema = z.discriminatedUnion("kind", [
     player_kr: z.string().min(1).max(40).optional(),
   }),
 ])
+
+/** reservoir.audit 는 발행 경로마다 배열/객체 두 형태 — news-learn-edits cron 과 같은 규칙으로 append */
+function auditWithEntries(audit: unknown, entries: Record<string, unknown>[]): unknown {
+  if (Array.isArray(audit)) return [...audit, ...entries]
+  const obj = (audit ?? {}) as { edit_learner_runs?: unknown[] }
+  return { ...obj, edit_learner_runs: [...(obj.edit_learner_runs ?? []), ...entries] }
+}
 
 /** 사가 한글명 교정 → 표기 사전 직접 등재 (무LLM — 운영자 입력 그대로, 환각 불가) */
 async function registerPlayerAlias(
@@ -167,14 +180,48 @@ export async function PATCH(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     const old = { title: post.title as string, content: post.content }
+    const note = body.note?.trim() || null
     after(async () => {
-      await learnFromDeskEdit(supabase, {
+      const res = await learnFromDeskEdit(supabase, {
         postId: post.id,
         originalTitle: old.title,
         originalContent: old.content,
         finalTitle: body.title,
         finalContent: content,
+        operatorNote: note,
       })
+
+      // 사유·학습 결과를 reservoir audit 에 영속 — 사유는 실패해도 남겨 밤 cron 이
+      // 재학습 때 쓰고, 성공 해시는 cron 의 같은 버전 재학습(이중 LLM 호출)을 막는다.
+      const entries: Record<string, unknown>[] = []
+      if (note) {
+        entries.push({ at: new Date().toISOString(), agent: "operator", action: "edit_note", note })
+      }
+      if (res.ran) {
+        entries.push({
+          at: new Date().toISOString(),
+          agent: "edit_learner",
+          action: "learn",
+          tier: "T2",
+          message: `hash=${deskEditTextHash(body.title, content)} corrections=${res.learned.length} factual=${res.factual.length} via=admin-fix`,
+          ...(res.factual.length > 0 ? { factual: res.factual } : {}),
+        })
+      }
+      if (entries.length === 0) return
+      const { data: rv } = await supabase
+        .from("news_reservoir")
+        .select("id, audit")
+        .or(`publish->>post_id.eq.${post.id},publish->>postId.eq.${post.id}`)
+        .limit(1)
+        .maybeSingle()
+      if (!rv) return
+      await supabase
+        .from("news_reservoir")
+        .update({
+          audit: auditWithEntries(rv.audit, entries),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", rv.id)
     })
     return NextResponse.json({ ok: true, learning: true })
   }
@@ -195,6 +242,7 @@ export async function PATCH(req: NextRequest) {
 
     const oldHeadline = entry.headline as string
     if (oldHeadline !== body.headline) {
+      const entryNote = body.note?.trim() || null
       after(async () => {
         await learnFromDeskEdit(supabase, {
           postId: `saga-entry:${entry.id}`,
@@ -202,6 +250,7 @@ export async function PATCH(req: NextRequest) {
           originalContent: null,
           finalTitle: body.headline,
           finalContent: null,
+          operatorNote: entryNote,
         })
       })
     }

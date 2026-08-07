@@ -74,6 +74,7 @@ function PublishedArticles() {
   const [editing, setEditing] = useState<string | null>(null)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState<unknown>(null)
+  const [note, setNote] = useState("")
   const [busy, setBusy] = useState(false)
 
   const save = async (row: ArticleRow) => {
@@ -88,6 +89,7 @@ function PublishedArticles() {
           post_id: row.id,
           title: title.trim(),
           content: content ?? row.content,
+          ...(note.trim() ? { note: note.trim() } : {}),
         }),
       })
       const d = (await res.json().catch(() => ({}))) as { error?: string }
@@ -148,6 +150,7 @@ function PublishedArticles() {
                       setEditing(row.id)
                       setTitle(row.title)
                       setContent(row.content)
+                      setNote("")
                     }}
                     className="shrink-0 rounded border px-2.5 py-1 text-[11px]"
                   >
@@ -160,6 +163,18 @@ function PublishedArticles() {
                   <div className="bg-background max-h-[420px] overflow-auto rounded-lg border p-3">
                     <TipTapEditor content={row.content} onChange={setContent} />
                   </div>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    maxLength={500}
+                    placeholder='무엇이 문제였나요? (선택) — 예: "클럽이 틀림: 바르사→레알" / "선수명 음차 교정"'
+                    className="mt-2 w-full rounded border px-2 py-1.5 text-xs"
+                  />
+                  <p className="text-muted-foreground mt-0.5 text-[11px]">
+                    사유를 적으면 표기 교정(사전 등재)과 사실 오류(사전 미등재·사고 기록)를 구분해
+                    학습합니다.
+                  </p>
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => void save(row)}
@@ -195,6 +210,7 @@ function PublishedSagaEntries() {
   const [editing, setEditing] = useState<string | null>(null)
   const [headline, setHeadline] = useState("")
   const [tier, setTier] = useState<EntryRow["tier"]>("rumor")
+  const [entryNote, setEntryNote] = useState("")
   /** 사가 이름 교정 폼이 열린 사가 id */
   const [renaming, setRenaming] = useState<string | null>(null)
   const [sagaTitle, setSagaTitle] = useState("")
@@ -297,7 +313,13 @@ function PublishedSagaEntries() {
                     <button
                       onClick={async () => {
                         const ok = await patch(
-                          { kind: "entry", entry_id: row.id, headline: headline.trim(), tier },
+                          {
+                            kind: "entry",
+                            entry_id: row.id,
+                            headline: headline.trim(),
+                            tier,
+                            ...(entryNote.trim() ? { note: entryNote.trim() } : {}),
+                          },
                           "엔트리 수정 완료"
                         )
                         if (ok) setEditing(null)
@@ -321,6 +343,7 @@ function PublishedSagaEntries() {
                       setEditing(row.id)
                       setHeadline(row.headline)
                       setTier(row.tier)
+                      setEntryNote("")
                     }}
                     className="shrink-0 rounded border px-2.5 py-1 text-[11px]"
                   >
@@ -328,6 +351,15 @@ function PublishedSagaEntries() {
                   </button>
                 )}
               </div>
+              {isEditing && (
+                <input
+                  value={entryNote}
+                  onChange={(e) => setEntryNote(e.target.value)}
+                  maxLength={500}
+                  placeholder="수정 사유 (선택) — 표기 교정인지 사실 오류인지 학습 분류에 쓰입니다"
+                  className="mt-1.5 w-full rounded border px-2 py-1 text-[11px]"
+                />
+              )}
 
               {isRenaming && (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">

@@ -39,7 +39,7 @@ function tiptapText(node: unknown, out: string[] = []): string[] {
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim()
 
-type AuditEntry = { agent?: string; message?: string }
+type AuditEntry = { agent?: string; message?: string; action?: string; note?: string }
 type Audit = AuditEntry[] | { edit_learner_runs?: AuditEntry[] } | null
 
 // audit 형태가 발행 경로마다 다르다(배열 | 객체) — 기존 데이터를 덮지 않게 읽기/쓰기 분리
@@ -103,23 +103,36 @@ async function cronGet(request: Request) {
     const currentText = norm([post.title, ...tiptapText(post.content)].join("\n"))
     if (!originalText || !currentText || originalText === currentText) continue
 
-    // 같은 버전 재학습 방지 — VPS 스크립트와 같은 해시 컨벤션 (이중 학습 차단)
+    // 같은 버전 재학습 방지 — VPS 스크립트와 같은 해시 컨벤션 (이중 학습 차단).
+    // 수정 화면(published-fixes)이 즉시 학습에 성공하면 같은 해시를 남기므로 여기서 스킵된다.
     const contentHash = createHash("sha1").update(currentText, "utf8").digest("hex").slice(0, 12)
-    const already = auditEntries(item.audit as Audit).some(
+    const entries = auditEntries(item.audit as Audit)
+    const already = entries.some(
       (a) => a?.agent === "edit_learner" && a?.message?.includes(contentHash)
     )
     if (already) continue
 
+    // 운영자가 수정 화면에 적은 사유 — 표기/사실 분류의 근거로 학습기에 전달
+    const operatorNote =
+      entries
+        .filter((a) => a?.agent === "operator" && a?.action === "edit_note" && a?.note)
+        .map((a) => a.note)
+        .join(" / ") || null
+
     edited++
-    const rules = await learnFromDeskEdit(supabase, {
+    const res = await learnFromDeskEdit(supabase, {
       postId,
       originalTitle: draft.title,
       originalContent: draft.content,
       finalTitle: post.title as string,
       finalContent: post.content,
+      operatorNote,
     })
-    learnedRules += rules.length
-    learned.push(...rules.map((r) => `${postId.slice(0, 8)}: ${r}`))
+    learnedRules += res.learned.length
+    learned.push(...res.learned.map((r) => `${postId.slice(0, 8)}: ${r}`))
+
+    // 추출이 완주 못 했으면(OpenAI 장애 등) 해시를 남기지 않는다 — 다음 밤에 재시도
+    if (!res.ran) continue
 
     await supabase
       .from("news_reservoir")
@@ -129,7 +142,8 @@ async function cronGet(request: Request) {
           agent: "edit_learner",
           action: "learn",
           tier: "T2",
-          message: `hash=${contentHash} corrections=${rules.length}`,
+          message: `hash=${contentHash} corrections=${res.learned.length} factual=${res.factual.length}`,
+          ...(res.factual.length > 0 ? { factual: res.factual } : {}),
         }),
         updated_at: new Date().toISOString(),
       })

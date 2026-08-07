@@ -1,4 +1,5 @@
 import "server-only"
+import { createHash } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 /**
@@ -15,22 +16,29 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 const MODEL = "gpt-4.1-mini"
 
-const EXTRACT_PROMPT = `너는 한국 스포츠 뉴스룸의 교열 기록원이다. 봇이 쓴 기사(원본)와 검수자가 고친 최종본(수정본)을 비교해서, **표기 교정만** 추출한다.
+const EXTRACT_PROMPT = `너는 한국 스포츠 뉴스룸의 교열 기록원이다. 봇이 쓴 기사(원본)와 검수자가 고친 최종본(수정본)을 비교해서, **표기 교정**과 **사실 정정**을 분리해 추출한다.
 
-추출 대상 (category):
+표기 교정 (corrections — 표기 사전에 등록된다):
 - player / team / coach / competition: 인명·팀명·대회명 한글 표기 교정
 - media: 언론사·기자·매체 표기 교정 (예: "Sky Sports News" → "스카이 스포츠")
 - term: 축구 용어·일반 단어의 표기·음차 교정
 
+사실 정정 (factual — 사전에 넣으면 오염되므로 반드시 분리한다):
+- **같은 대상의 표기를 다듬은 게 아니라, 다른 대상·다른 값으로 바꾼 것.**
+  예: 클럽이 틀림("바르셀로나" → "레알 마드리드"), 금액·날짜·스코어가 틀림, 이적 상태(오피셜/루머)가 틀림.
+- kind: club | amount | date | score | status | other
+
 규칙:
-1. 원본과 수정본에서 **실제로 바뀐 표기만** 추출한다. 바뀌지 않은 것은 포함하지 않는다.
-2. 문장 구조 변경·내용 추가/삭제·조사 수정은 표기 교정이 아니다 — 제외.
+1. 원본과 수정본에서 **실제로 바뀐 것만** 추출한다. 바뀌지 않은 것은 포함하지 않는다.
+2. 문장 구조 변경·조사 수정은 어느 쪽에도 넣지 않는다 — 제외.
 3. wrong 은 원본에 등장한 문자열 그대로, correct 는 수정본의 대응 문자열 그대로.
-4. 확실하지 않으면 빼라. 잘못된 규칙 하나가 이후 모든 기사에 전파된다.
+4. 같은 인물/팀의 음차를 다듬었으면 corrections("주니어"→"주니오르"). 다른 인물/팀/값으로 교체했으면 factual("바르셀로나"→"레알 마드리드"). 애매하면 factual — 사전 오염이 더 위험하다.
+5. 검수자_사유가 주어지면 분류의 1차 근거로 삼는다 (사유가 "클럽이 틀림"이면 그 변경은 factual/club).
+6. 확실하지 않으면 빼라. 잘못된 규칙 하나가 이후 모든 기사에 전파된다.
 
 출력 (JSON only):
-{"corrections":[{"wrong":"...","correct":"...","category":"player|team|coach|competition|media|term","romanized":"원어 표기(아는 경우만)"}]}
-교정이 없으면 {"corrections":[]}`
+{"corrections":[{"wrong":"...","correct":"...","category":"player|team|coach|competition|media|term","romanized":"원어 표기(아는 경우만)"}],"factual":[{"wrong":"...","correct":"...","kind":"club|amount|date|score|status|other","summary":"무엇이 왜 틀렸는지 한 줄"}]}
+없으면 각각 빈 배열.`
 
 interface Correction {
   wrong: string
@@ -39,7 +47,28 @@ interface Correction {
   romanized?: string
 }
 
+/** 사실 정정 사례 — 사전에 넣지 않고 audit 에 남긴다 (골든셋 함정 케이스 후보) */
+export interface FactualCase {
+  wrong: string
+  correct: string
+  kind: string
+  summary: string
+}
+
+export interface DeskEditLearnResult {
+  /** 사전에 반영된 표기 교정 (로그용 요약) */
+  learned: string[]
+  /** 사실 정정 — 사전 미반영, 호출자가 audit 에 기록 */
+  factual: FactualCase[]
+  /**
+   * 추출이 실제로 완주했는가. false(API 키 없음·OpenAI 실패·diff 없음)면 호출자는
+   * 학습 완료 해시를 남기지 말 것 — 밤 cron 의 안전망 재시도가 막힌다.
+   */
+  ran: boolean
+}
+
 const VALID_CATEGORIES = new Set(["player", "team", "coach", "competition", "media", "term"])
+const VALID_FACTUAL_KINDS = new Set(["club", "amount", "date", "score", "status", "other"])
 
 /** TipTap JSON → 문단 텍스트 (이미지·임베드 제외) */
 function tiptapText(node: unknown, out: string[] = []): string[] {
@@ -149,18 +178,22 @@ export async function learnFromDeskEdit(
     originalContent: unknown
     finalTitle: string
     finalContent: unknown
+    /** 검수자가 적은 수정 사유 — 표기/사실 분류의 1차 근거 (예: "클럽이 틀림") */
+    operatorNote?: string | null
   }
-): Promise<string[]> {
+): Promise<DeskEditLearnResult> {
+  const empty: DeskEditLearnResult = { learned: [], factual: [], ran: false }
   const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return []
+  if (!apiKey) return empty
 
   const originalText = norm(
     [params.originalTitle, ...tiptapText(params.originalContent)].join("\n")
   )
   const currentText = norm([params.finalTitle, ...tiptapText(params.finalContent)].join("\n"))
-  if (!originalText || !currentText || originalText === currentText) return []
+  if (!originalText || !currentText || originalText === currentText) return empty
 
-  let parsed: { corrections?: Correction[] }
+  const note = params.operatorNote?.trim()
+  let parsed: { corrections?: Correction[]; factual?: FactualCase[] }
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -172,7 +205,14 @@ export async function learnFromDeskEdit(
         model: MODEL,
         messages: [
           { role: "system", content: EXTRACT_PROMPT },
-          { role: "user", content: JSON.stringify({ 원본: originalText, 수정본: currentText }) },
+          {
+            role: "user",
+            content: JSON.stringify({
+              원본: originalText,
+              수정본: currentText,
+              ...(note ? { 검수자_사유: note } : {}),
+            }),
+          },
         ],
         response_format: { type: "json_object" },
         temperature: 0,
@@ -182,13 +222,13 @@ export async function learnFromDeskEdit(
     })
     if (!res.ok) {
       console.error("[desk-learn] OpenAI HTTP", res.status)
-      return []
+      return empty
     }
     const json = await res.json()
     parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}")
   } catch (e) {
     console.error("[desk-learn] extract failed:", e)
-    return []
+    return empty
   }
 
   const learned: string[] = []
@@ -221,6 +261,41 @@ export async function learnFromDeskEdit(
     }
   }
 
+  // 사실 정정 — 사전에 넣지 않는다 (디오망데형: "바르셀로나"→"레알 마드리드"를
+  // 표기 교정으로 오학습하면 사전이 오염된다). 같은 환각 가드만 통과시켜 반환.
+  const factual: FactualCase[] = []
+  for (const raw of parsed.factual ?? []) {
+    const wrong = String(raw?.wrong ?? "").trim()
+    const correct = String(raw?.correct ?? "").trim()
+    const kind = String(raw?.kind ?? "").trim()
+    if (!wrong || !correct || wrong === correct) continue
+    if (!VALID_FACTUAL_KINDS.has(kind)) continue
+    if (!originalText.includes(wrong) || !currentText.includes(correct)) continue
+    factual.push({
+      wrong,
+      correct,
+      kind,
+      summary: String(raw?.summary ?? "")
+        .trim()
+        .slice(0, 200),
+    })
+  }
+
   if (learned.length > 0) console.log("[desk-learn] 학습:", learned.join(" / "))
-  return learned
+  if (factual.length > 0)
+    console.log(
+      "[desk-learn] 사실 정정(사전 미반영):",
+      factual.map((f) => `[${f.kind}] "${f.wrong}" → "${f.correct}"`).join(" / ")
+    )
+  return { learned, factual, ran: true }
+}
+
+/**
+ * 데스킹 학습 콘텐츠 해시 — news-learn-edits cron·VPS learn-from-edits.js 와 같은
+ * 컨벤션 (제목+문단 텍스트 norm → sha1 12자). 수정 화면에서 즉시 학습한 버전을
+ * audit 에 이 해시로 남기면 밤 cron 이 같은 버전을 재학습하지 않는다.
+ */
+export function deskEditTextHash(title: string, content: unknown): string {
+  const text = norm([title, ...tiptapText(content)].join("\n"))
+  return createHash("sha1").update(text, "utf8").digest("hex").slice(0, 12)
 }
