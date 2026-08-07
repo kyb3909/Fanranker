@@ -18,12 +18,21 @@ const TipTapEditor = dynamic(
  * 고친다. 고치는 즉시 표기 학습이 태워져 다음 기사부터 반영된다.
  */
 
+interface ErrorReport {
+  id: string
+  comment_text: string
+  claim: string
+  created_at: string
+}
+
 interface ArticleRow {
   id: string
   title: string
   content: unknown
   image: string | null
   created_at: string
+  /** 독자 오류 제보 (pending) — cron 이 댓글에서 감지. 확정은 사람 */
+  reports: ErrorReport[]
 }
 
 interface EntryRow {
@@ -105,6 +114,26 @@ function PublishedArticles() {
     }
   }
 
+  /** 독자 제보 무시 — 구라·오해로 판단한 제보를 큐에서 내린다 */
+  const dismissReport = async (reportId: string) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await fetch("/api/admin/published-fixes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "report_dismiss", report_id: reportId }),
+      })
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "실패", description: "제보 무시 실패" })
+        return
+      }
+      void mutate()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <details className="bg-background rounded-xl border">
       <summary className="cursor-pointer px-4 py-3 text-sm font-semibold select-none">
@@ -117,6 +146,7 @@ function PublishedArticles() {
         )}
         {items.map((row) => {
           const isEditing = editing === row.id
+          const reports = row.reports ?? []
           return (
             <li key={row.id} className="rounded-lg border p-2.5">
               <div className="flex items-center gap-2">
@@ -132,6 +162,11 @@ function PublishedArticles() {
                   />
                 ) : (
                   <p className="min-w-0 flex-1 truncate text-sm font-medium">{row.title}</p>
+                )}
+                {reports.length > 0 && (
+                  <span className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    제보 {reports.length}
+                  </span>
                 )}
                 <span className="text-muted-foreground shrink-0 text-[11px]">
                   {timeAgo(row.created_at)}
@@ -160,6 +195,39 @@ function PublishedArticles() {
               </div>
               {isEditing && (
                 <div className="mt-2">
+                  {reports.length > 0 && (
+                    <div className="mb-2 space-y-1.5">
+                      {reports.map((r) => (
+                        <div key={r.id} className="rounded-lg bg-red-50 p-2 dark:bg-red-950/30">
+                          <p className="text-xs font-semibold">📣 {r.claim}</p>
+                          <p className="text-muted-foreground mt-0.5 text-[11px]">
+                            “{r.comment_text.slice(0, 200)}”
+                          </p>
+                          <div className="mt-1 flex gap-1.5">
+                            <button
+                              onClick={() =>
+                                setNote(`독자 제보: ${r.claim} — "${r.comment_text}"`.slice(0, 500))
+                              }
+                              className="rounded border px-2 py-0.5 text-[11px]"
+                            >
+                              사유로 채우기
+                            </button>
+                            <button
+                              onClick={() => void dismissReport(r.id)}
+                              disabled={busy}
+                              className="text-muted-foreground rounded border px-2 py-0.5 text-[11px]"
+                            >
+                              무시 (제보가 틀림)
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-muted-foreground text-[11px]">
+                        제보는 자동 감지된 주장일 뿐입니다 — 사실인지 확인 후 반영하세요. 기사를
+                        저장하면 이 기사의 대기 제보는 반영됨으로 처리됩니다.
+                      </p>
+                    </div>
+                  )}
                   <div className="bg-background max-h-[420px] overflow-auto rounded-lg border p-3">
                     <TipTapEditor content={row.content} onChange={setContent} />
                   </div>

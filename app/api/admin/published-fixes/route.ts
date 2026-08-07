@@ -40,15 +40,49 @@ export async function GET(req: NextRequest) {
   const since = new Date(Date.now() - LOOKBACK_MS).toISOString()
 
   if (kind === "articles") {
-    const { data } = await supabase
-      .from("posts")
-      .select("id, title, content, image, created_at")
-      .eq("user_id", NEWS_BOT_USER_ID)
-      .is("deleted_at", null)
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(30)
-    return NextResponse.json({ items: data ?? [] })
+    const [{ data }, { data: pendingReports }] = await Promise.all([
+      supabase
+        .from("posts")
+        .select("id, title, content, image, created_at")
+        .eq("user_id", NEWS_BOT_USER_ID)
+        .is("deleted_at", null)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(30),
+      // 독자 오류 제보 — 대기 중인 제보는 기사 나이와 무관하게 보여야 한다
+      supabase
+        .from("news_error_reports")
+        .select("id, post_id, comment_text, claim, created_at")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ])
+
+    const items = [...((data ?? []) as { id: string }[])]
+    const itemIds = new Set(items.map((p) => p.id))
+    const reportPostIds = [
+      ...new Set(((pendingReports ?? []) as { post_id: string }[]).map((r) => r.post_id)),
+    ].filter((id) => !itemIds.has(id))
+    if (reportPostIds.length > 0) {
+      // 72시간 창 밖인데 제보가 걸린 기사 — 목록에 합류시켜 고칠 수 있게 한다
+      const { data: extra } = await supabase
+        .from("posts")
+        .select("id, title, content, image, created_at")
+        .eq("user_id", NEWS_BOT_USER_ID)
+        .is("deleted_at", null)
+        .in("id", reportPostIds)
+      items.push(...((extra ?? []) as { id: string }[]))
+    }
+
+    const reportsByPost = new Map<string, unknown[]>()
+    for (const r of (pendingReports ?? []) as { post_id: string }[]) {
+      const list = reportsByPost.get(r.post_id) ?? []
+      list.push(r)
+      reportsByPost.set(r.post_id, list)
+    }
+    return NextResponse.json({
+      items: items.map((p) => ({ ...p, reports: reportsByPost.get(p.id) ?? [] })),
+    })
   }
 
   const { data } = await supabase
@@ -80,6 +114,11 @@ const BodySchema = z.discriminatedUnion("kind", [
     saga_id: z.string().uuid(),
     title: z.string().min(1).max(100).optional(),
     player_kr: z.string().min(1).max(40).optional(),
+  }),
+  // 독자 오류 제보 무시 — 구라·오해로 판단한 제보를 큐에서 내린다
+  z.object({
+    kind: z.literal("report_dismiss"),
+    report_id: z.string().uuid(),
   }),
 ])
 
@@ -159,6 +198,16 @@ export async function PATCH(req: NextRequest) {
   const body = parsed.data
   const now = new Date().toISOString()
 
+  if (body.kind === "report_dismiss") {
+    const { error } = await supabase
+      .from("news_error_reports")
+      .update({ status: "dismissed", updated_at: now })
+      .eq("id", body.report_id)
+      .eq("status", "pending")
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
   if (body.kind === "article") {
     const { data: post } = await supabase
       .from("posts")
@@ -178,6 +227,13 @@ export async function PATCH(req: NextRequest) {
       .update({ title: body.title, content, image: image ?? null })
       .eq("id", post.id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // 이 기사에 걸린 대기 제보는 반영된 것으로 마감 (수정이 곧 제보 처리)
+    await supabase
+      .from("news_error_reports")
+      .update({ status: "accepted", updated_at: now })
+      .eq("post_id", post.id)
+      .eq("status", "pending")
 
     const old = { title: post.title as string, content: post.content }
     const note = body.note?.trim() || null

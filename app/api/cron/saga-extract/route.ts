@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { extractTransferBatch } from "@/lib/saga/extract"
+import { extractTransferBatch, type ExtractedTransfer } from "@/lib/saga/extract"
 import { classifyTier } from "@/lib/saga/tier"
 import { identityKey, normalizePlayerKey } from "@/lib/saga/identity"
 import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/canonical"
@@ -35,6 +35,8 @@ export const dynamic = "force-dynamic"
 const BATCH = 20
 const MAX_ROWS = 40 // 60s 안에 LLM 2콜
 const AUTO_PUBLISH_MIN_CONFIDENCE = 0.7
+/** 잠긴 unknown_player 재평가 상한 (run 당) — LLM 없이 사전 대조만이라 저렴 */
+const RETRY_LIMIT = 15
 
 function kstDay(iso: string): string {
   return new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
@@ -53,7 +55,6 @@ async function cronGet(request: Request) {
       .eq("status", "ingested")
       .order("created_at", { ascending: true })
       .limit(MAX_ROWS)
-    if (!pending?.length) return NextResponse.json({ ok: true, processed: 0 })
 
     const { data: aliasRows } = await supabase
       .from("news_alias_dictionary")
@@ -67,8 +68,9 @@ async function cronGet(request: Request) {
     let failed = 0
     let autoHeld = 0
 
-    for (let i = 0; i < pending.length; i += BATCH) {
-      const chunk = pending.slice(i, i + BATCH)
+    const pendingRows = pending ?? []
+    for (let i = 0; i < pendingRows.length; i += BATCH) {
+      const chunk = pendingRows.slice(i, i + BATCH)
       const results = await extractTransferBatch(
         chunk.map((r) => ({ title: r.title, headlineKr: r.headline_kr }))
       )
@@ -225,14 +227,82 @@ async function cronGet(request: Request) {
       }
     }
 
+    // ── 잠긴 unknown_player 자가 재평가 (2026-08-07, 디오망데 사가 실사고) ──
+    // 사전에 선수가 등재되는 순간, auto_hold:unknown_player 로 큐에 잠긴 행이 다음
+    // 회차에 스스로 살아난다 (뉴스 브레이킹 레인 P0-2 와 같은 원리). extracted 가
+    // 영속돼 있어 LLM 재호출 없이 사전 대조만 다시 한다. unknown_player 외의 보류
+    // 사유(club_conflict 등)가 함께 남은 행은 사전 등재로 풀 수 없으므로 건드리지
+    // 않고, 여전히 미등재인 행도 무기록으로 지나간다 (다음 회차 재시도).
+    let retried = 0
+    let revived = 0
+    {
+      const { data: held } = await supabase
+        .from("saga_reservoir")
+        .select("id, source_url, source, title, headline_kr, occurred_at, extracted, error")
+        .eq("status", "queued")
+        .like("error", "auto_hold:%unknown_player%")
+        .order("occurred_at", { ascending: true })
+        .limit(RETRY_LIMIT)
+
+      for (const row of held ?? []) {
+        const ex = (row.extracted ?? null) as ExtractedTransfer | null
+        if (!ex?.player) continue
+        retried++
+
+        const canon = canonicalizePlayer(ex.player, aliasIndex)
+        if (!canon.matched) continue
+
+        const holdReasons = String(row.error ?? "")
+          .replace(/^auto_hold:/, "")
+          .split(",")
+          .filter(Boolean)
+        if (holdReasons.some((r) => r !== "unknown_player")) continue
+
+        // 추출 시점과 같은 자동 발행 조건 재검사 (사전 매칭 외)
+        if ((ex.confidence ?? 0) < AUTO_PUBLISH_MIN_CONFIDENCE) continue
+        if (!(ex.headline_ko ?? row.headline_kr)) continue
+        if (isWomensFootball(row.title, row.headline_kr, row.source_url)) continue
+
+        try {
+          await publishReservoirItem(
+            supabase,
+            {
+              id: row.id,
+              source_url: row.source_url,
+              source: (row.source ?? null) as Record<string, unknown> | null,
+              title: row.title,
+              headline_kr: row.headline_kr,
+              extracted: ex,
+              occurred_at: row.occurred_at,
+            },
+            { player: canon.key, ...(canon.ko ? { player_kr: canon.ko } : {}) }
+          )
+          revived++
+        } catch (e) {
+          failed++
+          const message = e instanceof Error ? e.message : String(e)
+          await supabase
+            .from("saga_reservoir")
+            .update({
+              error: `auto_publish_failed:${message}`.slice(0, 500),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", row.id)
+          console.error("[saga-extract] 재평가 발행 실패", row.id, message)
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      processed: pending.length,
+      processed: pendingRows.length,
       queued,
       autoPublished,
       autoHeld,
       discarded,
       failed,
+      retried,
+      revived,
     })
   }
 }

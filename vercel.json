@@ -99,6 +99,10 @@
     {
       "path": "/api/cron/match-mapping-shadow",
       "schedule": "41 * * * *"
+    },
+    {
+      "path": "/api/cron/news-comment-reports",
+      "schedule": "26 * * * *"
     }
   ]
 }
