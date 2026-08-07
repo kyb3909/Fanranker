@@ -9,6 +9,8 @@ import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/c
 import { SAGA_WINDOW_KEY } from "@/lib/saga/config"
 import { publishReservoirItem } from "@/lib/saga/publish"
 import { isWomensFootball } from "@/lib/news/quality-gate"
+import { judgeClubConsistency } from "@/lib/saga/consistency"
+import { notifyDiscordOps } from "@/lib/discord-notify"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -126,6 +128,42 @@ async function cronGet(request: Request) {
         const clusterKey = `${normalizePlayerKey(ex.player)}:${ex.stage_signal ?? "news"}:${kstDay(row.occurred_at)}`
 
         const headlineKo = ex.headline_ko ?? row.headline_kr
+
+        // ── 시계열 클럽 일관성 (환각 방지 L3 — 디오망데 실사고 2026-08-07) ──
+        // 오피셜/완료 신호인데 최근 7일 같은 선수 언급들의 지배 클럽과 전혀 다르면
+        // 자동 발행을 막고 검수로 (자동 수정 금지 — 진짜 하이재킹일 수 있다) + 운영 알림.
+        let clubConflict: { dominant: string | null } | null = null
+        if ((tier === "official" || ex.stage_signal === "done") && ex.clubs.length > 0) {
+          const { data: priorRows } = await supabase
+            .from("saga_reservoir")
+            .select("extracted")
+            .neq("id", row.id)
+            .gte("occurred_at", new Date(Date.now() - 7 * 24 * 3600_000).toISOString())
+            .filter("extracted->>player", "not.is", null)
+            .limit(400)
+          const playerKey = normalizePlayerKey(ex.player)
+          const priorClubs = ((priorRows ?? []) as { extracted: Record<string, unknown> | null }[])
+            .map((p) => p.extracted)
+            .filter(
+              (e): e is Record<string, unknown> =>
+                !!e &&
+                typeof e.player === "string" &&
+                normalizePlayerKey(e.player as string) === playerKey &&
+                Array.isArray(e.clubs)
+            )
+            .map((e) => e.clubs as string[])
+          const verdict = judgeClubConsistency(ex.clubs, priorClubs)
+          if (verdict.conflict) {
+            clubConflict = { dominant: verdict.dominant }
+            notifyDiscordOps({
+              title: `오피셜 클럽 모순 의심 — ${ex.player_kr ?? ex.player}`,
+              description: `이번 표기 [${ex.clubs.join(", ")}] vs 최근 7일 지배 클럽 "${verdict.dominant}". 자동 발행 보류 — 검수 필요.\n${row.title.slice(0, 140)}`,
+              level: "warn",
+              url: "/admin2/saga",
+            }).catch(() => {})
+          }
+        }
+
         const autoHoldReasons = [
           ...(!canon.matched ? ["unknown_player"] : []),
           ...((ex.confidence ?? 0) < AUTO_PUBLISH_MIN_CONFIDENCE ? ["low_confidence"] : []),
@@ -133,13 +171,14 @@ async function cronGet(request: Request) {
           ...(isWomensFootball(row.title, row.headline_kr, row.source_url)
             ? ["womens_football"]
             : []),
+          ...(clubConflict ? ["club_conflict"] : []),
         ]
 
         const { error: queueError } = await supabase
           .from("saga_reservoir")
           .update({
             status: "queued",
-            extracted: { ...ex, tier },
+            extracted: { ...ex, tier, ...(clubConflict ? { club_conflict: clubConflict } : {}) },
             saga_hint: hint,
             cluster_key: clusterKey,
             error: autoHoldReasons.length > 0 ? `auto_hold:${autoHoldReasons.join(",")}` : null,

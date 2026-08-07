@@ -211,32 +211,50 @@ export async function fetchTransferFeed(
     .order("posted_at", { ascending: false })
     .limit(limit)
 
-  return (
-    ((data ?? []) as TickerRow[])
-      .filter((r) => r.headline_kr)
-      // 여자 축구 제외 (운영자 확정 2026-08-04) — 뉴스 파이프라인과 동일 기준.
-      // 한국어 제목에선 성별 표기가 지워지는 실사고(몰리 바트립)가 있어 URL 까지 검사.
-      .filter(
-        (r) =>
-          !WOMENS_FOOTBALL_RE.test(`${r.headline_kr} ${r.original_title ?? ""} ${r.link_url ?? ""}`)
-      )
-      .map((r) => ({
-        id: r.id,
-        headline: r.headline_kr as string,
-        originalTitle: r.original_title,
-        tier: classifyTier(r),
-        // 원 소스 해석 체인: 기자명 브래킷 → naver author 언론사 → 링크 도메인 매체.
-        // 야후·레딧 등 유통 채널은 출처로 표시하지 않는다 (운영자 방침 2026-07-26).
-        source:
-          bracketSource(r.original_title) ??
-          outletFromAuthor(r.author) ??
-          outletFromUrl(r.link_url) ??
-          "",
-        sourceUrl: r.link_url || r.external_url,
-        redditUrl: r.external_url,
-        postedAt: r.posted_at,
-        importance: r.importance ?? 0,
-        score: r.score ?? 0,
-      }))
-  )
+  const rows = ((data ?? []) as TickerRow[])
+    .filter((r) => r.headline_kr)
+    // 여자 축구 제외 (운영자 확정 2026-08-04) — 뉴스 파이프라인과 동일 기준.
+    // 한국어 제목에선 성별 표기가 지워지는 실사고(몰리 바트립)가 있어 URL 까지 검사.
+    .filter(
+      (r) =>
+        !WOMENS_FOOTBALL_RE.test(`${r.headline_kr} ${r.original_title ?? ""} ${r.link_url ?? ""}`)
+    )
+
+  // ── 시계열 클럽 모순 강등 (환각 방지 L3 — 디오망데 실사고 2026-08-07) ──
+  // 사가 추출이 "최근 언급들과 클럽이 정면 모순"으로 판정한 오피셜은 검수 전까지
+  // 오피셜 섹션에 올리지 않는다 (루머로 강등 — 자동 수정은 하지 않는다).
+  const officialUrls = rows
+    .filter((r) => classifyTier(r) === "official")
+    .map((r) => r.external_url)
+    .filter((u): u is string => !!u)
+  const conflictedUrls = new Set<string>()
+  if (officialUrls.length > 0) {
+    const { data: conflicted } = await supabase
+      .from("saga_reservoir")
+      .select("source_url")
+      .in("source_url", officialUrls)
+      .not("extracted->club_conflict", "is", null)
+    for (const c of conflicted ?? []) {
+      if (c.source_url) conflictedUrls.add(c.source_url as string)
+    }
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    headline: r.headline_kr as string,
+    originalTitle: r.original_title,
+    tier: r.external_url && conflictedUrls.has(r.external_url) ? "rumor" : classifyTier(r),
+    // 원 소스 해석 체인: 기자명 브래킷 → naver author 언론사 → 링크 도메인 매체.
+    // 야후·레딧 등 유통 채널은 출처로 표시하지 않는다 (운영자 방침 2026-07-26).
+    source:
+      bracketSource(r.original_title) ??
+      outletFromAuthor(r.author) ??
+      outletFromUrl(r.link_url) ??
+      "",
+    sourceUrl: r.link_url || r.external_url,
+    redditUrl: r.external_url,
+    postedAt: r.posted_at,
+    importance: r.importance ?? 0,
+    score: r.score ?? 0,
+  }))
 }
