@@ -22,6 +22,8 @@ import {
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
+import { isBreakingNewsItem, isRetryableGateReasons } from "@/lib/news/breaking"
+import { notifyDiscordOps } from "@/lib/discord-notify"
 import {
   newsCandidateRunId,
   recordNewsCandidateEvents,
@@ -149,6 +151,9 @@ async function run(request: NextRequest) {
   // 발행 전 표기 검증 루프의 런 단위 캐시 — 같은 이름을 기사마다 재검증하지 않는다
   const namingCache = new Map<string, { preferred: string } | "unknown" | "infra">()
   let namingRegistered = 0
+  // 브레이킹 자가 재평가 상한 (P0-2) — 게이트 재실행은 LLM 비용이라 회당 제한
+  const BREAKING_RETRY_CAP = 3
+  let breakingRetries = 0
 
   // 중복 차단 재료 — 최근 48시간 발행 제목 + 원문 URL (실사고 2026-08-04: 레딧에 같은
   // 소식이 여러 개 올라와 '헨더슨 첼시 합류'가 3번 발행됨 / 2026-08-06: 같은 가디언
@@ -197,6 +202,36 @@ async function run(request: NextRequest) {
   const skipCounts: Record<string, number> = {}
   let repeatedVerdicts = 0
   const ledgerEvents: NewsCandidateEvent[] = []
+
+  // ── 브레이킹 판별 메모 (개선 P0, 2026-08-07 비니시우스 실사고) ──
+  const rowById = new Map(queue.map((r) => [r.id, r]))
+  const breakingMemo = new Map<string, boolean>()
+  const isBreaking = (id: string): boolean => {
+    const memo = breakingMemo.get(id)
+    if (memo !== undefined) return memo
+    const row = rowById.get(id)
+    const v = row
+      ? isBreakingNewsItem({
+          draftTitle: row.draft?.title ?? null,
+          originalTitle: row.draft?.original?.title ?? null,
+          sourceUrl: row.urls?.source ?? null,
+        })
+      : false
+    breakingMemo.set(id, v)
+    return v
+  }
+  // P0-1: 브레이킹이 검수 큐로 떨어지는 순간 알림 — 상태 전이 시 1회만 (반복 억제 공유)
+  const alertBreakingHeld = (id: string, reason: string) => {
+    if (!isBreaking(id)) return
+    const row = rowById.get(id)
+    notifyDiscordOps({
+      title: `브레이킹 막힘 — ${reason}`,
+      description: `${row?.draft?.title?.slice(0, 120) ?? id}\n오피셜급 뉴스가 자동발행되지 못하고 검수 대기입니다.`,
+      level: "alert",
+      url: "/admin/news-review",
+    }).catch(() => {})
+  }
+
   const noteSkip = (id: string, reason: string, state: NewsCandidateState = "held") => {
     skipCounts[reason] = (skipCounts[reason] ?? 0) + 1
     skipped.push(`${id}: ${reason}`)
@@ -204,6 +239,7 @@ async function run(request: NextRequest) {
       repeatedVerdicts++
       return
     }
+    if (state === "needs_human") alertBreakingHeld(id, reason)
     ledgerEvents.push({
       candidate_id: id,
       reservoir_id: id,
@@ -251,10 +287,23 @@ async function run(request: NextRequest) {
     }
 
     // 검사관 불통과 이력 → 재검사 안 함 (사람 검수 대기 중 — 비용·루프 방지)
-    const priorGate = (row.decision?.auto_gate ?? null) as { pass?: boolean } | null
+    // 예외 (P0-2, 비니시우스 실사고): **브레이킹**은 해소 가능한 사유(사전 미등재)에
+    // 한해 매 사이클 재평가 — 사전이 등재되는 순간 스스로 살아난다. 회당 3건 상한.
+    const priorGate = (row.decision?.auto_gate ?? null) as {
+      pass?: boolean
+      reasons?: unknown
+    } | null
     if (priorGate?.pass === false) {
-      noteSkip(row.id, "prior_gate_rejected", "needs_human")
-      continue
+      const selfHealEligible =
+        breakingRetries < BREAKING_RETRY_CAP &&
+        isBreaking(row.id) &&
+        isRetryableGateReasons(priorGate.reasons)
+      if (!selfHealEligible) {
+        noteSkip(row.id, "prior_gate_rejected", "needs_human")
+        continue
+      }
+      breakingRetries++
+      // fall through — 게이트 전체 재실행 (표기 루프가 사전·흡수로 해소 시도)
     }
 
     // 중복 차단 1 — **같은 원문 URL 은 제목이 아무리 달라도 같은 기사다** (결정론, 최우선).
@@ -466,6 +515,10 @@ async function run(request: NextRequest) {
           details: { reasons: failReasons },
           run_id: ledgerRunId,
         })
+        // P0-1: 브레이킹이 게이트에서 막히면 즉시 알림 (전이 시 1회 — lastVerdict 억제)
+        if (lastVerdict.get(row.id) !== "needs_human:quality_gate_rejected") {
+          alertBreakingHeld(row.id, failReasons[0] ?? "quality_gate_rejected")
+        }
       }
       gated.push(`${row.id}: ${failReasons.join(" / ")}`)
       continue
