@@ -96,13 +96,79 @@ export async function extractTransferBatch(
       const idx = (it as Record<string, unknown> | null)?.i
       if (typeof idx === "number") byIndex.set(idx, it)
     }
-    return inputs.map((_, i) => sanitize(byIndex.get(i + 1)))
+    return inputs.map((x, i) => {
+      const item = sanitize(byIndex.get(i + 1))
+      if (!item || item.clubs.length === 0) return item
+      // 클럽 증거 검사 — 원제목에 없는 클럽은 환각 가능성 (디오망데 실사고)
+      const { clubs, dropped } = filterClubsByEvidence(item.clubs, x.title)
+      if (dropped.length === 0) return item
+      return {
+        ...item,
+        clubs,
+        // 클럽을 지어냈다면 나머지 판단도 의심 — 검수 화면에서 눈에 띄게
+        confidence: Math.min(item.confidence, 0.4),
+      }
+    })
   } catch {
     return inputs.map(() => null)
   }
 }
 
 const STAGES = new Set(["interest", "contact", "bid", "negotiation", "medical", "done"])
+
+/**
+ * 클럽 증거 검사 (2026-08-07 디오망데 실사고).
+ *
+ * VPS 요약기가 클럽명 없는 원제("Comunicado Oficial: Yan Diomande")에 "바르사"를
+ * 환각으로 채웠고, 그 한글 헤드라인이 이 추출기의 입력으로 들어와
+ * clubs=["Barcelona"] confidence 1 로 전파됐다 — 실제 오피셜은 레알 마드리드.
+ *
+ * 방어: LLM 이 낸 클럽은 **영문 원제목에 실제로 등장할 때만** 채택한다.
+ * 한글 헤드라인은 증거로 쓰지 않는다(그게 오염원). 증거 없는 클럽은 버리고
+ * 신뢰도를 깎아 검수 눈에 띄게 한다 — 클럽 미상은 사가 연결(선수 identity)에
+ * 지장이 없고, 단정보다 공란이 낫다 (fail-closed).
+ */
+const CLUB_EVIDENCE_ALIASES: Record<string, string[]> = {
+  barcelona: ["barcelona", "barca", "barça", "fcb"],
+  "real madrid": ["real madrid", "madrid"],
+  "manchester united": ["manchester united", "man utd", "man united", "manchester utd"],
+  "manchester city": ["manchester city", "man city"],
+  tottenham: ["tottenham", "spurs"],
+  "tottenham hotspur": ["tottenham", "spurs"],
+  "paris saint-germain": ["paris saint-germain", "psg", "paris"],
+  "bayern munich": ["bayern", "munich"],
+  "atletico madrid": ["atletico", "atlético"],
+  inter: ["inter"],
+  "inter milan": ["inter"],
+  "ac milan": ["milan"],
+  "rb leipzig": ["leipzig"],
+  newcastle: ["newcastle"],
+  "newcastle united": ["newcastle"],
+  "west ham": ["west ham"],
+  "west ham united": ["west ham"],
+  wolves: ["wolves", "wolverhampton"],
+  wolverhampton: ["wolves", "wolverhampton"],
+}
+
+export function filterClubsByEvidence(
+  clubs: string[],
+  title: string
+): { clubs: string[]; dropped: string[] } {
+  const haystack = title.toLowerCase()
+  const kept: string[] = []
+  const dropped: string[] = []
+  for (const club of clubs) {
+    const key = club.trim().toLowerCase()
+    if (!key) continue
+    const needles = CLUB_EVIDENCE_ALIASES[key] ?? [key]
+    // 폴백: 전체명 또는 첫 토큰(4자 이상 — "Real"류 짧은 토큰 오폭 방지)
+    const firstToken = key.split(/\s+/)[0]
+    const candidates = [...needles, ...(firstToken.length >= 5 ? [firstToken] : [])]
+    if (candidates.some((n) => haystack.includes(n))) kept.push(club)
+    else dropped.push(club)
+  }
+  return { clubs: kept, dropped }
+}
 
 /** LLM 출력 방어 정규화 — 스키마 밖 값은 버린다 */
 function sanitize(raw: unknown): ExtractedTransfer | null {
