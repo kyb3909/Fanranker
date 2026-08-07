@@ -140,9 +140,10 @@ async function run(request: NextRequest) {
   })
 
   // 표기 사전 (선수) — 미등재 선수명 기사는 자동발행 제외 (환각 음차 차단)
+  // id·romanized·surfaces 는 검증 루프의 "기존 항목 흡수" 판정용 (비니시우스 실사고)
   const { data: dict } = await supabase
     .from("news_alias_dictionary")
-    .select("preferred_ko, hangul_alts")
+    .select("id, preferred_ko, hangul_alts, romanized, surfaces")
     .eq("category", "player")
 
   // 발행 전 표기 검증 루프의 런 단위 캐시 — 같은 이름을 기사마다 재검증하지 않는다
@@ -375,14 +376,23 @@ async function run(request: NextRequest) {
         // 미등재 이름을 곧장 보류하지 않고 네이버 검증 루프를 먼저 돈다. 승자가 나오면
         // 사전에 등재되고(기사 표기는 alt), 발행 초크의 사전 치환이 본문을 대표 표기로
         // 정리한 뒤 발행된다. 근거 없는 이름만 기존대로 보류(사람 검수).
-        const loop = await resolveUnknownPlayersViaNaver(supabase, unknown, title, namingCache)
+        const loop = await resolveUnknownPlayersViaNaver(
+          supabase,
+          unknown,
+          title,
+          namingCache,
+          dict ?? []
+        )
         if (loop.registered.length > 0) {
           namingRegistered += loop.registered.length
           // 이번 런의 뒷 기사들이 같은 이름에 다시 막히지 않도록 사전 캐시 갱신
           for (const r of loop.registered) {
             dict?.push({
+              id: `runtime_${namingRegistered}`,
               preferred_ko: r.preferred,
               hangul_alts: r.name !== r.preferred ? [r.name] : [],
+              romanized: null,
+              surfaces: null,
             })
           }
         }

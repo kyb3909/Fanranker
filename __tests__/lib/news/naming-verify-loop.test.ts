@@ -18,15 +18,57 @@ vi.mock("@/lib/naming/pick", () => ({
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
 
 function makeSupabase() {
-  const upserts: Record<string, unknown>[] = []
+  const inserts: Record<string, unknown>[] = []
+  const updates: Record<string, unknown>[] = []
   return {
-    upserts,
+    inserts,
+    updates,
     client: {
       from: () => ({
-        upsert: async (row: Record<string, unknown>) => {
-          upserts.push(row)
+        insert: async (row: Record<string, unknown>) => {
+          inserts.push(row)
           return { error: null }
         },
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: null, error: null }), // 신규 등재 경로: 기존 행 없음
+          }),
+        }),
+        update: (row: Record<string, unknown>) => ({
+          eq: async () => {
+            updates.push(row)
+            return { error: null }
+          },
+        }),
+      }),
+    },
+  }
+}
+
+/** 흡수 경로용 — 사전 행 조회가 기존 항목(hangul_alts)을 돌려준다 */
+function makeSupabaseWithDict() {
+  const inserts: Record<string, unknown>[] = []
+  const updates: Record<string, unknown>[] = []
+  return {
+    inserts,
+    updates,
+    client: {
+      from: () => ({
+        insert: async (row: Record<string, unknown>) => {
+          inserts.push(row)
+          return { error: null }
+        },
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: { hangul_alts: [] }, error: null }),
+          }),
+        }),
+        update: (row: Record<string, unknown>) => ({
+          eq: async () => {
+            updates.push(row)
+            return { error: null }
+          },
+        }),
       }),
     },
   }
@@ -52,8 +94,8 @@ describe("resolveUnknownPlayersViaNaver", () => {
 
     expect(r.registered).toEqual([{ name: "코디 갓포", preferred: "코디 각포" }])
     expect(r.stillUnknown).toEqual([])
-    expect(sb.upserts).toHaveLength(1)
-    expect(sb.upserts[0]).toMatchObject({
+    expect(sb.inserts).toHaveLength(1)
+    expect(sb.inserts[0]).toMatchObject({
       preferred_ko: "코디 각포",
       hangul_alts: ["코디 갓포"],
       category: "player",
@@ -73,7 +115,7 @@ describe("resolveUnknownPlayersViaNaver", () => {
 
     expect(r.stillUnknown).toEqual(["아무개"])
     expect(r.registered).toEqual([])
-    expect(sb.upserts).toHaveLength(0)
+    expect(sb.inserts).toHaveLength(0)
   })
 
   it("네이버 API 미가동 → infraFailed (낙인 없이 재시도 재료)", async () => {
@@ -120,6 +162,96 @@ describe("resolveUnknownPlayersViaNaver", () => {
     // 두 번째 기사에서는 이미 등재됨 — unknown 도 registered 도 아님 (통과)
     expect(r2.stillUnknown).toEqual([])
     expect(r2.registered).toEqual([])
+  })
+
+  describe("기존 항목 흡수 (비니시우스 주니어 실사고 2026-08-07)", () => {
+    const vini = {
+      id: "player_vinicius_jr",
+      preferred_ko: "비니시우스 주니오르",
+      romanized: "Vinicius Junior",
+      surfaces: ["vinicius junior", "vinicius jr"],
+      hangul_alts: [],
+    }
+    const martinelli = {
+      id: "player_martinelli",
+      preferred_ko: "가브리엘 마르티넬리",
+      romanized: "Gabriel Martinelli",
+      surfaces: ["gabriel martinelli"],
+      hangul_alts: [],
+    }
+
+    it("승자 판정 실패(양쪽 병용)여도 로마자가 기존 항목과 일치하면 별칭 흡수", async () => {
+      const sb = makeSupabaseWithDict()
+      verifyMock.mockResolvedValue({
+        winner: null, // 주니오르/주니어 둘 다 많이 쓰여 압도 승자 없음 — 실사고 그대로
+        romanized: "Vinicius Junior",
+        counts: [
+          { candidate: "비니시우스 주니오르", total: 15000 },
+          { candidate: "비니시우스 주니어", total: 12000 },
+        ],
+        reason: "우세 불충분",
+      })
+
+      const r = await resolveUnknownPlayersViaNaver(
+        sb.client as never,
+        ["비니시우스 주니어"],
+        "제목",
+        undefined,
+        [vini, martinelli]
+      )
+
+      expect(r.registered).toEqual([
+        { name: "비니시우스 주니어", preferred: "비니시우스 주니오르" },
+      ])
+      expect(r.stillUnknown).toEqual([])
+      expect(sb.updates).toHaveLength(1)
+      expect(sb.updates[0].hangul_alts).toContain("비니시우스 주니어")
+    })
+
+    it("자모 유사도가 높아도 로마자 불일치(다른 선수)면 흡수 금지 — 마르티네스≠마르티넬리", async () => {
+      const sb = makeSupabaseWithDict()
+      verifyMock.mockResolvedValue({
+        winner: null,
+        romanized: "Gabriel Martinez",
+        counts: [],
+        reason: "근거 부족",
+      })
+
+      const r = await resolveUnknownPlayersViaNaver(
+        sb.client as never,
+        ["가브리엘 마르티네스"],
+        "제목",
+        undefined,
+        [vini, martinelli]
+      )
+
+      expect(r.registered).toEqual([])
+      expect(r.stillUnknown).toEqual(["가브리엘 마르티네스"])
+      expect(sb.updates).toHaveLength(0)
+    })
+
+    it("네이버 승자가 기존 대표 표기와 같으면 신규 등재 대신 별칭 흡수", async () => {
+      const sb = makeSupabaseWithDict()
+      verifyMock.mockResolvedValue({
+        winner: "비니시우스 주니오르",
+        romanized: "Vinicius Junior",
+        counts: [{ candidate: "비니시우스 주니오르", total: 15000 }],
+      })
+
+      const r = await resolveUnknownPlayersViaNaver(
+        sb.client as never,
+        ["비니시우스 주니어"],
+        "제목",
+        undefined,
+        [vini, martinelli]
+      )
+
+      expect(r.registered).toEqual([
+        { name: "비니시우스 주니어", preferred: "비니시우스 주니오르" },
+      ])
+      expect(sb.inserts).toHaveLength(0) // 신규 행 생성 없음 — 기존 항목에 흡수
+      expect(sb.updates).toHaveLength(1)
+    })
   })
 
   it("기사당 검증 상한 초과분은 infraFailed (시도 못 함 ≠ 판정)", async () => {

@@ -21,11 +21,30 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
+import { suggestExisting } from "@/lib/news/alias-suggest"
 
 type ServiceClient = SupabaseClient<never, never, never> | { from: CallableFunction }
 
 /** 기사 1건당 검증 상한 — LLM 1회 + 네이버 최대 4회/이름이라 폭주 방지 */
 const MAX_VERIFICATIONS_PER_ARTICLE = 8
+
+/**
+ * 기존 항목 흡수 판정용 자모 유사도 하한 (2026-08-07 비니시우스 실사고).
+ *
+ * ⚠️ 유사도 단독으로는 흡수 금지 — 실측: "비니시우스 주니어"↔"주니오르" 0.875 (진짜 변형)
+ * vs "가브리엘 마르티네스"↔"마르티넬리" 0.865 (다른 선수!) — 임계값으로 못 가른다.
+ * 판별자는 **로마자 일치**: 같은 선수의 표기 변형은 로마자가 같고(Junior→vinicius junior
+ * = 사전 surfaces), 다른 선수는 다르다(Martinez ≠ martinelli). 유사도는 후보 축소용.
+ */
+const ABSORB_SIMILARITY_MIN = 0.75
+
+export interface LoopDictionaryEntry {
+  id: string
+  preferred_ko: string
+  romanized: string | null
+  surfaces: string[] | null
+  hangul_alts: string[] | null
+}
 
 export interface NamingLoopResult {
   /** 네이버 근거로 사전에 새로 등재된 이름 (기사 표기 → 대표 표기) */
@@ -46,11 +65,16 @@ export async function resolveUnknownPlayersViaNaver(
   supabase: ServiceClient,
   names: string[],
   contextTitle: string,
-  cache?: Map<string, { preferred: string } | "unknown" | "infra">
+  cache?: Map<string, { preferred: string } | "unknown" | "infra">,
+  dictionary: LoopDictionaryEntry[] = []
 ): Promise<NamingLoopResult> {
   const result: NamingLoopResult = { registered: [], stillUnknown: [], infraFailed: [] }
   const memo = cache ?? new Map()
   let verifications = 0
+
+  const preferredIndex = new Map(
+    dictionary.map((d) => [d.preferred_ko.replace(/\s+/g, ""), d] as const)
+  )
 
   for (const raw of names) {
     const name = raw.trim()
@@ -81,6 +105,50 @@ export async function resolveUnknownPlayersViaNaver(
     verifications++
 
     const v = await verifySpelling(name, contextTitle)
+    const romanKey = v.romanized ? normalizePlayerKey(v.romanized) : null
+
+    // ── 기존 항목 흡수 (비니시우스 주니어 실사고: 신규 등재만 알고 변형을 몰랐다) ──
+    // ① 네이버 승자가 이미 사전의 대표 표기와 같으면 → 그 항목의 별칭으로 흡수
+    // ② 승자 판정 실패(주니오르/주니어처럼 양쪽 병용)여도, 자모 유사 후보의
+    //    로마자와 일치하면 같은 선수의 변형 → 흡수. 로마자 불일치는 다른 선수(마르티네스류).
+    let absorbTarget: LoopDictionaryEntry | null = null
+    if (v.winner) {
+      absorbTarget = preferredIndex.get(v.winner.replace(/\s+/g, "")) ?? null
+    }
+    if (!absorbTarget && romanKey && dictionary.length > 0) {
+      const sims = suggestExisting(
+        name,
+        dictionary.map((d) => ({
+          id: d.id,
+          preferred_ko: d.preferred_ko,
+          romanized: d.romanized ?? "",
+          hangul_alts: d.hangul_alts,
+        })),
+        { min: ABSORB_SIMILARITY_MIN, limit: 3 }
+      )
+      for (const s of sims) {
+        const entry = dictionary.find((d) => d.id === s.id)
+        if (!entry) continue
+        const entryRoman = entry.romanized ? normalizePlayerKey(entry.romanized) : null
+        const surfaceKeys = (entry.surfaces ?? []).map((x) => normalizePlayerKey(x))
+        if ((entryRoman && entryRoman === romanKey) || surfaceKeys.includes(romanKey)) {
+          absorbTarget = entry
+          break
+        }
+      }
+    }
+
+    if (absorbTarget && absorbTarget.preferred_ko !== name) {
+      const absorbError = await absorbAliasIntoEntry(supabase, absorbTarget.id, name)
+      if (absorbError) {
+        memo.set(name, "infra")
+        result.infraFailed.push(name)
+        continue
+      }
+      memo.set(name, { preferred: absorbTarget.preferred_ko })
+      result.registered.push({ name, preferred: absorbTarget.preferred_ko })
+      continue
+    }
 
     if (!v.winner || !v.romanized) {
       if (isInfraReason(v.reason)) {
@@ -113,6 +181,27 @@ export async function resolveUnknownPlayersViaNaver(
   return result
 }
 
+/** 기존 사전 항목에 표기 변형을 별칭으로 흡수 (admin 1클릭 alias 모드와 동일 효과) */
+export async function absorbAliasIntoEntry(
+  supabase: ServiceClient,
+  entryId: string,
+  alias: string
+): Promise<string | null> {
+  const { data: existing, error: readError } = await (supabase as SupabaseClient)
+    .from("news_alias_dictionary")
+    .select("hangul_alts")
+    .eq("id", entryId)
+    .maybeSingle()
+  if (readError) return readError.message
+  if (!existing) return "entry_not_found"
+  const merged = Array.from(new Set([...((existing.hangul_alts as string[] | null) ?? []), alias]))
+  const { error } = await (supabase as SupabaseClient)
+    .from("news_alias_dictionary")
+    .update({ hangul_alts: merged, updated_at: new Date().toISOString() })
+    .eq("id", entryId)
+  return error ? error.message : null
+}
+
 /**
  * 네이버 검증을 통과한 표기를 사전에 등재. naming-audit(소급 감사)과 같은 형태 —
  * id 는 romanized 키 기반, 기사 표기가 대표와 다르면 옛 표기(alt)로 흡수해
@@ -123,18 +212,31 @@ export async function registerVerifiedPlayer(
   input: { articleName: string; preferred: string; romanized: string; notes: string }
 ): Promise<string | null> {
   const romanKey = normalizePlayerKey(input.romanized)
-  const { error } = await (supabase as SupabaseClient).from("news_alias_dictionary").upsert(
-    {
-      id: `player_auto_${romanKey.replace(/-/g, "_")}`.slice(0, 60),
-      category: "player",
-      preferred_ko: input.preferred,
-      romanized: input.romanized,
-      surfaces: [romanKey.replace(/-/g, " "), input.preferred],
-      hangul_alts: input.preferred !== input.articleName ? [input.articleName] : [],
-      confidence: 0.7,
-      notes: input.notes,
-    },
-    { onConflict: "id", ignoreDuplicates: true }
-  )
+  const id = `player_auto_${romanKey.replace(/-/g, "_")}`.slice(0, 60)
+
+  // 이미 있으면 새 표기를 별칭으로 흡수 — 예전 ignoreDuplicates 는 조용히 no-op 이라
+  // 변형 표기가 영영 등재되지 않았다 (비니시우스 실사고 계열의 잠복 버그)
+  const { data: existing } = await (supabase as SupabaseClient)
+    .from("news_alias_dictionary")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle()
+  if (existing) {
+    if (input.articleName !== input.preferred) {
+      return absorbAliasIntoEntry(supabase, id, input.articleName)
+    }
+    return null
+  }
+
+  const { error } = await (supabase as SupabaseClient).from("news_alias_dictionary").insert({
+    id,
+    category: "player",
+    preferred_ko: input.preferred,
+    romanized: input.romanized,
+    surfaces: [romanKey.replace(/-/g, " "), input.preferred],
+    hangul_alts: input.preferred !== input.articleName ? [input.articleName] : [],
+    confidence: 0.7,
+    notes: input.notes,
+  })
   return error ? error.message : null
 }
