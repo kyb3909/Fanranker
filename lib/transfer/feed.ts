@@ -1,5 +1,6 @@
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { WOMENS_FOOTBALL_RE } from "@/lib/news/quality-gate"
+import { stripUnevidencedAmounts } from "@/lib/news/amount-evidence"
 
 /**
  * 이적시장 상황판 데이터 (비로그인 공개 페이지 /transfer).
@@ -239,22 +240,32 @@ export async function fetchTransferFeed(
     }
   }
 
-  return rows.map((r) => ({
-    id: r.id,
-    headline: r.headline_kr as string,
-    originalTitle: r.original_title,
-    tier: r.external_url && conflictedUrls.has(r.external_url) ? "rumor" : classifyTier(r),
-    // 원 소스 해석 체인: 기자명 브래킷 → naver author 언론사 → 링크 도메인 매체.
-    // 야후·레딧 등 유통 채널은 출처로 표시하지 않는다 (운영자 방침 2026-07-26).
-    source:
-      bracketSource(r.original_title) ??
-      outletFromAuthor(r.author) ??
-      outletFromUrl(r.link_url) ??
-      "",
-    sourceUrl: r.link_url || r.external_url,
-    redditUrl: r.external_url,
-    postedAt: r.posted_at,
-    importance: r.importance ?? 0,
-    score: r.score ?? 0,
-  }))
+  return rows.map((r) => {
+    const tier: TransferTier =
+      r.external_url && conflictedUrls.has(r.external_url) ? "rumor" : classifyTier(r)
+    // 오피셜 헤드라인의 근거 없는 금액 제거 (2026-08-08 오너: "영입 오피셜 사실만") —
+    // 원문 제목에 그 숫자가 없으면 환산·창작 금액이다 ("1,400억" 실사고)
+    const headline =
+      tier === "official" && r.original_title
+        ? stripUnevidencedAmounts(r.headline_kr as string, r.original_title).title
+        : (r.headline_kr as string)
+    return {
+      id: r.id,
+      headline,
+      originalTitle: r.original_title,
+      tier,
+      // 원 소스 해석 체인: 기자명 브래킷 → naver author 언론사 → 링크 도메인 매체.
+      // 야후·레딧 등 유통 채널은 출처로 표시하지 않는다 (운영자 방침 2026-07-26).
+      source:
+        bracketSource(r.original_title) ??
+        outletFromAuthor(r.author) ??
+        outletFromUrl(r.link_url) ??
+        "",
+      sourceUrl: r.link_url || r.external_url,
+      redditUrl: r.external_url,
+      postedAt: r.posted_at,
+      importance: r.importance ?? 0,
+      score: r.score ?? 0,
+    }
+  })
 }

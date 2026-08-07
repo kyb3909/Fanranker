@@ -48,3 +48,38 @@ export function isRetryableGateReasons(reasons: unknown): boolean {
   if (!Array.isArray(reasons) || reasons.length === 0) return false
   return reasons.every((r) => typeof r === "string" && r.startsWith(UNKNOWN_PLAYER_PREFIX))
 }
+
+/**
+ * 오피셜 웹 대조 (2026-08-08 오너 확정: "오피셜 웹 대조를 해야함 당연히").
+ *
+ * 오피셜은 발행 전에 한국 언론 실보도로 교차 확인한다 — 네이버 뉴스 검색량이
+ * 근거다 (표기 검증 루프와 같은 채널). 디오망데("바르사" 환각)처럼 사실이 틀린
+ * 오피셜은 그 조합의 한국 보도가 없어서 걸린다.
+ *
+ * 판정: corroborated(보도 ≥2건) / unverified(0~1건 — 보류·검수) /
+ *       infra(네이버 미가동 — 판정 아님, 다음 회차 재시도)
+ */
+export type OfficialCorroboration = "corroborated" | "unverified" | "infra"
+
+export async function corroborateOfficialViaNaver(
+  playerKr: string,
+  clubKr: string | null,
+  countFn: (query: string) => Promise<number | null>
+): Promise<{ verdict: OfficialCorroboration; query: string; total: number | null }> {
+  const query = clubKr ? `${playerKr} ${clubKr}` : `${playerKr} 이적`
+  const total = await countFn(query)
+  if (total === null) return { verdict: "infra", query, total }
+  return { verdict: total >= 2 ? "corroborated" : "unverified", query, total }
+}
+
+/** 제목에서 아는 클럽 한글 표기 찾기 (team_dictionary name_kr·aliases 기반) */
+export function findClubInTitle(title: string, clubNames: { name: string }[]): string | null {
+  let best: string | null = null
+  for (const c of clubNames) {
+    if (!c.name || c.name.length < 2) continue
+    if (title.includes(c.name) && (best === null || c.name.length > best.length)) {
+      best = c.name
+    }
+  }
+  return best
+}

@@ -147,6 +147,12 @@ vi.mock("@/lib/supabase/server", () => ({
           select: () => ({ eq: async () => ({ data: [], error: null }) }),
         }
       }
+      if (table === "team_dictionary") {
+        // 오피셜 웹 대조용 클럽 표기 로드 (2026-08-08) — 테스트에선 빈 사전
+        return {
+          select: async () => ({ data: [], error: null }),
+        }
+      }
       if (table === "post_flairs" || table === "post_flair_map") {
         return {
           select: () => ({

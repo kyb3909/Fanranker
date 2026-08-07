@@ -22,7 +22,14 @@ import {
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
-import { isBreakingNewsItem, isRetryableGateReasons } from "@/lib/news/breaking"
+import {
+  isBreakingNewsItem,
+  isRetryableGateReasons,
+  corroborateOfficialViaNaver,
+  findClubInTitle,
+} from "@/lib/news/breaking"
+import { stripUnevidencedAmounts } from "@/lib/news/amount-evidence"
+import { naverNewsCount } from "@/lib/naming/verify"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import {
   newsCandidateRunId,
@@ -114,7 +121,7 @@ async function run(request: NextRequest) {
   const freshCutoff = new Date(Date.now() - MAX_AGE_HOURS * 3600 * 1000).toISOString()
   const { data: drafts, error } = await supabase
     .from("news_reservoir")
-    .select("id, status, urls, draft, entities, tags, decision, created_at")
+    .select("id, status, urls, draft, raw, entities, tags, decision, created_at")
     .eq("status", "drafted")
     .gte("created_at", freshCutoff)
     .order("created_at", { ascending: false }) // 최신 우선 — 뉴스는 신선한 것부터
@@ -134,6 +141,8 @@ async function run(request: NextRequest) {
       status: string
       decision: Record<string, unknown> | null
       created_at: string
+      /** 원문 스냅샷 — 금액 증거 검사(오피셜)용 (2026-08-08) */
+      raw: { source_text?: string } | null
     })[]),
   ].sort((a, b) => {
     const [ua, ub] = [at(a) <= urgentCutoff, at(b) <= urgentCutoff]
@@ -154,6 +163,15 @@ async function run(request: NextRequest) {
   // 브레이킹 자가 재평가 상한 (P0-2) — 게이트 재실행은 LLM 비용이라 회당 제한
   const BREAKING_RETRY_CAP = 3
   let breakingRetries = 0
+
+  // 오피셜 웹 대조용 클럽 한글 표기 (팀 사전 — 제목에서 클럽 찾기)
+  const { data: clubRows } = await supabase.from("team_dictionary").select("name_kr, aliases_kr")
+  const clubNamesKr = (
+    (clubRows ?? []) as { name_kr: string | null; aliases_kr: string[] | null }[]
+  )
+    .flatMap((c) => [c.name_kr, ...(c.aliases_kr ?? [])])
+    .filter((n): n is string => !!n)
+    .map((name) => ({ name }))
 
   // 중복 차단 재료 — 최근 48시간 발행 제목 + 원문 URL (실사고 2026-08-04: 레딧에 같은
   // 소식이 여러 개 올라와 '헨더슨 첼시 합류'가 3번 발행됨 / 2026-08-06: 같은 가디언
@@ -524,7 +542,44 @@ async function run(request: NextRequest) {
       continue
     }
 
-    const result = await publishNewsDraft(supabase, row, { title, content, auto: true })
+    // ── 오피셜 최종 관문 (2026-08-08 오너: "오피셜 웹 대조를 해야함 당연히" +
+    //     "금액은 굳이 없으면 빼도 좋아 — 영입 오피셜 사실만 전해도 돼") ──
+    let publishTitle = title
+    if (isBreaking(row.id)) {
+      const playerKr = verdict.playerNamesKr[0] ?? null
+      if (playerKr) {
+        const club = findClubInTitle(title, clubNamesKr)
+        const cor = await corroborateOfficialViaNaver(playerKr, club, naverNewsCount)
+        if (cor.verdict === "infra") {
+          // 네이버 미가동 = 판정 아님 — 낙인 없이 다음 회차 재시도 (이미지 infra 규율)
+          noteSkip(row.id, "official_check_unavailable", "retry_wait")
+          continue
+        }
+        if (cor.verdict === "unverified") {
+          // 한국 언론 실보도가 아직 없음 — 사실 오류(디오망데형) 또는 초속보.
+          // 둘 다 사람이 봐야 한다 (noteSkip 이 브레이킹 알림까지 발화)
+          noteSkip(row.id, "official_unverified", "needs_human")
+          continue
+        }
+      }
+      // 금액 증거: 원문에 없는 금액은 제목에서 제거 — 환산·창작 금액 게재 금지
+      const sourceText = `${row.raw?.source_text ?? ""} ${row.draft?.original?.title ?? ""}`
+      const strippedTitle = stripUnevidencedAmounts(title, sourceText)
+      if (strippedTitle.removed.length > 0) {
+        publishTitle = strippedTitle.title
+        console.info(
+          "[news-auto-publish] 근거 없는 금액 제거",
+          row.id,
+          strippedTitle.removed.join(" | ")
+        )
+      }
+    }
+
+    const result = await publishNewsDraft(supabase, row, {
+      title: publishTitle,
+      content,
+      auto: true,
+    })
     if (result.error) {
       // 실패 항목은 drafted 로 남는다 — 다음 run 재시도 또는 수동 검수로 처리 가능
       errors.push(`${row.id}: ${result.error}`)
