@@ -3,6 +3,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { notifyDiscordOps } from "@/lib/discord-notify"
+import { isBreakingNewsItem } from "@/lib/news/breaking"
 
 export const dynamic = "force-dynamic"
 
@@ -100,6 +101,60 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     console.error("ops-monitor news_reservoir check 실패:", e)
+  }
+
+  // 2b+) 브레이킹 방치 — 오피셜급 뉴스가 needs_human 으로 6시간 넘게 잠겨 있으면 경보.
+  //      막히는 순간의 1회 알림(news-auto-publish alertBreakingHeld)을 놓쳤을 때의
+  //      안전망 (P1-3, 비니시우스 실사고: 오피셜이 하루 넘게 조용히 잠겨 있었다).
+  //      브레이킹은 48시간 뒤 만료되므로 6시간 경보면 손쓸 시간이 남아 있다.
+  try {
+    const { data: stuckRows } = await supabase
+      .from("news_candidates")
+      .select("candidate_id, last_reason_code, updated_at")
+      .eq("state", "needs_human")
+      .lt("updated_at", new Date(Date.now() - 6 * H).toISOString())
+      .order("updated_at", { ascending: true })
+      .limit(50)
+    const ids = (stuckRows ?? []).map((r) => r.candidate_id as string)
+    if (ids.length > 0) {
+      // 이미 발행/반려된 후보는 지나간 일 — 아직 검수 큐에 살아 있는 것만 센다
+      const { data: rvRows } = await supabase
+        .from("news_reservoir")
+        .select("id, draft, urls")
+        .eq("status", "drafted")
+        .in("id", ids)
+      const byId = new Map((rvRows ?? []).map((r) => [r.id as string, r]))
+      const breaking = (stuckRows ?? []).filter((c) => {
+        const rv = byId.get(c.candidate_id as string) as
+          | {
+              draft?: { title?: string; original?: { title?: string } } | null
+              urls?: { source?: string | null } | null
+            }
+          | undefined
+        if (!rv) return false
+        return isBreakingNewsItem({
+          draftTitle: rv.draft?.title ?? null,
+          originalTitle: rv.draft?.original?.title ?? null,
+          sourceUrl: rv.urls?.source ?? null,
+        })
+      })
+      if (breaking.length > 0) {
+        const oldest = breaking[0]
+        const ageH = Math.round((Date.now() - new Date(oldest.updated_at as string).getTime()) / H)
+        issues.push({
+          name: "🚨 브레이킹 방치",
+          value:
+            `오피셜급 ${breaking.length}건이 검수 대기(needs_human)로 잠겨 있음 — 최장 ${ageH}시간. ` +
+            `사유: ${breaking
+              .slice(0, 3)
+              .map((c) => (c.last_reason_code as string | null) ?? "?")
+              .join(", ")}. ` +
+            `/admin/news-review 에서 발행·반려할 것 (브레이킹은 48시간 뒤 만료)`,
+        })
+      }
+    }
+  } catch (e) {
+    console.error("ops-monitor breaking stuck check 실패:", e)
   }
 
   // 2c) 커뮤 크롤(떡밥 초안) 정지 — VPS 매시 :20. 새벽엔 원소스가 조용할 수 있어
