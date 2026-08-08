@@ -10,6 +10,7 @@ import "server-only"
  */
 
 import { pickWinner, type SpellingVerdict } from "./pick"
+import { chatParams } from "@/lib/llm/openai-params"
 
 export type { SpellingVerdict }
 
@@ -30,8 +31,7 @@ export async function proposeCandidates(name: string, context?: string): Promise
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.3,
+        ...chatParams("gpt-4o-mini", { temperature: 0.3 }),
         response_format: { type: "json_object" },
         messages: [
           {

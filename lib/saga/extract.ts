@@ -10,6 +10,8 @@
  * - 실패는 null 로 격리 (배치 하나 죽어도 나머지 진행) — 드라이런 리포트에 집계.
  */
 
+import { chatParams } from "@/lib/llm/openai-params"
+
 export interface ExtractInput {
   /** 원제목 ([브래킷 출처] 포함 가능) */
   title: string
@@ -72,8 +74,7 @@ export async function extractTransferBatch(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
+        ...chatParams("gpt-4o-mini", { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

@@ -12,6 +12,8 @@
  * (server-only 미사용 — cron 과 scripts/run-match-mapping-shadow.ts 가 함께 쓴다)
  */
 
+import { chatParams } from "@/lib/llm/openai-params"
+
 const SEARCH_BASE = "https://s.livesport.services/api/v2/search/"
 const SOCCERWAY_PROJECT_ID = "2020"
 
@@ -107,8 +109,7 @@ export async function proposeSearchQueries(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
+        ...chatParams("gpt-4o-mini", { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           {

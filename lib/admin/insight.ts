@@ -1,5 +1,6 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { chatParams } from "@/lib/llm/openai-params"
 
 /**
  * 운영 인사이트 — "무엇을 주목하고, 다음에 무엇을 할지".
@@ -141,14 +142,12 @@ export async function generateInsight(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        ...chatParams(DEFAULT_MODEL, { temperature: 0.3, max_tokens: 1600 }),
         messages: [
           { role: "system", content: PROMPT },
           { role: "user", content: JSON.stringify(input) },
         ],
         response_format: { type: "json_object" },
-        temperature: 0.3,
-        max_tokens: 1600,
       }),
       signal: AbortSignal.timeout(90_000),
     })

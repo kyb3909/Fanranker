@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { isContentFreeText } from "@/lib/news/content-quality"
 import { PERSONAL_BLOG_RE, isWomensFootball } from "@/lib/news/quality-gate"
 import { titleSimilarity } from "@/lib/saga/cluster"
+import { chatParams, supportsSamplingParams } from "@/lib/llm/openai-params"
 
 /**
  * 어사인먼트 데스크 (Phase 2 — shadow 전용).
@@ -318,11 +319,10 @@ decision 을 hold 나 reject 로 바꿔라.** 판정과 사유가 어긋나면 �
 JSON만 출력:
 {"desk":"...","priority":0,"risk":"...","format":"...","required_checks":[],"deadline_minutes":0,"decision":"...","reason_codes":[]}`
 
-/** GPT-5 계열은 temperature 를 받지 않는다 — 넣으면 400 이고, fail-closed 경로에서는
- *  전건 반려로 조용히 죽는다(2026-08-04 불변식). 모델을 바꿔도 재발하지 않도록
- *  호출부가 아니라 여기서 판정한다. */
+/** 판정 본체는 `lib/llm/openai-params` 단일 소스로 이관됐다 (2026-08-09) — 같은 함정이
+ *  이 파일 밖 11곳에도 있었기 때문. 기존 이름은 호출부·테스트 호환으로 남긴다. */
 export function supportsTemperature(model: string): boolean {
-  return !/^gpt-5/i.test(model)
+  return supportsSamplingParams(model)
 }
 
 /**
@@ -541,6 +541,10 @@ const MODEL_RATES_USD_PER_MTOK: Record<string, { input: number; cached: number; 
     "gpt-4o-mini": { input: 0.15, cached: 0.075, output: 0.6 },
     "gpt-4.1-mini": { input: 0.4, cached: 0.1, output: 1.6 },
     "gpt-4o": { input: 2.5, cached: 1.25, output: 10 },
+    // 2026-08-09 확인 (OpenAI 공식 요율표). terra 는 출력이 4o-mini 의 20배라
+    // "출력이 긴 작업"에서 요금이 급증한다 — 모델 선택 시 입력가만 보면 안 된다.
+    "gpt-5.6-terra": { input: 2.0, cached: 0.2, output: 12 },
+    "gpt-5.1": { input: 1.25, cached: 0.125, output: 10 },
   }
 
 /** 결정론 규칙 판정은 호출이 없으므로 비용 0 (null 이 아니라 진짜 0 이다) */
@@ -599,8 +603,7 @@ export async function requestAssignment(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
       body: JSON.stringify({
-        model,
-        ...(supportsTemperature(model) ? { temperature: 0 } : {}),
+        ...chatParams(model, { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

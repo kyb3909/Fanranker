@@ -1,6 +1,7 @@
 import "server-only"
 import { createHash } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { chatParams } from "@/lib/llm/openai-params"
 
 /**
  * 데스킹 학습 — 검수자가 봇 기사를 고쳐서 발행하면, 그 수정에서 **표기 교정**만
@@ -202,7 +203,7 @@ export async function learnFromDeskEdit(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        ...chatParams(MODEL, { temperature: 0, max_tokens: 800 }),
         messages: [
           { role: "system", content: EXTRACT_PROMPT },
           {
@@ -215,8 +216,6 @@ export async function learnFromDeskEdit(
           },
         ],
         response_format: { type: "json_object" },
-        temperature: 0,
-        max_tokens: 800,
       }),
       signal: AbortSignal.timeout(20000),
     })

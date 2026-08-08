@@ -3,6 +3,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
+import { chatParams } from "@/lib/llm/openai-params"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -154,13 +155,11 @@ JSON으로 응답해:
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        ...chatParams(OPENAI_MODEL, { temperature: 0.8, max_tokens: 1000 }),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.8,
-        max_tokens: 1000,
         response_format: { type: "json_object" },
       }),
     })

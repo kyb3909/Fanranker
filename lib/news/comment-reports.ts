@@ -1,4 +1,5 @@
 import "server-only"
+import { chatParams } from "@/lib/llm/openai-params"
 
 /**
  * 독자 오류 제보 감지 (2026-08-07 운영자: "기사 잘못됐다는 댓글 자동 반영 —
@@ -75,7 +76,7 @@ export async function classifyErrorReports(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: MODEL,
+        ...chatParams(MODEL, { temperature: 0, max_tokens: 1200 }),
         messages: [
           { role: "system", content: CLASSIFY_PROMPT },
           {
@@ -91,8 +92,6 @@ export async function classifyErrorReports(
           },
         ],
         response_format: { type: "json_object" },
-        temperature: 0,
-        max_tokens: 1200,
       }),
       signal: AbortSignal.timeout(25000),
     })

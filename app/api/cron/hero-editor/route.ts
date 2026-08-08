@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { chatParams } from "@/lib/llm/openai-params"
 
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
@@ -73,8 +74,7 @@ async function cronGet(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o",
-        temperature: 0.3,
+        ...chatParams("gpt-4o", { temperature: 0.3 }),
         response_format: { type: "json_object" },
         messages: [
           {

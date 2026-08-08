@@ -1,6 +1,7 @@
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
+import { chatParams } from "@/lib/llm/openai-params"
 
 /**
  * VS 쟁점 생성 — 발행된 뉴스에 찬반 대결 폴 + 3줄 요약을 붙인다.
@@ -52,8 +53,7 @@ export async function generateVsIssue(title: string, content: unknown): Promise<
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.4,
+        ...chatParams("gpt-4o-mini", { temperature: 0.4 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

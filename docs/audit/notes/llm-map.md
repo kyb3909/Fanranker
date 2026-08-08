@@ -127,8 +127,16 @@ flowchart LR
 
 ## 6. 특이사항
 
-1. **gpt-5.1 + temperature=0.3 → 400 위험**: `data/crawlers/core/summarizer.js:205-215, 309-318`이 gpt-5.1에 `temperature: 0.3`을 보냄. 운영 메모·코드 주석(`quality-gate.ts:61` "GPT-5 계열은 temperature 미지원 — 넣으면 400") 및 `assignment-desk.ts:324-326` `supportsTemperature` 가드와 정면 모순. 현재 소스 0개 휴면이라 안 터질 뿐, 재가동 시 전건 400.
-2. **temperature 가드가 한 곳에만 있음**: `assignment-desk.ts:324`의 `/^gpt-5/i` 가드는 그 모듈 전용. 다른 15개 지점은 모델 하드코딩이라 모델만 5세대로 바꾸면 즉사하는 구조 (quality-gate는 아예 temperature를 안 보내는 방식으로 회피).
+1. ~~**gpt-5.1 + temperature=0.3 → 400 위험**~~ **← 오진 (2026-08-09 실제 API 프로브로 정정)**.
+   `gpt-5.1 + temperature: 0.3` 은 **200 OK** 다. 티커 요약기(`data/crawlers/core/summarizer.js`)는
+   24시간 49건을 한글 요약까지 채워 정상 가동 중이며, 이 항목이 예측한 장애는 존재하지 않는다.
+   실제로 거부하는 것은 **terra 한정**이고, 거부 항목도 temperature 하나가 아니다:
+   `temperature`(≠1) / `top_p` / `max_tokens`(→`max_completion_tokens`) 셋 다 400.
+   교훈: "GPT-5 계열은 전부 X" 같은 계열 단위 일반화를 코드 주석에서 그대로 받아 적지 말 것 —
+   모델별로 다르고, 확인 비용은 API 호출 한 번이다.
+2. ~~**temperature 가드가 한 곳에만 있음**~~ **← 2026-08-09 수리 완료.** 판정을
+   `lib/llm/openai-params.ts` 단일 소스로 옮기고 라이브 호출부 13곳 + VPS 스캐너 2곳에
+   `chatParams()` 적용. 이제 모델 문자열만 바꿔도 파라미터가 자동 정리된다(드리프트 불가).
 3. **VS 쟁점 프롬프트 중복 3벌**: `lib/news/vs-issue.ts:29`(폴백 생성) vs `scripts/vps-news-scanner/news-scanner.mjs:579`(2단 판정, confidence 게이트 있음 — 더 정교) vs 구사본 `scripts/news-scanner.mjs`. 기준이 두 개라 드리프트 중.
 4. **스캐너 사본 2벌**: `scripts/news-scanner.mjs`(212)와 `scripts/vps-news-scanner/news-scanner.mjs`(477) — 후자가 정본(원문 공급·MODEL_LONG 있음). 전자는 폐기 대상 ❓.
 5. **교정 학습 경로 2벌**: `lib/news/learn-corrections.ts`(Vercel cron, 정본) vs `data/agents/scripts/learn-from-edits.js`(구 Hermes 로컬 경로). 프롬프트·등재 로직이 따로 진화할 수 있음.

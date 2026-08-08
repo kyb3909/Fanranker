@@ -50,7 +50,7 @@
 | P2-8 | 카르마 적립 사망 (posts가 flair_team_id null 하드코딩 → awardFlairKarma 영원히 false) + 스타디움 레벨 정의 이원화 | notes/metaverse-stadium.md §6-3·4 |
 | P2-9 | 티커 폴백이 가짜 헤드라인 목업 노출 / 미니게임 점수 클라 신뢰 / PATCH posts 검증 공백 | notes/aggregator-ticker.md #5; notes/games.md #7; notes/community-core.md #3 |
 | P2-10 | ops-monitor "커뮤 크롤 정지" 경보가 소스 전면 휴면을 몰라 영구 참 조건 (알림 둔감화) + 디스코드 웹훅 자체가 무감시 SPOF | notes/aggregator-ticker.md #2; notes/automation-map.md §5 |
-| P2-11 | LLM: 5세대 temperature 가드가 1곳뿐(15곳 무방비), 휴면 summarizer는 gpt-5.1+temperature로 재가동 시 전건 400 | notes/llm-map.md §6-1·2 |
+| ~~P2-11~~ | ✅ **2026-08-09 수리** — 판정을 `lib/llm/openai-params.ts` 로 단일화하고 호출부 15곳 적용. 단 "gpt-5.1 재가동 시 전건 400" 부분은 **오진이었다**(실제 프로브: 200 OK). 거부하는 건 terra 한정이고 `temperature`·`top_p`·`max_tokens` 셋 다 | notes/llm-map.md §6-1·2 |
 | P2-12 | 홈 SSR 피드 catch 전삼킴(빈 피드, 로그 0 — 44% 에러율 사태 패턴 재현 조건) | notes/community-core.md #6 |
 
 ### P3 — 여유 있을 때

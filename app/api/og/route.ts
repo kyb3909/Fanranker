@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { apiError } from "@/lib/api-error"
 import { assertPublicUrl, SsrfBlockedError } from "@/lib/ssrf-guard"
 import { decodeHtmlEntities } from "@/lib/decode-html-entities"
+import { chatParams } from "@/lib/llm/openai-params"
 
 export const runtime = "nodejs"
 
@@ -235,7 +236,7 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        ...chatParams("gpt-4o-mini", { temperature: 0.3, max_tokens: 600 }),
         messages: [
           {
             role: "system",
@@ -244,8 +245,6 @@ async function summarizeArticle(text: string, title: string): Promise<string[] |
           },
           { role: "user", content: `제목: ${title}\n\n본문:\n${text}` },
         ],
-        temperature: 0.3,
-        max_tokens: 600,
         response_format: { type: "json_object" },
       }),
     })

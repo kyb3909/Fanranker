@@ -4,6 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isClubName } from "@/lib/naming/pick"
 import { isWomensFootball } from "@/lib/news/quality-gate"
+import { chatParams } from "@/lib/llm/openai-params"
 import {
   newsCandidateRunId,
   recordNewsCandidateEvents,
@@ -53,8 +54,7 @@ async function judge(titles: string[]): Promise<({ keep: boolean; reason: string
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
+        ...chatParams("gpt-4o-mini", { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

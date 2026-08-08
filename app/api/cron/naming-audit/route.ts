@@ -6,6 +6,7 @@ import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
 import { registerVerifiedPlayer } from "@/lib/news/naming-verify-loop"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
+import { chatParams } from "@/lib/llm/openai-params"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -54,8 +55,7 @@ async function extractNames(title: string, body: string): Promise<string[]> {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
+        ...chatParams("gpt-4o-mini", { temperature: 0 }),
         response_format: { type: "json_object" },
         messages: [
           {

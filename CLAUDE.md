@@ -119,6 +119,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `lib/supabase/database.types.ts`는 스키마 변경 후 갱신 필요 (RPC/테이블 추가 시).
 
 ### 주요 서브시스템
+- **LLM 호출 규약** (`lib/llm/openai-params.ts`) — OpenAI 호출은 반드시 `...chatParams(model, { temperature, max_tokens })` 로 파라미터를 넘길 것. 모델별로 받는 파라미터가 다르다(실측: `gpt-5.6-terra` 는 `temperature`≠1·`top_p`·`max_tokens` 를 전부 400 으로 거부, `max_completion_tokens` 를 요구). 직접 `temperature:` 를 적으면 모델 교체 시 400 → **fail-closed 경로에서 발행이 조용히 멈춘다**. VPS 스캐너(`scripts/vps-news-scanner/`)는 무의존 단일 파일이라 같은 함수를 복제해 둠 — 한쪽 고치면 양쪽 고칠 것. 모델 요율표는 `lib/news/assignment-desk.ts` `MODEL_RATES_USD_PER_MTOK`.
 - **News Agents** (`data/agents/`) — fetch → credibility → korean naming → desk review → summary → reservoir. Phase A: r/soccer만, drafted 정지, 수동 검수, 한국어만.
 - **News Crawlers** (`data/crawlers/`) — Reddit 44 + Naver News 11 = 55개 소스, 하루 1회. Vultr VPS에서 cron. Agents 안정화 후 deprecate.
 - **Betman Sync** (`lib/betman/`, `scripts/betman-*.ts`) — Vultr 서울 VPS cron (`/opt/betman/sync.sh`, 2시간 간격). Vercel은 해외 IP라 betman.co.kr 직접 접근 불가.

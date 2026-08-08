@@ -16,7 +16,10 @@
  * Vultr cron 에서 `node news-scanner.mjs`.
  *
  * env: OPENAI_API_KEY, CRON_SECRET, BASE_URL(기본 https://gongnori.fan),
- *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-4o-mini)
+ *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-4o-mini),
+ *      SCANNER_MODEL_LONG(기본 gpt-4.1-mini) — 원문을 확보한 글의 **기사 작성** 모델.
+ *        독자가 실제로 읽는 본문을 쓰는 자리라 품질 투자 지점이 여기다.
+ *        gpt-5.6-terra 로 올리려면 이 값만 바꾸면 된다(아래 chatParams 가 파라미터를 정리).
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
@@ -31,6 +34,23 @@ const MODEL = process.env.SCANNER_MODEL || "gpt-4o-mini"
 // 본문 없는 글은 기존 MODEL 로 짧게 (비용 유지).
 const MODEL_LONG = process.env.SCANNER_MODEL_LONG || "gpt-4.1-mini"
 const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판별 로그만 (테스트용)
+
+/**
+ * 모델 세대에 맞는 파라미터만 내보낸다. lib/llm/openai-params.ts 와 같은 규율이지만
+ * 이 파일은 **무의존 단일 파일**(VPS 배포 단위)이라 import 대신 복제한다 — 한쪽을
+ * 고치면 다른 쪽도 고칠 것.
+ *
+ * 2026-08-09 실측: gpt-5.6-terra 는 temperature(≠1)·top_p·max_tokens 를 400 으로 거부한다.
+ * 이 가드가 없으면 SCANNER_MODEL_LONG 을 terra 로 바꾸는 순간 그 글들이 전건 실패한다.
+ */
+function chatParams(model, params = {}) {
+  const { temperature, max_tokens: maxTokens } = params
+  const limit = maxTokens === undefined ? {} : { max_tokens: maxTokens }
+  if (!/^gpt-5/i.test(model)) {
+    return { model, ...(temperature === undefined ? {} : { temperature }), ...limit }
+  }
+  return { model, ...(maxTokens === undefined ? {} : { max_completion_tokens: maxTokens }) }
+}
 
 const LOOKBACK_HOURS = 24 // 이보다 오래된 글은 무시 (신선도)
 const MAX_LLM_PER_RUN = Number(process.env.SCANNER_MAX_LLM || 30) // run 당 OpenAI 호출 상한 (비용 가드)
@@ -442,15 +462,26 @@ async function judgeAndWrite(
     : ""
   const sys = `너는 한국 축구 커뮤니티의 뉴스 에디터다. 레딧 축구 글 하나를 받아 "정보성 축구 소식인가 vs 순수 잡담인가"만 가른다. 기본값은 통과(worthy=true)이고, 애매하면 통과시킨다. 최종 취사선택은 사람 편집자가 검수에서 한다.
 
-worthy=true (폭넓게): 이적·영입·계약·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·공식 발표·구단/선수 근황·유망주·한국 선수 등 축구와 관련해 사실 정보가 담긴 것이면 전부. 무명 선수·유망주·미확정 루머·낮은 신뢰도도 관련 있으면 통과. 신뢰도/중요도가 낮다고 버리지 마라 — 그 판단은 사람 몫이다.
+worthy=true (폭넓게): 이적·영입·계약·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·공식 발표·**인터뷰·기자회견 발언**·구단/선수 근황·유망주·한국 선수 등 축구와 관련해 사실 정보가 담긴 것이면 전부. 무명 선수·유망주·미확정 루머·낮은 신뢰도도 관련 있으면 통과. 신뢰도/중요도가 낮다고 버리지 마라 — 그 판단은 사람 몫이다.
 
 worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·움짤, 정보 없는 단순 감탄/응원("wow", "amazing"), 개인 SNS 좋아요/반응 캡처, 라이브 경기 중계 스레드, 설문/의견 질문글, 오래된 떡밥 재탕. 애매하면 false 말고 true.
 
 - 톤: 한국어, 드라이한 팩트 와이어체("~라고 합니다", "~로 전해집니다"). AI 티 나는 감상/질문/평가 금지.
-- 분량은 **주어진 재료의 양**으로 정한다. 어떤 경우든 **최소 5문장**을 목표로 하되, 문장 수를 채우려고 재료에 없는 사실을 지어내는 것이 최악이다:
-  · 아래 "기사 원문"이 있으면 → **6~12문장, 500~1,000자**. 발언 인용, 이적료·계약 기간·경기 기록 같은 수치, 배경 경위, 다음 일정까지 원문에 있는 디테일을 충실히 옮긴다. 문단은 빈 줄로 나눈다. **두세 줄 요약으로 퉁치는 것은 실패다** — 원문에 디테일이 있는데 안 옮긴 것이므로. (원문이 300자 미만으로 짧게만 확보됐으면 그 범위에서 4~6문장.)
-  · 아래 "트윗 원문"이 있으면 → 트윗에서 **주요 내용을 전부 추출**해 **5~8문장**으로 쓴다. 누가(기자/구단) 무엇을 전했는지, 트윗 속 수치(이적료·계약 기간·조항)·발언 인용·경위·"Here we go" 류 확정 신호까지 빠짐없이 옮긴다. 트윗에 있는 정보를 한 조각도 버리지 마라. 마지막 문장으로 이 소식의 맥락(어느 팀 상황과 관련되는지)을 트윗·제목에 실재하는 범위에서 한 줄 정리한다.
-  · 원문 확보에 실패했으면(제목·링크뿐) → 제목에 실재하는 정보만으로 가능한 만큼 쓴다(보통 2~4문장). 상상으로 살을 붙이지 마라 — 이때만은 짧은 게 맞다.
+- **출처를 본문에 밝힌다** (운영자 지시 2026-08-09). 첫 문장은 누구의 보도인지로 연다:
+  기자까지 확인되면 "디 애슬레틱의 데이비드 온스테인에 따르면", 매체만 확인되면
+  "BBC 보도에 따르면", 구단·선수 공식 채널이면 "아스날 공식 발표에 따르면".
+  ⛔ 확인되지 않은 매체·기자 이름을 지어내지 마라 — 재료(기사 원문·트윗 작성자·제목의
+  대괄호)에 실재하는 이름만 쓴다. 출처가 불명확하면 귀속 문구 없이 사실만 쓴다.
+  ⛔ 레딧은 출처가 아니다 (발견 경로일 뿐).
+- **요점만 간략히** (운영자 지시 2026-08-09). 분량 목표는 없다 — 재료의 핵심 사실
+  (누가·무엇을·언제·얼마에·다음 절차)만 추리고 나머지는 버린다. 배경 설명·전망·의미 부여로
+  늘리지 마라. 보통 3~6문장이면 충분하고, 문장을 채우려고 재료에 없는 말을 덧붙이는 것이
+  최악이다. 단 **수치와 발언은 요점이다** — 이적료·계약 기간·조항·인용은 짧게 쓰더라도
+  버리지 마라. 재료가 제목뿐이면 제목에 실재하는 정보만으로 2~3문장.
+- **인터뷰·기자회견 기사는 발언 번역이 본문이다** (운영자 지시 2026-08-09).
+  누가 어디서 말했는지 한 줄로 밝힌 뒤, 실제 발언을 그대로 번역해 따옴표로 옮긴다.
+  발언에 대한 해설·평가·요약을 붙이지 않는다 — 독자가 원하는 건 그 사람이 진짜 뭐라고
+  했는지다. 원문의 발언을 임의로 줄이거나 매끄럽게 다듬지 마라.
 - 기사/트윗 원문에 없는 사실은 절대 추가하지 않는다. 원문 말미의 무관한 조각(다른 경기 홍보·구독 안내)은 무시한다.
 - 제목: 출처가 **분명할 때만** "[출처] 핵심" 형식 (예: "[로마노] 아스날, OOO 영입 추진").
   출처로 쓸 수 있는 것은 **기자·언론사·구단** 뿐이다.
@@ -479,8 +510,7 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     signal: AbortSignal.timeout(material ? 60000 : 30000),
     body: JSON.stringify({
-      model: material ? MODEL_LONG : MODEL,
-      temperature: 0.4,
+      ...chatParams(material ? MODEL_LONG : MODEL, { temperature: 0.4 }),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: sys },
@@ -604,8 +634,7 @@ async function judgeVsIssue(title, summaryText) {
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     signal: AbortSignal.timeout(20000),
     body: JSON.stringify({
-      model: MODEL,
-      temperature: 0.3,
+      ...chatParams(MODEL, { temperature: 0.3 }),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: VS_JUDGE_PROMPT },
@@ -737,18 +766,20 @@ async function main() {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
         continue
       }
-      // 성의 가드 — 재료가 넉넉한데(700자↑) 두세 줄로 퉁친 출력은 1회 재작성시킨다.
-      // (프롬프트 지시만으론 가끔 새는 걸 실측으로 확인 → 결정적 길이 검사로 강제)
-      if (material && material.text.length >= 700 && (v.summary || "").length < 350) {
+      // 요점 누락 가드 — **분량 강제가 아니다**. 2026-08-09 운영자 지시로 길이 목표를
+      // 없앴으므로(요점만 간략히), 여기서는 "재료가 풍부한데 한두 줄로 끝나 핵심 사실을
+      // 통째로 버린" 경우만 잡는다. 임계값을 700→1,500자 / 350→120자로 낮춘 이유가 그것:
+      // 짧은 기사는 이제 정상이고, 사실이 빠진 기사만 실패다.
+      if (material && material.text.length >= 1500 && (v.summary || "").length < 120) {
         log(
-          `retry(짧음) [${p.subreddit}/${p.id}] 재료 ${material.text.length}자 → 기사 ${(v.summary || "").length}자`
+          `retry(요점누락) [${p.subreddit}/${p.id}] 재료 ${material.text.length}자 → 기사 ${(v.summary || "").length}자`
         )
         llmCalls++
         const retry = await judgeAndWrite(
           p,
           corrections,
           material,
-          `직전 초안(${(v.summary || "").length}자)은 원문 디테일을 버리고 요약으로 퉁쳤다 — 실패다. 원문에 있는 인용·수치·경위·일정을 옮겨 6문장 이상, 500자 이상으로 다시 써라. 원문에 없는 내용 추가는 여전히 금지.`
+          `직전 초안(${(v.summary || "").length}자)은 원문의 핵심 사실을 대부분 버렸다. 원문에 있는 수치(이적료·계약 기간·조항)와 실제 발언 인용을 빠뜨리지 말고 다시 써라. **분량을 늘리라는 뜻이 아니다** — 요점만 쓰되 빠뜨리지 말라는 뜻이다. 원문에 없는 내용 추가는 여전히 금지.`
         )
         if (retry?.worthy && (retry.summary || "").length > (v.summary || "").length) v = retry
       }
