@@ -1,33 +1,20 @@
 /**
  * Admin Utilities
  * Helper functions for admin role checking
+ *
+ * 판정은 lib/admin/roles.ts 단일 소스에 위임 (2026-08-08 감사 P2-6 — 여기서
+ * role 조회와 === "admin" 비교를 따로 하드코딩하던 3중 정의 해소).
+ * 기존과 동일하게 실패·예외는 전부 false (권한은 fail-closed).
  */
 
-import { auth } from "@clerk/nextjs/server"
-import { createServiceRoleClient } from "@/lib/supabase/server"
+import { ADMIN_ROLE, getCurrentRole } from "@/lib/admin/roles"
 
 /**
  * Check if current user is an admin
  * @returns true if user is admin, false otherwise
  */
 async function isAdmin(): Promise<boolean> {
-  try {
-    const { userId } = await auth()
-    if (!userId) return false
-
-    const supabase = createServiceRoleClient()
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", userId)
-      .single()
-
-    if (error || !profile) return false
-    return profile.role === "admin"
-  } catch (error) {
-    console.error("Failed to check admin status:", error)
-    return false
-  }
+  return (await getCurrentRole()) === ADMIN_ROLE
 }
 
 /**

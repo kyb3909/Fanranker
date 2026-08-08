@@ -25,10 +25,17 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export type StaffRole = "admin" | "editor"
 
-/** 이 등급들만 /admin2 에 들어올 수 있다 */
-const STAFF_ROLES: readonly string[] = ["admin", "editor"]
+export const ADMIN_ROLE = "admin"
 
-async function getRole(): Promise<string | null> {
+/** 이 등급들만 /admin2 에 들어올 수 있다 */
+const STAFF_ROLES: readonly string[] = [ADMIN_ROLE, "editor"]
+
+/**
+ * 현재 로그인 유저의 profiles.role — 권한 판정의 단일 조회 지점.
+ * (2026-08-08 감사 P2-6: admin.ts / require-admin-api.ts 가 각자 role 조회와
+ * `=== "admin"` 비교를 하드코딩하던 3중 정의를 여기로 수렴 — 두 파일은 위임만 남음)
+ */
+export async function getCurrentRole(): Promise<string | null> {
   try {
     const { userId } = await auth()
     if (!userId) return null
@@ -42,8 +49,42 @@ async function getRole(): Promise<string | null> {
 }
 
 export async function getStaffRole(): Promise<StaffRole | null> {
-  const role = await getRole()
+  const role = await getCurrentRole()
   return role && STAFF_ROLES.includes(role) ? (role as StaffRole) : null
+}
+
+interface RoleAuth {
+  userId: string
+  role: string
+  supabase: ReturnType<typeof createServiceRoleClient>
+}
+
+/**
+ * API 권한 판정 공용 엔진 — 미로그인 401, 등급 미달이면 403(메시지는 호출부 지정).
+ * requireStaffApi / requireAdminApi 가 공유한다.
+ */
+export async function requireRoleApi(
+  allowed: readonly string[],
+  forbiddenMessage: string
+): Promise<RoleAuth | NextResponse> {
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
+  }
+
+  const supabase = createServiceRoleClient()
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("user_id", userId)
+    .single()
+
+  const role = profile?.role
+  if (!role || !allowed.includes(role)) {
+    return NextResponse.json({ error: forbiddenMessage }, { status: 403 })
+  }
+
+  return { userId, role, supabase }
 }
 
 /**
@@ -68,22 +109,7 @@ interface StaffAuth {
  * ⚠️ 돈·권한을 건드리는 라우트에는 절대 쓰지 마라. 그쪽은 `requireAdminApi`.
  */
 export async function requireStaffApi(): Promise<StaffAuth | NextResponse> {
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
-  }
-
-  const supabase = createServiceRoleClient()
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("user_id", userId)
-    .single()
-
-  const role = profile?.role
-  if (!role || !STAFF_ROLES.includes(role)) {
-    return NextResponse.json({ error: "운영 권한이 필요합니다." }, { status: 403 })
-  }
-
-  return { userId, role: role as StaffRole, supabase }
+  const result = await requireRoleApi(STAFF_ROLES, "운영 권한이 필요합니다.")
+  if (result instanceof NextResponse) return result
+  return { userId: result.userId, role: result.role as StaffRole, supabase: result.supabase }
 }
