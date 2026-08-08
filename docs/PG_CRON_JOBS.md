@@ -7,6 +7,13 @@
 >
 > **정본은 여전히 DB 다** — 이 문서는 기록이지 배포 수단이 아니다. 변경은 DB 에 직접
 > (`cron.schedule`/`cron.unschedule`) 하고, 하면 반드시 이 문서를 갱신할 것.
+>
+> **2026-08-08 갱신 (전수 감사 P2-1)**: 잡 6종을 마이그레이션으로 채록
+> (`supabase/migrations/20260808e_transcribe_pg_cron_jobs.sql` — cron.schedule 은
+> 같은 이름 upsert 라 재적용 안전, jobid 1~6 유지 확인). Edge Function 소스도
+> 라이브에서 회수해 `supabase/functions/betman-sync-watchdog/` 에 채록 — **이제
+> 리포만으로 재구축 가능**. watchdog 트리거 command 에 시크릿 없음 실측 확인
+> (아래 "서비스 키" 언급은 2026-08-06 당시 기록 — 현재는 Content-Type 헤더뿐).
 
 ## 실측 방법
 
