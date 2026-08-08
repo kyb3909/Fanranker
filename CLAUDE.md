@@ -86,15 +86,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 클라이언트 코드는 `/api/sports`, `/api/live-scores`만 호출할 것. 외부에 betman/wisetoto 노출 금지.
 
 ### Vercel Cron (`vercel.json`)
-앱 내부 작업용. **Vultr cron(betman 크롤)과 별개 레이어** — 둘이 공존하는 이중 구조.
+앱 내부 작업용. **Vultr cron(betman 크롤)·pg_cron(온도 등 6종, `docs/PG_CRON_JOBS.md`)과 별개 레이어** — 셋이 공존하는 다층 구조. 전수 목록은 `vercel.json`(28개)이 정본 — 대표만:
 - `/api/cron/daily-token-reset` — 매일 14:00 UTC (KST 23:00) 토큰 리셋
 - `/api/cron/betman-sync` — 30분마다 (Vultr 2시간 sync의 보조)
 - `/api/wisetoto/sync` — 매분 라이브 스코어
-- `/api/cron/reddit-seed-posts` — 6시간마다
+- `/api/cron/news-auto-publish` — :07/:37 뉴스 자동발행 / `/api/cron/saga-*` — 사가 수집·추출·마감
+- `/api/cron/invariant-audit` — 매시 :44 불변식 감사(2층) / `/api/cron/ops-monitor` — 30분마다 헬스 감시
 - `/api/cron/weekly-analytics` — 매주 월요일 00:00 UTC
-- `/api/cron/metaverse-cleanup-rooms` — 30분마다
 
-새 cron 추가는 `vercel.json`에 path + schedule 등록. 라우트는 `app/api/cron/<name>/route.ts`에 구현하고 `CRON_SECRET` 검증 필수.
+새 cron 추가는 `vercel.json`에 path + schedule 등록. 라우트는 `app/api/cron/<name>/route.ts`에 구현하고 `verifyCronSecret` + `withCronLog` 필수 (로그가 없으면 invariant-audit 심박 감시가 오탐).
 
 ### Cache 헤더 정책 (`next.config.mjs`)
 - 읽기 API (`/api/posts|communities|profiles`): `s-maxage=30, swr=120`

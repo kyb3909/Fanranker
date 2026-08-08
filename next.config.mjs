@@ -19,9 +19,15 @@ const withBundleAnalyzer = bundleAnalyzer({
 //    (쿼터 소모 + 진짜 에러 매몰).
 //    XSS 위험은 script-src 에 있지 style-src 에 있지 않으므로, script-src 만 strict 로 남긴다.
 //    인라인 스타일을 전부 클래스로 걷어낸 뒤에 다시 조이는 것이 순서다.
-const STRICT_CSP_REPORT_ONLY = [
-  "default-src 'self'",
-  "script-src 'self' https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.cdninstagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.sentry.io https://va.vercel-scripts.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
+// ── CSP 화이트리스트 단일 소스 (2026-08-08 감사 P2-5) ──
+// 종전엔 enforce/report-only 두 문자열에 같은 호스트 목록이 중복 하드코딩돼 있어
+// 외부 호스트 추가 시 한쪽만 고치는 drift 사고 지점이었다. 이제 호스트는 아래
+// 상수 한 곳만 고치면 두 정책에 함께 반영된다. 두 정책의 의도적 차이는 script-src
+// 의 'unsafe-inline'/'unsafe-eval' 유무(TipTap/광고 호환)와 report-uri 뿐이다.
+const CSP_SCRIPT_HOSTS =
+  "https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.cdninstagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.sentry.io https://va.vercel-scripts.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google"
+
+const CSP_SHARED_DIRECTIVES = [
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://clerk.gongnori.fan",
   "img-src 'self' data: blob: https:",
@@ -29,6 +35,18 @@ const STRICT_CSP_REPORT_ONLY = [
   "font-src 'self' data: https://cdn.jsdelivr.net",
   "frame-src 'self' https://www.youtube.com https://streamable.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://clerk.gongnori.fan https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://cdn.jsdelivr.net https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net",
+]
+
+const ENFORCED_CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${CSP_SCRIPT_HOSTS}`,
+  ...CSP_SHARED_DIRECTIVES,
+].join('; ')
+
+const STRICT_CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  `script-src 'self' ${CSP_SCRIPT_HOSTS}`,
+  ...CSP_SHARED_DIRECTIVES,
   "report-uri /api/security/csp-report",
 ].join('; ')
 
@@ -56,17 +74,7 @@ const nextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://platform.twitter.com https://platform.x.com https://www.instagram.com https://*.cdninstagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.sentry.io https://va.vercel-scripts.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
-              "worker-src 'self' blob:",
-              "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://clerk.gongnori.fan",
-              "img-src 'self' data: blob: https:",
-              "media-src 'self' data: blob: https:",
-              "font-src 'self' data: https://cdn.jsdelivr.net",
-              "frame-src 'self' https://www.youtube.com https://streamable.com https://platform.twitter.com https://platform.x.com https://www.instagram.com https://clerk.gongnori.fan https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://clerk.gongnori.fan https://*.clerk.dev https://*.clerk.com https://api.clerk.com https://*.clerk.accounts.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://cdn.jsdelivr.net https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net",
-            ].join('; '),
+            value: ENFORCED_CSP,
           },
           // 관측용 strict 정책 — 차단하지 않고 위반만 report-uri로 수집.
           // 운영에서 1~2주 clean하면 위 Content-Security-Policy도 동일 내용으로 교체.

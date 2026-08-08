@@ -29,7 +29,8 @@ export const CRON_JOBS: CronJobMeta[] = [
     schedule: "30분마다",
     staleAfterMin: 90,
   },
-  { name: "reddit-seed-posts", label: "Reddit 시딩", schedule: "6시간마다", staleAfterMin: 8 * 60 },
+  // reddit-seed-posts 는 vercel.json 에서 내려간 중단 잡 — 기준 목록에 남겨두면
+  // 영구 "지연" 뱃지로 진짜 지연을 가린다 (2026-08-08 감사 드리프트 정리)
   {
     name: "daily-token-reset",
     label: "일일 토큰 리셋",

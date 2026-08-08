@@ -168,6 +168,19 @@ async function handler(req: NextRequest) {
     checkErrors.push(`published_posts: ${e instanceof Error ? e.message : String(e)}`)
   }
 
+  // ── 4b) 디스코드 ops 웹훅 설정 불변식 — 알림 채널 자체의 SPOF 감시 ──
+  // 미설정이면 notifyDiscordOps 가 조용히 no-op 이라 모든 경보가 무음이 된다
+  // (감사 P2-10). 웹훅이 없으니 이 위반은 디스코드로 못 나가지만, 원장과
+  // /admin/operations·cron 응답에는 남는다.
+  if (!process.env.DISCORD_OPS_WEBHOOK_URL) {
+    findings.push({
+      invariant: "discord_webhook_missing",
+      fingerprint: "discord_webhook:unset",
+      summary: "DISCORD_OPS_WEBHOOK_URL 미설정 — 모든 운영 경보가 무음 no-op 상태",
+      detail: { env: "DISCORD_OPS_WEBHOOK_URL" },
+    })
+  }
+
   // ── 원장 반영: 신규/재발만 알림, 사라진 위반은 resolved ──
   const nowIso = new Date(now).toISOString()
   const fingerprints = findings.map((f) => f.fingerprint)
