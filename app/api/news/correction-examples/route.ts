@@ -17,6 +17,13 @@ export const dynamic = "force-dynamic"
  *    버려졌어도 다시 쓴 문장은 최고의 교보재다.
  *
  * 고칠수록 예시가 쌓여 원본 품질이 올라가는 자기개선 루프.
+ *
+ * 2026-08-09 추가 — naming: **확정 한글 표기 사전**.
+ * 그동안의 표기 방어는 전부 "LLM이 지어낸 뒤 잡는" 사후 교정이었다. 잡는 그물을
+ * 아무리 촘촘히 해도 처음 보는 오표기는 계속 뚫린다('하비 알론소' 실사고).
+ * 그래서 **쓰기 전에 정답을 준다** — 스캐너가 원문에서 발견한 고유명사에 대해
+ * 확정 표기를 프롬프트에 실으면 지어낼 기회 자체가 없어진다.
+ * 새 엔드포인트를 만들지 않고 여기 얹는 이유는 스캐너가 이미 회차당 1회 호출하기 때문.
  */
 interface ReservoirRow {
   raw: { title?: string } | null
@@ -72,7 +79,41 @@ async function handler(req: NextRequest) {
     })
     .slice(0, 2)
 
-  return NextResponse.json({ examples, articles })
+  const naming = await fetchNamingHints(supabase)
+
+  return NextResponse.json({ examples, articles, naming })
+}
+
+/**
+ * 확정 표기 사전 → 스캐너가 원문 매칭에 쓸 수 있는 형태 `{ ko, en[] }`.
+ *
+ * en 은 **원문(영어)에 실제로 나타날 수 있는 형태만** 남긴다:
+ *  - 도메인(theathletic.com)은 기사 본문에 안 나오므로 제외
+ *  - 한글은 영어 원문 매칭에 무의미하므로 제외
+ *  - 3자 이하는 제외 — 'as'·'om' 같은 약어가 아무 문장에나 걸린다 (source-label 과 같은 규율)
+ */
+async function fetchNamingHints(
+  supabase: ReturnType<typeof createServiceRoleClient>
+): Promise<{ ko: string; en: string[] }[]> {
+  const { data } = await supabase
+    .from("news_alias_dictionary")
+    .select("preferred_ko, romanized, surfaces")
+    .in("category", ["player", "coach", "team", "media"])
+
+  const out: { ko: string; en: string[] }[] = []
+  for (const row of (data ?? []) as {
+    preferred_ko: string | null
+    romanized: string | null
+    surfaces: string[] | null
+  }[]) {
+    const ko = row.preferred_ko?.trim()
+    if (!ko) continue
+    const en = [...new Set([row.romanized ?? "", ...(row.surfaces ?? [])])]
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 3 && !s.includes(".") && !/[가-힣]/.test(s))
+    if (en.length > 0) out.push({ ko, en })
+  }
+  return out
 }
 
 export const GET = handler

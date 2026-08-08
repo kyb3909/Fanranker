@@ -438,13 +438,15 @@ async function fetchArticleBody(url) {
  */
 async function judgeAndWrite(
   post,
-  corrections = { examples: [], articles: [] },
+  corrections = { examples: [], articles: [], naming: [] },
   material = null,
   retryNote = ""
 ) {
   const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
   // few-shot — 검수자가 실제로 고친 사례를 예시로 주입해 표기/스타일을 학습시킨다.
-  const { examples = [], articles = [] } = corrections
+  const { examples = [], articles = [], naming = [] } = corrections
+  // 확정 표기 — 제목과 원문 재료에 등장하는 고유명사만 골라 싣는다 (예방층)
+  const namingHints = buildNamingHints(naming, `${post.title || ""}\n${material?.text || ""}`)
   const fewshot = examples.length
     ? `\n\n## 최근 검수 교정 예시 (원본 → 발행본)\n검수자가 아래처럼 다듬었다. 같은 표기·스타일(특히 팀·선수·기자명 한글 표기)을 따르라:\n${examples
         .map((e) => `- "${e.from}" → "${e.to}"`)
@@ -507,8 +509,9 @@ worthy=false 로 버려라. (이적료·계약 기간·부상 진단명처럼 **
   "[r/soccer]" 같은 표기는 절대 쓰지 마라. 출처가 불명확하면 **대괄호 없이 제목만** 써라
   (예: "아시아 투어 참가 선수 명단 공개").
 - 팀/선수 한글 표기는 한국 축구 미디어의 정착된 표기를 따른다 (예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
+  ⚠️ 아래 "확정 한글 표기" 목록이 있으면 **그것이 이 규칙보다 우선한다** (네 감보다 사전이 맞다).
 - 미확정 루머는 단정하지 말 것.
-- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${fewshot}${styleshot}
+- credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${namingHints}${fewshot}${styleshot}
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
   const user = `제목: ${post.title}
 출처유형: ${sourceKind}
@@ -600,21 +603,63 @@ function buildContent(summary, mediaNode) {
  * 구조·톤을 통째로 흉내내는 게 목적.
  */
 async function fetchCorrectionExamples() {
-  if (!CRON_SECRET) return { examples: [], articles: [] }
+  const empty = { examples: [], articles: [], naming: [] }
+  if (!CRON_SECRET) return empty
   try {
     const res = await fetch(`${BASE_URL}/api/news/correction-examples`, {
       headers: { Authorization: `Bearer ${CRON_SECRET}` },
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) return { examples: [], articles: [] }
+    if (!res.ok) return empty
     const d = await res.json().catch(() => ({}))
     return {
       examples: Array.isArray(d?.examples) ? d.examples : [],
       articles: Array.isArray(d?.articles) ? d.articles : [],
+      // 확정 표기 사전 [{ ko, en[] }] — 지어내기 전에 정답을 주기 위한 재료
+      naming: Array.isArray(d?.naming) ? d.naming : [],
     }
   } catch {
-    return { examples: [], articles: [] }
+    return empty
   }
+}
+
+/** 낱말 경계 포함 검사 — 'as'가 'last'에, 'inter'가 'interview'에 걸리는 것을 막는다 */
+function includesWord(haystack, needle) {
+  if (!needle) return false
+  let i = haystack.indexOf(needle)
+  while (i !== -1) {
+    const before = i === 0 ? " " : haystack[i - 1]
+    const after = i + needle.length >= haystack.length ? " " : haystack[i + needle.length]
+    if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) return true
+    i = haystack.indexOf(needle, i + 1)
+  }
+  return false
+}
+
+/**
+ * 확정 표기 주입 (2026-08-09) — **사후 교정에서 사전 예방으로**.
+ *
+ * 그동안의 표기 방어는 전부 "LLM 이 지어낸 뒤 잡기"였고, 그물을 아무리 촘촘히 해도
+ * 처음 보는 오표기는 계속 뚫렸다('하비 알론소' 실사고 — 사전에 '사비 알론소'가
+ * 있었는데도 발행됨). 쓰기 전에 정답을 주면 지어낼 기회 자체가 없다.
+ *
+ * 사전 전체(1,000여 건)를 싣지 않는다 — 토큰 낭비이자, 긴 목록은 무시당하는 지시가
+ * 된다. **지금 이 원문에 실제로 등장하는 것만** 골라 준다.
+ */
+const MAX_NAMING_HINTS = 25
+function buildNamingHints(naming, sourceText) {
+  if (!Array.isArray(naming) || naming.length === 0 || !sourceText) return ""
+  const hay = sourceText.toLowerCase()
+  const hits = []
+  for (const row of naming) {
+    if (!row?.ko || !Array.isArray(row.en)) continue
+    // 긴 표기부터 — "manchester united"가 "manchester"보다 먼저 잡히게
+    const matched = [...row.en].sort((a, b) => b.length - a.length).find((en) => includesWord(hay, en))
+    if (matched) hits.push(`- ${matched} = ${row.ko}`)
+    if (hits.length >= MAX_NAMING_HINTS) break
+  }
+  if (hits.length === 0) return ""
+  return `\n\n## 확정 한글 표기 (반드시 이대로)\n원문에 등장하는 고유명사다. 아래 한글 표기를 **그대로** 써라 — 다르게 음차하지 마라:\n${hits.join("\n")}\n이 목록에 없는 이름만 네가 판단해 음차하고, 확신이 없으면 영문 원어를 그대로 둔다.`
 }
 
 // ── VS 쟁점 2단 판정 (2026-07-31, 3인 회의 VS-RESULT 스펙) ──────────────
@@ -741,9 +786,9 @@ async function main() {
 
   // 검수 교정 예시 로드 (few-shot 학습) — 실패해도 스캔은 계속
   const corrections = await fetchCorrectionExamples()
-  if (corrections.examples.length || corrections.articles.length)
+  if (corrections.examples.length || corrections.articles.length || corrections.naming.length)
     log(
-      `검수 few-shot 로드 — 제목 교정 ${corrections.examples.length}건 / 기사 재작성 ${corrections.articles.length}건`
+      `검수 few-shot 로드 — 제목 교정 ${corrections.examples.length}건 / 기사 재작성 ${corrections.articles.length}건 / 확정 표기 사전 ${corrections.naming.length}건`
     )
 
   let drafted = 0

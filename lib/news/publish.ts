@@ -7,6 +7,7 @@ import {
   applyNamingPairsToTipTap,
   fetchNamingPairs,
 } from "@/lib/news/naming-normalize"
+import { fetchSourceLabelMap, normalizeSourceLabel } from "@/lib/news/source-label"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
@@ -131,6 +132,14 @@ export async function publishNewsDraft(
       title: applyNamingPairs(opts.title, namingPairs),
       content: applyNamingPairsToTipTap(opts.content, namingPairs),
     }
+  }
+
+  // ── 출처 라벨 표기 통일 (2026-08-09) ──
+  // [The Athletic] → [디 애슬레틱]. 같은 매체가 영문·한글로 섞여 나가던 것을 막는다.
+  // **제목 대괄호만** 건드린다 — 본문 치환은 'Goal'→'골닷컴' 류 오탐이 확실해서 금지.
+  const sourceLabels = await fetchSourceLabelMap(supabase)
+  if (sourceLabels.size > 0) {
+    opts = { ...opts, title: normalizeSourceLabel(opts.title, sourceLabels) }
   }
 
   // 긴 단일 문단 → 2~3문장 단위 문단 분할 (가독성, 2026-08-04 운영자)

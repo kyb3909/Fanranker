@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
+import { fetchSourceLabelMap, normalizeSourceLabel } from "@/lib/news/source-label"
+import { notifyDiscordOps } from "@/lib/discord-notify"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
@@ -117,6 +119,9 @@ async function cronGet(request: NextRequest) {
     .from("news_alias_dictionary")
     .select("id, preferred_ko, hangul_alts")
     .in("category", [...NAMING_CATEGORIES])
+  // 출처 라벨 사전 (매체·구단) — 인물 사전과 분류가 달라 따로 읽는다
+  const sourceLabels = await fetchSourceLabelMap(supabase)
+
   const preferredSet = new Set((dict ?? []).map((d) => d.preferred_ko.replace(/\s+/g, "")))
   const altToPreferred = new Map<string, string>()
   for (const d of dict ?? []) {
@@ -183,21 +188,30 @@ async function cronGet(request: NextRequest) {
       }
     }
 
-    if (pairs.length === 0) {
-      if (skipped.length > 0) report.push({ post: post.title as string, changes: [], skipped })
-      continue
-    }
     // 긴 표기 먼저 치환 ('코디 갓포'를 먼저, 그 다음 '갓포')
     pairs.sort((a, b) => b[0].length - a[0].length)
 
-    const newTitle = applyToText(post.title as string, pairs)
-    const newContent = applyToContent(post.content, pairs)
+    const originalTitle = post.title as string
+    const namedTitle = applyToText(originalTitle, pairs)
+    // 출처 라벨 통일도 같은 회차에 — 발행 경로와 **같은 함수**를 써서 규칙이 두 벌 되지 않게
+    const newTitle = normalizeSourceLabel(namedTitle, sourceLabels)
+    const labelChanged = newTitle !== namedTitle
+
+    if (pairs.length === 0 && !labelChanged) {
+      if (skipped.length > 0) report.push({ post: originalTitle, changes: [], skipped })
+      continue
+    }
+
+    const changes = pairs.map(([f, t]) => `${f} → ${t}`)
+    if (labelChanged)
+      changes.push(`출처 라벨: ${namedTitle.slice(0, 30)} → ${newTitle.slice(0, 30)}`)
+
     if (!dry) {
-      await supabase
-        .from("posts")
-        .update({ title: newTitle, content: newContent })
-        .eq("id", post.id)
-      // 사가 연표 헤드라인도 같은 교정 적용
+      // 이름 교정이 없으면 본문은 건드리지 않는다 (라벨은 제목에만 있다)
+      const update: Record<string, unknown> = { title: newTitle }
+      if (pairs.length > 0) update.content = applyToContent(post.content, pairs)
+      await supabase.from("posts").update(update).eq("id", post.id)
+      // 사가 연표 헤드라인도 같은 교정 적용 (이름 교정 한정 — 연표에는 출처 라벨이 없다)
       for (const [from] of pairs) {
         const { data: entries } = await supabase
           .from("saga_entries")
@@ -211,10 +225,35 @@ async function cronGet(request: NextRequest) {
         }
       }
     }
-    report.push({
-      post: post.title as string,
-      changes: pairs.map(([f, t]) => `${f} → ${t}`),
-      skipped,
+    report.push({ post: originalTitle, changes, skipped })
+  }
+
+  const changedPosts = report.filter((r) => r.changes.length > 0)
+  const unresolved = report.flatMap((r) => r.skipped)
+
+  // ── 측정층 (2026-08-09) ──
+  // 그전까지 표기 오류의 탐지기는 '운영자 눈'뿐이었고, 실제로 '하비 알론소' 4건이
+  // 최대 5일 방치됐다. 무엇을 몇 건 고쳤는지 매일 보이면 오표기율이 추세가 된다.
+  // **고칠 게 있었을 때만** 보낸다 — 조용한 날의 알림은 곧 무시당한다.
+  if (!dry && (changedPosts.length > 0 || unresolved.length > 0)) {
+    await notifyDiscordOps({
+      title: `표기 감사 — ${changedPosts.length}건 교정 / ${unresolved.length}건 미해결`,
+      description: changedPosts
+        .slice(0, 8)
+        .map((r) => `• ${r.changes.join(", ")}`)
+        .join("\n")
+        .slice(0, 1500),
+      level: changedPosts.length > 0 ? "warn" : "info",
+      url: "https://gongnori.fan/admin/news-review",
+      fields: [
+        { name: "검사", value: `${posts?.length ?? 0}건`, inline: true },
+        { name: "교정", value: `${changedPosts.length}건`, inline: true },
+        // 미해결 = 네이버 근거가 없어 손대지 않은 이름. 사전 등재 후보다.
+        {
+          name: "근거 부족",
+          value: unresolved.slice(0, 5).join(", ").slice(0, 200) || "없음",
+        },
+      ],
     })
   }
 
@@ -223,7 +262,7 @@ async function cronGet(request: NextRequest) {
     dry,
     scanned: posts?.length ?? 0,
     offset,
-    changedPosts: report.filter((r) => r.changes.length > 0).length,
+    changedPosts: changedPosts.length,
     report,
   })
 }
