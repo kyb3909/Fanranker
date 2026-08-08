@@ -5,7 +5,7 @@ import { getOrCreateSaga, appendEntry } from "./create"
 import { findEntryWithUrl } from "./cluster"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { resolveOrigin, classifyTier, type TransferTier } from "./tier"
-import { identityKey, isSamePlayerKey, normalizePlayerKey } from "./identity"
+import { identityKey, isSamePlayerKey, normalizePlayerKey, transferClusterKey } from "./identity"
 import { SAGA_WINDOW_KEY } from "./config"
 import { extractTransferBatch, type ExtractedTransfer } from "./extract"
 import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "./canonical"
@@ -50,10 +50,7 @@ export async function upsertSagaEntry(
     windowKey: SAGA_WINDOW_KEY,
   })
 
-  const day = new Date(new Date(d.occurredAt).getTime() + 9 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10)
-  const clusterKey = `${normalizePlayerKey(d.player)}:${d.stageSignal ?? "news"}:${day}`
+  const clusterKey = transferClusterKey(d.player, d.stageSignal, d.occurredAt)
 
   // 같은 URL 을 이미 담은 엔트리 우선 (점검 F7) — 같은 기사가 두 경로에서 다른
   // stage 신호로 추출돼 엔트리 2개가 되는 것을 막는다. 그다음이 cluster_key 동일성.
@@ -439,9 +436,6 @@ export async function publishReservoirItem(
     occurredAt: row.occurred_at,
   })
 
-  const day = new Date(new Date(row.occurred_at).getTime() + 9 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10)
   const { error: reservoirError } = await supabase
     .from("saga_reservoir")
     .update({
@@ -451,7 +445,7 @@ export async function publishReservoirItem(
         direction,
         window_key: SAGA_WINDOW_KEY,
       }),
-      cluster_key: `${normalizePlayerKey(player)}:${stageSignal ?? "news"}:${day}`,
+      cluster_key: transferClusterKey(player, stageSignal, row.occurred_at),
       updated_at: new Date().toISOString(),
     })
     .eq("id", row.id)

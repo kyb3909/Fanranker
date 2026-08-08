@@ -1,6 +1,7 @@
 import "server-only"
 
 import type { createServiceRoleClient } from "@/lib/supabase/server"
+import { kstDay } from "@/lib/saga/identity"
 import fplPlayers from "@/public/data/fpl-players.json"
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
@@ -219,8 +220,7 @@ export async function fetchTeamChronicle(
 
   const events: ChronicleEvent[] = []
   const entryDatesKst = new Set<string>()
-  const kstDate = (iso: string) =>
-    new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+  const kstDate = kstDay
   for (const e of ownEntries ?? []) {
     const origin = (e.origin ?? {}) as { url?: string }
     entryDatesKst.add(kstDate(e.occurred_at as string))

@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js"
 import * as Sentry from "@sentry/nextjs"
 import { batchUpdateUserStats } from "./stats"
+import { retryRefundTokens } from "./refund-tokens"
 import { syncStadiumContributions } from "@/lib/stadium/contribution-sync"
 
 /**
@@ -23,8 +24,8 @@ interface AuditRow {
 }
 
 /**
- * 환불 재시도 (3회) + 실패 시 pending_refunds 기록.
- * 성공 시 audit 행 1개를 auditRows 에 push.
+ * 환불 재시도 (3회) + 실패 시 pending_refunds 기록 — 엔진은 retryRefundTokens
+ * 단일 소스 (2026-08-08 감사 P2-3: 동일 패턴 복제 통합). 성공 시 audit 행 push.
  */
 async function retryRefund(
   supabase: SupabaseClient,
@@ -35,13 +36,9 @@ async function retryRefund(
   auditRows: AuditRow[],
   actor: string
 ): Promise<string | null> {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const { error } = await supabase.rpc("refund_tokens", {
-      p_user_id: userId,
-      p_amount: amount,
-      p_description: description,
-    })
-    if (!error) {
+  return retryRefundTokens(supabase, userId, amount, description, 3, {
+    source: "settlement_refund_failed",
+    onSuccess: (attempt) => {
       auditRows.push({
         event_type: "refund",
         actor,
@@ -55,24 +52,8 @@ async function retryRefund(
         reason: description,
         rpc_name: "refund_tokens",
       })
-      return null
-    }
-    if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt))
-  }
-  // 모든 재시도 실패 → pending_refunds에 기록
-  await supabase.from("pending_refunds").insert({
-    user_id: userId,
-    amount,
-    description,
-    source: "settlement_refund_failed",
-    attempts: 3,
-    last_error: "All retry attempts failed",
+    },
   })
-  Sentry.captureMessage("settlement refund failed after 3 retries", {
-    level: "fatal",
-    extra: { userId, amount, description },
-  })
-  return `refund failed for user=${userId} amount=${amount}`
 }
 
 interface GameData {

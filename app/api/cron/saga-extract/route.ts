@@ -4,7 +4,7 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTransferBatch, type ExtractedTransfer } from "@/lib/saga/extract"
 import { classifyTier } from "@/lib/saga/tier"
-import { identityKey, normalizePlayerKey } from "@/lib/saga/identity"
+import { identityKey, normalizePlayerKey, transferClusterKey } from "@/lib/saga/identity"
 import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "@/lib/saga/canonical"
 import { SAGA_WINDOW_KEY } from "@/lib/saga/config"
 import { publishReservoirItem } from "@/lib/saga/publish"
@@ -37,10 +37,6 @@ const MAX_ROWS = 40 // 60s 안에 LLM 2콜
 const AUTO_PUBLISH_MIN_CONFIDENCE = 0.7
 /** 잠긴 unknown_player 재평가 상한 (run 당) — LLM 없이 사전 대조만이라 저렴 */
 const RETRY_LIMIT = 15
-
-function kstDay(iso: string): string {
-  return new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
-}
 
 async function cronGet(request: Request) {
   const denied = verifyCronSecret(request)
@@ -127,7 +123,7 @@ async function cronGet(request: Request) {
           direction: ex.direction,
           window_key: SAGA_WINDOW_KEY,
         })
-        const clusterKey = `${normalizePlayerKey(ex.player)}:${ex.stage_signal ?? "news"}:${kstDay(row.occurred_at)}`
+        const clusterKey = transferClusterKey(ex.player, ex.stage_signal, row.occurred_at)
 
         const headlineKo = ex.headline_ko ?? row.headline_kr
 

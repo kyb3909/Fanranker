@@ -17,6 +17,24 @@ export function normalizePlayerKey(name: string): string {
     .replace(/^-|-$/g, "")
 }
 
+/** KST 날짜 버킷 (YYYY-MM-DD) — cluster_key 등 "같은 KST 날" 판정의 단일 소스 */
+export function kstDay(iso: string): string {
+  return new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
+/**
+ * transfer 엔트리 cluster_key — saga_entries UNIQUE(saga_id, cluster_key) 멱등의 재료.
+ * 2026-08-08 감사: 이 포맷이 4곳(cluster/publish×2/saga-extract)에 하드코딩돼 있어
+ * 포맷 변경 시 드리프트 위험 — 단일 소스로 통합.
+ */
+export function transferClusterKey(
+  player: string,
+  stageSignal: string | null | undefined,
+  occurredAtIso: string
+): string {
+  return `${normalizePlayerKey(player)}:${stageSignal ?? "news"}:${kstDay(occurredAtIso)}`
+}
+
 export interface TransferIdentity {
   playerKey: string
   direction: "in" | "out"

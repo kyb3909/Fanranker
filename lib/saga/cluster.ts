@@ -10,7 +10,7 @@
  * 순수 함수 — DB 접근 없음. 드라이런과 실파이프라인이 같은 코드를 쓴다.
  */
 
-import { identityKey, normalizePlayerKey } from "./identity"
+import { identityKey, kstDay, normalizePlayerKey, transferClusterKey } from "./identity"
 import type { ExtractedTransfer } from "./extract"
 import type { TransferTier } from "./tier"
 
@@ -80,10 +80,7 @@ export function titleSimilarity(a: string, b: string): number {
   return inter / (ta.size + tb.size - inter)
 }
 
-/** KST 날짜 버킷 — "같은 날의 같은 신호"가 에코 판정의 1차 울타리 */
-function kstDay(iso: string): string {
-  return new Date(new Date(iso).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
-}
+// KST 날짜 버킷("같은 날의 같은 신호"가 에코 판정의 1차 울타리)은 identity.kstDay 단일 소스
 
 /**
  * 사가 → 클러스터 2단 그루핑.
@@ -147,7 +144,12 @@ export function clusterBatch(
         )
         const origin = sorted[0]
         return {
-          clusterKey: `${normalizePlayerKey(first.extracted.player as string)}:${c.signal ?? "news"}:${c.day}`,
+          // c.rows 는 전부 같은 KST 날(c.day 그루핑)이라 첫 행 기준으로 충분
+          clusterKey: transferClusterKey(
+            first.extracted.player as string,
+            c.signal,
+            c.rows[0].occurredAt
+          ),
           stageSignal: c.signal,
           origin,
           echoes: sorted.slice(1),
