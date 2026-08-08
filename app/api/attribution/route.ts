@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs"
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
@@ -75,7 +76,10 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .is("utm_source", null)
     if (fillError) {
+      // 귀속은 소급 불가 지표 — 조용한 유실은 개막 유입 데이터 공백이 된다
+      // (2026-08-08 감사 P1-7: console 로그만 있어 실패가 무증상이었음)
       console.error("[attribution] backfill 실패:", fillError.message)
+      Sentry.captureException(fillError, { extra: { stage: "attribution_backfill" } })
     }
 
     return NextResponse.json({ ok: true })

@@ -19,6 +19,17 @@ function isDeleteProfile(req: NextRequest): boolean {
   return req.nextUrl.pathname === "/api/profile/me" && req.method === "DELETE"
 }
 
+// 예측 제출 = 볼 차감 경로 (2026-08-08 감사: 유일하게 무방비였던 돈 라우트).
+// POST 만 조인다 — GET 은 내 예측 조회라 일반 한도. 미들웨어는 rewrite 전 원본
+// URL 을 보므로 클라이언트용 /api/sports 와 직접 호출용 /api/betman 둘 다 등재.
+function isPredictionSubmit(req: NextRequest): boolean {
+  return (
+    req.method === "POST" &&
+    (req.nextUrl.pathname === "/api/sports/prediction" ||
+      req.nextUrl.pathname === "/api/betman/prediction")
+  )
+}
+
 /**
  * API 요청 rate limiting.
  * 429 응답 반환 시 해당 NextResponse를 리턴, 통과 시 null.
@@ -31,7 +42,8 @@ export function rateLimitGuard(req: NextRequest): NextResponse | null {
     req.headers.get("x-real-ip") ||
     "unknown"
 
-  const isStrict = isStrictPath(req.nextUrl.pathname) || isDeleteProfile(req)
+  const isStrict =
+    isStrictPath(req.nextUrl.pathname) || isDeleteProfile(req) || isPredictionSubmit(req)
   const preset = isStrict ? RATE_LIMITS.STRICT : RATE_LIMITS.STANDARD
   const key = `${ip}:${req.nextUrl.pathname}`
 

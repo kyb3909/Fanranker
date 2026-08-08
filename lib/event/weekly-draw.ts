@@ -78,11 +78,22 @@ export async function buildCandidates(supabase: ServiceClient): Promise<DrawCand
     for (const p of data ?? []) nickById.set(p.user_id, p.nickname ?? "이름 없는 팬")
   }
 
-  // 소속 팬덤 — 유니폼 추첨이 승리 팬덤으로 한정되므로 후보에 실어둔다
+  // 소속 팬덤 — 유니폼 추첨이 승리 팬덤으로 한정되므로 후보에 실어둔다.
+  // event_registrations 는 월드컵과 공용 — 시즌 이벤트 행만 조회해야 한다
+  // (2026-08-08 감사 P1-4: 양쪽 등록 유저의 group_slug 가 월드컵 gooner 로 덮여
+  // 유니폼 pool 필터에서 누락될 수 있었음)
+  const { data: seasonEvent } = await supabase
+    .from("events")
+    .select("id")
+    .eq("slug", SEASON_EVENT_SLUG)
+    .maybeSingle()
   const groupByUser = new Map<string, string>()
-  const { data: regs } = await supabase
-    .from("event_registrations")
-    .select("user_id, event_groups!inner(slug)")
+  const { data: regs } = seasonEvent
+    ? await supabase
+        .from("event_registrations")
+        .select("user_id, event_groups!inner(slug)")
+        .eq("event_id", seasonEvent.id)
+    : { data: [] }
   for (const r of (regs ?? []) as unknown as {
     user_id: string
     event_groups: { slug: string }

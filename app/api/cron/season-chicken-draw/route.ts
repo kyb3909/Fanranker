@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { SEASON_EVENT_SLUG } from "@/lib/event/season-stats"
 import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
@@ -21,12 +22,11 @@ export const dynamic = "force-dynamic"
 const FREE_BOARD_CATEGORY_ID = "f151f1fe-8d73-4e84-bfb2-b3e5680f226c"
 const FREE_BOARD_SLUG = "free-board"
 
-export async function GET(request: NextRequest) {
-  return run(request)
-}
-export async function POST(request: NextRequest) {
-  return run(request)
-}
+// 2026-08-08 감사 P0-2: vercel.json 등록 누락으로 한 번도 스케줄 실행된 적 없던
+// 크론 — 등록(10 14 * * * = 23:10 KST)과 함께 심박 감시(invariant-audit)가 잡을 수
+// 있도록 cron_run_log 계측을 붙인다.
+export const GET = withCronLog("season-chicken-draw", (request: NextRequest) => run(request))
+export const POST = withCronLog("season-chicken-draw", (request: NextRequest) => run(request))
 
 async function run(request: NextRequest) {
   const authError = verifyCronSecret(request)

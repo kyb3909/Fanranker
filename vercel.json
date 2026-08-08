@@ -107,6 +107,10 @@
     {
       "path": "/api/cron/invariant-audit",
       "schedule": "44 * * * *"
+    },
+    {
+      "path": "/api/cron/season-chicken-draw",
+      "schedule": "10 14 * * *"
     }
   ]
 }

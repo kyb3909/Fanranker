@@ -50,20 +50,34 @@ const STEPS = [
 ] as const
 
 export default async function WorldcupPage() {
-  // 등록자 카운트 — 소셜 증명
   const supabase = createServiceRoleClient()
-  const { count } = await supabase
-    .from("event_registrations")
-    .select("*", { count: "exact", head: true })
-  const regCount = count ?? 0
+
+  // event_registrations 는 월드컵+시즌 이벤트가 공용 — event_id 필터 없이 세면
+  // 시즌 등록자가 월드컵 카운트/등록 판정에 섞인다 (2026-08-08 감사 P1-4 실사고)
+  const { data: wcEvent } = await supabase
+    .from("events")
+    .select("id")
+    .eq("slug", "worldcup-2026")
+    .maybeSingle()
+
+  // 등록자 카운트 — 소셜 증명
+  let regCount = 0
+  if (wcEvent) {
+    const { count } = await supabase
+      .from("event_registrations")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", wcEvent.id)
+    regCount = count ?? 0
+  }
 
   // 현재 유저가 이미 등록한 구너인지 — 등록 후엔 CTA 를 "경기 예측하러 가기" 로 전환
   const user = await currentUser()
   let isRegistered = false
-  if (user) {
+  if (user && wcEvent) {
     const { data: reg } = await supabase
       .from("event_registrations")
       .select("id")
+      .eq("event_id", wcEvent.id)
       .eq("user_id", user.id)
       .maybeSingle()
     isRegistered = !!reg

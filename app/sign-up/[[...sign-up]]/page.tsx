@@ -418,14 +418,15 @@ export default function SignUpPage() {
       // 4. Analytics: 가입 완료 이벤트 + 유입 채널 귀속 기록
       //    귀속은 첫 방문 때 저장해둔 값이라 "며칠 뒤 재방문 가입"도 유튜버에게 붙는다.
       //    계측 실패가 가입을 막으면 안 되므로 응답은 확인하지 않는다.
+      //    저장된 귀속이 없어도(시크릿 모드 등 localStorage 차단) "(direct)" 로 항상
+      //    보낸다 — signup_at 원장은 이 API 만 쓰므로 스킵하면 가입 자체가 퍼널에서
+      //    증발한다 (2026-08-08 감사 P1-7). 서버는 최초 1회만 기록하므로 무해.
       const attribution = getAttribution()
-      if (attribution) {
-        fetch("/api/attribution", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(attribution),
-        }).catch(() => {})
-      }
+      fetch("/api/attribution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(attribution ?? { source: "(direct)" }),
+      }).catch(() => {})
       trackEvent({
         name: "signup_complete",
         params: { method: signupMethod, ...channelParams(attribution) },
