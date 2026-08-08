@@ -272,6 +272,31 @@ export async function POST(req: NextRequest) {
     console.error("ops-monitor locked_odds check 실패:", e)
   }
 
+  // 7) 불변식 감사관 심박 — 감사관(invariant-audit)은 모든 크론의 심박을 감시하지만
+  //    자기가 죽으면 보고할 수 없다 (감사관 함정). 그래서 ops-monitor 가 감사관을,
+  //    감사관이 나머지를 본다 — 상호 감시 한 쌍. 매시 :44 주기라 3시간이면 3회 결번.
+  //    "기록이 아예 없음"은 첫 배포 직후의 정상 상태일 수 있어 stale 만 경보한다.
+  try {
+    const { data: audit } = await supabase
+      .from("cron_run_log")
+      .select("started_at")
+      .eq("job_name", "invariant-audit")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ started_at: string | null }>()
+    if (audit?.started_at) {
+      const ageH = (Date.now() - new Date(audit.started_at).getTime()) / H
+      if (ageH > 3) {
+        issues.push({
+          name: "🧿 불변식 감사관 정지",
+          value: `invariant-audit 마지막 실행 ${Math.round(ageH)}시간 전 (평소 매시 :44) — 2층 감사가 꺼져 있음`,
+        })
+      }
+    }
+  } catch (e) {
+    console.error("ops-monitor invariant-audit check 실패:", e)
+  }
+
   if (issues.length > 0) {
     await notifyDiscordOps({
       level: "alert",

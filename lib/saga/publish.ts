@@ -5,7 +5,7 @@ import { getOrCreateSaga, appendEntry } from "./create"
 import { findEntryWithUrl } from "./cluster"
 import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import { resolveOrigin, classifyTier, type TransferTier } from "./tier"
-import { identityKey, normalizePlayerKey } from "./identity"
+import { identityKey, isSamePlayerKey, normalizePlayerKey } from "./identity"
 import { SAGA_WINDOW_KEY } from "./config"
 import { extractTransferBatch, type ExtractedTransfer } from "./extract"
 import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "./canonical"
@@ -305,6 +305,29 @@ export async function linkArticleToSaga(
     const canon = canonicalizePlayer(ex.player, buildAliasIndex((aliasRows ?? []) as AliasRow[]))
     const player = canon.matched ? canon.key : ex.player
     const playerKr = canon.ko ?? ex.player_kr
+
+    // 사전 미등재 선수는 새 사가를 만들지 않는다 (2026-08-08). saga-extract 자동 발행과
+    // 같은 원칙("미등재는 새 사가 오식별 위험")인데, 이 경로만 게이트가 없어 자동발행
+    // 가동 후 영문 제목 사가 10건이 새어 나왔다 — "기사 발행 = 사람 검수 통과" 전제가
+    // NEWS_AUTO_PUBLISH 이후 깨졌기 때문. 이미 있는 사가(운영자 생성·과거 유입)로의
+    // 합류는 허용하고, 선수가 사전에 등재되는 순간부터 새 사가도 다시 열린다.
+    if (!canon.matched) {
+      const newPlayerKey = normalizePlayerKey(player)
+      if (!newPlayerKey) return null
+      const { data: candidates } = await supabase
+        .from("sagas")
+        .select("id, subject")
+        .eq("saga_type", "transfer")
+        .eq("window_key", SAGA_WINDOW_KEY)
+        .eq("status", "active")
+      const exists = (candidates ?? []).some((c) =>
+        isSamePlayerKey(
+          normalizePlayerKey(String((c.subject as { player_key?: string })?.player_key ?? "")),
+          newPlayerKey
+        )
+      )
+      if (!exists) return null
+    }
 
     const tier = classifyTier({
       category: null,
