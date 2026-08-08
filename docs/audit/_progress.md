@@ -35,6 +35,17 @@
 | P1-6 admin2 이전 | news/bulk→/api/admin/news-review/bulk, saga→/api/admin/saga-review 로 git mv(이력 보존), 구 경로는 얇은 위임 잔류(전환기 호환), UI 호출 3곳 교체 | 〃 |
 | 미착수 | P1-5 사가 D9(에코 접힘 오피셜 삼킴)만 잔류 — PRD 결정 로그 재논의 필요라 오너 논의 선행 | HEALTH_REPORT 로드맵 11 |
 
+## 3차 수리 (P2 개선 4단계, 2026-08-08 심야 — 전부 동작 보존, 개별 커밋)
+
+| 단계 | 조치 | 검증 |
+|---|---|---|
+| 1. 중복 통합 | kstDay 사본 3곳→identity.ts 정본, cluster_key 포맷 4곳→transferClusterKey, 환불 재시도 settle/refund-tokens 통합(source·audit 훅 파라미터화) | tsc + 관련 테스트 229 |
+| 2. 권한 단일화 | role 조회+admin 비교 3중 정의→roles.ts getCurrentRole/requireRoleApi 수렴 (시그니처·메시지·상태코드 보존, 호출부 무수정) | tsc + 테스트 40 |
+| 3. 자동화 정본화 | pg_cron 6종 마이그 채록(20260808e, upsert 적용·jobid 무중복 실측) + Edge Fn 소스 회수(supabase/functions/) + tsconfig Deno 제외 | 라이브 cron.job 재조회 |
+| 4. 위생+CSP | 죽은 admin2 API 2개 삭제, cron-monitor reddit-seed 잔재 제거, CLAUDE.md 드리프트 정정, CSP 화이트리스트 공유 상수화(**결과 헤더 바이트 동일 실측**), 웹훅 미설정 불변식 추가 | config 이중 로드 비교 |
+
+남은 것: 죽은 테이블 DROP(데이터 파괴라 오너 승인 필요), knip 미사용 export 정리(보존 지시 교차 확인 필요), P1-5 사가 D9(오너 논의).
+
 ## 도메인 분할 (Phase 1)
 
 | notes 파일 | 도메인 | 주 진입점 힌트 |
