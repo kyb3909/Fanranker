@@ -32,7 +32,13 @@ function mockSupabase() {
     },
     from: (table: string) => {
       if (table === "news_alias_dictionary") {
-        return { select: () => ({ eq: async () => ({ data: dictRows, error: null }) }) }
+        // 사전 조회는 category in (player, coach) — 감독 표기도 게이트와 같은 범위 (2026-08-09)
+        return {
+          select: () => ({
+            eq: async () => ({ data: dictRows, error: null }),
+            in: async () => ({ data: dictRows, error: null }),
+          }),
+        }
       }
       if (table === "news_reservoir") {
         return {

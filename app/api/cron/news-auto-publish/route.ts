@@ -21,6 +21,7 @@ import {
 } from "@/lib/news/quality-gate"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
+import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
 import {
   isBreakingNewsItem,
@@ -152,12 +153,12 @@ async function run(request: NextRequest) {
     return ua ? at(a) - at(b) : at(b) - at(a)
   })
 
-  // 표기 사전 (선수) — 미등재 선수명 기사는 자동발행 제외 (환각 음차 차단)
+  // 표기 사전 (선수 + 감독) — 미등재 인물명 기사는 자동발행 제외 (환각 음차 차단)
   // id·romanized·surfaces 는 검증 루프의 "기존 항목 흡수" 판정용 (비니시우스 실사고)
   const { data: dict } = await supabase
     .from("news_alias_dictionary")
     .select("id, preferred_ko, hangul_alts, romanized, surfaces")
-    .eq("category", "player")
+    .in("category", [...NAMING_CATEGORIES])
 
   // 발행 전 표기 검증 루프의 런 단위 캐시 — 같은 이름을 기사마다 재검증하지 않는다
   const namingCache = new Map<string, { preferred: string } | "unknown" | "infra">()
@@ -456,19 +457,32 @@ async function run(request: NextRequest) {
       ])) && ledgerHealthy
     const verdict = await inspectDraft(title, content)
     let failReasons = verdict.pass ? [] : verdict.reasons
-    if (verdict.pass && verdict.playerNamesKr.length > 0) {
-      const unknown = unknownPlayerNames(verdict.playerNamesKr, dict ?? [])
-      if (unknown.length > 0) {
-        // ── 발행 전 표기 검증 루프 (2026-08-07 운영자: "루프 다 돌고 무결 검증 후 발행") ──
-        // 미등재 이름을 곧장 보류하지 않고 네이버 검증 루프를 먼저 돈다. 승자가 나오면
-        // 사전에 등재되고(기사 표기는 alt), 발행 초크의 사전 치환이 본문을 대표 표기로
-        // 정리한 뒤 발행된다. 근거 없는 이름만 기존대로 보류(사람 검수).
+    if (verdict.pass) {
+      // ── 발행 전 표기 검증 루프 (2026-08-07 운영자: "루프 다 돌고 무결 검증 후 발행") ──
+      // 미등재 이름을 곧장 보류하지 않고 네이버 검증 루프를 먼저 돈다. 승자가 나오면
+      // 사전에 등재되고(기사 표기는 alt), 발행 초크의 사전 치환이 본문을 대표 표기로
+      // 정리한 뒤 발행된다. 근거 없는 이름만 기존대로 보류(사람 검수).
+      //
+      // 선수와 감독을 같은 루프에 태우되 **등재 category 만** 가른다. 2026-08-09 실사고:
+      // 감독이 검사관 추출 단계에서 빠져 이 루프에 들어오지도 못했고, 그 결과
+      // 'Xabi Alonso → 하비 알론소'(정: 사비)가 3건 발행됐다. category 를 가르는 이유는
+      // 감독을 player 로 등재하는 것이 무인 사서를 폐지시킨 바로 그 오염이기 때문이다.
+      const stillUnknown: string[] = []
+      let infraBlocked = false
+      for (const { names, category } of [
+        { names: verdict.playerNamesKr, category: "player" as const },
+        { names: verdict.coachNamesKr, category: "coach" as const },
+      ]) {
+        if (names.length === 0) continue
+        const unknown = unknownPlayerNames(names, dict ?? [])
+        if (unknown.length === 0) continue
         const loop = await resolveUnknownPlayersViaNaver(
           supabase,
           unknown,
           title,
           namingCache,
-          dict ?? []
+          dict ?? [],
+          category
         )
         if (loop.registered.length > 0) {
           namingRegistered += loop.registered.length
@@ -483,15 +497,17 @@ async function run(request: NextRequest) {
             })
           }
         }
-        if (loop.infraFailed.length > 0 && loop.stillUnknown.length === 0) {
-          // 검증 자체를 못 했다(네이버 미가동 등) — 판정이 아니므로 낙인 없이 다음 회차 재시도
-          noteSkip(row.id, "naming_check_unavailable", "retry_wait")
-          continue
-        }
-        if (loop.stillUnknown.length > 0) {
-          // 접두사는 상수 — 사전 후보 화면이 이 문자열을 파싱해 1클릭 등재를 제안한다
-          failReasons = [`${UNKNOWN_PLAYER_PREFIX}${loop.stillUnknown.join(", ")}`]
-        }
+        if (loop.infraFailed.length > 0) infraBlocked = true
+        stillUnknown.push(...loop.stillUnknown)
+      }
+      if (infraBlocked && stillUnknown.length === 0) {
+        // 검증 자체를 못 했다(네이버 미가동 등) — 판정이 아니므로 낙인 없이 다음 회차 재시도
+        noteSkip(row.id, "naming_check_unavailable", "retry_wait")
+        continue
+      }
+      if (stillUnknown.length > 0) {
+        // 접두사는 상수 — 사전 후보 화면이 이 문자열을 파싱해 1클릭 등재를 제안한다
+        failReasons = [`${UNKNOWN_PLAYER_PREFIX}${stillUnknown.join(", ")}`]
       }
     }
     // 이미지 적합성 (vision) — 배너·로고·광고 이미지 차단 (Substack 실사고).

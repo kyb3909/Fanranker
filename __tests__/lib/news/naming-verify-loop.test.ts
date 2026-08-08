@@ -102,6 +102,48 @@ describe("resolveUnknownPlayersViaNaver", () => {
     })
   })
 
+  it("감독은 coach 로 등재된다 — 선수 사전을 오염시키지 않는다 (2026-08-09 하비/사비 실사고)", async () => {
+    const sb = makeSupabase()
+    verifyMock.mockResolvedValue({
+      winner: "사비 알론소",
+      romanized: "Xabi Alonso",
+      counts: [
+        { candidate: "사비 알론소", total: 12000 },
+        { candidate: "하비 알론소", total: 30 },
+      ],
+    })
+
+    const r = await resolveUnknownPlayersViaNaver(
+      sb.client as never,
+      ["하비 알론소"],
+      "리버풀 프리시즌",
+      undefined,
+      [],
+      "coach"
+    )
+
+    expect(r.registered).toEqual([{ name: "하비 알론소", preferred: "사비 알론소" }])
+    expect(sb.inserts[0]).toMatchObject({
+      id: "coach_auto_xabi_alonso",
+      category: "coach",
+      preferred_ko: "사비 알론소",
+      hangul_alts: ["하비 알론소"],
+    })
+  })
+
+  it("category 를 안 주면 기존대로 player — 호출부 미변경 경로 보호", async () => {
+    const sb = makeSupabase()
+    verifyMock.mockResolvedValue({
+      winner: "코디 각포",
+      romanized: "Cody Gakpo",
+      counts: [{ candidate: "코디 각포", total: 3966 }],
+    })
+
+    await resolveUnknownPlayersViaNaver(sb.client as never, ["코디 갓포"], "제목")
+
+    expect(sb.inserts[0]).toMatchObject({ id: "player_auto_cody_gakpo", category: "player" })
+  })
+
   it("근거 부족(판정) → 등재 없이 stillUnknown — 기존 보류 경로 유지", async () => {
     const sb = makeSupabase()
     verifyMock.mockResolvedValue({

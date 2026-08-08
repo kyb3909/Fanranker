@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
+import { withCronLog } from "@/lib/cron/log-run"
+import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
@@ -12,12 +14,17 @@ export const maxDuration = 300
 export const dynamic = "force-dynamic"
 
 /**
- * 표기 소급 교정 도구 (수동 — vercel.json 미등록, CRON_SECRET 필수).
+ * 표기 소급 교정 (매일 23:20 KST 자동 + 수동 호출 겸용, CRON_SECRET 필수).
  * "지금까지 발행된 떡밥들도 모두 검수해서 바꿔줘" (2026-08-04 운영자).
  *
- * 발행된 봇 기사에서 선수명을 추출 → 사전·네이버로 올바른 표기 확정 →
+ * 발행된 봇 기사에서 인물명을 추출 → 사전·네이버로 올바른 표기 확정 →
  * 제목·본문·사가 연표 헤드라인까지 일괄 교정. 실사례: '코디 갓포'(네이버 0건)
  * → '코디 각포'(3,966건).
+ *
+ * 2026-08-09 자동화: 운영자 지시("내가 말해주지 않아도 알아서 네이버와 대조해라").
+ * 그전까지는 수동 도구라 아무도 부르지 않으면 오표기가 그대로 남았고, 실제로
+ * '하비 알론소'(정: 사비)가 3건 발행된 채 방치됐다. 발행 전 게이트는 미등재 이름만
+ * 잡으므로, **이미 발행된 글**의 오표기를 잡는 건 이 소급 경로뿐이다.
  *
  * 호출: GET ?limit=10&offset=0&dry=1   (dry=1 이면 보고만, 수정 없음)
  * fail-closed: 네이버 근거가 없는 이름은 건드리지 않는다.
@@ -46,10 +53,19 @@ function applyToText(text: string, pairs: [string, string][]): string {
   return t
 }
 
-/** 기사에서 선수 한글 표기 추출 (mini — 이름만 뽑는 단순 작업) */
-async function extractNames(title: string, body: string): Promise<string[]> {
+/**
+ * 기사에서 인물 한글 표기 추출 (mini — 이름만 뽑는 단순 작업).
+ * 선수/감독을 나눠 받는다 — 등재 category 가 갈리기 때문 (감독을 player 로 등재하면
+ * 무인 사서를 폐지시킨 그 오염이 재발한다). 2026-08-09 이전에는 감독을 아예 제외해서
+ * 'Xabi Alonso → 하비 알론소'(정: 사비) 같은 오표기가 소급 교정에서도 안 잡혔다.
+ */
+async function extractNames(
+  title: string,
+  body: string
+): Promise<{ players: string[]; coaches: string[] }> {
+  const empty = { players: [], coaches: [] }
   const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return []
+  if (!apiKey) return empty
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -61,30 +77,36 @@ async function extractNames(title: string, body: string): Promise<string[]> {
           {
             role: "system",
             content:
-              '기사에 등장하는 축구 선수 이름의 한글 표기를 기사에 적힌 그대로 전부 추출하라 (감독·구단 제외). JSON만: {"names": ["..."]}',
+              '기사에 등장하는 축구 인물 이름의 한글 표기를 기사에 적힌 그대로 추출하라 (구단·대회명 제외). 역할로 나눈다 — players=선수, coaches=감독·수석코치. 역할이 불확실하면 players 에 넣어라. JSON만: {"players": ["..."], "coaches": ["..."]}',
           },
           { role: "user", content: `제목: ${title}\n\n본문:\n${body.slice(0, 3000)}` },
         ],
       }),
       signal: AbortSignal.timeout(30000),
     })
-    if (!res.ok) return []
+    if (!res.ok) return empty
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as { names?: unknown[] }
-    return Array.isArray(parsed.names)
-      ? [...new Set(parsed.names.map(String).filter((s) => /[가-힣]/.test(s)))].slice(0, 15)
-      : []
+    const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
+      players?: unknown[]
+      coaches?: unknown[]
+    }
+    const clean = (v: unknown[] | undefined, cap: number) =>
+      Array.isArray(v)
+        ? [...new Set(v.map(String).filter((s) => /[가-힣]/.test(s)))].slice(0, cap)
+        : []
+    return { players: clean(parsed.players, 15), coaches: clean(parsed.coaches, 5) }
   } catch {
-    return []
+    return empty
   }
 }
 
-export async function GET(request: NextRequest) {
+async function cronGet(request: NextRequest) {
   const denied = verifyCronSecret(request)
   if (denied) return denied
 
   const sp = request.nextUrl.searchParams
-  const limit = Math.min(20, Math.max(1, Number(sp.get("limit") ?? 10)))
+  // 자동 회차는 파라미터가 없다 — 기본값이 하루치 발행량(30~45건)의 절반을 덮도록 20
+  const limit = Math.min(20, Math.max(1, Number(sp.get("limit") ?? 20)))
   const offset = Math.max(0, Number(sp.get("offset") ?? 0))
   const dry = sp.get("dry") === "1"
 
@@ -94,7 +116,7 @@ export async function GET(request: NextRequest) {
   const { data: dict } = await supabase
     .from("news_alias_dictionary")
     .select("id, preferred_ko, hangul_alts")
-    .eq("category", "player")
+    .in("category", [...NAMING_CATEGORIES])
   const preferredSet = new Set((dict ?? []).map((d) => d.preferred_ko.replace(/\s+/g, "")))
   const altToPreferred = new Map<string, string>()
   for (const d of dict ?? []) {
@@ -116,11 +138,15 @@ export async function GET(request: NextRequest) {
 
   for (const post of posts ?? []) {
     const body = extractTextFromTipTapJSON(post.content as TipTapNode)
-    const names = await extractNames(post.title as string, body)
+    const extracted = await extractNames(post.title as string, body)
     const pairs: [string, string][] = []
     const skipped: string[] = []
 
-    for (const name of names) {
+    const targets = [
+      ...extracted.players.map((name) => ({ name, category: "player" as const })),
+      ...extracted.coaches.map((name) => ({ name, category: "coach" as const })),
+    ]
+    for (const { name, category } of targets) {
       // 클럽명 오탐 차단 (실사고: '리버풀'이 선수로 추출돼 '헨더슨'으로 치환됨)
       if (isClubName(name)) continue
       const compact = name.replace(/\s+/g, "")
@@ -139,7 +165,8 @@ export async function GET(request: NextRequest) {
             articleName: name,
             preferred: v.winner,
             romanized: v.romanized,
-            notes: `소급 감사 등재 — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
+            category,
+            notes: `소급 감사 등재(${category}) — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
           })
           preferredSet.add(v.winner.replace(/\s+/g, ""))
           verifiedCache.set(name, v.winner)
@@ -200,3 +227,5 @@ export async function GET(request: NextRequest) {
     report,
   })
 }
+
+export const GET = withCronLog("naming-audit", cronGet)

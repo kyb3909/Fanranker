@@ -22,6 +22,7 @@ import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
 import { suggestExisting } from "@/lib/news/alias-suggest"
+import type { NamingCategory } from "@/lib/news/naming-normalize"
 
 type ServiceClient = SupabaseClient<never, never, never> | { from: CallableFunction }
 
@@ -66,7 +67,9 @@ export async function resolveUnknownPlayersViaNaver(
   names: string[],
   contextTitle: string,
   cache?: Map<string, { preferred: string } | "unknown" | "infra">,
-  dictionary: LoopDictionaryEntry[] = []
+  dictionary: LoopDictionaryEntry[] = [],
+  /** 등재 분류 — 호출부가 검사관에게서 역할을 받아 넘긴다 (감독을 선수로 등재 금지) */
+  category: NamingCategory = "player"
 ): Promise<NamingLoopResult> {
   const result: NamingLoopResult = { registered: [], stillUnknown: [], infraFailed: [] }
   const memo = cache ?? new Map()
@@ -165,7 +168,8 @@ export async function resolveUnknownPlayersViaNaver(
       articleName: name,
       preferred: v.winner,
       romanized: v.romanized,
-      notes: `발행 게이트 등재 — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
+      category,
+      notes: `발행 게이트 등재(${category}) — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
     })
     if (registerError) {
       // 등재 실패는 인프라 실패로 취급 — 다음 회차에 다시 시도
@@ -209,10 +213,21 @@ export async function absorbAliasIntoEntry(
  */
 export async function registerVerifiedPlayer(
   supabase: ServiceClient,
-  input: { articleName: string; preferred: string; romanized: string; notes: string }
+  input: {
+    articleName: string
+    preferred: string
+    romanized: string
+    notes: string
+    /**
+     * 등재 분류. 감독을 player 로 넣으면 무인 사서를 폐지시킨 그 오염("은퇴 레전드·
+     * 감독을 선수로")이 재발한다 — 호출부가 역할을 알 때만 coach 를 넘길 것.
+     */
+    category?: NamingCategory
+  }
 ): Promise<string | null> {
+  const category = input.category ?? "player"
   const romanKey = normalizePlayerKey(input.romanized)
-  const id = `player_auto_${romanKey.replace(/-/g, "_")}`.slice(0, 60)
+  const id = `${category}_auto_${romanKey.replace(/-/g, "_")}`.slice(0, 60)
 
   // 이미 있으면 새 표기를 별칭으로 흡수 — 예전 ignoreDuplicates 는 조용히 no-op 이라
   // 변형 표기가 영영 등재되지 않았다 (비니시우스 실사고 계열의 잠복 버그)
@@ -230,7 +245,7 @@ export async function registerVerifiedPlayer(
 
   const { error } = await (supabase as SupabaseClient).from("news_alias_dictionary").insert({
     id,
-    category: "player",
+    category,
     preferred_ko: input.preferred,
     romanized: input.romanized,
     surfaces: [romanKey.replace(/-/g, " "), input.preferred],

@@ -33,7 +33,9 @@ vi.mock("@/lib/cron/log-run", () => ({
 }))
 const inspectImageMock = vi.fn()
 vi.mock("@/lib/news/quality-gate", () => ({
-  inspectDraft: vi.fn().mockResolvedValue({ pass: true, reasons: [], playerNamesKr: [] }),
+  inspectDraft: vi
+    .fn()
+    .mockResolvedValue({ pass: true, reasons: [], playerNamesKr: [], coachNamesKr: [] }),
   inspectImage: (url: string) => inspectImageMock(url),
   unknownPlayerNames: vi.fn().mockReturnValue([]),
   PERSONAL_BLOG_RE: /substack\.com/i,
@@ -144,7 +146,11 @@ vi.mock("@/lib/supabase/server", () => ({
       }
       if (table === "news_alias_dictionary") {
         return {
-          select: () => ({ eq: async () => ({ data: [], error: null }) }),
+          select: () => ({
+            eq: async () => ({ data: [], error: null }),
+            // category in (player, coach) — 감독 표기 게이트 (2026-08-09)
+            in: async () => ({ data: [], error: null }),
+          }),
         }
       }
       if (table === "team_dictionary") {

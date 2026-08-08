@@ -65,7 +65,11 @@ export function applyNamingPairsToTipTap(node: unknown, pairs: NamingPair[]): un
   return out
 }
 
-/** 발행 초크포인트용 — 선수 사전에서 치환 쌍 로드 (실패 시 빈 배열: 교정 없이 발행) */
+/** 교정 대상 = 사람 이름. 구단·매체·대회는 치환하지 않는다(오폭 위험이 이득보다 크다) */
+export const NAMING_CATEGORIES = ["player", "coach"] as const
+export type NamingCategory = (typeof NAMING_CATEGORIES)[number]
+
+/** 발행 초크포인트용 — 인물 사전에서 치환 쌍 로드 (실패 시 빈 배열: 교정 없이 발행) */
 export async function fetchNamingPairs(
   supabase: SupabaseClient<never, never, never> | { from: CallableFunction }
 ): Promise<NamingPair[]> {
@@ -73,7 +77,11 @@ export async function fetchNamingPairs(
     const { data } = await (supabase as SupabaseClient)
       .from("news_alias_dictionary")
       .select("preferred_ko, hangul_alts")
-      .eq("category", "player")
+      // 2026-08-09 실사고: 'Xabi Alonso → 하비 알론소'(정: 사비)가 3건 발행됐다.
+      // 사전에는 coach 15건이 정확히 등재돼 있었는데 **읽는 코드가 하나도 없었다** —
+      // 여기도, 소급 감사(cron/naming-audit)도, 검사관(quality-gate)도 전부 player 만
+      // 봤다. 감독 이름이 4중 방어를 그대로 통과한 이유. 죽은 사전을 살린다.
+      .in("category", [...NAMING_CATEGORIES])
     return buildNamingPairs((data ?? []) as DictionaryRow[])
   } catch {
     // 사전 조회 실패가 발행을 막으면 안 된다 — 교정 생략이 올바른 강등

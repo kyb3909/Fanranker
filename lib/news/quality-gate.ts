@@ -16,6 +16,13 @@ export interface QualityVerdict {
   reasons: string[]
   /** 기사에 등장하는 선수 한글 표기 — 사전 게이트(미등재 선수명 차단)의 재료 */
   playerNamesKr: string[]
+  /**
+   * 감독·코치 한글 표기. 선수와 따로 받는 이유는 **등재 category 를 가르기 위해서**다 —
+   * 감독을 player 로 등재하는 건 무인 사서를 폐지시킨 바로 그 오염이다.
+   * 2026-08-09 실사고: 감독이 추출 대상에서 아예 빠져 있어 'Xabi Alonso → 하비 알론소'
+   * (정: 사비)가 3건 발행됐다. 사전에 coach 15건이 정확히 있었는데 읽는 코드가 없었다.
+   */
+  coachNamesKr: string[]
 }
 
 const SYSTEM_PROMPT = `너는 한국어 스포츠 기사 발행 전 품질 검사관이다. 기사를 고치지 말고 판정만 하라.
@@ -36,18 +43,22 @@ const SYSTEM_PROMPT = `너는 한국어 스포츠 기사 발행 전 품질 검�
    저작권상 그런 원문은 애초에 기사로 만들지 않는 것이 방침이다 (2026-08-09)
 6. 도박/베팅 사이트 홍보 문구·링크
 
-또한 기사에 등장하는 **선수 이름의 한글 표기**를 전부 player_names_kr 배열에 담아라
-(감독·구단명은 제외. 선수가 없으면 빈 배열).
+또한 기사에 등장하는 **인물 이름의 한글 표기**를 기사에 적힌 그대로 추출하라 (구단명·대회명은 제외).
+역할에 따라 배열을 나눈다 — 표기 사전이 선수와 감독을 다르게 관리하기 때문이다:
+- player_names_kr: 선수 (현역·은퇴 불문)
+- coach_names_kr: 감독·수석코치
+어느 쪽이든 해당자가 없으면 빈 배열. 역할이 불확실하면 선수로 넣어라.
 
 reasons 에는 범주명만 쓰지 말고 근거를 한 줄로 (예: "이적료가 3,600만/4,500만 유로로 상충").
 
-JSON만 출력: {"pass": boolean, "reasons": ["..."], "player_names_kr": ["..."]}`
+JSON만 출력: {"pass": boolean, "reasons": ["..."], "player_names_kr": ["..."], "coach_names_kr": ["..."]}`
 
 export async function inspectDraft(title: string, content: unknown): Promise<QualityVerdict> {
   const fail = (reason: string): QualityVerdict => ({
     pass: false,
     reasons: [reason],
     playerNamesKr: [],
+    coachNamesKr: [],
   })
 
   const apiKey = process.env.OPENAI_API_KEY
@@ -78,12 +89,16 @@ export async function inspectDraft(title: string, content: unknown): Promise<Qua
       pass?: boolean
       reasons?: unknown[]
       player_names_kr?: unknown[]
+      coach_names_kr?: unknown[]
     }
     return {
       pass: parsed.pass === true,
       reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map(String).slice(0, 5) : [],
       playerNamesKr: Array.isArray(parsed.player_names_kr)
         ? parsed.player_names_kr.map(String).slice(0, 20)
+        : [],
+      coachNamesKr: Array.isArray(parsed.coach_names_kr)
+        ? parsed.coach_names_kr.map(String).slice(0, 10)
         : [],
     }
   } catch {

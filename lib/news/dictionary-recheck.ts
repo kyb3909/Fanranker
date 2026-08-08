@@ -3,6 +3,7 @@ import "server-only"
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { unknownPlayerNames } from "@/lib/news/quality-gate"
+import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
 import {
   newsCandidateRunId,
   recordNewsCandidateEvents,
@@ -73,7 +74,9 @@ export async function requeueDraftsUnblockedByDictionary(
     supabase
       .from("news_alias_dictionary")
       .select("preferred_ko, hangul_alts")
-      .eq("category", "player"),
+      // 발행 게이트와 같은 범위여야 한다 — 게이트가 감독까지 보는데 여기가 선수만 보면
+      // 감독 등재로 풀린 초안이 영영 재평가되지 않는다 (2026-08-09)
+      .in("category", [...NAMING_CATEGORIES]),
     supabase
       .from("news_reservoir")
       .select("id, decision")
