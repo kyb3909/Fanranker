@@ -259,7 +259,7 @@ export function FastReview({
     setBusy(true)
     try {
       const ids = [...selected]
-      const res = await fetch("/api/admin2/news/bulk", {
+      const res = await fetch("/api/admin/news-review/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "reject", ids }),

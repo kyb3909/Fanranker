@@ -30,7 +30,10 @@
 | P1-3 rate-limit 사각 | 예측 제출 POST만 STRICT (sports/betman 두 경로) | tsc 통과 |
 | P1-4 이벤트 교차 오염 | worldcup 페이지 2쿼리 + weekly-draw 후보 빌드에 event_id 필터 | tsc 통과 |
 | P1-7 귀속 무증상 | backfill 실패 Sentry 배선 + 가입 시 귀속 없어도 "(direct)"로 항상 POST(signup_at 원장 완결) | tsc 통과 |
-| 미착수(중간 난이도) | P1-1 정산 SQL 이원화, P1-2 invest RPC화, P1-5 사가 D9(PRD 논의 선행), P1-6 admin2 API 이전 | 로드맵 6~8·11 참조 |
+| P1-1 정산 이원화 | expire-pending 라우트를 "취소 + settlePredictions 경유"로 재작성(재계산·audit·알림·환불큐·통계 확보), SQL 함수는 배포 순서 안전한 no-op 스텁으로 교체(마이그 20260808c, 라이브 적용). 결과 있는 경기는 settle-pending 몫으로 제외(구 SQL은 무조건 취소했음) | tsc·전체 테스트 1328 통과 |
+| P1-2 invest 원자화 | RPC `invest_stadium_points`(advisory lock + FOR UPDATE, 마이그 20260808d 라이브 적용) + 라우트 교체. 경제 RPC 권한 규율(PUBLIC REVOKE) 준수 | 〃 |
+| P1-6 admin2 이전 | news/bulk→/api/admin/news-review/bulk, saga→/api/admin/saga-review 로 git mv(이력 보존), 구 경로는 얇은 위임 잔류(전환기 호환), UI 호출 3곳 교체 | 〃 |
+| 미착수 | P1-5 사가 D9(에코 접힘 오피셜 삼킴)만 잔류 — PRD 결정 로그 재논의 필요라 오너 논의 선행 | HEALTH_REPORT 로드맵 11 |
 
 ## 도메인 분할 (Phase 1)
 

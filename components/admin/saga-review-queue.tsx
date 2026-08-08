@@ -82,7 +82,7 @@ function RowCard({
   const act = async (action: "publish" | "reject") => {
     setBusy(true)
     try {
-      const res = await fetch("/api/admin2/saga", {
+      const res = await fetch("/api/admin/saga-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -252,7 +252,7 @@ function RowCard({
 
 export function SagaReviewQueue() {
   const { data, mutate } = useSWR<{ queue: QueueRow[]; sagas: SagaInfo[] }>(
-    "/api/admin2/saga",
+    "/api/admin/saga-review",
     fetcher,
     { refreshInterval: 60_000 }
   )

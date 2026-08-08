@@ -375,7 +375,7 @@ export async function linkArticleToSaga(
 }
 
 /**
- * 검수 승인 → 사가 발행 (W3). /api/admin2/saga 의 publish 액션 본체.
+ * 검수 승인 → 사가 발행 (W3). /api/admin/saga-review 의 publish 액션 본체.
  *
  * - 검수자 수정값(edits)이 추출값을 덮는다.
  * - 같은 (사가, cluster_key)에 이미 엔트리가 있으면 **에코로 접는다** (D9 —
