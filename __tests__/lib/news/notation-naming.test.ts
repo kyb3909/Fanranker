@@ -76,3 +76,36 @@ describe("applyNamingPairsToTipTap", () => {
     expect(out.content[1].attrs?.src).toBe("https://x.com/갓포.jpg")
   })
 })
+
+/**
+ * 2026-08-09 운영자 결정 "네이버 우선" — 치환 대상이 인물뿐이었던 탓에 구단명이
+ * 기사마다 흔들렸다. 실측: 아스날 36건 vs 아스널 10건(사전·네이버 모두 '아스널').
+ * 같은 팀이 기사마다 다른 이름으로 나오면 독자는 매체로 안 본다.
+ */
+describe("구단명 치환 (네이버 우선 정책)", () => {
+  const TEAMS = [
+    { preferred_ko: "아스널", hangul_alts: ["아스날"] },
+    { preferred_ko: "토트넘", hangul_alts: ["토트넘 홋스퍼"] },
+    { preferred_ko: "크리스털 팰리스", hangul_alts: ["크리스탈 팰리스"] },
+  ]
+
+  it("흔들린 구단 표기를 대표 표기로 모은다", () => {
+    const pairs = buildNamingPairs(TEAMS)
+    expect(applyNamingPairs("아스날이 크리스탈 팰리스를 꺾었다", pairs)).toBe(
+      "아스널이 크리스털 팰리스를 꺾었다"
+    )
+  })
+
+  it("⚠️ 더 긴 정식명은 본문에서 줄이지 않는다 — 인용문을 건드리기 때문", () => {
+    const pairs = buildNamingPairs(TEAMS)
+    // 실측: CEO 발언 "'뉴캐슬 유나이티드 2.0'" 이 "'뉴캐슬 2.0'" 으로 바뀌었다.
+    // 길이 통일은 위치가 고정된 제목 라벨의 몫이다 (source label).
+    expect(applyNamingPairs("토트넘 홋스퍼, 토날리 영입", pairs)).toBe("토트넘 홋스퍼, 토날리 영입")
+  })
+
+  it("⚠️ 한글 없는 alt 는 치환 쌍이 되지 않는다 — 본문의 'Goal' 이 '골닷컴'이 되면 안 된다", () => {
+    const pairs = buildNamingPairs([{ preferred_ko: "골닷컴", hangul_alts: ["Goal"] }])
+    expect(pairs).toEqual([])
+    expect(applyNamingPairs("Goal of the season", pairs)).toBe("Goal of the season")
+  })
+})

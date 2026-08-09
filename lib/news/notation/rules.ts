@@ -28,7 +28,9 @@ export type NamingPair = [from: string, to: string]
 /**
  * 사전 행 → 치환 쌍. 안전 규칙:
  *  - alt 가 2자 미만이면 제외 (일반 단어 오폭 방지)
- *  - alt 가 다른 항목의 대표 표기와 같으면 제외 (그건 다른 사람이다)
+ *  - **한글이 없는 alt 는 제외** — 본문 치환에 영문을 걸면 'Goal'→'골닷컴' 처럼
+ *    "Goal of the season" 을 박살낸다. 영문 표기 통일은 제목 라벨(source label)의 몫이다.
+ *  - alt 가 다른 항목의 대표 표기와 같으면 제외 (그건 다른 사람/구단이다)
  *  - 긴 표기 우선 정렬 ('코디 갓포'를 먼저, 그 다음 '갓포' — 이중 치환 방지)
  */
 export function buildNamingPairs(
@@ -41,7 +43,15 @@ export function buildNamingPairs(
     for (const alt of row.hangul_alts ?? []) {
       const from = alt?.trim()
       if (!from || from.length < 2) continue
+      if (!/[가-힣]/.test(from)) continue
       if (from === row.preferred_ko) continue
+      // alt 가 대표 표기를 **포함**하면 오표기가 아니라 더 긴 정식명이다 —
+      // '뉴캐슬 유나이티드'(대표: 뉴캐슬), '파브리시오 로마노'(대표: 로마노).
+      // 본문에서 이걸 줄이면 인용문까지 건드린다: 실측에서 CEO 발언
+      // "'뉴캐슬 유나이티드 2.0'" 이 "'뉴캐슬 2.0'" 으로 바뀌었다.
+      // 길이 통일은 **제목 라벨**(source label)에서만 한다 — 위치가 고정돼 안전하다.
+      // findNotationViolations 와 같은 규칙이다: 포함 관계면 오표기가 아니다.
+      if (from.includes(row.preferred_ko)) continue
       if (preferredSet.has(from)) continue
       if (seen.has(from)) continue // 서로 다른 항목이 같은 alt 를 주장 — 첫 항목 승
       seen.add(from)

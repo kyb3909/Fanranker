@@ -57,7 +57,12 @@ function toView(entries: NotationEntry[]): Notation {
   return {
     entries,
     persons,
-    pairs: buildNamingPairs(persons),
+    // 치환은 **인물 + 구단·매체 전부**를 대상으로 한다 (2026-08-09 운영자 "네이버 우선").
+    // 인물만 보던 시절의 실측: 아스날 36건 vs 아스널 10건 — 우리 사전도 네이버도
+    // '아스널'인데 구단이 치환 대상이 아니라 틀린 쪽이 3.6배 많았다. 같은 팀이 기사마다
+    // 다른 이름으로 나오면 독자는 매체로 안 본다.
+    // 안전은 buildNamingPairs 가 진다 — 한글 alt 만, 2자 이상, 대표 표기 충돌 시 제외.
+    pairs: buildNamingPairs(entries),
     labels: buildSourceLabelMap(labelRows),
     hints: buildNotationHints(entries),
   }
