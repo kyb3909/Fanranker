@@ -13,6 +13,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
 
 export type NamingPair = [from: string, to: string]
 
@@ -74,15 +75,17 @@ export async function fetchNamingPairs(
   supabase: SupabaseClient<never, never, never> | { from: CallableFunction }
 ): Promise<NamingPair[]> {
   try {
-    const { data } = await (supabase as SupabaseClient)
-      .from("news_alias_dictionary")
-      .select("preferred_ko, hangul_alts")
-      // 2026-08-09 실사고: 'Xabi Alonso → 하비 알론소'(정: 사비)가 3건 발행됐다.
-      // 사전에는 coach 15건이 정확히 등재돼 있었는데 **읽는 코드가 하나도 없었다** —
-      // 여기도, 소급 감사(cron/naming-audit)도, 검사관(quality-gate)도 전부 player 만
-      // 봤다. 감독 이름이 4중 방어를 그대로 통과한 이유. 죽은 사전을 살린다.
-      .in("category", [...NAMING_CATEGORIES])
-    return buildNamingPairs((data ?? []) as DictionaryRow[])
+    // 2026-08-09 실사고: 'Xabi Alonso → 하비 알론소'(정: 사비)가 3건 발행됐다.
+    // 사전에는 coach 15건이 정확히 등재돼 있었는데 **읽는 코드가 하나도 없었다** —
+    // 여기도, 소급 감사(cron/naming-audit)도, 검사관(quality-gate)도 전부 player 만
+    // 봤다. 감독 이름이 4중 방어를 그대로 통과한 이유. 죽은 사전을 살린다.
+    // 전량 조회는 반드시 fetchDictionaryRows 로 — 1,000행 무음 절단 방지.
+    const data = await fetchDictionaryRows<DictionaryRow>(
+      supabase,
+      "preferred_ko, hangul_alts",
+      NAMING_CATEGORIES
+    )
+    return buildNamingPairs(data)
   } catch {
     // 사전 조회 실패가 발행을 막으면 안 된다 — 교정 생략이 올바른 강등
     return []

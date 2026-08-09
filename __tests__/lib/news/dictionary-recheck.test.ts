@@ -32,11 +32,13 @@ function mockSupabase() {
     },
     from: (table: string) => {
       if (table === "news_alias_dictionary") {
-        // 사전 조회는 category in (player, coach) — 감독 표기도 게이트와 같은 범위 (2026-08-09)
+        // 사전 조회는 fetchDictionaryRows — category in (player, coach) 를 페이지 단위로
+        // 전량 조회한다 (.in → .order → .range). 1,000행 무음 절단 방지 (2026-08-09).
         return {
           select: () => ({
-            eq: async () => ({ data: dictRows, error: null }),
-            in: async () => ({ data: dictRows, error: null }),
+            in: () => ({
+              order: () => ({ range: async () => ({ data: dictRows, error: null }) }),
+            }),
           }),
         }
       }

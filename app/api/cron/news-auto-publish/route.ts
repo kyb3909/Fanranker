@@ -22,6 +22,7 @@ import {
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
 import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
+import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
 import {
   isBreakingNewsItem,
@@ -155,10 +156,17 @@ async function run(request: NextRequest) {
 
   // 표기 사전 (선수 + 감독) — 미등재 인물명 기사는 자동발행 제외 (환각 음차 차단)
   // id·romanized·surfaces 는 검증 루프의 "기존 항목 흡수" 판정용 (비니시우스 실사고)
-  const { data: dict } = await supabase
-    .from("news_alias_dictionary")
-    .select("id, preferred_ko, hangul_alts, romanized, surfaces")
-    .in("category", [...NAMING_CATEGORIES])
+  // ⚠️ 전량 조회 필수 — 1,000행 무음 절단에 걸리면 사전에 있는 이름이 '미등재'로
+  // 판정돼 멀쩡한 기사가 반려된다 (사전은 자동 등재로 매일 자란다)
+  const dict = await fetchDictionaryRows<{
+    id: string
+    preferred_ko: string
+    hangul_alts: string[] | null
+    romanized: string | null
+    surfaces: string[] | null
+  }>(supabase, "id, preferred_ko, hangul_alts, romanized, surfaces", NAMING_CATEGORIES).catch(
+    () => null
+  )
 
   // 발행 전 표기 검증 루프의 런 단위 캐시 — 같은 이름을 기사마다 재검증하지 않는다
   const namingCache = new Map<string, { preferred: string } | "unknown" | "infra">()

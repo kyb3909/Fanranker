@@ -623,15 +623,28 @@ async function fetchCorrectionExamples() {
   }
 }
 
-/** 낱말 경계 포함 검사 — 'as'가 'last'에, 'inter'가 'interview'에 걸리는 것을 막는다 */
-function includesWord(haystack, needle) {
+/**
+ * 원문에 **고유명사로** 등장하는지 검사 (낱말 경계 + 첫 글자 대문자).
+ *
+ * 대문자 조건이 핵심이다. 선수 성씨의 상당수가 흔한 영어 단어와 겹친다 —
+ * young·march·cash·mount·rice·slot·pope·green·wood·hill·hall·shaw…
+ * 낱말 경계만 보면 "a young midfielder"가 'Young'(영)으로, "in March"가
+ * 'March'(마치)로 잡혀서 **엉뚱한 힌트를 주입**한다. 힌트는 "반드시 이대로 쓰라"는
+ * 강한 지시라 틀린 힌트는 없느니만 못하다. 영어는 고유명사를 대문자로 쓰므로
+ * 이 한 줄이 대부분을 가른다 (문장 첫머리 오탐은 남지만, 그건 힌트 한 칸 낭비일 뿐).
+ */
+function includesProperNoun(text, lowerText, needle) {
   if (!needle) return false
-  let i = haystack.indexOf(needle)
+  let i = lowerText.indexOf(needle)
   while (i !== -1) {
-    const before = i === 0 ? " " : haystack[i - 1]
-    const after = i + needle.length >= haystack.length ? " " : haystack[i + needle.length]
-    if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) return true
-    i = haystack.indexOf(needle, i + 1)
+    const before = i === 0 ? " " : lowerText[i - 1]
+    const after = i + needle.length >= lowerText.length ? " " : lowerText[i + needle.length]
+    if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) {
+      const c = text[i] ?? ""
+      // 대문자(Šeško 같은 비ASCII 포함) 또는 숫자 시작(90min)이면 고유명사로 본다
+      if (c !== c.toLowerCase() || /[0-9]/.test(c)) return true
+    }
+    i = lowerText.indexOf(needle, i + 1)
   }
   return false
 }
@@ -646,20 +659,56 @@ function includesWord(haystack, needle) {
  * 사전 전체(1,000여 건)를 싣지 않는다 — 토큰 낭비이자, 긴 목록은 무시당하는 지시가
  * 된다. **지금 이 원문에 실제로 등장하는 것만** 골라 준다.
  */
+/**
+ * 대문자 검사를 통과해버리는 일반어 — 힌트에서 제외한다.
+ * 월·요일은 영어에서 **항상 대문자**라 대문자 규칙으로 못 거른다. 그런데 이적 기사는
+ * "in January", "until June 2027"을 끝없이 쓴다. 실측에서 "in March."가 'March'(마치,
+ * 솔리 마치)로 잡혔다. 이 선수들 이름은 힌트를 못 받지만 — **놓치는 건 안전하고,
+ * 틀린 힌트를 주입하는 건 안전하지 않다.**
+ */
+const AMBIGUOUS_EN = new Set([
+  "january",
+  "february",
+  "march",
+  "april",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+])
+
 const MAX_NAMING_HINTS = 25
 function buildNamingHints(naming, sourceText) {
   if (!Array.isArray(naming) || naming.length === 0 || !sourceText) return ""
-  const hay = sourceText.toLowerCase()
+  const lower = sourceText.toLowerCase()
   const hits = []
   for (const row of naming) {
     if (!row?.ko || !Array.isArray(row.en)) continue
     // 긴 표기부터 — "manchester united"가 "manchester"보다 먼저 잡히게
-    const matched = [...row.en].sort((a, b) => b.length - a.length).find((en) => includesWord(hay, en))
-    if (matched) hits.push(`- ${matched} = ${row.ko}`)
-    if (hits.length >= MAX_NAMING_HINTS) break
+    const matched = [...row.en]
+      .filter((en) => !AMBIGUOUS_EN.has(en))
+      .sort((a, b) => b.length - a.length)
+      .find((en) => includesProperNoun(sourceText, lower, en))
+    if (matched) hits.push({ en: matched, ko: row.ko })
   }
   if (hits.length === 0) return ""
-  return `\n\n## 확정 한글 표기 (반드시 이대로)\n원문에 등장하는 고유명사다. 아래 한글 표기를 **그대로** 써라 — 다르게 음차하지 마라:\n${hits.join("\n")}\n이 목록에 없는 이름만 네가 판단해 음차하고, 확신이 없으면 영문 원어를 그대로 둔다.`
+  // 상한을 넘길 땐 **긴 표기부터** 남긴다 — 'manchester united'가 'young'보다 값지다
+  const top = hits.sort((a, b) => b.en.length - a.en.length).slice(0, MAX_NAMING_HINTS)
+  return `\n\n## 확정 한글 표기 (반드시 이대로)\n원문에 등장하는 고유명사다. 아래 한글 표기를 **그대로** 써라 — 다르게 음차하지 마라:\n${top
+    .map((h) => `- ${h.en} = ${h.ko}`)
+    .join(
+      "\n"
+    )}\n단, 같은 철자가 일반 단어로 쓰인 자리(예: 'young'이 '어린'이라는 뜻으로 쓰인 문장)에는 적용하지 마라.\n이 목록에 없는 이름만 네가 판단해 음차하고, 확신이 없으면 영문 원어를 그대로 둔다.`
 }
 
 // ── VS 쟁점 2단 판정 (2026-07-31, 3인 회의 VS-RESULT 스펙) ──────────────

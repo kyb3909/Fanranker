@@ -16,6 +16,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
 
 export interface SourceLabelRow {
   preferred_ko: string
@@ -113,11 +114,12 @@ export async function fetchSourceLabelMap(
   supabase: SupabaseClient<never, never, never> | { from: CallableFunction }
 ): Promise<Map<string, string>> {
   try {
-    const { data } = await (supabase as SupabaseClient)
-      .from("news_alias_dictionary")
-      .select("preferred_ko, romanized, surfaces, hangul_alts")
-      .in("category", [...SOURCE_LABEL_CATEGORIES])
-    return buildSourceLabelMap((data ?? []) as SourceLabelRow[])
+    const rows = await fetchDictionaryRows<SourceLabelRow>(
+      supabase,
+      "preferred_ko, romanized, surfaces, hangul_alts",
+      SOURCE_LABEL_CATEGORIES
+    )
+    return buildSourceLabelMap(rows)
   } catch {
     return new Map()
   }

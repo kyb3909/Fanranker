@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
+import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
 import { fetchSourceLabelMap, normalizeSourceLabel } from "@/lib/news/source-label"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import { createServiceRoleClient } from "@/lib/supabase/server"
@@ -114,11 +115,12 @@ async function cronGet(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // 사전: 정표기·변형표기 매핑
-  const { data: dict } = await supabase
-    .from("news_alias_dictionary")
-    .select("id, preferred_ko, hangul_alts")
-    .in("category", [...NAMING_CATEGORIES])
+  // 사전: 정표기·변형표기 매핑 (전량 — 1,000행 무음 절단 방지)
+  const dict = await fetchDictionaryRows<{
+    id: string
+    preferred_ko: string
+    hangul_alts: string[] | null
+  }>(supabase, "id, preferred_ko, hangul_alts", NAMING_CATEGORIES)
   // 출처 라벨 사전 (매체·구단) — 인물 사전과 분류가 달라 따로 읽는다
   const sourceLabels = await fetchSourceLabelMap(supabase)
 

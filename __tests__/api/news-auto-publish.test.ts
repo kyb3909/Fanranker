@@ -145,11 +145,13 @@ vi.mock("@/lib/supabase/server", () => ({
         }
       }
       if (table === "news_alias_dictionary") {
+        // fetchDictionaryRows 의 페이지 조회 체인 (.in → .order → .range).
+        // category in (player, coach) — 감독 표기 게이트 (2026-08-09)
         return {
           select: () => ({
-            eq: async () => ({ data: [], error: null }),
-            // category in (player, coach) — 감독 표기 게이트 (2026-08-09)
-            in: async () => ({ data: [], error: null }),
+            in: () => ({
+              order: () => ({ range: async () => ({ data: [], error: null }) }),
+            }),
           }),
         }
       }
