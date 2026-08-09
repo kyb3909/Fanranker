@@ -15,7 +15,7 @@ interface ReservoirRow {
   decision: Record<string, unknown> | null
 }
 
-let dictRows: { preferred_ko: string; hangul_alts: string[] | null }[] = []
+let dictRows: { category: string; preferred_ko: string; hangul_alts: string[] | null }[] = []
 let reservoirRows: ReservoirRow[] = []
 let updates: Array<{ id: string; patch: Record<string, unknown>; statusGuard: boolean }> = []
 let updateError: { message: string } | null = null
@@ -83,7 +83,7 @@ describe("requeueDraftsUnblockedByDictionary", () => {
   })
 
   it("등재로 풀린 초안의 반려 기록을 걷고 이력·원장을 남긴다", async () => {
-    dictRows = [{ preferred_ko: "맥스 도우먼", hangul_alts: null }]
+    dictRows = [{ category: "player", preferred_ko: "맥스 도우먼", hangul_alts: null }]
     reservoirRows = [blockedRow("a", ["사전 미등재 선수명: 도우먼"], { interest: { keep: true } })]
 
     const result = await requeueDraftsUnblockedByDictionary(mockSupabase())
@@ -110,7 +110,7 @@ describe("requeueDraftsUnblockedByDictionary", () => {
   })
 
   it("부분 표기 등재도 게이트와 같은 규칙으로 풀린다 (성만 쓴 기사 ↔ 풀네임 등재)", async () => {
-    dictRows = [{ preferred_ko: "브루노 기마랑이스", hangul_alts: null }]
+    dictRows = [{ category: "player", preferred_ko: "브루노 기마랑이스", hangul_alts: null }]
     reservoirRows = [blockedRow("a", ["사전 미등재 선수명: 기마랑이스"])]
 
     const result = await requeueDraftsUnblockedByDictionary(mockSupabase())
@@ -119,7 +119,7 @@ describe("requeueDraftsUnblockedByDictionary", () => {
   })
 
   it("다른 미등재 이름이 남으면 건드리지 않는다", async () => {
-    dictRows = [{ preferred_ko: "맥스 도우먼", hangul_alts: null }]
+    dictRows = [{ category: "player", preferred_ko: "맥스 도우먼", hangul_alts: null }]
     reservoirRows = [blockedRow("a", ["사전 미등재 선수명: 도우먼, 은가누"])]
 
     const result = await requeueDraftsUnblockedByDictionary(mockSupabase())
@@ -130,7 +130,7 @@ describe("requeueDraftsUnblockedByDictionary", () => {
   })
 
   it("사전과 무관한 반려(이미지·검사관)는 절대 건드리지 않는다", async () => {
-    dictRows = [{ preferred_ko: "맥스 도우먼", hangul_alts: null }]
+    dictRows = [{ category: "player", preferred_ko: "맥스 도우먼", hangul_alts: null }]
     reservoirRows = [
       blockedRow("a", ["이미지 부적합: 구독 배너"]),
       blockedRow("b", ["제목-본문 불일치"]),
@@ -145,7 +145,7 @@ describe("requeueDraftsUnblockedByDictionary", () => {
   })
 
   it("DB 갱신 실패는 failed로 세고 원장에 남기지 않는다 (침묵 실패 금지)", async () => {
-    dictRows = [{ preferred_ko: "맥스 도우먼", hangul_alts: null }]
+    dictRows = [{ category: "player", preferred_ko: "맥스 도우먼", hangul_alts: null }]
     reservoirRows = [blockedRow("a", ["사전 미등재 선수명: 도우먼"])]
     updateError = { message: "boom" }
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined)
@@ -158,7 +158,13 @@ describe("requeueDraftsUnblockedByDictionary", () => {
   })
 
   it("hangul_alts 별칭 등재로도 풀린다", async () => {
-    dictRows = [{ preferred_ko: "비니시우스 주니오르", hangul_alts: ["비니시우스 주니어"] }]
+    dictRows = [
+      {
+        category: "player",
+        preferred_ko: "비니시우스 주니오르",
+        hangul_alts: ["비니시우스 주니어"],
+      },
+    ]
     reservoirRows = [blockedRow("a", ["사전 미등재 선수명: 비니시우스 주니어"])]
 
     const result = await requeueDraftsUnblockedByDictionary(mockSupabase())

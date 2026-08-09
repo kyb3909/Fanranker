@@ -10,13 +10,10 @@ import {
   heartbeatThresholdMinutes,
 } from "@/lib/ops/cron-schedule"
 import { bigramTitleSimilarity, DUP_SUSPECT_MIN } from "@/lib/ops/title-similarity"
-import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
+import { findNotationViolations, loadNotation } from "@/lib/news/notation"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
-
-/** 표기 감시 대상 — 인물·구단·매체 전부. 하나라도 빼면 그 분류는 감시 사각지대가 된다 */
-const NOTATION_AUDIT_CATEGORIES = ["player", "coach", "team", "media"] as const
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -163,26 +160,15 @@ async function handler(req: NextRequest) {
     // 그래서 그날 발견된 오표기(하비/샤비/자비 알론소, 카릭, 영문 매체 라벨)를
     // **하나도 못 잡았고**, 전부 운영자가 눈으로 찾아냈다. 탐지를 사람에게
     // 의존하는 상태가 진짜 문제였으므로 범위를 셋 다 넓힌다.
-    const dict = await fetchDictionaryRows<{
-      id: string
-      preferred_ko: string
-      hangul_alts: string[] | null
-    }>(supabase, "id, preferred_ko, hangul_alts", NOTATION_AUDIT_CATEGORIES)
-    for (const d of dict) {
-      const preferred = d.preferred_ko
-      for (const alt of d.hangul_alts ?? []) {
-        // 2자 허용 — '카릭'·'각포' 같은 성씨 오표기가 3자 하한에 걸려 빠져나갔다
-        if (!alt || alt.length < 2 || alt === preferred) continue
-        for (const p of rows) {
-          if (p.haystack.includes(alt)) {
-            findings.push({
-              invariant: "notation_alt_in_title",
-              fingerprint: `notation:${p.id}:${d.id}`,
-              summary: `발행물이 옛/오 표기 사용 — "${alt}" (대표: "${preferred}") in "${p.title.slice(0, 60)}"`,
-              detail: { post_id: p.id, dict_id: d.id, alt, preferred },
-            })
-          }
-        }
+    const notation = await loadNotation(supabase)
+    for (const p of rows) {
+      for (const v of findNotationViolations(p.haystack, notation.entries)) {
+        findings.push({
+          invariant: "notation_alt_in_title",
+          fingerprint: `notation:${p.id}:${v.entryId}`,
+          summary: `발행물이 옛/오 표기 사용 — "${v.alt}" (대표: "${v.preferred}") in "${p.title.slice(0, 60)}"`,
+          detail: { post_id: p.id, dict_id: v.entryId, alt: v.alt, preferred: v.preferred },
+        })
       }
     }
   } catch (e) {

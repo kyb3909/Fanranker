@@ -15,10 +15,8 @@ vi.mock("@/lib/naming/pick", () => ({
   isClubName: (n: string) => n === "리버풀",
 }))
 
-import {
-  resolveUnknownPlayersViaNaver,
-  findUniqueRomanizedMatch,
-} from "@/lib/news/naming-verify-loop"
+import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
+import { findUniqueRomanizedMatch } from "@/lib/news/notation"
 
 function makeSupabase() {
   const inserts: Record<string, unknown>[] = []

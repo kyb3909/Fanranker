@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
-import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
-import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
-import { fetchSourceLabelMap, normalizeSourceLabel } from "@/lib/news/source-label"
+import {
+  applyNamingPairs,
+  applyNamingPairsToTipTap,
+  loadNotation,
+  normalizeSourceLabel,
+} from "@/lib/news/notation"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
@@ -35,26 +38,11 @@ export const dynamic = "force-dynamic"
 
 const NEWS_BOT = "user_bot_soccer_kr"
 
-/** TipTap 트리의 텍스트 노드에 교정 쌍 적용 (긴 표기 먼저 — '코디 갓포' > '갓포') */
-function applyToContent(node: unknown, pairs: [string, string][]): unknown {
-  if (Array.isArray(node)) return node.map((n) => applyToContent(n, pairs))
-  if (!node || typeof node !== "object") return node
-  const n = node as Record<string, unknown>
-  const out: Record<string, unknown> = { ...n }
-  if (typeof n.text === "string") {
-    let t = n.text
-    for (const [from, to] of pairs) t = t.split(from).join(to)
-    out.text = t
-  }
-  if (n.content) out.content = applyToContent(n.content, pairs)
-  return out
-}
-
-function applyToText(text: string, pairs: [string, string][]): string {
-  let t = text
-  for (const [from, to] of pairs) t = t.split(from).join(to)
-  return t
-}
+// 치환 함수는 notation 모듈이 소유한다. 예전에는 이 파일이 applyToText/applyToContent 를
+// 따로 갖고 있었는데, 그게 정확히 "같은 규칙이 두 벌"인 상태였다 — 한쪽만 고쳐지면
+// 발행 경로와 소급 경로가 조용히 갈라진다.
+const applyToText = applyNamingPairs
+const applyToContent = applyNamingPairsToTipTap
 
 /**
  * 기사에서 인물 한글 표기 추출 (mini — 이름만 뽑는 단순 작업).
@@ -115,18 +103,14 @@ async function cronGet(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // 사전: 정표기·변형표기 매핑 (전량 — 1,000행 무음 절단 방지)
-  const dict = await fetchDictionaryRows<{
-    id: string
-    preferred_ko: string
-    hangul_alts: string[] | null
-  }>(supabase, "id, preferred_ko, hangul_alts", NAMING_CATEGORIES)
-  // 출처 라벨 사전 (매체·구단) — 인물 사전과 분류가 달라 따로 읽는다
-  const sourceLabels = await fetchSourceLabelMap(supabase)
+  // 사전은 한 번만 읽는다 — 인물 표기와 출처 라벨이 같은 뷰에서 나온다
+  const notation = await loadNotation(supabase)
+  const dict = notation.persons
+  const sourceLabels = notation.labels
 
-  const preferredSet = new Set((dict ?? []).map((d) => d.preferred_ko.replace(/\s+/g, "")))
+  const preferredSet = new Set(dict.map((d) => d.preferred_ko.replace(/\s+/g, "")))
   const altToPreferred = new Map<string, string>()
-  for (const d of dict ?? []) {
+  for (const d of dict) {
     for (const alt of d.hangul_alts ?? []) {
       if (alt && alt !== d.preferred_ko) altToPreferred.set(alt, d.preferred_ko)
     }

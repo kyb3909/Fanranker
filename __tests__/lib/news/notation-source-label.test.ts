@@ -3,8 +3,8 @@ import {
   buildSourceLabelMap,
   normalizeSourceLabel,
   sourceKey,
-  type SourceLabelRow,
-} from "@/lib/news/source-label"
+  type NotationEntry,
+} from "@/lib/news/notation"
 
 /**
  * 계약: 제목 대괄호 라벨만 대표 표기로 통일한다. 사전에 없으면 손대지 않고,
@@ -12,7 +12,7 @@ import {
  */
 
 // 실제 사전 행과 같은 모양 (surfaces=도메인, romanized=도메인 또는 인물명)
-const ROWS: SourceLabelRow[] = [
+const ROWS: Pick<NotationEntry, "preferred_ko" | "romanized" | "surfaces" | "hangul_alts">[] = [
   {
     preferred_ko: "디 애슬레틱",
     romanized: "theathletic.com",

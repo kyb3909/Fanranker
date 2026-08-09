@@ -9,7 +9,7 @@
  */
 import "dotenv/config"
 import { createClient } from "@supabase/supabase-js"
-import { fetchSourceLabelMap, normalizeSourceLabel } from "@/lib/news/source-label"
+import { loadNotation, normalizeSourceLabel } from "@/lib/news/notation"
 
 const NEWS_BOT = "user_bot_soccer_kr"
 
@@ -20,7 +20,7 @@ async function main() {
   if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 필요")
   const supabase = createClient(url, key)
 
-  const map = await fetchSourceLabelMap(supabase)
+  const { labels: map } = await loadNotation(supabase)
   console.log(`출처 라벨 사전 ${map.size}개 키`)
 
   const { data, error } = await supabase

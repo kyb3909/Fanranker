@@ -15,14 +15,12 @@ import { canonicalSourceUrl } from "@/lib/news/canonical-url"
 import {
   inspectDraft,
   inspectImage,
-  unknownPlayerNames,
   PERSONAL_BLOG_RE,
   isWomensFootball,
 } from "@/lib/news/quality-gate"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
-import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
-import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
+import { addRuntimePerson, loadNotationSafe, unknownPersonNames } from "@/lib/news/notation"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
 import {
   isBreakingNewsItem,
@@ -154,19 +152,9 @@ async function run(request: NextRequest) {
     return ua ? at(a) - at(b) : at(b) - at(a)
   })
 
-  // 표기 사전 (선수 + 감독) — 미등재 인물명 기사는 자동발행 제외 (환각 음차 차단)
-  // id·romanized·surfaces 는 검증 루프의 "기존 항목 흡수" 판정용 (비니시우스 실사고)
-  // ⚠️ 전량 조회 필수 — 1,000행 무음 절단에 걸리면 사전에 있는 이름이 '미등재'로
-  // 판정돼 멀쩡한 기사가 반려된다 (사전은 자동 등재로 매일 자란다)
-  const dict = await fetchDictionaryRows<{
-    id: string
-    preferred_ko: string
-    hangul_alts: string[] | null
-    romanized: string | null
-    surfaces: string[] | null
-  }>(supabase, "id, preferred_ko, hangul_alts, romanized, surfaces", NAMING_CATEGORIES).catch(
-    () => null
-  )
+  // 표기 사전 — 미등재 인물명 기사는 자동발행 제외 (환각 음차 차단).
+  // 범위·페이징·실패 규약은 notation 모듈이 소유한다 (여기서 고르지 않는다).
+  const notation = await loadNotationSafe(supabase)
 
   // 발행 전 표기 검증 루프의 런 단위 캐시 — 같은 이름을 기사마다 재검증하지 않는다
   const namingCache = new Map<string, { preferred: string } | "unknown" | "infra">()
@@ -482,26 +470,23 @@ async function run(request: NextRequest) {
         { names: verdict.coachNamesKr, category: "coach" as const },
       ]) {
         if (names.length === 0) continue
-        const unknown = unknownPlayerNames(names, dict ?? [])
+        const unknown = unknownPersonNames(names, notation.persons)
         if (unknown.length === 0) continue
         const loop = await resolveUnknownPlayersViaNaver(
           supabase,
           unknown,
           title,
           namingCache,
-          dict ?? [],
+          notation.persons,
           category
         )
         if (loop.registered.length > 0) {
           namingRegistered += loop.registered.length
-          // 이번 런의 뒷 기사들이 같은 이름에 다시 막히지 않도록 사전 캐시 갱신
+          // 이번 런의 뒷 기사들이 같은 이름에 다시 막히지 않도록 사전 뷰 갱신
           for (const r of loop.registered) {
-            dict?.push({
-              id: `runtime_${namingRegistered}`,
+            addRuntimePerson(notation, {
               preferred_ko: r.preferred,
               hangul_alts: r.name !== r.preferred ? [r.name] : [],
-              romanized: null,
-              surfaces: null,
             })
           }
         }

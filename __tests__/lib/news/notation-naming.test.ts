@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest"
-import {
-  buildNamingPairs,
-  applyNamingPairs,
-  applyNamingPairsToTipTap,
-} from "@/lib/news/naming-normalize"
+import { buildNamingPairs, applyNamingPairs, applyNamingPairsToTipTap } from "@/lib/news/notation"
 
 /**
  * 발행 시점 선수 표기 전방 교정 — '코디 갓포' 실사고(2026-08-07)의 재발 방지선.

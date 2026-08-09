@@ -22,7 +22,7 @@ import { verifySpelling } from "@/lib/naming/verify"
 import { isClubName } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
 import { suggestExisting } from "@/lib/news/alias-suggest"
-import type { NamingCategory } from "@/lib/news/naming-normalize"
+import { findUniqueRomanizedMatch, type PersonCategory } from "@/lib/news/notation"
 
 type ServiceClient = SupabaseClient<never, never, never> | { from: CallableFunction }
 
@@ -56,57 +56,6 @@ export interface NamingLoopResult {
   infraFailed: string[]
 }
 
-/** 로마자 → 비교용 토큰 ("Michael Carrick" → ["michael","carrick"]) */
-function romanTokens(s: string | null | undefined): string[] {
-  return (s ?? "")
-    .toLowerCase()
-    .split(/[^a-z]+/)
-    .filter((t) => t.length > 1)
-}
-
-/**
- * 로마자 토큰 포함 관계로 **같은 인물인 기존 항목**을 찾는다 (2026-08-09).
- *
- * 실사고: 기사가 성씨만 '카릭'이라 썼는데 사전에는 '마이클 캐릭'(Michael Carrick)이
- * 풀네임으로만 있었다. 자모 유사도는 길이 차이 때문에 이 둘을 못 잇고, 네이버 검증은
- * LLM 이 낸 후보([카릭, 마이클 카릭, 미하엘 카릭])에 정답이 없어서 **오표기를 152건
- * 근거로 확정**했다. 같은 방식으로 'Xabi Alonso'가 '샤비 알론소'로 확정되기도 했다.
- *
- * 로마자는 LLM 이 거의 틀리지 않는다(누구인지는 안다) — 흔들리는 건 한글 음차뿐이다.
- * 그래서 로마자로 신원을 맞추고, **한글 표기는 사전을 따른다**. 사전이 네이버보다 위다.
- *
- * ⚠️ 유일할 때만 흡수한다. 'Silva' 한 토큰은 Gabriel Silva·Thiago Silva 양쪽의
- * 부분집합이라 아무 데나 붙을 수 있다 — 후보가 둘 이상이면 판단하지 않는다.
- *
- * 단 **정확 일치가 있으면 그것이 이긴다**. 같은 인물이 성씨 항목('캐릭')과 풀네임
- * 항목('마이클 캐릭')으로 둘 다 등재되는 건 정상인데(각포/코디 각포 선례), 부분집합만
- * 보면 둘 다 걸려 "모호함"으로 포기해버린다 — 실측에서 실제로 그랬다.
- */
-export function findUniqueRomanizedMatch(
-  dictionary: LoopDictionaryEntry[],
-  romanized: string | null
-): LoopDictionaryEntry | null {
-  const want = romanTokens(romanized)
-  if (want.length === 0) return null
-  const wantSet = new Set(want)
-  const wantKey = [...want].sort().join(" ")
-
-  // ① 로마자 토큰 집합이 정확히 같은 항목 (성씨 입력 → 성씨 항목)
-  const exact = dictionary.filter(
-    (d) => [...new Set(romanTokens(d.romanized))].sort().join(" ") === wantKey
-  )
-  if (exact.length === 1) return exact[0]
-  if (exact.length > 1) return null // 동명이인 — 판단하지 않는다
-
-  // ② 포함 관계 (성씨 입력 → 풀네임 항목, 또는 그 반대)
-  const subset = dictionary.filter((d) => {
-    const have = new Set(romanTokens(d.romanized))
-    if (have.size === 0) return false
-    return want.every((t) => have.has(t)) || [...have].every((t) => wantSet.has(t))
-  })
-  return subset.length === 1 ? subset[0] : null
-}
-
 /** verifySpelling 실패 사유 중 "판정 불가(인프라)"와 "근거 부족(판정)"의 구분 */
 function isInfraReason(reason: string | undefined): boolean {
   if (!reason) return false
@@ -120,7 +69,7 @@ export async function resolveUnknownPlayersViaNaver(
   cache?: Map<string, { preferred: string } | "unknown" | "infra">,
   dictionary: LoopDictionaryEntry[] = [],
   /** 등재 분류 — 호출부가 검사관에게서 역할을 받아 넘긴다 (감독을 선수로 등재 금지) */
-  category: NamingCategory = "player"
+  category: PersonCategory = "player"
 ): Promise<NamingLoopResult> {
   const result: NamingLoopResult = { registered: [], stillUnknown: [], infraFailed: [] }
   const memo = cache ?? new Map()
@@ -278,7 +227,7 @@ export async function registerVerifiedPlayer(
      * 등재 분류. 감독을 player 로 넣으면 무인 사서를 폐지시킨 그 오염("은퇴 레전드·
      * 감독을 선수로")이 재발한다 — 호출부가 역할을 알 때만 coach 를 넘길 것.
      */
-    category?: NamingCategory
+    category?: PersonCategory
   }
 ): Promise<string | null> {
   const category = input.category ?? "player"

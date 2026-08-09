@@ -2,9 +2,7 @@ import "server-only"
 
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
-import { unknownPlayerNames } from "@/lib/news/quality-gate"
-import { NAMING_CATEGORIES } from "@/lib/news/naming-normalize"
-import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
+import { loadNotation, unknownPersonNames } from "@/lib/news/notation"
 import {
   newsCandidateRunId,
   recordNewsCandidateEvents,
@@ -71,16 +69,12 @@ export async function requeueDraftsUnblockedByDictionary(
 ): Promise<DictionaryRecheckResult> {
   const result: DictionaryRecheckResult = { requeued: 0, stillBlocked: 0, failed: 0 }
 
-  // 발행 게이트와 같은 범위·같은 전량 조회여야 한다 — 게이트가 감독까지 보는데 여기가
-  // 선수만 보면 감독 등재로 풀린 초안이 영영 재평가되지 않는다 (2026-08-09).
-  // 1,000행 무음 절단도 같은 결과를 만든다 — 등재됐는데 안 풀리는 초안.
+  // 발행 게이트와 **같은 사전 뷰**를 써야 한다 — 범위가 어긋나면 등재로 풀린 초안이
+  // 영영 재평가되지 않는다 (2026-08-09: 게이트는 감독을 보는데 여기는 선수만 봤다).
+  // 이제 범위를 고를 수 없다: notation 모듈이 단독으로 소유한다.
   const [dictResult, { data: rows, error: rowsError }] = await Promise.all([
-    fetchDictionaryRows<{ preferred_ko: string; hangul_alts: string[] | null }>(
-      supabase,
-      "preferred_ko, hangul_alts",
-      NAMING_CATEGORIES
-    ).then(
-      (d) => ({ data: d, error: null as string | null }),
+    loadNotation(supabase).then(
+      (n) => ({ data: n.persons, error: null as string | null }),
       (e: unknown) => ({ data: null, error: e instanceof Error ? e.message : String(e) })
     ),
     supabase
@@ -109,7 +103,7 @@ export async function requeueDraftsUnblockedByDictionary(
     const names = parseDictionaryOnlyReasons(gate)
     if (!names) continue // 사전과 무관한 반려(검사관·이미지·중복)는 건드리지 않는다
 
-    if (unknownPlayerNames(names, dictionary).length > 0) {
+    if (unknownPersonNames(names, dictionary).length > 0) {
       result.stillBlocked++
       continue
     }

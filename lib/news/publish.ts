@@ -5,9 +5,9 @@ import { isContentFreeText } from "@/lib/news/content-quality"
 import {
   applyNamingPairs,
   applyNamingPairsToTipTap,
-  fetchNamingPairs,
-} from "@/lib/news/naming-normalize"
-import { fetchSourceLabelMap, normalizeSourceLabel } from "@/lib/news/source-label"
+  loadNotationSafe,
+  normalizeSourceLabel,
+} from "@/lib/news/notation"
 import { extractFirstImageSrcFromTipTapJSON } from "@/lib/utils/tiptap-embeds"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import { notifyNewsPublished, resolveNewsChannel } from "@/lib/discord/news-notify"
@@ -124,22 +124,22 @@ export async function publishNewsDraft(
   // 사전이 아는 옛 표기(hangul_alts)를 대표 표기로 치환하고 발행한다. 게이트는
   // "등재 여부"만 보므로 옛 표기도 통과하는데, 그 값을 그대로 실으면 안 된다.
   // 결정론 치환만 — 미등재 이름의 네이버 검증은 소급 naming-audit 몫 (설계 근거는
-  // lib/news/naming-normalize.ts 주석).
-  const namingPairs = await fetchNamingPairs(supabase)
-  if (namingPairs.length > 0) {
+  // lib/news/notation/rules.ts 주석).
+  // 사전은 한 번만 읽는다 — 인물 치환과 출처 라벨이 같은 뷰를 공유한다
+  const notation = await loadNotationSafe(supabase)
+  if (notation.pairs.length > 0) {
     opts = {
       ...opts,
-      title: applyNamingPairs(opts.title, namingPairs),
-      content: applyNamingPairsToTipTap(opts.content, namingPairs),
+      title: applyNamingPairs(opts.title, notation.pairs),
+      content: applyNamingPairsToTipTap(opts.content, notation.pairs),
     }
   }
 
   // ── 출처 라벨 표기 통일 (2026-08-09) ──
   // [The Athletic] → [디 애슬레틱]. 같은 매체가 영문·한글로 섞여 나가던 것을 막는다.
   // **제목 대괄호만** 건드린다 — 본문 치환은 'Goal'→'골닷컴' 류 오탐이 확실해서 금지.
-  const sourceLabels = await fetchSourceLabelMap(supabase)
-  if (sourceLabels.size > 0) {
-    opts = { ...opts, title: normalizeSourceLabel(opts.title, sourceLabels) }
+  if (notation.labels.size > 0) {
+    opts = { ...opts, title: normalizeSourceLabel(opts.title, notation.labels) }
   }
 
   // 긴 단일 문단 → 2~3문장 단위 문단 분할 (가독성, 2026-08-04 운영자)

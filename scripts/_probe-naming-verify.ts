@@ -10,9 +10,7 @@
 import "dotenv/config"
 import { createClient } from "@supabase/supabase-js"
 import { verifySpelling } from "@/lib/naming/verify"
-import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
-import { findUniqueRomanizedMatch } from "@/lib/news/naming-verify-loop"
-import type { LoopDictionaryEntry } from "@/lib/news/naming-verify-loop"
+import { findUniqueRomanizedMatch, loadNotation } from "@/lib/news/notation"
 
 const CASES: [name: string, context: string, correct: string][] = [
   ["카릭", "카릭, 래시포드 다음 주 복귀 확인", "캐릭"],
@@ -39,11 +37,7 @@ async function main() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error("Supabase 자격증명 필요")
   const supabase = createClient(url, key)
-  const dict = await fetchDictionaryRows<LoopDictionaryEntry>(
-    supabase,
-    "id, preferred_ko, romanized, surfaces, hangul_alts",
-    ["player", "coach"]
-  )
+  const { persons: dict } = await loadNotation(supabase)
   console.log(`사전 ${dict.length}건 로드`)
 
   for (const [name, , correct] of CASES) {

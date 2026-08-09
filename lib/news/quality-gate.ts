@@ -185,26 +185,3 @@ export const WOMENS_FOOTBALL_RE =
 export function isWomensFootball(...texts: (string | null | undefined)[]): boolean {
   return WOMENS_FOOTBALL_RE.test(texts.filter(Boolean).join(" "))
 }
-
-/**
- * 표기 사전 게이트 — 기사 속 선수 한글 표기가 사전에 없으면 자동발행 제외.
- * 환각 음차("기마랑에")·오식별("Luis Hall") 차단. 사전은 검수·교정 학습으로
- * 계속 자라므로 커버리지는 시간이 해결한다. 미등재 = 사람 검수로 강등일 뿐.
- */
-export function unknownPlayerNames(
-  namesKr: string[],
-  dictionary: { preferred_ko: string; hangul_alts: string[] | null }[]
-): string[] {
-  const known = new Set<string>()
-  for (const d of dictionary) {
-    known.add(d.preferred_ko.replace(/\s+/g, ""))
-    for (const alt of d.hangul_alts ?? []) known.add(alt.replace(/\s+/g, ""))
-  }
-  return namesKr.filter((n) => {
-    const key = n.replace(/\s+/g, "")
-    if (known.has(key)) return false
-    // 성/이름 부분 표기 허용 — "브루노 기마랑이스" 등재 시 "기마랑이스"도 통과
-    for (const k of known) if (k.includes(key) || key.includes(k)) return false
-    return true
-  })
-}

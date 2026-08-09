@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
-import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
+import { loadNotationSafe } from "@/lib/news/notation"
 import type { TipTapNode } from "@/types/post"
 
 export const dynamic = "force-dynamic"
-
-/** 확정 표기 힌트 대상 — 인물(선수·감독) + 구단 + 매체·기자 */
-const NAMING_HINT_CATEGORIES = ["player", "coach", "team", "media"] as const
 
 /**
  * GET/POST /api/news/correction-examples  (CRON_SECRET)
@@ -83,40 +80,10 @@ async function handler(req: NextRequest) {
     })
     .slice(0, 2)
 
-  const naming = await fetchNamingHints(supabase)
+  // 확정 표기 힌트 — 규칙(무엇을 en 으로 볼지)은 notation 모듈이 소유한다
+  const { hints: naming } = await loadNotationSafe(supabase)
 
   return NextResponse.json({ examples, articles, naming })
-}
-
-/**
- * 확정 표기 사전 → 스캐너가 원문 매칭에 쓸 수 있는 형태 `{ ko, en[] }`.
- *
- * en 은 **원문(영어)에 실제로 나타날 수 있는 형태만** 남긴다:
- *  - 도메인(theathletic.com)은 기사 본문에 안 나오므로 제외
- *  - 한글은 영어 원문 매칭에 무의미하므로 제외
- *  - 3자 이하는 제외 — 'as'·'om' 같은 약어가 아무 문장에나 걸린다 (source-label 과 같은 규율)
- */
-async function fetchNamingHints(
-  supabase: ReturnType<typeof createServiceRoleClient>
-): Promise<{ ko: string; en: string[] }[]> {
-  // ⚠️ 전량 조회 — PostgREST 1,000행 무음 절단에 걸리면 사전 꼬리가 통째로 사라진다
-  // (실측: 1,041행 중 955건만 도착, 새로 등재한 매체 항목이 전부 누락됐다)
-  const data = await fetchDictionaryRows<{
-    preferred_ko: string | null
-    romanized: string | null
-    surfaces: string[] | null
-  }>(supabase, "preferred_ko, romanized, surfaces", NAMING_HINT_CATEGORIES)
-
-  const out: { ko: string; en: string[] }[] = []
-  for (const row of data) {
-    const ko = row.preferred_ko?.trim()
-    if (!ko) continue
-    const en = [...new Set([row.romanized ?? "", ...(row.surfaces ?? [])])]
-      .map((s) => s.trim().toLowerCase())
-      .filter((s) => s.length > 3 && !s.includes(".") && !/[가-힣]/.test(s))
-    if (en.length > 0) out.push({ ko, en })
-  }
-  return out
 }
 
 export const GET = handler

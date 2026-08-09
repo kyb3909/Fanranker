@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireStaffApi } from "@/lib/admin/roles"
-import { unknownPlayerNames } from "@/lib/news/quality-gate"
+import { unknownPersonNames } from "@/lib/news/notation"
 import { requeueDraftsUnblockedByDictionary } from "@/lib/news/dictionary-recheck"
 import {
   parseUnknownNames,
@@ -82,7 +82,7 @@ export async function GET() {
 
   // 반려 이후 등재된 이름은 목록에서 사라진다 — 게이트와 같은 판정 함수를 쓴다
   const stillUnknown = new Set(
-    unknownPlayerNames(
+    unknownPersonNames(
       parsed.map((p) => p.name),
       dictionary.map((d) => ({ preferred_ko: d.preferred_ko, hangul_alts: d.hangul_alts }))
     )
