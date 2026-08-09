@@ -297,6 +297,14 @@ export function findNotationViolations(
   for (const d of dictionary) {
     for (const alt of d.hangul_alts ?? []) {
       if (!alt || alt.length < 2 || alt === d.preferred_ko) continue
+      // ⚠️ alt 가 대표 표기를 **포함**하면 그건 오표기가 아니라 더 긴 정식 표기다.
+      // hangul_alts 에는 성질이 다른 두 가지가 섞여 산다:
+      //   · 진짜 오표기      — '하비 알론소'(정: 사비 알론소), '카릭'(정: 캐릭)
+      //   · 더 긴 정식 표기  — 'FC 바르셀로나'(대표: 바르셀로나), '마테오 모레토'(대표: 모레토)
+      // 후자는 축약형을 대표로 쓰려고 등재한 것이지 틀린 게 아니다. 제목 라벨은 통일하되
+      // 본문에 있다고 위반으로 올리면 첫날부터 오탐이 쏟아지고, **시끄러운 감시는 곧
+      // 무시당해 없느니만 못하다**. 포함 관계 한 줄이 둘을 정확히 가른다.
+      if (alt.includes(d.preferred_ko)) continue
       if (haystack.includes(alt)) {
         out.push({ entryId: d.id, alt, preferred: d.preferred_ko })
       }
