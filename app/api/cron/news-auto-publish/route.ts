@@ -17,7 +17,10 @@ import {
   inspectImage,
   PERSONAL_BLOG_RE,
   isWomensFootball,
+  isWomensFootballSource,
 } from "@/lib/news/quality-gate"
+import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import type { TipTapNode } from "@/types/post"
 import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
 import { addRuntimePerson, loadNotationSafe, unknownPersonNames } from "@/lib/news/notation"
@@ -281,11 +284,18 @@ async function run(request: NextRequest) {
       noteSkip(row.id, "personal_blog")
       continue
     }
-    // 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04). 관심도 필터가 1차
-    // 반려하지만 필터 사이클 전에 발행되는 걸 막는 이중 방어. 한국어 번역 제목에선
-    // 성별 표기가 지워지는 실사고(몰리 바트립 — 구단 URL 에만 women 표기)가 있어
-    // **출처 URL·영문 원제까지** 함께 검사한다.
-    if (isWomensFootball(title, row.urls?.source, row.draft?.original?.title)) {
+    // 여자 축구 — 서비스 커버리지 밖 (운영자 확정 2026-08-04, 2026-08-09 재확인).
+    //
+    // ⚠️ 2026-08-09 까지 여기는 `row.draft?.original?.title` 을 검사했는데, 그 필드는
+    // 스캐너가 아예 보내지 않아 **항상 null** 이었다 — 몰리 바트립 사고 후 세운 방어가
+    // 한 번도 실행된 적이 없다. 그 사이 케롤린(맨시티 여자팀 → 바르셀로나) 기사가
+    // 발행됐고, 원문에 'WSL' 이 6회 있었는데도 아무도 원문을 안 봤다.
+    // 이제 실제로 존재하는 것만 검사한다: 한국어 제목·본문 + 출처 URL + **원문 리드**.
+    const koreanLead = extractTextFromTipTapJSON(content as TipTapNode).slice(0, 800)
+    if (
+      isWomensFootball(title, row.urls?.source, koreanLead) ||
+      isWomensFootballSource(row.raw?.source_text)
+    ) {
       noteSkip(row.id, "womens_football")
       continue
     }

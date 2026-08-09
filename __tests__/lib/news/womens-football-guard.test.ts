@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isWomensFootball } from "@/lib/news/quality-gate"
+import { isWomensFootball, isWomensFootballSource } from "@/lib/news/quality-gate"
 
 /**
  * 여자 축구 가드 — 운영자 확정 정책(전면 제외)이라 **놓치면 안 되는 쪽**이 훨씬 중요하다.
@@ -66,5 +66,64 @@ describe("여자 축구 가드 — 잡으면 안 되는 것", () => {
         "https://www.bbc.co.uk/sport/football/articles/abc"
       )
     ).toBe(false)
+  })
+})
+
+/**
+ * 2026-08-09 케롤린 실사고 — 한국어 번역에는 성별 단서가 남지 않는다.
+ * 게이트가 검사하던 `draft.original.title` 은 스캐너가 안 보내는 필드라 **항상 null**
+ * 이었고(몰리 바트립 사고 후 세운 방어가 한 번도 실행된 적 없음), 원문에 WSL 이 6회
+ * 있었는데도 통과했다. 그래서 원문 리드를 본다 — 다만 밀도로 봐야 한다:
+ * BBC·가디언 페이지는 사이드바에 women's football 링크가 섞여, 문자열 존재만으로
+ * 막으면 실측 10건 중 8건이 남자 기사 오탐이었다.
+ */
+describe("isWomensFootballSource — 원문 리드 밀도", () => {
+  it("리드에 WSL 이 있으면 차단 (케롤린 실사고 원문)", () => {
+    const real =
+      "City taken aback by forward's absence from training\n" +
+      "WSL champions wait two days before mentioning deal\n" +
+      "The Brazil forward Kerolin failed to report back for pre-season training at " +
+      "Manchester City in July before her transfer to Barcelona had been agreed. " +
+      "Manchester City eventually confirmed they had received a WSL record fee."
+    expect(isWomensFootballSource(real)).toBe(true)
+  })
+
+  it("스페인어·카탈루냐어 여성형도 잡는다", () => {
+    expect(
+      isWomensFootballSource(
+        "El FC Barcelona femenino tiene ante sí el reto. La jugadora llega hoy."
+      )
+    ).toBe(true)
+  })
+
+  it("⚠️ 사이드바에 women 1회 섞인 남자 기사는 통과 — 오탐이 진짜 알림을 죽인다", () => {
+    const mensNews =
+      "West Ham co-owner David Sullivan has been advised to stay away from home matches " +
+      "while an investigation continues. The club said it would cooperate fully. " +
+      "More from BBC Sport: Women's Super League fixtures announced."
+    expect(isWomensFootballSource(mensNews)).toBe(false)
+  })
+
+  it("원문이 없으면 판정하지 않는다 (없는 근거로 막지 않는다)", () => {
+    expect(isWomensFootballSource(null)).toBe(false)
+    expect(isWomensFootballSource("")).toBe(false)
+  })
+})
+
+describe("여자 월드컵·리그 표기 (패턴 누락 실사고)", () => {
+  it("'여자 월드컵'을 잡는다 — 기존 패턴에 이 조합이 없어 U20 기사가 발행됐다", () => {
+    expect(isWomensFootball("UEFA 보이콧 위협 속 프랑스, U20 여자 월드컵 출전 계획 유지")).toBe(
+      true
+    )
+  })
+
+  it("여자 리그·선수·국가대표 표기도 잡는다", () => {
+    for (const t of ["여자 리그 개막", "여자 선수 영입", "여자 국가대표 명단"]) {
+      expect(isWomensFootball(t)).toBe(true)
+    }
+  })
+
+  it("맥스 도우먼은 여전히 통과한다 (한글 낱말 경계 오탐 방지 회귀)", () => {
+    expect(isWomensFootball("아스날 맥스 도우먼, 프리미어리그 데뷔")).toBe(false)
   })
 })

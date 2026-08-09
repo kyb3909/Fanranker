@@ -180,8 +180,39 @@ export const PERSONAL_BLOG_RE =
  * 남자 기사가 잘못 걸리는 것만 막는 수정이다.
  */
 export const WOMENS_FOOTBALL_RE =
-  /여자\s*축구|여자\s*팀|여자부|여자\s*대표팀|여성\s*축구|여축|(?<![가-힣])(?:위민|우먼)|women'?s?\b|\bwoman\b|\bWSL\b|\bNWSL\b|\bUWCL\b|frauen|femenin[ao]|féminin/i
+  /여자\s*(?:축구|팀|부|대표팀|월드컵|리그|선수|국가대표|프로|클럽)|여성\s*축구|여축|(?<![가-힣])(?:위민|우먼)|women'?s?\b|\bwoman\b|\bWSL\b|\bNWSL\b|\bUWCL\b|frauen|femenin[ao]|féminin/i
 
 export function isWomensFootball(...texts: (string | null | undefined)[]): boolean {
   return WOMENS_FOOTBALL_RE.test(texts.filter(Boolean).join(" "))
+}
+
+/**
+ * 원문(영어·스페인어 등) 리드 기반 여자축구 판정 (2026-08-09).
+ *
+ * 왜 따로 필요한가: **한국어 번역에는 성별 단서가 남지 않는다.** 케롤린 실사고에서
+ * 원문에 'WSL'이 6회 나오는데 한국어 제목·본문에는 '여자'가 한 글자도 없었다.
+ * 그런데 그때 게이트가 검사하던 세 번째 인자(`draft.original.title`)는 스캐너가 아예
+ * 보내지 않는 필드라 **항상 null** — 몰리 바트립 사고 후 세운 방어가 한 번도 실행된
+ * 적이 없었다. 그래서 원문 자체를 본다.
+ *
+ * ⚠️ 문자열 존재만으로 차단하면 안 된다. BBC·가디언 페이지는 사이드바에 women's
+ * football 링크가 섞여 들어와서, 실측 10건 중 8건이 남자 기사 오탐이었다.
+ * 판별자는 **위치와 밀도**다 — 진짜 여자축구는 리드에 단서가 몰리고, 사이드바
+ * 노이즈는 뒤쪽에 흩어진다:
+ *   케롤린(여자)   리드 WSL 2회        → 차단
+ *   웨스트햄(남자) 리드 women 1회      → 통과
+ *   남자 8건       리드 0~1회          → 통과
+ */
+const WOMENS_LEAD_CHARS = 900
+/** 여자 리그·대회 — 리드에 있으면 그 자체로 확정 (남자 기사에 나올 이유가 없다) */
+const WOMENS_LEAGUE_RE = /\b(?:WSL|NWSL|UWCL|Liga F|Frauen[- ]?Bundesliga|D1 Arkema)\b/gi
+/** 성별 표현 — 사이드바에 1회씩 섞이므로 2회 이상일 때만 신호로 본다 */
+const WOMENS_WORD_RE =
+  /women'?s?\b|\bfemenin[ao]\b|\bfemení\b|\bjugadora\b|\bdavantera\b|\bfrauen\b/gi
+
+export function isWomensFootballSource(sourceText: string | null | undefined): boolean {
+  if (!sourceText) return false
+  const lead = sourceText.slice(0, WOMENS_LEAD_CHARS)
+  if ((lead.match(WOMENS_LEAGUE_RE) ?? []).length > 0) return true
+  return (lead.match(WOMENS_WORD_RE) ?? []).length >= 2
 }

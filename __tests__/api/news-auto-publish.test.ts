@@ -41,6 +41,8 @@ vi.mock("@/lib/news/quality-gate", () => ({
   PERSONAL_BLOG_RE: /substack\.com/i,
   isWomensFootball: (...texts: (string | null | undefined)[]) =>
     /women|여자\s*축구/i.test(texts.filter(Boolean).join(" ")),
+  // 원문 리드 기반 판정 (2026-08-09 케롤린 실사고) — 한국어에는 성별 단서가 안 남는다
+  isWomensFootballSource: (src: string | null | undefined) => /\bWSL\b/.test(src ?? ""),
 }))
 vi.mock("@/lib/saga/cluster", () => ({ titleSimilarity: () => 0 }))
 const rehostMock = vi.fn(async (src: string, _userId?: string) => src)
