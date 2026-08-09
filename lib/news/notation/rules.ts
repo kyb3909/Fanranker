@@ -108,10 +108,20 @@ const TLD_PARTS = new Set([
 
 /**
  * 짧은 키는 버린다. `[AFC]`가 아스널로, `[OM]`이 마르세유로 둔갑하는 것을 막는다.
- * 3자 이하 약어(bbc·espn·psg…)는 대부분 preferred 와 같아 어차피 바뀔 게 없고,
- * 다른 뜻일 위험만 남는다 — 놓치는 건 안전하지만 엉뚱하게 바꾸는 건 안전하지 않다.
+ * 3자 이하 **로마자** 약어(afc·om·psg…)는 다른 뜻일 위험이 크다.
+ *
+ * ⚠️ 한글은 기준이 다르다. '모레토'(3자)는 약어가 아니라 온전한 이름인데 4자 하한에
+ * 걸려 키가 안 만들어졌고, 그 결과 **사전에 있는데도 "모르는 라벨"로 취급돼**
+ * `[모레토]` 가 도메인 폴백으로 `[야후 스포츠]` 가 될 뻔했다(2026-08-09 드라이런).
+ * 한글 3자 조합이 다른 뜻일 확률은 로마자 약어와 비교가 안 된다.
  */
-const MIN_LABEL_KEY_LENGTH = 4
+function isLabelKeyUsable(key: string, fromDomain = false): boolean {
+  if (/[가-힣]/.test(key)) return key.length >= 2
+  // 도메인에서 나온 키는 약어와 다르다 — 'bbc'(bbc.com)는 모호하지 않은데 4자 하한에
+  // 걸려 키가 안 만들어졌고, 그래서 `[Mokbel]`(source_url=bbc.com)이 `[BBC]` 로
+  // 못 바뀌었다. 위험한 건 팀 surfaces 의 약어('afc')지 도메인이 아니다.
+  return fromDomain ? key.length >= 3 : key.length >= 4
+}
 
 /** 비교용 키 — 대소문자·공백·구두점을 접는다 ("The Athletic" ≡ "theathletic.com"의 몸통) */
 export function sourceKey(s: string): string {
@@ -136,8 +146,12 @@ export function buildSourceLabelMap(
   const map = new Map<string, string>()
   const add = (raw: string | null | undefined, preferred: string) => {
     if (!raw) return
-    for (const key of [sourceKey(raw), domainBody(raw)]) {
-      if (key.length < MIN_LABEL_KEY_LENGTH) continue
+    const looksLikeDomain = raw.includes(".")
+    for (const [key, fromDomain] of [
+      [sourceKey(raw), false],
+      [domainBody(raw), looksLikeDomain],
+    ] as const) {
+      if (!isLabelKeyUsable(key, fromDomain)) continue
       if (!map.has(key)) map.set(key, preferred)
     }
   }
@@ -163,13 +177,61 @@ const LABEL_RE = /^\[([^\]]{1,40})\]/
  * 'Goal' → '골닷컴'을 본문에 걸면 "Goal of the season"이 박살난다. 라벨은 위치가
  * 고정돼 있어서 오탐이 원천적으로 불가능하다는 것이 이 설계의 전부다.
  */
-export function normalizeSourceLabel(title: string, map: Map<string, string>): string {
+export function normalizeSourceLabel(
+  title: string,
+  map: Map<string, string>,
+  /**
+   * 원문 URL. 라벨이 사전에 **없을 때만** 이 도메인으로 매체명을 채운다 (2026-08-09).
+   *
+   * 왜 필요한가: 스캐너가 레딧 원제의 대괄호를 그대로 옮겨서 `[Tom Garry]` `[Mokbel]`
+   * `[Stone]` 같은 **기자 성씨 영문**이 제목에 나간다. 독자에게 아무 의미가 없고
+   * 신뢰도 판단도 못 하게 만든다 — 게다가 `[Mokbel]` 의 source_url 은 bbc.com 이라
+   * 다른 기사의 `[BBC]` 와 같은 매체인데 이름이 갈린다.
+   * 도메인은 LLM 이 지어낼 수 없는 사실이므로, 모르는 라벨보다 언제나 낫다.
+   *
+   * ⚠️ 사전에 **있는** 라벨은 건드리지 않는다 — `[로마노]` `[온스테인]` 처럼 기자명이
+   * 매체명보다 정보가 많은 경우가 있고, 그건 이미 운영자가 등재해 인정한 것이다.
+   *
+   * ⚠️ **한글 라벨도 건드리지 않는다.** 폴백의 목적은 "독자가 못 읽는 라벨"을 없애는
+   * 것이지 기자명을 매체명으로 바꾸는 게 아니다. 드라이런에서 `[루크 에드워즈]` →
+   * `[텔레그래프]`, `[게타페]` → `[마르카]` 처럼 **정보가 오히려 줄어드는** 변환이
+   * 나왔다. 한글로 적혀 있으면 이미 읽을 수 있으므로 그대로 둔다.
+   */
+  sourceUrl?: string | null
+): string {
   const m = LABEL_RE.exec(title)
   if (!m) return title
   const label = m[1].trim()
   const preferred = map.get(sourceKey(label))
-  if (!preferred || preferred === label) return title
-  return `[${preferred}]${title.slice(m[0].length)}`
+  if (preferred) return preferred === label ? title : `[${preferred}]${title.slice(m[0].length)}`
+
+  if (/[가-힣]/.test(label)) return title
+  const fromDomain = sourceUrl ? lookupBySourceUrl(map, sourceUrl) : undefined
+  if (!fromDomain || fromDomain === label) return title
+  return `[${fromDomain}]${title.slice(m[0].length)}`
+}
+
+/**
+ * URL → 매체 표기. **호스트만 보면 안 된다** — The Athletic 기사는 전부
+ * `nytimes.com/athletic/...` 로 온다(실측 6건 전수). 호스트로만 판정하면 디 애슬레틱
+ * 기사가 뉴욕타임스로 나간다. 그래서 `host/첫경로` 를 먼저 찾고, 없으면 호스트로 내린다.
+ */
+function lookupBySourceUrl(map: Map<string, string>, url: string): string | undefined {
+  let host = ""
+  let seg = ""
+  try {
+    const u = new URL(url)
+    host = u.hostname.replace(/^www\./, "")
+    seg = u.pathname.split("/").filter(Boolean)[0] ?? ""
+  } catch {
+    return undefined
+  }
+  if (!host) return undefined
+  if (seg) {
+    const scoped = map.get(domainBody(`${host}/${seg}`)) ?? map.get(sourceKey(`${host}/${seg}`))
+    if (scoped) return scoped
+  }
+  return map.get(domainBody(host))
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -118,7 +118,7 @@ async function cronGet(request: NextRequest) {
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, title, content")
+    .select("id, title, content, source_url")
     .eq("user_id", NEWS_BOT)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
@@ -180,7 +180,12 @@ async function cronGet(request: NextRequest) {
     const originalTitle = post.title as string
     const namedTitle = applyToText(originalTitle, pairs)
     // 출처 라벨 통일도 같은 회차에 — 발행 경로와 **같은 함수**를 써서 규칙이 두 벌 되지 않게
-    const newTitle = normalizeSourceLabel(namedTitle, sourceLabels)
+    // 원문 URL 을 함께 — 라벨이 사전에 없으면 도메인으로 매체명을 채운다 (발행 경로와 동일)
+    const newTitle = normalizeSourceLabel(
+      namedTitle,
+      sourceLabels,
+      post.source_url as string | null
+    )
     const labelChanged = newTitle !== namedTitle
 
     if (pairs.length === 0 && !labelChanged) {

@@ -25,7 +25,7 @@ async function main() {
 
   const { data, error } = await supabase
     .from("posts")
-    .select("id, title")
+    .select("id, title, source_url")
     .eq("user_id", NEWS_BOT)
     .is("deleted_at", null)
     .like("title", "[%")
@@ -36,7 +36,7 @@ async function main() {
     .map((p) => ({
       id: p.id as string,
       from: p.title as string,
-      to: normalizeSourceLabel(p.title as string, map),
+      to: normalizeSourceLabel(p.title as string, map, p.source_url as string | null),
     }))
     .filter((c) => c.from !== c.to)
 

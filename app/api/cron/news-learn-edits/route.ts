@@ -5,7 +5,9 @@ import { withCronLog } from "@/lib/cron/log-run"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { learnFromDeskEdit } from "@/lib/news/learn-corrections"
 
-export const maxDuration = 60
+// 60 이었다가 발행량이 늘며 실제 소요가 넘어섰다(36s→48s→초과). 일괄 조회로 원인은
+// 없앴지만, 상한도 형제 뉴스 cron 과 맞춘다 — 타임아웃은 로그조차 안 남는다.
+export const maxDuration = 300
 export const dynamic = "force-dynamic"
 
 /**
@@ -24,6 +26,11 @@ export const dynamic = "force-dynamic"
 const LOOKBACK_DAYS = 14
 /** LLM 호출 상한 (run 당) — 하루 발행 ≤20건이라 실제로는 닿지 않는다 */
 const MAX_LEARN_PER_RUN = 20
+/**
+ * 훑을 발행분 상한. 14일 × 30~45건이면 500건을 넘고, 그게 타임아웃의 실제 원인이었다.
+ * 최신순이라 잘리는 건 가장 오래된 것들이고, 그건 이미 이전 회차가 처리했다.
+ */
+const MAX_SCAN_PER_RUN = 300
 
 /** TipTap JSON → 문단 텍스트 (learn-from-edits.js 와 같은 규칙 — 해시 호환) */
 function tiptapText(node: unknown, out: string[] = []): string[] {
@@ -72,7 +79,36 @@ async function cronGet(request: Request) {
     .select("id, publish, audit, draft")
     .eq("status", "published")
     .gte("updated_at", since)
+    .order("updated_at", { ascending: false })
+    .limit(MAX_SCAN_PER_RUN)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // ── posts 일괄 조회 (2026-08-09 타임아웃 수리) ──
+  // 예전에는 항목마다 posts 를 개별 조회했다(N+1). 14일치가 500건을 넘으면서 diff 를
+  // 보기도 전에 왕복만 500회가 됐고, 실측 소요가 36s → 48s → **60s 초과**로 늘어
+  // 3일간 회차가 통째로 사라졌다. 더 나쁜 건 `withCronLog` 가 로그를 finally 에 쓰기
+  // 때문에 **타임아웃은 기록조차 남지 않는다** — "죽음"과 "미실행"이 구분되지 않았다.
+  // (탐지 자체는 invariant-audit 의 cron_heartbeat 가 해냈다.)
+  const postIds = (items ?? [])
+    .map((i) => {
+      const p = (i.publish ?? {}) as { post_id?: string; postId?: string }
+      return p.post_id ?? p.postId
+    })
+    .filter((id): id is string => !!id)
+
+  const postById = new Map<
+    string,
+    { id: string; title: string; content: unknown; deleted_at: string | null }
+  >()
+  for (let i = 0; i < postIds.length; i += 200) {
+    const { data: rows } = await supabase
+      .from("posts")
+      .select("id, title, content, deleted_at")
+      .in("id", postIds.slice(i, i + 200))
+    for (const r of rows ?? []) {
+      postById.set(r.id as string, r as never)
+    }
+  }
 
   let checked = 0
   let edited = 0
@@ -92,11 +128,7 @@ async function cronGet(request: Request) {
     if (!postId || !draft?.title || !draft.content) continue
     checked++
 
-    const { data: post } = await supabase
-      .from("posts")
-      .select("id, title, content, deleted_at")
-      .eq("id", postId)
-      .maybeSingle()
+    const post = postById.get(postId)
     if (!post || post.deleted_at) continue
 
     const originalText = norm([draft.title, ...tiptapText(draft.content)].join("\n"))

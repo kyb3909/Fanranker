@@ -109,3 +109,170 @@ describe("sourceKey / buildSourceLabelMap", () => {
     expect(dup.get("samename")).toBe("먼저")
   })
 })
+
+/**
+ * 2026-08-09: 스캐너가 레딧 원제의 대괄호를 그대로 옮겨 `[Tom Garry]` `[Mokbel]`
+ * 같은 기자 성씨 영문이 제목에 나갔다. 독자에게 의미가 없고, `[Mokbel]` 의
+ * source_url 은 bbc.com 이라 다른 기사의 `[BBC]` 와 같은 매체인데 이름이 갈렸다.
+ * 도메인은 LLM 이 지어낼 수 없는 사실이므로 모르는 라벨보다 언제나 낫다.
+ */
+describe("normalizeSourceLabel — 원문 도메인 폴백", () => {
+  it("사전에 없는 기자 성씨 영문은 도메인의 매체명으로 바꾼다", () => {
+    expect(
+      normalizeSourceLabel(
+        "[Tom Garry] 맨시티 소식",
+        MAP,
+        "https://www.theguardian.com/football/2026/aug/06/x"
+      )
+    ).toBe("[가디언] 맨시티 소식")
+  })
+
+  it("⚠️ 사전에 있는 기자명은 보존한다 — 매체명보다 정보가 많고 운영자가 인정한 것", () => {
+    const t = "[온스테인] 단독"
+    expect(normalizeSourceLabel(t, MAP, "https://www.theguardian.com/x")).toBe(t)
+  })
+
+  it("도메인도 모르면 손대지 않는다 (모르면 두는 것이 fail-safe)", () => {
+    const t = "[KSTA] 쾰른 소식"
+    expect(normalizeSourceLabel(t, MAP, "https://www.ksta.de/x")).toBe(t)
+    expect(normalizeSourceLabel(t, MAP, null)).toBe(t)
+  })
+
+  it("깨진 URL 이어도 죽지 않는다", () => {
+    const t = "[Tom Garry] 소식"
+    expect(normalizeSourceLabel(t, MAP, "not-a-url")).toBe(t)
+  })
+
+  it("라벨이 이미 사전 표기면 URL 과 무관하게 그대로", () => {
+    expect(normalizeSourceLabel("[디 애슬레틱] 소식", MAP, "https://www.bbc.com/x")).toBe(
+      "[디 애슬레틱] 소식"
+    )
+  })
+})
+
+/**
+ * 드라이런에서 나온 개악 3종 회귀 방지 (2026-08-09).
+ * 폴백의 목적은 "독자가 못 읽는 라벨" 제거지, 정보를 줄이는 게 아니다.
+ */
+describe("도메인 폴백이 정보를 줄이지 않는다", () => {
+  const M = buildSourceLabelMap([
+    {
+      preferred_ko: "모레토",
+      romanized: "Matteo Moretto",
+      surfaces: ["moretto"],
+      hangul_alts: null,
+    },
+    {
+      preferred_ko: "야후 스포츠",
+      romanized: "sports.yahoo.com",
+      surfaces: ["sports.yahoo.com"],
+      hangul_alts: null,
+    },
+    {
+      preferred_ko: "텔레그래프",
+      romanized: "telegraph.co.uk",
+      surfaces: ["telegraph.co.uk"],
+      hangul_alts: null,
+    },
+    {
+      preferred_ko: "가디언",
+      romanized: "theguardian.com",
+      surfaces: ["theguardian.com"],
+      hangul_alts: null,
+    },
+  ])
+
+  it("⚠️ 3자 한글 이름도 키가 된다 — '모레토'가 하한 4자에 걸려 덮이면 안 된다", () => {
+    expect(M.get("모레토")).toBe("모레토")
+    expect(normalizeSourceLabel("[모레토] 소식", M, "https://sports.yahoo.com/x")).toBe(
+      "[모레토] 소식"
+    )
+  })
+
+  it("⚠️ 사전에 없어도 한글 라벨이면 손대지 않는다 — 기자명이 매체명보다 정보가 많다", () => {
+    const t = "[루크 에드워즈] 뉴캐슬 소식"
+    expect(normalizeSourceLabel(t, M, "https://www.telegraph.co.uk/x")).toBe(t)
+  })
+
+  it("로마자 라벨만 도메인으로 채운다 (원래 목적)", () => {
+    expect(normalizeSourceLabel("[Tom Garry] 소식", M, "https://www.theguardian.com/x")).toBe(
+      "[가디언] 소식"
+    )
+  })
+
+  it("3자 이하 로마자 약어는 여전히 키가 아니다 ([AFC]→아스널 방지 회귀)", () => {
+    const A = buildSourceLabelMap([
+      {
+        preferred_ko: "아스널",
+        romanized: "Arsenal FC",
+        surfaces: ["arsenal", "afc"],
+        hangul_alts: null,
+      },
+    ])
+    expect(A.has("afc")).toBe(false)
+  })
+})
+
+/**
+ * The Athletic 기사는 전부 `nytimes.com/athletic/...` 로 온다(실측 6건 전수).
+ * 호스트만 보면 디 애슬레틱 기사가 뉴욕타임스로 나간다.
+ */
+describe("멀티브랜드 호스트 (nytimes.com/athletic)", () => {
+  const M = buildSourceLabelMap([
+    {
+      preferred_ko: "디 애슬레틱",
+      romanized: "theathletic.com",
+      surfaces: ["theathletic.com", "nytimes.com/athletic"],
+      hangul_alts: null,
+    },
+    {
+      preferred_ko: "뉴욕타임스",
+      romanized: "nytimes.com",
+      surfaces: ["nytimes.com"],
+      hangul_alts: null,
+    },
+  ])
+
+  it("경로가 /athletic 이면 디 애슬레틱", () => {
+    expect(
+      normalizeSourceLabel(
+        "[Jack Pitt-Brooke] 반 데 벤 재계약",
+        M,
+        "https://www.nytimes.com/athletic/6945026/2026/08/06/x/?utm=1"
+      )
+    ).toBe("[디 애슬레틱] 반 데 벤 재계약")
+  })
+
+  it("같은 호스트라도 다른 경로면 뉴욕타임스", () => {
+    expect(normalizeSourceLabel("[Somebody] 기사", M, "https://www.nytimes.com/2026/08/06/x")).toBe(
+      "[뉴욕타임스] 기사"
+    )
+  })
+})
+
+describe("도메인 유래 3자 키 (bbc.com → bbc)", () => {
+  const M = buildSourceLabelMap([
+    {
+      preferred_ko: "BBC",
+      romanized: "bbc.com",
+      surfaces: ["bbc.com", "bbc.co.uk"],
+      hangul_alts: null,
+    },
+    {
+      preferred_ko: "아스널",
+      romanized: "Arsenal FC",
+      surfaces: ["arsenal", "afc"],
+      hangul_alts: null,
+    },
+  ])
+
+  it("기자 성씨 영문을 도메인의 매체로 바꾼다 (bbc.com 3자 키)", () => {
+    expect(normalizeSourceLabel("[Mokbel] 맨유 소식", M, "https://www.bbc.com/sport/x")).toBe(
+      "[BBC] 맨유 소식"
+    )
+  })
+
+  it("⚠️ 팀 약어는 여전히 키가 아니다 — 위험한 건 도메인이 아니라 약어다", () => {
+    expect(M.has("afc")).toBe(false)
+  })
+})

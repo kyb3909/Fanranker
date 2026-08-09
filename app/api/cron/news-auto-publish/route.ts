@@ -43,6 +43,13 @@ import {
 import { titleSimilarity } from "@/lib/saga/cluster"
 
 export const dynamic = "force-dynamic"
+/**
+ * ⚠️ 선언이 없으면 기본값(짧음)이라 타임아웃 나고, **타임아웃은 cron_run_log 에
+ * 기록조차 안 남는다**(withCronLog 가 finally 에 쓴다) — 처리량이 조용히 반토막 나도
+ * 관측에 안 잡힌다. 실측 추세: 평균 10.1s(8/5) → 34.6s(8/9), 최대 51s.
+ * 형제 뉴스 cron(naming-audit 300 / interest-filter 120)과 맞춘다.
+ */
+export const maxDuration = 300
 
 /**
  * 뉴스 자동발행 cron (30분 주기) — 검수 없이 나가는 유일한 경로라 조건이 문이다.
