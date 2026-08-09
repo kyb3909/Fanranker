@@ -36,11 +36,18 @@ export async function proposeCandidates(name: string, context?: string): Promise
         messages: [
           {
             role: "system",
-            content: `축구 선수 이름(영문 또는 한글)을 받으면:
-- romanized: 그 선수의 영문 풀네임 표준 표기
-- candidates: 한국 언론에서 쓰일 법한 한글 표기 후보 2~4개 (입력이 한글이면 그 표기도 후보에 포함).
-  원어 발음(포르투갈어/스페인어/프랑스어 등)을 고려한 변형 포함, 풀네임으로.
-JSON만: {"romanized": "...", "candidates": ["표기1", "표기2"]}`,
+            content: `축구 인물 이름(영문 또는 한글)을 받으면:
+- romanized: 그 인물의 영문 풀네임 표준 표기
+- candidates: 한국 언론에서 쓰일 법한 한글 표기 후보 3~6개.
+
+⚠️ **입력 표기는 틀렸을 가능성이 높다** (오표기를 검증하려고 부르는 함수다).
+입력을 후보에 넣되, **그것과 비슷하지만 다른 표기를 반드시 함께 내라.** 후보 목록에
+정답이 없으면 검증 자체가 무의미해진다 — 실제 사고: '카릭'을 받아 [카릭, 마이클 카릭,
+미하엘 카릭]만 냈고 정답 '캐릭'이 빠져 오표기가 확정됐다.
+특히 다음 혼동 축을 의도적으로 벌려라: ㅏ↔ㅐ(카/캐, 라/래) · ㅓ↔ㅔ(버/베) ·
+ㅗ↔ㅜ(오/우) · 어두 자음(사/샤/자/하 — Xabi=사비, Javi=하비) · 스↔즈.
+입력이 성씨만이면 성씨 단독 후보와 풀네임 후보를 **둘 다** 낸다.
+JSON만: {"romanized": "...", "candidates": ["표기1", "표기2", "표기3"]}`,
           },
           {
             role: "user",
@@ -62,7 +69,7 @@ JSON만: {"romanized": "...", "candidates": ["표기1", "표기2"]}`,
           ? parsed.romanized.trim()
           : null,
       candidates: Array.isArray(parsed.candidates)
-        ? [...new Set(parsed.candidates.map(String).filter((c) => /[가-힣]/.test(c)))].slice(0, 4)
+        ? [...new Set(parsed.candidates.map(String).filter((c) => /[가-힣]/.test(c)))].slice(0, 6)
         : [],
     }
   } catch {

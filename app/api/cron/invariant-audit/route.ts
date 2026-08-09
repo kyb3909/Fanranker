@@ -10,7 +10,13 @@ import {
   heartbeatThresholdMinutes,
 } from "@/lib/ops/cron-schedule"
 import { bigramTitleSimilarity, DUP_SUSPECT_MIN } from "@/lib/ops/title-similarity"
+import { fetchDictionaryRows } from "@/lib/news/dictionary-fetch"
+import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
+import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
+
+/** 표기 감시 대상 — 인물·구단·매체 전부. 하나라도 빼면 그 분류는 감시 사각지대가 된다 */
+const NOTATION_AUDIT_CATEGORIES = ["player", "coach", "team", "media"] as const
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -122,12 +128,18 @@ async function handler(req: NextRequest) {
   try {
     const { data: posts } = await supabase
       .from("posts")
-      .select("id, title, created_at")
+      .select("id, title, content, created_at")
       .eq("user_id", NEWS_BOT_USER_ID)
       .is("deleted_at", null)
       .gte("created_at", new Date(now - 48 * H).toISOString())
       .order("created_at", { ascending: true })
-    const rows = (posts ?? []) as { id: string; title: string; created_at: string }[]
+    const rows = (
+      (posts ?? []) as { id: string; title: string; content: unknown; created_at: string }[]
+    ).map((p) => ({
+      ...p,
+      // 본문까지 합쳐 검사한다 — 제목만 보던 탓에 본문 오표기를 통째로 놓쳤다 (2026-08-09)
+      haystack: `${p.title}\n${extractTextFromTipTapJSON(p.content as TipTapNode)}`,
+    }))
 
     for (let i = 0; i < rows.length; i++) {
       for (let j = i + 1; j < rows.length; j++) {
@@ -144,20 +156,29 @@ async function handler(req: NextRequest) {
       }
     }
 
-    const { data: dict } = await supabase
-      .from("news_alias_dictionary")
-      .select("id, preferred_ko, hangul_alts")
-      .eq("category", "player")
-    for (const d of dict ?? []) {
-      const preferred = d.preferred_ko as string
-      for (const alt of (d.hangul_alts as string[] | null) ?? []) {
-        if (!alt || alt.length < 3 || alt === preferred) continue
+    // ── 표기 흔들림 감시 ──
+    // 사전이 **오표기로 아는 문자열**이 발행물에 살아 있다는 건, 교정 파이프라인
+    // 어딘가가 샜다는 직접 증거다. 2026-08-09 이전에는 이 검사가 세 겹으로 좁았다:
+    // 선수만(감독·매체·구단 제외) · 제목만(본문 제외) · 1,000행 절단.
+    // 그래서 그날 발견된 오표기(하비/샤비/자비 알론소, 카릭, 영문 매체 라벨)를
+    // **하나도 못 잡았고**, 전부 운영자가 눈으로 찾아냈다. 탐지를 사람에게
+    // 의존하는 상태가 진짜 문제였으므로 범위를 셋 다 넓힌다.
+    const dict = await fetchDictionaryRows<{
+      id: string
+      preferred_ko: string
+      hangul_alts: string[] | null
+    }>(supabase, "id, preferred_ko, hangul_alts", NOTATION_AUDIT_CATEGORIES)
+    for (const d of dict) {
+      const preferred = d.preferred_ko
+      for (const alt of d.hangul_alts ?? []) {
+        // 2자 허용 — '카릭'·'각포' 같은 성씨 오표기가 3자 하한에 걸려 빠져나갔다
+        if (!alt || alt.length < 2 || alt === preferred) continue
         for (const p of rows) {
-          if (p.title.includes(alt)) {
+          if (p.haystack.includes(alt)) {
             findings.push({
               invariant: "notation_alt_in_title",
               fingerprint: `notation:${p.id}:${d.id}`,
-              summary: `발행 제목이 옛/오 표기 사용 — "${alt}" (대표: "${preferred}") in "${p.title.slice(0, 60)}"`,
+              summary: `발행물이 옛/오 표기 사용 — "${alt}" (대표: "${preferred}") in "${p.title.slice(0, 60)}"`,
               detail: { post_id: p.id, dict_id: d.id, alt, preferred },
             })
           }

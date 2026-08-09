@@ -15,7 +15,10 @@ vi.mock("@/lib/naming/pick", () => ({
   isClubName: (n: string) => n === "리버풀",
 }))
 
-import { resolveUnknownPlayersViaNaver } from "@/lib/news/naming-verify-loop"
+import {
+  resolveUnknownPlayersViaNaver,
+  findUniqueRomanizedMatch,
+} from "@/lib/news/naming-verify-loop"
 
 function makeSupabase() {
   const inserts: Record<string, unknown>[] = []
@@ -311,5 +314,69 @@ describe("resolveUnknownPlayersViaNaver", () => {
     expect(verifyMock).toHaveBeenCalledTimes(8)
     expect(r.stillUnknown).toHaveLength(8)
     expect(r.infraFailed).toHaveLength(2)
+  })
+})
+
+/**
+ * 2026-08-09 실사고: 네이버 검증이 **틀린 답을 근거와 함께 확정**했다.
+ * 후보 생성(LLM)이 정답을 빠뜨리면 네이버는 남은 오답 중에서만 고르기 때문이다.
+ *   "카릭"        → 후보 [카릭, 마이클 카릭, 미하엘 카릭] — 정답 '캐릭' 없음 → 카릭 확정
+ *   "하비 알론소" → 후보 [샤비, 하비, 자비]              — 정답 '사비' 없음 → 샤비 확정
+ * 로마자는 LLM 이 거의 안 틀린다(누구인지는 안다) → 로마자로 신원을 맞추고
+ * 한글 표기는 **운영자가 확정한 사전**을 따른다. 사전이 네이버보다 위다.
+ */
+describe("findUniqueRomanizedMatch", () => {
+  const DICT = [
+    {
+      id: "a",
+      preferred_ko: "마이클 캐릭",
+      romanized: "Michael Carrick",
+      surfaces: [],
+      hangul_alts: [],
+    },
+    { id: "b", preferred_ko: "캐릭", romanized: "Carrick", surfaces: [], hangul_alts: [] },
+    {
+      id: "c",
+      preferred_ko: "사비 알론소",
+      romanized: "Xabi Alonso",
+      surfaces: [],
+      hangul_alts: [],
+    },
+    {
+      id: "d",
+      preferred_ko: "가브리엘 실바",
+      romanized: "Gabriel Silva",
+      surfaces: [],
+      hangul_alts: [],
+    },
+    {
+      id: "e",
+      preferred_ko: "치아구 실바",
+      romanized: "Thiago Silva",
+      surfaces: [],
+      hangul_alts: [],
+    },
+  ]
+
+  it("로마자가 정확히 같으면 그 항목 — 성씨 항목과 풀네임 항목이 함께 있어도 고른다", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Carrick")?.preferred_ko).toBe("캐릭")
+  })
+
+  it("풀네임 일치도 잡는다 (네이버가 '샤비'라 해도 사전의 '사비'가 이긴다)", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Xabi Alonso")?.preferred_ko).toBe("사비 알론소")
+  })
+
+  it("성씨만으로 풀네임 항목에 닿는다 (정확 일치 항목이 없을 때)", () => {
+    const onlyFull = DICT.filter((d) => d.id !== "b")
+    expect(findUniqueRomanizedMatch(onlyFull, "Carrick")?.preferred_ko).toBe("마이클 캐릭")
+  })
+
+  it("⚠️ 흔한 성씨는 판단하지 않는다 — Silva 는 두 선수의 부분집합이다", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Silva")).toBeNull()
+  })
+
+  it("사전에 없는 인물은 매칭 없음 (없는 답을 지어내지 않는다)", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Erling Haaland")).toBeNull()
+    expect(findUniqueRomanizedMatch(DICT, null)).toBeNull()
   })
 })
