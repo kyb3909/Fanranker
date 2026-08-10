@@ -11,7 +11,7 @@ import type { PredictionSuccessState } from "@/types/betting"
 
 const MOCK: PredictionSuccessState = {
   isOpen: true,
-  message: "1경기 조합 3볼 베팅 완료! (잔액: 1볼)",
+  message: "1경기 조합 3볼 예측 완료! (잔액: 1볼)",
   showCommunity: true,
   distribution: [
     {

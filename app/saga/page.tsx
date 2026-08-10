@@ -53,7 +53,7 @@ export default async function SagaIndexPage() {
       <PageBand
         kicker="Transfer Saga"
         title="이적 사가"
-        description="이적설 하나가 문서 하나 — 소식이 터질 때마다 문서가 자랍니다. 어디까지 왔는지 보고, 결말에 베팅하세요."
+        description="이적설 하나가 문서 하나 — 소식이 터질 때마다 문서가 자랍니다. 어디까지 왔는지 보고, 결말을 예측해보세요."
       />
 
       <main className="mx-auto max-w-[860px] px-4 pt-6 pb-16 sm:px-6">
