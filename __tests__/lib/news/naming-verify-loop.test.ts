@@ -465,3 +465,60 @@ describe("승자 타당성 가드", () => {
     expect(r.registered).toEqual([{ name: "코디 갓포", preferred: "코디 각포" }])
   })
 })
+
+/**
+ * 2026-08-10 — 발음 부호가 신원 매칭을 조용히 깨뜨렸다.
+ * 사전에 '하파엘 레앙'(romanized "Rafael Leão")이 정확히 있는데도, 'ã' 에서 토큰이
+ * 쪼개져 "Rafael Leao" 와 매칭되지 않았다. 축구 이름에 diacritic 은 흔하다.
+ */
+describe("findUniqueRomanizedMatch — 발음 부호", () => {
+  const DICT = [
+    {
+      id: "leao",
+      preferred_ko: "하파엘 레앙",
+      romanized: "Rafael Leão",
+      surfaces: [],
+      hangul_alts: [],
+    },
+    {
+      id: "bruno",
+      preferred_ko: "브루노 기마랑이스",
+      romanized: "Bruno Guimarães",
+      surfaces: [],
+      hangul_alts: [],
+    },
+    {
+      id: "sesko",
+      preferred_ko: "셰슈코",
+      romanized: "Benjamin Šeško",
+      surfaces: [],
+      hangul_alts: [],
+    },
+    {
+      id: "hojlund",
+      preferred_ko: "호일룬",
+      romanized: "Rasmus Højlund",
+      surfaces: [],
+      hangul_alts: [],
+    },
+  ]
+
+  it("악센트 없는 입력이 악센트 있는 항목과 매칭된다", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Rafael Leao")?.preferred_ko).toBe("하파엘 레앙")
+    expect(findUniqueRomanizedMatch(DICT, "Bruno Guimaraes")?.preferred_ko).toBe(
+      "브루노 기마랑이스"
+    )
+    expect(findUniqueRomanizedMatch(DICT, "Benjamin Sesko")?.preferred_ko).toBe("셰슈코")
+  })
+
+  it("NFD 로 안 벗겨지는 글자(ø)도 처리한다", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Rasmus Hojlund")?.preferred_ko).toBe("호일룬")
+  })
+
+  it("반대 방향도 성립한다 (악센트 있는 입력 → 악센트 없는 항목)", () => {
+    const plain = [
+      { id: "x", preferred_ko: "뮈노스", romanized: "Munoz", surfaces: [], hangul_alts: [] },
+    ]
+    expect(findUniqueRomanizedMatch(plain, "Muñoz")?.preferred_ko).toBe("뮈노스")
+  })
+})

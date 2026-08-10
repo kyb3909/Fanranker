@@ -261,10 +261,26 @@ export function unknownPersonNames(
   })
 }
 
-/** 로마자 → 비교용 토큰 ("Michael Carrick" → ["michael","carrick"]) */
+/**
+ * 로마자 → 비교용 토큰 ("Michael Carrick" → ["michael","carrick"]).
+ *
+ * ⚠️ **발음 부호를 먼저 벗긴다.** 축구 이름에는 diacritic 이 흔한데(Leão·Guimarães·
+ * Muñoz·Šeško·Højlund), 벗기지 않으면 `a-z` 분할이 글자 한가운데를 쪼갠다:
+ *   "Rafael Leão" → ["rafael","le","o"] → ["rafael","le"]   ← 'ã' 에서 끊김
+ *   "Rafael Leao" → ["rafael","leao"]
+ * 두 표기가 같은 사람인데 토큰이 달라져 신원 매칭이 조용히 실패한다 (2026-08-10 실측:
+ * 사전에 '하파엘 레앙'이 정확히 있는데도 오표기를 구해내지 못했다).
+ * ø·đ 처럼 분해되지 않는 글자는 NFD 로 안 벗겨지므로 따로 치환한다.
+ */
 function romanTokens(s: string | null | undefined): string[] {
   return (s ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    .replace(/ø/g, "o")
+    .replace(/đ/g, "d")
+    .replace(/æ/g, "ae")
+    .replace(/ß/g, "ss")
     .split(/[^a-z]+/)
     .filter((t) => t.length > 1)
 }

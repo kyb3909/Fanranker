@@ -1,18 +1,23 @@
 import "dotenv/config"
-import { verifySpelling } from "@/lib/naming/verify"
+import { createClient } from "@supabase/supabase-js"
+import { findUniqueRomanizedMatch, loadNotation } from "@/lib/news/notation"
 
-/** 실제로 게이트에 갇혀 있던 이름들 — 접기 수정 후 승자가 나오는지 실측 */
-const BLOCKED = ["로날드 아라우호", "에딘 제코", "비니시우스 주니어", "프렌키 데용", "라파엘 레앙"]
-
+/** 발음 부호 수정이 실사전에서 듣는지 — 로마자를 고정해 LLM 비결정성을 배제 */
 async function main() {
-  for (const name of BLOCKED) {
-    const v = await verifySpelling(name, `${name} 이적설`)
-    const counts = (v.counts ?? [])
-      .map((c) => `${c.candidate} ${c.total.toLocaleString()}`)
-      .join(" / ")
-    console.log(`\n■ "${name}"`)
-    console.log(`  ${v.winner ? `✅ 승자: ${v.winner}` : `❌ ${v.reason}`}`)
-    console.log(`  네이버: ${counts || "(없음)"}`)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { persons } = await loadNotation(supabase)
+  for (const roman of [
+    "Rafael Leao",
+    "Rafael Leão",
+    "Bruno Guimaraes",
+    "Rasmus Hojlund",
+    "Benjamin Sesko",
+  ]) {
+    const hit = findUniqueRomanizedMatch(persons, roman)
+    console.log(`  ${roman.padEnd(20)} → ${hit ? hit.preferred_ko : "(매칭 없음)"}`)
   }
 }
 main().catch((e) => {
