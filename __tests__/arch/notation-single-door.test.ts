@@ -46,6 +46,7 @@ const ALLOWED: Record<string, string> = {
   "app/api/admin/published-fixes/route.ts": "발행분 교정 시 별칭 등재 — 쓰기",
   "scripts/seed-naver-player-notation.ts":
     "네이버 스포츠 정본 시드 CLI — 쓰기(읽기는 loadNotation 사용)",
+  "scripts/harvest-team-notation.ts": "팀 뉴스 수확 시드 CLI — 쓰기(읽기는 loadNotation 사용)",
 
   // ── 사가: 의도적으로 별개 정책 ──
   // 사가는 선수 이적이라 player 한정이다. 감독을 섞으면 무인 사서를 폐지시킨
