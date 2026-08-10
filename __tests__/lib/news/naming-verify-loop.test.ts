@@ -11,7 +11,10 @@ const verifyMock = vi.fn()
 vi.mock("@/lib/naming/verify", () => ({
   verifySpelling: (...args: unknown[]) => verifyMock(...args),
 }))
-vi.mock("@/lib/naming/pick", () => ({
+// isClubName 만 좁게 바꾸고 plausibleCorrection 은 **실제 구현**을 쓴다 —
+// 승자 타당성 가드가 진짜 규칙으로 검증돼야 의미가 있다
+vi.mock("@/lib/naming/pick", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/naming/pick")>()),
   isClubName: (n: string) => n === "리버풀",
 }))
 
@@ -403,5 +406,62 @@ describe("findUniqueRomanizedMatch — 이니셜 축약형 배제", () => {
 
   it("정상 항목은 그대로 매칭된다 (회귀)", () => {
     expect(findUniqueRomanizedMatch(DICT, "Carrick")?.preferred_ko).toBe("캐릭")
+  })
+})
+
+/**
+ * 2026-08-10 — 네이버 승자를 그대로 믿지 않는다.
+ * 실측: '라파엘 레앙' 검증에서 '레온'(45,133건)이 이겼다. 흔한 단어라 검색량이
+ * 폭발하는 다른 대상이다. 소급 감사에는 plausibleCorrection 가드가 있었는데
+ * 발행 게이트에는 없어서 그대로 등재됐다.
+ */
+describe("승자 타당성 가드", () => {
+  it("⚠️ 닮지 않은 승자는 등재하지 않고 보류한다 (레앙 → 레온)", async () => {
+    const sb = makeSupabase()
+    verifyMock.mockResolvedValue({
+      winner: "레온",
+      romanized: "Rafael Leao",
+      counts: [
+        { candidate: "레온", total: 45133 },
+        { candidate: "레앙", total: 5209 },
+      ],
+    })
+
+    const r = await resolveUnknownPlayersViaNaver(sb.client as never, ["라파엘 레앙"], "제목")
+
+    expect(r.registered).toEqual([])
+    expect(r.stillUnknown).toEqual(["라파엘 레앙"])
+    expect(sb.inserts).toHaveLength(0)
+  })
+
+  it("길이 변형이면 교정이 아니라 확인 — 기사 표기를 그대로 등재해 차단만 푼다", async () => {
+    const sb = makeSupabase()
+    verifyMock.mockResolvedValue({
+      winner: "아라우호",
+      romanized: "Ronald Araujo",
+      counts: [
+        { candidate: "아라우호", total: 6790 },
+        { candidate: "로날드 아라우호", total: 3957 },
+      ],
+    })
+
+    const r = await resolveUnknownPlayersViaNaver(sb.client as never, ["로날드 아라우호"], "제목")
+
+    // 풀네임→성 축약을 '교정'으로 적용하면 본문이 훼손된다 — 기사 표기가 대표가 된다
+    expect(r.registered).toEqual([{ name: "로날드 아라우호", preferred: "로날드 아라우호" }])
+    expect(sb.inserts[0]).toMatchObject({ preferred_ko: "로날드 아라우호" })
+  })
+
+  it("진짜 음차 교정은 그대로 통과한다 (회귀 — 갓포→각포)", async () => {
+    const sb = makeSupabase()
+    verifyMock.mockResolvedValue({
+      winner: "코디 각포",
+      romanized: "Cody Gakpo",
+      counts: [{ candidate: "코디 각포", total: 3966 }],
+    })
+
+    const r = await resolveUnknownPlayersViaNaver(sb.client as never, ["코디 갓포"], "제목")
+
+    expect(r.registered).toEqual([{ name: "코디 갓포", preferred: "코디 각포" }])
   })
 })

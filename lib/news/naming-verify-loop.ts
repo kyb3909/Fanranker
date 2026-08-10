@@ -19,7 +19,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { verifySpelling } from "@/lib/naming/verify"
-import { isClubName } from "@/lib/naming/pick"
+import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
 import { suggestExisting } from "@/lib/news/alias-suggest"
 import { findUniqueRomanizedMatch, type PersonCategory } from "@/lib/news/notation"
@@ -169,9 +169,29 @@ export async function resolveUnknownPlayersViaNaver(
       continue
     }
 
+    // ── 승자를 그대로 믿지 않는다 (2026-08-10) ──
+    // 실측: '라파엘 레앙' 검증에서 '레온'(45,133건)이 이겼다 — 흔한 단어라 검색량이
+    // 폭발하는 **다른 대상**이다. 소급 감사(naming-audit)에는 plausibleCorrection
+    // 가드가 있었는데 **발행 게이트에는 없어서**, 여기서는 그대로 등재됐다.
+    //
+    // 두 경우를 갈라야 한다:
+    //  · 승자가 기사 표기의 **길이 변형**이면(로날드 아라우호 ↔ 아라우호) 철자 다툼이
+    //    없다 → 교정이 아니라 확인이므로 **기사 표기를 그대로** 등재해 차단만 푼다.
+    //    (풀네임→성 축약을 '교정'으로 적용하면 본문이 훼손된다.)
+    //  · 철자가 실제로 다르면 교정 주장이므로 타당성 검사를 통과해야 한다.
+    const compact = (s: string) => s.replace(/\s+/g, "")
+    const isLengthVariant =
+      compact(v.winner).includes(compact(name)) || compact(name).includes(compact(v.winner))
+    const preferred = isLengthVariant ? name : v.winner
+    if (!isLengthVariant && !plausibleCorrection(name, v.winner)) {
+      memo.set(name, "unknown")
+      result.stillUnknown.push(name)
+      continue
+    }
+
     const registerError = await registerVerifiedPlayer(supabase, {
       articleName: name,
-      preferred: v.winner,
+      preferred,
       romanized: v.romanized,
       category,
       notes: `발행 게이트 등재(${category}) — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
@@ -183,8 +203,10 @@ export async function resolveUnknownPlayersViaNaver(
       continue
     }
 
-    memo.set(name, { preferred: v.winner })
-    result.registered.push({ name, preferred: v.winner })
+    // 실제 등재한 값을 보고한다 — 호출부(news-auto-publish)가 이걸로 런타임 사전을
+    // 갱신하므로, v.winner 를 그대로 보고하면 사전과 캐시가 어긋난다
+    memo.set(name, { preferred })
+    result.registered.push({ name, preferred })
   }
 
   return result

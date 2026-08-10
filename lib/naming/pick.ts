@@ -39,10 +39,44 @@ export function plausibleCorrection(from: string, to: string): boolean {
   return overlap / Math.max(a.length, 1) >= 0.34
 }
 
+/**
+ * 길이 변형 접기 — 같은 이름의 짧은/긴 형태는 **경쟁 관계가 아니다** (2026-08-10).
+ *
+ * 실사고: '로날드 아라우호'가 7일간 4번 막히고도 한 번도 등재되지 않았다. 이유는
+ *   네이버: 아라우호 6,790 / 로날드 아라우호 3,957 → "표기 경합 — 사람 검수"
+ * 인데, 이 둘은 **철자가 다른 게 아니라 길이가 다르다.** 짧은 쪽이 많은 건 당연하다 —
+ * 그의 모든 기사에 들어 있는 부분 문자열이니까. 철자 다툼이 없는데 시스템이 다툼으로
+ * 오독해 영원히 보류했다. 같은 구조로 '비니시우스 주니어/주니오르'도 갇혔었다.
+ *
+ * 반대로 진짜 대안(샤비/하비/자비 알론소, 캐릭/카릭)은 서로 부분 문자열이 아니라
+ * 그대로 비교된다 — 이 접기는 그 판정을 건드리지 않는다.
+ *
+ * 같은 변형군에서는 **검색량이 큰 쪽을 남긴다** — 한국 언론 실사용이 정답이라는
+ * 이 모듈의 원칙 그대로다. 남지 않은 형태는 등재 시 별칭이 되므로 버려지지 않는다.
+ */
+export function foldLengthVariants(
+  counts: { candidate: string; total: number }[]
+): { candidate: string; total: number }[] {
+  const compact = (s: string) => s.replace(/\s+/g, "")
+  const kept: { candidate: string; total: number }[] = []
+  for (const c of [...counts].sort((a, b) => b.total - a.total)) {
+    const n = compact(c.candidate)
+    const isVariant = kept.some((k) => {
+      const kn = compact(k.candidate)
+      return kn.includes(n) || n.includes(kn)
+    })
+    if (!isVariant) kept.push(c)
+  }
+  return kept
+}
+
 export function pickWinner(counts: { candidate: string; total: number }[]): SpellingVerdict {
   const sorted = [...counts].sort((a, b) => b.total - a.total)
-  const top = sorted[0]
-  const second = sorted[1]
+  // 판정은 접힌 목록으로, **근거(counts)는 원본 그대로** 남긴다 — 사전 notes 에
+  // 실제로 무엇을 얼마로 비교했는지가 남아야 나중에 판정을 재검토할 수 있다.
+  const folded = foldLengthVariants(sorted)
+  const top = folded[0]
+  const second = folded[1]
   if (!top || top.total < MIN_TOTAL) {
     return { winner: null, counts: sorted, reason: "검색량 부족 — 사람 검수" }
   }
