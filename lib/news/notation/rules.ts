@@ -10,6 +10,9 @@
  * 그래서 규칙을 여기 한 곳에 모은다. 소비자는 규칙을 다시 쓰지 않는다.
  */
 
+// 자모 바이그램 유사도 — 순수 함수라 이 파일의 "I/O 없음" 원칙을 깨지 않는다
+import { koSimilarity } from "@/lib/news/alias-suggest"
+
 export interface NotationEntry {
   id: string
   category: string
@@ -420,6 +423,87 @@ export function findNotationViolations(
       if (alt.includes(d.preferred_ko)) continue
       if (haystack.includes(alt)) {
         out.push({ entryId: d.id, alt, preferred: d.preferred_ko })
+      }
+    }
+  }
+  return out
+}
+
+export interface AliasPoisoning {
+  entryId: string
+  preferred: string
+  alt: string
+  /** 왜 의심스러운가 — 알림에 그대로 실어 사람이 1초 만에 판단하게 한다 */
+  reason: string
+}
+
+/**
+ * "이 alt 는 사전의 **다른 항목**을 가리킨다"고 볼 자모 유사도 하한.
+ *
+ * 실측(2026-08-11)으로 정했다. 세 번 헛짚은 끝에 나온 값이다:
+ *   · 글자 겹침 0.34   → 무리뉴 변형('조세 모리냐' 0.20)이 오탐
+ *   · 자모 유사도 단독 → 오염 최대 0.364 > 정상 최소 0.167 로 **선을 그을 수 없었다**
+ *   · 이 규칙          → 오염 0.909·1.000 vs 오탐 후보 최대 0.750 으로 깨끗이 갈렸다
+ * 사전 1,225행 전체에 0.8 을 적용해 경보 0건(오탐 없음)을 확인했다.
+ */
+const ALIAS_OWNER_SIM_MIN = 0.8
+
+/**
+ * 사전 자체의 오염 탐지 — **alt 가 오표기가 아니라 다른 사람**인 경우.
+ *
+ * ## 왜 필요한가
+ * 2026-08-11 운영자가 발행된 기사에서 "레온"을 발견했다(정: 하파엘 레앙). 파보니
+ * 파이프라인이 못 고친 게 아니라 **사전이 레앙을 레온으로 바꾸고 있었다**:
+ *   `preferred_ko: "레온"(D.Leon) / hangul_alts: ["라파엘 레앙"]`
+ * 이름만으로 네이버를 세던 시절(레온 45,133 vs 레앙 5,209) 만들어진 화석이다.
+ * 같은 형태를 훑으니 넷 더 있었다 — 엔소←"엔조 마레스카"(첼시 감독),
+ * 안드레아스←"데코"(바르사 디렉터), 올슨←"노르웨이 축구협회 회장"(직함!),
+ * 헥터 벨레린←"헥터 포르트"(다른 선수).
+ *
+ * 발행 게이트에는 이제 `plausibleCorrection` 가드가 있어 새 오염은 막힌다. 그러나
+ * **이미 들어앉은 오염은 아무도 안 본다** — 치환이 조용히 성공하므로 위반으로도 안
+ * 잡히고, 결국 운영자가 발행된 기사에서 눈으로 찾았다. 그래서 사전 자체를 검사한다.
+ *
+ * ## 판정 — "이 오표기가 사전의 **다른 항목**을 더 닮았는가"
+ * 길이 변형(한쪽이 다른 쪽을 포함)은 통과 — '레앙'↔'하파엘 레앙'은 다툼이 아니다.
+ * 그 외에는, alt 가 자기 항목보다 **다른 항목을 뚜렷하게 더 닮았으면** 두 대상을
+ * 뭉개고 있다고 본다. '라파엘 레앙'은 자기 항목 '레온'과 0.27 이지만 '하파엘 레앙'과
+ * 0.91 이다. 반면 음차 변형은 그런 주인이 따로 없다.
+ *
+ * ⚠️ **한계**: 진짜 주인이 사전에 있어야 잡힌다. '데코'·'헥터 포르트'처럼 상대가
+ * 미등재면 이 검사는 침묵한다. 오탐 없는 좁은 그물을 택한 결과다 —
+ * 시끄러운 감시는 곧 무시당해 없느니만 못하기 때문이다.
+ *
+ * 자동 삭제하지 않는다 — 확정은 사람이다(이 저장소의 감사 원칙).
+ */
+export function findAliasPoisoning(dictionary: NotationEntry[]): AliasPoisoning[] {
+  const compact = (s: string) => s.replace(/\s+/g, "")
+  const out: AliasPoisoning[] = []
+
+  for (const d of dictionary) {
+    const pk = compact(d.preferred_ko)
+    for (const alt of d.hangul_alts ?? []) {
+      if (!alt || alt === d.preferred_ko) continue
+      const ak = compact(alt)
+      if (pk.includes(ak) || ak.includes(pk)) continue // 길이 변형 — 정상
+
+      const own = koSimilarity(d.preferred_ko, alt)
+      let best = { id: "", ko: "", sim: 0 }
+      for (const other of dictionary) {
+        if (other.id === d.id) continue
+        const sim = koSimilarity(other.preferred_ko, alt)
+        if (sim > best.sim) best = { id: other.id, ko: other.preferred_ko, sim }
+      }
+
+      if (best.sim >= ALIAS_OWNER_SIM_MIN && best.sim > own) {
+        out.push({
+          entryId: d.id,
+          preferred: d.preferred_ko,
+          alt,
+          reason:
+            `"${alt}" 은 자기 항목("${d.preferred_ko}", 유사도 ${own.toFixed(2)})보다 ` +
+            `"${best.ko}"(${best.id}, ${best.sim.toFixed(2)})를 더 닮았다 — 서로 다른 대상을 뭉갠다`,
+        })
       }
     }
   }

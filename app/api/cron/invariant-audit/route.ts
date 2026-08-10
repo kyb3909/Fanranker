@@ -10,7 +10,7 @@ import {
   heartbeatThresholdMinutes,
 } from "@/lib/ops/cron-schedule"
 import { bigramTitleSimilarity, DUP_SUSPECT_MIN } from "@/lib/ops/title-similarity"
-import { findNotationViolations, loadNotation } from "@/lib/news/notation"
+import { findAliasPoisoning, findNotationViolations, loadNotation } from "@/lib/news/notation"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
@@ -25,12 +25,14 @@ export const maxDuration = 60
  * 발행 전 게이트(1층)는 아이템 하나만 보므로 원리상 못 잡는 것들 — 경로 간 규칙
  * 불일치, 발행쌍 중복, 표기 흔들림, 크론 무호출 — 을 가로로 늘어놓고 본다.
  *
- * 불변식 4종:
+ * 불변식 5종:
  *   1. saga_title_korean   — 노출 사가 제목은 한글이다 (영문 제목 10건 실사고)
  *   2. cron_heartbeat      — 등록된 크론은 기대 주기 안에 cron_run_log 를 남긴다
  *                            (news-learn-edits 무기록 결번 실사고)
  *   3. dup_published_pair  — 같은 소식은 1회만 발행된다 (첼시 41인 같은 run 2발 실사고)
  *   4. notation_alt_in_title — 발행 제목은 사전 대표 표기를 쓴다 (래시포드/래시퍼드 실사고)
+ *   5. dict_alias_poisoned  — 사전의 오표기(alt)는 같은 대상의 변형이다 (레온/하파엘 레앙
+ *                            실사고 — 4번은 사전이 옳다고 전제하므로 원리상 못 잡는다)
  *
  * 자동 수정은 하지 않는다 — 확정은 사람 (독자 제보 파이프라인과 같은 원칙, 오탐 무해).
  * 알림 피로 방지: invariant_findings 원장에 fingerprint 로 기록하고 **open 전이 시
@@ -170,6 +172,19 @@ async function handler(req: NextRequest) {
           detail: { post_id: p.id, dict_id: v.entryId, alt: v.alt, preferred: v.preferred },
         })
       }
+    }
+
+    // ── 5) 사전 오염 — alt 가 오표기가 아니라 '다른 사람'인 경우 ──
+    // 4번(notation_alt_in_title)은 사전이 옳다고 전제하고 발행물을 본다. 사전 자체가
+    // 틀리면 치환이 조용히 성공하므로 4번에 안 걸린다 — 2026-08-11 "레온"(정: 하파엘
+    // 레앙) 사고가 그랬고, 결국 운영자가 발행된 기사에서 눈으로 찾았다.
+    for (const p of findAliasPoisoning(notation.entries)) {
+      findings.push({
+        invariant: "dict_alias_poisoned",
+        fingerprint: `dictpoison:${p.entryId}:${p.alt}`,
+        summary: `사전 오염 의심 — "${p.alt}" 를 "${p.preferred}" 의 오표기로 등록 (${p.reason})`,
+        detail: { dict_id: p.entryId, alt: p.alt, preferred: p.preferred, reason: p.reason },
+      })
     }
   } catch (e) {
     checkErrors.push(`published_posts: ${e instanceof Error ? e.message : String(e)}`)

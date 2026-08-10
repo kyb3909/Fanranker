@@ -56,6 +56,8 @@ export {
   buildNotationHints,
   // 위반 탐지
   findNotationViolations,
+  findAliasPoisoning,
+  type AliasPoisoning,
   type NamingPair,
   type NotationEntry,
   type NotationHint,
