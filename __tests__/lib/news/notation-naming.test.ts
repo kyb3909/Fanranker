@@ -109,3 +109,34 @@ describe("구단명 치환 (네이버 우선 정책)", () => {
     expect(applyNamingPairs("Goal of the season", pairs)).toBe("Goal of the season")
   })
 })
+
+/**
+ * 2026-08-10 실사고 — 성씨 별칭이 다른 사람 이름을 오염시켰다.
+ * 네이버 시드가 shortName 을 별칭으로 넣은 탓에 '제임스'→'다니엘 제임스' 치환이 생겼고,
+ * 골키퍼 **제임스 트래포드**가 '다니엘 제임스 트래포드'가 될 뻔했다(리즈 윙어와 섞임).
+ * 성씨는 여러 사람이 공유하므로 길이 변형은 어느 방향이든 치환하지 않는다.
+ */
+describe("길이 변형 치환 금지 (양방향)", () => {
+  it("⚠️ 성씨 별칭이 다른 사람 이름을 건드리지 않는다", () => {
+    const pairs = buildNamingPairs([
+      { preferred_ko: "다니엘 제임스", hangul_alts: ["제임스"] },
+      { preferred_ko: "벤자민 노벨 멘디", hangul_alts: ["멘디"] },
+    ])
+    expect(pairs).toEqual([])
+    expect(applyNamingPairs("제임스 트래포드, 리즈 이적", pairs)).toBe("제임스 트래포드, 리즈 이적")
+    expect(applyNamingPairs("벤자민 멘디 비판", pairs)).toBe("벤자민 멘디 비판")
+  })
+
+  it("더 긴 정식명도 여전히 치환하지 않는다 (회귀)", () => {
+    const pairs = buildNamingPairs([{ preferred_ko: "뉴캐슬", hangul_alts: ["뉴캐슬 유나이티드"] }])
+    expect(pairs).toEqual([])
+  })
+
+  it("철자가 다른 진짜 오표기는 그대로 교정된다 (회귀)", () => {
+    const pairs = buildNamingPairs([
+      { preferred_ko: "코디 각포", hangul_alts: ["코디 갓포", "갓포"] },
+      { preferred_ko: "캐릭", hangul_alts: ["카릭"] },
+    ])
+    expect(applyNamingPairs("코디 갓포와 카릭", pairs)).toBe("코디 각포와 캐릭")
+  })
+})

@@ -45,13 +45,22 @@ export function buildNamingPairs(
       if (!from || from.length < 2) continue
       if (!/[가-힣]/.test(from)) continue
       if (from === row.preferred_ko) continue
-      // alt 가 대표 표기를 **포함**하면 오표기가 아니라 더 긴 정식명이다 —
-      // '뉴캐슬 유나이티드'(대표: 뉴캐슬), '파브리시오 로마노'(대표: 로마노).
-      // 본문에서 이걸 줄이면 인용문까지 건드린다: 실측에서 CEO 발언
-      // "'뉴캐슬 유나이티드 2.0'" 이 "'뉴캐슬 2.0'" 으로 바뀌었다.
-      // 길이 통일은 **제목 라벨**(source label)에서만 한다 — 위치가 고정돼 안전하다.
-      // findNotationViolations 와 같은 규칙이다: 포함 관계면 오표기가 아니다.
-      if (from.includes(row.preferred_ko)) continue
+      // ⚠️ **길이 변형은 치환하지 않는다** — 어느 쪽이 길든 오표기가 아니다.
+      //
+      // ① alt 가 더 긴 경우: '뉴캐슬 유나이티드'(대표: 뉴캐슬), '파브리시오 로마노'.
+      //    줄이면 인용문까지 건드린다 — 실측에서 CEO 발언 "'뉴캐슬 유나이티드 2.0'" 이
+      //    "'뉴캐슬 2.0'" 으로 훼손됐다.
+      // ② alt 가 더 짧은 경우(성씨): '제임스'(대표: 다니엘 제임스). **성씨는 여러 사람이
+      //    공유한다.** 실측 2026-08-10: 네이버 시드가 shortName 을 별칭으로 넣은 탓에
+      //    골키퍼 **'제임스 트래포드'가 '다니엘 제임스 트래포드'로** 바뀌려 했다
+      //    (리즈 윙어 Daniel James 와 섞임). '벤자민 멘디'→'벤자민 노벨 멘디'도 같은 건.
+      //
+      // 진짜 오표기는 길이가 아니라 **철자**가 다르다(갓포↔각포, 카릭↔캐릭) — 그건 서로
+      // 부분 문자열이 아니므로 이 규칙에 안 걸린다. 길이 통일이 필요하면 위치가 고정된
+      // 제목 라벨에서만 한다. foldLengthVariants·findNotationViolations 와 같은 원칙이다.
+      const fromC = from.replace(/\s+/g, "")
+      const prefC = row.preferred_ko.replace(/\s+/g, "")
+      if (fromC.includes(prefC) || prefC.includes(fromC)) continue
       if (preferredSet.has(from)) continue
       if (seen.has(from)) continue // 서로 다른 항목이 같은 alt 를 주장 — 첫 항목 승
       seen.add(from)
