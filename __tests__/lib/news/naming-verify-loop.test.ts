@@ -378,3 +378,30 @@ describe("findUniqueRomanizedMatch", () => {
     expect(findUniqueRomanizedMatch(DICT, null)).toBeNull()
   })
 })
+
+/**
+ * 2026-08-10 실사고 — 이니셜 축약형이 성씨 동명이인을 뭉쳤다.
+ * FPL 시드 747건 중 49건이 `J.Araujo` `A.García` 형태인데, romanTokens 가 1글자
+ * 토큰을 버려서 `J.Araujo` → ["araujo"] 가 된다. 그러면 성이 같은 모든 선수가 한
+ * 사람이 되고, 기사가 '아라우호'로 옳게 써도 본머스의 '아라우조'로 흡수된다.
+ * 실측으로 확인: findUniqueRomanizedMatch(실사전, "Ronald Araujo") → 아라우조.
+ */
+describe("findUniqueRomanizedMatch — 이니셜 축약형 배제", () => {
+  const DICT = [
+    { id: "fpl", preferred_ko: "아라우조", romanized: "J.Araujo", surfaces: [], hangul_alts: [] },
+    { id: "ok", preferred_ko: "캐릭", romanized: "Carrick", surfaces: [], hangul_alts: [] },
+  ]
+
+  it("이니셜 항목은 앵커가 되지 않는다 — 다른 Araujo 를 흡수하면 안 된다", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Ronald Araujo")).toBeNull()
+    expect(findUniqueRomanizedMatch(DICT, "Araujo")).toBeNull()
+  })
+
+  it("입력이 이니셜 형태여도 판단하지 않는다", () => {
+    expect(findUniqueRomanizedMatch(DICT, "J.Araujo")).toBeNull()
+  })
+
+  it("정상 항목은 그대로 매칭된다 (회귀)", () => {
+    expect(findUniqueRomanizedMatch(DICT, "Carrick")?.preferred_ko).toBe("캐릭")
+  })
+})

@@ -286,14 +286,30 @@ function romanTokens(s: string | null | undefined): string[] {
  * 항목('마이클 캐릭')으로 둘 다 등재되는 건 정상인데(각포/코디 각포 선례), 부분집합만
  * 보면 둘 다 걸려 "모호함"으로 포기해버린다.
  */
+/**
+ * 신원 판정에 쓸 수 없는 로마자 — **이니셜 축약형**(`J.Araujo`, `A.García`).
+ *
+ * 2026-08-10 실사고: FPL 시드 747건 중 49건이 이 형태다. `romanTokens` 가 1글자
+ * 토큰을 버리므로 `J.Araujo` 가 `["araujo"]` 가 되고, 그러면 **성이 같은 모든 선수가
+ * 한 사람으로 뭉친다.** 실측: `findUniqueRomanizedMatch(dict, "Ronald Araujo")` 가
+ * 본머스의 J.Araujo(아라우조)를 돌려줬다 — 기사가 '아라우호'로 옳게 써도 이 매칭이
+ * '아라우조'로 흡수해버린다. 이니셜은 사람을 특정하지 못하므로 앵커로 쓰지 않는다.
+ */
+function isInitialForm(romanized: string | null): boolean {
+  return /^[A-Za-z]\s*\./.test((romanized ?? "").trim())
+}
+
 export function findUniqueRomanizedMatch<T extends Pick<NotationEntry, "romanized">>(
   dictionary: T[],
   romanized: string | null
 ): T | null {
+  if (isInitialForm(romanized)) return null
   const want = romanTokens(romanized)
   if (want.length === 0) return null
   const wantSet = new Set(want)
   const wantKey = [...want].sort().join(" ")
+  // 이니셜 축약형 항목은 후보에서 제외 — 신원을 특정하지 못한다
+  dictionary = dictionary.filter((d) => !isInitialForm(d.romanized))
 
   // ① 로마자 토큰 집합이 정확히 같은 항목 (성씨 입력 → 성씨 항목)
   const exact = dictionary.filter(
