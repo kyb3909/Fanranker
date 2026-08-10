@@ -9,7 +9,7 @@ import "server-only"
  * 않는다 (fail-closed — 애매하면 사람 검수).
  */
 
-import { pickWinner, type SpellingVerdict } from "./pick"
+import { extractClubName, pickWinner, type SpellingVerdict } from "./pick"
 import { chatParams } from "@/lib/llm/openai-params"
 
 export type { SpellingVerdict }
@@ -77,15 +77,27 @@ JSON만: {"romanized": "...", "candidates": ["표기1", "표기2", "표기3"]}`,
   }
 }
 
-/** 네이버 뉴스 검색 총 건수 — 표기의 실사용 근거 */
-export async function naverNewsCount(query: string): Promise<number | null> {
+/**
+ * 네이버 뉴스 검색 총 건수 — 표기의 실사용 근거.
+ *
+ * `scope`(보통 구단명)를 주면 **그 맥락 안에서만** 센다. 이름만 세면 흔한 단어가
+ * 이기기 때문이다 (2026-08-10 운영자 지적). 실측:
+ *   '레앙' 5,209 vs '레온' 45,133      → 레온 승 (다른 대상인데 오답)
+ *   AC밀란 한정 3,384 vs 376           → 레앙 승 (정답)
+ *   '아라우호' 6,790 vs '아라우조' 3,607 → 1.9배라 판정 보류
+ *   바르셀로나 한정 4,661 vs 63        → 74배, 확정
+ *
+ * ⚠️ 질의 형태 주의: **이름만 따옴표**로 묶고 scope 는 밖에 둔다. 전체를 묶으면
+ * 정확한 구절 검색이 되어 거의 0이 나온다 (실측으로 한 번 헛다리 짚었다).
+ */
+export async function naverNewsCount(query: string, scope?: string | null): Promise<number | null> {
   const clientId = process.env.NAVER_CLIENT_ID
   const clientSecret = process.env.NAVER_CLIENT_SECRET
   if (!clientId || !clientSecret) return null
   try {
     const res = await fetch(
       `https://openapi.naver.com/v1/search/news.json?${new URLSearchParams({
-        query: `"${query}"`,
+        query: scope ? `"${query}" ${scope}` : `"${query}"`,
         display: "1",
       })}`,
       {
@@ -110,14 +122,22 @@ export async function verifySpelling(
   if (candidates.length === 0) {
     return { winner: null, counts: [], reason: "후보 생성 실패 — 사람 검수", romanized }
   }
+  // 맥락에서 구단명을 뽑아 질의를 좁힌다 — 없으면 기존대로 이름 단독 (fail-open)
+  const scope = extractClubName(context)
   const counts: { candidate: string; total: number }[] = []
   for (const c of candidates) {
-    const total = await naverNewsCount(c)
+    const total = await naverNewsCount(c, scope)
     if (total === null) {
       return { winner: null, counts, reason: "네이버 API 미가동 — 사람 검수", romanized }
     }
     counts.push({ candidate: c, total })
     await new Promise((r) => setTimeout(r, 150)) // API 예의
   }
-  return { ...pickWinner(counts), romanized }
+  const verdict = pickWinner(counts)
+  return {
+    ...verdict,
+    // 근거에 어느 맥락으로 셌는지 남긴다 — 나중에 판정을 재검토하려면 필요하다
+    reason: scope ? `${verdict.reason} (${scope} 한정)` : verdict.reason,
+    romanized,
+  }
 }

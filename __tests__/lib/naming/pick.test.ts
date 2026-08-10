@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { pickWinner, foldLengthVariants, isClubName, plausibleCorrection } from "@/lib/naming/pick"
+import {
+  pickWinner,
+  foldLengthVariants,
+  isClubName,
+  plausibleCorrection,
+  extractClubName,
+} from "@/lib/naming/pick"
 
 describe("가드 — 클럽명·교정 타당성 (2026-08-04 실사고: 리버풀→헨더슨 치환)", () => {
   it("클럽명은 선수 검증 대상이 아님", () => {
@@ -122,5 +128,22 @@ describe("pickWinner — 길이 변형 접기 반영", () => {
       { candidate: "카릭", total: 152 },
     ])
     expect(v.winner).toBe("캐릭")
+  })
+})
+
+/**
+ * 2026-08-10 운영자 제안: "AC밀란 선수들을 검색해서 레앙에 해당하는 이름을 찾는 식으로".
+ * 이름만 세면 흔한 단어가 이긴다 — 실측 '레앙' 5,209 vs '레온' 45,133.
+ */
+describe("extractClubName — 검증 질의를 좁힐 구단", () => {
+  it("기사 제목에서 구단을 뽑는다", () => {
+    expect(extractClubName("[가제타] AC 밀란, 라파엘 레앙 매각 검토")).toBe("밀란")
+    expect(extractClubName("[더 타임스] 리버풀, 바르셀로나 아라우조 영입 후보")).toBe("리버풀")
+  })
+
+  it("구단이 없으면 null — 호출부는 기존대로 이름 단독 검색 (fail-open)", () => {
+    expect(extractClubName("FIFA 회장 선거 절차 논란")).toBeNull()
+    expect(extractClubName(null)).toBeNull()
+    expect(extractClubName(undefined)).toBeNull()
   })
 })
