@@ -438,18 +438,18 @@ function TodayFixtures({
         style={{ background: "var(--gn-cream)", color: "var(--gn-night)" }}
       >
         {!isSignedIn
-          ? "가입하면 무료 10볼 — 오늘 픽 걸러 가기"
+          ? "가입하고 오늘 경기 예측하기"
           : rest > 0
-            ? `오늘 ${matches.length}경기 픽 걸러 가기`
-            : "오늘 픽 걸러 가기"}
+            ? `오늘 ${matches.length}경기 예측하기`
+            : "오늘 경기 예측하기"}
         <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>
       <p className="mt-2 text-center text-[12px]" style={{ color: "#8d8794" }}>
         {/* 비로그인에겐 가치 제안, 로그인에겐 리마인더 (2026-07-30 워룸: CTA 전부 미래형·
             가입 이유 0개 문제의 밴드 몫) */}
         {!isSignedIn
-          ? "가입은 1분 — 매일 밤 11시 무료 볼 충전"
-          : "매일 밤 11시 볼 충전 — 오늘 안 걸면 내일의 내가 아쉬워함"}
+          ? "가입은 1분 — 볼은 매일 밤 11시 무료 충전"
+          : "매일 밤 11시 볼 충전 — 오늘 안 하면 내일의 내가 아쉬워함"}
       </p>
     </aside>
   )

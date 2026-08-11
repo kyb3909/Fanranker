@@ -497,7 +497,7 @@ export function BettingSlip({
           {isSubmitting ? (
             <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" />
           ) : !isSignedIn ? (
-            "로그인하고 무료 10볼로 예측하기"
+            "로그인하고 오늘 경기 예측하기"
           ) : (
             `${selectedBets.length}경기 ${betAmount.toLocaleString()}볼 예측하기`
           )}

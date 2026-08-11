@@ -172,7 +172,7 @@ export function SignInMenu() {
           />
           <h2 className="text-foreground text-xl font-bold">로그인</h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            가입하면 매일 무료 10볼 — 오늘 경기부터 픽을 걸 수 있어요
+            가입하면 오늘 경기부터 바로 예측할 수 있어요
           </p>
         </div>
 
