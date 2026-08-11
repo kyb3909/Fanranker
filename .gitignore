@@ -142,3 +142,6 @@ workspace/agg-training/fixture.json
 
 # 로컬 권한 승인 기록 — 토큰 등 비밀이 섞일 수 있어 커밋 금지 (2026-07-26 푸시 보호 적발)
 .claude/settings.local.json
+
+# 뉴스 카드 원본 아트 — 조판만 바꿀 때 재생성을 피하려고 남기지만, 장당 1.3MB라 커밋하지 않는다
+public/images/_news-team-raw/

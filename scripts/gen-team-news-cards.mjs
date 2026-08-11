@@ -1,20 +1,34 @@
-// 구단별 뉴스 플레이스홀더 이미지 생성 (OpenAI gpt-image-1 + sharp 텍스트 합성).
+// 구단별 뉴스 플레이스홀더 이미지 생성 (OpenAI gpt-image-1).
 //
-// 왜 텍스트를 따로 합성하나: 이미지 모델은 한글을 자주 뭉갠다. 배경 아트만 생성하고
-// 팀명은 sharp 로 얹으면 글자가 항상 정확하고, 구단이 늘어나도 조판이 흔들리지 않는다.
+// ## 팀명 텍스트를 굽지 않는다 (2026-08-12 운영자 결정)
+// 원래는 sharp 로 팀명을 합성했다(모델이 한글을 뭉개서). 그런데 이 이미지가 쓰이는
+// 히어로 카드는 **사진 위에 기사 제목을 얹는** 구조라, 구워진 팀명과 제목이 겹쳐
+// 둘 다 안 읽혔다. 운영자: "그냥 엠블럼만 있는 게 낫다."
 //
-//   node scripts/gen-team-news-cards.mjs                # 샘플 3개
-//   node scripts/gen-team-news-cards.mjs --all          # 전체
+// 텍스트를 빼면 조판 문제가 통째로 사라진다 — 썸네일(104×76)에서 양옆이 잘려 팀명이
+// 날아가던 문제도, 히어로에서 제목과 부딪히던 문제도 같은 원인이었다. 어느 팀인지는
+// 카드의 말머리 칩이 이미 말하고 있으므로 이미지가 또 말할 필요가 없다.
+//
+// 스크림(좌→우 어두운 그라디언트)도 함께 뺐다. 흰 글자 가독성용이었는데 글자가 없어졌고,
+// 히어로 카드는 UI 가 자체 스크림을 덧씌우고 있어 이중으로 어두워지고 있었다.
+//
+//   node scripts/gen-team-news-cards.mjs                # 샘플 3개 (유료 — API 호출)
+//   node scripts/gen-team-news-cards.mjs --all          # 전체 21장 (유료 — 약 $5)
 //   node scripts/gen-team-news-cards.mjs --only epl_arsenal
+//   node scripts/gen-team-news-cards.mjs --recompose    # 보관된 원본으로 다시 굽기 (공짜)
+//
+// 크롭·화질처럼 **조판만** 바꿀 때는 --recompose 를 쓴다. 원본 아트가 RAW_DIR 에
+// 남아 있어 API 를 다시 부르지 않는다. (원본이 없던 시절, 텍스트를 빼려고 21장을
+// 통째로 다시 생성해야 했다 — 그 값이 $5 였다.)
 import "dotenv/config"
 import sharp from "sharp"
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 
 const OUT = "public/images/news-team"
+/** 원본 아트 보관소 — 조판만 바꿀 때 재생성을 피한다 (gitignore) */
+const RAW_DIR = "public/images/_news-team-raw"
 const W = 1200
 const H = 630
-// Windows 기본 한글 폰트 — librsvg 가 시스템 폰트만 보므로 base64 임베드는 안 먹는다(실측)
-const KO_FONT = "Malgun Gothic"
 
 const TEAMS = [
   // 팀을 못 뽑는 기사(리그 전체·협회·복수 구단)용 중립 카드. 사이트 톤인 와인을 쓴다.
@@ -62,7 +76,9 @@ function prompt(t) {
     `Color palette: ${t.hue}, with deep shadow tones.`,
     `Visual motif: ${t.motif}, rendered as clean geometric shapes only.`,
     "Style: flat vector, bold diagonal composition, subtle grain, premium sports magazine aesthetic.",
-    "Left third must stay visually calm and uncluttered for text overlay.",
+    // 제목이 얹히는 자리는 하단이다 (히어로 카드 스크림이 to-top 그라디언트) —
+    // 예전엔 좌측을 비우게 했는데, 굽는 텍스트가 없어진 지금 비워야 할 곳은 아래쪽이다
+    "Bottom third must stay visually calm and uncluttered — a headline will be overlaid there.",
     "Absolutely NO text, NO letters, NO numbers, NO logos, NO emblems, NO crests, NO badges, NO players, NO faces.",
   ].join(" ")
 }
@@ -90,31 +106,14 @@ async function generate(t) {
   return Buffer.from(b64, "base64")
 }
 
-/** 팀명·사이트 마크를 얹는다 — 좌측 여백에 배치, 가독성 위해 왼쪽에 어두운 그라디언트 */
-function overlay(t) {
-  return Buffer.from(
-    `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="s" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="0" stop-color="#000" stop-opacity="0.62"/>
-    <stop offset="0.55" stop-color="#000" stop-opacity="0.18"/>
-    <stop offset="1" stop-color="#000" stop-opacity="0"/>
-  </linearGradient></defs>
-  <rect width="${W}" height="${H}" fill="url(#s)"/>
-  <text x="76" y="322" font-family="${KO_FONT}" font-weight="bold"
-        font-size="${t.ko.length > 6 ? 84 : 116}" fill="#fff">${t.ko}</text>
-  <text x="80" y="382" font-family="${KO_FONT}" font-weight="bold" font-size="28"
-        fill="#fff" fill-opacity="0.72" letter-spacing="8">${t.en}</text>
-  <rect x="76" y="414" width="84" height="6" fill="#fff" fill-opacity="0.9"/>
-  <text x="76" y="${H - 52}" font-family="${KO_FONT}" font-weight="bold" font-size="26"
-        fill="#fff" fill-opacity="0.78">gongnori.fan</text>
-</svg>`
-  )
-}
-
 async function main() {
   mkdirSync(OUT, { recursive: true })
+  mkdirSync(RAW_DIR, { recursive: true })
   const onlyIdx = process.argv.indexOf("--only")
-  const list = process.argv.includes("--all")
+  // 보관된 원본 아트로 다시 굽기만 한다 (API 호출 0회 = 공짜).
+  // 크롭·화질처럼 **조판만** 바꿀 때 쓴다 — RAW_DIR 을 남기는 이유가 바로 이것이다.
+  const recompose = process.argv.includes("--recompose")
+  const list = process.argv.includes("--all") || recompose
     ? TEAMS
     : onlyIdx >= 0
       ? TEAMS.filter((t) => t.id === process.argv[onlyIdx + 1])
@@ -122,10 +121,17 @@ async function main() {
 
   for (const t of list) {
     try {
-      const art = await generate(t)
+      const art = recompose ? readFileSync(`${RAW_DIR}/${t.id}.png`) : await generate(t)
+      // ⚠️ 원본 아트를 **반드시** 남긴다 (gitignore 대상). 1차 작업 때 합성본만 저장했다가
+      //    조판을 고치려니 21장을 다시 생성해야 했다 — 텍스트 위치 하나 바꾸는 데 1시간.
+      if (!recompose) writeFileSync(`${RAW_DIR}/${t.id}.png`, art)
       const out = await sharp(art)
-        .resize(W, H, { fit: "cover", position: "center" })
-        .composite([{ input: overlay(t) }])
+        // ⚠️ position 은 **top** 이다 (center 아님). 모델은 3:2(1536×1024)로 그리는데
+        // 저장은 OG 규격 1.9:1 이라 세로 21% 가 잘린다. center 로 자르면 위아래를 균등하게
+        // 깎아 엠블럼 머리가 날아갔다("왜 닭머리가 잘림?" — 2026-08-12).
+        // 프롬프트가 하단을 비우게 하므로 버릴 몫은 전부 아래에 있다 → 위를 붙이고 아래를 깎는다.
+        // sharp.strategy.attention 도 시험했지만 그 빈 띠를 '관심 영역'으로 오인해 되살렸다.
+        .resize(W, H, { fit: "cover", position: "top" })
         // WebP — PNG 로 뽑으면 장당 1.3MB 라 피드 썸네일로 무겁다(21장 27.6MB → 1.2MB)
         .webp({ quality: 88 })
         .toBuffer()
