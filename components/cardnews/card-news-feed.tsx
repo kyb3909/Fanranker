@@ -1,14 +1,12 @@
 "use client"
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react"
-import { useAuth, useClerk } from "@clerk/nextjs"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { suggestTarot, tarotHref } from "@/lib/tarot/suggest"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
 import {
-  Heart,
   MessageCircle,
   ChevronRight,
   ChevronDown,
@@ -206,10 +204,31 @@ function CompactKicker({ card }: { card: CardNewsItem }) {
       )
     )
   }
-  if (parts.length === 0) return null
+  // 시간·댓글수는 원래 제목 아래 별도 줄(작성자·좋아요와 함께)에 있었다.
+  // 그 줄을 통째로 없애면서 살아남을 값 둘만 키커로 올렸다 (2026-08-12 디자인 패널):
+  //  · 작성자 — 최근 60장 전부 "공놀이봇" 단일값. 정보량 0비트라 삭제
+  //  · 좋아요 — 아래 CompactCard 주석 참조
+  parts.push(
+    <span key="time" style={{ color: "var(--wc-mute)" }} suppressHydrationWarning>
+      {formatRelativeTime(new Date(card.createdAt))}
+    </span>
+  )
+  if (card.commentCount > 0) {
+    parts.push(
+      <span
+        key="cmt"
+        className="inline-flex items-center gap-1"
+        style={{ color: "var(--wc-mute)" }}
+      >
+        <MessageCircle className="h-3 w-3" />
+        <span className="tabular-nums">{card.commentCount}</span>
+      </span>
+    )
+  }
+
   return (
     <div
-      className="mb-1 flex items-center gap-2 text-[11px] font-bold"
+      className="mb-1.5 flex items-center gap-2 text-[11px] font-bold"
       style={{ letterSpacing: "0.03em" }}
     >
       {parts}
@@ -222,53 +241,6 @@ function CompactKicker({ card }: { card: CardNewsItem }) {
 /** eased scrim — 투명→어두움 9스톱 (하드 엣지 없음) */
 const SCRIM =
   "linear-gradient(to top, rgba(9,8,11,.86) 0%, rgba(9,8,11,.83) 8%, rgba(9,8,11,.76) 18%, rgba(9,8,11,.63) 32%, rgba(9,8,11,.46) 46%, rgba(9,8,11,.28) 62%, rgba(9,8,11,.12) 78%, rgba(9,8,11,.03) 90%, rgba(9,8,11,0) 100%)"
-
-/** 고스트 액션 — 아이콘+숫자. 히트 영역은 실제 padding 으로 확보 (-m 이 layout 상쇄 —
- * pseudo(::before) hit area 는 target-size 접근성 감사가 인정하지 않아 실박스로 전환) */
-const ghostAction =
-  "-m-2.5 p-2.5 relative inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors"
-
-/**
- * 카드 좋아요 — 비로그인은 로컬 즉각 반응(기존), 로그인은 **실제 vote API** 동기화.
- * 2026-07-30 워룸: 가장 마찰 낮은 참여 장치가 localStorage 전용이라 서버에 아무것도
- * 안 쌓였고, 그게 "추천 0" 전시가 구조적으로 재생산되던 뿌리였다.
- */
-function useLocalLike(id: string) {
-  const { isSignedIn } = useAuth()
-  const [liked, setLiked] = useState(false)
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("cardnews-likes") || "{}")
-      if (saved[id]) setLiked(true)
-    } catch {
-      // 무시
-    }
-  }, [id])
-  const toggle = useCallback(() => {
-    setLiked((prev) => {
-      const next = !prev
-      try {
-        const saved = JSON.parse(localStorage.getItem("cardnews-likes") || "{}")
-        if (next) saved[id] = true
-        else delete saved[id]
-        localStorage.setItem("cardnews-likes", JSON.stringify(saved))
-      } catch {
-        // 무시
-      }
-      return next
-    })
-    // 로그인 유저는 서버에도 반영 (API 도 토글이라 로컬 토글과 방향이 맞는다).
-    // 실패해도 UI 는 로컬 상태 유지 — 좋아요는 비핵심 경로라 조용히 넘어간다.
-    if (isSignedIn) {
-      fetch(`/api/posts/${id}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "up" }),
-      }).catch(() => {})
-    }
-  }, [id, isSignedIn])
-  return { liked, toggle }
-}
 
 /** 이적시장 상황판 진입 카드 — 라이트 존 규칙(카드 다크 금지) 준수, 배경 틴트로만 구분 */
 function TransferPromoCard() {
@@ -379,38 +351,84 @@ function openPost(id: string, destination: "post" | "saga" = "post") {
  * 투표 데이터는 이미 서버가 카드에 실어 보내고 있었다(lib/feed/cardnews.ts `card.vs`) —
  * 폴 조회·집계까지 다 하고 화면만 없던 상태였다.
  */
-function CardAction({ card }: { card: CardNewsItem }) {
-  if (card.vs) return <CardVsVote vs={card.vs} surface="card" compact />
-  return <TarotHook card={card} />
-}
-
 /**
- * 타로 진입점 — 이적·거취·경기 기사에만 붙는다 (2026-08-12 운영자 제안).
+ * 액션 띠 — 카드 하단 전폭 44px 슬롯 (2026-08-12 디자인 패널 채택안 I-1 + 같은 날 개정).
  *
- * "기마랑이스 이적설이야 → 이 이적에 대한 타로점을 봐보라고 유도". 질문이 제목에서
- * 미리 만들어져 클릭 한 번에 리딩이 시작된다 — 빈 입력창이라는 최대 마찰이 사라진다.
- * suggestTarot 이 null 이면 **아무것도 안 보여준다**: 어설픈 질문을 채우느니 감춘다.
+ * ## 왜 띠인가
+ * 액션이 본문 안에 있으면 세 가지가 동시에 깨진다: 투표 위젯이 자기 테두리를 가져
+ * "카드 안에 또 카드"가 되고, 투표 유무로 카드 높이가 2배 갈리고, 투표(사각 박스)와
+ * 타로(둥근 pill)의 톤이 따로 논다. 셋 다 "액션이 자기 집을 못 가진 것"이 원인이라
+ * 집을 하나 주면 한꺼번에 사라진다.
  *
- * 카드 전체가 링크(absolute inset-0 z-1)라 이 버튼은 z-2 + pointer-events-auto 로
- * 그 위에 떠야 클릭이 먹는다 (좋아요 버튼과 같은 방식).
+ * ## 개정: "항상 렌더"를 버렸다
+ * 처음엔 폴도 타로도 없는 카드에 "기사 읽기 →"를 넣어 슬롯을 무조건 채웠다 —
+ * 높이를 상수로 만들려면 슬롯이 조건부면 안 된다는 논리였다. 실측이 그 논리를 뒤집었다:
+ * 피드 49장 중 **45장(92%)이 질문성 띠**를 달고 있었고, 전부가 물으면 묻는 게 신호가
+ * 아니게 된다(눈이 배너로 학습해 건너뛴다). "기사 읽기 →"는 카드 전체가 이미 하는 말을
+ * 한 번 더 하는 것이라 그 92%에 순수 노이즈로 기여했다.
+ *
+ * 높이 상수화가 풀려던 진짜 문제는 "**변동이 상시적이라 리듬이 없다**"였지,
+ * 변동 자체가 아니었다. 질문을 5장에 한 장으로 줄이면(allowQuestion) 나머지는 전부
+ * 같은 높이가 되고, 질문 카드만 44px 더 높다 — 변동이 소음에서 **강세**로 바뀐다.
+ * 그래서 액션이 없으면 아무것도 그리지 않는다.
+ *
+ * ## 톤
+ * 버건디 틴트 배경과 🔮 이모지를 뺐다(편집 패널: "버건디는 카드 한 장에 최대 한 번",
+ * "이모지는 에디토리얼의 반대말 — 폰트마다 다르게 렌더돼 조판이 흔들린다").
+ * 남은 건 hairline 하나와 텍스트뿐이라, 반복돼도 서류 푸터처럼 읽히지 않는다.
+ *
+ * ## 데드존
+ * 이 띠는 카드 전면 링크(absolute inset-0) **바깥**에 있다. 그래서 예전처럼
+ * z-index·pointer-events·stopPropagation 으로 링크와 싸울 필요가 없다.
+ * 예전 구조에선 투표 박스 래퍼가 버튼이 아닌 56px 까지 덮어 링크를 먹었다.
  */
-function TarotHook({ card }: { card: CardNewsItem }) {
-  const suggestion = suggestTarot(card.title)
-  if (!suggestion) return null
+function CardActionStrip({ card }: { card: CardNewsItem }) {
+  if (card.vs) return <CardVsVote vs={card.vs} surface="card" variant="strip" />
+
+  const tarot = suggestTarot(card.title)
+  if (!tarot) return null
+
   return (
     <Link
-      href={tarotHref(suggestion.question, "cardnews")}
-      className="pointer-events-auto relative z-[2] mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold no-underline transition-opacity hover:opacity-80"
+      href={tarotHref(tarot.question, "cardnews")}
+      className="flex items-center justify-center text-[12.5px] font-bold no-underline transition-colors"
       style={{
-        background: "color-mix(in srgb, var(--wc-burgundy) 7%, transparent)",
+        height: 44,
+        borderTop: "1px solid var(--wc-line)",
         color: "var(--wc-burgundy)",
       }}
       onClick={() => trackEvent({ name: "tarot_hook_click", params: { surface: "cardnews" } })}
     >
-      <span aria-hidden>🔮</span>
-      {suggestion.label}
+      {tarot.label}
     </Link>
   )
+}
+
+/**
+ * 질문성 띠(투표·타로)를 실을 카드 index 집합 — 밀도 상한 (2026-08-12).
+ *
+ * 실측: 게이트 전 49장 중 45장(92%)이 질문을 걸고 있었다. 폴에만 상한을 걸면
+ * 그 자리를 타로가 그대로 이어받아(투표 카드 29장 중 19장이 이적·감독·경기 키워드)
+ * 84%로 거의 안 내려간다 — 그래서 상한은 **폴이 아니라 띠 레벨**에 걸어야 한다.
+ *
+ * 간격 규칙은 이 저장소가 이미 쓰던 것을 그대로 가져왔다 (VS 최초 도입 때의
+ * "첫 화면 1개 + 5장 간격"). 첫 장은 허용해 첫 화면에 하나는 보이게 하고,
+ * 그다음부터는 5장 간격. 결과적으로 질문 밀도가 20% 선으로 내려간다.
+ *
+ * 무한 스크롤로 배열이 늘어도 앞에서부터 다시 계산하므로 경계가 흔들리지 않는다.
+ */
+const QUESTION_GAP = 5
+
+function pickQuestionCards(cards: CardNewsItem[]): Set<number> {
+  const allowed = new Set<number>()
+  let last = -Infinity
+  cards.forEach((card, i) => {
+    if (!card.vs && !suggestTarot(card.title)) return // 애초에 질문이 없는 카드
+    if (i - last < QUESTION_GAP) return
+    allowed.add(i)
+    last = i
+  })
+  return allowed
 }
 
 function CommentPreview({ card }: { card: CardNewsItem }) {
@@ -488,112 +506,85 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
 
 /* ---------- 3) 컴팩트 — 텍스트 좌 + 썸네일 우 (밀도 담당) ---------- */
 
-function CompactCard({ card }: { card: CardNewsItem }) {
-  const { liked, toggle } = useLocalLike(card.id)
+/**
+ * 하트(좋아요)를 카드에서 내린 이유 (2026-08-12 디자인 패널, 세 패널 공통 결론):
+ *  · "카드당 액션 하나" 규칙을 이 하트가 이미 어기고 있었다 — 하단 액션 띠와 둘이 된다
+ *  · 타겟이 34px(권장 44px 미달)인데 카드 전면 링크 위라 오탭 비용까지 얹혀 있었다
+ *  · 그 위험을 지고 얻는 게 없었다 — 표시값이 사실상 전 카드 0
+ * 반응 장치가 사라지는 게 아니라 상세 하단 좋아요(`/api/posts/[id]/vote`)로 일원화된다.
+ * 로컬 낙관 토글 훅(useLocalLike)도 이 카드가 유일한 소비자였어서 함께 내려갔다.
+ */
+function CompactCard({ card, allowQuestion }: { card: CardNewsItem; allowQuestion: boolean }) {
   const faceFocus = useFaceFocus(card.image)
 
   return (
     <article
-      className="relative flex items-center gap-3 rounded-xl px-4 py-3"
+      className="relative overflow-hidden rounded-xl"
       style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
     >
-      {/* 이적설 사가가 붙은 기사는 위키로 직행 (2026-08-03 오너 — "게시물이 아니라 위키로") */}
-      <Link
-        href={
-          card.sagaSlug
-            ? `/saga/${card.sagaSlug}?utm_source=cardnews&from=${card.id}`
-            : `/post/${card.id}?utm_source=cardnews`
-        }
-        className="absolute inset-0 z-[1]"
-        aria-label={card.title}
-        onClick={() => openPost(card.id, card.sagaSlug ? "saga" : "post")}
-      />
+      {/* 전면 링크는 이 본문 행에만 걸린다 — 하단 액션 띠는 이 div 바깥이라
+          z-index·pointer-events 로 링크와 다툴 일이 없다 (CardActionStrip 주석 참조) */}
+      <div className="relative flex items-center gap-3 px-4 py-3">
+        {/* 이적설 사가가 붙은 기사는 위키로 직행 (2026-08-03 오너 — "게시물이 아니라 위키로") */}
+        <Link
+          href={
+            card.sagaSlug
+              ? `/saga/${card.sagaSlug}?utm_source=cardnews&from=${card.id}`
+              : `/post/${card.id}?utm_source=cardnews`
+          }
+          className="absolute inset-0 z-[1]"
+          aria-label={card.title}
+          onClick={() => openPost(card.id, card.sagaSlug ? "saga" : "post")}
+        />
 
-      <div className="min-w-0 flex-1">
-        <CompactKicker card={card} />
-        <h2
-          className="line-clamp-2"
-          style={{
-            fontSize: 14.5,
-            fontWeight: 650,
-            lineHeight: 1.38,
-            letterSpacing: "-0.01em",
-            color: "var(--wc-ink)",
-            wordBreak: "keep-all",
-            overflowWrap: "anywhere",
-          }}
-        >
-          {card.title}
-        </h2>
-        <div className="mt-1.5 flex items-center gap-3.5">
-          {/* 글쓴이 — 운영자 요청 (2026-08-03): 제목·글쓴이·좋아요·댓글 구성 */}
-          {card.author && (
-            <span
-              className="max-w-[92px] truncate text-[11.5px] font-semibold"
-              style={{ color: "var(--wc-mute)" }}
-            >
-              {card.author}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={toggle}
-            className={`${ghostAction} pointer-events-auto z-[2] !text-[11.5px] ${
-              liked ? "text-rose-500" : "text-[var(--wc-mute)]"
-            }`}
-            aria-label="좋아요"
-            aria-pressed={liked}
+        <div className="min-w-0 flex-1">
+          <CompactKicker card={card} />
+          <h2
+            className="line-clamp-2"
+            style={{
+              fontSize: 14.5,
+              fontWeight: 650,
+              lineHeight: 1.38,
+              letterSpacing: "-0.01em",
+              color: "var(--wc-ink)",
+              wordBreak: "keep-all",
+              overflowWrap: "anywhere",
+            }}
           >
-            <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
-            {card.voteCount + (liked ? 1 : 0) > 0 && (
-              <span className="tabular-nums">{card.voteCount + (liked ? 1 : 0)}</span>
-            )}
-          </button>
-          <span
-            className="inline-flex items-center gap-1 text-[11.5px] font-semibold"
-            style={{ color: "var(--wc-mute)" }}
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            {card.commentCount > 0 && <span className="tabular-nums">{card.commentCount}</span>}
-          </span>
-          <span
-            className="text-[11.5px] font-medium"
-            style={{ color: "var(--wc-mute)" }}
-            suppressHydrationWarning
-          >
-            {formatRelativeTime(new Date(card.createdAt))}
-          </span>
+            {card.title}
+          </h2>
+          <CommentPreview card={card} />
         </div>
-        <CardAction card={card} />
-        <CommentPreview card={card} />
+
+        {(card.image || card.media) && (
+          <div className="relative h-[76px] w-[104px] shrink-0 overflow-hidden rounded-lg">
+            {card.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={card.image}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: faceFocus ?? "50% 30%" }}
+              />
+            ) : (
+              card.media && <MediaPlaceholder provider={card.media.provider} />
+            )}
+            {/* 유튜브 썸네일엔 미니 재생 표시 (재생은 상세/상위 카드 몫) */}
+            {card.media?.provider === "youtube" && card.image && (
+              <span
+                className="absolute top-1/2 left-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+                style={{ background: "rgba(0,0,0,.55)" }}
+                aria-hidden
+              >
+                <Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" />
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {(card.image || card.media) && (
-        <div className="relative h-[76px] w-[104px] shrink-0 overflow-hidden rounded-lg">
-          {card.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={card.image}
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ objectPosition: faceFocus ?? "50% 30%" }}
-            />
-          ) : (
-            card.media && <MediaPlaceholder provider={card.media.provider} />
-          )}
-          {/* 유튜브 썸네일엔 미니 재생 표시 (재생은 상세/상위 카드 몫) */}
-          {card.media?.provider === "youtube" && card.image && (
-            <span
-              className="absolute top-1/2 left-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
-              style={{ background: "rgba(0,0,0,.55)" }}
-              aria-hidden
-            >
-              <Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" />
-            </span>
-          )}
-        </div>
-      )}
+      {allowQuestion && <CardActionStrip card={card} />}
     </article>
   )
 }
@@ -660,6 +651,9 @@ export function CardNewsFeed({
     trackEvent({ name: "cardnews_feed_open", params: {} })
   }, [])
 
+  // 질문성 띠 밀도 상한 — 카드가 늘 때만 다시 계산 (pickQuestionCards 주석 참조)
+  const questionCards = useMemo(() => pickQuestionCards(cards), [cards])
+
   return (
     <div className="flex flex-col gap-3">
       {/*
@@ -670,7 +664,7 @@ export function CardNewsFeed({
       */}
       {cards.map((card, i) => (
         <Fragment key={card.id}>
-          <CompactCard card={card} />
+          <CompactCard card={card} allowQuestion={questionCards.has(i)} />
           {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
               폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정
               (2026-07-30 워룸). 3번째 카드 뒤 폴 1개, 9번째 뒤 디스코드 1개 — 도배 금지. */}
