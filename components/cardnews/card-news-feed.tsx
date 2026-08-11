@@ -6,6 +6,7 @@ import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { suggestTarot, tarotHref } from "@/lib/tarot/suggest"
+import { CardVsVote } from "@/components/vs/card-vs-vote"
 import {
   Heart,
   MessageCircle,
@@ -367,6 +368,23 @@ function openPost(id: string, destination: "post" | "saga" = "post") {
  * 공방을 카드 안에서 맛보고 "모두 보기"로 상세 진입하는 참여 사다리.
  */
 /**
+ * 카드 액션 — **카드 하나에 액션은 항상 하나** (2026-08-12 운영자 결정).
+ *
+ * 우선순위: 투표 > 타로.
+ *   · VS 쟁점이 붙은 기사는 이미 논쟁거리라 투표가 자연스럽고, 타로가 굳이 필요 없다
+ *   · 폴이 없는 이적설엔 타로가 딱 맞는다
+ * 실측(최근 60장): 투표 37 / 나머지 23 — 서로 겹치지 않고 62:38 로 갈린다.
+ * 둘 다 붙이면 카드당 CTA 가 셋(기사·투표·타로)이 되고, 고를 게 많으면 아무것도 안 누른다.
+ *
+ * 투표 데이터는 이미 서버가 카드에 실어 보내고 있었다(lib/feed/cardnews.ts `card.vs`) —
+ * 폴 조회·집계까지 다 하고 화면만 없던 상태였다.
+ */
+function CardAction({ card }: { card: CardNewsItem }) {
+  if (card.vs) return <CardVsVote vs={card.vs} surface="card" compact />
+  return <TarotHook card={card} />
+}
+
+/**
  * 타로 진입점 — 이적·거취·경기 기사에만 붙는다 (2026-08-12 운영자 제안).
  *
  * "기마랑이스 이적설이야 → 이 이적에 대한 타로점을 봐보라고 유도". 질문이 제목에서
@@ -546,7 +564,7 @@ function CompactCard({ card }: { card: CardNewsItem }) {
             {formatRelativeTime(new Date(card.createdAt))}
           </span>
         </div>
-        <TarotHook card={card} />
+        <CardAction card={card} />
         <CommentPreview card={card} />
       </div>
 

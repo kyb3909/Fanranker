@@ -73,11 +73,16 @@ type AnalyticsEvent =
   | { name: "saga_vote"; params: { saga_slug: string; choice: string } }
   // ── VS 쟁점 계측 (VS-RESULT 결정 1·2·5의 표본 — 안 1과 반드시 동행) ──
   // confidence 는 poll_id → polls.confidence 조인으로 붙인다 (이벤트엔 안 실음)
-  // surface "modal" = 예측 완료 모달 (2026-08-12 패널 Top5 #5 — 쓰기 대신 고르기)
-  | { name: "vs_impression"; params: { poll_id: string; surface: "card" | "post" | "modal" } }
+  // surface 별로 분리 계측한다 — 같은 폴이라도 다른 표면은 다른 노출이고, 어느 자리가
+  // 실제로 참여를 만드는지가 이 피처의 판정 근거다 (2026-08-12).
+  //   card=떡밥 피드 카드 / post=글 상세 / modal=예측 완료 / hero=담벼락 히어로 배너
+  | {
+      name: "vs_impression"
+      params: { poll_id: string; surface: "card" | "post" | "modal" | "hero" }
+    }
   | {
       name: "vs_vote"
-      params: { poll_id: string; option_key: string; surface: "card" | "post" | "modal" }
+      params: { poll_id: string; option_key: string; surface: "card" | "post" | "modal" | "hero" }
     }
 
 export function trackEvent(event: AnalyticsEvent) {

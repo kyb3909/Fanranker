@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { HeroVsVote } from "@/components/home/hero-vs-vote"
 import { useAuth } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
@@ -247,60 +248,9 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                 {c.title}
               </Link>
             </h3>
-            {/* VS 쟁점 스트립 — 폴 있는 히어로에만. 다크 밴드(선언 영역) 안이라 다크 허용 */}
-            {c.vs && (
-              <Link href={`/post/${c.id}`} className="mt-3 block max-w-[430px] no-underline">
-                <span
-                  className="mb-1.5 flex items-baseline gap-2 text-[12.5px] font-bold"
-                  style={{ color: "var(--gn-cream)" }}
-                >
-                  <span
-                    className="rounded px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider"
-                    style={{ background: "rgba(150,30,55,.35)", color: "#e8a0b0" }}
-                  >
-                    오늘의 쟁점
-                  </span>
-                  <span style={{ wordBreak: "keep-all" }}>{c.vs.question}</span>
-                </span>
-                {/* 소표본(10표 미만) % 숨김 — 카드/상세 위젯과 동일 규칙 (2026-07-30 워룸) */}
-                <span
-                  className="flex h-[22px] overflow-hidden rounded-md text-[11px] font-extrabold"
-                  style={{ color: "var(--gn-cream)" }}
-                  role="img"
-                  aria-label={
-                    c.vs.total >= 10
-                      ? `${c.vs.aLabel} ${c.vs.aPct}%, ${c.vs.bLabel} ${100 - c.vs.aPct}%`
-                      : `${c.vs.aLabel} 대 ${c.vs.bLabel} — 집계 중`
-                  }
-                >
-                  <span
-                    className="flex items-center pl-2"
-                    style={{
-                      width: `${c.vs.aPct}%`,
-                      minWidth: 30,
-                      background:
-                        "linear-gradient(100deg, var(--wc-burgundy-deep,#771629), var(--wc-burgundy,#961e37))",
-                    }}
-                  >
-                    {c.vs.total >= 10 && `${c.vs.aPct}%`}
-                  </span>
-                  <span
-                    className="flex items-center justify-end pr-2"
-                    style={{
-                      width: `${100 - c.vs.aPct}%`,
-                      minWidth: 30,
-                      background: "linear-gradient(100deg, #2c4a6e, #1f3550)",
-                    }}
-                  >
-                    {c.vs.total >= 10 && `${100 - c.vs.aPct}%`}
-                  </span>
-                </span>
-                <span className="mt-1 flex justify-between text-[11px] font-bold">
-                  <span style={{ color: "#e8a0b0", wordBreak: "keep-all" }}>{c.vs.aLabel}</span>
-                  <span style={{ color: "#9db8d8", wordBreak: "keep-all" }}>{c.vs.bLabel}</span>
-                </span>
-              </Link>
-            )}
+            {/* VS 쟁점 — 결과만 보던 스트립을 **그 자리에서 투표**로 (2026-08-12 운영자).
+                다크 밴드(선언 영역) 안이라 다크 허용. 기사 진입은 컴포넌트 안 별도 링크. */}
+            {c.vs && <HeroVsVote vs={c.vs} postId={c.id} />}
             {/* 0 카운트는 노출하지 않는다 (피드 count>0 규칙과 통일, 2026-07-30 워룸
                 — "댓글 0 · 추천 0" 전시는 유령 사이트 각인만 남긴다). CTA 링크는
                 2026-08-04 운영자 지시로 제거 — 제목 링크가 내비게이션을 담당한다. */}
