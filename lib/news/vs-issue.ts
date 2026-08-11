@@ -2,6 +2,7 @@ import type { createServiceRoleClient } from "@/lib/supabase/server"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import { chatParams } from "@/lib/llm/openai-params"
+import { isClubName } from "@/lib/naming/pick"
 
 /**
  * VS 쟁점 생성 — 발행된 뉴스에 찬반 대결 폴 + 3줄 요약을 붙인다.
@@ -159,16 +160,74 @@ export interface VsReviewDecision {
 export const VS_AUTO_ON_CONFIDENCE = 0.7
 
 /**
+ * 일 쿼터 — 하루에 **켜진 채** 나가는 VS 폴 상한 (2026-08-12 운영자 결정).
+ *
+ * 배경: 실측 하루 24건(최근 7일 13~31건)이 붙어 피드 카드의 **61%가 질문을 걸고**
+ * 있었다. 전부가 물으면 묻는 게 신호가 아니게 된다 — 눈이 배너로 학습해 건너뛴다.
+ * 6건이면 피드 비중이 약 25%(네 장 중 한 장) 선으로 내려간다.
+ *
+ * 판정을 정교화하는 대신 상한으로 페이싱하는 건 이 저장소 관례다 — news-auto-publish
+ * 의 PER_RUN_CAP, 스캐너의 MAX_LLM_PER_RUN 과 같은 철학이다. confidence 임계값을
+ * 올리는 방식을 안 쓴 이유는 아래 게이트 주석 참조.
+ */
+export const VS_DAILY_QUOTA = 6
+
+/**
+ * KST 자정의 UTC ISO — 쿼터를 "하루"로 자르는 기준선.
+ * ⚠️ app/api/cron/news-auto-publish/route.ts 에 같은 함수가 있다(그쪽이 원본).
+ * 날짜 경계 규칙을 고칠 일이 생기면 **양쪽 다** 고칠 것.
+ */
+function kstMidnightUtcIso(): string {
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000)
+  return new Date(
+    Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - 9 * 3600 * 1000
+  ).toISOString()
+}
+
+/** 오늘(KST) 켜진 채 만들어진 VS 폴 수 — 쿼터는 "보이는 밀도" 상한이라 is_active 만 센다 */
+async function countTodayActiveVsPolls(supabase: ServiceClient): Promise<number> {
+  const { count } = await supabase
+    .from("polls")
+    .select("id", { count: "exact", head: true })
+    .eq("created_by", "system_vs")
+    .eq("is_active", true)
+    .gte("created_at", kstMidnightUtcIso())
+  return count ?? 0
+}
+
+/**
  * 초안의 VS 제안 + 검수 결정 → 폴 생성 (2026-07-31, 발행 시 LLM 호출 제거).
  *
  * 기본값 정책 (3인 회의 결론 — fail-open):
  *   confidence >= 0.7 → 검수자가 안 끄면 켜진 채 발행
  *   0.4~0.7          → 제안 상태(꺼짐)로 저장 — 검수에서 켰을 때만 노출
  * 검수 결정(enabled/문구 수정)이 오면 그것이 우선한다. 절대 throw 하지 않는다.
+ *
+ * ## 관심도 게이트 + 일 쿼터 (2026-08-12 추가)
+ *
+ * **왜 confidence 로는 안 되는가.** 스캐너의 `judgeVsIssue()` 는 초안 작성과 *동시에*
+ * 돌아서, 관심도 심사(별도 크론)가 있기도 전에 confidence 를 굳힌다. 그 프롬프트에는
+ * 클럽·선수 유명도를 묻는 문항이 한 줄도 없고 함수 입력도 제목·본문 둘뿐이다 —
+ * 즉 confidence 는 "갈등 구도가 서술 가능한가"만 재고 "그 갈등에 몇 명이 신경 쓰는가"는
+ * 아무도 안 잰다. 두 축이 직교하므로 임계값을 올려봐야 "쟁점은 확실한데 아무도 관심
+ * 없는 것"은 그대로 통과한다. 그래서 축을 하나 더 세운다.
+ *
+ * **왜 새 LLM 판정을 안 만드는가.** 뉴스 관심도 필터가 이미 쓰는 `isClubName()` 을
+ * 그대로 재사용한다. 정규식이라 LLM 호출 0회고, 모델·프롬프트가 바뀌어도 판정이
+ * 흔들리지 않는다. 여기서 판정 사전을 새로 세우면 표기 사전이 읽는 경로 7개로 갈라져
+ * 사고가 반복되던 패턴을 VS 게이트에서 재현하게 된다.
+ *
+ * **사람이 이긴다.** 검수자가 명시적으로 켠 폴은 게이트·쿼터가 뒤집지 않는다 —
+ * 자동 기본값만 조이는 장치다.
+ *
+ * ⚠️ 한계: 유명 선수가 무명 클럽에 있는 기사는 `isClubName()` 이 못 잡아 폴이 꺼진다.
+ * 정규식으로 선수 목록까지 담는 건 불가능해서 남겨둔 사각지대다 — 개막 후 실트래픽으로
+ * 폴 유형별 투표 패턴이 보이면 그때 다시 본다.
  */
 export async function createVsPollFromDraft(
   supabase: ServiceClient,
   postId: string,
+  title: string,
   proposal: VsDraftProposal,
   decision?: VsReviewDecision | null
 ): Promise<void> {
@@ -189,7 +248,13 @@ export async function createVsPollFromDraft(
     const optionB = (decision?.optionB ?? proposal.option_b).trim()
     if (!question || !optionA || !optionB) return
 
-    const isActive = decision?.enabled ?? proposal.confidence >= VS_AUTO_ON_CONFIDENCE
+    // 검수자 결정이 최우선. 자동 경로만 관심도·쿼터를 통과해야 켜진다 —
+    // && 단축 평가라 앞의 두 조건이 깨지면 쿼터 COUNT 질의 자체가 안 나간다.
+    const isActive =
+      decision?.enabled ??
+      (proposal.confidence >= VS_AUTO_ON_CONFIDENCE &&
+        isClubName(title) &&
+        (await countTodayActiveVsPolls(supabase)) < VS_DAILY_QUOTA)
 
     const { error } = await supabase.from("polls").insert({
       question: question.slice(0, 80),

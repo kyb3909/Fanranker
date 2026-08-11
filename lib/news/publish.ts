@@ -326,7 +326,7 @@ export async function publishNewsDraft(
   const vsProposal = item.draft?.vs
   if (vsProposal) {
     after(async () => {
-      await createVsPollFromDraft(supabase, post.id, vsProposal, opts.vs)
+      await createVsPollFromDraft(supabase, post.id, opts.title, vsProposal, opts.vs)
     })
   }
 
