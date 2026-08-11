@@ -36,7 +36,12 @@ type AnalyticsEvent =
   | { name: "prediction_submit"; params: { sport: string; stake: number } }
   // ── 예측 완료 모달 → 커뮤니티 전환 실험 (2026-07-02) ──
   | { name: "prediction_success_modal"; params: { game_count: number; has_community: boolean } }
-  | { name: "prediction_modal_post_click"; params: { post_id: string } }
+  // slot: 어느 슬롯의 카드를 눌렀나 (2026-08-12 모달 재편성 — 편성글/예측한 팀 기사 분리 계측.
+  // 실패 판정이 슬롯별로 갈린다: 편성 클릭률과 팀 기사 클릭률은 다른 가설이다)
+  | {
+      name: "prediction_modal_post_click"
+      params: { post_id: string; slot: "featured" | "team" }
+    }
   | { name: "prediction_modal_board_click"; params: { board: string } }
   // 예측 직후 → 사가 주입 (PM 토론 2026-08-04 #4 — 콘텐츠 전환 최대 레버 실험)
   | { name: "prediction_modal_saga_click"; params: { saga_slug: string } }
@@ -65,8 +70,12 @@ type AnalyticsEvent =
   | { name: "saga_vote"; params: { saga_slug: string; choice: string } }
   // ── VS 쟁점 계측 (VS-RESULT 결정 1·2·5의 표본 — 안 1과 반드시 동행) ──
   // confidence 는 poll_id → polls.confidence 조인으로 붙인다 (이벤트엔 안 실음)
-  | { name: "vs_impression"; params: { poll_id: string; surface: "card" | "post" } }
-  | { name: "vs_vote"; params: { poll_id: string; option_key: string; surface: "card" | "post" } }
+  // surface "modal" = 예측 완료 모달 (2026-08-12 패널 Top5 #5 — 쓰기 대신 고르기)
+  | { name: "vs_impression"; params: { poll_id: string; surface: "card" | "post" | "modal" } }
+  | {
+      name: "vs_vote"
+      params: { poll_id: string; option_key: string; surface: "card" | "post" | "modal" }
+    }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {
