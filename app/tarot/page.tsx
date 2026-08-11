@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { TarotClient } from "./tarot-client"
 
 export const metadata: Metadata = {
@@ -21,7 +22,10 @@ export const metadata: Metadata = {
 export default function TarotPage() {
   return (
     <div className="min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
-      <TarotClient />
+      {/* useSearchParams(질문 프리필) 때문에 Suspense 필수 — 없으면 빌드가 막힌다 */}
+      <Suspense>
+        <TarotClient />
+      </Suspense>
     </div>
   )
 }

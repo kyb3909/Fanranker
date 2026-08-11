@@ -5,6 +5,7 @@ import { useAuth, useClerk } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
+import { suggestTarot, tarotHref } from "@/lib/tarot/suggest"
 import {
   Heart,
   MessageCircle,
@@ -365,6 +366,35 @@ function openPost(id: string, destination: "post" | "saga" = "post") {
  * 댓글 미리보기 (흰 표면 카드용) — 접힘: BEST 한 줄, 탭하면 상위 3개 인라인 펼침.
  * 공방을 카드 안에서 맛보고 "모두 보기"로 상세 진입하는 참여 사다리.
  */
+/**
+ * 타로 진입점 — 이적·거취·경기 기사에만 붙는다 (2026-08-12 운영자 제안).
+ *
+ * "기마랑이스 이적설이야 → 이 이적에 대한 타로점을 봐보라고 유도". 질문이 제목에서
+ * 미리 만들어져 클릭 한 번에 리딩이 시작된다 — 빈 입력창이라는 최대 마찰이 사라진다.
+ * suggestTarot 이 null 이면 **아무것도 안 보여준다**: 어설픈 질문을 채우느니 감춘다.
+ *
+ * 카드 전체가 링크(absolute inset-0 z-1)라 이 버튼은 z-2 + pointer-events-auto 로
+ * 그 위에 떠야 클릭이 먹는다 (좋아요 버튼과 같은 방식).
+ */
+function TarotHook({ card }: { card: CardNewsItem }) {
+  const suggestion = suggestTarot(card.title)
+  if (!suggestion) return null
+  return (
+    <Link
+      href={tarotHref(suggestion.question, "cardnews")}
+      className="pointer-events-auto relative z-[2] mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold no-underline transition-opacity hover:opacity-80"
+      style={{
+        background: "color-mix(in srgb, var(--wc-burgundy) 7%, transparent)",
+        color: "var(--wc-burgundy)",
+      }}
+      onClick={() => trackEvent({ name: "tarot_hook_click", params: { surface: "cardnews" } })}
+    >
+      <span aria-hidden>🔮</span>
+      {suggestion.label}
+    </Link>
+  )
+}
+
 function CommentPreview({ card }: { card: CardNewsItem }) {
   const [open, setOpen] = useState(false)
   if (card.topComments.length === 0 || card.commentCount === 0) return null
@@ -516,6 +546,7 @@ function CompactCard({ card }: { card: CardNewsItem }) {
             {formatRelativeTime(new Date(card.createdAt))}
           </span>
         </div>
+        <TarotHook card={card} />
         <CommentPreview card={card} />
       </div>
 

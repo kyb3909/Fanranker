@@ -3,7 +3,7 @@
 import { Suspense } from "react"
 import Link from "@/components/ui/app-link"
 import { usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Target, User } from "lucide-react"
+import { Compass, LayoutGrid, Sparkles, Target, User } from "lucide-react"
 
 const tabs = [
   {
@@ -24,6 +24,13 @@ const tabs = [
     icon: Target,
     label: "승부예측",
     match: (p: string) => p.startsWith("/prediction") || p.startsWith("/worldcup"),
+  },
+  {
+    // 축구 타로 — 재미 콘텐츠. 승부예측 뒤에 둔다(예측과 붙으면 "점으로 고른다"로 읽힘).
+    href: "/tarot",
+    icon: Sparkles,
+    label: "타로",
+    match: (p: string) => p.startsWith("/tarot"),
   },
   {
     href: "/settings",

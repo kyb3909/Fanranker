@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import { SPREADS, SPREAD_IDS, type SpreadId } from "@/lib/tarot/spreads"
 import { expressionSrc, type Expression } from "@/lib/tarot/expression"
 
@@ -47,7 +48,10 @@ const PRESETS = [
 ]
 
 export function TarotClient() {
-  const [question, setQuestion] = useState("")
+  // 기사에서 들어오면 질문이 이미 채워져 있다 (lib/tarot/suggest) —
+  // 콜드스타트에서 가장 큰 마찰은 빈 입력창이다.
+  const searchParams = useSearchParams()
+  const [question, setQuestion] = useState(() => (searchParams.get("q") ?? "").slice(0, 200))
   const [spreadId, setSpreadId] = useState<SpreadId>("three")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ReadingResult | null>(null)

@@ -46,6 +46,9 @@ type AnalyticsEvent =
   // 예측 직후 → 사가 주입 (PM 토론 2026-08-04 #4 — 콘텐츠 전환 최대 레버 실험)
   | { name: "prediction_modal_saga_click"; params: { saga_slug: string } }
   | { name: "search"; params: { query: string } }
+  // ── 축구 타로 (2026-08-12) — 진입점별 전환을 갈라 본다 ──
+  | { name: "tarot_hook_click"; params: { surface: "cardnews" | "gnb" } }
+  | { name: "tarot_reading"; params: { spread: string; prefilled: boolean } }
   // ── 메타버스 이벤트 ──
   | { name: "metaverse_enter"; params: { is_guest: boolean } }
   | { name: "metaverse_plot_enter"; params: { plot_code: string; has_room: boolean } }
