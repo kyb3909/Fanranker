@@ -37,6 +37,8 @@ const ALLOWED: Record<string, string> = {
   "components/legal/terms-content.tsx":
     "약관 제6조의2 — '금전 베팅을 제공하지 않는다' 선언 자체. 지우면 소명이 사라진다",
   "lib/news/quality-gate.ts": "LLM 검사 프롬프트 — '도박/베팅 사이트 홍보 차단' 규칙문",
+  "lib/tarot/safety.ts":
+    "타로 도박 유도 질문 탐지 패턴 — 막으려면 그 단어를 알아야 한다(유저 노출 아님)",
 }
 
 /**
