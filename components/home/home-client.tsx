@@ -230,8 +230,11 @@ export function HomeClient({
                 /worldcup 세그먼트 전체가 redirect 되므로 진입 배너도 내린다.
                 worldcupConcluded prop 은 시즌 이벤트 배너 재사용 대비로 유지. */}
 
-            {/* 메인 탭 스트립 — 카드뉴스/오늘의 경기 + 게시판 정렬(랜덤/온도순/최신순).
-                정렬 pill 을 누르면 게시판 탭으로 전환된다. (pill 스타일 유지 — 언더라인 통일 예외) */}
+            {/* 메인 탭 스트립 — 카드뉴스/오늘의 경기 + 게시판 정렬(랜덤/최신순).
+                정렬 pill 을 누르면 게시판 탭으로 전환된다. (pill 스타일 유지 — 언더라인 통일 예외)
+                온도순은 UI 에서 하차 (2026-08-12 패널): 트래픽 0 에서 온도가 전부 0이라
+                "온도순"이 사실상 최신순의 다른 이름이었다 — 라벨이 거짓말을 하고 있었다.
+                공식·API(?sort=hot)·문서는 그대로 유지, 트래픽이 쌓여 온도가 실제로 갈리면 복귀. */}
             <div
               className="scrollbar-none mt-4 flex items-center gap-1.5 overflow-x-auto"
               role="group"
@@ -267,7 +270,6 @@ export function HomeClient({
               />
               {[
                 { key: "random" as const, label: "랜덤" },
-                { key: "hot" as const, label: "온도순" },
                 { key: "new" as const, label: "최신순" },
               ].map(({ key, label }) => {
                 const active = feedTab === "board" && sortBy === key

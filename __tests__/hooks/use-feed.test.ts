@@ -184,6 +184,31 @@ describe("useFeed", () => {
       expect(String(result.current.posts[0].id)).toBe(String(newPost.id))
     })
 
+    // 2026-08-12 패널 수리: 이전 구현(sort(() => Math.random()-0.5))은 loadMore 로
+    // data 참조가 바뀔 때마다 누적 전체를 다시 섞어 스크롤 중 피드가 널뛰었다.
+    it("random 정렬은 같은 세션에서 순서가 고정된다 — 데이터가 늘어도 재셔플 없음", () => {
+      const first = Array.from({ length: 10 }, () => makeRawPost())
+      const { result, rerender } = setup({ sortBy: "random", pages: [page(first)] })
+      const before = result.current.posts.map((p) => String(p.id))
+
+      // loadMore 시뮬레이션 — 같은 훅 인스턴스에 페이지가 하나 더 붙는다
+      const second = Array.from({ length: 10 }, () => makeRawPost())
+      swrState = { ...swrState, data: [page(first), page(second)], size: 2 }
+      rerender()
+      const after = result.current.posts.map((p) => String(p.id))
+
+      // 기존 글들의 상대 순서가 그대로다 (새 글은 사이에 끼어들 수 있음 — 해시 특성상 수용)
+      expect(after.filter((id) => before.includes(id))).toEqual(before)
+    })
+
+    it("random 정렬은 글을 잃지도 늘리지도 않는다", () => {
+      const posts = Array.from({ length: 15 }, () => makeRawPost())
+      const { result } = setup({ sortBy: "random", pages: [page(posts)] })
+      expect(result.current.posts.map((p) => String(p.id)).sort()).toEqual(
+        posts.map((p) => String(p.id)).sort()
+      )
+    })
+
     it("프로필이 있으면 닉네임, 없으면 익명", () => {
       const known = makeRawPost()
       const unknown = makeRawPost({ user_id: "ghost" })

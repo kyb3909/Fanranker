@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import useSWRInfinite from "swr/infinite"
@@ -14,6 +14,29 @@ export type { Post } from "@/types/post"
 import type { Post } from "@/types/post"
 
 const PAGE_SIZE = 20
+
+/**
+ * 시드 고정 셔플 순서값 — 랜덤 정렬용 (2026-08-12 패널 Realist 확인 반영).
+ *
+ * 기존 `sort(() => Math.random() - 0.5)` 는 두 가지가 겹쳐 있었다:
+ *   ① 비교기가 매 호출 다른 값을 내 편향 셔플이 된다 (균등하지 않음)
+ *   ② posts useMemo 가 loadMore()의 data 참조 변경마다 재실행되어 **누적 전체를
+ *      다시 섞는다** — 스크롤 중 이미 본 글들이 널뛴다
+ * 마운트당 1회 고정된 seed 로 글 id 를 해시하면 같은 세션에서 순서가 안정되고
+ * (loadMore 는 새 글이 사이에 끼어들 뿐 기존 상대 순서 유지), 새로고침마다 새 순서가
+ * 나와 "랜덤"의 목적도 지킨다. 해시라 편향도 없다.
+ */
+function seededOrder(id: string, seed: number): number {
+  let h = seed | 0
+  for (let i = 0; i < id.length; i++) {
+    h = Math.imul(h ^ id.charCodeAt(i), 2654435761)
+  }
+  // 마무리 애벌런치 — 연속된 id(uuid 앞부분 공유 등)가 비슷한 값으로 몰리는 것 방지
+  h ^= h >>> 13
+  h = Math.imul(h, 0x5bd1e995)
+  h ^= h >>> 15
+  return h >>> 0
+}
 
 interface RawPost {
   id: string
@@ -127,6 +150,10 @@ export function useFeed(
 ) {
   const { isSignedIn } = useAuth()
 
+  // 랜덤 정렬 시드 — 마운트당 1회. SSR 은 랜덤 정렬을 fallback 하지 않으므로(위 주석)
+  // 서버·클라 불일치(hydration) 걱정 없음.
+  const randomSeedRef = useRef((Math.random() * 0x7fffffff) | 0)
+
   const slugsArray = useMemo(() => Array.from(followedCommunities), [followedCommunities])
 
   // 담벼락 말머리 개인화 — 내 prefs 를 받아 favorite(only)/mute(exclude) flair id 로 변환.
@@ -221,7 +248,10 @@ export function useFeed(
     })
 
     if (sortBy === "random") {
-      return [...dedupedPosts].sort(() => Math.random() - 0.5)
+      const seed = randomSeedRef.current
+      return [...dedupedPosts].sort(
+        (a, b) => seededOrder(String(a.id), seed) - seededOrder(String(b.id), seed)
+      )
     }
     if (sortBy === "new") {
       return [...dedupedPosts].sort(

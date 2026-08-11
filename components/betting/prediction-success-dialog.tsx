@@ -141,13 +141,17 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
  * 예측 완료 모달 — 커뮤니티 전환 실험 (2026-07-02).
  * 기존 "예측 완료!" 단순 알림(막다른 골목)을 대체:
  * 1) 방금 예측한 경기들의 전체 픽 분포 ("다른 사람들은 어디에?")
- * 2) 축구 게시판 인기글 1개 + 게시판 CTA (showCommunity 일 때만)
+ * 2) 최신 글 카드 + 게시판 CTA (showCommunity 일 때만)
  * 클릭은 GA4(prediction_modal_*)로 계측 → 매치 스레드(B안) 투자 판단 데이터.
  */
 export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDialogProps) {
-  // 활성 게시판(자유·축구 등) 인기글 — 종목 무관. 썸네일 있는 글을 우선 노출한다.
+  // 최신 글 — 종목 무관, 썸네일 있는 글 우선 노출.
+  // ⚠️ 2026-08-12 패널: 이전엔 sort=hot 에 "🔥 지금 인기 있는 글" 라벨이었는데,
+  // 온도가 전부 0이라 hot 은 최신순의 다른 이름이었다 — 최고 전환 지점(이 모달)에서
+  // "인기글"이라며 평균 조회 0.57짜리 최신 봇글을 뿌리던 셈. 라벨을 사실대로 바꾸고
+  // 쿼리도 정직하게 sort=new 로. "오늘의 이슈" 편성 슬롯이 생기면 이 소스를 교체한다.
   const { data: hotData } = useSWR<{ posts: HotPost[] }>(
-    state.isOpen && state.showCommunity ? "/api/posts?sort=hot&limit=8" : null,
+    state.isOpen && state.showCommunity ? "/api/posts?sort=new&limit=8" : null,
     fetcher
   )
   // 진행 중 이적 사가 — 예측 직후는 "다음 베팅거리"를 찾는 순간 (PM 토론 #4)
@@ -248,7 +252,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
         {state.showCommunity && hotPosts.length > 0 && (
           <div className="min-w-0 space-y-2">
             <p className="text-[12px] font-bold" style={{ color: "var(--wc-mute, #5c6470)" }}>
-              🔥 지금 인기 있는 글
+              ⚡ 방금 올라온 소식
             </p>
             {hotPosts.map((post) => {
               const thumb = postThumbnail(post)
