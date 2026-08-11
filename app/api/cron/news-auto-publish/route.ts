@@ -32,6 +32,7 @@ import {
   findClubInTitle,
 } from "@/lib/news/breaking"
 import { stripUnevidencedAmounts } from "@/lib/news/amount-evidence"
+import { resolveTeamCard } from "@/lib/news/team-card"
 import { naverNewsCount } from "@/lib/naming/verify"
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import {
@@ -86,8 +87,6 @@ const DRAFT_WINDOW = 120
  * 되어 신선도 우선이 무의미해진다.
  */
 const EXPIRY_SOON_HOURS = 4
-/** 오피셜(브레이킹) 기본 이미지 — 원문 무이미지 시 붙여서 발행 (2026-08-08 오너 위임) */
-const OFFICIAL_FALLBACK_IMAGE = "/images/news-official-default.png"
 
 function kstMidnightUtcIso(): string {
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000)
@@ -306,30 +305,24 @@ async function run(request: NextRequest) {
       noteSkip(row.id, "womens_football")
       continue
     }
-    // 실제 이미지 필수 (2026-07-30 강화) — 기존 hasVisualContent 는 X/유튜브 임베드도
-    // 통과시켜 "이미지 파일 없는 글"이 자동으로 나갔다. 임베드-온리 글은 사람 검수로만.
-    // 예외 (2026-08-08 오너 위임 결정): **브레이킹(오피셜)은 기본 이미지를 붙여 발행** —
-    // 구단 공식 발표는 원문에 이미지가 없는 경우가 흔한데(비니시우스 실사고: 가장 큰
-    // 뉴스가 no_image 무덤행), 오피셜은 사실 오류 위험이 가장 낮은 등급이다.
+    // ── 이미지 없으면 구단 카드를 붙인다 (2026-08-11 운영자 지시) ──
+    // 이전에는 브레이킹(오피셜)만 예외로 와인톤 기본 카드를 달고, 나머지는 `no_image` 로
+    // 검수 무덤에 갇혔다(비니시우스 실사고 — 가장 큰 뉴스가 그렇게 죽었다). 그 기본 카드도
+    // 흰 배경 로고를 버건디에 합성한 것이라 "이미지 로딩 실패"처럼 보였다.
+    // 이제 구단별 카드 21종이 있으므로, **이미지 없는 기사 전부**에 붙여 내보낸다.
+    // 구단을 못 뽑으면 중립 축구 카드로 떨어진다.
     let workingContent = content
     let firstImage = extractFirstImageSrcFromTipTapJSON(content)
     let usedFallbackImage = false
     if (!firstImage) {
-      if (isBreaking(row.id)) {
-        const doc = workingContent as { type?: string; content?: unknown[] }
-        workingContent = {
-          ...doc,
-          content: [
-            { type: "image", attrs: { src: OFFICIAL_FALLBACK_IMAGE, alt: "공식 발표" } },
-            ...(doc.content ?? []),
-          ],
-        } as typeof content
-        firstImage = OFFICIAL_FALLBACK_IMAGE
-        usedFallbackImage = true
-      } else {
-        noteSkip(row.id, "no_image", "needs_human")
-        continue
-      }
+      const card = resolveTeamCard(title, koreanLead)
+      const doc = workingContent as { type?: string; content?: unknown[] }
+      workingContent = {
+        ...doc,
+        content: [{ type: "image", attrs: { src: card, alt: title } }, ...(doc.content ?? [])],
+      } as typeof content
+      firstImage = card
+      usedFallbackImage = true
     }
     // 무내용 초안 차단 (2026-07-30) — 원문 0자로 생성돼 "세부 사항은 기사에서 확인"류
     // 필러만 있는 글 (hermes-reddit-1vank7k 사례). 80자 미만·자기지시 문구 = 자동발행 금지.

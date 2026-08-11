@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 /**
  * 뉴스 자동발행 cron — 검수 없이 담벼락에 나가는 유일한 경로.
  * 여기서 잠그는 계약:
- *   · 실제 이미지 없는 초안은 자동으로 나가지 않는다 (사람 검수로만)
+ *   · 이미지 없는 초안은 구단 카드를 붙여 내보낸다 (2026-08-11 — 이전엔 사람 검수행이었다)
  *   · 일일 상한은 없고 회당 2건 페이싱만 적용한다
  *   · 자동 스킵 사유를 응답에 집계해 무기록 탈락을 막는다
  *   · 킬스위치 env 로 배포 없이 끌 수 있다
@@ -280,11 +280,14 @@ describe("GET /api/cron/news-auto-publish", () => {
     expect(inserted).toHaveLength(0)
   })
 
-  it("임베드만 있고 실제 이미지가 없는 초안은 발행하지 않는다 (2026-07-30 강화)", async () => {
+  // 2026-08-11 정책 변경: 이미지 없는 초안은 **구단 카드를 붙여 발행**한다.
+  // 이전(2026-07-30)엔 no_image 로 사람 검수에 넘겼는데, 그 규칙이 있던 이유가
+  // "피드 카드에 썸네일이 없다"였다. 구단 카드 21종이 생겨 그 이유가 사라졌다.
+  it("이미지가 없으면 구단 카드를 붙여 발행한다 (임베드만 있는 초안 포함)", async () => {
     const embedOnlyDoc = {
       type: "doc",
       content: [
-        { type: "paragraph", content: [{ type: "text", text: "본문" }] },
+        { type: "paragraph", content: [{ type: "text", text: LONG_BODY }] },
         { type: "embed", attrs: { provider: "x", url: "https://x.com/a/status/1" } },
       ],
     }
@@ -292,8 +295,10 @@ describe("GET /api/cron/news-auto-publish", () => {
 
     const body = await (await call()).json()
 
-    expect(body.published).toBe(0)
-    expect(body.skipCounts.no_image).toBe(1)
+    expect(body.published).toBe(1)
+    expect(body.skipCounts?.no_image).toBeUndefined()
+    // LONG_BODY 는 아스날 경기 기사라 아스날 카드가 붙어야 한다 (본문에서 팀을 뽑는다)
+    expect(inserted[0]?.image).toBe("/images/news-team/epl_arsenal.webp")
   })
 
   it("무내용 초안(80자 미만·자기지시 필러)은 이미지가 있어도 발행하지 않는다 (2026-07-30)", async () => {
@@ -333,14 +338,17 @@ describe("GET /api/cron/news-auto-publish", () => {
     expect(trail).toEqual(["fact_checking", "published"])
   })
 
+  // ⚠️ 재료가 no_image → content_free 로 바뀌었다 (2026-08-11). 이미지 없는 초안은 이제
+  //    구단 카드를 달고 나가므로 no_image 판정 자체가 발생하지 않는다. 이 두 테스트가
+  //    검증하는 건 사유가 아니라 **원장 중복 차단**이라 재료만 갈아끼운다.
   it("판정이 그대로인 정체 후보는 원장에 다시 기록하지 않는다 (이벤트 증폭 차단)", async () => {
     drafts = [draft("a", textOnlyDoc)]
-    knownCandidates = [{ candidate_id: "a", state: "needs_human", last_reason_code: "no_image" }]
+    knownCandidates = [{ candidate_id: "a", state: "held", last_reason_code: "content_free" }]
 
     const body = await (await call()).json()
 
     // 회차별 집계는 유지 — 정체 규모를 운영자가 계속 본다
-    expect(body.skipCounts.no_image).toBe(1)
+    expect(body.skipCounts.content_free).toBe(1)
     expect(body.repeatedVerdicts).toBe(1)
     expect(ledgerEvents.filter((e) => e.candidate_id === "a")).toHaveLength(0)
   })
@@ -353,7 +361,7 @@ describe("GET /api/cron/news-auto-publish", () => {
 
     expect(body.repeatedVerdicts).toBeUndefined()
     expect(ledgerEvents.filter((e) => e.candidate_id === "a")).toEqual([
-      expect.objectContaining({ to_state: "needs_human", reason_code: "no_image" }),
+      expect.objectContaining({ to_state: "held", reason_code: "content_free" }),
     ])
   })
 
