@@ -132,8 +132,17 @@ async function main() {
         // 프롬프트가 하단을 비우게 하므로 버릴 몫은 전부 아래에 있다 → 위를 붙이고 아래를 깎는다.
         // sharp.strategy.attention 도 시험했지만 그 빈 띠를 '관심 영역'으로 오인해 되살렸다.
         .resize(W, H, { fit: "cover", position: "top" })
-        // WebP — PNG 로 뽑으면 장당 1.3MB 라 피드 썸네일로 무겁다(21장 27.6MB → 1.2MB)
-        .webp({ quality: 88 })
+        // WebP — PNG 로 뽑으면 장당 1.3MB 라 피드 썸네일로 무겁다(21장 27.6MB → 1.0MB)
+        //
+        // q88 → q80 사이에 절벽이 있다 (실측, 21장 합계): 2.36MB → 1.01MB 로 57% 가 빠지는데
+        // 육안 차이가 없다. 그라디언트가 가장 심한 뉴캐슬 하늘을 1:1 로 잘라 q88/q80/q72 를
+        // 나란히 비교했으나 밴딩이 안 보였다 — 프롬프트의 "subtle grain" 이 압축 아티팩트를
+        // 가려주기 때문이다. effort 6 은 인코딩만 느려지고 화질 손해 없이 더 줄여준다.
+        //
+        // ⚠️ 해상도(1200)는 건드리지 말 것. 이 이미지는 OG 이미지로도 나간다
+        // (app/post/[id]/page.tsx 의 openGraph.images ← post.image). 900 으로 내리면
+        // 0.41MB 까지 떨어지지만 공유 카드가 흐려진다. 더 줄여야 하면 품질을 먼저 낮춘다.
+        .webp({ quality: 80, effort: 6 })
         .toBuffer()
       writeFileSync(`${OUT}/${t.id}.webp`, out)
       console.log(`  ✓ ${t.id}  (${t.ko})`)
