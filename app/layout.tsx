@@ -99,7 +99,7 @@ const koLocalization = {
   signIn: {
     start: {
       title: "로그인",
-      subtitle: "오늘 경기를 예측해 보세요 — 볼은 매일 무료 충전",
+      subtitle: "승부예측으로 점수를 쌓아보세요",
       actionText: "계정이 없으신가요?",
       actionLink: "가입하기",
     },
@@ -107,7 +107,7 @@ const koLocalization = {
   signUp: {
     start: {
       title: "회원가입",
-      subtitle: "가입하면 오늘 경기부터 바로 예측할 수 있어요",
+      subtitle: "가입하고 승부예측으로 점수를 쌓아보세요",
       actionText: "이미 계정이 있으신가요?",
       actionLink: "로그인",
     },

@@ -133,7 +133,7 @@ export function BettingSlip({
                 color: "var(--wc-burgundy)",
               }}
             />
-            {isSignedIn ? `${userBalls.toLocaleString()}개` : "무료 10개"}
+            {isSignedIn ? `${userBalls.toLocaleString()}개` : "10개"}
           </span>
         </div>
       </div>
@@ -326,7 +326,7 @@ export function BettingSlip({
             <Circle
               style={{ width: 12, height: 12, fill: "var(--wc-ink)", color: "var(--wc-ink)" }}
             />
-            {isSignedIn ? userBalls.toLocaleString() : "무료 10볼"}
+            {isSignedIn ? userBalls.toLocaleString() : "10볼"}
           </span>
         </div>
 

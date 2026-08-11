@@ -172,7 +172,7 @@ export function SignInMenu() {
           />
           <h2 className="text-foreground text-xl font-bold">로그인</h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            가입하면 오늘 경기부터 바로 예측할 수 있어요
+            가입하고 승부예측으로 점수를 쌓아보세요
           </p>
         </div>
 
