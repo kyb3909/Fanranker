@@ -80,6 +80,16 @@ const ASSETS = {
       "arms raised in celebration, blue stadium lighting, no face visible, no badge on the kit. " +
       STYLE,
   },
+  // 빅4 프로모(맨유) — kop 과 같은 빨강이라 흰 쇼츠·검은 연기로 구분 (2026-08-13)
+  "player-devils": {
+    file: "player-devils.webp",
+    size: "1024x1536",
+    prompt:
+      "A single anonymous footballer in a plain red shirt and plain white shorts seen from behind or in dramatic shadow, " +
+      "arms raised in celebration, deep red stadium lighting with wisps of black smoke curling around, " +
+      "no face visible, no badge on the kit. " +
+      STYLE,
+  },
 }
 
 const args = process.argv.slice(2)
