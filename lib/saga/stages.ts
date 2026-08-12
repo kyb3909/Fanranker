@@ -44,11 +44,22 @@ export function stageIndex(type: SagaType, stage: string): number {
 }
 
 /**
- * 단계 갱신 규칙: 전진은 자유, 후퇴도 이벤트다(PRD §4.2 — negotiation→collapsed 임박).
- * 단 유효 세트 밖의 값은 거부. 종결 outcome 은 stage 가 아니라 sagas.outcome 에 든다.
+ * 단계 갱신 규칙: **전진만 허용, 후퇴는 무시** (2026-08-12 오너 확정 — 단조 규칙).
+ *
+ * 실사고: 페란 토레스 사가가 협상(8/8)까지 갔는데, "PSG 초기 제안 거절" 보도 2건(8/10)이
+ * 제안 단계 신호로 추출되며 사가를 제안으로 끌어내렸다. 뉴스는 시간순으로 오지 않고
+ * 낮은 단계의 후속·회고 보도가 늦게 도착한다 — 전수 조사에서 활성 사가 15건이 같은
+ * 패턴으로 후퇴해 있었다(오피셜 찍고 관심으로 돌아간 이한범·기마랑이스 포함).
+ *
+ * 기존 주석의 "후퇴도 이벤트다(PRD §4.2)"는 결렬·잔류를 가리킨 것인데, 그것은 stage 가
+ * 아니라 sagas.outcome 이 담당한다 — stage 를 되돌릴 정당한 자동 경로는 없다.
+ * 엔트리의 stage_after 에는 원 신호가 그대로 남으므로(appendEntry) 기록은 잃지 않는다.
+ * 진짜 후퇴(무산 후 재협상 등)가 필요하면 사람이 outcome/검수 경로로 처리한다.
+ * 유효 세트 밖의 값은 종전대로 거부.
  */
 export function nextStage(type: SagaType, current: string, incoming: string | null): string {
   if (!incoming || !isValidStage(type, incoming)) return current
+  if (stageIndex(type, incoming) < stageIndex(type, current)) return current
   return incoming
 }
 

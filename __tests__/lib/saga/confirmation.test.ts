@@ -50,3 +50,31 @@ describe("gatedStageSignal — 오피셜 단계는 official 티어에서만 (202
     expect(nextStage("transfer", "bid", gatedStageSignal("done", "official"))).toBe("done")
   })
 })
+
+describe("nextStage — 단계 후퇴 금지 (2026-08-12 오너 확정, 페란 토레스 실사고)", () => {
+  it("낮은 단계 신호는 사가를 끌어내리지 못한다 — 협상 중 '제안 거절' 회고 보도", () => {
+    expect(nextStage("transfer", "negotiation", "bid")).toBe("negotiation")
+    expect(nextStage("transfer", "negotiation", "interest")).toBe("negotiation")
+  })
+
+  it("오피셜 완료 후 어떤 신호도 단계를 되돌리지 못한다 — 이한범·기마랑이스 실사고", () => {
+    expect(nextStage("transfer", "done", "interest")).toBe("done")
+    expect(nextStage("transfer", "done", "negotiation")).toBe("done")
+  })
+
+  it("전진과 제자리는 종전대로 허용", () => {
+    expect(nextStage("transfer", "bid", "negotiation")).toBe("negotiation")
+    expect(nextStage("transfer", "bid", "bid")).toBe("bid")
+    expect(nextStage("transfer", "interest", "medical")).toBe("medical")
+  })
+
+  it("match 타입에도 같은 규칙 — 종료된 경기가 live 로 돌아가지 않는다", () => {
+    expect(nextStage("match", "finished", "live")).toBe("finished")
+    expect(nextStage("match", "live", "finished")).toBe("finished")
+  })
+
+  it("유효 세트 밖 신호·null 은 종전대로 무시", () => {
+    expect(nextStage("transfer", "bid", "finished")).toBe("bid")
+    expect(nextStage("transfer", "bid", null)).toBe("bid")
+  })
+})

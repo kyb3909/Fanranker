@@ -11,6 +11,7 @@ import {
 } from "@/lib/ops/cron-schedule"
 import { bigramTitleSimilarity, DUP_SUSPECT_MIN } from "@/lib/ops/title-similarity"
 import { findAliasPoisoning, findNotationViolations, loadNotation } from "@/lib/news/notation"
+import { gatedStageSignal, STAGE_FLOW, STAGE_LABEL } from "@/lib/saga/stages"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
 import vercelConfig from "@/vercel.json"
@@ -33,6 +34,9 @@ export const maxDuration = 60
  *   4. notation_alt_in_title — 발행 제목은 사전 대표 표기를 쓴다 (래시포드/래시퍼드 실사고)
  *   5. dict_alias_poisoned  — 사전의 오표기(alt)는 같은 대상의 변형이다 (레온/하파엘 레앙
  *                            실사고 — 4번은 사전이 옳다고 전제하므로 원리상 못 잡는다)
+ *   6. saga_stage_regressed — 사가 단계는 게이트 통과 신호의 최대치보다 낮지 않다
+ *                            (페란 토레스 실사고 — 늦게 온 낮은 단계 보도가 15건을
+ *                            끌어내림. nextStage 단조 규칙이 1층, 여기는 2층 그물)
  *
  * 자동 수정은 하지 않는다 — 확정은 사람 (독자 제보 파이프라인과 같은 원칙, 오탐 무해).
  * 알림 피로 방지: invariant_findings 원장에 fingerprint 로 기록하고 **open 전이 시
@@ -201,6 +205,58 @@ async function handler(req: NextRequest) {
       summary: "DISCORD_OPS_WEBHOOK_URL 미설정 — 모든 운영 경보가 무음 no-op 상태",
       detail: { env: "DISCORD_OPS_WEBHOOK_URL" },
     })
+  }
+
+  // ── 6) 사가 단계 후퇴 불변식 ──
+  // 1층(nextStage 단조 규칙)이 자동 경로를 막지만, 직접 DB 수정·신규 코드 경로·과거
+  // 오염분은 못 본다. 여기서 전 활성 사가를 놓고 "현 단계 < 게이트 통과 신호 최대치"를
+  // 가로로 검사한다. 티어 게이트는 발행 경로와 동일(gatedStageSignal) — 루머의 done
+  // 주장은 최대치 계산에서도 빠진다. 자동 수정 없음, 확정은 사람.
+  try {
+    const flow = STAGE_FLOW.transfer
+    const { data: activeSagas } = await supabase
+      .from("sagas")
+      .select("id, slug, title, stage")
+      .eq("saga_type", "transfer")
+      .eq("status", "active")
+    const sagaIds = (activeSagas ?? []).map((s) => s.id as string)
+    if (sagaIds.length) {
+      const { data: entries } = await supabase
+        .from("saga_entries")
+        .select("saga_id, stage_after, tier")
+        .in("saga_id", sagaIds)
+      const maxIdxBySaga = new Map<string, number>()
+      for (const e of entries ?? []) {
+        const signal = gatedStageSignal(
+          (e.stage_after as string | null) ?? null,
+          (e.tier as string) ?? "rumor"
+        )
+        if (!signal) continue
+        const idx = flow.indexOf(signal)
+        if (idx < 0) continue
+        const prev = maxIdxBySaga.get(e.saga_id as string) ?? -1
+        if (idx > prev) maxIdxBySaga.set(e.saga_id as string, idx)
+      }
+      for (const s of activeSagas ?? []) {
+        const curIdx = flow.indexOf(s.stage as string)
+        const maxIdx = maxIdxBySaga.get(s.id as string) ?? -1
+        if (curIdx >= 0 && maxIdx > curIdx) {
+          findings.push({
+            invariant: "saga_stage_regressed",
+            fingerprint: `saga_stage_regressed:${s.id}`,
+            summary: `사가 단계 후퇴 — "${s.title}" 현재 ${STAGE_LABEL[s.stage as string] ?? s.stage} < 최대 ${STAGE_LABEL[flow[maxIdx]] ?? flow[maxIdx]} (/saga/${s.slug})`,
+            detail: {
+              saga_id: s.id,
+              slug: s.slug,
+              current_stage: s.stage,
+              max_gated_stage: flow[maxIdx],
+            },
+          })
+        }
+      }
+    }
+  } catch (e) {
+    checkErrors.push(`saga_stage_regressed: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   // ── 원장 반영: 신규/재발만 알림, 사라진 위반은 resolved ──

@@ -2,6 +2,10 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { PostDetailContent } from "@/components/post-detail/post-detail-content"
+import {
+  SagaContextBanner,
+  type SagaContextItem,
+} from "@/components/post-detail/saga-context-banner"
 import { BoardRecentPosts } from "@/components/board-recent-posts"
 import { BackButton } from "@/components/back-button"
 import { createServerAnonClient } from "@/lib/supabase"
@@ -120,6 +124,25 @@ async function fetchBoardRecentPosts(communitySlug: string, excludePostId: strin
     }))
 }
 
+/** 이 글이 속한 사가 (연표 링크 기준). 없으면 빈 배열 — 카드 미노출 */
+async function fetchLinkedSagas(postId: string): Promise<SagaContextItem[]> {
+  const supabase = createServiceRoleClient()
+  const { data: links } = await supabase
+    .from("saga_article_links")
+    .select("saga_id")
+    .eq("post_id", postId)
+    .limit(3)
+  if (!links?.length) return []
+  const { data: sagas } = await supabase
+    .from("sagas")
+    .select("slug, title, saga_type, stage, entry_count")
+    .in(
+      "id",
+      links.map((l) => l.saga_id)
+    )
+  return (sagas ?? []) as SagaContextItem[]
+}
+
 async function fetchComments(postId: string) {
   // 비밀댓글 필터를 SSR/클라 API가 공유(단일 출처). 원글 작성자·운영자는 초기 렌더에서도
   // 비밀댓글을 본다. auth() 로 현재 뷰어를 넘겨 권한 판정.
@@ -220,11 +243,13 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   }
 
   const { userId: viewerId } = await auth()
-  const [recentPosts, commentsData, vsPoll] = await Promise.all([
+  const [recentPosts, commentsData, vsPoll, linkedSagas] = await Promise.all([
     fetchBoardRecentPosts(postData.community_slug, id),
     fetchComments(id),
     // VS 쟁점 폴 (뉴스 게시물에만 존재) — 없으면 null, 실패해도 글은 뜬다
     fetchVsPoll(createServiceRoleClient(), id, null).catch(() => null),
+    // 이 글이 속한 사가 — 실패해도 글은 뜬다
+    fetchLinkedSagas(id).catch(() => []),
   ])
   // 내 투표는 별도 확인 (viewerId 가 있을 때만 — fetchVsPoll 결과에서 찾는다)
   if (vsPoll && viewerId) {
@@ -300,6 +325,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 vsPoll={vsPoll}
                 contentHtml={contentHtml}
               />
+
+              {/* 이 글이 속한 사가 — 본문을 다 읽은 자리에서 연대기로 잇는다 */}
+              <SagaContextBanner sagas={linkedSagas} />
 
               {/* Board Recent Posts */}
               <BoardRecentPosts
