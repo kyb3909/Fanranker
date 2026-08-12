@@ -1,6 +1,7 @@
 "use client"
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
@@ -306,7 +307,9 @@ function useFaceFocus(imageUrl: string | null): string | null {
     let cancelled = false
     // 화면 <img>에 crossOrigin 을 걸면 CORS 미허용 호스트에서 이미지가 깨짐
     // → 별도 프로브 이미지로만 감지 (실패해도 화면 무영향)
-    const probe = new Image()
+    // ⚠️ window.Image 로 명시 — 이 파일은 next/image 를 Image 로 import 하므로
+    //    그냥 `new Image()` 를 쓰면 컴포넌트를 생성자로 부르는 꼴이 된다
+    const probe = new window.Image()
     probe.crossOrigin = "anonymous"
     probe.src = imageUrl
     probe.onload = async () => {
@@ -580,14 +583,37 @@ function CompactCard({ card, allowQuestion }: { card: CardNewsItem; allowQuestio
         {(card.image || card.media) && (
           <div className="relative h-[76px] w-[104px] shrink-0 overflow-hidden rounded-lg">
             {card.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={card.image}
-                alt=""
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ objectPosition: faceFocus ?? "50% 30%" }}
-              />
+              /**
+               * 104×76 썸네일에 1200px 원본을 내리고 있었다 — 실측 **11.5배 과잉**
+               * (2026-08-12 /benchmark: 홈 이미지 1,515KB 중 업로드 사진이 1,211KB).
+               * 업로드는 이미 WebP 1200px q80 으로 최적화돼 있으므로 더 압축할 게 아니라
+               * **치수**를 줄여야 한다 — next/image 가 sizes 에 맞춰 축소본을 만들어 준다.
+               * 덤으로 CLS 도 잡힌다(고정 박스 + fill).
+               *
+               * 같은 출처(/storage, /images)만 next/image 에 태운다. 외부 호스트가 섞여
+               * 들어오면 remotePatterns 미등록 시 런타임에 터져 피드 전체가 죽는다 —
+               * 그 경우엔 예전처럼 평범한 img 로 흘려보낸다.
+               */
+              card.image.startsWith("/") ? (
+                <Image
+                  src={card.image}
+                  alt=""
+                  fill
+                  sizes="104px"
+                  loading="lazy"
+                  className="object-cover"
+                  style={{ objectPosition: faceFocus ?? "50% 30%" }}
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={card.image}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ objectPosition: faceFocus ?? "50% 30%" }}
+                />
+              )
             ) : (
               card.media && <MediaPlaceholder provider={card.media.provider} />
             )}
