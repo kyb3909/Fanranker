@@ -3,6 +3,7 @@ import Link from "@/components/ui/app-link"
 import { ArrowRight } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
+import { CREATOR_DUEL_ENABLED } from "@/lib/event/season-config"
 import { HeroCountdown } from "@/components/season/hero-countdown"
 import { TeamPicker, type SeasonGroup } from "@/components/season/team-picker"
 import { WeeklyDrawReveal } from "@/components/season/weekly-draw-reveal"
@@ -17,7 +18,7 @@ import {
 export const metadata: Metadata = {
   title: "시즌 오픈 팬덤 대항전",
   description:
-    "리버풀 vs 첼시 — 시즌 개막 4주, 팬덤의 자존심을 건 승부예측 대항전. 활동하면 경품 추첨 자격이 생깁니다.",
+    "리버풀 vs 첼시 vs 아스날 — 시즌 개막 4주, 팬덤의 자존심을 건 승부예측 대항전. 활동하면 경품 추첨 자격이 생깁니다.",
   alternates: { canonical: "/season" },
   openGraph: {
     title: "시즌 오픈 팬덤 대항전 | gongnori.fan",
@@ -35,18 +36,21 @@ const EVENT_SLUG = "season-open-2026"
 const CRESTS: Record<string, string> = {
   kop: "/season/crest-liverpool.png",
   blues: "/season/crest-chelsea.png",
+  gooner: "/season/crest-arsenal.png",
 }
 
 /** 팀 카드 선수 포스터 (그런지 일러스트 — 특정 인물 아님, 초상권 회피) */
 const PLAYERS: Record<string, string> = {
   kop: "/season/player-kop.webp",
   blues: "/season/player-blues.webp",
+  gooner: "/season/player-gooner.webp",
 }
 
-/** 히어로 크레스트 크기 [기본px, lg px] — 양 팀 동일 (2026-07-31 운영자 확정) */
+/** 히어로 크레스트 크기 [기본px, lg px] — 세 팀 동일 (2026-07-31 운영자 확정) */
 const CREST_HERO_PX: Record<string, [number, number]> = {
   kop: [92, 112],
   blues: [92, 112],
+  gooner: [92, 112],
 }
 
 /**
@@ -56,6 +60,7 @@ const CREST_HERO_PX: Record<string, [number, number]> = {
 const CREST_HERO_SHIFT: Record<string, number> = {
   kop: 0,
   blues: 0,
+  gooner: 0,
 }
 
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */
@@ -87,21 +92,24 @@ const STEPS = [
   {
     num: "03",
     title: "팬덤 순위 발표",
-    body: "팀 순위는 매주 월요일에 공개됩니다. 매주 승리 팬덤에서 시즌 유니폼 주인공 1명이 나와요.",
+    body: "팀 순위는 매주 월요일에 공개됩니다. 같은 날 그 주 활동 기준으로 경품 추첨도 진행돼요.",
   },
 ] as const
 
-/** 2026-08-03 확정 구성(주간 맞대결) — 상세·근거는 workspace/RESULT-0802-prizes.md.
- *  유니폼은 "그 주 승리 팬덤"에서 매주 1명 — 맞대결 주체(크리에이터)는 협업 합의 전이라
- *  페이지에 이름을 올리지 않고, 승리 팬덤 기준으로만 안내한다. */
+/** 2026-08-03 확정 구성 — 상세·근거는 workspace/RESULT-0802-prizes.md.
+ *  유니폼 행은 CREATOR_DUEL_ENABLED 를 따라 붙었다 떨어진다 (제휴 의존 상품). */
 const PRIZES = [
-  ["팬덤 1위 사인 상품", "리버풀·첼시 각 1명 (정품 확인서 포함)", "2명", "팬덤별 예측력 1위"],
-  [
-    "시즌 유니폼",
-    "매주 승리 팬덤에게 (선택한 팀 것)",
-    "매주 1명",
-    "승리 팬덤의 활동 달성자 중 추첨 (4주 4명)",
-  ],
+  ["팬덤 1위 사인 상품", "팬덤별 1명 (정품 확인서 포함)", "팬덤별 1명", "팬덤별 예측력 1위"],
+  ...(CREATOR_DUEL_ENABLED
+    ? ([
+        [
+          "시즌 유니폼",
+          "매주 승리 팬덤에게 (선택한 팀 것)",
+          "매주 1명",
+          "승리 팬덤의 활동 달성자 중 추첨 (4주 4명)",
+        ],
+      ] as const)
+    : []),
   ["스팀 기프트카드", "5만원권 — 매주 월요일 발표", "매주 5명", "그 주 활동 기준 추첨 (4주 20명)"],
 ] as const
 
@@ -253,7 +261,7 @@ export default async function SeasonEventPage({
   }
 
   // 미리보기 표본 숫자 — 실데이터가 있으면 실데이터 우선
-  const previewCounts: Record<string, number> = { kop: 138, blues: 121 }
+  const previewCounts: Record<string, number> = { kop: 138, blues: 121, gooner: 129 }
 
   const pickerGroups: SeasonGroup[] = (groups ?? []).map((g) => ({
     slug: g.slug,
@@ -270,6 +278,14 @@ export default async function SeasonEventPage({
           ? (previewCounts[g.slug] ?? 0)
           : 0,
   }))
+  /**
+   * 팬덤 수 한글 수사 — 카피에 "두 팬덤"을 굳혀 두면 팀이 늘고 줄 때마다 문구가 거짓말이 된다.
+   * 실제로 3팀 → 2팀(2026-08-02) → 3팀(2026-08-12) 을 오가는 동안 "두 팬덤"이 남아 있었다.
+   */
+  const fandomCountKo =
+    ({ 2: "두", 3: "세", 4: "네" } as Record<number, string>)[pickerGroups.length] ??
+    `${pickerGroups.length}`
+
   const previewTotalRegs =
     preview && totalRegs === 0 ? Object.values(previewCounts).reduce((a, b) => a + b, 0) : totalRegs
   const previewSlipCount = preview && (slipCount ?? 0) === 0 ? 2431 : (slipCount ?? 0)
@@ -453,10 +469,11 @@ export default async function SeasonEventPage({
                   style={{
                     backgroundImage: "url(/season/hero-collage.webp)",
                     // 원본 3패널 중 팀 수만큼만 보이게: 전체를 (3/N)배 폭으로 펼친다 (2팀 → 150%).
-                    // ×1.1 오버스캔: 패널 경계가 너덜너덜한 사선이라 정확히 2/3 에서 자르면
-                    // 상단 우측에 3번째(빨강) 패널이 비쳐 나온다 (2026-08-03 운영자 발견) —
-                    // 조금 더 당겨 경계 앞에서 자른다.
-                    backgroundSize: `${(3 / Math.max(pickerGroups.length, 1)) * 100 * 1.1}% 100%`,
+                    // ×1.1 오버스캔은 **잘라낼 패널이 있을 때만** 건다: 패널 경계가 너덜너덜한
+                    // 사선이라 정확히 2/3 에서 자르면 상단 우측에 3번째(빨강) 패널이 비쳐
+                    // 나왔다 (2026-08-03 운영자 발견). 3팀이면 자를 게 없으므로 오버스캔을 걸면
+                    // 오히려 아스날 패널이 10% 잘린다 (2026-08-12 아스날 복원).
+                    backgroundSize: `${(3 / Math.max(pickerGroups.length, 1)) * 100 * (pickerGroups.length >= 3 ? 1 : 1.1)}% 100%`,
                     backgroundPosition: "left center",
                     backgroundRepeat: "no-repeat",
                   }}
@@ -573,7 +590,7 @@ export default async function SeasonEventPage({
             className="mb-1.5 text-[12px] font-extrabold"
             style={{ color: "var(--wc-burgundy)", letterSpacing: "0.18em" }}
           >
-            ★ ★ ★&nbsp;&nbsp;두 팬덤, 4주간의 승부&nbsp;&nbsp;★ ★ ★
+            ★ ★ ★&nbsp;&nbsp;{fandomCountKo} 팬덤, 4주간의 승부&nbsp;&nbsp;★ ★ ★
           </p>
           <h2
             className="text-[26px] sm:text-[30px]"
@@ -678,7 +695,9 @@ export default async function SeasonEventPage({
             [
               "보상 안내",
               "활동하면 추첨 자격",
-              "사인 상품·유니폼·매주 스팀 — 예측만으론 응모 불가",
+              CREATOR_DUEL_ENABLED
+                ? "사인 상품·유니폼·매주 스팀 — 예측만으론 응모 불가"
+                : "사인 상품·매주 스팀 — 예측만으론 응모 불가",
             ],
           ].map(([k, t, d]) => (
             <div key={k} className="px-5 py-4" style={{ background: "var(--wc-card, #fff)" }}>
@@ -766,7 +785,8 @@ export default async function SeasonEventPage({
                 wordBreak: "keep-all",
               }}
             >
-              아직 발표 전입니다 — 개막하면 매주 월요일, 두 팬덤의 예측력 평균이 여기서 갈립니다.
+              아직 발표 전입니다 — 개막하면 매주 월요일, {fandomCountKo} 팬덤의 예측력 평균이 여기서
+              갈립니다.
             </div>
           )}
 
@@ -870,70 +890,73 @@ export default async function SeasonEventPage({
             생성 애셋(duel-banner.webp, gpt-image-2): 빨강 vs 파랑 실루엣 사이에 무지
             유니폼이 전리품처럼 떠 있는 구도 — "유니폼이 어느 팬덤으로 갈지는 대표들의
             승부에 달렸다"를 카피 없이도 읽히게 한다. 크리에이터 실명은 협업 합의 전이라
-            "양 팀 대표 유튜버"로만 지칭 (2026-08-03). */}
-        <section className="mt-12" aria-label="주간 맞대결 — 유니폼의 행방">
-          <div
-            className="relative overflow-hidden rounded-2xl"
-            style={{ border: "1px solid var(--wc-line)", background: "#0b0a0e" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/season/duel-banner.webp"
-              alt=""
-              className="w-full object-cover"
-              style={{ aspectRatio: "16 / 10", objectPosition: "center 38%" }}
-              loading="lazy"
-            />
+            "양 팀 대표 유튜버"로만 지칭 (2026-08-03).
+            ⚠️ 2026-08-12 제휴 무산으로 꺼둠 — CREATOR_DUEL_ENABLED 주석 참조. */}
+        {CREATOR_DUEL_ENABLED && (
+          <section className="mt-12" aria-label="주간 맞대결 — 유니폼의 행방">
             <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(to top, rgba(9,8,11,.92) 0%, rgba(9,8,11,.55) 26%, rgba(9,8,11,0) 55%)",
-              }}
-            />
-            <div className="absolute right-0 bottom-0 left-0 px-5 pb-6 text-center sm:pb-8">
-              {/* 버건디는 뒤의 금색 빛기둥에 묻힌다 — 크림 + 그림자로 대비 확보 */}
-              <p
-                className="text-[11px] font-extrabold"
+              className="relative overflow-hidden rounded-2xl"
+              style={{ border: "1px solid var(--wc-line)", background: "#0b0a0e" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/season/duel-banner.webp"
+                alt=""
+                className="w-full object-cover"
+                style={{ aspectRatio: "16 / 10", objectPosition: "center 38%" }}
+                loading="lazy"
+              />
+              <div
+                className="absolute inset-0"
                 style={{
-                  color: "rgba(245,239,231,.85)",
-                  letterSpacing: "0.2em",
-                  textShadow: "0 1px 10px rgba(0,0,0,.9)",
+                  background:
+                    "linear-gradient(to top, rgba(9,8,11,.92) 0%, rgba(9,8,11,.55) 26%, rgba(9,8,11,0) 55%)",
                 }}
-              >
-                WEEKLY DUEL
-              </p>
-              <h2
-                className="mt-1.5"
-                style={{
-                  fontFamily: DISPLAY,
-                  fontWeight: 700,
-                  fontSize: "clamp(22px, 3.2vw, 34px)",
-                  color: "rgba(245,239,231,.97)",
-                  letterSpacing: "-0.01em",
-                  textShadow: "0 2px 20px rgba(0,0,0,.8)",
-                  wordBreak: "keep-all",
-                }}
-              >
-                이번 주 유니폼, 어느 팬덤으로 가는가
-              </h2>
-              <p
-                className="mx-auto mt-2.5 max-w-[560px] text-[13.5px] sm:text-[14.5px]"
-                style={{
-                  lineHeight: 1.6,
-                  color: "rgba(245,239,231,.78)",
-                  wordBreak: "keep-all",
-                }}
-              >
-                양 팀을 대표하는 유튜버가 매주 승부예측으로 맞붙습니다. 이긴 쪽 팬덤에서 유니폼
-                주인공이 나옵니다 — 우리 대표가 이겨야 우리 쪽에 기회가 옵니다.
-              </p>
-              <p className="mt-2 text-[12px] font-bold" style={{ color: "rgba(245,239,231,.5)" }}>
-                결과는 매주 월요일, 팬덤 순위와 함께 발표
-              </p>
+              />
+              <div className="absolute right-0 bottom-0 left-0 px-5 pb-6 text-center sm:pb-8">
+                {/* 버건디는 뒤의 금색 빛기둥에 묻힌다 — 크림 + 그림자로 대비 확보 */}
+                <p
+                  className="text-[11px] font-extrabold"
+                  style={{
+                    color: "rgba(245,239,231,.85)",
+                    letterSpacing: "0.2em",
+                    textShadow: "0 1px 10px rgba(0,0,0,.9)",
+                  }}
+                >
+                  WEEKLY DUEL
+                </p>
+                <h2
+                  className="mt-1.5"
+                  style={{
+                    fontFamily: DISPLAY,
+                    fontWeight: 700,
+                    fontSize: "clamp(22px, 3.2vw, 34px)",
+                    color: "rgba(245,239,231,.97)",
+                    letterSpacing: "-0.01em",
+                    textShadow: "0 2px 20px rgba(0,0,0,.8)",
+                    wordBreak: "keep-all",
+                  }}
+                >
+                  이번 주 유니폼, 어느 팬덤으로 가는가
+                </h2>
+                <p
+                  className="mx-auto mt-2.5 max-w-[560px] text-[13.5px] sm:text-[14.5px]"
+                  style={{
+                    lineHeight: 1.6,
+                    color: "rgba(245,239,231,.78)",
+                    wordBreak: "keep-all",
+                  }}
+                >
+                  양 팀을 대표하는 유튜버가 매주 승부예측으로 맞붙습니다. 이긴 쪽 팬덤에서 유니폼
+                  주인공이 나옵니다 — 우리 대표가 이겨야 우리 쪽에 기회가 옵니다.
+                </p>
+                <p className="mt-2 text-[12px] font-bold" style={{ color: "rgba(245,239,231,.5)" }}>
+                  결과는 매주 월요일, 팬덤 순위와 함께 발표
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* 상품 안내 — 활동 기준 추첨 (컴플라이언스: 순위 직결 아님) */}
         <section className="mt-12">
@@ -1017,7 +1040,7 @@ export default async function SeasonEventPage({
       </main>
 
       <div className="pb-[56px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-        두 팬덤의 자존심이 여기서 갈립니다 — 당신의 팀은 어디입니까
+        {fandomCountKo} 팬덤의 자존심이 여기서 갈립니다 — 당신의 팀은 어디입니까
       </div>
     </div>
   )

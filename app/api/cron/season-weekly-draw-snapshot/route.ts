@@ -4,6 +4,7 @@ import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
 import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
+import { CREATOR_DUEL_ENABLED } from "@/lib/event/season-config"
 import {
   buildCandidates,
   drawWinners,
@@ -83,9 +84,14 @@ async function run(request: NextRequest) {
     // 이긴 팬덤의 응모 자격 충족자 중 1명에게 유니폼을 준다.
     // 스팀 추첨 당첨자와 중복되지 않게 제외한다 — 같은 날 두 개를 받으면 말이 나온다.
     // weekStart 는 이번 주 월요일(KST). 심판 구간은 그 직전 7일이다.
+    // ⚠️ 제휴가 없으면 맞대결 자체를 돌리지 않는다 (CREATOR_DUEL_ENABLED).
+    // 페이지에서 유니폼 문구를 내려도 여기가 살아 있으면 매주 월요일 자유게시판에
+    // "유니폼은 ○○님!" 공지가 올라가 약속이 되살아난다 — 두 곳이 같은 스위치를 봐야 한다.
     const weekEnd = new Date(`${weekStart}T00:00:00+09:00`)
     const weekFrom = new Date(weekEnd.getTime() - 7 * 24 * 3600 * 1000)
-    const duel = await resolveWeeklyDuel(supabase, { from: weekFrom, to: weekEnd })
+    const duel = CREATOR_DUEL_ENABLED
+      ? await resolveWeeklyDuel(supabase, { from: weekFrom, to: weekEnd })
+      : { winner: null, scores: [], reason: "creator_duel_disabled" as const }
 
     let uniformWinner: { user_id: string; nickname: string } | null = null
     if (duel.winner) {

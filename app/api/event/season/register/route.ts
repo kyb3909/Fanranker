@@ -16,7 +16,9 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 const EVENT_SLUG = "season-open-2026"
 
 const RegisterSchema = z.object({
-  group_slug: z.enum(["kop", "blues"]),
+  // 2026-08-12 아스날(gooner) 복원 — 3팀. DB event_groups 와 이 enum 이 어긋나면
+  // "화면에 보이는데 등록은 실패하는" 팀이 생긴다(20260802b 가 경계한 바로 그 불일치).
+  group_slug: z.enum(["kop", "blues", "gooner"]),
   traffic_source: z.string().min(1).max(64).nullable().optional(),
 })
 
