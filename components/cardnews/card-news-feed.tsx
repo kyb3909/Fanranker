@@ -4,7 +4,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
-import { suggestTarot, tarotHref } from "@/lib/tarot/suggest"
+import { suggestTarot } from "@/lib/tarot/suggest"
+import { TarotModal } from "@/components/tarot/tarot-modal"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
 import {
   MessageCircle,
@@ -388,19 +389,39 @@ function CardActionStrip({ card }: { card: CardNewsItem }) {
   const tarot = suggestTarot(card.title)
   if (!tarot) return null
 
+  return <TarotStrip tarot={tarot} />
+}
+
+/**
+ * 타로 띠 — 누르면 **모달**이 열린다 (2026-08-12 운영자 요청: "페이지 전환 말고 모달로").
+ *
+ * 페이지로 넘기면 읽던 피드 위치를 잃고, 보고 나서 돌아오려면 뒤로가기를 눌러야 한다.
+ * 재미로 한 번 눌러보는 성격의 진입점에 치르기엔 비싼 대가라 원래 자리를 지킨다.
+ *
+ * 상태를 여기 두는 이유: CardActionStrip 은 card.vs 여부로 먼저 return 하므로 그 위에
+ * 훅을 둘 수 없다. 띠 하나가 자기 모달을 갖는 편이 조건부 훅보다 단순하다.
+ */
+function TarotStrip({ tarot }: { tarot: NonNullable<ReturnType<typeof suggestTarot>> }) {
+  const [open, setOpen] = useState(false)
   return (
-    <Link
-      href={tarotHref(tarot.question, "cardnews")}
-      className="flex items-center justify-center text-[12.5px] font-bold no-underline transition-colors"
-      style={{
-        height: 44,
-        borderTop: "1px solid var(--wc-line)",
-        color: "var(--wc-burgundy)",
-      }}
-      onClick={() => trackEvent({ name: "tarot_hook_click", params: { surface: "cardnews" } })}
-    >
-      {tarot.label}
-    </Link>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          trackEvent({ name: "tarot_hook_click", params: { surface: "cardnews" } })
+          setOpen(true)
+        }}
+        className="flex w-full items-center justify-center text-[12.5px] font-bold transition-colors"
+        style={{
+          height: 44,
+          borderTop: "1px solid var(--wc-line)",
+          color: "var(--wc-burgundy)",
+        }}
+      >
+        {tarot.label}
+      </button>
+      <TarotModal question={tarot.question} open={open} onOpenChange={setOpen} />
+    </>
   )
 }
 
