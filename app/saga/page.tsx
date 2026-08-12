@@ -36,17 +36,27 @@ interface SagaRow {
  */
 export default async function SagaIndexPage() {
   const supabase = createServiceRoleClient()
-  const { data } = await supabase
-    .from("sagas")
-    .select(
-      "id, saga_type, slug, title, stage, status, outcome, is_confirmed, summary, entry_count, last_event_at, subject"
-    )
-    .order("last_event_at", { ascending: false })
-    .limit(50)
-  const all = (data ?? []) as unknown as SagaRow[]
-  // 시즌 위키는 상단 고정 스트립 — 이적설 범프에 묻히면 팀 허브 역할을 못 한다
-  const seasons = all.filter((s) => s.saga_type === "season")
-  const sagas = all.filter((s) => s.saga_type !== "season")
+  const COLUMNS =
+    "id, saga_type, slug, title, stage, status, outcome, is_confirmed, summary, entry_count, last_event_at, subject"
+  // 시즌 위키는 별도 쿼리 — 상단 고정 스트립이라던 주석과 달리 실제로는 이적 사가와
+  // limit(50) 창을 공유해 88~100위로 밀려 프로덕션에서 한 번도 노출된 적이 없었다
+  // (2026-08-12 QA ISSUE-001). 시즌 문서는 몇 개 안 되므로 전용 쿼리가 정답.
+  const [{ data: seasonData }, { data: transferData }] = await Promise.all([
+    supabase
+      .from("sagas")
+      .select(COLUMNS)
+      .eq("saga_type", "season")
+      .order("last_event_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("sagas")
+      .select(COLUMNS)
+      .neq("saga_type", "season")
+      .order("last_event_at", { ascending: false })
+      .limit(50),
+  ])
+  const seasons = (seasonData ?? []) as unknown as SagaRow[]
+  const sagas = (transferData ?? []) as unknown as SagaRow[]
 
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
