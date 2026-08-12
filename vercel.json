@@ -77,6 +77,14 @@
       "schedule": "5 0 * * *"
     },
     {
+      "path": "/api/cron/interview-scout",
+      "schedule": "26 * * * *"
+    },
+    {
+      "path": "/api/cron/interview-extract",
+      "schedule": "36 * * * *"
+    },
+    {
       "path": "/api/cron/hero-editor",
       "schedule": "22,52 * * * *"
     },
