@@ -90,7 +90,12 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
           >
             {saga.title}
           </h1>
-          {!seasonOver && standing && (
+          {/* 0경기 현 시즌 테이블의 순위는 순번일 뿐이다 — "리그 14위"로 읽히면 오보 (QA ISSUE-003) */}
+          {!seasonOver && standing && standing.played === 0 && !standingIsLastSeason ? (
+            <p className="mt-3 text-[13.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+              개막 전 — 순위는 첫 라운드 후 표시됩니다
+            </p>
+          ) : !seasonOver && standing ? (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
               <span className="font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
                 리그 {standing.rank}위
@@ -105,7 +110,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                   : `기준 ${fmtDate(standing.fetchedAt)}`}
               </span>
             </div>
-          )}
+          ) : null}
           {upcoming && (
             <p className="mt-1.5 text-[13px]" style={{ color: "var(--wc-mute)" }}>
               다음 경기 · {fmtDate(upcoming.matchTime)} {upcoming.home} vs {upcoming.away}
@@ -271,6 +276,8 @@ function MatchEvent({
  */
 function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) {
   const paragraphs = (ev.summary ?? "").split(/\n{2,}/).filter((p) => p.trim())
+  // 엔트리 종류에 맞는 접힘 라벨 — 인터뷰 카드에 "경기 리포트"라고 적혀 있었다 (QA ISSUE-002)
+  const label = ev.headline.startsWith("[인터뷰]") ? "인터뷰" : "경기 리포트"
   return (
     <article className="rounded-xl px-4 py-3" style={card}>
       <p
@@ -285,8 +292,8 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
             className="cursor-pointer list-none text-[12px] font-bold select-none"
             style={{ color: "var(--wc-burgundy)" }}
           >
-            <span className="group-open:hidden">경기 리포트 펼치기</span>
-            <span className="hidden group-open:inline">경기 리포트 접기</span>
+            <span className="group-open:hidden">{label} 펼치기</span>
+            <span className="hidden group-open:inline">{label} 접기</span>
           </summary>
           <div className="mt-2 flex flex-col gap-2">
             {paragraphs.map((p, i) => (
