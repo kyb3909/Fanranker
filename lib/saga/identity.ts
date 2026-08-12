@@ -84,6 +84,31 @@ export function isSamePlayerKey(a: string, b: string): boolean {
   return short.every((t) => long.includes(t))
 }
 
+/**
+ * 부분 이름인가 — a 가 b 보다 토큰이 적으면서(성씨만 등) 전부 b 에 포함.
+ * "diomande" ⊂ "yan-diomande" → true. "yan-diomande" vs "ousmane-diomande" → false.
+ *
+ * isSamePlayerKey 의 부분집합 규칙은 헨더슨 뭉침(조던/헨더슨)을 막지만, 성씨만 온
+ * 보도는 동성이인 **누구의** 부분집합도 되는 게 뒷면이다 — 얀/우스만 디오망데가
+ * 한 사가로 합쳐진 실사고 (2026-08-12). 부분 이름 합류는 클럽 맥락(clubsOverlap)을
+ * 추가로 요구한다 (create.ts 게이트).
+ */
+export function isPartialNameOf(a: string, b: string): boolean {
+  const ta = nameTokens(a)
+  const tb = nameTokens(b)
+  if (ta.length === 0 || ta.length >= tb.length) return false
+  if (ta[ta.length - 1] !== tb[tb.length - 1]) return false
+  return ta.every((t) => tb.includes(t))
+}
+
+/** 클럽 맥락 겹침 — 소문자 접기 후 교집합 존재 (judgeClubConsistency 와 같은 정규화 규약) */
+export function clubsOverlap(a: string[], b: string[]): boolean {
+  const norm = (c: string) => c.trim().toLowerCase()
+  const setA = new Set(a.map(norm).filter(Boolean))
+  if (setA.size === 0) return false
+  return b.some((c) => setA.has(norm(c)))
+}
+
 /** slug — URL 용. 멱등키와 달리 사람이 읽는 값이라 충돌 시 suffix 를 붙인다(create 쪽 몫) */
 export function baseSlug(type: SagaType, subject: Record<string, unknown>): string {
   if (type === "transfer") {

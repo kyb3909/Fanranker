@@ -22,6 +22,8 @@ export interface SagaEntryDraft {
   tier: TransferTier
   origin: { reporter: string | null; outlet: string; url: string }
   occurredAt: string
+  /** 보도가 언급한 클럽들 — 동성이인 게이트 재료 + 사가 subject.clubs_seen 축적 */
+  clubs?: string[]
 }
 
 /**
@@ -38,17 +40,35 @@ export async function upsertSagaEntry(
   folded: boolean
   entryId: string | null
 }> {
+  const normClubs = (d.clubs ?? []).map((c) => c.trim().toLowerCase()).filter(Boolean)
   const subject = {
     player_key: normalizePlayerKey(d.player),
     player_name_kr: d.playerKr,
     direction: d.direction,
+    // 신규 사가의 클럽 맥락 시드 — 이후 엔트리마다 아래 merge 로 자란다
+    ...(normClubs.length ? { clubs_seen: normClubs } : {}),
   }
   const { saga } = await getOrCreateSaga(supabase, {
     type: "transfer",
     title: `${d.playerKr ?? d.player} 이적 사가`,
     subject,
+    clubs: normClubs,
     windowKey: SAGA_WINDOW_KEY,
   })
+
+  // 클럽 맥락 축적 — 기존 사가에 새 클럽 언급이 오면 subject.clubs_seen 에 합친다
+  // (동성이인 게이트가 읽는 값. 엔트리가 에코로 접혀도 맥락은 남는다)
+  if (normClubs.length) {
+    const subj = saga.subject as Record<string, unknown>
+    const seen = ((subj.clubs_seen as string[] | undefined) ?? []).map(String)
+    const merged = [...new Set([...seen, ...normClubs])]
+    if (merged.length > seen.length) {
+      await supabase
+        .from("sagas")
+        .update({ subject: { ...subj, clubs_seen: merged } })
+        .eq("id", saga.id)
+    }
+  }
 
   const clusterKey = transferClusterKey(d.player, d.stageSignal, d.occurredAt)
 
@@ -347,6 +367,7 @@ export async function linkArticleToSaga(
       stageSignal: ex.stage_signal,
       headline: article.title,
       tier,
+      clubs: ex.clubs ?? [],
       origin: {
         reporter: origin.reporter,
         outlet: origin.outlet,
@@ -428,6 +449,7 @@ export async function publishReservoirItem(
     stageSignal,
     headline,
     tier: ex.tier ?? "rumor",
+    clubs: ex.clubs ?? [],
     origin: {
       reporter: origin.reporter,
       outlet: origin.outlet,

@@ -5,6 +5,8 @@ import {
   identityKey,
   baseSlug,
   isSamePlayerKey,
+  isPartialNameOf,
+  clubsOverlap,
 } from "@/lib/saga/identity"
 import { buildAliasIndex, canonicalizePlayer } from "@/lib/saga/canonical"
 import { STAGE_FLOW, STAGE_LABEL, stageIndex, nextStage } from "@/lib/saga/stages"
@@ -166,10 +168,10 @@ describe("stages — transfer 플로우", () => {
     expect(stageIndex("transfer", "nonsense")).toBe(0)
   })
 
-  it("nextStage: 전진·후퇴 모두 허용, 유효 세트 밖 값만 거부 (PRD §4.2 — 후퇴도 이벤트)", () => {
+  it("nextStage: 전진만 허용, 후퇴·유효 세트 밖 값은 무시 (2026-08-12 단조 규칙)", () => {
     expect(nextStage("transfer", "bid", "medical")).toBe("medical")
-    // 협상 결렬 임박 → 단계가 뒤로 가는 것도 드라마의 일부
-    expect(nextStage("transfer", "negotiation", "interest")).toBe("interest")
+    // 후퇴 신호는 사가를 못 끌어내린다 — 결렬·잔류는 outcome 몫 (페란 토레스 실사고)
+    expect(nextStage("transfer", "negotiation", "interest")).toBe("negotiation")
     // match stage 를 transfer 에 꽂으면 거부 — 교차 오염 방지 (DB CHECK 없음의 대가를 코드가 진다)
     expect(nextStage("transfer", "bid", "live")).toBe("bid")
     expect(nextStage("transfer", "bid", null)).toBe("bid")
@@ -179,5 +181,34 @@ describe("stages — transfer 플로우", () => {
     for (const st of STAGE_FLOW.transfer) {
       expect(STAGE_LABEL[st], `label for ${st}`).toBeTruthy()
     }
+  })
+})
+
+describe("동성이인 게이트 술어 (2026-08-12 얀/우스만 디오망데 실사고)", () => {
+  it("isPartialNameOf — 성씨만 온 키는 풀네임의 부분 이름이다", () => {
+    expect(isPartialNameOf("diomande", "yan-diomande")).toBe(true)
+    expect(isPartialNameOf("henderson", "jordan-henderson")).toBe(true)
+  })
+
+  it("isPartialNameOf — 풀네임끼리·역방향·다른 성은 부분 이름이 아니다", () => {
+    expect(isPartialNameOf("yan-diomande", "ousmane-diomande")).toBe(false) // 동성이인 풀네임
+    expect(isPartialNameOf("yan-diomande", "diomande")).toBe(false) // 역방향 (더 구체적)
+    expect(isPartialNameOf("diomande", "diomande")).toBe(false) // 동일 키
+    expect(isPartialNameOf("silva", "yan-diomande")).toBe(false) // 다른 성
+  })
+
+  it("clubsOverlap — 소문자 접기 후 교집합, 빈 목록은 겹침 아님(fail-closed)", () => {
+    expect(clubsOverlap(["Real Madrid"], ["real madrid", "rb leipzig"])).toBe(true)
+    expect(clubsOverlap(["Nottingham Forest"], ["real madrid", "rb leipzig"])).toBe(false)
+    expect(clubsOverlap([], ["real madrid"])).toBe(false)
+    expect(clubsOverlap(["Real Madrid"], [])).toBe(false)
+  })
+
+  it("시나리오: '디오망데' 성씨-only 보도 — 얀(레알) 사가에는 포레스트 보도가 못 들어간다", () => {
+    const yanSagaClubs = ["real madrid", "rb leipzig"]
+    // 포레스트 보도 → 클럽 안 겹침 → 게이트가 검수로 보낸다
+    expect(clubsOverlap(["Nottingham Forest", "Sporting CP"], yanSagaClubs)).toBe(false)
+    // 레알 보도 → 겹침 → 종전대로 합류
+    expect(clubsOverlap(["Real Madrid"], yanSagaClubs)).toBe(true)
   })
 })

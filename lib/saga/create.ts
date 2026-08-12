@@ -1,7 +1,14 @@
 import "server-only"
 
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { identityKey, baseSlug, isSamePlayerKey, normalizePlayerKey } from "./identity"
+import {
+  identityKey,
+  baseSlug,
+  isSamePlayerKey,
+  isPartialNameOf,
+  clubsOverlap,
+  normalizePlayerKey,
+} from "./identity"
 import { confirmationPatch, gatedStageSignal, nextStage, type SagaType } from "./stages"
 
 /**
@@ -25,6 +32,8 @@ export interface CreateSagaInput {
   subject: Record<string, unknown>
   windowKey: string
   summary?: string
+  /** 이번 보도가 언급한 클럽들 (부분 이름 합류 게이트 재료 — 없으면 게이트가 fail-closed) */
+  clubs?: string[]
 }
 
 export interface AppendEntryInput {
@@ -68,10 +77,27 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
       const subj = c.subject as { player_key?: string }
       return isSamePlayerKey(normalizePlayerKey(String(subj.player_key ?? "")), newPlayerKey)
     })
-    if (same.length === 1) return { saga: same[0], created: false as const }
+    if (same.length === 1) {
+      const cand = same[0]
+      const candKey = normalizePlayerKey(
+        String((cand.subject as { player_key?: string }).player_key ?? "")
+      )
+      // 동성이인 게이트 (2026-08-12 얀/우스만 디오망데 실사고): 성씨만 온 보도는
+      // 동성이인 누구의 부분집합도 된다 — 부분 이름이 기존 사가에 합류하려면
+      // 클럽 맥락(clubs_seen)이 겹쳐야 한다. 안 겹치면 fail-closed → 검수 큐
+      // (auto_publish_failed 로 남아 사람이 판정). 풀네임끼리는 종전대로.
+      if (isPartialNameOf(newPlayerKey, candKey)) {
+        const seen = ((cand.subject as { clubs_seen?: string[] }).clubs_seen ?? []) as string[]
+        if (!clubsOverlap(input.clubs ?? [], seen)) {
+          throw new Error(
+            `동성이인 보호: 부분 이름 "${newPlayerKey}" 는 기존 사가(${candKey})와 클럽 맥락이 겹치지 않습니다 — 풀네임으로 재시도하거나 검수에서 판정`
+          )
+        }
+      }
+      return { saga: cand, created: false as const }
+    }
     if (same.length > 1) {
-      // 후보끼리도 전부 동일인이면(과거 방향 분열 잔재) 최근 활동 문서로 —
-      // 동일인이 아닌 후보가 섞였으면(동성이인, 예: Jordan/Dean Henderson) 병합 포기
+      // 후보끼리도 전부 동일인이면(과거 방향 분열 잔재) 최근 활동 문서로
       const keys = same.map((c) =>
         normalizePlayerKey(String((c.subject as { player_key?: string }).player_key ?? ""))
       )
@@ -82,6 +108,11 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
         )[0]
         return { saga: pick, created: false as const }
       }
+      // 동일인이 아닌 후보가 섞였으면(동성이인, 예: 얀/우스만 디오망데) 새 사가
+      // 생성도 금지 — 종전엔 여기로 흘러 성씨-only 유령 사가가 하나 더 생겼다
+      throw new Error(
+        `동성이인 보호: "${newPlayerKey}" 와 겹치는 사가가 ${same.length}건 — 자동 판정 불가, 풀네임 필요`
+      )
     }
   }
 
