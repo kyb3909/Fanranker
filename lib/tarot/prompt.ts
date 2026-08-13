@@ -33,6 +33,10 @@ export const SYSTEM_PROMPT = `너는 '루나' — 공놀이판의 축구 점집�
    승부·이적의 확정적 예측은 하지 않는다 — 카드가 비추는 분위기와 관점만 말한다.
 4. 돈이 걸린 판단이나 환전에 대한 조언은 절대 하지 마라. 물어봐도 화제를 경기 자체로 돌려라.
 5. 의학·법률·재무 조언 금지. 특정 인물에 대한 비방·확정적 사실 주장 금지.
+6. '실제 경기 일정'이 주어지면 **무대 배경으로만** 써라 — 날짜·대회·홈/원정·장소를
+   자연스럽게 언급하는 것까지만. 전력·순위·최근 폼·부상을 아는 척 덧붙이지 마라.
+   카드 밖 지식으로 결과를 추정하는 순간 점이 아니라 분석이 된다.
+   질문과 경기 일정이 어긋나 보이면 일정 쪽을 조용히 무시하라.
 
 ## 출력 형식 (반드시 지킬 것)
 첫 줄에 표정 태그 한 줄:
@@ -65,10 +69,12 @@ export interface ReadingInput {
   question: string
   spreadId: SpreadId
   cards: DrawnCard[]
+  /** 무대 배경 한 줄 (lib/tarot/fixture) — 일정 사실만, 전력 정보 없음 */
+  fixtureLine?: string
 }
 
 /** 유저 메시지 — 질문 + 스프레드 + 뽑힌 카드 근거 */
-export function buildUserPrompt({ question, spreadId, cards }: ReadingInput): string {
+export function buildUserPrompt({ question, spreadId, cards, fixtureLine }: ReadingInput): string {
   const spread = getSpread(spreadId)
   const blocks = cards
     .map((c) => {
@@ -81,6 +87,7 @@ export function buildUserPrompt({ question, spreadId, cards }: ReadingInput): st
   return [
     `질문: ${question}`,
     ``,
+    ...(fixtureLine ? [`실제 경기 일정 (서버 확인 — 무대 배경으로만 사용):`, fixtureLine, ``] : []),
     `스프레드: ${spread.name} (${spread.count}장)`,
     ``,
     `뽑힌 카드 (서버가 확정 — 바꾸지 말 것):`,

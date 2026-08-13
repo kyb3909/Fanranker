@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { apiBadRequest, apiError, checkRateLimit } from "@/lib/api-error"
 import { chatParams } from "@/lib/llm/openai-params"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { CARD_MEANINGS } from "@/lib/tarot/cards"
 import { drawCards } from "@/lib/tarot/draw"
+import { findFixtureLine } from "@/lib/tarot/fixture"
 import { getSpread, isSpreadId } from "@/lib/tarot/spreads"
 import { buildUserPrompt, splitExpressionTag, SYSTEM_PROMPT } from "@/lib/tarot/prompt"
 import { CRISIS_MESSAGE, CRISIS_RESOURCES, GAMBLING_MESSAGE, checkSafety } from "@/lib/tarot/safety"
@@ -84,6 +86,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // ── 무대 배경 (내부 경기 일정 — 전력 정보 없음, 실패해도 리딩은 성립) ──
+    let fixtureLine: string | undefined
+    try {
+      fixtureLine =
+        (await findFixtureLine(createServiceRoleClient(), question, new Date())) ?? undefined
+    } catch {
+      // fail-open: 배경 없이 진행
+    }
+
     // ── 카드 추출 (서버 확정) ──
     const spread = getSpread(spreadId)
     const drawn = drawCards(spreadId)
@@ -112,7 +123,10 @@ export async function POST(request: NextRequest) {
         ...chatParams("gpt-4o", { temperature: 0.85, max_tokens: 1400 }),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt({ question, spreadId, cards: drawn }) },
+          {
+            role: "user",
+            content: buildUserPrompt({ question, spreadId, cards: drawn, fixtureLine }),
+          },
         ],
       }),
       signal: AbortSignal.timeout(50000),

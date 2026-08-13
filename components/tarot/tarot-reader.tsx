@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { SPREADS, SPREAD_IDS, type SpreadId } from "@/lib/tarot/spreads"
 import { expressionSrc, type Expression } from "@/lib/tarot/expression"
@@ -74,6 +74,13 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
   const [blocked, setBlocked] = useState<BlockedResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // 점괘가 나오면 입력 폼이 접혀 문서 높이가 줄어든다 — 스크롤 위치가 카드 아래에
+  // 남아있을 수 있으므로 결과 첫머리로 데려간다 (모달에서는 다이얼로그가 스크롤 컨테이너).
+  const resultRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [result])
+
   async function submit() {
     const q = question.trim()
     if (q.length < 2 || loading) return
@@ -135,107 +142,120 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
           className={`text-center text-[13.5px] ${inModal ? "mt-3" : "mt-1"}`}
           style={{ color: "var(--wc-mute)" }}
         >
-          {loading ? "카드를 펼치는 중이에요…" : "궁금한 걸 물어보세요. 카드가 흐름을 비춰줄게요."}
+          {loading
+            ? "카드를 펼치는 중이에요…"
+            : result
+              ? "카드가 나왔어요. 루나의 이야기를 들어보세요."
+              : "궁금한 걸 물어보세요. 카드가 흐름을 비춰줄게요."}
         </p>
       </div>
 
-      {/* 질문 */}
-      <div className="mt-6">
-        <label
-          htmlFor="tarot-q"
-          className="mb-1.5 block text-[12px] font-bold"
-          style={{ color: "var(--wc-mute)" }}
-        >
-          무엇이 궁금한가요?
-          {/* 질문 원문이 그대로 프롬프트에 들어간다 — 구체적일수록 리딩이 좋아진다 */}
-          <span className="ml-1.5 font-medium opacity-80">
-            날짜·대회·상대까지, 구체적일수록 잘 읽혀요
-          </span>
-        </label>
-        <textarea
-          id="tarot-q"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
-          placeholder="예: 9월 17일 챔피언스리그 경기에서 맨체스터 유나이티드가 승리할 수 있을까요?"
-          rows={2}
-          className="w-full resize-none rounded-xl px-3.5 py-3 text-[14px] outline-none"
-          style={{
-            background: "var(--wc-card)",
-            border: "1px solid var(--wc-line)",
-            color: "var(--wc-ink)",
-          }}
-        />
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {PRESETS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setQuestion(p)}
-              className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold transition-colors"
+      {/* 결과가 나오면 입력 폼(질문·프리셋·스프레드·버튼)은 접는다 — 점괘가
+          스크롤 없이 바로 보이는 게 우선이다. "새 질문 하기"로 되돌아온다. */}
+      {!result && (
+        <>
+          {/* 질문 */}
+          <div className="mt-6">
+            <label
+              htmlFor="tarot-q"
+              className="mb-1.5 block text-[12px] font-bold"
+              style={{ color: "var(--wc-mute)" }}
+            >
+              무엇이 궁금한가요?
+              {/* 질문 원문이 그대로 프롬프트에 들어간다 — 구체적일수록 리딩이 좋아진다 */}
+              <span className="ml-1.5 font-medium opacity-80">
+                날짜·대회·상대까지, 구체적일수록 잘 읽혀요
+              </span>
+            </label>
+            <textarea
+              id="tarot-q"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
+              placeholder="예: 9월 17일 챔피언스리그 경기에서 맨체스터 유나이티드가 승리할 수 있을까요?"
+              rows={2}
+              className="w-full resize-none rounded-xl px-3.5 py-3 text-[14px] outline-none"
               style={{
                 background: "var(--wc-card)",
-                border: "1px solid var(--wc-line-2)",
-                color: "var(--wc-mute)",
+                border: "1px solid var(--wc-line)",
+                color: "var(--wc-ink)",
               }}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 스프레드 */}
-      <div className="mt-5">
-        <p className="mb-1.5 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
-          몇 장으로 볼까요?
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {SPREAD_IDS.map((id) => {
-            const s = SPREADS[id]
-            const active = spreadId === id
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setSpreadId(id)}
-                aria-pressed={active}
-                className="rounded-xl px-3 py-2.5 text-left transition-all"
-                style={{
-                  background: active
-                    ? "color-mix(in srgb, var(--wc-burgundy) 7%, white)"
-                    : "var(--wc-card)",
-                  border: `1.5px solid ${active ? "var(--wc-burgundy)" : "var(--wc-line)"}`,
-                }}
-              >
-                <span
-                  className="block text-[13.5px] font-bold"
-                  style={{ color: active ? "var(--wc-burgundy)" : "var(--wc-ink)" }}
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {PRESETS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setQuestion(p)}
+                  className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold transition-colors"
+                  style={{
+                    background: "var(--wc-card)",
+                    border: "1px solid var(--wc-line-2)",
+                    color: "var(--wc-mute)",
+                  }}
                 >
-                  {s.name}
-                </span>
-                <span className="mt-0.5 block text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
-                  {s.hint}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <button
-        type="button"
-        onClick={submit}
-        disabled={loading || question.trim().length < 2}
-        className="mt-4 w-full rounded-xl py-3 text-[14px] font-bold transition-opacity disabled:opacity-45"
-        style={{ background: "var(--wc-burgundy)", color: "#fff" }}
-      >
-        {loading ? "루나가 카드를 읽는 중…" : "카드 뽑기"}
-      </button>
+          {/* 스프레드 */}
+          <div className="mt-5">
+            <p className="mb-1.5 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
+              몇 장으로 볼까요?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {SPREAD_IDS.map((id) => {
+                const s = SPREADS[id]
+                const active = spreadId === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSpreadId(id)}
+                    aria-pressed={active}
+                    className="rounded-xl px-3 py-2.5 text-left transition-all"
+                    style={{
+                      background: active
+                        ? "color-mix(in srgb, var(--wc-burgundy) 7%, white)"
+                        : "var(--wc-card)",
+                      border: `1.5px solid ${active ? "var(--wc-burgundy)" : "var(--wc-line)"}`,
+                    }}
+                  >
+                    <span
+                      className="block text-[13.5px] font-bold"
+                      style={{ color: active ? "var(--wc-burgundy)" : "var(--wc-ink)" }}
+                    >
+                      {s.name}
+                    </span>
+                    <span
+                      className="mt-0.5 block text-[11.5px]"
+                      style={{ color: "var(--wc-mute)" }}
+                    >
+                      {s.hint}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-      {error && (
-        <p className="mt-3 text-center text-[13px]" style={{ color: "var(--wc-burgundy)" }}>
-          {error}
-        </p>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading || question.trim().length < 2}
+            className="mt-4 w-full rounded-xl py-3 text-[14px] font-bold transition-opacity disabled:opacity-45"
+            style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+          >
+            {loading ? "루나가 카드를 읽는 중…" : "카드 뽑기"}
+          </button>
+
+          {error && (
+            <p className="mt-3 text-center text-[13px]" style={{ color: "var(--wc-burgundy)" }}>
+              {error}
+            </p>
+          )}
+        </>
       )}
 
       {/* 안전 가드 응답 */}
@@ -261,7 +281,14 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
 
       {/* 결과 */}
       {result && (
-        <div className="mt-7">
+        <div ref={resultRef} className="mt-7" style={{ scrollMarginTop: 12 }}>
+          {/* 접힌 폼 대신 어떤 질문의 점괘인지 한 줄로 남긴다 */}
+          <p
+            className="mb-3 text-center text-[13px] font-semibold"
+            style={{ color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
+          >
+            Q. {result.question}
+          </p>
           <div
             className={`grid gap-2.5 ${result.cards.length === 1 ? "grid-cols-1 justify-items-center" : "grid-cols-3"}`}
           >
@@ -339,18 +366,32 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={submit}
-            className="mt-3 w-full rounded-xl py-2.5 text-[13px] font-bold"
-            style={{
-              background: "var(--wc-card)",
-              border: "1px solid var(--wc-line)",
-              color: "var(--wc-ink-2)",
-            }}
-          >
-            같은 질문으로 다시 뽑기
-          </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={submit}
+              className="rounded-xl py-2.5 text-[13px] font-bold"
+              style={{
+                background: "var(--wc-card)",
+                border: "1px solid var(--wc-line)",
+                color: "var(--wc-ink-2)",
+              }}
+            >
+              같은 질문으로 다시 뽑기
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // 질문은 남긴다 — 폼이 프리필된 채 돌아와 고쳐 쓰기 쉽다
+                setResult(null)
+                setError(null)
+              }}
+              className="rounded-xl py-2.5 text-[13px] font-bold"
+              style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+            >
+              새 질문 하기
+            </button>
+          </div>
         </div>
       )}
 
