@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
+import { Compass, Dribbble, LayoutGrid, Sparkles, Target } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -25,6 +25,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname.startsWith("/prediction") || pathname.startsWith("/worldcup")
+  const isNba = pathname.startsWith("/nba")
   const isTarot = pathname.startsWith("/tarot")
 
   return (
@@ -87,6 +88,13 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
             <Target className="h-[18px] w-[18px] shrink-0" />
             승부예측
+          </span>
+        </Link>
+        {/* NBA 라운지 (2026-08-13) — 축구 중심 사이트에 농구 팬이 앉을 자리. 오프시즌에도 게시판·타로로 성립 */}
+        <Link href="/nba">
+          <span className={baseClass} data-on={isNba ? "true" : undefined}>
+            <Dribbble className="h-[18px] w-[18px] shrink-0" />
+            NBA
           </span>
         </Link>
         {/*

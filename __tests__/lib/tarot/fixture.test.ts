@@ -115,6 +115,21 @@ describe("selectFixture", () => {
     const rows = [row({ home_team_name: "맨체스U", away_team_name: "아스널" })]
     expect(selectFixture("오늘 우리 팀 이길 수 있을까요?", rows, NOW)).toBeNull()
   })
+
+  it("NBA 별칭 — 레이커스/골스가 betman 축약 표기에 걸린다", () => {
+    const rows = [
+      row({ home_team_name: "LA레이커", away_team_name: "골든워리", league_code: "NBA" }),
+    ]
+    expect(selectFixture("레이커스 이길까?", rows, NOW)?.home).toBe("LA레이커")
+    expect(selectFixture("골스 요즘 어때?", rows, NOW)?.away).toBe("골든워리")
+  })
+
+  it("NBA 전체 팀명 일치 — 뉴욕 닉스 (별칭 사전 미등록 팀)", () => {
+    const rows = [
+      row({ home_team_name: "뉴욕 닉스", away_team_name: "브루네츠", league_code: "NBA" }),
+    ]
+    expect(selectFixture("뉴욕 닉스 경기 어떨까?", rows, NOW)?.home).toBe("뉴욕 닉스")
+  })
 })
 
 describe("formatFixtureLine", () => {
