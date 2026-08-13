@@ -286,6 +286,8 @@ export function useBettingSlip(
         message: data.message || `${selectedBets.length}경기 예측이 성공적으로 등록되었습니다.`,
         distribution,
         showCommunity,
+        // 아래에서 setSelectedSport(null) 로 리셋되기 전에 캡처 — 이벤트 스트립 판정용
+        sport: selectedSport,
       })
       trackEvent({
         name: "prediction_success_modal",

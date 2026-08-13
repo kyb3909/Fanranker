@@ -18,6 +18,7 @@ import { CardVsVote } from "@/components/vs/card-vs-vote"
 import { trackEvent } from "@/lib/analytics/events"
 import { STAGE_LABEL } from "@/lib/saga/stages"
 import { getGameTypeLabel } from "@/types/betting"
+import { isEventLive } from "@/lib/event/gunners-season"
 import {
   extractFirstImageSrcFromTipTapJSON,
   extractFirstEmbedFromTipTapJSON,
@@ -211,6 +212,33 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
             {state.message}
           </DialogDescription>
         </DialogHeader>
+
+        {/* 건너스 레이스 참가 피드백 (8/22~9/30) — 축구 슬립은 자동 참가라는 걸
+            제출 직후에 알려준다. 이벤트 페이지가 다시 콘텐츠 허브로 이어진다 */}
+        {state.sport === "축구" && isEventLive() && (
+          <Link
+            href="/event/gunners-season?ref=pick"
+            onClick={() => trackEvent({ name: "prediction_modal_event_click", params: {} })}
+            className="flex min-w-0 items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90"
+            style={{
+              background: "var(--wc-wine-tint, #fbf2f4)",
+              border: "1px solid var(--wc-line, #e8e5e0)",
+            }}
+          >
+            <span
+              className="min-w-0 truncate text-[13px] font-bold"
+              style={{ color: "var(--wc-burgundy, #961e37)" }}
+            >
+              🏁 건너스 레이스에 반영됐어요
+            </span>
+            <span
+              className="shrink-0 text-[12px] font-bold"
+              style={{ color: "var(--wc-burgundy, #961e37)" }}
+            >
+              내 순위 보기 →
+            </span>
+          </Link>
+        )}
 
         {/* min-w-0 필수 — DialogContent 는 grid 이고 grid item 의 min-width:auto 기본값 때문에
             긴 콘텐츠(HOT 제목)가 컬럼을 다이얼로그 밖으로 밀어냄 (truncate 무력화) */}

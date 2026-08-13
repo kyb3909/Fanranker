@@ -104,6 +104,8 @@ export interface PredictionSuccessState {
   message: string
   distribution: PickDistributionEntry[]
   showCommunity: boolean
+  /** 제출한 슬립의 종목 — 이벤트(건너스 레이스) 참가 피드백 노출 판정용 */
+  sport?: string | null
 }
 
 export interface RankingUser {

@@ -45,6 +45,8 @@ type AnalyticsEvent =
   | { name: "prediction_modal_board_click"; params: { board: string } }
   // 예측 직후 → 사가 주입 (PM 토론 2026-08-04 #4 — 콘텐츠 전환 최대 레버 실험)
   | { name: "prediction_modal_saga_click"; params: { saga_slug: string } }
+  // 예측 직후 → 건너스 레이스 순위 확인 (2026-08-14 이벤트 참가 피드백)
+  | { name: "prediction_modal_event_click"; params: Record<string, never> }
   | { name: "search"; params: { query: string } }
   // ── 축구 타로 (2026-08-12) — 진입점별 전환을 갈라 본다 ──
   | { name: "tarot_hook_click"; params: { surface: "cardnews" | "gnb" } }

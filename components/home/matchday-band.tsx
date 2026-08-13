@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HeroVsVote } from "@/components/home/hero-vs-vote"
 import { useAuth } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
+import { isEventLive } from "@/lib/event/gunners-season"
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -394,6 +395,22 @@ function TodayFixtures({
             {countdown}
           </span>
         </div>
+      )}
+
+      {/* 건너스 레이스 진입점 (8/22~9/30) — 홈의 경기 밴드가 이벤트의 자연 입구다 */}
+      {isEventLive() && (
+        <Link
+          href="/event/gunners-season?ref=band"
+          className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 transition-opacity hover:opacity-85"
+          style={{ background: "rgba(150,30,55,0.28)", border: "1px solid rgba(150,30,55,0.5)" }}
+        >
+          <span className="text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
+            🏁 건너스 레이스 진행 중 — 축구 픽이 곧 참가
+          </span>
+          <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
+            순위 보기 →
+          </span>
+        </Link>
       )}
 
       <ul className="flex-1">
