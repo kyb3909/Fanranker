@@ -147,12 +147,16 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
           style={{ color: "var(--wc-mute)" }}
         >
           무엇이 궁금한가요?
+          {/* 질문 원문이 그대로 프롬프트에 들어간다 — 구체적일수록 리딩이 좋아진다 */}
+          <span className="ml-1.5 font-medium opacity-80">
+            날짜·대회·상대까지, 구체적일수록 잘 읽혀요
+          </span>
         </label>
         <textarea
           id="tarot-q"
           value={question}
           onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
-          placeholder="예: 오늘 아스날 이길 수 있을까요?"
+          placeholder="예: 9월 17일 챔피언스리그 경기에서 맨체스터 유나이티드가 승리할 수 있을까요?"
           rows={2}
           className="w-full resize-none rounded-xl px-3.5 py-3 text-[14px] outline-none"
           style={{
