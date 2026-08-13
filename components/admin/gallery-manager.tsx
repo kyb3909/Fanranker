@@ -42,15 +42,18 @@ export function GalleryManager() {
       if (!res.ok) {
         setReport(d?.error ?? "등록에 실패했습니다.")
       } else {
-        const failed = (d.results ?? []).filter((r: { ok: boolean }) => !r.ok)
+        type R = { ok: boolean; url: string; reason?: string }
+        const failed = (d.results ?? []).filter((r: R) => !r.ok)
+        // 등록됐지만 일부 사진이 인물 아님 판정으로 빠진 경우도 알려준다
+        const partial = (d.results ?? []).filter((r: R) => r.ok && r.reason)
         setReport(
-          `${d.registered}건 등록${
-            failed.length
+          `${d.registered}건 등록` +
+            (partial.length ? ` · ${partial.map((p: R) => p.reason).join(" / ")}` : "") +
+            (failed.length
               ? ` · 실패 ${failed.length}건: ${failed
-                  .map((f: { url: string; reason?: string }) => `${f.url} (${f.reason})`)
+                  .map((f: R) => `${f.url} (${f.reason})`)
                   .join(", ")}`
-              : ""
-          }`
+              : "")
         )
         setInput("")
         mutate()
