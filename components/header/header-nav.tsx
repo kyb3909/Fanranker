@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, Dribbble, LayoutGrid, Sparkles, Target } from "lucide-react"
+import { Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -25,7 +25,6 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
   const isPrediction = pathname.startsWith("/prediction") || pathname.startsWith("/worldcup")
-  const isNba = pathname.startsWith("/nba")
   const isTarot = pathname.startsWith("/tarot")
 
   return (
@@ -90,13 +89,10 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             승부예측
           </span>
         </Link>
-        {/* NBA 라운지 (2026-08-13) — 축구 중심 사이트에 농구 팬이 앉을 자리. 오프시즌에도 게시판·타로로 성립 */}
-        <Link href="/nba">
-          <span className={baseClass} data-on={isNba ? "true" : undefined}>
-            <Dribbble className="h-[18px] w-[18px] shrink-0" />
-            NBA
-          </span>
-        </Link>
+        {/*
+          NBA 라운지(/nba)는 운영자 결정으로 GNB 미노출 (2026-08-13) — 게시판(농구)만 노출.
+          라우트는 유지, 직접 URL 접근 — 10월 NBA 개막 때 노출 재검토.
+        */}
         {/*
           축구 타로 (2026-08-12) — 재미 콘텐츠. 승부예측 **뒤**에 둔다:
           예측 바로 옆에 붙으면 "무엇에 걸지 점으로 정한다"로 읽힐 수 있어서다
