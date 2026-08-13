@@ -35,7 +35,9 @@ const ALLOWED_NODES = new Set<string>([
   "tableCell",
 ])
 
-const ALLOWED_EMBED_PROVIDERS = new Set<string>(["youtube", "instagram", "x"])
+// streamable·bsky (2026-08-14): NBA 뉴스 소스가 스트리머블 클립·블루스카이(기자 이동)라
+// 원문 임베드에 필요. 여기 없으면 스캐너가 단 embed 노드가 적재 시 조용히 잘린다.
+const ALLOWED_EMBED_PROVIDERS = new Set<string>(["youtube", "instagram", "x", "streamable", "bsky"])
 const ALLOWED_TEXT_ALIGN = new Set<string>(["left", "center", "right"])
 const ALLOWED_HEADING_LEVELS = new Set<number>([1, 2, 3])
 

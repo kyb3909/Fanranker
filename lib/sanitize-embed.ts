@@ -20,8 +20,8 @@ const ALLOWED_IFRAME_HOSTS = [
  * Returns safe HTML containing only the iframe, or empty string.
  */
 export function sanitizeEmbedHtml(html: string, provider: string): string {
-  // X/Twitter and Instagram use blockquote (not iframe) — sanitize with DOMPurify
-  if (provider === "x" || provider === "instagram") {
+  // X/Twitter, Instagram, Bluesky use blockquote (not iframe) — sanitize with DOMPurify
+  if (provider === "x" || provider === "instagram" || provider === "bsky") {
     return sanitizeBlockquoteHtml(html)
   }
 
@@ -63,7 +63,17 @@ function sanitizeBlockquoteHtml(html: string): string {
       img: ["src", "alt", "width", "height", "style"],
       div: ["class", "style"],
       span: ["class", "style"],
-      blockquote: ["class", "style", "data-instgrm-permalink", "data-instgrm-version", "cite"],
+      blockquote: [
+        "class",
+        "style",
+        "cite",
+        "lang",
+        "data-instgrm-permalink",
+        "data-instgrm-version",
+        // Bluesky embed.js 가 iframe 으로 바꿀 때 읽는 식별자 (없으면 텍스트 폴백만 남는다)
+        "data-bluesky-uri",
+        "data-bluesky-cid",
+      ],
       time: ["datetime"],
     },
     allowedSchemes: ["https", "http"],

@@ -349,7 +349,12 @@ async function fetchSubreddit(sub) {
 function isExternalArticle(u) {
   try {
     const h = new URL(u).hostname.replace(/^www\./, "")
-    if (/reddit\.com|redd\.it|x\.com|twitter\.com|youtube\.com|youtu\.be|instagram\.com/.test(h))
+    // bsky·streamable 은 기사가 아니라 소셜/영상 소스 — 본문 <p> 추출이 무의미하다
+    if (
+      /reddit\.com|redd\.it|x\.com|twitter\.com|youtube\.com|youtu\.be|instagram\.com|bsky\.app|streamable\.com/.test(
+        h
+      )
+    )
       return false
     if (/\.(jpg|jpeg|png|gif|webp|mp4|gifv)$/i.test(u)) return false
     return true
@@ -359,6 +364,15 @@ function isExternalArticle(u) {
 }
 function isTweet(u) {
   return /(?:twitter\.com|x\.com)\/\w+\/status(?:es)?\/\d+/i.test(u || "")
+}
+// NBA 기자 다수가 X → Bluesky 로 이동 (2026-08 실측: r/nba 상위 소스가 bsky.app).
+// 트윗과 같은 급의 소셜 소스로 취급 — 포스트 전문을 재료로, 원문은 임베드로.
+function isBsky(u) {
+  return /bsky\.app\/profile\/[^/]+\/post\/[a-zA-Z0-9]+/i.test(u || "")
+}
+// 스트리머블 = 인터뷰/기자회견 클립 영상. 원문이 곧 영상이라 임베드가 본체다.
+function isStreamable(u) {
+  return /streamable\.com\/(?:[eosm]\/)?[a-zA-Z0-9]+/i.test(u || "")
 }
 
 // ── 기사 원문 본문 추출 ──────────────────────────────────────────────
@@ -470,7 +484,15 @@ async function judgeAndWrite(
   material = null,
   retryNote = ""
 ) {
-  const sourceKind = isTweet(post.url) ? "tweet" : isExternalArticle(post.url) ? "article" : "none"
+  const sourceKind = isTweet(post.url)
+    ? "tweet"
+    : isBsky(post.url)
+      ? "bsky"
+      : isStreamable(post.url)
+        ? "video"
+        : isExternalArticle(post.url)
+          ? "article"
+          : "none"
   // few-shot — 검수자가 실제로 고친 사례를 예시로 주입해 표기/스타일을 학습시킨다.
   const { examples = [], articles = [], naming = [] } = corrections
   // 확정 표기 — 제목과 원문 재료에 등장하는 고유명사만 골라 싣는다 (예방층)
@@ -549,7 +571,9 @@ JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,
       ? `\n\n## 기사 원문 (영어, 발췌)\n${material.text}`
       : material?.kind === "tweet"
         ? `\n\n## 트윗 원문 (작성자: ${material.author || "미상"})\n${material.text}`
-        : ""
+        : material?.kind === "bsky"
+          ? `\n\n## 블루스카이 포스트 원문 (작성자: ${material.author || "미상"})\n${material.text}`
+          : ""
   }${retryNote ? `\n\n## 재작성 지시\n${retryNote}` : ""}`
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -600,6 +624,37 @@ async function fetchTweetData(url) {
         author_name: d.author_name || null,
       },
     },
+  }
+}
+
+/**
+ * Bluesky 포스트 → 임베드 노드 + 포스트 전문 텍스트 (트윗과 같은 원리).
+ * /api/oembed 가 embed.bsky.app 을 프록시하고 title 에 포스트 본문을 담아준다.
+ */
+async function fetchBskyData(url) {
+  const res = await fetch(`${BASE_URL}/api/oembed?url=${encodeURIComponent(url)}&includeHtml=true`, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!res.ok) return null
+  const d = await res.json().catch(() => null)
+  if (!d) return null
+  const text = String(d.title || "").trim()
+  return {
+    text: text.length >= 20 ? text : null,
+    author: d.author_name || null,
+    node: d.html
+      ? {
+          type: "embed",
+          attrs: {
+            url,
+            html: d.html,
+            provider: "bsky",
+            title: d.title || null,
+            author_name: d.author_name || null,
+          },
+        }
+      : null,
   }
 }
 
@@ -881,7 +936,7 @@ async function main() {
     // (레딧 자체글·짤·하이라이트 영상)은 결국 "레딧글을 퍼온 것"이 된다.
     // 실측: 대기 139건 중 34건(24%)이 여기 해당했고, 출처가 성립하는 104건은 남는다.
     // LLM 호출 **전에** 걸러 비용도 아낀다.
-    if (!isExternalArticle(p.url) && !isTweet(p.url)) {
+    if (!isExternalArticle(p.url) && !isTweet(p.url) && !isBsky(p.url) && !isStreamable(p.url)) {
       skippedNoSource++
       log(`skip(출처없음) [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)}`)
       continue
@@ -893,12 +948,15 @@ async function main() {
       // 외부 기사 = 본문 <p> 추출, 트윗 = oembed 로 트윗 전문 (임베드 노드도 같이 얻어
       // 아래에서 재사용 — oembed 이중 호출 방지).
       const tweetData = isTweet(p.url) ? await fetchTweetData(p.url) : null
+      const bskyData = isBsky(p.url) ? await fetchBskyData(p.url) : null
       const articleBody = isExternalArticle(p.url) ? await fetchArticleBody(p.url) : null
       const material = articleBody
         ? { kind: "article", text: articleBody }
         : tweetData?.text
           ? { kind: "tweet", text: tweetData.text, author: tweetData.author }
-          : null
+          : bskyData?.text
+            ? { kind: "bsky", text: bskyData.text, author: bskyData.author }
+            : null
       let v = await judgeAndWrite(p, corrections, material)
       if (!v?.worthy) {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
@@ -957,6 +1015,11 @@ async function main() {
       let summary = v.summary
       if (isTweet(p.url)) {
         mediaNode = tweetData?.node ?? null
+      } else if (isBsky(p.url)) {
+        mediaNode = bskyData?.node ?? null
+      } else if (isStreamable(p.url)) {
+        // 원문 = 영상 그 자체. embed-card 가 url 로 플레이어 iframe 을 만든다 (html 불필요)
+        mediaNode = { type: "embed", attrs: { url: p.url, provider: "streamable" } }
       } else if (isExternalArticle(p.url)) {
         const { imageNode, ogSummary } = await buildArticleOg(p.url)
         mediaNode = imageNode

@@ -9,7 +9,11 @@ import { ExternalLink, Loader2, Play } from "lucide-react"
 import { loadInstagramEmbedJs, processInstagramEmbeds } from "@/lib/embed/instagram-loader"
 
 /** 플랫폼 BI 헤더 스트립 */
-function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" | "streamable" }) {
+function PlatformBadge({
+  platform,
+}: {
+  platform: "youtube" | "x" | "instagram" | "streamable" | "bsky"
+}) {
   const configs = {
     youtube: {
       bg: "var(--wc-card, #ffffff)",
@@ -76,6 +80,21 @@ function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" |
       ),
       borderBottom: "1px solid var(--wc-line, #e8e5e0)",
     },
+    bsky: {
+      bg: "var(--wc-card, #ffffff)",
+      iconColor: "#0085FF",
+      label: "Bluesky",
+      labelColor: "var(--wc-mute, #5C6470)",
+      source: "bsky.app",
+      sourceMuted: true,
+      icon: (
+        // Bluesky 나비 마크
+        <svg viewBox="0 0 600 530" fill="currentColor" width="15" height="15">
+          <path d="M135.72 44.03C202.216 93.951 273.74 195.17 300 249.49c26.262-54.316 97.782-155.54 164.28-205.46C512.26 8.009 590-19.862 590 68.825c0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.38-3.69-10.832-3.708-7.896-.017-2.936-1.193.516-3.707 7.896-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.45-163.25-81.433C20.15 217.613 9.997 86.535 9.997 68.825c0-88.687 77.742-60.816 125.72-24.795z" />
+        </svg>
+      ),
+      borderBottom: "1px solid var(--wc-line, #e8e5e0)",
+    },
   } as const
 
   const c = configs[platform]
@@ -136,7 +155,7 @@ function PlatformBadge({ platform }: { platform: "youtube" | "x" | "instagram" |
 }
 
 interface EmbedCardProps {
-  provider: "youtube" | "instagram" | "x" | "streamable"
+  provider: "youtube" | "instagram" | "x" | "streamable" | "bsky"
   url: string
   html?: string // 선택적: 상세 페이지에서만 필요
   title?: string
@@ -273,6 +292,20 @@ export function EmbedCard({
 
   const html = htmlProp || fetchedHtml
 
+  // Bluesky: blockquote + embed.js (트위터 widgets 와 같은 방식 — 스크립트가 iframe 으로 승격)
+  if (provider === "bsky") {
+    if (!html && isLoading) {
+      return (
+        <Card className={cn("border-border bg-card border", className)}>
+          <CardContent className="flex items-center justify-center p-8">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+          </CardContent>
+        </Card>
+      )
+    }
+    return <BskyEmbed html={html} url={url} className={className} />
+  }
+
   // X: oEmbed API에서 구조화된 data를 받아 자체 카드로 렌더 (html 불필요)
   if (provider === "x") {
     if (isLoading && !fetchedData) {
@@ -367,6 +400,64 @@ export function EmbedCard({
 
 function buildTwitterVideoProxyUrl(url: string) {
   return `/api/media-proxy?url=${encodeURIComponent(url)}`
+}
+
+/**
+ * Bluesky 임베드 — blockquote 삽입 후 embed.bsky.app/static/embed.js 로드.
+ * 스크립트가 blockquote(data-bluesky-uri)를 iframe 으로 바꾼다. 스크립트가 막혀도
+ * sanitize 된 blockquote 에 포스트 전문 텍스트가 있어 내용은 읽힌다 (graceful).
+ */
+const BSKY_EMBED_JS = "https://embed.bsky.app/static/embed.js"
+
+function BskyEmbed({
+  html,
+  url,
+  className,
+}: {
+  html: string | null
+  url: string
+  className?: string
+}) {
+  useEffect(() => {
+    if (!html) return
+    const w = window as unknown as { bluesky?: { scan?: () => void } }
+    if (document.querySelector(`script[src="${BSKY_EMBED_JS}"]`)) {
+      // 이미 로드됨 — 새로 삽입된 blockquote 를 다시 스캔
+      w.bluesky?.scan?.()
+      return
+    }
+    const s = document.createElement("script")
+    s.src = BSKY_EMBED_JS
+    s.async = true
+    s.charset = "utf-8"
+    document.body.appendChild(s)
+  }, [html])
+
+  return (
+    <Card className={cn("border-border overflow-hidden border", className)}>
+      <CardContent className="p-0">
+        <PlatformBadge platform="bsky" />
+        <div className="bg-card p-4">
+          {html ? (
+            <div
+              className="mx-auto max-w-[600px] [&_.bluesky-embed]:!mx-auto"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          ) : (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary flex items-center gap-2 text-sm hover:underline"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Bluesky에서 보기
+            </a>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 /**

@@ -11,7 +11,7 @@ interface EmbedMedia {
 }
 
 interface OEmbedResponse {
-  provider: "youtube" | "instagram" | "x" | "streamable"
+  provider: "youtube" | "instagram" | "x" | "streamable" | "bsky"
   url: string
   html?: string
   title?: string
@@ -44,6 +44,7 @@ const ALLOWED_HOSTS = new Set([
   "www.x.com",
   "streamable.com",
   "www.streamable.com",
+  "bsky.app",
 ])
 
 /**
@@ -55,6 +56,8 @@ const URL_PATTERNS = {
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reel)\/([a-zA-Z0-9_-]+)/,
   x: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(?:es)?\/(\d+)/,
   streamable: /(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:[eosm]\/)?([a-zA-Z0-9]+)/,
+  // NBA 기자 다수가 X → Bluesky 로 이동 (2026 실측: r/nba 상위 소스가 bsky.app)
+  bsky: /(?:https?:\/\/)?bsky\.app\/profile\/([^/]+)\/post\/([a-zA-Z0-9]+)/,
 }
 
 /**
@@ -73,6 +76,10 @@ function cacheKey(provider: string, url: string): string | null {
       const m = url.match(URL_PATTERNS.x)
       return m ? `x:${m[2]}` : null
     }
+    case "bsky": {
+      const m = url.match(URL_PATTERNS.bsky)
+      return m ? `bsky:${m[1]}/${m[2]}` : null
+    }
     default:
       return null // streamable 은 외부 호출이 없어 캐시 불필요
   }
@@ -81,7 +88,7 @@ function cacheKey(provider: string, url: string): string | null {
 /**
  * Detect which provider a URL belongs to
  */
-function detectProvider(url: string): "youtube" | "instagram" | "x" | "streamable" | null {
+function detectProvider(url: string): "youtube" | "instagram" | "x" | "streamable" | "bsky" | null {
   if (URL_PATTERNS.youtube.test(url)) {
     return "youtube"
   }
@@ -94,7 +101,50 @@ function detectProvider(url: string): "youtube" | "instagram" | "x" | "streamabl
   if (URL_PATTERNS.streamable.test(url)) {
     return "streamable"
   }
+  if (URL_PATTERNS.bsky.test(url)) {
+    return "bsky"
+  }
   return null
+}
+
+/**
+ * Bluesky oEmbed — 공식 embed.bsky.app/oembed 프록시.
+ * html 은 blockquote(포스트 전문 텍스트 포함) + embed.js 스크립트 태그로 오는데,
+ * 스크립트는 sanitize 에서 잘리고 클라이언트(embed-card)가 직접 로드한다.
+ * title 에 포스트 본문 텍스트를 뽑아 담는다 — 스캐너가 기사 재료로 쓴다 (트윗과 동일 원리).
+ */
+async function fetchBskyOEmbed(url: string): Promise<OEmbedResponse> {
+  const res = await fetch(
+    `https://embed.bsky.app/oembed?url=${encodeURIComponent(url)}&format=json`,
+    {
+      headers: { "User-Agent": "gongnori.fan-oembed/1.0" },
+      signal: AbortSignal.timeout(10000),
+    }
+  )
+  if (!res.ok) {
+    throw new Error(`Bluesky oEmbed failed: ${res.status}`)
+  }
+  const data = (await res.json()) as { html?: string; author_name?: string }
+  if (!data.html) {
+    throw new Error("Bluesky oEmbed: html 없음")
+  }
+  // blockquote 안 <p> 들이 포스트 본문 — 태그를 벗겨 평문으로
+  const text = (data.html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) ?? [])
+    .map((p) =>
+      p
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .trim()
+    )
+    .filter(Boolean)
+    .join("\n")
+  return {
+    provider: "bsky",
+    url,
+    html: data.html,
+    title: text.slice(0, 1000) || undefined,
+    author_name: data.author_name || undefined,
+  }
 }
 
 /**
@@ -478,6 +528,9 @@ export async function GET(request: NextRequest) {
           break
         case "streamable":
           oembedData = buildStreamableEmbed(url)
+          break
+        case "bsky":
+          oembedData = await fetchBskyOEmbed(url)
           break
         default:
           return NextResponse.json({ error: "Unsupported provider" }, { status: 422 })
