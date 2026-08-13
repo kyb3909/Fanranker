@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * news-scanner.mjs — 축구 뉴스 스캐너 (결정적 스캔 + OpenAI 작성)
+ * news-scanner.mjs — 스포츠 뉴스 스캐너 (결정적 스캔 + OpenAI 작성. 축구 + NBA)
  *
- * 흐름: 5대리그+인기클럽 서브레딧 RSS(hot) → 잡담/오래됨/중복 컷 → OpenAI 가
- *      "축구 뉴스 vs 잡담"만 판별 + 한국어 작성 (신뢰도/중요도로 거르지 않음 — 사람 검수 몫)
+ * 흐름: 5대리그+인기클럽+r/nba 서브레딧 RSS(hot) → 잡담/오래됨/중복 컷 → OpenAI 가
+ *      "정보성 소식 vs 잡담"만 판별 + 한국어 작성 (신뢰도/중요도로 거르지 않음 — 사람 검수 몫)
  *      → 트윗이면 /api/oembed, 기사면 /api/og 로 보강 → /api/news/agent-draft 로 초안 적재.
  * 발행은 안 함. /admin/news-review 에서 사람이 검수·발행 (fail-closed).
  * 소스 목록·상한: SUBREDDITS / SCANNER_MAX_LLM(기본 30) / SCANNER_THROTTLE_MS(기본 65000).
@@ -79,7 +79,7 @@ const UA = "gongnori.fan news-scanner/1.0"
 const REDDIT_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
-// 수집 소스: r/soccer 종합 + 5대리그 + 인기 클럽. 이적설만이 아니라 축구 뉴스 전반을 폭넓게 긁는다.
+// 수집 소스: r/soccer 종합 + 5대리그 + 인기 클럽 + r/nba. 이적설만이 아니라 뉴스 전반을 폭넓게 긁는다.
 // 관련성/품질 판단은 사람 검수(/admin/news-review)로 이관 — 여기서는 명백한 잡담만 컷.
 const SUBREDDITS = [
   "soccer",
@@ -98,7 +98,34 @@ const SUBREDDITS = [
   "realmadrid",
   "Barca",
   "FCBayern",
+  "nba", // NBA (2026-08-14) — 농구 게시판 발행. 회전 풀에만 둔다: 레딧 예산(REDDIT_RATE)상
+  //       항상-스캔을 늘리면 축구 커버리지가 줄고, 24h lookback + seen 중복 방지 덕에
+  //       ~48분에 한 번 방문해도 유실은 없다 (지연만 최대 1시간쯤).
 ]
+
+// 서브레딧 → 종목. 미등재는 축구. 발행 게시판 라우팅(lib/news/publish SPORT_BOARDS)과
+// 프롬프트(에디터 정체성·worthy 기준·표기 규칙)가 이 값을 따라간다.
+const SUB_SPORT = { nba: "basketball" }
+const sportOf = (sub) => SUB_SPORT[sub] || "football"
+
+// 종목별 프롬프트 조각 — 에디터 정체성·worthy 예시·표기 예시만 갈아끼운다.
+// 나머지 규율(출처 귀속·드라이 톤·분석 금지·한국어 제목)은 종목 공통 — 그건 매체
+// 규칙이지 종목 규칙이 아니다.
+const SPORT_PROMPTS = {
+  football: {
+    label: "축구",
+    worthyList:
+      "이적·영입·계약·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·공식 발표·**인터뷰·기자회견 발언**·구단/선수 근황·유망주·한국 선수",
+    notationExamples: "예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼",
+  },
+  basketball: {
+    label: "농구(NBA)",
+    worthyList:
+      "트레이드·FA 계약·연장·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·드래프트·공식 발표·**인터뷰·기자회견 발언**·구단/선수 근황·유망주·한국 선수",
+    notationExamples:
+      "예: LeBron James=르브론 제임스, Golden State Warriors=골든스테이트 워리어스, Victor Wembanyama=빅터 웸반야마",
+  },
+}
 
 // r/soccer 는 종합·최대 물량이라 매 run 고정, 나머지는 회차 순환 (REDDIT_RATE 참조).
 const ALWAYS_SUB = "soccer"
@@ -107,9 +134,10 @@ const ROTATING_SUBS = SUBREDDITS.filter((s) => s !== ALWAYS_SUB)
 // 잡담/스레드 컷
 const SKIP_AUTHORS = new Set(["AutoModerator", "2soccer2bot", "MatchThreadder"])
 const SKIP_PATTERNS = [
-  /^daily discussion$/i,
+  /^daily discussion/i, // r/nba 는 "Daily Discussion Thread (날짜)" 꼴 — 끝 앵커를 풀어야 잡힌다
   /^free talk/i,
   /match thread/i,
+  /game thread/i, // r/nba: "Game Thread" / "Post-Game Thread"
   /^monday moan/i,
   /^\[?(megathread|match thread)\]?/i,
   /weekly.*(thread|discussion|megathread)/i,
@@ -462,9 +490,10 @@ async function judgeAndWrite(
         )
         .join("\n\n")}`
     : ""
-  const sys = `너는 한국 축구 커뮤니티의 뉴스 에디터다. 레딧 축구 글 하나를 받아 "정보성 축구 소식인가 vs 순수 잡담인가"만 가른다. 기본값은 통과(worthy=true)이고, 애매하면 통과시킨다. 최종 취사선택은 사람 편집자가 검수에서 한다.
+  const sp = SPORT_PROMPTS[sportOf(post.subreddit)] || SPORT_PROMPTS.football
+  const sys = `너는 한국 ${sp.label} 커뮤니티의 뉴스 에디터다. 레딧 ${sp.label} 글 하나를 받아 "정보성 ${sp.label} 소식인가 vs 순수 잡담인가"만 가른다. 기본값은 통과(worthy=true)이고, 애매하면 통과시킨다. 최종 취사선택은 사람 편집자가 검수에서 한다.
 
-worthy=true (폭넓게): 이적·영입·계약·부상·복귀·감독 선임/경질·경기 결과·기록·수상/후보·공식 발표·**인터뷰·기자회견 발언**·구단/선수 근황·유망주·한국 선수 등 축구와 관련해 사실 정보가 담긴 것이면 전부. 무명 선수·유망주·미확정 루머·낮은 신뢰도도 관련 있으면 통과. 신뢰도/중요도가 낮다고 버리지 마라 — 그 판단은 사람 몫이다.
+worthy=true (폭넓게): ${sp.worthyList} 등 ${sp.label}와 관련해 사실 정보가 담긴 것이면 전부. 무명 선수·유망주·미확정 루머·낮은 신뢰도도 관련 있으면 통과. 신뢰도/중요도가 낮다고 버리지 마라 — 그 판단은 사람 몫이다.
 
 worthy=false (좁게, 정보가 0인 것만): 순수 밈·짤·GIF·팬아트·움짤, 정보 없는 단순 감탄/응원("wow", "amazing"), 개인 SNS 좋아요/반응 캡처, 라이브 경기 중계 스레드, 설문/의견 질문글, 오래된 떡밥 재탕. 애매하면 false 말고 true.
 
@@ -508,7 +537,7 @@ worthy=false 로 버려라. (이적료·계약 기간·부상 진단명처럼 **
   ⛔ **레딧은 출처가 아니다.** 우리가 소식을 발견한 경로일 뿐이므로 "[레딧]", "[Reddit]",
   "[r/soccer]" 같은 표기는 절대 쓰지 마라. 출처가 불명확하면 **대괄호 없이 제목만** 써라
   (예: "아시아 투어 참가 선수 명단 공개").
-- 팀/선수 한글 표기는 한국 축구 미디어의 정착된 표기를 따른다 (예: Bournemouth=본머스, Tottenham=토트넘, Wolverhampton=울버햄튼). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
+- 팀/선수 한글 표기는 한국 ${sp.label} 미디어의 정착된 표기를 따른다 (${sp.notationExamples}). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
   ⚠️ 아래 "확정 한글 표기" 목록이 있으면 **그것이 이 규칙보다 우선한다** (네 감보다 사전이 맞다).
 - 미확정 루머는 단정하지 말 것.
 - credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${namingHints}${fewshot}${styleshot}
@@ -788,7 +817,7 @@ async function main() {
   const cutoff = Date.now() - LOOKBACK_HOURS * 3600 * 1000
 
   // 이번 run 이 긁을 소스 = r/soccer 고정 + 나머지에서 회차 순환 (REDDIT_RATE).
-  // 15개를 5개씩 나눠 도므로 3 run(45분)이면 전 소스 커버 — LOOKBACK_HOURS(24h) 안이라 유실 없음.
+  // 회전 16개를 5개씩 나눠 도므로 ~3.2 run(48분)이면 전 소스 커버 — LOOKBACK_HOURS(24h) 안이라 유실 없음.
   const rotation = loadRotation()
   const scanSubs = [ALWAYS_SUB, ...pickRotating(ROTATING_SUBS, rotation.scan, SCAN_SUBS_PER_RUN)]
   rotation.scan = (rotation.scan + SCAN_SUBS_PER_RUN) % ROTATING_SUBS.length
@@ -933,12 +962,16 @@ async function main() {
         mediaNode = imageNode
         if (ogSummary && (summary || "").length < 40) summary = ogSummary
       }
-      // VS 쟁점 제안 (2단 판정) — 실패해도 초안은 나간다
-      let vs
-      try {
-        vs = await judgeVsIssue(v.title, summary || "")
-      } catch {
-        vs = null
+      const sport = sportOf(p.subreddit)
+      // VS 쟁점 제안 (2단 판정) — 축구 전용 (판정 프롬프트가 축구 데스크 기준).
+      // 실패해도 초안은 나간다.
+      let vs = null
+      if (sport === "football") {
+        try {
+          vs = await judgeVsIssue(v.title, summary || "")
+        } catch {
+          vs = null
+        }
       }
       const r = await postDraft({
         title: v.title,
@@ -952,6 +985,8 @@ async function main() {
         tags: Array.isArray(v.tags) ? v.tags.slice(0, 10) : [],
         scores: { credibility: v.credibility, importance: v.importance },
         dedupe_key: `reddit:${p.id}`,
+        // 종목 표기 — 발행이 이 값으로 게시판을 고른다 (미표기 = football, 하위 호환)
+        ...(sport !== "football" ? { sport } : {}),
         ...(vs ? { vs } : {}),
       })
       if (r.ok) {

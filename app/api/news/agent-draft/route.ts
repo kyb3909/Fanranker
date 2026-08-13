@@ -46,6 +46,8 @@ const BodySchema = z.object({
   scores: z.record(z.unknown()).optional(),
   /** 중복 방지 키 (예: "soccer:<reddit_post_id>") */
   dedupe_key: z.string().min(1).max(200),
+  /** 종목 — 발행 시 게시판 라우팅(lib/news/publish SPORT_BOARDS). 미지정 = football */
+  sport: z.enum(["football", "basketball"]).optional(),
   /** VS 쟁점 제안 (스캐너 2단 판정) — 검수 화면에서 확인 후 발행 시 폴 생성 */
   vs: z
     .object({
@@ -202,6 +204,8 @@ export async function POST(req: NextRequest) {
       title: d.title,
       dedupe_key: d.dedupe_key,
       ...(d.source_text ? { source_text: d.source_text } : {}),
+      // 종목은 불변 스냅샷(raw)에 둔다 — draft 는 검수 편집이 덮을 수 있다
+      ...(d.sport ? { sport: d.sport } : {}),
     },
     scores: d.scores ?? {},
     dedupe_key: d.dedupe_key,

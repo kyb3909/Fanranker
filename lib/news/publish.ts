@@ -36,10 +36,26 @@ import type { TipTapNode } from "@/types/post"
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
-/** 발행 뉴스 작성자 = 공놀이봇(user_bot_soccer_kr). football 게시판. 봇 글은 전부 이 계정. */
+/** 발행 뉴스 작성자 = 공놀이봇(user_bot_soccer_kr). 봇 글은 종목 무관 전부 이 계정. */
 export const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
 export const FOOTBALL_CATEGORY_ID = "22105623-6c99-487d-975f-15073e0990fc"
 export const FOOTBALL_SLUG = "football"
+
+/**
+ * 종목 → 게시판 라우팅 (2026-08-14 NBA 뉴스 도입).
+ * 스캐너가 raw.sport 로 종목을 실어 보내고, 발행은 그 종목의 게시판으로 간다.
+ * raw 는 유입 스냅샷이라 검수 편집이 덮지 않는다 — draft 에 넣으면 편집 경로에 따라
+ * 유실될 수 있어 여기 둔다. 미표기(기존 축구 스캐너·과거 초안)는 전부 football.
+ */
+const SPORT_BOARDS = {
+  football: { slug: FOOTBALL_SLUG, categoryId: FOOTBALL_CATEGORY_ID },
+  basketball: { slug: "basketball", categoryId: "abe429a9-94dc-4162-9711-f932e34ebcf6" },
+} as const
+type NewsSport = keyof typeof SPORT_BOARDS
+
+export function reservoirSport(item: Pick<NewsReservoirItem, "raw">): NewsSport {
+  return item.raw?.sport === "basketball" ? "basketball" : "football"
+}
 
 export interface NewsReservoirItem {
   id: string
@@ -52,6 +68,8 @@ export interface NewsReservoirItem {
     /** 봇 원본 스냅샷 — 검수 편집("수정 저장")이 draft 를 덮기 전에 보존. 교정 학습의 기준점 */
     original?: { title?: string; content?: unknown }
   } | null
+  /** 유입 스냅샷(불변) — 스캐너가 실은 종목 등. select 에 raw 를 빼먹으면 축구로 발행되니 주의 */
+  raw?: { sport?: string } | null
   entities: {
     teams?: { surface?: string | null; preferred_ko?: string | null }[]
   } | null
@@ -186,6 +204,10 @@ export async function publishNewsDraft(
     }
   }
 
+  // 종목 → 게시판 확정 (raw.sport 기반, 기본 football)
+  const sport = reservoirSport(item)
+  const board = SPORT_BOARDS[sport]
+
   // 말머리(다중) — 지정(flairIds)이 있으면 그대로, 미지정이면 제목 기반 자동 추천.
   // 대표 말머리(posts.flair_id)는 첫 번째(팀 우선 정렬), 나머지는 post_flair_map 에 담는다.
   let flairIds = opts.flairIds
@@ -193,9 +215,19 @@ export async function publishNewsDraft(
     const { data: flairOpts } = await supabase
       .from("post_flairs")
       .select("id, name, team_id")
-      .eq("community_slug", FOOTBALL_SLUG)
+      .eq("community_slug", board.slug)
       .eq("is_active", true)
     flairIds = suggestFlairs(opts.title, flairOpts ?? []).flairIds
+  } else if (flairIds.length > 0 && sport !== "football") {
+    // 검수 UI 는 축구 말머리를 제안한다 — 다른 게시판 글에 남의 게시판 말머리가
+    // 붙지 않게 게시판 소속 말머리만 남긴다
+    const { data: valid } = await supabase
+      .from("post_flairs")
+      .select("id")
+      .eq("community_slug", board.slug)
+      .in("id", flairIds)
+    const validSet = new Set((valid ?? []).map((v) => v.id))
+    flairIds = flairIds.filter((f) => validSet.has(f))
   }
   // 담벼락엔 대표 말머리 1개만 표시된다(posts.flair_id). 대표는 팀/리그를 우선하고
   // 성격(이적/뉴스)은 뒤로 민다 — 지정 순서와 무관하게 팀/리그가 대표가 되도록.
@@ -213,8 +245,8 @@ export async function publishNewsDraft(
     .from("posts")
     .insert({
       user_id: NEWS_BOT_USER_ID,
-      category_id: FOOTBALL_CATEGORY_ID,
-      community_slug: FOOTBALL_SLUG,
+      category_id: board.categoryId,
+      community_slug: board.slug,
       title: opts.title,
       content,
       ...(image ? { image } : {}),
@@ -298,7 +330,10 @@ export async function publishNewsDraft(
   // 위키에 엔트리로 쌓이고(없으면 자동 생성), 아니면 no-op — 실패해도 발행 유지.
   let sagaLinked: { slug: string; title: string } | null = null
   let sagaError: string | undefined
-  if (opts.saga) {
+  // 사가(이적 연대기)는 축구 전용 — 농구 기사에 LLM 추출을 태우면 엉뚱한 사가가 생긴다
+  if (sport !== "football") {
+    // no-op
+  } else if (opts.saga) {
     try {
       const linked = await linkArticleToSagaChosen(
         supabase,
@@ -323,7 +358,8 @@ export async function publishNewsDraft(
   // VS 쟁점 폴 — 스캐너가 초안 단계에서 판정·제안한 것(draft.vs)을 검수 결정과 합쳐
   // 확정한다 (2026-07-31, 3인 회의: 발행 시 LLM 생성 제거 — 사람 눈이 노출 전에
   // 지나가는 구조). 제안이 없으면 폴 없는 기사로 남는다.
-  const vsProposal = item.draft?.vs
+  // VS 폴 판정 프롬프트가 축구 데스크 기준이라 축구만 — 스캐너도 농구엔 제안 안 함
+  const vsProposal = sport === "football" ? item.draft?.vs : undefined
   if (vsProposal) {
     after(async () => {
       await createVsPollFromDraft(supabase, post.id, opts.title, vsProposal, opts.vs)

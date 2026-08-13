@@ -71,7 +71,8 @@ export async function POST(req: NextRequest) {
 
   const { data: item } = await supabase
     .from("news_reservoir")
-    .select("id, status, urls, draft, entities, tags")
+    // raw 는 종목 라우팅(reservoirSport)에 필요 — 빼먹으면 농구 기사가 축구로 발행된다
+    .select("id, status, urls, draft, raw, entities, tags")
     .eq("id", id)
     .maybeSingle<DraftReservoirRow>()
   if (!item) return NextResponse.json({ error: "초안을 찾을 수 없습니다." }, { status: 404 })

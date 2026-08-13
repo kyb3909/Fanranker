@@ -152,8 +152,8 @@ async function run(request: NextRequest) {
       status: string
       decision: Record<string, unknown> | null
       created_at: string
-      /** 원문 스냅샷 — 금액 증거 검사(오피셜)용 (2026-08-08) */
-      raw: { source_text?: string } | null
+      /** 원문 스냅샷 — 금액 증거 검사(오피셜)·종목 라우팅용 */
+      raw: { source_text?: string; sport?: string } | null
     })[]),
   ].sort((a, b) => {
     const [ua, ub] = [at(a) <= urgentCutoff, at(b) <= urgentCutoff]
@@ -278,6 +278,15 @@ async function run(request: NextRequest) {
 
   for (const row of queue) {
     if (published >= budget) break
+
+    // 농구(NBA)는 자동발행 제외 — 검수 발행만 (2026-08-14 도입 단계 규칙).
+    // 게이트(표기 사전·팀 카드·여축 필터)가 전부 축구 기준이라 농구 기사에는
+    // 오판정한다. 축구 Phase A 와 같은 수순: 수동 검수로 시작하고, 볼륨·품질이
+    // 확인되면 농구용 게이트를 갖춰 자동화한다.
+    if (row.raw?.sport === "basketball") {
+      noteSkip(row.id, "basketball_manual_only", "needs_human")
+      continue
+    }
 
     const title = row.draft?.title?.trim()
     const content = sanitizeTipTapJSON(row.draft?.content)
