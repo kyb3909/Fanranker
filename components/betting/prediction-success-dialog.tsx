@@ -151,19 +151,25 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
   // ── 슬롯 재편성 (2026-08-12 패널 Top5 #4): 이 모달은 CTA 자리가 아니라
   // 하루 조회 15회짜리 콘텐츠를 사람 눈앞에 옮기는 **유일한 유통 채널**이다. ──
 
+  // ⚡ 프리페치 (2026-08-14 운영자: "모달 뜨고 나서 뉴스가 늦게 뜬다")
+  // 이 컴포넌트는 예측 페이지와 함께 **마운트되어 있고** 모달만 닫혀 있다. 그런데
+  // SWR 키를 state.isOpen 으로 잠가 두면 "제출 순간"에야 3개 요청이 동시에 나가서
+  // 카드가 뒤늦게 채워진다 — 유저가 가장 집중한 3초를 빈 자리로 쓰는 셈.
+  // 키를 열어 두면 페이지 체류 중에 미리 받아 두고, 제출 시엔 캐시가 즉시 그려진다.
+  // (세 엔드포인트 모두 CDN 캐시 대상이고 dedupe 되므로 부하는 무시할 만하다.)
+  const PREFETCH = { revalidateOnFocus: false, dedupingInterval: 60_000 }
+
   // ① 오늘의 이슈 — 편성 시스템(fetchHeroCards 3단: 수동 핀 → 에이전트 픽 → 규칙 폴백).
   // 담벼락 히어로와 같은 소스라 한 번 편성하면 두 화면에 동시 노출. 폴백 덕에 안 비는다.
   const { data: featuredData } = useSWR<{ cards: CardNewsItem[] }>(
-    state.isOpen && state.showCommunity ? "/api/feed/featured" : null,
-    fetcher
+    "/api/feed/featured",
+    fetcher,
+    PREFETCH
   )
   const featuredCards = (featuredData?.cards ?? []).slice(0, 3)
 
   // ② 진행 중 이적 사가 — 예측 직후는 "다음 논쟁거리"를 찾는 순간 (PM 토론 #4)
-  const { data: sagaData } = useSWR<{ sagas: ActiveSaga[] }>(
-    state.isOpen ? "/api/saga/active" : null,
-    fetcher
-  )
+  const { data: sagaData } = useSWR<{ sagas: ActiveSaga[] }>("/api/saga/active", fetcher, PREFETCH)
   const activeSagas = (sagaData?.sagas ?? []).slice(0, 2)
 
   // ③ 방금 예측한 팀 소식 — 룰 기반(개인화 아님, 유저 0명에서도 작동): 슬립의 팀명이
@@ -172,11 +178,11 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
   const teamNames = Array.from(
     new Set(state.distribution.flatMap((e) => [e.homeTeam, e.awayTeam]).filter(Boolean))
   )
+  // 팀 필터는 클라이언트에서 하므로 키 자체는 제출 전에도 동일 → 같이 프리페치한다
   const { data: latestData } = useSWR<{ posts: HotPost[] }>(
-    state.isOpen && state.showCommunity && teamNames.length > 0
-      ? "/api/posts?sort=new&limit=30"
-      : null,
-    fetcher
+    "/api/posts?sort=new&limit=30",
+    fetcher,
+    PREFETCH
   )
   const featuredIds = new Set(featuredCards.map((c) => String(c.id)))
   const teamPosts = (latestData?.posts ?? [])
@@ -186,6 +192,15 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
 
   // ④ VS 투표 — 편성 카드에 실려 온 폴 하나만, 기사 카드 아래 (Top5 #5)
   const modalVs = featuredCards.find((c) => c.vs)?.vs
+
+  // ⑤ 이벤트 참가 여부 — 스트립 문구를 가른다 (신청자만 "반영됐어요"가 사실이다).
+  // 경량 엔드포인트라 다른 프리페치와 같이 미리 받아 둔다.
+  const { data: regData } = useSWR<{ registered: boolean }>(
+    "/api/event/season/registration",
+    fetcher,
+    PREFETCH
+  )
+  const eventRegistered = regData?.registered === true
 
   return (
     <Dialog
@@ -213,11 +228,12 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
           </DialogDescription>
         </DialogHeader>
 
-        {/* 건너스 레이스 참가 피드백 (8/22~9/30) — 축구 슬립은 자동 참가라는 걸
-            제출 직후에 알려준다. 이벤트 페이지가 다시 콘텐츠 허브로 이어진다 */}
+        {/* 구너스 레이스 스트립 (8/22~9/30) — 신청자에게는 "반영됐다", 미신청자에게는
+            "신청하면 다음 예측부터"라고 말한다. 참여는 신청 이후부터이므로(운영자 확정
+            2026-08-14) 미신청자에게 반영됐다고 하면 그건 거짓말이다. */}
         {state.sport === "축구" && isEventLive() && (
           <Link
-            href="/season?ref=pick"
+            href={eventRegistered ? "/season?ref=pick" : "/season/join?ref=pick"}
             onClick={() => trackEvent({ name: "prediction_modal_event_click", params: {} })}
             className="flex min-w-0 items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90"
             style={{
@@ -229,13 +245,15 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
               className="min-w-0 truncate text-[13px] font-bold"
               style={{ color: "var(--wc-burgundy, #961e37)" }}
             >
-              🏁 구너스 레이스에 반영됐어요
+              {eventRegistered
+                ? "🏁 구너스 레이스에 반영됐어요"
+                : "🏁 구너스 레이스 — 신청하면 다음 예측부터"}
             </span>
             <span
               className="shrink-0 text-[12px] font-bold"
               style={{ color: "var(--wc-burgundy, #961e37)" }}
             >
-              내 순위 보기 →
+              {eventRegistered ? "내 순위 보기 →" : "참가 신청 →"}
             </span>
           </Link>
         )}

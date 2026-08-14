@@ -42,6 +42,8 @@ export interface RaceStanding {
   top: RaceRow[]
   me: (RaceRow & { rank: number }) | null
   participants: number
+  /** 요청자가 참가 신청을 마쳤는가 — 미신청자에게 "레이스 반영" UI 를 띄우지 않기 위한 값 */
+  registered: boolean
 }
 
 /**
@@ -55,30 +57,49 @@ export async function computeRaceStanding(
   meUserId: string | null,
   topN = 5
 ): Promise<RaceStanding> {
-  // 참가 신청자 집합 — season-open-2026 등록 기준
+  // 참가 신청자 집합 — season-open-2026 등록 기준.
+  // registered_at 을 같이 읽는다: **신청 이후의 예측만** 레이스에 반영한다
+  // (운영자 확정 2026-08-14). 신청 전에 쌓아둔 슬립이 순위를 만들면 "신청하고 참가"라는
+  // 규칙 문구와 화면이 어긋난다.
   const { data: ev } = await supabase
     .from("events")
     .select("id")
     .eq("slug", GUNNERS_SEASON.dbSlug)
     .maybeSingle()
   const { data: regs } = ev
-    ? await supabase.from("event_registrations").select("user_id").eq("event_id", ev.id)
-    : { data: [] as { user_id: string }[] }
-  const registered = new Set((regs ?? []).map((r) => r.user_id))
-  if (registered.size === 0) return { top: [], me: null, participants: 0 }
+    ? await supabase
+        .from("event_registrations")
+        .select("user_id, registered_at")
+        .eq("event_id", ev.id)
+    : { data: [] as { user_id: string; registered_at: string }[] }
+  const joinedAt = new Map(
+    (regs ?? []).map((r) => [r.user_id, new Date(r.registered_at).getTime()])
+  )
+  if (joinedAt.size === 0) {
+    return { top: [], me: null, participants: 0, registered: false }
+  }
 
+  // 이번 이벤트의 판만 센다 — 지난 대회(월드컵 등) 슬립은 event_id 로 남아 있으므로
+  // 명시적으로 배제한다 (기간 필터만 믿지 않는다: 이벤트가 겹치면 바로 샌다).
+  // 메인 풀 슬립은 event_id 가 null 이고, 그게 이번 레이스의 경기장이다.
   const { data: slips } = await supabase
     .from("prediction_slips")
-    .select("user_id, stake, total_odds, status")
+    .select("user_id, stake, total_odds, status, created_at")
     .eq("sport", "축구")
     .gte("created_at", GUNNERS_SEASON.startAt)
     .lt("created_at", GUNNERS_SEASON.endAt)
+    .or(`event_id.is.null,event_id.eq.${ev!.id}`)
     .limit(20000)
 
+  // 신청자는 예측 0건이어도 순위표에 오른다 — 신청이 곧 참가이므로 "N명 중 내 자리"가
+  // 신청 직후부터 보여야 한다 (빈손이면 공동 꼴찌에서 출발).
   const byUser = new Map<string, { points: number; slips: number; won: number }>()
+  for (const userId of joinedAt.keys()) byUser.set(userId, { points: 0, slips: 0, won: 0 })
   for (const s of slips ?? []) {
-    if (!registered.has(s.user_id)) continue
-    const row = byUser.get(s.user_id) ?? { points: 0, slips: 0, won: 0 }
+    const joined = joinedAt.get(s.user_id)
+    if (joined === undefined) continue
+    if (new Date(s.created_at).getTime() < joined) continue // 신청 전 슬립 제외
+    const row = byUser.get(s.user_id)!
     row.slips += 1
     const stake = Number(s.stake) || 0
     if (s.status === "won") {
@@ -87,12 +108,20 @@ export async function computeRaceStanding(
     } else if (s.status === "lost") {
       row.points -= stake
     }
-    byUser.set(s.user_id, row)
   }
 
+  // 동점 처리: 포인트 → 적중 수 → 슬립 수 적은 쪽(같은 점수를 더 적은 시도로) →
+  // user_id 사전순. 마지막 단계는 "무작위 아님"을 보장하는 결정론 장치다 —
+  // 정렬 키가 없으면 요청마다 1위가 바뀌어 상품 분쟁이 된다.
   const ranked = [...byUser.entries()]
     .map(([userId, r]) => ({ userId, ...r }))
-    .sort((a, b) => b.points - a.points || b.won - a.won)
+    .sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.won - a.won ||
+        a.slips - b.slips ||
+        a.userId.localeCompare(b.userId)
+    )
 
   const topIds = ranked.slice(0, topN).map((r) => r.userId)
   const meIdx = meUserId ? ranked.findIndex((r) => r.userId === meUserId) : -1
@@ -115,6 +144,7 @@ export async function computeRaceStanding(
     top: ranked.slice(0, topN).map(toRow),
     me: meIdx >= 0 ? { ...toRow(ranked[meIdx]), rank: meIdx + 1 } : null,
     participants: ranked.length,
+    registered: meUserId !== null && joinedAt.has(meUserId),
   }
 }
 
