@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HeroVsVote } from "@/components/home/hero-vs-vote"
 import { useAuth } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
-import { isEventLive } from "@/lib/event/gunners-season"
+import { GUNNERS_SEASON } from "@/lib/event/gunners-season"
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -75,10 +75,13 @@ export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayB
     fallbackData: initialGames ?? undefined,
   })
 
-  // 아직 시작 안 한 경기만, 킥오프 순
+  // 아직 시작 안 한 경기만, 킥오프 순.
+  // 당분간 축구만 노출 (운영자 2026-08-14) — 시즌 이벤트 기간 홈의 초점을 축구에 고정.
+  // SSR fallback(initialGames)에도 타 종목이 섞여 오므로 URL 이 아니라 여기서 거른다.
   const matches = useMemo(() => {
     const now = Date.now()
     return (data?.groupedGames ?? [])
+      .filter((m) => m.sport === "축구")
       .filter((m) => new Date(m.matchTime).getTime() > now)
       .filter((m) => m.homeTeam && m.awayTeam && m.homeTeam !== "미정" && m.awayTeam !== "미정")
       .sort((a, b) => a.matchTime.localeCompare(b.matchTime))
@@ -397,18 +400,19 @@ function TodayFixtures({
         </div>
       )}
 
-      {/* 건너스 레이스 진입점 (8/22~9/30) — 홈의 경기 밴드가 이벤트의 자연 입구다 */}
-      {isEventLive() && (
+      {/* 시즌 개막 이벤트 진입점 — 미신청자는 /season(참가 신청), 신청자는 /prediction 으로
+          가는 스마트 라우터(/season/join). 사전 등록 기간부터 노출 (운영자 2026-08-14) */}
+      {new Date() < new Date(GUNNERS_SEASON.endAt) && (
         <Link
-          href="/event/gunners-season?ref=band"
+          href="/season/join?ref=band"
           className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 transition-opacity hover:opacity-85"
           style={{ background: "rgba(150,30,55,0.28)", border: "1px solid rgba(150,30,55,0.5)" }}
         >
           <span className="text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
-            🏁 건너스 레이스 진행 중 — 축구 픽이 곧 참가
+            🏁 오늘 개막 이벤트 참가하기
           </span>
           <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
-            순위 보기 →
+            참가 →
           </span>
         </Link>
       )}
