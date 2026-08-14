@@ -163,6 +163,64 @@ export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayB
           </span>
         </div>
 
+        {/* 시즌 개막 이벤트 광고 배너 (운영자 2026-08-14) — 오늘의 떡밥 메인에서
+            독립된 한 칸. 떡밥 회전과 무관하게 이벤트 기간 내내 고정.
+            아스날 팬 전용 이벤트 — 경품 앙리 사인 유니폼 실물 사진이 광고 본체다. */}
+        {new Date() < new Date(GUNNERS_SEASON.endAt) && (
+          <Link
+            href="/season/join?ref=hero"
+            className="relative mb-4 flex min-h-[130px] items-center overflow-hidden rounded-[16px] transition-opacity hover:opacity-95 sm:min-h-[150px]"
+            style={{
+              background: "var(--gn-night-soft)",
+              boxShadow: "0 20px 50px -20px rgba(0,0,0,.7)",
+            }}
+          >
+            {/* 우측 유니폼 사진 — 좌측으로 어둡게 페이드시켜 카피와 자연스럽게 잇는다 */}
+            <div className="absolute inset-y-0 right-0 w-[55%] sm:w-[46%]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/season/event-banner-henry.webp"
+                alt="티에리 앙리 친필 사인 14번 유니폼"
+                className="h-full w-full object-cover"
+                style={{ objectPosition: "50% 35%" }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to right, var(--gn-night-soft) 0%, rgba(22,20,26,0.25) 45%, rgba(22,20,26,0) 100%)",
+                }}
+              />
+            </div>
+            <div className="relative z-[2] max-w-[62%] p-5 sm:p-7">
+              <p
+                className="text-[11px] font-extrabold uppercase"
+                style={{ color: "var(--wc-gold)", letterSpacing: "0.12em" }}
+              >
+                Arsenal Only · 아스날 팬 전용
+              </p>
+              <p
+                className="font-title mt-1.5 text-[19px] leading-[1.25] font-bold sm:text-[25px]"
+                style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
+              >
+                프리미어리그 개막 이벤트
+              </p>
+              <p
+                className="mt-1 text-[12.5px] sm:text-[13.5px]"
+                style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
+              >
+                앙리 친필 사인 유니폼의 주인공은? 지금 참가하세요
+              </p>
+              <span
+                className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-[12.5px] font-bold"
+                style={{ background: "var(--wc-burgundy)", color: "var(--gn-cream)" }}
+              >
+                참가하기 →
+              </span>
+            </div>
+          </Link>
+        )}
+
         <div className="grid gap-4 pb-7 lg:grid-cols-[1.35fr_1fr]">
           {slides.length > 0 && <TopStoryCarousel slides={slides} />}
           {matches.length > 0 && <TodayFixtures matches={matches} countdown={countdown} />}
@@ -210,29 +268,6 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
       aria-roledescription="carousel"
       aria-label="오늘의 톱스토리"
     >
-      {/* 시즌 개막 이벤트 고정 공지 (운영자 2026-08-14) — 슬라이드 회전과 무관하게
-          이벤트 기간 내내 상단 고정. 떡밥 로테이션은 그 아래에서 그대로 돈다.
-          핀(hero_pinned_at)으로 태우면 새 핀에 밀리고 회전으로 사라져서 코드 고정. */}
-      {new Date() < new Date(GUNNERS_SEASON.endAt) && (
-        <Link
-          href="/season/join?ref=hero"
-          className="absolute top-3 right-3 left-3 z-[3] flex items-center justify-between gap-2 rounded-lg px-3.5 py-2.5 transition-opacity hover:opacity-90"
-          style={{
-            background: "rgba(150,30,55,0.92)",
-            border: "1px solid rgba(255,255,255,0.18)",
-          }}
-        >
-          <span
-            className="min-w-0 truncate text-[13px] font-extrabold"
-            style={{ color: "var(--gn-cream)" }}
-          >
-            ⚽ 프리미어리그 개막 이벤트 — 개막과 함께 시즌 레이스 시작
-          </span>
-          <span className="shrink-0 text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
-            참가하기 →
-          </span>
-        </Link>
-      )}
       {slides.map((c, i) => (
         <article
           key={c.id}
