@@ -265,7 +265,7 @@ export function useBettingSlip(
         showAlert(
           "error",
           "참가 신청이 먼저예요",
-          "구너스 레이스는 참가 신청 이후의 예측만 반영됩니다.\n참가 신청 화면으로 이동할게요."
+          "개막 기념 승부예측 이벤트는 참가 신청 이후의 예측만 반영됩니다.\n참가 신청 화면으로 이동할게요."
         )
         setIsSubmittingPrediction(false)
         setTimeout(() => {

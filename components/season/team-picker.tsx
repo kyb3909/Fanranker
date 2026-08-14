@@ -25,15 +25,24 @@ export interface SeasonGroup {
  * 시즌 오픈 대항전 팀 선택 — 3팀 카드, 클릭 즉시 등록.
  * 비로그인은 로그인 모달(가입 후 재클릭 동선), 등록 후 팀 변경 불가.
  * 라이트 존 규칙: 카드 다크 금지 — 팀 컬러는 상단 스트라이프·칩으로만.
+ *
+ * ⚠️ 등록 API 는 이벤트마다 다르다(`registerEndpoint`). 이 컴포넌트를 새 이벤트에
+ *    붙일 때 기본값을 그대로 두면 등록이 **다른 이벤트로 들어간다** — 반드시 넘길 것.
+ *    (/cog-event → /api/event/cog/register)
  */
 export function TeamPicker({
   groups,
   myGroupSlug,
   registrationOpen,
+  registerEndpoint = "/api/event/season/register",
+  unitLabel = "팀",
 }: {
   groups: SeasonGroup[]
   myGroupSlug: string | null
   registrationOpen: boolean
+  registerEndpoint?: string
+  /** 카피에서 부르는 단위 — 시즌은 "팀", 코그 대결은 "진영" */
+  unitLabel?: string
 }) {
   const router = useRouter()
   const { isSignedIn } = useAuth()
@@ -51,10 +60,13 @@ export function TeamPicker({
       toast({ title: "등록 기간이 아닙니다", description: "이벤트 오픈 후 참가할 수 있어요." })
       return
     }
-    if (!confirm("한 번 선택한 팀은 이벤트가 끝날 때까지 변경할 수 없습니다. 진행할까요?")) return
+    if (
+      !confirm(`한 번 선택한 ${unitLabel}은 이벤트가 끝날 때까지 변경할 수 없습니다. 진행할까요?`)
+    )
+      return
     setBusy(slug)
     try {
-      const res = await fetch("/api/event/season/register", {
+      const res = await fetch(registerEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -72,7 +84,7 @@ export function TeamPicker({
       setJoined(slug)
       toast({
         title: "참가 완료!",
-        description: "이제 승부예측으로 팀 성적을 끌어올려 주세요.",
+        description: `이제 승부예측으로 ${unitLabel} 성적을 끌어올려 주세요.`,
       })
       router.refresh()
     } catch (e) {
@@ -171,11 +183,11 @@ export function TeamPicker({
                   <Loader2 className="h-4 w-4 animate-spin" style={{ color: g.color }} />
                 ) : mine ? (
                   <span className="inline-flex items-center gap-1" style={{ color: g.color }}>
-                    <Check className="h-3.5 w-3.5" strokeWidth={3} /> 내 팀
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} /> 내 {unitLabel}
                   </span>
                 ) : joined ? null : (
                   <span style={{ color: "var(--wc-burgundy)", wordBreak: "keep-all" }}>
-                    {registrationOpen ? "이 팀으로 참가 →" : "오픈 예정"}
+                    {registrationOpen ? `이 ${unitLabel}으로 참가 →` : "오픈 예정"}
                   </span>
                 )}
               </div>
