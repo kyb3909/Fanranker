@@ -175,9 +175,7 @@ export function TeamPicker({
               >
                 {/* 0 카운트 비노출 규칙 (워룸) — 참가자가 생기기 전엔 모집 문구로 */}
                 <span className="tnum" style={{ wordBreak: "keep-all" }}>
-                  {g.regCount > 0
-                    ? `${g.regCount.toLocaleString()}명 참가 중`
-                    : "선착순 아님, 자존심순"}
+                  {g.regCount > 0 ? `${g.regCount.toLocaleString()}명 참가 중` : "참가자 모집 중"}
                 </span>
                 {busy === g.slug ? (
                   <Loader2 className="h-4 w-4 animate-spin" style={{ color: g.color }} />
