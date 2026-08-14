@@ -7,7 +7,9 @@ export function useBettingRankings(active: boolean) {
 
   const [rankings, setRankings] = useState<RankingUser[]>([])
   const [isLoadingRankings, setIsLoadingRankings] = useState(false)
-  const [rankingSportFilter, setRankingSportFilter] = useState<string>("전체")
+  // 축구 전용 운영 (2026-08-14) — 탭에 "전체"가 없으므로 기본값도 축구여야 선택 상태가 맞다.
+  // 종목 확장 시 "전체" 로 복원 (betting-header 랭킹 탭이 SPORT_TABS 를 따라간다).
+  const [rankingSportFilter, setRankingSportFilter] = useState<string>("축구")
   const [rankingFilter, setRankingFilter] = useState<"profit" | "winRate" | "roi">("profit")
   const [myRank, setMyRank] = useState<MyRank | null>(null)
 

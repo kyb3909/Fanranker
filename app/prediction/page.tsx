@@ -55,7 +55,11 @@ async function fetchSidebarData() {
     (async (): Promise<unknown | null> => {
       try {
         const base = process.env.NEXT_PUBLIC_SITE_URL || "https://gongnori.fan"
-        const res = await fetch(`${base}/api/sports/games`, { next: { revalidate: 60 } })
+        // 축구 전용 노출 (2026-08-14) — 클라 기본 필터(use-betting-matches)와 키를 맞춰야
+        // 폴백이 붙는다. 종목 확장 시 이 파라미터와 훅 기본값을 함께 되돌릴 것.
+        const res = await fetch(`${base}/api/sports/games?sport=${encodeURIComponent("축구")}`, {
+          next: { revalidate: 60 },
+        })
         if (!res.ok) return null
         return await res.json()
       } catch {

@@ -15,8 +15,10 @@ export function useBettingMatches(
     initialGames?: unknown | null
   }
 ) {
+  // 당분간 축구만 노출 (운영자 2026-08-14) — 농구 전면 비노출·시즌 이벤트 집중과 같은 선.
+  // 되돌리려면 "all" 로 바꾸고 types/betting SPORT_TABS 를 복원하면 된다.
   const [sportFilter, setSportFilterRaw] = useState<"all" | "축구" | "야구" | "농구" | "배구">(
-    "all"
+    "축구"
   )
   const [leagueFilter, setLeagueFilter] = useState<"all" | string>("all")
   const [currentTime, setCurrentTime] = useState(() => new Date())
@@ -44,8 +46,10 @@ export function useBettingMatches(
     dedupingInterval: 10_000,
     // fallbackData 는 훅 인스턴스의 모든 키에 적용되므로, 필터 기본 상태에서만 —
     // 종목 필터 키에 전체 데이터가 폴백으로 잘못 비치는 걸 막는다.
+    // SSR 프리페치도 축구 키로 받는다 (page.tsx 가 ?sport=축구 로 가져옴) — 기본 필터가
+    // 축구로 바뀌었으므로 "all" 조건을 그대로 두면 폴백이 영영 안 붙어 스켈레톤이 돌아온다.
     fallbackData:
-      sportFilter === "all" && !eventSlug ? (options?.initialGames ?? undefined) : undefined,
+      sportFilter === "축구" && !eventSlug ? (options?.initialGames ?? undefined) : undefined,
   })
 
   // Derive values directly from SWR data

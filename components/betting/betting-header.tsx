@@ -45,24 +45,28 @@ export function SportLeagueFilter({
 }: SportLeagueFilterProps) {
   return (
     <>
-      {/* 종목 = 4탭 아래 종속 필터 → 칩 한 줄 (담벼락 정렬 칩과 같은 문법) */}
-      <div className="wc-chip-tabs" role="group" aria-label="종목 필터">
-        {SPORT_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
-            disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
-            className={sportFilter === tab.id ? "on" : ""}
-          >
-            {tab.id === "all" ? (
-              <LayoutGrid className="h-4 w-4" />
-            ) : (
-              <BoardIcon slug={tab.id} className="h-4 w-4" />
-            )}
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* 종목 = 4탭 아래 종속 필터 → 칩 한 줄 (담벼락 정렬 칩과 같은 문법).
+          단일 종목 운영 중(축구만, 2026-08-14)에는 고를 게 없으므로 줄 자체를 감춘다 —
+          "축구" 칩 하나만 덩그러니 켜져 있는 건 필터가 아니라 노이즈다. */}
+      {SPORT_TABS.length > 1 && (
+        <div className="wc-chip-tabs" role="group" aria-label="종목 필터">
+          {SPORT_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSportFilter(tab.id as "all" | "축구" | "야구" | "농구" | "배구")}
+              disabled={!!selectedSport && tab.id !== "all" && tab.id !== selectedSport}
+              className={sportFilter === tab.id ? "on" : ""}
+            >
+              {tab.id === "all" ? (
+                <LayoutGrid className="h-4 w-4" />
+              ) : (
+                <BoardIcon slug={tab.id} className="h-4 w-4" />
+              )}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {sportFilter !== "all" && availableLeagues.length > 0 && (
         <div className="wc-chip-tabs sub" role="group" aria-label="리그 필터">
           {[
@@ -149,13 +153,12 @@ export function BettingHeader({
           {/* 랭킹: 종목 row + 정렬 pill */}
           {activeTab === "ranking" && (
             <>
+              {/* 랭킹 종목 탭 — 경기 목록이 축구 전용인데 여기만 4종목이면 화면이 어긋난다.
+                  SPORT_TABS 를 따라간다 ("전체"는 종목이 하나면 축구와 같은 뜻이라 제외). */}
               <div className="wc-underline-tabs">
                 {[
-                  { id: "전체", label: "전체", icon: "🎯" },
-                  { id: "축구", label: "축구", icon: "⚽" },
-                  { id: "야구", label: "야구", icon: "⚾" },
-                  { id: "농구", label: "농구", icon: "🏀" },
-                  { id: "배구", label: "배구", icon: "🏐" },
+                  ...(SPORT_TABS.length > 1 ? [{ id: "전체", label: "전체", icon: "🎯" }] : []),
+                  ...SPORT_TABS.filter((t) => t.id !== "all"),
                 ].map((tab) => (
                   <button
                     key={tab.id}

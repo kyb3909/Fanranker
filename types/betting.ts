@@ -327,13 +327,22 @@ export const SPORT_ICONS: Record<string, string> = {
   배구: "🏐",
 }
 
-export const SPORT_TABS = [
-  { id: "all", label: "전체", icon: "🎯" },
+/**
+ * 승부예측 종목 탭 — 당분간 **축구만** (운영자 2026-08-14).
+ * 탭이 1개면 SportLeagueFilter 가 종목 줄 자체를 감추고 리그 칩만 보여준다.
+ * 종목 확장 시: 아래 주석 해제 + use-betting-matches 기본값·prediction SSR 파라미터 복원.
+ */
+export type SportFilterId = "all" | "축구" | "야구" | "농구" | "배구"
+
+// as const 를 쓰지 않는다 — 탭이 하나면 id 가 "축구" 리터럴로 좁아져 "all" 분기가
+// 타입 에러가 된다 (종목 확장 시 되돌릴 코드를 지금 지우게 만드는 함정).
+export const SPORT_TABS: { id: SportFilterId; label: string; icon: string }[] = [
   { id: "축구", label: "축구", icon: "⚽" },
-  { id: "야구", label: "야구", icon: "⚾" },
-  { id: "농구", label: "농구", icon: "🏀" },
-  { id: "배구", label: "배구", icon: "🏐" },
-] as const
+  // { id: "all", label: "전체", icon: "🎯" },
+  // { id: "야구", label: "야구", icon: "⚾" },
+  // { id: "농구", label: "농구", icon: "🏀" },
+  // { id: "배구", label: "배구", icon: "🏐" },
+]
 
 // ============================================================
 // Utility Functions
