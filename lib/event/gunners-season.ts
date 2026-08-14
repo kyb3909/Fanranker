@@ -1,7 +1,7 @@
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
- * 건너스 레이스 — 아스날 팬 시즌 이벤트 (2026-08-22 ~ 09-30, 1차 구간).
+ * 구너스 레이스 — 아스날 팬 시즌 이벤트 (2026-08-22 ~ 09-30, 1차 구간).
  *
  * ## 설계 (workspace/event-gunners-season-plan-20260814.md)
  * - **별도 예측 풀이 없다.** 기간 내 축구(sport='축구') 슬립을 그대로 집계한다 —
@@ -36,6 +36,8 @@ export interface RaceRow {
   points: number
   slips: number
   won: number
+  /** 정산이 끝난 슬립 수 (won + lost). 적중률 분모 — pending/cancelled 를 실패로 세지 않는다 */
+  settled: number
 }
 
 export interface RaceStanding {
@@ -93,8 +95,9 @@ export async function computeRaceStanding(
 
   // 신청자는 예측 0건이어도 순위표에 오른다 — 신청이 곧 참가이므로 "N명 중 내 자리"가
   // 신청 직후부터 보여야 한다 (빈손이면 공동 꼴찌에서 출발).
-  const byUser = new Map<string, { points: number; slips: number; won: number }>()
-  for (const userId of joinedAt.keys()) byUser.set(userId, { points: 0, slips: 0, won: 0 })
+  const byUser = new Map<string, { points: number; slips: number; won: number; settled: number }>()
+  for (const userId of joinedAt.keys())
+    byUser.set(userId, { points: 0, slips: 0, won: 0, settled: 0 })
   for (const s of slips ?? []) {
     const joined = joinedAt.get(s.user_id)
     if (joined === undefined) continue
@@ -105,8 +108,10 @@ export async function computeRaceStanding(
     if (s.status === "won") {
       row.points += stake * ((Number(s.total_odds) || 1) - 1)
       row.won += 1
+      row.settled += 1
     } else if (s.status === "lost") {
       row.points -= stake
+      row.settled += 1
     }
   }
 
@@ -138,6 +143,7 @@ export async function computeRaceStanding(
     points: Math.round(r.points),
     slips: r.slips,
     won: r.won,
+    settled: r.settled,
   })
 
   return {
@@ -145,6 +151,197 @@ export async function computeRaceStanding(
     me: meIdx >= 0 ? { ...toRow(ranked[meIdx]), rank: meIdx + 1 } : null,
     participants: ranked.length,
     registered: meUserId !== null && joinedAt.has(meUserId),
+  }
+}
+
+/* ── 내 예측 결과 (/season/results) ────────────────────────────── */
+
+export interface RaceResultPick {
+  home: string
+  away: string
+  league: string | null
+  matchTime: string | null
+  /** 내가 고른 쪽 — 화면 라벨 */
+  pick: string
+  /** null = 정산 전 */
+  isCorrect: boolean | null
+  homeScore: number | null
+  awayScore: number | null
+}
+
+export interface RaceResultSlip {
+  id: string
+  createdAt: string
+  stake: number
+  totalOdds: number
+  /** won | lost | pending | cancelled */
+  status: string
+  /** 이 예측이 순위에 더한 점수 — won: stake×(배당−1), lost: −stake, 그 외 0 */
+  net: number
+  picks: RaceResultPick[]
+}
+
+export interface MyRaceResults {
+  registered: boolean
+  registeredAt: string | null
+  slips: RaceResultSlip[]
+  won: number
+  lost: number
+  pending: number
+  cancelled: number
+  /** 정산 완료분 합계 (표시용 반올림 전 원값) */
+  netPoints: number
+}
+
+const PICK_LABEL: Record<string, (home: string, away: string) => string> = {
+  home: (h) => `${h} 승`,
+  away: (_h, a) => `${a} 승`,
+  draw: () => "무승부",
+  over: () => "오버",
+  under: () => "언더",
+}
+
+/**
+ * 내 레이스 예측 결과 — **순위 계산과 같은 필터를 쓴다.**
+ *
+ * 화면 두 곳이 각자 조건을 쓰면 "결과 페이지엔 5건인데 순위는 3건 기준"이 되고,
+ * 상품이 걸린 이벤트에서 그건 곧바로 분쟁이다. 그래서 computeRaceStanding 과
+ * 같은 파일에 두고 조건(축구 · 기간 · 이번 이벤트 판 · 신청 이후)을 그대로 복제한다.
+ */
+export async function fetchMyRaceSlips(
+  supabase: ServiceClient,
+  userId: string
+): Promise<MyRaceResults> {
+  const empty: MyRaceResults = {
+    registered: false,
+    registeredAt: null,
+    slips: [],
+    won: 0,
+    lost: 0,
+    pending: 0,
+    cancelled: 0,
+    netPoints: 0,
+  }
+
+  const { data: ev } = await supabase
+    .from("events")
+    .select("id")
+    .eq("slug", GUNNERS_SEASON.dbSlug)
+    .maybeSingle()
+  if (!ev) return empty
+
+  const { data: reg } = await supabase
+    .from("event_registrations")
+    .select("registered_at")
+    .eq("event_id", ev.id)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!reg) return empty
+
+  const joinedAt = new Date(reg.registered_at).getTime()
+
+  const { data: rows } = await supabase
+    .from("prediction_slips")
+    .select("id, stake, total_odds, status, created_at")
+    .eq("user_id", userId)
+    .eq("sport", "축구")
+    .gte("created_at", GUNNERS_SEASON.startAt)
+    .lt("created_at", GUNNERS_SEASON.endAt)
+    .or(`event_id.is.null,event_id.eq.${ev.id}`)
+    .order("created_at", { ascending: false })
+    .limit(500)
+
+  const mine = (rows ?? []).filter((s) => new Date(s.created_at).getTime() >= joinedAt)
+  if (mine.length === 0) {
+    return { ...empty, registered: true, registeredAt: reg.registered_at }
+  }
+
+  const { data: preds } = await supabase
+    .from("betman_predictions")
+    .select(
+      "slip_id, prediction, is_correct, game:betman_games(home_team_name, away_team_name, match_time, league_code, home_score, away_score)"
+    )
+    .in(
+      "slip_id",
+      mine.map((s) => s.id)
+    )
+
+  type PredRow = {
+    slip_id: string | null
+    prediction: string
+    is_correct: boolean | null
+    game: {
+      home_team_name: string | null
+      away_team_name: string | null
+      match_time: string | null
+      league_code: string | null
+      home_score: number | null
+      away_score: number | null
+    } | null
+  }
+  const bySlip = new Map<string, RaceResultPick[]>()
+  for (const p of (preds ?? []) as unknown as PredRow[]) {
+    if (!p.slip_id) continue
+    const home = p.game?.home_team_name ?? "홈팀"
+    const away = p.game?.away_team_name ?? "원정팀"
+    const list = bySlip.get(p.slip_id) ?? []
+    list.push({
+      home,
+      away,
+      league: p.game?.league_code ?? null,
+      matchTime: p.game?.match_time ?? null,
+      pick: (PICK_LABEL[p.prediction] ?? (() => p.prediction))(home, away),
+      isCorrect: p.is_correct,
+      homeScore: p.game?.home_score ?? null,
+      awayScore: p.game?.away_score ?? null,
+    })
+    bySlip.set(p.slip_id, list)
+  }
+
+  let won = 0
+  let lost = 0
+  let pending = 0
+  let cancelled = 0
+  let netPoints = 0
+
+  const slips: RaceResultSlip[] = mine.map((s) => {
+    const stake = Number(s.stake) || 0
+    const odds = Number(s.total_odds) || 1
+    let net = 0
+    if (s.status === "won") {
+      net = stake * (odds - 1)
+      won += 1
+    } else if (s.status === "lost") {
+      net = -stake
+      lost += 1
+    } else if (s.status === "cancelled") {
+      cancelled += 1
+    } else {
+      pending += 1
+    }
+    netPoints += net
+    return {
+      id: s.id,
+      createdAt: s.created_at,
+      stake,
+      totalOdds: odds,
+      status: s.status ?? "pending",
+      net,
+      picks: (bySlip.get(s.id) ?? []).sort((a, b) =>
+        (a.matchTime ?? "").localeCompare(b.matchTime ?? "")
+      ),
+    }
+  })
+
+  return {
+    registered: true,
+    registeredAt: reg.registered_at,
+    slips,
+    won,
+    lost,
+    pending,
+    cancelled,
+    netPoints,
   }
 }
 

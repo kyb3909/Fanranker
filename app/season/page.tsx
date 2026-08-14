@@ -12,13 +12,14 @@ import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
 import { formatRelativeTime } from "@/lib/utils/date"
 
 export const metadata: Metadata = {
-  title: "구너스 레이스 — 앙리의 14번을 건 시즌 예측 레이스",
+  title: "구너스 레이스 — 앙리의 14번, 주인은 한 명",
   description:
-    "아스날은 심장으로, 나머지는 눈으로. 전 리그 예측으로 겨루는 구너들의 레이스 — 1위에게 티에리 앙리 친필 사인 14번 유니폼. 8/22 개막.",
+    "티에리 앙리가 사인한 14번 유니폼 한 장. 8월 22일부터 9월 30일까지, 전 리그 예측으로 겨루는 구너들의 레이스.",
   alternates: { canonical: "/season" },
   openGraph: {
     title: "구너스 레이스 | gongnori.fan",
-    description: "리그는 38경기가 아니라 380경기다 — 시즌 레이스 1위가 앙리의 14번을 가져갑니다.",
+    description:
+      "리그는 38경기가 아니라 380경기다. 앙리의 14번을 건 구너들의 레이스, 8월 22일 시작.",
     url: "/season",
   },
 }
@@ -48,27 +49,118 @@ const DISPLAY = "var(--font-display-ko), var(--font-title)"
 const STEPS = [
   {
     num: "01",
-    title: "참가 등록",
-    body: "버튼 하나로 끝. 팀 선택은 없습니다 — 구너라고 선언하면 그게 참가입니다.",
+    title: "참가 버튼을 누른다",
+    body: "그게 전부입니다. 고를 팀도, 적을 것도 없습니다.",
   },
   {
     num: "02",
-    title: "평소처럼 예측",
-    body: "따로 할 일이 없습니다. 기간 내 축구 픽이 자동으로 레이스에 집계됩니다. 매일 충전되는 무료 볼 10개면 충분합니다.",
+    title: "하던 대로 예측한다",
+    body: "참가한 다음부터 9월 30일까지 한 축구 예측이 그대로 점수가 됩니다. 매일 받는 무료 볼만 써도 됩니다.",
   },
   {
     num: "03",
-    title: "시즌 종료, 1위 확정",
-    body: "9/30 레이스가 끝나면 1위가 앙리의 14번을 가져갑니다. TOP 5와 내 순위는 상시 공개됩니다.",
+    title: "순위는 매일 열려 있다",
+    body: "내 등수와 상위 5명은 언제든 볼 수 있습니다. 마지막 날까지 뒤집힙니다.",
   },
 ] as const
 
-const NOTICES = [
-  "앙리의 14번(티에리 앙리 친필 사인 유니폼)은 이벤트 종료 시점 레이스 1위 1명에게 지급되며, 정품 인증서(COA)가 함께 제공됩니다. 사이즈·시즌 사양은 상세 공지 참조.",
-  "순위는 이벤트 기간(8/22~9/30) 내 축구 승부예측의 net 손익으로 집계합니다 — 적중 시 stake×(배당−1), 실패 시 −stake. 정산이 완료된 예측만 점수에 반영됩니다.",
-  "참가 등록자만 순위에 집계됩니다. 등록 전에 한 기간 내 예측도 등록하면 함께 집계됩니다.",
-  "다계정·승부 담합 등 어뷰징이 확인되면 모든 계정이 순위에서 제외됩니다.",
-  "5만원 초과 상품 수령 시 신원·배송 정보를 수집하며(제세공과금 처리), 미성년자는 법정대리인 동의가 필요합니다.",
+/**
+ * 이벤트 규칙 — 6항목 고정 (참가 자격 / 점수 계산 / 순위 결정 / 상품 지급 /
+ * 제외·부정행위 / 기간·집계 대상). 기획 검수(workspace/copy-planner-20260814.md §2)의
+ * 구조를 따른다.
+ *
+ * ⚠️ 원칙: **코드가 하는 일만 쓴다.** 각 줄의 근거는 아래 주석의 파일:동작.
+ * 문장을 고칠 때는 근거부터 확인할 것 — 구현 안 된 걸 약속하면 그게 최악의 버그다.
+ *   · 신청 이후 예측만 집계        lib/event/gunners-season.ts (registered_at 컷)
+ *   · net 손익 / 동점 4단계         같은 파일 sort 체인
+ *   · 축구만 · 지난 대회 배제       같은 파일 sport='축구' + event_id 필터
+ *   · 볼 1~10 · 구매 불가           app/api/betman/prediction (zod max 10), reset_user_daily_tokens (일 10)
+ *   · 취소 경기 처리                lib/betman/settle.ts (전부 취소=환불 / 일부 취소=배당 재계산)
+ *   · 참가 상시                     events.registration_closes_at = end_at (2026-08-14 운영자 확정)
+ */
+const RULES: { title: string; lines: string[] }[] = [
+  {
+    title: "참가 자격",
+    lines: [
+      "로그인한 뒤 이 페이지의 참가 버튼을 한 번 누르면 참가가 끝납니다. 팀을 고르거나 따로 적을 것은 없습니다.",
+      "참가 접수는 9월 30일까지 언제든 열려 있습니다. 마감일은 따로 두지 않습니다.",
+      "계정당 한 번만 참가할 수 있고, 참가 취소와 재등록은 되지 않습니다.",
+      "운영진과 운영 봇 계정은 상품 대상에서 빠집니다.",
+    ],
+  },
+  {
+    title: "점수 계산",
+    lines: [
+      "참가한 다음에 한 축구 예측만 점수가 됩니다. 참가 전에 한 예측은 들어가지 않습니다.",
+      "맞히면 사용한 볼에 배당이 붙어 점수가 오르고, 틀리면 사용한 볼만큼 내려갑니다. 10볼로 배당 2.5짜리 예측을 했다면 맞을 때 +15점, 틀릴 때 −10점입니다.",
+      "정산이 끝난 예측만 점수가 됩니다. 정산 전에는 0점으로 두고 정산되는 시점에 반영합니다.",
+      "예측한 경기가 전부 취소되면 볼을 전액 돌려드리고 점수는 그대로입니다. 일부만 취소되면 그 경기를 빼고 배당을 다시 계산해 판정합니다.",
+      "볼은 매일 10개까지 무료로 충전되고 살 수 없습니다. 하루에 올릴 수 있는 점수의 상한이 모두에게 같다는 뜻입니다.",
+      "리그별 가중치도, 아스날 경기 보너스도 없습니다.",
+    ],
+  },
+  {
+    title: "순위 결정",
+    lines: [
+      "점수가 높은 순입니다. 상위 5명과 내 순위는 기간 내내 볼 수 있습니다.",
+      "동점이면 적중한 예측이 많은 쪽이 위입니다. 그것도 같으면 더 적은 예측으로 같은 점수를 만든 쪽, 셋 다 같으면 계정 식별자 순으로 정합니다. 무작위 추첨이 아닙니다.",
+      "참가만 하고 예측을 하지 않아도 0점으로 순위표에 올라갑니다.",
+      "점수는 소수점까지 계산하고 화면에는 반올림해 보여줍니다.",
+      "지난 대회(2026 월드컵 등)의 예측 기록은 이번 집계에 들어가지 않습니다.",
+    ],
+  },
+  {
+    title: "상품 지급",
+    lines: [
+      "앙리의 14번(티에리 앙리 친필 사인 유니폼) 한 장을 최종 1위 한 명에게 보냅니다. 정품 인증서가 함께 갑니다. 사이즈와 시즌 사양은 별도 공지에 적습니다.",
+      "9월 30일 23시 59분(KST)까지 한 예측이 대상입니다. 그 시점에 정산이 남아 있으면 남은 정산이 끝난 뒤 최종 순위를 확정하고 따로 공지합니다.",
+      "상품 가액이 5만원을 넘어 제세공과금 22%가 발생하며, 주최 측이 부담합니다.",
+      "수령을 위해 이름·연락처·주소를 받고 상품 발송과 세무 신고에만 씁니다.",
+      "상품은 현금이나 다른 물품으로 바꿔 드리지 않습니다. 만 19세 미만은 법정대리인 동의가 있어야 받을 수 있습니다.",
+    ],
+  },
+  {
+    title: "제외 및 부정행위",
+    lines: [
+      "한 사람이 계정을 둘 이상 쓰거나, 참가자끼리 짜고 예측하거나, 자동화 도구를 쓰거나, 남의 계정을 쓰면 순위에서 뺍니다.",
+      "어뷰징으로 판단되면 관련된 계정을 전부 뺍니다.",
+      "제외 여부는 운영자가 최종 판단하고, 근거는 요청하시면 개별로 안내합니다.",
+    ],
+  },
+  {
+    title: "기간과 집계 대상",
+    lines: [
+      "레이스 기간은 2026년 8월 22일 00시부터 9월 30일 23시 59분까지입니다 (KST).",
+      "집계 대상은 축구 예측입니다. 야구·농구·배구는 점수에 들어가지 않습니다.",
+      "예측은 경기 시작 전까지 할 수 있습니다.",
+    ],
+  },
+]
+
+/**
+ * 추첨 보조 상품 — 실제로 도는 cron 두 개를 그대로 옮긴 것.
+ * app/api/cron/season-chicken-draw (매일 23:10 KST),
+ * app/api/cron/season-weekly-draw-snapshot (매주 월 00:05 KST, 5명).
+ * ⚠️ cron 을 내리면 이 블록도 같이 내릴 것 — 봇이 자유게시판에 당첨자를 발표하므로
+ *    화면에서만 지우면 규칙 없는 경품이 나가고, 화면에만 남기면 없는 경품을 약속한다.
+ */
+const DRAWS: { title: string; lines: string[] }[] = [
+  {
+    title: "매일 밤 치킨",
+    lines: [
+      "참가자 중 그날(전날 23시 ~ 당일 23시, KST) 열 자 이상 댓글을 하나라도 쓴 사람이 자동 응모됩니다.",
+      "댓글을 몇 개 쓰든 한 사람당 한 표입니다. 매일 밤 11시 10분에 한 명을 뽑습니다.",
+      "당첨자는 자유게시판 발표 글로 알리고, 기프티콘은 운영자가 개별 연락으로 전달합니다.",
+    ],
+  },
+  {
+    title: "매주 스팀 기프트카드",
+    lines: [
+      "참가자 중 이벤트 활동 포인트 30점 이상, 글·댓글 3회 이상이면 자동 응모됩니다.",
+      "매주 월요일 0시 5분에 다섯 명을 뽑아 자유게시판에 발표합니다. 한 사람당 한 표입니다.",
+      "예측 성적과는 무관합니다. 순위가 낮아도 자격만 채우면 응모됩니다.",
+    ],
+  },
 ]
 
 const fmtDate = (iso: string) =>
@@ -238,8 +330,7 @@ export default async function SeasonEventPage({
               className="pb-7 text-[13px] font-bold"
               style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
             >
-              {fmtDate(event.start_at)} ~ {fmtDate(event.end_at)} · 시즌 종료 시 1위가 앙리의 14번을
-              가져갑니다
+              {fmtDate(event.start_at)} ~ {fmtDate(event.end_at)}
               {totalRegs > 0 && (
                 <>
                   {" "}
@@ -266,6 +357,17 @@ export default async function SeasonEventPage({
           {/* ① 내 순위 — 재방문의 목적지 (개인화라 클라이언트 SWR) */}
           <RaceMyPanel />
 
+          {/* 이벤트 전용 결과 페이지로 — 마이페이지(전 종목·전 기간)와 다른 지면이다 */}
+          <div className="flex justify-end">
+            <Link
+              href="/season/results?ref=event"
+              className="text-[13px] font-bold"
+              style={{ color: "var(--wc-burgundy)" }}
+            >
+              내 예측 결과 보기 →
+            </Link>
+          </div>
+
           {/* ② 다음 행동 스트립 — 버건디 = 행동의 색 */}
           <Link
             href="/prediction?ref=event"
@@ -277,10 +379,7 @@ export default async function SeasonEventPage({
             }}
           >
             <span className="text-[15px] font-extrabold" style={{ wordBreak: "keep-all" }}>
-              오늘 픽하러 가기{" "}
-              <span className="font-semibold" style={{ color: "rgba(255,255,255,.75)" }}>
-                — 기간 내 축구 픽이 전부 레이스 점수입니다
-              </span>
+              오늘 경기 예측하러 가기
             </span>
             <ArrowRight className="h-[18px] w-[18px] shrink-0" aria-hidden />
           </Link>
@@ -295,7 +394,7 @@ export default async function SeasonEventPage({
             }}
           >
             <p className="text-[12px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
-              ★ 메인 매치
+              이번 아스날 경기
             </p>
             {arsenal ? (
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
@@ -319,7 +418,7 @@ export default async function SeasonEventPage({
               </div>
             ) : (
               <p className="mt-2 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
-                다가오는 아스날 경기가 등록되면 여기에 표시됩니다.
+                다음 아스날 경기는 일정 나오는 대로 올립니다.
               </p>
             )}
             {/* 예측 전에도 읽을거리 먼저 — 콘텐츠 전환 루프의 상시 진입점 */}
@@ -335,7 +434,7 @@ export default async function SeasonEventPage({
                     className="block truncate text-[13px] font-semibold hover:underline"
                     style={{ color: "var(--wc-ink-2)" }}
                   >
-                    📰 {n.title}
+                    {n.title}
                   </Link>
                 ))}
               </div>
@@ -346,7 +445,7 @@ export default async function SeasonEventPage({
           <section className="rounded-xl p-4" style={cardStyle}>
             <div className="flex items-center justify-between">
               <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                🔥 지금 뜨는 글
+                지금 읽히는 글
               </h2>
               <Link
                 href="/?ref=event"
@@ -445,7 +544,7 @@ export default async function SeasonEventPage({
                   className="mb-3 flex flex-wrap items-center gap-2.5 text-[12.5px] font-extrabold"
                   style={{ color: "var(--gn-bg-100)", letterSpacing: "0.14em" }}
                 >
-                  아스날 팬 전용 · 전 리그 예측 레이스
+                  8.22 개막 · 구너들의 전 리그 레이스
                   <span
                     className="gn-num rounded px-1.5 py-[2px] text-[10.5px]"
                     style={{
@@ -480,17 +579,13 @@ export default async function SeasonEventPage({
                   구너스 레이스
                 </h1>
 
+                {/* 히어로의 명제는 하나. "심장/눈"은 배점 규칙 옆(순위 규칙 섹션)이 제자리다
+                    — 둘을 붙여 두면 서로 잡아먹는다 (카피 검수 §2-1) */}
                 <p
-                  className="mb-1.5 text-[16px] font-extrabold"
+                  className="mb-6 text-[16px] font-extrabold"
                   style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
                 >
                   리그는 38경기가 아니라 380경기다
-                </p>
-                <p
-                  className="mb-6 text-[13.5px] font-bold"
-                  style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
-                >
-                  아스날은 심장으로, 나머지는 눈으로 — 남의 경기를 읽는 눈이 레이스를 가립니다
                 </p>
 
                 {/* 앙리의 14번 — 획득 어법, COA 는 각주가 아니라 본문 (구너 검수 P0) */}
@@ -511,13 +606,13 @@ export default async function SeasonEventPage({
                     className="mt-1 text-[14.5px] font-bold"
                     style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
                   >
-                    티에리 앙리 친필 사인 유니폼 — 단 1장. 1명. 1위가 가져갑니다.
+                    티에리 앙리가 직접 사인한 유니폼. 한 장뿐입니다.
                   </p>
                   <p
                     className="mt-1 text-[12.5px]"
                     style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
                   >
-                    정품 인증서(COA)와 함께 배송됩니다. 추첨이 아니라 랭킹 1위의 몫입니다.
+                    9월 30일, 순위표 맨 위에 있는 사람에게 갑니다. 정품 인증서 동봉.
                   </p>
                 </div>
 
@@ -529,14 +624,14 @@ export default async function SeasonEventPage({
                 </div>
 
                 {!isDraft && !isClosed ? (
-                  <RaceJoinButton signedIn={!!userId} registrationOpen={registrationOpen} />
+                  <RaceJoinButton registrationOpen={registrationOpen} />
                 ) : isDraft ? (
                   <p className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
                     참가 등록은 오픈과 동시에 시작됩니다
                   </p>
                 ) : (
                   <p className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
-                    이번 레이스는 종료되었습니다
+                    이번 레이스는 끝났습니다
                   </p>
                 )}
               </div>
@@ -579,7 +674,7 @@ export default async function SeasonEventPage({
                     className="absolute inset-x-0 bottom-0 z-[1] px-4 pb-3.5 text-center text-[10.5px] font-bold"
                     style={{ color: "rgba(245,239,231,.85)", letterSpacing: "0.14em" }}
                   >
-                    THIERRY HENRY · No.14 · 친필 사인 — 정품 확인서 포함
+                    THIERRY HENRY · No.14 · SIGNED
                   </p>
                 </div>
               </div>
@@ -615,12 +710,12 @@ export default async function SeasonEventPage({
                   {fmtDate(event.start_at)} ~ {fmtDate(event.end_at)}
                 </b>
               </span>
+              {/* 접수 마감일을 따로 두지 않는다(운영자 확정 2026-08-14 — DB
+                  registration_closes_at = end_at). 마감 날짜를 적으면 기간과 두 줄이
+                  되어 "언제까지 신청?"을 다시 묻게 만든다 */}
               {!isDraft && (
                 <span className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
-                  참가 등록{" "}
-                  <b style={{ color: "var(--gn-cream)" }}>
-                    ~{fmtDate(event.registration_closes_at)}
-                  </b>
+                  참가 접수 <b style={{ color: "var(--gn-cream)" }}>기간 내 상시</b>
                 </span>
               )}
             </div>
@@ -634,7 +729,7 @@ export default async function SeasonEventPage({
         <section>
           <div className="mb-[24px] text-center">
             <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-              How it works
+              JOIN
             </div>
             <h2
               className="text-[24px] font-extrabold sm:text-[28px]"
@@ -664,11 +759,11 @@ export default async function SeasonEventPage({
             className="mt-4 text-center text-[13px]"
             style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
           >
-            타팀 팬도 참가할 수 있습니다. 다만 6주 뒤에도 타팀 팬일 수 있을지는 보장 못 합니다.
+            타팀 팬도 참가할 수 있습니다. 다만 9월 30일에도 타팀 팬일지는 보장 못 합니다.
           </p>
           {!isDraft && !isClosed && (
             <div className="mt-7 text-center">
-              <RaceJoinButton signedIn={!!userId} registrationOpen={registrationOpen} />
+              <RaceJoinButton registrationOpen={registrationOpen} />
             </div>
           )}
         </section>
@@ -677,7 +772,7 @@ export default async function SeasonEventPage({
         <section className="mt-12">
           <div className="mb-[18px] text-center">
             <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-              Ranking
+              SCORING
             </div>
             <h2
               className="text-[24px] font-extrabold sm:text-[28px]"
@@ -689,8 +784,8 @@ export default async function SeasonEventPage({
               className="mx-auto mt-[10px] max-w-[620px] text-[14.5px]"
               style={{ color: "var(--wc-mute)", lineHeight: 1.65, wordBreak: "keep-all" }}
             >
-              리그는 우리 38경기로 끝나지 않습니다. 시티가 미끄러지는 밤, 토트넘이 무너지는 오후 —
-              남의 경기를 읽는 눈이 진짜 축구 보는 눈입니다. 그래서 레이스는 전 리그입니다.
+              아스날 38경기만 봐서는 아스날 시즌을 모릅니다. 시티가 어디서 미끄러지는지, 토트넘이
+              어디서 무너지는지 구너는 원래 다 보고 있습니다. 그걸 점수로 만들었을 뿐입니다.
             </p>
           </div>
           <div
@@ -705,22 +800,22 @@ export default async function SeasonEventPage({
               className="flex flex-col gap-2.5 text-[14px]"
               style={{ lineHeight: 1.65, color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
             >
+              {/* 수식(stake×(배당−1))을 숫자 예시로 바꿨다 — 오해가 가장 비싼 자리인데
+                  수식이 나오는 순간 아무도 안 읽는다 (카피 검수 §2-4) */}
               <li>
-                <b style={{ color: "var(--wc-burgundy)" }}>
-                  많이 찍는다고 올라가지 않습니다. 잘 찍어야 올라갑니다.
-                </b>{" "}
-                순위는 net 손익 — 적중하면 stake×(배당−1)을 얻고, 빗나가면 stake 를 잃습니다.
+                <b style={{ color: "var(--wc-burgundy)" }}>딴 만큼 오르고, 잃은 만큼 내려갑니다.</b>{" "}
+                맞히면 사용한 볼에 배당이 붙어 점수가 오릅니다. 틀리면 사용한 볼만큼 내려갑니다.
+                10볼로 배당 2.5짜리 예측을 했다면 맞을 때 +15점, 틀릴 때 −10점. 많이 예측한다고
+                오르지 않는 이유입니다.
               </li>
               <li>
-                <b style={{ color: "var(--wc-burgundy)" }}>아스날 경기 보너스는 없습니다.</b> 배점은
-                전 경기 동일합니다. 어차피 심장으로 찍을 거잖아요.
+                <b style={{ color: "var(--wc-burgundy)" }}>아스날은 심장으로, 나머지는 눈으로.</b>{" "}
+                아스날 경기라고 점수를 더 주지 않습니다. 전 경기 배점이 같습니다. 어차피 심장으로
+                찍으실 텐데요.
               </li>
               <li>
-                기간 내 <b>축구 승부예측 전부</b>가 자동 집계됩니다 — 따로 응모하거나 등록할 픽이
-                없습니다.
-              </li>
-              <li>
-                TOP 5와 내 순위는 <b>상시 공개</b>됩니다. 역전은 마지막 주에도 일어날 수 있어요.
+                <b>따로 응모할 건 없습니다.</b> 참가한 다음부터 9월 30일까지 한 축구 예측이 순위에
+                들어갑니다. 정산이 끝난 예측만 점수가 됩니다.
               </li>
             </ul>
           </div>
@@ -755,7 +850,7 @@ export default async function SeasonEventPage({
                     className="min-w-0 truncate text-[14px] font-semibold"
                     style={{ color: "var(--wc-ink)" }}
                   >
-                    📰 {n.title}
+                    {n.title}
                   </span>
                   <span className="shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
                     {formatRelativeTime(new Date(n.created_at))}
@@ -766,30 +861,94 @@ export default async function SeasonEventPage({
           </section>
         )}
 
-        {/* 유의사항 */}
+        {/* 추첨 상품 — 앙리의 14번과 **다른 구역**이다 (경품 표 혼합 금지).
+            유니폼은 히어로 단독 무대, 여기는 순위와 무관한 추첨. 실제로 cron 두 개가
+            매일·매주 돌면서 봇이 자유게시판에 당첨자를 발표하므로 규칙이 화면에 있어야 한다. */}
+        <section className="mt-12">
+          <div className="mb-[18px] text-center">
+            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+              DRAWS
+            </div>
+            <h2
+              className="text-[24px] font-extrabold sm:text-[28px]"
+              style={{ letterSpacing: "-.03em", wordBreak: "keep-all" }}
+            >
+              순위와 별개로 도는 추첨
+            </h2>
+            <p
+              className="mx-auto mt-[10px] max-w-[620px] text-[14.5px]"
+              style={{ color: "var(--wc-mute)", lineHeight: 1.65, wordBreak: "keep-all" }}
+            >
+              레이스와 따로 매일 밤과 매주 월요일에 추첨이 있습니다. 앙리의 14번은 여기 포함되지
+              않습니다.
+            </p>
+          </div>
+          <div className="grid gap-[18px] sm:grid-cols-2">
+            {DRAWS.map((d) => (
+              <div key={d.title} className="rounded-xl p-4" style={cardStyle}>
+                <h3 className="text-[15.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                  {d.title}
+                </h3>
+                <ul
+                  className="mt-2.5 flex flex-col gap-1.5"
+                  style={{ listStyle: "none", margin: 0, padding: 0 }}
+                >
+                  {d.lines.map((l) => (
+                    <li
+                      key={l}
+                      className="flex gap-2 text-[13.5px]"
+                      style={{ lineHeight: 1.62, color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
+                    >
+                      <span style={{ flexShrink: 0 }}>·</span>
+                      <span>{l}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 이벤트 규칙 — 6항목 고정 */}
         <section className="mt-12 pb-14">
           <div className="wc-panel">
             <h3
               className="mb-[14px] text-[15.5px] font-extrabold"
               style={{ color: "var(--wc-mute)" }}
             >
-              유의사항
+              이벤트 규칙
             </h3>
-            <ul
-              className="flex flex-col gap-2"
-              style={{ listStyle: "none", margin: 0, padding: 0 }}
-            >
-              {NOTICES.map((n) => (
-                <li
-                  key={n}
-                  className="flex gap-2 text-[13px]"
-                  style={{ lineHeight: 1.6, color: "var(--wc-mute-2)", wordBreak: "keep-all" }}
-                >
-                  <span style={{ flexShrink: 0 }}>·</span>
-                  <span>{n}</span>
-                </li>
+            <div className="flex flex-col gap-[18px]">
+              {RULES.map((r) => (
+                <div key={r.title}>
+                  <p
+                    className="mb-1.5 text-[13.5px] font-extrabold"
+                    style={{ color: "var(--wc-ink-2)" }}
+                  >
+                    {r.title}
+                  </p>
+                  <ul
+                    className="flex flex-col gap-1.5"
+                    style={{ listStyle: "none", margin: 0, padding: 0 }}
+                  >
+                    {r.lines.map((l) => (
+                      <li
+                        key={l}
+                        className="flex gap-2 text-[13px]"
+                        style={{
+                          lineHeight: 1.6,
+                          color: "var(--wc-mute-2)",
+                          wordBreak: "keep-all",
+                        }}
+                      >
+                        <span style={{ flexShrink: 0 }}>·</span>
+                        <span>{l}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </section>
       </main>

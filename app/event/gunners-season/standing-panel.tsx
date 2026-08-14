@@ -27,7 +27,12 @@ const cardStyle = {
   boxShadow: "var(--wc-shadow-1)",
 } as const
 
-const winRate = (r: RaceRow) => (r.slips > 0 ? Math.round((r.won / r.slips) * 100) : 0)
+/**
+ * 적중률 분모는 **정산이 끝난 예측**만 쓴다. 대기·취소를 분모에 넣으면 점수는 그대로인데
+ * 적중률만 떨어져 "왜 내 적중률이 내려갔냐"가 된다 (기획 검수 P1-7).
+ * /season/results 요약도 같은 분모를 쓴다 — 두 화면 숫자가 갈리면 안 된다.
+ */
+const winRate = (r: RaceRow) => (r.settled > 0 ? Math.round((r.won / r.settled) * 100) : null)
 
 /** ① 내 레이스 현황 — S2 허브 최상단 (재방문자가 3초 안에 자기 숫자를 찾는 카드) */
 export function RaceMyPanel() {
@@ -53,21 +58,21 @@ export function RaceMyPanel() {
               {data.me.points.toLocaleString()}P
             </p>
             <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
-              net 포인트
+              점수
             </p>
           </div>
           <div>
             <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-              {winRate(data.me)}%
+              {winRate(data.me) === null ? "—" : `${winRate(data.me)}%`}
             </p>
             <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
-              적중률 ({data.me.won}/{data.me.slips})
+              적중률 ({data.me.won}/{data.me.settled})
             </p>
           </div>
         </div>
       ) : (
         <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-          기간 내 축구 예측 슬립이 곧 레이스 참가입니다 — 지금 픽 하나면 순위표에 올라가요.
+          순위를 불러오는 중입니다.
         </p>
       )}
     </section>
@@ -81,7 +86,7 @@ export function RaceTopPanel() {
   return (
     <section className="rounded-xl p-4" style={cardStyle}>
       <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-        🏆 구너 랭킹 TOP 5
+        구너 순위 상위 5명
       </h2>
       {data?.top?.length ? (
         <ul className="mt-3 space-y-1.5">
@@ -120,7 +125,7 @@ export function RaceTopPanel() {
         </ul>
       ) : (
         <p className="mt-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
-          아직 순위가 없어요 — 첫 주인공이 되어보세요.
+          아직 아무도 예측하지 않았습니다. 지금 예측하면 1위입니다.
         </p>
       )}
     </section>

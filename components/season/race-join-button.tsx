@@ -16,16 +16,11 @@ import { getAttribution } from "@/lib/analytics/attribution"
  * ⚠️ traffic_source: getAttribution() — 최초터치 UTM → 참가 귀속의 유일한 발사 지점.
  *    구 team-picker.tsx 에서 이식. 누락하면 유튜버별 귀속이 소급 불가로 증발한다.
  *
- * 라벨은 서버가 판정한 signedIn 을 그대로 그린다 (클라이언트 useAuth 로 라벨을
- * 바꾸면 hydration 불일치 위험 — Clerk #418 계열). 클릭 동작만 라이브 상태를 쓴다.
+ * 라벨은 로그인 여부와 무관하게 하나다. 비로그인은 클릭 시 로그인 모달이 뜨므로
+ * 라벨에 로그인을 앞세워 마찰을 미리 보여줄 이유가 없다 (카피 검수 §2-6).
+ * 부수 효과로 서버/클라이언트 라벨 분기가 사라져 hydration 위험(Clerk #418)도 없다.
  */
-export function RaceJoinButton({
-  signedIn,
-  registrationOpen,
-}: {
-  signedIn: boolean
-  registrationOpen: boolean
-}) {
+export function RaceJoinButton({ registrationOpen }: { registrationOpen: boolean }) {
   const router = useRouter()
   const { isSignedIn } = useAuth()
   const clerk = useClerk()
@@ -59,7 +54,7 @@ export function RaceJoinButton({
         return
       }
       if (!res.ok) throw new Error(data.error || "등록에 실패했습니다.")
-      toast({ title: "참가 완료", description: "이제 픽 하나면 순위표에 올라갑니다." })
+      toast({ title: "등록됐습니다", description: "이제 예측만 하면 됩니다." })
       router.refresh()
     } catch (e) {
       toast({
@@ -85,7 +80,7 @@ export function RaceJoinButton({
       }}
     >
       {busy && <Loader2 className="h-[17px] w-[17px] animate-spin" aria-hidden />}
-      {signedIn ? "참가하고 레이스 시작" : "로그인하고 참가하기"}
+      구너로 참가하기
       {!busy && <ArrowRight className="h-[17px] w-[17px]" aria-hidden />}
     </button>
   )

@@ -197,7 +197,7 @@ export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayB
                 className="text-[11px] font-extrabold uppercase"
                 style={{ color: "var(--wc-gold)", letterSpacing: "0.12em" }}
               >
-                Arsenal Only · 아스날 팬 전용
+                Arsenal Only · 구너스 레이스
               </p>
               <p
                 className="font-title mt-1.5 text-[19px] leading-[1.25] font-bold sm:text-[25px]"
@@ -209,7 +209,7 @@ export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayB
                 className="mt-1 text-[12.5px] sm:text-[13.5px]"
                 style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
               >
-                앙리 친필 사인 유니폼의 주인공은? 지금 참가하세요
+                티에리 앙리가 사인한 14번 유니폼 한 장. 9월 30일 1위가 가져갑니다
               </p>
               <span
                 className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-[12.5px] font-bold"
