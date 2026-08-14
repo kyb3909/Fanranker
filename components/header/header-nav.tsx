@@ -24,7 +24,10 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
 
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
-  const isPrediction = pathname.startsWith("/prediction") || pathname.startsWith("/worldcup")
+  const isPrediction =
+    pathname.startsWith("/prediction") ||
+    pathname.startsWith("/worldcup") ||
+    pathname.startsWith("/season")
   const isTarot = pathname.startsWith("/tarot")
 
   return (
@@ -82,8 +85,11 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           </span>
         </Link>
         {/* 이적시장(/transfer)은 GNB 에서 내리고 축구 게시판 상단 채널 카드로 이동 (2026-07-27) */}
-        {/* 승부예측 상시 메뉴 — 이벤트(월드컵 등)는 /prediction 상단 이벤트 슬롯에서 진행 */}
-        <Link href="/prediction">
+        {/* 승부예측 → **이벤트 페이지**로 (운영자 2026-08-14).
+            예측이 이벤트 전용(참가 신청 필요·축구 한정)이 된 뒤로, 메뉴를 누르자마자
+            예측 화면이 뜨면 "왜 신청하라는 거지?"에서 헷갈린다. 규칙·상품·참가가 있는
+            /season 을 먼저 보여주고, 신청자는 허브의 '오늘 픽하러 가기'로 한 번에 간다. */}
+        <Link href="/season">
           <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
             <Target className="h-[18px] w-[18px] shrink-0" />
             승부예측

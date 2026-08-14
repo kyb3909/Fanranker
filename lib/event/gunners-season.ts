@@ -21,13 +21,22 @@ export const GUNNERS_SEASON = {
   dbSlug: "season-open-2026",
   // "건너스"는 팬이 안 쓰는 오표기 (구너 검수 P0, 2026-08-14) — 표기만 교체, slug 는 유지
   title: "구너스 레이스",
-  // KST 8/22 00:00 ~ 10/1 00:00
-  startAt: "2026-08-21T15:00:00.000Z",
+  // KST 8/21 00:00 ~ 10/1 00:00 — 개막 라운드(8/21 밤 경기)부터 예측이 열리도록
+  // 시작을 하루 당겼다 (운영자 2026-08-14). 8/22 로 적힌 문구가 남아 있으면 그건 옛 값.
+  startAt: "2026-08-20T15:00:00.000Z",
   endAt: "2026-09-30T15:00:00.000Z",
 } as const
 
 export function isEventLive(now = new Date()): boolean {
   return now >= new Date(GUNNERS_SEASON.startAt) && now < new Date(GUNNERS_SEASON.endAt)
+}
+
+/**
+ * 승부예측 개시 여부 — 이벤트 시작 전에는 예측 화면을 열지 않는다 (운영자 2026-08-14).
+ * 예측이 이벤트 전용이 된 이상, 개막 전 예측은 어느 판에도 속하지 않기 때문이다.
+ */
+export function hasEventStarted(now = new Date()): boolean {
+  return now >= new Date(GUNNERS_SEASON.startAt)
 }
 
 export interface RaceRow {

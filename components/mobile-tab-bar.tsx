@@ -19,11 +19,13 @@ const tabs = [
     match: (p: string) => p.startsWith("/explore") || p.startsWith("/community"),
   },
   {
-    // 승부예측 상시 메뉴 — 이벤트(월드컵 등)는 /prediction 안 이벤트 슬롯에서 진행.
-    href: "/prediction",
+    // 승부예측 → 이벤트 페이지 (2026-08-14, GNB 와 같은 이유: 예측이 이벤트 전용이라
+    // 규칙·참가를 먼저 보여주고 넘긴다). match 는 예측 화면에서도 이 탭이 켜지게 유지.
+    href: "/season",
     icon: Target,
     label: "승부예측",
-    match: (p: string) => p.startsWith("/prediction") || p.startsWith("/worldcup"),
+    match: (p: string) =>
+      p.startsWith("/prediction") || p.startsWith("/worldcup") || p.startsWith("/season"),
   },
   {
     // 축구 타로 — 재미 콘텐츠. 승부예측 뒤에 둔다(예측과 붙으면 "점으로 고른다"로 읽힘).

@@ -14,12 +14,12 @@ import { formatRelativeTime } from "@/lib/utils/date"
 export const metadata: Metadata = {
   title: "구너스 레이스 — 앙리의 14번, 주인은 한 명",
   description:
-    "티에리 앙리가 사인한 14번 유니폼 한 장. 8월 22일부터 9월 30일까지, 전 리그 예측으로 겨루는 구너들의 레이스.",
+    "티에리 앙리가 사인한 14번 유니폼 한 장. 8월 21일부터 9월 30일까지, 전 리그 예측으로 겨루는 구너들의 레이스.",
   alternates: { canonical: "/season" },
   openGraph: {
     title: "구너스 레이스 | gongnori.fan",
     description:
-      "리그는 38경기가 아니라 380경기다. 앙리의 14번을 건 구너들의 레이스, 8월 22일 시작.",
+      "리그는 38경기가 아니라 380경기다. 앙리의 14번을 건 구너들의 레이스, 8월 21일 시작.",
     url: "/season",
   },
 }
@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic"
 const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
 /**
- * /season — 구너스 레이스 (2026-08-22 ~ 09-30). 아스날 단독 전환 2026-08-14.
+ * /season — 구너스 레이스 (2026-08-21 ~ 09-30). 아스날 단독 전환 2026-08-14.
  *
  * 한 URL, 상태별 인라인 전환 (workspace/event-design-FINAL-20260814.md — 리다이렉트 금지):
  * - S0 비로그인 / S1 로그인·미신청: 세일즈 스프레드 — 다크 히어로에 "앙리의 14번"
@@ -130,7 +130,7 @@ const RULES: { title: string; lines: string[] }[] = [
   {
     title: "기간과 집계 대상",
     lines: [
-      "레이스 기간은 2026년 8월 22일 00시부터 9월 30일 23시 59분까지입니다 (KST).",
+      "레이스 기간은 2026년 8월 21일 00시부터 9월 30일 23시 59분까지입니다 (KST).",
       "집계 대상은 축구 예측입니다. 야구·농구·배구는 점수에 들어가지 않습니다.",
       "예측은 경기 시작 전까지 할 수 있습니다.",
     ],
