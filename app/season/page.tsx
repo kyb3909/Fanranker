@@ -2,136 +2,114 @@ import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { ArrowRight } from "lucide-react"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { currentUser } from "@clerk/nextjs/server"
-import { CREATOR_DUEL_ENABLED } from "@/lib/event/season-config"
+import { auth } from "@clerk/nextjs/server"
 import { HeroCountdown } from "@/components/season/hero-countdown"
-import { TeamPicker, type SeasonGroup } from "@/components/season/team-picker"
-import { WeeklyDrawReveal } from "@/components/season/weekly-draw-reveal"
-import {
-  fetchSeasonSlipCount,
-  fetchSeasonPointsForUser,
-  POINTS_THRESHOLD,
-  MIN_COMMUNITY_ACTIONS,
-  type SeasonPoints,
-} from "@/lib/event/season-stats"
+import { RaceJoinButton } from "@/components/season/race-join-button"
+import { RaceMyPanel, RaceTopPanel } from "@/app/event/gunners-season/standing-panel"
+import { findArsenalNextMatch, GUNNERS_SEASON } from "@/lib/event/gunners-season"
+import { fetchSeasonSlipCount } from "@/lib/event/season-stats"
+import { NEWS_BOT_USER_ID } from "@/lib/news/publish"
+import { formatRelativeTime } from "@/lib/utils/date"
 
 export const metadata: Metadata = {
-  title: "시즌 오픈 팬덤 대항전",
+  title: "구너스 레이스 — 앙리의 14번을 건 시즌 예측 레이스",
   description:
-    "리버풀 vs 첼시 vs 아스날 — 시즌 개막 4주, 팬덤의 자존심을 건 승부예측 대항전. 활동하면 경품 추첨 자격이 생깁니다.",
+    "아스날은 심장으로, 나머지는 눈으로. 전 리그 예측으로 겨루는 구너들의 레이스 — 1위에게 티에리 앙리 친필 사인 14번 유니폼. 8/22 개막.",
   alternates: { canonical: "/season" },
   openGraph: {
-    title: "시즌 오픈 팬덤 대항전 | gongnori.fan",
-    description: "내 팀을 골라 참가하고, 예측으로 팬덤의 자존심을 지켜라.",
+    title: "구너스 레이스 | gongnori.fan",
+    description: "리그는 38경기가 아니라 380경기다 — 시즌 레이스 1위가 앙리의 14번을 가져갑니다.",
     url: "/season",
   },
 }
 
-// 참가자 카운트 즉시 반영
+// S0/S1/S2 분기가 유저별(auth + 등록 여부)이라 요청마다 판정한다
 export const dynamic = "force-dynamic"
-
-const EVENT_SLUG = "season-open-2026"
-
-/** 구단 크레스트 (Wikimedia 공식 원본 래스터) — 운영 판단으로 표시 (2026-07-31) */
-const CRESTS: Record<string, string> = {
-  kop: "/season/crest-liverpool.png",
-  blues: "/season/crest-chelsea.png",
-  gooner: "/season/crest-arsenal.png",
-}
-
-/** 팀 카드 선수 포스터 (그런지 일러스트 — 특정 인물 아님, 초상권 회피) */
-const PLAYERS: Record<string, string> = {
-  kop: "/season/player-kop.webp",
-  blues: "/season/player-blues.webp",
-  gooner: "/season/player-gooner.webp",
-}
-
-/** 히어로 크레스트 크기 [기본px, lg px] — 세 팀 동일 (2026-07-31 운영자 확정) */
-const CREST_HERO_PX: Record<string, [number, number]> = {
-  kop: [92, 112],
-  blues: [92, 112],
-  gooner: [92, 112],
-}
-
-/**
- * 히어로 크레스트 수평 오프셋 — 콜라주 패널이 사선이라 필요 시 색 패널 중심으로
- * 미세 정렬. 균등 3분할 애셋(2026-07-31 재생성) 기준 기본 0.
- */
-const CREST_HERO_SHIFT: Record<string, number> = {
-  kop: 0,
-  blues: 0,
-  gooner: 0,
-}
 
 /** 어그로체 디스플레이 — 매치데이 밴드와 동일 (이미 Bold 라 font-weight 얹지 말 것) */
 const DISPLAY = "var(--font-display-ko), var(--font-title)"
 
 /**
- * 시즌 오픈 이벤트 랜딩 — 디자인 시안 A "홈 문법 그대로" (2026-07-31 승인,
- * ~/.gstack/.../season-redesign-20260731/approved.json).
- * 히어로 = 매치데이 밴드 문법(다크 선언 존 + 스큐 버건디 플레이트 + 세로 라벨 +
- * 어그로체 대형 타이포 + 3색 팀 패널 콜라주), 본문 = 라이트 페이퍼 존 흰 카드.
- * 기억점: "팬덤 전쟁의 긴장감". 구단 엠블럼은 라이선스 문제로 쓰지 않는다 —
- * 팀 컬러 패널 + 팬덤명 타이포로 대결 구도를 만든다.
+ * /season — 구너스 레이스 (2026-08-22 ~ 09-30). 아스날 단독 전환 2026-08-14.
  *
- * 공개 정책 (설계 §3): 참가자 수·누적 예측 수는 실시간, 팀 순위·평균 성적은 주 1회만.
- * 컴플라이언스 (약관 제6조의2): 경품은 활동 포인트 기준 "추첨" — 순위 직결 확정 지급 아님.
+ * 한 URL, 상태별 인라인 전환 (workspace/event-design-FINAL-20260814.md — 리다이렉트 금지):
+ * - S0 비로그인 / S1 로그인·미신청: 세일즈 스프레드 — 다크 히어로에 "앙리의 14번"
+ *   단독 무대(경품 표 혼합 금지) + 참가 방법 3단계 + 원클릭 참가(팀 선택 없음).
+ * - S2 신청 완료: 히어로가 컴팩트 밴드(~110px)로 접히고 레이스 허브 —
+ *   ①내 순위 ②오늘 픽 스트립 ③메인 매치+아스날 소식 ④지금 뜨는 글 ⑤TOP5.
+ *   콘텐츠 링크는 전부 ?ref=event (설계 1원칙: 예측은 입구, 목적지는 게시물).
+ * - S3 종료 후 결과 화면은 후속 작업.
+ *
+ * 3파전 문법(팀 선택·팬덤 대결 카피·kop/blues 시각 요소)은 전량 제거됐다.
+ * 톤: 느낌표·홈쇼핑 어휘 금지 — 물건이 셀수록 카피는 낮은 목소리 (구너 검수 §5).
+ * 다크는 히어로 선언 존만, 라이트 존 다크 카드·한쪽 액센트 보더 금지.
  */
 
 const STEPS = [
   {
     num: "01",
-    title: "팀 선택 참가",
-    // ⚠️ 팀 이름을 여기 박지 말 것 — 3팀 → 2팀 → 3팀을 오가는 동안 "리버풀·첼시"가
-    // 남아 아스날 복원 뒤에도 한 팀을 빠뜨린 안내가 됐다 (2026-08-12).
-    body: "참가할 팬덤을 하나 고르면 끝. 다른 팀 팬도 그중 하나를 골라 참전할 수 있어요. 이벤트 중 팀 변경은 불가.",
+    title: "참가 등록",
+    body: "버튼 하나로 끝. 팀 선택은 없습니다 — 구너라고 선언하면 그게 참가입니다.",
   },
   {
     num: "02",
-    title: "매일 예측 + 활동",
-    body: "매일 충전되는 무료 볼 10개로 경기를 예측하고, 매치데이 글에 댓글을 남겨보세요. 활동이 곧 추첨 응모권입니다.",
+    title: "평소처럼 예측",
+    body: "따로 할 일이 없습니다. 기간 내 축구 픽이 자동으로 레이스에 집계됩니다. 매일 충전되는 무료 볼 10개면 충분합니다.",
   },
   {
     num: "03",
-    title: "팬덤 순위 발표",
-    body: "팀 순위는 매주 월요일에 공개됩니다. 같은 날 그 주 활동 기준으로 경품 추첨도 진행돼요.",
+    title: "시즌 종료, 1위 확정",
+    body: "9/30 레이스가 끝나면 1위가 앙리의 14번을 가져갑니다. TOP 5와 내 순위는 상시 공개됩니다.",
   },
 ] as const
 
-/** 2026-08-03 확정 구성 — 상세·근거는 workspace/RESULT-0802-prizes.md.
- *  유니폼 행은 CREATOR_DUEL_ENABLED 를 따라 붙었다 떨어진다 (제휴 의존 상품). */
-const PRIZES = [
-  ["팬덤 1위 사인 상품", "팬덤별 1명 (정품 확인서 포함)", "팬덤별 1명", "팬덤별 예측력 1위"],
-  ...(CREATOR_DUEL_ENABLED
-    ? ([
-        [
-          "시즌 유니폼",
-          "매주 승리 팬덤에게 (선택한 팀 것)",
-          "매주 1명",
-          "승리 팬덤의 활동 달성자 중 추첨 (4주 4명)",
-        ],
-      ] as const)
-    : []),
-  ["스팀 기프트카드", "5만원권 — 매주 월요일 발표", "매주 5명", "그 주 활동 기준 추첨 (4주 20명)"],
-] as const
-
 const NOTICES = [
-  "사인 상품은 팬덤별 예측력 1위에게 지급하며, 그 외 경품은 활동 포인트 기준 추첨으로 정해집니다.",
-  "예측만으로는 응모할 수 없습니다 — 커뮤니티 활동(댓글·글)이 최소 3회 필요합니다.",
-  "한 번 선택한 팀은 이벤트 종료까지 변경할 수 없습니다.",
-  "이벤트 기간 중 삭제된 글·댓글의 포인트는 회수되며, 무성의한 도배는 검수 후 당첨이 취소될 수 있습니다.",
-  "다계정 참여가 확인되면 모든 계정이 실격됩니다.",
-  "5만원 초과 경품 당첨자는 수령 시 신원·배송 정보를 수집하며(제세공과금 처리), 미성년자는 법정대리인 동의가 필요합니다.",
-  "포인트 수치·응모 기준점은 이벤트 오픈 시 확정 공지됩니다.",
+  "앙리의 14번(티에리 앙리 친필 사인 유니폼)은 이벤트 종료 시점 레이스 1위 1명에게 지급되며, 정품 인증서(COA)가 함께 제공됩니다. 사이즈·시즌 사양은 상세 공지 참조.",
+  "순위는 이벤트 기간(8/22~9/30) 내 축구 승부예측의 net 손익으로 집계합니다 — 적중 시 stake×(배당−1), 실패 시 −stake. 정산이 완료된 예측만 점수에 반영됩니다.",
+  "참가 등록자만 순위에 집계됩니다. 등록 전에 한 기간 내 예측도 등록하면 함께 집계됩니다.",
+  "다계정·승부 담합 등 어뷰징이 확인되면 모든 계정이 순위에서 제외됩니다.",
+  "5만원 초과 상품 수령 시 신원·배송 정보를 수집하며(제세공과금 처리), 미성년자는 법정대리인 동의가 필요합니다.",
 ]
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    timeZone: "Asia/Seoul",
+  })
+
+function formatKickoff(iso: string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso))
+}
+
+const cardStyle = {
+  background: "var(--wc-card)",
+  border: "1px solid var(--wc-line)",
+  boxShadow: "var(--wc-shadow-1)",
+} as const
+
+interface NewsRow {
+  id: string
+  title: string
+  created_at: string
+}
 
 export default async function SeasonEventPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>
 }) {
-  // 운영자 미리보기 (?preview=1) — draft 상태에서 오픈된 모습 확인. 등록 API 는
-  // 여전히 draft 를 거부하므로 실제 참가는 불가. 표본 숫자는 리본으로 명시.
+  // 운영자 미리보기 (?preview=1) — draft 상태에서 오픈된 세일즈 지면 확인.
+  // 등록 API 는 여전히 draft 를 거부하므로 실제 참가는 불가. 표본 숫자는 리본으로 명시.
   const params = await searchParams
   const preview = params.preview === "1"
 
@@ -139,8 +117,8 @@ export default async function SeasonEventPage({
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, name, description, status, start_at, end_at, registration_closes_at")
-    .eq("slug", EVENT_SLUG)
+    .select("id, status, start_at, end_at, registration_closes_at")
+    .eq("slug", GUNNERS_SEASON.dbSlug)
     .maybeSingle()
 
   if (!event) {
@@ -154,142 +132,42 @@ export default async function SeasonEventPage({
     )
   }
 
-  const { data: groups } = await supabase
-    .from("event_groups")
-    .select("id, slug, name, club_kor, color, motto, sort_order")
-    .eq("event_id", event.id)
-    .order("sort_order", { ascending: true })
+  const { userId } = await auth()
 
-  // 팀별 참가자 수 — 실시간 공개 항목 (순위·성적은 주 1회)
-  const { data: regs } = await supabase
-    .from("event_registrations")
-    .select("group_id")
-    .eq("event_id", event.id)
-  const countByGroup = new Map<string, number>()
-  for (const r of regs ?? []) {
-    countByGroup.set(r.group_id, (countByGroup.get(r.group_id) ?? 0) + 1)
-  }
-  const totalRegs = (regs ?? []).length
-
-  // 이벤트 슬립 누적 수 — 동적 귀속 RPC (등록자·기간 내·EPL 슬립, pending 포함)
-  const slipCount = await fetchSeasonSlipCount(supabase)
-
-  // 주간 팬덤 순위 — 최신 스냅샷 묶음만 (공개 정책: 실시간 재계산 노출 금지)
-  const { data: latestSnap } = await supabase
-    .from("event_leaderboard_snapshots")
-    .select("captured_at")
-    .eq("event_id", event.id)
-    .order("captured_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  let weeklyStandings: {
-    slug: string
-    avgSkill: number
-    qualifiedCount: number
-  }[] = []
-  let weeklyCapturedAt: string | null = null
-  if (latestSnap?.captured_at) {
-    weeklyCapturedAt = latestSnap.captured_at
-    const { data: snapRows } = await supabase
-      .from("event_leaderboard_snapshots")
-      .select("group_id, skill_score, total_in_group")
-      .eq("event_id", event.id)
-      .eq("captured_at", latestSnap.captured_at)
-    const agg = new Map<string, { sum: number; n: number }>()
-    for (const r of snapRows ?? []) {
-      const a = agg.get(r.group_id) ?? { sum: 0, n: 0 }
-      a.sum += Number(r.skill_score) || 0
-      a.n += 1
-      agg.set(r.group_id, a)
-    }
-    weeklyStandings = [...agg.entries()]
-      .map(([groupId, a]) => ({
-        slug: (groups ?? []).find((g) => g.id === groupId)?.slug ?? "",
-        avgSkill: a.n > 0 ? a.sum / a.n : 0,
-        qualifiedCount: a.n,
-      }))
-      .filter((s) => s.slug)
-      .sort((x, y) => y.avgSkill - x.avgSkill)
-  }
-
-  // 이번 주 당첨자 — 최신 1회차만. 굴러가는 동안 보일 이름은 후보 중 일부만 쓴다
-  // (전원을 클라이언트로 내리면 응모자 명단이 통째로 노출된다)
-  const { data: drawRow } = await supabase
-    .from("season_weekly_draws")
-    .select(
-      "week_start, winners, candidate_count, candidates, duel_scores, duel_winner_group_id, uniform_winner"
-    )
-    .eq("event_id", event.id)
-    .not("drawn_at", "is", null)
-    .order("week_start", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const weeklyDraw = drawRow?.winners
-    ? {
-        week_start: drawRow.week_start as string,
-        winners: drawRow.winners as { user_id: string; nickname: string }[],
-        candidate_count: drawRow.candidate_count as number,
-        poolNames: ((drawRow.candidates ?? []) as { nickname: string }[])
-          .slice(0, 40)
-          .map((c) => c.nickname),
-        duelScores: (drawRow.duel_scores ?? []) as {
-          group_slug: string
-          nickname: string
-          skill_score: number
-        }[],
-        duelWinnerSlug:
-          ((drawRow.duel_scores ?? []) as { group_slug: string; group_id: string }[]).find(
-            (s) => s.group_id === drawRow.duel_winner_group_id
-          )?.group_slug ?? null,
-        uniformWinner: drawRow.uniform_winner as { user_id: string; nickname: string } | null,
-      }
-    : null
-
-  const user = await currentUser()
-  let myGroupSlug: string | null = null
-  let myPoints: SeasonPoints | null = null
-  if (user) {
-    const { data: myReg } = await supabase
+  const [regCountRes, slipCount, myRegRes, newsRes] = await Promise.all([
+    // 참가자 수 — 실시간 공개 항목 (아스날 단독이라 합계만)
+    supabase
       .from("event_registrations")
-      .select("group_id")
-      .eq("event_id", event.id)
-      .eq("user_id", user.id)
-      .maybeSingle()
-    if (myReg) {
-      myGroupSlug = (groups ?? []).find((g) => g.id === myReg.group_id)?.slug ?? null
-      myPoints = await fetchSeasonPointsForUser(supabase, user.id)
-    }
-  }
+      .select("user_id", { count: "exact", head: true })
+      .eq("event_id", event.id),
+    // 이벤트 슬립 누적 수 — 동적 귀속 RPC (등록자·기간 내, pending 포함)
+    fetchSeasonSlipCount(supabase),
+    userId
+      ? supabase
+          .from("event_registrations")
+          .select("user_id")
+          .eq("event_id", event.id)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null as { user_id: string } | null }),
+    // 아스날 최신 소식 2 — 봇 기사 (표기 흔들림: 아스널/아스날). S0~S2 공통 —
+    // 어느 상태에서도 페이지가 막다른 골목이 되지 않게 한다.
+    supabase
+      .from("posts")
+      .select("id, title, created_at")
+      .eq("user_id", NEWS_BOT_USER_ID)
+      .is("deleted_at", null)
+      .or("title.ilike.%아스널%,title.ilike.%아스날%")
+      .order("created_at", { ascending: false })
+      .limit(2),
+  ])
+
+  const totalRegs = regCountRes.count ?? 0
+  const registered = !!myRegRes.data
+  const arsenalNews = (newsRes.data ?? []) as NewsRow[]
 
   // 미리보기 표본 숫자 — 실데이터가 있으면 실데이터 우선
-  const previewCounts: Record<string, number> = { kop: 138, blues: 121, gooner: 129 }
-
-  const pickerGroups: SeasonGroup[] = (groups ?? []).map((g) => ({
-    slug: g.slug,
-    name: g.name,
-    club_kor: g.club_kor,
-    color: g.color,
-    motto: g.motto ?? "",
-    crest: CRESTS[g.slug] ?? null,
-    player: PLAYERS[g.slug] ?? null,
-    regCount:
-      (countByGroup.get(g.id) ?? 0) > 0
-        ? (countByGroup.get(g.id) ?? 0)
-        : preview
-          ? (previewCounts[g.slug] ?? 0)
-          : 0,
-  }))
-  /**
-   * 팬덤 수 한글 수사 — 카피에 "두 팬덤"을 굳혀 두면 팀이 늘고 줄 때마다 문구가 거짓말이 된다.
-   * 실제로 3팀 → 2팀(2026-08-02) → 3팀(2026-08-12) 을 오가는 동안 "두 팬덤"이 남아 있었다.
-   */
-  const fandomCountKo =
-    ({ 2: "두", 3: "세", 4: "네" } as Record<number, string>)[pickerGroups.length] ??
-    `${pickerGroups.length}`
-
-  const previewTotalRegs =
-    preview && totalRegs === 0 ? Object.values(previewCounts).reduce((a, b) => a + b, 0) : totalRegs
+  const previewTotalRegs = preview && totalRegs === 0 ? 129 : totalRegs
   const previewSlipCount = preview && (slipCount ?? 0) === 0 ? 2431 : (slipCount ?? 0)
 
   const isDraft = event.status === "draft" && !preview
@@ -300,14 +178,222 @@ export default async function SeasonEventPage({
   const msToStart = preview ? -1 : new Date(event.start_at).getTime() - Date.now()
   const started = msToStart <= 0
 
-  const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("ko-KR", {
-      month: "numeric",
-      day: "numeric",
-      weekday: "short",
-      timeZone: "Asia/Seoul",
-    })
+  /* ══════════════ S2 — 레이스 허브 (신청 완료) ══════════════ */
+  if (registered && !preview) {
+    const [arsenal, hotPostsRes] = await Promise.all([
+      findArsenalNextMatch(supabase),
+      // 지금 뜨는 글 — 온도순 (담벼락과 같은 신호)
+      supabase
+        .from("posts")
+        .select("id, title, comment_count, temperature, created_at")
+        .is("deleted_at", null)
+        .order("temperature", { ascending: false, nullsFirst: false })
+        .limit(5),
+    ])
+    const hotPosts = (hotPostsRes.data ?? []) as {
+      id: string
+      title: string
+      comment_count: number | null
+      created_at: string
+    }[]
+    const daysLeft = Math.max(
+      0,
+      Math.ceil((new Date(event.end_at).getTime() - Date.now()) / 86_400_000)
+    )
 
+    return (
+      <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
+        {/* 컴팩트 밴드 (~110px) — 세일즈 히어로가 접힌 형태 자체가 "당신은 이미
+            참가자"라는 신호. 시계는 정적 D-n 하나만 (카운트다운 중복 금지) */}
+        <section className="gn-band" aria-label="구너스 레이스">
+          <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 pt-8 pb-1.5">
+              <span
+                className="gn-num text-[13px] font-bold uppercase"
+                style={{ letterSpacing: "0.2em", color: "var(--gn-bg-100)" }}
+              >
+                Race for No.14
+              </span>
+              <h1
+                className="text-[30px] leading-none sm:text-[42px]"
+                style={{
+                  fontFamily: DISPLAY,
+                  fontWeight: 700,
+                  color: "var(--gn-cream)",
+                  letterSpacing: "-0.035em",
+                }}
+              >
+                구너스 레이스
+              </h1>
+              {!isClosed && (
+                <span
+                  className="gn-num ml-auto hidden text-[15px] font-bold sm:block"
+                  style={{ letterSpacing: "0.1em", color: "var(--gn-cream-dim)" }}
+                >
+                  종료까지 D-{daysLeft}
+                </span>
+              )}
+            </div>
+            <p
+              className="pb-7 text-[13px] font-bold"
+              style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
+            >
+              {fmtDate(event.start_at)} ~ {fmtDate(event.end_at)} · 시즌 종료 시 1위가 앙리의 14번을
+              가져갑니다
+              {totalRegs > 0 && (
+                <>
+                  {" "}
+                  · 참가 구너{" "}
+                  <b className="gn-num text-[15px]" style={{ color: "var(--gn-cream)" }}>
+                    {totalRegs.toLocaleString()}
+                  </b>
+                </>
+              )}
+              {(slipCount ?? 0) > 0 && (
+                <>
+                  {" "}
+                  · 누적 예측{" "}
+                  <b className="gn-num text-[15px]" style={{ color: "var(--gn-cream)" }}>
+                    {(slipCount ?? 0).toLocaleString()}
+                  </b>
+                </>
+              )}
+            </p>
+          </div>
+        </section>
+
+        <main className="mx-auto w-full max-w-[880px] space-y-4 px-4 pt-6 pb-16 sm:px-6">
+          {/* ① 내 순위 — 재방문의 목적지 (개인화라 클라이언트 SWR) */}
+          <RaceMyPanel />
+
+          {/* ② 다음 행동 스트립 — 버건디 = 행동의 색 */}
+          <Link
+            href="/prediction?ref=event"
+            className="flex items-center justify-between gap-3 rounded-xl px-5 py-4 transition-transform active:scale-[.99]"
+            style={{
+              background: "linear-gradient(100deg, var(--wc-burgundy), var(--wc-burgundy-deep))",
+              color: "#fff",
+              boxShadow: "0 12px 30px -12px rgba(150,30,55,.55)",
+            }}
+          >
+            <span className="text-[15px] font-extrabold" style={{ wordBreak: "keep-all" }}>
+              오늘 픽하러 가기{" "}
+              <span className="font-semibold" style={{ color: "rgba(255,255,255,.75)" }}>
+                — 기간 내 축구 픽이 전부 레이스 점수입니다
+              </span>
+            </span>
+            <ArrowRight className="h-[18px] w-[18px] shrink-0" aria-hidden />
+          </Link>
+
+          {/* ③ 메인 매치 + 아스날 소식 — 배점은 동일, 강조만 (보너스 없음 확정) */}
+          <section
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--wc-wine-tint)",
+              border: "1px solid var(--wc-line)",
+              boxShadow: "var(--wc-shadow-1)",
+            }}
+          >
+            <p className="text-[12px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
+              ★ 메인 매치
+            </p>
+            {arsenal ? (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[17px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                    {arsenal.home} <span style={{ color: "var(--wc-mute)" }}>vs</span>{" "}
+                    {arsenal.away}
+                  </p>
+                  <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                    {formatKickoff(arsenal.matchTime)}
+                    {arsenal.league ? ` · ${arsenal.league}` : ""}
+                  </p>
+                </div>
+                <Link
+                  href="/prediction?ref=event"
+                  className="rounded-lg px-4 py-2.5 text-[13.5px] font-bold"
+                  style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+                >
+                  예측하러 가기 →
+                </Link>
+              </div>
+            ) : (
+              <p className="mt-2 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+                다가오는 아스날 경기가 등록되면 여기에 표시됩니다.
+              </p>
+            )}
+            {/* 예측 전에도 읽을거리 먼저 — 콘텐츠 전환 루프의 상시 진입점 */}
+            {arsenalNews.length > 0 && (
+              <div
+                className="mt-3 space-y-1 border-t pt-2.5"
+                style={{ borderColor: "var(--wc-line)" }}
+              >
+                {arsenalNews.map((n) => (
+                  <Link
+                    key={n.id}
+                    href={`/post/${n.id}?ref=event`}
+                    className="block truncate text-[13px] font-semibold hover:underline"
+                    style={{ color: "var(--wc-ink-2)" }}
+                  >
+                    📰 {n.title}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ④ 지금 뜨는 글 — 허브가 막다른 골목이 되지 않게 (핵심 전환 루프) */}
+          <section className="rounded-xl p-4" style={cardStyle}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                🔥 지금 뜨는 글
+              </h2>
+              <Link
+                href="/?ref=event"
+                className="text-[12.5px] font-bold"
+                style={{ color: "var(--wc-burgundy)" }}
+              >
+                담벼락 가기 →
+              </Link>
+            </div>
+            <ul className="mt-3 divide-y" style={{ borderColor: "var(--wc-line)" }}>
+              {hotPosts.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/post/${p.id}?ref=event`}
+                    className="flex items-baseline justify-between gap-3 py-2.5"
+                  >
+                    <span
+                      className="min-w-0 truncate text-[13.5px] font-semibold"
+                      style={{ color: "var(--wc-ink)" }}
+                    >
+                      {p.title}
+                      {(p.comment_count ?? 0) > 0 && (
+                        <span
+                          className="ml-1.5 text-[12px] font-bold"
+                          style={{ color: "var(--wc-burgundy)" }}
+                        >
+                          {p.comment_count}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                      {formatRelativeTime(new Date(p.created_at))}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* ⑤ 구너 랭킹 TOP 5 */}
+          <RaceTopPanel />
+        </main>
+      </div>
+    )
+  }
+
+  /* ══════════════ S0/S1 — 세일즈 스프레드 (신청 전) ══════════════ */
   return (
     <div className="min-h-screen" style={{ background: "var(--wc-paper)" }}>
       {preview && (
@@ -319,18 +405,13 @@ export default async function SeasonEventPage({
         </div>
       )}
 
-      {/* ══ 다크 히어로 — 매치데이 밴드 문법 (선언 영역이라 다크 허용) ══ */}
-      <section className="gn-band" aria-label="시즌 오픈 팬덤 대항전">
+      {/* ══ 다크 히어로 — 앙리의 14번 단독 무대 (선언 영역이라 다크 허용).
+          배경 장식은 걷어낸다 — 다크 존의 어둠 자체가 벨벳 (편집 설계 §2.1) ══ */}
+      <section className="gn-band" aria-label="구너스 레이스">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
           <div
             className="relative overflow-hidden rounded-b-[16px]"
-            style={{
-              // 생성 애셋: 버건디 스플래터 + 군중 실루엣 그런지 (2026-07-31, 시안 A 질감)
-              backgroundImage:
-                "linear-gradient(rgba(22,20,26,.42), rgba(22,20,26,.58)), url(/season/hero-bg.webp)",
-              backgroundSize: "cover",
-              backgroundPosition: "center bottom",
-            }}
+            style={{ background: "var(--gn-night-soft)" }}
           >
             {/* 스큐 버건디 플레이트 + 세로 라벨 — 매치데이 밴드의 TOP STORY 문법 */}
             <div
@@ -350,21 +431,21 @@ export default async function SeasonEventPage({
                   color: "var(--gn-cream)",
                 }}
               >
-                SEASON OPEN
+                GOONERS RACE
               </span>
             </div>
 
             {/* pl 은 스큐 플레이트의 "위쪽" 폭 기준 — skewX(-8deg) 가 상단을 오른쪽으로
                 ~tan(8°)×(높이/2) ≈ 37px 밀어내므로, 플레이트 명목 폭(118px)만 보고 잡으면
                 첫 줄 텍스트가 경사면과 겹친다 (2026-08-03 운영자 발견) */}
-            <div className="relative grid gap-8 py-9 pl-[72px] sm:py-12 sm:pl-[140px] lg:grid-cols-[1.05fr_.95fr] lg:gap-4">
+            <div className="relative grid gap-8 py-9 pr-4 pl-[72px] sm:py-12 sm:pr-8 sm:pl-[140px] lg:grid-cols-[1.05fr_.95fr] lg:gap-6">
               {/* ── 좌: 선언 ── */}
               <div>
                 <p
-                  className="mb-3 flex items-center gap-2.5 text-[12.5px] font-extrabold"
+                  className="mb-3 flex flex-wrap items-center gap-2.5 text-[12.5px] font-extrabold"
                   style={{ color: "var(--gn-bg-100)", letterSpacing: "0.14em" }}
                 >
-                  시즌의 시작, 팬덤의 자존심을 걸어라
+                  아스날 팬 전용 · 전 리그 예측 레이스
                   <span
                     className="gn-num rounded px-1.5 py-[2px] text-[10.5px]"
                     style={{
@@ -393,150 +474,113 @@ export default async function SeasonEventPage({
                     fontSize: "clamp(40px, 6vw, 64px)",
                     lineHeight: 1.08,
                     letterSpacing: "-0.02em",
+                    color: "var(--gn-cream)",
                   }}
                 >
-                  <span style={{ color: "var(--gn-cream)" }}>시즌 오픈</span>
-                  <br />
-                  <span style={{ color: "#e0475f" }}>팬덤 대항전</span>
+                  구너스 레이스
                 </h1>
 
                 <p
-                  className="mb-6 flex items-center gap-3 text-[14.5px] font-bold"
+                  className="mb-1.5 text-[16px] font-extrabold"
+                  style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
+                >
+                  리그는 38경기가 아니라 380경기다
+                </p>
+                <p
+                  className="mb-6 text-[13.5px] font-bold"
                   style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
                 >
-                  <span
-                    aria-hidden
-                    className="h-px w-8"
-                    style={{ background: "var(--gn-night-line)" }}
-                  />
-                  어느 팬덤으로 싸울 건가요
-                  <span
-                    aria-hidden
-                    className="h-px w-8"
-                    style={{ background: "var(--gn-night-line)" }}
-                  />
+                  아스날은 심장으로, 나머지는 눈으로 — 남의 경기를 읽는 눈이 레이스를 가립니다
                 </p>
+
+                {/* 앙리의 14번 — 획득 어법, COA 는 각주가 아니라 본문 (구너 검수 P0) */}
+                <div
+                  className="mb-6 rounded-xl px-4 py-3.5"
+                  style={{
+                    background: "rgba(255,255,255,.05)",
+                    border: "1px solid var(--gn-night-line)",
+                  }}
+                >
+                  <p
+                    className="text-[15px] font-bold"
+                    style={{ fontFamily: DISPLAY, fontWeight: 700, color: "var(--wc-gold)" }}
+                  >
+                    앙리의 14번
+                  </p>
+                  <p
+                    className="mt-1 text-[14.5px] font-bold"
+                    style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
+                  >
+                    티에리 앙리 친필 사인 유니폼 — 단 1장. 1명. 1위가 가져갑니다.
+                  </p>
+                  <p
+                    className="mt-1 text-[12.5px]"
+                    style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
+                  >
+                    정품 인증서(COA)와 함께 배송됩니다. 추첨이 아니라 랭킹 1위의 몫입니다.
+                  </p>
+                </div>
 
                 <div className="mb-6 flex flex-wrap items-center gap-3">
                   <HeroCountdown
                     target={started && !isClosed ? event.end_at : event.start_at}
-                    label={started && !isClosed ? "대항전 종료까지" : "개막까지"}
+                    label={started && !isClosed ? "레이스 종료까지" : "개막까지"}
                   />
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-3 text-[12.5px] font-bold"
-                    style={{
-                      background: "rgba(255,255,255,.06)",
-                      border: "1px solid var(--gn-night-line)",
-                      color: "var(--gn-cream-dim)",
-                      wordBreak: "keep-all",
-                    }}
-                  >
-                    팀 순위는 <b style={{ color: "var(--gn-cream)" }}>매주 월요일</b> 발표
-                  </span>
                 </div>
 
-                {!isDraft && !isClosed && (
-                  <Link
-                    href="/prediction"
-                    className="inline-flex items-center gap-2 rounded-[12px] px-6 py-3.5 text-[15.5px] font-extrabold transition-transform active:scale-[.98]"
-                    style={{
-                      background: "linear-gradient(100deg, var(--wc-burgundy), var(--gn-bg-700))",
-                      color: "var(--gn-cream)",
-                      boxShadow: "0 12px 30px -12px rgba(150,30,55,.7)",
-                    }}
-                  >
-                    오늘 경기 예측하러 가기 <ArrowRight className="h-[17px] w-[17px]" aria-hidden />
-                  </Link>
-                )}
-                {isDraft && (
+                {!isDraft && !isClosed ? (
+                  <RaceJoinButton signedIn={!!userId} registrationOpen={registrationOpen} />
+                ) : isDraft ? (
                   <p className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
                     참가 등록은 오픈과 동시에 시작됩니다
+                  </p>
+                ) : (
+                  <p className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
+                    이번 레이스는 종료되었습니다
                   </p>
                 )}
               </div>
 
-              {/* ── 우: 깃발 콜라주 (생성 애셋 — 엠블럼 없이 컬러·군중·깃발로
-                  대결 구도, 팬덤명 타이포는 HTML 오버레이) ──
-                  원본은 빨강|파랑|빨강 3분할이다. 대결이 2팀으로 줄면서(2026-08-02)
-                  **왼쪽 2패널만** 쓴다 — background-size 150% 로 원본을 컨테이너 1.5배 폭에
-                  펼치면 패널 하나가 정확히 컨테이너의 50% 가 되어 빨강|파랑 = Kop|Blues 로 맞는다.
-                  (object-cover 는 종횡비에 따라 가로 크롭이 달라져 칸이 안 맞는다) */}
-              <div
-                aria-hidden
-                className="relative mt-1 min-h-[190px] overflow-hidden rounded-[14px] lg:mt-0 lg:min-h-[300px]"
-                style={{ border: "1px solid var(--gn-night-line)" }}
-              >
+              {/* ── 우: 유니폼 스틸 — 커버 오브젝트. 사진 등장은 히어로 1회뿐 ── */}
+              <div className="relative mt-1 lg:mt-0">
+                <span
+                  aria-hidden
+                  className="gn-num pointer-events-none absolute -top-6 right-0 leading-none font-bold select-none"
+                  style={{ fontSize: "clamp(96px, 10vw, 140px)", color: "rgba(245,239,231,.07)" }}
+                >
+                  14
+                </span>
                 <div
-                  className="absolute inset-0"
+                  className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[14px]"
                   style={{
-                    backgroundImage: "url(/season/hero-collage.webp)",
-                    // 원본 3패널 중 팀 수만큼만 보이게: 전체를 (3/N)배 폭으로 펼친다 (2팀 → 150%).
-                    // ×1.1 오버스캔은 **잘라낼 패널이 있을 때만** 건다: 패널 경계가 너덜너덜한
-                    // 사선이라 정확히 2/3 에서 자르면 상단 우측에 3번째(빨강) 패널이 비쳐
-                    // 나왔다 (2026-08-03 운영자 발견). 3팀이면 자를 게 없으므로 오버스캔을 걸면
-                    // 오히려 아스날 패널이 10% 잘린다 (2026-08-12 아스날 복원).
-                    backgroundSize: `${(3 / Math.max(pickerGroups.length, 1)) * 100 * (pickerGroups.length >= 3 ? 1 : 1.1)}% 100%`,
-                    backgroundPosition: "left center",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      "linear-gradient(to top, rgba(9,8,11,.72) 0%, rgba(9,8,11,.12) 45%, rgba(9,8,11,0) 70%)",
-                  }}
-                />
-                <div
-                  className="absolute inset-0 grid items-center pt-2 pb-3.5"
-                  style={{
-                    gridTemplateColumns: `repeat(${Math.max(pickerGroups.length, 1)}, minmax(0, 1fr))`,
+                    border: "1px solid var(--gn-night-line)",
+                    aspectRatio: "4 / 5",
+                    boxShadow: "0 24px 60px -24px rgba(0,0,0,.65)",
                   }}
                 >
-                  {pickerGroups.map((g) => (
-                    <div key={g.slug} className="flex h-full flex-col items-center justify-between">
-                      <div className="flex flex-1 items-center">
-                        {CRESTS[g.slug] && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={CRESTS[g.slug]}
-                            alt=""
-                            className="object-contain"
-                            style={{
-                              height: `clamp(${CREST_HERO_PX[g.slug]?.[0] ?? 92}px, 9vw, ${CREST_HERO_PX[g.slug]?.[1] ?? 112}px)`,
-                              width: `clamp(${CREST_HERO_PX[g.slug]?.[0] ?? 92}px, 9vw, ${CREST_HERO_PX[g.slug]?.[1] ?? 112}px)`,
-                              transform: `translateX(${CREST_HERO_SHIFT[g.slug] ?? 0}px)`,
-                              filter: "drop-shadow(0 6px 18px rgba(0,0,0,.6))",
-                            }}
-                            loading="eager"
-                          />
-                        )}
-                      </div>
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span
-                          style={{
-                            fontFamily: DISPLAY,
-                            fontWeight: 700,
-                            fontSize: "clamp(20px, 2vw, 28px)",
-                            color: "rgba(245,239,231,.96)",
-                            letterSpacing: "-0.01em",
-                            textShadow: "0 2px 14px rgba(0,0,0,.75)",
-                          }}
-                        >
-                          {g.name}
-                        </span>
-                        <span
-                          className="text-[10.5px] font-bold"
-                          style={{
-                            color: "rgba(245,239,231,.72)",
-                            textShadow: "0 1px 8px rgba(0,0,0,.8)",
-                          }}
-                        >
-                          {g.club_kor}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/season/event-banner-henry.webp"
+                    alt="티에리 앙리 친필 사인 14번 유니폼"
+                    className="h-full w-full object-cover"
+                    style={{ objectPosition: "50% 32%" }}
+                    loading="eager"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(to top, rgba(9,8,11,.78) 0%, rgba(9,8,11,.12) 34%, rgba(9,8,11,0) 55%)",
+                    }}
+                  />
+                  {/* 박물관 플레이트 캡션 — 가짜 손글씨(Nanum Pen) 금지, 사인은 사진 속에만 */}
+                  <p
+                    className="absolute inset-x-0 bottom-0 z-[1] px-4 pb-3.5 text-center text-[10.5px] font-bold"
+                    style={{ color: "rgba(245,239,231,.85)", letterSpacing: "0.14em" }}
+                  >
+                    THIERRY HENRY · No.14 · 친필 사인 — 정품 확인서 포함
+                  </p>
                 </div>
               </div>
             </div>
@@ -551,7 +595,7 @@ export default async function SeasonEventPage({
             >
               {previewTotalRegs > 0 && (
                 <span className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
-                  참여 팬{" "}
+                  참가 구너{" "}
                   <b className="gn-num text-[17px]" style={{ color: "var(--gn-cream)" }}>
                     {previewTotalRegs.toLocaleString()}
                   </b>
@@ -566,7 +610,7 @@ export default async function SeasonEventPage({
                 </span>
               )}
               <span className="text-[13px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
-                이벤트 기간{" "}
+                레이스 기간{" "}
                 <b style={{ color: "var(--gn-cream)" }}>
                   {fmtDate(event.start_at)} ~ {fmtDate(event.end_at)}
                 </b>
@@ -586,279 +630,8 @@ export default async function SeasonEventPage({
 
       {/* ══ 라이트 존 ══ */}
       <main className="mx-auto w-full max-w-[1080px] px-4 pt-9 sm:px-6">
-        {/* 팀 선택 */}
-        <div className="mb-3 text-center">
-          <p
-            className="mb-1.5 text-[12px] font-extrabold"
-            style={{ color: "var(--wc-burgundy)", letterSpacing: "0.18em" }}
-          >
-            ★ ★ ★&nbsp;&nbsp;{fandomCountKo} 팬덤, 4주간의 승부&nbsp;&nbsp;★ ★ ★
-          </p>
-          <h2
-            className="text-[26px] sm:text-[30px]"
-            style={{
-              fontFamily: DISPLAY,
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "var(--wc-ink)",
-            }}
-          >
-            어느 팬덤으로 싸울 건가요?
-          </h2>
-        </div>
-        <TeamPicker
-          groups={pickerGroups}
-          myGroupSlug={myGroupSlug}
-          registrationOpen={registrationOpen}
-        />
-
-        {/* 내 응모 진행 — 등록자에게만 (예측 완료 직후 주입 동선의 목적지, 설계 §4) */}
-        {myPoints && (
-          <div
-            className="mt-4 rounded-xl px-5 py-4"
-            style={{
-              background: "#fff",
-              border: "1px solid var(--wc-line)",
-              boxShadow: "var(--wc-shadow-1)",
-            }}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[14.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                내 응모 진행
-              </span>
-              {myPoints.qualified ? (
-                <span
-                  className="rounded-full px-2.5 py-[3px] text-[11.5px] font-bold text-white"
-                  style={{ background: "var(--wc-go, #2e7d4f)" }}
-                >
-                  ✓ 추첨 응모 자격 달성
-                </span>
-              ) : (
-                <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
-                  {myPoints.totalPoints < POINTS_THRESHOLD &&
-                    `응모까지 ${POINTS_THRESHOLD - myPoints.totalPoints}점`}
-                  {myPoints.totalPoints < POINTS_THRESHOLD &&
-                    myPoints.communityActions < MIN_COMMUNITY_ACTIONS &&
-                    " · "}
-                  {myPoints.communityActions < MIN_COMMUNITY_ACTIONS &&
-                    `커뮤니티 활동 ${MIN_COMMUNITY_ACTIONS - myPoints.communityActions}회 남음`}
-                </span>
-              )}
-            </div>
-            <div
-              className="mt-2.5 h-2.5 overflow-hidden rounded-full"
-              style={{ background: "var(--wc-soft)" }}
-              role="progressbar"
-              aria-valuenow={Math.min(myPoints.totalPoints, POINTS_THRESHOLD)}
-              aria-valuemax={POINTS_THRESHOLD}
-            >
-              <div
-                className="h-full rounded-full transition-[width]"
-                style={{
-                  width: `${Math.min(100, (myPoints.totalPoints / POINTS_THRESHOLD) * 100)}%`,
-                  background:
-                    "linear-gradient(90deg, var(--wc-burgundy), var(--gn-bg-700, #771629))",
-                }}
-              />
-            </div>
-            <div
-              className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-semibold"
-              style={{ color: "var(--wc-mute-2)" }}
-            >
-              <span className="tnum" style={{ color: "var(--wc-ink)" }}>
-                {myPoints.totalPoints} / {POINTS_THRESHOLD}점
-              </span>
-              <span className="tnum">
-                커뮤니티 활동 {Math.min(myPoints.communityActions, MIN_COMMUNITY_ACTIONS)}/
-                {MIN_COMMUNITY_ACTIONS}
-              </span>
-              {myPoints.predictionPoints > 0 && (
-                <span className="tnum">예측 +{myPoints.predictionPoints}</span>
-              )}
-              {myPoints.postPoints > 0 && <span className="tnum">글 +{myPoints.postPoints}</span>}
-              {myPoints.commentPoints > 0 && (
-                <span className="tnum">댓글 +{myPoints.commentPoints}</span>
-              )}
-              {myPoints.votePoints > 0 && (
-                <span className="tnum">받은 추천 +{myPoints.votePoints}</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 기간·참여·보상 3열 정보 행 (시안 A 하단 문법) */}
-        <div
-          className="mt-4 grid gap-px overflow-hidden rounded-xl sm:grid-cols-3"
-          style={{ background: "var(--wc-line)", border: "1px solid var(--wc-line)" }}
-        >
-          {[
-            ["대항전 기간", "4주간", `${fmtDate(event.start_at)} ~ ${fmtDate(event.end_at)}`],
-            ["참여 방법", "예측하고, 떠들어라", "매일 무료 볼 10개 + 매치데이 댓글이 응모권"],
-            [
-              "보상 안내",
-              "활동하면 추첨 자격",
-              CREATOR_DUEL_ENABLED
-                ? "사인 상품·유니폼·매주 스팀 — 예측만으론 응모 불가"
-                : "사인 상품·매주 스팀 — 예측만으론 응모 불가",
-            ],
-          ].map(([k, t, d]) => (
-            <div key={k} className="px-5 py-4" style={{ background: "var(--wc-card, #fff)" }}>
-              <p className="mb-1 text-[11.5px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
-                {k}
-              </p>
-              <p className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                {t}
-              </p>
-              <p
-                className="mt-0.5 text-[12.5px]"
-                style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
-              >
-                {d}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* 주간 팬덤 순위 발표 — 매주 월요일 스냅샷만 노출 (실시간 비공개 정책) */}
-        <section className="mt-12">
-          <div className="mb-[18px] text-center">
-            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-              Weekly standings
-            </div>
-            <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
-              style={{ letterSpacing: "-.03em" }}
-            >
-              이번 주 팬덤 순위
-            </h2>
-            <p className="mt-[8px] text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
-              {weeklyCapturedAt
-                ? `${fmtDate(weeklyCapturedAt)} 발표 — 다음 발표는 다음 주 월요일`
-                : "첫 발표는 개막 후 첫 월요일 자정에 올라옵니다"}
-            </p>
-          </div>
-          {weeklyStandings.length > 0 ? (
-            <div
-              className="overflow-hidden rounded-xl"
-              style={{ border: "1px solid var(--wc-line)", background: "#fff" }}
-            >
-              {weeklyStandings.map((s, i) => {
-                const g = pickerGroups.find((p) => p.slug === s.slug)
-                if (!g) return null
-                return (
-                  <div
-                    key={s.slug}
-                    className="flex items-center gap-3.5 px-4 py-3.5"
-                    style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : "none" }}
-                  >
-                    <span
-                      className="gn-num w-7 text-center text-[20px] font-bold"
-                      style={{ color: i === 0 ? "var(--wc-burgundy)" : "var(--wc-mute-2)" }}
-                    >
-                      {i + 1}
-                    </span>
-                    {g.crest && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={g.crest} alt="" className="h-8 w-8 object-contain" loading="lazy" />
-                    )}
-                    <span className="flex-1 text-[16px] font-extrabold" style={{ color: g.color }}>
-                      {g.club_kor}
-                    </span>
-                    <span className="text-[12px] font-bold" style={{ color: "var(--wc-mute-2)" }}>
-                      유효 참여 {s.qualifiedCount.toLocaleString()}명
-                    </span>
-                    <span
-                      className="tnum text-[15px] font-extrabold"
-                      style={{ color: "var(--wc-ink)" }}
-                    >
-                      예측력 {s.avgSkill.toFixed(2)}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div
-              className="rounded-xl px-5 py-6 text-center text-[13.5px] font-semibold"
-              style={{
-                border: "1px dashed var(--wc-line-2)",
-                color: "var(--wc-mute)",
-                background: "#fff",
-                wordBreak: "keep-all",
-              }}
-            >
-              아직 발표 전입니다 — 개막하면 매주 월요일, {fandomCountKo} 팬덤의 예측력 평균이 여기서
-              갈립니다.
-            </div>
-          )}
-
-          {/* 이번 주 당첨자 — 추첨은 백단 cron 이 끝냈고 여기서는 연출로 공개만 한다.
-              이름을 한 줄로 나열하면 공지가 되지만, 칸이 하나씩 멈추면 발표가 된다. */}
-          {weeklyDraw && (
-            <div className="mt-4">
-              <WeeklyDrawReveal
-                weekStart={weeklyDraw.week_start}
-                winners={weeklyDraw.winners}
-                candidateCount={weeklyDraw.candidate_count}
-                poolNames={weeklyDraw.poolNames}
-                duelScores={weeklyDraw.duelScores}
-                duelWinnerSlug={weeklyDraw.duelWinnerSlug}
-                uniformWinner={weeklyDraw.uniformWinner}
-                groupColors={Object.fromEntries(
-                  (groups ?? []).map((g) => [g.slug, g.color ?? "#8b1e3f"])
-                )}
-              />
-            </div>
-          )}
-        </section>
-
-        {/* 순위 규칙 — 예측력 */}
-        <section className="mt-12">
-          <div className="mb-[18px] text-center">
-            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-              Ranking
-            </div>
-            <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
-              style={{ letterSpacing: "-.03em" }}
-            >
-              순위는 &lsquo;예측력&rsquo;으로 가립니다
-            </h2>
-          </div>
-          <div
-            className="rounded-xl"
-            style={{
-              background: "var(--wc-wine-tint)",
-              border: "1px solid rgba(150,30,55,.2)",
-              padding: "18px 20px",
-            }}
-          >
-            <ul
-              className="flex flex-col gap-2.5 text-[14px]"
-              style={{ lineHeight: 1.65, color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
-            >
-              <li>
-                <b style={{ color: "var(--wc-burgundy)" }}>어려운 경기를 맞힐수록 크게 오릅니다.</b>{" "}
-                모두가 맞히는 쉬운 픽은 점수가 거의 오르지 않아요.
-              </li>
-              <li>
-                <b style={{ color: "var(--wc-burgundy)" }}>한 방 몰아주기로는 못 올라갑니다.</b>{" "}
-                대박 한 번보다 꾸준한 적중이 유리하도록 설계했습니다.
-              </li>
-              <li>
-                정산된 예측이 <b>5회 이상</b>인 참가자만 순위에 들어갑니다 — 팀 순위도 이 참가자들의
-                평균으로 계산해요.
-              </li>
-              <li>
-                팀 순위·평균 성적은 <b>매주 월요일에만 공개</b>됩니다. 역전은 마지막 주에도 일어날
-                수 있어요.
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        {/* 진행 방식 */}
-        <section className="mt-12">
+        {/* 참가 방법 3단계 */}
+        <section>
           <div className="mb-[24px] text-center">
             <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
               How it works
@@ -867,7 +640,7 @@ export default async function SeasonEventPage({
               className="text-[24px] font-extrabold sm:text-[28px]"
               style={{ letterSpacing: "-.03em" }}
             >
-              진행 방식
+              참가 방법
             </h2>
           </div>
           <div className="grid w-full gap-[18px] text-left sm:grid-cols-3">
@@ -886,135 +659,115 @@ export default async function SeasonEventPage({
               </div>
             ))}
           </div>
+          {/* 타팀 팬 — 자기선언 허용, 카피로 뒤집기 (구너 검수 §2) */}
+          <p
+            className="mt-4 text-center text-[13px]"
+            style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
+          >
+            타팀 팬도 참가할 수 있습니다. 다만 6주 뒤에도 타팀 팬일 수 있을지는 보장 못 합니다.
+          </p>
+          {!isDraft && !isClosed && (
+            <div className="mt-7 text-center">
+              <RaceJoinButton signedIn={!!userId} registrationOpen={registrationOpen} />
+            </div>
+          )}
         </section>
 
-        {/* 주간 맞대결 선언 밴드 — 유니폼의 행방 (다크 = 선언 영역이라 허용).
-            생성 애셋(duel-banner.webp, gpt-image-2): 빨강 vs 파랑 실루엣 사이에 무지
-            유니폼이 전리품처럼 떠 있는 구도 — "유니폼이 어느 팬덤으로 갈지는 대표들의
-            승부에 달렸다"를 카피 없이도 읽히게 한다. 크리에이터 실명은 협업 합의 전이라
-            "양 팀 대표 유튜버"로만 지칭 (2026-08-03).
-            ⚠️ 2026-08-12 제휴 무산으로 꺼둠 — CREATOR_DUEL_ENABLED 주석 참조. */}
-        {CREATOR_DUEL_ENABLED && (
-          <section className="mt-12" aria-label="주간 맞대결 — 유니폼의 행방">
-            <div
-              className="relative overflow-hidden rounded-2xl"
-              style={{ border: "1px solid var(--wc-line)", background: "#0b0a0e" }}
+        {/* 순위 규칙 — 전 리그 프레이밍 + 공정성 (신뢰 장치) */}
+        <section className="mt-12">
+          <div className="mb-[18px] text-center">
+            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+              Ranking
+            </div>
+            <h2
+              className="text-[24px] font-extrabold sm:text-[28px]"
+              style={{ letterSpacing: "-.03em", wordBreak: "keep-all" }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/season/duel-banner.webp"
-                alt=""
-                className="w-full object-cover"
-                style={{ aspectRatio: "16 / 10", objectPosition: "center 38%" }}
-                loading="lazy"
-              />
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(to top, rgba(9,8,11,.92) 0%, rgba(9,8,11,.55) 26%, rgba(9,8,11,0) 55%)",
-                }}
-              />
-              <div className="absolute right-0 bottom-0 left-0 px-5 pb-6 text-center sm:pb-8">
-                {/* 버건디는 뒤의 금색 빛기둥에 묻힌다 — 크림 + 그림자로 대비 확보 */}
-                <p
-                  className="text-[11px] font-extrabold"
-                  style={{
-                    color: "rgba(245,239,231,.85)",
-                    letterSpacing: "0.2em",
-                    textShadow: "0 1px 10px rgba(0,0,0,.9)",
-                  }}
-                >
-                  WEEKLY DUEL
-                </p>
-                <h2
-                  className="mt-1.5"
-                  style={{
-                    fontFamily: DISPLAY,
-                    fontWeight: 700,
-                    fontSize: "clamp(22px, 3.2vw, 34px)",
-                    color: "rgba(245,239,231,.97)",
-                    letterSpacing: "-0.01em",
-                    textShadow: "0 2px 20px rgba(0,0,0,.8)",
-                    wordBreak: "keep-all",
-                  }}
-                >
-                  이번 주 유니폼, 어느 팬덤으로 가는가
-                </h2>
-                <p
-                  className="mx-auto mt-2.5 max-w-[560px] text-[13.5px] sm:text-[14.5px]"
-                  style={{
-                    lineHeight: 1.6,
-                    color: "rgba(245,239,231,.78)",
-                    wordBreak: "keep-all",
-                  }}
-                >
-                  양 팀을 대표하는 유튜버가 매주 승부예측으로 맞붙습니다. 이긴 쪽 팬덤에서 유니폼
-                  주인공이 나옵니다 — 우리 대표가 이겨야 우리 쪽에 기회가 옵니다.
-                </p>
-                <p className="mt-2 text-[12px] font-bold" style={{ color: "rgba(245,239,231,.5)" }}>
-                  결과는 매주 월요일, 팬덤 순위와 함께 발표
-                </p>
+              왜 전 리그인가
+            </h2>
+            <p
+              className="mx-auto mt-[10px] max-w-[620px] text-[14.5px]"
+              style={{ color: "var(--wc-mute)", lineHeight: 1.65, wordBreak: "keep-all" }}
+            >
+              리그는 우리 38경기로 끝나지 않습니다. 시티가 미끄러지는 밤, 토트넘이 무너지는 오후 —
+              남의 경기를 읽는 눈이 진짜 축구 보는 눈입니다. 그래서 레이스는 전 리그입니다.
+            </p>
+          </div>
+          <div
+            className="rounded-xl"
+            style={{
+              background: "var(--wc-wine-tint)",
+              border: "1px solid rgba(150,30,55,.2)",
+              padding: "18px 20px",
+            }}
+          >
+            <ul
+              className="flex flex-col gap-2.5 text-[14px]"
+              style={{ lineHeight: 1.65, color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
+            >
+              <li>
+                <b style={{ color: "var(--wc-burgundy)" }}>
+                  많이 찍는다고 올라가지 않습니다. 잘 찍어야 올라갑니다.
+                </b>{" "}
+                순위는 net 손익 — 적중하면 stake×(배당−1)을 얻고, 빗나가면 stake 를 잃습니다.
+              </li>
+              <li>
+                <b style={{ color: "var(--wc-burgundy)" }}>아스날 경기 보너스는 없습니다.</b> 배점은
+                전 경기 동일합니다. 어차피 심장으로 찍을 거잖아요.
+              </li>
+              <li>
+                기간 내 <b>축구 승부예측 전부</b>가 자동 집계됩니다 — 따로 응모하거나 등록할 픽이
+                없습니다.
+              </li>
+              <li>
+                TOP 5와 내 순위는 <b>상시 공개</b>됩니다. 역전은 마지막 주에도 일어날 수 있어요.
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* 아스날 소식 — 신청 전에도 읽을거리 먼저 (막다른 골목 금지) */}
+        {arsenalNews.length > 0 && (
+          <section className="mt-12">
+            <div className="mb-[18px] text-center">
+              <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
+                Arsenal news
               </div>
+              <h2
+                className="text-[24px] font-extrabold sm:text-[28px]"
+                style={{ letterSpacing: "-.03em" }}
+              >
+                아스날 소식
+              </h2>
+            </div>
+            <div
+              className="overflow-hidden rounded-xl"
+              style={{ border: "1px solid var(--wc-line)", background: "#fff" }}
+            >
+              {arsenalNews.map((n, i) => (
+                <Link
+                  key={n.id}
+                  href={`/post/${n.id}?ref=event`}
+                  className="flex items-baseline justify-between gap-3 px-5 py-3.5 hover:underline"
+                  style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : "none" }}
+                >
+                  <span
+                    className="min-w-0 truncate text-[14px] font-semibold"
+                    style={{ color: "var(--wc-ink)" }}
+                  >
+                    📰 {n.title}
+                  </span>
+                  <span className="shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                    {formatRelativeTime(new Date(n.created_at))}
+                  </span>
+                </Link>
+              ))}
             </div>
           </section>
         )}
 
-        {/* 상품 안내 — 활동 기준 추첨 (컴플라이언스: 순위 직결 아님) */}
-        <section className="mt-12">
-          <div className="mb-[20px] text-center">
-            <div className="wc-sec-eb" style={{ marginBottom: 8 }}>
-              Prize
-            </div>
-            <h2
-              className="text-[24px] font-extrabold sm:text-[28px]"
-              style={{ letterSpacing: "-.03em" }}
-            >
-              상품 안내
-            </h2>
-            <p className="mt-[10px] text-[14.5px]" style={{ color: "var(--wc-mute)" }}>
-              활동 포인트를 달성한 참가자 대상 추첨입니다. 예측만으로는 응모할 수 없어요 — 커뮤니티
-              활동 3회가 필요합니다.
-            </p>
-          </div>
-          <div
-            className="w-full overflow-hidden rounded-xl text-left"
-            style={{ border: "1px solid var(--wc-line)", background: "#fff" }}
-          >
-            {PRIZES.map(([tier, desc, n, how], i) => (
-              <div
-                key={tier}
-                className="grid grid-cols-[96px_1fr_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[130px_1fr_90px_1fr]"
-                style={{ borderTop: i > 0 ? "1px solid var(--wc-line)" : "none" }}
-              >
-                <span className="text-[13.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                  {tier}
-                </span>
-                <span
-                  className="text-[13px]"
-                  style={{ color: "var(--wc-mute)", wordBreak: "keep-all" }}
-                >
-                  {desc}
-                </span>
-                <span
-                  className="tnum text-right text-[13px] font-bold"
-                  style={{ color: "var(--wc-burgundy)" }}
-                >
-                  {n}
-                </span>
-                <span
-                  className="col-span-3 text-[12.5px] sm:col-span-1"
-                  style={{ color: "var(--wc-mute-2)", wordBreak: "keep-all" }}
-                >
-                  {how}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* 유의사항 */}
-        <section className="mt-12 pb-10">
+        <section className="mt-12 pb-14">
           <div className="wc-panel">
             <h3
               className="mb-[14px] text-[15.5px] font-extrabold"
@@ -1040,10 +793,6 @@ export default async function SeasonEventPage({
           </div>
         </section>
       </main>
-
-      <div className="pb-[56px] text-center text-[13px]" style={{ color: "var(--wc-mute)" }}>
-        {fandomCountKo} 팬덤의 자존심이 여기서 갈립니다 — 당신의 팀은 어디입니까
-      </div>
     </div>
   )
 }

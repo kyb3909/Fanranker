@@ -7,8 +7,9 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 /**
  * POST /api/event/season/register — 시즌 오픈 팬덤 대항전 참가 등록.
  *
- * 월드컵 register 와 동일 골격이되 2팀(kop/blues) 허용.
+ * 월드컵 register 와 동일 골격.
  * 2026-08-02: 대결이 리빅 vs 첼루키 2인으로 확정되어 gooner 제거 (등록 0건 상태에서 정리).
+ * 2026-08-14: 아스날 단독 전환(구너스 레이스) — 참가는 gooner 로만 받는다.
  * - Clerk 로그인 필수, UNIQUE (event_id, user_id) — 팀 변경 불가 (설계 §3)
  * - traffic_source: 클라이언트가 최초 터치 UTM(channel)을 실어 보냄 — 유튜버별 귀속
  */
@@ -16,9 +17,10 @@ import { apiError, apiBadRequest, checkRateLimit } from "@/lib/api-error"
 const EVENT_SLUG = "season-open-2026"
 
 const RegisterSchema = z.object({
-  // 2026-08-12 아스날(gooner) 복원 — 3팀. DB event_groups 와 이 enum 이 어긋나면
-  // "화면에 보이는데 등록은 실패하는" 팀이 생긴다(20260802b 가 경계한 바로 그 불일치).
-  group_slug: z.enum(["kop", "blues", "gooner"]),
+  // 2026-08-14 아스날 단독 전환(구너스 레이스) — kop/blues 제거, gooner 한정.
+  // kop/blues 행은 event_groups 에 남아 있지만 화면(팀 선택 UI 제거)과 API 를
+  // 같은 커밋에서 함께 닫아 "화면에 보이는데 등록은 실패하는" 불일치(20260802b)를 피한다.
+  group_slug: z.enum(["gooner"]),
   traffic_source: z.string().min(1).max(64).nullable().optional(),
 })
 

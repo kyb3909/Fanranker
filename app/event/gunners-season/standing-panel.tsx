@@ -8,107 +8,121 @@ const fetcher = (u: string) => fetch(u).then((r) => (r.ok ? r.json() : null))
 /**
  * 내 레이스 현황 + 구너 랭킹 TOP 5 — 개인화 데이터라 클라이언트에서 가져온다
  * (서버 ISR 페이지에 내 순위를 심으면 캐시로 다른 유저에게 샌다).
+ *
+ * 2026-08-14 허브 통합: /season S2 레이스 허브가 ①내 순위 … ⑤TOP5 로 두 카드를
+ * 떨어뜨려 배치하므로 컴포넌트를 둘로 분리했다. SWR 키가 같아 요청은 1회로 dedupe.
  */
-export function RaceStandingPanel() {
-  const { data } = useSWR<RaceStanding & { event: { live: boolean } }>(
-    "/api/event/gunners-season/standing",
-    fetcher,
-    { revalidateOnFocus: false }
-  )
 
-  const cardStyle = {
-    background: "var(--wc-card)",
-    border: "1px solid var(--wc-line)",
-    boxShadow: "var(--wc-shadow-1)",
-  } as const
+type StandingResponse = RaceStanding & { event: { live: boolean } }
 
-  const winRate = (r: RaceRow) => (r.slips > 0 ? Math.round((r.won / r.slips) * 100) : 0)
+function useRaceStanding() {
+  return useSWR<StandingResponse>("/api/event/gunners-season/standing", fetcher, {
+    revalidateOnFocus: false,
+  })
+}
+
+const cardStyle = {
+  background: "var(--wc-card)",
+  border: "1px solid var(--wc-line)",
+  boxShadow: "var(--wc-shadow-1)",
+} as const
+
+const winRate = (r: RaceRow) => (r.slips > 0 ? Math.round((r.won / r.slips) * 100) : 0)
+
+/** ① 내 레이스 현황 — S2 허브 최상단 (재방문자가 3초 안에 자기 숫자를 찾는 카드) */
+export function RaceMyPanel() {
+  const { data } = useRaceStanding()
 
   return (
-    <>
-      <section className="rounded-xl p-4" style={cardStyle}>
-        <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-          내 레이스 현황
-        </h2>
-        {data?.me ? (
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
-                {data.me.rank}위
-              </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                / {data.participants}명
-              </p>
-            </div>
-            <div>
-              <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                {data.me.points.toLocaleString()}P
-              </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                net 포인트
-              </p>
-            </div>
-            <div>
-              <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-                {winRate(data.me)}%
-              </p>
-              <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                적중률 ({data.me.won}/{data.me.slips})
-              </p>
-            </div>
+    <section className="rounded-xl p-4" style={cardStyle}>
+      <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+        내 레이스 현황
+      </h2>
+      {data?.me ? (
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
+              {data.me.rank}위
+            </p>
+            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              / {data.participants}명
+            </p>
           </div>
-        ) : (
-          <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
-            기간 내 축구 예측 슬립이 곧 레이스 참가입니다 — 지금 픽 하나면 순위표에 올라가요.
-          </p>
-        )}
-      </section>
+          <div>
+            <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+              {data.me.points.toLocaleString()}P
+            </p>
+            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              net 포인트
+            </p>
+          </div>
+          <div>
+            <p className="text-[20px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+              {winRate(data.me)}%
+            </p>
+            <p className="text-[11px]" style={{ color: "var(--wc-mute)" }}>
+              적중률 ({data.me.won}/{data.me.slips})
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--wc-mute)" }}>
+          기간 내 축구 예측 슬립이 곧 레이스 참가입니다 — 지금 픽 하나면 순위표에 올라가요.
+        </p>
+      )}
+    </section>
+  )
+}
 
-      <section className="rounded-xl p-4" style={cardStyle}>
-        <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-          🏆 구너 랭킹 TOP 5
-        </h2>
-        {data?.top?.length ? (
-          <ul className="mt-3 space-y-1.5">
-            {data.top.map((r, i) => (
-              <li
-                key={r.userId}
-                className="flex items-center justify-between gap-2 rounded-lg px-3 py-2"
-                style={
-                  i === 0
-                    ? { background: "color-mix(in srgb, var(--wc-gold) 22%, white)" }
-                    : { background: "var(--wc-soft)" }
-                }
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="w-5 shrink-0 text-center text-[13px] font-extrabold"
-                    style={{ color: i === 0 ? "var(--wc-gold-deep)" : "var(--wc-mute)" }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span
-                    className="truncate text-[13.5px] font-bold"
-                    style={{ color: "var(--wc-ink)" }}
-                  >
-                    {r.nickname}
-                  </span>
+/** ⑤ 구너 랭킹 TOP 5 — S2 허브 하단 (콘텐츠 섹션 뒤, 닉네임 리스트는 후순위) */
+export function RaceTopPanel() {
+  const { data } = useRaceStanding()
+
+  return (
+    <section className="rounded-xl p-4" style={cardStyle}>
+      <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+        🏆 구너 랭킹 TOP 5
+      </h2>
+      {data?.top?.length ? (
+        <ul className="mt-3 space-y-1.5">
+          {data.top.map((r, i) => (
+            <li
+              key={r.userId}
+              className="flex items-center justify-between gap-2 rounded-lg px-3 py-2"
+              style={
+                i === 0
+                  ? { background: "color-mix(in srgb, var(--wc-gold) 22%, white)" }
+                  : { background: "var(--wc-soft)" }
+              }
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span
+                  className="w-5 shrink-0 text-center text-[13px] font-extrabold"
+                  style={{ color: i === 0 ? "var(--wc-gold-deep)" : "var(--wc-mute)" }}
+                >
+                  {i + 1}
                 </span>
                 <span
-                  className="shrink-0 text-[13px] font-extrabold tabular-nums"
-                  style={{ color: "var(--wc-ink-2)" }}
+                  className="truncate text-[13.5px] font-bold"
+                  style={{ color: "var(--wc-ink)" }}
                 >
-                  {r.points.toLocaleString()}P
+                  {r.nickname}
                 </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
-            아직 순위가 없어요 — 첫 주인공이 되어보세요.
-          </p>
-        )}
-      </section>
-    </>
+              </span>
+              <span
+                className="shrink-0 text-[13px] font-extrabold tabular-nums"
+                style={{ color: "var(--wc-ink-2)" }}
+              >
+                {r.points.toLocaleString()}P
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-[13px]" style={{ color: "var(--wc-mute)" }}>
+          아직 순위가 없어요 — 첫 주인공이 되어보세요.
+        </p>
+      )}
+    </section>
   )
 }
