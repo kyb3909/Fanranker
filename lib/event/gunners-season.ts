@@ -17,7 +17,10 @@ type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
 export const GUNNERS_SEASON = {
   slug: "gunners-season",
-  title: "건너스 레이스",
+  /** events 테이블의 실제 이벤트 행 — 등록(event_registrations)이 여기 매달린다 */
+  dbSlug: "season-open-2026",
+  // "건너스"는 팬이 안 쓰는 오표기 (구너 검수 P0, 2026-08-14) — 표기만 교체, slug 는 유지
+  title: "구너스 레이스",
   // KST 8/22 00:00 ~ 10/1 00:00
   startAt: "2026-08-21T15:00:00.000Z",
   endAt: "2026-09-30T15:00:00.000Z",
@@ -42,7 +45,8 @@ export interface RaceStanding {
 }
 
 /**
- * 기간 내 축구 슬립 → 유저별 net 손익 랭킹.
+ * 기간 내 축구 슬립 → 유저별 net 손익 랭킹. **참가 신청자만** 집계한다
+ * (2026-08-14 명시적 참가제 전환 — 신청이 곧 랭킹 자격).
  * pending/refunded 는 점수 제외 (정산 완료분만) — 슬립 수에는 pending 포함해
  * "참여 중" 감각은 살린다.
  */
@@ -51,6 +55,18 @@ export async function computeRaceStanding(
   meUserId: string | null,
   topN = 5
 ): Promise<RaceStanding> {
+  // 참가 신청자 집합 — season-open-2026 등록 기준
+  const { data: ev } = await supabase
+    .from("events")
+    .select("id")
+    .eq("slug", GUNNERS_SEASON.dbSlug)
+    .maybeSingle()
+  const { data: regs } = ev
+    ? await supabase.from("event_registrations").select("user_id").eq("event_id", ev.id)
+    : { data: [] as { user_id: string }[] }
+  const registered = new Set((regs ?? []).map((r) => r.user_id))
+  if (registered.size === 0) return { top: [], me: null, participants: 0 }
+
   const { data: slips } = await supabase
     .from("prediction_slips")
     .select("user_id, stake, total_odds, status")
@@ -61,6 +77,7 @@ export async function computeRaceStanding(
 
   const byUser = new Map<string, { points: number; slips: number; won: number }>()
   for (const s of slips ?? []) {
+    if (!registered.has(s.user_id)) continue
     const row = byUser.get(s.user_id) ?? { points: 0, slips: 0, won: 0 }
     row.slips += 1
     const stake = Number(s.stake) || 0

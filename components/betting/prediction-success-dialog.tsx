@@ -217,7 +217,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
             제출 직후에 알려준다. 이벤트 페이지가 다시 콘텐츠 허브로 이어진다 */}
         {state.sport === "축구" && isEventLive() && (
           <Link
-            href="/event/gunners-season?ref=pick"
+            href="/season?ref=pick"
             onClick={() => trackEvent({ name: "prediction_modal_event_click", params: {} })}
             className="flex min-w-0 items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90"
             style={{
@@ -229,7 +229,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
               className="min-w-0 truncate text-[13px] font-bold"
               style={{ color: "var(--wc-burgundy, #961e37)" }}
             >
-              🏁 건너스 레이스에 반영됐어요
+              🏁 구너스 레이스에 반영됐어요
             </span>
             <span
               className="shrink-0 text-[12px] font-bold"
