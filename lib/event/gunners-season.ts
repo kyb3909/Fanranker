@@ -1,16 +1,18 @@
 import type { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
- * 구너스 레이스 — 아스날 팬 시즌 이벤트 (2026-08-22 ~ 09-30, 1차 구간).
+ * 2026/27 프리미어리그 개막 기념 승부예측 이벤트 (2026-08-21 ~ 09-30, 1차 구간).
+ * ⚠️ 파일명·slug 는 옛 이름(gunners-season)을 유지한다 — URL 과 DB 키라 바꾸면 링크가 깨진다.
  *
  * ## 설계 (workspace/event-gunners-season-plan-20260814.md)
  * - **별도 예측 풀이 없다.** 기간 내 축구(sport='축구') 슬립을 그대로 집계한다 —
  *   월드컵의 event_id 분리 방식보다 단순하고, 유저는 평소처럼 /prediction 에서 픽하면
- *   자동으로 레이스에 올라탄다 (참가 마찰 0).
+ *   자동으로 순위에 올라탄다 (참가 마찰 0).
  * - 점수 = 슬립 단위 net 손익 (월드컵 검증 모델: won = stake×(total_odds−1), lost = −stake).
  *   points_earned(배당 합계) 함정을 피한 그 산식 그대로.
  * - 아스날 보너스 없음 (운영자 확정 2026-08-14) — 아스날 경기는 UI 강조만.
  * - 랭킹 TOP 5 + 내 순위 공개 (월드컵의 비공개 정책 해제 — 운영자 확정).
+ * - 상품 자격은 점수와 **별개 축**이다 (MIN_ACTIVE_DAYS) — 아래 상수 주석 참조.
  */
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
@@ -19,13 +21,33 @@ export const GUNNERS_SEASON = {
   slug: "gunners-season",
   /** events 테이블의 실제 이벤트 행 — 등록(event_registrations)이 여기 매달린다 */
   dbSlug: "season-open-2026",
-  // "건너스"는 팬이 안 쓰는 오표기 (구너 검수 P0, 2026-08-14) — 표기만 교체, slug 는 유지
-  title: "구너스 레이스",
+  // 운영자 확정 2026-08-14: 구호체 이름("구너스 레이스")을 버리고 사실 명칭만 쓴다.
+  // 표기만 교체하고 slug/dbSlug/파일명은 유지 — URL·DB 키라 바꾸면 링크가 깨진다.
+  title: "2026/27 프리미어리그 개막 기념 승부예측 이벤트",
+  /** 반복 노출 자리(밴드·모달·스트립)용 축약형 — 같은 이벤트를 가리킨다 */
+  shortTitle: "개막 기념 승부예측 이벤트",
   // KST 8/21 00:00 ~ 10/1 00:00 — 개막 라운드(8/21 밤 경기)부터 예측이 열리도록
   // 시작을 하루 당겼다 (운영자 2026-08-14). 8/22 로 적힌 문구가 남아 있으면 그건 옛 값.
   startAt: "2026-08-20T15:00:00.000Z",
   endAt: "2026-09-30T15:00:00.000Z",
 } as const
+
+/**
+ * 상품 자격 최소 참여 일수 (KST 기준 서로 다른 날에 예측한 일수).
+ *
+ * 왜 있나: 점수만으로 1등을 뽑으면 배당 높은 한 방을 운으로 맞힌 계정이 그대로 유니폼을
+ * 가져간다. "가장 잘 맞힌 사람"이 아니라 "가장 운 좋았던 하루"에 상품이 가는 셈이라,
+ * 꾸준히 참여한 사람이 이길 이유가 사라진다.
+ *
+ * ⚠️ **정렬은 건드리지 않는다.** 순위표에서 사람을 지우면 "왜 내가 없지?"가 되고,
+ * 그건 자격 규칙보다 훨씬 비싼 이탈이다. 점수 순위는 그대로 두고 자격만 표시로 가른다.
+ * 화면(순위 카드·결과 요약)과 규칙 문구가 이 상수 하나를 같이 읽어야 한다.
+ */
+export const MIN_ACTIVE_DAYS = 10
+
+/** KST 날짜 키 (YYYY-MM-DD) — 활동 일수 집계 단위. UTC+9 로 밀어 ISO 앞 10자리를 쓴다 */
+const kstDayKey = (iso: string): string =>
+  new Date(new Date(iso).getTime() + 9 * 3_600_000).toISOString().slice(0, 10)
 
 export function isEventLive(now = new Date()): boolean {
   return now >= new Date(GUNNERS_SEASON.startAt) && now < new Date(GUNNERS_SEASON.endAt)
@@ -47,6 +69,10 @@ export interface RaceRow {
   won: number
   /** 정산이 끝난 슬립 수 (won + lost). 적중률 분모 — pending/cancelled 를 실패로 세지 않는다 */
   settled: number
+  /** 예측한 날의 수 (KST, 서로 다른 날짜). 정산 여부와 무관 — "참여"의 척도라서 */
+  activeDays: number
+  /** 상품 자격 — activeDays >= MIN_ACTIVE_DAYS. 순위(정렬)와는 별개 축이다 */
+  eligible: boolean
 }
 
 export interface RaceStanding {
@@ -104,15 +130,20 @@ export async function computeRaceStanding(
 
   // 신청자는 예측 0건이어도 순위표에 오른다 — 신청이 곧 참가이므로 "N명 중 내 자리"가
   // 신청 직후부터 보여야 한다 (빈손이면 공동 꼴찌에서 출발).
-  const byUser = new Map<string, { points: number; slips: number; won: number; settled: number }>()
+  const byUser = new Map<
+    string,
+    { points: number; slips: number; won: number; settled: number; days: Set<string> }
+  >()
   for (const userId of joinedAt.keys())
-    byUser.set(userId, { points: 0, slips: 0, won: 0, settled: 0 })
+    byUser.set(userId, { points: 0, slips: 0, won: 0, settled: 0, days: new Set() })
   for (const s of slips ?? []) {
     const joined = joinedAt.get(s.user_id)
     if (joined === undefined) continue
     if (new Date(s.created_at).getTime() < joined) continue // 신청 전 슬립 제외
     const row = byUser.get(s.user_id)!
     row.slips += 1
+    // 활동 일수는 **제출 시점** 기준 — 정산 결과와 무관하다. 틀린 날도 참여한 날이다.
+    row.days.add(kstDayKey(s.created_at))
     const stake = Number(s.stake) || 0
     if (s.status === "won") {
       row.points += stake * ((Number(s.total_odds) || 1) - 1)
@@ -153,6 +184,8 @@ export async function computeRaceStanding(
     slips: r.slips,
     won: r.won,
     settled: r.settled,
+    activeDays: r.days.size,
+    eligible: r.days.size >= MIN_ACTIVE_DAYS,
   })
 
   return {

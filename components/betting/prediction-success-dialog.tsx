@@ -228,7 +228,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
           </DialogDescription>
         </DialogHeader>
 
-        {/* 구너스 레이스 스트립 (8/22~9/30) — 신청자에게는 "반영됐다", 미신청자에게는
+        {/* 개막 기념 승부예측 이벤트 스트립 (8/21~9/30) — 신청자에게는 "반영됐다", 미신청자에게는
             "신청하면 다음 예측부터"라고 말한다. 참여는 신청 이후부터이므로(운영자 확정
             2026-08-14) 미신청자에게 반영됐다고 하면 그건 거짓말이다. */}
         {state.sport === "축구" && isEventLive() && (
@@ -246,8 +246,8 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
               style={{ color: "var(--wc-burgundy, #961e37)" }}
             >
               {eventRegistered
-                ? "🏁 구너스 레이스에 반영됐어요"
-                : "🏁 구너스 레이스 — 신청하면 다음 예측부터"}
+                ? "🏁 개막 기념 승부예측 이벤트에 반영됐어요"
+                : "🏁 개막 기념 승부예측 이벤트 — 신청하면 다음 예측부터"}
             </span>
             <span
               className="shrink-0 text-[12px] font-bold"

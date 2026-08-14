@@ -197,19 +197,20 @@ export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayB
                 className="text-[11px] font-extrabold uppercase"
                 style={{ color: "var(--wc-gold)", letterSpacing: "0.12em" }}
               >
-                Arsenal Only · 구너스 레이스
+                Arsenal Only · Premier League 2026/27
               </p>
               <p
                 className="font-title mt-1.5 text-[19px] leading-[1.25] font-bold sm:text-[25px]"
                 style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
               >
-                프리미어리그 개막 이벤트
+                개막 기념 승부예측 이벤트
               </p>
               <p
                 className="mt-1 text-[12.5px] sm:text-[13.5px]"
                 style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
               >
-                티에리 앙리가 사인한 14번 유니폼 한 장. 9월 30일 1위가 가져갑니다
+                1등 상품 · 14번 Thierry Henry 사인 유니폼. 국가대표 경기 기간이 시작될 때 1위인
+                사람에게 증정됩니다
               </p>
               <span
                 className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-[12.5px] font-bold"

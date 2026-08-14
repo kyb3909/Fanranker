@@ -8,12 +8,13 @@ import {
   computeRaceStanding,
   fetchMyRaceSlips,
   GUNNERS_SEASON,
+  MIN_ACTIVE_DAYS,
   type RaceResultSlip,
 } from "@/lib/event/gunners-season"
 
 export const metadata: Metadata = {
-  title: "내 예측 결과 — 구너스 레이스",
-  description: "구너스 레이스에 들어간 내 축구 예측과 점수를 한 곳에서 봅니다.",
+  title: "내 예측 결과 — 2026/27 프리미어리그 개막 기념 승부예측 이벤트",
+  description: "개막 기념 승부예측 이벤트에 들어간 내 축구 예측과 점수를 한 곳에서 봅니다.",
   alternates: { canonical: "/season/results" },
   robots: { index: false },
 }
@@ -22,10 +23,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 /**
- * /season/results — 구너스 레이스 **전용** 예측 결과 지면 (2026-08-14 운영자 지시).
+ * /season/results — 개막 기념 승부예측 이벤트 **전용** 결과 지면 (2026-08-14 운영자 지시).
  *
  * /my-predictions 와 다른 페이지다. 그쪽은 전 종목·전 기간의 개인 기록이고,
- * 여기는 "이번 레이스 점수를 만든 예측"만 본다. 그래서 집계 조건을 화면이 따로
+ * 여기는 "이번 이벤트 점수를 만든 예측"만 본다. 그래서 집계 조건을 화면이 따로
  * 정의하지 않고 lib/event/gunners-season.ts 의 fetchMyRaceSlips 를 쓴다 —
  * 순위 계산과 같은 파일, 같은 필터. 두 화면이 각자 조건을 쓰면 "결과엔 5건인데
  * 순위는 3건 기준"이 되고, 상품이 걸린 이벤트에서 그건 곧바로 분쟁이다.
@@ -81,7 +82,7 @@ function EmptyShell({
       <PageBand
         kicker="RESULTS"
         title="내 예측 결과"
-        description="구너스 레이스에 들어간 내 축구 예측만 모아 봅니다."
+        description="개막 기념 승부예측 이벤트에 들어간 내 축구 예측만 모아 봅니다."
       />
       <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-16 sm:px-6">
         <section className="rounded-xl p-6 text-center" style={cardStyle}>
@@ -102,7 +103,7 @@ function EmptyShell({
             className="text-[13px] font-bold"
             style={{ color: "var(--wc-burgundy)" }}
           >
-            구너스 레이스로 돌아가기 →
+            이벤트 안내로 돌아가기 →
           </Link>
         </p>
       </main>
@@ -219,7 +220,7 @@ export default async function SeasonResultsPage() {
     return (
       <EmptyShell
         title="로그인하면 내 결과가 보입니다"
-        body="구너스 레이스에 참가한 계정의 예측만 여기 모입니다. 참가 버튼을 누르면 로그인 창이 먼저 뜹니다."
+        body="개막 기념 승부예측 이벤트에 참가한 계정의 예측만 여기 모입니다. 참가 버튼을 누르면 로그인 창이 먼저 뜹니다."
         action={joinCta}
       />
     )
@@ -230,7 +231,7 @@ export default async function SeasonResultsPage() {
   if (!results.registered) {
     return (
       <EmptyShell
-        title="아직 레이스에 참가하지 않았습니다"
+        title="아직 이벤트에 참가하지 않았습니다"
         body="참가한 다음에 한 축구 예측부터 순위에 들어갑니다. 참가는 9월 30일까지 언제든 할 수 있습니다."
         action={joinCta}
       />
@@ -246,7 +247,7 @@ export default async function SeasonResultsPage() {
       <PageBand
         kicker="RESULTS"
         title="내 예측 결과"
-        description="구너스 레이스에 들어간 내 축구 예측만 모아 봅니다. 참가 전에 한 예측은 여기 없습니다."
+        description="개막 기념 승부예측 이벤트에 들어간 내 축구 예측만 모아 봅니다. 참가 전에 한 예측은 여기 없습니다."
       />
 
       <main className="mx-auto w-full max-w-[880px] space-y-4 px-4 pt-6 pb-16 sm:px-6">
@@ -289,6 +290,49 @@ export default async function SeasonResultsPage() {
               </p>
             </div>
           </div>
+          {/* 상품 자격 — 점수와 다른 축이라 요약 숫자 아래 따로 놓는다.
+              순위 패널(standing-panel.tsx EligibilityBar)과 같은 값·같은 문장을 쓴다 */}
+          {standing.me && (
+            <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--wc-line)" }}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-ink-2)" }}>
+                  상품 자격 · 예측한 날{" "}
+                  <b className="tabular-nums" style={{ color: "var(--wc-burgundy)" }}>
+                    {Math.min(standing.me.activeDays, MIN_ACTIVE_DAYS)}일
+                  </b>{" "}
+                  / {MIN_ACTIVE_DAYS}일
+                </span>
+                <span
+                  className="shrink-0 text-[11.5px] font-extrabold"
+                  style={{
+                    color: standing.me.eligible ? "var(--wc-go, #2f7d5b)" : "var(--wc-mute)",
+                  }}
+                >
+                  {standing.me.eligible
+                    ? "자격 있음"
+                    : `${MIN_ACTIVE_DAYS - standing.me.activeDays}일 남음`}
+                </span>
+              </div>
+              <div
+                className="mt-1.5 h-1.5 overflow-hidden rounded-full"
+                style={{ background: "var(--wc-soft)" }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.min(100, Math.round((standing.me.activeDays / MIN_ACTIVE_DAYS) * 100))}%`,
+                    background: standing.me.eligible
+                      ? "var(--wc-go, #2f7d5b)"
+                      : "var(--wc-burgundy)",
+                  }}
+                />
+              </div>
+              <p className="mt-1.5 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                서로 다른 {MIN_ACTIVE_DAYS}일에 예측해야 상품을 받을 수 있습니다. 순위는 자격과
+                상관없이 점수 순으로 매겨집니다.
+              </p>
+            </div>
+          )}
           {results.pending > 0 && (
             <p className="mt-3 text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
               정산 대기 {results.pending}건은 정산이 끝나는 시점에 점수로 들어갑니다.
@@ -328,7 +372,7 @@ export default async function SeasonResultsPage() {
         {/* ③ TOP 5 요약 */}
         <section className="rounded-xl p-4" style={cardStyle}>
           <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            구너 순위 상위 5명
+            순위 상위 5명
           </h2>
           {standing.top.length > 0 ? (
             <ul className="mt-3 space-y-1.5">
@@ -378,7 +422,7 @@ export default async function SeasonResultsPage() {
             className="text-[13px] font-bold"
             style={{ color: "var(--wc-burgundy)" }}
           >
-            구너스 레이스로 돌아가기 →
+            이벤트 안내로 돌아가기 →
           </Link>
         </p>
       </main>

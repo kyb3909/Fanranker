@@ -131,7 +131,7 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
               style={{ ...card, color: "var(--wc-mute)" }}
             >
               아직 기록된 사료가 없습니다 — 경기가 열리고 이적 소식이 붙는 대로 이 연대기가 써
-              내려갑니다. (EPL 개막 8월 22일)
+              내려갑니다. (EPL 개막 8월 21일)
             </p>
           ) : (
             <div className="relative">

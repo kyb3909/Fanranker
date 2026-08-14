@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast"
 import { getAttribution } from "@/lib/analytics/attribution"
 
 /**
- * 구너스 레이스 원클릭 참가 버튼 — 아스날 단독 전환(2026-08-14)으로 팀 선택 UI 가
+ * 개막 기념 승부예측 이벤트 원클릭 참가 버튼 — 아스날 단독 전환(2026-08-14)으로 팀 선택 UI 가
  * 사라진 자리. S0(비로그인)은 로그인 모달, S1(로그인)은 즉시 등록.
  * 성공/409 → router.refresh() 로 같은 /season 이 S2 허브로 인라인 전환된다
  * (리다이렉트 금지 — 참가 직후 페이지가 "변신"하는 것 자체가 보상).
@@ -49,7 +49,7 @@ export function RaceJoinButton({ registrationOpen }: { registrationOpen: boolean
       const data = await res.json().catch(() => ({}))
       if (res.status === 409) {
         // 다른 기기에서 이미 참가한 경우 — 허브로 그대로 전환
-        toast({ title: "이미 참가 중입니다", description: "레이스 허브로 이동합니다." })
+        toast({ title: "이미 참가 중입니다", description: "이벤트 허브로 이동합니다." })
         router.refresh()
         return
       }

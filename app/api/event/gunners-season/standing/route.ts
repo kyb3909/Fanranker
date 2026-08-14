@@ -7,7 +7,8 @@ import { computeRaceStanding, GUNNERS_SEASON, isEventLive } from "@/lib/event/gu
 export const dynamic = "force-dynamic"
 
 /**
- * GET /api/event/gunners-season/standing — 건너스 레이스 랭킹 (TOP 5 + 내 순위).
+ * GET /api/event/gunners-season/standing — 개막 기념 승부예측 이벤트 랭킹 (TOP 5 + 내 순위).
+ * 응답에 activeDays/eligible 이 함께 실린다 (…standing 스프레드) — 상품 자격 표시용.
  * 비로그인도 TOP 5 는 본다 (유입 표면 원칙). 내 순위는 로그인 시에만.
  */
 export async function GET() {
