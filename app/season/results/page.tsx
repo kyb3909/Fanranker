@@ -232,7 +232,7 @@ export default async function SeasonResultsPage() {
     return (
       <EmptyShell
         title="아직 이벤트에 참가하지 않았습니다"
-        body="참가한 다음에 한 축구 예측부터 순위에 들어갑니다. 참가는 9월 30일까지 언제든 할 수 있습니다."
+        body="참가한 다음에 한 축구 예측부터 순위에 들어갑니다. 참가는 9월 20일까지 언제든 할 수 있습니다."
         action={joinCta}
       />
     )

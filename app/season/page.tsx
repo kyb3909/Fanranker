@@ -14,7 +14,7 @@ import { formatRelativeTime } from "@/lib/utils/date"
 export const metadata: Metadata = {
   title: "2026/27 프리미어리그 개막 기념 승부예측 이벤트",
   description:
-    "매일 무료로 받는 볼 10개로 축구 경기를 예측해 점수를 쌓습니다. 2026년 8월 21일부터 9월 30일까지. 1등 상품은 14번 Thierry Henry 사인 유니폼입니다.",
+    "매일 무료로 받는 볼 10개로 축구 경기를 예측해 점수를 쌓습니다. 2026년 8월 21일부터 9월 20일까지. 1등 상품은 14번 Thierry Henry 사인 유니폼입니다.",
   alternates: { canonical: "/season" },
   openGraph: {
     title: "2026/27 프리미어리그 개막 기념 승부예측 이벤트 | gongnori.fan",
@@ -86,7 +86,7 @@ const RULES: { title: string; lines: string[] }[] = [
     title: "참가 자격",
     lines: [
       "로그인한 뒤 이 페이지의 참가 버튼을 한 번 누르면 참가가 끝납니다. 팀을 고르거나 따로 적을 것은 없습니다.",
-      "참가 접수는 9월 30일까지 언제든 열려 있습니다. 마감일은 따로 두지 않습니다.",
+      "참가 접수는 9월 20일까지 언제든 열려 있습니다. 마감일은 따로 두지 않습니다.",
       "계정당 한 번만 참가할 수 있고, 참가 취소와 재등록은 되지 않습니다.",
       "운영진과 운영 봇 계정은 상품 대상에서 빠집니다.",
     ],
@@ -133,7 +133,7 @@ const RULES: { title: string; lines: string[] }[] = [
     title: "상품 지급",
     lines: [
       "1등 상품은 14번 Thierry Henry 사인 유니폼 한 장입니다. 정품 인증서가 함께 갑니다. 사이즈와 시즌 사양은 별도 공지에 적습니다.",
-      `국가대표 경기 기간이 시작될 때 1위인 사람에게 증정됩니다. 그 시점에 ${MIN_ACTIVE_DAYS}일 요건을 채운 사람 중 점수가 가장 높은 한 명이 대상이며, 정확한 날짜는 별도 공지합니다.`,
+      `국가대표 경기 기간이 시작되는 9월 21일, 그때 1위인 사람에게 증정됩니다. ${MIN_ACTIVE_DAYS}일 요건을 채운 사람 중 점수가 가장 높은 한 명이 대상입니다.`,
       "그 시점에 정산이 남아 있으면 남은 정산이 끝난 뒤 순위를 확정하고 따로 공지합니다.",
       "상품 가액이 5만원을 넘어 제세공과금 22%가 발생하며, 주최 측이 부담합니다.",
       "수령을 위해 이름·연락처·주소를 받고 상품 발송과 세무 신고에만 씁니다.",
@@ -151,7 +151,7 @@ const RULES: { title: string; lines: string[] }[] = [
   {
     title: "기간과 집계 대상",
     lines: [
-      "이벤트 기간은 2026년 8월 21일 00시부터 9월 30일 23시 59분까지입니다 (KST).",
+      "이벤트 기간은 2026년 8월 21일 00시부터 9월 20일 23시 59분까지입니다 (KST). 9월 21일 시작되는 국가대표 경기 기간 직전까지입니다.",
       "집계 대상은 축구 예측입니다. 야구·농구·배구는 점수에 들어가지 않습니다.",
       "예측은 경기 시작 전까지 할 수 있습니다.",
     ],
@@ -565,7 +565,7 @@ export default async function SeasonEventPage({
                   className="mb-3 flex flex-wrap items-center gap-2.5 text-[12.5px] font-extrabold"
                   style={{ color: "var(--gn-bg-100)", letterSpacing: "0.14em" }}
                 >
-                  8.21 개막 · 프리미어리그 2026/27
+                  8.21 예측 오픈 · 8.22 프리미어리그 개막
                   <span
                     className="gn-num rounded px-1.5 py-[2px] text-[10.5px]"
                     style={{
@@ -633,7 +633,8 @@ export default async function SeasonEventPage({
                     className="mt-1 text-[12.5px]"
                     style={{ color: "var(--gn-cream-dim)", wordBreak: "keep-all" }}
                   >
-                    국가대표 경기 기간이 시작될 때 1위인 사람에게 증정됩니다. 정품 인증서 동봉.
+                    국가대표 경기 기간이 시작되는 9월 21일, 그때 1위인 사람에게 증정됩니다. 정품
+                    인증서 동봉.
                   </p>
                 </div>
 
