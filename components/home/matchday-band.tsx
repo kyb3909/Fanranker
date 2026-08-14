@@ -210,6 +210,29 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
       aria-roledescription="carousel"
       aria-label="오늘의 톱스토리"
     >
+      {/* 시즌 개막 이벤트 고정 공지 (운영자 2026-08-14) — 슬라이드 회전과 무관하게
+          이벤트 기간 내내 상단 고정. 떡밥 로테이션은 그 아래에서 그대로 돈다.
+          핀(hero_pinned_at)으로 태우면 새 핀에 밀리고 회전으로 사라져서 코드 고정. */}
+      {new Date() < new Date(GUNNERS_SEASON.endAt) && (
+        <Link
+          href="/season/join?ref=hero"
+          className="absolute top-3 right-3 left-3 z-[3] flex items-center justify-between gap-2 rounded-lg px-3.5 py-2.5 transition-opacity hover:opacity-90"
+          style={{
+            background: "rgba(150,30,55,0.92)",
+            border: "1px solid rgba(255,255,255,0.18)",
+          }}
+        >
+          <span
+            className="min-w-0 truncate text-[13px] font-extrabold"
+            style={{ color: "var(--gn-cream)" }}
+          >
+            ⚽ 프리미어리그 개막 이벤트 — 개막과 함께 시즌 레이스 시작
+          </span>
+          <span className="shrink-0 text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
+            참가하기 →
+          </span>
+        </Link>
+      )}
       {slides.map((c, i) => (
         <article
           key={c.id}
