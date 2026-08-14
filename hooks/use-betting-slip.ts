@@ -259,6 +259,20 @@ export function useBettingSlip(
         body: JSON.stringify(payload),
       })
       const data = await res.json()
+      // 이벤트 전용 기간에는 미신청자 제출이 403(needs_registration)으로 막힌다.
+      // 그냥 실패 알림만 띄우면 유저는 "왜 안 되는지" 모른 채 이탈한다 — 신청 화면으로 넘긴다.
+      if (!res.ok && data?.needs_registration) {
+        showAlert(
+          "error",
+          "참가 신청이 먼저예요",
+          "구너스 레이스는 참가 신청 이후의 예측만 반영됩니다.\n참가 신청 화면으로 이동할게요."
+        )
+        setIsSubmittingPrediction(false)
+        setTimeout(() => {
+          window.location.assign("/season/join?ref=pick-gate")
+        }, 1200)
+        return
+      }
       if (!res.ok) throw new Error(data.error || "예측 저장에 실패했습니다.")
 
       trackEvent({
