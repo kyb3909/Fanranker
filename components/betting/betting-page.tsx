@@ -175,7 +175,7 @@ export default function BettingPage({
             <div className="hidden lg:col-span-4 lg:block">
               <div className="sticky" style={{ top: 76 }}>
                 <BettingSlip variant="rail" {...slipProps} />
-                {eventSlug && <WorldcupRulesCard />}
+                {eventSlug === "worldcup-2026" && <WorldcupRulesCard />}
               </div>
             </div>
             <div className="col-span-12 lg:col-span-8">
@@ -187,7 +187,7 @@ export default function BettingPage({
           {(activeTab === "betting" || bettingOnly) && (
             <div className="lg:hidden">
               <BettingSlip {...slipProps} />
-              {eventSlug && <WorldcupRulesCard />}
+              {eventSlug === "worldcup-2026" && <WorldcupRulesCard />}
             </div>
           )}
         </>

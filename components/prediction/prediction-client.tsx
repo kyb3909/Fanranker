@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { PageBand } from "@/components/page-band"
+import { GUNNERS_SEASON, isEventLive } from "@/lib/event/gunners-season"
 
 const ActivitySidebar = dynamic(
   () =>
@@ -56,8 +57,17 @@ export function PredictionClient({
           <div className="col-span-12 lg:col-span-9">
             {/* 월드컵 이벤트 슬롯 제거 (2026-07-29) — 1차 이벤트 아카이브 비공개
                 (/worldcup 전체 redirect). 슬롯 구조는 시즌 이벤트에서 재사용 예정이라
-                worldcupStatus prop 은 유지. */}
-            <BettingPage railMode initialGames={initialGames} />
+                worldcupStatus prop 은 유지.
+
+                2026-08-14: 이벤트 기간에는 승부예측 메뉴 자체가 **이벤트 전용**이다
+                (운영자 지시). eventSlug 를 넘기면 슬립에 event_id 가 찍혀 이번 이벤트
+                데이터만 따로 쌓이고, 미신청자 제출은 API 가 403(needs_registration)으로
+                막는다 — "참가 신청 이후에 참여 가능" 규칙의 실제 집행 지점. */}
+            <BettingPage
+              railMode
+              initialGames={initialGames}
+              eventSlug={isEventLive() ? GUNNERS_SEASON.dbSlug : undefined}
+            />
           </div>
 
           <aside className="col-span-3 hidden lg:block">

@@ -121,9 +121,15 @@ export async function GET(request: NextRequest) {
       .gt("match_time", windowStart.toISOString())
       .lte("match_time", windowEnd.toISOString())
 
-    // 이벤트 경기 풀 분리 — 메인은 이벤트 코드 제외, 이벤트 모드는 해당 코드만
+    // 이벤트 경기 풀 분리 — 메인은 이벤트 코드 제외, 이벤트 모드는 해당 코드만.
+    //
+    // ⚠️ league_codes 가 **빈 배열이면 "축구 전 리그"** 를 뜻한다 (2026-08-14 시즌 이벤트).
+    // 구너스 레이스는 특정 리그가 아니라 축구 전체가 판이라, 리그를 열거하면 betman 이
+    // 새 리그 코드를 붙일 때마다 조용히 이벤트 밖으로 새어나간다. 빈 배열을
+    // "__none__"(경기 0건)으로 읽던 종전 분기를 여기서 갈라 준다.
     if (includeCodes !== null) {
-      query = query.in("league_code", includeCodes.length > 0 ? includeCodes : ["__none__"])
+      query =
+        includeCodes.length > 0 ? query.in("league_code", includeCodes) : query.eq("sport", "축구")
     } else if (excludeCodes.length > 0) {
       // null league_code 게임은 유지하고 이벤트 코드만 제외
       query = query.or(`league_code.is.null,league_code.not.in.(${excludeCodes.join(",")})`)

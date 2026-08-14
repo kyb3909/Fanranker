@@ -296,29 +296,34 @@ export async function POST(request: NextRequest) {
     if (event_slug) {
       const { data: ev } = await supabase
         .from("events")
-        .select("id, status, league_codes, registration_closes_at, end_at")
+        .select("id, status, league_codes, registration_closes_at, start_at, end_at")
         .eq("slug", event_slug)
         .maybeSingle()
 
       if (!ev) {
         return NextResponse.json({ error: "이벤트를 찾을 수 없습니다." }, { status: 404 })
       }
-      if (ev.status !== "live") {
-        return NextResponse.json({ error: "현재 이벤트가 진행 중이 아닙니다." }, { status: 400 })
+      // 진행 여부는 **날짜가 정본**이다. status 문자열('open'→'live') 수동 전환에
+      // 의존하면 개막 당일 아무도 제출을 못 하는 사고가 난다 (2026-08-14).
+      // 종료·취소 상태는 여전히 막는다.
+      const nowTs = new Date()
+      if (ev.status === "closed" || ev.status === "canceled") {
+        return NextResponse.json({ error: "종료된 이벤트입니다." }, { status: 400 })
       }
-      if (new Date(ev.end_at) < new Date()) {
+      if (new Date(ev.start_at) > nowTs) {
+        return NextResponse.json({ error: "아직 이벤트 시작 전입니다." }, { status: 400 })
+      }
+      if (new Date(ev.end_at) < nowTs) {
         return NextResponse.json({ error: "이벤트가 종료되었습니다." }, { status: 400 })
       }
+      // league_codes 가 비어 있으면 "축구 전 리그"가 이벤트 판이다 (2026-08-14 구너스
+      // 레이스). games API 와 같은 규약 — 한쪽만 고치면 화면엔 뜨는데 제출은 막히는
+      // 최악의 불일치가 난다.
       const codes: string[] = Array.isArray(ev.league_codes) ? ev.league_codes : []
-      if (codes.length === 0) {
-        return NextResponse.json(
-          { error: "이벤트 경기 코드가 아직 배정되지 않았습니다." },
-          { status: 400 }
-        )
-      }
-
-      // 모든 게임의 league_code 가 이벤트 코드 안에 있어야 함
-      const offGames = games.filter((g) => !codes.includes(g.league_code as unknown as string))
+      const offGames =
+        codes.length === 0
+          ? games.filter((g) => g.sport !== "축구")
+          : games.filter((g) => !codes.includes(g.league_code as unknown as string))
       if (offGames.length > 0) {
         const names = offGames.map((g) => `${g.home_team_name} vs ${g.away_team_name}`).join(", ")
         return NextResponse.json(
