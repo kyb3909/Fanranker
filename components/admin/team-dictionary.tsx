@@ -43,6 +43,18 @@ interface ProposalRow {
   latest: string
 }
 
+/** CSV 일괄 반영 결과 — dry_run 이면 계산만 한 계획서다 */
+interface CsvResult {
+  dry_run: boolean
+  tally: Partial<Record<"insert" | "update" | "skip" | "error", number>>
+  plan: {
+    line: number
+    action: "insert" | "update" | "skip" | "error"
+    name_kr: string
+    detail: string
+  }[]
+}
+
 interface ApiData {
   teams: TeamRow[]
   unresolved: UnresolvedRow[]
@@ -65,12 +77,43 @@ export function TeamDictionaryManager() {
   const [editing, setEditing] = useState<string | null>(null)
   const [renameVal, setRenameVal] = useState<Record<string, string>>({})
   const [repointUrl, setRepointUrl] = useState<Record<string, string>>({})
+  // CSV 일괄 — 미리보기(dry_run)를 통과해야 적용 버튼이 열린다
+  const [csvText, setCsvText] = useState("")
+  const [csvPlan, setCsvPlan] = useState<CsvResult | null>(null)
 
   const teams = data?.teams ?? []
   const activeTeams = teams.filter((t) => t.status !== "rejected")
   const unresolved = data?.unresolved ?? []
   const proposals = data?.proposals ?? []
   const counts = data?.outcomeCounts ?? {}
+
+  /** CSV 미리보기/적용 — dry 면 서버가 계산만 하고 쓰지 않는다 */
+  const runCsv = async (dry: boolean) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await fetch("/api/admin/team-dictionary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "csv_import", csv: csvText, dry_run: dry }),
+      })
+      const d = (await res.json().catch(() => ({}))) as CsvResult & { error?: string }
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "실패", description: d.error ?? "처리 실패" })
+        return
+      }
+      setCsvPlan(d)
+      if (!dry) {
+        toast({
+          title: "CSV 반영 완료",
+          description: `신규 ${d.tally.insert ?? 0} · 수정 ${d.tally.update ?? 0} · 오류 ${d.tally.error ?? 0}`,
+        })
+        void mutate()
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const send = async (body: Record<string, unknown>, ok: string) => {
     if (busy) return
@@ -252,6 +295,115 @@ export function TeamDictionaryManager() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* 2.5 CSV 일괄 — 등재할 팀이 100개 가까우면 1클릭 반복은 무리다 */}
+      <section className="bg-background rounded-xl border">
+        <div className="border-b px-4 py-3">
+          <h2 className="text-sm font-semibold">CSV 일괄</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            표로 빼서 편집하고 되올립니다. 열:{" "}
+            <code>soccerway_team_id, url, name_kr, aliases_kr, name_en, slug, status, note</code> —
+            별칭은 <b>|</b> 로 구분. 신규 등재는 <b>url</b> 열에 soccerway 팀 주소를 넣으면 서버가
+            검증합니다(한 번에 25개까지).
+          </p>
+        </div>
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/api/admin/team-dictionary?format=csv"
+              className="rounded border px-3 py-1.5 text-xs font-medium"
+            >
+              현재 사전 CSV 내려받기
+            </a>
+            <label className="cursor-pointer rounded border px-3 py-1.5 text-xs font-medium">
+              CSV 파일 선택
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  setCsvText(await f.text())
+                  setCsvPlan(null)
+                  e.target.value = ""
+                }}
+              />
+            </label>
+          </div>
+
+          <textarea
+            value={csvText}
+            onChange={(e) => {
+              setCsvText(e.target.value)
+              setCsvPlan(null)
+            }}
+            rows={csvText ? 8 : 3}
+            placeholder={
+              "여기에 CSV 를 붙여넣어도 됩니다.\nurl,name_kr\nhttps://int.soccerway.com/.../team/bournemouth/XXXXXXXX/,본머스"
+            }
+            className="bg-background w-full rounded border p-2 font-mono text-[11px]"
+          />
+
+          {csvText.trim() && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => void runCsv(true)}
+                disabled={busy}
+                className="rounded border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              >
+                미리보기 (쓰기 없음)
+              </button>
+              <button
+                onClick={() => void runCsv(false)}
+                disabled={busy || !csvPlan}
+                className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                title={csvPlan ? undefined : "먼저 미리보기를 실행하세요"}
+              >
+                적용
+              </button>
+            </div>
+          )}
+
+          {csvPlan && (
+            <div className="rounded-lg border">
+              <div className="bg-muted/40 flex flex-wrap gap-3 border-b px-3 py-2 text-[11px]">
+                {(["insert", "update", "skip", "error"] as const).map((k) => (
+                  <span key={k} className={k === "error" ? "font-semibold text-red-600" : ""}>
+                    {{ insert: "신규", update: "수정", skip: "건너뜀", error: "오류" }[k]}{" "}
+                    {csvPlan.tally[k] ?? 0}
+                  </span>
+                ))}
+                {csvPlan.dry_run && (
+                  <span className="text-muted-foreground ml-auto">미리보기 — 아직 반영 안 됨</span>
+                )}
+              </div>
+              <ul className="max-h-64 divide-y overflow-auto text-[11px]">
+                {csvPlan.plan.map((p, i) => (
+                  <li key={i} className="flex gap-2 px-3 py-1">
+                    <span className="text-muted-foreground w-8 shrink-0 text-right">{p.line}</span>
+                    <span
+                      className={
+                        p.action === "error"
+                          ? "w-12 shrink-0 font-medium text-red-600"
+                          : p.action === "insert"
+                            ? "w-12 shrink-0 font-medium text-emerald-600"
+                            : p.action === "update"
+                              ? "w-12 shrink-0 font-medium text-sky-600"
+                              : "text-muted-foreground w-12 shrink-0"
+                      }
+                    >
+                      {{ insert: "신규", update: "수정", skip: "건너뜀", error: "오류" }[p.action]}
+                    </span>
+                    <span className="w-28 shrink-0 truncate font-medium">{p.name_kr || "—"}</span>
+                    <span className="text-muted-foreground truncate">{p.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 3. 사전 목록 */}

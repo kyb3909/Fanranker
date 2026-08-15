@@ -4,6 +4,8 @@ import { requireStaffApi } from "@/lib/admin/roles"
 import { apiBadRequest, apiError } from "@/lib/api-error"
 
 export const dynamic = "force-dynamic"
+// CSV 일괄 등재는 행마다 soccerway 팀 페이지를 검증 fetch 한다 (최대 25건)
+export const maxDuration = 120
 
 /**
  * 팀 사전 관리 (실록 단계 2-B, 2026-08-07)
@@ -14,6 +16,7 @@ export const dynamic = "force-dynamic"
  * atletico→somalia 로 착지한 실측이 근거).
  *
  * GET: 사전 목록 + 미등재 팀 큐(매핑 shadow 의 team_unresolved 집계) + 매핑 제안 현황
+ *      `?format=csv` → 사전 전체를 CSV 로 (엑셀용 BOM 포함, 별칭은 `|` 구분)
  * POST:
  *  - alias    미등재 표기를 기존 팀의 별칭으로 흡수
  *  - register soccerway 팀 URL 을 검증 fetch 해 신규 등재 (slug·해시는 서버가 추출)
@@ -21,6 +24,7 @@ export const dynamic = "force-dynamic"
  *  - rename       대표 한글 표기 교체 (틀린 표기 수정)
  *  - remove_alias 잘못 흡수된 별칭 제거
  *  - repoint      한글 표기를 엉뚱한 팀에서 올바른 팀으로 이설
+ *  - csv_import   CSV 일괄 반영 (`dry_run` 으로 먼저 미리보기)
  *  - reject   해석에서 제외 — ⚠️ **최후 수단**
  *
  * ⚠️ 사전이 틀렸을 때의 정답은 **제외가 아니라 수정**이다 (2026-08-15).
@@ -32,10 +36,98 @@ export const dynamic = "force-dynamic"
 
 const LOOKBACK_DAYS = 14
 
-export async function GET() {
+/** CSV 한 칸 — 쉼표/따옴표/줄바꿈이 있으면 감싸고 따옴표는 두 번 */
+function csvCell(v: unknown): string {
+  const s = v == null ? "" : String(v)
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+/** RFC4180 기본형 파서 — 따옴표 안의 쉼표/줄바꿈/이스케이프 처리 */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let cell = ""
+  let inQuotes = false
+  const src = text.replace(/^﻿/, "") // BOM 제거 (엑셀 저장분)
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i]
+    if (inQuotes) {
+      if (c === '"') {
+        if (src[i + 1] === '"') {
+          cell += '"'
+          i++
+        } else inQuotes = false
+      } else cell += c
+      continue
+    }
+    if (c === '"') inQuotes = true
+    else if (c === ",") {
+      row.push(cell)
+      cell = ""
+    } else if (c === "\n" || c === "\r") {
+      if (c === "\r" && src[i + 1] === "\n") i++
+      row.push(cell)
+      cell = ""
+      if (row.some((x) => x.trim() !== "")) rows.push(row)
+      row = []
+    } else cell += c
+  }
+  row.push(cell)
+  if (row.some((x) => x.trim() !== "")) rows.push(row)
+  return rows
+}
+
+const CSV_COLUMNS = [
+  "soccerway_team_id",
+  "url",
+  "name_kr",
+  "aliases_kr",
+  "name_en",
+  "slug",
+  "status",
+  "note",
+] as const
+
+export async function GET(request: NextRequest) {
   const auth = await requireStaffApi()
   if (auth instanceof NextResponse) return auth
   const { supabase } = auth
+
+  // ── CSV 내보내기 ────────────────────────────────────────────────
+  // 등재할 팀이 100개 가까이라 1클릭 반복은 무리 — 표로 빼서 편집하고 되올린다.
+  // aliases_kr 는 CSV 안에서 쉼표와 충돌하므로 **| 로 구분**한다.
+  if (new URL(request.url).searchParams.get("format") === "csv") {
+    const { data, error } = await supabase
+      .from("team_dictionary")
+      .select("soccerway_team_id, slug, name_en, name_kr, aliases_kr, status, note")
+      .order("name_en")
+    if (error) return apiError("팀 사전 조회 실패", 500, error)
+    const lines = [
+      CSV_COLUMNS.join(","),
+      ...(data ?? []).map((t) =>
+        [
+          t.soccerway_team_id,
+          "", // url — 신규 등재 시에만 채운다
+          t.name_kr,
+          (t.aliases_kr ?? []).join("|"),
+          t.name_en,
+          t.slug,
+          t.status,
+          t.note,
+        ]
+          .map(csvCell)
+          .join(",")
+      ),
+    ]
+    // 엑셀이 UTF-8 로 열도록 BOM 을 붙인다 (없으면 한글이 깨진다)
+    return new NextResponse("﻿" + lines.join("\r\n"), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="team-dictionary.csv"`,
+        "Cache-Control": "no-store",
+      },
+    })
+  }
 
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600_000).toISOString()
 
@@ -156,6 +248,13 @@ const postSchema = z.discriminatedUnion("mode", [
     mode: z.literal("remove_alias"),
     soccerway_team_id: z.string().min(1),
     alias: z.string().min(1).max(60),
+  }),
+  z.object({
+    // CSV 일괄 반영. dry_run 이면 무엇이 바뀔지만 계산해서 돌려준다(쓰기 없음).
+    // 신규 등재 행은 url 을 실제로 fetch 해 검증하므로 한 번에 많이 넣지 않는다.
+    mode: z.literal("csv_import"),
+    csv: z.string().min(1).max(200_000),
+    dry_run: z.boolean().optional(),
   }),
   z.object({
     // 한글 표기가 **엉뚱한 팀**에 붙었을 때 — 표기를 올바른 팀으로 이설한다.
@@ -288,6 +387,190 @@ export async function POST(request: NextRequest) {
       })
       if (error) return apiError("등재 실패", 500, error)
       return NextResponse.json({ success: true, hash, slug, name_en: nameEn })
+    }
+
+    // ── CSV 일괄 반영 ───────────────────────────────────────────────
+    if (input.mode === "csv_import") {
+      const rows = parseCsv(input.csv)
+      if (rows.length < 2) return apiBadRequest("헤더 + 최소 1행이 필요합니다.")
+      const header = rows[0].map((h) => h.trim().toLowerCase())
+      const idx = (name: string) => header.indexOf(name)
+      const iId = idx("soccerway_team_id")
+      const iUrl = idx("url")
+      const iKr = idx("name_kr")
+      const iAliases = idx("aliases_kr")
+      const iStatus = idx("status")
+      const iNote = idx("note")
+      if (iKr < 0 && iAliases < 0) {
+        return apiBadRequest("name_kr 또는 aliases_kr 열이 있어야 합니다.")
+      }
+      if (iId < 0 && iUrl < 0) {
+        return apiBadRequest("soccerway_team_id 또는 url 열이 있어야 합니다.")
+      }
+
+      const body = rows.slice(1)
+      // URL 검증은 외부 fetch 라 느리다 — 한 번에 처리할 신규 등재 수를 제한한다.
+      const MAX_URL_LOOKUPS = 25
+      let lookups = 0
+
+      const plan: {
+        line: number
+        action: "insert" | "update" | "skip" | "error"
+        name_kr: string
+        detail: string
+      }[] = []
+
+      // 미리 사전 전체를 읽어 둔다 (행마다 조회하면 왕복이 폭증)
+      const { data: existingAll } = await supabase
+        .from("team_dictionary")
+        .select("soccerway_team_id, name_kr, aliases_kr, status, note")
+      const byId = new Map((existingAll ?? []).map((t) => [t.soccerway_team_id, t]))
+
+      for (let r = 0; r < body.length; r++) {
+        const cells = body[r]
+        const get = (i: number) => (i >= 0 ? (cells[i] ?? "").trim() : "")
+        const line = r + 2 // 1-based + 헤더
+        const nameKr = get(iKr)
+        const aliases = get(iAliases)
+          .split("|")
+          .map((a) => a.trim())
+          .filter(Boolean)
+        const status = get(iStatus)
+        const note = get(iNote)
+        let hash = get(iId)
+        const url = get(iUrl)
+
+        if (status && !["proposed", "confirmed", "rejected"].includes(status)) {
+          plan.push({
+            line,
+            action: "error",
+            name_kr: nameKr,
+            detail: `status 값이 잘못됨: ${status}`,
+          })
+          continue
+        }
+
+        // 해시가 없으면 URL 로 해석 — soccerway 팀 페이지임을 실제로 확인한다.
+        // (사전 오염은 이후 모든 매핑에 전파되므로 여기서 검증을 건너뛰지 않는다)
+        let slug = ""
+        let nameEn = ""
+        if (!hash) {
+          if (!url) {
+            plan.push({ line, action: "skip", name_kr: nameKr, detail: "id·url 둘 다 없음" })
+            continue
+          }
+          if (lookups >= MAX_URL_LOOKUPS) {
+            plan.push({
+              line,
+              action: "skip",
+              name_kr: nameKr,
+              detail: `신규 등재는 한 번에 ${MAX_URL_LOOKUPS}개까지 — 나눠서 올려주세요`,
+            })
+            continue
+          }
+          lookups++
+          const resolved = await resolveTeamUrl(url)
+          if (!resolved.ok) {
+            plan.push({ line, action: "error", name_kr: nameKr, detail: resolved.message })
+            continue
+          }
+          hash = resolved.hash
+          slug = resolved.slug
+          nameEn = resolved.nameEn
+        }
+
+        const found = byId.get(hash)
+        if (found) {
+          const nextAliases = Array.from(new Set([...(found.aliases_kr ?? []), ...aliases])).filter(
+            (a) => a !== (nameKr || found.name_kr)
+          )
+          const changes: string[] = []
+          if (nameKr && nameKr !== found.name_kr)
+            changes.push(`표기 ${found.name_kr ?? "—"}→${nameKr}`)
+          if (nextAliases.length !== (found.aliases_kr ?? []).length)
+            changes.push(`별칭 +${nextAliases.length - (found.aliases_kr ?? []).length}`)
+          if (status && status !== found.status) changes.push(`상태 ${found.status}→${status}`)
+          if (changes.length === 0) {
+            plan.push({
+              line,
+              action: "skip",
+              name_kr: nameKr || (found.name_kr ?? ""),
+              detail: "변경 없음",
+            })
+            continue
+          }
+          plan.push({
+            line,
+            action: "update",
+            name_kr: nameKr || (found.name_kr ?? ""),
+            detail: changes.join(", "),
+          })
+          if (!input.dry_run) {
+            const { error } = await supabase
+              .from("team_dictionary")
+              .update({
+                name_kr: nameKr || found.name_kr,
+                aliases_kr: nextAliases,
+                status: status || found.status,
+                note: note || found.note,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("soccerway_team_id", hash)
+            if (error)
+              plan[plan.length - 1] = {
+                line,
+                action: "error",
+                name_kr: nameKr,
+                detail: error.message,
+              }
+          }
+        } else {
+          if (!nameKr) {
+            plan.push({
+              line,
+              action: "error",
+              name_kr: "",
+              detail: "신규 등재인데 name_kr 이 없음",
+            })
+            continue
+          }
+          if (!slug) {
+            plan.push({
+              line,
+              action: "error",
+              name_kr: nameKr,
+              detail: "사전에 없는 id — 신규 등재는 url 열로 넣어주세요",
+            })
+            continue
+          }
+          plan.push({ line, action: "insert", name_kr: nameKr, detail: `${nameEn} (${hash})` })
+          if (!input.dry_run) {
+            const { error } = await supabase.from("team_dictionary").insert({
+              soccerway_team_id: hash,
+              slug,
+              name_en: nameEn,
+              name_kr: nameKr,
+              aliases_kr: aliases,
+              status: status || "proposed",
+              source: "csv",
+              note: note || null,
+            })
+            if (error)
+              plan[plan.length - 1] = {
+                line,
+                action: "error",
+                name_kr: nameKr,
+                detail: error.message,
+              }
+          }
+        }
+      }
+
+      const tally = plan.reduce<Record<string, number>>((a, p) => {
+        a[p.action] = (a[p.action] ?? 0) + 1
+        return a
+      }, {})
+      return NextResponse.json({ success: true, dry_run: !!input.dry_run, tally, plan })
     }
 
     // ── 수정 3종 ────────────────────────────────────────────────────
