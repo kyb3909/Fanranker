@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
 import { fetchCardNews, fetchHeroCards, type CardNewsItem } from "@/lib/feed/cardnews"
+import { buildGamesPayload } from "@/lib/betman/games-payload"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
 import type { GroupedMatch } from "@/types/betting"
 
@@ -134,18 +135,17 @@ async function fetchAllHomeData(sort: SortType) {
     fetchHeroCards().catch(() => [] as CardNewsItem[]),
 
     // 8) 오늘의 경기 (매치데이 밴드) — SSR 로 실어 하이드레이션 후 밴드가 자라며
-    //    본문을 밀어내는 CLS(모바일 0.17)를 제거. 라우트 로직 추출 대신 자체 API 를
-    //    재사용(60s 캐시). 빌드/장애 시 null → 밴드가 기존처럼 클라 SWR 로 폴백.
-    (async (): Promise<{ groupedGames?: GroupedMatch[] } | null> => {
-      try {
-        const base = process.env.NEXT_PUBLIC_SITE_URL || "https://gongnori.fan"
-        const res = await fetch(`${base}/api/sports/games`, { next: { revalidate: 60 } })
-        if (!res.ok) return null
-        return (await res.json()) as { groupedGames?: GroupedMatch[] }
-      } catch {
-        return null
-      }
-    })(),
+    //    본문을 밀어내는 CLS(모바일 0.17)를 제거. 빌드/장애 시 null → 밴드가 기존처럼
+    //    클라 SWR 로 폴백.
+    //
+    //    ⚠️ 예전에는 여기서 `fetch("https://gongnori.fan/api/sports/games")` 로 **자기
+    //    자신을 HTTP 로** 불렀다. 서버 함수(iad1)가 인터넷으로 나갔다 자기 도메인으로 되돌아
+    //    오는 구조라 왕복이 통째로 낭비였고, 홈 렌더의 long pole 이었다 (2026-08-15 실측:
+    //    홈 완료까지 2.7~3.5초). 같은 로직을 라우트와 공유하는 함수로 직접 호출한다.
+    //    비로그인 형태(userId 없음)로 부르므로 개인 예측 조회 왕복도 발생하지 않는다.
+    buildGamesPayload()
+      .then((p) => ({ groupedGames: p.groupedGames as unknown as GroupedMatch[] }))
+      .catch(() => null),
   ])
 
   // 히어로 확정: 운영자 핀 우선. **핀이 하나라도 있으면 그것만** 올린다(채워넣기 없음 —

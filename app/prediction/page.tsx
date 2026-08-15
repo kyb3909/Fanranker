@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { createAnonClient } from "@/lib/supabase/server"
 import { PredictionClient } from "@/components/prediction/prediction-client"
+import { buildGamesPayload } from "@/lib/betman/games-payload"
 
 // 사이드바 데이터(카테고리/최근댓글)는 ISR 5분 캐시. BettingPage 내부 데이터는
 // 클라이언트에서 자체 fetch — 경기/배당/내 슬립은 항상 최신 필요.
@@ -52,20 +53,13 @@ async function fetchSidebarData() {
 
     // 오늘의 경기 SSR 프리페치 (홈 page.tsx 와 동일 패턴, 2026-07-30 워룸) —
     // "픽 걸러 가기" 직후가 빈 스켈레톤 39개였다. 실패 시 null → 기존 클라 fetch 폴백.
-    (async (): Promise<unknown | null> => {
-      try {
-        const base = process.env.NEXT_PUBLIC_SITE_URL || "https://gongnori.fan"
-        // 축구 전용 노출 (2026-08-14) — 클라 기본 필터(use-betting-matches)와 키를 맞춰야
-        // 폴백이 붙는다. 종목 확장 시 이 파라미터와 훅 기본값을 함께 되돌릴 것.
-        const res = await fetch(`${base}/api/sports/games?sport=${encodeURIComponent("축구")}`, {
-          next: { revalidate: 60 },
-        })
-        if (!res.ok) return null
-        return await res.json()
-      } catch {
-        return null
-      }
-    })(),
+    //
+    // ⚠️ 축구 전용 노출 (2026-08-14) — 클라 기본 필터(use-betting-matches)와 키를 맞춰야
+    // 폴백이 붙는다. 종목 확장 시 이 인자와 훅 기본값을 함께 되돌릴 것.
+    //
+    // 자기 도메인 HTTP fetch 였던 것을 공유 함수 직접 호출로 교체 (2026-08-15).
+    // 이 경로가 사이트에서 제일 느렸다 — `?sport=축구` 오리진 실측 4.4초.
+    buildGamesPayload({ sport: "축구" }).catch(() => null),
   ])
 
   return {
