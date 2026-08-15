@@ -1,0 +1,3435 @@
+{
+  "data": {
+    "findEventById": {
+      "__typename": "Event",
+      "updateFeedProviderId": {
+        "__typename": "ProviderIdValue",
+        "id": 7
+      },
+      "eventStage": {
+        "__typename": "EventCurrentStage",
+        "eventStage": 38,
+        "eventStageType": 2
+      },
+      "shouldUpdate": true,
+      "eventParticipants": [
+        {
+          "__typename": "EventParticipant",
+          "id": "d0QheciS",
+          "type": {
+            "__typename": "ParticipantType",
+            "side": "HOME"
+          },
+          "participants": [
+            {
+              "__typename": "ParticipantOnEventParticipant",
+              "participant": {
+                "__typename": "Participant",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "Gb50BgCr-K2FpWLH3.png",
+                    "variantType": 15,
+                    "fallback": "TEAM"
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "Sheffield Utd",
+          "averageRating": "6.4",
+          "lineup": {
+            "__typename": "Lineup",
+            "additionalInfoEligible": true,
+            "aggregatedStats": {
+              "__typename": "LineupAggregatedStats",
+              "avgRating": null,
+              "avgHeight": null,
+              "sumMarketValue": null,
+              "avgAge": null
+            },
+            "players": [
+              {
+                "__typename": "LineupPlayer",
+                "id": "xlauOaft",
+                "participantId": "xlauOaft",
+                "gender": "MEN",
+                "fieldName": "Cooper",
+                "listName": "Cooper M.",
+                "number": "1",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "hOX0WAan-lriIc5ma.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "nan4VUEh-lriIc5ma.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Qko8UlUb-lriIc5ma.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "KCpCT8q5-lriIc5ma.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "YFlGSSbB-lriIc5ma.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "SxlKRnEH-lriIc5ma.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.7",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "cooper-michael"
+                },
+                "playerRoles": [
+                  {
+                    "__typename": "LineupPlayerRole",
+                    "suffix": "(G)",
+                    "title": "Goalkeeper"
+                  }
+                ],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "nmzHusQh",
+                "participantId": "nmzHusQh",
+                "gender": "MEN",
+                "fieldName": "Seriki",
+                "listName": "Seriki F.",
+                "number": "38",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "GGTeCBqQ-fBC5YCRk.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "YeGN7Vis-fBC5YCRk.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CnFR6k7m-fBC5YCRk.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "KCEV59Mg-fBC5YCRk.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "b3DZ4Ty0-fBC5YCRk.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "hQCw4mi6-fBC5YCRk.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.6",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "seriki-femi"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "SC4ftpKU",
+                "participantId": "SC4ftpKU",
+                "gender": "MEN",
+                "fieldName": "Tanganga",
+                "listName": "Tanganga J.",
+                "number": "5",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "jgfV2nMc-6eTFZBTO.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "pGgZ16y4-6eTFZBTO.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "O6hw1QjA-6eTFZBTO.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "htcs0p6G-KWY4T4a4.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "U5KArIzq-KWY4T4a4.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OSJEsxjk-KWY4T4a4.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "7.1",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "tanganga-japhet"
+                },
+                "playerRoles": [
+                  {
+                    "__typename": "LineupPlayerRole",
+                    "suffix": "(C)",
+                    "title": "Captain"
+                  }
+                ],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "t2oriIrB",
+                "participantId": "t2oriIrB",
+                "gender": "MEN",
+                "fieldName": "McGuinness",
+                "listName": "McGuinness M.",
+                "number": "25",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "AoPPXzuh-f1yj8O00.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "48OTWffb-Yizf7rG6.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "raNXVE94-Yizf7rG6.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CYRyVYOA-Yizf7rG6.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jPQuUhvH-Yizf7rG6.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "rLl9CQ8q-Yizf7rG6.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "KCxL6tlI-rBRfGJwm.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "C80lkEIp-rBRfGJwm.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Ireland",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.6",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "mcguinness-mark"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "C4Edl4v7",
+                "participantId": "C4Edl4v7",
+                "gender": "MEN",
+                "fieldName": "McCallum",
+                "listName": "McCallum S.",
+                "number": "3",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "4pnvZkbn-f5HMoht5.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "b7orY9Dh-f5HMoht5.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xbpnXTSb-f5HMoht5.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "pOqjWmr5-f5HMoht5.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OErfV7cB-f5HMoht5.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "IyrbURCH-f5HMoht5.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.5",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "mccallum-sam"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "CfEtgFkn",
+                "participantId": "CfEtgFkn",
+                "gender": "MEN",
+                "fieldName": "Peck",
+                "listName": "Peck S.",
+                "number": "42",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "ju7Sq55K-vehoVTZf.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "p26WrPKQ-vehoVTZf.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "nBhbvqTs-vehoVTZf.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Gpc2w3rl-vehoVTZf.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "fyd6xNcf-vehoVTZf.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "lbeAysD0-vehoVTZf.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.6",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "peck-sydie"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "ba1Lstl4",
+                "participantId": "ba1Lstl4",
+                "gender": "MEN",
+                "fieldName": "Rothwell",
+                "listName": "Rothwell J.",
+                "number": "7",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "thYRjGKt-WOJWrf2J.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "zFXVkzzm-WOJWrf2J.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "E5WZlfkg-WOJWrf2J.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MVVwlE4a-WOJWrf2J.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "0MUsmYJ5-WOJWrf2J.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "fqUonhZB-WOJWrf2J.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.3",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "rothwell-joe"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "bJGhQNbG",
+                "participantId": "bJGhQNbG",
+                "gender": "MEN",
+                "fieldName": "Donovan",
+                "listName": "Donovan R.",
+                "number": "11",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "jVczDPvh-lnF4htkO.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "phcvCqfb-lnF4htkO.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OrdrB394-lnF4htkO.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "IJAoANOA-jkvXkQJh.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dA9k9svH-jkvXkQJh.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jX8g81gN-jkvXkQJh.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.3",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "donovan-romelle"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "WOoQI2cF",
+                "participantId": "WOoQI2cF",
+                "gender": "MEN",
+                "fieldName": "O'Hare",
+                "listName": "O'Hare C.",
+                "number": "10",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "06GKlqoQ-fqfi8kn6.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Io3np3gs-fqfi8kn6.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dx2jqN8m-fqfi8kn6.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QB6frsOg-fqfi8kn6.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "425bs1w0-fqfi8kn6.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "bP42tLh6-fqfi8kn6.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.0",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "o-hare-callum"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "W8FBLdMC",
+                "participantId": "W8FBLdMC",
+                "gender": "MEN",
+                "fieldName": "Bamford",
+                "listName": "Bamford P.",
+                "number": "45",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "Y72vdaNE-fLyCUpF9.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Q3Q7vXis-fLyCUpF9.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "v7UBwi7m-fLyCUpF9.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "YTTFxBMg-fLyCUpF9.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CKSJyVy0-fLyCUpF9.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "KpSNzki6-fLyCUpF9.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.3",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "bamford-patrick"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "xSJqUiDE",
+                "participantId": "xSJqUiDE",
+                "gender": "MEN",
+                "fieldName": "Cannon",
+                "listName": "Cannon T.",
+                "number": "9",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "hlJFyepQ-Mg2ahO1j.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "AT5sXEhs-Mg2ahO1j.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8EOpWY7m-Mg2ahO1j.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "2yOlVhNg-Mg2ahO1j.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "tSMhUCx0-Mg2ahO1j.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "A1RdTWi6-Mg2ahO1j.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "KCxL6tlI-rBRfGJwm.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "C80lkEIp-rBRfGJwm.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Ireland",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "5.7",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "cannon-thomas"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "llWb13eK",
+                "participantId": "llWb13eK",
+                "gender": "MEN",
+                "fieldName": "Davies",
+                "listName": "Davies A.",
+                "number": "17",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "W0NZiD23-8tTeyXhI.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QNMwiXH9-8tTeyXhI.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "vRQsjiXF-8tTeyXhI.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "YmQokBnM-8tTeyXhI.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CvPklV1S-8tTeyXhI.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "4WGHqkAq-8tTeyXhI.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "fDT92h6e-M5j0fiva.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OnYD1CL1-M5j0fiva.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Wales",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "davies-adam"
+                },
+                "playerRoles": [
+                  {
+                    "__typename": "LineupPlayerRole",
+                    "suffix": "(G)",
+                    "title": "Goalkeeper"
+                  }
+                ],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "KC9KwhwI",
+                "participantId": "KC9KwhwI",
+                "gender": "MEN",
+                "fieldName": "Doherty",
+                "listName": "Doherty M.",
+                "number": "2",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "vLklb6OE-2cTPK5Wp.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8ffhcQwL-2cTPK5Wp.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "nogddpgR-2cTPK5Wp.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "4QuOi41r-6HpON8K5.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "G0qSjOGl-6HpON8K5.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ANrWkrWf-6HpON8K5.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "KCxL6tlI-rBRfGJwm.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "C80lkEIp-rBRfGJwm.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Ireland",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "doherty-matt"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "E5SLqe3I",
+                "participantId": "E5SLqe3I",
+                "gender": "MEN",
+                "fieldName": "Riedewald",
+                "listName": "Riedewald J.",
+                "number": "44",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "hpQB37an-S2iQ2y33.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "0APF2REh-S2iQ2y33.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "v1OJ1oUb-S2iQ2y33.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MPDO05q5-S2iQ2y33.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "zTHSaPbB-S2iQ2y33.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "UkHWbqEH-S2iQ2y33.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "OC3sXk8T-zPfEtcc6.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "thj9S9Gp-zPfEtcc6.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Netherlands",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "riedewald-jairo"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "YeI6deYT",
+                "participantId": "YeI6deYT",
+                "gender": "MEN",
+                "fieldName": "Baptiste",
+                "listName": "Baptiste J.",
+                "number": "33",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "lSlTiBuh-Ia87U9Yl.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "I1gXjVfb-Ia87U9Yl.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dhhyjkA4-Ia87U9Yl.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jFiuk9PA-Ia87U9Yl.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "l0ArlTvH-Ia87U9Yl.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "rN9nmmfN-Ia87U9Yl.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "baptiste-jamal"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "SMROu1Ds",
+                "participantId": "SMROu1Ds",
+                "gender": "MEN",
+                "fieldName": "Burrows",
+                "listName": "Burrows H.",
+                "number": "14",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "tGYMTV0n-rqRdLeaR.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "zwYQSkGh-rqRdLeaR.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ltxVR9Vb-rqRdLeaR.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "r3yZQTp5-rqRdLeaR.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MgzwQm0B-rqRdLeaR.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jTvsP7FH-rqRdLeaR.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "burrows-harrison"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "MexA8uvb",
+                "participantId": "MexA8uvb",
+                "gender": "MEN",
+                "fieldName": "Arblaster",
+                "listName": "Arblaster O.",
+                "number": "4",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "WxNvFcMc-29NwDqhf.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QaMrEHy4-29NwDqhf.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "4jLnDyiA-29NwDqhf.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CGKjCe6G-29NwDqhf.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "j7JfBFLM-29NwDqhf.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "pUIbAZzT-29NwDqhf.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "arblaster-ollie"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "vJtjCSCH",
+                "participantId": "vJtjCSCH",
+                "gender": "MEN",
+                "fieldName": "Campbell",
+                "listName": "Campbell T.",
+                "number": "23",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "vDwtGhs9-4pS25Gvn.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8nrpFCdF-4pS25Gvn.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "nwslEWBL-4pS25Gvn.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "t0thDjRR-4pS25Gvn.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "GhXJ8AZr-4pS25Gvn.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "AFWN7Ulk-4pS25Gvn.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "campbell-tyrese"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "ChPmiS0q",
+                "participantId": "ChPmiS0q",
+                "gender": "MEN",
+                "fieldName": "One",
+                "listName": "One R.",
+                "number": "26",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "zwYoUBIt-jc47KFXN.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "UaXkTVXn-jc47KFXN.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8jWgSkmg-jc47KFXN.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xQzbR92a-jc47KFXN.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "GGZ1QTH5-jc47KFXN.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "AwZ5PmXB-jc47KFXN.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "pICWcHP6-GMQvApsp.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "EiHzcyuD-GMQvApsp.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Scotland",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "one-ryan"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "KxziU4tD",
+                "participantId": "KxziU4tD",
+                "gender": "MEN",
+                "fieldName": "Chong",
+                "listName": "Chong T.",
+                "number": "19",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "rR3dJiJt-IwVcVAba.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xl30IBYn-IwVcVAba.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "zZL3HVmg-IwVcVAba.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "UeL7Gk3a-IwVcVAba.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8nKBF9I5-IwVcVAba.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xMOFETXB-IwVcVAba.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "MuPAMoQk-vylSK1e2.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "G2OEL5ud-vylSK1e2.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Curaçao",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "chong-tahith"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              }
+            ],
+            "formation": {
+              "__typename": "LineupFormation",
+              "name": "4-2-2-2",
+              "lines": [
+                {
+                  "__typename": "LineupFormationLine",
+                  "sortKey": 1,
+                  "name": "Line 1",
+                  "rows": [
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 0,
+                      "playerIds": ["xlauOaft"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 1,
+                      "playerIds": ["nmzHusQh", "SC4ftpKU", "t2oriIrB", "C4Edl4v7"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 2,
+                      "playerIds": ["CfEtgFkn", "ba1Lstl4"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 3,
+                      "playerIds": ["bJGhQNbG", "WOoQI2cF"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 4,
+                      "playerIds": ["W8FBLdMC", "xSJqUiDE"]
+                    }
+                  ]
+                }
+              ]
+            },
+            "groups": [
+              {
+                "__typename": "LineupGroup",
+                "groupType": "STARTERS",
+                "sortKey": 11,
+                "name": "Starting Lineups",
+                "playerIds": [
+                  "xlauOaft",
+                  "nmzHusQh",
+                  "SC4ftpKU",
+                  "t2oriIrB",
+                  "C4Edl4v7",
+                  "CfEtgFkn",
+                  "ba1Lstl4",
+                  "bJGhQNbG",
+                  "WOoQI2cF",
+                  "W8FBLdMC",
+                  "xSJqUiDE"
+                ],
+                "transKey": "TRANS_DETAIL_LABEL_STARTING_LINEUPS"
+              },
+              {
+                "__typename": "LineupGroup",
+                "groupType": "SUBSTITUTES",
+                "sortKey": 501,
+                "name": "Substitutes",
+                "playerIds": [
+                  "MexA8uvb",
+                  "YeI6deYT",
+                  "SMROu1Ds",
+                  "vJtjCSCH",
+                  "KxziU4tD",
+                  "llWb13eK",
+                  "KC9KwhwI",
+                  "ChPmiS0q",
+                  "E5SLqe3I"
+                ],
+                "transKey": "TRANS_DETAIL_LABEL_SUBSTITUTES"
+              }
+            ],
+            "coaches": {
+              "__typename": "LineupGroup",
+              "sortKey": 901,
+              "name": "Coaches",
+              "players": [
+                {
+                  "__typename": "LineupPlayer",
+                  "id": "EoQjC3VB",
+                  "participantId": "EoQjC3VB",
+                  "name": "Wilder C.",
+                  "listName": "Wilder C.",
+                  "teamLogo": [
+                    {
+                      "__typename": "Image",
+                      "path": "2yGc8QR6-fqCjSvcO.png",
+                      "variantType": 87,
+                      "fallback": "TEAM"
+                    },
+                    {
+                      "__typename": "Image",
+                      "path": "dbF17psD-fqCjSvcO.png",
+                      "variantType": 88,
+                      "fallback": "TEAM"
+                    }
+                  ],
+                  "teamName": "England",
+                  "participant": {
+                    "__typename": "Participant",
+                    "url": "wilder-chris"
+                  }
+                }
+              ],
+              "playerIds": ["EoQjC3VB"]
+            },
+            "usedSubstitutions": []
+          },
+          "subscriptionSubjects": {
+            "__typename": "SubscriptionSubjects",
+            "updateLineupSubscriptionSubjects": [
+              "/fsds/changes/dli/event/participant/lineup/incidents/7/d0QheciS/EN",
+              "/fsds/changes/dli/event/stats/players/7/dj140ofe",
+              "/fsds/changes/dli/event/stats/7/dj140ofe",
+              "/fsds/changes/dli/event/participant/resync/LINEUPS/7/d0QheciS"
+            ]
+          }
+        },
+        {
+          "__typename": "EventParticipant",
+          "id": "CQVNkyFk",
+          "type": {
+            "__typename": "ParticipantType",
+            "side": "AWAY"
+          },
+          "participants": [
+            {
+              "__typename": "ParticipantOnEventParticipant",
+              "participant": {
+                "__typename": "Participant",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "KSNoT4h5-fuIfr9AH.png",
+                    "variantType": 15,
+                    "fallback": "TEAM"
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "Birmingham",
+          "averageRating": "6.5",
+          "lineup": {
+            "__typename": "Lineup",
+            "additionalInfoEligible": true,
+            "aggregatedStats": {
+              "__typename": "LineupAggregatedStats",
+              "avgRating": null,
+              "avgHeight": null,
+              "sumMarketValue": null,
+              "avgAge": null
+            },
+            "players": [
+              {
+                "__typename": "LineupPlayer",
+                "id": "pxU6a6FB",
+                "participantId": "pxU6a6FB",
+                "gender": "MEN",
+                "fieldName": "Beadle",
+                "listName": "Beadle J.",
+                "number": "1",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "QPLCeppQ-YLZHcG0M.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "r58vi4hs-YLZHcG0M.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Me7rjO7m-YLZHcG0M.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jVBnkrNg-YLZHcG0M.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ULAjl2x0-YLZHcG0M.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OrAfmMi6-YLZHcG0M.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.4",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "beadle-james"
+                },
+                "playerRoles": [
+                  {
+                    "__typename": "LineupPlayerRole",
+                    "suffix": "(G)",
+                    "title": "Goalkeeper"
+                  }
+                ],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "K8EVlkle",
+                "participantId": "K8EVlkle",
+                "gender": "MEN",
+                "fieldName": "Osayi-Samuel",
+                "listName": "Osayi-Samuel B.",
+                "number": "26",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "KIFhMRqQ-AVxuJeoA.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xb2KHohs-AVxuJeoA.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Gl1OG57m-AVxuJeoA.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "APFRFPMg-AVxuJeoA.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "lGEVEqx0-AVxuJeoA.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "rwEZD3i6-AVxuJeoA.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "dlKtilqp-23UjJxJO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QNOpj8bj-23UjJxJO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Nigeria",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.5",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "osayi-samuel-bright"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "pbQe8KLk",
+                "participantId": "pbQe8KLk",
+                "gender": "MEN",
+                "fieldName": "Neumann",
+                "listName": "Neumann P.",
+                "number": "5",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "UqNS9Kuh-Yq2Cv64a.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "O6MW8veb-Yq2Cv64a.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "2cLz8bA4-Yq2Cv64a.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "WWPv7IPA-Yq2Cv64a.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ANOr6xuH-Yq2Cv64a.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "4pOn5dfN-Yq2Cv64a.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "Yg9OhUnI-8hqSsydl.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QkXiy2Hp-8hqSsydl.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Germany",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.9",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "neumann-phil"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "xCsCMzW0",
+                "participantId": "xCsCMzW0",
+                "gender": "MEN",
+                "fieldName": "Klarer",
+                "listName": "Klarer C.",
+                "number": "4",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "UTb92cLc-rZPiBESh.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OjbD1Hz4-rZPiBESh.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "2scH0yjA-rZPiBESh.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "WG1Lae5G-jRkt9ZeB.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "A70PbFKM-jRkt9ZeB.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "4UaTcZZS-jRkt9ZeB.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "MonLAWrp-rR7C21Ju.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jLjP9jbj-rR7C21Ju.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Austria",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "7.1",
+                  "isBest": true
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "klarer-christoph"
+                },
+                "playerRoles": [
+                  {
+                    "__typename": "LineupPlayerRole",
+                    "suffix": "(C)",
+                    "title": "Captain"
+                  }
+                ],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "tUoRXZSp",
+                "participantId": "tUoRXZSp",
+                "gender": "MEN",
+                "fieldName": "Cochrane",
+                "listName": "Cochrane A.",
+                "number": "20",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "p0cRlRHt-hvvSbAHk.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "vNdVmoXn-hvvSbAHk.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "IDeZn5ng-hvvSbAHk.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ClAxnP1a-8lV8z6gk.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ju9toqH5-8lV8z6gk.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "p28pp3WB-8lV8z6gk.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "7.1",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "cochrane-alexander"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "Qs56dHSA",
+                "participantId": "Qs56dHSA",
+                "gender": "MEN",
+                "fieldName": "Iwata",
+                "listName": "Iwata T.",
+                "number": "24",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "QqGEnKwh-b9v8wqzM.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Y9FIovgb-b9v8wqzM.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "C0EMpb84-b9v8wqzM.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "6NDQqINA-b9v8wqzM.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "KQHUrxwH-b9v8wqzM.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CMubR97q-b9v8wqzM.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "Cp8XHAq1-Sz3v6Urh.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "677yHUb7-Sz3v6Urh.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Japan",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "7.0",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "iwata-tomoki"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "CxVKphX0",
+                "participantId": "CxVKphX0",
+                "gender": "MEN",
+                "fieldName": "Solis Romero",
+                "listName": "Solis Romero J. E.",
+                "number": "14",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "zPKmUyvh-M9rLBn9f.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "rkKiTegb-M9rLBn9f.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MuJeSF84-M9rLBn9f.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "G2IaRZNA-rkdo3Iol.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "U5M3QgwH-rkdo3Iol.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OSL7PDhN-rkdo3Iol.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "nFbD74lI-GKREsGBI.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "txbH6O3O-GKREsGBI.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Colombia",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.2",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "solis-jhon"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "bRBNu8DM",
+                "participantId": "bRBNu8DM",
+                "gender": "MEN",
+                "fieldName": "Vicente",
+                "listName": "Vicente C.",
+                "number": "7",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "lp6TXfLc-2JzoLlI4.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "IJAXWEz4-2JzoLlI4.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dA9yWYkA-2JzoLlI4.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "jX8uVh5G-tSbzCp0k.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "0ty9DQZr-tSbzCp0k.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "f3zDCpkk-tSbzCp0k.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "QFbOpTR6-GtJBBjyH.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "KxbSqmsD-GtJBBjyH.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Spain",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "5.9",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "vicente-carlos"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "vLTExrEN",
+                "participantId": "vLTExrEN",
+                "gender": "MEN",
+                "fieldName": "Paik",
+                "listName": "Paik Seung-Ho",
+                "number": "8",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "hnhL6o3K-fD1YI4Xn.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MLdP55IQ-fD1YI4Xn.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OUri1PQs-fD1YI4Xn.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Iire0qtl-G8DTJjAT.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Wfnaa3ef-G8DTJjAT.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QHo3bNA0-G8DTJjAT.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "GxL7Reo1-IkiAj41e.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "O2KBQF07-IkiAj41e.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "South Korea",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.4",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "paik-seung-ho"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "xvOCZvWF",
+                "participantId": "xvOCZvWF",
+                "gender": "MEN",
+                "fieldName": "Stansfield",
+                "listName": "Stansfield J.",
+                "number": "28",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "zZDwIObn-p622zihG.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "UeDsHrEh-p622zihG.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8nCoG2Tb-p622zihG.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "2NQlFMr5-p622zihG.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "tEPhEtbB-p622zihG.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "zyPdD0DH-p622zihG.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.1",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "stansfield-jay"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "j1ewl4bp",
+                "participantId": "j1ewl4bp",
+                "gender": "MEN",
+                "fieldName": "Priske",
+                "listName": "Priske A.",
+                "number": "9",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "Wdc16Ns9-4bVmqGSP.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QJd55scF-4bVmqGSP.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xdPYmFRs-4bVmqGSP.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "WIOxmZtl-nDwzNSRB.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "A9Ntngdf-nDwzNSRB.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "vqSpoDB0-nDwzNSRB.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "xjhdXT6C-6sApwvEd.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "WCi0WmMI-6sApwvEd.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Denmark",
+                "incidents": [],
+                "rating": {
+                  "__typename": "LineupPlayerRating",
+                  "value": "6.1",
+                  "isBest": false
+                },
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "priske-august"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "SE6BJMLi",
+                "participantId": "SE6BJMLi",
+                "gender": "MEN",
+                "fieldName": "Allsop",
+                "listName": "Allsop R.",
+                "number": "21",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "KEfFeRME-jczIYGF9.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "EyfJfoxL-jczIYGF9.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "hShNg5iR-jczIYGF9.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "YLzjkPar-ImQ2jwtC.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CCZglqFl-ImQ2jwtC.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "6ZYcm3Uf-ImQ2jwtC.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "allsop-ryan"
+                },
+                "playerRoles": [
+                  {
+                    "__typename": "LineupPlayerRole",
+                    "suffix": "(G)",
+                    "title": "Goalkeeper"
+                  }
+                ],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "hIreZGmE",
+                "participantId": "hIreZGmE",
+                "gender": "MEN",
+                "fieldName": "Lund",
+                "listName": "Lund K.",
+                "number": "25",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "GAbiyY03-QijkWQFL.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "AXcezhG9-QijkWQFL.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "lOdaZBVF-QijkWQFL.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "raB2YVpM-xIK7of2i.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MkA6Xk0S-xIK7of2i.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "vVdYS98q-xIK7of2i.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "n5adRNrp-hW3gKkMl.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "tSb0Qsbj-hW3gKkMl.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "USA",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "hansen-kristoffer"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "vBfoyb90",
+                "participantId": "vBfoyb90",
+                "gender": "MEN",
+                "fieldName": "Fry",
+                "listName": "Fry D.",
+                "number": "23",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "t6VnCDcn-GKDUs9tU.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "zTUjBXCh-GKDUs9tU.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "lWYfAiSb-GKDUs9tU.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "rgYb9Bs5-GKDUs9tU.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MqX28VdB-GKDUs9tU.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "U9W67kCH-GKDUs9tU.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "fry-dael"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "UawH7MA5",
+                "participantId": "UawH7MA5",
+                "gender": "MEN",
+                "fieldName": "Laird",
+                "listName": "Laird E.",
+                "number": "2",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "E5I5RX03-xCRoumpe.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "ruN9QiG9-xCRoumpe.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MVLDPBVF-xCRoumpe.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "GhLHOVpM-QH7RqVm0.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "SSOLNk0S-QH7RqVm0.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "p8BmJ98q-QH7RqVm0.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "laird-ethan"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "WE2YQOwr",
+                "participantId": "WE2YQOwr",
+                "gender": "MEN",
+                "fieldName": "Bird",
+                "listName": "Bird M.",
+                "number": "18",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "KU1NVLIt-jo8YEY0c.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Ei1RUuYn-jo8YEY0c.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Sf5VTamg-jo8YEY0c.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "MH4ZSJ2a-2P5FsiQi.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "083wSwI5-2P5FsiQi.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Us8sRcXB-2P5FsiQi.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "bird-max"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "bimIUO0s",
+                "participantId": "bimIUO0s",
+                "gender": "MEN",
+                "fieldName": "Fujimoto",
+                "listName": "Fujimoto K.",
+                "number": "27",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "MqV2FJuh-6ummqVpG.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "G6U6Eweb-6ummqVpG.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "EimADcA4-6ummqVpG.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8EnECHPA-prnynkJU.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "n5oIByuH-prnynkJU.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "GvjMAefN-prnynkJU.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "Cp8XHAq1-Sz3v6Urh.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "677yHUb7-Sz3v6Urh.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Japan",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "fujimoto-kanya"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "AF2iqxB6",
+                "participantId": "AF2iqxB6",
+                "gender": "MEN",
+                "fieldName": "Gray",
+                "listName": "Gray D.",
+                "number": "10",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "QFbUmL4K-IBWEuZXm.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "KxbYnuKQ-IBWEuZXm.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "fVl0raSs-IBWEuZXm.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "lhl4sJsl-hWBDKIBB.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Srm8twcf-hWBDKIBB.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dIiCucC0-hWBDKIBB.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "U9nMHxsp-8jljYlHN.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "bqiQGddj-8jljYlHN.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Jamaica",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "gray-demarai"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "llCwLjA8",
+                "participantId": "llCwLjA8",
+                "gender": "MEN",
+                "fieldName": "Roberts",
+                "listName": "Roberts P.",
+                "number": "16",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "jJ32jJan-jgfo3PtT.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "pt36kwFh-jgfo3PtT.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "OW1AlcUb-jgfo3PtT.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "h66EmHq5-jgfo3PtT.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "Wd5InyaB-jgfo3PtT.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "QJ4MoeEH-jgfo3PtT.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "2yGc8QR6-fqCjSvcO.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "dbF17psD-fqCjSvcO.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "England",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "roberts-patrick"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              },
+              {
+                "__typename": "LineupPlayer",
+                "id": "pILm9siL",
+                "participantId": "pILm9siL",
+                "gender": "MEN",
+                "fieldName": "Vazquez",
+                "listName": "Vazquez L.",
+                "number": "32",
+                "images": [
+                  {
+                    "__typename": "Image",
+                    "path": "IerHdZLc-GOcJU0XM.png",
+                    "variantType": 81,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "CIsLegy4-GOcJU0XM.png",
+                    "variantType": 82,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "j9tPfDjA-GOcJU0XM.png",
+                    "variantType": 83,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "bZuTgX5G-GOcJU0XM.png",
+                    "variantType": 84,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "xQvXhiLM-GOcJU0XM.png",
+                    "variantType": 85,
+                    "fallback": "MEN"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "WnvyhBzT-GOcJU0XM.png",
+                    "variantType": 86,
+                    "fallback": "MEN"
+                  }
+                ],
+                "teamLogo": [
+                  {
+                    "__typename": "Image",
+                    "path": "Ea1ZZ85C-WzGSpHzt.png",
+                    "variantType": 87,
+                    "fallback": "TEAM"
+                  },
+                  {
+                    "__typename": "Image",
+                    "path": "8M0wZSKI-WzGSpHzt.png",
+                    "variantType": 88,
+                    "fallback": "TEAM"
+                  }
+                ],
+                "teamName": "Argentina",
+                "incidents": [],
+                "rating": null,
+                "participant": {
+                  "__typename": "Participant",
+                  "url": "vazquez-luis"
+                },
+                "playerRoles": [],
+                "seasonResult": null,
+                "marketValue": null,
+                "height": null,
+                "age": null,
+                "averageRating": null
+              }
+            ],
+            "formation": {
+              "__typename": "LineupFormation",
+              "name": "4-2-3-1",
+              "lines": [
+                {
+                  "__typename": "LineupFormationLine",
+                  "sortKey": 1,
+                  "name": "Line 1",
+                  "rows": [
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 0,
+                      "playerIds": ["pxU6a6FB"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 1,
+                      "playerIds": ["K8EVlkle", "pbQe8KLk", "xCsCMzW0", "tUoRXZSp"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 2,
+                      "playerIds": ["Qs56dHSA", "CxVKphX0"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 3,
+                      "playerIds": ["bRBNu8DM", "vLTExrEN", "xvOCZvWF"]
+                    },
+                    {
+                      "__typename": "LineupFormationRow",
+                      "sortKey": 4,
+                      "playerIds": ["j1ewl4bp"]
+                    }
+                  ]
+                }
+              ]
+            },
+            "groups": [
+              {
+                "__typename": "LineupGroup",
+                "groupType": "STARTERS",
+                "sortKey": 11,
+                "name": "Starting Lineups",
+                "playerIds": [
+                  "pxU6a6FB",
+                  "K8EVlkle",
+                  "pbQe8KLk",
+                  "xCsCMzW0",
+                  "tUoRXZSp",
+                  "Qs56dHSA",
+                  "CxVKphX0",
+                  "bRBNu8DM",
+                  "vLTExrEN",
+                  "xvOCZvWF",
+                  "j1ewl4bp"
+                ],
+                "transKey": "TRANS_DETAIL_LABEL_STARTING_LINEUPS"
+              },
+              {
+                "__typename": "LineupGroup",
+                "groupType": "SUBSTITUTES",
+                "sortKey": 501,
+                "name": "Substitutes",
+                "playerIds": [
+                  "SE6BJMLi",
+                  "WE2YQOwr",
+                  "vBfoyb90",
+                  "bimIUO0s",
+                  "AF2iqxB6",
+                  "UawH7MA5",
+                  "hIreZGmE",
+                  "llCwLjA8",
+                  "pILm9siL"
+                ],
+                "transKey": "TRANS_DETAIL_LABEL_SUBSTITUTES"
+              }
+            ],
+            "coaches": {
+              "__typename": "LineupGroup",
+              "sortKey": 901,
+              "name": "Coaches",
+              "players": [
+                {
+                  "__typename": "LineupPlayer",
+                  "id": "Uu6L6Igl",
+                  "participantId": "Uu6L6Igl",
+                  "name": "Davies C.",
+                  "listName": "Davies C.",
+                  "teamLogo": [
+                    {
+                      "__typename": "Image",
+                      "path": "fDT92h6e-M5j0fiva.png",
+                      "variantType": 87,
+                      "fallback": "TEAM"
+                    },
+                    {
+                      "__typename": "Image",
+                      "path": "OnYD1CL1-M5j0fiva.png",
+                      "variantType": 88,
+                      "fallback": "TEAM"
+                    }
+                  ],
+                  "teamName": "Wales",
+                  "participant": {
+                    "__typename": "Participant",
+                    "url": "davies-chris"
+                  }
+                }
+              ],
+              "playerIds": ["Uu6L6Igl"]
+            },
+            "usedSubstitutions": []
+          },
+          "subscriptionSubjects": {
+            "__typename": "SubscriptionSubjects",
+            "updateLineupSubscriptionSubjects": [
+              "/fsds/changes/dli/event/participant/lineup/incidents/7/CQVNkyFk/EN",
+              "/fsds/changes/dli/event/stats/players/7/dj140ofe",
+              "/fsds/changes/dli/event/stats/7/dj140ofe",
+              "/fsds/changes/dli/event/participant/resync/LINEUPS/7/CQVNkyFk"
+            ]
+          }
+        }
+      ],
+      "tournamentStage": {
+        "__typename": "TournamentStage",
+        "tournament": {
+          "__typename": "Tournament",
+          "tournamentTemplate": {
+            "__typename": "TournamentTemplate",
+            "switchedParticipants": false
+          }
+        }
+      }
+    }
+  }
+}

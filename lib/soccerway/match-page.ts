@@ -125,6 +125,27 @@ export function parseMatchPage(html: string): SoccerwayMatchPageInfo | null {
   }
 }
 
+/**
+ * 경기 페이지 HTML → Livesport eventId 후보 (라인업 조회용, 2026-08-16).
+ *
+ * HTML 안의 8자 영숫자 id 는 팀 해시와 동형이라 전수 스캔은 오탐 지뢰밭이다.
+ * 실측으로 확인한 **결정적 앵커 두 곳**만 읽는다:
+ *   ① `window.environment = {"event_id_c":"dj140ofe", …}`  — 프론트 부트스트랩
+ *   ② dataLayer pageinfo `{"event":"pageinfo", …, "type":"detail_page", "id":"dj140ofe"}`
+ * 보통 둘이 같은 값이라 후보는 1개다. 그래도 **채택은 호출자가 라인업 API 의
+ * 참가팀명을 대조한 뒤에** 한다 — 오탐 eventId 는 남의 경기 라인업이라 사고 등급이 높다.
+ * (후보만 뽑고 채택은 검증이 — match-mapping 의 규율과 같은 모양)
+ */
+export function extractLivesportEventIds(html: string): string[] {
+  const out: string[] = []
+  const push = (id: string | undefined) => {
+    if (id && /^[A-Za-z0-9]{6,12}$/.test(id) && !out.includes(id)) out.push(id)
+  }
+  push(html.match(/"event_id_c"\s*:\s*"([A-Za-z0-9]{6,12})"/)?.[1])
+  push(html.match(/"event"\s*:\s*"pageinfo"[^}]{0,200}?"id"\s*:\s*"([A-Za-z0-9]{6,12})"/)?.[1])
+  return out.slice(0, 3)
+}
+
 export interface MatchPageFetchResult {
   httpStatus: number
   html: string | null

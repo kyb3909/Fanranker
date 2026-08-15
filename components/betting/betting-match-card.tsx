@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import type { GroupedMatch, SelectedBet, SportsGame } from "@/types/betting"
 import { getGameTypeLabel, formatMatchTime, sportColors } from "@/types/betting"
 import { BoardIcon } from "@/components/sidebar/board-icon"
+import { MatchLineup } from "@/components/match/match-lineup"
 
 interface BettingMatchCardProps {
   groupedMatch: GroupedMatch
@@ -251,6 +252,18 @@ export function BettingMatchCard({
           {groupedMatch.awayTeam}
         </span>
       </div>
+
+      {/* 선발 라인업 (soccerway, 킥오프 ~1h 전 발표) — 매핑·발표가 없으면 스스로 숨는다.
+          예측 옵션 토글과 별개의 자체 토글 — 라인업은 참고 정보다. */}
+      {groupedMatch.sport === "축구" && groupedMatch.games[0]?.id && (
+        <div className="px-3">
+          <MatchLineup
+            gameId={String(groupedMatch.games[0].id)}
+            matchTime={groupedMatch.matchTime}
+            compact
+          />
+        </div>
+      )}
 
       {/* Game Types — 메인(승무패)는 항상 표시, 나머지는 토글로 펼침.
           펼친 상태에선 접기 버튼이 추가 옵션 아래(맨 끝)로 이동.
