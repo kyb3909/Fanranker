@@ -14,6 +14,19 @@ describe("가드 — 클럽명·교정 타당성 (2026-08-04 실사고: 리버�
     expect(isClubName("조던 헨더슨")).toBe(false)
   })
 
+  // 이 정규식은 관심도 심사의 축①(주체) 게이트로도 쓰인다 — 여기 걸리면 "아는 팀"으로
+  // 간주돼 LLM 이 농도만 본다. 맨몸 토큰이 남미 동명 구단을 잡으면 그대로 새어 나간다.
+  // 실측 유출(2026-08-15): "프레드, 아틀레티코 미네이루로 이적" 이 `아틀레티코` 에 걸림.
+  it("남미 동명 구단은 빅클럽으로 오인하지 않는다", () => {
+    expect(isClubName("아틀레티코 미네이루")).toBe(false)
+    expect(isClubName("인테르나시오나우")).toBe(false)
+    expect(isClubName("로사리오 센트랄")).toBe(false)
+    // 원래 의도한 유럽 구단은 그대로 통과해야 한다 (과잉 차단 방지)
+    expect(isClubName("아틀레티코 마드리드")).toBe(true)
+    expect(isClubName("아틀레티코, 알바레스 영입")).toBe(true)
+    expect(isClubName("인테르")).toBe(true)
+  })
+
   it("음차 차이는 타당 (갓포→각포, 추아미니→추아메니)", () => {
     expect(plausibleCorrection("코디 갓포", "코디 각포")).toBe(true)
     expect(plausibleCorrection("추아미니", "추아메니")).toBe(true)
