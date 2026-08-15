@@ -162,15 +162,20 @@ export function HomeClient({
         히어로↔PageBand 스왑은 gn-band-entering 마운트 전환(260ms)으로 붕괴감을 줄인다
         — 첫 로드는 애니메이션 없음(LCP 보호), 탭 전환부터만.
       */}
+      {/* 개막 이벤트는 독립 배너 대신 **캐러셀 슬라이드**로 (2026-08-16 운영자 승인).
+          종전 배너는 히어로 위에서 min-h 150px 를 추가로 먹어 톱스토리·오늘의 경기를
+          접힘 아래로 밀었다. 캐러셀 안에 들어가면 이미 있는 자리를 나눠 쓰므로 세로가
+          늘지 않고, 셋이 한 화면에 들어온다. 노출은 회전 첫 장이라 오히려 세다. */}
       {feedTab === "cardnews" ? (
         <MatchdayBand
           cards={heroCards ?? initialCardNews?.cards ?? []}
           initialGames={initialGames}
+          eventAsSlide
         />
       ) : feedTab === "games" ? (
         // 같은 DNA 의 축소 매치데이 밴드 — 히어로→"요약"으로 읽히고, 카운트다운이
         // 경기 픽 화면과 문맥이 정확히 맞는다 (감리 실행안 B)
-        <MatchdayBand cards={[]} compact initialGames={initialGames} />
+        <MatchdayBand cards={[]} compact initialGames={initialGames} eventAsSlide />
       ) : (
         <PageBand
           as="h2" // sr-only h1(156행)과의 h1 중복 방지 — 문서 아웃라인 고정
