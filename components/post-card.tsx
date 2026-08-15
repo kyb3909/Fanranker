@@ -31,9 +31,25 @@ interface PostCardProps {
   post: Post
   /** 첫 번째 게시물인 경우 true - LCP 이미지 최적화 */
   priority?: boolean
+  /**
+   * 껍데기(chrome)만 고르는 스위치 — 안쪽 내용·상호작용은 완전히 동일하다.
+   *
+   * - `card`(기본): 둥근 흰 카드 + 테두리 + 그림자. **프로덕션 홈의 현재 모습.**
+   * - `row`: 테두리·그림자·라운드를 걷어낸 목록 행. 구분선은 부모(.gnp-rows)가 긋는다.
+   *   게시물마다 박스를 씌우면 제목보다 박스가 먼저 읽혀서, 편집형 피드에서는 껍데기를
+   *   지우고 타이포에 위계를 준다.
+   *
+   * ⚠️ 기본값이 `card` 라 이 prop 을 넘기지 않는 기존 호출부는 동작이 그대로다.
+   *    (2026-08-15 홈 리디자인 프리뷰에서만 `row` 를 쓴다)
+   */
+  variant?: "card" | "row"
 }
 
-export const PostCard = memo(function PostCard({ post, priority = false }: PostCardProps) {
+export const PostCard = memo(function PostCard({
+  post,
+  priority = false,
+  variant = "card",
+}: PostCardProps) {
   const { user } = useUser()
   const isAuthor = post.userId === user?.id
 
@@ -72,14 +88,25 @@ export const PostCard = memo(function PostCard({ post, priority = false }: PostC
   return (
     <article>
       <div
-        className="group gn-card-lift overflow-hidden rounded-xl"
-        style={{
-          background: "var(--wc-card)",
-          border: "1px solid var(--wc-line)",
-          boxShadow: "0 1px 2px rgba(24,18,21,.05)",
-        }}
+        className={
+          variant === "row"
+            ? "gnp-row group overflow-hidden"
+            : "group gn-card-lift overflow-hidden rounded-xl"
+        }
+        style={
+          variant === "row"
+            ? undefined // 면·구분선은 .gnp-row / .gnp-rows 가 담당
+            : {
+                background: "var(--wc-card)",
+                border: "1px solid var(--wc-line)",
+                boxShadow: "0 1px 2px rgba(24,18,21,.05)",
+              }
+        }
       >
-        <div className="relative" style={{ padding: "18px 20px" }}>
+        <div
+          className="relative"
+          style={{ padding: variant === "row" ? "20px 22px" : "18px 20px" }}
+        >
           <PostCardContent
             postId={post.id}
             title={post.title}

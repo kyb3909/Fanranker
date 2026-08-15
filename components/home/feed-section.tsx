@@ -16,6 +16,11 @@ interface FeedSectionProps {
   isLoading: boolean
   isLoadingMore: boolean
   loadMore: () => void
+  /**
+   * 게시물 껍데기 — PostCard 로 그대로 넘긴다. 기본 `card` = 프로덕션 현재 모습.
+   * `row` 는 홈 리디자인 프리뷰(/home-preview)에서만 쓴다 (2026-08-15).
+   */
+  variant?: "card" | "row"
 }
 
 export const FeedSection = memo(function FeedSection({
@@ -23,6 +28,7 @@ export const FeedSection = memo(function FeedSection({
   isLoading,
   isLoadingMore,
   loadMore,
+  variant = "card",
 }: FeedSectionProps) {
   const { isSignedIn } = useAuth()
   const { isBlocked } = useBlockedUsers()
@@ -129,7 +135,10 @@ export const FeedSection = memo(function FeedSection({
     )
   }
 
-  return (
+  // ⚠️ card(프로덕션) 는 **반드시 Fragment 로 반환**한다. 호출부가 `space-y-2.5` 로
+  //    게시물 간격을 주는데(`> * + *`), 래퍼 div 를 하나 끼우면 포스트가 직계 자식이
+  //    아니게 돼 간격이 통째로 사라진다. row 일 때만 구분선용 래퍼를 씌운다.
+  const items = (
     <>
       {visiblePosts.map((post, index) => (
         <React.Fragment key={post.id}>
@@ -143,7 +152,7 @@ export const FeedSection = memo(function FeedSection({
             }
           >
             {/* LCP 후보가 첫 카드가 아닐 수 있음(텍스트/iframe 카드가 앞서면 3번째가 LCP). 상위 3개에 priority. */}
-            <PostCard post={post} priority={index < 3} />
+            <PostCard post={post} priority={index < 3} variant={variant} />
           </div>
           {(index + 1) % 7 === 0 && <AdPlaceholder variant="banner" />}
         </React.Fragment>
@@ -156,6 +165,8 @@ export const FeedSection = memo(function FeedSection({
       </div>
     </>
   )
+
+  return variant === "row" ? <div className="gnp-rows">{items}</div> : items
 })
 
 FeedSection.displayName = "FeedSection"
