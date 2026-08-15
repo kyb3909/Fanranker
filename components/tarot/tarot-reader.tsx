@@ -1,48 +1,44 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import Image from "next/image"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { SPREADS, SPREAD_IDS, type SpreadId } from "@/lib/tarot/spreads"
-import { expressionSrc, type Expression } from "@/lib/tarot/expression"
+import { DEFAULT_EXPRESSION, type Expression } from "@/lib/tarot/expression"
+import { LunaStage } from "@/components/tarot/luna-stage"
+import { CardTable, type ReadingCard } from "@/components/tarot/card-table"
 
 /**
- * 축구 타로 리더 — 질문 → 스프레드 선택 → 카드 → 루나의 해석.
+ * 축구 타로 리더 — 루나의 점집 (2026-08-15 전면 개편).
  *
- * ## 왜 페이지에서 떼어냈나 (2026-08-12)
- * 떡밥 카드의 "이 경기 흐름, 카드로 볼까?"가 /tarot 으로 **페이지 전환**을 했다.
- * 운영자 요청으로 모달로 바꾸면서, 같은 리딩 UI 를 두 표면이 공유해야 해졌다.
- * 복붙하면 표기 사전이 읽는 경로 7개로 갈라져 사고가 반복되던 패턴을 여기서 재현하게 된다.
+ * ## 왜 다시 썼나
+ * 종전 화면은 폼 → 스피너 → 결과 덤프였다. 원본 서비스(D:/Projects/tarot)와 나란히 놓고
+ * 보니 로직(lib/tarot/*)만 이식되고 **연출이 통째로 빠져 있었다.** 운영자 평: "삭막하다".
+ * 원본에서 리딩은 조회가 아니라 **사건**이다 — 질문에 반응하고, 카드를 깔고, 사용자가
+ * 한 장씩 뒤집고, 말이 흘러나오고, 끝나면 더 물어볼 수 있다.
  *
- * 페이지(/tarot)는 이 컴포넌트를 감싸 URL 질문(?q=)을 넘기고, 모달은 카드가 만든
- * 질문을 prop 으로 넘긴다 — 질문의 출처만 다르고 리딩 로직은 하나다.
+ * ## 단계
+ *   intro   질문·스프레드 고르기
+ *   dealing 카드를 까는 중 (스트림이 카드를 먼저 보낸다)
+ *   stage   사용자가 한 장씩 뒤집는 의식. 그동안 해석은 뒤에서 흐르고 있다
+ *   chat    다 뒤집으면 해석이 타이핑되듯 드러나고, 이어서 후속 질문
  *
- * 비로그인도 전부 쓸 수 있다 (유입 표면 기준: 유저 0명 성립 + 비로그인 가치).
- * 오락 목적 고지는 화면 하단에 **상시** 노출 — 카카오 심사 소명과 같은 선상이다.
+ * ⚠️ 뒤집기는 **연출일 뿐** 결과를 바꾸지 않는다. 카드는 서버가 이미 확정했다.
+ * ⚠️ 스트림이 먼저 끝나도 뒤집기가 끝날 때까지 무대를 지킨다 — 의식을 건너뛰면
+ *    다시 "결과 덤프"가 된다.
+ *
+ * 모달/페이지 두 표면이 이 컴포넌트를 공유한다 (질문의 출처만 다르다).
+ * 비로그인도 전부 쓸 수 있고, 오락 목적 고지는 상시 노출한다.
  */
 
-interface ReadingCard {
-  position: number
-  positionName: string
-  arcana: number
-  nameKo: string
-  name: string
-  reversed: boolean
-  image: string
-}
-
-interface ReadingResult {
-  question: string
-  spread: { id: string; name: string }
-  cards: ReadingCard[]
-  reading: string
-  expression: Expression
-}
+type Phase = "intro" | "dealing" | "stage" | "chat"
 
 interface BlockedResult {
-  blocked: "crisis" | "gambling"
   message: string
   resources?: readonly { name: string; contact: string }[]
-  expression: Expression
+}
+
+interface Turn {
+  role: "user" | "luna"
+  text: string
 }
 
 /** 질문 프리셋 — 빈 입력창은 콜드스타트에서 가장 큰 마찰이다 */
@@ -51,111 +47,353 @@ const PRESETS = [
   "이번 이적설, 진짜 성사될까요?",
   "우리 팀 이번 시즌 어디까지 갈까요?",
   "감독 계속 믿어도 될까요?",
-  "이 선수 영입하는 게 맞을까요?",
 ]
 
 export interface TarotReaderProps {
   /** 프리필될 질문 — 페이지는 ?q=, 모달은 기사 제목에서 만든 질문을 넘긴다 */
   initialQuestion?: string
-  /**
-   * 모달 안에서 쓰이는가. 세로 예산이 페이지의 절반도 안 되므로:
-   *  · 루나 일러스트를 340 → 200px 로 줄이고
-   *  · 제목(h1)을 감춘다 — DialogTitle 이 이미 말하고 있어 두 번 말하는 꼴이 된다
-   * 그 외 리딩 UI 는 완전히 동일하다.
-   */
+  /** 모달 안에서 쓰이는가 — 세로 예산이 페이지의 절반도 안 돼 무대를 낮춘다 */
   inModal?: boolean
 }
 
+/** NDJSON 스트림을 한 줄씩 넘겨준다 */
+async function readNdjson(res: Response, onLine: (o: Record<string, unknown>) => void) {
+  const reader = res.body?.getReader()
+  if (!reader) return
+  const decoder = new TextDecoder()
+  let buf = ""
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split("\n")
+    buf = lines.pop() ?? ""
+    for (const l of lines) {
+      const t = l.trim()
+      if (!t) continue
+      try {
+        onLine(JSON.parse(t))
+      } catch {
+        /* 깨진 줄은 버린다 */
+      }
+    }
+  }
+}
+
 export function TarotReader({ initialQuestion = "", inModal = false }: TarotReaderProps) {
+  const [phase, setPhase] = useState<Phase>("intro")
   const [question, setQuestion] = useState(() => initialQuestion.slice(0, 200))
+  const [askedQuestion, setAskedQuestion] = useState("")
   const [spreadId, setSpreadId] = useState<SpreadId>("three")
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<ReadingResult | null>(null)
+
+  const [cards, setCards] = useState<ReadingCard[]>([])
+  const [flipped, setFlipped] = useState<Set<number>>(new Set())
+  const [expression, setExpression] = useState<Expression>(DEFAULT_EXPRESSION)
+
+  const [reading, setReading] = useState("")
+  const [streaming, setStreaming] = useState(false)
+  const [shownLen, setShownLen] = useState(0)
+
   const [blocked, setBlocked] = useState<BlockedResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // 점괘가 나오면 입력 폼이 접혀 문서 높이가 줄어든다 — 스크롤 위치가 카드 아래에
-  // 남아있을 수 있으므로 결과 첫머리로 데려간다 (모달에서는 다이얼로그가 스크롤 컨테이너).
-  const resultRef = useRef<HTMLDivElement>(null)
+  const [turns, setTurns] = useState<Turn[]>([])
+  const [followup, setFollowup] = useState("")
+  const [followupBusy, setFollowupBusy] = useState(false)
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const allFlipped = cards.length > 0 && flipped.size === cards.length
+
+  // 다 뒤집으면 무대를 대화로 넘긴다
   useEffect(() => {
-    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }, [result])
+    if (allFlipped && phase === "stage") setPhase("chat")
+  }, [allFlipped, phase])
+
+  // 해석을 타이핑하듯 드러낸다 — 이미 다 받아둔 텍스트라도 한 번에 떨구지 않는다.
+  // 뒤집기가 끝나기 전엔 시작하지 않는다(의식이 먼저).
+  useEffect(() => {
+    if (!allFlipped || shownLen >= reading.length) return
+    const step = Math.max(2, Math.ceil((reading.length - shownLen) / 60))
+    const id = setTimeout(() => setShownLen((l) => Math.min(reading.length, l + step)), 16)
+    return () => clearTimeout(id)
+  }, [allFlipped, shownLen, reading])
+
+  // 말이 늘어나면 아래를 따라간다
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [shownLen, turns])
+
+  const flip = useCallback((position: number) => {
+    setFlipped((prev) => {
+      const next = new Set(prev)
+      next.add(position)
+      return next
+    })
+  }, [])
 
   async function submit() {
     const q = question.trim()
-    if (q.length < 2 || loading) return
-    setLoading(true)
+    if (q.length < 2 || phase === "dealing") return
+    setPhase("dealing")
     setError(null)
-    setResult(null)
     setBlocked(null)
+    setCards([])
+    setFlipped(new Set())
+    setReading("")
+    setShownLen(0)
+    setTurns([])
+    setAskedQuestion(q)
+    setExpression("focused")
+    setStreaming(true)
     try {
       const res = await fetch("/api/tarot/reading", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, spreadId }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data?.error ?? "리딩에 실패했어요.")
-      } else if (data.blocked) {
-        setBlocked(data as BlockedResult)
-      } else {
-        setResult(data as ReadingResult)
+        const j = await res.json().catch(() => ({}))
+        setError(j?.error ?? "리딩에 실패했어요.")
+        setPhase("intro")
+        return
       }
+      await readNdjson(res, (o) => {
+        switch (o.type) {
+          case "blocked":
+            setBlocked({
+              message: String(o.message ?? ""),
+              resources: o.resources as BlockedResult["resources"],
+            })
+            setExpression((o.expression as Expression) ?? "worried")
+            setPhase("intro")
+            break
+          case "cards":
+            setCards((o.cards as ReadingCard[]) ?? [])
+            setPhase("stage")
+            break
+          case "expression":
+            setExpression(o.value as Expression)
+            break
+          case "delta":
+            setReading((t) => t + String(o.t ?? ""))
+            break
+          case "error":
+            setError(String(o.message ?? "리딩에 실패했어요."))
+            break
+        }
+      })
     } catch {
       setError("연결이 불안정해요. 다시 시도해주세요.")
+      setPhase((p) => (p === "dealing" ? "intro" : p))
     } finally {
-      setLoading(false)
+      setStreaming(false)
     }
   }
 
-  const expression: Expression = blocked?.expression ?? result?.expression ?? "neutral"
+  async function askFollowup() {
+    const q = followup.trim()
+    if (q.length < 2 || followupBusy) return
+    setFollowup("")
+    setFollowupBusy(true)
+    setTurns((t) => [...t, { role: "user", text: q }, { role: "luna", text: "" }])
+    try {
+      const res = await fetch("/api/tarot/followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: askedQuestion,
+          reading,
+          cards: cards.map((c) => ({
+            positionName: c.positionName,
+            nameKo: c.nameKo,
+            reversed: c.reversed,
+          })),
+          followup: q,
+          history: turns.slice(-6),
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setTurns((t) => {
+          const n = [...t]
+          n[n.length - 1] = { role: "luna", text: j?.error ?? "대답을 받지 못했어요." }
+          return n
+        })
+        return
+      }
+      await readNdjson(res, (o) => {
+        if (o.type === "delta" || o.type === "blocked" || o.type === "error") {
+          const piece = String(o.t ?? o.message ?? "")
+          setTurns((t) => {
+            const n = [...t]
+            const last = n[n.length - 1]
+            n[n.length - 1] = {
+              role: "luna",
+              text: o.type === "delta" ? last.text + piece : piece,
+            }
+            return n
+          })
+        }
+      })
+    } catch {
+      setTurns((t) => {
+        const n = [...t]
+        n[n.length - 1] = { role: "luna", text: "연결이 불안정해요." }
+        return n
+      })
+    } finally {
+      setFollowupBusy(false)
+    }
+  }
+
+  // 카드가 깔리면 무대를 키운다 — 얼굴과 테이블이 한 화면에 같이 있어야 "마주 본다"가 된다
+  const stageH = cards.length > 0 ? (inModal ? 290 : 420) : inModal ? 240 : 340
+  const shown = reading.slice(0, shownLen)
+  const typing = allFlipped && (shownLen < reading.length || streaming)
+
+  /** 루나가 지금 무슨 상태인지 한 줄 — 무대의 자막 역할 */
+  const caption = blocked
+    ? "잠깐, 그건 카드로 볼 일이 아니에요."
+    : phase === "intro"
+      ? "궁금한 걸 물어보세요. 카드가 흐름을 비춰줄게요."
+      : phase === "dealing"
+        ? "카드를 고르는 중이에요…"
+        : phase === "stage"
+          ? flipped.size === 0
+            ? "카드를 깔았어요. 한 장씩 뒤집어 보세요."
+            : `${cards.length - flipped.size}장 남았어요.`
+          : typing
+            ? "…"
+            : "더 궁금한 게 있으면 물어보세요."
 
   return (
     <div className={inModal ? "" : "mx-auto max-w-[680px] px-4 pt-5 pb-16 sm:px-6"}>
-      {/* 루나 */}
-      <div className="flex flex-col items-center">
-        <div
-          className="relative aspect-square w-full overflow-hidden rounded-2xl"
-          style={{ maxWidth: inModal ? 200 : 340, boxShadow: "var(--wc-shadow-1)" }}
-        >
-          <Image
-            src={expressionSrc(loading ? "focused" : expression)}
-            alt="타로 리더 루나"
-            fill
-            sizes={inModal ? "200px" : "340px"}
-            className="object-cover"
-            priority={!inModal}
-          />
-          {/* 정지 일러스트에 생기를 주는 오버레이 (globals.css).
-              이미지에 빛을 구워 넣지 않는 이유: 표정 6종을 매번 다시 뽑아야 하고
-              그때마다 빛의 세기가 달라진다. 좌표는 생성 프롬프트가 구도를 고정해 유효하다. */}
-          <span aria-hidden className="tarot-orb-aura" />
-          <span aria-hidden className="tarot-candle-glow" />
-        </div>
-        {!inModal && (
-          <h1 className="mt-4 text-[22px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            루나의 축구 점집
-          </h1>
+      {/* ── 무대 ── */}
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        style={{
+          height: stageH,
+          background: "#120c1a",
+          boxShadow: "var(--wc-shadow-2)",
+          transition: "height 600ms cubic-bezier(.2,.8,.3,1)",
+        }}
+      >
+        <LunaStage
+          expression={expression}
+          className="absolute inset-0"
+          dim={phase !== "intro"}
+          raise={cards.length > 0}
+        />
+
+        {/* 카드 테이블 — 무대 아래쪽에 앉는다 */}
+        {cards.length > 0 && (
+          <div className="absolute inset-x-0 bottom-3 px-3">
+            <CardTable cards={cards} flipped={flipped} onFlip={flip} compact={inModal} />
+          </div>
         )}
+
+        {/* 자막 */}
         <p
-          className={`text-center text-[13.5px] ${inModal ? "mt-3" : "mt-1"}`}
-          style={{ color: "var(--wc-mute)" }}
+          className="absolute inset-x-0 top-3 px-4 text-center text-[12.5px] font-semibold"
+          style={{ color: "rgba(255,255,255,.9)", textShadow: "0 1px 6px rgba(0,0,0,.7)" }}
         >
-          {loading
-            ? "카드를 펼치는 중이에요…"
-            : result
-              ? "카드가 나왔어요. 루나의 이야기를 들어보세요."
-              : "궁금한 걸 물어보세요. 카드가 흐름을 비춰줄게요."}
+          {caption}
         </p>
+
+        {phase === "dealing" && (
+          <span
+            aria-hidden
+            className="absolute inset-x-0 bottom-6 mx-auto block h-[3px] w-24 animate-pulse rounded-full"
+            style={{ background: "rgba(224,189,126,.7)" }}
+          />
+        )}
       </div>
 
-      {/* 결과가 나오면 입력 폼(질문·프리셋·스프레드·버튼)은 접는다 — 점괘가
-          스크롤 없이 바로 보이는 게 우선이다. "새 질문 하기"로 되돌아온다. */}
-      {!result && (
+      {/* ── 안전 가드 ── */}
+      {blocked && (
+        <div
+          className="mt-4 rounded-xl p-4"
+          style={{ background: "var(--wc-soft)", border: "1px solid var(--wc-line)" }}
+        >
+          <p className="text-[14px] leading-relaxed" style={{ color: "var(--wc-ink)" }}>
+            {blocked.message}
+          </p>
+          {blocked.resources && (
+            <ul className="mt-3 space-y-1">
+              {blocked.resources.map((r) => (
+                <li key={r.name} className="text-[13px]" style={{ color: "var(--wc-ink-2)" }}>
+                  <span className="font-bold">{r.name}</span> · {r.contact}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* ── 대화 ── */}
+      {(phase === "stage" || phase === "chat") && (
+        <div
+          ref={scrollRef}
+          className="mt-4 space-y-3 overflow-y-auto"
+          style={{ maxHeight: inModal ? 260 : 420 }}
+        >
+          <Bubble role="user">{askedQuestion}</Bubble>
+
+          {!allFlipped && !streaming && reading.length > 0 && (
+            <Bubble role="luna" muted>
+              이야기를 다 준비했어요. 남은 카드를 뒤집어 주세요.
+            </Bubble>
+          )}
+
+          {allFlipped && (
+            <Bubble role="luna">
+              {shown.split("\n").map((line, i) => {
+                const t = line.trim()
+                if (!t) return null
+                if (t.startsWith("#")) {
+                  return (
+                    <p
+                      key={i}
+                      className="mt-3 mb-1 text-[13px] font-extrabold first:mt-0"
+                      style={{ color: "var(--wc-burgundy)" }}
+                    >
+                      {t.replace(/^#+\s*/, "")}
+                    </p>
+                  )
+                }
+                return (
+                  <p
+                    key={i}
+                    className="text-[14px] leading-relaxed"
+                    style={{ color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
+                  >
+                    {t}
+                  </p>
+                )
+              })}
+              {typing && (
+                <span
+                  aria-hidden
+                  className="ml-0.5 inline-block h-[14px] w-[2px] animate-pulse align-middle"
+                  style={{ background: "var(--wc-burgundy)" }}
+                />
+              )}
+            </Bubble>
+          )}
+
+          {turns.map((t, i) => (
+            <Bubble key={i} role={t.role}>
+              {t.role === "luna" && !t.text ? "…" : t.text}
+            </Bubble>
+          ))}
+        </div>
+      )}
+
+      {/* ── 입력 ── */}
+      {phase === "intro" && (
         <>
-          {/* 질문 */}
-          <div className="mt-6">
+          <div className="mt-4">
             <label
               htmlFor="tarot-q"
               className="mb-1.5 block text-[12px] font-bold"
@@ -186,7 +424,7 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
                   key={p}
                   type="button"
                   onClick={() => setQuestion(p)}
-                  className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold transition-colors"
+                  className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold"
                   style={{
                     background: "var(--wc-card)",
                     border: "1px solid var(--wc-line-2)",
@@ -199,8 +437,7 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
             </div>
           </div>
 
-          {/* 스프레드 */}
-          <div className="mt-5">
+          <div className="mt-4">
             <p className="mb-1.5 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
               몇 장으로 볼까요?
             </p>
@@ -243,167 +480,120 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
           <button
             type="button"
             onClick={submit}
-            disabled={loading || question.trim().length < 2}
+            disabled={question.trim().length < 2}
             className="mt-4 w-full rounded-xl py-3 text-[14px] font-bold transition-opacity disabled:opacity-45"
             style={{ background: "var(--wc-burgundy)", color: "#fff" }}
           >
-            {loading ? "루나가 카드를 읽는 중…" : "카드 뽑기"}
+            카드 뽑기
           </button>
-
-          {error && (
-            <p className="mt-3 text-center text-[13px]" style={{ color: "var(--wc-burgundy)" }}>
-              {error}
-            </p>
-          )}
         </>
       )}
 
-      {/* 안전 가드 응답 */}
-      {blocked && (
-        <div
-          className="mt-6 rounded-xl p-4"
-          style={{ background: "var(--wc-soft)", border: "1px solid var(--wc-line)" }}
-        >
-          <p className="text-[14px] leading-relaxed" style={{ color: "var(--wc-ink)" }}>
-            {blocked.message}
-          </p>
-          {blocked.resources && (
-            <ul className="mt-3 space-y-1">
-              {blocked.resources.map((r) => (
-                <li key={r.name} className="text-[13px]" style={{ color: "var(--wc-ink-2)" }}>
-                  <span className="font-bold">{r.name}</span> · {r.contact}
-                </li>
-              ))}
-            </ul>
-          )}
+      {/* 후속 질문 — 카드를 다 뒤집고 해석이 나온 뒤에만 */}
+      {phase === "chat" && !typing && (
+        <div className="mt-3 flex gap-2">
+          <input
+            value={followup}
+            onChange={(e) => setFollowup(e.target.value.slice(0, 200))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) void askFollowup()
+            }}
+            placeholder="루나에게 더 물어보기…"
+            disabled={followupBusy}
+            className="min-w-0 flex-1 rounded-xl px-3.5 py-2.5 text-[14px] outline-none"
+            style={{
+              background: "var(--wc-card)",
+              border: "1px solid var(--wc-line)",
+              color: "var(--wc-ink)",
+            }}
+          />
+          <button
+            type="button"
+            onClick={askFollowup}
+            disabled={followupBusy || followup.trim().length < 2}
+            className="shrink-0 rounded-xl px-4 text-[13px] font-bold disabled:opacity-45"
+            style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+          >
+            {followupBusy ? "…" : "묻기"}
+          </button>
         </div>
       )}
 
-      {/* 결과 */}
-      {result && (
-        <div ref={resultRef} className="mt-7" style={{ scrollMarginTop: 12 }}>
-          {/* 접힌 폼 대신 어떤 질문의 점괘인지 한 줄로 남긴다 */}
-          <p
-            className="mb-3 text-center text-[13px] font-semibold"
-            style={{ color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
-          >
-            Q. {result.question}
-          </p>
-          <div
-            className={`grid gap-2.5 ${result.cards.length === 1 ? "grid-cols-1 justify-items-center" : "grid-cols-3"}`}
-          >
-            {result.cards.map((c) => (
-              <figure key={c.position} className="min-w-0">
-                <div
-                  className="relative overflow-hidden rounded-lg"
-                  style={{
-                    aspectRatio: "2 / 3",
-                    maxWidth: result.cards.length === 1 ? 200 : undefined,
-                    margin: "0 auto",
-                    border: "1px solid var(--wc-line)",
-                  }}
-                >
-                  <Image
-                    src={c.image}
-                    alt={c.nameKo}
-                    fill
-                    sizes="(max-width: 640px) 33vw, 200px"
-                    // 역방향은 실제로 뒤집어 보여준다 — 카드가 뒤집혔다는 걸 글로만 말하면 안 와닿는다
-                    className="object-cover"
-                    style={c.reversed ? { transform: "rotate(180deg)" } : undefined}
-                  />
-                </div>
-                <figcaption className="mt-1.5 text-center">
-                  <span
-                    className="block text-[11px] font-bold"
-                    style={{ color: "var(--wc-burgundy)" }}
-                  >
-                    {c.positionName}
-                  </span>
-                  <span
-                    className="block text-[12.5px] font-semibold"
-                    style={{ color: "var(--wc-ink)" }}
-                  >
-                    {c.nameKo}
-                    {c.reversed && (
-                      <span className="ml-1 text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                        역
-                      </span>
-                    )}
-                  </span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+      {phase === "chat" && !typing && (
+        <button
+          type="button"
+          onClick={() => {
+            setPhase("intro")
+            setCards([])
+            setFlipped(new Set())
+            setReading("")
+            setShownLen(0)
+            setTurns([])
+            setBlocked(null)
+            setError(null)
+          }}
+          className="mt-2 w-full rounded-xl py-2.5 text-[13px] font-bold"
+          style={{
+            background: "var(--wc-card)",
+            border: "1px solid var(--wc-line)",
+            color: "var(--wc-ink-2)",
+          }}
+        >
+          새 질문 하기
+        </button>
+      )}
 
-          <div
-            className="mt-5 rounded-xl p-4"
-            style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-          >
-            {result.reading.split("\n").map((line, i) => {
-              const t = line.trim()
-              if (!t) return null
-              if (t.startsWith("###")) {
-                return (
-                  <p
-                    key={i}
-                    className="mt-3 mb-1 text-[13.5px] font-extrabold first:mt-0"
-                    style={{ color: "var(--wc-burgundy)" }}
-                  >
-                    {t.replace(/^#+\s*/, "")}
-                  </p>
-                )
-              }
-              return (
-                <p
-                  key={i}
-                  className="text-[14px] leading-relaxed"
-                  style={{ color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
-                >
-                  {t}
-                </p>
-              )
-            })}
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={submit}
-              className="rounded-xl py-2.5 text-[13px] font-bold"
-              style={{
-                background: "var(--wc-card)",
-                border: "1px solid var(--wc-line)",
-                color: "var(--wc-ink-2)",
-              }}
-            >
-              같은 질문으로 다시 뽑기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                // 질문은 남긴다 — 폼이 프리필된 채 돌아와 고쳐 쓰기 쉽다
-                setResult(null)
-                setError(null)
-              }}
-              className="rounded-xl py-2.5 text-[13px] font-bold"
-              style={{ background: "var(--wc-burgundy)", color: "#fff" }}
-            >
-              새 질문 하기
-            </button>
-          </div>
-        </div>
+      {error && (
+        <p className="mt-3 text-center text-[13px]" style={{ color: "var(--wc-burgundy)" }}>
+          {error}
+        </p>
       )}
 
       {/* 오락 목적 고지 — 상시 노출 */}
       <p
-        className={`text-center text-[11.5px] ${inModal ? "mt-6" : "mt-8"}`}
+        className={`text-center text-[11.5px] ${inModal ? "mt-5" : "mt-8"}`}
         style={{ color: "var(--wc-mute)" }}
       >
         타로 리딩은 오락 목적의 콘텐츠예요. 경기 결과나 이적을 예측하지 않으며,
         <br />
         어떤 형태의 금전적 판단에도 사용할 수 없어요.
       </p>
+    </div>
+  )
+}
+
+/** 대화 말풍선 — 루나는 왼쪽, 상담자는 오른쪽 */
+function Bubble({
+  role,
+  muted = false,
+  children,
+}: {
+  role: "user" | "luna"
+  muted?: boolean
+  children: React.ReactNode
+}) {
+  const isUser = role === "user"
+  return (
+    <div className={isUser ? "flex justify-end" : "flex justify-start"}>
+      <div
+        className="max-w-[86%] rounded-2xl px-3.5 py-2.5"
+        style={{
+          background: isUser ? "var(--wc-burgundy)" : "var(--wc-card)",
+          border: isUser ? "none" : "1px solid var(--wc-line)",
+          color: isUser ? "#fff" : "var(--wc-ink-2)",
+          opacity: muted ? 0.75 : 1,
+          borderBottomRightRadius: isUser ? 6 : undefined,
+          borderBottomLeftRadius: isUser ? undefined : 6,
+        }}
+      >
+        {typeof children === "string" ? (
+          <p className="text-[14px] leading-relaxed" style={{ wordBreak: "keep-all" }}>
+            {children}
+          </p>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   )
 }
