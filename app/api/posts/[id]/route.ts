@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { HOME_TAGS } from "@/lib/home/cached-home-data"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { apiError, apiBadRequest, apiUnauthorized } from "@/lib/api-error"
@@ -143,8 +144,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return apiError("게시글 수정에 실패했습니다.", 500, error)
     }
 
-    // 홈 피드 ISR on-demand revalidate (수정 내용이 즉시 반영되도록 — POST 경로와 동일)
+    // 홈 피드 즉시 반영 (POST 경로와 동일). 홈 피드는 Data Cache(30초)에 들어 있고
+    // 그건 revalidatePath 로 안 지워진다 — 태그를 빼면 수정 내용이 최대 30초 늦게 반영된다.
     try {
+      revalidateTag(HOME_TAGS.posts)
       revalidatePath("/")
     } catch {
       // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
@@ -187,8 +190,10 @@ export async function DELETE(
       return apiError("게시글 삭제에 실패했습니다.", 500, error)
     }
 
-    // 홈 피드 ISR on-demand revalidate (삭제가 담벼락에 즉시 반영되도록 — POST 경로와 동일)
+    // 삭제를 담벼락에 즉시 반영 (POST 경로와 동일). ⚠️ 태그를 빼면 **삭제한 글이 홈에
+    // 최대 30초 남는다** — Data Cache 는 revalidatePath 로 지워지지 않는다.
     try {
+      revalidateTag(HOME_TAGS.posts)
       revalidatePath("/")
     } catch {
       // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
