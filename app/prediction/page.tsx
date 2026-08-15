@@ -1,8 +1,12 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
-import { createAnonClient } from "@/lib/supabase/server"
 import { PredictionClient } from "@/components/prediction/prediction-client"
 import { getGamesPayloadForSsr } from "@/lib/betman/games-payload"
+import {
+  getCachedCategories,
+  getCachedRecentComments,
+  getCachedWorldcupStatus,
+} from "@/lib/home/cached-home-data"
 
 // 사이드바 데이터(카테고리/최근댓글)는 ISR 5분 캐시. BettingPage 내부 데이터는
 // 클라이언트에서 자체 fetch — 경기/배당/내 슬립은 항상 최신 필요.
@@ -20,36 +24,15 @@ export const metadata: Metadata = {
 }
 
 async function fetchSidebarData() {
-  const supabase = createAnonClient()
-
+  // 홈과 **같은 Data Cache 키**를 쓴다 (lib/home/cached-home-data.ts) — 두 페이지가
+  // 같은 사이드바 데이터를 보므로 캐시도 공유하는 게 맞다. 이 페이지의 `revalidate = 300`
+  // 은 동작하지 않으니(ClerkProvider dynamic) 캐시는 전적으로 이 래퍼들이 담당한다.
   const [categoriesResult, recentCommentsResult, worldcupStatus, gamesResult] = await Promise.all([
-    Promise.resolve(
-      supabase
-        .from("categories")
-        .select("id, slug, name, icon, sort_order, description, parent_slug")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-    )
-      .then(({ data }) => data ?? [])
-      .catch(() => [] as unknown[]),
-    Promise.resolve(
-      supabase
-        .from("posts")
-        .select("id, title, community_slug, comment_count, last_comment_at, created_at")
-        .is("deleted_at", null)
-        .gt("comment_count", 0)
-        .order("last_comment_at", { ascending: false, nullsFirst: false })
-        .limit(10)
-    )
-      .then(({ data }) => data ?? [])
-      .catch(() => [] as unknown[]),
+    getCachedCategories(),
+    getCachedRecentComments(),
 
     // 이벤트 슬롯 — 향후 이벤트도 events 테이블 status 기반으로 이 자리에서 안내
-    Promise.resolve(
-      supabase.from("events").select("status").eq("slug", "worldcup-2026").maybeSingle()
-    )
-      .then(({ data }) => (data as { status?: string } | null)?.status ?? null)
-      .catch(() => null),
+    getCachedWorldcupStatus(),
 
     // 오늘의 경기 SSR 프리페치 (홈 page.tsx 와 동일 패턴, 2026-07-30 워룸) —
     // "픽 걸러 가기" 직후가 빈 스켈레톤 39개였다. 실패 시 null → 기존 클라 fetch 폴백.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth as clerkAuth } from "@clerk/nextjs/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { HOME_TAGS } from "@/lib/home/cached-home-data"
 import { z } from "zod"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { canPostNotice } from "@/lib/board-moderator"
@@ -149,8 +150,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { error } = await supabase.from("posts").update(update).eq("id", id)
     if (error) return apiError(error.message, 500, error)
 
-    // 전체 공지·히어로는 홈에 노출되므로 즉시 갱신
+    // 전체 공지·히어로는 홈에 노출되므로 즉시 갱신.
+    // Data Cache 태그도 같이 지워야 한다 — 공지는 posts, 히어로는 cardnews 캐시에 걸린다.
     if (update.is_global_notice !== undefined || update.hero_pinned_at !== undefined) {
+      revalidateTag(HOME_TAGS.posts)
+      revalidateTag(HOME_TAGS.cardnews)
       revalidatePath("/")
     }
 

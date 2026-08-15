@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { HOME_TAGS } from "@/lib/home/cached-home-data"
 import { z } from "zod"
 import { requireAdminApi, isErrorResponse } from "@/lib/admin/require-admin-api"
 import { writeAuditLog, getIpFromRequest } from "@/lib/admin/audit"
@@ -13,6 +14,10 @@ import { apiError, apiBadRequest } from "@/lib/api-error"
  * 또한 /api/categories 응답 캐시는 Cache-Control: s-maxage=60 이라 1분 내 자연 만료.
  */
 function revalidateCategoryPages(slug?: string) {
+  // 홈/승부예측 사이드바는 Data Cache(unstable_cache, 5분)에 들어 있어 태그로만 지워진다.
+  // 게시판 노출(is_active) 변경은 담벼락 피드 범위도 바꾸므로 posts 태그도 함께 비운다.
+  revalidateTag(HOME_TAGS.categories)
+  revalidateTag(HOME_TAGS.posts)
   revalidatePath("/explore")
   revalidatePath("/")
   revalidatePath("/community", "layout")

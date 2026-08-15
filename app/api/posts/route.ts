@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { parseLimit } from "@/lib/api/parse-limit"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { HOME_TAGS } from "@/lib/home/cached-home-data"
 import { createAnonClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { currentUser } from "@clerk/nextjs/server"
 
@@ -371,8 +372,11 @@ export async function POST(request: NextRequest) {
     // 분석글(기자 예측) 알림만 betman/prediction route 의 expert_prediction 으로 발송.
     // 복원 시: user_follows(followed=userId, follower≠userId) → notifications(new_post_by_followed).
 
-    // 홈 피드 ISR on-demand revalidate (새 글이 즉시 노출되도록)
+    // 새 글이 홈에 즉시 노출되도록 무효화.
+    // ⚠️ `revalidatePath("/")` 만으로는 부족하다 — 홈 피드는 이제 Data Cache(unstable_cache,
+    //    30초)에 들어 있고 그건 태그로만 지워진다. 이 태그를 빼면 새 글이 최대 30초 늦게 뜬다.
     try {
+      revalidateTag(HOME_TAGS.posts)
       revalidatePath("/")
     } catch {
       // revalidate 실패는 응답에 영향 없음 (다음 revalidate 주기에 반영)
