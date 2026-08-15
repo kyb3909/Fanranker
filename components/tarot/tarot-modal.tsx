@@ -40,7 +40,9 @@ export function TarotModal({
         리딩 결과(카드 3장 + 해석)가 길어 화면을 넘긴다 — 내부 스크롤로 가둔다.
       */}
       <DialogContent
-        className="worldcup-scope max-h-[92dvh] overflow-y-auto p-5 sm:max-w-[560px]"
+        // 좌(무대)·우(채팅) 2단이 들어가야 해서 데스크톱에서 넓힌다 — 560 이면 무대가 접혀
+        // 모바일 배치로만 보인다 (2026-08-15 전면 개편)
+        className="worldcup-scope max-h-[92dvh] overflow-y-auto p-4 sm:max-w-[980px] sm:p-5"
         style={{ background: "var(--wc-paper)" }}
       >
         <DialogHeader>

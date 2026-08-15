@@ -23,15 +23,16 @@ export function CardTable({
   cards,
   flipped,
   onFlip,
-  compact = false,
+  width = 84,
 }: {
   cards: ReadingCard[]
   /** 뒤집힌 카드의 position 집합 */
   flipped: Set<number>
   onFlip: (position: number) => void
-  compact?: boolean
+  /** 카드 한 장의 폭(px). 데스크톱 좌측 무대는 넓어서 크게 준다 */
+  width?: number
 }) {
-  const w = compact ? 62 : 84
+  const w = width
   const h = Math.round(w * 1.5)
   const nextToFlip = cards.find((c) => !flipped.has(c.position))?.position
 

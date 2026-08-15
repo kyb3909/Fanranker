@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { SPREADS, SPREAD_IDS, type SpreadId } from "@/lib/tarot/spreads"
-import { DEFAULT_EXPRESSION, type Expression } from "@/lib/tarot/expression"
-import { LunaStage } from "@/components/tarot/luna-stage"
-import { CardTable, type ReadingCard } from "@/components/tarot/card-table"
+import { DEFAULT_EXPRESSION, expressionSrc, type Expression } from "@/lib/tarot/expression"
+import { StagePanel } from "@/components/tarot/stage-panel"
+import type { ReadingCard } from "@/components/tarot/card-table"
 
 /**
  * 축구 타로 리더 — 루나의 점집 (2026-08-15 전면 개편).
@@ -247,203 +247,234 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
     }
   }
 
-  // 카드가 깔리면 무대를 키운다 — 얼굴과 테이블이 한 화면에 같이 있어야 "마주 본다"가 된다
-  const stageH = cards.length > 0 ? (inModal ? 290 : 420) : inModal ? 240 : 340
+  /** 판을 접고 처음으로 — 질문은 지운다(같은 질문 재리딩은 다시 입력하면 된다) */
+  function reset() {
+    setPhase("intro")
+    setCards([])
+    setFlipped(new Set())
+    setReading("")
+    setShownLen(0)
+    setTurns([])
+    setBlocked(null)
+    setError(null)
+    setAskedQuestion("")
+    setExpression(DEFAULT_EXPRESSION)
+  }
+
   const shown = reading.slice(0, shownLen)
   const typing = allFlipped && (shownLen < reading.length || streaming)
+  const busy = phase === "dealing" || followupBusy || typing
 
-  /** 루나가 지금 무슨 상태인지 한 줄 — 무대의 자막 역할 */
-  const caption = blocked
-    ? "잠깐, 그건 카드로 볼 일이 아니에요."
+  /** 루나가 지금 무슨 상태인지 한 줄 — 무대의 자막이자 채팅 헤더의 상태 */
+  const status = blocked
+    ? "잠깐, 그건 카드로 볼 일이 아니에요"
     : phase === "intro"
-      ? "궁금한 걸 물어보세요. 카드가 흐름을 비춰줄게요."
+      ? "타로 리더"
       : phase === "dealing"
-        ? "카드를 고르는 중이에요…"
+        ? "카드를 고르는 중…"
         : phase === "stage"
           ? flipped.size === 0
-            ? "카드를 깔았어요. 한 장씩 뒤집어 보세요."
-            : `${cards.length - flipped.size}장 남았어요.`
+            ? "카드를 깔았어요 — 한 장씩 뒤집어 보세요"
+            : `${cards.length - flipped.size}장 남았어요`
           : typing
-            ? "…"
-            : "더 궁금한 게 있으면 물어보세요."
+            ? "카드를 읽는 중…"
+            : "타로 리더"
+
+  /** 입력창 하나가 질문과 후속 질문을 모두 받는다 — 그래야 대화로 읽힌다 */
+  const canSend = phase === "intro" ? question.trim().length >= 2 : phase === "chat" && !typing
+  const send = () => {
+    if (phase === "intro") void submit()
+    else if (phase === "chat" && !typing) void askFollowup()
+  }
 
   return (
-    <div className={inModal ? "" : "mx-auto max-w-[680px] px-4 pt-5 pb-16 sm:px-6"}>
-      {/* ── 무대 ── */}
+    <div className={inModal ? "" : "mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6"}>
       <div
-        className="relative overflow-hidden rounded-2xl"
+        className="overflow-hidden rounded-2xl lg:flex"
         style={{
-          height: stageH,
-          background: "#120c1a",
+          border: "1px solid var(--wc-line)",
           boxShadow: "var(--wc-shadow-2)",
-          transition: "height 600ms cubic-bezier(.2,.8,.3,1)",
+          height: undefined,
         }}
       >
-        <LunaStage
+        {/* ── 좌: 무대 ──
+            데스크톱은 왼쪽 절반을 차지해 오른쪽 채팅과 마주 본다.
+            좁은 화면에서는 채팅 위에 얹히는 가로 띠가 된다. */}
+        <StagePanel
           expression={expression}
-          className="absolute inset-0"
-          dim={phase !== "intro"}
-          raise={cards.length > 0}
+          cards={cards}
+          flipped={flipped}
+          onFlip={flip}
+          caption={phase === "intro" ? "궁금한 걸 물어보세요" : status}
+          dealing={phase === "dealing"}
+          className={`h-[260px] w-full shrink-0 lg:h-auto lg:w-1/2 ${inModal ? "lg:min-h-[460px]" : "lg:min-h-[560px]"}`}
         />
 
-        {/* 카드 테이블 — 무대 아래쪽에 앉는다 */}
-        {cards.length > 0 && (
-          <div className="absolute inset-x-0 bottom-3 px-3">
-            <CardTable cards={cards} flipped={flipped} onFlip={flip} compact={inModal} />
+        {/* ── 우: 채팅 ── */}
+        <div className="flex min-w-0 flex-1 flex-col" style={{ background: "var(--wc-paper)" }}>
+          {/* 헤더 — 이게 있어야 "루나와의 방"으로 읽힌다 */}
+          <div
+            className="flex flex-none items-center gap-2.5 px-4 py-3"
+            style={{ borderBottom: "1px solid var(--wc-line)", background: "var(--wc-card)" }}
+          >
+            <span
+              className="relative block h-9 w-9 shrink-0 overflow-hidden rounded-full"
+              style={{ border: "1.5px solid var(--wc-burgundy)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={expressionSrc(expression)}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ objectPosition: "center 18%" }}
+              />
+            </span>
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-[14.5px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                루나 <span className="align-[1px] text-[10px] text-[var(--wc-burgundy)]">✦</span>
+              </span>
+              <span className="truncate text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                {status}
+              </span>
+            </span>
+            {phase !== "intro" && (
+              <button
+                type="button"
+                onClick={reset}
+                className="ml-auto shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-bold"
+                style={{
+                  background: "var(--wc-card)",
+                  border: "1px solid var(--wc-line)",
+                  color: "var(--wc-mute)",
+                }}
+              >
+                새 질문
+              </button>
+            )}
           </div>
-        )}
 
-        {/* 자막 */}
-        <p
-          className="absolute inset-x-0 top-3 px-4 text-center text-[12.5px] font-semibold"
-          style={{ color: "rgba(255,255,255,.9)", textShadow: "0 1px 6px rgba(0,0,0,.7)" }}
-        >
-          {caption}
-        </p>
+          {/* 메시지 */}
+          <div
+            ref={scrollRef}
+            className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+            style={{ maxHeight: inModal ? 340 : 460 }}
+          >
+            {phase === "intro" && !blocked && (
+              <>
+                <Bubble role="luna">
+                  안녕, 나는 루나예요. 축구 얘기라면 뭐든 카드로 봐줄게요. 무엇이 궁금한가요?
+                </Bubble>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setQuestion(p)}
+                      className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold"
+                      style={{
+                        background: "var(--wc-card)",
+                        border: "1px solid var(--wc-line-2)",
+                        color: "var(--wc-mute)",
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
-        {phase === "dealing" && (
-          <span
-            aria-hidden
-            className="absolute inset-x-0 bottom-6 mx-auto block h-[3px] w-24 animate-pulse rounded-full"
-            style={{ background: "rgba(224,189,126,.7)" }}
-          />
-        )}
-      </div>
+            {blocked && (
+              <Bubble role="luna">
+                <p className="text-[14px] leading-relaxed" style={{ wordBreak: "keep-all" }}>
+                  {blocked.message}
+                </p>
+                {blocked.resources && (
+                  <ul className="mt-2 space-y-1">
+                    {blocked.resources.map((r) => (
+                      <li key={r.name} className="text-[13px]">
+                        <span className="font-bold">{r.name}</span> · {r.contact}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Bubble>
+            )}
 
-      {/* ── 안전 가드 ── */}
-      {blocked && (
-        <div
-          className="mt-4 rounded-xl p-4"
-          style={{ background: "var(--wc-soft)", border: "1px solid var(--wc-line)" }}
-        >
-          <p className="text-[14px] leading-relaxed" style={{ color: "var(--wc-ink)" }}>
-            {blocked.message}
-          </p>
-          {blocked.resources && (
-            <ul className="mt-3 space-y-1">
-              {blocked.resources.map((r) => (
-                <li key={r.name} className="text-[13px]" style={{ color: "var(--wc-ink-2)" }}>
-                  <span className="font-bold">{r.name}</span> · {r.contact}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+            {askedQuestion && <Bubble role="user">{askedQuestion}</Bubble>}
 
-      {/* ── 대화 ── */}
-      {(phase === "stage" || phase === "chat") && (
-        <div
-          ref={scrollRef}
-          className="mt-4 space-y-3 overflow-y-auto"
-          style={{ maxHeight: inModal ? 260 : 420 }}
-        >
-          <Bubble role="user">{askedQuestion}</Bubble>
+            {phase === "stage" && (
+              <Bubble role="luna" muted>
+                {flipped.size === 0
+                  ? "카드를 깔았어요. 왼쪽에서 한 장씩 뒤집어 보세요."
+                  : reading.length > 0 && !streaming
+                    ? "이야기는 다 준비했어요. 남은 카드를 뒤집어 주세요."
+                    : "…"}
+              </Bubble>
+            )}
 
-          {!allFlipped && !streaming && reading.length > 0 && (
-            <Bubble role="luna" muted>
-              이야기를 다 준비했어요. 남은 카드를 뒤집어 주세요.
-            </Bubble>
-          )}
-
-          {allFlipped && (
-            <Bubble role="luna">
-              {shown.split("\n").map((line, i) => {
-                const t = line.trim()
-                if (!t) return null
-                if (t.startsWith("#")) {
+            {allFlipped && (
+              <Bubble role="luna">
+                {shown.split("\n").map((l, i) => {
+                  const t = l.trim()
+                  if (!t) return null
+                  if (t.startsWith("#")) {
+                    return (
+                      <p
+                        key={i}
+                        className="mt-3 mb-1 text-[13px] font-extrabold first:mt-0"
+                        style={{ color: "var(--wc-burgundy)" }}
+                      >
+                        {t.replace(/^#+\s*/, "")}
+                      </p>
+                    )
+                  }
                   return (
                     <p
                       key={i}
-                      className="mt-3 mb-1 text-[13px] font-extrabold first:mt-0"
-                      style={{ color: "var(--wc-burgundy)" }}
+                      className="text-[14px] leading-relaxed"
+                      style={{ wordBreak: "keep-all" }}
                     >
-                      {t.replace(/^#+\s*/, "")}
+                      {t}
                     </p>
                   )
-                }
-                return (
-                  <p
-                    key={i}
-                    className="text-[14px] leading-relaxed"
-                    style={{ color: "var(--wc-ink-2)", wordBreak: "keep-all" }}
-                  >
-                    {t}
-                  </p>
-                )
-              })}
-              {typing && (
-                <span
-                  aria-hidden
-                  className="ml-0.5 inline-block h-[14px] w-[2px] animate-pulse align-middle"
-                  style={{ background: "var(--wc-burgundy)" }}
-                />
-              )}
-            </Bubble>
-          )}
+                })}
+                {typing && (
+                  <span
+                    aria-hidden
+                    className="ml-0.5 inline-block h-[14px] w-[2px] animate-pulse align-middle"
+                    style={{ background: "var(--wc-burgundy)" }}
+                  />
+                )}
+              </Bubble>
+            )}
 
-          {turns.map((t, i) => (
-            <Bubble key={i} role={t.role}>
-              {t.role === "luna" && !t.text ? "…" : t.text}
-            </Bubble>
-          ))}
-        </div>
-      )}
+            {turns.map((t, i) => (
+              <Bubble key={i} role={t.role}>
+                {t.role === "luna" && !t.text ? "…" : t.text}
+              </Bubble>
+            ))}
 
-      {/* ── 입력 ── */}
-      {phase === "intro" && (
-        <>
-          <div className="mt-4">
-            <label
-              htmlFor="tarot-q"
-              className="mb-1.5 block text-[12px] font-bold"
-              style={{ color: "var(--wc-mute)" }}
-            >
-              무엇이 궁금한가요?
-              {/* 질문 원문이 그대로 프롬프트에 들어간다 — 구체적일수록 리딩이 좋아진다 */}
-              <span className="ml-1.5 font-medium opacity-80">
-                날짜·대회·상대까지, 구체적일수록 잘 읽혀요
-              </span>
-            </label>
-            <textarea
-              id="tarot-q"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value.slice(0, 200))}
-              placeholder="예: 9월 17일 챔피언스리그 경기에서 맨체스터 유나이티드가 승리할 수 있을까요?"
-              rows={2}
-              className="w-full resize-none rounded-xl px-3.5 py-3 text-[14px] outline-none"
-              style={{
-                background: "var(--wc-card)",
-                border: "1px solid var(--wc-line)",
-                color: "var(--wc-ink)",
-              }}
-            />
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {PRESETS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setQuestion(p)}
-                  className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold"
-                  style={{
-                    background: "var(--wc-card)",
-                    border: "1px solid var(--wc-line-2)",
-                    color: "var(--wc-mute)",
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+            {error && (
+              <p className="text-center text-[13px]" style={{ color: "var(--wc-burgundy)" }}>
+                {error}
+              </p>
+            )}
           </div>
 
-          <div className="mt-4">
-            <p className="mb-1.5 text-[12px] font-bold" style={{ color: "var(--wc-mute)" }}>
-              몇 장으로 볼까요?
-            </p>
-            <div className="grid grid-cols-2 gap-2">
+          {/* 스프레드 — 질문 전에만. 알약 대신 작은 선택 줄 */}
+          {phase === "intro" && (
+            <div
+              className="flex flex-none items-center gap-2 px-4 py-2"
+              style={{ borderTop: "1px solid var(--wc-line)" }}
+            >
+              <span
+                className="shrink-0 text-[11.5px] font-bold"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                몇 장
+              </span>
               {SPREAD_IDS.map((id) => {
-                const s = SPREADS[id]
                 const active = spreadId === id
                 return (
                   <button
@@ -451,109 +482,69 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
                     type="button"
                     onClick={() => setSpreadId(id)}
                     aria-pressed={active}
-                    className="rounded-xl px-3 py-2.5 text-left transition-all"
+                    className="rounded-full px-2.5 py-1 text-[12px] font-bold"
                     style={{
-                      background: active
-                        ? "color-mix(in srgb, var(--wc-burgundy) 7%, white)"
-                        : "var(--wc-card)",
-                      border: `1.5px solid ${active ? "var(--wc-burgundy)" : "var(--wc-line)"}`,
+                      background: active ? "var(--wc-burgundy)" : "var(--wc-card)",
+                      border: `1px solid ${active ? "var(--wc-burgundy)" : "var(--wc-line)"}`,
+                      color: active ? "#fff" : "var(--wc-mute)",
                     }}
                   >
-                    <span
-                      className="block text-[13.5px] font-bold"
-                      style={{ color: active ? "var(--wc-burgundy)" : "var(--wc-ink)" }}
-                    >
-                      {s.name}
-                    </span>
-                    <span
-                      className="mt-0.5 block text-[11.5px]"
-                      style={{ color: "var(--wc-mute)" }}
-                    >
-                      {s.hint}
-                    </span>
+                    {SPREADS[id].name}
                   </button>
                 )
               })}
             </div>
+          )}
+
+          {/* 입력 — 질문과 후속 질문을 같은 자리에서 받는다 */}
+          <div
+            className="flex flex-none items-end gap-2 px-3 py-3"
+            style={{ borderTop: "1px solid var(--wc-line)", background: "var(--wc-card)" }}
+          >
+            <textarea
+              value={phase === "intro" ? question : followup}
+              onChange={(e) => {
+                const v = e.target.value.slice(0, 200)
+                if (phase === "intro") setQuestion(v)
+                else setFollowup(v)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault()
+                  if (canSend) send()
+                }
+              }}
+              rows={1}
+              disabled={phase === "dealing" || phase === "stage"}
+              placeholder={
+                phase === "intro"
+                  ? "무엇이 궁금한가요? (날짜·상대까지 적으면 더 잘 읽혀요)"
+                  : phase === "stage"
+                    ? "카드를 다 뒤집으면 이어서 물어볼 수 있어요"
+                    : "루나에게 더 물어보기…"
+              }
+              className="max-h-24 min-w-0 flex-1 resize-none rounded-xl px-3.5 py-2.5 text-[14px] outline-none disabled:opacity-50"
+              style={{
+                background: "var(--wc-paper)",
+                border: "1px solid var(--wc-line)",
+                color: "var(--wc-ink)",
+              }}
+            />
+            <button
+              type="button"
+              onClick={send}
+              disabled={!canSend || busy}
+              className="h-10 shrink-0 rounded-xl px-4 text-[13px] font-bold disabled:opacity-45"
+              style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+            >
+              {phase === "intro" ? "카드 뽑기" : busy ? "…" : "묻기"}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={submit}
-            disabled={question.trim().length < 2}
-            className="mt-4 w-full rounded-xl py-3 text-[14px] font-bold transition-opacity disabled:opacity-45"
-            style={{ background: "var(--wc-burgundy)", color: "#fff" }}
-          >
-            카드 뽑기
-          </button>
-        </>
-      )}
-
-      {/* 후속 질문 — 카드를 다 뒤집고 해석이 나온 뒤에만 */}
-      {phase === "chat" && !typing && (
-        <div className="mt-3 flex gap-2">
-          <input
-            value={followup}
-            onChange={(e) => setFollowup(e.target.value.slice(0, 200))}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) void askFollowup()
-            }}
-            placeholder="루나에게 더 물어보기…"
-            disabled={followupBusy}
-            className="min-w-0 flex-1 rounded-xl px-3.5 py-2.5 text-[14px] outline-none"
-            style={{
-              background: "var(--wc-card)",
-              border: "1px solid var(--wc-line)",
-              color: "var(--wc-ink)",
-            }}
-          />
-          <button
-            type="button"
-            onClick={askFollowup}
-            disabled={followupBusy || followup.trim().length < 2}
-            className="shrink-0 rounded-xl px-4 text-[13px] font-bold disabled:opacity-45"
-            style={{ background: "var(--wc-burgundy)", color: "#fff" }}
-          >
-            {followupBusy ? "…" : "묻기"}
-          </button>
         </div>
-      )}
-
-      {phase === "chat" && !typing && (
-        <button
-          type="button"
-          onClick={() => {
-            setPhase("intro")
-            setCards([])
-            setFlipped(new Set())
-            setReading("")
-            setShownLen(0)
-            setTurns([])
-            setBlocked(null)
-            setError(null)
-          }}
-          className="mt-2 w-full rounded-xl py-2.5 text-[13px] font-bold"
-          style={{
-            background: "var(--wc-card)",
-            border: "1px solid var(--wc-line)",
-            color: "var(--wc-ink-2)",
-          }}
-        >
-          새 질문 하기
-        </button>
-      )}
-
-      {error && (
-        <p className="mt-3 text-center text-[13px]" style={{ color: "var(--wc-burgundy)" }}>
-          {error}
-        </p>
-      )}
+      </div>
 
       {/* 오락 목적 고지 — 상시 노출 */}
-      <p
-        className={`text-center text-[11.5px] ${inModal ? "mt-5" : "mt-8"}`}
-        style={{ color: "var(--wc-mute)" }}
-      >
+      <p className="mt-4 text-center text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
         타로 리딩은 오락 목적의 콘텐츠예요. 경기 결과나 이적을 예측하지 않으며,
         <br />
         어떤 형태의 금전적 판단에도 사용할 수 없어요.
@@ -576,7 +567,7 @@ function Bubble({
   return (
     <div className={isUser ? "flex justify-end" : "flex justify-start"}>
       <div
-        className="max-w-[86%] rounded-2xl px-3.5 py-2.5"
+        className="max-w-[88%] rounded-2xl px-3.5 py-2.5"
         style={{
           background: isUser ? "var(--wc-burgundy)" : "var(--wc-card)",
           border: isUser ? "none" : "1px solid var(--wc-line)",
