@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Bell, Search } from "lucide-react"
 import Link from "@/components/ui/app-link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { SignedIn, SignedOut, useClerk } from "@clerk/nextjs"
 import { UserMenu } from "./user-menu"
 import { SignInMenu } from "./sign-in-menu"
@@ -17,6 +17,8 @@ import { HeaderNav } from "./header-nav"
 export function Header() {
   const router = useRouter()
   const { openSignIn } = useClerk()
+  // 홈 리디자인 프리뷰는 같은 메뉴를 히어로 아래 Bridge 로 내려 붙였다 → 여기선 감춘다
+  const hideNav = usePathname() === "/home-preview"
 
   return (
     <header
@@ -113,8 +115,14 @@ export function Header() {
         </div>
       </div>
 
-      {/* 헤더 2행: nav — 모든 viewport에서 별도 row (메뉴 공간 확보 + 로그인 시 우측 영역 겹침 방지) */}
-      <HeaderNav />
+      {/*
+        헤더 2행: nav — 모든 viewport에서 별도 row (메뉴 공간 확보 + 로그인 시 우측 영역 겹침 방지).
+
+        ⚠️ `/home-preview` 에서만 감춘다 (2026-08-15 홈 리디자인 프리뷰). 그 페이지는 같은
+        메뉴를 히어로 아래 Bridge 로 내려 붙여서, 여기까지 그리면 **같은 내비게이션이 두 줄**로
+        보인다. 프리뷰 승인 전까지 프로덕션 경로는 전부 그대로다 — 이 조건 하나만 붙인다.
+      */}
+      {!hideNav && <HeaderNav />}
     </header>
   )
 }

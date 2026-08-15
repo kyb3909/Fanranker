@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "@/components/ui/app-link"
-import { ArrowUpRight } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { ArrowUpRight, Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
 import type { FeedTab } from "@/components/home/home-client"
 import type { SortType } from "@/hooks/use-feed"
 
@@ -17,13 +18,40 @@ import type { SortType } from "@/hooks/use-feed"
  *    오른쪽은 실재하는 라우트로만 나간다. 없는 기능을 만들어 붙이지 않았다.
  */
 
-/** 실재하는 라우트만 — 없는 메뉴를 만들지 않는다 */
-const SECTIONS: { href: string; label: string }[] = [
-  { href: "/explore", label: "운동장" },
-  { href: "/prediction", label: "승부예측" },
-  { href: "/transfer", label: "이적시장" },
-  { href: "/saga", label: "사가" },
-  { href: "/gallery", label: "갤러리" },
+/**
+ * 상단 GNB 를 여기로 내렸다 (2026-08-15 운영자: "상단 GNB를 없애고 아이콘을 아래 GNB로").
+ *
+ * 헤더 2행 nav 와 이 띠가 같이 있으면 **같은 내비게이션이 두 줄**로 보인다. 프리뷰에서는
+ * 헤더 쪽을 감추고(components/header/header.tsx) 아이콘·라벨·라우트를 그대로 여기로 옮겼다.
+ * ⚠️ 라우트는 header-nav.tsx 와 **같은 값**을 써야 한다 — 승부예측이 /season 인 이유는
+ *    예측이 이벤트 전용이 된 뒤 규칙·상품·참가가 있는 허브를 먼저 보여주기 위해서다.
+ */
+const SECTIONS: {
+  href: string
+  label: string
+  Icon: typeof Compass
+  match: (p: string) => boolean
+}[] = [
+  {
+    href: "/",
+    label: "담벼락",
+    Icon: LayoutGrid,
+    match: (p) => p === "/" || p === "/home-preview",
+  },
+  {
+    href: "/explore",
+    label: "운동장",
+    Icon: Compass,
+    match: (p) => p.startsWith("/explore") || p.startsWith("/community"),
+  },
+  {
+    href: "/season",
+    label: "승부예측",
+    Icon: Target,
+    match: (p) =>
+      p.startsWith("/prediction") || p.startsWith("/worldcup") || p.startsWith("/season"),
+  },
+  { href: "/tarot", label: "타로", Icon: Sparkles, match: (p) => p.startsWith("/tarot") },
 ]
 
 interface CommunityBridgeProps {
@@ -34,6 +62,8 @@ interface CommunityBridgeProps {
 }
 
 export function CommunityBridge({ feedTab, sortBy, onTab, onSort }: CommunityBridgeProps) {
+  const pathname = usePathname()
+
   /** 활성 여부만 다르고 형태는 같은 탭 버튼 — 밑줄로 위계를 준다(알약 남발 회피) */
   const tabBtn = (active: boolean) =>
     [
@@ -91,18 +121,26 @@ export function CommunityBridge({ feedTab, sortBy, onTab, onSort }: CommunityBri
           style={{ background: "var(--gnp-line)" }}
         />
 
-        {/* 우: 다른 지면으로 — 담벼락 밖 콘텐츠가 있다는 신호 */}
-        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-4 overflow-x-auto pb-2 sm:pb-0">
-          {SECTIONS.map((s) => (
-            <Link
-              key={s.href}
-              href={s.href}
-              className="shrink-0 text-[13px] font-semibold whitespace-nowrap no-underline transition-colors"
-              style={{ color: "var(--wc-mute)" }}
-            >
-              {s.label}
-            </Link>
-          ))}
+        {/* 우: 사이트 주요 메뉴 — 상단 헤더에서 내려온 GNB */}
+        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pb-2 sm:pb-0">
+          {SECTIONS.map(({ href, label, Icon, match }) => {
+            const on = match(pathname)
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={on ? "page" : undefined}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-semibold whitespace-nowrap no-underline transition-colors"
+                style={{
+                  background: on ? "var(--gnp-accent)" : "transparent",
+                  color: on ? "#fff" : "var(--wc-mute)",
+                }}
+              >
+                <Icon className="h-[17px] w-[17px] shrink-0" />
+                {label}
+              </Link>
+            )
+          })}
           <Link
             href="/write"
             className="ml-auto hidden shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-[13px] font-bold whitespace-nowrap no-underline sm:inline-flex"
