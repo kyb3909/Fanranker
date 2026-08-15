@@ -18,7 +18,16 @@ export const dynamic = "force-dynamic"
  *  - alias    미등재 표기를 기존 팀의 별칭으로 흡수
  *  - register soccerway 팀 URL 을 검증 fetch 해 신규 등재 (slug·해시는 서버가 추출)
  *  - confirm  proposed → confirmed (오너 확정 라벨 — 실기록 자격)
- *  - reject   잘못된 항목 비활성 (해석에서 제외)
+ *  - rename       대표 한글 표기 교체 (틀린 표기 수정)
+ *  - remove_alias 잘못 흡수된 별칭 제거
+ *  - repoint      한글 표기를 엉뚱한 팀에서 올바른 팀으로 이설
+ *  - reject   해석에서 제외 — ⚠️ **최후 수단**
+ *
+ * ⚠️ 사전이 틀렸을 때의 정답은 **제외가 아니라 수정**이다 (2026-08-15).
+ *    리졸버는 `status === "rejected"` 인 행을 건너뛴다(match-mapping.ts). 즉 reject 하면
+ *    그 팀이 낀 경기가 영구히 team_unresolved 로 떨어져 **커버리지가 조용히 사라진다.**
+ *    reject 는 "이 soccerway 팀은 우리 사전에 있을 이유가 없다"일 때만 쓴다.
+ *    표기가 틀렸을 뿐이면 rename/repoint 로 고칠 것.
  */
 
 const LOOKBACK_DAYS = 14
@@ -129,6 +138,35 @@ const postSchema = z.discriminatedUnion("mode", [
   }),
   z.object({ mode: z.literal("confirm"), soccerway_team_id: z.string().min(1) }),
   z.object({ mode: z.literal("reject"), soccerway_team_id: z.string().min(1) }),
+
+  // ── 수정 3종 (2026-08-15) ────────────────────────────────────────
+  // 사전이 틀렸을 때의 정답은 **제외가 아니라 수정**이다. reject 는 리졸버가
+  // 그 팀을 통째로 건너뛰게 만들어(match-mapping.ts `status === "rejected"` → continue)
+  // 해당 팀이 낀 경기가 영구히 team_unresolved 로 떨어진다 = 커버리지 영구 손실.
+  z.object({
+    mode: z.literal("rename"),
+    soccerway_team_id: z.string().min(1),
+    name_kr: z.string().min(1).max(60),
+    // 기본은 **버림**. 고치는 이유가 "그 표기가 틀려서"이므로 별칭으로 남기면
+    // 틀린 표기가 계속 이 팀으로 해석된다. 실제 통용 표기였을 때만 켤 것.
+    keep_old_as_alias: z.boolean().optional(),
+    note: z.string().max(300).optional(),
+  }),
+  z.object({
+    mode: z.literal("remove_alias"),
+    soccerway_team_id: z.string().min(1),
+    alias: z.string().min(1).max(60),
+  }),
+  z.object({
+    // 한글 표기가 **엉뚱한 팀**에 붙었을 때 — 표기를 올바른 팀으로 이설한다.
+    // (시드 드라이런의 west-ham→bolton, atletico→somalia 착지가 이 케이스)
+    mode: z.literal("repoint"),
+    from_soccerway_team_id: z.string().min(1),
+    url: z.string().url(),
+    name_kr: z.string().min(1).max(60).optional(),
+    move_aliases: z.boolean().optional(),
+    note: z.string().max(300).optional(),
+  }),
 ])
 
 const TEAM_URL_RE = /\/team\/([a-z0-9-]+)\/([A-Za-z0-9]{8})\/?$/
@@ -137,6 +175,43 @@ const FETCH_HEADERS = {
   "Accept-Language": "en-GB,en;q=0.9",
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+}
+
+/**
+ * soccerway 팀 URL → { slug, hash, nameEn }.
+ *
+ * 구 URL 도 허용 (301 을 따라가 최종 신 URL 에서 추출). 구 URL 리다이렉트는 숫자 id 만
+ * 보므로, 여기서 추출한 slug·해시가 곧 검증 결과다. 표시명은 페이지 title 에서 뽑는다 —
+ * 홈/원정 대조가 soccerway 표시명 기준이라 표시명이 정본.
+ */
+async function resolveTeamUrl(
+  url: string
+): Promise<
+  { ok: true; slug: string; hash: string; nameEn: string } | { ok: false; message: string }
+> {
+  const host = new URL(url).hostname
+  if (!host.endsWith("soccerway.com")) {
+    return { ok: false, message: "soccerway.com 팀 URL 만 허용됩니다." }
+  }
+  const res = await fetch(url, { headers: FETCH_HEADERS, redirect: "follow" })
+  const finalUrl = res.url || url
+  const m = finalUrl.match(TEAM_URL_RE)
+  if (!res.ok || !m) {
+    return {
+      ok: false,
+      message: `팀 페이지가 아닙니다 (최종 URL: ${finalUrl}). /team/{이름}/{해시}/ 형태의 팀 URL 을 붙여넣어 주세요.`,
+    }
+  }
+  const [, slug, hash] = m
+  const html = await res.text()
+  const title = html.match(/<title>([^<|]+?)(?:\s+live scores| \|)/i)
+  const nameEn =
+    title?.[1]?.trim() ||
+    slug
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ")
+  return { ok: true, slug, hash, nameEn }
 }
 
 export async function POST(request: NextRequest) {
@@ -176,31 +251,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (input.mode === "register") {
-      // soccerway 팀 URL 검증 — 구 URL 도 허용 (301 을 따라가 최종 신 URL 에서 추출).
-      // 구 URL 리다이렉트는 숫자 id 만 보므로, 여기서 추출한 slug·해시가 곧 검증 결과다.
-      const host = new URL(input.url).hostname
-      if (!host.endsWith("soccerway.com")) {
-        return apiBadRequest("soccerway.com 팀 URL 만 허용됩니다.")
-      }
-      const res = await fetch(input.url, { headers: FETCH_HEADERS, redirect: "follow" })
-      const finalUrl = res.url || input.url
-      const m = finalUrl.match(TEAM_URL_RE)
-      if (!res.ok || !m) {
-        return apiBadRequest(
-          `팀 페이지가 아닙니다 (최종 URL: ${finalUrl}). /team/{이름}/{해시}/ 형태의 팀 URL 을 붙여넣어 주세요.`
-        )
-      }
-      const [, slug, hash] = m
-
-      // 표시명은 페이지 title 에서 — 홈/원정 대조가 soccerway 표시명 기준이라 표시명이 정본
-      const html = await res.text()
-      const title = html.match(/<title>([^<|]+?)(?:\s+live scores| \|)/i)
-      const nameEn =
-        title?.[1]?.trim() ||
-        slug
-          .split("-")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ")
+      const resolved = await resolveTeamUrl(input.url)
+      if (!resolved.ok) return apiBadRequest(resolved.message)
+      const { slug, hash, nameEn } = resolved
 
       const { data: existing } = await supabase
         .from("team_dictionary")
@@ -235,6 +288,139 @@ export async function POST(request: NextRequest) {
       })
       if (error) return apiError("등재 실패", 500, error)
       return NextResponse.json({ success: true, hash, slug, name_en: nameEn })
+    }
+
+    // ── 수정 3종 ────────────────────────────────────────────────────
+    if (input.mode === "rename") {
+      const { data: team } = await supabase
+        .from("team_dictionary")
+        .select("name_kr, aliases_kr, note")
+        .eq("soccerway_team_id", input.soccerway_team_id)
+        .maybeSingle()
+      if (!team) return apiBadRequest("대상 팀이 사전에 없습니다.")
+
+      const next = input.name_kr.trim()
+      const old = (team.name_kr ?? "").trim()
+      // 기존 표기는 기본적으로 **버린다** — 고치는 이유가 그 표기가 틀려서이므로,
+      // 별칭으로 남기면 틀린 표기가 계속 이 팀으로 해석된다.
+      let aliases = (team.aliases_kr ?? []).filter((a: string) => a !== next)
+      if (input.keep_old_as_alias && old && old !== next) {
+        aliases = Array.from(new Set([...aliases, old]))
+      } else if (old) {
+        aliases = aliases.filter((a: string) => a !== old)
+      }
+
+      const { error } = await supabase
+        .from("team_dictionary")
+        .update({
+          name_kr: next,
+          aliases_kr: aliases,
+          note: input.note ?? team.note,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("soccerway_team_id", input.soccerway_team_id)
+      if (error) return apiError("표기 수정 실패", 500, error)
+      return NextResponse.json({ success: true, from: old || null, to: next, aliases })
+    }
+
+    if (input.mode === "remove_alias") {
+      const { data: team } = await supabase
+        .from("team_dictionary")
+        .select("aliases_kr")
+        .eq("soccerway_team_id", input.soccerway_team_id)
+        .maybeSingle()
+      if (!team) return apiBadRequest("대상 팀이 사전에 없습니다.")
+      const target = input.alias.trim()
+      const aliases = (team.aliases_kr ?? []).filter((a: string) => a !== target)
+      if (aliases.length === (team.aliases_kr ?? []).length) {
+        return apiBadRequest("해당 별칭이 없습니다.")
+      }
+      const { error } = await supabase
+        .from("team_dictionary")
+        .update({ aliases_kr: aliases, updated_at: new Date().toISOString() })
+        .eq("soccerway_team_id", input.soccerway_team_id)
+      if (error) return apiError("별칭 제거 실패", 500, error)
+      return NextResponse.json({ success: true, removed: target, aliases })
+    }
+
+    if (input.mode === "repoint") {
+      // 한글 표기가 엉뚱한 팀에 붙은 경우 — 표기를 올바른 팀으로 **이설**한다.
+      // 원본 행은 지우지 않는다(그 soccerway 팀 자체는 실재한다). 한글 결속만 떼어내
+      // 더 이상 아무 betman 표기와도 매칭되지 않게 한다.
+      const { data: from } = await supabase
+        .from("team_dictionary")
+        .select("soccerway_team_id, name_kr, aliases_kr")
+        .eq("soccerway_team_id", input.from_soccerway_team_id)
+        .maybeSingle()
+      if (!from) return apiBadRequest("원본 팀이 사전에 없습니다.")
+
+      const resolved = await resolveTeamUrl(input.url)
+      if (!resolved.ok) return apiBadRequest(resolved.message)
+      const { slug, hash, nameEn } = resolved
+      if (hash === from.soccerway_team_id) {
+        return apiBadRequest("원본과 같은 팀입니다 — 이설할 필요가 없습니다.")
+      }
+
+      const moving = (input.name_kr ?? from.name_kr ?? "").trim()
+      if (!moving) return apiBadRequest("옮길 한글 표기가 없습니다.")
+      const movingAliases = input.move_aliases ? (from.aliases_kr ?? []) : []
+
+      const { data: target } = await supabase
+        .from("team_dictionary")
+        .select("soccerway_team_id, name_kr, aliases_kr")
+        .eq("soccerway_team_id", hash)
+        .maybeSingle()
+
+      if (target) {
+        // 이미 있는 팀이면 대표 표기는 보호하고 별칭으로 흡수
+        const merged = Array.from(
+          new Set([
+            ...(target.aliases_kr ?? []),
+            ...(target.name_kr ? [moving] : []),
+            ...movingAliases,
+          ])
+        ).filter((a) => a !== target.name_kr)
+        const { error } = await supabase
+          .from("team_dictionary")
+          .update({
+            name_kr: target.name_kr ?? moving,
+            aliases_kr: merged,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("soccerway_team_id", hash)
+        if (error) return apiError("이설 대상 갱신 실패", 500, error)
+      } else {
+        const { error } = await supabase.from("team_dictionary").insert({
+          soccerway_team_id: hash,
+          slug,
+          name_en: nameEn,
+          name_kr: moving,
+          aliases_kr: movingAliases,
+          status: "proposed",
+          source: "admin",
+          note: input.note ?? null,
+        })
+        if (error) return apiError("이설 대상 등재 실패", 500, error)
+      }
+
+      // 원본에서 한글 결속 제거
+      const { error: clearErr } = await supabase
+        .from("team_dictionary")
+        .update({
+          name_kr: null,
+          aliases_kr: input.move_aliases ? [] : (from.aliases_kr ?? []),
+          note: input.note ?? `한글 표기를 ${nameEn}(${hash}) 로 이설`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("soccerway_team_id", from.soccerway_team_id)
+      if (clearErr) return apiError("원본 정리 실패", 500, clearErr)
+
+      return NextResponse.json({
+        success: true,
+        moved: moving,
+        to: { hash, slug, name_en: nameEn },
+        aliases_moved: movingAliases.length,
+      })
     }
 
     // confirm / reject

@@ -61,6 +61,10 @@ export function TeamDictionaryManager() {
   const [busy, setBusy] = useState(false)
   const [aliasTarget, setAliasTarget] = useState<Record<string, string>>({})
   const [registerUrl, setRegisterUrl] = useState<Record<string, string>>({})
+  // 수정 패널 — 사전이 틀렸을 때 제외가 아니라 고치기 위한 것 (2026-08-15)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [renameVal, setRenameVal] = useState<Record<string, string>>({})
+  const [repointUrl, setRepointUrl] = useState<Record<string, string>>({})
 
   const teams = data?.teams ?? []
   const activeTeams = teams.filter((t) => t.status !== "rejected")
@@ -300,14 +304,37 @@ export function TeamDictionaryManager() {
                       확정
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setEditing(editing === t.soccerway_team_id ? null : t.soccerway_team_id)
+                      setRenameVal((p) => ({
+                        ...p,
+                        [t.soccerway_team_id]: p[t.soccerway_team_id] ?? t.name_kr ?? "",
+                      }))
+                    }}
+                    disabled={busy}
+                    className="rounded border px-2 py-1 text-[11px] disabled:opacity-50"
+                  >
+                    수정
+                  </button>
                   {t.status !== "rejected" && (
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        // ⚠️ 제외는 리졸버가 이 팀을 통째로 건너뛰게 만든다 → 이 팀이 낀
+                        //    경기가 영구히 team_unresolved 로 떨어진다. 표기가 틀렸을 뿐이면
+                        //    수정이 정답이라, 여기서 한 번 막는다.
+                        const ok = window.confirm(
+                          `"${t.name_kr ?? t.name_en}" 을(를) 사전에서 제외합니다.\n\n` +
+                            `제외하면 이 팀이 낀 경기는 앞으로 계속 "미등재"로 떨어집니다.\n` +
+                            `표기가 틀린 것뿐이라면 [제외]가 아니라 [수정]을 쓰세요.\n\n` +
+                            `이 soccerway 팀 자체가 우리 사전에 있을 이유가 없을 때만 진행하세요.`
+                        )
+                        if (!ok) return
                         void send(
                           { mode: "reject", soccerway_team_id: t.soccerway_team_id },
                           "사전에서 제외"
                         )
-                      }
+                      }}
                       disabled={busy}
                       className="text-muted-foreground rounded border px-2 py-1 text-[11px] disabled:opacity-50"
                     >
@@ -315,6 +342,119 @@ export function TeamDictionaryManager() {
                     </button>
                   )}
                 </span>
+
+                {editing === t.soccerway_team_id && (
+                  <div className="bg-muted/40 mt-2 w-full space-y-3 rounded-lg border p-3">
+                    {/* 대표 표기 수정 */}
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground text-[11px] font-medium">
+                        대표 한글 표기
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <input
+                          value={renameVal[t.soccerway_team_id] ?? ""}
+                          onChange={(e) =>
+                            setRenameVal((p) => ({ ...p, [t.soccerway_team_id]: e.target.value }))
+                          }
+                          placeholder={t.name_en}
+                          className="bg-background min-w-[160px] flex-1 rounded border px-2 py-1 text-xs"
+                        />
+                        <button
+                          onClick={() => {
+                            const v = (renameVal[t.soccerway_team_id] ?? "").trim()
+                            if (!v) return
+                            void send(
+                              {
+                                mode: "rename",
+                                soccerway_team_id: t.soccerway_team_id,
+                                name_kr: v,
+                              },
+                              `표기를 "${v}" 로 수정`
+                            )
+                          }}
+                          disabled={busy}
+                          className="rounded bg-sky-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                        >
+                          표기 저장
+                        </button>
+                      </div>
+                      <p className="text-muted-foreground text-[10px]">
+                        기존 표기는 <b>버려집니다</b> — 틀린 표기를 별칭으로 남기면 계속 이 팀으로
+                        해석되기 때문입니다.
+                      </p>
+                    </div>
+
+                    {/* 별칭 제거 */}
+                    {t.aliases_kr.length > 0 && (
+                      <div className="space-y-1">
+                        <label className="text-muted-foreground text-[11px] font-medium">
+                          별칭 — 잘못 붙은 것을 누르면 제거됩니다
+                        </label>
+                        <div className="flex flex-wrap gap-1">
+                          {t.aliases_kr.map((a) => (
+                            <button
+                              key={a}
+                              onClick={() =>
+                                void send(
+                                  {
+                                    mode: "remove_alias",
+                                    soccerway_team_id: t.soccerway_team_id,
+                                    alias: a,
+                                  },
+                                  `별칭 "${a}" 제거`
+                                )
+                              }
+                              disabled={busy}
+                              className="bg-background rounded-full border px-2 py-0.5 text-[11px] hover:border-red-300 hover:text-red-600 disabled:opacity-50"
+                            >
+                              {a} ×
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 다른 팀으로 이설 */}
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground text-[11px] font-medium">
+                        엉뚱한 팀에 붙었다면 — 올바른 soccerway 팀으로 이설
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <input
+                          value={repointUrl[t.soccerway_team_id] ?? ""}
+                          onChange={(e) =>
+                            setRepointUrl((p) => ({ ...p, [t.soccerway_team_id]: e.target.value }))
+                          }
+                          placeholder="https://int.soccerway.com/teams/.../team/{이름}/{해시}/"
+                          className="bg-background min-w-[220px] flex-1 rounded border px-2 py-1 text-xs"
+                        />
+                        <button
+                          onClick={() => {
+                            const url = (repointUrl[t.soccerway_team_id] ?? "").trim()
+                            if (!url) return
+                            void send(
+                              {
+                                mode: "repoint",
+                                from_soccerway_team_id: t.soccerway_team_id,
+                                url,
+                                move_aliases: true,
+                              },
+                              `"${t.name_kr ?? t.name_en}" 표기를 이설`
+                            )
+                          }}
+                          disabled={busy}
+                          className="rounded bg-amber-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                        >
+                          이설
+                        </button>
+                      </div>
+                      <p className="text-muted-foreground text-[10px]">
+                        한글 표기와 별칭이 대상 팀으로 옮겨지고, 이 행은 한글 결속만 비워집니다
+                        (soccerway 팀 자체는 남습니다).
+                      </p>
+                    </div>
+                  </div>
+                )}
               </li>
             )
           })}
