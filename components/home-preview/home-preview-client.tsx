@@ -15,6 +15,7 @@ import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-
 import { CommunitySidebar } from "@/components/sidebar/community-sidebar"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { CommunityBridge } from "@/components/home-preview/community-bridge"
+import { PinnedEventCard } from "@/components/home-preview/pinned-event-card"
 import type { FeedTab } from "@/components/home/home-client"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 import type { GroupedMatch } from "@/types/betting"
@@ -134,11 +135,12 @@ export function HomePreviewClient({
     <div className="worldcup-scope gnp-scope min-h-[100dvh]">
       {/* 다크 히어로 — 컴포넌트는 프로덕션과 동일. 내부 폭만 스코프 CSS 가 1080 으로 맞춘다 */}
       {feedTab === "games" ? (
-        <MatchdayBand cards={[]} compact initialGames={initialGames} />
+        <MatchdayBand cards={[]} compact initialGames={initialGames} hideEventBanner />
       ) : (
         <MatchdayBand
           cards={heroCards ?? initialCardNews?.cards ?? []}
           initialGames={initialGames}
+          hideEventBanner
         />
       )}
 
@@ -164,6 +166,8 @@ export function HomePreviewClient({
             {feedTab === "cardnews" && (
               <section className="mt-4 space-y-3">
                 <SectionLabel eyebrow="Today" title="오늘의 떡밥" />
+                {/* 히어로에서 내려온 개막 이벤트 — 떡밥 회전과 무관하게 첫 칸 고정 */}
+                <PinnedEventCard />
                 <CardNewsFeed
                   initialCards={initialCardNews?.cards ?? []}
                   initialCursor={initialCardNews?.nextCursor ?? null}

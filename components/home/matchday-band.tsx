@@ -63,9 +63,22 @@ interface MatchdayBandProps {
    * null 이면 기존처럼 클라이언트 SWR 로만 로드 (fail-open).
    */
   initialGames?: { groupedGames?: GroupedMatch[] } | null
+  /**
+   * 시즌 개막 이벤트 배너를 밴드에서 뺀다 (2026-08-15 운영자: "배너들이 너무 많은 위치를
+   * 차지한다"). 홈 리디자인 프리뷰는 같은 이벤트를 **오늘의 떡밥 피드 최상단 고정 카드**로
+   * 옮겨 붙였다 — 두 곳에 다 그리면 같은 광고가 화면에 두 번 나온다.
+   *
+   * ⚠️ 기본값 false 라 프로덕션 홈은 배너를 그대로 유지한다.
+   */
+  hideEventBanner?: boolean
 }
 
-export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayBandProps) {
+export function MatchdayBand({
+  cards,
+  compact = false,
+  initialGames,
+  hideEventBanner = false,
+}: MatchdayBandProps) {
   const slides = useMemo(() => cards.filter((c) => !!c.image).slice(0, MAX_SLIDES), [cards])
 
   const { data } = useSWR<{ groupedGames?: GroupedMatch[] }>("/api/sports/games", fetcher, {
@@ -166,7 +179,7 @@ export function MatchdayBand({ cards, compact = false, initialGames }: MatchdayB
         {/* 시즌 개막 이벤트 광고 배너 (운영자 2026-08-14) — 오늘의 떡밥 메인에서
             독립된 한 칸. 떡밥 회전과 무관하게 이벤트 기간 내내 고정.
             아스날 팬 전용 이벤트 — 경품 앙리 사인 유니폼 실물 사진이 광고 본체다. */}
-        {new Date() < new Date(GUNNERS_SEASON.endAt) && (
+        {!hideEventBanner && new Date() < new Date(GUNNERS_SEASON.endAt) && (
           <Link
             href="/season/join?ref=hero"
             className="relative mb-4 flex min-h-[130px] items-center overflow-hidden rounded-[16px] transition-opacity hover:opacity-95 sm:min-h-[150px]"
