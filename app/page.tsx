@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { createAnonClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home/home-client"
 import { fetchCardNews, fetchHeroCards, type CardNewsItem } from "@/lib/feed/cardnews"
-import { buildGamesPayload } from "@/lib/betman/games-payload"
+import { getGamesPayloadForSsr } from "@/lib/betman/games-payload"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
 import type { GroupedMatch } from "@/types/betting"
 
@@ -143,7 +143,10 @@ async function fetchAllHomeData(sort: SortType) {
     //    오는 구조라 왕복이 통째로 낭비였고, 홈 렌더의 long pole 이었다 (2026-08-15 실측:
     //    홈 완료까지 2.7~3.5초). 같은 로직을 라우트와 공유하는 함수로 직접 호출한다.
     //    비로그인 형태(userId 없음)로 부르므로 개인 예측 조회 왕복도 발생하지 않는다.
-    buildGamesPayload()
+    //    ⚠️ 반드시 Data Cache 로 감싼 `getGamesPayloadForSsr` 를 쓸 것 — 이 페이지의
+    //    `revalidate = 300` 은 실제로는 동작하지 않아(ClerkProvider dynamic) 매 요청마다
+    //    렌더된다. 캐시 없이 직접 부르면 왕복만 줄고 DB 조회는 늘어난다.
+    getGamesPayloadForSsr()
       .then((p) => ({ groupedGames: p.groupedGames as unknown as GroupedMatch[] }))
       .catch(() => null),
   ])

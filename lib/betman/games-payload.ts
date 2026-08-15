@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import {
   getTodayDailyId,
@@ -65,6 +66,29 @@ export async function runGamesHousekeeping(): Promise<void> {
       /* RPC가 없으면 무시 */
     }),
   ])
+}
+
+/**
+ * SSR 프리페치 전용 — 위 조립을 **Data Cache 60초**로 감싼다.
+ *
+ * ⚠️ 이 래퍼가 없으면 홈/승부예측이 렌더될 때마다 betman 쿼리를 새로 돈다.
+ *    두 페이지에 `export const revalidate = 300` 이 선언돼 있지만 **그건 죽어 있다** —
+ *    루트 레이아웃의 `<ClerkProvider dynamic>` 이 앱 전체를 동적 렌더로 고정해서
+ *    프리렌더 라우트가 robots/sitemap/og 3개뿐이고, 모든 페이지 응답이
+ *    `private, no-store` 로 나간다 (2026-08-15 실측: x-vercel-cache 100% MISS).
+ *
+ *    종전 `fetch(".../api/sports/games", { next: { revalidate: 60 } })` 는 HTTP 왕복이라는
+ *    큰 비용을 냈지만 그 대신 Data Cache 는 얻고 있었다. 왕복만 걷어내고 캐시를 안 붙이면
+ *    중앙값이 오히려 나빠진다 — 왕복 제거와 캐시 유지를 **둘 다** 해야 이긴다.
+ *
+ * 라우트(`/api/betman/games`)는 이걸 쓰지 않는다. 개인 예측이 섞이고 필터 조합이 열려 있어
+ * 캐시 키가 발산하기 때문. 라우트는 자체 CDN 캐시 헤더로 처리한다.
+ */
+export function getGamesPayloadForSsr(sport = "all") {
+  return unstable_cache(() => buildGamesPayload({ sport }), ["betman-games-ssr", sport], {
+    revalidate: 60,
+    tags: ["betman-games"],
+  })()
 }
 
 export async function buildGamesPayload(params: GamesPayloadParams = {}) {

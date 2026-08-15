@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { createAnonClient } from "@/lib/supabase/server"
 import { PredictionClient } from "@/components/prediction/prediction-client"
-import { buildGamesPayload } from "@/lib/betman/games-payload"
+import { getGamesPayloadForSsr } from "@/lib/betman/games-payload"
 
 // 사이드바 데이터(카테고리/최근댓글)는 ISR 5분 캐시. BettingPage 내부 데이터는
 // 클라이언트에서 자체 fetch — 경기/배당/내 슬립은 항상 최신 필요.
@@ -59,7 +59,8 @@ async function fetchSidebarData() {
     //
     // 자기 도메인 HTTP fetch 였던 것을 공유 함수 직접 호출로 교체 (2026-08-15).
     // 이 경로가 사이트에서 제일 느렸다 — `?sport=축구` 오리진 실측 4.4초.
-    buildGamesPayload({ sport: "축구" }).catch(() => null),
+    // Data Cache 60초 래퍼 필수 — 이 페이지의 revalidate=300 은 동작하지 않는다(홈 주석 참고).
+    getGamesPayloadForSsr("축구").catch(() => null),
   ])
 
   return {
