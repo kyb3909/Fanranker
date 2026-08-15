@@ -64,22 +64,46 @@ interface MatchdayBandProps {
    */
   initialGames?: { groupedGames?: GroupedMatch[] } | null
   /**
-   * 시즌 개막 이벤트 배너를 밴드에서 뺀다 (2026-08-15 운영자: "배너들이 너무 많은 위치를
-   * 차지한다"). 홈 리디자인 프리뷰는 같은 이벤트를 **오늘의 떡밥 피드 최상단 고정 카드**로
-   * 옮겨 붙였다 — 두 곳에 다 그리면 같은 광고가 화면에 두 번 나온다.
+   * 개막 이벤트를 **독립 배너 대신 톱스토리 캐러셀의 첫 슬라이드**로 넣는다
+   * (2026-08-15 운영자: "배너들이 너무 많은 위치를 차지한다" → 지목한 위치가 캐러셀 카드).
    *
-   * ⚠️ 기본값 false 라 프로덕션 홈은 배너를 그대로 유지한다.
+   * 배너는 히어로 위에서 min-h 150px 를 **추가로** 먹었다. 캐러셀 안으로 들어가면 이미
+   * 있는 자리를 나눠 쓰므로 **세로를 하나도 더 안 쓴다.** 노출은 회전 첫 장이라 오히려 세다.
+   *
+   * ⚠️ 기본값 false — 프로덕션 홈은 배너를 그대로 유지한다 (프리뷰 승인 전까지).
    */
-  hideEventBanner?: boolean
+  eventAsSlide?: boolean
 }
+
+/** 캐러셀에 끼워 넣는 이벤트 슬라이드의 표식 — 이 id 만 링크가 참가 페이지로 간다 */
+const EVENT_SLIDE_ID = "__gunners_event_slide__"
 
 export function MatchdayBand({
   cards,
   compact = false,
   initialGames,
-  hideEventBanner = false,
+  eventAsSlide = false,
 }: MatchdayBandProps) {
-  const slides = useMemo(() => cards.filter((c) => !!c.image).slice(0, MAX_SLIDES), [cards])
+  const eventLive = eventAsSlide && new Date() < new Date(GUNNERS_SEASON.endAt)
+  const slides = useMemo(() => {
+    const base = cards.filter((c) => !!c.image).slice(0, MAX_SLIDES)
+    if (!eventLive) return base
+    // 첫 장 고정 — 회전하다 다시 돌아온다. 떡밥 슬라이드는 한 장 밀린다.
+    const ev: CardNewsItem = {
+      id: EVENT_SLIDE_ID,
+      title: "개막 기념 승부예측 이벤트 — 1등 상품은 14번 티에리 앙리 사인 유니폼",
+      source: null,
+      author: null,
+      image: "/season/event-banner-henry.webp",
+      voteCount: 0,
+      commentCount: 0,
+      createdAt: new Date().toISOString(),
+      topComments: [],
+      flair: { name: "이벤트", color: null },
+      media: null,
+    }
+    return [ev, ...base].slice(0, MAX_SLIDES + 1)
+  }, [cards, eventLive])
 
   const { data } = useSWR<{ groupedGames?: GroupedMatch[] }>("/api/sports/games", fetcher, {
     refreshInterval: 5 * 60 * 1000,
@@ -179,7 +203,7 @@ export function MatchdayBand({
         {/* 시즌 개막 이벤트 광고 배너 (운영자 2026-08-14) — 오늘의 떡밥 메인에서
             독립된 한 칸. 떡밥 회전과 무관하게 이벤트 기간 내내 고정.
             아스날 팬 전용 이벤트 — 경품 앙리 사인 유니폼 실물 사진이 광고 본체다. */}
-        {!hideEventBanner && new Date() < new Date(GUNNERS_SEASON.endAt) && (
+        {!eventAsSlide && new Date() < new Date(GUNNERS_SEASON.endAt) && (
           <Link
             href="/season/join?ref=hero"
             className="relative mb-4 flex min-h-[130px] items-center overflow-hidden rounded-[16px] transition-opacity hover:opacity-95 sm:min-h-[150px]"
@@ -320,7 +344,11 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                 overflowWrap: "break-word",
               }}
             >
-              <Link href={`/post/${c.id}`} className="hover:underline">
+              {/* 이벤트 슬라이드만 참가 페이지로 — 나머지는 기사로 */}
+              <Link
+                href={c.id === EVENT_SLIDE_ID ? "/season/join?ref=hero-slide" : `/post/${c.id}`}
+                className="hover:underline"
+              >
                 {c.title}
               </Link>
             </h3>
