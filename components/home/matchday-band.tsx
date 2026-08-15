@@ -91,7 +91,9 @@ export function MatchdayBand({
     // 첫 장 고정 — 회전하다 다시 돌아온다. 떡밥 슬라이드는 한 장 밀린다.
     const ev: CardNewsItem = {
       id: EVENT_SLIDE_ID,
-      title: "개막 기념 승부예측 이벤트 — 1등 상품은 14번 티에리 앙리 사인 유니폼",
+      // 상품명은 제목에 붙이지 않고 아래 줄로 뺀다 (2026-08-15 운영자) — 한 줄로 이으면
+      // 3줄까지 흘러 무엇이 이벤트 이름이고 무엇이 상품인지 위계가 안 보인다.
+      title: "개막 기념 승부예측 이벤트",
       source: null,
       author: null,
       image: "/season/event-banner-henry.webp",
@@ -352,6 +354,16 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
                 {c.title}
               </Link>
             </h3>
+            {/* 이벤트 슬라이드 부제 — 제목 아래 한 줄로 상품을 알린다 (2026-08-15 운영자).
+                제목(이벤트 이름)과 상품을 갈라야 둘 다 읽힌다. */}
+            {c.id === EVENT_SLIDE_ID && (
+              <p
+                className="font-title mt-2 text-[16px] leading-[1.3] font-bold sm:text-[20px]"
+                style={{ color: "var(--wc-gold)", wordBreak: "keep-all" }}
+              >
+                1등 상품 · 14번 티에리 앙리 사인 유니폼
+              </p>
+            )}
             {/* VS 쟁점 — 결과만 보던 스트립을 **그 자리에서 투표**로 (2026-08-12 운영자).
                 다크 밴드(선언 영역) 안이라 다크 허용. 기사 진입은 컴포넌트 안 별도 링크. */}
             {c.vs && <HeroVsVote vs={c.vs} postId={c.id} />}
