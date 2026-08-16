@@ -217,11 +217,13 @@ async function extractEvents(
     `축구 경기 리포트에서 **경기 중에 일어난 사건만** 추출하는 파서다.
 - 대상: 득점(goal/own_goal/penalty), 도움, 카드(yellow_card/red_card), VAR 판정(var), 교체(sub), 부상(injury), 결정적 기회(chance).
 - 제외: 시즌 배경, 팀 근황, 전망, 평가, 감독 코멘트가 아닌 서사.
-- players 는 원문 표기 그대로(영문). detail 은 원문 근거의 짧은 영문 한 문장.
+- players 는 원문 표기 그대로(영문). detail 은 **원문의 장면 묘사를 최대한 보존한 영문 1~3문장** —
+  득점이면 빌드업·도움·슛 종류(헤더/발리/중거리/침투)·위치·골키퍼 상황까지, 퇴장이면 어떤 파울이었고
+  판정이 어떻게 진행됐는지. 원문에 있는 만큼만, 뭉개서 요약하지 마라.
 - minute 은 원문에 있으면 "43'" 형식, 없으면 null. 사건이 없으면 events 는 빈 배열.
 - 출력: {"score": "3-0" 또는 null, "events": [{"minute", "type", "team": "home|away|null", "players": [], "detail"}]} JSON. 사건은 시간 순.`,
     { title, paragraphs: paragraphs.slice(0, 12) },
-    1200
+    1800
   )
   if (!content) return null
   try {
@@ -272,15 +274,20 @@ async function composeReportKo(
 ): Promise<MatchReport | null> {
   const content = await callLLM(
     `구조화된 경기 사건 목록으로 한국어 경기 리포트를 쓰는 에디터다. 규칙:
-- **사건 목록에 있는 것만** 쓴다. 배경·전망·평가·의미 부여 금지 (운영자 지시: "미사여구 없이 담백하게, 경기 중에 일어난 일만").
-- 드라이 톤: 사실만, 감탄·수사 금지. 기사체 평서문.
+- **사건 목록에 있는 것만** 쓴다. 배경·전망·평가·의미 부여 금지 (운영자 지시: "경기 중에 일어난 일만").
+- 단, **득점·퇴장 장면은 detail 을 근거로 구체적으로 묘사한다** — 공격이 어떻게 만들어졌고,
+  누가 도왔고, 어떤 슛(헤더·발리·중거리 등)이 어디로 들어갔는지. 퇴장은 어떤 파울에 어떤
+  판정 과정이었는지. detail 에 없는 묘사를 지어내는 것은 금지 (운영자: "정확히 골 장면이나
+  퇴장 장면을 묘사").
+- 톤: 사실 기반. 감탄사·과장·클리셰("환상적인", "믿을 수 없는")는 금지지만, 장면이 눈에
+  그려지게는 쓴다. 기사체 평서문.
 - 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
 - 팀 이름: 홈팀 "${homeTeam}", 원정팀 "${awayTeam}".
-- 시간 순서대로 2~4문단, 문단당 2~3문장.
+- 시간 순서대로 3~5문단, 문단당 2~3문장.
 - 제목: 간결하되 사실 왜곡 금지 — 퇴장·수적 열세는 어느 팀 것인지 분명히.
 - 출력: {"title": "...", "paragraphs": ["...", ...]} JSON.`,
     { home: homeTeam, away: awayTeam, score, events },
-    1400
+    1800
   )
   if (!content) return null
   try {
@@ -317,7 +324,7 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       if (!ko) throw new Error("report-not-yet")
       return ko
     },
-    ["match-report-v2", eventId],
+    ["match-report-v3", eventId],
     { revalidate: 24 * 3600 }
   )
 }
