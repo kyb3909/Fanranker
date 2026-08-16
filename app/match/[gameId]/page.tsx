@@ -58,6 +58,7 @@ export default async function MatchPage({ params }: Props) {
   // betman 은 종료를 1~1.5시간 늦게 반영한다 (2026-08-16 실측). LFA 가 먼저 주는 FT·스코어를
   // 함께 보고, 어느 쪽이든 먼저 종료를 알려주면 그때부터 스코어·스탯·리포트를 연다.
   const lfa = await getLfaMatchInfo({
+    gameId: match.gameId,
     homeTeam: match.homeTeam,
     awayTeam: match.awayTeam,
     matchTime: match.matchTime,

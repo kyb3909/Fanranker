@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
+import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lookup"
 
 /**
  * betman 경기 → live-football-api 경기 해석 + 스코어/스탯 (2026-08-17).
@@ -146,9 +147,39 @@ export interface LfaMatchInfo {
   goals: { minute: string; side: "home" | "away"; player: string; score: string }[]
 }
 
+/* ── 득점자 한글화 ── */
+
+/**
+ * LFA 득점자명("R. Calafiori")을 그 경기 라인업의 한글 표기로 바꾼다.
+ *
+ * 콘텐츠는 한글이 원칙이라 영문 이름을 그대로 올릴 수 없다. 근거는 LLM 의 감이 아니라
+ * **그 경기의 실제 라인업**이다 (match-extras.ts 의 groundPlayerNames 와 같은 규율).
+ * 22명으로 후보가 좁혀지므로 성(姓) 하나로도 거의 유일하게 결정된다
+ * (2026-08-16 실측: 40명 중 39명 자동 매칭). 애매하면 원문 유지 — 틀린 한글보다 낫다.
+ */
+function localizeScorer(lfaName: string, lineup: LineupResponse): string {
+  if (lineup.status !== "ready") return lfaName
+  const roster = [
+    ...lineup.home.starters,
+    ...lineup.home.bench,
+    ...lineup.away.starters,
+    ...lineup.away.bench,
+  ]
+  // 앞 이니셜("R.")을 떼고 남은 성을 로마자 슬러그 토큰과 대조
+  const surname = tokens(lfaName.replace(/^[A-Za-z]\.\s*/, ""))
+  if (surname.length === 0) return lfaName
+  const hits = roster.filter((p) => {
+    const rt = tokens(p.roman ?? "")
+    return surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))
+  })
+  return hits.length === 1 ? hits[0].label : lfaName
+}
+
 /* ── 본체 ── */
 
 interface BetmanGameKey {
+  /** betman_games.id — 라인업 조회(득점자 한글화)에 쓴다 */
+  gameId: string
   homeTeam: string
   awayTeam: string
   matchTime: string
@@ -233,15 +264,22 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       info.stats.push({ label: ko, home: h.text, away: a.text, homeNum: h.num, awayNum: a.num })
     }
 
-    for (const e of d.events ?? []) {
+    const rawGoals = (d.events ?? []).filter((e) => {
       const type = String(e.type ?? "").toLowerCase()
-      if (type !== "goal" && type !== "own goal" && type !== "penalty") continue
+      return type === "goal" || type === "own goal" || type === "penalty"
+    })
+    // 라인업은 득점이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
+    const lineup: LineupResponse = rawGoals.length
+      ? await getLineupForGame(game.gameId).catch(() => ({ status: "none" }) as LineupResponse)
+      : { status: "none" }
+
+    for (const e of rawGoals) {
       const player = e.detail?.player?.name?.trim()
       if (!player) continue
       info.goals.push({
         minute: String(e.time ?? ""),
         side: e.side,
-        player,
+        player: localizeScorer(player, lineup),
         score: e.detail?.score ?? "",
       })
     }
