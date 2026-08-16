@@ -1,0 +1,253 @@
+import "server-only"
+
+import { unstable_cache } from "next/cache"
+import { createServiceRoleClient } from "@/lib/supabase/server"
+import { lfaLeagueId } from "@/lib/lfa/leagues"
+import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
+
+/**
+ * betman 경기 → live-football-api 경기 해석 + 스코어/스탯 (2026-08-17).
+ *
+ * ## 해석 방식 (fail-closed)
+ * (킥오프 UTC 날짜) → `/matches?date=` 한 번 → 리그 id 로 좁힘 → 팀명 대조 →
+ * **정확히 1건일 때만** 채택. 애매하면 null — 남의 경기 스코어를 붙이는 것이 최악이다.
+ *
+ * 팀명은 betman 한글 → `team_dictionary.name_en` → LFA 영문명 대조다. LFA 는 축약형을
+ * 쓰므로("Man. City") 정확일치가 아니라 토큰 접두 매칭을 쓴다 ("man" ⊂ "manchester").
+ *
+ * ## 크레딧
+ * 날짜별 목록은 **날짜 하나당 1회**만 받아 그날 전 경기가 공유한다 (경기별 호출 금지).
+ * 진행 중이면 60초, 종료됐으면 6시간 캐시 — 끝난 경기를 다시 물어볼 이유가 없다.
+ */
+
+/* ── 팀명 대조 ── */
+
+/** betman 한글 팀명 → 영문명 (team_dictionary, 1h 캐시) */
+const cachedTeamEn = unstable_cache(
+  async (): Promise<[string, string][]> => {
+    const { data } = await createServiceRoleClient()
+      .from("team_dictionary")
+      .select("name_kr, aliases_kr, name_en")
+      .neq("status", "rejected")
+    const out: [string, string][] = []
+    for (const r of data ?? []) {
+      const en = String(r.name_en ?? "").trim()
+      if (!en) continue
+      if (r.name_kr) out.push([String(r.name_kr).trim(), en])
+      for (const a of (r.aliases_kr as string[] | null) ?? []) {
+        if (a) out.push([String(a).trim(), en])
+      }
+    }
+    return out
+  },
+  ["lfa-team-en"],
+  { revalidate: 3600 }
+)
+
+function tokens(s: string): string[] {
+  return (
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      // 3글자 미만은 버린다 — "fc"·"sc" 같은 접미가 서로 다른 팀을 이어붙인다
+      .filter((t) => t.length >= 3 && !["afc", "the"].includes(t))
+  )
+}
+
+/**
+ * LFA 축약명과 우리 영문명이 같은 팀인가 — **느슨한 양방향 접두 겹침**.
+ *
+ * 엄격한 전체 토큰 일치는 실패한다: 양쪽의 축약 방식이 다르다
+ * (LFA "M. Hollyhock" vs 우리 "Mito", LFA "Man. City" vs 우리 "Manchester City").
+ * 유의미한 토큰이 하나라도 서로의 접두사면 후보로 보고, 최종 확정은 호출부의
+ * "정확히 1건" 규칙이 담당한다.
+ */
+function teamMatches(lfaName: string, ourEn: string): boolean {
+  const a = tokens(lfaName)
+  const b = tokens(ourEn)
+  if (a.length === 0 || b.length === 0) return false
+  return a.some((t) => b.some((u) => u.startsWith(t) || t.startsWith(u)))
+}
+
+/* ── 날짜별 경기 목록 (크레딧 절약의 핵심) ── */
+
+function cachedDayMatches(dateUtc: string, live: boolean) {
+  return unstable_cache(
+    async () => {
+      const data = await lfaFetch<{ matches?: LfaMatch[] }>("matches", {
+        date: dateUtc,
+        lang: "en",
+      })
+      return data?.matches ?? []
+    },
+    ["lfa-day", dateUtc, live ? "live" : "settled"],
+    { revalidate: live ? 60 : 6 * 3600 }
+  )
+}
+
+function cachedDetails(matchId: string, live: boolean) {
+  return unstable_cache(
+    async () => lfaFetch<LfaMatchDetails>("live_match_details", { match_id: matchId, lang: "en" }),
+    ["lfa-details", matchId, live ? "live" : "settled"],
+    { revalidate: live ? 60 : 6 * 3600 }
+  )
+}
+
+/* ── 스탯 한글화 ── */
+
+/**
+ * LFA 지표명 → 한글. 원문은 터키어 기계번역이라 영어가 이상하다
+ * ("PLAYING THE BALL" = 점유율, "Winning a Duo Challenge" = 경합 승리).
+ * **목록에 없는 지표는 버린다** — 뜻이 불확실한 것을 지면에 올리지 않는다.
+ * 순서가 곧 표시 순서다.
+ */
+const STAT_LABELS: [string, string][] = [
+  ["Goal Expectation (xG)", "기대득점 (xG)"],
+  ["PLAYING THE BALL", "점유율"],
+  ["Total Shots", "슈팅"],
+  ["Accurate Shot", "유효 슈팅"],
+  ["corner", "코너킥"],
+  ["Receiving the Ball in the Opponent's Penalty Area", "상대 박스 침투"],
+  ["Pass Accuracy%", "패스 성공률"],
+  ["Foul", "파울"],
+  ["Offside", "오프사이드"],
+]
+
+/** "%41" → "41%", "2,19" → "2.19" (터키식 소수점 쉼표 + 퍼센트 접두) */
+function normalizeStatValue(raw: string): { text: string; num: number | null } {
+  const s = String(raw ?? "").trim()
+  const pct = s.startsWith("%")
+  const body = (pct ? s.slice(1) : s).replace(",", ".")
+  const num = Number(body)
+  if (!Number.isFinite(num)) return { text: s, num: null }
+  return { text: pct ? `${body}%` : body, num }
+}
+
+export interface LfaStatRow {
+  label: string
+  home: string
+  away: string
+  homeNum: number | null
+  awayNum: number | null
+}
+
+export interface LfaMatchInfo {
+  matchId: string
+  /** LFA 기준 종료 여부 — betman 이 늦어도 이건 즉시 참이 된다 */
+  finished: boolean
+  live: boolean
+  homeScore: number | null
+  awayScore: number | null
+  stats: LfaStatRow[]
+  /** 득점·퇴장 등 주요 사건 (교체는 선수명이 안 와서 제외) */
+  goals: { minute: string; side: "home" | "away"; player: string; score: string }[]
+}
+
+/* ── 본체 ── */
+
+interface BetmanGameKey {
+  homeTeam: string
+  awayTeam: string
+  matchTime: string
+  leagueCode: string
+}
+
+/** 킥오프 UTC 날짜 (LFA 의 date 파라미터는 UTC 기준이다) */
+function utcDate(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10)
+}
+
+async function resolveMatch(game: BetmanGameKey): Promise<LfaMatch | null> {
+  const leagueId = lfaLeagueId(game.leagueCode)
+  if (!leagueId) return null
+
+  // 킥오프 시각으로 진행 중일 법한지 판단해 캐시 주기를 고른다 (킥오프 ~ +3h)
+  const ko = new Date(game.matchTime).getTime()
+  const now = Date.now()
+  const live = now >= ko && now <= ko + 3 * 3600_000
+
+  const all = await cachedDayMatches(utcDate(game.matchTime), live)()
+  const inLeague = all.filter((m) => m.league?.id === leagueId)
+  if (inLeague.length === 0) return null
+
+  // ① 킥오프 시각(UTC HH:MM)이 가장 강한 신호다 — 팀명 표기 차이를 타지 않는다.
+  //    (2026-08-16 실측: 매치 페이지 대상 리그 10경기 전부 이 단계에서 확정)
+  const hhmm = new Date(game.matchTime).toISOString().slice(11, 16)
+  const sameTime = inLeague.filter((m) => m.kickoff === hhmm)
+  if (sameTime.length === 1) return sameTime[0]
+
+  // ② 같은 시각에 여러 경기(리그 라운드 동시 킥오프)면 팀명으로 좁힌다.
+  //    시각이 아예 안 맞으면(양쪽 일정 편차) 리그 전체를 후보로 둔다.
+  const dict = new Map(await cachedTeamEn())
+  const homeEn = dict.get(game.homeTeam.trim()) ?? game.homeTeam
+  const awayEn = dict.get(game.awayTeam.trim()) ?? game.awayTeam
+  const pool = sameTime.length > 0 ? sameTime : inLeague
+  const hits = pool.filter(
+    (m) => teamMatches(m.home?.name ?? "", homeEn) && teamMatches(m.away?.name ?? "", awayEn)
+  )
+  // 정확히 1건일 때만 — 애매하면 붙이지 않는다 (남의 경기 스코어가 최악)
+  return hits.length === 1 ? hits[0] : null
+}
+
+/**
+ * betman 경기의 LFA 스코어·스탯. 해석 실패·API 장애는 전부 null (fail-open).
+ * 상세(스탯)는 경기가 시작된 뒤에만 부른다 — 예정 경기에 크레딧을 쓰지 않는다.
+ */
+export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | null> {
+  try {
+    const m = await resolveMatch(game)
+    if (!m) return null
+
+    const state = m.status?.state ?? ""
+    const live = m.status?.is_live === true
+    const finished = state === "postGame" || m.status?.display === "FT"
+    const toNum = (v: string | null | undefined) => {
+      const n = Number(v)
+      return v != null && v !== "" && Number.isFinite(n) ? n : null
+    }
+
+    const info: LfaMatchInfo = {
+      matchId: m.id,
+      finished,
+      live,
+      homeScore: toNum(m.home?.score),
+      awayScore: toNum(m.away?.score),
+      stats: [],
+      goals: [],
+    }
+
+    // 킥오프 전이면 상세를 부르지 않는다 (크레딧 절약)
+    if (!live && !finished) return info
+
+    const d = await cachedDetails(m.id, live)()
+    if (!d) return info
+
+    for (const [en, ko] of STAT_LABELS) {
+      const s = d.stats?.find((x) => x.label === en)
+      if (!s) continue
+      const h = normalizeStatValue(s.home)
+      const a = normalizeStatValue(s.away)
+      info.stats.push({ label: ko, home: h.text, away: a.text, homeNum: h.num, awayNum: a.num })
+    }
+
+    for (const e of d.events ?? []) {
+      const type = String(e.type ?? "").toLowerCase()
+      if (type !== "goal" && type !== "own goal" && type !== "penalty") continue
+      const player = e.detail?.player?.name?.trim()
+      if (!player) continue
+      info.goals.push({
+        minute: String(e.time ?? ""),
+        side: e.side,
+        player,
+        score: e.detail?.score ?? "",
+      })
+    }
+
+    return info
+  } catch {
+    return null
+  }
+}

@@ -145,3 +145,6 @@ workspace/agg-training/fixture.json
 
 # 뉴스 카드 원본 아트 — 조판만 바꿀 때 재생성을 피하려고 남기지만, 장당 1.3MB라 커밋하지 않는다
 public/images/_news-team-raw/
+
+# live-football-api 프로브 캐시 (크레딧 절약용 로컬 응답 캐시)
+.lfa-probe-cache/

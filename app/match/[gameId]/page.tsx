@@ -4,8 +4,10 @@ import { notFound } from "next/navigation"
 import Link from "@/components/ui/app-link"
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
+import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { MatchHeader } from "./match-header"
 import { MatchExtrasSection } from "./match-extras-section"
+import { MatchStatsSection } from "./match-stats-section"
 import { MatchLineup } from "@/components/match/match-lineup"
 
 /**
@@ -53,6 +55,19 @@ export default async function MatchPage({ params }: Props) {
   const match = await getMatchByGameId(gameId)
   if (!match) notFound()
 
+  // betman 은 종료를 1~1.5시간 늦게 반영한다 (2026-08-16 실측). LFA 가 먼저 주는 FT·스코어를
+  // 함께 보고, 어느 쪽이든 먼저 종료를 알려주면 그때부터 스코어·스탯·리포트를 연다.
+  const lfa = await getLfaMatchInfo({
+    homeTeam: match.homeTeam,
+    awayTeam: match.awayTeam,
+    matchTime: match.matchTime,
+    leagueCode: match.leagueCode,
+  })
+  const finished = match.status === "completed" || lfa?.finished === true
+  const homeScore = match.homeScore ?? lfa?.homeScore ?? null
+  const awayScore = match.awayScore ?? lfa?.awayScore ?? null
+  const hasLfaStats = (lfa?.stats.length ?? 0) > 0
+
   return (
     <div className="worldcup-scope min-h-[80vh]">
       <main className="mx-auto max-w-[720px] px-4 py-6 sm:px-6">
@@ -63,7 +78,12 @@ export default async function MatchPage({ params }: Props) {
         >
           ← 경기 일정
         </Link>
-        <MatchHeader initial={match} />
+        <MatchHeader
+          match={match}
+          finished={finished}
+          homeScore={homeScore}
+          awayScore={awayScore}
+        />
 
         {/* 선발 라인업 — 매핑·발표 없으면 스스로 숨는다 (fail-open) */}
         <section
@@ -77,14 +97,20 @@ export default async function MatchPage({ params }: Props) {
           </p>
         </section>
 
-        {/* 기초 스탯 + 경기 리포트 — FT 후 + 5대 리그·UCL 에만 시도, 없으면 스스로
-            숨는다. 첫 생성은 LLM 파이프라인이 수십 초라 Suspense 로 분리 — 본문 먼저 스트림 */}
-        {match.status === "completed" && isMatchExtrasLeague(match.leagueCode) && (
+        {/* 득점 + 스탯 — 구조화 데이터라 즉시 렌더 (LLM 없음) */}
+        {finished && lfa && (
+          <MatchStatsSection info={lfa} homeTeam={match.homeTeam} awayTeam={match.awayTeam} />
+        )}
+
+        {/* 경기 리포트 — FT 후 + 5대 리그·UCL 에만 시도, 없으면 스스로 숨는다.
+            첫 생성이 LLM 파이프라인이라 수십 초 — Suspense 로 분리해 본문 먼저 스트림 */}
+        {finished && isMatchExtrasLeague(match.leagueCode) && (
           <Suspense fallback={null}>
             <MatchExtrasSection
               gameId={match.gameId}
               homeTeam={match.homeTeam}
               awayTeam={match.awayTeam}
+              withStats={!hasLfaStats}
             />
           </Suspense>
         )}

@@ -1,34 +1,65 @@
-import { getMatchExtras } from "@/lib/soccerway/match-extras"
+import type { LfaMatchInfo } from "@/lib/lfa/match"
 
 /**
- * 경기 리포트 + (폴백) 기초 스탯 — 서버 컴포넌트, fail-open.
- * 데이터가 없으면 스스로 사라진다 — 스켈레톤·에러 문구 금지 (라인업과 같은 계약).
+ * 득점 요약 + 경기 스탯 (2026-08-17).
  *
- * 스탯은 live-football-api 쪽이 더 풍부해서 그쪽이 있으면 여기선 안 그린다
- * (`withStats={false}`). soccerway 스탯은 LFA 해석 실패 시의 폴백으로만 남는다.
- * 리포트(한국어 서사)는 여전히 이 경로가 유일하다.
+ * live-football-api 의 구조화된 데이터라 LLM 추출 단계가 없다 — 환각이 원천적으로 없고
+ * betman 종료 반영(1~1.5시간 지연)을 기다리지 않는다. 지표 한글화·숫자 정규화는
+ * lib/lfa/match.ts 가 끝낸 상태로 온다 (뜻이 불확실한 지표는 거기서 버려진다).
  */
-export async function MatchExtrasSection({
-  gameId,
+export function MatchStatsSection({
+  info,
   homeTeam,
   awayTeam,
-  withStats = true,
 }: {
-  gameId: string
+  info: LfaMatchInfo
   homeTeam: string
   awayTeam: string
-  withStats?: boolean
 }) {
-  const { stats: rawStats, report } = await getMatchExtras(gameId).catch(() => ({
-    stats: null,
-    report: null,
-  }))
-  const stats = withStats ? rawStats : null
-  if (!stats && !report) return null
+  const hasGoals = info.goals.length > 0
+  const hasStats = info.stats.length > 0
+  if (!hasGoals && !hasStats) return null
 
   return (
     <>
-      {stats && (
+      {hasGoals && (
+        <section
+          className="mt-4 rounded-xl px-4 py-3.5"
+          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+        >
+          <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+            득점
+          </h2>
+          <ul className="mt-2 space-y-1.5">
+            {info.goals.map((g, i) => (
+              <li key={i} className="flex items-baseline gap-2 text-[13.5px]">
+                <span
+                  className="gn-num shrink-0 text-[12px] font-bold"
+                  style={{ color: "var(--wc-burgundy)", minWidth: 30 }}
+                >
+                  {g.minute}&apos;
+                </span>
+                <span className="font-bold" style={{ color: "var(--wc-ink)" }}>
+                  {g.player}
+                </span>
+                <span className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
+                  {g.side === "home" ? homeTeam : awayTeam}
+                </span>
+                {g.score && (
+                  <span
+                    className="gn-num ml-auto text-[12.5px] font-bold"
+                    style={{ color: "var(--wc-mute)" }}
+                  >
+                    {g.score}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {hasStats && (
         <section
           className="mt-4 rounded-xl px-4 py-3.5"
           style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
@@ -44,7 +75,7 @@ export async function MatchExtrasSection({
             <span className="truncate">{awayTeam}</span>
           </div>
           <ul className="mt-2 space-y-2.5">
-            {stats.map((s) => {
+            {info.stats.map((s) => {
               const total = s.homeNum != null && s.awayNum != null ? s.homeNum + s.awayNum : null
               const homePct = total && total > 0 ? (s.homeNum! / total) * 100 : 50
               return (
@@ -86,46 +117,6 @@ export async function MatchExtrasSection({
               )
             })}
           </ul>
-        </section>
-      )}
-
-      {report && (
-        <section
-          className="mt-4 rounded-xl px-4 py-4"
-          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-        >
-          <h2
-            className="text-[12px] font-extrabold"
-            style={{ color: "var(--wc-burgundy)", letterSpacing: "0.06em" }}
-          >
-            경기 리포트
-          </h2>
-          <h3
-            className="mt-1.5 text-[16.5px] leading-snug"
-            style={{
-              fontFamily: "var(--font-display-ko), var(--font-title)",
-              fontWeight: 700,
-              color: "var(--wc-ink)",
-              letterSpacing: "-0.02em",
-              wordBreak: "keep-all",
-            }}
-          >
-            {report.title}
-          </h3>
-          <div className="mt-2.5 space-y-2.5">
-            {report.paragraphs.map((p, i) => (
-              <p
-                key={i}
-                className="text-[13.5px] leading-relaxed"
-                style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-              >
-                {p}
-              </p>
-            ))}
-          </div>
-          <p className="mt-3 text-[11px]" style={{ color: "var(--wc-mute-2)" }}>
-            외신 경기 리포트를 요약 재구성한 내용입니다.
-          </p>
         </section>
       )}
     </>

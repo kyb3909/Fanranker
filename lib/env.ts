@@ -22,6 +22,10 @@ const serverSchema = z.object({
   NEWS_ASSIGNMENT_DESK: z.string().optional(),
   // betman↔Soccerway 경기 매핑 shadow ("shadow" = 원장 기록만 / 미설정 = 정지) — 실록 단계 2
   MATCH_MAPPING_SHADOW: z.string().optional(),
+  // live-football-api.com — 경기 스코어·스탯 (크레딧 과금). 미설정 시 lib/lfa 전체가 no-op.
+  LIVE_FOOTBALL_API_KEY: z.string().optional(),
+  // 위 API 전면 킬스위치 ("off" = 호출 안 함) — 프리뷰·dev 에서 크레딧 낭비 방지
+  LFA_ENABLED: z.string().optional(),
   // 어드민 인사이트 요약 모델 override (기본값은 코드에)
   ADMIN_INSIGHT_MODEL: z.string().optional(),
   // 네이버 오픈API (뉴스 표기 대조·검색)
