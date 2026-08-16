@@ -146,9 +146,9 @@ export function MatchdayBand({
     revalidateOnFocus: false,
     fallbackData: initialLive ?? undefined,
   })
-  // 매치 센터가 다루는 리그만 센다 — "N경기 진행 중"이라 해놓고 /matches 에
-  // 아무것도 없으면 거짓말이 된다 (2026-08-16 운영자: K리그 등 목록 밖 라이브 오탐)
-  const liveMatches = (liveData?.liveMatches ?? []).filter((m) => isMatchPageLeague(m.leagueCode))
+  // 매치 센터가 다루는 리그만 센다 — 카운트 = 목적지(/matches)가 보여주는 것만.
+  // 진행 중(LIVE)은 노출하지 않는다 — 라이브 스코어 소스가 없어 "진행 중" 광고는
+  // 중계 기대만 만든다 (2026-08-16 운영자: 라이브 없이 종료 후 리포트 형태로).
   const finishedMatches = (liveData?.finishedMatches ?? []).filter((m) =>
     isMatchPageLeague(m.leagueCode)
   )
@@ -194,14 +194,8 @@ export function MatchdayBand({
     )
   }
 
-  // 밴드는 톱스토리도 경기도(예정·진행·당일 종료 포함) 없으면 통째로 숨긴다
-  if (
-    slides.length === 0 &&
-    matches.length === 0 &&
-    liveMatches.length === 0 &&
-    finishedMatches.length === 0
-  )
-    return null
+  // 밴드는 톱스토리도 경기도(예정·당일 종료 포함) 없으면 통째로 숨긴다
+  if (slides.length === 0 && matches.length === 0 && finishedMatches.length === 0) return null
 
   return (
     <section className="gn-band" aria-label="오늘의 메인 이벤트">
@@ -296,11 +290,10 @@ export function MatchdayBand({
 
         <div className="grid gap-4 pb-7 lg:grid-cols-[1.35fr_1fr]">
           {slides.length > 0 && <TopStoryCarousel slides={slides} />}
-          {(matches.length > 0 || liveMatches.length > 0 || finishedMatches.length > 0) && (
+          {(matches.length > 0 || finishedMatches.length > 0) && (
             <TodayFixtures
               matches={matches}
               countdown={countdown}
-              liveMatches={liveMatches}
               finishedMatches={finishedMatches}
             />
           )}
@@ -500,12 +493,10 @@ function CarouselBtn({
 function TodayFixtures({
   matches,
   countdown,
-  liveMatches,
   finishedMatches,
 }: {
   matches: GroupedMatch[]
   countdown: string | null
-  liveMatches: LiveMatchRow[]
   finishedMatches: LiveMatchRow[]
 }) {
   // SSR/하이드레이션 첫 렌더에서는 undefined → 게스트 문구로 시작, 로그인 확인 후 전환
@@ -575,36 +566,8 @@ function TodayFixtures({
         </Link>
       )}
 
-      {/* 진행 중 — 스코어·목록은 매치 센터로 위임, 홈은 한 줄 진입점만 (2026-08-16
-          운영자: 중계를 못 해주는데 LIVE 상세를 흉내 내지 않는다). "킥오프 순간
-          경기가 밴드에서 증발"하지 않는다는 계약은 이 줄이 이어받는다. */}
-      {liveMatches.length > 0 && (
-        <Link
-          href="/matches"
-          className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 transition-opacity hover:opacity-85"
-          style={{ background: "rgba(150,30,55,0.28)", border: "1px solid rgba(150,30,55,0.5)" }}
-        >
-          <span className="flex items-center gap-2">
-            <span
-              className="gn-num rounded px-1.5 py-[3px] text-[10.5px] font-extrabold"
-              style={{
-                background: "rgba(150,30,55,0.55)",
-                color: "var(--gn-cream)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              LIVE
-            </span>
-            <span className="text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
-              지금 {liveMatches.length}경기 진행 중
-            </span>
-          </span>
-          <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
-            스코어 보기 →
-          </span>
-        </Link>
-      )}
-
+      {/* 진행 중(LIVE) 줄은 두지 않는다 — 라이브 스코어 소스가 없다 (2026-08-16 운영자:
+          라이브 없이 종료 후 매치 리포트 형태로). 경기는 FT 후 "오늘 결과"로 돌아온다. */}
       <ul className="flex-1">
         {shown.map((m) => (
           <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>

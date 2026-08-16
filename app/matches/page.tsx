@@ -13,7 +13,8 @@ import { leagueLabel, leagueOrder } from "@/lib/match/leagues"
  *
  * 디자인: 전 페이지 공용 다크 밴드(PageBand) + 웜 페이퍼 지면. 리그별 섹션(대항전 →
  * 5대 리그 → 컵 순), 행은 시각/상태 — 팀 — 스코어. 대상 리그라 모든 행이 매치 페이지로
- * 간다. LIVE 는 버건디 배지 + 스코어, FT 는 스코어가 주인공, 예정은 킥오프 시각이 주인공.
+ * 간다. FT 는 스코어가 주인공, 예정·진행 중은 킥오프 시각이 주인공 — 라이브 스코어는
+ * 제공하지 않는다 (2026-08-16 운영자: 라이브 없이 종료 후 매치 리포트 형태로).
  */
 export const revalidate = 60
 
@@ -69,7 +70,6 @@ export default async function MatchesPage({
   const ordered = [...sections.entries()].sort((a, b) => leagueOrder(a[0]) - leagueOrder(b[0]))
 
   const dp = dateParts(date)
-  const liveCount = fixtures.filter((f) => f.status === "in_progress").length
 
   return (
     <div className="worldcup-scope min-h-[100dvh]">
@@ -77,12 +77,7 @@ export default async function MatchesPage({
         kicker="Fixtures"
         title="경기 일정"
         description="챔피언스리그 · 유로파리그 · 유럽 5대 리그와 주요 컵대회"
-        aside={
-          <PageBandStat
-            value={fixtures.length}
-            label={liveCount > 0 ? `${liveCount} LIVE` : "MATCHES"}
-          />
-        }
+        aside={<PageBandStat value={fixtures.length} label="MATCHES" />}
       />
 
       <main className="mx-auto max-w-[760px] px-4 py-6 sm:px-6">
@@ -206,19 +201,8 @@ export default async function MatchesPage({
                       href={`/match/${m.gameId}`}
                       className="grid grid-cols-[56px_1fr] items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-soft)]"
                     >
-                      {/* 좌: 시각 또는 상태 */}
-                      {m.status === "in_progress" ? (
-                        <span
-                          className="gn-num rounded px-1.5 py-[3px] text-center text-[10.5px] font-extrabold"
-                          style={{
-                            background: "var(--wc-burgundy)",
-                            color: "#fff",
-                            letterSpacing: "0.08em",
-                          }}
-                        >
-                          LIVE
-                        </span>
-                      ) : m.status === "completed" ? (
+                      {/* 좌: 시각 또는 상태 — 진행 중도 킥오프 시각으로 (라이브 표기 없음) */}
+                      {m.status === "completed" ? (
                         <span
                           className="gn-num text-center text-[11px] font-bold"
                           style={{ color: "var(--wc-mute-2)", letterSpacing: "0.08em" }}
@@ -254,15 +238,14 @@ export default async function MatchesPage({
                           className="gn-num text-center text-[15px] font-bold"
                           style={{
                             color:
-                              m.homeScore != null
-                                ? m.status === "in_progress"
-                                  ? "var(--wc-burgundy)"
-                                  : "var(--wc-ink)"
+                              m.status === "completed" && m.homeScore != null
+                                ? "var(--wc-ink)"
                                 : "var(--wc-mute-2)",
                             minWidth: 34,
                           }}
                         >
-                          {m.homeScore != null && m.awayScore != null
+                          {/* 스코어는 종료 후에만 — 진행 중 표시는 갱신 소스가 없어 오정보 */}
+                          {m.status === "completed" && m.homeScore != null && m.awayScore != null
                             ? `${m.homeScore}:${m.awayScore}`
                             : "vs"}
                         </span>
