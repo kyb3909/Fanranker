@@ -350,7 +350,7 @@ export function PostDetailContent({
             {/* Image — 본문에 이미 포함된 이미지는 중복 표시하지 않음.
                 봇 기사(user_bot_*)는 아예 표시하지 않는다 (2026-08-16 운영자 — 저작권:
                 수집 기사 이미지는 피드 썸네일까지만, 본문에는 싣지 않는다) */}
-            {!post.user_id.startsWith("user_bot_") &&
+            {!post.userId.startsWith("user_bot_") &&
               post.image &&
               (() => {
                 // 본문 JSON을 문자열화하여 이미지 URL이 포함되어 있는지 확인
