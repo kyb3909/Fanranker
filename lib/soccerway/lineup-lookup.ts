@@ -133,18 +133,44 @@ const cachedPersons = unstable_cache(
   { revalidate: 3600 }
 )
 
+/**
+ * 팀 스쿼드 사전(team_squads) — slug → 한글명, 1h 캐시.
+ * soccerway 선수 슬러그끼리의 **정확 매칭**이라 로마자 추측보다 강하다. 다만 표기 정본
+ * 순위(운영자 확정 사전 > 수확분)에 따라 뉴스 표기 사전 unique 매칭이 먼저, 이건 2차.
+ * Map 은 Data Cache 직렬화가 안 되므로 pair 배열로 캐시하고 사용처에서 Map 을 만든다.
+ */
+const cachedSquadPairs = unstable_cache(
+  async (): Promise<[string, string][]> => {
+    const { data } = await createServiceRoleClient()
+      .from("team_squads")
+      .select("player_slug, name_kr")
+      .not("name_kr", "is", null)
+      .neq("status", "rejected")
+    return (data ?? []).map((r) => [
+      String(r.player_slug).replace(/-/g, " "), // romanizedFull 과 같은 공백 구분형으로
+      String(r.name_kr),
+    ])
+  },
+  ["lineup-squad-names"],
+  { revalidate: 3600 }
+)
+
 /* ── 본체 ── */
 
 function toDisplay(
   side: { formation: string | null; starters: LineupPlayer[]; bench: LineupPlayer[] },
   teamLabel: string,
-  persons: { romanized: string | null; preferred_ko: string }[]
+  persons: { romanized: string | null; preferred_ko: string }[],
+  squadKo: Map<string, string>
 ): DisplaySide {
   const label = (p: LineupPlayer): string => {
     // 풀네임 슬러그("cooper michael")가 이니셜형 listName 보다 신원 판정이 강하다.
     // 동명이인이면 findUniqueRomanizedMatch 가 null — 틀린 한글로 부르느니 로마자.
     const hit = findUniqueRomanizedMatch(persons, p.romanizedFull ?? p.name)
-    return hit?.preferred_ko ?? p.name
+    if (hit) return hit.preferred_ko
+    // 2차: 팀 스쿼드 사전 — soccerway 슬러그 정확 매칭 (harvest-squads.ts 수확분)
+    const squadHit = p.romanizedFull ? squadKo.get(p.romanizedFull) : undefined
+    return squadHit ?? p.name
   }
   return {
     teamLabel,
@@ -217,6 +243,16 @@ export async function getLineupForGame(gameId: string): Promise<LineupResponse> 
   const persons = await cachedPersons().catch(
     () => [] as { romanized: string | null; preferred_ko: string }[]
   )
+  const squadPairs = await cachedSquadPairs().catch(() => [] as [string, string][])
+  // 같은 슬러그가 서로 다른 한글명으로 두 번 나오면(전 소속팀 잔재 등) 둘 다 버린다
+  const squadKo = new Map<string, string>()
+  const clash = new Set<string>()
+  for (const [slug, ko] of squadPairs) {
+    const prev = squadKo.get(slug)
+    if (prev !== undefined && prev !== ko) clash.add(slug)
+    else squadKo.set(slug, ko)
+  }
+  for (const s of clash) squadKo.delete(s)
 
   // soccerway HOME 이 매핑 행의 page_home_en 과 같은 팀인지 대조.
   // page_home_en 은 "soccerway 페이지 기준 홈"이고, home_away_flip 이 betman 과의
@@ -232,8 +268,8 @@ export async function getLineupForGame(gameId: string): Promise<LineupResponse> 
   return {
     status: "ready",
     kickoff: kickoff.toISOString(),
-    home: toDisplay(betmanHomeSide, game.home_team_name as string, persons),
-    away: toDisplay(betmanAwaySide, game.away_team_name as string, persons),
+    home: toDisplay(betmanHomeSide, game.home_team_name as string, persons, squadKo),
+    away: toDisplay(betmanAwaySide, game.away_team_name as string, persons, squadKo),
     fetchedAt: new Date().toISOString(),
   }
 }
