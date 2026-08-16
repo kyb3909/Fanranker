@@ -44,6 +44,14 @@ export interface LineupPlayer {
   /** 한글 표기 (lookup 계층이 사전 대조 후 채움 — 없으면 로마자 그대로 노출) */
   nameKo?: string
   number: number | null
+  /* 인시던트 (2026-08-16) — dlie2 의 선수별 incidents. 라인업 아이콘 표시용 */
+  goals?: number
+  ownGoals?: number
+  red?: boolean
+  /** 교체 아웃 시각 ("65'") — 선발이 빠진 경우 */
+  subOut?: string | null
+  /** 교체 인 시각 — 벤치에서 들어온 경우 (상대 선수의 SubstitutionOut.playerInId 로 역산) */
+  subIn?: string | null
 }
 
 export interface LineupSide {
@@ -62,12 +70,19 @@ export interface RawLineup {
 
 /* ── 파싱 ── */
 
+interface RawIncident {
+  __typename?: string
+  incident?: { minute?: string | null } | null
+  playerInId?: string | null
+}
+
 interface RawPlayer {
   id?: string
   fieldName?: string
   listName?: string
   number?: string | number | null
   participant?: { url?: string | null } | null
+  incidents?: RawIncident[]
 }
 
 function toPlayer(p: RawPlayer): LineupPlayer | null {
@@ -75,11 +90,31 @@ function toPlayer(p: RawPlayer): LineupPlayer | null {
   if (!name) return null
   const slug = p.participant?.url ?? null
   const num = p.number != null && String(p.number).trim() !== "" ? Number(p.number) : null
+
+  // 인시던트 — typename 부분 문자열로 판정 (실측: EventIncidentGoal / EventIncidentYellowCard /
+  // EventIncidentSubstitutionOut{playerInId} / RedCard 계열은 YellowRedCard 포함 "RedCard" 매칭)
+  let goals = 0
+  let ownGoals = 0
+  let red = false
+  let subOut: string | null = null
+  for (const inc of p.incidents ?? []) {
+    const t = inc.__typename ?? ""
+    const minute = inc.incident?.minute ?? null
+    if (t.includes("OwnGoal")) ownGoals++
+    else if (t.includes("Goal")) goals++
+    else if (t.includes("RedCard")) red = true
+    else if (t.includes("SubstitutionOut")) subOut = minute
+  }
+
   return {
     name,
     // "cooper-michael" → "cooper michael" (성-이름 순이지만 토큰 매칭이라 순서 무관)
     romanizedFull: slug ? slug.replace(/-/g, " ").trim() || null : null,
     number: Number.isFinite(num) ? num : null,
+    ...(goals > 0 ? { goals } : {}),
+    ...(ownGoals > 0 ? { ownGoals } : {}),
+    ...(red ? { red } : {}),
+    ...(subOut ? { subOut } : {}),
   }
 }
 
@@ -114,6 +149,16 @@ export function parseLineupPayload(json: unknown): RawLineup | null {
       const byId = new Map<string, RawPlayer>()
       for (const p of lu.players) if (p.id) byId.set(p.id, p)
 
+      // 교체 인 시각 — SubstitutionOut 의 playerInId 로 역산 (들어온 선수 쪽엔 기록이 없다)
+      const subInMinute = new Map<string, string>()
+      for (const p of lu.players) {
+        for (const inc of p.incidents ?? []) {
+          if ((inc.__typename ?? "").includes("SubstitutionOut") && inc.playerInId) {
+            subInMinute.set(inc.playerInId, inc.incident?.minute ?? "")
+          }
+        }
+      }
+
       const pick = (groupType: string): LineupPlayer[] => {
         const g = lu.groups!.find((x) => x.groupType === groupType)
         if (!g?.playerIds) return []
@@ -121,7 +166,11 @@ export function parseLineupPayload(json: unknown): RawLineup | null {
         for (const id of g.playerIds) {
           const p = byId.get(id)
           const player = p ? toPlayer(p) : null
-          if (player) out.push(player)
+          if (player) {
+            const inAt = subInMinute.get(id)
+            if (inAt !== undefined) player.subIn = inAt || null
+            out.push(player)
+          }
         }
         return out
       }

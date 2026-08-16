@@ -97,6 +97,22 @@ export interface PublishNewsOptions {
  * 외부 핫링크는 원본 해상도(수 MB)·핫링크 차단·서드파티 쿠키(FIFA 사례)를 그대로 피드에 실어 나르므로
  * 발행 시점에 WebP 1200px 로 내린다. 개별 실패는 원본 유지(fail-open) — 이미지 때문에 발행을 막지 않는다.
  */
+/** 본문에서 image 노드만 제거 (복사본 반환). embed(트윗 등)·텍스트는 그대로. */
+function stripImageNodes(content: unknown): unknown {
+  if (!content || typeof content !== "object") return content
+  const clone = structuredClone(content)
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== "object") return
+    const n = node as { content?: unknown[] }
+    if (Array.isArray(n.content)) {
+      n.content = n.content.filter((c) => (c as { type?: string })?.type !== "image")
+      for (const child of n.content) walk(child)
+    }
+  }
+  walk(clone)
+  return clone
+}
+
 async function rehostContentImages(content: unknown): Promise<unknown> {
   if (!content || typeof content !== "object") return content
   const clone = structuredClone(content)
@@ -166,8 +182,11 @@ export async function publishNewsDraft(
   }
 
   // 긴 단일 문단 → 2~3문장 단위 문단 분할 (가독성, 2026-08-04 운영자)
-  const content = splitLongParagraphs(await rehostContentImages(opts.content))
-  const image = extractFirstImageSrcFromTipTapJSON(content)
+  const withImages = splitLongParagraphs(await rehostContentImages(opts.content))
+  const image = extractFirstImageSrcFromTipTapJSON(withImages)
+  // 이미지는 썸네일(image 컬럼)로만 쓰고 본문에서는 뺀다 (2026-08-16 운영자:
+  // "봇 뉴스는 섬네일에만 이미지, 본문에는 빼줘"). 트윗 임베드 등 embed 노드는 유지.
+  const content = stripImageNodes(withImages)
   const sourceUrl = item.urls?.source ?? null
 
   // ── "같은 원문 URL = 같은 기사" 최후 방어선 (2026-08-06 가디언 이중 발행 실사고) ──

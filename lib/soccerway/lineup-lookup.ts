@@ -40,6 +40,12 @@ export interface DisplayPlayer {
   number: number | null
   /** 풀네임 로마자 (슬러그 유래) — 리포트 파이프라인이 기사 속 영문명과 대조하는 재료 */
   roman: string | null
+  /* 인시던트 아이콘 재료 (2026-08-16) — 없으면 생략 (페이로드 절약) */
+  goals?: number
+  ownGoals?: number
+  red?: boolean
+  subOut?: string | null
+  subIn?: string | null
 }
 
 export interface DisplaySide {
@@ -181,11 +187,21 @@ function toDisplay(
       label: label(p),
       number: p.number,
       roman: p.romanizedFull ?? p.name,
+      ...(p.goals ? { goals: p.goals } : {}),
+      ...(p.ownGoals ? { ownGoals: p.ownGoals } : {}),
+      ...(p.red ? { red: true } : {}),
+      ...(p.subOut ? { subOut: p.subOut } : {}),
+      ...(p.subIn ? { subIn: p.subIn } : {}),
     })),
     bench: side.bench.map((p) => ({
       label: label(p),
       number: p.number,
       roman: p.romanizedFull ?? p.name,
+      ...(p.goals ? { goals: p.goals } : {}),
+      ...(p.ownGoals ? { ownGoals: p.ownGoals } : {}),
+      ...(p.red ? { red: true } : {}),
+      ...(p.subOut ? { subOut: p.subOut } : {}),
+      ...(p.subIn ? { subIn: p.subIn } : {}),
     })),
   }
 }

@@ -19,6 +19,59 @@ import { ChevronDown } from "lucide-react"
 interface DisplayPlayer {
   label: string
   number: number | null
+  goals?: number
+  ownGoals?: number
+  red?: boolean
+  subOut?: string | null
+  subIn?: string | null
+}
+
+/** 인시던트 아이콘 — public/match/icons/ (OpenAI 이미지 생성 에셋, 2026-08-16) */
+function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
+  const goals = p.goals ?? 0
+  const ownGoals = p.ownGoals ?? 0
+  if (!goals && !ownGoals && !p.red && !p.subOut && !p.subIn) return null
+  const img = (src: string, alt: string, key?: string) => (
+    // eslint-disable-next-line @next/next/no-img-element -- 12px 고정 소형 아이콘, next/image 불필요
+    <img key={key} src={src} alt={alt} width={size} height={size} className="inline-block" />
+  )
+  return (
+    <span className="inline-flex shrink-0 items-center gap-[3px] align-middle">
+      {Array.from({ length: Math.min(goals, 3) }, (_, i) =>
+        img("/match/icons/goal.png", "득점", `g${i}`)
+      )}
+      {goals > 3 && (
+        <span className="gn-num text-[9.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+          ×{goals}
+        </span>
+      )}
+      {ownGoals > 0 && (
+        <span className="inline-flex items-center gap-[1px]">
+          {img("/match/icons/goal.png", "자책골")}
+          <span className="text-[9px] font-bold" style={{ color: "var(--wc-down, #c03a3a)" }}>
+            OG
+          </span>
+        </span>
+      )}
+      {p.red && img("/match/icons/red-card.png", "퇴장")}
+      {p.subOut && (
+        <span className="inline-flex items-center gap-[2px]">
+          {img("/match/icons/sub-out.png", "교체 아웃")}
+          <span className="gn-num text-[9.5px]" style={{ color: "var(--wc-mute-2)" }}>
+            {p.subOut}
+          </span>
+        </span>
+      )}
+      {p.subIn && (
+        <span className="inline-flex items-center gap-[2px]">
+          {img("/match/icons/sub-in.png", "교체 투입")}
+          <span className="gn-num text-[9.5px]" style={{ color: "var(--wc-mute-2)" }}>
+            {p.subIn}
+          </span>
+        </span>
+      )}
+    </span>
+  )
 }
 
 interface DisplaySide {
@@ -167,11 +220,13 @@ export function MatchLineup({
                     >
                       {p.label}
                     </span>
+                    <IncidentIcons p={p} />
                   </li>
                 ))}
               </ol>
               {side.bench.length > 0 && (
-                <details className="mt-2">
+                // 교체 투입이 있으면 기본 펼침 — 누가 들어왔는지가 접혀 있으면 의미가 없다
+                <details className="mt-2" open={side.bench.some((p) => p.subIn)}>
                   <summary
                     className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full px-2 py-[2px] text-[10.5px] font-bold"
                     style={{
@@ -195,6 +250,7 @@ export function MatchLineup({
                         <span className="truncate" style={{ color: "var(--wc-mute)" }}>
                           {p.label}
                         </span>
+                        <IncidentIcons p={p} size={11} />
                       </li>
                     ))}
                   </ol>
