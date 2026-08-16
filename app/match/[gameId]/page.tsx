@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "@/components/ui/app-link"
 import { getMatchByGameId } from "@/lib/match/get-match"
+import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { MatchHeader } from "./match-header"
 import { MatchExtrasSection } from "./match-extras-section"
 import { MatchLineup } from "@/components/match/match-lineup"
@@ -17,8 +18,11 @@ import { MatchLineup } from "@/components/match/match-lineup"
  * (lib/match/leagues.ts). 목록 밖 리그·타 종목은 404.
  *
  * 1차 구성: 스코어 헤더(LIVE 면 60초 갱신) + 선발 라인업(soccerway, FT 후 24h까지).
- * 리포트·통계·과거 아카이브는 실록 단계 3~4(fixtures 영속화)에서 — 여기는 betman_games
- * 읽기 전용이라 24h 지난 경기의 라인업은 비고 스코어만 남는다.
+ * LIVE 중에는 스코어만 — 중계를 제공하지 못하므로 그 이상을 흉내 내지 않는다
+ * (2026-08-16 운영자). 리포트+기초 스탯은 **FT 후 + 5대 리그·UCL 한정**
+ * (lib/match/leagues.ts MATCH_EXTRAS_LEAGUES). 과거 아카이브는 실록 단계 3~4
+ * (fixtures 영속화)에서 — 여기는 betman_games 읽기 전용이라 24h 지난 경기의
+ * 라인업은 비고 스코어만 남는다.
  */
 export const revalidate = 30
 
@@ -73,9 +77,9 @@ export default async function MatchPage({ params }: Props) {
           </p>
         </section>
 
-        {/* 기초 스탯 + 경기 리포트 — LIVE/FT 에만 시도, 없으면 스스로 숨는다.
-            첫 생성은 LLM 파이프라인이 수십 초라 Suspense 로 분리 — 본문 먼저 스트림 */}
-        {(match.status === "in_progress" || match.status === "completed") && (
+        {/* 기초 스탯 + 경기 리포트 — FT 후 + 5대 리그·UCL 에만 시도, 없으면 스스로
+            숨는다. 첫 생성은 LLM 파이프라인이 수십 초라 Suspense 로 분리 — 본문 먼저 스트림 */}
+        {match.status === "completed" && isMatchExtrasLeague(match.leagueCode) && (
           <Suspense fallback={null}>
             <MatchExtrasSection
               gameId={match.gameId}

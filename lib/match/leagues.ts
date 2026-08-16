@@ -39,6 +39,24 @@ export function isMatchPageLeague(leagueCode: string | null | undefined): boolea
 }
 
 /**
+ * 경기 리포트 + 기초 스탯 대상 (2026-08-16 운영자: "5대 리그와 챔피언스리그 관련된
+ * 것만"). 매치 페이지·일정 자체는 MATCH_PAGE_LEAGUES 전체가 대상이지만, FT 후
+ * 리포트·스탯 파이프라인(LLM 비용 포함)은 이 목록에만 붙는다.
+ */
+export const MATCH_EXTRAS_LEAGUES: ReadonlySet<string> = new Set([
+  "UCL",
+  "EPL",
+  "라리가",
+  "세리에A",
+  "분데스리",
+  "프리그1",
+])
+
+export function isMatchExtrasLeague(leagueCode: string | null | undefined): boolean {
+  return !!leagueCode && MATCH_EXTRAS_LEAGUES.has(leagueCode)
+}
+
+/**
  * 일정 페이지 표시명 — betman 코드는 지면에 그대로 못 쓴다 ('분데스리', '프리그1').
  * 순서 = 지면 섹션 순서: 유럽 대항전 → 5대 리그 → 컵. Map 이라 삽입 순서가 곧 정렬이다.
  */
