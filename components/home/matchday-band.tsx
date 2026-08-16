@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { HeroVsVote } from "@/components/home/hero-vs-vote"
 import { useAuth } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
@@ -12,6 +12,7 @@ import type { CardNewsItem } from "@/lib/feed/cardnews"
 import type { GroupedMatch } from "@/types/betting"
 // type-only — games-payload 는 server-only 모듈이지만 타입 import 는 컴파일 시 소거된다
 import type { LiveMatchRow } from "@/lib/betman/games-payload"
+import { isMatchPageLeague } from "@/lib/match/leagues"
 
 /**
  * 담벼락 상단 "오늘의 메인 이벤트" 다크 밴드 (시안 A · 매치데이).
@@ -581,7 +582,8 @@ function TodayFixtures({
       {liveShown.length > 0 && (
         <ul style={{ borderBottom: "1px solid var(--gn-night-line)" }}>
           {liveShown.map((m) => (
-            <li key={m.matchKey} className="flex items-center gap-2.5 py-2">
+            // 대상 리그(유럽 대항전·5대 리그·컵)면 매치 페이지로 — 아니면 일반 행
+            <LiveRowShell key={m.matchKey} match={m}>
               <span
                 className="gn-num shrink-0 rounded px-1.5 py-[3px] text-[10.5px] font-extrabold"
                 style={{
@@ -618,7 +620,7 @@ function TodayFixtures({
                 )}
                 {m.awayTeam}
               </span>
-            </li>
+            </LiveRowShell>
           ))}
           {liveRest > 0 && (
             <li className="pb-2 text-[11.5px]" style={{ color: "#8d8794" }}>
@@ -675,7 +677,7 @@ function TodayFixtures({
           </summary>
           <ul>
             {ftShown.map((m) => (
-              <li key={m.matchKey} className="flex items-center gap-2.5 py-1.5">
+              <LiveRowShell key={m.matchKey} match={m} className="py-1.5">
                 <span
                   className="gn-num shrink-0 text-[10.5px] font-bold"
                   style={{ color: "#8d8794", letterSpacing: "0.08em" }}
@@ -701,7 +703,7 @@ function TodayFixtures({
                   </span>
                   {m.awayTeam}
                 </span>
-              </li>
+              </LiveRowShell>
             ))}
             {ftAll.length > ftShown.length && (
               <li className="pb-1.5 text-[11.5px]" style={{ color: "#8d8794" }}>
@@ -732,6 +734,35 @@ function TodayFixtures({
           : "매일 밤 11시 볼 충전 — 오늘 안 하면 내일의 내가 아쉬워함"}
       </p>
     </aside>
+  )
+}
+
+/**
+ * LIVE/FT 행 껍데기 — 매치 페이지 대상 리그(유럽 대항전·5대 리그·컵)면 행 전체가
+ * `/match/[gameId]` 링크가 되고, 아니면 일반 행이다 (2026-08-16 운영자: 대상 리그 한정).
+ */
+function LiveRowShell({
+  match,
+  className = "py-2",
+  children,
+}: {
+  match: LiveMatchRow
+  className?: string
+  children: ReactNode
+}) {
+  const base = `flex items-center gap-2.5 ${className}`
+  if (!isMatchPageLeague(match.leagueCode)) {
+    return <li className={base}>{children}</li>
+  }
+  return (
+    <li>
+      <Link
+        href={`/match/${match.gameId}`}
+        className={`${base} transition-opacity hover:opacity-80`}
+      >
+        {children}
+      </Link>
+    </li>
   )
 }
 

@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "@/components/ui/app-link"
 import { MatchLineup } from "@/components/match/match-lineup"
+import { isMatchPageLeague } from "@/lib/match/leagues"
 
 /**
  * 라인업 검증 프리뷰 목록 (미공개 페이지 전용).
@@ -145,6 +147,15 @@ export function LineupPreviewClient({ matches }: { matches: PreviewMatch[] }) {
                   {m.awayTeam}
                 </span>
                 <StatusBadge gameId={m.gameId} />
+                {isMatchPageLeague(m.leagueCode) && (
+                  <Link
+                    href={`/match/${m.gameId}`}
+                    className="shrink-0 text-[11.5px] font-bold no-underline"
+                    style={{ color: "var(--wc-burgundy)" }}
+                  >
+                    매치 페이지 →
+                  </Link>
+                )}
               </div>
               {/* 실사용 컴포넌트 그대로 — ready 일 때만 토글이 나타난다 */}
               <MatchLineup gameId={m.gameId} matchTime={m.matchTime} compact />

@@ -29,7 +29,10 @@ import { loadNotationSafe, findUniqueRomanizedMatch } from "@/lib/news/notation"
  */
 
 const WINDOW_BEFORE_MS = 150 * 60 * 1000
-const WINDOW_AFTER_MS = 180 * 60 * 1000
+// 종료 후에도 하루 동안은 라인업을 보여준다 — 매치 페이지(2026-08-16)가 "새벽 경기
+// 어떻게 됐지?"에 답하려면 FT 후 조회가 돼야 한다. 캐시(eventId 24h·본문 300s) 덕에
+// 창을 넓혀도 아웃바운드 비용은 거의 그대로다. 그 이상의 과거는 단계 3 영속화의 몫.
+const WINDOW_AFTER_MS = 24 * 3600 * 1000
 
 export interface DisplayPlayer {
   /** 화면 표기 — 사전에 있으면 한글, 없으면 로마자 (운영자 결정: 혼용 허용) */

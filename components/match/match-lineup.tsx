@@ -34,7 +34,8 @@ type LineupResponse =
   | { status: "ready"; kickoff: string; home: DisplaySide; away: DisplaySide; fetchedAt: string }
 
 const WINDOW_BEFORE_MS = 150 * 60 * 1000
-const WINDOW_AFTER_MS = 180 * 60 * 1000
+// 서버(lineup-lookup)와 동일 — FT 후에도 하루 동안 조회 가능 (매치 페이지, 2026-08-16)
+const WINDOW_AFTER_MS = 24 * 3600 * 1000
 const POLL_MS = 5 * 60 * 1000
 const MAX_POLLS = 24
 
