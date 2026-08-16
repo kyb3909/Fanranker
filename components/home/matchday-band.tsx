@@ -12,6 +12,7 @@ import type { CardNewsItem } from "@/lib/feed/cardnews"
 import type { GroupedMatch } from "@/types/betting"
 // type-only — games-payload 는 server-only 모듈이지만 타입 import 는 컴파일 시 소거된다
 import type { LiveMatchRow } from "@/lib/betman/games-payload"
+import { isMatchPageLeague } from "@/lib/match/leagues"
 
 /**
  * 담벼락 상단 "오늘의 메인 이벤트" 다크 밴드 (시안 A · 매치데이).
@@ -145,8 +146,12 @@ export function MatchdayBand({
     revalidateOnFocus: false,
     fallbackData: initialLive ?? undefined,
   })
-  const liveMatches = liveData?.liveMatches ?? []
-  const finishedMatches = liveData?.finishedMatches ?? []
+  // 매치 센터가 다루는 리그만 센다 — "N경기 진행 중"이라 해놓고 /matches 에
+  // 아무것도 없으면 거짓말이 된다 (2026-08-16 운영자: K리그 등 목록 밖 라이브 오탐)
+  const liveMatches = (liveData?.liveMatches ?? []).filter((m) => isMatchPageLeague(m.leagueCode))
+  const finishedMatches = (liveData?.finishedMatches ?? []).filter((m) =>
+    isMatchPageLeague(m.leagueCode)
+  )
 
   // 훅 규칙상 조건 없이 호출 — full 밴드에서는 TodayFixtures 에 내려준다
   const countdown = useCountdown(matches[0]?.matchTime)
