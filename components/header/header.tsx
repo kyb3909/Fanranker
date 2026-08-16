@@ -22,9 +22,11 @@ export function Header() {
 
   return (
     <header
-      className="sticky top-0 z-50 w-full pt-[env(safe-area-inset-top)] backdrop-blur-xl"
+      className="sticky top-0 z-50 w-full pt-[env(safe-area-inset-top)]"
       style={{
-        background: "rgba(255, 255, 255, 0.92)",
+        // 순백 불투명 (2026-08-16) — 종전 92% 반투명+블러는 다크 밴드 위를 지날 때
+        // 버건디가 배어나 헤더가 분홍 워시로 보였다 (운영자 스크린샷 제보)
+        background: "#ffffff",
         borderBottom: "1px solid #e8e5e0",
         boxShadow: "0 1px 3px rgba(30, 30, 50, 0.04)",
       }}
