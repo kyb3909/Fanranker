@@ -96,13 +96,42 @@ function htmlToText(html: string): string {
     .replace(/\|[\s|]*\|/g, "|")
 }
 
+/**
+ * 정식 문서명 오버라이드 — 검색·Go 로 못 닿는 구단 (2026-08-16 실측 잔여분).
+ * 나무위키 리그 문서는 JS 셸이라 링크 수집이 안 되고, 검색 랭킹은 도시 문서가 이긴다.
+ * 제목이 틀려도 스코어링(스쿼드 대조 수)이 걸러주므로 추측 등재의 위험은 없다.
+ * ⚠️ K/J리그·국대는 문서를 찾아도 스쿼드 표에 로마자 열이 없어 대조 자체가 불가 —
+ *    여기 넣어도 소용없다. 그쪽은 발음 역변환(별도 과제)의 몫.
+ */
+const NAMU_DOC_OVERRIDES: Record<string, string[]> = {
+  브라이턴: ["브라이튼 앤 호브 알비온 FC"], // 나무위키는 '브라이튼' 표기
+  발렌시아: ["발렌시아 CF"],
+  아약스: ["AFC 아약스"],
+  "FK보되 글림트": ["FK 보되/글림트", "보되/글림트"],
+  로센보르그BK: ["로센보르그 BK"],
+  릴레스트룀SK: ["릴레스트룀 SK"],
+  "슬로반 브라티슬라바": ["ŠK 슬로반 브라티슬라바"],
+  "슈투름 그라츠": ["SK 슈투름 그라츠"],
+  "포르튀나 시타르트": ["포르투나 시타르트"],
+  "루아얄 위니옹 생질루아즈": ["로얄 위니옹 생질루아즈", "위니옹 생질루아즈"],
+  "링컨 시티": ["링컨 시티 FC"],
+}
+
 /** 나무위키 팀 문서 탐색 — 후보 URL 을 순회하며 스쿼드 영문명이 가장 많이 겹치는 문서 채택 */
 async function findNamuDoc(
   nameKr: string,
   nameEn: string,
   squad: SquadMember[]
 ): Promise<{ url: string; text: string } | null> {
-  const candidates = [...new Set([nameKr, `${nameKr} FC`, `FC ${nameKr}`, nameEn])]
+  const candidates = [
+    ...new Set([
+      ...(NAMU_DOC_OVERRIDES[nameKr] ?? []),
+      nameKr,
+      `${nameKr} FC`,
+      `FC ${nameKr}`,
+      nameEn,
+    ]),
+  ]
   // Go?q= 는 나무위키의 "바로가기" — 표기 차이를 넘어 정답 문서로 302 해준다
   // (실측: AC밀란 → /w/AC 밀란). 직접 후보가 다 빗나가는 팀의 구원투수.
   const urls = [
@@ -128,7 +157,48 @@ async function findNamuDoc(
       /* 다음 후보 */
     }
   }
-  if (!best || best.score < Math.max(3, squad.length * 0.2)) return null
+  const threshold = Math.max(3, squad.length * 0.2)
+
+  // 최후 폴백: 나무위키 검색 — 구단 문서명이 "SSC 나폴리"처럼 수식어를 달고 있으면
+  // 직접 후보도 Go 도 못 맞춘다 (Go?q=나폴리 는 도시 문서로 간다, 2026-08-16 실측).
+  // 검색 상위 문서들을 후보로 넣고 같은 스코어링으로 거른다 — 오답 문서는 대조가 0 에
+  // 수렴하므로 안전하다.
+  if (!best || best.score < threshold) {
+    try {
+      const res = await fetch(
+        `https://namu.wiki/Search?q=${encodeURIComponent(`${nameKr} 축구`)}`,
+        { headers: NAMU_HEADERS }
+      )
+      if (res.ok) {
+        const docs = [
+          ...new Set(
+            [...(await res.text()).matchAll(/href="\/w\/([^"#?]+)"/g)]
+              .map((m) => decodeURIComponent(m[1]))
+              .filter((x) => !/사용자:|틀:|분류:|파일:|토론:|\//.test(x)) // 서브문서("…/클럽 경력") 제외
+          ),
+        ].slice(0, 6)
+        for (const doc of docs) {
+          const url = `https://namu.wiki/w/${encodeURIComponent(doc)}`
+          if (seen.has(url)) continue
+          try {
+            const dr = await fetch(url, { headers: NAMU_HEADERS })
+            if (!dr.ok) continue
+            seen.add(dr.url)
+            const text = htmlToText(await dr.text())
+            const score = squad.filter((p) => matchKoreanName(p.nameEn, text) !== null).length
+            if (!best || score > best.score) best = { url: dr.url, text, score }
+            if (score >= squad.length * 0.6) break
+          } catch {
+            /* 다음 문서 */
+          }
+        }
+      }
+    } catch {
+      /* 검색 실패 — 아래 임계 판정으로 */
+    }
+  }
+
+  if (!best || best.score < threshold) return null
   return { url: best.url, text: best.text }
 }
 
@@ -240,8 +310,9 @@ async function main() {
   const apply = args.includes("--apply")
   const teamArg = args.includes("--team") ? args[args.indexOf("--team") + 1] : null
   const all = args.includes("--all")
-  if (!teamArg && !all) {
-    console.log("사용법: --team <slug|id> [--apply] | --all [--apply]")
+  const missingOnly = args.includes("--missing")
+  if (!teamArg && !all && !missingOnly) {
+    console.log("사용법: --team <slug|id> [--apply] | --all [--apply] | --missing [--apply]")
     process.exit(1)
   }
 
@@ -251,7 +322,24 @@ async function main() {
   )
   let q = sb.from("team_dictionary").select("soccerway_team_id, slug, name_en, name_kr")
   if (teamArg) q = q.or(`slug.eq.${teamArg},soccerway_team_id.eq.${teamArg}`)
-  const { data: teams, error } = await q.order("name_en")
+  const { data: teamsRaw, error } = await q.order("name_en")
+  let teams = teamsRaw
+  if (!error && teams?.length && missingOnly) {
+    // 한글 대조가 1건도 없는 팀만 — 문서 미발견 팀 재수확용
+    const ok = new Set<string>()
+    for (let from = 0; ; from += 1000) {
+      // PostgREST 기본 1,000행 상한 — 페이지로 전량 수집
+      const { data: page } = await sb
+        .from("team_squads")
+        .select("soccerway_team_id")
+        .not("name_kr", "is", null)
+        .range(from, from + 999)
+      for (const r of page ?? []) ok.add(String(r.soccerway_team_id))
+      if (!page || page.length < 1000) break
+    }
+    teams = teams.filter((t) => !ok.has(String(t.soccerway_team_id)))
+    console.log(`--missing: 한글 0건 팀 ${teams.length}개 대상`)
+  }
   if (error || !teams?.length) {
     console.log("팀 조회 실패:", error?.message ?? "0건")
     process.exit(1)
