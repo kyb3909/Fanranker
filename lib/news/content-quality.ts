@@ -6,7 +6,7 @@
  */
 
 /** 무내용 초안이 쓰는 자기지시 필러 문구 */
-export const CONTENT_FREE_PHRASES = [
+const CONTENT_FREE_PHRASES = [
   "기사에서 확인할 수",
   "기사를 참고",
   "자세한 내용은 기사",

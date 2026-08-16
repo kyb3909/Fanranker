@@ -49,7 +49,7 @@ const PRESETS = [
   "감독 계속 믿어도 될까요?",
 ]
 
-export interface TarotReaderProps {
+interface TarotReaderProps {
   /** 프리필될 질문 — 페이지는 ?q=, 모달은 기사 제목에서 만든 질문을 넘긴다 */
   initialQuestion?: string
   /** 모달 안에서 쓰이는가 — 세로 예산이 페이지의 절반도 안 돼 무대를 낮춘다 */

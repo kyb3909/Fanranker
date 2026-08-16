@@ -25,7 +25,7 @@ export const EXPRESSION_BY_KO: Record<string, Expression> = {
   놀람: "surprised",
 }
 
-export const EXPRESSION_LABEL: Record<Expression, string> = {
+const EXPRESSION_LABEL: Record<Expression, string> = {
   neutral: "평온",
   focused: "집중",
   smile: "미소",

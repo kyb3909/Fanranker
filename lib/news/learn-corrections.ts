@@ -49,7 +49,7 @@ interface Correction {
 }
 
 /** 사실 정정 사례 — 사전에 넣지 않고 audit 에 남긴다 (골든셋 함정 케이스 후보) */
-export interface FactualCase {
+interface FactualCase {
   wrong: string
   correct: string
   kind: string

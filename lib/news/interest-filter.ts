@@ -14,7 +14,7 @@ import type { TipTapNode } from "@/types/post"
 /** LLM 에 딸려 보낼 본문 앞부분 — 제목만으론 농도를 못 가린다 */
 export const LEAD_CHARS = 180
 
-export const INTEREST_SYSTEM_PROMPT = `너는 한국 축구 팬 커뮤니티(EPL 중심)의 데스크다. 지면은 한정돼 있다.
+const INTEREST_SYSTEM_PROMPT = `너는 한국 축구 팬 커뮤니티(EPL 중심)의 데스크다. 지면은 한정돼 있다.
 **"한국 독자가 관심 가질 것만 낸다"** 가 원칙이다 — 유지에 근거가 필요하고, 없으면 반려다.
 
 각 항목은 [빅클럽] 표시 유무와 제목, 본문 앞부분으로 주어진다. 두 축으로 본다.
@@ -106,7 +106,7 @@ export interface InterestItem {
   bigClub: boolean
 }
 
-export interface InterestVerdict {
+interface InterestVerdict {
   keep: boolean
   reason: string
 }
@@ -149,7 +149,7 @@ export function renderInterestInput(items: InterestItem[]): string {
  * 심판 규칙 변경·훈련 불참에까지 같은 사유를 붙였다. 사유는 검수 화면에서 사람이
  * 기사를 되살릴 때 읽는 근거라 뭉개지면 안 된다.
  */
-export const INTEREST_MODEL = process.env.INTEREST_FILTER_MODEL || "gpt-4o"
+const INTEREST_MODEL = process.env.INTEREST_FILTER_MODEL || "gpt-4o"
 
 /**
  * 판정. 실패는 `null` — 호출부는 **유지**로 처리해야 한다 (잘못 버리는 게 더 나쁘다).

@@ -46,7 +46,7 @@ const B_COLOR = "#2c4a6e"
  */
 const SHOW_PCT_MIN_VOTES = 3
 
-export interface CardVsVoteProps {
+interface CardVsVoteProps {
   vs: NonNullable<CardNewsItem["vs"]>
   surface: "card" | "modal"
   /** 카드용 컴팩트 배치 — 질문을 한 줄로 줄이고 여백을 줄인다 */

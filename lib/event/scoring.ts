@@ -16,7 +16,7 @@
 
 export const MIN_SETTLED_SLIPS = 5
 
-export interface ScorableSlip {
+interface ScorableSlip {
   user_id: string
   status: string
   stake: number | null

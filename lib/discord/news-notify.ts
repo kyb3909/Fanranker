@@ -9,7 +9,7 @@
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://gongnori.fan"
 
 /** 팀 채널 3개(이벤트 3팀) + 종합 + 떡밥(페르소나 커뮤글 — 여돌/유머). */
-export type NewsChannelKey = "arsenal" | "liverpool" | "chelsea" | "football" | "snack"
+type NewsChannelKey = "arsenal" | "liverpool" | "chelsea" | "football" | "snack"
 
 const CHANNEL_WEBHOOK_ENV: Record<NewsChannelKey, string> = {
   arsenal: "DISCORD_NEWS_WEBHOOK_ARSENAL",
@@ -23,7 +23,7 @@ const CHANNEL_WEBHOOK_ENV: Record<NewsChannelKey, string> = {
  * 팀 키워드 — 뉴스 제목/entities → 채널 라우팅과 경기 매칭(F14)에 공용.
  * 소문자 비교. 문제 소스/오라우팅 발견 시 여기서 즉시 조정.
  */
-export const TEAM_KEYWORDS: Record<Exclude<NewsChannelKey, "football" | "snack">, string[]> = {
+const TEAM_KEYWORDS: Record<Exclude<NewsChannelKey, "football" | "snack">, string[]> = {
   arsenal: ["아스날", "아스널", "arsenal", "gunners", "구너"],
   liverpool: ["리버풀", "liverpool", "lfc", "콥"],
   chelsea: ["첼시", "chelsea", "cfc"],

@@ -6,13 +6,13 @@
  * 여기서는 수집만 한다: 이적 여부 판정은 extract(LLM), 티어는 tier.ts 몫.
  */
 
-export interface RssItem {
+interface RssItem {
   title: string
   link: string
   publishedAt: string // ISO
 }
 
-export interface RssFeed {
+interface RssFeed {
   key: string
   url: string
   outlet: string
@@ -50,7 +50,7 @@ function decodeEntities(s: string): string {
 }
 
 /** RSS 2.0 <item> + Atom <entry> 겸용 */
-export function parseFeed(xml: string): RssItem[] {
+function parseFeed(xml: string): RssItem[] {
   const items: RssItem[] = []
   const blocks = xml.match(/<(?:item|entry)[\s>][\s\S]*?<\/(?:item|entry)>/g) ?? []
   for (const block of blocks) {

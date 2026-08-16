@@ -15,7 +15,7 @@ import { getSpread, type SpreadId } from "./spreads"
 export const MAJOR_ARCANA_COUNT = 22
 
 /** 역방향 확률 (카드당 독립) */
-export const REVERSAL_PROBABILITY = 0.5
+const REVERSAL_PROBABILITY = 0.5
 
 export interface DrawnCard {
   /** 스프레드 포지션 인덱스 (0부터) */

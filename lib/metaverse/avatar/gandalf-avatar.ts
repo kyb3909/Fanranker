@@ -91,7 +91,7 @@ function fps(preset: AvatarPreset, kind: GandalfAnimKind): number {
 }
 
 /** Phaser image 텍스처 키 — 프레임 단위. */
-export function gandalfTexKey(kind: GandalfAnimKind, frame: number, presetId: string): string {
+function gandalfTexKey(kind: GandalfAnimKind, frame: number, presetId: string): string {
   const preset = AVATAR_PRESETS[presetId]
   return `${preset.texturePrefix}-${kind}-${frame}`
 }
@@ -162,7 +162,7 @@ export function createAllGandalfAnims(scene: Phaser.Scene): void {
 }
 
 /** one-shot 애니(bite/headbut/kick/knockback/pain) 여부. */
-export function gandalfIsOneShot(kind: GandalfAnimKind): boolean {
+function gandalfIsOneShot(kind: GandalfAnimKind): boolean {
   return !LOOPING_ANIMS.has(kind)
 }
 
@@ -171,8 +171,8 @@ export function gandalfIsOneShot(kind: GandalfAnimKind): boolean {
 // TODO: body/hair 분리 스프라이트 에셋이 준비되면 구현 완성.
 // ============================================================
 
-export const GANDALF_BODY_TEX = "gandalf-body-sheet"
-export const GANDALF_HAIR_TEX = "gandalf-hair-sheet"
+const GANDALF_BODY_TEX = "gandalf-body-sheet"
+const GANDALF_HAIR_TEX = "gandalf-hair-sheet"
 
 /** IndoorMapScene 의 상태 이름 (indoor 씬 고유 — IndoorActionState 와 동일). */
 export type GandalfState = "idle" | "walk" | "run" | "jump" | "fall" | "attack"

@@ -16,7 +16,7 @@ const HEADERS = {
   Referer: "https://m.sports.naver.com/",
 }
 
-export type StandingsRow = Record<string, string | number>
+type StandingsRow = Record<string, string | number>
 
 /** 네이버 API에서 해당 리그의 현재 시즌 코드 조회 (isDefault 우선, 없으면 마지막=최신) */
 export async function fetchCurrentSeasonCode(categoryId: string): Promise<string | null> {

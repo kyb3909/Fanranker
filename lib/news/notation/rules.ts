@@ -390,7 +390,7 @@ export function buildNotationHints(
 // 5. 위반 탐지 (발행물에 오표기가 살아 있는가)
 // ─────────────────────────────────────────────────────────────
 
-export interface NotationViolation {
+interface NotationViolation {
   entryId: string
   alt: string
   preferred: string
@@ -429,7 +429,7 @@ export function findNotationViolations(
   return out
 }
 
-export interface AliasPoisoning {
+interface AliasPoisoning {
   entryId: string
   preferred: string
   alt: string

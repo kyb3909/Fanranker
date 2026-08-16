@@ -20,11 +20,11 @@ import { chatParams } from "@/lib/llm/openai-params"
 
 const DEFAULT_MODEL = process.env.ADMIN_INSIGHT_MODEL || "gpt-4.1"
 
-export interface InsightItem {
+interface InsightItem {
   title: string
   detail: string
 }
-export interface ActionItem {
+interface ActionItem {
   title: string
   why: string
   /** 대략적 규모 — 1~2인 팀이 착수 여부를 판단하는 기준 */

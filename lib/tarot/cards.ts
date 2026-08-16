@@ -10,7 +10,7 @@
  * 출처: RWS 공통 해석 전통(A.E. Waite 계열). 오락 목적.
  */
 
-export interface CardMeaning {
+interface CardMeaning {
   /** 0..21 */
   arcana: number
   name: string
@@ -231,7 +231,7 @@ export const CARD_MEANINGS: CardMeaning[] = [
 ]
 
 /** arcana 번호(0..21)로 의미 조회. v1 은 메이저만 — 마이너 56장은 이미지·의미가 없다. */
-export function getCardMeaning(arcana: number): CardMeaning {
+function getCardMeaning(arcana: number): CardMeaning {
   const m = CARD_MEANINGS[arcana]
   if (!m || m.arcana !== arcana) {
     throw new Error(`알 수 없는 아르카나 번호: ${arcana}`)

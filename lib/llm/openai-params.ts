@@ -25,7 +25,7 @@ export function supportsSamplingParams(model: string): boolean {
   return !/^gpt-5/i.test(model)
 }
 
-export interface SamplingParams {
+interface SamplingParams {
   temperature?: number
   top_p?: number
   /** 5세대에서는 max_completion_tokens 로 자동 변환된다 */

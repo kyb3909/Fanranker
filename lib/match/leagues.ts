@@ -42,7 +42,7 @@ export function isMatchPageLeague(leagueCode: string | null | undefined): boolea
  * 일정 페이지 표시명 — betman 코드는 지면에 그대로 못 쓴다 ('분데스리', '프리그1').
  * 순서 = 지면 섹션 순서: 유럽 대항전 → 5대 리그 → 컵. Map 이라 삽입 순서가 곧 정렬이다.
  */
-export const LEAGUE_LABELS: ReadonlyMap<string, string> = new Map([
+const LEAGUE_LABELS: ReadonlyMap<string, string> = new Map([
   ["UCL", "챔피언스리그"],
   ["UEL", "유로파리그"],
   ["UECL", "컨퍼런스리그"],

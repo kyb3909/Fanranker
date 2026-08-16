@@ -23,14 +23,14 @@ export interface ClusterInput {
   occurredAt: string // ISO
 }
 
-export interface SagaCluster {
+interface SagaCluster {
   clusterKey: string
   stageSignal: ExtractedTransfer["stage_signal"]
   origin: ClusterInput
   echoes: ClusterInput[]
 }
 
-export interface SagaGroup {
+interface SagaGroup {
   identityKey: string
   playerKey: string
   direction: "in" | "out"

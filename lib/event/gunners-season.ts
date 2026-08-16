@@ -205,7 +205,7 @@ export async function computeRaceStanding(
 
 /* ── 내 예측 결과 (/season/results) ────────────────────────────── */
 
-export interface RaceResultPick {
+interface RaceResultPick {
   home: string
   away: string
   league: string | null
@@ -230,7 +230,7 @@ export interface RaceResultSlip {
   picks: RaceResultPick[]
 }
 
-export interface MyRaceResults {
+interface MyRaceResults {
   registered: boolean
   registeredAt: string | null
   slips: RaceResultSlip[]

@@ -70,7 +70,7 @@ export const ASSIGNMENT_MODEL = "gpt-4o-mini"
 export const ASSIGNMENT_RULE_MODEL = "rule:v2"
 
 /** 같은 소식으로 접는 제목 유사도 임계 — auto-publish 중복 게이트와 같은 값 */
-export const ASSIGNMENT_DUPLICATE_THRESHOLD = 0.5
+const ASSIGNMENT_DUPLICATE_THRESHOLD = 0.5
 
 /** 회복 가능 실패를 몇 번까지 다시 볼 것인가 — 넘으면 dead_letter */
 export const ASSIGNMENT_MAX_ATTEMPTS = 3
@@ -81,22 +81,15 @@ export const ASSIGNMENT_MAX_ATTEMPTS = 3
  * 재시도로 풀리는 문제가 아니고, 3번 두들기면 헛돈만 쓴다. 한 번만 더 보고 접는다
  * (prompt_version 을 올리면 같은 후보가 다시 열린다 — 그게 정상 복구 경로다).
  */
-export const ASSIGNMENT_CONTRACT_MAX_ATTEMPTS = 2
+const ASSIGNMENT_CONTRACT_MAX_ATTEMPTS = 2
 
-export const ASSIGNMENT_DESKS = [
-  "transfer",
-  "match",
-  "official",
-  "injury",
-  "general",
-  "saga",
-] as const
-export const ASSIGNMENT_RISKS = ["low", "medium", "high"] as const
-export const ASSIGNMENT_FORMATS = ["breaking_brief", "standard", "saga_update", "hold"] as const
-export const ASSIGNMENT_DECISIONS = ["assign", "hold", "duplicate", "reject"] as const
+const ASSIGNMENT_DESKS = ["transfer", "match", "official", "injury", "general", "saga"] as const
+const ASSIGNMENT_RISKS = ["low", "medium", "high"] as const
+const ASSIGNMENT_FORMATS = ["breaking_brief", "standard", "saga_update", "hold"] as const
+const ASSIGNMENT_DECISIONS = ["assign", "hold", "duplicate", "reject"] as const
 
 /** 후속 단계(팩트체커·카피데스크)가 반드시 돌려야 하는 검증 */
-export const ASSIGNMENT_CHECKS = [
+const ASSIGNMENT_CHECKS = [
   "image_required",
   "player_dictionary",
   "duplicate_scan",
@@ -107,7 +100,7 @@ export const ASSIGNMENT_CHECKS = [
 ] as const
 
 /** 배정 근거 */
-export const ASSIGN_REASON_CODES = [
+const ASSIGN_REASON_CODES = [
   "big_club",
   "korean_player",
   "star_player",
@@ -118,7 +111,7 @@ export const ASSIGN_REASON_CODES = [
   "transfer_rumor",
 ] as const
 /** 보류 근거 */
-export const HOLD_REASON_CODES = [
+const HOLD_REASON_CODES = [
   "unclear_source",
   "thin_source",
   "personal_blog",
@@ -126,9 +119,9 @@ export const HOLD_REASON_CODES = [
   "content_free",
 ] as const
 /** 중복 근거 (규칙 판정 전용 — LLM 은 이 결정을 내리지 않는다) */
-export const DUPLICATE_REASON_CODES = ["duplicate_recent"] as const
+const DUPLICATE_REASON_CODES = ["duplicate_recent"] as const
 /** 반려 근거 */
-export const REJECT_REASON_CODES = [
+const REJECT_REASON_CODES = [
   "minor_league",
   "admin_notice",
   "non_football",
@@ -145,19 +138,19 @@ export const REJECT_REASON_CODES = [
 const INTEREST_LEVEL_REASON_CODES = ["low_interest"] as const
 
 /** 판정 사유. 자유 문장 대신 닫힌 집합이어야 분포를 집계하고 회귀를 감지할 수 있다. */
-export const ASSIGNMENT_REASON_CODES = [
+const ASSIGNMENT_REASON_CODES = [
   ...ASSIGN_REASON_CODES,
   ...HOLD_REASON_CODES,
   ...DUPLICATE_REASON_CODES,
   ...REJECT_REASON_CODES,
 ] as const
 
-export type AssignmentDesk = (typeof ASSIGNMENT_DESKS)[number]
-export type AssignmentRisk = (typeof ASSIGNMENT_RISKS)[number]
-export type AssignmentFormat = (typeof ASSIGNMENT_FORMATS)[number]
-export type AssignmentDecision = (typeof ASSIGNMENT_DECISIONS)[number]
-export type AssignmentCheck = (typeof ASSIGNMENT_CHECKS)[number]
-export type AssignmentReasonCode = (typeof ASSIGNMENT_REASON_CODES)[number]
+type AssignmentDesk = (typeof ASSIGNMENT_DESKS)[number]
+type AssignmentRisk = (typeof ASSIGNMENT_RISKS)[number]
+type AssignmentFormat = (typeof ASSIGNMENT_FORMATS)[number]
+type AssignmentDecision = (typeof ASSIGNMENT_DECISIONS)[number]
+type AssignmentCheck = (typeof ASSIGNMENT_CHECKS)[number]
+type AssignmentReasonCode = (typeof ASSIGNMENT_REASON_CODES)[number]
 
 export interface AssignmentVerdict {
   desk: AssignmentDesk
@@ -180,16 +173,16 @@ export interface AssignmentInput {
   sourceUrl: string | null
 }
 
-export interface AssignmentUsage {
+interface AssignmentUsage {
   inputTokens: number | null
   outputTokens: number | null
   cachedTokens: number | null
 }
 
 /** LLM 호출 실패의 성격. 재시도 가치 판단의 입력이지 결과가 아니다. */
-export type AssignmentFailureKind = "http" | "network" | "parse" | "contract"
+type AssignmentFailureKind = "http" | "network" | "parse" | "contract"
 
-export type AssignmentCallResult =
+type AssignmentCallResult =
   | {
       ok: true
       verdict: AssignmentVerdict
@@ -434,7 +427,7 @@ export function preAssign(
   return null
 }
 
-export type AssignmentParseResult =
+type AssignmentParseResult =
   | {
       ok: true
       verdict: AssignmentVerdict

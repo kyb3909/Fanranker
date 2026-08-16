@@ -32,7 +32,7 @@ const TEAM_ALIASES: Record<string, string[]> = {
 const TRANSFER_RE =
   /영입|이적|계약|임대|이적료|이적설|영입설|합류|사인|방출|콜업|떠나|잔류|바이아웃|바이백|메디컬|자유계약|영입\s*추진|영입\s*경쟁/
 
-export interface SuggestedFlairs {
+interface SuggestedFlairs {
   /** 매칭된 팀 말머리 id (없으면 null) */
   teamFlairId: string | null
   /** 성격 말머리 id — "이적" 또는 "뉴스" (목록에 있으면) */

@@ -16,7 +16,7 @@ import { normalizeForMatch, verifyQuote } from "./scout"
 
 const MODEL = "gpt-4o-mini"
 
-export interface ExtractedInterview {
+interface ExtractedInterview {
   speaker: string | null
   /** 원문 그대로의 발언 (verifyQuote 통과분만) */
   quotes: string[]
@@ -34,10 +34,7 @@ Rules — all mandatory:
 Return JSON: {"speaker": string|null, "quotes": ["...", ...]}`
 
 /** LLM 1회 — 발언 오려내기. 실패 시 null (호출부가 재시도 원장 관리) */
-export async function extractQuotes(
-  title: string,
-  material: string
-): Promise<ExtractedInterview | null> {
+async function extractQuotes(title: string, material: string): Promise<ExtractedInterview | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
   try {
@@ -72,7 +69,7 @@ export async function extractQuotes(
   }
 }
 
-export interface TranslatedInterview {
+interface TranslatedInterview {
   headline_ko: string
   speaker_ko: string | null
   /** quotes 입력과 같은 길이·같은 순서 */

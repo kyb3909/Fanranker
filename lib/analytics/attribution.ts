@@ -12,7 +12,7 @@
 const STORAGE_KEY = "gn_attr_v1"
 const SESSION_LANDING_KEY = "gn_landing_v1"
 
-export type Attribution = {
+type Attribution = {
   source: string
   medium: string | null
   campaign: string | null

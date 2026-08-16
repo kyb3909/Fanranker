@@ -34,7 +34,7 @@ const WINDOW_BEFORE_MS = 150 * 60 * 1000
 // 창을 넓혀도 아웃바운드 비용은 거의 그대로다. 그 이상의 과거는 단계 3 영속화의 몫.
 const WINDOW_AFTER_MS = 24 * 3600 * 1000
 
-export interface DisplayPlayer {
+interface DisplayPlayer {
   /** 화면 표기 — 사전에 있으면 한글, 없으면 로마자 (운영자 결정: 혼용 허용) */
   label: string
   number: number | null
@@ -51,7 +51,7 @@ export interface DisplayPlayer {
   subPartner?: string
 }
 
-export interface DisplaySide {
+interface DisplaySide {
   /** betman 한글 팀명 (카드와 같은 라벨) */
   teamLabel: string
   formation: string | null

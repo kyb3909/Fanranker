@@ -23,7 +23,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
  * 이유가 분명할 때만 `requireStaffApi` 를 쓴다. 반대로 하면 실수로 열린다.
  */
 
-export type StaffRole = "admin" | "editor"
+type StaffRole = "admin" | "editor"
 
 export const ADMIN_ROLE = "admin"
 

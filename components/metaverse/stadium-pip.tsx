@@ -42,7 +42,7 @@ interface StadiumPipValue {
 
 const StadiumPipContext = createContext<StadiumPipValue | null>(null)
 
-export function useStadiumPip(): StadiumPipValue {
+function useStadiumPip(): StadiumPipValue {
   const ctx = useContext(StadiumPipContext)
   if (!ctx) throw new Error("useStadiumPip must be used within StadiumPipProvider")
   return ctx

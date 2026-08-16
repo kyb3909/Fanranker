@@ -34,7 +34,7 @@ import {
  * .2 (2026-08-07): 2연전 목록 템플릿(B) 지원 — .1 은 단일 템플릿만 알아서
  * UCL 예선 쌍 페이지가 전부 parse_failed(dead_letter)로 남았다 (원장 실측).
  */
-export const PREDICATE_VERSION = "match-mapping@2026-08-07.2"
+const PREDICATE_VERSION = "match-mapping@2026-08-07.2"
 
 /** fetch_error 재시도 상한 — 초과 시 dead_letter (assignment desk 관례) */
 const MAX_FETCH_ATTEMPTS = 2
@@ -51,7 +51,7 @@ export interface TeamDictionaryRow {
   status: string
 }
 
-export interface BetmanGameRow {
+interface BetmanGameRow {
   id: string
   home_team_name: string
   away_team_name: string
@@ -126,7 +126,7 @@ function candidateDateIso(candidate: SoccerwayMatchCandidate, kickoffIso: string
   return best
 }
 
-export interface MatchJudgement {
+interface MatchJudgement {
   outcome: "proposed" | "ambiguous" | "no_candidate"
   /** betman 홈/원정 ≠ soccerway 홈/원정 (자동 스왑 금지 — 검수 신호). null = 이름 대조 불능 */
   homeAwayFlip: boolean | null
@@ -200,7 +200,7 @@ export function judgeMatchPage(
   }
 }
 
-export interface ShadowRunSummary {
+interface ShadowRunSummary {
   scanned: number
   skipped: number
   proposed: number

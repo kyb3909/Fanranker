@@ -31,7 +31,7 @@ export function numericTokens(text: string): Set<string> {
   return out
 }
 
-export interface AmountStripResult {
+interface AmountStripResult {
   title: string
   /** 제거된 금액 표현들 (원장·로그용) */
   removed: string[]

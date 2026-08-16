@@ -23,18 +23,18 @@ import {
  */
 
 /** 인물 — 표기 치환·게이트·신원 판정 대상 */
-export const PERSON_CATEGORIES = ["player", "coach"] as const
+const PERSON_CATEGORIES = ["player", "coach"] as const
 /** 출처 라벨 — 매체와 구단(공식 발표) */
-export const LABEL_CATEGORIES = ["media", "team"] as const
+const LABEL_CATEGORIES = ["media", "team"] as const
 /** 사전에서 읽어오는 전체 범위 */
-export const NOTATION_CATEGORIES = [...PERSON_CATEGORIES, ...LABEL_CATEGORIES] as const
+const NOTATION_CATEGORIES = [...PERSON_CATEGORIES, ...LABEL_CATEGORIES] as const
 
 export type PersonCategory = (typeof PERSON_CATEGORIES)[number]
 
 const COLUMNS = "id, category, preferred_ko, romanized, surfaces, hangul_alts"
 
 /** 한 번 읽어 만든 사전 뷰 — 소비자는 필요한 조각만 꺼내 쓴다 */
-export interface Notation {
+interface Notation {
   /** 전체 항목 (인물 + 라벨) */
   entries: NotationEntry[]
   /** 인물만 — 게이트·신원 판정용 */
@@ -69,7 +69,7 @@ function toView(entries: NotationEntry[]): Notation {
 }
 
 /** 빈 사전 — 조회 실패 시 "교정 없이 진행"을 선택한 호출부가 쓴다 */
-export function emptyNotation(): Notation {
+function emptyNotation(): Notation {
   return toView([])
 }
 

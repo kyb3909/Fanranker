@@ -338,9 +338,9 @@ function FeedImageFrame({ src, alt, priority }: { src: string; alt: string; prio
             onError={() => setError(true)}
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element -- arbitrary user URL, not in remotePatterns
           // fill 분기(next/image)와 동일하게 absolute inset-0 로 채워 16/9 예약 박스를 넘지 않게 함.
           // (h-auto 면 세로 긴 이미지가 박스를 뚫고 자라 아래 콘텐츠·푸터를 밀어 CLS 발생)
+          // eslint-disable-next-line @next/next/no-img-element -- arbitrary user URL, not in remotePatterns
           <img
             src={src}
             alt={alt}

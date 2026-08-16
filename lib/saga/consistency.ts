@@ -13,7 +13,7 @@
  *    보류(검수) + 알림이 정답 (연구 원칙 3).
  */
 
-export interface ClubConsistencyVerdict {
+interface ClubConsistencyVerdict {
   conflict: boolean
   /** 최근 언급의 지배 클럽 (모순 판단 근거) */
   dominant: string | null

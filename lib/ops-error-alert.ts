@@ -159,7 +159,7 @@ function evictIfNeeded() {
   if (oldest) seen.delete(oldest[0])
 }
 
-export interface ServerErrorContext {
+interface ServerErrorContext {
   /** 어디서 났나 (예: /api/betman/prediction) */
   path?: string
   /** 라우트 종류 (route handler / server component 등) */

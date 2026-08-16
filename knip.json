@@ -18,11 +18,17 @@
     "!**/.audit/**",
     "!**/.playwright-cli/**",
     "!supabase/migrations-backup/**",
+    "!supabase/functions/**",
     "!data/agents/**",
     "!data/crawlers/**",
     "!aseprite-mcp/**"
   ],
   "ignore": [
+    "components/header/gold-balance.tsx",
+    "components/season/weekly-draw-reveal.tsx",
+    "lib/youtube/resolve-channel.ts",
+    "__tests__/_stubs/server-only.ts",
+    "supabase/functions/**",
     "components/battle/battle-types.ts",
     "components/battle/create-worldcup-dialog.tsx",
     "components/battle/worldcup-stats.tsx",
@@ -34,6 +40,7 @@
     "lib/supabase/types.ts"
   ],
   "ignoreDependencies": [
+    "@tailwindcss/typography",
     "tailwindcss",
     "autoprefixer",
     "tw-animate-css",

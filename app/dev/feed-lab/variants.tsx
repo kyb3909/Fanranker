@@ -10,7 +10,7 @@ import type { Sample } from "./samples"
  *  · 각 변주는 **무언가를 버려야** 한다. 버린 것을 meta.dropped 에 명시한다.
  */
 
-export interface VariantMeta {
+interface VariantMeta {
   id: string
   name: string
   author: "편집" | "인터랙션" | "정보구조" | "회의론" | "현행"
@@ -33,7 +33,7 @@ const card: React.CSSProperties = {
 
 /* ─────────────── 현행 (비교 기준) ─────────────── */
 
-export const CURRENT: VariantMeta = {
+const CURRENT: VariantMeta = {
   id: "current",
   name: "현행",
   author: "현행",
@@ -41,7 +41,7 @@ export const CURRENT: VariantMeta = {
   dropped: [],
 }
 
-export function Current({ s }: { s: Sample }) {
+function Current({ s }: { s: Sample }) {
   return (
     <article
       style={{ ...card, display: "flex", gap: 12, alignItems: "center", padding: "12px 16px" }}
@@ -145,7 +145,7 @@ export function Current({ s }: { s: Sample }) {
 
 /* ─────────────── I-1 하단 액션 띠 (인터랙션 본안) ─────────────── */
 
-export const I1: VariantMeta = {
+const I1: VariantMeta = {
   id: "i1",
   name: "I-1 하단 액션 띠",
   author: "인터랙션",
@@ -153,7 +153,7 @@ export const I1: VariantMeta = {
   dropped: ["작성자", "좋아요", "투표 질문", "안내문 2줄", "투표 박스 테두리"],
 }
 
-export function I1Card({ s }: { s: Sample }) {
+function I1Card({ s }: { s: Sample }) {
   return (
     <article style={card}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "12px 16px" }}>
@@ -257,7 +257,7 @@ export function I1Card({ s }: { s: Sample }) {
 
 /* ─────────────── I-2 투표가 곧 게이지 ─────────────── */
 
-export const I2: VariantMeta = {
+const I2: VariantMeta = {
   id: "i2",
   name: "I-2 투표가 곧 게이지",
   author: "인터랙션",
@@ -265,7 +265,7 @@ export const I2: VariantMeta = {
   dropped: ["작성자", "좋아요", "투표 질문", "안내문", "투표 박스"],
 }
 
-export function I2Card({ s }: { s: Sample }) {
+function I2Card({ s }: { s: Sample }) {
   return (
     <article style={card}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "12px 16px" }}>
@@ -355,7 +355,7 @@ export function I2Card({ s }: { s: Sample }) {
 
 /* ─────────────── E-1 인덱스 (편집: 조용한 목록형) ─────────────── */
 
-export const E1: VariantMeta = {
+const E1: VariantMeta = {
   id: "e1",
   name: "E-1 인덱스",
   author: "편집",
@@ -363,7 +363,7 @@ export const E1: VariantMeta = {
   dropped: ["작성자", "좋아요", "투표 박스", "안내문", "투표 질문"],
 }
 
-export function E1Card({ s }: { s: Sample }) {
+function E1Card({ s }: { s: Sample }) {
   return (
     <article
       style={{ ...card, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start" }}
@@ -454,7 +454,7 @@ export function E1Card({ s }: { s: Sample }) {
 
 /* ─────────────── E-3 판(plate)형 ─────────────── */
 
-export const E3: VariantMeta = {
+const E3: VariantMeta = {
   id: "e3",
   name: "E-3 판형",
   author: "편집",
@@ -462,7 +462,7 @@ export const E3: VariantMeta = {
   dropped: ["작성자", "좋아요", "투표 버튼(결과만)", "안내문", "투표 질문"],
 }
 
-export function E3Card({ s }: { s: Sample }) {
+function E3Card({ s }: { s: Sample }) {
   return (
     <article style={{ ...card, display: "flex", gap: 16, padding: 16, alignItems: "center" }}>
       <img
@@ -533,7 +533,7 @@ export function E3Card({ s }: { s: Sample }) {
 
 /* ─────────────── A-7 액션 한 슬롯 (정보구조) ─────────────── */
 
-export const A7: VariantMeta = {
+const A7: VariantMeta = {
   id: "a7",
   name: "A-7 액션 한 슬롯",
   author: "정보구조",
@@ -541,7 +541,7 @@ export const A7: VariantMeta = {
   dropped: ["작성자", "좋아요", "시간", "안내문", "투표 박스"],
 }
 
-export function A7Card({ s }: { s: Sample }) {
+function A7Card({ s }: { s: Sample }) {
   return (
     <article
       style={{ ...card, display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 16px" }}
@@ -625,7 +625,7 @@ export function A7Card({ s }: { s: Sample }) {
 
 /* ─────────────── C-1 투표 추방형 (회의론) ─────────────── */
 
-export const C1: VariantMeta = {
+const C1: VariantMeta = {
   id: "c1",
   name: "C-1 투표 추방",
   author: "회의론",
@@ -633,7 +633,7 @@ export const C1: VariantMeta = {
   dropped: ["투표 전체", "작성자", "좋아요", "안내문", "타로 버튼"],
 }
 
-export function C1Card({ s }: { s: Sample }) {
+function C1Card({ s }: { s: Sample }) {
   return (
     <article
       style={{ ...card, display: "flex", gap: 12, alignItems: "center", padding: "13px 16px" }}
@@ -668,7 +668,7 @@ export function C1Card({ s }: { s: Sample }) {
 
 /* ─────────────── C-2 텍스트 전용 (플레이스홀더 폐기) ─────────────── */
 
-export const C2: VariantMeta = {
+const C2: VariantMeta = {
   id: "c2",
   name: "C-2 텍스트 전용",
   author: "회의론",
@@ -676,7 +676,7 @@ export const C2: VariantMeta = {
   dropped: ["구단 플레이스홀더", "작성자", "좋아요", "안내문", "투표 박스"],
 }
 
-export function C2Card({ s }: { s: Sample }) {
+function C2Card({ s }: { s: Sample }) {
   return (
     <article style={{ ...card, padding: "16px 18px" }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: MUTE, marginBottom: 6 }}>
@@ -743,7 +743,7 @@ export function C2Card({ s }: { s: Sample }) {
 
 /* ─────────────── C-3 구단 배지형 ─────────────── */
 
-export const C3: VariantMeta = {
+const C3: VariantMeta = {
   id: "c3",
   name: "C-3 구단 배지",
   author: "회의론",
@@ -758,7 +758,7 @@ const TEAM_COLOR: Record<string, string> = {
   첼시: "#034694",
 }
 
-export function C3Card({ s }: { s: Sample }) {
+function C3Card({ s }: { s: Sample }) {
   const color = TEAM_COLOR[s.flair] ?? BUR
   return (
     <article
@@ -845,7 +845,7 @@ export function C3Card({ s }: { s: Sample }) {
 
 /* ─────────────── A-2 제목 목록 (썸네일 없음) ─────────────── */
 
-export const A2: VariantMeta = {
+const A2: VariantMeta = {
   id: "a2",
   name: "A-2 제목 목록",
   author: "정보구조",
@@ -853,7 +853,7 @@ export const A2: VariantMeta = {
   dropped: ["썸네일", "작성자", "좋아요", "시간", "안내문", "투표 질문"],
 }
 
-export function A2Card({ s }: { s: Sample }) {
+function A2Card({ s }: { s: Sample }) {
   return (
     <article style={{ background: CARD, padding: "14px 18px", borderBottom: `1px solid ${L}` }}>
       <h2

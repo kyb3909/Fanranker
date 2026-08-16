@@ -1,10 +1,10 @@
-export interface CandidateSnapshot {
+interface CandidateSnapshot {
   candidate_id: string
   state: string
   first_seen_at: string
 }
 
-export interface CandidateEventSnapshot {
+interface CandidateEventSnapshot {
   candidate_id: string
   to_state: string
   actor: string

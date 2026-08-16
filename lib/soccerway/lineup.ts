@@ -60,7 +60,7 @@ export interface LineupPlayer {
   subPartnerName?: string
 }
 
-export interface LineupSide {
+interface LineupSide {
   /** Livesport 참가팀명 (영문, 예: "Sheffield Utd") — 홈/원정 배치 대조의 근거 */
   teamNameEn: string
   side: "HOME" | "AWAY"

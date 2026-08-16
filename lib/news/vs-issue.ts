@@ -42,7 +42,7 @@ const SYSTEM_PROMPT = `너는 한국 축구 커뮤니티의 데스크 에디터�
 JSON만 출력: {"no_issue": boolean, "question": "...", "option_a": "...", "option_b": "...", "summary": ["...", "...", "..."]}`
 
 /** 기사에서 VS 쟁점 생성. 쟁점화 불가/실패 시 null (throw 하지 않음) */
-export async function generateVsIssue(title: string, content: unknown): Promise<VsIssue | null> {
+async function generateVsIssue(title: string, content: unknown): Promise<VsIssue | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
 

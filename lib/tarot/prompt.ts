@@ -65,7 +65,7 @@ function cardBlock(card: DrawnCard, positionName: string, positionMeaning: strin
   ].join("\n")
 }
 
-export interface ReadingInput {
+interface ReadingInput {
   question: string
   spreadId: SpreadId
   cards: DrawnCard[]

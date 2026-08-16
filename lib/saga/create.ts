@@ -23,10 +23,10 @@ import { confirmationPatch, gatedStageSignal, nextStage, type SagaType } from ".
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
-export const SAGA_BOT_USER_ID = "user_saga_bot"
+const SAGA_BOT_USER_ID = "user_saga_bot"
 const SAGA_BOARD_SLUG = "saga"
 
-export interface CreateSagaInput {
+interface CreateSagaInput {
   type: SagaType
   title: string
   subject: Record<string, unknown>
@@ -36,7 +36,7 @@ export interface CreateSagaInput {
   clubs?: string[]
 }
 
-export interface AppendEntryInput {
+interface AppendEntryInput {
   clusterKey: string
   headline: string
   summary?: string

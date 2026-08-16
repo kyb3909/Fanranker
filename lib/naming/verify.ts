@@ -12,9 +12,7 @@ import "server-only"
 import { extractClubName, pickWinner, type SpellingVerdict } from "./pick"
 import { chatParams } from "@/lib/llm/openai-params"
 
-export type { SpellingVerdict }
-
-export interface SpellingProposal {
+interface SpellingProposal {
   /** 영문 표준 표기 (사전 romanized 키용) */
   romanized: string | null
   /** 한글 표기 후보 2~4개 */

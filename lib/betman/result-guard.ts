@@ -20,7 +20,7 @@ function normalizeResult(result: string | null | undefined): string | null {
   return result == null || result === "" ? null : result
 }
 
-export interface ResultChangeCheck {
+interface ResultChangeCheck {
   /** 이 경기에 status='settled' 픽이 하나라도 있는가 (돈이 이미 움직였는가) */
   hasSettledPicks: boolean
   currentResult: string | null | undefined
@@ -31,9 +31,9 @@ export interface ResultChangeCheck {
   incomingStatus: string | null | undefined
 }
 
-export type ResultBlockReason = "result_change" | "cancel_transition" | "status_regression"
+type ResultBlockReason = "result_change" | "cancel_transition" | "status_regression"
 
-export interface ResultGuardVerdict {
+interface ResultGuardVerdict {
   blocked: boolean
   reason: ResultBlockReason | null
 }

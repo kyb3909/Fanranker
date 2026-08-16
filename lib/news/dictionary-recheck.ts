@@ -28,7 +28,7 @@ import {
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
-export interface DictionaryRecheckResult {
+interface DictionaryRecheckResult {
   /** 반려 기록을 걷어 재검사 대상이 된 초안 수 */
   requeued: number
   /** 사전 사유였지만 다른 미등재 이름이 남아 그대로 둔 초안 수 */

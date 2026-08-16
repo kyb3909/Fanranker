@@ -1,5 +1,5 @@
 // Re-export shared constants from betting-types (single source of truth)
-export { getGameTypeLabel, SPORT_ICONS, sportColorFill, formatMatchTime } from "@/types/betting"
+export { getGameTypeLabel, formatMatchTime } from "@/types/betting"
 
 export interface SportsGame {
   id: string

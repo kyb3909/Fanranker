@@ -115,7 +115,7 @@ const WINDOW_AFTER_MS = 24 * 3600 * 1000
 const POLL_MS = 5 * 60 * 1000
 const MAX_POLLS = 24
 
-export interface MatchLineupProps {
+interface MatchLineupProps {
   gameId: string
   /** betman 킥오프 ISO — 창 판정을 클라에서 먼저 해 창 밖 호출을 0으로 만든다 */
   matchTime: string

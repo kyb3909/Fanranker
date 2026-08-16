@@ -11,7 +11,7 @@ import type { TipTapNode } from "@/types/post"
  * - 검사관은 고치지 않는다, 판정만 한다 (수정은 사람 또는 재작성 파이프라인 몫)
  */
 
-export interface QualityVerdict {
+interface QualityVerdict {
   pass: boolean
   reasons: string[]
   /** 기사에 등장하는 선수 한글 표기 — 사전 게이트(미등재 선수명 차단)의 재료 */
@@ -115,7 +115,7 @@ export async function inspectDraft(title: string, content: unknown): Promise<Qua
  * 검사관이 이미지를 보지도 못했는데 "부적합" 낙인이 찍혀 기사가 만료로 죽었다.
  * 호출부는 infra 실패를 부적합과 절대 같은 결과로 취급하면 안 된다.
  */
-export interface ImageVerdict {
+interface ImageVerdict {
   pass: boolean
   reason: string
   /** true = 검사 자체가 불가했음(판정 없음). 재시도·우회 대상이지 반려 사유가 아니다 */

@@ -17,7 +17,7 @@ export const STAGE_FLOW: Record<SagaType, readonly string[]> = {
 } as const
 
 /** 종결 outcome — transfer 전용 (PRD §4.2). done 만 is_confirmed=true (D7 noindex 해제) */
-export const TRANSFER_OUTCOMES = ["done", "collapsed", "stayed"] as const
+const TRANSFER_OUTCOMES = ["done", "collapsed", "stayed"] as const
 
 export const STAGE_LABEL: Record<string, string> = {
   interest: "관심",

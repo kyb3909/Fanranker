@@ -35,7 +35,7 @@ export function transferClusterKey(
   return `${normalizePlayerKey(player)}:${stageSignal ?? "news"}:${kstDay(occurredAtIso)}`
 }
 
-export interface TransferIdentity {
+interface TransferIdentity {
   playerKey: string
   direction: "in" | "out"
   windowKey: string // '2026-summer'

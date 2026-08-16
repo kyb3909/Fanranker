@@ -38,8 +38,8 @@ type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
 /** 발행 뉴스 작성자 = 공놀이봇(user_bot_soccer_kr). 봇 글은 종목 무관 전부 이 계정. */
 export const NEWS_BOT_USER_ID = "user_bot_soccer_kr"
-export const FOOTBALL_CATEGORY_ID = "22105623-6c99-487d-975f-15073e0990fc"
-export const FOOTBALL_SLUG = "football"
+const FOOTBALL_CATEGORY_ID = "22105623-6c99-487d-975f-15073e0990fc"
+const FOOTBALL_SLUG = "football"
 
 /**
  * 종목 → 게시판 라우팅 (2026-08-14 NBA 뉴스 도입).
@@ -53,7 +53,7 @@ const SPORT_BOARDS = {
 } as const
 type NewsSport = keyof typeof SPORT_BOARDS
 
-export function reservoirSport(item: Pick<NewsReservoirItem, "raw">): NewsSport {
+function reservoirSport(item: Pick<NewsReservoirItem, "raw">): NewsSport {
   return item.raw?.sport === "basketball" ? "basketball" : "football"
 }
 
@@ -76,7 +76,7 @@ export interface NewsReservoirItem {
   tags: string[] | null
 }
 
-export interface PublishNewsOptions {
+interface PublishNewsOptions {
   /** 발행할 제목/본문 (본문은 sanitize 완료본) */
   title: string
   content: unknown
@@ -417,7 +417,7 @@ export function isContentFreeDraft(content: unknown): boolean {
  * 검수 화면의 "사진 없음(떡밥 제외)" 경고와 같은 기준 — 글만 있는 기사는
  * 담벼락 품질을 깎으므로 자동으로는 내보내지 않는다 (수동 발행은 가능).
  */
-export function hasVisualContent(content: unknown): boolean {
+function hasVisualContent(content: unknown): boolean {
   if (!content || typeof content !== "object") return false
   const node = content as { type?: string; content?: unknown[] }
   if (node.type === "image") return true

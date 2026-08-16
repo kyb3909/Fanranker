@@ -29,7 +29,7 @@ export interface DrawCandidate {
   group_slug: string
 }
 
-export interface DrawWinner {
+interface DrawWinner {
   user_id: string
   nickname: string
   /** 발표 화면에서 팀 색 점을 찍어 "우리 쪽에서 몇 명 나왔나"가 읽히게 한다 */
@@ -139,7 +139,7 @@ export interface DuelScore {
   settled_slips: number
 }
 
-export interface DuelResult {
+interface DuelResult {
   scores: DuelScore[]
   /** 승자 팬덤. 무승부·주장 미설정·정산 슬립 0 이면 null (그 주는 유니폼 미지급) */
   winner: DuelScore | null

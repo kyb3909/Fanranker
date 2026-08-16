@@ -17,7 +17,7 @@ import { UNKNOWN_PLAYER_PREFIX } from "@/lib/news/alias-suggest"
 const CLUB_BRACKET_RE =
   /^\[(레알 마드리드|Real Madrid|바르셀로나|FC ?Barcelona|아스널|아스날|Arsenal|리버풀|Liverpool|첼시|Chelsea|맨체스터 시티|Manchester City|맨체스터 유나이티드|Manchester United|바이에른 뮌헨|Bayern(?: Munich)?|토트넘(?: 홋스퍼)?|Tottenham(?: Hotspur)?|파리 생제르맹|PSG|유벤투스|Juventus|인테르|Inter|AC ?밀란|AC ?Milan|아틀레티코(?: 마드리드)?|Atletico(?: Madrid)?|뉴캐슬(?: 유나이티드)?|Newcastle(?: United)?)\]/i
 
-export interface BreakingCheckInput {
+interface BreakingCheckInput {
   /** 한국어 초안 제목 (브래킷 포함) */
   draftTitle: string | null
   /** 영문 원제 (있으면) */
@@ -59,7 +59,7 @@ export function isRetryableGateReasons(reasons: unknown): boolean {
  * 판정: corroborated(보도 ≥2건) / unverified(0~1건 — 보류·검수) /
  *       infra(네이버 미가동 — 판정 아님, 다음 회차 재시도)
  */
-export type OfficialCorroboration = "corroborated" | "unverified" | "infra"
+type OfficialCorroboration = "corroborated" | "unverified" | "infra"
 
 export async function corroborateOfficialViaNaver(
   playerKr: string,

@@ -20,7 +20,7 @@ export const SEASON_EVENT_SLUG = "season-open-2026"
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
-export interface SeasonStandings {
+interface SeasonStandings {
   users: UserEventScore[]
   groups: GroupEventScore[]
   /** user_id → group slug (스냅샷 저장 시 그룹 매핑에 사용) */
@@ -72,11 +72,11 @@ export async function fetchSeasonSlipCount(supabase: ServiceClient): Promise<num
 /* ── 활동 포인트 (경품 응모 자격) ─────────────────────────────── */
 
 /** 응모 기준점 — 설계 문서 미정 항목의 기본값 (운영 확정 시 이 상수만 변경) */
-export const POINTS_THRESHOLD = 30
+const POINTS_THRESHOLD = 30
 /** 응모 조건: 커뮤니티 활동(글+댓글) 최소 횟수 — 예측만으로는 응모 불가 (설계 §1) */
-export const MIN_COMMUNITY_ACTIONS = 3
+const MIN_COMMUNITY_ACTIONS = 3
 
-export interface SeasonPoints {
+interface SeasonPoints {
   userId: string
   totalPoints: number
   predictionPoints: number
@@ -110,7 +110,7 @@ function mapPointsRow(r: {
 }
 
 /** 단일 유저 포인트 (미등록이면 null) — /season 진행바·마이페이지용 */
-export async function fetchSeasonPointsForUser(
+async function fetchSeasonPointsForUser(
   supabase: ServiceClient,
   userId: string
 ): Promise<SeasonPoints | null> {

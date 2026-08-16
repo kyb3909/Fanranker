@@ -11,7 +11,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
-export interface MainVoteAggregate {
+interface MainVoteAggregate {
   go: number
   stay: number
   total: number

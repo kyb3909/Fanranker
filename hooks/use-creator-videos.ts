@@ -9,8 +9,6 @@ export interface CreatorVideo {
   published_at: string
 }
 
-export type { CommunityPost }
-
 /**
  * 크리에이터 영상 조회 — { hero(최신 1), recent(나머지) }.
  * 서버 API(/api/creators/[id]/videos)를 SWR 로 가져온다 (클라에서 supabase 직접 호출 X).

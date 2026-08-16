@@ -1,6 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
-export interface VisibleCommentRow {
+interface VisibleCommentRow {
   id: string
   post_id: string
   user_id: string
@@ -14,7 +14,7 @@ export interface VisibleCommentRow {
   stickers: { id: string; name: string; image_url: string } | null
 }
 
-export interface VisibleCommentsResult {
+interface VisibleCommentsResult {
   comments: VisibleCommentRow[]
   profiles: { user_id: string; nickname: string; avatar_url: string | null }[]
   equippedTitles: {

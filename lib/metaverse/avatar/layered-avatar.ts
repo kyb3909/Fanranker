@@ -16,7 +16,7 @@
 import type * as Phaser from "phaser"
 import { GANDALF_ANIM_KINDS, type GandalfAnimKind, type GandalfState } from "./gandalf-avatar"
 
-export type Gender = "male" | "female"
+type Gender = "male" | "female"
 
 /** 장착 구성 — Phase 2 에서 DB equipped 슬롯으로 대체 예정. */
 export interface Outfit {

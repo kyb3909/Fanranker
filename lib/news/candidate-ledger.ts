@@ -3,7 +3,7 @@ import "server-only"
 import { randomUUID } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-export const NEWS_CANDIDATE_STATES = [
+const NEWS_CANDIDATE_STATES = [
   "discovered",
   "deduplicated",
   "assigned",

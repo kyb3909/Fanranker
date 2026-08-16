@@ -11,7 +11,7 @@
 
 export type SpreadId = "one" | "three"
 
-export interface SpreadPosition {
+interface SpreadPosition {
   index: number
   /** 표시용 이름 */
   name: string
@@ -19,7 +19,7 @@ export interface SpreadPosition {
   meaning: string
 }
 
-export interface Spread {
+interface Spread {
   id: SpreadId
   name: string
   /** 화면 설명 — 무엇을 물을 때 쓰는지 */

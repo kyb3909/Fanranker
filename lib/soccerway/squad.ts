@@ -31,7 +31,7 @@ const SECTION_MAP: Record<string, SquadMember["position"]> = {
 }
 
 /** HTML → 스쿼드. 파싱 실패·빈 결과는 null. */
-export function parseSquadHtml(html: string): SquadMember[] | null {
+function parseSquadHtml(html: string): SquadMember[] | null {
   // ⚠️ 페이지에는 lineupTable 이 여럿이다 — 스쿼드 본표 외에 "직전 경기 라인업" 위젯도
   //    같은 클래스를 쓴다(실측: 아스날 페이지에 리즈 선수 혼입). 첫 Goalkeepers 헤더부터
   //    두 번째 Goalkeepers 직전까지만 스쿼드로 본다.

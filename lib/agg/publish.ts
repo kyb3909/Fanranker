@@ -38,7 +38,7 @@ export function hasPublishableMedia(media: AggMediaItem[] | null): boolean {
 }
 
 /** 문단 배열 + 미디어 → TipTap doc (첫 문단 → 미디어 → 나머지 문단) */
-export function buildTipTapDoc(paragraphs: string[], media: AggMediaItem[]) {
+function buildTipTapDoc(paragraphs: string[], media: AggMediaItem[]) {
   const para = (text: string) => ({
     type: "paragraph",
     content: [{ type: "text", text: String(text).slice(0, 2000) }],

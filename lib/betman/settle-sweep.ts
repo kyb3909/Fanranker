@@ -15,7 +15,7 @@ interface PendingPrediction {
   locked_odds: number | null
 }
 
-export interface SettleSweepResult {
+interface SettleSweepResult {
   pendingPredictions: number
   settleableGames: number
   settled: number

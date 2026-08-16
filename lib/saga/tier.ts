@@ -18,7 +18,7 @@ import {
 export { classifyTier }
 export type { TransferTier }
 
-export interface SagaOrigin {
+interface SagaOrigin {
   reporter: string | null
   outlet: string
   url: string | null

@@ -17,7 +17,7 @@
  * "gandalf" = 9-애니 east-only 사이드뷰 (walking/idle/run/jump/bite/headbut/kick/knockback/pain).
  *             west 는 east flipX. PNG 확장자. Aseprite 직접 export.
  */
-export type AvatarSystem = "pro-xl" | "gandalf"
+type AvatarSystem = "pro-xl" | "gandalf"
 
 export interface AvatarPreset {
   /** 저장/전송용 안정 키 (프리셋 변경 시 그대로 유지). */
@@ -69,8 +69,8 @@ export interface AvatarPreset {
 
 export const DEFAULT_AVATAR_KEY = "male-basic" as const
 export const MALE_BASIC_AVATAR_KEY = "male-basic" as const
-export const FEMALE_BASIC_AVATAR_KEY = "female-basic" as const
-export const MALE_ARSENAL_AVATAR_KEY = "male-arsenal" as const
+const FEMALE_BASIC_AVATAR_KEY = "female-basic" as const
+const MALE_ARSENAL_AVATAR_KEY = "male-arsenal" as const
 
 export const AVATAR_PRESETS: Record<string, AvatarPreset> = {
   [MALE_BASIC_AVATAR_KEY]: {

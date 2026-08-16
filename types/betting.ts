@@ -320,7 +320,7 @@ export const sportColorFill: Record<string, { bg: string; text: string; border: 
   volleyball: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
 }
 
-export const SPORT_ICONS: Record<string, string> = {
+const SPORT_ICONS: Record<string, string> = {
   축구: "⚽",
   야구: "⚾",
   농구: "🏀",
@@ -332,7 +332,7 @@ export const SPORT_ICONS: Record<string, string> = {
  * 탭이 1개면 SportLeagueFilter 가 종목 줄 자체를 감추고 리그 칩만 보여준다.
  * 종목 확장 시: 아래 주석 해제 + use-betting-matches 기본값·prediction SSR 파라미터 복원.
  */
-export type SportFilterId = "all" | "축구" | "야구" | "농구" | "배구"
+type SportFilterId = "all" | "축구" | "야구" | "농구" | "배구"
 
 // as const 를 쓰지 않는다 — 탭이 하나면 id 가 "축구" 리터럴로 좁아져 "all" 분기가
 // 타입 에러가 된다 (종목 확장 시 되돌릴 코드를 지금 지우게 만드는 함정).

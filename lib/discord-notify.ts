@@ -16,7 +16,7 @@ const COLORS: Record<Level, number> = {
   success: 0x57f287, // 초록 (정상/완료)
 }
 
-export interface DiscordOpsNotice {
+interface DiscordOpsNotice {
   title: string
   description?: string
   level?: Level

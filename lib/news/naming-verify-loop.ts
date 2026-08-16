@@ -39,7 +39,7 @@ const MAX_VERIFICATIONS_PER_ARTICLE = 8
  */
 const ABSORB_SIMILARITY_MIN = 0.75
 
-export interface LoopDictionaryEntry {
+interface LoopDictionaryEntry {
   id: string
   preferred_ko: string
   romanized: string | null
@@ -47,7 +47,7 @@ export interface LoopDictionaryEntry {
   hangul_alts: string[] | null
 }
 
-export interface NamingLoopResult {
+interface NamingLoopResult {
   /** 네이버 근거로 사전에 새로 등재된 이름 (기사 표기 → 대표 표기) */
   registered: { name: string; preferred: string }[]
   /** 검증을 통과하지 못한 이름 — 기존대로 보류(사람 검수) 사유가 된다 */

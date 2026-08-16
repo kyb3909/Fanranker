@@ -15,7 +15,7 @@ export interface AliasRow {
   surfaces: string[]
 }
 
-export interface CanonicalPlayer {
+interface CanonicalPlayer {
   /** identity_key 에 들어갈 정규 키 (사전 미등재면 입력 그대로 정규화) */
   key: string
   /** 한국어 표기 (사전 미등재면 null — 추출기의 player_kr 이 폴백) */
@@ -28,7 +28,7 @@ interface AliasEntry {
   ko: string
 }
 
-export interface AliasIndex {
+interface AliasIndex {
   exact: Map<string, AliasEntry>
   /** 성(마지막 토큰) → 항목. 같은 성이 여러 명이면 null(충돌 — 병합 금지) */
   bySurname: Map<string, AliasEntry | null>

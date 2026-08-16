@@ -24,19 +24,19 @@ export interface AssignmentRowSnapshot {
   created_at: string
 }
 
-export interface CandidateOutcomeSnapshot {
+interface CandidateOutcomeSnapshot {
   candidate_id: string
   state: string
 }
 
 /** 관심도 필터가 남긴 원장 이벤트 (actor = news-interest-filter) */
-export interface InterestEventSnapshot {
+interface InterestEventSnapshot {
   candidate_id: string
   reason_code: string | null
 }
 
 /** 후보의 실제 종착 — shadow 판정과 맞대볼 축 */
-export type ActualBucket = "published" | "dropped" | "pending" | "unknown"
+type ActualBucket = "published" | "dropped" | "pending" | "unknown"
 
 const DROPPED_STATES = new Set(["rejected", "expired", "duplicate", "dead_letter"])
 

@@ -39,7 +39,7 @@ const GAMBLING_PATTERNS: RegExp[] = [
   /환전|출금|입금/,
 ]
 
-export type SafetyVerdict = "ok" | "crisis" | "gambling"
+type SafetyVerdict = "ok" | "crisis" | "gambling"
 
 /** 질문 텍스트를 검사한다. 질문이 없으면 통과. */
 export function checkSafety(question: string | undefined | null): SafetyVerdict {

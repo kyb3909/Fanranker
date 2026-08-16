@@ -43,7 +43,7 @@ function extractSubject(title: string): string | null {
   return cleaned.length >= 2 && cleaned.length <= 20 ? cleaned : null
 }
 
-export interface TarotSuggestion {
+interface TarotSuggestion {
   /** 프리필될 질문 */
   question: string
   /** 카드에 붙일 유도 문구 */

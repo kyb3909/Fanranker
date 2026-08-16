@@ -19,7 +19,7 @@ const MODEL = "gpt-4.1-mini"
 export const ERROR_REPORT_HINT_RE =
   /잘못|틀렸|틀린|틀림|오보|오타|오류|정정|수정해|사실과 다|사실이 아|아닌데요|아니에요|아니잖|가짜|허위|팩트 체크|팩트체크|기사가 이상|반대로|바뀌었|헷갈린 듯|다른 선수|다른 팀/
 
-export interface CandidateComment {
+interface CandidateComment {
   id: string
   postId: string
   userId: string | null
@@ -55,7 +55,7 @@ const CLASSIFY_PROMPT = `너는 한국 스포츠 뉴스룸의 제보 접수원�
 입력: {"items":[{"idx":0,"기사제목":"...","기사본문":"...","댓글":"..."}]}
 출력 (JSON only): {"results":[{"idx":0,"is_report":true|false,"claim":"..."}]}`
 
-export interface ErrorReportVerdict {
+interface ErrorReportVerdict {
   idx: number
   isReport: boolean
   claim: string

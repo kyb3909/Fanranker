@@ -113,7 +113,7 @@ export function parseDateHint(question: string, now: Date): string | null {
   return null
 }
 
-export interface MatchedFixture {
+interface MatchedFixture {
   home: string
   away: string
   kickoffIso: string

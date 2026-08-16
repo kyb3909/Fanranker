@@ -26,7 +26,7 @@ import { dedupeMarketRows } from "@/lib/betman/market-dedup"
 /** 조회 실패를 라우트가 구분해 메시지를 유지하기 위한 표식 */
 export class BetmanGamesError extends Error {}
 
-export interface GamesPayloadParams {
+interface GamesPayloadParams {
   /** "all" 또는 축구/야구/농구/배구 — 호출 전 검증되어 있다고 가정 */
   sport?: string
   /** "all" 또는 일반/핸디캡/언더오버 */

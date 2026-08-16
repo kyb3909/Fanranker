@@ -25,9 +25,9 @@ import {
   THRESHOLDS,
 } from "./ad-filter-config"
 
-export type AdSignalId = keyof typeof SIGNAL_WEIGHTS
+type AdSignalId = keyof typeof SIGNAL_WEIGHTS
 
-export interface AdSignalHit {
+interface AdSignalHit {
   id: AdSignalId
   /** 0..1 — 신호 자체의 확신도 */
   score: number
@@ -46,7 +46,7 @@ export interface AdFilterInput {
   otherPostsBySameAuthor: Array<{ text: string; createdAt: Date }>
 }
 
-export interface AdFilterResult {
+interface AdFilterResult {
   /** 최종 점수 = min(1, Σ 가중치 × 신호점수) */
   score: number
   signals: AdSignalHit[]

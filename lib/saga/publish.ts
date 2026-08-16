@@ -13,7 +13,7 @@ import { buildAliasIndex, canonicalizePlayer, type AliasRow } from "./canonical"
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 
 /** 사가 엔트리 공용 업서트 재료 — 검수 큐 발행과 기사 발행 연동이 공유 */
-export interface SagaEntryDraft {
+interface SagaEntryDraft {
   player: string
   playerKr: string | null
   direction: "in" | "out"
@@ -30,7 +30,7 @@ export interface SagaEntryDraft {
  * 사가 getOrCreate + 엔트리 append. 같은 (사가, cluster_key)에 이미 엔트리가 있으면
  * **에코로 접는다** (D9 — 덮어쓰기 금지, origin 은 먼저 발행된 보도 유지).
  */
-export async function upsertSagaEntry(
+async function upsertSagaEntry(
   supabase: ServiceClient,
   d: SagaEntryDraft
 ): Promise<{
@@ -149,7 +149,7 @@ export async function upsertSagaEntry(
  * 제목에 시즌 사가의 팀 별칭이 등장하면 연결 — LLM 없이 텍스트 매칭 (제목은
  * 한국어라 팀명이 그대로 박혀 있다). 첫 매칭 팀 하나만 (post_id 가 PK).
  */
-export async function linkArticleToSeasonWiki(
+async function linkArticleToSeasonWiki(
   supabase: ServiceClient,
   article: { postId: string; title: string }
 ): Promise<string | null> {

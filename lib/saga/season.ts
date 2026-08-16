@@ -25,13 +25,13 @@ export interface SeasonSubject {
   season: string
 }
 
-export interface SquadPlayer {
+interface SquadPlayer {
   name: string
   nameKo: string
   position: string
 }
 
-export interface SeasonStanding {
+interface SeasonStanding {
   rank: number
   played: number
   win: number
@@ -42,7 +42,7 @@ export interface SeasonStanding {
   fetchedAt: string
 }
 
-export interface SeasonMatch {
+interface SeasonMatch {
   matchTime: string
   home: string
   away: string
@@ -52,7 +52,7 @@ export interface SeasonMatch {
   leagueCode: string | null
 }
 
-export interface RelatedSaga {
+interface RelatedSaga {
   slug: string
   title: string
   stage: string
@@ -275,7 +275,7 @@ export async function fetchTeamChronicle(
   return events
 }
 
-export async function fetchRelatedTransferSagas(
+async function fetchRelatedTransferSagas(
   supabase: ServiceClient,
   aliases: string[]
 ): Promise<RelatedSaga[]> {

@@ -39,7 +39,7 @@ const FETCH_HEADERS = {
 
 /* ── 기초 스탯 ── */
 
-export interface MatchStatRow {
+interface MatchStatRow {
   label: string // 한글 지표명
   home: string
   away: string
@@ -112,7 +112,7 @@ function cachedStats(eventId: string) {
 
 /* ── 경기 리포트 ── */
 
-export interface MatchReport {
+interface MatchReport {
   title: string
   paragraphs: string[]
 }
@@ -467,7 +467,7 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
 
 /* ── 본체 ── */
 
-export interface MatchExtras {
+interface MatchExtras {
   stats: MatchStatRow[] | null
   report: MatchReport | null
 }

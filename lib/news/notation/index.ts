@@ -28,17 +28,7 @@
  * 사가는 선수 이적이라 감독을 섞으면 무인 사서를 폐지시킨 오염이 재발한다.
  */
 
-export {
-  PERSON_CATEGORIES,
-  LABEL_CATEGORIES,
-  NOTATION_CATEGORIES,
-  loadNotation,
-  loadNotationSafe,
-  emptyNotation,
-  addRuntimePerson,
-  type Notation,
-  type PersonCategory,
-} from "./load"
+export { loadNotation, loadNotationSafe, addRuntimePerson, type PersonCategory } from "./load"
 
 export {
   // 인물 표기 치환
@@ -53,13 +43,9 @@ export {
   unknownPersonNames,
   findUniqueRomanizedMatch,
   // 예방 힌트
-  buildNotationHints,
+
   // 위반 탐지
   findNotationViolations,
   findAliasPoisoning,
-  type AliasPoisoning,
-  type NamingPair,
   type NotationEntry,
-  type NotationHint,
-  type NotationViolation,
 } from "./rules"

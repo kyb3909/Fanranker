@@ -9,7 +9,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
  *
  * ⚠️ 절대 throw 하지 않는다. 계측 실패가 예측/댓글 자체를 죽이면 본말전도다.
  */
-export type FunnelStep = "first_slip" | "first_post" | "first_comment"
+type FunnelStep = "first_slip" | "first_post" | "first_comment"
 
 export async function recordFunnelMilestone(userId: string, step: FunnelStep): Promise<boolean> {
   if (!userId) return false
