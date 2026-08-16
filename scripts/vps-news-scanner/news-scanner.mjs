@@ -577,6 +577,7 @@ worthy=false 로 버려라. (이적료·계약 기간·부상 진단명처럼 **
   (예: "아시아 투어 참가 선수 명단 공개").
 - 팀/선수 한글 표기는 한국 ${sp.label} 미디어의 정착된 표기를 따른다 (${sp.notationExamples}). 억지 음차 금지. 확신 없으면 영문 원어를 그대로 쓴다.
   ⚠️ 아래 "확정 한글 표기" 목록이 있으면 **그것이 이 규칙보다 우선한다** (네 감보다 사전이 맞다).
+- 구단명은 한국 미디어가 부르는 **통칭(축약형)** 으로 쓴다 — 레알 마드리드→레알, 인테르나치오날레→인테르, 맨체스터 유나이티드→맨유, 파리 생제르맹→PSG. 정식 명칭을 반복하지 마라. 단, **직접 인용문 안의 표현은 원문 그대로** 둔다.
 - 미확정 루머는 단정하지 말 것.
 - credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${namingHints}${fewshot}${styleshot}
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
