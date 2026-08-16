@@ -85,7 +85,11 @@ function observedIds(): Map<string, Set<string>> {
 
 function main() {
   const catalogFile = readdirSync(CACHE).find((f) => f.startsWith("leagues_"))
-  if (!catalogFile) throw new Error("leagues 캐시 없음 — _lfa-probe.ts 를 먼저 실행")
+  if (!catalogFile) {
+    throw new Error(
+      `${CACHE}/leagues_*.json 없음 — GET /api/v1/leagues?api_key=…&lang=en 응답을 그 경로에 저장할 것`
+    )
+  }
   const catalog = JSON.parse(readFileSync(join(CACHE, catalogFile), "utf-8"))
   const byCountry = new Map<string, { name: string; id: string }[]>()
   for (const c of catalog.data.data) byCountry.set(c.country, c.leagues)
@@ -124,17 +128,15 @@ function main() {
   const mappedIds = new Set(out.map((o) => o.id))
   const unmapped = [...obs.entries()].filter(([, ids]) => ![...ids].some((i) => mappedIds.has(i)))
 
+  // 정렬 패딩을 넣지 않는다 — prettier 가 걷어내서 재생성마다 diff 가 난다 (멱등 유지)
   const lines = out
-    .map(
-      (o) =>
-        `  ["${o.code}", "${o.id}"],`.padEnd(52) + `// ${o.label}${o.note ? ` — ${o.note}` : ""}`
-    )
+    .map((o) => `  ["${o.code}", "${o.id}"], // ${o.label}${o.note ? ` — ${o.note}` : ""}`)
     .join("\n")
 
   const src = `/**
  * betman league_code → live-football-api 리그 id (2026-08-17).
  *
- * ⚠️ 이 파일은 \`scripts/_lfa-gen-leagues.ts\` 가 카탈로그에서 생성한다. 손으로 고치지 말 것 —
+ * ⚠️ 이 파일은 \`scripts/gen-lfa-leagues.ts\` 가 카탈로그에서 생성한다. 손으로 고치지 말 것 —
  *    32자 해시는 눈으로 검증이 안 된다. 리그를 추가하려면 생성기의 RULES 에 한 줄 넣고 재생성한다.
  *
  * 매핑 키가 (국가, 리그명) 쌍인 이유: 이름만으로는 충돌한다. "Premier League" 는 잉글랜드와
