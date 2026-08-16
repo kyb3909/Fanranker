@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { getFixturesForDay, todayKst, kstDayRange, type FixtureRow } from "@/lib/match/get-fixtures"
 import { leagueLabel, leagueOrder } from "@/lib/match/leagues"
+import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 
 /**
  * 경기 일정 — `/matches` (2026-08-16)
@@ -58,7 +59,29 @@ export default async function MatchesPage({
   const params = await searchParams
   const today = todayKst()
   const date = params.date && kstDayRange(params.date) ? params.date : today
-  const fixtures = await getFixturesForDay(date)
+  const rawFixtures = await getFixturesForDay(date)
+
+  // betman 은 종료를 1~1.5시간 늦게 반영한다. 킥오프가 지났는데 아직 스코어가 없는 경기가
+  // 하나라도 있을 때만 LFA 를 부른다 — 이미 다 정산된 날에는 크레딧을 쓰지 않는다.
+  const needsLfa = rawFixtures.some(
+    (f) =>
+      new Date(f.matchTime).getTime() < Date.now() &&
+      f.status !== "cancelled" &&
+      (f.status !== "completed" || f.homeScore == null)
+  )
+  const lfaIndex = needsLfa ? await getLfaDayIndex(date) : null
+  const fixtures: FixtureRow[] = lfaIndex
+    ? rawFixtures.map((f) => {
+        const hit = lookupLfaDayEntry(lfaIndex, f)
+        if (!hit) return f
+        return {
+          ...f,
+          status: hit.finished && f.status !== "cancelled" ? "completed" : f.status,
+          homeScore: f.homeScore ?? hit.homeScore,
+          awayScore: f.awayScore ?? hit.awayScore,
+        }
+      })
+    : rawFixtures
 
   // 리그별 섹션 — 대항전 → 5대 리그 → 컵 (leagues.ts 삽입 순서)
   const sections = new Map<string, FixtureRow[]>()

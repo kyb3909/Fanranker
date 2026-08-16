@@ -123,9 +123,6 @@ export async function MatchExtrasSection({
               </p>
             ))}
           </div>
-          <p className="mt-3 text-[11px]" style={{ color: "var(--wc-mute-2)" }}>
-            외신 경기 리포트를 요약 재구성한 내용입니다.
-          </p>
         </section>
       )}
     </>

@@ -75,6 +75,12 @@ function teamMatches(lfaName: string, ourEn: string): boolean {
 
 /* ── 날짜별 경기 목록 (크레딧 절약의 핵심) ── */
 
+/**
+ * 날짜별 전 경기 목록. **크레딧 비용의 대부분이 여기서 결정된다** — 캐시 키가 날짜뿐이라
+ * 그날 모든 경기·모든 방문자가 이 한 번을 나눠 쓴다. TTL 을 짧게 줄이면 비용이 그대로
+ * 배로 뛴다: 5분 → 하루 최대 576회, 1분 → 2,880회. 라이브 중계를 하지 않으므로
+ * 5분이면 충분하다 (betman 은 90분 걸린다).
+ */
 function cachedDayMatches(dateUtc: string, live: boolean) {
   return unstable_cache(
     async () => {
@@ -85,7 +91,7 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
       return data?.matches ?? []
     },
     ["lfa-day", dateUtc, live ? "live" : "settled"],
-    { revalidate: live ? 60 : 6 * 3600 }
+    { revalidate: live ? 300 : 12 * 3600 }
   )
 }
 
@@ -221,6 +227,75 @@ async function resolveMatch(game: BetmanGameKey): Promise<LfaMatch | null> {
   )
   // 정확히 1건일 때만 — 애매하면 붙이지 않는다 (남의 경기 스코어가 최악)
   return hits.length === 1 ? hits[0] : null
+}
+
+/* ── 일정 페이지용 하루치 색인 ── */
+
+export interface LfaDayEntry {
+  finished: boolean
+  homeScore: number | null
+  awayScore: number | null
+}
+
+/** (리그id|킥오프 UTC HH:MM) — 일정 페이지는 이 키로 조인한다 */
+function dayKey(leagueId: string, hhmm: string): string {
+  return `${leagueId}|${hhmm}`
+}
+
+/**
+ * KST 달력 하루의 LFA 스코어 색인.
+ *
+ * KST 하루는 UTC 두 날짜에 걸치므로 `/matches?date=` 를 최대 2회 부른다 — 그 2회가
+ * 그날 **모든 경기**를 덮는다 (경기별 호출이면 20~30회가 됐을 것). 캐시 TTL 은 지난
+ * 날짜면 12시간, 오늘·미래면 5분. 라이브 중계를 하지 않으므로 분 단위 갱신이 필요 없다.
+ *
+ * ⚠️ 호출부는 betman 이 이미 정산한 날에는 이 함수를 부르지 말 것 — 크레딧이 나간다.
+ */
+export async function getLfaDayIndex(dateKst: string): Promise<Map<string, LfaDayEntry>> {
+  const index = new Map<string, LfaDayEntry>()
+  try {
+    const startMs = new Date(`${dateKst}T00:00:00+09:00`).getTime()
+    if (!Number.isFinite(startMs)) return index
+    const endMs = startMs + 24 * 3600_000
+    const dates = new Set([
+      new Date(startMs).toISOString().slice(0, 10),
+      new Date(endMs - 1).toISOString().slice(0, 10),
+    ])
+    // 이미 다 지난 날이면 값이 굳었으므로 길게 캐시한다
+    const elapsed = Date.now() > endMs
+
+    for (const d of dates) {
+      const matches = await cachedDayMatches(d, !elapsed)()
+      for (const m of matches) {
+        const lid = m.league?.id
+        const ko = m.kickoff
+        if (!lid || !ko) continue
+        const toNum = (v: string | null | undefined) => {
+          const n = Number(v)
+          return v != null && v !== "" && Number.isFinite(n) ? n : null
+        }
+        index.set(dayKey(lid, ko), {
+          finished: m.status?.state === "postGame" || m.status?.display === "FT",
+          homeScore: toNum(m.home?.score),
+          awayScore: toNum(m.away?.score),
+        })
+      }
+    }
+  } catch {
+    // fail-open — 색인이 비면 호출부가 betman 값을 그대로 쓴다
+  }
+  return index
+}
+
+/** betman 경기에 대응하는 색인 항목 (리그 매핑 + 킥오프 시각으로 조인) */
+export function lookupLfaDayEntry(
+  index: Map<string, LfaDayEntry>,
+  game: { leagueCode: string; matchTime: string }
+): LfaDayEntry | null {
+  const lid = lfaLeagueId(game.leagueCode)
+  if (!lid) return null
+  const hhmm = new Date(game.matchTime).toISOString().slice(11, 16)
+  return index.get(dayKey(lid, hhmm)) ?? null
 }
 
 /**
