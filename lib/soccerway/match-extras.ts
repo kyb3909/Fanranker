@@ -178,7 +178,9 @@ async function fetchArticleBody(
  * 같은 단계식으로 쪼갠다. 이름의 근거는 LLM 의 감이 아니라 **그 경기의 실제 라인업**
  * (스쿼드 사전 한글)이다. */
 
-const MODEL = "gpt-4o-mini"
+/** 추출·작성 — 4o-mini 는 장면 디테일을 뭉개고 표기가 흔들렸다 (운영자: 더 높은 걸로).
+ *  비용은 경기당 ~$0.05, 24h 캐시라 하루 수십 회가 상한. 요율표: assignment-desk.ts */
+const MODEL = "gpt-5.1"
 /** 검증자는 뉴스 검사관과 같은 모델 — 4o-mini 는 검증 역할에서 오탐이 많았다 (실측:
  *  "맞지만 잘못된 것으로 보일 수 있다"류 자기모순 지적으로 정상 리포트를 죽였다) */
 const VERIFIER_MODEL = "gpt-5.6-terra"
@@ -297,6 +299,7 @@ async function composeReportKo(
   "이 경기의 주목 포인트"가 리포트를 심심하지 않게 만든다 (운영자 지시).
 - **마지막 문단은 경기 흐름** — 제공된 스탯 수치(xG·슈팅·점유율 등)로 어느 쪽이 주도했는지,
   스코어와 내용이 일치했는지를 짚는다. 제공되지 않은 수치는 쓰지 마라.
+- **숫자(시간·개수·기록·수치)는 사건 목록·스탯·score 에 있는 것만** 쓴다. 새 숫자를 만들지 마라.
 - 톤: 사실 기반. 감탄사·과장·클리셰("환상적인", "믿을 수 없는")는 금지지만, 장면이 눈에
   그려지게는 쓴다. 기사체 평서문.
 - 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
@@ -429,7 +432,7 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
       // 재검증까지 실패하면 미노출(fail-closed) — 틀린 리포트는 없는 리포트보다 나쁘다.
       let feedback: string[] = []
-      for (let attempt = 0; attempt < 2; attempt++) {
+      for (let attempt = 0; attempt < 3; attempt++) {
         const ko = await composeReportKo(
           homeTeam,
           awayTeam,
@@ -453,7 +456,7 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       }
       throw new Error("report-not-yet") // 검증 미통과 — 다음 요청이 처음부터 재시도
     },
-    ["match-report-v5", eventId],
+    ["match-report-v6", eventId],
     { revalidate: 24 * 3600 }
   )
 }

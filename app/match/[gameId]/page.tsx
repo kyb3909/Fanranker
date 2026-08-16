@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import Link from "@/components/ui/app-link"
 import { getMatchByGameId } from "@/lib/match/get-match"
@@ -72,13 +73,16 @@ export default async function MatchPage({ params }: Props) {
           </p>
         </section>
 
-        {/* 기초 스탯 + 경기 리포트 — LIVE/FT 에만 시도, 없으면 스스로 숨는다 */}
+        {/* 기초 스탯 + 경기 리포트 — LIVE/FT 에만 시도, 없으면 스스로 숨는다.
+            첫 생성은 LLM 파이프라인이 수십 초라 Suspense 로 분리 — 본문 먼저 스트림 */}
         {(match.status === "in_progress" || match.status === "completed") && (
-          <MatchExtrasSection
-            gameId={match.gameId}
-            homeTeam={match.homeTeam}
-            awayTeam={match.awayTeam}
-          />
+          <Suspense fallback={null}>
+            <MatchExtrasSection
+              gameId={match.gameId}
+              homeTeam={match.homeTeam}
+              awayTeam={match.awayTeam}
+            />
+          </Suspense>
         )}
       </main>
     </div>
