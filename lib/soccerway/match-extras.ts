@@ -179,15 +179,23 @@ async function fetchArticleBody(
  * (스쿼드 사전 한글)이다. */
 
 const MODEL = "gpt-4o-mini"
+/** 검증자는 뉴스 검사관과 같은 모델 — 4o-mini 는 검증 역할에서 오탐이 많았다 (실측:
+ *  "맞지만 잘못된 것으로 보일 수 있다"류 자기모순 지적으로 정상 리포트를 죽였다) */
+const VERIFIER_MODEL = "gpt-5.6-terra"
 
-async function callLLM(system: string, user: unknown, maxTokens: number): Promise<string | null> {
+async function callLLM(
+  system: string,
+  user: unknown,
+  maxTokens: number,
+  model: string = MODEL
+): Promise<string | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      ...chatParams(MODEL, { temperature: 0, max_tokens: maxTokens }),
+      ...chatParams(model, { temperature: 0, max_tokens: maxTokens }),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -273,7 +281,8 @@ async function composeReportKo(
   awayTeam: string,
   score: string | null,
   events: MatchEvent[],
-  stats: MatchStatRow[] | null
+  stats: MatchStatRow[] | null,
+  feedback?: string[]
 ): Promise<MatchReport | null> {
   const content = await callLLM(
     `구조화된 경기 사건 목록과 실측 스탯으로 한국어 경기 리포트를 쓰는 에디터다. 규칙:
@@ -281,6 +290,9 @@ async function composeReportKo(
 - **득점·퇴장 장면은 detail 을 근거로 구체적으로 묘사한다** — 공격이 어떻게 만들어졌고,
   누가 도왔고, 어떤 슛(헤더·발리·중거리 등)이 어디로 들어갔는지. 퇴장은 어떤 파울에 어떤
   판정 과정이었는지. detail 에 없는 묘사를 지어내는 것은 금지.
+- **detail 이 특정하지 않는 것은 특정하지 마라** — 슛 종류(헤더/발리/슈팅)가 명시돼 있지
+  않으면 "마무리했다"·"골로 연결했다"처럼 종류 중립으로 쓴다. 시간(분)도 minute·detail 에
+  없으면 쓰지 않는다.
 - **note 유형과 불발된 결정적 기회도 살려 쓴다** — 선방, 크로스바, 파울 누적, 선수 기록 같은
   "이 경기의 주목 포인트"가 리포트를 심심하지 않게 만든다 (운영자 지시).
 - **마지막 문단은 경기 흐름** — 제공된 스탯 수치(xG·슈팅·점유율 등)로 어느 쪽이 주도했는지,
@@ -298,6 +310,9 @@ async function composeReportKo(
       score,
       events,
       stats: (stats ?? []).map((s) => ({ 지표: s.label, [homeTeam]: s.home, [awayTeam]: s.away })),
+      ...(feedback && feedback.length > 0
+        ? { 검증_지적사항: feedback, 지시: "지적된 내용을 제거하거나 근거 안으로 고쳐 다시 써라" }
+        : {}),
     },
     1800
   )
@@ -310,6 +325,82 @@ async function composeReportKo(
     return { title: parsed.title, paragraphs: parsed.paragraphs.filter((p) => p.trim()) }
   } catch {
     return null
+  }
+}
+
+/* ── 환각 가드 (운영자: "환각 가드가 진짜 중요") ──
+ * 자유 에이전트가 아니라 고정 단계 + 독립 검증자 + 결정론 게이트 구조다
+ * (뉴스 Terra 검사관과 같은 패턴 — 런타임 멀티에이전트는 이 코드베이스 금기). */
+
+/** ④ 결정론 게이트 — 출력의 모든 숫자가 입력 재료 어딘가에 있어야 한다 (코드, LLM 아님) */
+function numbersGate(
+  report: MatchReport,
+  sources: {
+    paragraphs: string[]
+    events: MatchEvent[]
+    stats: MatchStatRow[] | null
+    score: string | null
+  }
+): { ok: boolean; rogue: string[] } {
+  const nums = (s: string) => s.match(/\d+(?:\.\d+)?/g) ?? []
+  const allowed = new Set<string>()
+  const feed = (s: string | null | undefined) => {
+    for (const n of nums(s ?? "")) {
+      allowed.add(n)
+      if (n.includes(".")) allowed.add(n.split(".")[0]) // 1.93 → 1 도 허용 (반올림 서술)
+    }
+  }
+  for (const p of sources.paragraphs) feed(p)
+  for (const e of sources.events) {
+    feed(e.minute)
+    feed(e.detail)
+    for (const p of e.players) feed(p)
+  }
+  for (const s of sources.stats ?? []) {
+    feed(s.home)
+    feed(s.away)
+    feed(s.label)
+  }
+  feed(sources.score)
+  // 스코어 개별 숫자 ("3-0" → 3, 0) 와 흔한 서수(전/후반 45·90)는 기본 허용
+  for (const n of ["0", "1", "2", "45", "90"]) allowed.add(n)
+
+  const rogue: string[] = []
+  for (const text of [report.title, ...report.paragraphs]) {
+    for (const n of nums(text)) if (!allowed.has(n)) rogue.push(n)
+  }
+  return { ok: rogue.length === 0, rogue: [...new Set(rogue)] }
+}
+
+/** ⑤ 독립 검증자 — 문장별 근거 대조 (작성자와 별도 호출, temp 0) */
+async function verifyReport(
+  report: MatchReport,
+  sources: { paragraphs: string[]; events: MatchEvent[]; stats: MatchStatRow[] | null }
+): Promise<{ pass: boolean; problems: string[] }> {
+  const content = await callLLM(
+    `경기 리포트 검증자다. 한국어 리포트의 문장들을 근거 재료와 대조해 **사실 오류만** 찾는다.
+- 근거 우선순위: **누가 득점/도움/카드를 받았고 어떤 순서였는지는 "사건 목록"(events)이 정본**이다 —
+  리포트가 events 와 일치하면 원문 문단을 다시 해석해 뒤집지 마라.
+  장면 묘사(슛 종류·방향·전개)는 해당 사건의 detail 및 원문 문단과 대조한다.
+- 문제 삼는 것: 근거에 없는 행위 주체(득점자·도움자 바꿔치기), 없는 사건, 없는 수치·기록,
+  detail 에 없는 구체 묘사(예: 원문은 슛인데 헤더라고 쓴 것).
+- 문제 삼지 않는 것: 번역·요약·문체·수식어("멋진" 등), 문단 구성, 표현 강도.
+- **확신할 수 있는 사실 오류만 넣어라.** "~로 보일 수 있다", "~여야 하며" 수준의 해석 차이는
+  문제가 아니다. 애매하면 통과시켜라 — 상류에 결정론 게이트(숫자·이름)가 따로 있다.
+- 출력: {"pass": true|false, "problems": ["문제 문장과 이유", ...]} JSON. 사실 오류가 없으면 pass true.`,
+    { 리포트: { 제목: report.title, 문단: report.paragraphs }, 근거: sources },
+    900,
+    VERIFIER_MODEL
+  )
+  if (!content) return { pass: false, problems: ["verifier-unavailable"] }
+  try {
+    const parsed = JSON.parse(content) as { pass?: boolean; problems?: string[] }
+    return {
+      pass: parsed.pass === true && (parsed.problems ?? []).length === 0,
+      problems: parsed.problems ?? [],
+    }
+  } catch {
+    return { pass: false, problems: ["verifier-parse-failed"] }
   }
 }
 
@@ -333,11 +424,36 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       )
       const { events } = groundPlayerNames(extracted.events, lineup)
       const stats = await cachedStats(eventId)().catch(() => null)
-      const ko = await composeReportKo(homeTeam, awayTeam, extracted.score, events, stats)
-      if (!ko) throw new Error("report-not-yet")
-      return ko
+      const sources = { paragraphs: body.paragraphs, events, stats, score: extracted.score }
+
+      // ③ 작성 → ④ 숫자 게이트 → ⑤ 독립 검증 → ⑥ 불합격이면 지적사항 넣어 1회 재작성.
+      // 재검증까지 실패하면 미노출(fail-closed) — 틀린 리포트는 없는 리포트보다 나쁘다.
+      let feedback: string[] = []
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const ko = await composeReportKo(
+          homeTeam,
+          awayTeam,
+          extracted.score,
+          events,
+          stats,
+          feedback
+        )
+        if (!ko) break
+        const gate = numbersGate(ko, sources)
+        const verdict = gate.ok
+          ? await verifyReport(ko, { paragraphs: body.paragraphs, events, stats })
+          : { pass: false, problems: [`근거에 없는 숫자: ${gate.rogue.join(", ")}`] }
+        if (verdict.pass) return ko
+        // 서버 로그만 — 화면은 fail-open 계약대로 침묵. 반복되면 프롬프트 튜닝 신호다.
+        console.warn(
+          `[match-report] 검증 불합격 (${attempt + 1}차, event ${eventId}):`,
+          verdict.problems.slice(0, 5).join(" | ")
+        )
+        feedback = verdict.problems
+      }
+      throw new Error("report-not-yet") // 검증 미통과 — 다음 요청이 처음부터 재시도
     },
-    ["match-report-v4", eventId],
+    ["match-report-v5", eventId],
     { revalidate: 24 * 3600 }
   )
 }
