@@ -25,17 +25,32 @@ export default async function LineupPreviewPage() {
   const payload = await getGamesPayloadForSsr().catch(() => null)
   const groups = (payload?.groupedGames ?? []) as unknown as GroupedMatch[]
 
-  // 오늘 윈도우의 축구 경기 전부 — 시작 여부 무관 (검증 페이지라 창 밖도 목록엔 보인다)
-  const matches: PreviewMatch[] = groups
-    .filter((g) => g.sport === "축구" && g.games[0]?.id)
-    .map((g) => ({
+  // 예정(scheduled) + 진행 중 + 당일 종료를 병합 — 종전엔 서버 status 필터 때문에
+  // 킥오프한 경기가 목록에서 빠져 검증 창(+180분)을 다 못 봤다 (2026-08-16 수정).
+  const byKey = new Map<string, PreviewMatch>()
+  for (const g of groups) {
+    if (g.sport !== "축구" || !g.games[0]?.id) continue
+    byKey.set(g.matchKey, {
       gameId: String(g.games[0].id),
       leagueCode: g.leagueCode,
       homeTeam: g.homeTeam,
       awayTeam: g.awayTeam,
       matchTime: g.matchTime,
-    }))
-    .sort((a, b) => a.matchTime.localeCompare(b.matchTime))
+      phase: "scheduled",
+    })
+  }
+  for (const m of [...(payload?.liveMatches ?? []), ...(payload?.finishedMatches ?? [])]) {
+    byKey.set(m.matchKey, {
+      gameId: m.gameId,
+      leagueCode: m.leagueCode,
+      homeTeam: m.homeTeam,
+      awayTeam: m.awayTeam,
+      matchTime: m.matchTime,
+      phase: m.status === "in_progress" ? "live" : "finished",
+      score: m.homeScore != null && m.awayScore != null ? `${m.homeScore}:${m.awayScore}` : null,
+    })
+  }
+  const matches = [...byKey.values()].sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 
   return (
     <Suspense>

@@ -10,6 +10,8 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 import type { GroupedMatch } from "@/types/betting"
+// type-only — games-payload 는 server-only 모듈이지만 타입 import 는 컴파일 시 소거된다
+import type { LiveMatchRow } from "@/lib/betman/games-payload"
 
 /**
  * 담벼락 상단 "오늘의 메인 이벤트" 다크 밴드 (시안 A · 매치데이).
@@ -73,6 +75,12 @@ interface MatchdayBandProps {
    * ⚠️ 기본값 false — 프로덕션 홈은 배너를 그대로 유지한다 (프리뷰 승인 전까지).
    */
   eventAsSlide?: boolean
+  /**
+   * SSR 프리페치된 진행 중/당일 종료 경기 (games 페이로드의 liveMatches/finishedMatches).
+   * 클라는 이 값을 fallback 으로 깔고 `/api/sports/live` 를 60초 간격으로 갱신한다 —
+   * 스코어 수집이 매분(wisetoto sync)이라 주기를 그에 맞췄다 (2026-08-16 운영자).
+   */
+  initialLive?: { liveMatches: LiveMatchRow[]; finishedMatches: LiveMatchRow[] } | null
 }
 
 /** 캐러셀에 끼워 넣는 이벤트 슬라이드의 표식 — 이 id 만 링크가 참가 페이지로 간다 */
@@ -83,6 +91,7 @@ export function MatchdayBand({
   compact = false,
   initialGames,
   eventAsSlide = false,
+  initialLive = null,
 }: MatchdayBandProps) {
   const eventLive = eventAsSlide && new Date() < new Date(GUNNERS_SEASON.endAt)
   const slides = useMemo(() => {
@@ -126,6 +135,19 @@ export function MatchdayBand({
       .sort((a, b) => a.matchTime.localeCompare(b.matchTime))
   }, [data])
 
+  // 진행 중/당일 종료 — 60초 갱신 (스코어 수집이 매분이라 그에 맞춤). compact 밴드는
+  // 목록을 안 그리므로 폴링하지 않는다. 응답이 CDN 30초 캐시라 오리진 부하는 미미.
+  const { data: liveData } = useSWR<{
+    liveMatches: LiveMatchRow[]
+    finishedMatches: LiveMatchRow[]
+  }>(compact ? null : "/api/sports/live", fetcher, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: false,
+    fallbackData: initialLive ?? undefined,
+  })
+  const liveMatches = liveData?.liveMatches ?? []
+  const finishedMatches = liveData?.finishedMatches ?? []
+
   // 훅 규칙상 조건 없이 호출 — full 밴드에서는 TodayFixtures 에 내려준다
   const countdown = useCountdown(matches[0]?.matchTime)
 
@@ -167,8 +189,14 @@ export function MatchdayBand({
     )
   }
 
-  // 밴드는 톱스토리도 경기도 없으면 통째로 숨긴다 (빈 다크 박스로 첫 화면 낭비 X)
-  if (slides.length === 0 && matches.length === 0) return null
+  // 밴드는 톱스토리도 경기도(예정·진행·당일 종료 포함) 없으면 통째로 숨긴다
+  if (
+    slides.length === 0 &&
+    matches.length === 0 &&
+    liveMatches.length === 0 &&
+    finishedMatches.length === 0
+  )
+    return null
 
   return (
     <section className="gn-band" aria-label="오늘의 메인 이벤트">
@@ -263,7 +291,14 @@ export function MatchdayBand({
 
         <div className="grid gap-4 pb-7 lg:grid-cols-[1.35fr_1fr]">
           {slides.length > 0 && <TopStoryCarousel slides={slides} />}
-          {matches.length > 0 && <TodayFixtures matches={matches} countdown={countdown} />}
+          {(matches.length > 0 || liveMatches.length > 0 || finishedMatches.length > 0) && (
+            <TodayFixtures
+              matches={matches}
+              countdown={countdown}
+              liveMatches={liveMatches}
+              finishedMatches={finishedMatches}
+            />
+          )}
         </div>
       </div>
     </section>
@@ -457,17 +492,30 @@ function CarouselBtn({
 
 /* ─────────────────────────── 오늘의 경기 ─────────────────────────── */
 
+/** LIVE 최대 노출 행 — 새벽 MLS 13경기 동시 진행 실측, 캡 없이는 패널이 무한히 자란다 */
+const MAX_LIVE_ROWS = 4
+const MAX_FT_ROWS = 8
+
 function TodayFixtures({
   matches,
   countdown,
+  liveMatches,
+  finishedMatches,
 }: {
   matches: GroupedMatch[]
   countdown: string | null
+  liveMatches: LiveMatchRow[]
+  finishedMatches: LiveMatchRow[]
 }) {
   // SSR/하이드레이션 첫 렌더에서는 undefined → 게스트 문구로 시작, 로그인 확인 후 전환
   const { isSignedIn } = useAuth()
   const shown = matches.slice(0, MAX_ROWS)
   const rest = matches.length - shown.length
+  const liveShown = liveMatches.slice(0, MAX_LIVE_ROWS)
+  const liveRest = liveMatches.length - liveShown.length
+  // FT 인데 스코어가 아직 안 붙은 행은 숨긴다 — "vs" 로 보이면 예정과 구분이 안 된다
+  const ftAll = finishedMatches.filter((m) => m.homeScore != null && m.awayScore != null)
+  const ftShown = ftAll.slice(0, MAX_FT_ROWS)
 
   return (
     <aside
@@ -529,6 +577,57 @@ function TodayFixtures({
         </Link>
       )}
 
+      {/* 진행 중 — 매분 수집되는 스코어를 그대로 (2026-08-16, "킥오프 순간 사라지던" 경기의 귀환) */}
+      {liveShown.length > 0 && (
+        <ul style={{ borderBottom: "1px solid var(--gn-night-line)" }}>
+          {liveShown.map((m) => (
+            <li key={m.matchKey} className="flex items-center gap-2.5 py-2">
+              <span
+                className="gn-num shrink-0 rounded px-1.5 py-[3px] text-[10.5px] font-extrabold"
+                style={{
+                  background: "rgba(150,30,55,0.45)",
+                  color: "var(--gn-cream)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                LIVE
+              </span>
+              <span
+                className="gn-num shrink-0 text-[11px] font-bold uppercase"
+                style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.06em" }}
+              >
+                {m.leagueCode}
+              </span>
+              <span
+                className="min-w-0 flex-1 truncate text-[13.5px] font-bold"
+                style={{ color: "var(--gn-cream)" }}
+              >
+                {m.homeTeam}
+                {/* 스코어 미수집(wisetoto 미커버 라운드) 이면 숫자를 지어내지 않는다 */}
+                {m.homeScore != null && m.awayScore != null ? (
+                  <span className="gn-num mx-1.5 text-[15px]" style={{ color: "var(--wc-gold)" }}>
+                    {m.homeScore}:{m.awayScore}
+                  </span>
+                ) : (
+                  <span
+                    className="gn-num mx-1.5 text-[11px] font-bold"
+                    style={{ color: "#8d8794" }}
+                  >
+                    VS
+                  </span>
+                )}
+                {m.awayTeam}
+              </span>
+            </li>
+          ))}
+          {liveRest > 0 && (
+            <li className="pb-2 text-[11.5px]" style={{ color: "#8d8794" }}>
+              외 {liveRest}경기 진행 중
+            </li>
+          )}
+        </ul>
+      )}
+
       <ul className="flex-1">
         {shown.map((m) => (
           <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
@@ -564,6 +663,54 @@ function TodayFixtures({
           </li>
         ))}
       </ul>
+
+      {/* 오늘 결과 — 기본 접힘. 하루의 서사(진행→예정→결과)를 패널 하나에 담는다 */}
+      {ftShown.length > 0 && (
+        <details className="mt-1" style={{ borderTop: "1px solid var(--gn-night-line)" }}>
+          <summary
+            className="cursor-pointer list-none py-2 text-[12.5px] font-bold"
+            style={{ color: "var(--gn-cream-dim)" }}
+          >
+            오늘 결과 {ftAll.length}경기 ▾
+          </summary>
+          <ul>
+            {ftShown.map((m) => (
+              <li key={m.matchKey} className="flex items-center gap-2.5 py-1.5">
+                <span
+                  className="gn-num shrink-0 text-[10.5px] font-bold"
+                  style={{ color: "#8d8794", letterSpacing: "0.08em" }}
+                >
+                  FT
+                </span>
+                <span
+                  className="gn-num shrink-0 text-[11px] font-bold uppercase"
+                  style={{ color: "#8d8794", letterSpacing: "0.06em" }}
+                >
+                  {m.leagueCode}
+                </span>
+                <span
+                  className="min-w-0 flex-1 truncate text-[13px] font-semibold"
+                  style={{ color: "var(--gn-cream-dim)" }}
+                >
+                  {m.homeTeam}
+                  <span
+                    className="gn-num mx-1.5 text-[13.5px] font-bold"
+                    style={{ color: "var(--gn-cream)" }}
+                  >
+                    {m.homeScore}:{m.awayScore}
+                  </span>
+                  {m.awayTeam}
+                </span>
+              </li>
+            ))}
+            {ftAll.length > ftShown.length && (
+              <li className="pb-1.5 text-[11.5px]" style={{ color: "#8d8794" }}>
+                외 {ftAll.length - ftShown.length}경기
+              </li>
+            )}
+          </ul>
+        </details>
+      )}
 
       <Link
         href="/prediction"

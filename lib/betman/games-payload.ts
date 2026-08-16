@@ -91,6 +91,91 @@ export function getGamesPayloadForSsr(sport = "all") {
   })()
 }
 
+/**
+ * 진행 중/당일 종료 경기 — 매치 단위로 접은 경량 목록 (2026-08-16).
+ *
+ * ## 왜 별도 목록인가
+ * 메인 목록(games/groupedGames)은 `isToday → status='scheduled'` 필터가 예측 UI 를
+ * 보호한다 — 킥오프한 경기가 예측 목록에 섞이면 안 된다. 그래서 진행/종료 경기는
+ * **별도 필드로 운반**하고, 소비자(홈 매치데이 밴드·lineup-preview)가 명시적으로 꺼내 쓴다.
+ *
+ * ## 스코어는 어디서 오나
+ * `/api/wisetoto/sync` cron 이 **매분** `betman_games.home_score/away_score` 를 갱신한다
+ * (+VPS 크롤러 보조). 이 함수는 그 값을 읽기만 한다 — 수집 변경 0.
+ * ⚠️ 발견 배경: 이 스코어를 읽는 사용자향 UI 가 지금까지 0개였다 (매분 수집 → 아무도 못 봄).
+ */
+export interface LiveMatchRow {
+  matchKey: string
+  /** 라인업 조회용 대표 game_id (마켓 row 중 아무거나 하나) */
+  gameId: string
+  homeTeam: string
+  awayTeam: string
+  leagueCode: string
+  matchTime: string
+  status: "in_progress" | "completed"
+  homeScore: number | null
+  awayScore: number | null
+}
+
+async function fetchLiveFinishedMatches(
+  supabase: ReturnType<typeof createServiceRoleClient>
+): Promise<{ liveMatches: LiveMatchRow[]; finishedMatches: LiveMatchRow[] }> {
+  // ⚠️ 데일리 윈도우를 쓰지 않는다 — 윈도우는 전날 23:00 에 다음날로 flip 되는데,
+  //    그 순간부터 새벽까지가 유럽 경기의 한복판이다. 윈도우 기준이면 "지금 뛰고 있는"
+  //    경기가 전날 소속이라 통째로 빠진다 (첫 구현에서 실제로 0건이 나왔던 원인).
+  //    사용자 직관은 "지금 진행 중" + "지난 밤 결과"이므로 now 기준 범위로 자른다.
+  const now = Date.now()
+  // 진행 중: 킥오프 2.5h 이내 — 축구는 연장 없이 ~2h 에 끝난다. 이보다 오래된 in_progress 는
+  // 결과 크롤러가 아직 completed 로 못 바꾼 **낡은 상태 잔재**다 (실측: 종료 3h 지난 EFL
+  // 경기들이 in_progress 로 남아 null:null LIVE 로 떴다). LIVE 로 보여주면 거짓말이 된다.
+  const liveFloor = new Date(now - 2.5 * 3600_000).toISOString()
+  const finishedFloor = new Date(now - 24 * 3600_000).toISOString() // 결과: 24h 이내
+  const { data } = await supabase
+    .from("betman_games")
+    .select(
+      "id, home_team_name, away_team_name, league_code, match_time, status, home_score, away_score"
+    )
+    .eq("sport", "축구")
+    .in("status", ["in_progress", "completed"])
+    .gt("match_time", finishedFloor)
+    .lte("match_time", new Date(now + 10 * 60_000).toISOString())
+    .neq("home_team_name", "미정")
+    .not("home_team_name", "is", null)
+
+  const byKey = new Map<string, LiveMatchRow>()
+  for (const g of data ?? []) {
+    const key = `${g.home_team_name}_${g.away_team_name}_${g.match_time}`
+    const prev = byKey.get(key)
+    // 마켓별 다중 row — 스코어가 있는 row 를 우선해 한 경기로 접는다
+    if (prev && prev.homeScore != null) continue
+    byKey.set(key, {
+      matchKey: key,
+      gameId: String(g.id),
+      homeTeam: String(g.home_team_name),
+      awayTeam: String(g.away_team_name),
+      leagueCode: String(g.league_code ?? ""),
+      matchTime: String(g.match_time),
+      status: g.status as "in_progress" | "completed",
+      homeScore: g.home_score != null ? Number(g.home_score) : null,
+      awayScore: g.away_score != null ? Number(g.away_score) : null,
+    })
+  }
+  const all = [...byKey.values()]
+  return {
+    liveMatches: all
+      .filter((m) => m.status === "in_progress" && m.matchTime >= liveFloor)
+      .sort((a, b) => a.matchTime.localeCompare(b.matchTime)),
+    finishedMatches: all
+      .filter((m) => m.status === "completed")
+      .sort((a, b) => b.matchTime.localeCompare(a.matchTime)),
+  }
+}
+
+/** 진행/최근 종료 경기만 — 홈 밴드 60초 폴링용 경량 진입점 (라우트에서 사용) */
+export async function getLiveFinishedForToday() {
+  return fetchLiveFinishedMatches(createServiceRoleClient())
+}
+
 export async function buildGamesPayload(params: GamesPayloadParams = {}) {
   const supabase = createServiceRoleClient()
   const sportFilter = params.sport || "all"
@@ -105,7 +190,8 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
   // --- 이벤트 경기 풀 분리 + 동기화 상태 (왕복 1회로 묶음) ---
   // ?event=<slug> → 그 이벤트 league_codes 만 포함 (이벤트 베팅 페이지 전용)
   // param 없음(메인) → 활성 이벤트(미종료) league_codes 전부 제외 → 이벤트 경기는 메인 풀에 안 보임
-  const [eventScopeRes, syncStateRes] = await Promise.all([
+  const isToday = !dateParam || dailyId === getTodayDailyId()
+  const [eventScopeRes, syncStateRes, liveFinished] = await Promise.all([
     eventParam
       ? supabase.from("events").select("league_codes").eq("slug", eventParam).maybeSingle()
       : supabase.from("events").select("league_codes").neq("status", "closed"),
@@ -115,6 +201,13 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // 진행/종료 경기는 오늘 윈도우에서만 의미가 있다 — 과거 날짜 조회에는 빈 목록
+    isToday
+      ? fetchLiveFinishedMatches(supabase)
+      : Promise.resolve({
+          liveMatches: [] as LiveMatchRow[],
+          finishedMatches: [] as LiveMatchRow[],
+        }),
   ])
 
   const scopeRaw = eventScopeRes.data as
@@ -129,7 +222,6 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
   const excludeCodes: string[] = eventParam ? [] : scopeCodes
 
   // --- Fetch games in daily window (kickoff-time based) ---
-  const isToday = !dateParam || dailyId === getTodayDailyId()
   let query = supabase
     .from("betman_games")
     .select(
@@ -375,6 +467,9 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
     earliestBetClose,
     games: visibleGames,
     groupedGames: visibleGroups,
+    // 진행 중/당일 종료 — 예측 목록과 분리된 별도 필드 (홈 밴드 LIVE·오늘 결과 섹션용)
+    liveMatches: liveFinished.liveMatches,
+    finishedMatches: liveFinished.finishedMatches,
     userPredictions,
     total: visibleGames.length,
     syncInfo: {

@@ -20,6 +20,10 @@ export interface PreviewMatch {
   homeTeam: string
   awayTeam: string
   matchTime: string
+  /** 예정/진행/종료 — 검증 페이지라 경기 단계도 그대로 노출한다 */
+  phase: "scheduled" | "live" | "finished"
+  /** 진행/종료 경기의 현재 스코어 ("2:1") — 없으면 미표시 */
+  score?: string | null
 }
 
 type ProbeStatus = "loading" | "none" | "pending" | "ready" | "error"
@@ -118,11 +122,27 @@ export function LineupPreviewClient({ matches }: { matches: PreviewMatch[] }) {
                 >
                   {m.leagueCode}
                 </span>
+                {m.phase !== "scheduled" && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-extrabold"
+                    style={
+                      m.phase === "live"
+                        ? { background: "var(--wc-burgundy)", color: "#fff" }
+                        : { background: "var(--wc-soft)", color: "var(--wc-mute)" }
+                    }
+                  >
+                    {m.phase === "live" ? "LIVE" : "FT"}
+                  </span>
+                )}
                 <span
                   className="min-w-0 flex-1 truncate text-[14px] font-bold"
                   style={{ color: "var(--wc-ink)" }}
                 >
-                  {m.homeTeam} <span style={{ color: "var(--wc-mute-2)" }}>vs</span> {m.awayTeam}
+                  {m.homeTeam}{" "}
+                  <span className="gn-num" style={{ color: "var(--wc-mute-2)" }}>
+                    {m.score ?? "vs"}
+                  </span>{" "}
+                  {m.awayTeam}
                 </span>
                 <StatusBadge gameId={m.gameId} />
               </div>

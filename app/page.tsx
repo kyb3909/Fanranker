@@ -77,7 +77,12 @@ async function fetchAllHomeData(sort: SortType) {
     //    `revalidate = 300` 은 실제로는 동작하지 않아(ClerkProvider dynamic) 매 요청마다
     //    렌더된다. 캐시 없이 직접 부르면 왕복만 줄고 DB 조회는 늘어난다.
     getGamesPayloadForSsr()
-      .then((p) => ({ groupedGames: p.groupedGames as unknown as GroupedMatch[] }))
+      .then((p) => ({
+        groupedGames: p.groupedGames as unknown as GroupedMatch[],
+        // 진행 중/당일 종료 — 매치데이 밴드 LIVE·오늘 결과 섹션 (2026-08-16)
+        liveMatches: p.liveMatches,
+        finishedMatches: p.finishedMatches,
+      }))
       .catch(() => null),
   ])
 

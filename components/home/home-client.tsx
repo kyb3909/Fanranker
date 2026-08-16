@@ -16,6 +16,7 @@ import { PageBand } from "@/components/page-band"
 import { CardNewsFeed } from "@/components/cardnews/card-news-feed"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
 import type { GroupedMatch } from "@/types/betting"
+import type { LiveMatchRow } from "@/lib/betman/games-payload"
 import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
 // 사이드바는 SSR 프리페치 데이터로 즉시 렌더되므로 직접 import.
 // dynamic() 로 감싸면 하이드레이션 시 loading 스켈레톤(h-96)이 잠깐 떴다가 실제 사이드바로
@@ -56,8 +57,13 @@ interface HomeClientProps {
    * initialCardNews.cards 에서는 이미 제외돼 있어 히어로↔떡밥 중복이 없다.
    */
   heroCards?: CardNewsItem[]
-  /** SSR 프리페치된 오늘의 경기 — 매치데이 밴드 CLS 제거용 (없으면 클라 SWR 폴백) */
-  initialGames?: { groupedGames?: GroupedMatch[] } | null
+  /** SSR 프리페치된 오늘의 경기 — 매치데이 밴드 CLS 제거용 (없으면 클라 SWR 폴백).
+   *  liveMatches/finishedMatches 는 밴드의 LIVE·오늘 결과 섹션 초기값 (2026-08-16) */
+  initialGames?: {
+    groupedGames?: GroupedMatch[]
+    liveMatches?: LiveMatchRow[]
+    finishedMatches?: LiveMatchRow[]
+  } | null
 }
 
 export function HomeClient({
@@ -171,6 +177,14 @@ export function HomeClient({
           cards={heroCards ?? initialCardNews?.cards ?? []}
           initialGames={initialGames}
           eventAsSlide
+          initialLive={
+            initialGames?.liveMatches
+              ? {
+                  liveMatches: initialGames.liveMatches,
+                  finishedMatches: initialGames.finishedMatches ?? [],
+                }
+              : null
+          }
         />
       ) : feedTab === "games" ? (
         // 같은 DNA 의 축소 매치데이 밴드 — 히어로→"요약"으로 읽히고, 카운트다운이
