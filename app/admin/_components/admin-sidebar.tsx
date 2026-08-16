@@ -125,6 +125,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: "경기 관리", href: "/admin/matches", icon: Trophy, badge: "matches" },
       { title: "팀 사전·경기 매핑", href: "/admin/team-dictionary", icon: BookOpen },
+      { title: "선수단 사전", href: "/admin/team-squads", icon: BookOpen },
       { title: "전문가 승인", href: "/admin/experts", icon: Shield },
       { title: "정산 처리", href: "/admin/settlements", icon: Coins },
       { title: "토큰 모니터링", href: "/admin/tokens", icon: Target },

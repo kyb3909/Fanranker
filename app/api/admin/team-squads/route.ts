@@ -73,16 +73,26 @@ export async function GET(req: NextRequest) {
   const { supabase } = auth
 
   const team = req.nextUrl.searchParams.get("team")
-  let q = supabase
-    .from("team_squads")
-    .select(
-      "soccerway_team_id, player_id, player_slug, name_en, name_kr, jersey_number, position, status, team_dictionary(name_kr)"
-    )
-    .order("soccerway_team_id")
-    .order("position")
-  if (team) q = q.eq("soccerway_team_id", team)
-  const { data, error } = await q
-  if (error) return apiError("스쿼드 조회 실패", 500, error)
+  const missingOnly = req.nextUrl.searchParams.get("missing") === "1"
+
+  // PostgREST 1,000행 상한 — 스쿼드는 3천+ 행이라 페이지로 전량 수집
+  const data: Record<string, unknown>[] = []
+  for (let from = 0; ; from += 1000) {
+    let q = supabase
+      .from("team_squads")
+      .select(
+        "soccerway_team_id, player_id, player_slug, name_en, name_kr, jersey_number, position, status, team_dictionary(name_kr)"
+      )
+      .order("soccerway_team_id")
+      .order("position")
+      .range(from, from + 999)
+    if (team) q = q.eq("soccerway_team_id", team)
+    if (missingOnly) q = q.is("name_kr", null)
+    const { data: page, error } = await q
+    if (error) return apiError("스쿼드 조회 실패", 500, error)
+    data.push(...(page ?? []))
+    if (!page || page.length < 1000) break
+  }
 
   const rows = (data ?? []).map((r) => ({
     soccerway_team_id: String(r.soccerway_team_id),
