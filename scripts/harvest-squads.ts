@@ -103,17 +103,26 @@ async function findNamuDoc(
   squad: SquadMember[]
 ): Promise<{ url: string; text: string } | null> {
   const candidates = [...new Set([nameKr, `${nameKr} FC`, `FC ${nameKr}`, nameEn])]
+  // Go?q= 는 나무위키의 "바로가기" — 표기 차이를 넘어 정답 문서로 302 해준다
+  // (실측: AC밀란 → /w/AC 밀란). 직접 후보가 다 빗나가는 팀의 구원투수.
+  const urls = [
+    ...candidates.map((c) => `https://namu.wiki/w/${encodeURIComponent(c)}`),
+    `https://namu.wiki/Go?q=${encodeURIComponent(nameKr)}`,
+    `https://namu.wiki/Go?q=${encodeURIComponent(`${nameKr} FC`)}`,
+  ]
 
   // 점수 = 실제 한글 대조에 성공하는 선수 수 — 표면 등장 횟수보다 훨씬 강한 신호
   let best: { url: string; text: string; score: number } | null = null
-  for (const cand of candidates) {
-    const url = `https://namu.wiki/w/${encodeURIComponent(cand)}`
+  const seen = new Set<string>()
+  for (const url of urls) {
     try {
       const res = await fetch(url, { headers: NAMU_HEADERS })
       if (!res.ok) continue
+      if (seen.has(res.url)) continue // Go 리다이렉트가 직접 후보와 같은 문서로 온 경우
+      seen.add(res.url)
       const text = htmlToText(await res.text())
       const score = squad.filter((p) => matchKoreanName(p.nameEn, text) !== null).length
-      if (!best || score > best.score) best = { url, text, score }
+      if (!best || score > best.score) best = { url: res.url, text, score }
       if (score >= squad.length * 0.6) break // 충분히 확신 — 더 안 돈다
     } catch {
       /* 다음 후보 */
