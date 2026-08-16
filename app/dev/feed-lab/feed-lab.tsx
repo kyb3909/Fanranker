@@ -83,7 +83,7 @@ export function FeedLab() {
   return (
     <div
       style={{
-        background: "var(--wc-paper, #faf9f7)",
+        background: "var(--wc-paper, #ffffff)",
         minHeight: "100dvh",
         padding: "24px 16px 80px",
       }}

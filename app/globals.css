@@ -23,8 +23,10 @@
 
 :root {
   /* ===== KT BizMeka-inspired Clean Design System ===== */
-  /* Background: 아주 살짝 회색 톤 - 카드와 구분 */
-  --background: #faf9f7;
+  /* Background: 순백 내추럴 (2026-08-16 운영자 확정 — 크림·로즈·차콜 시안 검토 끝에
+     "그냥 흰색으로 내츄럴하게". 카드 구분은 보더/그림자가 진다. 구 #faf9f7 회백은
+     채도 0이라 다크 밴드와 이질감의 원인이었음) */
+  --background: #ffffff;
   /* Primary Text: #111111 - 주요 텍스트 */
   --foreground: #111111;
 

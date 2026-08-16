@@ -54,7 +54,7 @@ export function PredictionStatsSummary({ stats, eventSlug }: { stats: Stats; eve
     ? "linear-gradient(165deg,#3b3035,#5b4a50 70%)"
     : "linear-gradient(165deg, var(--wc-burgundy-deep), var(--wc-burgundy) 70%)"
   const medalBg = low
-    ? "radial-gradient(circle at 38% 32%, #faf9f7, #d8d3ca 55%, #aab1bb)"
+    ? "radial-gradient(circle at 38% 32%, #ffffff, #d8d3ca 55%, #aab1bb)"
     : "radial-gradient(circle at 38% 32%, #fff5da, var(--wc-gold) 62%, var(--wc-gold-deep))"
   const medalInk = low ? "#3b3035" : "#5b3d00"
   const accent = low ? "#e8e5e0" : "var(--wc-gold)" // 도장 + 양수 통계 강조

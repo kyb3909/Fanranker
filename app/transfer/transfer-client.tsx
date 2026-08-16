@@ -97,7 +97,7 @@ export function TransferBoardClient({ initialItems }: { initialItems: TransferIt
             style={
               filter === f.key
                 ? { background: "var(--wc-ink, #1a1714)", color: "#fff" }
-                : { background: "var(--wc-paper, #faf9f7)", color: "var(--wc-mute, #5c6470)" }
+                : { background: "var(--wc-paper, #ffffff)", color: "var(--wc-mute, #5c6470)" }
             }
           >
             {f.label}

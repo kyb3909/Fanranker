@@ -81,7 +81,7 @@ function DistributionCard({ entry }: { entry: PickDistributionEntry }) {
     <div
       className="rounded-lg px-3.5 py-3"
       style={{
-        background: "var(--wc-paper, #faf9f7)",
+        background: "var(--wc-paper, #ffffff)",
         border: "1px solid var(--wc-line, #e8e5e0)",
       }}
     >
@@ -301,7 +301,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                     alt=""
                     loading="lazy"
                     className="h-14 w-14 shrink-0 rounded-md object-cover"
-                    style={{ background: "var(--wc-paper, #faf9f7)" }}
+                    style={{ background: "var(--wc-paper, #ffffff)" }}
                   />
                 ) : (
                   <span
@@ -423,7 +423,7 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
                       alt=""
                       loading="lazy"
                       className="h-14 w-14 shrink-0 rounded-md object-cover"
-                      style={{ background: "var(--wc-paper, #faf9f7)" }}
+                      style={{ background: "var(--wc-paper, #ffffff)" }}
                     />
                   ) : (
                     <span

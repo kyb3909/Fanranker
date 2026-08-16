@@ -246,7 +246,7 @@ export function CardVsVote({ vs, surface, compact, variant = "box" }: CardVsVote
     <div
       className={`pointer-events-auto relative z-[2] min-w-0 rounded-lg ${compact ? "mt-2 p-2" : "p-3"}`}
       style={{
-        background: "var(--wc-paper, #faf9f7)",
+        background: "var(--wc-paper, #ffffff)",
         border: "1px solid var(--wc-line, #e8e5e0)",
       }}
     >

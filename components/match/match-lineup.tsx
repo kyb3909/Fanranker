@@ -116,63 +116,81 @@ export function MatchLineup({
         />
       </button>
 
+      {/* 편집 지면 문법 (2026-08-16 리디자인) — 베이지 패널을 걷어내고 흰 지면 위에
+          괘선으로만 구조를 세운다. 등번호는 와인 틴트 칩, 포메이션은 pill. */}
       {open && (
-        <div
-          className="mt-2 grid grid-cols-2 gap-3 rounded-lg p-3"
-          style={{ background: "var(--wc-soft)", border: "1px solid var(--wc-line)" }}
-        >
-          {[data.home, data.away].map((side) => (
-            <div key={side.teamLabel} className="min-w-0">
-              <div className="mb-1.5 flex items-baseline gap-1.5">
+        <div className="mt-2.5 grid grid-cols-2">
+          {[data.home, data.away].map((side, sideIdx) => (
+            <div
+              key={side.teamLabel}
+              className={`min-w-0 ${sideIdx === 0 ? "pr-3" : "pl-3"}`}
+              style={sideIdx === 1 ? { borderLeft: "1px solid var(--wc-line)" } : undefined}
+            >
+              {/* 팀 헤더 — 팀명 볼드 + 포메이션 pill, 아래 굵은 괘선 */}
+              <div
+                className="flex items-center justify-between gap-1.5 pb-1.5"
+                style={{ borderBottom: "2px solid var(--wc-ink)" }}
+              >
                 <span
-                  className="truncate text-[12.5px] font-bold"
-                  style={{ color: "var(--wc-ink)" }}
+                  className="truncate text-[13px] font-extrabold"
+                  style={{ color: "var(--wc-ink)", letterSpacing: "-0.01em" }}
                 >
                   {side.teamLabel}
                 </span>
                 {side.formation && (
                   <span
-                    className="gn-num shrink-0 text-[10.5px] font-bold"
-                    style={{ color: "var(--wc-mute-2)" }}
+                    className="gn-num shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-bold"
+                    style={{
+                      background: "var(--wc-wine-tint)",
+                      color: "var(--wc-burgundy)",
+                    }}
                   >
                     {side.formation}
                   </span>
                 )}
               </div>
-              <ol className="space-y-0.5">
+              <ol className="mt-1.5 space-y-[3px]">
                 {side.starters.map((p, i) => (
-                  <li key={i} className="flex items-baseline gap-1.5 text-[12px] leading-[1.45]">
+                  <li key={i} className="flex items-center gap-2 text-[12.5px] leading-[1.5]">
                     <span
-                      className="gn-num w-4 shrink-0 text-right text-[10.5px] font-bold"
-                      style={{ color: "var(--wc-mute-2)" }}
+                      className="gn-num grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+                      style={{
+                        background: "var(--wc-wine-tint)",
+                        color: "var(--wc-burgundy)",
+                      }}
                     >
-                      {p.number ?? "-"}
+                      {p.number ?? "·"}
                     </span>
-                    <span className="truncate" style={{ color: "var(--wc-ink-2)" }}>
+                    <span
+                      className="truncate font-medium"
+                      style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                    >
                       {p.label}
                     </span>
                   </li>
                 ))}
               </ol>
               {side.bench.length > 0 && (
-                <details className="mt-1.5">
+                <details className="mt-2">
                   <summary
-                    className="cursor-pointer list-none text-[11px] font-semibold"
-                    style={{ color: "var(--wc-mute)" }}
+                    className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full px-2 py-[2px] text-[10.5px] font-bold"
+                    style={{
+                      background: "var(--wc-soft)",
+                      color: "var(--wc-mute)",
+                      letterSpacing: "0.02em",
+                    }}
                   >
                     벤치 {side.bench.length}
+                    <ChevronDown className="h-3 w-3" />
                   </summary>
-                  <ol className="mt-1 space-y-0.5">
+                  <ol className="mt-1.5 space-y-[3px]">
                     {side.bench.map((p, i) => (
-                      <li
-                        key={i}
-                        className="flex items-baseline gap-1.5 text-[11.5px] leading-[1.45]"
-                      >
+                      <li key={i} className="flex items-center gap-2 text-[11.5px] leading-[1.5]">
                         <span
-                          className="gn-num w-4 shrink-0 text-right text-[10px]"
-                          style={{ color: "var(--wc-mute-2)" }}
+                          className="gn-num grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[9.5px] font-bold"
+                          style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
                         >
-                          {p.number ?? "-"}
+                          {p.number ?? "·"}
                         </span>
                         <span className="truncate" style={{ color: "var(--wc-mute)" }}>
                           {p.label}
