@@ -38,6 +38,8 @@ export interface DisplayPlayer {
   /** 화면 표기 — 사전에 있으면 한글, 없으면 로마자 (운영자 결정: 혼용 허용) */
   label: string
   number: number | null
+  /** 풀네임 로마자 (슬러그 유래) — 리포트 파이프라인이 기사 속 영문명과 대조하는 재료 */
+  roman: string | null
 }
 
 export interface DisplaySide {
@@ -175,8 +177,16 @@ function toDisplay(
   return {
     teamLabel,
     formation: side.formation,
-    starters: side.starters.map((p) => ({ label: label(p), number: p.number })),
-    bench: side.bench.map((p) => ({ label: label(p), number: p.number })),
+    starters: side.starters.map((p) => ({
+      label: label(p),
+      number: p.number,
+      roman: p.romanizedFull ?? p.name,
+    })),
+    bench: side.bench.map((p) => ({
+      label: label(p),
+      number: p.number,
+      roman: p.romanizedFull ?? p.name,
+    })),
   }
 }
 

@@ -2,7 +2,12 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 import { chatParams } from "@/lib/llm/openai-params"
-import { resolveMatchEvent } from "@/lib/soccerway/lineup-lookup"
+import { findUniqueRomanizedMatch } from "@/lib/news/notation"
+import {
+  getLineupForGame,
+  resolveMatchEvent,
+  type LineupResponse,
+} from "@/lib/soccerway/lineup-lookup"
 
 /**
  * 매치 부가정보 — 기초 스탯 + 경기 리포트 (2026-08-16, 운영자 요청).
@@ -166,49 +171,120 @@ async function fetchArticleBody(
   return { title: art.title, paragraphs }
 }
 
-/** 영문 리포트 → 드라이 톤 한글 재작성. 실패는 null (fail-open) */
-async function rewriteReportKo(
-  title: string,
-  paragraphs: string[],
-  homeTeam: string,
-  awayTeam: string
-): Promise<MatchReport | null> {
+/* ── 리포트 파이프라인: ① 사건 추출 → ② 이름 확정(라인업 대조) → ③ 한국어 작성 ──
+ *
+ * 한 번의 번역 LLM 은 배경 서사를 끌고 오고 선수 표기를 지어냈다 (운영자: "정밀한
+ * 구조가 필요 — 주요 사건만 정리, 라인업과 대조해 이름 확인"). 그래서 뉴스 검사관과
+ * 같은 단계식으로 쪼갠다. 이름의 근거는 LLM 의 감이 아니라 **그 경기의 실제 라인업**
+ * (스쿼드 사전 한글)이다. */
+
+const MODEL = "gpt-4o-mini"
+
+async function callLLM(system: string, user: unknown, maxTokens: number): Promise<string | null> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return null
-  const MODEL = "gpt-4o-mini"
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      ...chatParams(MODEL, { temperature: 0, max_tokens: maxTokens }),
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: JSON.stringify(user) },
+      ],
+    }),
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+  return data.choices?.[0]?.message?.content ?? null
+}
+
+interface MatchEvent {
+  minute: string | null
+  type: string
+  team: "home" | "away" | null
+  players: string[]
+  detail: string
+}
+
+/** ① 원문 → 경기 중 사건만 구조화 (영문 그대로 — 번역은 ③의 몫) */
+async function extractEvents(
+  title: string,
+  paragraphs: string[]
+): Promise<{ score: string | null; events: MatchEvent[] } | null> {
+  const content = await callLLM(
+    `축구 경기 리포트에서 **경기 중에 일어난 사건만** 추출하는 파서다.
+- 대상: 득점(goal/own_goal/penalty), 도움, 카드(yellow_card/red_card), VAR 판정(var), 교체(sub), 부상(injury), 결정적 기회(chance).
+- 제외: 시즌 배경, 팀 근황, 전망, 평가, 감독 코멘트가 아닌 서사.
+- players 는 원문 표기 그대로(영문). detail 은 원문 근거의 짧은 영문 한 문장.
+- minute 은 원문에 있으면 "43'" 형식, 없으면 null. 사건이 없으면 events 는 빈 배열.
+- 출력: {"score": "3-0" 또는 null, "events": [{"minute", "type", "team": "home|away|null", "players": [], "detail"}]} JSON. 사건은 시간 순.`,
+    { title, paragraphs: paragraphs.slice(0, 12) },
+    1200
+  )
+  if (!content) return null
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        ...chatParams(MODEL, { temperature: 0.2, max_tokens: 1400 }),
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: `축구 경기 리포트를 한국어로 재작성하는 에디터다. 규칙:
-- 드라이 톤: 사실만, 감탄·수사·과장 금지. 존댓말 아님 (기사체 평서문).
-- 원문에 없는 사실을 지어내지 마라. 숫자·득점자·시간은 원문 그대로.
-- 팀 이름: 홈팀은 "${homeTeam}", 원정팀은 "${awayTeam}" 로 부른다. 선수 이름은 한국 축구 미디어의 정착된 한글 표기로, 확신 없으면 영문 그대로.
-- 분량: 3~4문단, 문단당 2~3문장.
-- 제목: 간결하되 사실이 왜곡되면 안 된다 — 퇴장·수적 열세는 어느 팀 것인지 분명히 (예: "10명의 헤타페를 상대로"이지 "10명으로 승리"가 아니다).
-- 출력: {"title": "한글 제목(간결)", "paragraphs": ["문단1", "문단2", ...]} JSON.`,
-          },
-          {
-            role: "user",
-            content: JSON.stringify({ title, paragraphs: paragraphs.slice(0, 10) }),
-          },
-        ],
-      }),
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[]
-    }
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as {
-      title?: string
-      paragraphs?: string[]
-    }
+    const parsed = JSON.parse(content) as { score?: string | null; events?: MatchEvent[] }
+    if (!Array.isArray(parsed.events) || parsed.events.length === 0) return null
+    return { score: parsed.score ?? null, events: parsed.events }
+  } catch {
+    return null
+  }
+}
+
+/** ② 사건 속 영문 선수명 → 그 경기 라인업의 확정 표기 (결정론 — LLM 없음) */
+function groundPlayerNames(
+  events: MatchEvent[],
+  lineup: LineupResponse
+): { events: MatchEvent[]; grounded: number; total: number } {
+  if (lineup.status !== "ready") return { events, grounded: 0, total: 0 }
+  const roster = [
+    ...lineup.home.starters,
+    ...lineup.home.bench,
+    ...lineup.away.starters,
+    ...lineup.away.bench,
+  ]
+    .filter((p) => p.roman)
+    .map((p) => ({ romanized: p.roman, label: p.label }))
+
+  let grounded = 0
+  let total = 0
+  const out = events.map((e) => ({
+    ...e,
+    players: e.players.map((name) => {
+      total++
+      // 동명이인이면 null — 틀린 확정보다 원문 유지가 낫다 (표기 사전과 같은 규율)
+      const hit = findUniqueRomanizedMatch(roster, name)
+      if (hit) grounded++
+      return hit?.label ?? name
+    }),
+  }))
+  return { events: out, grounded, total }
+}
+
+/** ③ 확정된 사건 목록 → 담백한 한국어 리포트 */
+async function composeReportKo(
+  homeTeam: string,
+  awayTeam: string,
+  score: string | null,
+  events: MatchEvent[]
+): Promise<MatchReport | null> {
+  const content = await callLLM(
+    `구조화된 경기 사건 목록으로 한국어 경기 리포트를 쓰는 에디터다. 규칙:
+- **사건 목록에 있는 것만** 쓴다. 배경·전망·평가·의미 부여 금지 (운영자 지시: "미사여구 없이 담백하게, 경기 중에 일어난 일만").
+- 드라이 톤: 사실만, 감탄·수사 금지. 기사체 평서문.
+- 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
+- 팀 이름: 홈팀 "${homeTeam}", 원정팀 "${awayTeam}".
+- 시간 순서대로 2~4문단, 문단당 2~3문장.
+- 제목: 간결하되 사실 왜곡 금지 — 퇴장·수적 열세는 어느 팀 것인지 분명히.
+- 출력: {"title": "...", "paragraphs": ["...", ...]} JSON.`,
+    { home: homeTeam, away: awayTeam, score, events },
+    1400
+  )
+  if (!content) return null
+  try {
+    const parsed = JSON.parse(content) as { title?: string; paragraphs?: string[] }
     if (!parsed.title || !Array.isArray(parsed.paragraphs) || parsed.paragraphs.length === 0) {
       return null
     }
@@ -222,18 +298,26 @@ async function rewriteReportKo(
  * 리포트 24h 캐시. "아직 기사 없음"은 캐시하지 않는다 — throw 로 회피
  * (unstable_cache 는 예외를 캐시하지 않는다. lineup-lookup 의 eventId 패턴과 동일).
  */
-function cachedReport(eventId: string, homeTeam: string, awayTeam: string) {
+function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTeam: string) {
   return unstable_cache(
     async (): Promise<MatchReport> => {
       const articleId = await findArticleId(eventId)
       if (!articleId) throw new Error("report-not-yet")
       const body = await fetchArticleBody(articleId)
       if (!body) throw new Error("report-not-yet")
-      const ko = await rewriteReportKo(body.title, body.paragraphs, homeTeam, awayTeam)
+
+      // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
+      const extracted = await extractEvents(body.title, body.paragraphs)
+      if (!extracted) throw new Error("report-not-yet")
+      const lineup = await getLineupForGame(gameId).catch(
+        () => ({ status: "none" }) as LineupResponse
+      )
+      const { events } = groundPlayerNames(extracted.events, lineup)
+      const ko = await composeReportKo(homeTeam, awayTeam, extracted.score, events)
       if (!ko) throw new Error("report-not-yet")
       return ko
     },
-    ["match-report", eventId],
+    ["match-report-v2", eventId],
     { revalidate: 24 * 3600 }
   )
 }
@@ -250,7 +334,9 @@ export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
   if (!resolved) return { stats: null, report: null }
   const [stats, report] = await Promise.all([
     cachedStats(resolved.eventId)().catch(() => null),
-    cachedReport(resolved.eventId, resolved.homeTeam, resolved.awayTeam)().catch(() => null),
+    cachedReport(resolved.eventId, gameId, resolved.homeTeam, resolved.awayTeam)().catch(
+      () => null
+    ),
   ])
   return { stats, report }
 }
