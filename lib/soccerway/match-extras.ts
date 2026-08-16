@@ -215,8 +215,10 @@ async function extractEvents(
 ): Promise<{ score: string | null; events: MatchEvent[] } | null> {
   const content = await callLLM(
     `축구 경기 리포트에서 **경기 중에 일어난 사건만** 추출하는 파서다.
-- 대상: 득점(goal/own_goal/penalty), 도움, 카드(yellow_card/red_card), VAR 판정(var), 교체(sub), 부상(injury), 결정적 기회(chance).
-- 제외: 시즌 배경, 팀 근황, 전망, 평가, 감독 코멘트가 아닌 서사.
+- 대상: 득점(goal/own_goal/penalty), 도움, 카드(yellow_card/red_card), VAR 판정(var), 교체(sub), 부상(injury), 결정적 기회(chance),
+  그리고 **주목 포인트(note)** — 원문이 짚은 경기 속 인상적 사실: 골키퍼 선방, 크로스바·포스트, 파울 누적,
+  한 팀의 압도, 선수의 기록(예: "리그 두 번째로 많은 골") 같은 것. 기회(chance)는 불발이어도 결정적이었으면 넣는다.
+- 제외: 다음 경기 전망, 순위 계산, 필자의 평가·감상.
 - players 는 원문 표기 그대로(영문). detail 은 **원문의 장면 묘사를 최대한 보존한 영문 1~3문장** —
   득점이면 빌드업·도움·슛 종류(헤더/발리/중거리/침투)·위치·골키퍼 상황까지, 퇴장이면 어떤 파울이었고
   판정이 어떻게 진행됐는지. 원문에 있는 만큼만, 뭉개서 요약하지 마라.
@@ -270,15 +272,19 @@ async function composeReportKo(
   homeTeam: string,
   awayTeam: string,
   score: string | null,
-  events: MatchEvent[]
+  events: MatchEvent[],
+  stats: MatchStatRow[] | null
 ): Promise<MatchReport | null> {
   const content = await callLLM(
-    `구조화된 경기 사건 목록으로 한국어 경기 리포트를 쓰는 에디터다. 규칙:
-- **사건 목록에 있는 것만** 쓴다. 배경·전망·평가·의미 부여 금지 (운영자 지시: "경기 중에 일어난 일만").
-- 단, **득점·퇴장 장면은 detail 을 근거로 구체적으로 묘사한다** — 공격이 어떻게 만들어졌고,
+    `구조화된 경기 사건 목록과 실측 스탯으로 한국어 경기 리포트를 쓰는 에디터다. 규칙:
+- **사건 목록과 스탯에 있는 것만** 쓴다. 다음 경기 전망·순위 계산·필자 감상은 금지.
+- **득점·퇴장 장면은 detail 을 근거로 구체적으로 묘사한다** — 공격이 어떻게 만들어졌고,
   누가 도왔고, 어떤 슛(헤더·발리·중거리 등)이 어디로 들어갔는지. 퇴장은 어떤 파울에 어떤
-  판정 과정이었는지. detail 에 없는 묘사를 지어내는 것은 금지 (운영자: "정확히 골 장면이나
-  퇴장 장면을 묘사").
+  판정 과정이었는지. detail 에 없는 묘사를 지어내는 것은 금지.
+- **note 유형과 불발된 결정적 기회도 살려 쓴다** — 선방, 크로스바, 파울 누적, 선수 기록 같은
+  "이 경기의 주목 포인트"가 리포트를 심심하지 않게 만든다 (운영자 지시).
+- **마지막 문단은 경기 흐름** — 제공된 스탯 수치(xG·슈팅·점유율 등)로 어느 쪽이 주도했는지,
+  스코어와 내용이 일치했는지를 짚는다. 제공되지 않은 수치는 쓰지 마라.
 - 톤: 사실 기반. 감탄사·과장·클리셰("환상적인", "믿을 수 없는")는 금지지만, 장면이 눈에
   그려지게는 쓴다. 기사체 평서문.
 - 선수 이름은 목록의 표기를 **한 글자도 바꾸지 말고 그대로** 쓴다 (한글이면 한글 그대로, 영문이면 영문 그대로 — 음차하지 마라).
@@ -286,7 +292,13 @@ async function composeReportKo(
 - 시간 순서대로 3~5문단, 문단당 2~3문장.
 - 제목: 간결하되 사실 왜곡 금지 — 퇴장·수적 열세는 어느 팀 것인지 분명히.
 - 출력: {"title": "...", "paragraphs": ["...", ...]} JSON.`,
-    { home: homeTeam, away: awayTeam, score, events },
+    {
+      home: homeTeam,
+      away: awayTeam,
+      score,
+      events,
+      stats: (stats ?? []).map((s) => ({ 지표: s.label, [homeTeam]: s.home, [awayTeam]: s.away })),
+    },
     1800
   )
   if (!content) return null
@@ -320,11 +332,12 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
         () => ({ status: "none" }) as LineupResponse
       )
       const { events } = groundPlayerNames(extracted.events, lineup)
-      const ko = await composeReportKo(homeTeam, awayTeam, extracted.score, events)
+      const stats = await cachedStats(eventId)().catch(() => null)
+      const ko = await composeReportKo(homeTeam, awayTeam, extracted.score, events, stats)
       if (!ko) throw new Error("report-not-yet")
       return ko
     },
-    ["match-report-v3", eventId],
+    ["match-report-v4", eventId],
     { revalidate: 24 * 3600 }
   )
 }
