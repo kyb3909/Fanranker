@@ -710,6 +710,15 @@ function TodayFixtures({
                 외 {ftAll.length - ftShown.length}경기
               </li>
             )}
+            <li className="pt-1 pb-2">
+              <Link
+                href="/matches"
+                className="text-[12px] font-bold"
+                style={{ color: "var(--gn-cream-dim)" }}
+              >
+                전체 일정·결과 보기 →
+              </Link>
+            </li>
           </ul>
         </details>
       )}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import Link from "@/components/ui/app-link"
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { MatchHeader } from "./match-header"
 import { MatchLineup } from "@/components/match/match-lineup"
@@ -49,6 +50,13 @@ export default async function MatchPage({ params }: Props) {
   return (
     <div className="worldcup-scope min-h-[80vh]">
       <main className="mx-auto max-w-[720px] px-4 py-6 sm:px-6">
+        <Link
+          href={`/matches?date=${new Date(new Date(match.matchTime).getTime() + 9 * 3600_000).toISOString().slice(0, 10)}`}
+          className="mb-3 inline-flex items-center gap-1 text-[12.5px] font-bold no-underline"
+          style={{ color: "var(--wc-mute)" }}
+        >
+          ← 경기 일정
+        </Link>
         <MatchHeader initial={match} />
 
         {/* 선발 라인업 — 매핑·발표 없으면 스스로 숨는다 (fail-open) */}
