@@ -46,12 +46,18 @@ export interface LineupPlayer {
   number: number | null
   /* 인시던트 (2026-08-16) — dlie2 의 선수별 incidents. 라인업 아이콘 표시용 */
   goals?: number
+  /** 득점 시각들 ("57'", "73'") — goals 와 같은 순서 */
+  goalMinutes?: string[]
   ownGoals?: number
   red?: boolean
   /** 교체 아웃 시각 ("65'") — 선발이 빠진 경우 */
   subOut?: string | null
   /** 교체 인 시각 — 벤치에서 들어온 경우 (상대 선수의 SubstitutionOut.playerInId 로 역산) */
   subIn?: string | null
+  /** 교체 상대 로마자 슬러그 — lookup 계층이 한글 라벨로 해석 */
+  subPartnerRoman?: string | null
+  /** 교체 상대 원표기 (라벨 해석 실패 시 폴백) */
+  subPartnerName?: string
 }
 
 export interface LineupSide {
@@ -94,6 +100,7 @@ function toPlayer(p: RawPlayer): LineupPlayer | null {
   // 인시던트 — typename 부분 문자열로 판정 (실측: EventIncidentGoal / EventIncidentYellowCard /
   // EventIncidentSubstitutionOut{playerInId} / RedCard 계열은 YellowRedCard 포함 "RedCard" 매칭)
   let goals = 0
+  const goalMinutes: string[] = []
   let ownGoals = 0
   let red = false
   let subOut: string | null = null
@@ -101,8 +108,10 @@ function toPlayer(p: RawPlayer): LineupPlayer | null {
     const t = inc.__typename ?? ""
     const minute = inc.incident?.minute ?? null
     if (t.includes("OwnGoal")) ownGoals++
-    else if (t.includes("Goal")) goals++
-    else if (t.includes("RedCard")) red = true
+    else if (t.includes("Goal")) {
+      goals++
+      if (minute) goalMinutes.push(minute)
+    } else if (t.includes("RedCard")) red = true
     else if (t.includes("SubstitutionOut")) subOut = minute
   }
 
@@ -111,7 +120,7 @@ function toPlayer(p: RawPlayer): LineupPlayer | null {
     // "cooper-michael" → "cooper michael" (성-이름 순이지만 토큰 매칭이라 순서 무관)
     romanizedFull: slug ? slug.replace(/-/g, " ").trim() || null : null,
     number: Number.isFinite(num) ? num : null,
-    ...(goals > 0 ? { goals } : {}),
+    ...(goals > 0 ? { goals, goalMinutes } : {}),
     ...(ownGoals > 0 ? { ownGoals } : {}),
     ...(red ? { red } : {}),
     ...(subOut ? { subOut } : {}),
@@ -149,12 +158,26 @@ export function parseLineupPayload(json: unknown): RawLineup | null {
       const byId = new Map<string, RawPlayer>()
       for (const p of lu.players) if (p.id) byId.set(p.id, p)
 
-      // 교체 인 시각 — SubstitutionOut 의 playerInId 로 역산 (들어온 선수 쪽엔 기록이 없다)
-      const subInMinute = new Map<string, string>()
+      // 교체 연결 — SubstitutionOut 의 playerInId 로 양방향 상대를 잇는다
+      // (들어온 선수 쪽엔 기록이 없어 역산 필수. 동시 교체가 있어 분(minute)으로는 못 잇는다)
+      const rawName = (p: RawPlayer | undefined) => (p?.listName || p?.fieldName || "").trim()
+      const rawRoman = (p: RawPlayer | undefined) =>
+        p?.participant?.url ? p.participant.url.replace(/-/g, " ").trim() || null : null
+      const subLink = new Map<
+        string,
+        { subIn?: string | null; partnerRoman: string | null; partnerName: string }
+      >()
       for (const p of lu.players) {
         for (const inc of p.incidents ?? []) {
-          if ((inc.__typename ?? "").includes("SubstitutionOut") && inc.playerInId) {
-            subInMinute.set(inc.playerInId, inc.incident?.minute ?? "")
+          if ((inc.__typename ?? "").includes("SubstitutionOut") && inc.playerInId && p.id) {
+            const q = byId.get(inc.playerInId)
+            const minute = inc.incident?.minute ?? ""
+            subLink.set(p.id, { partnerRoman: rawRoman(q), partnerName: rawName(q) })
+            subLink.set(inc.playerInId, {
+              subIn: minute || null,
+              partnerRoman: rawRoman(p),
+              partnerName: rawName(p),
+            })
           }
         }
       }
@@ -167,8 +190,12 @@ export function parseLineupPayload(json: unknown): RawLineup | null {
           const p = byId.get(id)
           const player = p ? toPlayer(p) : null
           if (player) {
-            const inAt = subInMinute.get(id)
-            if (inAt !== undefined) player.subIn = inAt || null
+            const link = subLink.get(id)
+            if (link) {
+              if (link.subIn !== undefined) player.subIn = link.subIn
+              player.subPartnerRoman = link.partnerRoman
+              player.subPartnerName = link.partnerName
+            }
             out.push(player)
           }
         }

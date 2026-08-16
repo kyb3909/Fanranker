@@ -20,13 +20,19 @@ interface DisplayPlayer {
   label: string
   number: number | null
   goals?: number
+  goalMinutes?: string[]
   ownGoals?: number
   red?: boolean
   subOut?: string | null
   subIn?: string | null
+  subPartner?: string
 }
 
-/** 인시던트 아이콘 — public/match/icons/ (OpenAI 이미지 생성 에셋, 2026-08-16) */
+/**
+ * 인시던트 표기 (2026-08-16, 운영자 조정) —
+ * 골·레드카드는 생성 아이콘(public/match/icons/), 교체는 축구 사이트 관행대로
+ * **일반 화살표(▼/▲) + 분 + 교체 상대**. 화살표 아이콘은 정신없다는 피드백으로 폐기.
+ */
 function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
   const goals = p.goals ?? 0
   const ownGoals = p.ownGoals ?? 0
@@ -36,13 +42,18 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
     <img key={key} src={src} alt={alt} width={size} height={size} className="inline-block" />
   )
   return (
-    <span className="inline-flex shrink-0 items-center gap-[3px] align-middle">
-      {Array.from({ length: Math.min(goals, 3) }, (_, i) =>
-        img("/match/icons/goal.png", "득점", `g${i}`)
-      )}
-      {goals > 3 && (
-        <span className="gn-num text-[9.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
-          ×{goals}
+    // shrink-0: 선수 이름이 먼저 살아남는다 — 잘리는 건 아래 교체 상대(max-w)뿐
+    <span className="inline-flex shrink-0 items-center gap-[4px] align-middle">
+      {goals > 0 && (
+        <span className="inline-flex items-center gap-[2px]">
+          {Array.from({ length: Math.min(goals, 3) }, (_, i) =>
+            img("/match/icons/goal.png", "득점", `g${i}`)
+          )}
+          {p.goalMinutes && p.goalMinutes.length > 0 && (
+            <span className="gn-num text-[9.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
+              {p.goalMinutes.join(" ")}
+            </span>
+          )}
         </span>
       )}
       {ownGoals > 0 && (
@@ -55,16 +66,28 @@ function IncidentIcons({ p, size = 12 }: { p: DisplayPlayer; size?: number }) {
       )}
       {p.red && img("/match/icons/red-card.png", "퇴장")}
       {p.subOut && (
-        <span className="inline-flex items-center gap-[2px]">
-          {img("/match/icons/sub-out.png", "교체 아웃")}
+        <span className="inline-flex min-w-0 items-baseline gap-[3px]" title="교체 아웃">
+          <span className="text-[9px]" style={{ color: "var(--wc-down, #c03a3a)" }}>
+            ▼
+          </span>
           <span className="gn-num text-[9.5px]" style={{ color: "var(--wc-mute-2)" }}>
             {p.subOut}
           </span>
+          {p.subPartner && (
+            <span
+              className="max-w-[64px] truncate text-[9.5px]"
+              style={{ color: "var(--wc-mute-2)" }}
+            >
+              {p.subPartner}
+            </span>
+          )}
         </span>
       )}
       {p.subIn && (
-        <span className="inline-flex items-center gap-[2px]">
-          {img("/match/icons/sub-in.png", "교체 투입")}
+        <span className="inline-flex items-baseline gap-[3px]" title="교체 투입">
+          <span className="text-[9px]" style={{ color: "var(--wc-go, #2f7d5b)" }}>
+            ▲
+          </span>
           <span className="gn-num text-[9.5px]" style={{ color: "var(--wc-mute-2)" }}>
             {p.subIn}
           </span>

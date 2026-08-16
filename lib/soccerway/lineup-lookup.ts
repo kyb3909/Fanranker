@@ -42,10 +42,13 @@ export interface DisplayPlayer {
   roman: string | null
   /* 인시던트 아이콘 재료 (2026-08-16) — 없으면 생략 (페이로드 절약) */
   goals?: number
+  goalMinutes?: string[]
   ownGoals?: number
   red?: boolean
   subOut?: string | null
   subIn?: string | null
+  /** 교체 상대 표시명 (한글 라벨 해석 후) — "누구랑 교체했는지" */
+  subPartner?: string
 }
 
 export interface DisplaySide {
@@ -165,6 +168,38 @@ const cachedSquadPairs = unstable_cache(
 
 /* ── 본체 ── */
 
+/**
+ * 한 팀의 선수 목록 → 표시용. 교체 상대(subPartner)는 같은 팀 전체(선발+벤치)에서
+ * 로마자 슬러그로 찾아 **한글 라벨**로 해석한다 — 못 찾으면 원표기 폴백.
+ */
+function toDisplayPlayers(
+  players: LineupPlayer[],
+  side: { starters: LineupPlayer[]; bench: LineupPlayer[] },
+  label: (p: LineupPlayer) => string
+): DisplayPlayer[] {
+  const romanToLabel = new Map<string, string>()
+  for (const p of [...side.starters, ...side.bench]) {
+    if (p.romanizedFull) romanToLabel.set(p.romanizedFull, label(p))
+  }
+  return players.map((p) => {
+    const partner = p.subPartnerRoman
+      ? (romanToLabel.get(p.subPartnerRoman) ?? p.subPartnerName)
+      : p.subPartnerName
+    return {
+      label: label(p),
+      number: p.number,
+      roman: p.romanizedFull ?? p.name,
+      ...(p.goals ? { goals: p.goals } : {}),
+      ...(p.goalMinutes?.length ? { goalMinutes: p.goalMinutes } : {}),
+      ...(p.ownGoals ? { ownGoals: p.ownGoals } : {}),
+      ...(p.red ? { red: true } : {}),
+      ...(p.subOut ? { subOut: p.subOut } : {}),
+      ...(p.subIn ? { subIn: p.subIn } : {}),
+      ...(partner ? { subPartner: partner } : {}),
+    }
+  })
+}
+
 function toDisplay(
   side: { formation: string | null; starters: LineupPlayer[]; bench: LineupPlayer[] },
   teamLabel: string,
@@ -183,26 +218,8 @@ function toDisplay(
   return {
     teamLabel,
     formation: side.formation,
-    starters: side.starters.map((p) => ({
-      label: label(p),
-      number: p.number,
-      roman: p.romanizedFull ?? p.name,
-      ...(p.goals ? { goals: p.goals } : {}),
-      ...(p.ownGoals ? { ownGoals: p.ownGoals } : {}),
-      ...(p.red ? { red: true } : {}),
-      ...(p.subOut ? { subOut: p.subOut } : {}),
-      ...(p.subIn ? { subIn: p.subIn } : {}),
-    })),
-    bench: side.bench.map((p) => ({
-      label: label(p),
-      number: p.number,
-      roman: p.romanizedFull ?? p.name,
-      ...(p.goals ? { goals: p.goals } : {}),
-      ...(p.ownGoals ? { ownGoals: p.ownGoals } : {}),
-      ...(p.red ? { red: true } : {}),
-      ...(p.subOut ? { subOut: p.subOut } : {}),
-      ...(p.subIn ? { subIn: p.subIn } : {}),
-    })),
+    starters: toDisplayPlayers(side.starters, side, label),
+    bench: toDisplayPlayers(side.bench, side, label),
   }
 }
 
