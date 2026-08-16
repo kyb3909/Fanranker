@@ -50,6 +50,8 @@ export const MATCH_EXTRAS_LEAGUES: ReadonlySet<string> = new Set([
   "세리에A",
   "분데스리",
   "프리그1",
+  // EPL 팀 간 경기라 "5대 리그 관련"으로 포함 (2026-08-16 운영자 — 커뮤니티 실드)
+  "잉슈퍼컵",
 ])
 
 export function isMatchExtrasLeague(leagueCode: string | null | undefined): boolean {
