@@ -56,10 +56,8 @@ export default async function MatchPage({ params }: Props) {
           className="mt-4 rounded-xl px-4 py-3.5"
           style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
         >
-          <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            선발 라인업
-          </h2>
-          <MatchLineup gameId={match.gameId} matchTime={match.matchTime} />
+          {/* 섹션 제목은 컴포넌트의 토글이 겸한다 — 같은 문구가 두 번 보이던 중복 제거 */}
+          <MatchLineup gameId={match.gameId} matchTime={match.matchTime} defaultOpen />
           <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
             라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
           </p>

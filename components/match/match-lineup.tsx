@@ -44,11 +44,18 @@ export interface MatchLineupProps {
   /** betman 킥오프 ISO — 창 판정을 클라에서 먼저 해 창 밖 호출을 0으로 만든다 */
   matchTime: string
   compact?: boolean
+  /** 매치 페이지처럼 라인업이 주인공인 곳은 접지 않고 바로 펼친다 (2026-08-16) */
+  defaultOpen?: boolean
 }
 
-export function MatchLineup({ gameId, matchTime, compact = false }: MatchLineupProps) {
+export function MatchLineup({
+  gameId,
+  matchTime,
+  compact = false,
+  defaultOpen = false,
+}: MatchLineupProps) {
   const [data, setData] = useState<LineupResponse | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const polls = useRef(0)
 
   useEffect(() => {
