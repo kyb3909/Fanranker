@@ -81,6 +81,7 @@ const CSV_COLUMNS = [
   "soccerway_team_id",
   "url",
   "name_kr",
+  "short_kr", // 통칭 — "레알", "인테르", "서울" (지면에서 부르는 이름)
   "aliases_kr",
   "name_en",
   "slug",
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
   if (new URL(request.url).searchParams.get("format") === "csv") {
     const { data, error } = await supabase
       .from("team_dictionary")
-      .select("soccerway_team_id, slug, name_en, name_kr, aliases_kr, status, note")
+      .select("soccerway_team_id, slug, name_en, name_kr, short_kr, aliases_kr, status, note")
       .order("name_en")
     if (error) return apiError("팀 사전 조회 실패", 500, error)
     const lines = [
@@ -109,6 +110,7 @@ export async function GET(request: NextRequest) {
           t.soccerway_team_id,
           "", // url — 신규 등재 시에만 채운다
           t.name_kr,
+          t.short_kr,
           (t.aliases_kr ?? []).join("|"),
           t.name_en,
           t.slug,
@@ -398,6 +400,7 @@ export async function POST(request: NextRequest) {
       const iId = idx("soccerway_team_id")
       const iUrl = idx("url")
       const iKr = idx("name_kr")
+      const iShort = idx("short_kr")
       const iAliases = idx("aliases_kr")
       const iStatus = idx("status")
       const iNote = idx("note")
@@ -423,7 +426,7 @@ export async function POST(request: NextRequest) {
       // 미리 사전 전체를 읽어 둔다 (행마다 조회하면 왕복이 폭증)
       const { data: existingAll } = await supabase
         .from("team_dictionary")
-        .select("soccerway_team_id, name_kr, aliases_kr, status, note")
+        .select("soccerway_team_id, name_kr, short_kr, aliases_kr, status, note")
       const byId = new Map((existingAll ?? []).map((t) => [t.soccerway_team_id, t]))
 
       for (let r = 0; r < body.length; r++) {
@@ -431,6 +434,7 @@ export async function POST(request: NextRequest) {
         const get = (i: number) => (i >= 0 ? (cells[i] ?? "").trim() : "")
         const line = r + 2 // 1-based + 헤더
         const nameKr = get(iKr)
+        const shortKr = get(iShort)
         const aliases = get(iAliases)
           .split("|")
           .map((a) => a.trim())
@@ -487,6 +491,8 @@ export async function POST(request: NextRequest) {
           const changes: string[] = []
           if (nameKr && nameKr !== found.name_kr)
             changes.push(`표기 ${found.name_kr ?? "—"}→${nameKr}`)
+          if (shortKr && shortKr !== found.short_kr)
+            changes.push(`통칭 ${found.short_kr ?? "—"}→${shortKr}`)
           if (nextAliases.length !== (found.aliases_kr ?? []).length)
             changes.push(`별칭 +${nextAliases.length - (found.aliases_kr ?? []).length}`)
           if (status && status !== found.status) changes.push(`상태 ${found.status}→${status}`)
@@ -510,6 +516,7 @@ export async function POST(request: NextRequest) {
               .from("team_dictionary")
               .update({
                 name_kr: nameKr || found.name_kr,
+                short_kr: shortKr || found.short_kr,
                 aliases_kr: nextAliases,
                 status: status || found.status,
                 note: note || found.note,
@@ -550,6 +557,7 @@ export async function POST(request: NextRequest) {
               slug,
               name_en: nameEn,
               name_kr: nameKr,
+              short_kr: shortKr || null,
               aliases_kr: aliases,
               status: status || "proposed",
               source: "csv",
