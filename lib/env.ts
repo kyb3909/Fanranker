@@ -18,6 +18,8 @@ const serverSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   // 사가 카드 라우팅 킬스위치 ("off" = 발행 기사 → 사가 연동 정지)
   SAGA_CARD_ROUTING: z.string().optional(),
+  // 경기 리뷰 카드 자동 적재 킬스위치 ("off" = 시즌 실록에 카드 안 쌓음) — D17
+  SAGA_MATCH_REVIEW: z.string().optional(),
   // 배정 데스크 모드 ("shadow" = 관찰만 / 미설정·"off" = 정지) — Phase 2
   NEWS_ASSIGNMENT_DESK: z.string().optional(),
   // betman↔Soccerway 경기 매핑 shadow ("shadow" = 원장 기록만 / 미설정 = 정지) — 실록 단계 2

@@ -1,6 +1,8 @@
 /**
  * 시즌 위키 시드 — 팀별 2026-27 시즌 문서 (saga_type='season', D4: identity = 팀+시즌).
  * 1차: 아스날(온보딩 검증 팬덤) + 리버풀·첼시(8/22 Kop/Blues 이벤트 유입 착지).
+ * 2차(2026-08-17): 맨체스터 시티 — 경기 리뷰 카드는 **양 팀 문서에 각자 관점으로** 쌓이므로
+ * (커뮤니티 실드 아스널 3-0 시티), 상대 팀 문서가 없으면 한쪽 연표만 남는다.
  *
  * 실행: pnpm exec tsx scripts/saga-seed-seasons.ts
  * 멱등: identity_key upsert — 재실행 안전.
@@ -43,6 +45,14 @@ const TEAMS: SeasonTeam[] = [
     teamFpl: "Chelsea",
     aliases: ["첼시", "Chelsea"],
     summary: "첼시의 2026-27 시즌 — 이적시장, 일정·결과, 스쿼드가 한 문서에 쌓입니다.",
+  },
+  {
+    teamId: "man-city",
+    teamKr: "맨체스터 시티",
+    teamFpl: "Man City",
+    // betman 표기가 "맨체스터 시티", 축약 표기가 섞여 들어오므로 둘 다 별칭에 둔다
+    aliases: ["맨체스터 시티", "맨시티", "Manchester City", "Man City"],
+    summary: "맨체스터 시티의 2026-27 시즌 — 이적시장, 일정·결과, 스쿼드가 한 문서에 쌓입니다.",
   },
 ]
 

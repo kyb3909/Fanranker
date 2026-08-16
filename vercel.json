@@ -79,6 +79,10 @@
       "schedule": "5 0 * * *"
     },
     {
+      "path": "/api/cron/saga-match-review",
+      "schedule": "37 * * * *"
+    },
+    {
       "path": "/api/cron/interview-scout",
       "schedule": "26 * * * *"
     },
