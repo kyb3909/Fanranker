@@ -180,7 +180,18 @@ function toDisplay(
   }
 }
 
-export async function getLineupForGame(gameId: string): Promise<LineupResponse> {
+/** 경기 → 검증된 Livesport eventId (① 창 게이트 → ② 형제 확장 → ③ 매핑 행 → ④ 해석) */
+interface ResolvedEvent {
+  status: "ok"
+  eventId: string
+  kickoff: Date
+  game: { home_team_name: string; away_team_name: string }
+  attempt: { page_home_en: string; page_away_en: string; home_away_flip: boolean | null }
+}
+
+async function resolveEventCore(
+  gameId: string
+): Promise<ResolvedEvent | { status: "none" } | { status: "pending"; kickoff: Date }> {
   const supabase = createServiceRoleClient()
 
   // ① 경기 확인 + 킥오프 창 게이트 (창 밖이면 아웃바운드 0)
@@ -231,9 +242,50 @@ export async function getLineupForGame(gameId: string): Promise<LineupResponse> 
     )()
   } catch {
     // 미발표라 검증을 못 한 상태 — 발표되면 다음 요청이 뚫는다
-    return { status: "pending", kickoff: kickoff.toISOString() }
+    return { status: "pending", kickoff }
   }
-  if (!eventId) return { status: "pending", kickoff: kickoff.toISOString() }
+  if (!eventId) return { status: "pending", kickoff }
+
+  return {
+    status: "ok",
+    eventId,
+    kickoff,
+    game: {
+      home_team_name: String(game.home_team_name),
+      away_team_name: String(game.away_team_name),
+    },
+    attempt: {
+      page_home_en: String(attempt.page_home_en),
+      page_away_en: String(attempt.page_away_en),
+      home_away_flip: attempt.home_away_flip as boolean | null,
+    },
+  }
+}
+
+/** 매치 부가정보(스탯·리포트)가 같은 해석을 재사용한다 — match-extras.ts 소비 */
+export async function resolveMatchEvent(
+  gameId: string
+): Promise<{ eventId: string; homeTeam: string; awayTeam: string } | null> {
+  try {
+    const r = await resolveEventCore(gameId)
+    if (r.status !== "ok") return null
+    return {
+      eventId: r.eventId,
+      homeTeam: r.game.home_team_name,
+      awayTeam: r.game.away_team_name,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function getLineupForGame(gameId: string): Promise<LineupResponse> {
+  const resolved = await resolveEventCore(gameId)
+  if (resolved.status === "none") return { status: "none" }
+  if (resolved.status === "pending") {
+    return { status: "pending", kickoff: resolved.kickoff.toISOString() }
+  }
+  const { eventId, kickoff, game, attempt } = resolved
 
   // ⑤ 라인업 (300s 캐시)
   const lineup: RawLineup | null = await cachedLineup(eventId)()

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Link from "@/components/ui/app-link"
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { MatchHeader } from "./match-header"
+import { MatchExtrasSection } from "./match-extras-section"
 import { MatchLineup } from "@/components/match/match-lineup"
 
 /**
@@ -70,6 +71,15 @@ export default async function MatchPage({ params }: Props) {
             라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
           </p>
         </section>
+
+        {/* 기초 스탯 + 경기 리포트 — LIVE/FT 에만 시도, 없으면 스스로 숨는다 */}
+        {(match.status === "in_progress" || match.status === "completed") && (
+          <MatchExtrasSection
+            gameId={match.gameId}
+            homeTeam={match.homeTeam}
+            awayTeam={match.awayTeam}
+          />
+        )}
       </main>
     </div>
   )
