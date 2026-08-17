@@ -3,6 +3,7 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
+import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
 
 /**
  * 일정 페이지 데이터 — **매치데이 하루**의 대상 리그 경기 전부 (2026-08-17 개정).
@@ -26,7 +27,12 @@ export const MATCHDAY_START_HOUR_KST = 6
 
 export interface FixtureRow {
   matchKey: string
-  gameId: string
+  /**
+   * betman_games.id — **없을 수 있다.** betman 은 베팅 마켓이 열린 경기만 싣기 때문에
+   * 개막 라운드처럼 아직 마켓이 없는 경기는 LFA 에만 존재한다 (2026-08-17).
+   * null 이면 매치 페이지 링크를 걸지 않는다 (라인업·리포트가 betman id 로 걸려 있다).
+   */
+  gameId: string | null
   homeTeam: string
   awayTeam: string
   leagueCode: string
@@ -112,9 +118,66 @@ async function fetchFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   return [...byKey.values()].sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 }
 
-/** 60초 Data Cache (날짜별 키) — LIVE 스코어가 크게 뒤처지지 않는 선 */
-export function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
+/** 60초 Data Cache (날짜별 키) — betman 쪽만. LFA 병합은 아래에서 한다 */
+function getBetmanFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   return unstable_cache(() => fetchFixturesForDay(dateKst), ["fixtures-day", dateKst], {
     revalidate: 60,
   })()
+}
+
+/** 같은 경기인가 — 리그 + 킥오프 시각(분)으로 본다 (팀명 표기 차이를 안 탄다) */
+function fixtureKey(leagueCode: string, matchTime: string): string {
+  return `${leagueCode}|${new Date(matchTime).toISOString().slice(0, 16)}`
+}
+
+/**
+ * 매치데이 전 경기 — **LFA 가 정본, betman 이 보강**.
+ *
+ * betman 은 마켓이 열린 경기만 있어 일정이 이틀치뿐이다 (2026-08-17 실측: EPL 개막
+ * 라운드 부재). 그래서 목록의 뼈대는 LFA 에서 가져오고, 같은 경기가 betman 에도 있으면
+ * gameId·한글 팀명·확정 스코어를 덮어씌운다 (매치 페이지·라인업이 betman id 로 걸려 있다).
+ *
+ * LFA 가 죽으면 betman 목록만 남는다 (fail-open) — 예전 동작으로 자연 강등된다.
+ */
+export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
+  const [betman, lfa] = await Promise.all([
+    getBetmanFixturesForDay(dateKst),
+    getLfaFixturesForMatchday(dateKst),
+  ])
+  if (lfa.length === 0) return betman
+
+  const byKey = new Map<string, FixtureRow>()
+  for (const f of lfa) {
+    byKey.set(fixtureKey(f.leagueCode, f.matchTime), {
+      matchKey: `lfa_${f.lfaId}`,
+      gameId: null,
+      homeTeam: f.homeTeam,
+      awayTeam: f.awayTeam,
+      leagueCode: f.leagueCode,
+      matchTime: f.matchTime,
+      status: f.status,
+      homeScore: f.homeScore,
+      awayScore: f.awayScore,
+    })
+  }
+  for (const b of betman) {
+    const k = fixtureKey(b.leagueCode, b.matchTime)
+    const hit = byKey.get(k)
+    if (!hit) {
+      byKey.set(k, b) // LFA 에 없는 경기(리그 매핑 공백 등)는 betman 것을 그대로
+      continue
+    }
+    // betman 이 있으면 그쪽 한글 팀명·gameId 를 쓴다. 스코어는 값이 있는 쪽 우선
+    byKey.set(k, {
+      ...hit,
+      matchKey: b.matchKey,
+      gameId: b.gameId,
+      homeTeam: b.homeTeam,
+      awayTeam: b.awayTeam,
+      status: STATUS_RANK[b.status] > STATUS_RANK[hit.status] ? b.status : hit.status,
+      homeScore: b.homeScore ?? hit.homeScore,
+      awayScore: b.awayScore ?? hit.awayScore,
+    })
+  }
+  return [...byKey.values()].sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 }

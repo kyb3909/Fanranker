@@ -62,6 +62,26 @@ function dateParts(dateKst: string) {
   }
 }
 
+/** 행 껍데기 — betman 경기가 있으면 매치 페이지 링크, 없으면 일반 행 */
+function FixtureRowShell({
+  gameId,
+  children,
+}: {
+  gameId: string | null
+  children: React.ReactNode
+}) {
+  const cls = "grid grid-cols-[56px_1fr] items-center gap-3 px-4 py-3"
+  if (!gameId) return <div className={cls}>{children}</div>
+  return (
+    <Link
+      href={`/match/${gameId}`}
+      className={`${cls} no-underline transition-colors hover:bg-[var(--wc-soft)]`}
+    >
+      {children}
+    </Link>
+  )
+}
+
 function shiftDate(dateKst: string, days: number): string {
   const d = new Date(`${dateKst}T12:00:00+09:00`)
   return new Date(d.getTime() + days * 24 * 3600_000).toISOString().slice(0, 10)
@@ -75,29 +95,9 @@ export default async function MatchesPage({
   const params = await searchParams
   const today = todayKst()
   const date = params.date && kstDayRange(params.date) ? params.date : today
-  const rawFixtures = await getFixturesForDay(date)
-
-  // betman 은 종료를 1~1.5시간 늦게 반영한다. 킥오프가 지났는데 아직 스코어가 없는 경기가
-  // 하나라도 있을 때만 LFA 를 부른다 — 이미 다 정산된 날에는 크레딧을 쓰지 않는다.
-  const needsLfa = rawFixtures.some(
-    (f) =>
-      new Date(f.matchTime).getTime() < Date.now() &&
-      f.status !== "cancelled" &&
-      (f.status !== "completed" || f.homeScore == null)
-  )
-  const lfaIndex = needsLfa ? await getLfaDayIndex(date) : null
-  const fixtures: FixtureRow[] = lfaIndex
-    ? rawFixtures.map((f) => {
-        const hit = lookupLfaDayEntry(lfaIndex, f)
-        if (!hit) return f
-        return {
-          ...f,
-          status: hit.finished && f.status !== "cancelled" ? "completed" : f.status,
-          homeScore: f.homeScore ?? hit.homeScore,
-          awayScore: f.awayScore ?? hit.awayScore,
-        }
-      })
-    : rawFixtures
+  // getFixturesForDay 가 LFA(정본) + betman(보강)을 이미 병합해 준다 — 스코어·종료 판정도
+  // 그 안에서 끝난다. 예전의 별도 LFA 보정 단계는 중복이라 제거했다 (2026-08-17).
+  const fixtures: FixtureRow[] = await getFixturesForDay(date)
 
   // 리그별 섹션 — 대항전 → 5대 리그 → 컵 (leagues.ts 삽입 순서)
   const sections = new Map<string, FixtureRow[]>()
@@ -236,10 +236,9 @@ export default async function MatchesPage({
                     key={m.matchKey}
                     style={i > 0 ? { borderTop: "1px solid var(--wc-line)" } : undefined}
                   >
-                    <Link
-                      href={`/match/${m.gameId}`}
-                      className="grid grid-cols-[56px_1fr] items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-soft)]"
-                    >
+                    {/* betman 에 아직 마켓이 없는 경기는 매치 페이지가 없다 (라인업·리포트가
+                        betman id 로 걸려 있다) — 링크 없이 목록에만 싣는다 */}
+                    <FixtureRowShell gameId={m.gameId}>
                       {/* 좌: 시각 또는 상태 — 진행 중도 킥오프 시각으로 (라이브 표기 없음) */}
                       {m.status === "completed" ? (
                         <span
@@ -295,7 +294,7 @@ export default async function MatchesPage({
                           {m.awayTeam}
                         </span>
                       </span>
-                    </Link>
+                    </FixtureRowShell>
                   </li>
                 ))}
               </ul>
