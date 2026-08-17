@@ -342,12 +342,19 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       info.stats.push({ label: ko, home: h.text, away: a.text, homeNum: h.num, awayNum: a.num })
     }
 
+    // ⚠️ LFA 이벤트 타입은 표기가 섞인다 — 실측: "Goal"(대문자·공백) 과 "red_card"
+    //    (소문자·언더스코어)가 같은 응답에 함께 온다. 반드시 정규화하고 비교할 것.
+    const norm = (t: unknown) =>
+      String(t ?? "")
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .trim()
     const isGoal = (t: string) => t === "goal" || t === "own goal" || t === "penalty"
-    // "Red Card" 와 "Second Yellow Card"(경고 누적 퇴장) 둘 다 퇴장이다
+    // 다이렉트 퇴장과 경고 누적 퇴장 둘 다 퇴장이다
     const isRed = (t: string) => t.includes("red card") || t.includes("second yellow")
 
     const rawEvents = (d.events ?? []).filter((e) => {
-      const t = String(e.type ?? "").toLowerCase()
+      const t = norm(e.type)
       return isGoal(t) || isRed(t)
     })
     // 라인업은 실을 사건이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
@@ -358,7 +365,7 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
     for (const e of rawEvents) {
       const player = e.detail?.player?.name?.trim()
       if (!player) continue
-      const t = String(e.type ?? "").toLowerCase()
+      const t = norm(e.type)
       const minute = String(e.time ?? "")
       const label = localizeScorer(player, lineup)
       if (isGoal(t)) {
