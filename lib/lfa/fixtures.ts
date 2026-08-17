@@ -37,23 +37,33 @@ export interface LfaFixture {
   awayScore: number | null
 }
 
-/** name_en(정규화) → name_kr. 1시간 캐시 */
-const cachedKoByEn = unstable_cache(
-  async (): Promise<[string, string][]> => {
+/**
+ * 한글 표기 조회 재료 — **LFA 팀 해시 우선**, 이름 대조는 폴백.
+ *
+ * LFA 는 축약형·타 언어 표기를 섞어 쓴다 ("Man. City", "Not. Forest", "Bayern Münih").
+ * 이름으로 대조하면 이미 사전에 있는 팀도 못 찾는다 (2026-08-17 실측: 470팀 중 27팀).
+ * `team_dictionary.lfa_team_id` 가 채워진 팀은 ID 하나로 끝나므로 표기 변형을 안 탄다.
+ */
+const cachedKoIndex = unstable_cache(
+  async (): Promise<{ byLfaId: [string, string][]; byEn: [string, string][] }> => {
     const { data } = await createServiceRoleClient()
       .from("team_dictionary")
-      .select("name_en, name_kr")
+      .select("name_en, name_kr, lfa_team_id")
       .neq("status", "rejected")
       .not("name_kr", "is", null)
-    const out: [string, string][] = []
+    const byLfaId: [string, string][] = []
+    const byEn: [string, string][] = []
     for (const r of data ?? []) {
-      const en = String(r.name_en ?? "").trim()
       const kr = String(r.name_kr ?? "").trim()
-      if (en && kr) out.push([normEn(en), kr])
+      if (!kr) continue
+      const lfaId = String(r.lfa_team_id ?? "").trim()
+      if (lfaId) byLfaId.push([lfaId, kr])
+      const en = String(r.name_en ?? "").trim()
+      if (en) byEn.push([normEn(en), kr])
     }
-    return out
+    return { byLfaId, byEn }
   },
-  ["lfa-ko-by-en"],
+  ["lfa-ko-index-v2"],
   { revalidate: 3600 }
 )
 
@@ -66,16 +76,25 @@ function normEn(s: string): string {
 }
 
 /**
- * LFA 영문 팀명 → 한글. 축약형이라 정확일치가 자주 실패하므로
- * (LFA "Man. United" vs 사전 "Manchester United") 접두 포함까지 본다.
- * 후보가 여럿이면 한글화하지 않는다 — 엉뚱한 팀 이름이 붙는 것이 최악이다.
+ * LFA 팀 → 한글. **팀 해시가 있으면 그것만 본다** (표기 변형 무관).
+ * 해시가 아직 안 붙은 팀만 이름 대조로 내려가고, 후보가 여럿이면 영문을 유지한다 —
+ * 엉뚱한 팀 이름이 붙는 것이 최악이다.
  */
-function toKorean(nameEn: string, index: [string, string][]): string {
+function toKorean(
+  team: { id?: string; name?: string } | undefined,
+  index: { byLfaId: [string, string][]; byEn: [string, string][] }
+): string {
+  const nameEn = String(team?.name ?? "")
+  const id = String(team?.id ?? "")
+  if (id) {
+    const hit = index.byLfaId.find(([lfaId]) => lfaId === id)
+    if (hit) return hit[1]
+  }
   const n = normEn(nameEn)
   if (!n) return nameEn
-  const exact = index.filter(([en]) => en === n)
+  const exact = index.byEn.filter(([en]) => en === n)
   if (exact.length === 1) return exact[0][1]
-  const partial = index.filter(([en]) => en.startsWith(n) || n.startsWith(en))
+  const partial = index.byEn.filter(([en]) => en.startsWith(n) || n.startsWith(en))
   return partial.length === 1 ? partial[0][1] : nameEn
 }
 
@@ -127,7 +146,7 @@ export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFix
       new Date(startMs).toISOString().slice(0, 10),
       new Date(endMs - 1).toISOString().slice(0, 10),
     ]
-    const index = await cachedKoByEn().catch(() => [] as [string, string][])
+    const index = await cachedKoIndex().catch(() => ({ byLfaId: [], byEn: [] }))
 
     const out: LfaFixture[] = []
     for (const d of [...new Set(dates)]) {
@@ -145,8 +164,8 @@ export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFix
         out.push({
           lfaId: m.id,
           leagueCode: code,
-          homeTeam: toKorean(m.home?.name ?? "", index),
-          awayTeam: toKorean(m.away?.name ?? "", index),
+          homeTeam: toKorean(m.home, index),
+          awayTeam: toKorean(m.away, index),
           matchTime: iso,
           status: toStatus(m),
           homeScore: toNum(m.home?.score),
