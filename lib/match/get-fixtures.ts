@@ -125,9 +125,35 @@ function getBetmanFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
   })()
 }
 
-/** 같은 경기인가 — 리그 + 킥오프 시각(분)으로 본다 (팀명 표기 차이를 안 탄다) */
-function fixtureKey(leagueCode: string, matchTime: string): string {
+/** 리그 + 킥오프 분 — 같은 라운드는 동시 킥오프가 흔하므로 이것만으로는 경기가 안 갈린다 */
+function slotKey(leagueCode: string, matchTime: string): string {
   return `${leagueCode}|${new Date(matchTime).toISOString().slice(0, 16)}`
+}
+
+/** 팀명 대조용 정규화 (한글은 그대로, 영문은 소문자·기호 제거) */
+function normTeam(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]/g, "")
+}
+
+/**
+ * betman 행이 어느 LFA 경기인가 — 같은 슬롯 후보 중에서 고른다.
+ * 후보가 하나면 그대로, 여럿이면 팀명 접두 겹침으로 좁힌다. 못 고르면 null
+ * (병합하지 않고 betman 행을 따로 싣는다 — 엉뚱한 경기와 합치는 것이 최악이다).
+ */
+function pickLfaCounterpart(betman: FixtureRow, candidates: FixtureRow[]): FixtureRow | null {
+  if (candidates.length === 1) return candidates[0]
+  const bh = normTeam(betman.homeTeam)
+  const ba = normTeam(betman.awayTeam)
+  const overlaps = (x: string, y: string) =>
+    x.length >= 2 && y.length >= 2 && (x.startsWith(y) || y.startsWith(x))
+  const hits = candidates.filter(
+    (c) => overlaps(normTeam(c.homeTeam), bh) && overlaps(normTeam(c.awayTeam), ba)
+  )
+  return hits.length === 1 ? hits[0] : null
 }
 
 /**
@@ -146,9 +172,12 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   ])
   if (lfa.length === 0) return betman
 
-  const byKey = new Map<string, FixtureRow>()
+  // ⚠️ 경기 단위 키는 lfaId 다. (리그, 킥오프)로 키를 잡으면 같은 라운드 동시 킥오프
+  //    경기들이 서로를 덮어쓴다 (2026-08-17 실측: EPL 개막 14:00 UTC 3경기 → 1경기).
+  const byLfaId = new Map<string, FixtureRow>()
+  const slots = new Map<string, FixtureRow[]>()
   for (const f of lfa) {
-    byKey.set(fixtureKey(f.leagueCode, f.matchTime), {
+    const row: FixtureRow = {
       matchKey: `lfa_${f.lfaId}`,
       gameId: null,
       homeTeam: f.homeTeam,
@@ -158,17 +187,26 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       status: f.status,
       homeScore: f.homeScore,
       awayScore: f.awayScore,
-    })
+    }
+    byLfaId.set(f.lfaId, row)
+    const k = slotKey(f.leagueCode, f.matchTime)
+    slots.set(k, [...(slots.get(k) ?? []), row])
   }
+
+  const merged: FixtureRow[] = []
+  const consumed = new Set<FixtureRow>()
   for (const b of betman) {
-    const k = fixtureKey(b.leagueCode, b.matchTime)
-    const hit = byKey.get(k)
+    const candidates = (slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []).filter(
+      (c) => !consumed.has(c)
+    )
+    const hit = pickLfaCounterpart(b, candidates)
     if (!hit) {
-      byKey.set(k, b) // LFA 에 없는 경기(리그 매핑 공백 등)는 betman 것을 그대로
+      merged.push(b) // LFA 에 없거나 특정 실패 — betman 행을 그대로 싣는다
       continue
     }
-    // betman 이 있으면 그쪽 한글 팀명·gameId 를 쓴다. 스코어는 값이 있는 쪽 우선
-    byKey.set(k, {
+    consumed.add(hit)
+    // betman 이 있으면 그쪽 한글 팀명·gameId 를 쓴다. 스코어·상태는 앞선 쪽 우선
+    merged.push({
       ...hit,
       matchKey: b.matchKey,
       gameId: b.gameId,
@@ -179,5 +217,7 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
       awayScore: b.awayScore ?? hit.awayScore,
     })
   }
-  return [...byKey.values()].sort((a, b) => a.matchTime.localeCompare(b.matchTime))
+  for (const row of byLfaId.values()) if (!consumed.has(row)) merged.push(row)
+
+  return merged.sort((a, b) => a.matchTime.localeCompare(b.matchTime))
 }
