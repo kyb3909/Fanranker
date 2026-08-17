@@ -1794,7 +1794,11 @@
 .wc-chip-tabs::-webkit-scrollbar {
   display: none;
 }
-.wc-chip-tabs button {
+/* button 과 a 를 함께 받는다 — 날짜 내비처럼 서버 렌더 링크로 만드는 칩이 있다
+   (2026-08-18 /matches). 링크는 밑줄을 지워야 칩으로 읽힌다. */
+.wc-chip-tabs button,
+.wc-chip-tabs a {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1814,16 +1818,19 @@
     color 0.15s,
     border-color 0.15s;
 }
-.wc-chip-tabs button svg {
+.wc-chip-tabs button svg,
+.wc-chip-tabs a svg {
   width: 15px;
   height: 15px;
   stroke: currentColor;
 }
-.wc-chip-tabs button:hover:not(:disabled):not(.on) {
+.wc-chip-tabs button:hover:not(:disabled):not(.on),
+.wc-chip-tabs a:hover:not(.on) {
   color: var(--wc-ink, #1a1714);
   border-color: var(--wc-line-2, #d8d3ca);
 }
-.wc-chip-tabs button.on {
+.wc-chip-tabs button.on,
+.wc-chip-tabs a.on {
   background: var(--wc-burgundy, #961e37);
   border-color: var(--wc-burgundy, #961e37);
   color: #fff;

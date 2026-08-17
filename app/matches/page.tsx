@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import {
   getFixturesForDay,
@@ -62,6 +61,32 @@ function dateParts(dateKst: string) {
   }
 }
 
+/**
+ * 아직 한글 표기가 없는 팀은 색을 낮춘다 — 숨기지 않고 "미번역"을 시각적으로 인정한다.
+ * 한 지면에서 한글과 로마자가 번갈아 나오면 어떤 타이포로도 못 살린다 (2026-08-18 감사).
+ */
+/**
+ * 접을 리그인가 — 5대 리그·유럽 대항전은 절대 접지 않고, 컵대회가 9경기 이상일 때만 접는다.
+ * (컵 1라운드에 하부리그 30경기가 통째로 들어와 지면을 8,921px 로 늘리던 것을 막는다)
+ */
+const NEVER_COLLAPSE = new Set([
+  "EPL",
+  "라리가",
+  "세리에A",
+  "분데스리",
+  "프리그1",
+  "UCL",
+  "UEL",
+  "UECL",
+])
+function collapsed(leagueCode: string, count: number): boolean {
+  return !NEVER_COLLAPSE.has(leagueCode) && count > 8
+}
+
+function teamTone(name: string): string {
+  return /[가-힣]/.test(name) ? "var(--wc-ink)" : "var(--wc-mute-2)"
+}
+
 /** 행 껍데기 — betman 경기가 있으면 매치 페이지 링크, 없으면 일반 행 */
 function FixtureRowShell({
   gameId,
@@ -120,56 +145,27 @@ export default async function MatchesPage({
       />
 
       <main className="mx-auto max-w-[760px] px-4 py-6 sm:px-6">
-        {/* 날짜 내비 — 오늘 ±3일 칩 + 화살표. 서버 렌더 링크라 상태 없이 동작 */}
-        <nav className="flex items-center gap-1.5" aria-label="날짜 선택">
-          <Link
-            href={`/matches?date=${shiftDate(date, -1)}`}
-            aria-label="전날"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-            style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-          >
-            <ChevronLeft className="h-4 w-4" style={{ color: "var(--wc-mute)" }} />
-          </Link>
-          <div className="scrollbar-none flex flex-1 items-center gap-1.5 overflow-x-auto">
-            {[-2, -1, 0, 1, 2, 3].map((off) => {
-              const d = shiftDate(today, off)
-              const p = dateParts(d)
-              const active = d === date
-              return (
-                <Link
-                  key={d}
-                  href={off === 0 ? "/matches" : `/matches?date=${d}`}
-                  aria-current={active ? "date" : undefined}
-                  className="flex shrink-0 flex-col items-center rounded-lg px-3 py-1.5 no-underline"
-                  style={{
-                    background: active ? "var(--wc-burgundy)" : "var(--wc-card)",
-                    border: `1px solid ${active ? "var(--wc-burgundy)" : "var(--wc-line)"}`,
-                  }}
-                >
-                  <span
-                    className="text-[10.5px] font-bold"
-                    style={{ color: active ? "rgba(255,255,255,.75)" : "var(--wc-mute-2)" }}
-                  >
-                    {off === 0 ? "오늘" : p.weekday}
-                  </span>
-                  <span
-                    className="gn-num text-[13px] leading-tight font-bold"
-                    style={{ color: active ? "#fff" : "var(--wc-ink)" }}
-                  >
-                    {p.short}
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
-          <Link
-            href={`/matches?date=${shiftDate(date, 1)}`}
-            aria-label="다음날"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-            style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-          >
-            <ChevronRight className="h-4 w-4" style={{ color: "var(--wc-mute)" }} />
-          </Link>
+        {/* 날짜 내비 (2026-08-18 리디자인 6단계).
+            ⚠️ 범위 기준이 `today` 였다 — 8/22 를 보고 있으면 칩이 오늘 ±3 만 그려져
+            **활성 칩이 하나도 없었다.** 보고 있는 날짜(`date`) 기준으로 바꾼다.
+            화살표 2개는 삭제: 칩이 좌우로 스크롤되고 맨 끝 칩이 곧 이동 수단이다. */}
+        <nav className="wc-chip-tabs" aria-label="날짜 선택">
+          {[-3, -2, -1, 0, 1, 2, 3].map((off) => {
+            const d = shiftDate(date, off)
+            const p = dateParts(d)
+            const active = off === 0
+            return (
+              <Link
+                key={d}
+                href={d === today ? "/matches" : `/matches?date=${d}`}
+                aria-current={active ? "date" : undefined}
+                className={`no-underline ${active ? "on" : ""}`}
+              >
+                <span style={{ opacity: 0.75 }}>{d === today ? "오늘" : p.weekday}</span>
+                <span className="gn-num font-bold">{p.short}</span>
+              </Link>
+            )
+          })}
         </nav>
 
         {/* 날짜 표제 — 매거진 일정면의 날짜 마스트헤드 */}
@@ -210,7 +206,7 @@ export default async function MatchesPage({
               <div className="flex items-center gap-3">
                 <h3
                   className="shrink-0 text-[12px] font-extrabold"
-                  style={{ color: "var(--wc-burgundy)", letterSpacing: "0.06em" }}
+                  style={{ color: "var(--wc-ink)", letterSpacing: "0.06em" }}
                 >
                   {leagueLabel(code)}
                 </h3>
@@ -227,8 +223,10 @@ export default async function MatchesPage({
                 </span>
               </div>
 
+              {/* 컵대회 1라운드는 한 리그에 30경기씩 들어온다 (DFB 포칼·카라바오컵).
+                  8경기를 넘으면 접어 둔다 — 지면이 8,921px 까지 늘어나던 주범 (2026-08-18). */}
               <ul
-                className="mt-2 overflow-hidden rounded-xl"
+                className={`mt-2 overflow-hidden rounded-xl ${collapsed(code, rows.length) ? "hidden" : ""}`}
                 style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
               >
                 {rows.map((m, i) => (
@@ -268,7 +266,7 @@ export default async function MatchesPage({
                       <span className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
                         <span
                           className="truncate text-right text-[14px] font-bold"
-                          style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                          style={{ color: teamTone(m.homeTeam), wordBreak: "keep-all" }}
                         >
                           {m.homeTeam}
                         </span>
@@ -282,14 +280,16 @@ export default async function MatchesPage({
                             minWidth: 34,
                           }}
                         >
-                          {/* 스코어는 종료 후에만 — 진행 중 표시는 갱신 소스가 없어 오정보 */}
+                          {/* 스코어는 종료 후에만 — 진행 중 표시는 갱신 소스가 없어 오정보.
+                              예정 경기에 `vs` 를 쓰지 않는다: 팀명 사이 공백이 이미 그 일을
+                              하고, 한 지면에 160번 반복되면 버건디 잡음이 된다 (2026-08-18) */}
                           {m.status === "completed" && m.homeScore != null && m.awayScore != null
-                            ? `${m.homeScore}:${m.awayScore}`
-                            : "vs"}
+                            ? `${m.homeScore}–${m.awayScore}`
+                            : ""}
                         </span>
                         <span
                           className="truncate text-left text-[14px] font-bold"
-                          style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                          style={{ color: teamTone(m.awayTeam), wordBreak: "keep-all" }}
                         >
                           {m.awayTeam}
                         </span>
@@ -298,6 +298,17 @@ export default async function MatchesPage({
                   </li>
                 ))}
               </ul>
+              {collapsed(code, rows.length) && (
+                <p
+                  className="mt-2 rounded-xl px-4 py-3 text-[12.5px]"
+                  style={{
+                    background: "var(--wc-soft)",
+                    color: "var(--wc-mute)",
+                  }}
+                >
+                  {rows.length}경기 — 하부 라운드는 접혀 있습니다
+                </p>
+              )}
             </section>
           ))}
         </div>

@@ -98,9 +98,11 @@ export function PageBandStat({ value, label }: { value: ReactNode; label: string
       >
         {value}
       </span>
+      {/* ⚠️ 자간은 **마지막 글자 뒤에도** 붙는다. 우측 정렬 슬롯이라 그 여백이 지면 밖으로
+          밀려 마지막 글자가 잘렸다 (2026-08-18 실측: `160 MATCHES` 의 S). 자간만큼 되민다. */}
       <span
         className="gn-num mt-1.5 block text-[12px] font-bold uppercase"
-        style={{ letterSpacing: "0.18em", color: "#8d8794" }}
+        style={{ letterSpacing: "0.18em", marginRight: "-0.18em", color: "#8d8794" }}
       >
         {label}
       </span>
