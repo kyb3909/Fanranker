@@ -67,12 +67,17 @@ export async function getOrCreateSaga(supabase: ServiceClient, input: CreateSaga
     const newPlayerKey = normalizePlayerKey(String(input.subject.player_key ?? ""))
     // 빈 선수 키가 "-in-2026s" 유령 사가를 만든 실사고 (2026-08-04) — 생성 자체를 거부
     if (!newPlayerKey) throw new Error("saga create rejected: empty player key")
+    // ⚠️ 종전엔 `status='active'` 만 후보로 봤다 — **종결된 사가가 후보에서 빠져** 같은
+    //    선수의 문서가 둘로 갈라졌다 (2026-08-17 실사고: "트레버 찰로바"(done/closed)가
+    //    있는데 후속 BBC 기사가 "찰로바" 새 사가를 열었고, 화면에는 이미 오피셜인 이적이
+    //    "유력"으로 다시 떴다). D2 상 identity 는 선수+방향+윈도우이므로 **종결 여부와
+    //    무관하게** 같은 문서다. 종결 사가에도 사료는 붙되 상태는 되돌리지 않는다.
     const { data: candidates } = await supabase
       .from("sagas")
       .select("*")
       .eq("saga_type", "transfer")
       .eq("window_key", input.windowKey)
-      .eq("status", "active")
+      .in("status", ["active", "closed"])
     const same = (candidates ?? []).filter((c) => {
       const subj = c.subject as { player_key?: string }
       return isSamePlayerKey(normalizePlayerKey(String(subj.player_key ?? "")), newPlayerKey)
