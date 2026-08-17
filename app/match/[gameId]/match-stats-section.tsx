@@ -16,41 +16,56 @@ export function MatchStatsSection({
   homeTeam: string
   awayTeam: string
 }) {
-  const hasGoals = info.goals.length > 0
+  // 득점과 퇴장을 한 줄기 시간순으로 — 퇴장이 몇 분에 나왔는지가 경기 해석의 핵심이다
+  const timeline = [
+    ...info.goals.map((g) => ({ ...g, kind: "goal" as const })),
+    ...info.reds.map((r) => ({ ...r, score: "", kind: "red" as const })),
+  ].sort((a, b) => (Number(a.minute) || 0) - (Number(b.minute) || 0))
   const hasStats = info.stats.length > 0
-  if (!hasGoals && !hasStats) return null
+  if (timeline.length === 0 && !hasStats) return null
 
   return (
     <>
-      {hasGoals && (
+      {timeline.length > 0 && (
         <section
           className="mt-4 rounded-xl px-4 py-3.5"
           style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
         >
           <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            득점
+            주요 기록
           </h2>
           <ul className="mt-2 space-y-1.5">
-            {info.goals.map((g, i) => (
+            {timeline.map((e, i) => (
               <li key={i} className="flex items-baseline gap-2 text-[13.5px]">
                 <span
                   className="gn-num shrink-0 text-[12px] font-bold"
-                  style={{ color: "var(--wc-burgundy)", minWidth: 30 }}
+                  style={{
+                    color: e.kind === "red" ? "var(--wc-mute-2)" : "var(--wc-burgundy)",
+                    minWidth: 30,
+                  }}
                 >
-                  {g.minute}&apos;
+                  {e.minute}&apos;
                 </span>
+                {e.kind === "red" && (
+                  <span
+                    aria-hidden
+                    className="inline-block shrink-0 rounded-[2px]"
+                    style={{ width: 9, height: 12, background: "#c2352f" }}
+                  />
+                )}
                 <span className="font-bold" style={{ color: "var(--wc-ink)" }}>
-                  {g.player}
+                  {e.player}
                 </span>
                 <span className="text-[12px]" style={{ color: "var(--wc-mute)" }}>
-                  {g.side === "home" ? homeTeam : awayTeam}
+                  {e.side === "home" ? homeTeam : awayTeam}
+                  {e.kind === "red" ? " · 퇴장" : ""}
                 </span>
-                {g.score && (
+                {e.score && (
                   <span
                     className="gn-num ml-auto text-[12.5px] font-bold"
                     style={{ color: "var(--wc-mute)" }}
                   >
-                    {g.score}
+                    {e.score}
                   </span>
                 )}
               </li>

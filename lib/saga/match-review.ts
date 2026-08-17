@@ -118,6 +118,10 @@ function buildSystemPrompt(teamKr: string, oppKr: string): string {
 - 선수 이름은 입력 표기를 **한 글자도 바꾸지 말고** 그대로 쓴다.
 - 구성: 2~3문단, 총 5~8문장. ①경기 흐름과 승부처(득점 장면 중심) ②마지막 문단 끝
   1~2문장으로 스탯이 말하는 바(제공된 지표 중 말이 되는 것 2~3개만, 나열 금지).
+- **퇴장이 있으면 몇 분에 누가 나갔는지 반드시 명시**한다. 수적 우위·열세가 경기 흐름을
+  어떻게 갈랐는지도 득점 시간과 엮어 쓴다.
+- 팀명은 조사를 정확히 붙인다 — 받침이 있으면 "은/이/을", 없으면 "는/가/를"
+  (예: "아스널은"·"맨체스터 시티는"). 팀명+"는" 처럼 틀린 조사는 금지.
 - 상대는 "${oppKr}"로 표기한다.
 - 출력: {"summary": "문단1\\n\\n문단2"} JSON. 문단 구분은 빈 줄 두 개.`
 }
@@ -161,11 +165,11 @@ export async function buildMatchReview(
   const them = weAreHome ? lfa.awayScore : lfa.homeScore
   const result: MatchReviewCard["result"] = us > them ? "W" : us < them ? "L" : "D"
 
-  const goals = lfa.goals.map((g) => ({
-    분: g.minute,
-    팀: (g.side === "home") === weAreHome ? perspective.teamKr : oppKr,
-    선수: g.player,
-  }))
+  const sideName = (side: "home" | "away") =>
+    (side === "home") === weAreHome ? perspective.teamKr : oppKr
+  const goals = lfa.goals.map((g) => ({ 분: g.minute, 팀: sideName(g.side), 선수: g.player }))
+  // 퇴장은 몇 분에 나왔는지가 경기 해석을 좌우한다 — 반드시 재료에 넣는다 (2026-08-17 운영자)
+  const reds = lfa.reds.map((r) => ({ 분: r.minute, 팀: sideName(r.side), 선수: r.player }))
   const stats = statsForPerspective(lfa.stats, weAreHome)
 
   const headline =
@@ -177,6 +181,7 @@ export async function buildMatchReview(
     홈원정: weAreHome ? "홈" : "원정",
     대회: leagueLabel(source.leagueCode),
     득점: goals,
+    퇴장: reds,
     스탯: stats,
   })
   if (!content) return null
@@ -195,6 +200,7 @@ export async function buildMatchReview(
     us,
     them,
     ...goals.flatMap((g) => [g.분, g.선수]),
+    ...reds.flatMap((r) => [r.분, r.선수]),
     ...stats.flatMap((s) => [s.지표, s.우리, s.상대]),
   ])
   const rogue = numbersGate(summary, allowed)

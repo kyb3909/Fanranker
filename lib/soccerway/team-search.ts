@@ -34,7 +34,17 @@ interface RawSearchItem {
   defaultCountry?: { name?: string } | null
 }
 
-/** 검색 응답 → 남자 축구 팀만 (여자축구 정책 + 선수/대회 결과 제외) */
+/**
+ * 유스·리저브 팀 표기 — 후보에서 제외한다.
+ *
+ * 2026-08-17 실측: "비야레알" 검색이 Villarreal / Villarreal U19 / Villarreal B 를 모두
+ * 반환했고, 셋 다 같은 슬러그("villarreal")에 id 만 달랐다. 발견 단계가 이들을 전부
+ * 후보로 삼으면 조합이 2건 이상 성립해 **ambiguous → 등재 실패**가 된다 (라싱 산탄데르
+ * vs 비야레알 라리가 개막 라운드가 이 이유로 라인업 없이 남았다).
+ */
+const YOUTH_RESERVE_RE = /\b(U\s?\d{2}|B|II|III|Reserves?|Youth|Academy|Sub\s?\d{2})\b/i
+
+/** 검색 응답 → 남자 축구 1군 팀만 (여자축구 정책 + 유스·리저브 + 선수/대회 결과 제외) */
 export function parseTeamSearchResults(raw: unknown): SoccerwayTeamCandidate[] {
   if (!Array.isArray(raw)) return []
   const out: SoccerwayTeamCandidate[] = []
@@ -43,6 +53,7 @@ export function parseTeamSearchResults(raw: unknown): SoccerwayTeamCandidate[] {
     if (item?.sport?.name !== "Soccer") continue
     if (item?.gender?.name === "Women") continue
     if (!item.id || !item.url || !item.name) continue
+    if (YOUTH_RESERVE_RE.test(item.name)) continue
     if (!/^[A-Za-z0-9]{8}$/.test(item.id)) continue
     out.push({
       soccerwayTeamId: item.id,

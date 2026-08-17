@@ -149,8 +149,10 @@ export interface LfaMatchInfo {
   homeScore: number | null
   awayScore: number | null
   stats: LfaStatRow[]
-  /** 득점·퇴장 등 주요 사건 (교체는 선수명이 안 와서 제외) */
+  /** 득점 (교체는 LFA 가 선수명을 안 줘서 제외) */
   goals: { minute: string; side: "home" | "away"; player: string; score: string }[]
+  /** 퇴장 — 몇 분에 나갔는지가 경기 해석의 핵심이라 따로 싣는다 (2026-08-17 운영자) */
+  reds: { minute: string; side: "home" | "away"; player: string }[]
 }
 
 /* ── 득점자 한글화 ── */
@@ -323,6 +325,7 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       awayScore: toNum(m.away?.score),
       stats: [],
       goals: [],
+      reds: [],
     }
 
     // 킥오프 전이면 상세를 부르지 않는다 (크레딧 절약)
@@ -339,24 +342,30 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       info.stats.push({ label: ko, home: h.text, away: a.text, homeNum: h.num, awayNum: a.num })
     }
 
-    const rawGoals = (d.events ?? []).filter((e) => {
-      const type = String(e.type ?? "").toLowerCase()
-      return type === "goal" || type === "own goal" || type === "penalty"
+    const isGoal = (t: string) => t === "goal" || t === "own goal" || t === "penalty"
+    // "Red Card" 와 "Second Yellow Card"(경고 누적 퇴장) 둘 다 퇴장이다
+    const isRed = (t: string) => t.includes("red card") || t.includes("second yellow")
+
+    const rawEvents = (d.events ?? []).filter((e) => {
+      const t = String(e.type ?? "").toLowerCase()
+      return isGoal(t) || isRed(t)
     })
-    // 라인업은 득점이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
-    const lineup: LineupResponse = rawGoals.length
+    // 라인업은 실을 사건이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
+    const lineup: LineupResponse = rawEvents.length
       ? await getLineupForGame(game.gameId).catch(() => ({ status: "none" }) as LineupResponse)
       : { status: "none" }
 
-    for (const e of rawGoals) {
+    for (const e of rawEvents) {
       const player = e.detail?.player?.name?.trim()
       if (!player) continue
-      info.goals.push({
-        minute: String(e.time ?? ""),
-        side: e.side,
-        player: localizeScorer(player, lineup),
-        score: e.detail?.score ?? "",
-      })
+      const t = String(e.type ?? "").toLowerCase()
+      const minute = String(e.time ?? "")
+      const label = localizeScorer(player, lineup)
+      if (isGoal(t)) {
+        info.goals.push({ minute, side: e.side, player: label, score: e.detail?.score ?? "" })
+      } else {
+        info.reds.push({ minute, side: e.side, player: label })
+      }
     }
 
     return info
