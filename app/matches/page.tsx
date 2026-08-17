@@ -2,7 +2,13 @@ import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { PageBand, PageBandStat } from "@/components/page-band"
-import { getFixturesForDay, todayKst, kstDayRange, type FixtureRow } from "@/lib/match/get-fixtures"
+import {
+  getFixturesForDay,
+  todayKst,
+  kstDayRange,
+  matchdayEndDate,
+  type FixtureRow,
+} from "@/lib/match/get-fixtures"
 import { leagueLabel, leagueOrder } from "@/lib/match/leagues"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 
@@ -36,12 +42,22 @@ function fmtKstTime(iso: string): string {
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const
 
+/**
+ * 매치데이 라벨 — 한 창이 KST 06:00~다음날 06:00 이라 **두 날짜에 걸친다**.
+ * 유럽 경기가 한국 새벽이라 "8월 16일"만 쓰면 그날 밤 경기가 다른 날처럼 보인다
+ * (2026-08-17 운영자). 그래서 "8월 16-17일" / "8.16-17" 로 짝지어 표기한다.
+ */
 function dateParts(dateKst: string) {
-  const d = new Date(`${dateKst}T00:00:00+09:00`)
+  const end = matchdayEndDate(dateKst)
+  const m = Number(dateKst.slice(5, 7))
+  const d1 = Number(dateKst.slice(8, 10))
+  const m2 = Number(end.slice(5, 7))
+  const d2 = Number(end.slice(8, 10))
+  // 달을 넘어가면 종료일에도 월을 붙인다 (8월 31-9월 1일)
+  const crossesMonth = m !== m2
   return {
-    month: d.getUTCMonth() /* +09 로 만든 UTC 자정 기준 */,
-    label: `${Number(dateKst.slice(5, 7))}월 ${Number(dateKst.slice(8, 10))}일`,
-    short: `${Number(dateKst.slice(5, 7))}.${Number(dateKst.slice(8, 10))}`,
+    label: crossesMonth ? `${m}월 ${d1}일-${m2}월 ${d2}일` : `${m}월 ${d1}-${d2}일`,
+    short: crossesMonth ? `${m}.${d1}-${m2}.${d2}` : `${m}.${d1}-${d2}`,
     weekday: WEEKDAYS[new Date(`${dateKst}T12:00:00+09:00`).getUTCDay()],
   }
 }
@@ -170,7 +186,7 @@ export default async function MatchesPage({
             {dp.label}
           </h2>
           <span className="text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
-            {dp.weekday}요일{date === today ? " · 오늘" : ""}
+            {dp.weekday}요일 밤{date === today ? " · 오늘" : ""}
           </span>
         </div>
 

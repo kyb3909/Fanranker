@@ -5,15 +5,24 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 
 /**
- * 일정 페이지 데이터 — KST 달력 하루의 대상 리그 경기 전부 (2026-08-16).
+ * 일정 페이지 데이터 — **매치데이 하루**의 대상 리그 경기 전부 (2026-08-17 개정).
  *
- * ⚠️ 베팅 데일리 윈도우(08:00~08:00, 23:00 flip)를 쓰지 않는다 — 일정은 사람의 달력
- *    직관("토요일 경기")을 따라야 한다. 유럽 경기는 KST 새벽이라 윈도우 기준으로는
- *    전날·당일에 걸쳐 찢어진다. 여기서는 KST 00:00~24:00 로 자른다.
+ * ⚠️ 달력일(KST 00:00~24:00)로 자르면 안 된다 — 유럽 경기가 한국 새벽이라 토요일
+ *    라운드가 토/일 두 날짜로 찢어진다 (2026-08-17 운영자: "시차 때문에 15/16일,
+ *    16/17일 이런 식으로 묶어서 보여주는 게 맞다"). 그래서 경계를 **KST 06:00** 에 둔다:
+ *    한 창은 KST 06:00 ~ 다음날 06:00 이고, 그 안에 K리그 낮경기(14:00) → 유럽 저녁
+ *    (23:00~) → MLS 새벽(04:00)까지 하루치 축구가 통째로 들어온다.
+ *    화면 라벨은 "8월 16-17일" 처럼 두 날짜를 함께 보여준다.
+ *
+ * 베팅 데일리 윈도우(08:00~08:00, 23:00 flip)와는 여전히 별개다 — 그쪽은 정산 기준이고
+ * 여기는 열람 기준이다.
  *
  * 상태·스코어는 마켓별 다중 row 를 경기 단위로 접는다 (get-match.ts 와 같은 규칙:
  * 상태는 completed > in_progress > cancelled > scheduled, 스코어는 값 있는 row 우선).
  */
+
+/** 매치데이 시작 시각 (KST) — 이 시각 이전 경기는 전날 매치데이 소속 */
+export const MATCHDAY_START_HOUR_KST = 6
 
 export interface FixtureRow {
   matchKey: string
@@ -29,10 +38,11 @@ export interface FixtureRow {
 
 const STATUS_RANK = { completed: 3, in_progress: 2, cancelled: 1, scheduled: 0 } as const
 
-/** "YYYY-MM-DD"(KST 달력일) → UTC 범위 [00:00 KST, +24h) */
+/** "YYYY-MM-DD"(매치데이 시작일) → UTC 범위 [그날 06:00 KST, +24h) */
 export function kstDayRange(dateKst: string): { start: string; end: string } | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKst)) return null
-  const start = new Date(`${dateKst}T00:00:00+09:00`)
+  const hh = String(MATCHDAY_START_HOUR_KST).padStart(2, "0")
+  const start = new Date(`${dateKst}T${hh}:00:00+09:00`)
   if (Number.isNaN(start.getTime())) return null
   return {
     start: start.toISOString(),
@@ -40,9 +50,19 @@ export function kstDayRange(dateKst: string): { start: string; end: string } | n
   }
 }
 
-/** 오늘의 KST 달력일 "YYYY-MM-DD" */
+/**
+ * 지금이 속한 매치데이의 시작일 "YYYY-MM-DD".
+ * KST 06:00 이전이면 아직 전날 매치데이다 — 새벽 4시에 보는 유럽 경기는 "어제 라운드".
+ */
 export function todayKst(): string {
-  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+  const kstMs = Date.now() + 9 * 3600_000 - MATCHDAY_START_HOUR_KST * 3600_000
+  return new Date(kstMs).toISOString().slice(0, 10)
+}
+
+/** 매치데이 시작일 → 종료일 ("2026-08-16" → "2026-08-17") */
+export function matchdayEndDate(dateKst: string): string {
+  const d = new Date(`${dateKst}T12:00:00+09:00`)
+  return new Date(d.getTime() + 24 * 3600_000).toISOString().slice(0, 10)
 }
 
 async function fetchFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
