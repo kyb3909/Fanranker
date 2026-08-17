@@ -4,6 +4,7 @@ import { CommentSection } from "@/components/post-detail/comment-section"
 import { STAGE_LABEL } from "@/lib/saga/stages"
 import {
   loadSquad,
+  loadSquadFromDb,
   fetchStanding,
   fetchMatches,
   fetchTeamChronicle,
@@ -11,6 +12,7 @@ import {
   seasonEndIso,
   type SeasonSubject,
   type ChronicleEvent,
+  type SquadGroup,
 } from "@/lib/saga/season"
 
 /**
@@ -51,6 +53,24 @@ const TIER_COLOR: Record<string, string> = {
   rumor: "#946A12",
 }
 
+/**
+ * 사료 종류별 색 — 테두리·배지가 같은 색을 쓴다 (2026-08-17 운영자: "박스 테두리로
+ * 무슨 뉴스인지 표시"). 이적은 티어별로 갈라 오피셜/유력/루머가 한눈에 구분된다.
+ * ⚠️ 좌측 액센트 바(border-left 3px)는 영구 금지 규칙이라 **사방 테두리**로 구현한다.
+ */
+function EVENT_COLOR(ev: ChronicleEvent): string {
+  if (ev.kind === "match") return "#3B5BA5" // 경기 = 블루
+  if (ev.kind === "entry") return "#3B5BA5" // 경기 리뷰 카드도 경기 계열
+  if (ev.kind === "transfer") return TIER_COLOR[ev.tier] ?? "var(--wc-mute)"
+  return "#6B5B8A" // 기사 = 퍼플
+}
+
+function EVENT_LABEL(ev: ChronicleEvent): string {
+  if (ev.kind === "match" || ev.kind === "entry") return "경기"
+  if (ev.kind === "article") return "기사"
+  return ev.tier === "official" ? "오피셜" : ev.tier === "tier1" ? "유력" : "이적설"
+}
+
 export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
   const supabase = createServiceRoleClient()
   const subject = saga.subject
@@ -71,7 +91,15 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
         .sort((a, b) => a.matchTime.localeCompare(b.matchTime))[0]
   const standingIsLastSeason =
     !!standing && new Date(standing.fetchedAt) < new Date(seasonStartIso(subject.season))
-  const squad = loadSquad(subject.team_fpl)
+  // team_squads(등번호·감독 보유) 우선, 없으면 fpl 이름 목록으로 폴백
+  const dbSquad = await loadSquadFromDb(supabase, subject.team_kr).catch(() => null)
+  const squad: SquadGroup[] =
+    dbSquad?.groups ??
+    loadSquad(subject.team_fpl).map((g) => ({
+      position: g.position,
+      label: g.label,
+      players: g.players.map((p) => ({ name: p.nameKo, number: null })),
+    }))
 
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
@@ -134,9 +162,12 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
               내려갑니다. (EPL 개막 8월 22일)
             </p>
           ) : (
+            /* 좌우 2단 실록 (2026-08-17 운영자: "일이 너무 많으니 좌우로, 칸도 두껍게").
+               가운데 레일을 두고 사료가 번갈아 좌우로 붙는다 — 세로 길이가 절반이 되고
+               한 칸이 넓어져 요약이 읽힌다. 모바일(<lg)은 단이 하나라 기존과 같다. */
             <div className="relative">
               <span
-                className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full"
+                className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full lg:left-1/2 lg:-translate-x-1/2"
                 style={{ background: "var(--wc-line)" }}
                 aria-hidden
               />
@@ -145,17 +176,22 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                   const showDate =
                     i === 0 ||
                     kstDateLabel(chronicle[i - 1].occurredAt) !== kstDateLabel(ev.occurredAt)
+                  const right = i % 2 === 1
                   return (
-                    <div key={i} className="relative pl-7">
+                    <div
+                      key={i}
+                      className={`relative pl-7 lg:w-1/2 lg:pl-0 ${
+                        right ? "lg:ml-auto lg:pl-8" : "lg:pr-8 lg:text-left"
+                      }`}
+                    >
                       <span
-                        className="absolute top-[26px] left-0 h-4 w-4 rounded-full border-2"
+                        className={`absolute top-[26px] left-0 h-4 w-4 rounded-full border-2 ${
+                          right
+                            ? "lg:left-0 lg:-translate-x-1/2"
+                            : "lg:right-0 lg:left-auto lg:translate-x-1/2"
+                        }`}
                         style={{
-                          borderColor:
-                            ev.kind === "match"
-                              ? "var(--wc-ink-2, #494d56)"
-                              : ev.kind === "transfer"
-                                ? (TIER_COLOR[ev.tier] ?? "var(--wc-mute)")
-                                : "var(--wc-mute)",
+                          borderColor: EVENT_COLOR(ev),
                           background:
                             ev.kind === "transfer" && ev.tier === "official"
                               ? TIER_COLOR.official
@@ -172,15 +208,35 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                         </p>
                       )}
 
-                      {ev.kind === "match" ? (
-                        <MatchEvent ev={ev} teamNames={teamNames} />
-                      ) : ev.kind === "transfer" ? (
-                        <TransferEvent ev={ev} />
-                      ) : ev.kind === "entry" ? (
-                        <EntryEvent ev={ev} />
-                      ) : (
-                        <ArticleEvent ev={ev} />
-                      )}
+                      {/* 종류를 테두리로 구분 (2026-08-17 운영자) — 좌측 액센트 바가 아니라
+                          사방 테두리 + 배지다 (좌측 3px 액센트는 영구 금지 규칙) */}
+                      <div
+                        className="rounded-xl"
+                        style={{
+                          border: `1px solid ${EVENT_COLOR(ev)}55`,
+                          background: `${EVENT_COLOR(ev)}0a`,
+                        }}
+                      >
+                        <div className="px-3 pt-2">
+                          <span
+                            className="inline-block rounded-full px-2 py-[1px] text-[10.5px] font-extrabold"
+                            style={{ background: `${EVENT_COLOR(ev)}1f`, color: EVENT_COLOR(ev) }}
+                          >
+                            {EVENT_LABEL(ev)}
+                          </span>
+                        </div>
+                        <div className="px-1 pb-1">
+                          {ev.kind === "match" ? (
+                            <MatchEvent ev={ev} teamNames={teamNames} />
+                          ) : ev.kind === "transfer" ? (
+                            <TransferEvent ev={ev} />
+                          ) : ev.kind === "entry" ? (
+                            <EntryEvent ev={ev} />
+                          ) : (
+                            <ArticleEvent ev={ev} />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
@@ -189,27 +245,56 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
           )}
         </section>
 
-        {/* ── 부록: 스쿼드 ── */}
+        {/* ── 부록: 스쿼드 — 등번호 칩 + 포지션별 그리드 (2026-08-17 운영자:
+            "스쿼드 피드를 활용해 선수단 명단을 제대로") ── */}
         {squad.length > 0 && (
           <section className="mt-8 rounded-2xl px-5 py-4 sm:px-6" style={card} aria-label="스쿼드">
-            <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-              스쿼드
-            </h2>
-            <div className="mt-2 flex flex-col gap-2.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
+                스쿼드{" "}
+                <span className="gn-num text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                  {squad.reduce((n, g) => n + g.players.length, 0)}
+                </span>
+              </h2>
+              {dbSquad?.coach && (
+                <span className="text-[12.5px]" style={{ color: "var(--wc-mute)" }}>
+                  감독 <b style={{ color: "var(--wc-ink)" }}>{dbSquad.coach}</b>
+                </span>
+              )}
+            </div>
+            <div className="mt-3 flex flex-col gap-4">
               {squad.map((group) => (
-                <div key={group.position} className="flex gap-2">
-                  <span
-                    className="w-[64px] shrink-0 pt-0.5 text-[11.5px] font-extrabold"
-                    style={{ color: "var(--wc-mute)" }}
-                  >
-                    {group.label}
-                  </span>
+                <div key={group.position}>
                   <p
-                    className="flex-1 text-[13px] leading-relaxed"
-                    style={{ color: "var(--wc-ink)" }}
+                    className="text-[11.5px] font-extrabold"
+                    style={{ color: "var(--wc-burgundy)", letterSpacing: "0.04em" }}
                   >
-                    {group.players.map((p) => p.nameKo).join(" · ")}
+                    {group.label}{" "}
+                    <span className="gn-num" style={{ color: "var(--wc-mute-2)" }}>
+                      {group.players.length}
+                    </span>
                   </p>
+                  <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
+                    {group.players.map((p, i) => (
+                      <li key={i} className="flex items-center gap-1.5 text-[13px]">
+                        <span
+                          className="gn-num grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+                          style={{
+                            background: "var(--wc-wine-tint)",
+                            color: "var(--wc-burgundy)",
+                          }}
+                        >
+                          {p.number ?? "·"}
+                        </span>
+                        <span
+                          className="truncate"
+                          style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+                        >
+                          {p.name}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>

@@ -70,6 +70,69 @@ const POSITION_LABEL: Record<string, string> = {
   FW: "공격수",
 }
 
+export interface SquadEntry {
+  name: string
+  number: number | null
+}
+
+export interface SquadGroup {
+  position: string
+  label: string
+  players: SquadEntry[]
+}
+
+/**
+ * 스쿼드 — `team_squads` 우선 (2026-08-17 운영자: "스쿼드 피드를 제대로 표현").
+ *
+ * fpl-players.json 은 이름만 있고 등번호가 없다. `team_squads` 는 soccerway 수확분이라
+ * **등번호·한글명·감독**까지 있고 시즌 중 갱신된다 (실측: 아스널 26명 중 25명 등번호).
+ * 팀 연결은 team_dictionary(name_kr → soccerway_team_id) 경유.
+ *
+ * 비어 있으면 null — 호출부가 fpl 폴백으로 내려간다.
+ */
+export async function loadSquadFromDb(
+  supabase: ServiceClient,
+  teamKr: string
+): Promise<{ groups: SquadGroup[]; coach: string | null } | null> {
+  const { data: dict } = await supabase
+    .from("team_dictionary")
+    .select("soccerway_team_id")
+    .or(`name_kr.eq.${teamKr},aliases_kr.cs.{"${teamKr}"}`)
+    .neq("status", "rejected")
+    .limit(1)
+    .maybeSingle()
+  if (!dict?.soccerway_team_id) return null
+
+  const { data } = await supabase
+    .from("team_squads")
+    .select("name_kr, name_en, jersey_number, position")
+    .eq("soccerway_team_id", dict.soccerway_team_id)
+    .neq("status", "rejected")
+  if (!data || data.length === 0) return null
+
+  const coach =
+    data.find((r) => r.position === "COACH")?.name_kr ??
+    data.find((r) => r.position === "COACH")?.name_en ??
+    null
+
+  const groups: SquadGroup[] = POSITION_ORDER.map((pos) => ({
+    position: pos,
+    label: POSITION_LABEL[pos] ?? pos,
+    players: data
+      .filter((r) => r.position === pos)
+      .map((r) => ({
+        // 한글명이 없으면 영문 — 목록에서 빠지는 것보다 낫다
+        name: String(r.name_kr ?? r.name_en ?? "").trim(),
+        number: r.jersey_number != null ? Number(r.jersey_number) : null,
+      }))
+      .filter((p) => p.name)
+      // 등번호 순 (없으면 뒤로)
+      .sort((a, b) => (a.number ?? 999) - (b.number ?? 999)),
+  })).filter((g) => g.players.length > 0)
+
+  return groups.length > 0 ? { groups, coach: coach ? String(coach) : null } : null
+}
+
 export function loadSquad(
   teamFpl: string
 ): { position: string; label: string; players: SquadPlayer[] }[] {
