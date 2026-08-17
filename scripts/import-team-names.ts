@@ -68,7 +68,7 @@ async function main() {
   const iSw = col("soccerway_팀ID")
   const iSlug = col("soccerway_슬러그")
   const iEn = col("soccerway_팀명")
-  const iKr = col("한글명")
+  const iKr = col("한글명(채워")
   if (iSw < 0 || iKr < 0) throw new Error("헤더에 soccerway_팀ID / 한글명 열이 없습니다")
 
   const { data: existing } = await supabase

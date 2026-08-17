@@ -50,14 +50,25 @@ async function main() {
     { auth: { persistSession: false } }
   )
 
-  const { data: dict } = await supabase
+  const { data: dictAll } = await supabase
     .from("team_dictionary")
-    .select("name_en, name_kr")
+    .select("soccerway_team_id, name_en, name_kr, lfa_team_id")
     .neq("status", "rejected")
-    .not("name_kr", "is", null)
+  // soccerway 해시 → 이미 확정된 한글명 (축약형 중복 판별용)
+  const krBySw = new Map(
+    (dictAll ?? [])
+      .filter((r) => r.name_kr)
+      .map((r) => [String(r.soccerway_team_id), String(r.name_kr)])
+  )
+  const dict = (dictAll ?? []).filter((r) => r.name_kr)
   const index = (dict ?? []).map((r) => norm(String(r.name_en)))
-  // 프로덕션과 같은 판정: 정확일치 1건 또는 접두 포함 1건일 때만 한글화된다
-  const resolvable = (en: string) => {
+  const byLfaId = new Set(
+    (dict ?? []).map((r) => String(r.lfa_team_id ?? "")).filter((v) => v.length > 0)
+  )
+  // 프로덕션과 같은 판정: LFA 팀 해시가 붙어 있으면 표기와 무관하게 한글화된다.
+  // 해시가 없을 때만 이름 대조로 내려간다 (정확일치 1건 또는 접두 포함 1건).
+  const resolvable = (en: string, lfaTeamId: string) => {
+    if (lfaTeamId && byLfaId.has(lfaTeamId)) return true
     const n = norm(en)
     if (!n) return false
     if (index.filter((e) => e === n).length === 1) return true
@@ -81,7 +92,7 @@ async function main() {
       for (const side of ["home", "away"] as const) {
         const en = String(m[side]?.name ?? "").trim()
         const id = String(m[side]?.id ?? "")
-        if (!en || !id || resolvable(en)) continue
+        if (!en || !id || resolvable(en, id)) continue
         if (!missing.has(id)) {
           missing.set(id, {
             leagueCode: code,
@@ -134,6 +145,9 @@ async function main() {
       sw.slug,
       sw.nameEn,
       sw.confidence,
+      // 이 soccerway 해시에 이미 확정 한글명이 있으면 = 축약형 때문에 못 찾은 것.
+      // 새로 번역할 필요 없이 확인만 하면 된다 (2026-08-17 운영자 "축약형도 있지 않았어?")
+      krBySw.get(sw.id) ?? "",
       "", // name_kr — 운영자가 채울 칸
       t.fixture,
     ])
@@ -151,6 +165,7 @@ async function main() {
     "soccerway_슬러그",
     "soccerway_팀명",
     "매칭신뢰도",
+    "기존한글명(있으면 이미 등록됨)",
     "한글명(채워주세요)",
     "예시경기",
   ]
