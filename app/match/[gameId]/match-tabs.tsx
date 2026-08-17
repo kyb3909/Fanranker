@@ -43,11 +43,12 @@ export function MatchTabs({
   const current = tabs.find((t) => t.key === active) ?? tabs[0]
 
   return (
-    <div className="mt-4">
+    <div>
+      {/* 종이 좌우 끝까지 뻗는 탭 스트립 — 음수 마진으로 종이 패딩을 상쇄한다 */}
       <div
         role="tablist"
         aria-label="경기 정보"
-        className="scrollbar-none flex gap-1 overflow-x-auto"
+        className="scrollbar-none -mx-4 flex gap-1 overflow-x-auto px-4 sm:-mx-6 sm:px-6"
         style={{ borderBottom: "1px solid var(--wc-line)" }}
       >
         {tabs.map((t) => {
@@ -70,7 +71,9 @@ export function MatchTabs({
           )
         })}
       </div>
-      <div role="tabpanel">{current.content}</div>
+      <div role="tabpanel" className="pt-6">
+        {current.content}
+      </div>
     </div>
   )
 }

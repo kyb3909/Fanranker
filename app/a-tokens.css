@@ -31,6 +31,30 @@
  * 레이어 없는 CSS 는 Tailwind 의 @layer utilities 를 특이도와 무관하게 이겨서,
  * `absolute inset-0` 같은 배치 유틸이 .gn-thumb 의 position 에 먹히는 사고가 난다. */
 @layer components {
+  /* ── 종이 1장 안의 단 라벨 (2026-08-18 매치 센터 리디자인) ──
+   * 흰 상자를 여러 개 겹치는 대신 종이 한 장 위에 라벨 + 괘선으로만 단을 나눈다.
+   * 괘선은 종이 좌우 끝까지 뻗어야 "단"으로 읽힌다 — 그래서 음수 마진으로 패딩을 상쇄한다.
+   * 라벨은 속삭이는 크기(12px mute)로 두고 검정은 콘텐츠에만 남긴다. */
+  .sheet-lab {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--wc-mute);
+    padding-bottom: 7px;
+    margin: 0 -16px 10px;
+    padding-left: 16px;
+    padding-right: 16px;
+    border-bottom: 1px solid var(--wc-line);
+  }
+  @media (min-width: 641px) {
+    .sheet-lab {
+      margin-left: -24px;
+      margin-right: -24px;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+  }
+
   /* 콘덴스드 + tabular — 시각·스코어·카운트다운 */
   /* ⚠️ 숫자 "슬롯"에만 건다. 한글이 섞인 줄 전체에 걸면 한글이 폴백으로 떨어진다
    *    (Barlow Condensed 는 라틴 전용) — 숫자만 <span class="gn-num"> 으로 분리할 것.

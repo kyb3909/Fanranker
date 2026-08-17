@@ -5,15 +5,11 @@ import { getMatchPreview, type FormMatch } from "@/lib/lfa/preview"
  * 전부 fail-open: 재료가 없는 섹션은 스스로 사라지고, 넷 다 없으면 통째로 안 그린다.
  */
 
+/** 종이 1장 안의 한 단 — 상자를 겹치지 않고 라벨 + 괘선으로만 나눈다 */
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section
-      className="mt-4 rounded-xl px-4 py-3.5"
-      style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-    >
-      <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-        {title}
-      </h2>
+    <section className="mt-8 first:mt-0">
+      <h2 className="sheet-lab">{title}</h2>
       {children}
     </section>
   )

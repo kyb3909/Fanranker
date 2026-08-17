@@ -29,13 +29,8 @@ export async function MatchExtrasSection({
   return (
     <>
       {stats && (
-        <section
-          className="mt-4 rounded-xl px-4 py-3.5"
-          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-        >
-          <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            경기 스탯
-          </h2>
+        <section>
+          <h2 className="sheet-lab">경기 스탯</h2>
           <div
             className="mt-1 flex items-baseline justify-between text-[11.5px] font-bold"
             style={{ color: "var(--wc-mute)" }}
@@ -90,16 +85,8 @@ export async function MatchExtrasSection({
       )}
 
       {report && (
-        <section
-          className="mt-4 rounded-xl px-4 py-4"
-          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-        >
-          <h2
-            className="text-[12px] font-extrabold"
-            style={{ color: "var(--wc-burgundy)", letterSpacing: "0.06em" }}
-          >
-            경기 리포트
-          </h2>
+        <section className="mt-8">
+          <h2 className="sheet-lab">경기 리포트</h2>
           <h3
             className="mt-1.5 text-[16.5px] leading-snug"
             style={{

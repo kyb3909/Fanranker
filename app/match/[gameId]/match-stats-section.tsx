@@ -27,13 +27,8 @@ export function MatchStatsSection({
   return (
     <>
       {timeline.length > 0 && (
-        <section
-          className="mt-4 rounded-xl px-4 py-3.5"
-          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-        >
-          <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            주요 기록
-          </h2>
+        <section>
+          <h2 className="sheet-lab">주요 기록</h2>
           <ul className="mt-2 space-y-1.5">
             {timeline.map((e, i) => (
               <li key={i} className="flex items-baseline gap-2 text-[13.5px]">
@@ -75,13 +70,8 @@ export function MatchStatsSection({
       )}
 
       {hasStats && (
-        <section
-          className="mt-4 rounded-xl px-4 py-3.5"
-          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-        >
-          <h2 className="text-[13px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            경기 스탯
-          </h2>
+        <section className="mt-8">
+          <h2 className="sheet-lab">경기 스탯</h2>
           <div
             className="mt-1 flex items-baseline justify-between text-[11.5px] font-bold"
             style={{ color: "var(--wc-mute)" }}
@@ -123,9 +113,10 @@ export function MatchStatsSection({
                         borderRadius: 99,
                       }}
                     />
+                    {/* 상대 팀을 회색으로 칠하면 "비어 있음"으로 읽혀 바가 거짓말을 한다 */}
                     <span
                       className="flex-1"
-                      style={{ background: "var(--wc-line-2)", borderRadius: 99 }}
+                      style={{ background: "var(--wc-ink)", opacity: 0.75, borderRadius: 99 }}
                     />
                   </div>
                 </li>

@@ -1,4 +1,5 @@
 import Link from "@/components/ui/app-link"
+import { PageBand, PageBandStat } from "@/components/page-band"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { CommentSection } from "@/components/post-detail/comment-section"
 import { STAGE_LABEL } from "@/lib/saga/stages"
@@ -42,6 +43,19 @@ function kstDateLabel(iso: string): string {
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`
 }
 
+/** 날짜 레일용 "8.3" — 숫자와 점만이라 .gn-num(라틴 전용) 을 안전하게 걸 수 있다 */
+function kstShortDate(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000)
+  return `${d.getUTCMonth() + 1}.${d.getUTCDate()}`
+}
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const
+
+/** 요일은 한글이므로 .gn-num 을 걸지 않는다 (걸면 폴백으로 떨어진다) */
+function kstWeekday(iso: string): string {
+  return WEEKDAYS[new Date(new Date(iso).getTime() + 9 * 3600 * 1000).getUTCDay()]
+}
+
 const card: React.CSSProperties = {
   background: "var(--wc-card, #fff)",
   boxShadow: "var(--wc-shadow-1)",
@@ -53,22 +67,39 @@ const TIER_COLOR: Record<string, string> = {
   rumor: "#946A12",
 }
 
-/**
- * 사료 종류별 색 — 테두리·배지가 같은 색을 쓴다 (2026-08-17 운영자: "박스 테두리로
- * 무슨 뉴스인지 표시"). 이적은 티어별로 갈라 오피셜/유력/루머가 한눈에 구분된다.
- * ⚠️ 좌측 액센트 바(border-left 3px)는 영구 금지 규칙이라 **사방 테두리**로 구현한다.
- */
-function EVENT_COLOR(ev: ChronicleEvent): string {
-  if (ev.kind === "match") return "#3B5BA5" // 경기 = 블루
-  if (ev.kind === "entry") return "#3B5BA5" // 경기 리뷰 카드도 경기 계열
-  if (ev.kind === "transfer") return TIER_COLOR[ev.tier] ?? "var(--wc-mute)"
-  return "#6B5B8A" // 기사 = 퍼플
-}
-
 function EVENT_LABEL(ev: ChronicleEvent): string {
   if (ev.kind === "match" || ev.kind === "entry") return "경기"
   if (ev.kind === "article") return "기사"
   return ev.tier === "official" ? "오피셜" : ev.tier === "tier1" ? "유력" : "이적설"
+}
+
+/**
+ * 사료 등급 칩 — **채움 3단 사다리로만** 말한다 (2026-08-18 리디자인).
+ *
+ * 직전 버전은 파랑·보라·초록·앰버 4색을 새로 만들어 테두리·배경틴트·칩배경·칩글자·도트
+ * 다섯 곳에 동시에 발랐다. 사이트 전체 유채색이 버건디 하나인데 실록에서만 5개가 되어
+ * "우리 사이트 같지 않다"의 큰 축이 됐다. 색을 늘리지 않고 형태로 등급을 가른다:
+ *
+ *   잉크 채움 = 오피셜(확정)  ·  버건디 외곽 = 유력  ·  실선 외곽 = 이적설  ·  soft = 경기·기사
+ *
+ * radius 4 = 상태 칩 (radius 8 소속 칩과 형태로 구분 — 홈 피드가 8을 쓴다).
+ */
+function EventChip({ ev }: { ev: ChronicleEvent }) {
+  const base =
+    "inline-block shrink-0 rounded-[4px] px-[7px] py-[2px] text-[10.5px] leading-[1.5] font-extrabold"
+  const style: React.CSSProperties =
+    ev.kind === "transfer" && ev.tier === "official"
+      ? { background: "var(--wc-ink)", color: "var(--wc-card)" }
+      : ev.kind === "transfer" && ev.tier === "tier1"
+        ? { color: "var(--wc-burgundy)", boxShadow: "inset 0 0 0 1px var(--wc-burgundy)" }
+        : ev.kind === "transfer"
+          ? { color: "var(--wc-mute-2)", boxShadow: "inset 0 0 0 1px var(--wc-line-2)" }
+          : { background: "var(--wc-soft)", color: "var(--wc-mute)" }
+  return (
+    <span className={base} style={style}>
+      {EVENT_LABEL(ev)}
+    </span>
+  )
 }
 
 export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
@@ -101,58 +132,34 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
       players: g.players.map((p) => ({ name: p.nameKo, number: null })),
     }))
 
+  // 헤더 요약 한 줄 — 밴드의 description 슬롯으로 들어간다
+  const headline =
+    !seasonOver && standing && standing.played === 0 && !standingIsLastSeason
+      ? "개막 전 — 순위는 첫 라운드 후 표시됩니다"
+      : !seasonOver && standing
+        ? `리그 ${standing.rank}위 · ${standing.played}경기 ${standing.win}승 ${standing.draw}무 ${standing.loss}패 · 승점 ${standing.points}` +
+          (standingIsLastSeason ? " (지난 시즌 최종 — 개막 후 자동 갱신)" : "")
+        : null
+  const upcomingLine = upcoming
+    ? `다음 경기 · ${fmtDate(upcoming.matchTime)} ${upcoming.home} ${upcoming.away}`
+    : null
+
   return (
-    <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
-      <main className="mx-auto max-w-[760px] px-4 pt-6 pb-16 sm:px-6">
-        {/* ── 헤더: 팀 + 시즌 + 순위·다음 경기 요약 ── */}
-        <header className="rounded-2xl px-5 py-5 sm:px-6" style={card}>
-          <p
-            className="text-[12px] font-extrabold tracking-wide"
-            style={{ color: "var(--wc-mute)" }}
-          >
-            SEASON WIKI · {subject.season}
-          </p>
-          <h1
-            className="mt-0.5 text-[24px] font-extrabold sm:text-[28px]"
-            style={{ color: "var(--wc-ink)", letterSpacing: "-.02em" }}
-          >
-            {saga.title}
-          </h1>
-          {/* 0경기 현 시즌 테이블의 순위는 순번일 뿐이다 — "리그 14위"로 읽히면 오보 (QA ISSUE-003) */}
-          {!seasonOver && standing && standing.played === 0 && !standingIsLastSeason ? (
-            <p className="mt-3 text-[13.5px] font-bold" style={{ color: "var(--wc-mute)" }}>
-              개막 전 — 순위는 첫 라운드 후 표시됩니다
-            </p>
-          ) : !seasonOver && standing ? (
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
-              <span className="font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
-                리그 {standing.rank}위
-              </span>
-              <span style={{ color: "var(--wc-ink)" }}>
-                {standing.played}경기 {standing.win}승 {standing.draw}무 {standing.loss}패 · 승점{" "}
-                {standing.points}
-              </span>
-              <span className="text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
-                {standingIsLastSeason
-                  ? "지난 시즌 최종 — 개막 후 자동 갱신"
-                  : `기준 ${fmtDate(standing.fetchedAt)}`}
-              </span>
-            </div>
-          ) : null}
-          {upcoming && (
-            <p className="mt-1.5 text-[13px]" style={{ color: "var(--wc-mute)" }}>
-              다음 경기 · {fmtDate(upcoming.matchTime)} {upcoming.home} vs {upcoming.away}
-              {upcoming.leagueCode ? ` (${upcoming.leagueCode})` : ""}
-            </p>
-          )}
-        </header>
+    <div className="min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
+      {/* ── 페이지 선언: 공용 다크 밴드 (2026-08-18 리디자인 1단계).
+          흰 헤더 카드로 시작하면 페이지가 "시작"하지 않는다 — 사이트에서 밴드를 쓰는
+          페이지가 11곳인데 사가·매치만 빠져 있던 것이 불일치의 1순위 원인이었다.
+          h1 은 페이지에 하나 — 밴드가 가져간다. */}
+      <PageBand
+        kicker={`Season Wiki ${subject.season}`}
+        title={saga.title}
+        description={[headline, upcomingLine].filter(Boolean).join("  ·  ") || undefined}
+        aside={<PageBandStat value={chronicle.length} label="CHRONICLE" />}
+      />
 
+      <main className="mx-auto max-w-[720px] px-4 pt-8 pb-16 sm:px-6">
         {/* ── 연대기 — 실록: 사료(경기·이적 소식)가 시간순으로 쌓여 내려간다 ── */}
-        <section className="mt-6" aria-label="연대기">
-          <h2 className="mb-3 text-[15px] font-extrabold" style={{ color: "var(--wc-ink)" }}>
-            연대기 <span style={{ color: "var(--wc-mute)" }}>{chronicle.length}</span>
-          </h2>
-
+        <section aria-label="연대기">
           {chronicle.length === 0 ? (
             <p
               className="rounded-xl px-5 py-8 text-center text-[13.5px]"
@@ -162,85 +169,65 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
               내려갑니다. (EPL 개막 8월 22일)
             </p>
           ) : (
-            /* 좌우 2단 실록 (2026-08-17 운영자: "일이 너무 많으니 좌우로, 칸도 두껍게").
-               가운데 레일을 두고 사료가 번갈아 좌우로 붙는다 — 세로 길이가 절반이 되고
-               한 칸이 넓어져 요약이 읽힌다. 모바일(<lg)은 단이 하나라 기존과 같다. */
-            <div className="relative">
-              <span
-                className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full lg:left-1/2 lg:-translate-x-1/2"
-                style={{ background: "var(--wc-line)" }}
-                aria-hidden
-              />
-              <div className="flex flex-col gap-3">
-                {chronicle.map((ev, i) => {
-                  const showDate =
-                    i === 0 ||
-                    kstDateLabel(chronicle[i - 1].occurredAt) !== kstDateLabel(ev.occurredAt)
-                  const right = i % 2 === 1
-                  return (
-                    <div
-                      key={i}
-                      className={`relative pl-7 lg:w-1/2 lg:pl-0 ${
-                        right ? "lg:ml-auto lg:pl-8" : "lg:pr-8 lg:text-left"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-[26px] left-0 h-4 w-4 rounded-full border-2 ${
-                          right
-                            ? "lg:left-0 lg:-translate-x-1/2"
-                            : "lg:right-0 lg:left-auto lg:translate-x-1/2"
-                        }`}
-                        style={{
-                          borderColor: EVENT_COLOR(ev),
-                          background:
-                            ev.kind === "transfer" && ev.tier === "official"
-                              ? TIER_COLOR.official
-                              : "var(--wc-card, #fff)",
-                        }}
-                        aria-hidden
-                      />
-                      {showDate && (
-                        <p
-                          className="mb-1.5 text-[12px] font-extrabold tracking-wide"
-                          style={{ color: "var(--wc-mute)" }}
-                        >
-                          {kstDateLabel(ev.occurredAt)}
-                        </p>
-                      )}
-
-                      {/* 종류를 테두리로 구분 (2026-08-17 운영자) — 좌측 액센트 바가 아니라
-                          사방 테두리 + 배지다 (좌측 3px 액센트는 영구 금지 규칙) */}
-                      <div
-                        className="rounded-xl"
-                        style={{
-                          border: `1px solid ${EVENT_COLOR(ev)}55`,
-                          background: `${EVENT_COLOR(ev)}0a`,
-                        }}
-                      >
-                        <div className="px-3 pt-2">
-                          <span
-                            className="inline-block rounded-full px-2 py-[1px] text-[10.5px] font-extrabold"
-                            style={{ background: `${EVENT_COLOR(ev)}1f`, color: EVENT_COLOR(ev) }}
+            /* 날짜 레일 (2026-08-18 리디자인 2단계).
+             *
+             * 직전의 좌우 지그재그를 되돌린다 — 목적("일이 너무 많다")은 맞았지만 수단이
+             * 역효과였다. 실측: 반폭이 되자 헤드라인이 3줄로 흘러 6항목 804px(항목당 134px),
+             * 날짜 레일 단일 칼럼은 같은 6항목이 ~340px. 화면 절반이 비는데 세로는 그대로였다.
+             *
+             * 왼쪽 92px 레일에 날짜를 한 번만 찍고, 같은 날 사료는 오른쪽에 붙여 한 덩어리로
+             * 읽게 한다. 유채 테두리·배경 틴트·도트는 전부 제거 — 등급은 칩 채움이 말한다. */
+            <div className="flex flex-col">
+              {chronicle.map((ev, i) => {
+                const newDay =
+                  i === 0 ||
+                  kstDateLabel(chronicle[i - 1].occurredAt) !== kstDateLabel(ev.occurredAt)
+                return (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[62px_1fr] sm:grid-cols-[92px_1fr]"
+                    style={newDay && i > 0 ? { marginTop: 20 } : undefined}
+                  >
+                    {/* 날짜 레일 — 그 날 첫 항목에만 찍는다 */}
+                    <div className="pt-3 pr-3">
+                      {newDay && (
+                        <>
+                          <p
+                            className="gn-num text-[18px] leading-none font-bold sm:text-[20px]"
+                            style={{ color: "var(--wc-ink)" }}
                           >
-                            {EVENT_LABEL(ev)}
-                          </span>
-                        </div>
-                        <div className="px-1 pb-1">
-                          {ev.kind === "match" ? (
-                            <MatchEvent ev={ev} teamNames={teamNames} />
-                          ) : ev.kind === "transfer" ? (
-                            <TransferEvent ev={ev} />
-                          ) : ev.kind === "entry" ? (
-                            <EntryEvent ev={ev} />
-                          ) : (
-                            <ArticleEvent ev={ev} />
-                          )}
-                        </div>
-                      </div>
+                            {kstShortDate(ev.occurredAt)}
+                          </p>
+                          <p className="mt-1 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                            {kstWeekday(ev.occurredAt)}
+                          </p>
+                        </>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
+
+                    <div
+                      className="py-3 pl-4 sm:pl-6"
+                      style={{
+                        borderLeft: "1px solid var(--wc-line-2)",
+                        borderBottom: "1px solid var(--wc-line)",
+                      }}
+                    >
+                      <div className="mb-1.5 flex min-w-0 items-center gap-2">
+                        <EventChip ev={ev} />
+                      </div>
+                      {ev.kind === "match" ? (
+                        <MatchEvent ev={ev} teamNames={teamNames} />
+                      ) : ev.kind === "transfer" ? (
+                        <TransferEvent ev={ev} />
+                      ) : ev.kind === "entry" ? (
+                        <EntryEvent ev={ev} />
+                      ) : (
+                        <ArticleEvent ev={ev} />
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>
@@ -323,33 +310,31 @@ function MatchEvent({
   const their = isHome ? m.awayScore : m.homeScore
   const wdl =
     our !== null && their !== null ? (our > their ? "승" : our < their ? "패" : "무") : null
+  // 카드 껍데기 없음 — 레일이 이미 지면을 나눈다 (카드 안 카드 금지)
   return (
-    <article className="rounded-xl px-4 py-3" style={card}>
-      <div className="flex items-center gap-2 text-[13.5px]">
-        {wdl && (
-          <span
-            className="shrink-0 rounded px-1.5 py-0.5 text-[11.5px] font-extrabold"
-            style={{
-              background: "rgba(0,0,0,.05)",
-              color:
-                wdl === "승" ? "#0E7A3C" : wdl === "패" ? "var(--wc-burgundy)" : "var(--wc-mute)",
-            }}
-          >
-            {wdl}
-          </span>
-        )}
-        <span className="font-semibold" style={{ color: "var(--wc-ink)" }}>
-          {m.home}{" "}
-          <b className="tabular-nums">
-            {m.homeScore} : {m.awayScore}
-          </b>{" "}
-          {m.away}
+    <div className="flex items-center gap-2 text-[15.5px]">
+      {wdl && (
+        <span
+          className="grid h-[17px] w-[17px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+          style={{
+            background: wdl === "승" ? "#2f7d5b1a" : wdl === "패" ? "#c2352f1a" : "var(--wc-soft)",
+            color: wdl === "승" ? "#2f7d5b" : wdl === "패" ? "#c2352f" : "var(--wc-mute)",
+          }}
+        >
+          {wdl}
         </span>
-        <span className="ml-auto shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
-          {m.leagueCode ?? ""}
-        </span>
-      </div>
-    </article>
+      )}
+      <span className="min-w-0 font-bold" style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}>
+        {m.home}
+        <b className="gn-num mx-1.5">
+          {m.homeScore}–{m.awayScore}
+        </b>
+        {m.away}
+      </span>
+      <span className="ml-auto shrink-0 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+        {m.leagueCode ?? ""}
+      </span>
+    </div>
   )
 }
 
@@ -364,9 +349,9 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
   // 엔트리 종류에 맞는 접힘 라벨 — 인터뷰 카드에 "경기 리포트"라고 적혀 있었다 (QA ISSUE-002)
   const label = ev.headline.startsWith("[인터뷰]") ? "인터뷰" : "경기 리포트"
   return (
-    <article className="rounded-xl px-4 py-3" style={card}>
+    <div>
       <p
-        className="text-[13.5px] font-semibold"
+        className="text-[15.5px] leading-[1.45] font-bold"
         style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
       >
         {ev.headline}
@@ -404,55 +389,46 @@ function EntryEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "entry" }> }) 
           </div>
         </details>
       )}
-    </article>
+    </div>
   )
 }
 
 function ArticleEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "article" }> }) {
   return (
-    <Link href={`/post/${ev.postId}?utm_source=season_wiki`} className="block">
-      <article className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md" style={card}>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-[12px]">📰</span>
-          <p
-            className="min-w-0 flex-1 text-[13.5px] font-semibold"
-            style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
-          >
-            {ev.title}
-          </p>
-        </div>
-      </article>
+    <Link href={`/post/${ev.postId}?utm_source=season_wiki`} className="block no-underline">
+      <p
+        className="text-[15.5px] leading-[1.45] font-bold"
+        style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
+      >
+        {ev.title}
+      </p>
     </Link>
   )
 }
 
 function TransferEvent({ ev }: { ev: Extract<ChronicleEvent, { kind: "transfer" }> }) {
   return (
-    <Link href={`/saga/${ev.sagaSlug}`} className="block">
-      <article className="rounded-xl px-4 py-3 transition-shadow hover:shadow-md" style={card}>
-        <div className="flex items-center gap-2 text-[11.5px] font-bold">
-          <span style={{ color: TIER_COLOR[ev.tier] ?? "var(--wc-mute)" }}>
-            {ev.tier === "official" ? "오피셜" : ev.tier === "tier1" ? "유력" : "루머"}
-          </span>
+    <Link href={`/saga/${ev.sagaSlug}`} className="block no-underline">
+      <div>
+        {/* 등급은 레일 칩이 이미 말한다 — 여기선 사가명과 현재 단계만.
+            "루머 → 제안" 처럼 전이를 병기하면 무엇이 지금인지 안 읽힌다 */}
+        <div className="flex min-w-0 items-center gap-2 text-[11.5px]">
           {ev.stageAfter && (
-            <span
-              className="rounded px-1 py-px"
-              style={{ background: "rgba(139,30,63,.07)", color: "var(--wc-burgundy)" }}
-            >
-              → {STAGE_LABEL[ev.stageAfter] ?? ev.stageAfter}
+            <span className="shrink-0 font-bold" style={{ color: "var(--wc-burgundy)" }}>
+              {STAGE_LABEL[ev.stageAfter] ?? ev.stageAfter}
             </span>
           )}
-          <span className="ml-auto truncate" style={{ color: "var(--wc-mute)" }}>
+          <span className="min-w-0 truncate" style={{ color: "var(--wc-mute-2)" }}>
             {ev.sagaTitle}
           </span>
         </div>
         <p
-          className="mt-1 text-[13.5px] font-semibold"
+          className="mt-1 text-[15.5px] leading-[1.45] font-bold"
           style={{ color: "var(--wc-ink)", wordBreak: "keep-all" }}
         >
           {ev.headline}
         </p>
-      </article>
+      </div>
     </Link>
   )
 }
