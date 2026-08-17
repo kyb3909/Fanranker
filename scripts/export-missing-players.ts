@@ -34,29 +34,52 @@ async function main() {
     { auth: { persistSession: false } }
   )
 
-  // ① 최근 대상 리그 경기에 등장한 팀 (우선순위 신호)
-  const since = new Date(Date.now() - 30 * 24 * 3600_000).toISOString()
-  const until = new Date(Date.now() + 30 * 24 * 3600_000).toISOString()
-  const { data: games } = await supabase
-    .from("betman_games")
-    .select("id")
-    .eq("sport", "축구")
-    .in("league_code", [...MATCH_PAGE_LEAGUES])
-    .gte("match_time", since)
-    .lte("match_time", until)
-  const gameIds = (games ?? []).map((g) => g.id as string)
+  // ① 팀이 어느 리그에서 관측됐는가 → 우선순위 (2026-08-18 개정)
+  //
+  //    종전 기준("최근 30일 경기에 등장")은 유럽 대항전 **예선** 팀을 1순위로 끌어올렸다
+  //    (비킹FK·레프스키 소피아 등). 예선 탈락하면 다시 안 나오는 팀이라 사전을 채워도
+  //    회수가 없다. 5대 리그 소속은 시즌 내내 반복 등장하므로 그쪽이 먼저다.
+  const BIG5 = new Set(["EPL", "라리가", "세리에A", "분데스리", "프리그1"])
+  // ⚠️ Supabase 는 한 번에 1000행이 상한 — 안 끊으면 목록이 조용히 잘려 전원 3순위가 된다
+  const leagueByGame = new Map<string, string>()
+  for (let page = 0; ; page++) {
+    const { data } = await supabase
+      .from("betman_games")
+      .select("id, league_code")
+      .eq("sport", "축구")
+      .in("league_code", [...MATCH_PAGE_LEAGUES])
+      .order("id", { ascending: true })
+      .range(page * 1000, page * 1000 + 999)
+    if (!data || data.length === 0) break
+    for (const g of data) leagueByGame.set(String(g.id), String(g.league_code))
+    if (data.length < 1000) break
+  }
+  const gameIds = [...leagueByGame.keys()]
 
-  const activeTeams = new Set<string>()
+  // soccerway 팀 → 그 팀이 뛴 리그들 (전 기간 — 소속 판정이라 최근일 필요가 없다)
+  const leaguesByTeam = new Map<string, Set<string>>()
   for (let i = 0; i < gameIds.length; i += 200) {
     const { data } = await supabase
       .from("match_mapping_attempts")
-      .select("home_team_id, away_team_id")
+      .select("game_id, home_team_id, away_team_id")
       .in("game_id", gameIds.slice(i, i + 200))
       .eq("outcome", "proposed")
     for (const a of data ?? []) {
-      if (a.home_team_id) activeTeams.add(String(a.home_team_id))
-      if (a.away_team_id) activeTeams.add(String(a.away_team_id))
+      const lg = leagueByGame.get(String(a.game_id))
+      if (!lg) continue
+      for (const tid of [a.home_team_id, a.away_team_id]) {
+        if (!tid) continue
+        const key = String(tid)
+        if (!leaguesByTeam.has(key)) leaguesByTeam.set(key, new Set())
+        leaguesByTeam.get(key)!.add(lg)
+      }
     }
+  }
+  /** 1순위 = 5대 리그 소속 · 2순위 = 대항전·컵에서만 관측 · 3순위 = 미관측 */
+  const priorityOf = (teamId: string): string => {
+    const lgs = leaguesByTeam.get(teamId)
+    if (!lgs) return "3순위"
+    return [...lgs].some((l) => BIG5.has(l)) ? "1순위 5대리그" : "2순위 대항전·컵"
   }
 
   // ② 팀 한글명 (사람이 읽을 수 있게)
@@ -91,7 +114,7 @@ async function main() {
     .map((p) => {
       const team = String(p.soccerway_team_id)
       return {
-        priority: activeTeams.has(team) ? "우선" : "후순위",
+        priority: priorityOf(team),
         teamKr: teamName.get(team) ?? team,
         teamId: team,
         playerId: String(p.player_id),
@@ -103,7 +126,7 @@ async function main() {
     })
     .sort(
       (a, b) =>
-        (a.priority === "우선" ? 0 : 1) - (b.priority === "우선" ? 0 : 1) ||
+        a.priority.localeCompare(b.priority) ||
         a.teamKr.localeCompare(b.teamKr) ||
         (Number(a.number) || 999) - (Number(b.number) || 999)
     )
@@ -141,13 +164,15 @@ async function main() {
     "\r\n"
   writeFileSync(OUT, csv, "utf-8")
 
-  const core = rows.filter((r) => r.priority === "우선").length
-  console.log(`[done] ${OUT} — ${rows.length}행 (우선 ${core} / 후순위 ${rows.length - core})`)
+  const byPri = new Map<string, number>()
+  for (const r of rows) byPri.set(r.priority, (byPri.get(r.priority) ?? 0) + 1)
+  console.log(`[done] ${OUT} — ${rows.length}행`)
+  for (const [k, v] of [...byPri.entries()].sort()) console.log(`   ${k}: ${v}행`)
   const teams = new Map<string, number>()
-  for (const r of rows.filter((x) => x.priority === "우선")) {
+  for (const r of rows.filter((x) => x.priority.startsWith("1"))) {
     teams.set(r.teamKr, (teams.get(r.teamKr) ?? 0) + 1)
   }
-  console.log("  우선 팀별:", [...teams.entries()].map(([t, n]) => `${t} ${n}`).join(" / "))
+  console.log("  1순위 팀별:", [...teams.entries()].map(([t, n]) => `${t} ${n}`).join(" / "))
 }
 
 main().catch((e) => {
