@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown } from "lucide-react"
+import { FormationPitch } from "@/components/match/formation-pitch"
 
 /**
  * 경기 라인업 (표시 전용, 2026-08-16) — /api/match/lineup 소비자.
@@ -122,6 +123,13 @@ interface MatchLineupProps {
   compact?: boolean
   /** 매치 페이지처럼 라인업이 주인공인 곳은 접지 않고 바로 펼친다 (2026-08-16) */
   defaultOpen?: boolean
+  /**
+   * 포메이션 피치를 목록 위에 그린다 (매치 센터 전용, 2026-08-17).
+   * 포메이션 파싱이 실패하면 스스로 빠지고 목록만 남는다.
+   */
+  withPitch?: boolean
+  /** 토글 없이 항상 펼친 상태로 — 탭 안에서는 접기 버튼이 군더더기다 */
+  alwaysOpen?: boolean
 }
 
 export function MatchLineup({
@@ -129,6 +137,8 @@ export function MatchLineup({
   matchTime,
   compact = false,
   defaultOpen = false,
+  withPitch = false,
+  alwaysOpen = false,
 }: MatchLineupProps) {
   const [data, setData] = useState<LineupResponse | null>(null)
   const [open, setOpen] = useState(defaultOpen)
@@ -175,26 +185,35 @@ export function MatchLineup({
   }, [gameId, matchTime])
 
   if (data?.status !== "ready") return null
+  const shown = alwaysOpen || open
 
   return (
     <div className={compact ? "mt-2" : "mt-2.5"}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="inline-flex items-center gap-1 text-[12px] font-bold transition-colors"
-        style={{ color: "var(--wc-burgundy)" }}
-      >
-        선발 라인업
-        <ChevronDown
-          className="h-3.5 w-3.5 transition-transform"
-          style={{ transform: open ? "rotate(180deg)" : undefined }}
-        />
-      </button>
+      {!alwaysOpen && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="inline-flex items-center gap-1 text-[12px] font-bold transition-colors"
+          style={{ color: "var(--wc-burgundy)" }}
+        >
+          선발 라인업
+          <ChevronDown
+            className="h-3.5 w-3.5 transition-transform"
+            style={{ transform: open ? "rotate(180deg)" : undefined }}
+          />
+        </button>
+      )}
+
+      {withPitch && shown && (
+        <div className="mb-3">
+          <FormationPitch home={data.home} away={data.away} />
+        </div>
+      )}
 
       {/* 편집 지면 문법 (2026-08-16 리디자인) — 베이지 패널을 걷어내고 흰 지면 위에
           괘선으로만 구조를 세운다. 등번호는 와인 틴트 칩, 포메이션은 pill. */}
-      {open && (
+      {shown && (
         <div className="mt-2.5 grid grid-cols-2">
           {[data.home, data.away].map((side, sideIdx) => (
             <div

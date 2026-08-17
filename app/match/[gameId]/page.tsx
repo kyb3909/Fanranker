@@ -8,6 +8,8 @@ import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { MatchHeader } from "./match-header"
 import { MatchExtrasSection } from "./match-extras-section"
 import { MatchStatsSection } from "./match-stats-section"
+import { MatchInfoSection } from "./match-info-section"
+import { MatchTabs } from "./match-tabs"
 import { MatchLineup } from "@/components/match/match-lineup"
 
 /**
@@ -86,35 +88,51 @@ export default async function MatchPage({ params }: Props) {
           awayScore={awayScore}
         />
 
-        {/* 선발 라인업 — 매핑·발표 없으면 스스로 숨는다 (fail-open) */}
-        <section
-          className="mt-4 rounded-xl px-4 py-3.5"
-          style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
-        >
-          {/* 섹션 제목은 컴포넌트의 토글이 겸한다 — 같은 문구가 두 번 보이던 중복 제거 */}
-          <MatchLineup gameId={match.gameId} matchTime={match.matchTime} defaultOpen />
-          <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
-            라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
-          </p>
-        </section>
-
-        {/* 득점 + 스탯 — 구조화 데이터라 즉시 렌더 (LLM 없음) */}
-        {finished && lfa && (
-          <MatchStatsSection info={lfa} homeTeam={match.homeTeam} awayTeam={match.awayTeam} />
-        )}
-
-        {/* 경기 리포트 — FT 후 + 5대 리그·UCL 에만 시도, 없으면 스스로 숨는다.
-            첫 생성이 LLM 파이프라인이라 수십 초 — Suspense 로 분리해 본문 먼저 스트림 */}
-        {finished && isMatchExtrasLeague(match.leagueCode) && (
-          <Suspense fallback={null}>
-            <MatchExtrasSection
-              gameId={match.gameId}
-              homeTeam={match.homeTeam}
-              awayTeam={match.awayTeam}
-              withStats={!hasLfaStats}
-            />
-          </Suspense>
-        )}
+        {/* 매치 센터 탭 — 정보 / 라인업 / 통계 / 리포트 (2026-08-17, FotMob 참고).
+            서버에서 렌더한 섹션을 넘겨 보이기만 전환한다 (탭 전환 시 재요청 없음). */}
+        <MatchTabs
+          initial={finished ? "stats" : "info"}
+          info={
+            lfa ? (
+              <Suspense fallback={null}>
+                <MatchInfoSection
+                  matchId={lfa.matchId}
+                  homeTeam={match.homeTeam}
+                  awayTeam={match.awayTeam}
+                />
+              </Suspense>
+            ) : null
+          }
+          lineup={
+            <section
+              className="mt-4 rounded-xl px-4 py-3.5"
+              style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
+            >
+              <MatchLineup gameId={match.gameId} matchTime={match.matchTime} alwaysOpen withPitch />
+              <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+                라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
+              </p>
+            </section>
+          }
+          stats={
+            finished && lfa ? (
+              <MatchStatsSection info={lfa} homeTeam={match.homeTeam} awayTeam={match.awayTeam} />
+            ) : null
+          }
+          report={
+            /* 첫 생성이 LLM 파이프라인이라 수십 초 — Suspense 로 분리 */
+            finished && isMatchExtrasLeague(match.leagueCode) ? (
+              <Suspense fallback={null}>
+                <MatchExtrasSection
+                  gameId={match.gameId}
+                  homeTeam={match.homeTeam}
+                  awayTeam={match.awayTeam}
+                  withStats={!hasLfaStats}
+                />
+              </Suspense>
+            ) : null
+          }
+        />
       </main>
     </div>
   )
