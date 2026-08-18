@@ -25,8 +25,12 @@ import {
  * 화면에 노출하지 않는다 (rewrite 은닉 원칙과 동일선).
  *
  * ## 캐시·실패 규율
- * 전부 fail-open (null → 섹션 미노출). 리포트는 FT 후 뒤늦게 올라오므로 "아직 없음"을
- * 24h 캐시에 박으면 안 된다 — eventId 해석과 같은 throw-회피 패턴을 쓴다.
+ * 전부 fail-open (null → 섹션 미노출).
+ * 성공한 리포트는 `match_reports` 에 **영구 저장**하고, 저장분을 해석보다 먼저 읽는다 —
+ * soccerway 해석에 킥오프 +24시간 창이 걸려 있어 그 뒤로는 재생성이 불가능하기 때문이다.
+ * 실패도 30분간 캐시한다. 종전엔 throw 로 캐시를 회피했는데, 리포트가 안 나오는 경기는
+ * **페이지를 열 때마다** LLM 체인을 처음부터 다시 돌아 매치 페이지가 몇 초씩 걸렸다
+ * (2026-08-18 운영자 제보).
  */
 
 const GRAPHQL_BASE = "https://2020.ds.lsapp.eu/pq_graphql"
@@ -413,20 +417,26 @@ async function verifyReport(
 }
 
 /**
- * 리포트 24h 캐시. "아직 기사 없음"은 캐시하지 않는다 — throw 로 회피
- * (unstable_cache 는 예외를 캐시하지 않는다. lineup-lookup 의 eventId 패턴과 동일).
+ * 리포트 생성 + **실패도 캐시**.
+ *
+ * ⚠️ 종전엔 실패를 throw 로 흘려 캐시를 회피했다. 의도는 "기사가 늦게 붙으니 다음 요청이
+ *    다시 시도한다" 였지만, 대가가 컸다 — 리포트가 안 나오는 경기는 **페이지를 열 때마다**
+ *    LLM 체인(추출→작성→검증, 최대 3회)을 처음부터 다시 돌았다. 매치 페이지가 몇 초씩
+ *    걸리던 정체가 이것이다 (2026-08-18 운영자: "넘어가는데 시간이 너무 오래 걸려").
+ *    성공분은 `match_reports` 에 영구 저장되므로, 여기 TTL 은 **재시도 간격**일 뿐이다.
  */
 function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTeam: string) {
   return unstable_cache(
-    async (): Promise<MatchReport> => {
+    async (): Promise<MatchReport | null> => {
+      // 기사가 아직 없는 경기가 대다수다 — LLM 을 부르기 전에 여기서 끝난다 (호출 2회)
       const articleId = await findArticleId(eventId)
-      if (!articleId) throw new Error("report-not-yet")
+      if (!articleId) return null
       const body = await fetchArticleBody(articleId)
-      if (!body) throw new Error("report-not-yet")
+      if (!body) return null
 
       // ① 사건 추출 → ② 라인업 대조로 이름 확정 → ③ 작성
       const extracted = await extractEvents(body.title, body.paragraphs)
-      if (!extracted) throw new Error("report-not-yet")
+      if (!extracted) return null
       const lineup = await getLineupForGame(gameId).catch(
         () => ({ status: "none" }) as LineupResponse
       )
@@ -459,10 +469,11 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
         )
         feedback = verdict.problems
       }
-      throw new Error("report-not-yet") // 검증 미통과 — 다음 요청이 처음부터 재시도
+      return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
-    ["match-report-v8", eventId],
-    { revalidate: 24 * 3600 }
+    ["match-report-v9", eventId],
+    // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
+    { revalidate: 1800 }
   )
 }
 
