@@ -36,6 +36,8 @@ import { isProseFragment, latinKey, pickAnchor, teamMatchScore } from "../lib/na
 const outArg = process.argv.find((a) => a.startsWith("--out="))
 const OUT = outArg ? outArg.slice(6) : "workspace/squad-all-20260818.csv"
 const HEADED = process.argv.includes("--headed")
+/** DB 반영 — 기본은 CSV 만 낸다 (운영자 검수 우선) */
+const APPLY = process.argv.includes("--apply")
 const CONCURRENCY = 3
 
 /**
@@ -236,7 +238,10 @@ function matchName(nameEn: string, pairs: Pair[]): { kr: string; sure: boolean }
       .filter((t) => t.length >= 3)
   )
 
-  let sure = false
+  // 성만 겹치는 짝과 이름까지 겹치는 짝이 동시에 있을 수 있다 — **더 많이 겹치는 쪽**이 정답이다.
+  // 종전엔 둘을 동급으로 보고 모호하다며 버렸다: "Lorenzo" 가 디 로렌초의 성이자
+  // 로렌초 루카의 이름이라, 나폴리 주장이 통째로 빈칸이었다 (2026-08-18 실측).
+  let best = 0
   const hits = new Set<string>()
   for (const p of pairs) {
     // ⚠️ **토큰 정확일치만** 본다. 통짜 문자열 포함을 폴백으로 두면 성이 남의 이름 속에
@@ -244,12 +249,16 @@ function matchName(nameEn: string, pairs: Pair[]): { kr: string; sure: boolean }
     //    "아타칸 에튀즈" 가 됐다 (2026-08-18 실측). DOM 은 토큰이 깨끗해 폴백이 필요 없다.
     const tokens = p.roman.split(/\s+/).map(latinKey).filter(Boolean)
     if (!tokens.includes(anchor)) continue
-    // 성 말고 다른 토큰까지 겹치면 동명이인 걱정이 없다
-    if (tokens.filter((t) => mine.has(t)).length >= 2) sure = true
-    hits.add(p.kr)
-    if (hits.size > 1) return null // 동성 선수 — 검수로
+    const overlap = tokens.filter((t) => mine.has(t)).length
+    if (overlap > best) {
+      best = overlap
+      hits.clear()
+    }
+    if (overlap === best) hits.add(p.kr)
   }
-  return hits.size === 1 ? { kr: [...hits][0], sure } : null
+  // 최고점이 동점으로 갈리면 진짜 모호한 것 — 버리고 검수로 (동성 선수)
+  if (hits.size !== 1) return null
+  return { kr: [...hits][0], sure: best >= 2 }
 }
 
 const csvCell = (v: unknown) => {
@@ -402,6 +411,29 @@ async function main() {
     ...rows.map((r) => head.map((h) => csvCell(r[h as keyof typeof r])).join(",")),
   ].join("\r\n")
   writeFileSync(OUT, "﻿" + csv, "utf8")
+
+  // ── DB 반영 (--apply). **빈칸만**, **확신이 "성+이름" 인 것만** 쓴다.
+  //    성만 맞은 건은 동성 다른 선수일 수 있어 (렉섬 Kieffer Moore → "알렉스 무어")
+  //    사람이 CSV 로 판정한다. 기존 값은 절대 덮지 않는다.
+  if (APPLY) {
+    const targets = rows.filter((r) => !r.현재_한글명 && r.나무위키_한글명 && r.확신 === "성+이름")
+    let ok = 0
+    for (const r of targets) {
+      const { error } = await supabase
+        .from("team_squads")
+        .update({
+          name_kr: r.나무위키_한글명,
+          source: "namu_pw",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("soccerway_team_id", r.soccerway_team_id)
+        .eq("player_id", r.player_id)
+        .is("name_kr", null) // 그 사이 확정된 값은 덮지 않는다
+      if (error) continue
+      ok++
+    }
+    console.log(`\nDB 반영: ${ok}/${targets.length}행 (확신 "성+이름" 인 빈칸만)`)
+  }
 
   const newlyFilled = rows.filter((r) => !r.현재_한글명 && r.나무위키_한글명).length
   const conflict = rows.filter((r) => r.일치 === "다름").length
