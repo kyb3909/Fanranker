@@ -4,6 +4,7 @@ import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
  * 리그 순위표 — `/standings/[league]` (2026-08-19 운영자 요청).
@@ -109,7 +110,10 @@ export default async function StandingsPage({
   const meta = findLeague(league)
   if (!meta) notFound()
 
-  const { rows, fetchedAt } = await getRows(meta.id)
+  const [{ rows, fetchedAt }, shortNames] = await Promise.all([
+    getRows(meta.id),
+    loadTeamShortMap(),
+  ])
   const played = rows.reduce((sum, r) => sum + (Number(r.경기) || 0), 0)
   const updated = fmtUpdated(fetchedAt)
 
@@ -210,7 +214,7 @@ export default async function StandingsPage({
                             className="truncate py-2.5 pl-3 text-[13.5px] font-bold"
                             style={{ color: "var(--wc-ink)" }}
                           >
-                            {r.팀명 ?? "-"}
+                            {r.팀명 ? displayTeamName(r.팀명, shortNames) : "-"}
                           </td>
                           {[r.경기, r.승, r.무, r.패].map((v, k) => (
                             <td

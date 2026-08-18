@@ -11,6 +11,7 @@ import {
 } from "@/lib/match/get-fixtures"
 import { leagueLabel, leagueOrder } from "@/lib/match/leagues"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
+import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
  * 경기 일정 — `/matches` (2026-08-16)
@@ -134,6 +135,9 @@ export default async function MatchesPage({
   }
   const ordered = [...sections.entries()].sort((a, b) => leagueOrder(a[0]) - leagueOrder(b[0]))
 
+  // 지면 표기는 사전 통칭으로 (2026-08-19 운영자: "인테르나치오날레 그냥 인테르").
+  // ⚠️ 라벨만 바꾼다 — m.homeTeam 원문은 LFA 해석 키라 건드리면 경기 매칭이 깨진다.
+  const shortNames = await loadTeamShortMap()
   const dp = dateParts(date)
 
   return (
@@ -273,7 +277,7 @@ export default async function MatchesPage({
                           className="truncate text-right text-[14px] font-bold"
                           style={{ color: teamTone(m.homeTeam), wordBreak: "keep-all" }}
                         >
-                          {m.homeTeam}
+                          {displayTeamName(m.homeTeam, shortNames)}
                         </span>
                         <span
                           className="gn-num text-center text-[15px] font-bold"
@@ -296,7 +300,7 @@ export default async function MatchesPage({
                           className="truncate text-left text-[14px] font-bold"
                           style={{ color: teamTone(m.awayTeam), wordBreak: "keep-all" }}
                         >
-                          {m.awayTeam}
+                          {displayTeamName(m.awayTeam, shortNames)}
                         </span>
                       </span>
                     </FixtureRowShell>

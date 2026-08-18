@@ -43,11 +43,16 @@ export function MatchHeader({
   finished,
   homeScore,
   awayScore,
+  homeLabel,
+  awayLabel,
 }: {
   match: MatchSummary
   finished: boolean
   homeScore: number | null
   awayScore: number | null
+  /** 지면 표기 (사전 통칭). 없으면 원문 — 데이터 값은 그대로 둔다 */
+  homeLabel?: string
+  awayLabel?: string
 }) {
   const showScore = finished && homeScore != null && awayScore != null
   const status = finished
@@ -103,7 +108,7 @@ export function MatchHeader({
             className="min-w-0 text-right text-[17px] leading-tight font-extrabold sm:text-[20px]"
             style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
           >
-            {match.homeTeam}
+            {homeLabel ?? match.homeTeam}
           </span>
           {showScore ? (
             <span
@@ -135,7 +140,7 @@ export function MatchHeader({
             className="min-w-0 text-left text-[17px] leading-tight font-extrabold sm:text-[20px]"
             style={{ color: "var(--gn-cream)", wordBreak: "keep-all" }}
           >
-            {match.awayTeam}
+            {awayLabel ?? match.awayTeam}
           </span>
         </div>
 

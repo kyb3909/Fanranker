@@ -72,12 +72,20 @@ export async function MatchInfoSection({
   matchId,
   homeTeam,
   awayTeam,
+  homeLabel,
+  awayLabel,
 }: {
   matchId: string
+  /** 사전 조회용 **원문** 팀명 — 통칭을 넘기면 스쿼드 조회(name_kr 정확일치)가 깨진다 */
   homeTeam: string
   awayTeam: string
+  /** 지면 표기용 통칭 (없으면 원문) */
+  homeLabel?: string
+  awayLabel?: string
 }) {
   const p = await getMatchPreview(matchId, homeTeam, awayTeam)
+  const homeName = homeLabel ?? homeTeam
+  const awayName = awayLabel ?? awayTeam
   const hasInjuries = p.injuries.home.length > 0 || p.injuries.away.length > 0
   const hasForm = p.homeForm.length > 0 || p.awayForm.length > 0
   if (!hasInjuries && !hasForm && p.h2h.length === 0 && p.officials.length === 0) return null
@@ -88,8 +96,8 @@ export async function MatchInfoSection({
         <Panel title="최근 경기">
           <div className="mt-2 grid gap-4 sm:grid-cols-2">
             {[
-              { label: homeTeam, form: p.homeForm },
-              { label: awayTeam, form: p.awayForm },
+              { label: homeName, form: p.homeForm },
+              { label: awayName, form: p.awayForm },
             ].map((side) => {
               // 승패 표시는 그 팀 기준이어야 한다 — LFA 폼 목록의 팀명 표기로 대조한다
               const anchor = side.form.find(
@@ -128,8 +136,8 @@ export async function MatchInfoSection({
         <Panel title="결장·부상">
           <div className="mt-2 grid gap-4 sm:grid-cols-2">
             {[
-              { label: homeTeam, rows: p.injuries.home },
-              { label: awayTeam, rows: p.injuries.away },
+              { label: homeName, rows: p.injuries.home },
+              { label: awayName, rows: p.injuries.away },
             ].map((side) => (
               <div key={side.label} className="min-w-0">
                 <p className="text-[11.5px] font-bold" style={{ color: "var(--wc-mute)" }}>

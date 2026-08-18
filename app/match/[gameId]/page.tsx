@@ -11,6 +11,7 @@ import { MatchStatsSection } from "./match-stats-section"
 import { MatchInfoSection } from "./match-info-section"
 import { MatchTabs } from "./match-tabs"
 import { MatchLineup } from "@/components/match/match-lineup"
+import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -71,10 +72,22 @@ export default async function MatchPage({ params }: Props) {
   const awayScore = match.awayScore ?? lfa?.awayScore ?? null
   const hasLfaStats = (lfa?.stats.length ?? 0) > 0
 
+  // 지면 표기는 사전 통칭 — 원문(match.homeTeam)은 LFA·soccerway 해석 키라 그대로 둔다
+  const shortNames = await loadTeamShortMap()
+  const homeLabel = displayTeamName(match.homeTeam, shortNames)
+  const awayLabel = displayTeamName(match.awayTeam, shortNames)
+
   return (
     <div className="min-h-[80vh]" style={{ background: "var(--wc-paper)" }}>
       {/* 스코어를 밴드로 — 페이지 선언 (2026-08-18 리디자인 1단계) */}
-      <MatchHeader match={match} finished={finished} homeScore={homeScore} awayScore={awayScore} />
+      <MatchHeader
+        match={match}
+        finished={finished}
+        homeScore={homeScore}
+        awayScore={awayScore}
+        homeLabel={homeLabel}
+        awayLabel={awayLabel}
+      />
 
       <main className="mx-auto max-w-[720px] px-0 pt-6 pb-16 sm:px-6">
         {/* 종이 1장 — 흰 상자를 여러 개 겹치지 않고 한 장 위에 괘선으로 단을 나눈다.
@@ -98,6 +111,8 @@ export default async function MatchPage({ params }: Props) {
                     matchId={lfa.matchId}
                     homeTeam={match.homeTeam}
                     awayTeam={match.awayTeam}
+                    homeLabel={homeLabel}
+                    awayLabel={awayLabel}
                   />
                 </Suspense>
               ) : null
@@ -117,7 +132,7 @@ export default async function MatchPage({ params }: Props) {
             }
             stats={
               finished && lfa ? (
-                <MatchStatsSection info={lfa} homeTeam={match.homeTeam} awayTeam={match.awayTeam} />
+                <MatchStatsSection info={lfa} homeTeam={homeLabel} awayTeam={awayLabel} />
               ) : null
             }
             report={
@@ -126,8 +141,8 @@ export default async function MatchPage({ params }: Props) {
                 <Suspense fallback={null}>
                   <MatchExtrasSection
                     gameId={match.gameId}
-                    homeTeam={match.homeTeam}
-                    awayTeam={match.awayTeam}
+                    homeTeam={homeLabel}
+                    awayTeam={awayLabel}
                     withStats={!hasLfaStats}
                   />
                 </Suspense>
