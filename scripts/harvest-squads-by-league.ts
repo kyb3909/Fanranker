@@ -22,6 +22,7 @@
  *   pnpm exec tsx scripts/harvest-squads-by-league.ts --all --apply
  */
 import "dotenv/config"
+import { writeFileSync } from "fs"
 import { createClient } from "@supabase/supabase-js"
 import {
   CLUB_LIST_SANITY_MAX,
@@ -31,6 +32,13 @@ import {
 } from "../lib/namu/league-clubs"
 
 const APPLY = process.argv.includes("--apply")
+/** DB 를 건드리지 않고 제안만 CSV 로 받는다 (운영자 검수 우선 워크플로) */
+const csvArg = process.argv.find((a) => a.startsWith("--csv"))
+const CSV_OUT = csvArg
+  ? csvArg.includes("=")
+    ? csvArg.split("=")[1]
+    : "workspace/squad-harvest.csv"
+  : null
 const ALL = process.argv.includes("--all")
 const leagueArg = process.argv.find((a) => a.startsWith("--league"))
 const LEAGUE = leagueArg?.includes("=")
@@ -244,10 +252,21 @@ function matchKoreanName(nameEn: string, namuText: string): string | null {
     if (isLatin(namuText[end + 1])) continue
     const before = namuText.slice(Math.max(0, start - 80), start)
     const runs = [...before.matchAll(HANGUL_RUN)]
-      .map((r) => r[0].trim())
-      .filter((r) => !NON_NAME.has(r) && r.length >= 2 && r.length <= 20)
-    if (runs.length === 0) continue
-    found.add(runs[runs.length - 1])
+    const last = runs[runs.length - 1]
+    if (!last) continue
+    // ⚠️ 표에서 한글 이름은 로마자 **바로 앞**에 붙어 있다. 창 안에서 아무 한글이나
+    //    주우면 본문 산문이 딸려온다 (실측: "20,000명 수용" → 한글명 "명 수용").
+    if (before.length - (last.index + last[0].length) > 2) continue
+    // "주장 브루누 마르팅스 인디" 처럼 역할 표기가 앞에 붙어 나온다 — 떼어낸다
+    const parts = last[0]
+      .trim()
+      .split(/[\s·]+/)
+      .filter(Boolean)
+    while (parts.length && NON_NAME.has(parts[0])) parts.shift()
+    const name = parts.join(" ")
+    if (!name || name.length < 2 || name.length > 20) continue
+    if (parts.some((t) => NON_NAME.has(t))) continue
+    found.add(name)
     if (found.size > 1) return null // 동성 선수 — 검수로
   }
   return found.size === 1 ? [...found][0] : null
@@ -284,6 +303,7 @@ async function main() {
   }
   console.log(`사전 ${dict.length}팀 로드`)
 
+  const proposals: Record<string, string | number>[] = []
   let totalFilled = 0
   for (const lg of leagues) {
     const doc = LEAGUE_DOCS[lg] ?? lg
@@ -367,6 +387,15 @@ async function main() {
         const kr = matchKoreanName(String(p.name_en ?? ""), text)
         if (debug) console.log(`     ${String(p.name_en).padEnd(28)} → ${kr ?? "—"}`)
         if (!kr) continue
+        proposals.push({
+          팀: String(team.name_kr),
+          등번호: p.jersey_number ?? "",
+          영문명: String(p.name_en ?? ""),
+          한글명: kr,
+          출처문서: club.doc,
+          soccerway_team_id: team.soccerway_team_id,
+          player_id: p.player_id,
+        })
         if (APPLY) {
           const { error } = await supabase
             .from("team_squads")
@@ -385,6 +414,19 @@ async function main() {
     }
   }
 
+  if (CSV_OUT) {
+    const LF = String.fromCharCode(10)
+    const cell = (v: unknown) => {
+      const t = String(v ?? "")
+      const risky = t.includes(",") || t.includes(String.fromCharCode(34)) || t.includes(LF)
+      return risky ? JSON.stringify(t) : t
+    }
+    const head = ["팀", "등번호", "영문명", "한글명", "출처문서", "soccerway_team_id", "player_id"]
+    const body = proposals.map((r) => head.map((h) => cell(r[h])).join(","))
+    const csv = [head.join(","), ...body].join("\r\n")
+    writeFileSync(CSV_OUT, "\ufeff" + csv, "utf8")
+    console.log(`\n${CSV_OUT} — 제안 ${proposals.length}행 (DB 미반영)`)
+  }
   console.log(`\n합계 ${totalFilled}명 대조${APPLY ? " (적용됨)" : " — 드라이런, --apply 로 반영"}`)
 }
 

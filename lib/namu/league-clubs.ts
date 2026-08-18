@@ -65,14 +65,8 @@ export async function fetchLeagueClubs(
   return out
 }
 
-/** 나무위키 문서 본문 텍스트 */
-export async function fetchNamuDocText(doc: string): Promise<string | null> {
-  const res = await fetch(`https://namu.wiki/w/${encodeURIComponent(doc)}`, {
-    headers: HEADERS,
-    signal: AbortSignal.timeout(25000),
-  })
-  if (!res.ok) return null
-  const html = await res.text()
+/** 나무위키 서버 HTML → 본문 텍스트 */
+function stripNamuHtml(html: string): string {
   return (
     html
       .replace(/<script[\s\S]*?<\/script>/g, " ")
@@ -94,41 +88,73 @@ export async function fetchNamuDocText(doc: string): Promise<string | null> {
   )
 }
 
-/** 스쿼드 표인가 — 로마자 열이 있어야 발음 추측 없이 대조가 성립한다 */
-function hasSquadTable(text: string | null): text is string {
-  return !!text && /로마자\s*성명|시즌 스쿼드/.test(text)
-}
-
-/**
- * 구단 문서 → **스쿼드 표 문서** 텍스트.
- *
- * 구단 본문에는 명단이 없다 (실측: 비야레알 CF 본문 13,528자에 로스터 없음 — 본문에 있는
- * 것은 "스쿼드" 링크뿐이다). 명단은 `틀:{구단 문서명}` 에 있고 거기엔
- * `등번호 | 국적 | 포지션 | 한글 성명 | 로마자 성명 | 생년월일` 표가 통째로 들어 있다.
- *
- * ⚠️ "펼치기·접기" 는 CSS 토글일 뿐이라 브라우저 자동화가 필요 없다 — 접힌 상태의
- *    서버 HTML 에 이미 전 선수가 들어 있다 (2026-08-18 실측).
- *
- * ⚠️ 틀 링크를 **문서 첫 등장 순서로** 고르면 안 된다. 페이지 최상단 내비게이션에
- *    `틀:라리가 2`·`틀:세리에 A` 같은 이웃 리그 틀이 먼저 나와서, 그걸 스쿼드로 착각하면
- *    전 구단이 0명 대조로 끝난다 (2026-08-18 실사고). 그래서 규칙 우선, 링크는 폴백.
- */
-export async function fetchSquadDocText(clubDoc: string): Promise<string | null> {
-  // ① 규칙 — 명단 틀은 `틀:{구단 문서명}`
-  const direct = await fetchNamuDocText(`틀:${clubDoc}`)
-  if (hasSquadTable(direct)) return direct
-
-  // ② 폴백 — 구단 본문에서 **앵커 텍스트가 "스쿼드"** 인 링크만 본다 (제목 순서 아님)
-  const res = await fetch(`https://namu.wiki/w/${encodeURIComponent(clubDoc)}`, {
+/** 나무위키 문서 본문 텍스트 */
+export async function fetchNamuDocText(doc: string): Promise<string | null> {
+  const res = await fetch(`https://namu.wiki/w/${encodeURIComponent(doc)}`, {
     headers: HEADERS,
     signal: AbortSignal.timeout(25000),
   })
   if (!res.ok) return null
-  const html = await res.text()
-  const m = html.match(/href='\/w\/(%ED%8B%80[^']+)'[^>]*>스쿼드<\/a>/)
-  if (!m) return null
-  const text = await fetchNamuDocText(decodeURIComponent(m[1]))
-  return hasSquadTable(text) ? text : null
+  return stripNamuHtml(await res.text())
+}
+
+/**
+ * 스쿼드 표인가 — **머리글이 아니라 내용으로** 판정한다.
+ *
+ * ⚠️ "로마자 성명" 같은 열 이름을 찾으면 안 된다. 그 머리글이 없는 양식이 따로 있어서
+ *    (VfB 슈투트가르트: `파비안 브레틀로 Fabian Bredlow ｜GK 1995.03.02`) 멀쩡한 명단을
+ *    통째로 버렸다 (2026-08-18 실사고 — 독일·네덜란드·J리그 구단이 "문서 본문 없음" 이던 이유).
+ *    양식이 뭐든 명단이면 **한글 이름 바로 뒤에 로마자 이름**이 줄줄이 나온다. 그걸 센다.
+ */
+function hasSquadTable(text: string | null): text is string {
+  if (!text) return false
+  const pairs = text.match(/[가-힣]{2,}(?:\s[가-힣]{2,})*\s+[A-ZÀ-Þ][A-Za-zÀ-ÿ'’-]{2,}/g)
+  return (pairs?.length ?? 0) >= 8
+}
+
+/**
+ * 구단의 명단 표를 **있는 대로 다 모아** 하나의 텍스트로 돌려준다.
+ *
+ * ⚠️ 명단이 어디 있는지는 구단마다 다르다 — 한 곳만 보면 안 된다 (2026-08-18 운영자 지적).
+ *   - 구단 문서 본문의 "스쿼드" 문단: 데포르티보 아 코루냐가 그렇다 (본문 25,177자에 표 있음)
+ *   - `틀:{구단 문서명}`: 비야레알 CF 가 그렇다 (본문 13,528자에 로스터 0, 틀에만 있음)
+ * 그래서 둘 다 읽어 합친다. 지난 시즌 표가 섞여도 **선수의 한글 표기는 시즌을 안 탄다**.
+ * 같은 성이 여럿이면 호출부가 fail-closed 로 버리므로 재료는 많을수록 낫다.
+ *
+ * ⚠️ "펼치기·접기" 는 CSS 토글일 뿐이라 브라우저 자동화가 필요 없다 — 접힌 상태의
+ *    서버 HTML 에 이미 전 선수가 들어 있다 (실측).
+ *
+ * ⚠️ 틀 링크를 **문서 첫 등장 순서로** 고르면 안 된다. 페이지 최상단 내비게이션에
+ *    `틀:라리가 2` 같은 이웃 리그 틀이 먼저 나와서, 그걸 스쿼드로 착각하면 전 구단이
+ *    0명 대조로 끝난다 (2026-08-18 실사고). 앵커 텍스트가 "스쿼드" 인 링크만 본다.
+ */
+export async function fetchSquadDocText(clubDoc: string): Promise<string | null> {
+  const parts: string[] = []
+
+  // ① 구단 문서 본문 — 표가 여기 실려 있는 구단이 있다
+  const res = await fetch(`https://namu.wiki/w/${encodeURIComponent(clubDoc)}`, {
+    headers: HEADERS,
+    signal: AbortSignal.timeout(25000),
+  })
+  const html = res.ok ? await res.text() : ""
+  const body = html ? stripNamuHtml(html) : null
+  if (hasSquadTable(body)) parts.push(body)
+
+  // ② `틀:{구단 문서명}` — 규칙으로 바로 맞는 경우
+  const direct = await fetchNamuDocText(`틀:${clubDoc}`)
+  if (hasSquadTable(direct)) parts.push(direct)
+
+  // ③ 규칙이 빗나가면 본문의 "스쿼드" 링크를 따라간다
+  if (parts.length === 0 && html) {
+    const m = html.match(/href='\/w\/(%ED%8B%80[^']+)'[^>]*>스쿼드<\/a>/)
+    if (m) {
+      const linked = await fetchNamuDocText(decodeURIComponent(m[1]))
+      if (hasSquadTable(linked)) parts.push(linked)
+    }
+  }
+
+  // 구분자를 끼워 두 표의 경계를 넘는 우연한 인접 대조를 막는다
+  return parts.length ? parts.join(" ||| ") : null
 }
 
 /**
