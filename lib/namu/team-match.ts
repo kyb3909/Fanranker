@@ -135,3 +135,20 @@ export function latinKey(s: string): string {
     .replace(/[^A-Za-z]/g, "")
     .toLowerCase()
 }
+
+/**
+ * 사람 이름이 아니라 **문서 산문 조각**인가.
+ *
+ * 나무위키 본문에서 "한글 뒤 로마자" 를 주울 때 문장이 딸려 들어온다 —
+ * "1884년에 창단하여 Derby…" 가 선수 한글명 "년에 창단하여" 가 됐다 (2026-08-18 실측).
+ * 음역된 사람 이름에는 조사·서술어 어미가 붙지 않는다는 성질로 거른다.
+ */
+const PROSE_TAIL =
+  /(년에|하여|하고|했다|한다|에서|으로|이며|였다|까지|부터|있는|되는|하는|이던|들이|원곡은)$/
+const PROSE_WORD =
+  /^(창단|우승|시즌|리그|구단|경기|소속|이후|당시|수용|홈구장|출신|현재|기록|이적료|계약|원곡)$/
+export function isProseFragment(kr: string): boolean {
+  const tokens = kr.split(/[\s·]+/).filter(Boolean)
+  if (tokens.length === 0) return true
+  return tokens.some((t) => PROSE_TAIL.test(t) || PROSE_WORD.test(t))
+}

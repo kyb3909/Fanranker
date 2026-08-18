@@ -31,7 +31,7 @@ import {
   fetchSquadDocText,
   LEAGUE_DOCS,
 } from "../lib/namu/league-clubs"
-import { latinKey, pickAnchor, teamMatchScore } from "../lib/namu/team-match"
+import { isProseFragment, latinKey, pickAnchor, teamMatchScore } from "../lib/namu/team-match"
 
 const outArg = process.argv.find((a) => a.startsWith("--out="))
 const OUT = outArg ? outArg.slice(6) : "workspace/squad-all-20260818.csv"
@@ -210,7 +210,8 @@ function pairsFromText(text: string): Pair[] {
   for (const m of text.matchAll(re)) {
     let kr = m[1].trim()
     while (ROLE.test(kr)) kr = kr.replace(ROLE, "")
-    if (kr.length < 2 || /코치|감독|단장|디렉터|명단|스쿼드|국기|수용|홈구장/.test(kr)) continue
+    if (kr.length < 2 || isProseFragment(kr)) continue
+    if (/코치|감독|단장|디렉터|명단|스쿼드|국기/.test(kr)) continue
     out.push({ kr, roman: m[2].trim() })
   }
   return out

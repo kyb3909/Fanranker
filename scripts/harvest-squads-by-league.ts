@@ -24,6 +24,7 @@
 import "dotenv/config"
 import { writeFileSync } from "fs"
 import { createClient } from "@supabase/supabase-js"
+import { isProseFragment } from "../lib/namu/team-match"
 import {
   CLUB_LIST_SANITY_MAX,
   fetchLeagueClubs,
@@ -265,6 +266,7 @@ function matchKoreanName(nameEn: string, namuText: string): string | null {
     while (parts.length && NON_NAME.has(parts[0])) parts.shift()
     const name = parts.join(" ")
     if (!name || name.length < 2 || name.length > 20) continue
+    if (isProseFragment(name)) continue // 문서 산문 조각 차단
     if (parts.some((t) => NON_NAME.has(t))) continue
     found.add(name)
     if (found.size > 1) return null // 동성 선수 — 검수로
