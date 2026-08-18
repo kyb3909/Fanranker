@@ -233,7 +233,7 @@ const cachedSquad = unstable_cache(
     return (data ?? []).map((r) => [String(r.name_en ?? ""), String(r.name_kr)] as [string, string])
   },
   ["lfa-preview-squad"],
-  { revalidate: 21600 }
+  { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
 /** "G. Guliashvili" → 한글. 이니셜은 앞뒤 어디든 올 수 있어 성 토큰으로만 본다 */

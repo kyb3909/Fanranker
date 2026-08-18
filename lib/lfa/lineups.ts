@@ -94,7 +94,7 @@ const cachedSquad = unstable_cache(
     return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
   },
   ["lfa-lineup-squad"],
-  { revalidate: 21600 }
+  { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
 /** "J. Agirrezabala" → 한글명. 유일하게 결정될 때만 바꾼다 (fail-closed) */

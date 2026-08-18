@@ -31,7 +31,7 @@ import {
   fetchSquadDocText,
   LEAGUE_DOCS,
 } from "../lib/namu/league-clubs"
-import { isProseFragment, latinKey, pickAnchor, teamMatchScore } from "../lib/namu/team-match"
+import { isProseFragment, latinKey, teamMatchScore } from "../lib/namu/team-match"
 
 const outArg = process.argv.find((a) => a.startsWith("--out="))
 const OUT = outArg ? outArg.slice(6) : "workspace/squad-all-20260818.csv"
@@ -227,38 +227,55 @@ function pairsFromText(text: string): Pair[] {
  * 표에 우리 선수가 아예 없고 같은 성의 다른 선수만 있으면 fail-closed 가 안 걸린다.
  */
 function matchName(nameEn: string, pairs: Pair[]): { kr: string; sure: boolean } | null {
-  const anchorRaw = pickAnchor(nameEn)
-  if (!anchorRaw) return null
-  const anchor = latinKey(anchorRaw)
-  if (anchor.length < 4) return null
   const mine = new Set(
     nameEn
       .split(/\s+/)
       .map(latinKey)
       .filter((t) => t.length >= 3)
   )
+  // ⚠️ 기준점을 성 하나로 못 박으면 안 된다. 표기 순서가 출처마다 다르다 —
+  //    soccerway 는 "Aubameyang Pierre"(성 먼저), LFA 는 "Pierre-Emerick Aubameyang"
+  //    (이름 먼저)로 준다. 성 자리를 앞에서만 찾으면 LFA 로 적재한 1,011명이 통째로
+  //    빗나간다 (2026-08-19). 그래서 **모든 토큰을 후보**로 두고, 어느 하나라도 짝의
+  //    토큰과 맞으면 후보로 본다. 확정은 아래 "겹침 최다 + 단독" 규칙이 한다.
+  const anchors = new Set(
+    nameEn
+      .split(/\s+/)
+      .map(latinKey)
+      .filter((t) => t.length >= 4)
+  )
+  if (anchors.size === 0) return null
 
   // 성만 겹치는 짝과 이름까지 겹치는 짝이 동시에 있을 수 있다 — **더 많이 겹치는 쪽**이 정답이다.
   // 종전엔 둘을 동급으로 보고 모호하다며 버렸다: "Lorenzo" 가 디 로렌초의 성이자
   // 로렌초 루카의 이름이라, 나폴리 주장이 통째로 빈칸이었다 (2026-08-18 실측).
   let best = 0
+  let bestDistinctive = false
   const hits = new Set<string>()
   for (const p of pairs) {
     // ⚠️ **토큰 정확일치만** 본다. 통짜 문자열 포함을 폴백으로 두면 성이 남의 이름 속에
     //    묻혀 걸린다 — "Kane" 이 "Atakan Etüz"(atakanetuz) 안에서 잡혀 해리 케인이
     //    "아타칸 에튀즈" 가 됐다 (2026-08-18 실측). DOM 은 토큰이 깨끗해 폴백이 필요 없다.
     const tokens = p.roman.split(/\s+/).map(latinKey).filter(Boolean)
-    if (!tokens.includes(anchor)) continue
-    const overlap = tokens.filter((t) => mine.has(t)).length
+    if (!tokens.some((t) => anchors.has(t))) continue
+    const shared = tokens.filter((t) => mine.has(t))
+    const overlap = shared.length
     if (overlap > best) {
       best = overlap
+      bestDistinctive = false
       hits.clear()
     }
-    if (overlap === best) hits.add(p.kr)
+    if (overlap === best) {
+      hits.add(p.kr)
+      // ⚠️ 토큰 2개가 겹쳤다고 다 같은 사람이 아니다. 스페인 이름은 "Jose Angel" 이
+      //    흔해서, 앙헬리뇨(Jose Angel Esmoris Tasende)가 "호세 앙헬 후라도" 로 붙었다
+      //    (2026-08-19 실측). 겹친 토큰 중 **6글자 이상**이 하나는 있어야 신원이 걸린다.
+      if (shared.some((t) => t.length >= 6)) bestDistinctive = true
+    }
   }
   // 최고점이 동점으로 갈리면 진짜 모호한 것 — 버리고 검수로 (동성 선수)
   if (hits.size !== 1) return null
-  return { kr: [...hits][0], sure: best >= 2 }
+  return { kr: [...hits][0], sure: best >= 2 && bestDistinctive }
 }
 
 const csvCell = (v: unknown) => {

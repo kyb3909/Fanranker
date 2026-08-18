@@ -195,7 +195,7 @@ interface SquadName {
 }
 
 /**
- * 팀 한글명 → 그 팀 스쿼드의 (영문명, 한글명) — 6시간 캐시.
+ * 팀 한글명 → 그 팀 스쿼드의 (영문명, 한글명) — 1시간 캐시.
  * `team_squads.name_en` 은 "성 이름" 순이다 ("Pepe Nicolas").
  */
 const cachedSquad = unstable_cache(
@@ -216,7 +216,7 @@ const cachedSquad = unstable_cache(
     return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
   },
   ["lfa-squad-names"],
-  { revalidate: 21600 }
+  { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
 /**
