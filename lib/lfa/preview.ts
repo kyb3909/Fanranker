@@ -62,10 +62,10 @@ const ROLE_LABELS: Record<string, string> = {
  */
 const INJURY_TERMS: [RegExp, string][] = [
   // 통 문장형 사유 — 부분 치환보다 먼저 통째로 잡는다 (2026-08-18 실측 미번역분)
-  [/not included in the (?:match )?squad/gi, "명단 제외"],
-  [/impact[- ]related/gi, "타박"],
-  [/lack of match fitness/gi, "경기 감각 부족"],
-  [/knock/gi, "타박"],
+  [/\bnot included in the (?:match )?squad\b/gi, "명단 제외"],
+  [/\bimpact[- ]related\b/gi, "타박"],
+  [/\black of match fitness\b/gi, "경기 감각 부족"],
+  [/\bknock\b/gi, "타박"],
   // 상태·유형 (먼저)
   [/\bcruciate ligament\b/gi, "십자인대"],
   [/\bligament\b/gi, "인대"],
