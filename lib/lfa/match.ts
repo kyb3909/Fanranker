@@ -183,6 +183,11 @@ function localizeScorer(lfaName: string, lineup: LineupResponse): string {
   return hits.length === 1 ? hits[0].label : lfaName
 }
 
+/** 한글이 섞였나 — 한글화가 실제로 됐는지의 유일한 판정 기준 */
+function hasHangul(s: string): boolean {
+  return /[가-힣]/.test(s)
+}
+
 /** 사전에 등재된 한 팀의 선수 (스쿼드 폴백용) */
 interface SquadName {
   nameEn: string
@@ -435,11 +440,23 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       if (!player) continue
       const t = norm(e.type)
       const minute = String(e.time ?? "")
+      // ⚠️ 판정 기준은 "값이 바뀌었나" 가 아니라 **한글이 됐나** 다.
+      //    라인업 경로는 사전에 없는 선수에게 로마자 라벨을 돌려준다 — LFA 의 "P. Aubameyang"
+      //    이 라인업 라벨 "Aubameyang P." 로 바뀌기만 하고 영문 그대로였는데, 바뀌었다는
+      //    이유로 스쿼드 폴백을 건너뛰어 영문이 남았다 (2026-08-18 실측).
       const fromLineup = localizeScorer(player, lineup)
-      const label =
-        fromLineup !== player
-          ? fromLineup
-          : localizeFromSquad(player, e.side === "away" ? awaySquad : homeSquad)
+      const squad = e.side === "away" ? awaySquad : homeSquad
+      let label = fromLineup
+      if (!hasHangul(label)) {
+        // 원문(LFA)과 라인업 라벨은 이니셜 위치가 서로 다르다 — 둘 다 시도한다
+        for (const candidate of [player, fromLineup]) {
+          const ko = localizeFromSquad(candidate, squad)
+          if (hasHangul(ko)) {
+            label = ko
+            break
+          }
+        }
+      }
       if (isGoal(t)) {
         info.goals.push({ minute, side: e.side, player: label, score: e.detail?.score ?? "" })
       } else {
