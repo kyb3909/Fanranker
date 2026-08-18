@@ -77,7 +77,7 @@ export async function MatchInfoSection({
   homeTeam: string
   awayTeam: string
 }) {
-  const p = await getMatchPreview(matchId)
+  const p = await getMatchPreview(matchId, homeTeam, awayTeam)
   const hasInjuries = p.injuries.home.length > 0 || p.injuries.away.length > 0
   const hasForm = p.homeForm.length > 0 || p.awayForm.length > 0
   if (!hasInjuries && !hasForm && p.h2h.length === 0 && p.officials.length === 0) return null

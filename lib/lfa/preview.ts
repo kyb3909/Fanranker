@@ -1,6 +1,7 @@
 import "server-only"
 
 import { unstable_cache } from "next/cache"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaFetch } from "@/lib/lfa/client"
 
 /**
@@ -60,6 +61,11 @@ const ROLE_LABELS: Record<string, string> = {
  * 긴 표현부터 치환해야 "Hamstring Injury" 가 "Injury" 에 먼저 걸리지 않는다.
  */
 const INJURY_TERMS: [RegExp, string][] = [
+  // 통 문장형 사유 — 부분 치환보다 먼저 통째로 잡는다 (2026-08-18 실측 미번역분)
+  [/not included in the (?:match )?squad/gi, "명단 제외"],
+  [/impact[- ]related/gi, "타박"],
+  [/lack of match fitness/gi, "경기 감각 부족"],
+  [/knock/gi, "타박"],
   // 상태·유형 (먼저)
   [/\bcruciate ligament\b/gi, "십자인대"],
   [/\bligament\b/gi, "인대"],
@@ -139,7 +145,117 @@ function toFormMatches(raw: unknown): FormMatch[] {
   return out
 }
 
-async function fetchPreview(matchId: string): Promise<MatchPreview> {
+/* ── 팀명·선수명 한글화 ──
+ *
+ * 정보 탭이 통째로 영문이었다 — 상대 전적 "R. Santander 2-1 Villarreal", 결장자
+ * "G. Guliashvili" (2026-08-18 운영자: "선수단 이름도 전혀 반영이 안되어있어").
+ * 콘텐츠 한글 원칙이 이 탭에만 적용되지 않고 있었다.
+ *
+ * 둘 다 **유일하게 결정될 때만** 바꾸고, 아니면 원문을 남긴다 — 틀린 한글보다 낫다. */
+
+function nameTokens(s: string): string[] {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 3 && !["the", "afc", "club"].includes(t))
+}
+
+/** 영문 팀명 → 한글 (team_dictionary, 1h 캐시) */
+const cachedTeamPairs = unstable_cache(
+  async (): Promise<[string, string][]> => {
+    const { data } = await createServiceRoleClient()
+      .from("team_dictionary")
+      .select("name_en, name_kr")
+      .neq("status", "rejected")
+      .not("name_kr", "is", null)
+    return (data ?? [])
+      .filter((r) => r.name_en)
+      .map((r) => [String(r.name_en), String(r.name_kr)] as [string, string])
+  },
+  ["lfa-preview-team-names"],
+  { revalidate: 3600 }
+)
+
+/**
+ * LFA 축약 팀명 → 한글. LFA 표기가 제각각이라("R. Santander"·"alaves"·"Ath.") 느슨하게
+ * 보되, **정확일치를 접두일치보다 높게** 친다.
+ *
+ * ⚠️ 접두 겹침만으로 동급 판정하면 오답이 난다 (2026-08-18 실측):
+ *    "Ath." 가 "AEK Athens" 의 "athens" 에 걸려 AEK아테네가 됐고,
+ *    "Villarreal" 은 "Aston Villa" 의 "villa" 와 동점이 돼 둘 다 버려졌다.
+ *    3글자 토큰은 정확일치만 인정하고, 정확일치가 있으면 그쪽이 이긴다.
+ */
+function localizeTeam(lfaName: string, pairs: [string, string][]): string {
+  const a = nameTokens(lfaName)
+  if (a.length === 0) return lfaName
+
+  const score = (t: string, b: string[]): number => {
+    if (b.some((u) => u === t)) return 2
+    if (t.length >= 4 && b.some((u) => u.startsWith(t) || t.startsWith(u))) return 1
+    return 0
+  }
+
+  let best = 0
+  const hits = new Set<string>()
+  for (const [en, kr] of pairs) {
+    const b = nameTokens(en)
+    if (b.length === 0) continue
+    const total = a.reduce((sum, t) => sum + score(t, b), 0)
+    if (total === 0) continue
+    if (total > best) {
+      best = total
+      hits.clear()
+    }
+    if (total === best) hits.add(kr)
+  }
+  return hits.size === 1 ? [...hits][0] : lfaName
+}
+
+/** 팀 한글명 → 그 팀 스쿼드 (영문명은 "성 이름" 순) */
+const cachedSquad = unstable_cache(
+  async (teamKr: string): Promise<[string, string][]> => {
+    const supabase = createServiceRoleClient()
+    const { data: team } = await supabase
+      .from("team_dictionary")
+      .select("soccerway_team_id")
+      .eq("name_kr", teamKr)
+      .maybeSingle()
+    if (!team) return []
+    const { data } = await supabase
+      .from("team_squads")
+      .select("name_en, name_kr")
+      .eq("soccerway_team_id", team.soccerway_team_id)
+      .not("name_kr", "is", null)
+      .neq("status", "rejected")
+    return (data ?? []).map((r) => [String(r.name_en ?? ""), String(r.name_kr)] as [string, string])
+  },
+  ["lfa-preview-squad"],
+  { revalidate: 21600 }
+)
+
+/** "G. Guliashvili" → 한글. 이니셜은 앞뒤 어디든 올 수 있어 성 토큰으로만 본다 */
+function localizePlayer(lfaName: string, squad: [string, string][]): string {
+  const surname = nameTokens(lfaName)
+  if (surname.length === 0 || squad.length === 0) return lfaName
+  const hits = new Set<string>()
+  for (const [en, kr] of squad) {
+    const rt = nameTokens(en)
+    if (surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))) {
+      hits.add(kr)
+    }
+    if (hits.size > 1) return lfaName
+  }
+  return hits.size === 1 ? [...hits][0] : lfaName
+}
+
+async function fetchPreview(
+  matchId: string,
+  homeTeamKr: string,
+  awayTeamKr: string
+): Promise<MatchPreview> {
   const [h2hData, injData, offData] = await Promise.all([
     lfaFetch<{ home_form?: unknown; away_form?: unknown; h2h?: unknown }>("h2h", {
       match_id: matchId,
@@ -152,23 +268,37 @@ async function fetchPreview(matchId: string): Promise<MatchPreview> {
     lfaFetch<{ officials?: unknown[] }>("officials", { match_id: matchId, lang: "en" }),
   ])
 
-  const toInjuries = (raw: unknown[] | undefined): InjuryRow[] =>
+  // 한글화 재료 — 실패해도 원문이 남는다 (fail-open)
+  const [teamPairs, homeSquad, awaySquad] = await Promise.all([
+    cachedTeamPairs().catch(() => [] as [string, string][]),
+    cachedSquad(homeTeamKr).catch(() => [] as [string, string][]),
+    cachedSquad(awayTeamKr).catch(() => [] as [string, string][]),
+  ])
+
+  const toInjuries = (raw: unknown[] | undefined, squad: [string, string][]): InjuryRow[] =>
     (raw ?? [])
       .map((r) => r as { name?: string; position?: string; status?: string })
       .filter((r) => !!r.name)
       .map((r) => ({
-        name: String(r.name),
+        name: localizePlayer(String(r.name), squad),
         position: r.position ? String(r.position) : null,
         status: localizeInjuryStatus(String(r.status ?? "")),
       }))
 
+  const koForm = (list: FormMatch[]): FormMatch[] =>
+    list.map((m) => ({
+      ...m,
+      home: { name: localizeTeam(m.home.name, teamPairs) },
+      away: { name: localizeTeam(m.away.name, teamPairs) },
+    }))
+
   return {
-    homeForm: toFormMatches(h2hData?.home_form),
-    awayForm: toFormMatches(h2hData?.away_form),
-    h2h: toFormMatches(h2hData?.h2h),
+    homeForm: koForm(toFormMatches(h2hData?.home_form)),
+    awayForm: koForm(toFormMatches(h2hData?.away_form)),
+    h2h: koForm(toFormMatches(h2hData?.h2h)),
     injuries: {
-      home: toInjuries(injData?.injuries?.home),
-      away: toInjuries(injData?.injuries?.away),
+      home: toInjuries(injData?.injuries?.home, homeSquad),
+      away: toInjuries(injData?.injuries?.away, awaySquad),
     },
     officials: (offData?.officials ?? [])
       .map((o) => o as { role?: string; name?: string })
@@ -178,10 +308,16 @@ async function fetchPreview(matchId: string): Promise<MatchPreview> {
 }
 
 /** 12시간 캐시 — 경기당 3콜이 그 시간 동안 모든 방문자를 덮는다 */
-export function getMatchPreview(matchId: string): Promise<MatchPreview> {
-  return unstable_cache(() => fetchPreview(matchId), ["lfa-preview", matchId], {
-    revalidate: 12 * 3600,
-  })().catch(() => ({
+export function getMatchPreview(
+  matchId: string,
+  homeTeamKr: string,
+  awayTeamKr: string
+): Promise<MatchPreview> {
+  return unstable_cache(
+    () => fetchPreview(matchId, homeTeamKr, awayTeamKr),
+    ["lfa-preview-v2", matchId],
+    { revalidate: 12 * 3600 }
+  )().catch(() => ({
     homeForm: [],
     awayForm: [],
     h2h: [],
