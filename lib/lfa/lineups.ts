@@ -93,7 +93,7 @@ const cachedSquad = unstable_cache(
       .neq("status", "rejected")
     return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
   },
-  ["lfa-lineup-squad"],
+  ["lfa-lineup-squad-v2"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
