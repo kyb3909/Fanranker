@@ -27,6 +27,7 @@ import { createClient } from "@supabase/supabase-js"
 import { isProseFragment } from "../lib/namu/team-match"
 import {
   CLUB_LIST_SANITY_MAX,
+  DEFAULT_HARVEST_LEAGUES,
   fetchLeagueClubs,
   fetchSquadDocText,
   LEAGUE_DOCS,
@@ -281,10 +282,13 @@ async function main() {
     { auth: { persistSession: false } }
   )
 
-  const leagues = ALL ? Object.keys(LEAGUE_DOCS) : LEAGUE ? [LEAGUE] : []
+  // --all 은 **기본 대상**(5대 리그+챔피언십)만 돈다. K리그·J리그 등은 승부예측 전용이라
+  // 여기서 돌지 않는다 — 필요하면 `--league K리그1` 로 콕 집어 부른다.
+  const leagues = ALL ? DEFAULT_HARVEST_LEAGUES : LEAGUE ? [LEAGUE] : []
   if (leagues.length === 0) {
     console.log("사용법: --league 라리가 [--apply] | --all [--apply]")
-    console.log("지원 리그:", Object.keys(LEAGUE_DOCS).join(", "))
+    console.log("기본(--all):", DEFAULT_HARVEST_LEAGUES.join(", "))
+    console.log("개별 지정 가능:", Object.keys(LEAGUE_DOCS).join(", "))
     return
   }
 

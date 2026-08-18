@@ -13,6 +13,14 @@
 import "dotenv/config"
 import { writeFileSync } from "fs"
 import { createClient } from "@supabase/supabase-js"
+import { MATCH_PAGE_LEAGUES } from "../lib/match/leagues"
+
+/**
+ * 대상 밖 팀도 볼지 (2026-08-19 운영자: "K리그·J리그는 승부예측 메뉴에만 두고 가려줘").
+ * 기본은 매치 페이지 화이트리스트(5대 리그·유럽 대항전·주요 컵)에 나온 팀만 — 안 그러면
+ * 손댈 일 없는 남미·북유럽·K/J리그 1,800여 행이 목록을 덮어 실제 할 일이 안 보인다.
+ */
+const ALL_TEAMS = process.argv.includes("--all-teams")
 
 const outArg = process.argv.find((a) => a.startsWith("--out="))
 const OUT = outArg ? outArg.slice(6) : "workspace/squad-review-20260818.csv"
@@ -46,6 +54,26 @@ async function main() {
   )
   const teamName = new Map(teams.map((t) => [t.soccerway_team_id, t.name_kr ?? ""]))
 
+  // 대상 리그에 실제로 나온 팀만 추린다. 팀에는 리그 표시가 없으므로 betman 경기에서
+  // 역으로 찾는다 — 화이트리스트(MATCH_PAGE_LEAGUES)는 매치 페이지와 같은 정본이다.
+  const inScope = new Set<string>()
+  if (!ALL_TEAMS) {
+    const games = await fetchAll<{ home_team_name: string; away_team_name: string }>((f, t) =>
+      supabase
+        .from("betman_games")
+        .select("home_team_name, away_team_name")
+        .in("league_code", [...MATCH_PAGE_LEAGUES])
+        .range(f, t)
+    )
+    const names = new Set<string>()
+    for (const g of games) {
+      names.add(String(g.home_team_name))
+      names.add(String(g.away_team_name))
+    }
+    for (const t of teams) if (t.name_kr && names.has(t.name_kr)) inScope.add(t.soccerway_team_id)
+    console.log(`대상 리그 팀 ${inScope.size}개 (--all-teams 로 전체 보기)`)
+  }
+
   const rows = await fetchAll<{
     soccerway_team_id: string
     player_id: string
@@ -67,6 +95,7 @@ async function main() {
   )
 
   const out = rows
+    .filter((r) => ALL_TEAMS || inScope.has(r.soccerway_team_id))
     .map((r) => ({
       구분: r.source === "namu_league" && r.name_kr ? "수확" : "미채움",
       팀: teamName.get(r.soccerway_team_id) || r.soccerway_team_id,

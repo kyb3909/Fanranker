@@ -195,7 +195,9 @@ const SPORT_TABS: { key: SportKey; label: string }[] = [
 ]
 
 const SPORT_LEAGUE_IDS: Record<SportKey, string[]> = {
-  football: ["epl", "laliga", "bundesliga", "seriea", "ligue1", "kleague1", "kleague2"],
+  // 2026-08-19 운영자: "K리그·J리그는 승부예측 메뉴에만 두고 나머지는 가려줘".
+  // 목록에서 빼는 것으로 충분하다 — STANDINGS_LEAGUES 정의는 남겨 두어 되살리기 쉽게.
+  football: ["epl", "laliga", "bundesliga", "seriea", "ligue1"],
   baseball: ["kbo", "mlb", "npb"],
   basketball: ["kbl", "wkbl", "nba"],
   volleyball: ["kovo_men", "kovo_women"],

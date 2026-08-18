@@ -190,5 +190,21 @@ export const LEAGUE_DOCS: Record<string, string> = {
   우크라이나: "우크라이나 프리미어 리그",
 }
 
+/**
+ * 수확기 기본 대상 (2026-08-19 운영자: "우리는 5대 리그 위주로만 할거야 일단").
+ *
+ * K리그·J리그·MLS 등은 승부예측 메뉴에만 두기로 했다. `LEAGUE_DOCS` 에는 남겨 둔다 —
+ * 나중에 필요하면 `--league K리그1` 로 개별 지정하면 되고, 목록을 지우면 그 매핑을
+ * 다시 찾아야 한다.
+ */
+export const DEFAULT_HARVEST_LEAGUES = [
+  "EPL",
+  "라리가",
+  "세리에A",
+  "분데스리",
+  "프리그1",
+  "챔피언십",
+]
+
 /** 구간 파싱이 실패했다고 볼 문서 크기 — 이보다 많으면 리그 명단이 아니다 */
 export const CLUB_LIST_SANITY_MAX = 40

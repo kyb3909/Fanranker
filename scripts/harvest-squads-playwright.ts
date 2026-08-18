@@ -27,6 +27,7 @@ import { createClient } from "@supabase/supabase-js"
 import { chromium, type Browser } from "playwright"
 import {
   CLUB_LIST_SANITY_MAX,
+  DEFAULT_HARVEST_LEAGUES,
   fetchLeagueClubs,
   fetchSquadDocText,
   LEAGUE_DOCS,
@@ -44,7 +45,7 @@ const CONCURRENCY = 3
  * 대상 리그 (2026-08-18 운영자: "유럽 5대리그 + 챔피언십 정도면 돼 일단은").
  * 세군다·K/J리그 등은 `LEAGUE_DOCS` 에 남아 있지만 여기서는 부르지 않는다.
  */
-const TARGET_LEAGUES = ["EPL", "라리가", "세리에A", "분데스리", "프리그1", "챔피언십"]
+const TARGET_LEAGUES = DEFAULT_HARVEST_LEAGUES
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
