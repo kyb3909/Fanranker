@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
+import { CalendarDays, Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -29,6 +29,11 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
     pathname.startsWith("/worldcup") ||
     pathname.startsWith("/season")
   const isTarot = pathname.startsWith("/tarot")
+  // 경기 허브 — 일정·순위·매치센터가 한 메뉴 아래 (2026-08-19)
+  const isMatch =
+    pathname.startsWith("/matches") ||
+    pathname.startsWith("/match/") ||
+    pathname.startsWith("/standings")
 
   return (
     <nav
@@ -89,6 +94,16 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             예측이 이벤트 전용(참가 신청 필요·축구 한정)이 된 뒤로, 메뉴를 누르자마자
             예측 화면이 뜨면 "왜 신청하라는 거지?"에서 헷갈린다. 규칙·상품·참가가 있는
             /season 을 먼저 보여주고, 신청자는 허브의 '오늘 픽하러 가기'로 한 번에 간다. */}
+        {/* 경기 — 일정 + 순위 (2026-08-19 운영자: "순위표만 GNB 에 넣기는 좀 그래").
+            순위 하나는 한 칸의 무게가 안 되지만 일정·순위·매치센터를 묶으면 된다.
+            게다가 /matches 는 만들어 놓고 입구가 홈 밴드 링크 하나뿐이라 죽어 있었다.
+            자리는 승부예측 **앞** — 예측하러 오기 전에 보는 참조 정보다. */}
+        <Link href="/matches">
+          <span className={baseClass} data-on={isMatch ? "true" : undefined}>
+            <CalendarDays className="h-[18px] w-[18px] shrink-0" />
+            경기
+          </span>
+        </Link>
         <Link href="/season">
           <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
             <Target className="h-[18px] w-[18px] shrink-0" />

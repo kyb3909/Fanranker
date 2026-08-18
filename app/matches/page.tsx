@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
+import { MatchHubTabs } from "@/components/match/hub-tabs"
 import {
   getFixturesForDay,
   todayKst,
@@ -145,6 +146,10 @@ export default async function MatchesPage({
       />
 
       <main className="mx-auto max-w-[760px] px-4 py-6 sm:px-6">
+        {/* 경기 허브 — 일정과 순위는 같은 질문의 앞뒷면이라 한 지붕 아래 둔다 */}
+        <div className="-mx-4 mb-5 sm:-mx-6">
+          <MatchHubTabs active="fixtures" />
+        </div>
         {/* 날짜 내비 (2026-08-18 리디자인 6단계).
             ⚠️ 범위 기준이 `today` 였다 — 8/22 를 보고 있으면 칩이 오늘 ±3 만 그려져
             **활성 칩이 하나도 없었다.** 보고 있는 날짜(`date`) 기준으로 바꾼다.

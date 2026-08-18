@@ -151,13 +151,15 @@
 }
 
 /* ─── Underline tabs — 사이트 공통 세그먼트 탭 (상단 메뉴와 동일 언더라인 스타일).
+ * button 과 a 를 모두 받는다 — 경기 허브(일정/순위)처럼 탭마다 자기 URL 을 갖는 경우가 있다.
  * 전역 적용(구 .worldcup-scope 한정 → 해제). 활성 표시는 .on / .active / [aria-selected="true"] 모두 지원. */
 .wc-underline-tabs {
   display: flex;
   padding: 0 12px;
   border-bottom: 1px solid #f2efea;
 }
-.wc-underline-tabs button {
+.wc-underline-tabs button,
+.wc-underline-tabs a {
   flex: 1;
   min-width: 0;
   display: inline-flex;
@@ -179,17 +181,22 @@
     border-color 0.15s ease;
 }
 /* 탭 안 아이콘은 글자색을 그대로 따라감 */
-.wc-underline-tabs button svg {
+.wc-underline-tabs button svg,
+.wc-underline-tabs a svg {
   width: 16px;
   height: 16px;
   stroke: currentColor;
 }
-.wc-underline-tabs button:hover:not(:disabled):not(.on):not(.active):not([aria-selected="true"]) {
+.wc-underline-tabs button:hover:not(:disabled):not(.on):not(.active):not([aria-selected="true"]),
+.wc-underline-tabs a:hover:not(.on):not(.active):not([aria-current="page"]) {
   color: #3a3f45;
 }
 .wc-underline-tabs button.on,
 .wc-underline-tabs button.active,
-.wc-underline-tabs button[aria-selected="true"] {
+.wc-underline-tabs button[aria-selected="true"],
+.wc-underline-tabs a.on,
+.wc-underline-tabs a.active,
+.wc-underline-tabs a[aria-current="page"] {
   color: #961e37;
   font-weight: 700;
   border-bottom-color: #961e37;
