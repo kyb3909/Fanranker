@@ -315,7 +315,7 @@ export function getMatchPreview(
 ): Promise<MatchPreview> {
   return unstable_cache(
     () => fetchPreview(matchId, homeTeamKr, awayTeamKr),
-    ["lfa-preview-v2", matchId],
+    ["lfa-preview-v3", matchId],
     { revalidate: 12 * 3600 }
   )().catch(() => ({
     homeForm: [],
