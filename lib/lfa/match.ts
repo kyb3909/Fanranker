@@ -183,6 +183,69 @@ function localizeScorer(lfaName: string, lineup: LineupResponse): string {
   return hits.length === 1 ? hits[0].label : lfaName
 }
 
+/** 사전에 등재된 한 팀의 선수 (스쿼드 폴백용) */
+interface SquadName {
+  nameEn: string
+  nameKr: string
+}
+
+/**
+ * 팀 한글명 → 그 팀 스쿼드의 (영문명, 한글명) — 6시간 캐시.
+ * `team_squads.name_en` 은 "성 이름" 순이다 ("Pepe Nicolas").
+ */
+const cachedSquad = unstable_cache(
+  async (teamKr: string): Promise<SquadName[]> => {
+    const supabase = createServiceRoleClient()
+    const { data: team } = await supabase
+      .from("team_dictionary")
+      .select("soccerway_team_id")
+      .eq("name_kr", teamKr)
+      .maybeSingle()
+    if (!team) return []
+    const { data } = await supabase
+      .from("team_squads")
+      .select("name_en, name_kr")
+      .eq("soccerway_team_id", team.soccerway_team_id)
+      .not("name_kr", "is", null)
+      .neq("status", "rejected")
+    return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
+  },
+  ["lfa-squad-names"],
+  { revalidate: 21600 }
+)
+
+/**
+ * 라인업 없이 득점자를 한글화한다 — **스쿼드 사전 폴백**.
+ *
+ * ⚠️ 종전엔 한글화가 라인업에 전적으로 매달려 있었다. 라인업은 경기 20여 시간 뒤 원본에서
+ *    사라지므로, 지난 경기를 열면 득점자만 영문으로 남았다 ("N. Pepe") — 라인업이 안 뜨는
+ *    것과 득점자가 영문인 것은 **같은 원인**이었다 (2026-08-18 운영자 제보).
+ *    스쿼드 사전은 영구 저장이라 시간이 지나도 한글이 유지된다.
+ *
+ * 팀을 반드시 좁혀서 본다: 같은 성이 양 팀에 있을 수 있다 (이 경기에 게예가 둘 —
+ * 비야레알 파페 게예, 라싱 마게테 게예). 이니셜이 오면 이름 첫 글자로 한 번 더 거른다.
+ */
+function localizeFromSquad(lfaName: string, squad: SquadName[]): string {
+  if (squad.length === 0) return lfaName
+  const initial = lfaName.match(/^([A-Za-z])\.\s*/)?.[1]?.toLowerCase() ?? null
+  const surname = tokens(lfaName.replace(/^[A-Za-z]\.\s*/, ""))
+  if (surname.length === 0) return lfaName
+
+  const hits = squad.filter((p) => {
+    const rt = tokens(p.nameEn)
+    if (!surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))) {
+      return false
+    }
+    if (!initial) return true
+    // 성 토큰이 아닌 나머지(=이름) 중 하나가 이니셜로 시작해야 한다
+    const rest = rt.filter(
+      (u) => !surname.some((t) => u === t || u.startsWith(t) || t.startsWith(u))
+    )
+    return rest.length === 0 || rest.some((u) => u.startsWith(initial))
+  })
+  return hits.length === 1 ? hits[0].nameKr : lfaName
+}
+
 /* ── 본체 ── */
 
 interface BetmanGameKey {
@@ -362,12 +425,21 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       ? await getLineupForGame(game.gameId).catch(() => ({ status: "none" }) as LineupResponse)
       : { status: "none" }
 
+    // 라인업이 없어도(=지난 경기) 스쿼드 사전으로 한글화한다. 사건이 있을 때만 부른다.
+    const [homeSquad, awaySquad] = rawEvents.length
+      ? await Promise.all([cachedSquad(game.homeTeam), cachedSquad(game.awayTeam)])
+      : [[], []]
+
     for (const e of rawEvents) {
       const player = e.detail?.player?.name?.trim()
       if (!player) continue
       const t = norm(e.type)
       const minute = String(e.time ?? "")
-      const label = localizeScorer(player, lineup)
+      const fromLineup = localizeScorer(player, lineup)
+      const label =
+        fromLineup !== player
+          ? fromLineup
+          : localizeFromSquad(player, e.side === "away" ? awaySquad : homeSquad)
       if (isGoal(t)) {
         info.goals.push({ minute, side: e.side, player: label, score: e.detail?.score ?? "" })
       } else {
