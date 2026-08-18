@@ -8,7 +8,8 @@ import { FormationPitch } from "@/components/match/formation-pitch"
  * 경기 라인업 (표시 전용, 2026-08-16) — /api/match/lineup 소비자.
  *
  * ## 조용함이 계약이다
- * - 킥오프 창(-150분~+180분) 밖이면 **호출 자체를 안 한다.**
+ * - 킥오프 **150분 전보다 이르면** 호출하지 않는다 (있을 리 없는 것을 묻지 않는다).
+ *   뒤로는 상한이 없다 — 지난 경기 라인업은 저장분/LFA 로 계속 나온다.
  * - `ready` 가 아니면 **아무것도 렌더하지 않는다** — 스켈레톤·"라인업 없음" 문구 금지.
  *   라인업은 곁들이 정보라 없음/실패가 화면에 보이는 순간 카드 전체가 고장나 보인다.
  * - `pending` 이면 5분 간격 재조회 (탭이 숨겨져 있으면 스킵, 최대 24회 = 2시간).
@@ -111,8 +112,10 @@ type LineupResponse =
   | { status: "ready"; kickoff: string; home: DisplaySide; away: DisplaySide; fetchedAt: string }
 
 const WINDOW_BEFORE_MS = 150 * 60 * 1000
-// 서버(lineup-lookup)와 동일 — FT 후에도 하루 동안 조회 가능 (매치 페이지, 2026-08-16)
-const WINDOW_AFTER_MS = 24 * 3600 * 1000
+// ⚠️ 종전엔 킥오프 +24시간 상한이 있었다. 서버의 soccerway 창과 짝을 이루던 값인데,
+//    그 창이 화면까지 꺼버려 하루 지난 경기를 열면 라인업 탭이 텅 비었다
+//    (2026-08-18 운영자: "서비스가 너무 일관성이 없다"). 이제 상한이 없다 —
+//    확보한 라인업은 `match_lineups` 에 남고, 없으면 LFA 가 지난 경기도 준다.
 const POLL_MS = 5 * 60 * 1000
 const MAX_POLLS = 24
 
@@ -149,7 +152,7 @@ export function MatchLineup({
     if (!Number.isFinite(kickoff)) return
     const inWindow = () => {
       const now = Date.now()
-      return now >= kickoff - WINDOW_BEFORE_MS && now <= kickoff + WINDOW_AFTER_MS
+      return now >= kickoff - WINDOW_BEFORE_MS
     }
     if (!inWindow()) return
 

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { unstable_cache } from "next/cache"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
 import { findUniqueRomanizedMatch } from "@/lib/news/notation"
 import {
@@ -472,14 +473,44 @@ interface MatchExtras {
   report: MatchReport | null
 }
 
+/** 저장해 둔 리포트 — 창 밖이어도, 원본 기사가 내려가도 그대로 보여준다 */
+async function loadStoredReport(gameId: string): Promise<MatchReport | null> {
+  const { data } = await createServiceRoleClient()
+    .from("match_reports")
+    .select("title, paragraphs")
+    .eq("game_id", gameId)
+    .maybeSingle()
+  if (!data?.title) return null
+  return { title: String(data.title), paragraphs: (data.paragraphs as string[]) ?? [] }
+}
+
+/** 검증을 통과한 리포트만 보관 — 재생성 비용(LLM)과 원본 소실 양쪽을 막는다 */
+async function storeReport(gameId: string, eventId: string, report: MatchReport) {
+  await createServiceRoleClient()
+    .from("match_reports")
+    .upsert(
+      { game_id: gameId, event_id: eventId, title: report.title, paragraphs: report.paragraphs },
+      { onConflict: "game_id" }
+    )
+}
+
 export async function getMatchExtras(gameId: string): Promise<MatchExtras> {
+  // ⚠️ 저장분을 **해석보다 먼저** 본다. soccerway 해석에는 킥오프 +24시간 창이 걸려 있어,
+  //    창을 벗어나면 resolveMatchEvent 가 null 이 되고 리포트·스탯이 통째로 사라졌다.
+  //    한 번 만든 리포트는 창과 무관하게 계속 보여야 한다 (2026-08-18 운영자 지적).
+  const stored = await loadStoredReport(gameId).catch(() => null)
+
   const resolved = await resolveMatchEvent(gameId)
-  if (!resolved) return { stats: null, report: null }
-  const [stats, report] = await Promise.all([
+  if (!resolved) return { stats: null, report: stored }
+
+  const [stats, fresh] = await Promise.all([
     cachedStats(resolved.eventId)().catch(() => null),
-    cachedReport(resolved.eventId, gameId, resolved.homeTeam, resolved.awayTeam)().catch(
-      () => null
-    ),
+    stored
+      ? Promise.resolve(null)
+      : cachedReport(resolved.eventId, gameId, resolved.homeTeam, resolved.awayTeam)().catch(
+          () => null
+        ),
   ])
-  return { stats, report }
+  if (fresh) await storeReport(gameId, resolved.eventId, fresh).catch(() => {})
+  return { stats, report: stored ?? fresh }
 }

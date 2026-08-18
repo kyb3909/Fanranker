@@ -322,7 +322,43 @@ export async function resolveMatchEvent(
   }
 }
 
+/**
+ * 저장해 둔 라인업 (있으면 창 밖이어도 그대로 보여준다).
+ *
+ * ⚠️ 창(킥오프 −150분 ~ +24시간)은 **바깥에 요청을 보낼지**만 정한다. 화면에 뭘 보여줄지는
+ *    저장분이 정한다. 종전엔 둘이 붙어 있어서, 하루 지난 경기를 열면 라인업·리포트·스탯이
+ *    한꺼번에 사라졌다 — 같은 페이지가 열어보는 시각에 따라 달라졌다 (2026-08-18 운영자).
+ */
+async function loadStoredLineup(gameId: string): Promise<LineupResponse | null> {
+  const { data } = await createServiceRoleClient()
+    .from("match_lineups")
+    .select("payload")
+    .eq("game_id", gameId)
+    .maybeSingle()
+  const payload = data?.payload as LineupResponse | undefined
+  return payload && payload.status === "ready" ? payload : null
+}
+
+/** 확보한 라인업을 영구 보관 — soccerway 는 하루 뒤 더 이상 주지 않는다 */
+export async function storeLineupPayload(gameId: string, eventId: string, payload: LineupResponse) {
+  return storeLineup(gameId, eventId, payload)
+}
+
+async function storeLineup(gameId: string, eventId: string, payload: LineupResponse) {
+  if (payload.status !== "ready") return
+  await createServiceRoleClient()
+    .from("match_lineups")
+    .upsert(
+      { game_id: gameId, event_id: eventId, payload, updated_at: new Date().toISOString() },
+      { onConflict: "game_id" }
+    )
+}
+
 export async function getLineupForGame(gameId: string): Promise<LineupResponse> {
+  // 저장분이 있으면 그것이 정답 — 원본이 이미 지웠을 수 있다
+  const stored = await loadStoredLineup(gameId).catch(() => null)
+  if (stored) return stored
+
   const resolved = await resolveEventCore(gameId)
   if (resolved.status === "none") return { status: "none" }
   if (resolved.status === "pending") {
@@ -360,11 +396,14 @@ export async function getLineupForGame(gameId: string): Promise<LineupResponse> 
   const betmanHomeSide = flip ? lineup.away : lineup.home
   const betmanAwaySide = flip ? lineup.home : lineup.away
 
-  return {
+  const ready: LineupResponse = {
     status: "ready",
     kickoff: kickoff.toISOString(),
     home: toDisplay(betmanHomeSide, game.home_team_name as string, persons, squadKo),
     away: toDisplay(betmanAwaySide, game.away_team_name as string, persons, squadKo),
     fetchedAt: new Date().toISOString(),
   }
+  // 저장 실패가 화면을 막지는 않는다 (fail-open) — 다음 요청이 다시 시도한다
+  await storeLineup(gameId, eventId, ready).catch(() => {})
+  return ready
 }
