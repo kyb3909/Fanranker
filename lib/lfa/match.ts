@@ -156,6 +156,27 @@ export interface LfaStatRow {
   awayNum: number | null
 }
 
+/**
+ * 매치 타임라인 한 건 (2026-08-19 데이터 회수 1차).
+ *
+ * 종전 "주요 기록"은 골·퇴장만 실었는데, 그건 데이터가 없어서가 아니라 우리가 걸러서였다
+ * (실측 8경기: 교체 68·옐로 26·골 12·퇴장 4·자책 2, 어시스트는 골 12중 5건). 팬 패널의
+ * 재방문 1순위가 "완전한 타임라인" — 이제 전부 싣는다. 선수 평점·히트맵 제외 정책과 무관.
+ */
+export interface LfaTimelineEvent {
+  minute: string
+  side: "home" | "away"
+  kind: "goal" | "pen" | "og" | "yellow" | "red" | "sub"
+  /** 한글화 시도된 표기 (자책골이면 실축한 상대 팀 선수) */
+  player: string
+  /** 골 계열 전용 — 도움 */
+  assist?: string
+  /** sub 전용 — 들어온 선수 (player 가 나간 선수) */
+  inPlayer?: string
+  /** 골 계열 전용 — 그 시점 스코어 */
+  score?: string
+}
+
 export interface LfaMatchInfo {
   matchId: string
   /** LFA 기준 종료 여부 — betman 이 늦어도 이건 즉시 참이 된다 */
@@ -163,11 +184,12 @@ export interface LfaMatchInfo {
   live: boolean
   homeScore: number | null
   awayScore: number | null
+  /** 전반 스코어 — 경기 서사의 절반 (전반 0-0 과 2-0 은 다른 경기다) */
+  htHome: number | null
+  htAway: number | null
   stats: LfaStatRow[]
-  /** 득점 (교체는 LFA 가 선수명을 안 줘서 제외) */
-  goals: { minute: string; side: "home" | "away"; player: string; score: string }[]
-  /** 퇴장 — 몇 분에 나갔는지가 경기 해석의 핵심이라 따로 싣는다 (2026-08-17 운영자) */
-  reds: { minute: string; side: "home" | "away"; player: string }[]
+  /** 시간순 전체 타임라인 — 골·어시·카드·교체 */
+  timeline: LfaTimelineEvent[]
 }
 
 /* ── 득점자 한글화 ── */
@@ -406,9 +428,10 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       live,
       homeScore: toNum(m.home?.score),
       awayScore: toNum(m.away?.score),
+      htHome: Number.isFinite(m.halftime?.home) ? (m.halftime!.home as number) : null,
+      htAway: Number.isFinite(m.halftime?.away) ? (m.halftime!.away as number) : null,
       stats: [],
-      goals: [],
-      reds: [],
+      timeline: [],
     }
 
     // 킥오프 전이면 상세를 부르지 않는다 (크레딧 절약)
@@ -433,14 +456,23 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
         .toLowerCase()
         .replace(/_/g, " ")
         .trim()
-    const isGoal = (t: string) => t === "goal" || t === "own goal" || t === "penalty"
-    // 다이렉트 퇴장과 경고 누적 퇴장 둘 다 퇴장이다
-    const isRed = (t: string) => t.includes("red card") || t.includes("second yellow")
+    const kindOf = (t: string): LfaTimelineEvent["kind"] | null => {
+      if (t === "goal") return "goal"
+      if (t === "penalty" || t.includes("penalty goal")) return "pen"
+      if (t === "own goal") return "og"
+      if (t === "yellow card") return "yellow"
+      // 다이렉트 퇴장과 경고 누적 퇴장 둘 다 퇴장이다
+      if (t.includes("red card") || t.includes("second yellow")) return "red"
+      if (t === "substitution") return "sub"
+      return null // VAR 등 — 뜻이 불확실한 이벤트는 싣지 않는다
+    }
 
-    const rawEvents = (d.events ?? []).filter((e) => {
-      const t = norm(e.type)
-      return isGoal(t) || isRed(t)
-    })
+    const rawEvents = (d.events ?? [])
+      .map((e) => ({ e, kind: kindOf(norm(e.type)) }))
+      .filter(
+        (x): x is { e: (typeof d.events)[number]; kind: LfaTimelineEvent["kind"] } =>
+          x.kind !== null
+      )
     // 라인업은 실을 사건이 있을 때만 부른다 (없으면 한글화할 대상도 없다)
     const lineup: LineupResponse = rawEvents.length
       ? await getLineupForGame(game.gameId).catch(() => ({ status: "none" }) as LineupResponse)
@@ -451,33 +483,54 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       ? await Promise.all([cachedSquad(game.homeTeam), cachedSquad(game.awayTeam)])
       : [[], []]
 
-    for (const e of rawEvents) {
-      const player = e.detail?.player?.name?.trim()
-      if (!player) continue
-      const t = norm(e.type)
+    // 이름 한글화 한 사람분 — 라인업 라벨 → 스쿼드 사전 폴백.
+    // ⚠️ 판정 기준은 "값이 바뀌었나" 가 아니라 **한글이 됐나** 다 (2026-08-18 실사고:
+    //    라인업이 로마자 라벨을 돌려주면 바뀐 걸로 착각해 폴백을 건너뛰었다).
+    const localizeName = (raw: string | undefined, side: "home" | "away"): string | null => {
+      const name = raw?.trim()
+      if (!name) return null
+      const fromLineup = localizeScorer(name, lineup)
+      if (hasHangul(fromLineup)) return fromLineup
+      const squad = side === "away" ? awaySquad : homeSquad
+      for (const candidate of [name, fromLineup]) {
+        const ko = localizeFromSquad(candidate, squad)
+        if (hasHangul(ko)) return ko
+      }
+      return fromLineup
+    }
+
+    for (const { e, kind } of rawEvents) {
       const minute = String(e.time ?? "")
-      // ⚠️ 판정 기준은 "값이 바뀌었나" 가 아니라 **한글이 됐나** 다.
-      //    라인업 경로는 사전에 없는 선수에게 로마자 라벨을 돌려준다 — LFA 의 "P. Aubameyang"
-      //    이 라인업 라벨 "Aubameyang P." 로 바뀌기만 하고 영문 그대로였는데, 바뀌었다는
-      //    이유로 스쿼드 폴백을 건너뛰어 영문이 남았다 (2026-08-18 실측).
-      const fromLineup = localizeScorer(player, lineup)
-      const squad = e.side === "away" ? awaySquad : homeSquad
-      let label = fromLineup
-      if (!hasHangul(label)) {
-        // 원문(LFA)과 라인업 라벨은 이니셜 위치가 서로 다르다 — 둘 다 시도한다
-        for (const candidate of [player, fromLineup]) {
-          const ko = localizeFromSquad(candidate, squad)
-          if (hasHangul(ko)) {
-            label = ko
-            break
-          }
-        }
+      if (kind === "sub") {
+        // player = 나간 선수(out), inPlayer = 들어온 선수 — 실측: 둘 다 이름이 온다
+        const out = localizeName(e.detail?.out?.name, e.side)
+        const inp = localizeName(e.detail?.in?.name, e.side)
+        if (!out && !inp) continue
+        info.timeline.push({
+          minute,
+          side: e.side,
+          kind,
+          player: out ?? "",
+          ...(inp ? { inPlayer: inp } : {}),
+        })
+        continue
       }
-      if (isGoal(t)) {
-        info.goals.push({ minute, side: e.side, player: label, score: e.detail?.score ?? "" })
-      } else {
-        info.reds.push({ minute, side: e.side, player: label })
-      }
+      // ⚠️ 자책골의 실축 선수는 **상대 팀** 로스터에 있다 (side 는 득점이 오른 팀)
+      const playerSide = kind === "og" ? (e.side === "home" ? "away" : "home") : e.side
+      const player = localizeName(e.detail?.player?.name, playerSide)
+      if (!player) continue
+      const assist =
+        kind === "goal" || kind === "pen" ? localizeName(e.detail?.assist?.name, e.side) : null
+      info.timeline.push({
+        minute,
+        side: e.side,
+        kind,
+        player,
+        ...(assist ? { assist } : {}),
+        ...(kind === "goal" || kind === "pen" || kind === "og"
+          ? { score: e.detail?.score ?? "" }
+          : {}),
+      })
     }
 
     return info

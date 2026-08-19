@@ -15,6 +15,7 @@ import { MatchStatsSection } from "./match-stats-section"
 import { MatchInfoSection } from "./match-info-section"
 import { MatchTabs } from "./match-tabs"
 import { MatchLineup } from "@/components/match/match-lineup"
+import { MatchMiniStandings } from "@/components/match/mini-standings"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
@@ -141,15 +142,25 @@ export default async function MatchPage({ params }: Props) {
             initial={finished ? (hasLfaStats ? "stats" : "lineup") : "info"}
             info={
               lfa ? (
-                <Suspense fallback={null}>
-                  <MatchInfoSection
-                    matchId={lfa.matchId}
-                    homeTeam={match.homeTeam}
-                    awayTeam={match.awayTeam}
-                    homeLabel={homeLabel}
-                    awayLabel={awayLabel}
-                  />
-                </Suspense>
+                <>
+                  <Suspense fallback={null}>
+                    <MatchInfoSection
+                      matchId={lfa.matchId}
+                      homeTeam={match.homeTeam}
+                      awayTeam={match.awayTeam}
+                      homeLabel={homeLabel}
+                      awayLabel={awayLabel}
+                    />
+                  </Suspense>
+                  {/* 미니 순위표 — "이 결과로 몇 위" (2026-08-19 팬 A8). 대조는 원문 팀명 */}
+                  <Suspense fallback={null}>
+                    <MatchMiniStandings
+                      leagueCode={match.leagueCode}
+                      homeTeam={match.homeTeam}
+                      awayTeam={match.awayTeam}
+                    />
+                  </Suspense>
+                </>
               ) : null
             }
             lineup={

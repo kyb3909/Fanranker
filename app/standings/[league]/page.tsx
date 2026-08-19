@@ -82,8 +82,13 @@ async function getRows(
   }
 }
 
-/** 순위권 색 띠 — 왼쪽 액센트 보더는 금지라 **순위 숫자 자체**에만 색을 준다 */
-function rankTone(rank: number, total: number): string {
+/**
+ * 순위권 색 띠 — 왼쪽 액센트 보더는 금지라 **순위 숫자 자체**에만 색을 준다.
+ * ⚠️ 개막 전(started=false)에는 색을 끈다 — 전 팀 0 인 "순위" 는 그냥 가나다순인데
+ *    거기에 진출권·강등 색을 입히면 오독만 만든다 (2026-08-19 감리 C-3).
+ */
+function rankTone(rank: number, total: number, started: boolean): string {
+  if (!started) return "var(--wc-mute-2)"
   if (rank <= 4) return "var(--wc-blue)" // 챔피언스리그
   if (rank > total - 3) return "var(--wc-down)" // 강등권
   return "var(--wc-mute-2)"
@@ -206,7 +211,7 @@ export default async function StandingsPage({
                         >
                           <td
                             className="gn-num py-2.5 text-right text-[13px] font-bold"
-                            style={{ color: rankTone(rank, rows.length) }}
+                            style={{ color: rankTone(rank, rows.length, played > 0) }}
                           >
                             {rank}
                           </td>
@@ -243,10 +248,18 @@ export default async function StandingsPage({
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
-                <span style={{ color: "var(--wc-blue)" }}>■</span> 상위 4팀 ·{" "}
-                <span style={{ color: "var(--wc-down)" }}>■</span> 하위 3팀
-              </p>
+              {played > 0 && (
+                <p className="mt-3 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                  <span className="font-bold" style={{ color: "var(--wc-blue)" }}>
+                    1–4위
+                  </span>{" "}
+                  챔피언스리그 ·{" "}
+                  <span className="font-bold" style={{ color: "var(--wc-down)" }}>
+                    하위 3팀
+                  </span>{" "}
+                  강등권
+                </p>
+              )}
             </>
           )}
         </div>

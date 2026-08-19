@@ -83,7 +83,15 @@ export interface LfaEvent {
   time: string
   type: string
   side: "home" | "away"
-  detail?: { player?: { name?: string; id?: string }; score?: string }
+  detail?: {
+    player?: { name?: string; id?: string }
+    score?: string
+    /** 골 이벤트의 도움 (2026-08-19 실측: 골 12건 중 5건에 존재) */
+    assist?: { name?: string; id?: string }
+    /** substitution 전용 — "선수명 안 줌" 코드 주석은 오류였다 (2026-08-19 실측 68건) */
+    in?: { name?: string; id?: string }
+    out?: { name?: string; id?: string }
+  }
 }
 
 export interface LfaStat {

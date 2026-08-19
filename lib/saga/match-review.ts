@@ -167,9 +167,19 @@ export async function buildMatchReview(
 
   const sideName = (side: "home" | "away") =>
     (side === "home") === weAreHome ? perspective.teamKr : oppKr
-  const goals = lfa.goals.map((g) => ({ 분: g.minute, 팀: sideName(g.side), 선수: g.player }))
+  // 타임라인 통합(2026-08-19) 후에도 리뷰 재료는 골·퇴장만 — 카드·교체까지 넣으면
+  // 요약이 사건 나열이 된다. 자책골은 (자책)을 붙여 실축 선수를 득점자로 오독하지 않게 한다.
+  const goals = lfa.timeline
+    .filter((e) => e.kind === "goal" || e.kind === "pen" || e.kind === "og")
+    .map((g) => ({
+      분: g.minute,
+      팀: sideName(g.side),
+      선수: g.kind === "og" ? `${g.player} (자책)` : g.player,
+    }))
   // 퇴장은 몇 분에 나왔는지가 경기 해석을 좌우한다 — 반드시 재료에 넣는다 (2026-08-17 운영자)
-  const reds = lfa.reds.map((r) => ({ 분: r.minute, 팀: sideName(r.side), 선수: r.player }))
+  const reds = lfa.timeline
+    .filter((e) => e.kind === "red")
+    .map((r) => ({ 분: r.minute, 팀: sideName(r.side), 선수: r.player }))
   const stats = statsForPerspective(lfa.stats, weAreHome)
 
   const headline =
