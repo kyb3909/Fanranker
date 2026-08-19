@@ -24,7 +24,7 @@ import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lo
 /* ── 팀명 대조 ── */
 
 /** betman 한글 팀명 → 영문명 (team_dictionary, 1h 캐시) */
-const cachedTeamEn = unstable_cache(
+export const cachedTeamEn = unstable_cache(
   async (): Promise<[string, string][]> => {
     const { data } = await createServiceRoleClient()
       .from("team_dictionary")
@@ -66,7 +66,7 @@ function tokens(s: string): string[] {
  * 유의미한 토큰이 하나라도 서로의 접두사면 후보로 보고, 최종 확정은 호출부의
  * "정확히 1건" 규칙이 담당한다.
  */
-function teamMatches(lfaName: string, ourEn: string): boolean {
+export function teamMatches(lfaName: string, ourEn: string): boolean {
   const a = tokens(lfaName)
   const b = tokens(ourEn)
   if (a.length === 0 || b.length === 0) return false

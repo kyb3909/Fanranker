@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 import { getLfaFixturesForMatchday } from "@/lib/lfa/fixtures"
+import { cachedTeamEn, teamMatches } from "@/lib/lfa/match"
 
 /**
  * 일정 페이지 데이터 — **매치데이 하루**의 대상 리그 경기 전부 (2026-08-17 개정).
@@ -143,17 +144,32 @@ function normTeam(s: string): string {
 
 /**
  * betman 행이 어느 LFA 경기인가 — 같은 슬롯 후보 중에서 고른다.
- * 후보가 하나면 그대로, 여럿이면 팀명 접두 겹침으로 좁힌다. 못 고르면 null
+ * 후보가 하나면 그대로, 여럿이면 팀명 대조로 좁힌다. 못 고르면 null
  * (병합하지 않고 betman 행을 따로 싣는다 — 엉뚱한 경기와 합치는 것이 최악이다).
+ *
+ * ⚠️ 대조는 두 축이다 (2026-08-20 실사고 — UCL 예선이 두 줄씩 실렸다):
+ *   ① 한글 통짜 접두 겹침 — LFA 행이 이미 한글화된 경우 ("셀틱" ≡ "셀틱")
+ *   ② 사전 영문 변환 + 토큰 접두 겹침 — LFA 행이 원문으로 남은 경우
+ *      (betman "하포엘 베르셰바" → EN "Hapoel Beer Sheva" → LFA "HB Sheva" 의
+ *       "sheva" 토큰이 잡는다). 한글화는 lfa_team_id 매핑이 있는 팀만 되므로
+ *       예선 마이너 팀은 ①이 영영 못 잡는다 — 그게 두 줄의 원인이었다.
  */
-function pickLfaCounterpart(betman: FixtureRow, candidates: FixtureRow[]): FixtureRow | null {
+function pickLfaCounterpart(
+  betman: FixtureRow,
+  candidates: FixtureRow[],
+  teamEn: Map<string, string>
+): FixtureRow | null {
   if (candidates.length === 1) return candidates[0]
   const bh = normTeam(betman.homeTeam)
   const ba = normTeam(betman.awayTeam)
+  const bhEn = teamEn.get(betman.homeTeam.trim())
+  const baEn = teamEn.get(betman.awayTeam.trim())
   const overlaps = (x: string, y: string) =>
     x.length >= 2 && y.length >= 2 && (x.startsWith(y) || y.startsWith(x))
+  const sideMatch = (candName: string, korNorm: string, en: string | undefined) =>
+    overlaps(normTeam(candName), korNorm) || (!!en && teamMatches(candName, en))
   const hits = candidates.filter(
-    (c) => overlaps(normTeam(c.homeTeam), bh) && overlaps(normTeam(c.awayTeam), ba)
+    (c) => sideMatch(c.homeTeam, bh, bhEn) && sideMatch(c.awayTeam, ba, baEn)
   )
   return hits.length === 1 ? hits[0] : null
 }
@@ -197,11 +213,13 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
 
   const merged: FixtureRow[] = []
   const consumed = new Set<FixtureRow>()
+  // 한글→영문 사전 — 예선 마이너 팀 대조용 (실패 시 빈 맵 → ① 축만으로 동작)
+  const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
   for (const b of betman) {
     const candidates = (slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []).filter(
       (c) => !consumed.has(c)
     )
-    const hit = pickLfaCounterpart(b, candidates)
+    const hit = pickLfaCounterpart(b, candidates, teamEn)
     if (!hit) {
       merged.push(b) // LFA 에 없거나 특정 실패 — betman 행을 그대로 싣는다
       continue
