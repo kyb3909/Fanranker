@@ -17,6 +17,8 @@ import { renderTipTapToHTML } from "@/lib/tiptap/render-html"
 import { computeTemperature } from "@/lib/temperature"
 import { jsonLd } from "@/lib/seo"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
+import { isBotUserId } from "@/lib/constants/bot-users"
+import { getCachedRecentComments } from "@/lib/home/cached-home-data"
 import { formatRelativeTime } from "@/lib/utils/date"
 
 // Supabase에서 글 상세 정보 가져오기
@@ -121,6 +123,35 @@ async function fetchBoardRecentPosts(communitySlug: string, excludePostId: strin
       vote_count: p.vote_count ?? 0,
       created_at: p.created_at,
       profile: null,
+    }))
+}
+
+/**
+ * 봇 기사 하단용 — 전 판 최근 댓글 달린 글 (2026-08-20 담벼락 동선).
+ * 홈과 같은 60초 Data Cache(getCachedRecentComments)를 나눠 쓴다 — 이 페이지도
+ * 매 요청 렌더라 무캐시 왕복을 새로 늘리면 안 된다 (cached-home-data 상단 경고).
+ * 행 형식은 BoardRecentPosts 계약에 맞춘다: vote_count 0 → 새 0카운트 숨김이 받는다.
+ */
+async function fetchWallActivityPosts(excludePostId: string) {
+  const rows = (await getCachedRecentComments()) as {
+    id: string
+    title: string
+    community_slug: string
+    comment_count?: number
+    last_comment_at?: string
+    created_at: string
+  }[]
+  return rows
+    .filter((p) => p.id !== excludePostId)
+    .slice(0, 10)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      comment_count: p.comment_count ?? 0,
+      vote_count: 0,
+      created_at: p.last_comment_at ?? p.created_at,
+      profile: null,
+      community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,
     }))
 }
 
@@ -243,8 +274,12 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   }
 
   const { userId: viewerId } = await auth()
+  // 봇 기사 하단은 같은 판 최근 글이 **또 봇 기사**라 미끼→미끼 순환이었다 (2026-08-20).
+  // 기사를 다 읽은 최고 의도 순간에 전 판 "최근 댓글 달린 글"(=사람 활동)로 잇는다.
+  // 사람 글은 현행 유지 — 같은 판 문맥이 유효하다.
+  const botArticle = isBotUserId(postData.user_id)
   const [recentPosts, commentsData, vsPoll, linkedSagas] = await Promise.all([
-    fetchBoardRecentPosts(postData.community_slug, id),
+    botArticle ? fetchWallActivityPosts(id) : fetchBoardRecentPosts(postData.community_slug, id),
     fetchComments(id),
     // VS 쟁점 폴 (뉴스 게시물에만 존재) — 없으면 null, 실패해도 글은 뜬다
     fetchVsPoll(createServiceRoleClient(), id, null).catch(() => null),
@@ -329,12 +364,15 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               {/* 이 글이 속한 사가 — 본문을 다 읽은 자리에서 연대기로 잇는다 */}
               <SagaContextBanner sagas={linkedSagas} />
 
-              {/* Board Recent Posts */}
+              {/* Board Recent Posts — 봇 기사면 전 판 담벼락 활동으로 (위 botArticle 주석) */}
               <BoardRecentPosts
                 posts={recentPosts}
                 boardName={boardName}
                 boardSlug={postData.community_slug}
                 currentPostId={id}
+                title={botArticle ? "지금 담벼락에서" : undefined}
+                moreHref={botArticle ? "/?tab=board" : undefined}
+                utmSource={botArticle ? "wall_now" : undefined}
               />
             </div>
 

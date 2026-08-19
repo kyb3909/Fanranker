@@ -6,6 +6,7 @@ import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { WallMoreRow, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
+import { WritePromptCard } from "@/components/home/write-prompt-card"
 import { suggestTarot } from "@/lib/tarot/suggest"
 import { TarotModal } from "@/components/tarot/tarot-modal"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
@@ -754,6 +755,13 @@ export function CardNewsFeed({
           {i === 12 && (
             <div className="lg:hidden">
               <DiscordInviteBanner variant="sidebar" placement="mobile_cardnews_feed" />
+            </div>
+          )}
+          {/* 쓰기 유도는 딥스크롤러에게만 (읽기→원탭→쓰기 계단) — 인터리브(4·9·14)와
+              디스코드(12)를 다 지난 지점 */}
+          {i === 18 && (
+            <div className="lg:hidden">
+              <WritePromptCard />
             </div>
           )}
         </Fragment>

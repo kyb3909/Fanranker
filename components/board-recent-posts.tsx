@@ -9,6 +9,8 @@ interface RecentPost {
   vote_count: number
   created_at: string
   profile: { nickname: string } | null
+  /** 전 판 모드(담벼락)에서 행별 판 이름 — 같은 판 모드에선 불필요 */
+  community?: string
 }
 
 interface BoardRecentPostsProps {
@@ -16,6 +18,12 @@ interface BoardRecentPostsProps {
   boardName: string
   boardSlug: string
   currentPostId: string
+  /** 헤더 문구 오버라이드 — 기본 "{boardName} 최근 글" */
+  title?: string
+  /** 더보기 목적지 오버라이드 — 기본 /community/{boardSlug} */
+  moreHref?: string
+  /** 행 링크에 붙일 utm_source (담벼락 동선 계측용) */
+  utmSource?: string
 }
 
 export function BoardRecentPosts({
@@ -23,6 +31,9 @@ export function BoardRecentPosts({
   boardName,
   boardSlug,
   currentPostId,
+  title,
+  moreHref,
+  utmSource,
 }: BoardRecentPostsProps) {
   if (posts.length === 0) return null
 
@@ -49,10 +60,10 @@ export function BoardRecentPosts({
           }}
         >
           <TrendingUp className="h-3.5 w-3.5" style={{ color: "var(--wc-burgundy)" }} />
-          {boardName} 최근 글
+          {title ?? `${boardName} 최근 글`}
         </h3>
         <Link
-          href={`/community/${boardSlug}`}
+          href={moreHref ?? `/community/${boardSlug}`}
           className="text-xs font-bold hover:underline"
           style={{ color: "var(--wc-burgundy)" }}
         >
@@ -65,7 +76,7 @@ export function BoardRecentPosts({
           return (
             <Link
               key={post.id}
-              href={`/post/${post.id}`}
+              href={`/post/${post.id}${utmSource ? `?utm_source=${utmSource}` : ""}`}
               className={
                 isCurrent
                   ? "flex items-center gap-3 px-4 py-2.5 transition-colors"
@@ -89,17 +100,26 @@ export function BoardRecentPosts({
                 className="gn-num flex shrink-0 items-center gap-2.5 text-[11px]"
                 style={{ color: "var(--wc-mute)" }}
               >
-                <span className="flex items-center gap-0.5">
-                  <ThumbsUp className="h-3 w-3" />
-                  {post.vote_count || 0}
-                </span>
-                <span className="flex items-center gap-0.5">
-                  <MessageSquare className="h-3 w-3" />
-                  {post.comment_count || 0}
-                </span>
-                <span className="hidden sm:inline">
-                  {formatRelativeTime(new Date(post.created_at))}
-                </span>
+                {/* 0 카운트는 아이콘째 숨긴다 — "0의 행렬 = 죽은 사이트 신호" (2026-08-20 수정) */}
+                {post.vote_count > 0 && (
+                  <span className="flex items-center gap-0.5">
+                    <ThumbsUp className="h-3 w-3" />
+                    {post.vote_count}
+                  </span>
+                )}
+                {post.comment_count > 0 && (
+                  <span className="flex items-center gap-0.5">
+                    <MessageSquare className="h-3 w-3" />
+                    {post.comment_count}
+                  </span>
+                )}
+                {post.community ? (
+                  <span className="hidden sm:inline">{post.community}</span>
+                ) : (
+                  <span className="hidden sm:inline">
+                    {formatRelativeTime(new Date(post.created_at))}
+                  </span>
+                )}
               </div>
             </Link>
           )

@@ -3,14 +3,13 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
-import Link from "next/link"
-import { Pencil } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { isBotUserId } from "@/lib/constants/bot-users"
+import { WritePromptCard } from "@/components/home/write-prompt-card"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 import { MatchdayBand } from "@/components/home/matchday-band"
 import { PageBand } from "@/components/page-band"
@@ -246,30 +245,7 @@ export function HomeClient({
             <GlobalNoticeBanner notices={initialGlobalNotices ?? []} />
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
             {/* 인라인 글쓰기 프롬프트 — 게시판 탭에서만 (뉴스/베팅 소비 모드와 무관한 CTA) */}
-            {feedTab === "board" && (
-              <Link
-                href="/write"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 no-underline transition-opacity hover:opacity-90"
-                style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
-              >
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
-                  aria-hidden
-                >
-                  <Pencil className="h-4 w-4" />
-                </span>
-                <span className="flex-1 text-[14px]" style={{ color: "var(--wc-mute)" }}>
-                  오늘 무슨 공놀이 이야기? 한 줄 남겨보세요…
-                </span>
-                <span
-                  className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-bold"
-                  style={{ background: "var(--wc-burgundy)", color: "#fff" }}
-                >
-                  글쓰기
-                </span>
-              </Link>
-            )}
+            {feedTab === "board" && <WritePromptCard />}
 
             {/* 월드컵 이벤트 배너 제거 (2026-07-29) — 1차 이벤트 아카이브 비공개에 따라
                 /worldcup 세그먼트 전체가 redirect 되므로 진입 배너도 내린다.
