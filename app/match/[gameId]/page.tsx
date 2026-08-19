@@ -10,6 +10,7 @@ import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
 import { MatchHeader } from "./match-header"
+import { LiveRefresher } from "./live-refresher"
 import { MatchExtrasSection } from "./match-extras-section"
 import { MatchStatsSection } from "./match-stats-section"
 import { MatchInfoSection } from "./match-info-section"
@@ -82,8 +83,12 @@ export default async function MatchPage({ params }: Props) {
     leagueCode: match.leagueCode,
   })
   const finished = match.status === "completed" || lfa?.finished === true
-  const homeScore = match.homeScore ?? lfa?.homeScore ?? null
-  const awayScore = match.awayScore ?? lfa?.awayScore ?? null
+  // 라이브 (2026-08-20 운영자: "경기 중엔 실시간 스탯과 점수가 보여야 매치센터지") —
+  // LFA 라이브 스코어·분·스탯을 그대로 낸다. 갱신은 LiveRefresher(60초 router.refresh).
+  const live = !finished && lfa?.live === true
+  // 라이브 중 스코어는 LFA 가 정본 — betman 은 종료 후에나 채워진다
+  const homeScore = live ? (lfa?.homeScore ?? null) : (match.homeScore ?? lfa?.homeScore ?? null)
+  const awayScore = live ? (lfa?.awayScore ?? null) : (match.awayScore ?? lfa?.awayScore ?? null)
   const hasLfaStats = (lfa?.stats.length ?? 0) > 0
 
   // 지면 표기는 사전 통칭 — 원문(match.homeTeam)은 LFA·soccerway 해석 키라 그대로 둔다
@@ -114,7 +119,11 @@ export default async function MatchPage({ params }: Props) {
         awayScore={awayScore}
         homeLabel={homeLabel}
         awayLabel={awayLabel}
+        live={live}
+        minute={lfa?.minute ?? null}
       />
+      {/* 진행 중에만 마운트 — FT 로 다시 그려지면 스스로 빠진다 */}
+      {live && <LiveRefresher />}
 
       {/* 데스크톱 2단: 본문 720(현행 그대로) + 우측 레일 (2026-08-20 시안 승인 —
           "좌우가 너무 비어 있다"). 레일은 lg 이상에서만 — 모바일 무변화. */}
@@ -154,8 +163,9 @@ export default async function MatchPage({ params }: Props) {
           >
             <MatchTabs
               /* 종료인데 스탯이 없으면 "정보"(경기 전 정보)로 떨어지지 않게 라인업으로 —
-               결장·부상을 종료 경기의 첫 화면으로 보여주는 것은 오답이다 (2026-08-19 UIUX) */
-              initial={finished ? (hasLfaStats ? "stats" : "lineup") : "info"}
+               결장·부상을 종료 경기의 첫 화면으로 보여주는 것은 오답이다 (2026-08-19 UIUX).
+               라이브도 같은 규칙 — 경기 중의 첫 화면은 실시간 스탯이다 (2026-08-20) */
+              initial={finished || live ? (hasLfaStats ? "stats" : "lineup") : "info"}
               info={
                 lfa ? (
                   <>
@@ -200,7 +210,7 @@ export default async function MatchPage({ params }: Props) {
                 </section>
               }
               stats={
-                finished && lfa ? (
+                (finished || live) && lfa ? (
                   <MatchStatsSection info={lfa} homeTeam={homeLabel} awayTeam={awayLabel} />
                 ) : null
               }

@@ -182,6 +182,8 @@ export interface LfaMatchInfo {
   /** LFA 기준 종료 여부 — betman 이 늦어도 이건 즉시 참이 된다 */
   finished: boolean
   live: boolean
+  /** 진행 중일 때의 경기 분("12", "45+2") — 라이브가 아니면 null (2026-08-20 라이브 매치센터) */
+  minute: string | null
   homeScore: number | null
   awayScore: number | null
   /** 전반 스코어 — 경기 서사의 절반 (전반 0-0 과 2-0 은 다른 경기다) */
@@ -426,6 +428,7 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
       matchId: m.id,
       finished,
       live,
+      minute: null,
       homeScore: toNum(m.home?.score),
       awayScore: toNum(m.away?.score),
       htHome: Number.isFinite(m.halftime?.home) ? (m.halftime!.home as number) : null,
@@ -440,6 +443,16 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
     // 빈 페이로드 throw(위 cachedDetails 주석)를 fail-open 으로 받는다 — 스코어는 이미 있다
     const d = await cachedDetails(m.id, live)().catch(() => null)
     if (!d) return info
+
+    if (live) {
+      // 경기 분 + 상세의 최신 스코어 — day 목록(5분 캐시)보다 상세(60초 캐시)가 새롭다.
+      // 라이브 중 골이 day 목록에 늦게 반영되어 스코어가 뒷걸음치는 것을 막는다.
+      info.minute = d.header?.status?.minute?.trim() || null
+      const dh = toNum(d.header?.home?.score)
+      const da = toNum(d.header?.away?.score)
+      if (dh != null) info.homeScore = dh
+      if (da != null) info.awayScore = da
+    }
 
     for (const [en, ko] of STAT_LABELS) {
       const s = d.stats?.find((x) => x.label === en)

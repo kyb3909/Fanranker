@@ -46,6 +46,8 @@ export function MatchHeader({
   awayScore,
   homeLabel,
   awayLabel,
+  live = false,
+  minute = null,
 }: {
   match: MatchSummary
   finished: boolean
@@ -54,20 +56,28 @@ export function MatchHeader({
   /** 지면 표기 (사전 통칭). 없으면 원문 — 데이터 값은 그대로 둔다 */
   homeLabel?: string
   awayLabel?: string
+  /** LFA 기준 진행 중 (2026-08-20 라이브 매치센터) — 스코어·분을 라이브로 낸다 */
+  live?: boolean
+  minute?: string | null
 }) {
-  const showScore = finished && homeScore != null && awayScore != null
+  // 라이브 중에도 스코어를 낸다 (2026-08-20 운영자: "그래야 매치센터지") —
+  // 종전 "진행 중엔 스코어를 주장하지 않는다"(8/16)는 LFA 라이브 실측 확인으로 폐기.
+  const showScore = (finished || live) && homeScore != null && awayScore != null
   const status = finished
     ? "종료"
-    : match.status === "cancelled"
-      ? "취소"
-      : match.status === "in_progress"
-        ? "진행 중"
-        : "예정"
+    : live
+      ? "LIVE"
+      : match.status === "cancelled"
+        ? "취소"
+        : match.status === "in_progress"
+          ? "진행 중"
+          : "예정"
 
-  // 이긴 쪽만 크림, 진 쪽은 회색 — 무승부면 둘 다 크림
+  // 이긴 쪽만 크림, 진 쪽은 회색 — 무승부면 둘 다 크림. 라이브 중엔 승패 톤을 걸지
+  // 않는다 (아직 끝난 얘기가 아니다) — 둘 다 크림.
   const dim = "#8d8794"
-  const homeTone = !showScore || homeScore! >= awayScore! ? "var(--gn-cream)" : dim
-  const awayTone = !showScore || awayScore! >= homeScore! ? "var(--gn-cream)" : dim
+  const homeTone = !showScore || live || homeScore! >= awayScore! ? "var(--gn-cream)" : dim
+  const awayTone = !showScore || live || awayScore! >= homeScore! ? "var(--gn-cream)" : dim
 
   // ⚠️ "← 경기 일정" 목적지는 달력일이 아니라 **매치데이**다. /matches 의 한 창은
   //    KST 06:00 ~ 다음날 06:00 — 새벽 킥오프(유럽 경기 대부분)에 +9h 달력일을 쓰면
@@ -139,13 +149,29 @@ export function MatchHeader({
             {homeLabel ?? match.homeTeam}
           </span>
           {showScore ? (
-            <span
-              className="gn-num text-center text-[40px] leading-none font-bold sm:text-[56px]"
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              <span style={{ color: homeTone }}>{homeScore}</span>
-              <span style={{ opacity: 0.35, fontSize: "0.55em", padding: "0 10px" }}>–</span>
-              <span style={{ color: awayTone }}>{awayScore}</span>
+            <span className="text-center">
+              <span
+                className="gn-num block text-[40px] leading-none font-bold sm:text-[56px]"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                <span style={{ color: homeTone }}>{homeScore}</span>
+                <span style={{ opacity: 0.35, fontSize: "0.55em", padding: "0 10px" }}>–</span>
+                <span style={{ color: awayTone }}>{awayScore}</span>
+              </span>
+              {live && (
+                <span
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold"
+                  style={{ color: "var(--gn-live)", letterSpacing: "0.08em" }}
+                >
+                  {/* 라임은 LIVE 전용, 화면당 1곳 (디자인 규칙) — 여기가 그 1곳이다 */}
+                  <span
+                    aria-hidden
+                    className="h-1.5 w-1.5 animate-pulse rounded-full"
+                    style={{ background: "var(--gn-live)" }}
+                  />
+                  {minute ? <span className="gn-num">{minute}&#8242;</span> : "LIVE"}
+                </span>
+              )}
             </span>
           ) : (
             <span className="text-center">
