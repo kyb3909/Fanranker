@@ -122,7 +122,10 @@ function cachedDay(dateUtc: string, ttl: number) {
         date: dateUtc,
         lang: "en",
       })
-      return data?.matches ?? []
+      // API 실패를 빈 배열로 캐시하지 않는다 (lib/lfa/match.ts cachedDayMatches 와 동일 —
+      // 2026-08-20 프로덕션 라이브 실사고). 호출부는 catch 로 fail-open.
+      if (!data) throw new Error("lfa-day-failed")
+      return data.matches ?? []
     },
     ["lfa-day", dateUtc, ttl === 300 ? "live" : "settled"],
     { revalidate: ttl }

@@ -88,7 +88,13 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
         date: dateUtc,
         lang: "en",
       })
-      return data?.matches ?? []
+      // ⚠️ API 실패(null)를 빈 배열로 캐시하면 settled 12시간·live 5분 동안 그날
+      //    전 경기의 해석이 통째로 죽는다 (2026-08-20 프로덕션 실사고: 라이브 매치가
+      //    "진행 중" 라벨만 남았다). throw 로 캐시를 회피한다 — cachedDetails 의
+      //    빈 페이로드 교훈과 같은 병. 성공했는데 정말 경기가 없는 날(matches: [])은
+      //    정상 값이라 그대로 캐시한다.
+      if (!data) throw new Error("lfa-day-failed")
+      return data.matches ?? []
     },
     ["lfa-day", dateUtc, live ? "live" : "settled"],
     { revalidate: live ? 300 : 12 * 3600 }

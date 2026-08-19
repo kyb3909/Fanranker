@@ -30,6 +30,8 @@ interface LfaEnvelope<T> {
 
 /**
  * 단일 호출. 실패는 전부 null (fail-open) — 이 API 가 죽어도 페이지는 살아야 한다.
+ * 일시 오류(네트워크·5xx)는 250ms 뒤 1회 재시도 — 라이브 중 한 번의 삐끗이 캐시 주기
+ * 내내 화면을 죽이는 것을 줄인다 (2026-08-20 프로덕션 라이브 실사고).
  * ⚠️ 캐시 없이 호출하면 크레딧이 요청 수만큼 나간다. 반드시 캐시 안에서 부를 것.
  */
 export async function lfaFetch<T>(
@@ -40,30 +42,41 @@ export async function lfaFetch<T>(
   const key = process.env.LIVE_FOOTBALL_API_KEY
   if (!key) return null
 
-  try {
-    const qs = new URLSearchParams({ api_key: key, ...params })
-    const res = await fetch(`${BASE}/${endpoint}?${qs}`, {
-      // Next 의 자동 fetch 캐시에 기대지 않는다 — 캐시 정책은 호출부(unstable_cache)가 쥔다
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) {
-      console.warn(`[lfa] ${endpoint} HTTP ${res.status}`)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const qs = new URLSearchParams({ api_key: key, ...params })
+      const res = await fetch(`${BASE}/${endpoint}?${qs}`, {
+        // Next 의 자동 fetch 캐시에 기대지 않는다 — 캐시 정책은 호출부(unstable_cache)가 쥔다
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) {
+        console.warn(`[lfa] ${endpoint} HTTP ${res.status}`)
+        // 4xx 는 재시도해도 같다 (키·파라미터 문제) — 5xx·레이트리밋만 한 번 더
+        if (attempt === 0 && (res.status >= 500 || res.status === 429)) {
+          await new Promise((r) => setTimeout(r, 250))
+          continue
+        }
+        return null
+      }
+      const json = (await res.json()) as LfaEnvelope<T>
+      if (json.credits_remaining != null && json.credits_remaining < 2000) {
+        // 소진 임박 — 라이브가 조용히 멈추기 전에 로그로 경고
+        console.warn(`[lfa] ⚠️ 잔여 크레딧 ${json.credits_remaining}`)
+      }
+      if (!json.success) {
+        console.warn(`[lfa] ${endpoint} 실패: ${json.message}`)
+        return null
+      }
+      return json.data ?? null
+    } catch (e) {
+      console.warn(`[lfa] ${endpoint} 예외:`, e instanceof Error ? e.message : e)
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 250))
+        continue
+      }
       return null
     }
-    const json = (await res.json()) as LfaEnvelope<T>
-    if (json.credits_remaining != null && json.credits_remaining < 2000) {
-      // 소진 임박 — 라이브가 조용히 멈추기 전에 로그로 경고
-      console.warn(`[lfa] ⚠️ 잔여 크레딧 ${json.credits_remaining}`)
-    }
-    if (!json.success) {
-      console.warn(`[lfa] ${endpoint} 실패: ${json.message}`)
-      return null
-    }
-    return json.data ?? null
-  } catch (e) {
-    console.warn(`[lfa] ${endpoint} 예외:`, e instanceof Error ? e.message : e)
-    return null
   }
 }
 
