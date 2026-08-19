@@ -44,6 +44,13 @@ function RowTime({ m }: { m: FixtureRow }) {
       </span>
     )
   }
+  if (m.status === "in_progress") {
+    return (
+      <span className="text-[10.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+        경기 중
+      </span>
+    )
+  }
   return (
     <span className="gn-num text-[12px] font-bold" style={{ color: "var(--wc-ink)" }}>
       {fmtKstTime(m.matchTime)}
@@ -125,7 +132,10 @@ export async function MatchdayRail({
               >
                 {label(m.homeTeam)} – {label(m.awayTeam)}
               </span>
-              {m.status === "completed" && m.homeScore != null && m.awayScore != null ? (
+              {/* 진행 중에도 스코어 (2026-08-20) — 목록 스코어는 day 캐시라 최대 5분 지연 */}
+              {(m.status === "completed" || m.status === "in_progress") &&
+              m.homeScore != null &&
+              m.awayScore != null ? (
                 <span
                   className="gn-num text-[12.5px] font-bold"
                   style={{ color: isCurrent ? "var(--wc-ink)" : "var(--wc-mute)" }}
