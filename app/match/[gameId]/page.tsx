@@ -20,6 +20,7 @@ import { MatchLineup } from "@/components/match/match-lineup"
 import { MatchMiniStandings } from "@/components/match/mini-standings"
 import { MatchdayRail } from "@/components/match/matchday-rail"
 import { getMatchLineup } from "@/lib/match/get-lineup"
+import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
@@ -102,7 +103,13 @@ export default async function MatchPage({ params }: Props) {
   // 예외: LFA 스탯이 없는 경기는 이 섹션이 soccerway 스탯 폴백을 겸하므로 탭을 유지한다.
   // 라인업 서버 선적재 (2026-08-20 운영자: "라인업이 너무 느리다") — 종전엔 클라이언트가
   // API 왕복으로만 받아 탭이 몇 초 비었다. 저장분·캐시가 있어 서버에서는 대체로 즉답이다.
-  const lineupInitial = await getMatchLineup(match.gameId).catch(() => null)
+  const lineupRaw = await getMatchLineup(match.gameId).catch(() => null)
+  // 저장 라인업은 킥오프 스냅샷이라 인시던트가 없다 — LFA 타임라인을 입힌다
+  // (2026-08-20 운영자: "교체가 전혀 표기가 안 된다")
+  const lineupInitial =
+    lineupRaw && lfa?.timeline.length
+      ? enrichLineupWithTimeline(lineupRaw, lfa.timeline)
+      : lineupRaw
 
   const extrasLeague = finished && isMatchExtrasLeague(match.leagueCode)
   const storedReport = extrasLeague ? await hasStoredReport(match.gameId) : false
@@ -110,11 +117,22 @@ export default async function MatchPage({ params }: Props) {
     after(() => getMatchExtras(match.gameId).catch(() => {}))
   }
 
-  // 불판 — 이 경기의 라이브 스레드 게시물 (크론이 라인업 발표 시 생성, lib/match/thread.ts)
-  const { data: threadRows } = await createServiceRoleClient()
+  // 불판 — 이 경기의 라이브 스레드 게시물 (크론이 라인업 발표 시 생성, lib/match/thread.ts).
+  // ⚠️ betman 은 같은 경기를 마켓별 중복 행으로 갖는다 — 불판은 그중 한 행에 걸리므로
+  //    같은 (팀, 킥오프)의 **모든 행 id** 로 찾는다. 아니면 어느 행으로 들어왔느냐에
+  //    따라 배너가 있다 없다 한다 (2026-08-20 실측).
+  const admin = createServiceRoleClient()
+  const { data: dupRows } = await admin
+    .from("betman_games")
+    .select("id")
+    .eq("home_team_name", match.homeTeam)
+    .eq("away_team_name", match.awayTeam)
+    .eq("match_time", match.matchTime)
+  const gameIds = [...new Set([match.gameId, ...(dupRows ?? []).map((r) => String(r.id))])]
+  const { data: threadRows } = await admin
     .from("posts")
     .select("id, comment_count")
-    .eq("match_game_id", match.gameId)
+    .in("match_game_id", gameIds)
     .is("deleted_at", null)
     .limit(1)
   const thread = threadRows?.[0] ?? null
