@@ -6,6 +6,7 @@ import { after } from "next/server"
 import Link from "@/components/ui/app-link"
 
 import { getMatchByGameId } from "@/lib/match/get-match"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
@@ -109,6 +110,15 @@ export default async function MatchPage({ params }: Props) {
     after(() => getMatchExtras(match.gameId).catch(() => {}))
   }
 
+  // 불판 — 이 경기의 라이브 스레드 게시물 (크론이 라인업 발표 시 생성, lib/match/thread.ts)
+  const { data: threadRows } = await createServiceRoleClient()
+    .from("posts")
+    .select("id, comment_count")
+    .eq("match_game_id", match.gameId)
+    .is("deleted_at", null)
+    .limit(1)
+  const thread = threadRows?.[0] ?? null
+
   return (
     <div className="min-h-[80vh]" style={{ background: "var(--wc-paper)" }}>
       {/* 스코어를 밴드로 — 페이지 선언 (2026-08-18 리디자인 1단계) */}
@@ -124,6 +134,24 @@ export default async function MatchPage({ params }: Props) {
       />
       {/* 진행 중에만 마운트 — FT 로 다시 그려지면 스스로 빠진다 */}
       {live && <LiveRefresher />}
+
+      {/* 불판 참여 — 경기를 보는 사람을 댓글 판으로 (2026-08-20). 불판이 있을 때만 */}
+      {thread && (
+        <div className="mx-auto max-w-[1080px] px-4 pt-4 sm:px-6">
+          <Link
+            href={`/post/${thread.id}?utm_source=matchcenter`}
+            className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
+            style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+          >
+            <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+              이 경기 불판에서 같이 봐요
+            </span>
+            <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+              {thread.comment_count > 0 ? `댓글 ${thread.comment_count} · ` : ""}참여 →
+            </span>
+          </Link>
+        </div>
+      )}
 
       {/* 데스크톱 2단: 본문 720(현행 그대로) + 우측 레일 (2026-08-20 시안 승인 —
           "좌우가 너무 비어 있다"). 레일은 lg 이상에서만 — 모바일 무변화. */}

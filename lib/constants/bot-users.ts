@@ -10,3 +10,6 @@ const BOT_USER_ID_RE = /(_bot$|seed_bot|^user_bot_|^user_reddit_)/
 export function isBotUserId(userId: string | null | undefined): boolean {
   return !!userId && BOT_USER_ID_RE.test(userId)
 }
+
+/** 불판(라이브 매치 스레드) 봇 — 닉네임 "중계불판" (2026-08-20 운영자 지정) */
+export const MATCH_THREAD_BOT_USER_ID = "user_bot_matchthread"

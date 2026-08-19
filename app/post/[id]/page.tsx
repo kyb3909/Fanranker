@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { notFound, redirect } from "next/navigation"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
+import { ThreadScoreStrip } from "@/components/match/thread-score-strip"
 import { PostDetailContent } from "@/components/post-detail/post-detail-content"
 import {
   SagaContextBanner,
@@ -43,7 +45,8 @@ async function fetchPost(id: string) {
       created_at,
       updated_at,
       source_url,
-      source_name
+      source_name,
+      match_game_id
     `
     )
     .eq("id", id)
@@ -352,6 +355,14 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             {/* Main Content - 9 columns */}
             <div className="col-span-12 space-y-4 lg:col-span-9">
               <BackButton fallbackHref={`/community/${postData.community_slug}`} />
+
+              {/* 불판 전광판 (2026-08-20) — match_game_id 가 있는 글(불판)만.
+                  라이브면 스코어·분·득점/카드가 60초 갱신, 실패해도 글은 뜬다 */}
+              {postData.match_game_id && (
+                <Suspense fallback={null}>
+                  <ThreadScoreStrip gameId={postData.match_game_id as string} />
+                </Suspense>
+              )}
 
               {/* Post Detail Content */}
               <PostDetailContent

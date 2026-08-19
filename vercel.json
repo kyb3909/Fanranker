@@ -129,6 +129,10 @@
     {
       "path": "/api/cron/naming-audit",
       "schedule": "20 14 * * *"
+    },
+    {
+      "path": "/api/cron/match-threads",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
