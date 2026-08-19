@@ -77,6 +77,7 @@ async function main() {
   const rows = await fetchAll<{
     soccerway_team_id: string
     player_id: string
+    player_slug: string | null
     name_en: string | null
     name_kr: string | null
     jersey_number: number | null
@@ -87,7 +88,7 @@ async function main() {
     supabase
       .from("team_squads")
       .select(
-        "soccerway_team_id, player_id, name_en, name_kr, jersey_number, position, source, status"
+        "soccerway_team_id, player_id, player_slug, name_en, name_kr, jersey_number, position, source, status"
       )
       .or("source.eq.namu_league,name_kr.is.null")
       .neq("status", "rejected")
@@ -102,10 +103,13 @@ async function main() {
       등번호: r.jersey_number ?? "",
       포지션: r.position ?? "",
       영문명: r.name_en ?? "",
-      한글명: r.name_kr ?? "",
+      // ⚠️ 헤더가 곧 업로드 계약이다 — 어드민 csv_import 는 soccerway_team_id ·
+      //    player_slug · name_kr 세 컬럼을 이름으로 찾는다. "한글명" 으로 내보내면
+      //    채워서 올려도 "필수 컬럼 누락" 이 된다 (2026-08-19 확인).
+      name_kr: r.name_kr ?? "",
       상태: r.status ?? "",
       soccerway_team_id: r.soccerway_team_id,
-      player_id: r.player_id,
+      player_slug: r.player_slug ?? "",
     }))
     .sort(
       (a, b) =>
