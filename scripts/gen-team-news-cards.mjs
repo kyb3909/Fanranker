@@ -1,4 +1,4 @@
-// 구단별 뉴스 플레이스홀더 이미지 생성 (OpenAI gpt-image-1).
+// 구단별 뉴스 플레이스홀더 이미지 생성 (OpenAI gpt-image-2 — 2026-08-20 승급).
 //
 // ## 팀명 텍스트를 굽지 않는다 (2026-08-12 운영자 결정)
 // 원래는 sharp 로 팀명을 합성했다(모델이 한글을 뭉개서). 그런데 이 이미지가 쓰이는
@@ -50,6 +50,18 @@ const TEAMS = [
   { id: "epl_astonvilla", ko: "아스톤 빌라", en: "ASTON VILLA", hue: "claret and sky blue", motif: "Birmingham, lion abstracted" },
   { id: "epl_brighton", ko: "브라이턴", en: "BRIGHTON", hue: "blue and white stripes", motif: "seaside pier, seagull abstracted" },
   { id: "epl_westham", ko: "웨스트햄", en: "WEST HAM", hue: "claret and sky blue", motif: "East London, crossed hammers abstracted into geometry" },
+  // ── 26/27 EPL 잔여 11팀 (2026-08-20 P2 — 개막 주간 커버리지. 명단 출처: standings_cache) ──
+  { id: "epl_bournemouth", ko: "본머스", en: "BOURNEMOUTH", hue: "vivid red and black vertical stripes", motif: "south coast cliffs and pier, cherry blossom abstracted into geometry" },
+  { id: "epl_brentford", ko: "브렌트퍼드", en: "BRENTFORD", hue: "bright red and white stripes with black", motif: "west London canal docks, honeybee abstracted into hexagonal geometry" },
+  { id: "epl_coventry", ko: "코벤트리 시티", en: "COVENTRY", hue: "vivid sky blue with white", motif: "phoenix rising abstracted into geometry, modernist cathedral spires" },
+  { id: "epl_crystalpalace", ko: "크리스털 팰리스", en: "CRYSTAL PALACE", hue: "red and royal blue vertical stripes", motif: "victorian glass palace lattice, eagle wing abstracted into geometry" },
+  { id: "epl_everton", ko: "에버턴", en: "EVERTON", hue: "deep royal blue and white", motif: "Merseyside lock-up tower silhouette abstracted, laurel geometry" },
+  { id: "epl_fulham", ko: "풀럼", en: "FULHAM", hue: "clean white and black with warm river tones", motif: "Thames riverside at dusk, riverside pavilion balcony geometry" },
+  { id: "epl_hull", ko: "헐 시티", en: "HULL CITY", hue: "amber orange and black", motif: "tiger stripe pattern abstracted into bold diagonal geometry, Humber estuary bridge arch" },
+  { id: "epl_ipswich", ko: "입스위치 타운", en: "IPSWICH", hue: "royal blue and white", motif: "Suffolk draught horse silhouette abstracted into geometry, rolling farmland lines" },
+  { id: "epl_leeds", ko: "리즈 유나이티드", en: "LEEDS", hue: "crisp white with royal blue and golden yellow accents", motif: "Yorkshire white rose abstracted into geometry, mill chimneys" },
+  { id: "epl_nottingham", ko: "노팅엄 포레스트", en: "NOTTINGHAM FOREST", hue: "garibaldi red with deep forest green shadow", motif: "great oak tree canopy abstracted into geometry, river Trent curve" },
+  { id: "epl_sunderland", ko: "선덜랜드", en: "SUNDERLAND", hue: "red and white vertical stripes", motif: "Wearmouth bridge arch and shipyard cranes abstracted into geometry" },
 
   // ── 유럽 빅클럽 (EPL 외) ──
   // 흰색 구단이라 밝게 잡으니 좌측 텍스트 그라디언트와 겹쳐 탁해졌다 — 어둡게 깔고 금색을 세운다
@@ -91,7 +103,8 @@ async function generate(t) {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "gpt-image-1",
+      // gpt-image-2 (2026-08-20 운영자 지시). 프롬프트 스캐폴드는 그대로 — 스타일 연속성.
+      model: "gpt-image-2",
       prompt: prompt(t),
       size: "1536x1024",
       quality: "high",

@@ -119,6 +119,35 @@ export function leagueKicker(code: string): string | null {
   return LEAGUE_KICKERS.get(code) ?? null
 }
 
+/**
+ * 매치센터 밴드 워터마크 (2026-08-20 P2 — scripts/gen-polish-assets.mjs 산출물).
+ *
+ * 크림 에칭 라인 일러스트를 밴드 우하단에 8~12% 불투명으로 깐다. 모티프가 리그가
+ * 아니라 **나라의 추상**(콜로세움 아치=이탈리아, 이베리아 아치=스페인, 고딕 첨탑=독일,
+ * 육각 격자=프랑스, 스타디움 보울=잉글랜드)이라 같은 나라 컵 대회도 리그 마크를
+ * 같이 쓴다. 목록 밖(UECL·슈퍼컵 등)은 null — 워터마크 없이도 밴드는 완성이다.
+ */
+const LEAGUE_MARKS: ReadonlyMap<string, string> = new Map([
+  ["EPL", "mark-epl"],
+  ["잉글FA컵", "mark-epl"],
+  ["잉리그컵", "mark-epl"],
+  ["라리가", "mark-laliga"],
+  ["스페FA컵", "mark-laliga"],
+  ["세리에A", "mark-seriea"],
+  ["이탈FA컵", "mark-seriea"],
+  ["분데스리", "mark-bundesliga"],
+  ["독일FA컵", "mark-bundesliga"],
+  ["프리그1", "mark-ligue1"],
+  ["프랑FA컵", "mark-ligue1"],
+  ["UCL", "mark-ucl"],
+  ["UEL", "mark-uel"],
+])
+
+export function leagueMarkSrc(code: string): string | null {
+  const id = LEAGUE_MARKS.get(code)
+  return id ? `/images/league-marks/${id}.webp` : null
+}
+
 /** 지면 섹션 정렬 키 — LEAGUE_LABELS 삽입 순서 기준, 목록 밖은 맨 뒤 */
 export function leagueOrder(code: string): number {
   const i = [...LEAGUE_LABELS.keys()].indexOf(code)

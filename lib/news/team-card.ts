@@ -49,6 +49,20 @@ const TEAM_PATTERNS: [RegExp, string][] = [
   [/유벤투스/, "seriea_juventus"],
   [/나폴리/, "seriea_napoli"],
   [/파리\s*생제르맹|PSG/, "ligue1_psg"],
+  // ── 26/27 EPL 잔여 11팀 (2026-08-20 P2 — 개막 주간 커버리지) ──
+  [/본머스/, "epl_bournemouth"],
+  [/브렌트퍼드|브렌트포드/, "epl_brentford"],
+  [/코벤트리|코번트리/, "epl_coventry"],
+  [/크리스털\s*팰리스|크리스탈\s*팰리스|팰리스/, "epl_crystalpalace"],
+  [/에버턴|에버튼/, "epl_everton"],
+  [/풀럼|풀햄/, "epl_fulham"],
+  // "헐" 단독은 한국어 감탄사와 충돌한다 — 반드시 "시티"까지 요구
+  [/헐\s*시티/, "epl_hull"],
+  [/입스위치/, "epl_ipswich"],
+  // "리즈" 단독은 "시리즈"에 걸린다 — 뒤에 유나이티드가 오거나, 앞이 "시"가 아닐 때만
+  [/리즈\s*유나이티드|(?<!시)리즈(?=[가-힣\s]|$)/, "epl_leeds"],
+  [/노팅엄/, "epl_nottingham"],
+  [/선덜랜드|썬더랜드/, "epl_sunderland"],
   // "밀란" 단독은 위 두 밀라노 팀이 다 안 걸린 뒤에만 — AC밀란 쪽이 통칭이다
   [/밀란/, "seriea_milan"],
 ]

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
+import { EmptyScene } from "@/components/empty-scene"
 import {
   getFixturesForDay,
   todayKst,
@@ -212,16 +213,18 @@ export default async function MatchesPage({
         </div>
 
         {ordered.length === 0 && (
-          <p
-            className="mt-6 rounded-xl px-4 py-10 text-center text-[13.5px]"
+          <div
+            className="mt-6 rounded-xl px-4 pt-8 pb-9 text-center"
             style={{
               background: "var(--wc-card)",
               border: "1px solid var(--wc-line)",
-              color: "var(--wc-mute)",
             }}
           >
-            이 날짜에는 대상 리그 경기가 없습니다.
-          </p>
+            <EmptyScene src="/images/empty/empty-no-matches.webp" size={320} />
+            <p className="mt-4 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+              이 날짜에는 대상 리그 경기가 없습니다.
+            </p>
+          </div>
         )}
 
         <div className="mt-4 space-y-6">

@@ -1,5 +1,6 @@
+import Image from "next/image"
 import Link from "@/components/ui/app-link"
-import { leagueKicker, leagueLabel } from "@/lib/match/leagues"
+import { leagueKicker, leagueLabel, leagueMarkSrc } from "@/lib/match/leagues"
 import type { MatchSummary } from "@/lib/match/get-match"
 
 /**
@@ -76,10 +77,25 @@ export function MatchHeader({
     .toISOString()
     .slice(0, 10)
 
+  const markSrc = leagueMarkSrc(match.leagueCode)
+
   return (
     <section className="gn-band" aria-label="경기 스코어">
+      {/* 리그 워터마크 — 크림 에칭 라인, 우하단 (2026-08-20 P2). 밴드가 overflow:hidden
+          + relative 라 그대로 잘려 앉는다. 콘텐츠 프레임에 relative 를 줘 글 위로 올린다. */}
+      {markSrc && (
+        <Image
+          src={markSrc}
+          alt=""
+          width={600}
+          height={400}
+          aria-hidden
+          className="pointer-events-none absolute right-0 bottom-0 w-[420px] max-w-[52%] select-none"
+          style={{ opacity: 0.11 }}
+        />
+      )}
       <div /* 본문 프레임(1080)과 좌측 등뼈를 맞춘다 — 밴드만 1280 이면 전환 시 점프 */
-        className="mx-auto max-w-[1080px] px-4 pt-5 pb-6 sm:px-6"
+        className="relative mx-auto max-w-[1080px] px-4 pt-5 pb-6 sm:px-6"
       >
         <div className="flex items-center justify-between gap-3">
           <Link

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { FormationPitch } from "@/components/match/formation-pitch"
+import { EmptyScene } from "@/components/empty-scene"
 
 /**
  * 경기 라인업 (표시 전용, 2026-08-16) — /api/match/lineup 소비자.
@@ -218,7 +219,11 @@ export function MatchLineup({
           className="rounded-xl px-4 py-8 text-center"
           style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
         >
-          <p className="text-[13.5px] font-semibold">라인업은 킥오프 약 1시간 전에 공개됩니다</p>
+          {/* 빈 더그아웃 + 백지 전술판 삽화 (P2) — 대기가 "고장"이 아니라 "발표 전"으로 읽히게 */}
+          <EmptyScene src="/images/empty/empty-lineup-wait.webp" size={260} />
+          <p className="mt-3 text-[13.5px] font-semibold">
+            라인업은 킥오프 약 1시간 전에 공개됩니다
+          </p>
           {kickoffLabel && (
             <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
               킥오프 <span className="gn-num font-bold">{kickoffLabel}</span> KST

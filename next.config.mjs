@@ -52,6 +52,14 @@ const STRICT_CSP_REPORT_ONLY = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // OG 카드(app/opengraph-image.tsx)가 fs 로 읽는 임베드 폰트 — 파일 트레이싱이 놓치면
+  // 프로덕션에서만 ENOENT 로 죽는다 (satori 는 woff2 를 못 읽어 ttf 를 따로 둠, 2026-08-20)
+  outputFileTracingIncludes: {
+    // 메타데이터 라우트는 빌드에 따라 키가 "/opengraph-image" 또는 "/opengraph-image/route" 로
+    // 잡힌다 — 둘 다 건다 (한쪽은 no-op, 비용 없음)
+    "/opengraph-image": ["./app/_og/*.ttf"],
+    "/opengraph-image/route": ["./app/_og/*.ttf"],
+  },
   // Next.js 15 스트리밍 메타데이터: 일반 UA는 메타데이터(description/og/canonical 등)를 <body>로
   // 스트림하고 브라우저가 <head>로 hoist. 아래 매칭 봇은 blocking 렌더 → 메타데이터를 <head>에
   // 직접 출력(JS 미실행 스크래퍼·링크 미리보기 대응).

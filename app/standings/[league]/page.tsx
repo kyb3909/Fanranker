@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
+import { EmptyScene } from "@/components/empty-scene"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
@@ -174,22 +175,32 @@ export default async function StandingsPage({
           </div>
 
           {rows.length === 0 ? (
-            <p
-              className="mt-4 rounded-xl px-4 py-10 text-center text-[13.5px]"
+            <div
+              className="mt-4 rounded-xl px-4 pt-8 pb-9 text-center"
               style={{
                 background: "var(--wc-card)",
                 border: "1px solid var(--wc-line)",
-                color: "var(--wc-mute)",
               }}
             >
-              순위표를 준비 중입니다.
-            </p>
+              <EmptyScene src="/images/empty/empty-preseason.webp" size={300} />
+              <p className="mt-4 text-[13.5px]" style={{ color: "var(--wc-mute)" }}>
+                순위표를 준비 중입니다.
+              </p>
+            </div>
           ) : (
             <>
               {played === 0 && (
-                <p className="mt-2 text-[12.5px]" style={{ color: "var(--wc-mute-2)" }}>
-                  아직 개막 전입니다 — 첫 라운드가 끝나면 채워집니다.
-                </p>
+                <div className="mt-3">
+                  {/* 개막 전 — 전 팀 0 인 표를 그대로 두되(빈 표를 감추면 페이지가 죽어 보인다),
+                      새벽 스타디움 삽화가 "고장"이 아니라 "기다림"으로 읽히게 한다 (P2) */}
+                  <EmptyScene src="/images/empty/empty-preseason.webp" size={260} />
+                  <p
+                    className="mt-1 text-center text-[12.5px]"
+                    style={{ color: "var(--wc-mute-2)" }}
+                  >
+                    아직 개막 전입니다 — 첫 라운드가 끝나면 채워집니다.
+                  </p>
+                </div>
               )}
               {/* 표는 좁은 화면에서 가로로만 스크롤한다 (지면 전체가 흔들리지 않게) */}
               <div className="mt-3 overflow-x-auto">
