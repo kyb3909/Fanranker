@@ -54,21 +54,30 @@ function RowTime({ m }: { m: FixtureRow }) {
 export async function MatchdayRail({
   currentGameId,
   matchTime,
+  leagueCode,
   shortNames,
 }: {
   currentGameId: string
   matchTime: string
+  /** 보고 있는 경기의 리그 — 레일 정렬 우선순위 */
+  leagueCode: string
   shortNames: TeamShortMap
 }) {
   const date = matchdayOf(matchTime)
   const fixtures = await getFixturesForDay(date).catch(() => [] as FixtureRow[])
   if (fixtures.length <= 1) return null
 
-  // 현재 경기를 맨 위로, 나머지는 킥오프 순 — 레일은 8행까지만 (지면이 아니라 곁창이다)
+  // 현재 경기를 맨 위로, 나머지는 **같은 리그 먼저** 킥오프 순 — 라리가 경기를 보는데
+  // 코파 이탈리아 하부 라운드가 레일을 덮으면 곁창이 소음이 된다 (2026-08-20 실측).
+  // 레일은 8행까지만 (지면이 아니라 곁창이다).
   const current = fixtures.find((f) => f.gameId === currentGameId)
   const others = fixtures
     .filter((f) => f.gameId !== currentGameId)
-    .sort((a, b) => a.matchTime.localeCompare(b.matchTime))
+    .sort(
+      (a, b) =>
+        Number(b.leagueCode === leagueCode) - Number(a.leagueCode === leagueCode) ||
+        a.matchTime.localeCompare(b.matchTime)
+    )
     .slice(0, 7)
   const rows = current ? [current, ...others] : others
   if (rows.length <= 1) return null

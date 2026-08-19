@@ -212,6 +212,7 @@ export default async function MatchPage({ params }: Props) {
             <MatchdayRail
               currentGameId={match.gameId}
               matchTime={match.matchTime}
+              leagueCode={match.leagueCode}
               shortNames={shortNames}
             />
           </Suspense>
