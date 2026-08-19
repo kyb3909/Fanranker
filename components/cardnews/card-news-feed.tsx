@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
+import { WallMoreRow, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
 import { suggestTarot } from "@/lib/tarot/suggest"
 import { TarotModal } from "@/components/tarot/tarot-modal"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
@@ -644,11 +645,18 @@ export function CardNewsFeed({
   initialCards,
   initialCursor,
   excludeIds,
+  wallPosts,
 }: {
   initialCards: CardNewsItem[]
   initialCursor: string | null
   /** 피드에서 제외할 글 id — 히어로(Top Story)에 이미 오른 글의 중복 노출 방지 */
   excludeIds?: string[]
+  /**
+   * 담벼락 인터리브 (2026-08-20 승인) — 뉴스 5장마다 사람 글 1장을 같은 밀도로 끼운다.
+   * 재료가 없으면(사람 활동 0) 아무것도 안 끼워져 피드가 지금과 동일하다 (콜드스타트 안전).
+   * 데스크톱은 우측 사이드바가 같은 데이터를 상시 노출하므로 모바일 전용(lg:hidden).
+   */
+  wallPosts?: WallPost[]
 }) {
   const [cards, setCards] = useState(initialCards)
   const [cursor, setCursor] = useState(initialCursor)
@@ -703,6 +711,15 @@ export function CardNewsFeed({
   // 질문성 띠 밀도 상한 — 카드가 늘 때만 다시 계산 (pickQuestionCards 주석 참조)
   const questionCards = useMemo(() => pickQuestionCards(cards), [cards])
 
+  // 담벼락 인터리브 배치 — 뉴스 5장마다(i=4,9,14…) 대기열에서 하나씩. 소진되면 자연히
+  // 뉴스만 흐른다. 인덱스→글 매핑을 미리 굳혀 무한스크롤로 카드가 늘어도 자리가 안 밀린다.
+  const wallAt = useMemo(() => {
+    const m = new Map<number, WallPost>()
+    ;(wallPosts ?? []).forEach((p, k) => m.set(4 + k * 5, p))
+    return m
+  }, [wallPosts])
+  const lastWallIndex = wallPosts?.length ? 4 + (wallPosts.length - 1) * 5 : -1
+
   return (
     <div className="flex flex-col gap-3">
       {/*
@@ -722,10 +739,19 @@ export function CardNewsFeed({
               <PollWidget />
             </div>
           )}
+          {/* 담벼락 인터리브 — 사람 글이 뉴스와 같은 밀도로 흐른다 (2026-08-20).
+              마지막 한 장 뒤에만 담벼락 진입로를 단다 (카드마다 달면 도배) */}
+          {wallAt.has(i) && (
+            <div className="flex flex-col gap-1.5 lg:hidden">
+              <WallPostCard post={wallAt.get(i)!} />
+              {i === lastWallIndex && <WallMoreRow />}
+            </div>
+          )}
           {/* 이적시장 상황판 — 가장 강한 비로그인 축구 자산인데 홈에 진입로가 0개였다
               (2026-07-30 워룸). 오피셜 뱃지 룰 보수화(2026-07-31) 선행 후 노출. */}
           {i === 5 && <TransferPromoCard />}
-          {i === 8 && (
+          {/* 디스코드는 i=8→12 로 — 인터리브가 들어와 8 이면 주입물이 3연속 밀집한다 */}
+          {i === 12 && (
             <div className="lg:hidden">
               <DiscordInviteBanner variant="sidebar" placement="mobile_cardnews_feed" />
             </div>

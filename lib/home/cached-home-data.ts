@@ -131,14 +131,17 @@ export function getCachedRecentComments(): Promise<unknown[]> {
       const supabase = createAnonClient()
       const { data } = await supabase
         .from("posts")
-        .select("id, title, community_slug, comment_count, last_comment_at, created_at")
+        // user_id: "담벼락 지금" 인터리브가 사람 글을 골라내는 데 쓴다 (2026-08-20).
+        // ActivitySidebar 는 여분 필드를 무시하므로 무해.
+        .select("id, title, community_slug, comment_count, last_comment_at, created_at, user_id")
         .is("deleted_at", null)
         .gt("comment_count", 0)
         .order("last_comment_at", { ascending: false, nullsFirst: false })
         .limit(10)
       return data ?? []
     },
-    ["home-recent-comments"],
+    // v2: user_id 추가 — 키를 안 올리면 revalidate 창 동안 옛 셰이프가 남는다 (실측 함정)
+    ["home-recent-comments-v2"],
     { revalidate: 60, tags: [HOME_TAGS.posts] }
   )().catch(() => [] as unknown[])
 }

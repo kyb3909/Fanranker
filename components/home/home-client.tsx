@@ -10,6 +10,7 @@ import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
+import { isBotUserId } from "@/lib/constants/bot-users"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 import { MatchdayBand } from "@/components/home/matchday-band"
 import { PageBand } from "@/components/page-band"
@@ -83,6 +84,31 @@ export function HomeClient({
   const searchParams = useSearchParams()
   const [sortBy, setSortBy] = useState<SortType>(initialSort)
   const [feedTab, setFeedTab] = useState<FeedTab>(initialTab)
+
+  // 담벼락 인터리브 재료 (2026-08-20) — 사이드바용으로 이미 프리페치된 최근 댓글 글에서
+  // **사람 글만** 거른다 (봇 기사는 이미 피드의 주인공이라 인터리브에 낄 이유가 없다).
+  // 최대 4장 — 뉴스 5장당 1장이라 4장이면 스무 장 분량의 스크롤을 덮는다.
+  const wallPosts = useMemo(
+    () =>
+      (
+        (initialRecentComments ?? []) as {
+          id: string
+          title: string
+          community_slug: string
+          comment_count?: number
+          user_id?: string
+        }[]
+      )
+        .filter((p) => !isBotUserId(p.user_id))
+        .slice(0, 4)
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          communitySlug: p.community_slug,
+          comments: p.comment_count || 1,
+        })),
+    [initialRecentComments]
+  )
   // 밴드 전환 애니메이션 게이트 — 첫 로드에는 안 붙인다(LCP 히어로가 opacity 0 에서
   // 시작하면 LCP 가 늦어진다). 사용자가 탭을 한 번이라도 바꾼 뒤부터, 히어로↔PageBand
   // 리마운트 시 gn-band-in 이 재생돼 530px→밴드 붕괴가 "전환"으로 읽힌다.
@@ -323,6 +349,7 @@ export function HomeClient({
                   initialCards={initialCardNews?.cards ?? []}
                   initialCursor={initialCardNews?.nextCursor ?? null}
                   excludeIds={heroCards?.map((h) => h.id)}
+                  wallPosts={wallPosts}
                 />
               </div>
             )}

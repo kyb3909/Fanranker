@@ -86,6 +86,11 @@ type AnalyticsEvent =
       name: "vs_vote"
       params: { poll_id: string; option_key: string; surface: "card" | "post" | "modal" | "hero" }
     }
+  // ── 담벼락 지금 블록 (2026-08-20 — 떡밥 피드에 박은 커뮤니티 진입로) ──
+  // 블록 CTR·board 탭 진입 변화가 "봇 글 담벼락 제외" 재검토의 판정 근거다.
+  // surface: cardnews=홈 떡밥 피드 주입 / post=봇 기사 상세 하단
+  | { name: "wall_now_open_post"; params: { post_id: string; surface: "cardnews" | "post" } }
+  | { name: "wall_now_open_board"; params: { surface: "cardnews" | "post" } }
 
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window !== "undefined" && typeof window.gtag === "function") {

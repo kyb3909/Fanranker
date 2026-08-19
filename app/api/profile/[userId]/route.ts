@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { apiError } from "@/lib/api-error"
+import { isBotUserId } from "@/lib/constants/bot-users"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
@@ -28,7 +29,7 @@ export async function GET(
 
     // profiles 에 row 가 없는 봇 작성자(시드봇 등) 처리.
     // user_id 가 봇 패턴이면 placeholder profile 반환 — 작성 글 목록은 그대로 조회.
-    const isBotPattern = /(_bot$|seed_bot|^user_bot_|^user_reddit_)/.test(userId)
+    const isBotPattern = isBotUserId(userId)
     if (profileError) {
       if (profileError.code === "PGRST116" && isBotPattern) {
         const { data: botPosts } = await supabase
