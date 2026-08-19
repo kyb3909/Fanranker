@@ -78,7 +78,9 @@ export function MatchHeader({
 
   return (
     <section className="gn-band" aria-label="경기 스코어">
-      <div className="mx-auto max-w-[1280px] px-4 pt-5 pb-6 sm:px-6">
+      <div /* 본문 프레임(1080)과 좌측 등뼈를 맞춘다 — 밴드만 1280 이면 전환 시 점프 */
+        className="mx-auto max-w-[1080px] px-4 pt-5 pb-6 sm:px-6"
+      >
         <div className="flex items-center justify-between gap-3">
           <Link
             href={`/matches?date=${backDate}`}

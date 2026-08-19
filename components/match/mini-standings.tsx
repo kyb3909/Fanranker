@@ -56,11 +56,18 @@ export async function MatchMiniStandings({
   leagueCode,
   homeTeam,
   awayTeam,
+  variant = "tab",
 }: {
   leagueCode: string
   /** 대조용 원문 팀명 — 통칭을 넘기면 토큰이 부족해 대조가 약해진다 */
   homeTeam: string
   awayTeam: string
+  /**
+   * tab = 탭 안 한 단(현행). rail = 데스크톱 우측 레일 카드 (2026-08-20 시안).
+   * 카드 크롬을 컴포넌트가 스스로 두른다 — 밖에서 감싸면 내용이 null 일 때
+   * 빈 껍데기가 남는다.
+   */
+  variant?: "tab" | "rail"
 }) {
   const league = STANDINGS_LEAGUE[leagueCode]
   if (!league) return null
@@ -95,7 +102,14 @@ export async function MatchMiniStandings({
   const shortNames = await loadTeamShortMap()
 
   return (
-    <section className="mt-8">
+    <section
+      className={variant === "rail" ? "overflow-hidden rounded-2xl px-4 pt-3.5 pb-2" : "mt-8"}
+      style={
+        variant === "rail"
+          ? { background: "var(--wc-card)", border: "1px solid var(--wc-line)" }
+          : undefined
+      }
+    >
       <div className="flex items-baseline justify-between">
         <h2 className="sheet-lab">순위</h2>
         <Link

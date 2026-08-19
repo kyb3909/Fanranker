@@ -16,6 +16,7 @@ import { MatchInfoSection } from "./match-info-section"
 import { MatchTabs } from "./match-tabs"
 import { MatchLineup } from "@/components/match/match-lineup"
 import { MatchMiniStandings } from "@/components/match/mini-standings"
+import { MatchdayRail } from "@/components/match/matchday-rail"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
@@ -103,100 +104,138 @@ export default async function MatchPage({ params }: Props) {
         awayLabel={awayLabel}
       />
 
-      <main className="mx-auto max-w-[720px] px-0 pt-6 pb-16 sm:px-6">
-        {/* 승부예측 도선 (2026-08-19 패널 만장일치 1순위) — 예정 경기를 보는 유저는
+      {/* 데스크톱 2단: 본문 720(현행 그대로) + 우측 레일 (2026-08-20 시안 승인 —
+          "좌우가 너무 비어 있다"). 레일은 lg 이상에서만 — 모바일 무변화. */}
+      <main className="mx-auto max-w-[1080px] px-0 pt-6 pb-16 sm:px-6 lg:grid lg:grid-cols-[minmax(0,720px)_minmax(280px,1fr)] lg:items-start lg:gap-6">
+        <div className="min-w-0">
+          {/* 승부예측 도선 (2026-08-19 패널 만장일치 1순위) — 예정 경기를 보는 유저는
             픽 직전 유저인데 종전엔 매치센터↔예측이 양방향 0링크였다. 목적지는 /season
             (예측이 이벤트 전용이라 규칙·참가가 있는 허브부터 — GNB 와 같은 판단).
             베팅/픽 카드 다크 금지 규칙에 따라 라이트 틴트로. */}
-        {!finished && (
-          <div className="px-4 pb-4 sm:px-0">
-            <Link
-              href="/season?ref=match"
-              className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
-              style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
-            >
-              <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
-                이 경기, 승부예측으로
-              </span>
-              <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
-                시즌 이벤트 픽 남기기 →
-              </span>
-            </Link>
-          </div>
-        )}
-        {/* 종이 1장 — 흰 상자를 여러 개 겹치지 않고 한 장 위에 괘선으로 단을 나눈다.
+          {!finished && (
+            <div className="px-4 pb-4 sm:px-0 lg:hidden">
+              <Link
+                href="/season?ref=match"
+                className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
+                style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+              >
+                <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                  이 경기, 승부예측으로
+                </span>
+                <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+                  시즌 이벤트 픽 남기기 →
+                </span>
+              </Link>
+            </div>
+          )}
+          {/* 종이 1장 — 흰 상자를 여러 개 겹치지 않고 한 장 위에 괘선으로 단을 나눈다.
             모바일에서는 풀블리드(라운드·좌우 테두리 없음)로 글 폭을 10% 넓힌다. */}
-        <div
-          className="px-4 py-6 sm:rounded-2xl sm:px-6 sm:py-7"
-          style={{
-            background: "var(--wc-card)",
-            border: "1px solid var(--wc-line)",
-            borderLeftWidth: 0,
-            borderRightWidth: 0,
-            boxShadow: "0 1px 2px rgba(24,18,21,.05)",
-          }}
-        >
-          <MatchTabs
-            /* 종료인데 스탯이 없으면 "정보"(경기 전 정보)로 떨어지지 않게 라인업으로 —
+          <div
+            className="px-4 py-6 sm:rounded-2xl sm:px-6 sm:py-7"
+            style={{
+              background: "var(--wc-card)",
+              border: "1px solid var(--wc-line)",
+              borderLeftWidth: 0,
+              borderRightWidth: 0,
+              boxShadow: "0 1px 2px rgba(24,18,21,.05)",
+            }}
+          >
+            <MatchTabs
+              /* 종료인데 스탯이 없으면 "정보"(경기 전 정보)로 떨어지지 않게 라인업으로 —
                결장·부상을 종료 경기의 첫 화면으로 보여주는 것은 오답이다 (2026-08-19 UIUX) */
-            initial={finished ? (hasLfaStats ? "stats" : "lineup") : "info"}
-            info={
-              lfa ? (
-                <>
-                  <Suspense fallback={null}>
-                    <MatchInfoSection
-                      matchId={lfa.matchId}
-                      homeTeam={match.homeTeam}
-                      awayTeam={match.awayTeam}
-                      homeLabel={homeLabel}
-                      awayLabel={awayLabel}
-                    />
-                  </Suspense>
-                  {/* 미니 순위표 — "이 결과로 몇 위" (2026-08-19 팬 A8). 대조는 원문 팀명 */}
-                  <Suspense fallback={null}>
-                    <MatchMiniStandings
-                      leagueCode={match.leagueCode}
-                      homeTeam={match.homeTeam}
-                      awayTeam={match.awayTeam}
-                    />
-                  </Suspense>
-                </>
-              ) : null
-            }
-            lineup={
-              <section>
-                <MatchLineup
-                  gameId={match.gameId}
-                  matchTime={match.matchTime}
-                  alwaysOpen
-                  withPitch
-                />
-                <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
-                  라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
-                </p>
-              </section>
-            }
-            stats={
-              finished && lfa ? (
-                <MatchStatsSection info={lfa} homeTeam={homeLabel} awayTeam={awayLabel} />
-              ) : null
-            }
-            report={
-              /* 저장 리포트가 있거나, LFA 스탯이 없어 soccerway 스탯 폴백이 필요한 경우만.
-                 그 외에는 탭 자체를 만들지 않는다 — 빈 패널 데드엔드 방지 (2026-08-19). */
-              extrasLeague && (storedReport || !hasLfaStats) ? (
-                <Suspense fallback={null}>
-                  <MatchExtrasSection
+              initial={finished ? (hasLfaStats ? "stats" : "lineup") : "info"}
+              info={
+                lfa ? (
+                  <>
+                    <Suspense fallback={null}>
+                      <MatchInfoSection
+                        matchId={lfa.matchId}
+                        homeTeam={match.homeTeam}
+                        awayTeam={match.awayTeam}
+                        homeLabel={homeLabel}
+                        awayLabel={awayLabel}
+                      />
+                    </Suspense>
+                    {/* 미니 순위표 — "이 결과로 몇 위" (2026-08-19 팬 A8). 대조는 원문 팀명.
+                      데스크톱은 레일에 상시 노출되므로 탭 안 것은 모바일 전용 */}
+                    <div className="lg:hidden">
+                      <Suspense fallback={null}>
+                        <MatchMiniStandings
+                          leagueCode={match.leagueCode}
+                          homeTeam={match.homeTeam}
+                          awayTeam={match.awayTeam}
+                        />
+                      </Suspense>
+                    </div>
+                  </>
+                ) : null
+              }
+              lineup={
+                <section>
+                  <MatchLineup
                     gameId={match.gameId}
-                    homeTeam={homeLabel}
-                    awayTeam={awayLabel}
-                    withStats={!hasLfaStats}
+                    matchTime={match.matchTime}
+                    alwaysOpen
+                    withPitch
                   />
-                </Suspense>
-              ) : null
-            }
-          />
+                  <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                    라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
+                  </p>
+                </section>
+              }
+              stats={
+                finished && lfa ? (
+                  <MatchStatsSection info={lfa} homeTeam={homeLabel} awayTeam={awayLabel} />
+                ) : null
+              }
+              report={
+                /* 저장 리포트가 있거나, LFA 스탯이 없어 soccerway 스탯 폴백이 필요한 경우만.
+                 그 외에는 탭 자체를 만들지 않는다 — 빈 패널 데드엔드 방지 (2026-08-19). */
+                extrasLeague && (storedReport || !hasLfaStats) ? (
+                  <Suspense fallback={null}>
+                    <MatchExtrasSection
+                      gameId={match.gameId}
+                      homeTeam={homeLabel}
+                      awayTeam={awayLabel}
+                      withStats={!hasLfaStats}
+                    />
+                  </Suspense>
+                ) : null
+              }
+            />
+          </div>
         </div>
+
+        {/* ── 우측 레일 (lg 전용) — 빈 여백을 장식이 아니라 정보로 채운다 ── */}
+        <aside className="hidden lg:flex lg:flex-col lg:gap-4">
+          <Suspense fallback={null}>
+            <MatchdayRail
+              currentGameId={match.gameId}
+              matchTime={match.matchTime}
+              shortNames={shortNames}
+            />
+          </Suspense>
+          <Suspense fallback={null}>
+            <MatchMiniStandings
+              variant="rail"
+              leagueCode={match.leagueCode}
+              homeTeam={match.homeTeam}
+              awayTeam={match.awayTeam}
+            />
+          </Suspense>
+          <Link
+            href="/season?ref=match"
+            className="flex items-baseline justify-between rounded-2xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
+            style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+          >
+            <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
+              승부예측으로
+            </span>
+            <span className="text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+              시즌 이벤트 픽 남기기 →
+            </span>
+          </Link>
+        </aside>
       </main>
     </div>
   )
