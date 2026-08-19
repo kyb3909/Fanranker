@@ -341,9 +341,8 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
               <button
                 type="button"
                 onClick={reset}
-                className="ml-auto shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-bold"
+                className="ml-auto shrink-0 rounded-lg bg-[var(--wc-card)] px-2.5 py-1.5 text-[12px] font-bold transition-colors hover:bg-[var(--wc-soft)] active:scale-[.98]"
                 style={{
-                  background: "var(--wc-card)",
                   border: "1px solid var(--wc-line)",
                   color: "var(--wc-mute)",
                 }}
@@ -370,9 +369,9 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
                       key={p}
                       type="button"
                       onClick={() => setQuestion(p)}
-                      className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold"
+                      /* 조작부 마감 (2026-08-20 폴리시 1-3) — 배경을 클래스로 두어야 hover 가 이긴다 */
+                      className="rounded-full bg-[var(--wc-card)] px-2.5 py-1.5 text-[12px] font-semibold transition-colors hover:bg-[var(--wc-soft)] active:scale-[.98]"
                       style={{
-                        background: "var(--wc-card)",
                         border: "1px solid var(--wc-line-2)",
                         color: "var(--wc-mute)",
                       }}
@@ -534,8 +533,7 @@ export function TarotReader({ initialQuestion = "", inModal = false }: TarotRead
               type="button"
               onClick={send}
               disabled={!canSend || busy}
-              className="h-10 shrink-0 rounded-xl px-4 text-[13px] font-bold disabled:opacity-45"
-              style={{ background: "var(--wc-burgundy)", color: "#fff" }}
+              className="h-10 shrink-0 rounded-xl bg-[var(--wc-burgundy)] px-4 text-[13px] font-bold text-white transition-[background-color,transform] hover:bg-[var(--wc-burgundy-deep)] active:translate-y-px disabled:opacity-45"
             >
               {phase === "intro" ? "카드 뽑기" : busy ? "…" : "묻기"}
             </button>

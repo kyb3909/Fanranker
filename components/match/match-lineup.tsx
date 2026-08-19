@@ -196,7 +196,39 @@ export function MatchLineup({
     }
   }, [gameId, matchTime, initial])
 
-  if (data?.status !== "ready") return null
+  if (data?.status !== "ready") {
+    // 매치 페이지(alwaysOpen)에서는 빈 방을 남기지 않는다 (2026-08-20 폴리시 2-1) —
+    // 탭은 사용자가 명시적으로 부른 화면이라 조용한 대기 블록이 최소 예의다.
+    // 스피너·스켈레톤 금지: 기다린다고 오는 것이 아니다. 곁들이 위젯(betting 카드 등)은
+    // 종전대로 조용히 사라진다.
+    if (alwaysOpen) {
+      const t = new Date(matchTime)
+      const kickoffLabel = Number.isFinite(t.getTime())
+        ? t.toLocaleString("ko-KR", {
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Asia/Seoul",
+          })
+        : null
+      return (
+        <div
+          className="rounded-xl px-4 py-8 text-center"
+          style={{ background: "var(--wc-soft)", color: "var(--wc-mute)" }}
+        >
+          <p className="text-[13.5px] font-semibold">라인업은 킥오프 약 1시간 전에 공개됩니다</p>
+          {kickoffLabel && (
+            <p className="mt-1 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
+              킥오프 <span className="gn-num font-bold">{kickoffLabel}</span> KST
+            </p>
+          )}
+        </div>
+      )
+    }
+    return null
+  }
   const shown = alwaysOpen || open
 
   return (

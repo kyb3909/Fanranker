@@ -45,11 +45,13 @@ export function MatchTabs({
   return (
     <div>
       {/* 종이 좌우 끝까지 뻗는 탭 스트립 — 음수 마진으로 종이 패딩을 상쇄한다 */}
+      {/* 허브 탭(일정/순위)과 같은 공통 문법 — 한 화면에 언더라인 탭 문법이 두 벌이었다
+          (2026-08-20 폴리시 1-2). hover 잉크 상승·active·44px 타깃·가로 스크롤이
+          .wc-underline-tabs 에 이미 다 들어 있다. */}
       <div
         role="tablist"
-        aria-label="경기 정보"
-        className="scrollbar-none -mx-4 flex gap-1 overflow-x-auto px-4 sm:-mx-6 sm:px-6"
-        style={{ borderBottom: "1px solid var(--wc-line)" }}
+        aria-label="경기 상세 탭"
+        className="wc-underline-tabs scroll -mx-4 sm:-mx-6"
       >
         {tabs.map((t) => {
           const on = t.key === current.key
@@ -59,19 +61,15 @@ export function MatchTabs({
               role="tab"
               aria-selected={on}
               onClick={() => setActive(t.key)}
-              className="shrink-0 px-3.5 py-2 text-[13px] font-bold transition-colors"
-              style={{
-                color: on ? "var(--wc-burgundy)" : "var(--wc-mute)",
-                borderBottom: on ? "2px solid var(--wc-burgundy)" : "2px solid transparent",
-                marginBottom: -1,
-              }}
+              className={on ? "on" : undefined}
             >
               {t.label}
             </button>
           )
         })}
       </div>
-      <div role="tabpanel" className="pt-6">
+      {/* key 로 리마운트해 탭마다 페이드 인 — opacity 만, translate 금지 (폴리시 1-2) */}
+      <div key={current.key} role="tabpanel" className="animate-in fade-in pt-6 duration-200">
         {current.content}
       </div>
     </div>

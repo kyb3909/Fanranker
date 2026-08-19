@@ -238,7 +238,7 @@ export function MatchdayBand({
             className="relative mb-4 flex min-h-[130px] items-center overflow-hidden rounded-[16px] transition-opacity hover:opacity-95 sm:min-h-[150px]"
             style={{
               background: "var(--gn-night-soft)",
-              boxShadow: "0 20px 50px -20px rgba(0,0,0,.7)",
+              boxShadow: "0 20px 50px -20px rgba(22,20,26,.55)",
             }}
           >
             {/* 우측 유니폼 사진 — 좌측으로 어둡게 페이드시켜 카피와 자연스럽게 잇는다 */}
@@ -326,7 +326,10 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
   return (
     <div
       className="relative flex min-h-[300px] items-end overflow-hidden rounded-[16px] sm:min-h-[420px]"
-      style={{ background: "var(--gn-night-soft)", boxShadow: "0 20px 50px -20px rgba(0,0,0,.7)" }}
+      style={{
+        background: "var(--gn-night-soft)",
+        boxShadow: "0 20px 50px -20px rgba(22,20,26,.55)",
+      }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => {
@@ -507,7 +510,7 @@ function TodayFixtures({
   return (
     <aside
       className="gn-dcard flex flex-col p-5"
-      style={{ boxShadow: "0 20px 50px -20px rgba(0,0,0,.7)" }}
+      style={{ boxShadow: "0 20px 50px -20px rgba(22,20,26,.55)" }}
     >
       <div className="flex items-center justify-between">
         <h3

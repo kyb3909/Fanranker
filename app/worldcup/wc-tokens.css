@@ -205,6 +205,17 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* 터치 기기 히트영역 44px (2026-08-20 폴리시 3-2) — 시각 크기는 유지하고
+ * 터치 타깃만 넓힌다. 날짜·리그 칩과 언더라인 탭 3개 지면에 동시 파급. */
+@media (pointer: coarse) {
+  .wc-chip-tabs a,
+  .wc-chip-tabs button,
+  .wc-underline-tabs a,
+  .wc-underline-tabs button {
+    min-height: 44px;
+  }
+}
+
 .wc-underline-tabs.scroll {
   overflow-x: auto;
   scrollbar-width: none;

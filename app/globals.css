@@ -85,6 +85,17 @@
     var(--font-pretendard), "Pretendard Variable", "Apple SD Gothic Neo", "Malgun Gothic",
     -apple-system, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* 섀도를 순검정에서 웜 잉크(#181215 축)로 — TW shadow-* 105곳 일괄 교체 (2026-08-20 폴리시).
+     사이트의 나머지 그림자(--wc-shadow-*)가 이미 웜 톤이라, 기본 유틸만 차갑게 떠 있었다. */
+  --shadow-2xs: 0 1px 2px rgba(24, 18, 21, 0.04);
+  --shadow-xs: 0 1px 2px rgba(24, 18, 21, 0.05);
+  --shadow-sm: 0 1px 3px rgba(24, 18, 21, 0.07), 0 1px 2px rgba(24, 18, 21, 0.05);
+  --shadow-md: 0 4px 12px rgba(24, 18, 21, 0.08), 0 1px 3px rgba(24, 18, 21, 0.05);
+  --shadow-lg: 0 8px 24px rgba(24, 18, 21, 0.1), 0 2px 6px rgba(24, 18, 21, 0.05);
+  --shadow-xl: 0 16px 40px rgba(24, 18, 21, 0.12), 0 4px 10px rgba(24, 18, 21, 0.06);
+  --shadow-2xl: 0 24px 56px rgba(24, 18, 21, 0.16);
+  /* 시그니처 이징(gn-band-in) 토큰화 — 신규 코드는 ease-lift 를 쓴다 */
+  --ease-lift: cubic-bezier(0.2, 0.8, 0.3, 1);
   --font-display: "GmarketSansBold", sans-serif;
   /* 제목/디스플레이 — SUIT Variable. font-title 유틸로 사용. */
   --font-title:
@@ -130,6 +141,13 @@
 }
 
 @layer base {
+  /* 제목 줄바꿈 균형 — 한글 keep-all 과 병행 시 조판 품질이 눈에 띄게 좋아진다 (2026-08-20) */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -437,22 +455,40 @@
   animation: vote-bump 200ms ease-out;
 }
 
-/* 전체 공지 카드 — 눈에 띄도록 골드 오우라가 은은하게 맥동 */
-@keyframes notice-aura {
+/* 전체 공지 카드 — 골드 오우라 맥동.
+ * ⚠️ box-shadow 를 무한 키프레임으로 돌리면 매 프레임 페인트다 (컴포지터 승격 불가) —
+ *    홈 첫 화면에 상시 노출되는 카드라 저사양·배터리 체감이 있었다 (2026-08-20 폴리시).
+ *    그림자 두 겹을 ::before/::after 에 고정으로 그려 두고 opacity 만 애니메이션한다 —
+ *    시각적으로 동일, GPU 합성으로 종결. */
+@keyframes notice-aura-fade {
   0%,
   100% {
-    box-shadow:
-      0 0 0 1px var(--wc-gold, #e7c66b),
-      0 0 10px 1px rgba(231, 198, 107, 0.35);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 0 1px var(--wc-gold, #e7c66b),
-      0 0 22px 6px rgba(231, 198, 107, 0.6);
+    opacity: 1;
   }
 }
 .notice-aura {
-  animation: notice-aura 2.2s ease-in-out infinite;
+  position: relative;
+  box-shadow:
+    0 0 0 1px var(--wc-gold, #e7c66b),
+    0 0 10px 1px rgba(231, 198, 107, 0.35);
+}
+.notice-aura::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 22px 6px rgba(231, 198, 107, 0.6);
+  opacity: 0;
+  animation: notice-aura-fade 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice-aura::after {
+    animation: none;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────

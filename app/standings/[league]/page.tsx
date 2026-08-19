@@ -49,10 +49,15 @@ export async function generateMetadata({
   const { league } = await params
   const meta = findLeague(league)
   if (!meta) return { title: "순위" }
+  const title = `${meta.label} 순위`
+  const description = `${meta.label} 승점·득실차 순위표. 경기 일정과 결과도 함께 봅니다.`
   return {
-    title: `${meta.label} 순위`,
-    description: `${meta.label} 승점·득실차 순위표. 경기 일정과 결과도 함께 봅니다.`,
+    title,
+    description,
     alternates: { canonical: `/standings/${meta.slug}` },
+    // page title 은 og 로 자동 전파되지 않는다 (2026-08-20 PM 실측 — 공유 카드가 기본 문구였다)
+    openGraph: { title, description },
+    twitter: { title, description },
   }
 }
 
@@ -128,7 +133,7 @@ export default async function StandingsPage({
         kicker="STANDINGS"
         title="순위"
         description="유럽 5대 리그 승점·득실차"
-        aside={<PageBandStat label="리그" value={String(LEAGUES.length)} />}
+        aside={<PageBandStat label="LEAGUES" value={String(LEAGUES.length)} />}
       />
 
       <main className="mx-auto max-w-[720px] px-0 pt-4 pb-16 sm:px-6">

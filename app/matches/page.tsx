@@ -30,6 +30,12 @@ export const metadata: Metadata = {
   title: "경기 일정",
   description: "챔피언스리그·유로파리그·유럽 5대 리그 경기 일정과 결과",
   alternates: { canonical: "/matches" },
+  // page title 은 og 로 자동 전파되지 않는다 (2026-08-20 PM 실측 — 공유 카드가 기본 문구였다)
+  openGraph: {
+    title: "경기 일정",
+    description: "챔피언스리그·유로파리그·유럽 5대 리그 경기 일정과 결과",
+  },
+  twitter: { title: "경기 일정" },
 }
 
 function fmtKstTime(iso: string): string {
@@ -85,8 +91,14 @@ function collapsed(leagueCode: string, count: number): boolean {
   return !NEVER_COLLAPSE.has(leagueCode) && count > 8
 }
 
-function teamTone(name: string): string {
-  return /[가-힣]/.test(name) ? "var(--wc-ink)" : "var(--wc-mute-2)"
+/**
+ * 팀명은 전부 잉크 한 색 (2026-08-20 편집 감리 A-1).
+ * ⚠️ 종전엔 한글 표기 없는 팀만 회색으로 낮췄는데, 독자에게 그 규칙(사전 유무)은
+ *    존재하지 않는 정보다 — 회색 팀명은 "비활성/오류"로 읽혀 데이터가 덜 익은 인상만 준다.
+ *    색 차이에는 반드시 읽히는 규칙이 있어야 한다.
+ */
+function teamTone(): string {
+  return "var(--wc-ink)"
 }
 
 /** 행 껍데기 — betman 경기가 있으면 매치 페이지 링크, 없으면 일반 행 */
@@ -293,7 +305,7 @@ export default async function MatchesPage({
                       <span className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
                         <span
                           className="truncate text-right text-[14px] font-bold"
-                          style={{ color: teamTone(m.homeTeam), wordBreak: "keep-all" }}
+                          style={{ color: teamTone(), wordBreak: "keep-all" }}
                         >
                           {displayTeamName(m.homeTeam, shortNames)}
                         </span>
@@ -316,7 +328,7 @@ export default async function MatchesPage({
                         </span>
                         <span
                           className="truncate text-left text-[14px] font-bold"
-                          style={{ color: teamTone(m.awayTeam), wordBreak: "keep-all" }}
+                          style={{ color: teamTone(), wordBreak: "keep-all" }}
                         >
                           {displayTeamName(m.awayTeam, shortNames)}
                         </span>

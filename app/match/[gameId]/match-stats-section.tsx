@@ -46,15 +46,27 @@ function TimelineRow({
     // 교체는 라인업 탭과 같은 관행 표기(▼ 아웃 ▲ 인) — 가장 조용한 층위
     return (
       <li className="flex items-baseline gap-2 text-[12px]" style={{ color: "var(--wc-mute-2)" }}>
-        <span className="gn-num shrink-0 text-[11.5px] font-bold" style={{ minWidth: 30 }}>
+        <span className="gn-num shrink-0 text-right text-[12px] font-bold" style={{ minWidth: 30 }}>
           {e.minute}&apos;
         </span>
         <span className="min-w-0 truncate">
-          <span aria-hidden>▼</span> {e.player}
+          {/* 시스템 폰트 ▼▲ 글리프는 크기·베이스라인이 텍스트와 안 맞는다 (감리 A-3) —
+              8px SVG 화살촉으로. 인(들어옴)만 잉크로 올려 기호에 위계를 만든다. */}
+          <svg aria-hidden viewBox="0 0 8 8" className="mr-0.5 inline-block h-[8px] w-[8px]">
+            <path d="M1 2.5h6L4 6.5Z" fill="currentColor" />
+          </svg>
+          {e.player}
           {e.inPlayer && (
             <>
               {" "}
-              <span aria-hidden>▲</span>{" "}
+              <svg
+                aria-hidden
+                viewBox="0 0 8 8"
+                className="mr-0.5 inline-block h-[8px] w-[8px]"
+                style={{ color: "var(--wc-ink)" }}
+              >
+                <path d="M1 5.5h6L4 1.5Z" fill="currentColor" />
+              </svg>
               <span style={{ color: "var(--wc-mute)" }}>{e.inPlayer}</span>
             </>
           )}
@@ -67,7 +79,7 @@ function TimelineRow({
   return (
     <li className="flex items-baseline gap-2 text-[13.5px]">
       <span
-        className="gn-num shrink-0 text-[12px] font-bold"
+        className="gn-num shrink-0 text-right text-[12px] font-bold"
         style={{ color: isScore ? "var(--wc-burgundy)" : "var(--wc-mute-2)", minWidth: 30 }}
       >
         {e.minute}&apos;

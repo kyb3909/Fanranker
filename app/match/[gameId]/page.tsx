@@ -51,10 +51,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!m) return { title: "경기" }
   const score =
     m.homeScore != null && m.awayScore != null ? ` ${m.homeScore}:${m.awayScore} ` : " vs "
+  const title = `${m.homeTeam}${score}${m.awayTeam}`
+  const description = `${m.leagueCode} — ${m.homeTeam} vs ${m.awayTeam} 경기 정보·스코어·선발 라인업`
   return {
-    title: `${m.homeTeam}${score}${m.awayTeam}`,
-    description: `${m.leagueCode} — ${m.homeTeam} vs ${m.awayTeam} 경기 정보·스코어·선발 라인업`,
+    title,
+    description,
     alternates: { canonical: `/match/${m.gameId}` },
+    // ⚠️ page 의 title 은 og:title 로 자동 전파되지 않는다 — 루트 layout 의 openGraph 가
+    //    이겨서 카톡·디스코드에 붙는 카드가 전부 사이트 기본 문구였다 (2026-08-20 PM 실측).
+    //    스코어가 og:title 에 실려야 경기 링크 공유가 정보가 된다.
+    openGraph: { title, description },
+    twitter: { title, description },
   }
 }
 
@@ -184,9 +191,12 @@ export default async function MatchPage({ params }: Props) {
                     alwaysOpen
                     withPitch
                   />
-                  <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
-                    라인업은 킥오프 약 1시간 전 발표되며, 일부 경기는 제공되지 않을 수 있습니다.
-                  </p>
+                  {/* 대기 블록(match-lineup 내부)이 같은 안내를 하므로 ready 일 때만 각주 */}
+                  {lineupInitial?.status === "ready" && (
+                    <p className="mt-2 text-[11.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                      일부 경기는 라인업이 제공되지 않을 수 있습니다.
+                    </p>
+                  )}
                 </section>
               }
               stats={

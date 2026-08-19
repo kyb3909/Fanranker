@@ -9,7 +9,12 @@ export function SidebarResources() {
     <footer className="mt-auto shrink-0" role="contentinfo">
       <Card className="border-border relative gap-0 overflow-hidden rounded-lg border py-0">
         <div className="px-4 py-3">
-          <h3 className="text-primary flex items-center gap-2 text-[14px] font-bold">
+          {/* 다른 모듈 헤더(게시판·오늘의 설문)와 같은 11px 트래킹 라벨 — 버건디 회수
+              (우측 레일은 헤더 반복 리듬으로 정돈되는 영역, 2026-08-20 감리 A-6) */}
+          <h3
+            className="flex items-center gap-2 text-[11px] font-bold tracking-[0.14em]"
+            style={{ color: "var(--wc-ink)" }}
+          >
             <BookOpen className="h-3.5 w-3.5" />
             리소스
           </h3>

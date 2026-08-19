@@ -45,21 +45,36 @@ export function DiscordInviteBanner({
     )
   }
 
+  // 브랜드색을 면(面)으로 쓰면 그 화면의 컬러 오너십을 뺏긴다 (2026-08-20 감리 A-10 —
+  // 우측 레일에서 가장 채도 높은 물체였다). 카드 자체는 페이퍼, 블러플은 아이콘 원 안에만 —
+  // 아이콘 한 점이면 충분히 "디스코드"로 읽힌다.
   return (
     <a
       href={DISCORD_INVITE_URL}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => handleClick(placement)}
-      className="block overflow-hidden rounded-lg transition-opacity hover:opacity-95"
-      style={{ background: DISCORD_BLURPLE, boxShadow: "var(--wc-shadow-1)" }}
+      className="block overflow-hidden rounded-lg transition-colors hover:bg-[var(--wc-soft)]"
+      style={{
+        background: "var(--wc-card)",
+        border: "1px solid var(--wc-line)",
+        boxShadow: "var(--wc-shadow-1)",
+      }}
     >
       <div className="flex items-center gap-3 px-4 py-3.5">
-        <DiscordMark className="h-8 w-8 shrink-0 text-white" />
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={{ background: DISCORD_BLURPLE }}
+        >
+          <DiscordMark className="h-5 w-5 text-white" />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-bold text-white">{DISCORD_BANNER.title}</p>
-          {/* white/85 는 blurple 위에서 3.8:1 로 AA 미달 — 불투명 white 는 4.6:1 통과 */}
-          <p className="mt-0.5 text-[12px] leading-snug text-white">{DISCORD_BANNER.desc}</p>
+          <p className="text-[14px] font-bold" style={{ color: "var(--wc-ink)" }}>
+            {DISCORD_BANNER.title}
+          </p>
+          <p className="mt-0.5 text-[12px] leading-snug" style={{ color: "var(--wc-mute)" }}>
+            {DISCORD_BANNER.desc}
+          </p>
         </div>
       </div>
     </a>

@@ -543,7 +543,9 @@ function CompactCard({ card, allowQuestion }: { card: CardNewsItem; allowQuestio
 
   return (
     <article
-      className="relative overflow-hidden rounded-xl"
+      /* 사이트에서 가장 많이 누르는 카드가 유일하게 무반응이었다 (2026-08-20 폴리시 1-1).
+         데스크톱 호버는 기존 문법(gn-card-lift), 모바일 눌림은 scale 하나만 — 둘 다 걸면 과하다 */
+      className="gn-card-lift relative overflow-hidden rounded-xl transition-transform active:scale-[.99]"
       style={{ background: "var(--wc-card)", boxShadow: "var(--wc-shadow-1)" }}
     >
       {/* 전면 링크는 이 본문 행에만 걸린다 — 하단 액션 띠는 이 div 바깥이라
