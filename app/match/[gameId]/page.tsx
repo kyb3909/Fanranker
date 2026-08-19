@@ -30,12 +30,12 @@ import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
  * 범위(운영자 확정): 유럽 대항전(UCL/UEL/UECL/U슈퍼컵) + 5대 리그 + 그 컵대회만
  * (lib/match/leagues.ts). 목록 밖 리그·타 종목은 404.
  *
- * 1차 구성: 스코어 헤더 + 선발 라인업(soccerway, FT 후 24h까지). **라이브 스코어는
- * 제공하지 않는다** — wisetoto 개편으로 수집이 끊겨, 라이브 없이 종료 후 매치 리포트
- * 형태로 확정 (2026-08-16 운영자). 스코어는 결과 동기화(betman) 후 표시. 리포트+기초
- * 스탯은 **FT 후 + MATCH_EXTRAS_LEAGUES(5대 리그·UCL·잉슈퍼컵) 한정**. 과거 아카이브는
- * 실록 단계 3~4(fixtures 영속화)에서 — 여기는 betman_games 읽기 전용이라 24h 지난
- * 경기의 라인업은 비고 스코어만 남는다.
+ * 1차 구성: 스코어 헤더 + 선발 라인업. ~~라이브 스코어는 제공하지 않는다~~ →
+ * **2026-08-20 폐기**: LFA 피드가 라이브(분·스코어·실시간 스탯)를 준다는 것을 실측
+ * 확인, 진행 중엔 라이브 매치센터로 동작한다 (LiveRefresher 60초 갱신). 8/16 결정은
+ * wisetoto 기준이었다. 리포트는 여전히 **FT 후 + MATCH_EXTRAS_LEAGUES 한정**.
+ * 과거 아카이브는 실록 단계 3~4(fixtures 영속화)에서 — 여기는 betman_games 읽기
+ * 전용이라 24h 지난 경기의 라인업은 비고 스코어만 남는다.
  */
 export const revalidate = 30
 
