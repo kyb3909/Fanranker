@@ -17,6 +17,7 @@ import { MatchTabs } from "./match-tabs"
 import { MatchLineup } from "@/components/match/match-lineup"
 import { MatchMiniStandings } from "@/components/match/mini-standings"
 import { MatchdayRail } from "@/components/match/matchday-rail"
+import { getMatchLineup } from "@/lib/match/get-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
 /**
@@ -86,6 +87,10 @@ export default async function MatchPage({ params }: Props) {
   // "리포트" 탭은 **저장분이 있을 때만** 만든다 (2026-08-19 패널 — 빈 탭 데드엔드).
   // 없으면 탭 대신 응답 후 백그라운드로 생성을 걸어 둔다(after) — 다음 방문자부터 보인다.
   // 예외: LFA 스탯이 없는 경기는 이 섹션이 soccerway 스탯 폴백을 겸하므로 탭을 유지한다.
+  // 라인업 서버 선적재 (2026-08-20 운영자: "라인업이 너무 느리다") — 종전엔 클라이언트가
+  // API 왕복으로만 받아 탭이 몇 초 비었다. 저장분·캐시가 있어 서버에서는 대체로 즉답이다.
+  const lineupInitial = await getMatchLineup(match.gameId).catch(() => null)
+
   const extrasLeague = finished && isMatchExtrasLeague(match.leagueCode)
   const storedReport = extrasLeague ? await hasStoredReport(match.gameId) : false
   if (extrasLeague && !storedReport) {
@@ -175,6 +180,7 @@ export default async function MatchPage({ params }: Props) {
                   <MatchLineup
                     gameId={match.gameId}
                     matchTime={match.matchTime}
+                    initial={lineupInitial}
                     alwaysOpen
                     withPitch
                   />

@@ -70,13 +70,13 @@ function tokens(s: string): string[] {
     .filter((t) => t.length >= 3)
 }
 
-interface SquadName {
+export interface SquadName {
   nameEn: string
   nameKr: string
 }
 
-/** 팀 한글명 → 그 팀 스쿼드 (영문명은 "성 이름" 순) */
-const cachedSquad = unstable_cache(
+/** 팀 한글명 → 그 팀 스쿼드 (영문명은 "성 이름" 순) — 저장 라인업 재한글화에도 쓰인다 */
+export const getTeamSquadNames = unstable_cache(
   async (teamKr: string): Promise<SquadName[]> => {
     const supabase = createServiceRoleClient()
     const { data: team } = await supabase
@@ -98,7 +98,7 @@ const cachedSquad = unstable_cache(
 )
 
 /** "J. Agirrezabala" → 한글명. 유일하게 결정될 때만 바꾼다 (fail-closed) */
-function localize(lfaName: string, squad: SquadName[]): string {
+export function localizePlayerName(lfaName: string, squad: SquadName[]): string {
   if (squad.length === 0) return lfaName
   const initial = lfaName.match(/^([A-Za-z])\.\s*/)?.[1]?.toLowerCase() ?? null
   const surname = tokens(lfaName.replace(/^[A-Za-z]\.\s*/, ""))
@@ -125,7 +125,7 @@ function toPeople(list: LfaLineupPlayer[] | undefined, squad: SquadName[]): LfaL
     if (!name) continue
     const n = Number(p.number)
     out.push({
-      label: localize(name, squad),
+      label: localizePlayerName(name, squad),
       number: Number.isFinite(n) && n > 0 ? n : null,
       roman: name,
     })
@@ -146,8 +146,8 @@ export async function getLfaLineup(
   if (!data?.home || !data?.away) return null
 
   const [homeSquad, awaySquad] = await Promise.all([
-    cachedSquad(homeTeamKr).catch(() => [] as SquadName[]),
-    cachedSquad(awayTeamKr).catch(() => [] as SquadName[]),
+    getTeamSquadNames(homeTeamKr).catch(() => [] as SquadName[]),
+    getTeamSquadNames(awayTeamKr).catch(() => [] as SquadName[]),
   ])
 
   const side = (s: LfaLineupSide, squad: SquadName[]): LfaLineupSideOut => ({

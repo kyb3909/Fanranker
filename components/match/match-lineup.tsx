@@ -121,6 +121,12 @@ const MAX_POLLS = 24
 
 interface MatchLineupProps {
   gameId: string
+  /**
+   * 서버 선적재 응답 (2026-08-20). 페이지가 getMatchLineup 으로 미리 받아 넘기면
+   * ready 일 때 API 왕복 없이 즉시 그린다 — "라인업이 너무 느리다"의 처방 절반.
+   * pending/none 이면 종전대로 클라이언트가 조회·폴링한다.
+   */
+  initial?: LineupResponse | null
   /** betman 킥오프 ISO — 창 판정을 클라에서 먼저 해 창 밖 호출을 0으로 만든다 */
   matchTime: string
   compact?: boolean
@@ -138,16 +144,19 @@ interface MatchLineupProps {
 export function MatchLineup({
   gameId,
   matchTime,
+  initial,
   compact = false,
   defaultOpen = false,
   withPitch = false,
   alwaysOpen = false,
 }: MatchLineupProps) {
-  const [data, setData] = useState<LineupResponse | null>(null)
+  const [data, setData] = useState<LineupResponse | null>(initial ?? null)
   const [open, setOpen] = useState(defaultOpen)
   const polls = useRef(0)
 
   useEffect(() => {
+    // 서버가 이미 확정 라인업을 넘겼으면 조회할 것이 없다 (발표된 라인업은 불변)
+    if (initial?.status === "ready") return
     const kickoff = new Date(matchTime).getTime()
     if (!Number.isFinite(kickoff)) return
     const inWindow = () => {
@@ -185,7 +194,7 @@ export function MatchLineup({
       stopped = true
       if (timer) clearTimeout(timer)
     }
-  }, [gameId, matchTime])
+  }, [gameId, matchTime, initial])
 
   if (data?.status !== "ready") return null
   const shown = alwaysOpen || open
