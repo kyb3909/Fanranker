@@ -97,7 +97,22 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
 
 function cachedDetails(matchId: string, live: boolean) {
   return unstable_cache(
-    async () => lfaFetch<LfaMatchDetails>("live_match_details", { match_id: matchId, lang: "en" }),
+    async () => {
+      const d = await lfaFetch<LfaMatchDetails>("live_match_details", {
+        match_id: matchId,
+        lang: "en",
+      })
+      // ⚠️ LFA 는 일부 경기의 이벤트·스탯을 FT 후 **몇 시간 뒤에** 채운다. 빈 응답을
+      //    6시간 캐시에 박으면 그동안 득점자·스탯이 통째로 사라진 경기 페이지가 된다
+      //    (2026-08-19 실사고: 라싱 2:2 비야레알 — 직접 조회하면 이벤트 21건인데 화면은 0).
+      //    throw 로 캐시를 회피한다(unstable_cache 는 예외를 캐시하지 않는다) — 채워질
+      //    때까지 요청마다 재조회하고, 호출부는 catch 로 fail-open(스코어는 day 목록에서
+      //    이미 확보). 리포트 negative-cache 와 같은 교훈이다.
+      if (!live && d && (d.events?.length ?? 0) === 0 && (d.stats?.length ?? 0) === 0) {
+        throw new Error("lfa-details-empty")
+      }
+      return d
+    },
     ["lfa-details", matchId, live ? "live" : "settled"],
     { revalidate: live ? 60 : 6 * 3600 }
   )
@@ -399,7 +414,8 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
     // 킥오프 전이면 상세를 부르지 않는다 (크레딧 절약)
     if (!live && !finished) return info
 
-    const d = await cachedDetails(m.id, live)()
+    // 빈 페이로드 throw(위 cachedDetails 주석)를 fail-open 으로 받는다 — 스코어는 이미 있다
+    const d = await cachedDetails(m.id, live)().catch(() => null)
     if (!d) return info
 
     for (const [en, ko] of STAT_LABELS) {

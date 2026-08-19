@@ -86,6 +86,39 @@ export function leagueLabel(code: string): string {
   return LEAGUE_LABELS.get(code) ?? code
 }
 
+/**
+ * 밴드 키커용 **라틴** 표기 (2026-08-19 감리 A-1).
+ *
+ * 매치센터 밴드의 키커 슬롯은 `.gn-num`(Barlow Condensed, 라틴 전용) — 여기에 betman
+ * 코드를 그대로 넣었더니 5대 리그 코드가 한글이라("라리가") 폴백 서체에 0.2em 라틴
+ * 자간까지 얹혀 깨졌고, 옆의 `leagueLabel()` 과 같은 단어가 두 번 찍혔다
+ * ("라리가 라리가"). 키커는 라틴, 본문 라벨은 한글 — 밴드 문법(스몰캡스 키커 + 한글)의
+ * 짝을 지키려면 라틴 표기가 따로 있어야 한다. 목록 밖 코드는 null — 키커를 그리지 않는다.
+ */
+const LEAGUE_KICKERS: ReadonlyMap<string, string> = new Map([
+  ["UCL", "CHAMPIONS LEAGUE"],
+  ["UEL", "EUROPA LEAGUE"],
+  ["UECL", "CONFERENCE LEAGUE"],
+  ["U슈퍼컵", "UEFA SUPER CUP"],
+  ["EPL", "PREMIER LEAGUE"],
+  ["라리가", "LALIGA"],
+  ["세리에A", "SERIE A"],
+  ["분데스리", "BUNDESLIGA"],
+  ["프리그1", "LIGUE 1"],
+  ["잉글FA컵", "FA CUP"],
+  ["잉리그컵", "CARABAO CUP"],
+  ["잉슈퍼컵", "COMMUNITY SHIELD"],
+  ["스페FA컵", "COPA DEL REY"],
+  ["이탈FA컵", "COPPA ITALIA"],
+  ["독일FA컵", "DFB-POKAL"],
+  ["프랑FA컵", "COUPE DE FRANCE"],
+  ["프슈퍼컵", "TROPHEE DES CHAMPIONS"],
+])
+
+export function leagueKicker(code: string): string | null {
+  return LEAGUE_KICKERS.get(code) ?? null
+}
+
 /** 지면 섹션 정렬 키 — LEAGUE_LABELS 삽입 순서 기준, 목록 밖은 맨 뒤 */
 export function leagueOrder(code: string): number {
   const i = [...LEAGUE_LABELS.keys()].indexOf(code)

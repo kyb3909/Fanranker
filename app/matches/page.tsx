@@ -122,6 +122,10 @@ export default async function MatchesPage({
   const params = await searchParams
   const today = todayKst()
   const date = params.date && kstDayRange(params.date) ? params.date : today
+  // 접힌 컵대회를 펼친 리그 코드들 — 서버 컴포넌트라 상태 대신 쿼리로 든다.
+  // ⚠️ 종전 "접힘"은 hidden 클래스만 붙이고 펼칠 수단이 없는 **영구 삭제**였다
+  //    (2026-08-19 PM 실측: FA컵 130경기 도달 불가).
+  const expanded = new Set((params.expand ?? "").split(",").filter(Boolean))
   // getFixturesForDay 가 LFA(정본) + betman(보강)을 이미 병합해 준다 — 스코어·종료 판정도
   // 그 안에서 끝난다. 예전의 별도 LFA 보정 단계는 중복이라 제거했다 (2026-08-17).
   const fixtures: FixtureRow[] = await getFixturesForDay(date)
@@ -235,7 +239,7 @@ export default async function MatchesPage({
               {/* 컵대회 1라운드는 한 리그에 30경기씩 들어온다 (DFB 포칼·카라바오컵).
                   8경기를 넘으면 접어 둔다 — 지면이 8,921px 까지 늘어나던 주범 (2026-08-18). */}
               <ul
-                className={`mt-2 overflow-hidden rounded-xl ${collapsed(code, rows.length) ? "hidden" : ""}`}
+                className={`mt-2 overflow-hidden rounded-xl ${collapsed(code, rows.length) && !expanded.has(code) ? "hidden" : ""}`}
                 style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
               >
                 {rows.map((m, i) => (
@@ -246,13 +250,27 @@ export default async function MatchesPage({
                     {/* betman 에 아직 마켓이 없는 경기는 매치 페이지가 없다 (라인업·리포트가
                         betman id 로 걸려 있다) — 링크 없이 목록에만 싣는다 */}
                     <FixtureRowShell gameId={m.gameId}>
-                      {/* 좌: 시각 또는 상태 — 진행 중도 킥오프 시각으로 (라이브 표기 없음) */}
+                      {/* 좌: 시각 또는 상태. 진행 중은 "경기 중" — 킥오프 시각을 그대로 두면
+                          "아직 안 시작했나?" 로 오독된다 (2026-08-19 팬·UIUX 합치).
+                          라이브 스코어 미제공 정책은 그대로 — 상태 카피만 바꾼다. */}
                       {m.status === "completed" ? (
                         <span
                           className="gn-num text-center text-[11px] font-bold"
                           style={{ color: "var(--wc-mute-2)", letterSpacing: "0.08em" }}
                         >
                           FT
+                        </span>
+                      ) : m.status === "in_progress" ||
+                        (m.status === "scheduled" &&
+                          // 킥오프 후 ~3시간까지만 — 종료 신호가 안 온 옛 경기에 "경기 중"을
+                          // 계속 달아두면 그게 더 큰 거짓말이 된다
+                          Date.now() - new Date(m.matchTime).getTime() > 0 &&
+                          Date.now() - new Date(m.matchTime).getTime() < 3 * 3600_000) ? (
+                        <span
+                          className="text-center text-[11px] leading-tight font-bold"
+                          style={{ color: "var(--wc-burgundy)" }}
+                        >
+                          경기 중
                         </span>
                       ) : m.status === "cancelled" ? (
                         <span
@@ -307,16 +325,21 @@ export default async function MatchesPage({
                   </li>
                 ))}
               </ul>
-              {collapsed(code, rows.length) && (
-                <p
-                  className="mt-2 rounded-xl px-4 py-3 text-[12.5px]"
+              {collapsed(code, rows.length) && !expanded.has(code) && (
+                <Link
+                  href={`/matches?date=${date}&expand=${[...expanded, code].join(",")}`}
+                  scroll={false}
+                  className="mt-2 flex items-baseline justify-between rounded-xl px-4 py-3 text-[12.5px] no-underline"
                   style={{
                     background: "var(--wc-soft)",
                     color: "var(--wc-mute)",
                   }}
                 >
-                  {rows.length}경기 — 하부 라운드는 접혀 있습니다
-                </p>
+                  <span>{rows.length}경기 — 하부 라운드 포함</span>
+                  <span className="font-bold" style={{ color: "var(--wc-burgundy)" }}>
+                    모두 보기
+                  </span>
+                </Link>
               )}
             </section>
           ))}

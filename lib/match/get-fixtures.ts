@@ -85,7 +85,9 @@ async function fetchFixturesForDay(dateKst: string): Promise<FixtureRow[]> {
     .in("league_code", [...MATCH_PAGE_LEAGUES])
     .gte("match_time", range.start)
     .lt("match_time", range.end)
+    // ⚠️ 양쪽 다 걸러야 한다 — 홈만 거르면 "OO vs 미정"(UCL 예선 미확정 대진)이 통과한다
     .neq("home_team_name", "미정")
+    .neq("away_team_name", "미정")
     .not("home_team_name", "is", null)
 
   const byKey = new Map<string, FixtureRow>()

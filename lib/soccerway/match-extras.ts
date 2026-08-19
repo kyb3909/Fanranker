@@ -484,6 +484,23 @@ interface MatchExtras {
   report: MatchReport | null
 }
 
+/**
+ * 저장 리포트 유무 — 매치 페이지가 "리포트" 탭을 만들지 말지 **렌더 전에** 판정하는 용도.
+ * 종전엔 탭을 무조건 만들고 내용이 Suspense 안에서 null 로 풀렸는데, 래퍼가 truthy 라
+ * 탭이 남아 **빈 패널 데드엔드**가 됐다 (2026-08-19 패널 2중 실측 — fail-open 계약 파공).
+ */
+export async function hasStoredReport(gameId: string): Promise<boolean> {
+  try {
+    const { count } = await createServiceRoleClient()
+      .from("match_reports")
+      .select("game_id", { count: "exact", head: true })
+      .eq("game_id", gameId)
+    return (count ?? 0) > 0
+  } catch {
+    return false
+  }
+}
+
 /** 저장해 둔 리포트 — 창 밖이어도, 원본 기사가 내려가도 그대로 보여준다 */
 async function loadStoredReport(gameId: string): Promise<MatchReport | null> {
   const { data } = await createServiceRoleClient()

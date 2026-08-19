@@ -1,5 +1,5 @@
 import Link from "@/components/ui/app-link"
-import { leagueLabel } from "@/lib/match/leagues"
+import { leagueKicker, leagueLabel } from "@/lib/match/leagues"
 import type { MatchSummary } from "@/lib/match/get-match"
 
 /**
@@ -68,7 +68,11 @@ export function MatchHeader({
   const homeTone = !showScore || homeScore! >= awayScore! ? "var(--gn-cream)" : dim
   const awayTone = !showScore || awayScore! >= homeScore! ? "var(--gn-cream)" : dim
 
-  const backDate = new Date(new Date(match.matchTime).getTime() + 9 * 3600_000)
+  // ⚠️ "← 경기 일정" 목적지는 달력일이 아니라 **매치데이**다. /matches 의 한 창은
+  //    KST 06:00 ~ 다음날 06:00 — 새벽 킥오프(유럽 경기 대부분)에 +9h 달력일을 쓰면
+  //    그 경기가 없는 날짜로 떨어진다 (2026-08-19 패널 3중 실측: 8/18 04:00 경기 →
+  //    ?date=8/18 은 0경기, 실제 소속은 8/17). KST에서 6시간을 되감은 날짜 = +3h UTC.
+  const backDate = new Date(new Date(match.matchTime).getTime() + 3 * 3600_000)
     .toISOString()
     .slice(0, 10)
 
@@ -91,13 +95,19 @@ export function MatchHeader({
           </span>
         </div>
 
+        {/* 키커는 **라틴 표기**(leagueKicker), 본문 라벨은 한글 — betman 코드를 그대로
+            넣으면 한글 코드가 .gn-num(라틴 전용)에서 깨지고 라벨과 같은 단어가 두 번
+            찍힌다 ("라리가 라리가", 2026-08-19 감리 A-1). 라틴 표기가 없는 코드는
+            키커 없이 라벨만. */}
         <p className="mt-3.5 flex flex-wrap items-baseline gap-x-2">
-          <span
-            className="gn-num text-[12.5px] font-bold uppercase"
-            style={{ color: "var(--gn-bg-100)", letterSpacing: "0.2em" }}
-          >
-            {match.leagueCode}
-          </span>
+          {leagueKicker(match.leagueCode) && (
+            <span
+              className="gn-num text-[12.5px] font-bold uppercase"
+              style={{ color: "var(--gn-bg-100)", letterSpacing: "0.2em" }}
+            >
+              {leagueKicker(match.leagueCode)}
+            </span>
+          )}
           <span className="text-[12.5px] font-semibold" style={{ color: "var(--gn-cream-dim)" }}>
             {leagueLabel(match.leagueCode)}
           </span>

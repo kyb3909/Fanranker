@@ -2,9 +2,13 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 
+import { after } from "next/server"
+import Link from "@/components/ui/app-link"
+
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { isMatchExtrasLeague } from "@/lib/match/leagues"
 import { getLfaMatchInfo } from "@/lib/lfa/match"
+import { getMatchExtras, hasStoredReport } from "@/lib/soccerway/match-extras"
 import { MatchHeader } from "./match-header"
 import { MatchExtrasSection } from "./match-extras-section"
 import { MatchStatsSection } from "./match-stats-section"
@@ -77,6 +81,15 @@ export default async function MatchPage({ params }: Props) {
   const homeLabel = displayTeamName(match.homeTeam, shortNames)
   const awayLabel = displayTeamName(match.awayTeam, shortNames)
 
+  // "리포트" 탭은 **저장분이 있을 때만** 만든다 (2026-08-19 패널 — 빈 탭 데드엔드).
+  // 없으면 탭 대신 응답 후 백그라운드로 생성을 걸어 둔다(after) — 다음 방문자부터 보인다.
+  // 예외: LFA 스탯이 없는 경기는 이 섹션이 soccerway 스탯 폴백을 겸하므로 탭을 유지한다.
+  const extrasLeague = finished && isMatchExtrasLeague(match.leagueCode)
+  const storedReport = extrasLeague ? await hasStoredReport(match.gameId) : false
+  if (extrasLeague && !storedReport) {
+    after(() => getMatchExtras(match.gameId).catch(() => {}))
+  }
+
   return (
     <div className="min-h-[80vh]" style={{ background: "var(--wc-paper)" }}>
       {/* 스코어를 밴드로 — 페이지 선언 (2026-08-18 리디자인 1단계) */}
@@ -90,6 +103,26 @@ export default async function MatchPage({ params }: Props) {
       />
 
       <main className="mx-auto max-w-[720px] px-0 pt-6 pb-16 sm:px-6">
+        {/* 승부예측 도선 (2026-08-19 패널 만장일치 1순위) — 예정 경기를 보는 유저는
+            픽 직전 유저인데 종전엔 매치센터↔예측이 양방향 0링크였다. 목적지는 /season
+            (예측이 이벤트 전용이라 규칙·참가가 있는 허브부터 — GNB 와 같은 판단).
+            베팅/픽 카드 다크 금지 규칙에 따라 라이트 틴트로. */}
+        {!finished && (
+          <div className="px-4 pb-4 sm:px-0">
+            <Link
+              href="/season?ref=match"
+              className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
+              style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+            >
+              <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                이 경기, 승부예측으로
+              </span>
+              <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+                시즌 이벤트 픽 남기기 →
+              </span>
+            </Link>
+          </div>
+        )}
         {/* 종이 1장 — 흰 상자를 여러 개 겹치지 않고 한 장 위에 괘선으로 단을 나눈다.
             모바일에서는 풀블리드(라운드·좌우 테두리 없음)로 글 폭을 10% 넓힌다. */}
         <div
@@ -103,7 +136,9 @@ export default async function MatchPage({ params }: Props) {
           }}
         >
           <MatchTabs
-            initial={finished ? "stats" : "info"}
+            /* 종료인데 스탯이 없으면 "정보"(경기 전 정보)로 떨어지지 않게 라인업으로 —
+               결장·부상을 종료 경기의 첫 화면으로 보여주는 것은 오답이다 (2026-08-19 UIUX) */
+            initial={finished ? (hasLfaStats ? "stats" : "lineup") : "info"}
             info={
               lfa ? (
                 <Suspense fallback={null}>
@@ -136,8 +171,9 @@ export default async function MatchPage({ params }: Props) {
               ) : null
             }
             report={
-              /* 첫 생성이 LLM 파이프라인이라 수십 초 — Suspense 로 분리 */
-              finished && isMatchExtrasLeague(match.leagueCode) ? (
+              /* 저장 리포트가 있거나, LFA 스탯이 없어 soccerway 스탯 폴백이 필요한 경우만.
+                 그 외에는 탭 자체를 만들지 않는다 — 빈 패널 데드엔드 방지 (2026-08-19). */
+              extrasLeague && (storedReport || !hasLfaStats) ? (
                 <Suspense fallback={null}>
                   <MatchExtrasSection
                     gameId={match.gameId}
