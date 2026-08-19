@@ -647,17 +647,21 @@ export function CardNewsFeed({
   initialCursor,
   excludeIds,
   wallPosts,
+  newsPerWall = 5,
 }: {
   initialCards: CardNewsItem[]
   initialCursor: string | null
   /** 피드에서 제외할 글 id — 히어로(Top Story)에 이미 오른 글의 중복 노출 방지 */
   excludeIds?: string[]
   /**
-   * 담벼락 인터리브 (2026-08-20 승인) — 뉴스 5장마다 사람 글 1장을 같은 밀도로 끼운다.
-   * 재료가 없으면(사람 활동 0) 아무것도 안 끼워져 피드가 지금과 동일하다 (콜드스타트 안전).
-   * 데스크톱은 우측 사이드바가 같은 데이터를 상시 노출하므로 모바일 전용(lg:hidden).
+   * 담벼락 인터리브 (2026-08-20 승인) — 뉴스 newsPerWall장마다 사람 글 1장을 같은 밀도로
+   * 끼운다. 재료가 없으면(사람 활동 0) 아무것도 안 끼워져 피드가 지금과 동일하다
+   * (콜드스타트 안전). 데스크톱은 우측 사이드바가 같은 데이터를 상시 노출하므로
+   * 모바일 전용(lg:hidden).
    */
   wallPosts?: WallPost[]
+  /** 뉴스 몇 장마다 담벼락 1장인가 — site_settings 다이얼 (기본 5) */
+  newsPerWall?: number
 }) {
   const [cards, setCards] = useState(initialCards)
   const [cursor, setCursor] = useState(initialCursor)
@@ -712,14 +716,23 @@ export function CardNewsFeed({
   // 질문성 띠 밀도 상한 — 카드가 늘 때만 다시 계산 (pickQuestionCards 주석 참조)
   const questionCards = useMemo(() => pickQuestionCards(cards), [cards])
 
-  // 담벼락 인터리브 배치 — 뉴스 5장마다(i=4,9,14…) 대기열에서 하나씩. 소진되면 자연히
-  // 뉴스만 흐른다. 인덱스→글 매핑을 미리 굳혀 무한스크롤로 카드가 늘어도 자리가 안 밀린다.
+  // 담벼락 인터리브 배치 — 뉴스 newsPerWall장마다 대기열에서 하나씩 (기본 5:1 → i=4,9,14…).
+  // 소진되면 자연히 뉴스만 흐른다. 인덱스→글 매핑을 미리 굳혀 무한스크롤로 카드가 늘어도
+  // 자리가 안 밀린다. 비율을 조이면(3:1 등) 기존 주입물 자리와 겹칠 수 있어 한 칸 미룬다
+  // — 같은 카드 뒤에 주입물 2개가 연달아 쌓이는 밀집 방지.
   const wallAt = useMemo(() => {
+    const n = Math.max(2, Math.floor(newsPerWall))
+    const RESERVED = new Set([2, 5, 12, 18]) // 폴·이적·디스코드·글쓰기 프롬프트 자리
     const m = new Map<number, WallPost>()
-    ;(wallPosts ?? []).forEach((p, k) => m.set(4 + k * 5, p))
+    let idx = n - 1
+    for (const p of wallPosts ?? []) {
+      while (RESERVED.has(idx) || m.has(idx)) idx++
+      m.set(idx, p)
+      idx += n
+    }
     return m
-  }, [wallPosts])
-  const lastWallIndex = wallPosts?.length ? 4 + (wallPosts.length - 1) * 5 : -1
+  }, [wallPosts, newsPerWall])
+  const lastWallIndex = wallAt.size ? Math.max(...wallAt.keys()) : -1
 
   return (
     <div className="flex flex-col gap-3">

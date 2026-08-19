@@ -11,6 +11,7 @@ import {
   getCachedWorldcupStatus,
   getCachedCardNews,
   getCachedHeroCards,
+  getCachedWallRatio,
 } from "@/lib/home/cached-home-data"
 import type { PostsResponse, SortType } from "@/hooks/use-feed"
 import type { GroupedMatch } from "@/types/betting"
@@ -41,6 +42,7 @@ async function fetchAllHomeData(sort: SortType) {
     cardNewsResult,
     heroResult,
     gamesResult,
+    wallRatio,
   ] = await Promise.all([
     // 1) 메인 피드 — 정렬 반영(최신순=created_at, 그 외=temperature)으로 깜빡임 제거
     getCachedFeed(sort),
@@ -84,6 +86,9 @@ async function fetchAllHomeData(sort: SortType) {
         finishedMatches: p.finishedMatches,
       }))
       .catch(() => null),
+
+    // 9) 담벼락 인터리브 비율 — site_settings 다이얼 (실패 시 5:1 기본값)
+    getCachedWallRatio(),
   ])
 
   // 히어로 확정: 운영자 핀 우선. **핀이 하나라도 있으면 그것만** 올린다(채워넣기 없음 —
@@ -116,6 +121,7 @@ async function fetchAllHomeData(sort: SortType) {
     heroCards,
     heroIds,
     initialGames: gamesResult,
+    wallRatio,
   }
 }
 
@@ -155,6 +161,7 @@ export default async function Home({
         initialCardNews={homeData.initialCardNews}
         heroCards={homeData.heroCards}
         initialGames={homeData.initialGames}
+        wallRatio={homeData.wallRatio}
       />
     </Suspense>
   )

@@ -15,6 +15,7 @@ import { MatchdayBand } from "@/components/home/matchday-band"
 import { PageBand } from "@/components/page-band"
 import { CardNewsFeed } from "@/components/cardnews/card-news-feed"
 import type { CardNewsItem } from "@/lib/feed/cardnews"
+import type { WallFeedRatio } from "@/lib/home/cached-home-data"
 import type { GroupedMatch } from "@/types/betting"
 import type { LiveMatchRow } from "@/lib/betman/games-payload"
 import { GlobalNoticeBanner, type GlobalNotice } from "@/components/home/global-notice-banner"
@@ -64,6 +65,8 @@ interface HomeClientProps {
     liveMatches?: LiveMatchRow[]
     finishedMatches?: LiveMatchRow[]
   } | null
+  /** 담벼락 인터리브 비율 (site_settings 다이얼 — cached-home-data.getCachedWallRatio) */
+  wallRatio?: WallFeedRatio
 }
 
 export function HomeClient({
@@ -77,6 +80,7 @@ export function HomeClient({
   initialCardNews,
   heroCards,
   initialGames,
+  wallRatio,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -86,7 +90,9 @@ export function HomeClient({
 
   // 담벼락 인터리브 재료 (2026-08-20) — 사이드바용으로 이미 프리페치된 최근 댓글 글에서
   // **사람 글만** 거른다 (봇 기사는 이미 피드의 주인공이라 인터리브에 낄 이유가 없다).
-  // 최대 4장 — 뉴스 5장당 1장이라 4장이면 스무 장 분량의 스크롤을 덮는다.
+  // 뉴스:게시글 비율은 site_settings 다이얼 (운영자: "비율을 점진적으로 바꿔나갈 거야")
+  // — 사람 글이 늘면 SQL 한 줄로 게시판 쪽으로 기울인다.
+  const maxWallCards = wallRatio?.maxWallCards ?? 4
   const wallPosts = useMemo(
     () =>
       (
@@ -99,14 +105,14 @@ export function HomeClient({
         }[]
       )
         .filter((p) => !isBotUserId(p.user_id))
-        .slice(0, 4)
+        .slice(0, maxWallCards)
         .map((p) => ({
           id: p.id,
           title: p.title,
           communitySlug: p.community_slug,
           comments: p.comment_count || 1,
         })),
-    [initialRecentComments]
+    [initialRecentComments, maxWallCards]
   )
   // 밴드 전환 애니메이션 게이트 — 첫 로드에는 안 붙인다(LCP 히어로가 opacity 0 에서
   // 시작하면 LCP 가 늦어진다). 사용자가 탭을 한 번이라도 바꾼 뒤부터, 히어로↔PageBand
@@ -326,6 +332,7 @@ export function HomeClient({
                   initialCursor={initialCardNews?.nextCursor ?? null}
                   excludeIds={heroCards?.map((h) => h.id)}
                   wallPosts={wallPosts}
+                  newsPerWall={wallRatio?.newsPerWall}
                 />
               </div>
             )}

@@ -147,6 +147,45 @@ export function getCachedRecentComments(): Promise<unknown[]> {
 }
 
 /**
+ * 담벼락 인터리브 비율 (2026-08-20 운영자: "뉴스 대 게시글 비율을 점진적으로 바꿔나갈 거야").
+ *
+ * `site_settings.home_feed_wall_ratio` 한 행이 다이얼이다 — 코드 배포 없이 SQL 로 조정:
+ *   UPDATE site_settings SET value='{"newsPerWall":4,"maxWallCards":6}' WHERE key='home_feed_wall_ratio';
+ * 사람 글이 늘수록 newsPerWall 을 내리고 maxWallCards 를 올리면 피드가 게시판 쪽으로 기운다.
+ * 행이 없거나 읽기 실패면 5:1·4장 기본값 — 다이얼 고장이 피드를 죽이면 안 된다.
+ */
+export interface WallFeedRatio {
+  newsPerWall: number
+  maxWallCards: number
+}
+
+const WALL_RATIO_DEFAULT: WallFeedRatio = { newsPerWall: 5, maxWallCards: 4 }
+
+export function getCachedWallRatio(): Promise<WallFeedRatio> {
+  return unstable_cache(
+    async () => {
+      const supabase = createAnonClient()
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "home_feed_wall_ratio")
+        .maybeSingle()
+      const v = (data?.value ?? {}) as Partial<WallFeedRatio>
+      // 정수·범위 강제 — 어드민 오타(0, 음수)가 무한 주입·0나눗셈이 되지 않게
+      const news = Math.floor(Number(v.newsPerWall))
+      const max = Math.floor(Number(v.maxWallCards))
+      return {
+        newsPerWall: Number.isFinite(news) && news >= 2 ? news : WALL_RATIO_DEFAULT.newsPerWall,
+        maxWallCards:
+          Number.isFinite(max) && max >= 0 && max <= 10 ? max : WALL_RATIO_DEFAULT.maxWallCards,
+      }
+    },
+    ["home-wall-ratio"],
+    { revalidate: 300 }
+  )().catch(() => WALL_RATIO_DEFAULT)
+}
+
+/**
  * 전체 공지 (담벼락 최상단 고정) — 관리자가 is_global_notice=true 로 고정한 글.
  * 컬럼 미적용(마이그레이션 전)이면 error+data:null → [] 로 안전하게 떨어진다.
  */
