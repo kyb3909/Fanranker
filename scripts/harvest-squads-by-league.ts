@@ -42,6 +42,8 @@ const CSV_OUT = csvArg
     : "workspace/squad-harvest.csv"
   : null
 const ALL = process.argv.includes("--all")
+/** 채워진 행 재대조 — 저장값과 신형 대조가 다르면 보고만 (DB 불변) */
+const VERIFY = process.argv.includes("--verify")
 const leagueArg = process.argv.find((a) => a.startsWith("--league"))
 const LEAGUE = leagueArg?.includes("=")
   ? leagueArg.split("=")[1]
@@ -148,8 +150,12 @@ const NON_NAME = new Set([
   "감독",
   "코치",
   "임대",
+  "영입",
+  "최근",
   "이적",
   "부상",
+  "방출",
+  "복귀",
   "군입대",
   "골키퍼",
   "수비수",
@@ -161,6 +167,7 @@ const NON_NAME = new Set([
   "번호",
   "등번호",
   "선수",
+  "스쿼드",
   "비고",
 ])
 const HANGUL_RUN = /[가-힣]+(?:[·\s-][가-힣]+)*/g
@@ -190,18 +197,24 @@ const PARTICLES = new Set([
 ])
 
 /**
- * 대조 기준점(성) 고르기.
- * soccerway 표기는 **"성 이름" 순**이다 (실측: "Chevalier Lucas", "Zabarnyi Ilya").
- * 그래서 앞쪽 토큰을 우선한다 — 이름을 기준으로 잡으면 "Macia Carlos" 가
- * "카를로스 로메로(Carlos Romero)" 로 붙는 오답이 난다.
+ * 유의 토큰 — 관사·전치사를 뺀 3글자 이상 토큰 전부 (접힌 소문자로).
+ *
+ * ⚠️ 종전엔 앞쪽 토큰 하나만 앵커로 썼다. soccerway 표기("성 이름" 순)에선 그게 성이라
+ *    맞았는데, LFA 로 적재된 로스터는 **"이름 성" 순**이다 — 첫 이름(Jose, Alejandro,
+ *    Raul…)이 앵커가 되면서 아무 호세나 물었다 (2026-08-20 실사고: 라리가 48건 중
+ *    12건 오염, "Raul de Tomas → 회장 라울 마르틴 프레사" 포함). 이제 인접 토큰은
+ *    행 위치만 잡고, 채택은 **행 창 안의 토큰 검증**이 결정한다 (matchKoreanName).
  */
-function pickAnchor(nameEn: string): string | null {
-  const toks = nameEn.split(/\s+/).filter(Boolean)
-  for (const t of toks) {
+function sigTokens(nameEn: string): string[] {
+  const out: string[] = []
+  for (const t of nameEn.split(/\s+/).filter(Boolean)) {
     if (PARTICLES.has(t.toLowerCase())) continue
-    if (t.replace(/[^A-Za-z]/g, "").length >= 4) return t
+    const folded = foldLatin(t)
+      .replace(/[^A-Za-z]/g, "")
+      .toLowerCase()
+    if (folded.length >= 3) out.push(folded)
   }
-  return null
+  return out
 }
 
 /**
@@ -233,44 +246,54 @@ function compact(text: string): { s: string; idx: number[] } {
  *
  * 모호하면(성이 여러 선수와 겹치면) null — 검수 큐로 보낸다.
  */
-function matchKoreanName(nameEn: string, namuText: string): string | null {
-  const anchorRaw = pickAnchor(nameEn)
-  if (!anchorRaw) return null
-  const anchor = foldLatin(anchorRaw)
-    .replace(/[^A-Za-z]/g, "")
-    .toLowerCase()
-  if (anchor.length < 4) return null
-
+export function matchKoreanName(nameEn: string, namuText: string): string | null {
+  const toks = sigTokens(nameEn)
+  if (toks.length === 0) return null
+  // 채택에 필요한 토큰 일치 수 — 둘 이상이면 반드시 2개 (첫 이름 하나만 잡히는
+  // 오염의 전형을 여기서 자른다). 유의 토큰이 하나뿐인 이름(Koke 등)만 단독 허용.
+  const NEED = Math.min(2, toks.length)
   const { s, idx } = compact(foldLatin(namuText))
   const hay = s.toLowerCase()
   const isLatin = (c: string | undefined) => !!c && /[A-Za-z]/.test(c)
 
   const found = new Set<string>()
-  for (let i = hay.indexOf(anchor); i >= 0; i = hay.indexOf(anchor, i + 1)) {
-    const start = idx[i]
-    const end = idx[i + anchor.length - 1]
-    // 경계 판정은 **원문** 기준 — 공백을 지운 문자열에선 이웃 단어가 붙어버린다
-    if (isLatin(namuText[start - 1])) continue
-    if (isLatin(namuText[end + 1])) continue
-    const before = namuText.slice(Math.max(0, start - 80), start)
-    const runs = [...before.matchAll(HANGUL_RUN)]
-    const last = runs[runs.length - 1]
-    if (!last) continue
-    // ⚠️ 표에서 한글 이름은 로마자 **바로 앞**에 붙어 있다. 창 안에서 아무 한글이나
-    //    주우면 본문 산문이 딸려온다 (실측: "20,000명 수용" → 한글명 "명 수용").
-    if (before.length - (last.index + last[0].length) > 2) continue
-    // "주장 브루누 마르팅스 인디" 처럼 역할 표기가 앞에 붙어 나온다 — 떼어낸다
-    const parts = last[0]
-      .trim()
-      .split(/[\s·]+/)
-      .filter(Boolean)
-    while (parts.length && NON_NAME.has(parts[0])) parts.shift()
-    const name = parts.join(" ")
-    if (!name || name.length < 2 || name.length > 20) continue
-    if (isProseFragment(name)) continue // 문서 산문 조각 차단
-    if (parts.some((t) => NON_NAME.has(t))) continue
-    found.add(name)
-    if (found.size > 1) return null // 동성 선수 — 검수로
+  for (const tok of toks) {
+    for (let i = hay.indexOf(tok); i >= 0; i = hay.indexOf(tok, i + 1)) {
+      const start = idx[i]
+      const end = idx[i + tok.length - 1]
+      // 경계 판정은 **원문** 기준 — 공백을 지운 문자열에선 이웃 단어가 붙어버린다
+      if (isLatin(namuText[start - 1])) continue
+      if (isLatin(namuText[end + 1])) continue
+      // 행 위치 확정 — 한글 성명이 로마자 **바로 앞**(간격 ≤2)에 있어야 스쿼드 표의 행이다.
+      // 창 안에서 아무 한글이나 주우면 본문 산문이 딸려온다 ("20,000명 수용" 실사고).
+      const before = namuText.slice(Math.max(0, start - 80), start)
+      const runs = [...before.matchAll(HANGUL_RUN)]
+      const last = runs[runs.length - 1]
+      if (!last) continue
+      if (before.length - (last.index + last[0].length) > 2) continue
+      // ⚠️ 행을 찾은 것과 **이 선수의 행**인 것은 다르다 — 이 행의 로마자 블록 안에
+      //    유의 토큰이 몇 개 있는지 센다. 첫 이름만 맞는 남의 행은 여기서 떨어진다
+      //    (2026-08-20 오염 12건의 처방). 블록의 끝 = **다음 한글**(다음 행의 성명) —
+      //    고정 길이 창을 쓰면 다음 선수의 성까지 증거로 세는 오염이 생긴다.
+      let rowEnd = i + tok.length
+      const cap = Math.min(hay.length, i + 90)
+      while (rowEnd < cap && !/[가-힣]/.test(s[rowEnd])) rowEnd++
+      const window = hay.slice(i, rowEnd)
+      const hits = toks.filter((t) => window.includes(t)).length
+      if (hits < NEED) continue
+      // "주장 브루누 마르팅스 인디" 처럼 역할 표기가 앞에 붙어 나온다 — 떼어낸다
+      const parts = last[0]
+        .trim()
+        .split(/[\s·]+/)
+        .filter(Boolean)
+      while (parts.length && NON_NAME.has(parts[0])) parts.shift()
+      const name = parts.join(" ")
+      if (!name || name.length < 2 || name.length > 20) continue
+      if (isProseFragment(name)) continue // 문서 산문 조각 차단
+      if (parts.some((t) => NON_NAME.has(t))) continue
+      found.add(name)
+      if (found.size > 1) return null // 서로 다른 행이 잡힘 — 검수로
+    }
   }
   return found.size === 1 ? [...found][0] : null
 }
@@ -360,13 +383,15 @@ async function main() {
 
     // ── 2단계: 확정된 문서에서만 명단을 긁는다
     for (const { club, team } of claims.values()) {
-      // 그 팀에서 한글명이 비어 있는 선수만
-      const { data: players } = await supabase
+      // 기본: 한글명이 비어 있는 선수만. --verify: **채워진 행도** 다시 대조해
+      // 저장값과 다르면 보고한다 (2026-08-20 오염 12건 사후 점검용 — DB 는 안 건드린다)
+      let q = supabase
         .from("team_squads")
-        .select("player_id, name_en, jersey_number")
+        .select("player_id, name_en, name_kr, jersey_number")
         .eq("soccerway_team_id", team.soccerway_team_id)
-        .is("name_kr", null)
         .neq("status", "rejected")
+      if (!VERIFY) q = q.is("name_kr", null)
+      const { data: players } = await q
       if (!players || players.length === 0) {
         console.log(`  ✓ ${String(team.name_kr).padEnd(20)} 채울 선수 없음`)
         continue
@@ -392,6 +417,24 @@ async function main() {
       for (const p of players) {
         const kr = matchKoreanName(String(p.name_en ?? ""), text)
         if (debug) console.log(`     ${String(p.name_en).padEnd(28)} → ${kr ?? "—"}`)
+        if (VERIFY) {
+          // 저장값이 있는데 신형 대조 결과와 다르면 오염 의심 — 보고만 한다.
+          // (null 재대조는 의심이 아니다: 문서에 없는 유스가 대부분이다)
+          const stored = (p as { name_kr?: string | null }).name_kr
+          if (stored && kr && stored !== kr) {
+            console.log(`  ⚠ 불일치  ${String(p.name_en).padEnd(28)} DB="${stored}" ↔ 대조="${kr}"`)
+            proposals.push({
+              팀: String(team.name_kr),
+              등번호: p.jersey_number ?? "",
+              영문명: String(p.name_en ?? ""),
+              한글명: kr,
+              출처문서: club.doc,
+              soccerway_team_id: team.soccerway_team_id,
+              player_id: p.player_id,
+            })
+          }
+          continue
+        }
         if (!kr) continue
         proposals.push({
           팀: String(team.name_kr),
