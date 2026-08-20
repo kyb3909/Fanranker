@@ -215,13 +215,21 @@ export async function getFixturesForDay(dateKst: string): Promise<FixtureRow[]> 
   const consumed = new Set<FixtureRow>()
   // 한글→영문 사전 — 예선 마이너 팀 대조용 (실패 시 빈 맵 → ① 축만으로 동작)
   const teamEn = new Map(await cachedTeamEn().catch(() => [] as [string, string][]))
+  // LFA 가 그날 실제로 커버하는 리그 — 아래 "짝 없는 betman 버리기"의 안전선
+  const leaguesInLfa = new Set(lfa.map((f) => f.leagueCode))
   for (const b of betman) {
     const candidates = (slots.get(slotKey(b.leagueCode, b.matchTime)) ?? []).filter(
       (c) => !consumed.has(c)
     )
     const hit = pickLfaCounterpart(b, candidates, teamEn)
     if (!hit) {
-      merged.push(b) // LFA 에 없거나 특정 실패 — betman 행을 그대로 싣는다
+      // ⚠️ 짝 못 찾은 betman 행은 **버린다** (2026-08-20 운영자: "돈 내고 가져오는
+      //    피드를 우선시" — LFA 가 정본, betman 은 링크·한글명 주석). 종전엔 그대로
+      //    실어서 이름 대조가 빗나갈 때마다 같은 경기가 두 줄이 됐다 — 대조를 아무리
+      //    다듬어도 실패 케이스는 남으므로, 실패의 결과를 "두 줄"이 아니라 "링크 없는
+      //    한 줄"로 바꾼다. 단 LFA 가 그 리그를 그날 아예 안 주면(리그 매핑 공백)
+      //    betman 행을 살린다 — 리그가 통째로 증발하는 것이 더 큰 사고다.
+      if (!leaguesInLfa.has(b.leagueCode)) merged.push(b)
       continue
     }
     consumed.add(hit)
