@@ -52,7 +52,12 @@ export interface CommentsInitialData {
 export function useComments(
   postId: string | number,
   onCommentCountChange?: (count: number) => void,
-  initialData?: CommentsInitialData
+  initialData?: CommentsInitialData,
+  /**
+   * 옵트인 폴링 간격 ms (2026-08-20 UX 패널 A2 — 불판 전용). initialData 경로는
+   * 마운트 후 재조회가 없어 **경기 중 댓글이 동결**됐다. 라이브 창에서만 넘긴다.
+   */
+  pollMs?: number
 ) {
   const initialComments = initialData
     ? transformComments(initialData.comments, initialData.profiles, initialData.equippedTitles)
@@ -112,6 +117,20 @@ export function useComments(
     reloadComments().finally(() => setIsLoadingComments(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadComments])
+
+  // 라이브 폴링 — 탭이 보일 때만 돌고, 복귀 즉시 한 번 따라잡는다
+  useEffect(() => {
+    if (!pollMs) return
+    const tick = () => {
+      if (document.visibilityState === "visible") reloadComments()
+    }
+    const timer = setInterval(tick, pollMs)
+    document.addEventListener("visibilitychange", tick)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", tick)
+    }
+  }, [pollMs, reloadComments])
 
   const handleCommentSubmit = async (
     text: string,

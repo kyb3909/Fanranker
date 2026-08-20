@@ -64,6 +64,7 @@ export function PostDetailContent({
   vsPoll,
   contentHtml,
   scoreboard,
+  commentsPollMs,
 }: {
   post: Post
   initialCommentsData?: InitialCommentsData
@@ -71,6 +72,8 @@ export function PostDetailContent({
   vsPoll?: VsPollData | null
   /** 불판 전광판 (match_game_id 글에만) — 서버가 렌더해 내려주는 슬롯 (2026-08-20) */
   scoreboard?: React.ReactNode
+  /** 댓글 라이브 폴링 간격 ms (불판 라이브 창에만, A2) */
+  commentsPollMs?: number
   /**
    * 서버에서 미리 렌더한 본문 HTML (lib/tiptap/render-html) — 첫 HTML 부터 본문이
    * 실리게 해 SEO 절단·스켈레톤 첫인상을 없앤다 (2026-07-30 워룸). 클라이언트
@@ -413,6 +416,7 @@ export function PostDetailContent({
         postId={post.id}
         onCommentCountChange={handleCommentCountChange}
         initialData={initialCommentsData}
+        pollMs={commentsPollMs}
         vsFaction={
           vsPoll
             ? {

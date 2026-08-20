@@ -281,14 +281,32 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   // 기사를 다 읽은 최고 의도 순간에 전 판 "최근 댓글 달린 글"(=사람 활동)로 잇는다.
   // 사람 글은 현행 유지 — 같은 판 문맥이 유효하다.
   const botArticle = isBotUserId(postData.user_id)
-  const [recentPosts, commentsData, vsPoll, linkedSagas] = await Promise.all([
+  const [recentPosts, commentsData, vsPoll, linkedSagas, threadKickoff] = await Promise.all([
     botArticle ? fetchWallActivityPosts(id) : fetchBoardRecentPosts(postData.community_slug, id),
     fetchComments(id),
     // VS 쟁점 폴 (뉴스 게시물에만 존재) — 없으면 null, 실패해도 글은 뜬다
     fetchVsPoll(createServiceRoleClient(), id, null).catch(() => null),
     // 이 글이 속한 사가 — 실패해도 글은 뜬다
     fetchLinkedSagas(id).catch(() => []),
+    // 불판 킥오프 시각 (A2 폴링 창 판정용) — 실패해도 글은 뜬다, 폴링만 꺼질 뿐
+    postData.match_game_id
+      ? (async () => {
+          const { data } = await createServiceRoleClient()
+            .from("betman_games")
+            .select("match_time")
+            .eq("id", postData.match_game_id as string)
+            .maybeSingle()
+          return data?.match_time ? new Date(data.match_time).getTime() : null
+        })().catch(() => null)
+      : Promise.resolve(null),
   ])
+  // 불판 댓글 라이브 폴링 (2026-08-20 UX 패널 A2) — initialData 경로는 재조회가 없어
+  // 경기 중 댓글이 동결됐다. 킥오프 30분 전 ~ 3시간 후(연장·승부차기 여유)만 40초 폴링.
+  const now = Date.now()
+  const commentsPollMs =
+    threadKickoff && now >= threadKickoff - 30 * 60_000 && now <= threadKickoff + 180 * 60_000
+      ? 40_000
+      : undefined
   // 내 투표는 별도 확인 (viewerId 가 있을 때만 — fetchVsPoll 결과에서 찾는다)
   if (vsPoll && viewerId) {
     vsPoll.myKey = vsPoll.voterMap[viewerId] ?? null
@@ -362,6 +380,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 initialCommentsData={commentsData}
                 vsPoll={vsPoll}
                 contentHtml={contentHtml}
+                commentsPollMs={commentsPollMs}
                 // 불판 전광판 — 게시물 카드 안(제목 아래)에 (2026-08-20 운영자:
                 // "상단에 있으니 게시물 글이 안 보여"). 실패해도 글은 뜬다
                 scoreboard={

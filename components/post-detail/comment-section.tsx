@@ -19,6 +19,8 @@ interface CommentSectionProps {
   vsFaction?: VsFactionInfo | null
   onCommentCountChange?: (count: number) => void
   initialData?: CommentsInitialData
+  /** 라이브 폴링 간격 ms (불판 전용, A2) — use-comments 로 그대로 전달 */
+  pollMs?: number
 }
 
 export function CommentSection({
@@ -26,6 +28,7 @@ export function CommentSection({
   onCommentCountChange,
   initialData,
   vsFaction,
+  pollMs,
 }: CommentSectionProps) {
   const { user, isLoaded } = useUser()
   const clerk = useClerk()
@@ -48,7 +51,7 @@ export function CommentSection({
     handleReplySubmit,
     commentSort,
     setCommentSort,
-  } = useComments(postId, onCommentCountChange, initialData)
+  } = useComments(postId, onCommentCountChange, initialData, pollMs)
 
   return (
     <div
