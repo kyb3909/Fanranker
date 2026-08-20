@@ -786,6 +786,13 @@ const AMBIGUOUS_EN = new Set([
   "friday",
   "saturday",
   "sunday",
+  // 구단끼리 공유하는 낱말 — "inter 가 들어간다고 모든 팀이 인테르가 되는 게 아니다"
+  // (운영자 2026-08-21: Inter Miami·Inter Turku 가 인테르로 오염). 사전 자동 학습이
+  // 맨몸 표기를 재등록해도 여기서 힌트 주입을 막는다. 인테르 밀라노는 "inter milan"·
+  // "internazionale" 표기로 여전히 잡힌다.
+  "inter",
+  // 매체(디 애슬레틱)와 구단(아틀레틱 빌바오)이 겹친다 — 긴 표기("the athletic")만 신뢰
+  "athletic",
 ])
 
 const MAX_NAMING_HINTS = 25
@@ -959,7 +966,6 @@ async function main() {
       continue
     }
 
-    llmCalls++
     try {
       // 작성 전에 원문 재료를 확보한다 — 이게 있어야 5문장 이상 기사가 나온다.
       // 외부 기사 = 본문 <p> 추출, 트윗 = oembed 로 트윗 전문 (임베드 노드도 같이 얻어
@@ -974,6 +980,17 @@ async function main() {
           : bskyData?.text
             ? { kind: "bsky", text: bskyData.text, author: bskyData.author }
             : null
+      // ── 재료 없으면 초안을 만들지 않는다 (운영자 2026-08-21) ─────────────────
+      // "[미러] 마스터스 성명" 실사고 — 본문 추출 실패(차단/JS렌더) 시 종전 정책은
+      // "제목만으로 짧게 나간다"였고, 그 결과가 제목을 두 문장으로 재진술한 **정보 0
+      // 껍데기 발행**이었다. 껍데기는 놓치는 것보다 비싸다 — 같은 사안은 대개 다른
+      // 소스(타 매체·기자 트윗)로 다시 들어온다. streamable 은 영상 임베드 자체가
+      // 내용이라 예외. LLM 호출 전에 거르므로 비용도 아낀다.
+      if (!material && !isStreamable(p.url)) {
+        log(`skip(재료없음) [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)}`)
+        continue
+      }
+      llmCalls++
       let v = await judgeAndWrite(p, corrections, material)
       if (!v?.worthy) {
         log(`skip [${p.subreddit}/${p.id}] ${p.title?.slice(0, 50)} — ${v?.reason || "not worthy"}`)
