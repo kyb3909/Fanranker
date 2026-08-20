@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { notFound, redirect } from "next/navigation"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
-import { ThreadScoreStrip } from "@/components/match/thread-score-strip"
+import { ThreadMatchWidgets } from "@/components/match/thread-match-widgets"
 import { PostDetailContent } from "@/components/post-detail/post-detail-content"
 import {
   SagaContextBanner,
@@ -367,7 +367,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 scoreboard={
                   postData.match_game_id ? (
                     <Suspense fallback={null}>
-                      <ThreadScoreStrip gameId={postData.match_game_id as string} />
+                      <ThreadMatchWidgets gameId={postData.match_game_id as string} />
                     </Suspense>
                   ) : undefined
                 }

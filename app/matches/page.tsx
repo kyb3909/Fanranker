@@ -13,6 +13,7 @@ import {
 import { leagueLabel, leagueOrder } from "@/lib/match/leagues"
 import { getLfaDayIndex, lookupLfaDayEntry } from "@/lib/lfa/match"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
  * 경기 일정 — `/matches` (2026-08-16)
@@ -102,21 +103,29 @@ function teamTone(): string {
   return "var(--wc-ink)"
 }
 
-/** 행 껍데기 — betman 경기가 있으면 매치 페이지 링크, 없으면 일반 행 */
+/**
+ * 행 껍데기 — 목적지 우선순위: 불판 > 매치센터 > 링크 없음 (2026-08-20 운영자:
+ * "일정서 경기를 누르면 그 불판으로"). 불판에 전광판·스탯·라인업 위젯이 다 있으므로
+ * 경기의 목적지는 불판이고, 매치센터는 불판이 아직 없는 경기(라인업 발표 전)의 폴백.
+ */
 function FixtureRowShell({
   gameId,
+  threadId,
   children,
 }: {
   gameId: string | null
+  threadId?: string | null
   children: React.ReactNode
 }) {
   const cls = "grid grid-cols-[56px_1fr] items-center gap-3 px-4 py-3"
-  if (!gameId) return <div className={cls}>{children}</div>
+  const href = threadId
+    ? `/post/${threadId}?utm_source=fixtures`
+    : gameId
+      ? `/match/${gameId}`
+      : null
+  if (!href) return <div className={cls}>{children}</div>
   return (
-    <Link
-      href={`/match/${gameId}`}
-      className={`${cls} no-underline transition-colors hover:bg-[var(--wc-soft)]`}
-    >
+    <Link href={href} className={`${cls} no-underline transition-colors hover:bg-[var(--wc-soft)]`}>
       {children}
     </Link>
   )
@@ -142,6 +151,21 @@ export default async function MatchesPage({
   // getFixturesForDay 가 LFA(정본) + betman(보강)을 이미 병합해 준다 — 스코어·종료 판정도
   // 그 안에서 끝난다. 예전의 별도 LFA 보정 단계는 중복이라 제거했다 (2026-08-17).
   const fixtures: FixtureRow[] = await getFixturesForDay(date)
+
+  // 불판 매핑 — 하루치 경기 전체를 한 번에 (2026-08-20: 일정의 목적지는 불판).
+  // 실패해도 일정은 뜬다 — 링크가 매치센터로 떨어질 뿐
+  const fixtureGameIds = fixtures.map((f) => f.gameId).filter((v): v is string => !!v)
+  const threadByGame = new Map<string, string>()
+  if (fixtureGameIds.length > 0) {
+    const { data: threads } = await createServiceRoleClient()
+      .from("posts")
+      .select("id, match_game_id")
+      .in("match_game_id", fixtureGameIds)
+      .is("deleted_at", null)
+    for (const t of threads ?? []) {
+      if (t.match_game_id) threadByGame.set(String(t.match_game_id), String(t.id))
+    }
+  }
 
   // 리그별 섹션 — 대항전 → 5대 리그 → 컵 (leagues.ts 삽입 순서)
   const sections = new Map<string, FixtureRow[]>()
@@ -264,7 +288,10 @@ export default async function MatchesPage({
                   >
                     {/* betman 에 아직 마켓이 없는 경기는 매치 페이지가 없다 (라인업·리포트가
                         betman id 로 걸려 있다) — 링크 없이 목록에만 싣는다 */}
-                    <FixtureRowShell gameId={m.gameId}>
+                    <FixtureRowShell
+                      gameId={m.gameId}
+                      threadId={m.gameId ? threadByGame.get(m.gameId) : null}
+                    >
                       {/* 좌: 시각 또는 상태. 진행 중은 "경기 중" — 킥오프 시각을 그대로 두면
                           "아직 안 시작했나?" 로 오독된다 (2026-08-19 팬·UIUX 합치).
                           라이브 스코어 미제공 정책은 그대로 — 상태 카피만 바꾼다. */}

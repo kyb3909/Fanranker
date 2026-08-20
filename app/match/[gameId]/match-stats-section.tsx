@@ -131,10 +131,13 @@ export function MatchStatsSection({
   info,
   homeTeam,
   awayTeam,
+  hideTimeline = false,
 }: {
   info: LfaMatchInfo
   homeTeam: string
   awayTeam: string
+  /** 불판에선 전광판이 타임라인을 이미 보여준다 — 스탯 바만 (2026-08-20) */
+  hideTimeline?: boolean
 }) {
   // 교체는 싣지 않는다 (2026-08-20 운영자: "통계에 안 나와도 될듯") — 교체는 라인업
   // 탭(▼▲)과 불판 전광판이 담당한다. 여기 타임라인은 골·카드만: 경기의 결정 장면.
@@ -209,7 +212,7 @@ export function MatchStatsSection({
           </ul>
         </section>
       )}
-      {timeline.length > 0 && (
+      {!hideTimeline && timeline.length > 0 && (
         <section className={hasStats ? "mt-8" : ""}>
           <h2 className="sheet-lab">타임라인</h2>
           <ul className="mt-2 space-y-1.5">
