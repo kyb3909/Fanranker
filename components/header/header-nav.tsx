@@ -1,18 +1,9 @@
 "use client"
 
-import { memo, useState } from "react"
-import dynamic from "next/dynamic"
+import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
 import { CalendarDays, Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
-import { trackEvent } from "@/lib/analytics/events"
-
-// 타로 리더는 무겁다 — 전 페이지 공용 헤더에 정적 import 하면 모든 페이지 번들에
-// 실린다. 첫 클릭 때만 청크를 받는다 (ssr 불필요 — 모달은 클라 전용)
-const TarotModal = dynamic(
-  () => import("@/components/tarot/tarot-modal").then((m) => ({ default: m.TarotModal })),
-  { ssr: false }
-)
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -30,7 +21,6 @@ interface HeaderNavProps {
 export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [tarotOpen, setTarotOpen] = useState(false)
 
   const isFeed = pathname === "/"
   const isExplore = pathname.startsWith("/explore") || pathname.startsWith("/community")
@@ -125,13 +115,11 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           라우트는 유지, 직접 URL 접근 — 10월 NBA 개막 때 노출 재검토.
         */}
         {/*
-          축구 타로 (2026-08-12) — 재미 콘텐츠. 승부예측 **뒤**에 둔다:
-          예측 바로 옆에 붙으면 "무엇에 걸지 점으로 정한다"로 읽힐 수 있어서다
-          (사행성 소명과 무관해야 한다). 오락 목적 고지는 /tarot 화면에 상시 노출.
-
-          2026-08-20 운영자: 타로는 "문맥 훅 + 모달"로 — 데스크톱 GNB 는 페이지 이동
-          대신 모달을 연다 (읽던 지면을 지킨다). 모바일(<lg)은 지금처럼 /tarot 페이지
-          — 하단 탭바와 같은 동작이고, 딥링크·공유 착지점도 페이지가 담당한다.
+          축구 타로 — **데스크톱 GNB 에서 제거** (2026-08-20 운영자: "타로는 이적 기사·
+          경기 일정 같은 문맥에서 점 보는 걸로"). 진입점은 문맥 훅뿐이다: 떡밥 카드
+          타로 띠(cardnews) · 기사 상세(post) · 경기 일정(fixtures) — 전부 모달이라
+          읽던 지면을 지킨다. 모바일(<lg)은 지금처럼 유지 — 하단 탭바와 짝인 페이지
+          링크이고, /tarot 은 딥링크·공유 착지점으로 남는다.
         */}
         <Link href="/tarot" className="lg:hidden">
           <span className={baseClass} data-on={isTarot ? "true" : undefined}>
@@ -139,20 +127,6 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             타로
           </span>
         </Link>
-        <button
-          type="button"
-          className="hidden lg:block"
-          onClick={() => {
-            setTarotOpen(true)
-            trackEvent({ name: "tarot_hook_click", params: { surface: "gnb" } })
-          }}
-        >
-          <span className={baseClass} data-on={isTarot ? "true" : undefined}>
-            <Sparkles className="h-[18px] w-[18px] shrink-0" />
-            타로
-          </span>
-        </button>
-        {tarotOpen && <TarotModal question="" open={tarotOpen} onOpenChange={setTarotOpen} />}
         {/*
           게임(/games)·스타디움(/metaverse/highbury)은 첫인상 단순화를 위해 메뉴에서 숨김 (2026-07-26).
           라우트는 유지 — 직접 URL로만 접근 가능.

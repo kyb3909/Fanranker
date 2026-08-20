@@ -24,6 +24,7 @@ import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { PostActions } from "./post-actions"
 import { CommentSection } from "./comment-section"
 import { VsIssueWidget, IssueSummary } from "@/components/post-detail/vs-issue-widget"
+import { ArticleTarotHook } from "@/components/tarot/article-tarot-hook"
 import type { VsPollData } from "@/lib/news/vs-issue"
 import { openReport } from "@/hooks/use-report-dialog"
 import { useBlockedUsers } from "@/hooks/use-blocked-users"
@@ -394,6 +395,12 @@ export function PostDetailContent({
           {/* 관리자 전용 — 홈 히어로 수동 큐레이션 (권한 없으면 null 렌더) */}
           <div className="mt-2">
             <HeroPinButton postId={String(post.id)} />
+          </div>
+
+          {/* 타로 훅 — 이적설·프리뷰 제목일 때만 (2026-08-20 운영자: "이적 기사에서
+              점 보는 걸로"). 본문을 다 읽은 자리, VS·댓글로 내려가기 직전 */}
+          <div className="mt-3">
+            <ArticleTarotHook title={post.title} />
           </div>
         </div>
       </div>
