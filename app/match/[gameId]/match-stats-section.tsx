@@ -136,7 +136,11 @@ export function MatchStatsSection({
   homeTeam: string
   awayTeam: string
 }) {
-  const timeline = [...info.timeline].sort((a, b) => minuteKey(a.minute) - minuteKey(b.minute))
+  // 교체는 싣지 않는다 (2026-08-20 운영자: "통계에 안 나와도 될듯") — 교체는 라인업
+  // 탭(▼▲)과 불판 전광판이 담당한다. 여기 타임라인은 골·카드만: 경기의 결정 장면.
+  const timeline = [...info.timeline]
+    .filter((e) => e.kind !== "sub")
+    .sort((a, b) => minuteKey(a.minute) - minuteKey(b.minute))
   const hasStats = info.stats.length > 0
   if (timeline.length === 0 && !hasStats) return null
 
@@ -148,45 +152,9 @@ export function MatchStatsSection({
 
   return (
     <>
-      {timeline.length > 0 && (
-        <section>
-          <h2 className="sheet-lab">타임라인</h2>
-          <ul className="mt-2 space-y-1.5">
-            {firstHalf.map((e, i) => (
-              <TimelineRow key={`f${i}`} e={e} teamOf={teamOf} />
-            ))}
-            {hasHt && (
-              <li aria-label="전반 종료" className="flex items-center gap-3 py-1">
-                <span
-                  aria-hidden
-                  className="h-px flex-1"
-                  style={{ background: "var(--wc-line-2)" }}
-                />
-                <span
-                  className="shrink-0 text-[11px] font-bold"
-                  style={{ color: "var(--wc-mute-2)" }}
-                >
-                  전반{" "}
-                  <span className="gn-num">
-                    {info.htHome}-{info.htAway}
-                  </span>
-                </span>
-                <span
-                  aria-hidden
-                  className="h-px flex-1"
-                  style={{ background: "var(--wc-line-2)" }}
-                />
-              </li>
-            )}
-            {secondHalf.map((e, i) => (
-              <TimelineRow key={`s${i}`} e={e} teamOf={teamOf} />
-            ))}
-          </ul>
-        </section>
-      )}
-
+      {/* 말이 통계 탭이니 스탯이 먼저다 (2026-08-20 운영자) — 타임라인은 그 아래 */}
       {hasStats && (
-        <section className="mt-8">
+        <section>
           <h2 className="sheet-lab">경기 스탯</h2>
           <div
             className="mt-1 flex items-baseline justify-between text-[11.5px] font-bold"
@@ -238,6 +206,42 @@ export function MatchStatsSection({
                 </li>
               )
             })}
+          </ul>
+        </section>
+      )}
+      {timeline.length > 0 && (
+        <section className={hasStats ? "mt-8" : ""}>
+          <h2 className="sheet-lab">타임라인</h2>
+          <ul className="mt-2 space-y-1.5">
+            {firstHalf.map((e, i) => (
+              <TimelineRow key={`f${i}`} e={e} teamOf={teamOf} />
+            ))}
+            {hasHt && (
+              <li aria-label="전반 종료" className="flex items-center gap-3 py-1">
+                <span
+                  aria-hidden
+                  className="h-px flex-1"
+                  style={{ background: "var(--wc-line-2)" }}
+                />
+                <span
+                  className="shrink-0 text-[11px] font-bold"
+                  style={{ color: "var(--wc-mute-2)" }}
+                >
+                  전반{" "}
+                  <span className="gn-num">
+                    {info.htHome}-{info.htAway}
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  className="h-px flex-1"
+                  style={{ background: "var(--wc-line-2)" }}
+                />
+              </li>
+            )}
+            {secondHalf.map((e, i) => (
+              <TimelineRow key={`s${i}`} e={e} teamOf={teamOf} />
+            ))}
           </ul>
         </section>
       )}
