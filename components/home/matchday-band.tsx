@@ -147,11 +147,12 @@ export function MatchdayBand({
     fallbackData: initialLive ?? undefined,
   })
   // 매치 센터가 다루는 리그만 센다 — 카운트 = 목적지(/matches)가 보여주는 것만.
-  // 진행 중(LIVE)은 노출하지 않는다 — 라이브 스코어 소스가 없어 "진행 중" 광고는
-  // 중계 기대만 만든다 (2026-08-16 운영자: 라이브 없이 종료 후 리포트 형태로).
   const finishedMatches = (liveData?.finishedMatches ?? []).filter((m) =>
     isMatchPageLeague(m.leagueCode)
   )
+  // 진행 중(LIVE) — ~~라이브 소스가 없어 미노출~~ 은 2026-08-20 폐기 (라이브 매치센터
+  // 가동). 개막 밤 홈→라이브 경기 경로가 0이던 것이 UX 패널 최중요 지적이었다.
+  const liveMatches = (liveData?.liveMatches ?? []).filter((m) => isMatchPageLeague(m.leagueCode))
 
   // 훅 규칙상 조건 없이 호출 — full 밴드에서는 TodayFixtures 에 내려준다
   const countdown = useCountdown(matches[0]?.matchTime)
@@ -292,6 +293,7 @@ export function MatchdayBand({
           {slides.length > 0 && <TopStoryCarousel slides={slides} />}
           {(matches.length > 0 || finishedMatches.length > 0) && (
             <TodayFixtures
+              liveMatches={liveMatches}
               matches={matches}
               countdown={countdown}
               finishedMatches={finishedMatches}
@@ -497,10 +499,12 @@ function TodayFixtures({
   matches,
   countdown,
   finishedMatches,
+  liveMatches,
 }: {
   matches: GroupedMatch[]
   countdown: string | null
   finishedMatches: LiveMatchRow[]
+  liveMatches: LiveMatchRow[]
 }) {
   // SSR/하이드레이션 첫 렌더에서는 undefined → 게스트 문구로 시작, 로그인 확인 후 전환
   const { isSignedIn } = useAuth()
@@ -530,7 +534,7 @@ function TodayFixtures({
           className="text-[13px] font-bold transition-opacity hover:opacity-80"
           style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.02em" }}
         >
-          매치 센터 →
+          경기 일정 →
         </Link>
       </div>
 
@@ -561,7 +565,7 @@ function TodayFixtures({
           style={{ background: "rgba(150,30,55,0.28)", border: "1px solid rgba(150,30,55,0.5)" }}
         >
           <span className="text-[12.5px] font-bold" style={{ color: "var(--gn-cream)" }}>
-            🏁 오늘 개막 이벤트 참가하기
+            오늘 개막 이벤트 참가하기
           </span>
           <span className="text-[12px] font-bold" style={{ color: "var(--gn-cream-dim)" }}>
             참가 →
@@ -569,13 +573,77 @@ function TodayFixtures({
         </Link>
       )}
 
-      {/* 진행 중(LIVE) 줄은 두지 않는다 — 라이브 스코어 소스가 없다 (2026-08-16 운영자:
-          라이브 없이 종료 후 매치 리포트 형태로). 경기는 FT 후 "오늘 결과"로 돌아온다. */}
+      {/* LIVE — 진행 중 경기로 직행 (2026-08-20, 8/16 "개수만" 결정 폐기).
+          라임은 LIVE 전용·화면당 1곳: 섹션 도트 하나만 라임, 행은 크림 */}
+      {liveMatches.length > 0 && (
+        <div className="mt-1" style={{ borderBottom: "1px solid var(--gn-night-line)" }}>
+          <p className="flex items-center gap-1.5 pt-2 pb-1">
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 animate-pulse rounded-full"
+              style={{ background: "var(--gn-live)" }}
+            />
+            <span
+              className="gn-num text-[11px] font-bold"
+              style={{ color: "var(--gn-live)", letterSpacing: "0.14em" }}
+            >
+              LIVE
+            </span>
+          </p>
+          <ul>
+            {liveMatches.map((m) => (
+              <li key={m.matchKey}>
+                <Link
+                  href={`/match/${m.gameId}`}
+                  className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2 transition-opacity hover:opacity-80"
+                >
+                  <span
+                    className="gn-num text-[15px] leading-none font-bold"
+                    style={{ color: "var(--gn-cream)" }}
+                  >
+                    {m.homeScore != null && m.awayScore != null
+                      ? `${m.homeScore}-${m.awayScore}`
+                      : "LIVE"}
+                  </span>
+                  <span
+                    className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                    style={{
+                      border: "1px solid var(--gn-night-line)",
+                      color: "var(--gn-cream-dim)",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    {m.leagueCode}
+                  </span>
+                  <span
+                    className="truncate text-[14px] font-bold"
+                    style={{ color: "var(--gn-cream)" }}
+                  >
+                    {m.homeTeam}
+                    <span
+                      className="gn-num mx-1.5 text-[11px] font-bold"
+                      style={{ color: "#8d8794" }}
+                    >
+                      VS
+                    </span>
+                    {m.awayTeam}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ul className="flex-1">
         {shown.map((m) => (
           <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
             <Link
-              href="/prediction"
+              href={
+                isMatchPageLeague(m.leagueCode) && m.games[0]?.id
+                  ? `/match/${m.games[0].id}`
+                  : "/prediction"
+              }
               className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2.5 transition-opacity hover:opacity-80"
             >
               <span
@@ -615,7 +683,7 @@ function TodayFixtures({
           style={{ borderTop: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
         >
           <span>오늘 결과 {finishedMatches.length}경기</span>
-          <span>매치 센터 →</span>
+          <span>경기 일정 →</span>
         </Link>
       )}
 
