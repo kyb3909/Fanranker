@@ -30,9 +30,17 @@ export function LiveRefresher({ intervalMs = 60_000 }: { intervalMs?: number }) 
     }
 
     start()
+    // 첫 진입 5초 뒤 1회 당겨 그리기 (2026-08-21 운영자 제보: 무트래픽 시간대 첫 방문이
+    // 54' 같은 30분 전 분을 보여줬다). unstable_cache 는 stale-while-revalidate — 오랜만의
+    // 첫 요청은 직전 캐시를 그대로 내고 **뒤에서** 갱신한다. 그 갱신분을 60초 주기까지
+    // 기다리지 않고 바로 반영한다. LFA 호출은 서버 60초 캐시가 그대로 지킨다.
+    const warm = setTimeout(() => {
+      if (!document.hidden) router.refresh()
+    }, 5000)
     document.addEventListener("visibilitychange", onVisible)
     return () => {
       if (timer) clearInterval(timer)
+      clearTimeout(warm)
       document.removeEventListener("visibilitychange", onVisible)
     }
   }, [router, intervalMs])

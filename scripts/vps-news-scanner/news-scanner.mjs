@@ -579,6 +579,10 @@ worthy=false 로 버려라. (이적료·계약 기간·부상 진단명처럼 **
   ⚠️ 아래 "확정 한글 표기" 목록이 있으면 **그것이 이 규칙보다 우선한다** (네 감보다 사전이 맞다).
 - 구단명은 한국 미디어가 부르는 **통칭(축약형)** 으로 쓴다 — 레알 마드리드→레알, 인테르나치오날레→인테르, 맨체스터 유나이티드→맨유, 파리 생제르맹→PSG. 정식 명칭을 반복하지 마라. 단, **직접 인용문 안의 표현은 원문 그대로** 둔다.
 - 미확정 루머는 단정하지 말 것.
+- 오늘은 ${new Date().toISOString().slice(0, 10)} 이다. **날짜·연도·시즌 표기는 원문(재료)에
+  명시된 것만 쓴다** — 원문에 없는 날짜·연도·시즌을 네 기억이나 추정으로 만들지 마라
+  (실사고: 원문에 없는 "2023-24 시즌"·"8월 11일"을 지어내 발행됨). 원문이 요일만 말하면
+  요일만 쓴다. 시즌을 언급해야 하는데 원문에 없으면 "이번 시즌"이라고만 쓴다.
 - credibility/importance 는 1~5로 매기되(검수자 참고용), 이 값으로 worthy 를 정하지는 마라.${namingHints}${fewshot}${styleshot}
 JSON 으로만 답하라: {"worthy":bool,"reason":str,"title":str,"summary":str,"tags":[str],"credibility":1-5,"importance":1-5}`
   const user = `제목: ${post.title}
@@ -748,6 +752,54 @@ function includesProperNoun(text, lowerText, needle) {
     i = lowerText.indexOf(needle, i + 1)
   }
   return false
+}
+
+/**
+ * 날짜 환각 검증 (운영자 2026-08-21) — 초안의 연도·"M월 D일" 표기가 원문에 실재하는가.
+ * 이적료·스탯 같은 일반 숫자는 단위 변환(35m→3,500만) 때문에 결정적 대조가 불가능하지만,
+ * 날짜는 변환이 없어 걸 수 있다. 실사고: 원문에 없는 "2023-24 시즌"·"8월 11일"이 발행됨
+ * (LLM 이 자기 기억의 옛 시즌 날짜를 끌어옴).
+ * - 연도: 작년~내년은 진행 시즌 문맥으로 허용, 그 밖은 원문에 숫자로 있어야 한다.
+ * - M월 D일: 일(D)은 원문 숫자에, 월(M)은 원문 숫자 또는 영문 월명에 있어야 한다.
+ * - 영문 월명 축약 검사(includes)는 일반 단어와 겹칠 수 있지만("may"·"mar") 그건
+ *   과잉 허용(놓침) 방향이라 안전하다 — 오탐(맞는 날짜를 지우는 것)만 피하면 된다.
+ */
+const MONTH_EN = {
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+}
+function findDateViolations(draftText, sourceText) {
+  if (!draftText) return []
+  const src = String(sourceText || "").toLowerCase()
+  const srcNums = new Set((src.match(/\d+/g) || []).map(Number))
+  const srcMonths = new Set()
+  for (const [name, num] of Object.entries(MONTH_EN)) {
+    if (src.includes(name) || src.includes(name.slice(0, 3))) srcMonths.add(num)
+  }
+  const bad = new Set()
+  const nowY = new Date().getFullYear()
+  for (const m of draftText.matchAll(/(?<![0-9])(20\d{2})(?![0-9])/g)) {
+    const y = Number(m[1])
+    if (Math.abs(y - nowY) <= 1) continue
+    if (!srcNums.has(y)) bad.add(`${y}년`)
+  }
+  for (const m of draftText.matchAll(/(\d{1,2})월\s*(\d{1,2})일/g)) {
+    const mm = Number(m[1])
+    const dd = Number(m[2])
+    const monthOk = srcNums.has(mm) || srcMonths.has(mm)
+    if (!monthOk || !srcNums.has(dd)) bad.add(`${mm}월 ${dd}일`)
+  }
+  return [...bad]
 }
 
 /**
@@ -1013,6 +1065,26 @@ async function main() {
           `직전 초안(${(v.summary || "").length}자)은 원문의 요점을 상당수 버렸다. 원문을 다시 훑어 빠뜨린 요점(수치·이적료·계약 기간·조항·실제 발언 인용·경위·다음 일정)을 전부 채워 다시 써라. 요점이 많으면 500~1,000자가 되는 게 정상이다. 단 **분량을 채우려는 배경 설명·전망·감상 추가는 금지** — 원문에 있는 사실만으로 채워라.`
         )
         if (retry?.worthy && (retry.summary || "").length > (v.summary || "").length) v = retry
+      }
+      // ── 날짜 검증 게이트 (운영자 2026-08-21) — 원문에 없는 날짜·연도는 환각이다.
+      //    위반 시 1회 재작성, 그래도 위반이면 초안 미생성 (fail-closed).
+      const dateSrc = `${p.title || ""}\n${material?.text || ""}`
+      let dateBad = findDateViolations(`${v.title || ""}\n${v.summary || ""}`, dateSrc)
+      if (dateBad.length) {
+        log(`retry(날짜검증) [${p.subreddit}/${p.id}] ${dateBad.join(", ")}`)
+        llmCalls++
+        const retry = await judgeAndWrite(
+          p,
+          corrections,
+          material,
+          `직전 초안에 원문에 없는 날짜 표기가 있다: ${dateBad.join(", ")}. 날짜·연도·시즌은 원문(재료)에 명시된 것만 쓰고, 원문에 없으면 그 날짜 표현 자체를 빼고 다시 써라. 오늘 날짜나 네 기억 기준의 추정 금지.`
+        )
+        if (retry?.worthy) v = retry
+        dateBad = findDateViolations(`${v.title || ""}\n${v.summary || ""}`, dateSrc)
+        if (dateBad.length) {
+          log(`skip(날짜검증) [${p.subreddit}/${p.id}] ${dateBad.join(", ")} — 초안 미생성`)
+          continue
+        }
       }
       v.title = stripRedditAttribution(applyKoreanFixes(v.title))
       v.summary = applyKoreanFixes(v.summary)
