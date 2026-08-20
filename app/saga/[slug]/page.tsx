@@ -166,8 +166,7 @@ export default async function SagaDetailPage({
             className="mb-4 rounded-lg px-4 py-2.5 text-[13px] font-bold"
             style={{ background: "rgba(148,106,18,.08)", color: "#946A12" }}
           >
-            ⚠️ 확정되지 않은 이적설입니다 — 아래 내용은 보도 시점의 주장이며 사실과 다를 수
-            있습니다.
+            확정되지 않은 이적설입니다 — 아래 내용은 보도 시점의 주장이며 사실과 다를 수 있습니다.
           </div>
         )}
 

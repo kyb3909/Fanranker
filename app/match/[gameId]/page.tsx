@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 
 import { after } from "next/server"
 import Link from "@/components/ui/app-link"
+import { BridgeRow } from "@/components/bridge-row"
 
 import { getMatchByGameId } from "@/lib/match/get-match"
 import { createServiceRoleClient } from "@/lib/supabase/server"
@@ -275,6 +276,12 @@ export default async function MatchPage({ params }: Props) {
                 ) : null
               }
             />
+          </div>
+
+          {/* 지면 종단 도선 (2026-08-20 UX 패널 — 모바일 매치센터 하단이 데드엔드였다).
+              lg 는 우측 레일이 같은 역할이라 모바일만 */}
+          <div className="mt-4 px-4 sm:px-0 lg:hidden">
+            <BridgeRow href="/matches" title="오늘 다른 경기 보기" action="경기 일정 →" />
           </div>
         </div>
 

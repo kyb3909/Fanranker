@@ -4,6 +4,7 @@ import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
 import { EmptyScene } from "@/components/empty-scene"
+import { BridgeRow } from "@/components/bridge-row"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 
@@ -278,6 +279,10 @@ export default async function StandingsPage({
               )}
             </>
           )}
+        </div>
+        {/* 지면 종단 도선 (2026-08-20 UX 패널 — 순위 끝이 데드엔드였다) */}
+        <div className="mt-8 px-4 sm:px-0">
+          <BridgeRow href="/matches" title="이번 라운드 경기 보러 가기" action="경기 일정 →" />
         </div>
       </main>
     </div>

@@ -7,6 +7,7 @@ import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { WallMoreRow, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
 import { WritePromptCard } from "@/components/home/write-prompt-card"
+import { BridgeRow } from "@/components/bridge-row"
 import { suggestTarot } from "@/lib/tarot/suggest"
 import { TarotModal } from "@/components/tarot/tarot-modal"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
@@ -785,6 +786,14 @@ export function CardNewsFeed({
           <p className="text-muted-foreground py-2 text-[13px]">오늘의 뉴스 끝!</p>
         )}
       </div>
+      {/* 피드 종단 도선 (2026-08-20 UX 패널) — "끝!"에서 푸터로 추락하는 대신
+          다음 지면으로 흘린다. 순환이 작동하던 지면은 뉴스 상세뿐이었다 */}
+      {!cursor && !loading && (
+        <div className="space-y-2 pb-2">
+          <BridgeRow href="/matches" title="오늘 경기는 어떻게 됐을까" action="경기 일정 →" />
+          <BridgeRow href="/?tab=board" title="담벼락에서 이야기 이어가기" action="담벼락 →" />
+        </div>
+      )}
     </div>
   )
 }

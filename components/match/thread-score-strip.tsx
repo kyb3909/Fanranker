@@ -291,15 +291,35 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
             )
           })()}
 
-        {/* 하단열: 매치센터 도선 */}
-        <div className="mt-2.5 flex justify-end">
-          <Link
-            href={`/match/${gameId}`}
-            className="text-[11.5px] font-bold no-underline"
-            style={{ color: CREAM_DIM }}
-          >
-            매치센터에서 스탯·라인업 →
-          </Link>
+        {/* 하단열 — 상태별 테일 (2026-08-20 UX 패널: FT 불판이 막다른 길이었다).
+            스탯·라인업 위젯이 불판 안에 있으므로 "스탯 보러 매치센터" 문구는 폐기 */}
+        <div className="mt-2.5 flex justify-end gap-4">
+          {finished ? (
+            <>
+              <Link
+                href={`/match/${gameId}`}
+                className="text-[11.5px] font-bold no-underline"
+                style={{ color: CREAM_DIM }}
+              >
+                매치 리포트 →
+              </Link>
+              <Link
+                href="/matches"
+                className="text-[11.5px] font-bold no-underline"
+                style={{ color: CREAM_DIM }}
+              >
+                오늘 다른 경기 →
+              </Link>
+            </>
+          ) : (
+            <Link
+              href={`/match/${gameId}`}
+              className="text-[11.5px] font-bold no-underline"
+              style={{ color: CREAM_DIM }}
+            >
+              경기 정보·상대전적 →
+            </Link>
+          )}
         </div>
       </div>
     </section>

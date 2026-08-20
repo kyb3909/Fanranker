@@ -4,6 +4,7 @@ import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
 import { EmptyScene } from "@/components/empty-scene"
 import { FixturesTarotHook } from "@/components/tarot/fixtures-tarot-hook"
+import { BridgeRow } from "@/components/bridge-row"
 import {
   getFixturesForDay,
   todayKst,
@@ -403,6 +404,15 @@ export default async function MatchesPage({
               )}
             </section>
           ))}
+        </div>
+        {/* 지면 종단 도선 (2026-08-20 UX 패널 — 일정 끝이 데드엔드였다) */}
+        <div className="mt-8 space-y-2">
+          <BridgeRow
+            href="/standings/epl"
+            title="5대 리그 순위는 어떻게 됐을까"
+            action="순위표 →"
+          />
+          <BridgeRow href="/" title="오늘의 축구 소식 보러 가기" action="담벼락 →" />
         </div>
       </main>
     </div>
