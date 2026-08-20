@@ -5,6 +5,7 @@ import { getLfaMatchInfo, type LfaTimelineEvent } from "@/lib/lfa/match"
 import { leagueKicker, leagueLabel, leagueMarkSrc } from "@/lib/match/leagues"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 import { LiveRefresher } from "@/app/match/[gameId]/live-refresher"
+import { CollapsibleRows } from "@/components/match/collapsible-rows"
 
 /**
  * 불판 전광판 (2026-08-20, 운영자 레퍼런스 확정 — MatchPal 류 타임라인 트래커).
@@ -261,20 +262,34 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
           </span>
         </div>
 
-        {/* 이벤트 타임라인 — 최신이 위. 킥오프·하프타임·종료 마커가 척추 */}
-        {started && (
-          <ul className="mt-2.5 space-y-1.5">
-            {finished && <MarkerRow chip="FT" label="경기 종료" />}
-            {secondHalf.map((e, i) => (
-              <EventRow key={`s${i}`} e={e} team={e.side === "away" ? awayLabel : homeLabel} />
-            ))}
-            {showHt && <MarkerRow chip="HT" label={`하프타임 ${halfTime}`} />}
-            {firstHalf.map((e, i) => (
-              <EventRow key={`f${i}`} e={e} team={e.side === "away" ? awayLabel : homeLabel} />
-            ))}
-            <MarkerRow chip="KO" label="킥오프" />
-          </ul>
-        )}
+        {/* 이벤트 타임라인 — 최신이 위, 킥오프·하프타임·종료 마커가 척추.
+            최근 7행만 펼치고 나머지는 접는다 (운영자: "목표는 댓글판" — 전광판이
+            화면을 다 먹으면 안 된다) */}
+        {started &&
+          (() => {
+            const rows: React.ReactNode[] = []
+            if (finished) rows.push(<MarkerRow key="ft" chip="FT" label="경기 종료" />)
+            secondHalf.forEach((e, i) =>
+              rows.push(
+                <EventRow key={`s${i}`} e={e} team={e.side === "away" ? awayLabel : homeLabel} />
+              )
+            )
+            if (showHt) rows.push(<MarkerRow key="ht" chip="HT" label={`하프타임 ${halfTime}`} />)
+            firstHalf.forEach((e, i) =>
+              rows.push(
+                <EventRow key={`f${i}`} e={e} team={e.side === "away" ? awayLabel : homeLabel} />
+              )
+            )
+            rows.push(<MarkerRow key="ko" chip="KO" label="킥오프" />)
+            const HEAD = 7
+            return (
+              <CollapsibleRows
+                head={rows.slice(0, HEAD)}
+                rest={rows.slice(HEAD)}
+                restCount={Math.max(0, rows.length - HEAD)}
+              />
+            )
+          })()}
 
         {/* 하단열: 매치센터 도선 */}
         <div className="mt-2.5 flex justify-end">

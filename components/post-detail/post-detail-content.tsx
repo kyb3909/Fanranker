@@ -62,11 +62,14 @@ export function PostDetailContent({
   initialCommentsData,
   vsPoll,
   contentHtml,
+  scoreboard,
 }: {
   post: Post
   initialCommentsData?: InitialCommentsData
   /** VS 쟁점 폴 (뉴스 게시물에만) — 3줄 요약 + 찬반 투표 + 댓글 진영 칩 */
   vsPoll?: VsPollData | null
+  /** 불판 전광판 (match_game_id 글에만) — 서버가 렌더해 내려주는 슬롯 (2026-08-20) */
+  scoreboard?: React.ReactNode
   /**
    * 서버에서 미리 렌더한 본문 HTML (lib/tiptap/render-html) — 첫 HTML 부터 본문이
    * 실리게 해 SEO 절단·스켈레톤 첫인상을 없앤다 (2026-07-30 워룸). 클라이언트
@@ -299,6 +302,8 @@ export function PostDetailContent({
             >
               {post.title}
             </h2>
+            {/* 불판 전광판 — 제목 바로 아래, 본문 위 (2026-08-20 운영자: "게시물 안에") */}
+            {scoreboard}
             {vsPoll?.summary && vsPoll.summary.length > 0 && (
               <IssueSummary summary={vsPoll.summary} />
             )}

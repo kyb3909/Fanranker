@@ -356,20 +356,21 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             <div className="col-span-12 space-y-4 lg:col-span-9">
               <BackButton fallbackHref={`/community/${postData.community_slug}`} />
 
-              {/* 불판 전광판 (2026-08-20) — match_game_id 가 있는 글(불판)만.
-                  라이브면 스코어·분·득점/카드가 60초 갱신, 실패해도 글은 뜬다 */}
-              {postData.match_game_id && (
-                <Suspense fallback={null}>
-                  <ThreadScoreStrip gameId={postData.match_game_id as string} />
-                </Suspense>
-              )}
-
               {/* Post Detail Content */}
               <PostDetailContent
                 post={post}
                 initialCommentsData={commentsData}
                 vsPoll={vsPoll}
                 contentHtml={contentHtml}
+                // 불판 전광판 — 게시물 카드 안(제목 아래)에 (2026-08-20 운영자:
+                // "상단에 있으니 게시물 글이 안 보여"). 실패해도 글은 뜬다
+                scoreboard={
+                  postData.match_game_id ? (
+                    <Suspense fallback={null}>
+                      <ThreadScoreStrip gameId={postData.match_game_id as string} />
+                    </Suspense>
+                  ) : undefined
+                }
               />
 
               {/* 이 글이 속한 사가 — 본문을 다 읽은 자리에서 연대기로 잇는다 */}
