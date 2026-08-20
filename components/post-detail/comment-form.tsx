@@ -19,9 +19,21 @@ interface CommentFormProps {
   isSubmitting: boolean
   /** 운영자에게만 "비밀댓글" 토글 노출 */
   isAdmin?: boolean
+  /**
+   * 비로그인 여부 (2026-08-20 UX 패널 A7) — 폼은 그대로 열어 두고 제출만 로그인
+   * 모달로 돌린다. 종전엔 다 쓰고 제출해야 401 토스트로 처음 알게 됐다.
+   */
+  signedIn?: boolean
+  onRequireSignIn?: () => void
 }
 
-export function CommentForm({ onSubmit, isSubmitting, isAdmin = false }: CommentFormProps) {
+export function CommentForm({
+  onSubmit,
+  isSubmitting,
+  isAdmin = false,
+  signedIn = true,
+  onRequireSignIn,
+}: CommentFormProps) {
   const [commentText, setCommentText] = useState("")
   const [showStickerPicker, setShowStickerPicker] = useState(false)
   const [selectedSticker, setSelectedSticker] = useState<Sticker | null>(null)
@@ -62,6 +74,12 @@ export function CommentForm({ onSubmit, isSubmitting, isAdmin = false }: Comment
   const handleSubmit = async () => {
     if (!commentText.trim() && !selectedSticker) return
     if (isSubmitting) return
+    // 비로그인: 쓰던 텍스트를 지우지 않고 로그인 모달만 연다 — Clerk 모달은 페이지를
+    // 떠나지 않아 로그인 후 그대로 이어서 제출된다 (2026-08-20 실측 검증)
+    if (!signedIn) {
+      onRequireSignIn?.()
+      return
+    }
 
     const text = commentText.trim()
     const sticker = selectedSticker
@@ -83,6 +101,11 @@ export function CommentForm({ onSubmit, isSubmitting, isAdmin = false }: Comment
 
   return (
     <div className="space-y-3">
+      {!signedIn && (
+        <p className="text-xs" style={{ color: "var(--wc-mute)", margin: 0 }}>
+          댓글은 로그인 후 남길 수 있어요 — 쓰던 내용은 로그인해도 사라지지 않습니다.
+        </p>
+      )}
       <div className="relative">
         <Textarea
           ref={textareaRef}
@@ -198,7 +221,13 @@ export function CommentForm({ onSubmit, isSubmitting, isAdmin = false }: Comment
               color: "white",
             }}
           >
-            {isSubmitting ? "작성 중..." : isSecret ? "비밀댓글 작성" : "댓글 작성"}
+            {isSubmitting
+              ? "작성 중..."
+              : !signedIn
+                ? "로그인하고 댓글 쓰기"
+                : isSecret
+                  ? "비밀댓글 작성"
+                  : "댓글 작성"}
           </Button>
         </div>
       </div>

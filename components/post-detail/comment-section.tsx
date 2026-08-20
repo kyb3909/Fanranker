@@ -1,6 +1,6 @@
 "use client"
 
-import { useUser } from "@clerk/nextjs"
+import { useUser, useClerk } from "@clerk/nextjs"
 import { ArrowUpDown } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
@@ -27,7 +27,8 @@ export function CommentSection({
   initialData,
   vsFaction,
 }: CommentSectionProps) {
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
+  const clerk = useClerk()
   const isAdmin = useIsAdmin()
   const { isBlocked, toggleBlock } = useBlockedUsers()
 
@@ -82,10 +83,14 @@ export function CommentSection({
           )}
         </div>
 
+        {/* 비로그인 판정은 isLoaded 이후에만 — 로딩 중엔 기본(로그인) 모양을 유지해
+            hydration mismatch(#418 전례)를 피한다 */}
         <CommentForm
           onSubmit={handleCommentSubmit}
           isSubmitting={isSubmittingComment}
           isAdmin={isAdmin}
+          signedIn={isLoaded ? !!user : true}
+          onRequireSignIn={() => clerk.openSignIn()}
         />
 
         <Separator />
