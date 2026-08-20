@@ -49,7 +49,8 @@ type AnalyticsEvent =
   | { name: "prediction_modal_event_click"; params: Record<string, never> }
   | { name: "search"; params: { query: string } }
   // ── 축구 타로 (2026-08-12) — 진입점별 전환을 갈라 본다 ──
-  | { name: "tarot_hook_click"; params: { surface: "cardnews" | "gnb" } }
+  // fixtures: 경기 일정의 "카드에게 물어보기" (2026-08-20 — 타로 = 문맥 훅 + 모달 정책)
+  | { name: "tarot_hook_click"; params: { surface: "cardnews" | "gnb" | "fixtures" } }
   | { name: "tarot_reading"; params: { spread: string; prefilled: boolean } }
   // ── 메타버스 이벤트 ──
   | { name: "metaverse_enter"; params: { is_guest: boolean } }

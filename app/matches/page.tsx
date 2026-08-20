@@ -3,6 +3,7 @@ import Link from "@/components/ui/app-link"
 import { PageBand, PageBandStat } from "@/components/page-band"
 import { MatchHubTabs } from "@/components/match/hub-tabs"
 import { EmptyScene } from "@/components/empty-scene"
+import { FixturesTarotHook } from "@/components/tarot/fixtures-tarot-hook"
 import {
   getFixturesForDay,
   todayKst,
@@ -235,6 +236,15 @@ export default async function MatchesPage({
             {dp.weekday}요일 밤{date === today ? " · 오늘" : ""}
           </span>
         </div>
+
+        {/* 타로 훅 — 예정 경기가 있는 날만 (2026-08-20 운영자: "경기 일정에서 점 보는 걸로").
+            대표 경기 = 리그 순서상 첫 예정 경기 (대항전 → 5대 리그) */}
+        {(() => {
+          const next = fixtures.find((f) => f.status === "scheduled")
+          if (!next) return null
+          const q = `${displayTeamName(next.homeTeam, shortNames)} vs ${displayTeamName(next.awayTeam, shortNames)}, 오늘 승부의 흐름은?`
+          return <FixturesTarotHook question={q} />
+        })()}
 
         {ordered.length === 0 && (
           <div
