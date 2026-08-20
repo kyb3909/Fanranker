@@ -3,7 +3,7 @@
 import { memo } from "react"
 import Link from "@/components/ui/app-link"
 import { useRouter, usePathname } from "next/navigation"
-import { CalendarDays, Compass, LayoutGrid, Sparkles, Target } from "lucide-react"
+import { CalendarDays, Compass, LayoutGrid, Target } from "lucide-react"
 
 // 시안 .hdr-link 패턴 — 흰 배경 nav, off=mute, on=burgundy fill.
 // scope-free 하게 var(--wc-*) + hex fallback 사용 → AppShell 어디서나 동작.
@@ -28,7 +28,6 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
     pathname.startsWith("/prediction") ||
     pathname.startsWith("/worldcup") ||
     pathname.startsWith("/season")
-  const isTarot = pathname.startsWith("/tarot")
   // 경기 허브 — 일정·순위·매치센터가 한 메뉴 아래 (2026-08-19)
   const isMatch =
     pathname.startsWith("/matches") ||
@@ -115,18 +114,12 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           라우트는 유지, 직접 URL 접근 — 10월 NBA 개막 때 노출 재검토.
         */}
         {/*
-          축구 타로 — **데스크톱 GNB 에서 제거** (2026-08-20 운영자: "타로는 이적 기사·
-          경기 일정 같은 문맥에서 점 보는 걸로"). 진입점은 문맥 훅뿐이다: 떡밥 카드
-          타로 띠(cardnews) · 기사 상세(post) · 경기 일정(fixtures) — 전부 모달이라
-          읽던 지면을 지킨다. 모바일(<lg)은 지금처럼 유지 — 하단 탭바와 짝인 페이지
-          링크이고, /tarot 은 딥링크·공유 착지점으로 남는다.
+          축구 타로 — **GNB 에서 완전 제거, 모바일 포함** (2026-08-20 운영자 확정:
+          "타로는 이적 기사·경기 일정 같은 문맥에서 점 보는 걸로"). 진입점은 문맥 훅
+          3곳뿐이다: 떡밥 카드 타로 띠(cardnews) · 기사 상세(post) · 경기 일정(fixtures)
+          — 전부 TarotModal 이라 읽던 지면을 지킨다 (데스크톱 = 980px 큰 루나 무대,
+          모바일 = 컴팩트 배치). /tarot 라우트는 딥링크·공유 착지점으로만 유지.
         */}
-        <Link href="/tarot" className="lg:hidden">
-          <span className={baseClass} data-on={isTarot ? "true" : undefined}>
-            <Sparkles className="h-[18px] w-[18px] shrink-0" />
-            타로
-          </span>
-        </Link>
         {/*
           게임(/games)·스타디움(/metaverse/highbury)은 첫인상 단순화를 위해 메뉴에서 숨김 (2026-07-26).
           라우트는 유지 — 직접 URL로만 접근 가능.
