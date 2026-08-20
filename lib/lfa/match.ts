@@ -114,12 +114,17 @@ function cachedDetails(matchId: string, live: boolean) {
       //    throw 로 캐시를 회피한다(unstable_cache 는 예외를 캐시하지 않는다) — 채워질
       //    때까지 요청마다 재조회하고, 호출부는 catch 로 fail-open(스코어는 day 목록에서
       //    이미 확보). 리포트 negative-cache 와 같은 교훈이다.
-      if (!live && d && (d.events?.length ?? 0) === 0 && (d.stats?.length ?? 0) === 0) {
+      //    판정은 **이벤트만** 본다 (2026-08-20 실사고 2탄): FT 전환 순간 LFA 가
+      //    스탯만 있고 이벤트가 빈 반쪽 페이로드를 주는데, "둘 다 빈 경우"만 걸렀더니
+      //    그 반쪽이 6시간 캐시에 박혀 타임라인·득점자가 증발했다. 프로 경기에
+      //    이벤트 0(교체 포함)은 존재하지 않는다 — 이벤트가 비면 무조건 미완성이다.
+      if (!live && d && (d.events?.length ?? 0) === 0) {
         throw new Error("lfa-details-empty")
       }
       return d
     },
-    ["lfa-details", matchId, live ? "live" : "settled"],
+    // v2: 반쪽 페이로드가 이미 박힌 캐시 무효화 (2026-08-20)
+    ["lfa-details-v2", matchId, live ? "live" : "settled"],
     { revalidate: live ? 60 : 6 * 3600 }
   )
 }
