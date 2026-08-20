@@ -94,7 +94,13 @@ function toKorean(
   if (!n) return nameEn
   const exact = index.byEn.filter(([en]) => en === n)
   if (exact.length === 1) return exact[0][1]
-  const partial = index.byEn.filter(([en]) => en.startsWith(n) || n.startsWith(en))
+  // ⚠️ 접두 대조는 짧은 쪽이 7자 이상일 때만 — "Inter"(5자, 인테르나치오날레의 name_en)가
+  //    "Inter Turku"의 접두라서 핀란드 인터 투르쿠가 인테르로 표기됐다 (2026-08-20 운영자
+  //    제보). 짧은 이름은 정확일치·lfa_team_id 직결로만 잇는다 — 틀린 한글보다 원문이 낫다.
+  const partial = index.byEn.filter(([en]) => {
+    const [s, l] = en.length <= n.length ? [en, n] : [n, en]
+    return s.length >= 7 && l.startsWith(s)
+  })
   return partial.length === 1 ? partial[0][1] : nameEn
 }
 

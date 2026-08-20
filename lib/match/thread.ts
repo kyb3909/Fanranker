@@ -44,33 +44,6 @@ function threadTitle(home: string, away: string, league: string): string {
   return `[불판] ${home} vs ${away} · ${league}`
 }
 
-/** 라인업 한 팀 → 본문 문단들 (헤딩 + 선발 나열 한 줄) */
-function sideParagraphs(
-  side: {
-    teamLabel: string
-    formation: string | null
-    starters: { label: string; number: number | null }[]
-  },
-  label: string
-) {
-  const names = side.starters
-    .map((p) => (p.number != null ? `${p.number} ${p.label}` : p.label))
-    .join(" · ")
-  return [
-    {
-      type: "paragraph",
-      content: [
-        {
-          type: "text",
-          marks: [{ type: "bold" }],
-          text: `${label} — ${side.formation ? `${side.formation} · ` : ""}선발`,
-        },
-      ],
-    },
-    { type: "paragraph", content: [{ type: "text", text: names }] },
-  ]
-}
-
 export async function sweepMatchThreads(opts?: {
   /** 테스트용 — 창 판정을 무시하고 이 경기만 시도 (화이트리스트·라인업 조건은 유지) */
   forceGameId?: string
@@ -139,6 +112,8 @@ export async function sweepMatchThreads(opts?: {
       timeZone: "Asia/Seoul",
     })
 
+    // 본문은 안내 한 문단뿐 (2026-08-20 운영자: "선발 나열·매치센터 링크는 없애야" —
+    // 전광판·스탯·라인업 위젯이 글 상단에 전부 있으니 본문 중복은 소음이다)
     const doc = {
       type: "doc",
       content: [
@@ -147,19 +122,7 @@ export async function sweepMatchThreads(opts?: {
           content: [
             {
               type: "text",
-              text: `${home} vs ${away} 불판입니다. 킥오프 ${kickoffKst} — 경기 보면서 자유롭게 댓글로 함께 응원해요. 스코어와 득점·카드 상황은 이 글 상단에 실시간으로 뜹니다.`,
-            },
-          ],
-        },
-        ...sideParagraphs(lineup.home, home),
-        ...sideParagraphs(lineup.away, away),
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              marks: [{ type: "link", attrs: { href: `/match/${gameId}` } }],
-              text: "매치센터에서 실시간 스탯 보기 →",
+              text: `${home} vs ${away} 불판입니다. 킥오프 ${kickoffKst} — 경기 보면서 자유롭게 댓글로 함께 응원해요. 스코어·라인업·스탯은 이 글 상단에 실시간으로 뜹니다.`,
             },
           ],
         },

@@ -21,17 +21,22 @@ export function FixturesTarotHook({ question }: { question: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
+      {/* 날짜 표제 행 우측의 버튼 (2026-08-20 운영자: "경기 일정 옆에 타로점 보기 버튼") */}
       <button
         type="button"
         onClick={() => {
           setOpen(true)
           trackEvent({ name: "tarot_hook_click", params: { surface: "fixtures" } })
         }}
-        className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-bold transition-opacity hover:opacity-80"
-        style={{ color: "var(--wc-burgundy)" }}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-bold transition-colors hover:bg-[var(--wc-tint)]"
+        style={{
+          background: "var(--wc-wine-tint)",
+          border: "1px solid var(--wc-line)",
+          color: "var(--wc-burgundy)",
+        }}
       >
         <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        오늘 경기, 카드에게 물어보기
+        타로점 보기
       </button>
       {open && <TarotModal question={question} open={open} onOpenChange={setOpen} />}
     </>

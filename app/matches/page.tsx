@@ -235,16 +235,19 @@ export default async function MatchesPage({
           <span className="text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
             {dp.weekday}요일 밤{date === today ? " · 오늘" : ""}
           </span>
+          {/* 타로점 버튼 — 표제 행 우측 (2026-08-20 운영자: "경기 일정 옆에").
+              예정 경기가 있는 날만, 대표 경기 = 리그 순서상 첫 예정 경기 */}
+          {(() => {
+            const next = fixtures.find((f) => f.status === "scheduled")
+            if (!next) return null
+            const q = `${displayTeamName(next.homeTeam, shortNames)} vs ${displayTeamName(next.awayTeam, shortNames)}, 오늘 승부의 흐름은?`
+            return (
+              <span className="ml-auto">
+                <FixturesTarotHook question={q} />
+              </span>
+            )
+          })()}
         </div>
-
-        {/* 타로 훅 — 예정 경기가 있는 날만 (2026-08-20 운영자: "경기 일정에서 점 보는 걸로").
-            대표 경기 = 리그 순서상 첫 예정 경기 (대항전 → 5대 리그) */}
-        {(() => {
-          const next = fixtures.find((f) => f.status === "scheduled")
-          if (!next) return null
-          const q = `${displayTeamName(next.homeTeam, shortNames)} vs ${displayTeamName(next.awayTeam, shortNames)}, 오늘 승부의 흐름은?`
-          return <FixturesTarotHook question={q} />
-        })()}
 
         {ordered.length === 0 && (
           <div
