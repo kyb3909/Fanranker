@@ -258,6 +258,44 @@ export function PredictionSuccessDialog({ state, onClose }: PredictionSuccessDia
           </Link>
         )}
 
+        {/* 방금 예측한 경기의 불판 (2026-08-20 UX 패널 A3) — 예측 완료 직후가 검증된
+            최대 전환 레버. 경기를 픽한 사람은 그 경기를 볼 사람이다 → 불판으로 잇는다.
+            불판이 있는 경기만, 최대 3개 (모달 비대화 방지) */}
+        {(state.threads ?? []).length > 0 && (
+          <div className="min-w-0 space-y-2">
+            {(state.threads ?? []).slice(0, 3).map((t) => (
+              <Link
+                key={t.threadId}
+                href={`/post/${t.threadId}?utm_source=prediction_modal`}
+                onClick={() =>
+                  trackEvent({
+                    name: "prediction_modal_thread_click",
+                    params: { post_id: t.threadId },
+                  })
+                }
+                className="flex min-w-0 items-baseline justify-between gap-2 rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90"
+                style={{
+                  background: "var(--wc-wine-tint, #fbf2f4)",
+                  border: "1px solid var(--wc-line, #e8e5e0)",
+                }}
+              >
+                <span
+                  className="min-w-0 truncate text-[13px] font-bold"
+                  style={{ color: "var(--wc-ink, #1a1714)" }}
+                >
+                  {t.homeTeam} vs {t.awayTeam} 불판에서 같이 봐요
+                </span>
+                <span
+                  className="shrink-0 text-[12px] font-bold"
+                  style={{ color: "var(--wc-burgundy, #961e37)" }}
+                >
+                  참여 →
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+
         {/* min-w-0 필수 — DialogContent 는 grid 이고 grid item 의 min-width:auto 기본값 때문에
             긴 콘텐츠(HOT 제목)가 컬럼을 다이얼로그 밖으로 밀어냄 (truncate 무력화) */}
         {state.distribution.length > 0 && (

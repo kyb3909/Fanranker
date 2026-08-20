@@ -98,6 +98,14 @@ export interface PickDistributionEntry {
   total: number
 }
 
+/** 예측 POST 응답의 경기별 불판 링크 (완료 모달 도선용, A3) */
+export interface MatchThreadLink {
+  gameId: string
+  threadId: string
+  homeTeam: string
+  awayTeam: string
+}
+
 /** 예측 완료 모달 상태 — 픽 분포 + 커뮤니티(축구 게시판) 섹션 노출 여부 */
 export interface PredictionSuccessState {
   isOpen: boolean
@@ -106,6 +114,8 @@ export interface PredictionSuccessState {
   showCommunity: boolean
   /** 제출한 슬립의 종목 — 이벤트(건너스 레이스) 참가 피드백 노출 판정용 */
   sport?: string | null
+  /** 방금 예측한 경기의 불판 (있는 경기만, A3) */
+  threads?: MatchThreadLink[]
 }
 
 export interface RankingUser {

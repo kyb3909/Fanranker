@@ -558,6 +558,63 @@ export async function POST(request: NextRequest) {
       console.error("Failed to compute pick distribution:", e)
     }
 
+    // ===== 불판 매핑 (완료 모달 도선용, 2026-08-20 UX 패널 A3) =====
+    // 예측 완료 직후가 검증된 최대 콘텐츠 전환 레버 — 방금 예측한 경기의 불판이 있으면
+    // 모달에서 바로 잇는다. 조회 실패해도 예측 자체는 성공이므로 빈 배열로 응답.
+    // ⚠️ betman 은 같은 경기를 마켓별 중복 행으로 갖는다 — 불판은 그중 한 행에 걸리므로
+    //    같은 (팀, 킥오프)의 형제 행 전체에서 찾는다 (매치센터 배너와 같은 규약).
+    let matchThreads: Array<{
+      gameId: string
+      threadId: string
+      homeTeam: string
+      awayTeam: string
+    }> = []
+    try {
+      const times = [...new Set(games.map((g) => g.match_time as string))]
+      const { data: sibs } = await supabase
+        .from("betman_games")
+        .select("id, home_team_name, away_team_name, match_time")
+        .in("match_time", times)
+      const sibIdsByGame = new Map<string, string[]>()
+      for (const g of games) {
+        const ids = (sibs ?? [])
+          .filter(
+            (s) =>
+              s.home_team_name === g.home_team_name &&
+              s.away_team_name === g.away_team_name &&
+              s.match_time === g.match_time
+          )
+          .map((s) => String(s.id))
+        sibIdsByGame.set(g.id, ids.length > 0 ? ids : [g.id])
+      }
+      const allSibIds = [...new Set([...sibIdsByGame.values()].flat())]
+      const { data: threads } = await supabase
+        .from("posts")
+        .select("id, match_game_id")
+        .in("match_game_id", allSibIds)
+        .is("deleted_at", null)
+      const threadByRow = new Map(
+        (threads ?? []).map((t) => [String(t.match_game_id), String(t.id)])
+      )
+      matchThreads = games.flatMap((g) => {
+        const threadId = (sibIdsByGame.get(g.id) ?? [])
+          .map((rowId) => threadByRow.get(rowId))
+          .find(Boolean)
+        return threadId
+          ? [
+              {
+                gameId: g.id,
+                threadId,
+                homeTeam: String(g.home_team_name),
+                awayTeam: String(g.away_team_name),
+              },
+            ]
+          : []
+      })
+    } catch (e) {
+      console.error("Failed to fetch match threads:", e)
+    }
+
     // ===== 온보딩 퍼널: 첫 슬립 =====
     // "처음인지"는 서버만 알 수 있다(클라 이벤트는 매번 발사돼 최초 판정이 불가능).
     // 실패해도 예측은 이미 성공했으므로 결과만 응답에 얹는다.
@@ -571,6 +628,7 @@ export async function POST(request: NextRequest) {
       remainingBalls: newBalance,
       message: `${predictions.length}경기 조합 ${stake}볼 예측 완료! (잔액: ${newBalance}볼)`,
       pickDistribution,
+      matchThreads,
       isFirstSlip,
     })
   } catch (error) {

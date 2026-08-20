@@ -4,6 +4,7 @@ import { useSWRConfig } from "swr"
 import type {
   SelectedBet,
   GroupedMatch,
+  MatchThreadLink,
   PickDistributionEntry,
   PredictionSuccessState,
 } from "@/types/betting"
@@ -302,6 +303,8 @@ export function useBettingSlip(
         showCommunity,
         // 아래에서 setSelectedSport(null) 로 리셋되기 전에 캡처 — 이벤트 스트립 판정용
         sport: selectedSport,
+        // 방금 예측한 경기의 불판 (A3) — 있으면 모달 최상단 도선으로
+        threads: (data.matchThreads ?? []) as MatchThreadLink[],
       })
       trackEvent({
         name: "prediction_success_modal",
