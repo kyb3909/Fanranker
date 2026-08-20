@@ -63,7 +63,16 @@ function EventRow({ e, team }: { e: LfaTimelineEvent; team: string }) {
 
       {isGoal && (
         // eslint-disable-next-line @next/next/no-img-element -- 12px 고정 소형 아이콘 (라인업과 동일)
-        <img src="/match/icons/goal.png" alt="득점" width={13} height={13} className="shrink-0" />
+        <img
+          src="/match/icons/goal.png"
+          alt="득점"
+          width={13}
+          height={13}
+          className="shrink-0"
+          // 아이콘이 라이트 지면용 잉크색이라 다크 밴드에 녹아 사라진다 (2026-08-20 운영자
+          // 제보: "골 아이콘이 안 보여") — 알파는 유지한 채 크림으로 반전
+          style={{ filter: "brightness(0) invert(0.96)" }}
+        />
       )}
       {(e.kind === "yellow" || e.kind === "red") && (
         <span
