@@ -21,6 +21,7 @@ export function MatchHubTabs({ active }: { active: "fixtures" | "standings" }) {
         <Link
           key={it.key}
           href={it.href}
+          prefetch={true}
           aria-current={active === it.key ? "page" : undefined}
           className={`no-underline ${active === it.key ? "on" : ""}`}
         >

@@ -60,8 +60,12 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             : "scrollbar-none flex items-center overflow-x-auto [&>:first-child]:ml-auto [&>:last-child]:mr-auto"
         }
       >
+        {/* GNB 4칸은 prefetch 명시 (2026-08-20 UX 패널 A6) — app-link 기본이
+            prefetch={false}인 건 피드 카드 수백 개의 RSC 폭탄 방지용이고, 화면당
+            4개뿐인 최상위 동선은 미리 받아 두는 게 체감 이동속도를 산다. */}
         <Link
           href="/"
+          prefetch={true}
           scroll={false}
           onClick={(e) => {
             e.preventDefault()
@@ -82,7 +86,7 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
           떡밥(/snack 풀스크린 스와이프)은 홈 오늘의 떡밥 탭과 이름 충돌로 메뉴에서 숨김 (2026-07-27).
           라우트는 유지 — 직접 URL로만 접근 가능.
         */}
-        <Link href="/explore">
+        <Link href="/explore" prefetch={true}>
           <span className={baseClass} data-on={isExplore ? "true" : undefined}>
             <Compass className="h-[18px] w-[18px] shrink-0" />
             운동장
@@ -97,13 +101,13 @@ export const HeaderNav = memo(function HeaderNav({ inline = false }: HeaderNavPr
             순위 하나는 한 칸의 무게가 안 되지만 일정·순위·매치센터를 묶으면 된다.
             게다가 /matches 는 만들어 놓고 입구가 홈 밴드 링크 하나뿐이라 죽어 있었다.
             자리는 승부예측 **앞** — 예측하러 오기 전에 보는 참조 정보다. */}
-        <Link href="/matches">
+        <Link href="/matches" prefetch={true}>
           <span className={baseClass} data-on={isMatch ? "true" : undefined}>
             <CalendarDays className="h-[18px] w-[18px] shrink-0" />
             경기
           </span>
         </Link>
-        <Link href="/season">
+        <Link href="/season" prefetch={true}>
           <span className={baseClass} data-on={isPrediction ? "true" : undefined}>
             <Target className="h-[18px] w-[18px] shrink-0" />
             승부예측
