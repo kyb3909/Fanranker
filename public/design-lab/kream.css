@@ -30,8 +30,13 @@
 
 /* ── 2) 캔버스 ──────────────────────────────────────────────────
  * body 는 scope 밖 여백까지 커버. 다크 밴드(.gn-band)는 자기 배경을 그리므로 무영향. */
-body {
-  background: #f6f6f7 !important;
+/* 캔버스 통일 (2026-08-21 운영자 제보: 좌우 경계선) — body 에만 칠하면
+ * 가운데 칼럼·워크스코프 래퍼가 각자 흰 배경을 유지해 세로 경계선이 생긴다.
+ * 페이지를 칠할 수 있는 래퍼 전부에 같은 값을 준다. 카드 흰색은 --wc-card 가 지킨다. */
+body,
+main,
+.worldcup-scope {
+  background-color: #f6f6f7 !important;
 }
 
 /* ── 3) 피드 카드 — 플랫 + 헤어라인, 리프트는 hover 에만 ─────── */
@@ -111,4 +116,13 @@ article.gn-card-lift .h-\[76px\]::after {
 }
 .rounded-2xl:not(.gn-band *, header *, footer *) {
   border-radius: 14px;
+}
+
+/* 좌우 레일 완화 (2026-08-21 운영자 제보: "좌우에 경계선") — 카드 외곽 링이 세로로
+ * 정렬돼 피드 양옆에 긴 레일처럼 읽혔다. 외곽 링만 캔버스 쪽으로 반 톤 섞어 누르고,
+ * 카드 내부 구분선(border-top 류)은 그대로 둔다. */
+:root,
+.worldcup-scope {
+  --wc-shadow-1: 0 0 0 1px color-mix(in srgb, var(--wc-line) 55%, var(--wc-paper));
+  --wc-shadow-2: 0 0 0 1px color-mix(in srgb, var(--wc-line-2) 60%, var(--wc-paper));
 }

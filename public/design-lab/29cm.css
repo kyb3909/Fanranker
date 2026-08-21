@@ -18,7 +18,7 @@
   --wc-tint: #ebe7df;
   --wc-line: #e7e3dc; /* 헤어라인 — 그림자를 대신하는 유일한 경계 */
   --wc-line-2: #cfc9bf;
-  --wc-paper: #ffffff;
+  --wc-paper: #f6f4f1;
   --wc-card: #ffffff;
   --wc-wine-tint: #faf3f4;
   /* 그림자 폐지 — 흐린 회색 번짐 대신 액자 선. 카드가 "떠 있는 종이"에서
@@ -31,8 +31,13 @@
 /* ═══ 2) 캔버스 — 벽은 반 톤 어둡게 ══════════════════════════════════════════
  * 순백 카드가 '종이'로 읽히려면 뒤의 벽이 물러나야 한다. 웜 오프화이트.
  * (전역 body 선언·레이어를 확실히 이기기 위한 이 파일의 유일한 전면 !important) */
-body {
-  background: #f6f4f1 !important;
+/* 캔버스 통일 (2026-08-21 운영자 제보: 좌우 경계선) — body 에만 칠하면
+ * 가운데 칼럼·워크스코프 래퍼가 각자 흰 배경을 유지해 세로 경계선이 생긴다.
+ * 페이지를 칠할 수 있는 래퍼 전부에 같은 값을 준다. 카드 흰색은 --wc-card 가 지킨다. */
+body,
+main,
+.worldcup-scope {
+  background-color: #f6f4f1 !important;
 }
 
 /* ═══ 3) 모서리 — 반 단계 날카롭게 ═══════════════════════════════════════════
@@ -148,4 +153,13 @@ article.gn-card-lift .h-\[76px\] {
 /* ═══ 8) 마감 — 드래그 선택까지 지면의 일부 ══════════════════════════════════ */
 .worldcup-scope ::selection {
   background: rgba(150, 30, 55, 0.14);
+}
+
+/* 좌우 레일 완화 (2026-08-21 운영자 제보: "좌우에 경계선") — 카드 외곽 링이 세로로
+ * 정렬돼 피드 양옆에 긴 레일처럼 읽혔다. 외곽 링만 캔버스 쪽으로 반 톤 섞어 누르고,
+ * 카드 내부 구분선(border-top 류)은 그대로 둔다. */
+:root,
+.worldcup-scope {
+  --wc-shadow-1: 0 0 0 1px color-mix(in srgb, var(--wc-line) 55%, var(--wc-paper));
+  --wc-shadow-2: 0 0 0 1px color-mix(in srgb, var(--wc-line-2) 60%, var(--wc-paper));
 }

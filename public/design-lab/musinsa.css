@@ -19,7 +19,7 @@
   --wc-tint: #eceef1;
   --wc-line: #e4e6ea; /* 헤어라인 — 이 시안의 주연. 웜 #e8e5e0 → 쿨 */
   --wc-line-2: #cfd3d9;
-  --wc-paper: #ffffff;
+  --wc-paper: #f7f8fa;
   --wc-card: #ffffff;
   --wc-canvas: #f7f8fa;
   --wc-wine-tint: #faf1f3; /* 버건디 도장의 faint fill — 미세하게만 냉각 */
@@ -33,8 +33,13 @@
 /* ── 2. 캔버스 — 순수 화이트 ─────────────────────────────────────────────
  * 회색 캔버스 위 흰 카드(부유)가 아니라, 흰 지면 위 헤어라인 칸(인쇄).
  * 무신사 랭킹 리스트의 문법이다. */
-body {
-  background: #ffffff !important;
+/* 캔버스 통일 (2026-08-21 운영자 제보: 좌우 경계선) — body 에만 칠하면
+ * 가운데 칼럼·워크스코프 래퍼가 각자 흰 배경을 유지해 세로 경계선이 생긴다.
+ * 페이지를 칠할 수 있는 래퍼 전부에 같은 값을 준다. 카드 흰색은 --wc-card 가 지킨다. */
+body,
+main,
+.worldcup-scope {
+  background-color: #f7f8fa !important;
 }
 
 /* ── 3. 피드 카드 — 플랫 + 조밀 + 랭킹보드 타이포 ──────────────────────── */
@@ -119,3 +124,12 @@ article.gn-card-lift .py-3 {
  * .gn-band + * 의 버건디 잔광: 편집 디자이너는 "순백을 위해 걷어내자" 했으나
  * UX 거부 — 잔광은 다크 밴드와 쿨 화이트 본문을 꿰매는 유일한 스티치다
  * (2026-07-28 band-seam 진단 존중). 카드 액션 띠 44px: 터치 타깃 하한이라 존치. */
+
+/* 좌우 레일 완화 (2026-08-21 운영자 제보: "좌우에 경계선") — 카드 외곽 링이 세로로
+ * 정렬돼 피드 양옆에 긴 레일처럼 읽혔다. 외곽 링만 캔버스 쪽으로 반 톤 섞어 누르고,
+ * 카드 내부 구분선(border-top 류)은 그대로 둔다. */
+:root,
+.worldcup-scope {
+  --wc-shadow-1: 0 0 0 1px color-mix(in srgb, var(--wc-line) 55%, var(--wc-paper));
+  --wc-shadow-2: 0 0 0 1px color-mix(in srgb, var(--wc-line-2) 60%, var(--wc-paper));
+}

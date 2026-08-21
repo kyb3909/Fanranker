@@ -8,7 +8,8 @@
 :root,
 .worldcup-scope {
   /* 잉크: #1a1714(15.9:1) → 진짜 검정(19.5:1). 헤드라인 펀치의 절반은 이 한 줄 */
-  --wc-ink: #0d0c0c;
+  --wc-paper: #f4f1eb;
+   #0d0c0c;
   --wc-ink-2: #3c3f45; /* 10.6:1 */
 
   /* 보조 회색 — 흐리게 누르지 않는다. 오히려 반 톤 조여서(6.73:1) 잉크와의
@@ -33,8 +34,13 @@
 }
 
 /* ── 2. 캔버스 — 신문지 톤. 흰 카드가 "떠 있는 패널"이 아니라 "박힌 인쇄물"이 된다 ── */
-body {
-  background: #f4f1eb;
+/* 캔버스 통일 (2026-08-21 운영자 제보: 좌우 경계선) — body 에만 칠하면
+ * 가운데 칼럼·워크스코프 래퍼가 각자 흰 배경을 유지해 세로 경계선이 생긴다.
+ * 페이지를 칠할 수 있는 래퍼 전부에 같은 값을 준다. 카드 흰색은 --wc-card 가 지킨다. */
+body,
+main,
+.worldcup-scope {
+  background-color: #f4f1eb !important;
 }
 
 /* ── 3. 피드 카드 헤드라인 — 650/-0.01em 의 얌전함을 걷는다.
@@ -103,4 +109,13 @@ article.gn-card-lift .h-\[76px\] {
   border-bottom-color: var(--wc-burgundy);
   border-bottom-width: 3px;
   font-weight: 800;
+}
+
+/* 좌우 레일 완화 (2026-08-21 운영자 제보: "좌우에 경계선") — 카드 외곽 링이 세로로
+ * 정렬돼 피드 양옆에 긴 레일처럼 읽혔다. 외곽 링만 캔버스 쪽으로 반 톤 섞어 누르고,
+ * 카드 내부 구분선(border-top 류)은 그대로 둔다. */
+:root,
+.worldcup-scope {
+  --wc-shadow-1: 0 0 0 1px color-mix(in srgb, var(--wc-line) 55%, var(--wc-paper));
+  --wc-shadow-2: 0 0 0 1px color-mix(in srgb, var(--wc-line-2) 60%, var(--wc-paper));
 }

@@ -81,6 +81,20 @@
       radial-gradient(700px 300px at 8% 110%, rgba(150, 30, 55, 0.14), transparent 65%),
       var(--gn-night);
   }
+  /* 초광폭 보정 (2026-08-21 운영자: "좌우 경계선") — 고정 px 래디얼은 1600px 넘는
+   * 화면에서 광이 중앙에만 닿고 양옆이 밋밋한 검정으로 끊겨 밴드 안에 세로 경계를
+   * 만들었다. 넓은 화면에서만 % 크기로 바꿔 광이 폭을 따라 늘어나게 한다.
+   * ⚠️ radial 크기에 max(px, %) 는 브라우저가 무효 처리한다 (2026-08-21 실측:
+   *    CSS.supports false → background 선언 전체가 죽어 밴드가 통째로 사라졌다). */
+  @media (min-width: 1600px) {
+    .gn-band {
+      background:
+        radial-gradient(75% 420px at 78% -10%, rgba(150, 30, 55, 0.28), transparent 60%),
+        radial-gradient(100% 210px at 50% 104%, rgba(150, 30, 55, 0.34), transparent 70%),
+        radial-gradient(45% 300px at 8% 110%, rgba(150, 30, 55, 0.14), transparent 65%),
+        var(--gn-night);
+    }
+  }
 
   /* 밴드 마운트 전환 — 홈 탭 스왑(히어로 530px ↔ PageBand)에서 상단이 "뚝" 하고
    * 바뀌는 위화감 완화. gn-band-entering 은 home-client 가 첫 탭 전환부터 붙인다
@@ -105,9 +119,17 @@
   }
 
   /* 라이트 존 첫 132px 에 다크의 잔광 — 운동장 카드 그림자가 하던 역할을 전 페이지로.
-   * 인접 형제 선택자라 JSX 수정 0. 다크 면적은 1px 도 늘지 않는다. */
+   * 인접 형제 선택자라 JSX 수정 0. 다크 면적은 1px 도 늘지 않는다.
+   * ⚠️ 이 형제는 대개 중앙 정렬 컨테이너다 — 세로로만 빠지는 linear 였을 땐 컨테이너의
+   *    좌우 가장자리에서 워시가 뚝 끊겨, 넓은 화면에서 세로 경계선으로 읽혔다
+   *    (2026-08-21 운동장 제보). 래디얼로 바꿔 좌우로도 스르르 사라지게 한다 —
+   *    가로 반지름 55% 라 컨테이너 양끝에 닿기 전에 투명해진다. */
   .gn-band + * {
-    background-image: linear-gradient(180deg, rgba(150, 30, 55, 0.06), rgba(150, 30, 55, 0) 132px);
+    background-image: radial-gradient(
+      55% 132px at 50% 0%,
+      rgba(150, 30, 55, 0.075),
+      rgba(150, 30, 55, 0) 100%
+    );
     background-repeat: no-repeat;
   }
   /* 미세 그레인 — 다크 면의 밴딩 제거.
