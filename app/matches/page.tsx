@@ -284,117 +284,128 @@ export default async function MatchesPage({
                 className={`mt-2 overflow-hidden rounded-xl ${collapsed(code, rows.length) && !expanded.has(code) ? "hidden" : ""}`}
                 style={{ background: "var(--wc-card)", border: "1px solid var(--wc-line)" }}
               >
-                {rows.map((m, i) => (
-                  <li
-                    key={m.matchKey}
-                    style={i > 0 ? { borderTop: "1px solid var(--wc-line)" } : undefined}
-                  >
-                    {/* betman 에 아직 마켓이 없는 경기는 매치 페이지가 없다 (라인업·리포트가
+                {rows.map((m, i) => {
+                  // 타로 노출 판정을 미리 계산 — 버튼은 행 위에 절대배치로 겹친다.
+                  // flex 형제로 두면 버튼 있는 행만 셸 폭이 줄어 vs 기준선이 왼쪽으로
+                  // 밀렸다 (2026-08-22 운영자: "vs 위치가 일정해야 해").
+                  const tarot =
+                    m.status === "scheduled" &&
+                    new Date(m.matchTime).getTime() > Date.now() &&
+                    hasFamousClub(
+                      displayTeamName(m.homeTeam, shortNames),
+                      displayTeamName(m.awayTeam, shortNames)
+                    )
+                  return (
+                    <li
+                      key={m.matchKey}
+                      style={i > 0 ? { borderTop: "1px solid var(--wc-line)" } : undefined}
+                    >
+                      {/* betman 에 아직 마켓이 없는 경기는 매치 페이지가 없다 (라인업·리포트가
                         betman id 로 걸려 있다) — 링크 없이 목록에만 싣는다 */}
-                    <div className="flex items-center">
-                      <div className="min-w-0 flex-1">
-                        <FixtureRowShell
-                          gameId={m.gameId}
-                          threadId={m.gameId ? threadByGame.get(m.gameId) : null}
-                        >
-                          {/* 좌: 시각 또는 상태. 진행 중은 "경기 중" — 킥오프 시각을 그대로 두면
+                      <div className="relative flex items-center">
+                        <div className="min-w-0 flex-1">
+                          <FixtureRowShell
+                            gameId={m.gameId}
+                            threadId={m.gameId ? threadByGame.get(m.gameId) : null}
+                          >
+                            {/* 좌: 시각 또는 상태. 진행 중은 "경기 중" — 킥오프 시각을 그대로 두면
                           "아직 안 시작했나?" 로 오독된다 (2026-08-19 팬·UIUX 합치).
                           라이브 스코어 미제공 정책은 그대로 — 상태 카피만 바꾼다. */}
-                          {m.status === "completed" ? (
-                            <span
-                              className="gn-num text-center text-[11px] font-bold"
-                              style={{ color: "var(--wc-mute-2)", letterSpacing: "0.08em" }}
-                            >
-                              FT
-                            </span>
-                          ) : m.status === "in_progress" ||
-                            (m.status === "scheduled" &&
-                              // 킥오프 후 ~3시간까지만 — 종료 신호가 안 온 옛 경기에 "경기 중"을
-                              // 계속 달아두면 그게 더 큰 거짓말이 된다
-                              Date.now() - new Date(m.matchTime).getTime() > 0 &&
-                              Date.now() - new Date(m.matchTime).getTime() < 3 * 3600_000) ? (
-                            <span
-                              className="text-center text-[11px] leading-tight font-bold"
-                              style={{ color: "var(--wc-burgundy)" }}
-                            >
-                              경기 중
-                            </span>
-                          ) : m.status === "cancelled" ? (
-                            <span
-                              className="text-center text-[11px] font-bold"
-                              style={{ color: "var(--wc-mute-2)" }}
-                            >
-                              취소
-                            </span>
-                          ) : (
-                            <span
-                              className="gn-num text-center text-[15px] font-bold"
-                              style={{ color: "var(--wc-ink)" }}
-                              suppressHydrationWarning
-                            >
-                              {fmtKstTime(m.matchTime)}
-                            </span>
-                          )}
+                            {m.status === "completed" ? (
+                              <span
+                                className="gn-num text-center text-[11px] font-bold"
+                                style={{ color: "var(--wc-mute-2)", letterSpacing: "0.08em" }}
+                              >
+                                FT
+                              </span>
+                            ) : m.status === "in_progress" ||
+                              (m.status === "scheduled" &&
+                                // 킥오프 후 ~3시간까지만 — 종료 신호가 안 온 옛 경기에 "경기 중"을
+                                // 계속 달아두면 그게 더 큰 거짓말이 된다
+                                Date.now() - new Date(m.matchTime).getTime() > 0 &&
+                                Date.now() - new Date(m.matchTime).getTime() < 3 * 3600_000) ? (
+                              <span
+                                className="text-center text-[11px] leading-tight font-bold"
+                                style={{ color: "var(--wc-burgundy)" }}
+                              >
+                                경기 중
+                              </span>
+                            ) : m.status === "cancelled" ? (
+                              <span
+                                className="text-center text-[11px] font-bold"
+                                style={{ color: "var(--wc-mute-2)" }}
+                              >
+                                취소
+                              </span>
+                            ) : (
+                              <span
+                                className="gn-num text-center text-[15px] font-bold"
+                                style={{ color: "var(--wc-ink)" }}
+                                suppressHydrationWarning
+                              >
+                                {fmtKstTime(m.matchTime)}
+                              </span>
+                            )}
 
-                          {/* 우: 팀 + 스코어 */}
-                          <span className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
-                            <span
-                              className="truncate text-right text-[14px] font-bold"
-                              style={{ color: teamTone(), wordBreak: "keep-all" }}
-                            >
-                              {displayTeamName(m.homeTeam, shortNames)}
-                            </span>
-                            <span
-                              className="gn-num text-center text-[15px] font-bold"
-                              style={{
-                                color:
-                                  (m.status === "completed" || m.status === "in_progress") &&
-                                  m.homeScore != null
-                                    ? "var(--wc-ink)"
-                                    : "var(--wc-mute-2)",
-                                minWidth: 34,
-                              }}
-                            >
-                              {/* 진행 중에도 스코어를 낸다 (2026-08-20 운영자 — LFA 라이브 실측
+                            {/* 우: 팀 + 스코어 */}
+                            <span className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
+                              <span
+                                className="truncate text-right text-[14px] font-bold"
+                                style={{ color: teamTone(), wordBreak: "keep-all" }}
+                              >
+                                {displayTeamName(m.homeTeam, shortNames)}
+                              </span>
+                              <span
+                                className="gn-num text-center text-[15px] font-bold"
+                                style={{
+                                  color:
+                                    (m.status === "completed" || m.status === "in_progress") &&
+                                    m.homeScore != null
+                                      ? "var(--wc-ink)"
+                                      : "var(--wc-mute-2)",
+                                  minWidth: 34,
+                                }}
+                              >
+                                {/* 진행 중에도 스코어를 낸다 (2026-08-20 운영자 — LFA 라이브 실측
                               확인으로 "갱신 소스 없음" 전제 폐기). day 목록 5분 캐시라 목록의
                               라이브 스코어는 최대 5분 지연 — 분 단위 정밀은 매치 페이지가 담당.
                               예정 경기는 vs 를 낸다 (2026-08-22 운영자 — 8/18 "공백이면
                               충분" 결정 폐기. 빈칸은 대진인지 렌더 누락인지 안 읽힌다).
                               반복 잡음은 크기·톤으로 죽인다 — 스코어보다 작고 연하게. */}
-                              {(m.status === "completed" || m.status === "in_progress") &&
-                              m.homeScore != null &&
-                              m.awayScore != null ? (
-                                `${m.homeScore}–${m.awayScore}`
-                              ) : (
-                                <span className="text-[11px] font-semibold tracking-wide">vs</span>
-                              )}
+                                {(m.status === "completed" || m.status === "in_progress") &&
+                                m.homeScore != null &&
+                                m.awayScore != null ? (
+                                  `${m.homeScore}–${m.awayScore}`
+                                ) : (
+                                  <span className="text-[11px] font-semibold tracking-wide">
+                                    vs
+                                  </span>
+                                )}
+                              </span>
+                              <span
+                                // 버튼이 겹치는 행만 원정팀 텍스트를 일찍 자른다 — 패딩은
+                                // 1fr 트랙 폭을 안 바꾸므로 vs 기준선은 그대로다
+                                className={`truncate text-left text-[14px] font-bold${tarot ? "pr-[80px]" : ""}`}
+                                style={{ color: teamTone(), wordBreak: "keep-all" }}
+                              >
+                                {displayTeamName(m.awayTeam, shortNames)}
+                              </span>
                             </span>
-                            <span
-                              className="truncate text-left text-[14px] font-bold"
-                              style={{ color: teamTone(), wordBreak: "keep-all" }}
-                            >
-                              {displayTeamName(m.awayTeam, shortNames)}
-                            </span>
-                          </span>
-                        </FixtureRowShell>
-                      </div>
-                      {/* 행 우측 타로점 (2026-08-21 운영자: "각 경기 오른쪽에, 유명 클럽이
+                          </FixtureRowShell>
+                        </div>
+                        {/* 행 우측 타로점 (2026-08-21 운영자: "각 경기 오른쪽에, 유명 클럽이
                           있을 때만"). 킥오프 전 경기 한정 — 시작·종료된 경기 점괘는 무의미 */}
-                      {m.status === "scheduled" &&
-                        new Date(m.matchTime).getTime() > Date.now() &&
-                        hasFamousClub(
-                          displayTeamName(m.homeTeam, shortNames),
-                          displayTeamName(m.awayTeam, shortNames)
-                        ) && (
-                          <div className="shrink-0 pr-3">
+                        {tarot && (
+                          <div className="absolute top-1/2 right-3 -translate-y-1/2">
                             <FixturesTarotHook
                               question={`${displayTeamName(m.homeTeam, shortNames)} vs ${displayTeamName(m.awayTeam, shortNames)}, 승부의 흐름은?`}
                             />
                           </div>
                         )}
-                    </div>
-                  </li>
-                ))}
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
               {collapsed(code, rows.length) && !expanded.has(code) && (
                 <Link

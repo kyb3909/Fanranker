@@ -191,17 +191,11 @@ export default async function StandingsPage({
           ) : (
             <>
               {played === 0 && (
-                <div className="mt-3">
-                  {/* 개막 전 — 전 팀 0 인 표를 그대로 두되(빈 표를 감추면 페이지가 죽어 보인다),
-                      새벽 스타디움 삽화가 "고장"이 아니라 "기다림"으로 읽히게 한다 (P2) */}
-                  <EmptyScene src="/images/empty/empty-preseason.webp" size={260} />
-                  <p
-                    className="mt-1 text-center text-[12.5px]"
-                    style={{ color: "var(--wc-mute-2)" }}
-                  >
-                    아직 개막 전입니다 — 첫 라운드가 끝나면 채워집니다.
-                  </p>
-                </div>
+                // 개막 전 — 전 팀 0 인 표를 그대로 두고 한 줄로만 알린다. 삽화는 뺐다
+                // (2026-08-22 운영자: 리그마다 반복되니 오히려 눈에 거슬린다)
+                <p className="mt-3 text-center text-[12.5px]" style={{ color: "var(--wc-mute-2)" }}>
+                  아직 개막 전입니다 — 첫 라운드가 끝나면 채워집니다.
+                </p>
               )}
               {/* 표는 좁은 화면에서 가로로만 스크롤한다 (지면 전체가 흔들리지 않게) */}
               <div className="mt-3 overflow-x-auto">
