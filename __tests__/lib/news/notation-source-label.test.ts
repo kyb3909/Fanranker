@@ -276,3 +276,36 @@ describe("도메인 유래 3자 키 (bbc.com → bbc)", () => {
     expect(M.has("afc")).toBe(false)
   })
 })
+
+/**
+ * 이중 대괄호 회귀 잠금 (2026-08-22 운영자 제보: "제목에 [마르카 이렇게 나오고
+ * ]가 붙어서 나와").
+ *
+ * 사고 경로: 교정 학습기가 제목 라벨을 통째로 집어 `[Marca]` → `[마르카]` 를 사전에
+ * 등록 → 그 항목의 romanized("Marca")가 깨끗한 항목과 같은 키를 주장 → 라벨 교정이
+ * `[${preferred}]` 를 다시 씌워 `[[마르카]]`. 사전은 사람도 고치는 곳이라, 오염된
+ * 행이 다시 들어와도 지면에는 이중 대괄호가 나가지 않아야 한다.
+ */
+describe("대괄호 오염된 사전 행", () => {
+  const POISONED = buildSourceLabelMap([
+    // 오염 행이 **먼저** 온다 — 같은 키는 먼저 온 항목이 이기므로 최악의 순서
+    { preferred_ko: "[마르카]", romanized: "Marca", surfaces: ["[marca]"], hangul_alts: null },
+    {
+      preferred_ko: "마르카",
+      romanized: "marca.com",
+      surfaces: ["marca.com", "marca"],
+      hangul_alts: null,
+    },
+  ])
+
+  it("대표 표기의 대괄호를 벗겨 이중 대괄호를 막는다", () => {
+    expect(normalizeSourceLabel("[Marca] 알바레스, 계약 2030년까지", POISONED)).toBe(
+      "[마르카] 알바레스, 계약 2030년까지"
+    )
+  })
+
+  it("이미 올바른 한글 라벨은 그대로 둔다 (오염 행이 있어도 덧씌우지 않는다)", () => {
+    const t = "[마르카] 알바레스, 계약 2030년까지"
+    expect(normalizeSourceLabel(t, POISONED)).toBe(t)
+  })
+})

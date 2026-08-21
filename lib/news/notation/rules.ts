@@ -148,6 +148,19 @@ function domainBody(domain: string): string {
 }
 
 /**
+ * 대괄호를 벗긴다 — 대괄호는 제목에서 라벨이 **놓이는 자리**지 표기 자체가 아니다.
+ *
+ * ⚠️ 실제 사고 (2026-08-22 운영자 제보): 교정 학습기가 제목 라벨을 통째로 집어
+ * `[Marca]` → `[마르카]` 를 사전에 등록했고, 그 항목의 romanized("Marca")가 깨끗한
+ * 항목(`마르카`)과 **같은 키를 주장**했다. 라벨 교정이 `[${preferred}]` 를 다시
+ * 씌우면서 제목이 `[[마르카]]` 로 나갔다. 쓰는 쪽(learn-corrections)에서 막지만,
+ * 사전은 사람도 고치는 곳이라 읽는 쪽에도 같은 가드를 둔다.
+ */
+function stripBrackets(s: string): string {
+  return s.replace(/[[\]]/g, "").trim()
+}
+
+/**
  * 사전 행 → {키: 대표표기} 맵.
  * 키 출처: preferred_ko / hangul_alts / surfaces / romanized, 그리고 도메인 몸통.
  * 서로 다른 항목이 같은 키를 주장하면 **먼저 온 항목이 이긴다** (치환 쌍과 같은 규율).
@@ -156,7 +169,8 @@ export function buildSourceLabelMap(
   rows: Pick<NotationEntry, "preferred_ko" | "romanized" | "surfaces" | "hangul_alts">[]
 ): Map<string, string> {
   const map = new Map<string, string>()
-  const add = (raw: string | null | undefined, preferred: string) => {
+  const add = (rawIn: string | null | undefined, preferred: string) => {
+    const raw = rawIn ? stripBrackets(rawIn) : ""
     if (!raw) return
     const looksLikeDomain = raw.includes(".")
     for (const [key, fromDomain] of [
@@ -168,7 +182,8 @@ export function buildSourceLabelMap(
     }
   }
   for (const row of rows) {
-    const preferred = row.preferred_ko?.trim()
+    // 대표 표기에 대괄호가 섞여 있으면 벗긴다 — 그대로 두면 `[${preferred}]` 가 이중이 된다
+    const preferred = stripBrackets(row.preferred_ko ?? "")
     if (!preferred) continue
     add(preferred, preferred)
     for (const alt of row.hangul_alts ?? []) add(alt, preferred)

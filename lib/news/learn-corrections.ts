@@ -85,6 +85,22 @@ function tiptapText(node: unknown, out: string[] = []): string[] {
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim()
 
+/**
+ * 제목 라벨의 대괄호를 벗긴다 — `[Marca]` → `Marca`.
+ *
+ * ⚠️ 실제 사고 (2026-08-22 운영자 제보: "제목에 [마르카 이렇게 나오고 ]가 붙어서
+ * 나와"). 추출기가 제목 앞머리 라벨을 통째로 집어 `[Marca]` → `[마르카]` 를 사전에
+ * 등록했다. 그 항목의 romanized("Marca")가 깨끗한 항목(`마르카`)과 같은 키를
+ * 주장하면서, 라벨 교정이 `[${preferred}]` 를 다시 씌워 제목이 `[[마르카]]` 로
+ * 나갔다. 사전에 들어갈 것은 **표기 그 자체**지 표기가 놓인 자리가 아니다.
+ */
+function stripLabelBrackets(s: string): string {
+  return s
+    .replace(/^\[\s*/, "")
+    .replace(/\s*\]$/, "")
+    .trim()
+}
+
 function slugify(s: string): string {
   const ascii = s
     .toLowerCase()
@@ -246,14 +262,29 @@ export async function learnFromDeskEdit(
     const roman = String(raw?.romanized ?? "").trim()
     const romanOk = roman && (originalText.includes(roman) || currentText.includes(roman))
 
+    // 환각 가드는 원문 그대로여야 통과하므로, 대괄호는 **가드를 지난 뒤** 벗긴다
+    const wrongTerm = stripLabelBrackets(wrong)
+    const correctTerm = stripLabelBrackets(correct)
+    if (!wrongTerm || !correctTerm || wrongTerm === correctTerm) continue
+    // 벗기고도 대괄호가 남으면 표기가 아니라 문장 조각이다 — 사전에 넣지 않는다
+    if (/[[\]]/.test(wrongTerm) || /[[\]]/.test(correctTerm)) {
+      console.warn(`[desk-learn] 대괄호 잔존 차단: "${wrong}" → "${correct}"`)
+      continue
+    }
+
     try {
       const result = await upsertCorrection(
         supabase,
-        { wrong, correct, category, romanized: romanOk ? roman : "" },
+        {
+          wrong: wrongTerm,
+          correct: correctTerm,
+          category,
+          romanized: romanOk ? stripLabelBrackets(roman) : "",
+        },
         params.postId
       )
       if (result !== "known" && result !== "error") {
-        learned.push(`[${category}] "${wrong}" → "${correct}" (${result})`)
+        learned.push(`[${category}] "${wrongTerm}" → "${correctTerm}" (${result})`)
       }
     } catch (e) {
       console.error("[desk-learn] upsert failed:", e)

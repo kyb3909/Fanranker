@@ -87,6 +87,11 @@ function slugify(s) {
   return ascii || createHash('sha1').update(s, 'utf8').digest('hex').slice(0, 10)
 }
 
+/** `[Marca]` → `Marca` — 대괄호는 표기가 아니라 제목에서 표기가 놓이는 자리다 */
+function stripLabelBrackets(s) {
+  return s.replace(/^\[\s*/, '').replace(/\s*\]$/, '').trim()
+}
+
 async function upsertCorrection(c, sourcePostId) {
   const wrong = c.wrong.trim()
   const correct = c.correct.trim()
@@ -293,7 +298,22 @@ async function main() {
       // romanized 도 어느 한쪽 텍스트에 등장할 때만 신뢰한다
       const roman = String(c.romanized || '').trim()
       const romanOk = roman && (inOriginal(roman) || inCurrent(roman))
-      corrections.push({ ...c, wrong, correct, romanized: romanOk ? roman : '' })
+      // 대괄호는 제목에서 라벨이 놓이는 **자리**지 표기가 아니다. 환각 가드는 원문
+      // 그대로여야 통과하므로 여기서(가드 뒤) 벗긴다 — 2026-08-22 사고: `[Marca]` →
+      // `[마르카]` 가 등재돼 라벨 교정이 대괄호를 덧씌워 제목이 `[[마르카]]` 로 나갔다.
+      const wrongTerm = stripLabelBrackets(wrong)
+      const correctTerm = stripLabelBrackets(correct)
+      if (!wrongTerm || !correctTerm || wrongTerm === correctTerm) continue
+      if (/[[\]]/.test(wrongTerm) || /[[\]]/.test(correctTerm)) {
+        log(`  [SKIP] 대괄호 잔존: "${wrong}" → "${correct}"`)
+        continue
+      }
+      corrections.push({
+        ...c,
+        wrong: wrongTerm,
+        correct: correctTerm,
+        romanized: romanOk ? stripLabelBrackets(roman) : '',
+      })
     }
 
     for (const c of corrections) {
