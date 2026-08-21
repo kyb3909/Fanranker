@@ -444,7 +444,30 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 // "상단에 있으니 게시물 글이 안 보여"). 실패해도 글은 뜬다
                 scoreboard={
                   postData.match_game_id ? (
-                    <Suspense fallback={null}>
+                    // fallback 스켈레톤 (2026-08-21 운영자: "불판에 스탯이 아무것도 없는데") —
+                    // 종전 fallback=null 은 위젯이 스트리밍되는 몇 초간 그 자리가 완전
+                    // 백지라 "없음"으로 읽혔다. 전광판 실루엣을 먼저 그려 "오는 중"으로
+                    // 읽히게 한다. 실제 실패(LFA 다운)도 이 실루엣이 아니라 null 로 끝난다
+                    <Suspense
+                      fallback={
+                        <div className="gn-band animate-pulse rounded-xl px-4 py-6">
+                          <div className="flex items-center justify-center gap-5">
+                            <div
+                              className="h-5 w-24 rounded"
+                              style={{ background: "rgba(255,255,255,.14)" }}
+                            />
+                            <div
+                              className="h-7 w-12 rounded"
+                              style={{ background: "rgba(255,255,255,.18)" }}
+                            />
+                            <div
+                              className="h-5 w-24 rounded"
+                              style={{ background: "rgba(255,255,255,.14)" }}
+                            />
+                          </div>
+                        </div>
+                      }
+                    >
                       <ThreadMatchWidgets gameId={postData.match_game_id as string} />
                     </Suspense>
                   ) : undefined
