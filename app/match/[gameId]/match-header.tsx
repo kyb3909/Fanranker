@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { leagueKicker, leagueLabel, leagueMarkSrc } from "@/lib/match/leagues"
+import { LiveMinute } from "@/components/match/live-minute"
 import type { MatchSummary } from "@/lib/match/get-match"
 
 /**
@@ -169,7 +170,7 @@ export function MatchHeader({
                     className="h-1.5 w-1.5 animate-pulse rounded-full"
                     style={{ background: "var(--gn-live)" }}
                   />
-                  {minute ? <span className="gn-num">{minute}&#8242;</span> : "LIVE"}
+                  {minute ? <LiveMinute minute={minute} /> : "LIVE"}
                 </span>
               )}
             </span>

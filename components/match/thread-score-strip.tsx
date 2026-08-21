@@ -5,6 +5,7 @@ import { getLfaMatchInfo, type LfaTimelineEvent } from "@/lib/lfa/match"
 import { leagueKicker, leagueLabel, leagueMarkSrc } from "@/lib/match/leagues"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 import { LiveRefresher } from "@/app/match/[gameId]/live-refresher"
+import { LiveMinute } from "@/components/match/live-minute"
 import { CollapsibleRows } from "@/components/match/collapsible-rows"
 
 /**
@@ -206,7 +207,7 @@ export async function ThreadScoreStrip({ gameId }: { gameId: string }) {
                 className="h-1.5 w-1.5 animate-pulse rounded-full"
                 style={{ background: "var(--gn-live)" }}
               />
-              {lfa?.minute ? <span className="gn-num">{lfa.minute}&#8242;</span> : "LIVE"}
+              {lfa?.minute ? <LiveMinute minute={lfa.minute} /> : "LIVE"}
             </span>
           ) : (
             <span
