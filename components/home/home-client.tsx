@@ -9,7 +9,7 @@ import { fetcher } from "@/lib/swr"
 import { useFeed, type SortType, type PostsResponse } from "@/hooks/use-feed"
 import { FeedSection } from "@/components/home/feed-section"
 import { isBotUserId } from "@/lib/constants/bot-users"
-import { WritePromptCard } from "@/components/home/write-prompt-card"
+import { QuickComposer } from "@/components/home/quick-composer"
 import { FlairFilterBar } from "@/components/home/flair-filter-bar"
 import { MatchdayBand } from "@/components/home/matchday-band"
 import { PageBand } from "@/components/page-band"
@@ -263,7 +263,8 @@ export function HomeClient({
             <GlobalNoticeBanner notices={initialGlobalNotices ?? []} />
             {/* AnnouncementCarousel은 AppShellClient에서 전역 mount */}
             {/* 인라인 글쓰기 프롬프트 — 게시판 탭에서만 (뉴스/베팅 소비 모드와 무관한 CTA) */}
-            {feedTab === "board" && <WritePromptCard />}
+            {/* 한마디 — 글쓰기 버튼(4단 계단) 대신 그 자리에서 바로 쓴다 (2026-08-21 운영자) */}
+            {feedTab === "board" && <QuickComposer />}
 
             {/* 월드컵 이벤트 배너 제거 (2026-07-29) — 1차 이벤트 아카이브 비공개에 따라
                 /worldcup 세그먼트 전체가 redirect 되므로 진입 배너도 내린다.

@@ -6,7 +6,7 @@ import Link from "@/components/ui/app-link"
 import { PollWidget } from "@/components/sidebar/poll-widget"
 import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { WallMoreRow, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
-import { WritePromptCard } from "@/components/home/write-prompt-card"
+import { QuickComposer } from "@/components/home/quick-composer"
 import { BridgeRow } from "@/components/bridge-row"
 import { suggestTarot } from "@/lib/tarot/suggest"
 import { TarotModal } from "@/components/tarot/tarot-modal"
@@ -963,7 +963,7 @@ export function CardNewsFeed({
               디스코드(12)를 다 지난 지점 */}
             {i === 18 && (
               <div className="lg:hidden">
-                <WritePromptCard />
+                <QuickComposer />
               </div>
             )}
           </Fragment>

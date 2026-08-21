@@ -93,6 +93,8 @@ type AnalyticsEvent =
   | { name: "cardnews_chip_filter"; params: { chip_id: string } }
   // VS 투표 완료 → 댓글판 읽기형 도선 (T1 수정판 — 판결 ②)
   | { name: "vs_comment_bridge_click"; params: { poll_id: string; post_id: string } }
+  // 한마디 인라인 글쓰기 (2026-08-21 운영자: "간단한 의견을 서로 나누면서 쓰게")
+  | { name: "quick_post_submit"; params: { community: string } }
   // ── 사가 계측 (PM 토론 2026-08-04 — "성공해도 증명할 숫자가 없다" 수리) ──
   // from_card: 떡밥 카드 경유 진입 여부. 체류·재방문은 GA4 표준 지표가 페이지 단위로 잡는다
   | { name: "saga_view"; params: { saga_slug: string; from_card: boolean } }
