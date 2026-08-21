@@ -11,7 +11,8 @@
  *    2026-08-20 인터 투르쿠 오염 전례).
  */
 const FAMOUS_KEYWORDS = [
-  // EPL
+  // EPL — 사전 정본 표기는 "아스널" (2026-08-21 실측: 아스날로 적어 개막전이 빗나갔다)
+  "아스널",
   "아스날",
   "리버풀",
   "첼시",
@@ -27,6 +28,10 @@ const FAMOUS_KEYWORDS = [
   "레알 마드리드",
   "바르셀로나",
   "아틀레티코",
+  "베티스",
+  "소시에다드",
+  "세비야",
+  "빌바오",
   // 분데스리가
   "바이에른",
   "도르트문트",
@@ -78,9 +83,18 @@ const FAMOUS_KEYWORDS = [
   "Celtic",
 ]
 
+/**
+ * 부분 일치가 위험해 **정확 일치로만** 판정하는 통칭.
+ * "레알"(레알 마드리드의 사전 통칭)을 부분 일치에 넣으면 비야레알·레알 베티스·
+ * 레알 소시에다드가 전부 걸린다 — 표시 라벨이 정확히 "레알"일 때만 마드리드다.
+ */
+const FAMOUS_EXACT = new Set(["레알"])
+
 /** 표시 라벨 중 하나라도 유명 구단 키워드에 걸리면 true */
 export function hasFamousClub(...teamLabels: string[]): boolean {
-  return teamLabels.some((label) =>
-    FAMOUS_KEYWORDS.some((k) => label.toLowerCase().includes(k.toLowerCase()))
+  return teamLabels.some(
+    (label) =>
+      FAMOUS_EXACT.has(label.trim()) ||
+      FAMOUS_KEYWORDS.some((k) => label.toLowerCase().includes(k.toLowerCase()))
   )
 }
