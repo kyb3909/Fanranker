@@ -358,13 +358,16 @@ export default async function MatchesPage({
                               {/* 진행 중에도 스코어를 낸다 (2026-08-20 운영자 — LFA 라이브 실측
                               확인으로 "갱신 소스 없음" 전제 폐기). day 목록 5분 캐시라 목록의
                               라이브 스코어는 최대 5분 지연 — 분 단위 정밀은 매치 페이지가 담당.
-                              예정 경기에 `vs` 를 쓰지 않는다: 팀명 사이 공백이 이미 그 일을
-                              하고, 한 지면에 160번 반복되면 버건디 잡음이 된다 (2026-08-18) */}
+                              예정 경기는 vs 를 낸다 (2026-08-22 운영자 — 8/18 "공백이면
+                              충분" 결정 폐기. 빈칸은 대진인지 렌더 누락인지 안 읽힌다).
+                              반복 잡음은 크기·톤으로 죽인다 — 스코어보다 작고 연하게. */}
                               {(m.status === "completed" || m.status === "in_progress") &&
                               m.homeScore != null &&
-                              m.awayScore != null
-                                ? `${m.homeScore}–${m.awayScore}`
-                                : ""}
+                              m.awayScore != null ? (
+                                `${m.homeScore}–${m.awayScore}`
+                              ) : (
+                                <span className="text-[11px] font-semibold tracking-wide">vs</span>
+                              )}
                             </span>
                             <span
                               className="truncate text-left text-[14px] font-bold"
