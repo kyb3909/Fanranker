@@ -173,7 +173,9 @@
   border-bottom: 2px solid transparent;
   font-size: 14px;
   font-weight: 500;
-  color: #7a828a;
+  /* 비활성 탭 — 종전 #7a828a 는 흰 바탕 3.9:1 로 AA 미달 (2026-08-21 디자인 랩에서
+     세 팀이 독립 적발한 실버그). mute 토큰과 같은 값으로 맞춰 5.98:1 확보 */
+  color: var(--wc-mute, #5c6470);
   white-space: nowrap;
   cursor: pointer;
   transition:
