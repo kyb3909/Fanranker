@@ -35,7 +35,9 @@ function mapApiPostsToRecentPosts(
     created_at: string
   }[]
 ): RecentPost[] {
-  return posts.map((p) => ({
+  // 재료 풀이 25로 늘었다 (2026-08-21 토론 D1 — 인터리브 풀 고갈 수리). 사이드바는
+  // 종전처럼 10개만 — 여기서 안 자르면 사이드바가 25행으로 늘어진다.
+  return posts.slice(0, 10).map((p) => ({
     id: p.id,
     title: p.title,
     community: COMMUNITY_NAMES[p.community_slug] || p.community_slug,

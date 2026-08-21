@@ -129,6 +129,13 @@ export function getCachedRecentComments(): Promise<unknown[]> {
   return unstable_cache(
     async () => {
       const supabase = createAnonClient()
+      // active 게시판만 — fetchFeed 와 같은 이유 (2026-08-21 혼합 피드 토론 D3:
+      // 이 함수만 필터가 없어서, 온보딩으로 숨긴 게시판 글이 댓글 하나로 홈에 재등장했다)
+      const { data: activeCats } = await supabase
+        .from("categories")
+        .select("slug")
+        .eq("is_active", true)
+      const activeSlugs = (activeCats ?? []).map((c) => c.slug)
       const { data } = await supabase
         .from("posts")
         // user_id: "담벼락 지금" 인터리브가 사람 글을 골라내는 데 쓴다 (2026-08-20).
@@ -139,16 +146,20 @@ export function getCachedRecentComments(): Promise<unknown[]> {
         )
         .is("deleted_at", null)
         .gt("comment_count", 0)
+        .in("community_slug", activeSlugs)
         .order("last_comment_at", { ascending: false, nullsFirst: false })
-        .limit(10)
+        // 25로 확장 (2026-08-21 토론 D1 — 풀 고갈 수리): 봇 기사 포함 top-10 에서 봇 제외를
+        // 클라이언트가 사후 수행하는 구조라, 경기일에 댓글이 봇 매치 기사로 몰리면 사람 글이
+        // 10칸 밖으로 밀려 인터리브가 **무증상으로** 사라졌다. 소비처는 각자 slice 한다.
+        .limit(25)
       const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
       return (data ?? []).map(({ content, ...row }) => ({
         ...row,
         image: (row.image as string | null) ?? extractFirstImageSrcFromTipTapJSON(content),
       }))
     },
-    // v3: image 추출 추가 — 키를 안 올리면 revalidate 창 동안 옛 셰이프가 남는다 (실측 함정)
-    ["home-recent-comments-v3"],
+    // v4: active 필터 + limit 25 — 키를 안 올리면 revalidate 창 동안 옛 셰이프가 남는다 (실측 함정)
+    ["home-recent-comments-v4"],
     { revalidate: 60, tags: [HOME_TAGS.posts] }
   )().catch(() => [] as unknown[])
 }
@@ -182,7 +193,9 @@ export function getCachedWallRatio(): Promise<WallFeedRatio> {
       const news = Math.floor(Number(v.newsPerWall))
       const max = Math.floor(Number(v.maxWallCards))
       return {
-        newsPerWall: Number.isFinite(news) && news >= 2 ? news : WALL_RATIO_DEFAULT.newsPerWall,
+        // 하한 3 (2026-08-21 토론 D2): n=2 면 첫 인터리브 슬롯이 2번째 카드로 튀어 올라
+        // 첫 화면(fold) 방어가 붕괴한다 — 다이얼로도 그 밑으로는 못 내리게 코드가 지킨다
+        newsPerWall: Number.isFinite(news) && news >= 3 ? news : WALL_RATIO_DEFAULT.newsPerWall,
         maxWallCards:
           Number.isFinite(max) && max >= 0 && max <= 10 ? max : WALL_RATIO_DEFAULT.maxWallCards,
       }
