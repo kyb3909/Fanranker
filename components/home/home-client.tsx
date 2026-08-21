@@ -105,6 +105,7 @@ export function HomeClient({
           community_slug: string
           comment_count?: number
           user_id?: string
+          image?: string | null
         }[]
       )
         .filter((p) => !isBotUserId(p.user_id))
@@ -113,6 +114,7 @@ export function HomeClient({
           title: p.title,
           communitySlug: p.community_slug,
           comments: p.comment_count || 1,
+          image: p.image ?? null,
         })),
     [initialRecentComments]
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "@/components/ui/app-link"
 import { trackEvent } from "@/lib/analytics/events"
 import { COMMUNITY_NAMES } from "@/lib/constants/communities"
@@ -22,6 +23,8 @@ export interface WallPost {
   title: string
   communitySlug: string
   comments: number
+  /** 본문 첫 이미지 (2026-08-21 운영자: "아이돌 이미지도 하나 중간에") — 없으면 텍스트 행 */
+  image?: string | null
 }
 
 export function WallPostCard({ post }: { post: WallPost }) {
@@ -74,6 +77,32 @@ export function WallPostCard({ post }: { post: WallPost }) {
             </span>
           </h2>
         </div>
+        {/* 썸네일 — 뉴스 카드(CompactCard)와 같은 104×76 문법. 같은 출처(/) 만 next/image,
+            외부 호스트는 remotePatterns 미등록 시 터지므로 평범한 img 로 (기존 규칙 준용) */}
+        {post.image && (
+          <div className="relative h-[76px] w-[104px] shrink-0 overflow-hidden rounded-lg">
+            {post.image.startsWith("/") ? (
+              <Image
+                src={post.image}
+                alt=""
+                fill
+                sizes="104px"
+                loading="lazy"
+                className="object-cover"
+                style={{ objectPosition: "50% 30%" }}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={post.image}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: "50% 30%" }}
+              />
+            )}
+          </div>
+        )}
       </div>
     </article>
   )

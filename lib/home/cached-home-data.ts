@@ -132,16 +132,23 @@ export function getCachedRecentComments(): Promise<unknown[]> {
       const { data } = await supabase
         .from("posts")
         // user_id: "담벼락 지금" 인터리브가 사람 글을 골라내는 데 쓴다 (2026-08-20).
-        // ActivitySidebar 는 여분 필드를 무시하므로 무해.
-        .select("id, title, community_slug, comment_count, last_comment_at, created_at, user_id")
+        // content: 첫 이미지 추출용 — 아래에서 image 로 줄이고 원본은 버린다 (2026-08-21
+        // 운영자: "아이돌 이미지도 하나 중간에 껴 있으면"). ActivitySidebar 는 여분 필드 무시.
+        .select(
+          "id, title, community_slug, comment_count, last_comment_at, created_at, user_id, image, content"
+        )
         .is("deleted_at", null)
         .gt("comment_count", 0)
         .order("last_comment_at", { ascending: false, nullsFirst: false })
         .limit(10)
-      return data ?? []
+      const { extractFirstImageSrcFromTipTapJSON } = await import("@/lib/utils/tiptap-embeds")
+      return (data ?? []).map(({ content, ...row }) => ({
+        ...row,
+        image: (row.image as string | null) ?? extractFirstImageSrcFromTipTapJSON(content),
+      }))
     },
-    // v2: user_id 추가 — 키를 안 올리면 revalidate 창 동안 옛 셰이프가 남는다 (실측 함정)
-    ["home-recent-comments-v2"],
+    // v3: image 추출 추가 — 키를 안 올리면 revalidate 창 동안 옛 셰이프가 남는다 (실측 함정)
+    ["home-recent-comments-v3"],
     { revalidate: 60, tags: [HOME_TAGS.posts] }
   )().catch(() => [] as unknown[])
 }
