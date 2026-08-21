@@ -186,6 +186,69 @@ export function getCachedWallRatio(): Promise<WallFeedRatio> {
 }
 
 /**
+ * 피드 종단 "내일 경기 예고" 한 줄 (2026-08-21 데드엔드 리포트 Top5-5).
+ * 다음 40시간 안의 발매 경기 중 유명 클럽 경기를 EPL 우선으로 하나 골라 문안까지
+ * 완성해 내려준다 — 목적지가 /prediction 이라 betman 마켓이 있는 경기만 정직하다.
+ * 없으면 null → 피드는 기존 일정 도선으로 폴백.
+ */
+export function getCachedTomorrowMatchTitle(): Promise<string | null> {
+  return unstable_cache(
+    async () => {
+      const { createServiceRoleClient } = await import("@/lib/supabase/server")
+      const { hasFamousClub } = await import("@/lib/match/famous-clubs")
+      const { displayTeamName, loadTeamShortMap } = await import("@/lib/match/team-display")
+      const { data } = await createServiceRoleClient()
+        .from("betman_games")
+        .select("home_team_name, away_team_name, match_time, league_code")
+        .eq("status", "scheduled")
+        .eq("sport", "축구")
+        .gt("match_time", new Date().toISOString())
+        .lte("match_time", new Date(Date.now() + 40 * 3600_000).toISOString())
+        .order("match_time", { ascending: true })
+        .limit(40)
+      const rows = data ?? []
+      if (rows.length === 0) return null
+      const shortNames = await loadTeamShortMap()
+      const label = (r: (typeof rows)[number]) => ({
+        home: displayTeamName(String(r.home_team_name), shortNames),
+        away: displayTeamName(String(r.away_team_name), shortNames),
+      })
+      // 같은 경기의 마켓별 중복 행은 첫 행만 보게 되므로 별도 dedupe 불필요 (정렬이 시간순)
+      const pick =
+        rows.find((r) => {
+          const t = label(r)
+          return r.league_code === "EPL" && hasFamousClub(t.home, t.away)
+        }) ??
+        rows.find((r) => {
+          const t = label(r)
+          return hasFamousClub(t.home, t.away)
+        }) ??
+        rows.find((r) => r.league_code === "EPL") ??
+        rows[0]
+      const t = label(pick)
+      const kst = new Date(new Date(pick.match_time as string).getTime() + 9 * 3600_000)
+      const kstNow = new Date(Date.now() + 9 * 3600_000)
+      const dayDiff = Math.floor(
+        (Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) -
+          Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())) /
+          86400_000
+      )
+      const day =
+        dayDiff <= 0
+          ? "오늘"
+          : dayDiff === 1
+            ? "내일"
+            : `${kst.getUTCMonth() + 1}/${kst.getUTCDate()}`
+      const hh = String(kst.getUTCHours()).padStart(2, "0")
+      const mm = String(kst.getUTCMinutes()).padStart(2, "0")
+      return `${day} ${hh}:${mm}, ${t.home} – ${t.away}`
+    },
+    ["home-tomorrow-match"],
+    { revalidate: 600 }
+  )().catch(() => null)
+}
+
+/**
  * 전체 공지 (담벼락 최상단 고정) — 관리자가 is_global_notice=true 로 고정한 글.
  * 컬럼 미적용(마이그레이션 전)이면 error+data:null → [] 로 안전하게 떨어진다.
  */

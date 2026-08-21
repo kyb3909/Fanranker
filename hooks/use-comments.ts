@@ -158,6 +158,8 @@ export function useComments(
         }
         throw new Error(error.error || "댓글 작성에 실패했습니다.")
       }
+      // 게시판 활성화 판정 지표 (2026-08-21 데드엔드 리포트 — 이번 패키지 전체의 분자)
+      trackEvent({ name: "comment_submit", params: { post_id: String(postId), kind: "comment" } })
       await trackFirstCommunityAction(response)
       await reloadComments()
     } catch (error) {
@@ -203,6 +205,7 @@ export function useComments(
         }
         throw new Error(error.error || "답글 작성에 실패했습니다.")
       }
+      trackEvent({ name: "comment_submit", params: { post_id: String(postId), kind: "reply" } })
       await trackFirstCommunityAction(response)
       await reloadComments()
       setReplyingTo(null)

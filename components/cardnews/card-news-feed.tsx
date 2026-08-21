@@ -338,8 +338,31 @@ function useFaceFocus(imageUrl: string | null): string | null {
   return pos
 }
 
-function openPost(id: string, destination: "post" | "saga" = "post") {
-  trackEvent({ name: "cardnews_card_open_post", params: { post_id: id, destination } })
+/** 댓글수 구간 — 댓글 흔적이 클릭률을 바꾸는지 (2026-08-21 리포트, T5 계측 회수) */
+function commentBucket(n: number): "0" | "1-2" | "3-9" | "10+" {
+  if (n <= 0) return "0"
+  if (n <= 2) return "1-2"
+  if (n <= 9) return "3-9"
+  return "10+"
+}
+
+function openPost(
+  id: string,
+  destination: "post" | "saga" = "post",
+  extra?: {
+    via?: "chip_filter" | "article_related" | "article_next" | "ft_row"
+    bucket?: "0" | "1-2" | "3-9" | "10+"
+  }
+) {
+  trackEvent({
+    name: "cardnews_card_open_post",
+    params: {
+      post_id: id,
+      destination,
+      ...(extra?.via ? { via: extra.via } : {}),
+      ...(extra?.bucket ? { comment_count_bucket: extra.bucket } : {}),
+    },
+  })
 }
 
 /**
@@ -390,7 +413,16 @@ function openPost(id: string, destination: "post" | "saga" = "post") {
  * 예전 구조에선 투표 박스 래퍼가 버튼이 아닌 56px 까지 덮어 링크를 먹었다.
  */
 function CardActionStrip({ card }: { card: CardNewsItem }) {
-  if (card.vs) return <CardVsVote vs={card.vs} surface="card" variant="strip" />
+  if (card.vs)
+    return (
+      <CardVsVote
+        vs={card.vs}
+        surface="card"
+        variant="strip"
+        postId={card.id}
+        commentCount={card.commentCount}
+      />
+    )
 
   const tarot = suggestTarot(card.title)
   if (!tarot) return null
@@ -446,6 +478,28 @@ function TarotStrip({ tarot }: { tarot: NonNullable<ReturnType<typeof suggestTar
  */
 const QUESTION_GAP = 5
 
+/**
+ * 유형·리그 말머리 — 칩 레일의 팀 칩 후보에서 제외한다 (2026-08-21 리포트 Top5-4).
+ * 봇 기사 말머리는 유형(뉴스·이적)과 팀(맨시티·리버풀…)이 섞여 있고, 팀 칩은
+ * 이 집합에 없는 말머리 중 당일 3건 이상인 것만 승격된다.
+ */
+const TYPE_FLAIRS = new Set([
+  "뉴스",
+  "이적",
+  "루머",
+  "오피셜",
+  "공지",
+  "분데스리가",
+  "세리에A",
+  "라리가",
+  "리그1",
+  "EPL",
+  "프리미어리그",
+  "해외축구",
+  "UCL",
+  "유럽대항전",
+])
+
 function pickQuestionCards(cards: CardNewsItem[]): Set<number> {
   const allowed = new Set<number>()
   let last = -Infinity
@@ -488,6 +542,16 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
           >
             {first.content}
           </span>
+          {/* 추천수 — 눈팅족의 스캔 신호 (2026-08-21 리포트 공백①: 시스템은 이미 있고
+              노출만 없었다). 0이면 안 그린다 — 0 카운트 숨김 원칙 */}
+          {first.votes > 0 && (
+            <span
+              className="gn-num shrink-0 text-[11px] font-bold tabular-nums"
+              style={{ color: "var(--wc-burgundy)" }}
+            >
+              추천 {first.votes}
+            </span>
+          )}
           <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--wc-mute)" }} />
         </button>
       ) : (
@@ -503,6 +567,14 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
               >
                 {c.content}
               </span>
+              {c.votes > 0 && (
+                <span
+                  className="gn-num shrink-0 text-[11px] font-bold tabular-nums"
+                  style={{ color: "var(--wc-burgundy)" }}
+                >
+                  추천 {c.votes}
+                </span>
+              )}
             </div>
           ))}
           <div className="flex items-center justify-between">
@@ -541,7 +613,16 @@ function CommentPreview({ card }: { card: CardNewsItem }) {
  * 반응 장치가 사라지는 게 아니라 상세 하단 좋아요(`/api/posts/[id]/vote`)로 일원화된다.
  * 로컬 낙관 토글 훅(useLocalLike)도 이 카드가 유일한 소비자였어서 함께 내려갔다.
  */
-function CompactCard({ card, allowQuestion }: { card: CardNewsItem; allowQuestion: boolean }) {
+function CompactCard({
+  card,
+  allowQuestion,
+  via,
+}: {
+  card: CardNewsItem
+  allowQuestion: boolean
+  /** 어느 장치를 거친 노출인가 — 클릭 계측의 via 로 실린다 (칩 필터 뷰 등) */
+  via?: "chip_filter"
+}) {
   const faceFocus = useFaceFocus(card.image)
 
   return (
@@ -563,7 +644,12 @@ function CompactCard({ card, allowQuestion }: { card: CardNewsItem; allowQuestio
           }
           className="absolute inset-0 z-[1]"
           aria-label={card.title}
-          onClick={() => openPost(card.id, card.sagaSlug ? "saga" : "post")}
+          onClick={() =>
+            openPost(card.id, card.sagaSlug ? "saga" : "post", {
+              via,
+              bucket: commentBucket(card.commentCount),
+            })
+          }
         />
 
         <div className="min-w-0 flex-1">
@@ -649,6 +735,8 @@ export function CardNewsFeed({
   excludeIds,
   wallPosts,
   newsPerWall = 5,
+  endWallPosts,
+  tomorrowTitle,
 }: {
   initialCards: CardNewsItem[]
   initialCursor: string | null
@@ -663,6 +751,13 @@ export function CardNewsFeed({
   wallPosts?: WallPost[]
   /** 뉴스 몇 장마다 담벼락 1장인가 — site_settings 다이얼 (기본 5) */
   newsPerWall?: number
+  /**
+   * 피드 종단의 담벼락 실물 (2026-08-21 리포트 Top5-5) — 인터리브에 안 실린 나머지분.
+   * 0건이면 현행 텍스트 도선으로 폴백 — 콜드스타트에서 화면이 지금과 동일하다.
+   */
+  endWallPosts?: WallPost[]
+  /** 종단 "내일 경기 예고" 한 줄 (서버에서 문안까지 완성) — 없으면 일정 도선 폴백 */
+  tomorrowTitle?: string | null
 }) {
   const [cards, setCards] = useState(initialCards)
   const [cursor, setCursor] = useState(initialCursor)
@@ -717,6 +812,39 @@ export function CardNewsFeed({
   // 질문성 띠 밀도 상한 — 카드가 늘 때만 다시 계산 (pickQuestionCards 주석 참조)
   const questionCards = useMemo(() => pickQuestionCards(cards), [cards])
 
+  // ── 말머리 칩 레일 (2026-08-21 리포트 Top5-4, 판결 ①) ──────────────────────
+  // 클라이언트 필터 — 24h 단일 페이지라 카드 전량이 이미 메모리에 있다. 서버 무변경.
+  // 팀 칩은 금지가 아니라 **건수 게이트**: 당일 3건 이상인 팀 말머리만 (유령방 방지),
+  // 상위 4개. 카운트 숫자는 표기하지 않는다 — 콜드스타트에서 얇음의 광고가 된다.
+  const [chip, setChip] = useState<string>("all")
+  const chips = useMemo(() => {
+    const list: { id: string; label: string }[] = []
+    if (cards.some((c) => c.source && badgeTier(c.source) === "official"))
+      list.push({ id: "official", label: "오피셜" })
+    if (cards.some((c) => c.flair?.name === "이적")) list.push({ id: "transfer", label: "이적설" })
+    const teamCnt = new Map<string, number>()
+    for (const c of cards) {
+      const n = c.flair?.name
+      if (!n || TYPE_FLAIRS.has(n)) continue
+      teamCnt.set(n, (teamCnt.get(n) ?? 0) + 1)
+    }
+    ;[...teamCnt.entries()]
+      .filter(([, n]) => n >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .forEach(([name]) => list.push({ id: `team:${name}`, label: name }))
+    return list
+  }, [cards])
+  const chipMatch = useCallback((c: CardNewsItem, id: string): boolean => {
+    if (id === "official") return !!c.source && badgeTier(c.source) === "official"
+    if (id === "transfer") return c.flair?.name === "이적"
+    return c.flair?.name === id.slice(5)
+  }, [])
+  const filtered = useMemo(
+    () => (chip === "all" ? cards : cards.filter((c) => chipMatch(c, chip))),
+    [cards, chip, chipMatch]
+  )
+
   // 담벼락 인터리브 배치 — 뉴스 newsPerWall장마다 대기열에서 하나씩 (기본 5:1 → i=4,9,14…).
   // 소진되면 자연히 뉴스만 흐른다. 인덱스→글 매핑을 미리 굳혀 무한스크롤로 카드가 늘어도
   // 자리가 안 밀린다. 비율을 조이면(3:1 등) 기존 주입물 자리와 겹칠 수 있어 한 칸 미룬다
@@ -737,62 +865,184 @@ export function CardNewsFeed({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* 말머리 칩 레일 — 의미 있는 칩이 2개 이상일 때만 (전체 하나뿐이면 장식) */}
+      {chips.length >= 2 && (
+        <div
+          className="scrollbar-none flex items-center gap-1.5 overflow-x-auto py-0.5"
+          role="tablist"
+          aria-label="말머리 필터"
+        >
+          {[{ id: "all", label: "전체" }, ...chips].map((c) => {
+            const on = chip === c.id
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => {
+                  setChip(on && c.id !== "all" ? "all" : c.id)
+                  if (!on && c.id !== "all")
+                    trackEvent({ name: "cardnews_chip_filter", params: { chip_id: c.id } })
+                }}
+                className="shrink-0 rounded-full px-3.5 text-[12.5px] font-bold whitespace-nowrap transition-colors"
+                style={{
+                  height: 34,
+                  background: on ? "var(--wc-wine-tint)" : "var(--wc-card)",
+                  border: `1px solid ${on ? "var(--wc-burgundy)" : "var(--wc-line)"}`,
+                  color: on ? "var(--wc-burgundy)" : "var(--wc-mute)",
+                }}
+              >
+                {c.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {/* 필터 뷰 — 시간순 스트림의 렌즈. 주입물(폴·인터리브·프로모)은 전체 뷰 전용이라
+          여기선 카드만 흐른다. 소진 지점에서 전체로 돌아가는 문을 단다 */}
+      {chip !== "all" && (
+        <>
+          {filtered.map((card) => (
+            <CompactCard key={card.id} card={card} allowQuestion={false} via="chip_filter" />
+          ))}
+          <div
+            className="flex items-baseline justify-between rounded-xl px-4 py-3"
+            style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+          >
+            <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
+              {filtered.length > 0 ? "이 말머리는 여기까지" : "오늘은 이 말머리 소식이 없어요"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setChip("all")}
+              className="shrink-0 text-[12.5px] font-bold"
+              style={{ color: "var(--wc-burgundy)" }}
+            >
+              전체 보기 →
+            </button>
+          </div>
+        </>
+      )}
       {/*
         오늘의 떡밥 = 전부 컴팩트 카드 (2026-08-03 운영자 확정 — 이전 기안 채택).
         좌: 제목·글쓴이·좋아요·댓글수 / 우: 썸네일. 전면 오버레이(HeroCard)는 홈 상단
         히어로(운영자 큐레이션) 전용으로만 남는다. 정렬은 서버(fetchCardNews)가
         온도순으로 내려주므로 여기서 재배열하지 않는다.
       */}
-      {cards.map((card, i) => (
-        <Fragment key={card.id}>
-          <CompactCard card={card} allowQuestion={questionCards.has(i)} />
-          {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
+      {chip === "all" &&
+        cards.map((card, i) => (
+          <Fragment key={card.id}>
+            <CompactCard card={card} allowQuestion={questionCards.has(i)} />
+            {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
               폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정
               (2026-07-30 워룸). 3번째 카드 뒤 폴 1개, 9번째 뒤 디스코드 1개 — 도배 금지. */}
-          {i === 2 && (
-            <div className="lg:hidden">
-              <PollWidget />
-            </div>
-          )}
-          {/* 담벼락 인터리브 — 사람 글이 뉴스와 같은 밀도로 흐른다 (2026-08-20).
+            {i === 2 && (
+              <div className="lg:hidden">
+                <PollWidget />
+              </div>
+            )}
+            {/* 담벼락 인터리브 — 사람 글이 뉴스와 같은 밀도로 흐른다 (2026-08-20).
               마지막 한 장 뒤에만 담벼락 진입로를 단다 (카드마다 달면 도배) */}
-          {wallAt.has(i) && (
-            <div className="flex flex-col gap-1.5 lg:hidden">
-              <WallPostCard post={wallAt.get(i)!} />
-              {i === lastWallIndex && <WallMoreRow />}
-            </div>
-          )}
-          {/* 이적시장 상황판 — 가장 강한 비로그인 축구 자산인데 홈에 진입로가 0개였다
+            {wallAt.has(i) && (
+              <div className="flex flex-col gap-1.5 lg:hidden">
+                <WallPostCard post={wallAt.get(i)!} />
+                {i === lastWallIndex && <WallMoreRow />}
+              </div>
+            )}
+            {/* 이적시장 상황판 — 가장 강한 비로그인 축구 자산인데 홈에 진입로가 0개였다
               (2026-07-30 워룸). 오피셜 뱃지 룰 보수화(2026-07-31) 선행 후 노출. */}
-          {i === 5 && <TransferPromoCard />}
-          {/* 디스코드는 i=8→12 로 — 인터리브가 들어와 8 이면 주입물이 3연속 밀집한다 */}
-          {i === 12 && (
-            <div className="lg:hidden">
-              <DiscordInviteBanner variant="sidebar" placement="mobile_cardnews_feed" />
-            </div>
-          )}
-          {/* 쓰기 유도는 딥스크롤러에게만 (읽기→원탭→쓰기 계단) — 인터리브(4·9·14)와
+            {i === 5 && <TransferPromoCard />}
+            {/* 디스코드는 i=8→12 로 — 인터리브가 들어와 8 이면 주입물이 3연속 밀집한다 */}
+            {i === 12 && (
+              <div className="lg:hidden">
+                <DiscordInviteBanner variant="sidebar" placement="mobile_cardnews_feed" />
+              </div>
+            )}
+            {/* 쓰기 유도는 딥스크롤러에게만 (읽기→원탭→쓰기 계단) — 인터리브(4·9·14)와
               디스코드(12)를 다 지난 지점 */}
-          {i === 18 && (
-            <div className="lg:hidden">
-              <WritePromptCard />
-            </div>
-          )}
-        </Fragment>
-      ))}
-      <div ref={sentinelRef} className="flex h-10 items-center justify-center">
+            {i === 18 && (
+              <div className="lg:hidden">
+                <WritePromptCard />
+              </div>
+            )}
+          </Fragment>
+        ))}
+      <div
+        ref={sentinelRef}
+        className={chip === "all" ? "flex h-10 items-center justify-center" : "hidden"}
+      >
         {loading && <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />}
-        {!cursor && !loading && (
-          <p className="text-muted-foreground py-2 text-[13px]">오늘의 뉴스 끝!</p>
-        )}
       </div>
-      {/* 피드 종단 도선 (2026-08-20 UX 패널) — "끝!"에서 푸터로 추락하는 대신
-          다음 지면으로 흘린다. 순환이 작동하던 지면은 뉴스 상세뿐이었다 */}
-      {!cursor && !loading && (
-        <div className="space-y-2 pb-2">
-          <BridgeRow href="/matches" title="오늘 경기는 어떻게 됐을까" action="경기 일정 →" />
-          <BridgeRow href="/?tab=board" title="담벼락에서 이야기 이어가기" action="담벼락 →" />
+      {/* 피드 종단 (2026-08-21 리포트 Top5-5, 판결 ③) — 마감선 + 담벼락 실물 + 내일 예고.
+          종단의 실도달자는 눈팅족뿐이라 그 단독 청중 기준으로 조판한다. 전 요소 폴백
+          내장 — 실물 0건·경기 없음이면 8/20 도선 2행과 사실상 같은 화면으로 수렴 */}
+      {chip === "all" && !cursor && !loading && (
+        <FeedEnd
+          count={cards.length}
+          wallPosts={endWallPosts ?? []}
+          tomorrowTitle={tomorrowTitle ?? null}
+        />
+      )}
+    </div>
+  )
+}
+
+/** 피드 종단 — 노출 자체를 계측한다 (feed_end_reach: "종단 도달자는 눈팅족뿐" 가설 실측) */
+function FeedEnd({
+  count,
+  wallPosts,
+  tomorrowTitle,
+}: {
+  count: number
+  wallPosts: WallPost[]
+  tomorrowTitle: string | null
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const fired = useRef(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !fired.current) {
+        fired.current = true
+        trackEvent({ name: "feed_end_reach", params: {} })
+        io.disconnect()
+      }
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} className="space-y-2 pb-2">
+      {/* 마감선 — "끝!"(사과문)을 편집의 마감 선언으로. 10건 미만이면 숫자 탈락
+          (콜드스타트에서 적은 숫자는 얇음의 광고다) */}
+      <p className="pt-1 text-center text-[13px] font-bold" style={{ color: "var(--wc-mute)" }}>
+        {count >= 10 ? `오늘 들어온 떡밥 ${count}건, 여기까지` : "오늘 들어온 떡밥은 여기까지"}
+      </p>
+      {wallPosts.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          {wallPosts.slice(0, 2).map((p) => (
+            <div
+              key={p.id}
+              onClickCapture={() =>
+                trackEvent({ name: "feed_end_wall_click", params: { post_id: p.id } })
+              }
+            >
+              <WallPostCard post={p} />
+            </div>
+          ))}
+          <WallMoreRow />
         </div>
+      ) : (
+        <BridgeRow href="/?tab=board" title="담벼락에서 이야기 이어가기" action="담벼락 →" />
+      )}
+      {tomorrowTitle ? (
+        <BridgeRow href="/prediction" title={tomorrowTitle} action="미리 예측 →" />
+      ) : (
+        <BridgeRow href="/matches" title="오늘 경기는 어떻게 됐을까" action="경기 일정 →" />
       )}
     </div>
   )

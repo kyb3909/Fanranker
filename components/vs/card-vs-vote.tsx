@@ -49,6 +49,13 @@ const SHOW_PCT_MIN_VOTES = 3
 interface CardVsVoteProps {
   vs: NonNullable<CardNewsItem["vs"]>
   surface: "card" | "modal"
+  /**
+   * 투표 완료 후 읽기형 도선용 (2026-08-21 리포트 T1 수정판, 판결 ②).
+   * 원안("이유 남기기" = 쓰기 요구)은 기전과 어긋났다 — 투표자의 본능은 여론 비교(읽기)다.
+   * 댓글 ≥1 인 글만 (빈 방 노출 금지), 퍼센트 표기는 그대로 보존.
+   */
+  postId?: string
+  commentCount?: number
   /** 카드용 컴팩트 배치 — 질문을 한 줄로 줄이고 여백을 줄인다 */
   compact?: boolean
   /**
@@ -64,7 +71,14 @@ interface CardVsVoteProps {
   variant?: "box" | "strip"
 }
 
-export function CardVsVote({ vs, surface, compact, variant = "box" }: CardVsVoteProps) {
+export function CardVsVote({
+  vs,
+  surface,
+  compact,
+  variant = "box",
+  postId,
+  commentCount = 0,
+}: CardVsVoteProps) {
   const { isSignedIn } = useAuth()
   const clerk = useClerk()
   const [myKey, setMyKey] = useState<string | null>(null)
@@ -227,18 +241,41 @@ export function CardVsVote({ vs, surface, compact, variant = "box" }: CardVsVote
       )
     }
     return (
-      <div
-        role="radiogroup"
-        aria-label={vs.question}
-        className="flex items-stretch"
-        // 틴트 없음 — hairline 하나로만 나눈다 (편집 패널: 카드가 이미 액자다.
-        // 틴트를 얹으면 카드마다 서류 푸터가 하나씩 달린 것처럼 읽힌다)
-        style={{ borderTop: "1px solid var(--wc-line, #e8e5e0)" }}
-      >
-        {stripSide(vs.aKey, vs.aLabel, A_COLOR, aPct, aCount)}
-        <span aria-hidden style={{ width: 1, background: "var(--wc-line, #e8e5e0)" }} />
-        {stripSide(vs.bKey, vs.bLabel, B_COLOR, 100 - aPct, bCount)}
-      </div>
+      <>
+        <div
+          role="radiogroup"
+          aria-label={vs.question}
+          className="flex items-stretch"
+          // 틴트 없음 — hairline 하나로만 나눈다 (편집 패널: 카드가 이미 액자다.
+          // 틴트를 얹으면 카드마다 서류 푸터가 하나씩 달린 것처럼 읽힌다)
+          style={{ borderTop: "1px solid var(--wc-line, #e8e5e0)" }}
+        >
+          {stripSide(vs.aKey, vs.aLabel, A_COLOR, aPct, aCount)}
+          <span aria-hidden style={{ width: 1, background: "var(--wc-line, #e8e5e0)" }} />
+          {stripSide(vs.bKey, vs.bLabel, B_COLOR, 100 - aPct, bCount)}
+        </div>
+        {/* 투표를 마친 사람에게만 — 여론 비교 본능을 댓글판 읽기로 잇는다 (T1 수정판).
+            투표 전엔 안 그려서 44px 리듬을 지키고, 퍼센트(투표의 보상)는 위 칸이 그대로 낸다 */}
+        {myKey !== null && postId && commentCount >= 1 && (
+          <a
+            href={`/post/${postId}?utm_source=vs_bridge#comments`}
+            onClick={() =>
+              trackEvent({
+                name: "vs_comment_bridge_click",
+                params: { poll_id: vs.pollId, post_id: postId },
+              })
+            }
+            className="flex items-center justify-end px-3 text-[12px] font-bold no-underline"
+            style={{
+              height: 36,
+              borderTop: "1px solid var(--wc-line, #e8e5e0)",
+              color: "var(--wc-burgundy, #961e37)",
+            }}
+          >
+            다른 의견 보러 가기 →
+          </a>
+        )}
+      </>
     )
   }
 

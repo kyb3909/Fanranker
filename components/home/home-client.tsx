@@ -67,6 +67,8 @@ interface HomeClientProps {
   } | null
   /** 담벼락 인터리브 비율 (site_settings 다이얼 — cached-home-data.getCachedWallRatio) */
   wallRatio?: WallFeedRatio
+  /** 피드 종단 "내일 경기 예고" 문안 (2026-08-21 리포트 Top5-5) — 없으면 일정 도선 폴백 */
+  tomorrowMatchTitle?: string | null
 }
 
 export function HomeClient({
@@ -81,6 +83,7 @@ export function HomeClient({
   heroCards,
   initialGames,
   wallRatio,
+  tomorrowMatchTitle,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -93,7 +96,7 @@ export function HomeClient({
   // 뉴스:게시글 비율은 site_settings 다이얼 (운영자: "비율을 점진적으로 바꿔나갈 거야")
   // — 사람 글이 늘면 SQL 한 줄로 게시판 쪽으로 기울인다.
   const maxWallCards = wallRatio?.maxWallCards ?? 4
-  const wallPosts = useMemo(
+  const humanWallPosts = useMemo(
     () =>
       (
         (initialRecentComments ?? []) as {
@@ -105,14 +108,23 @@ export function HomeClient({
         }[]
       )
         .filter((p) => !isBotUserId(p.user_id))
-        .slice(0, maxWallCards)
         .map((p) => ({
           id: p.id,
           title: p.title,
           communitySlug: p.community_slug,
           comments: p.comment_count || 1,
         })),
-    [initialRecentComments, maxWallCards]
+    [initialRecentComments]
+  )
+  const wallPosts = useMemo(
+    () => humanWallPosts.slice(0, maxWallCards),
+    [humanWallPosts, maxWallCards]
+  )
+  // 피드 종단 실물 (2026-08-21 리포트 Top5-5) — 인터리브에 안 실린 다음 순번 2건.
+  // 같은 글이 인터리브와 종단에 두 번 나오는 중복을 막는다. 없으면 빈 배열 → 도선 폴백
+  const endWallPosts = useMemo(
+    () => humanWallPosts.slice(maxWallCards, maxWallCards + 2),
+    [humanWallPosts, maxWallCards]
   )
   // 밴드 전환 애니메이션 게이트 — 첫 로드에는 안 붙인다(LCP 히어로가 opacity 0 에서
   // 시작하면 LCP 가 늦어진다). 사용자가 탭을 한 번이라도 바꾼 뒤부터, 히어로↔PageBand
@@ -333,6 +345,8 @@ export function HomeClient({
                   excludeIds={heroCards?.map((h) => h.id)}
                   wallPosts={wallPosts}
                   newsPerWall={wallRatio?.newsPerWall}
+                  endWallPosts={endWallPosts}
+                  tomorrowTitle={tomorrowMatchTitle}
                 />
               </div>
             )}

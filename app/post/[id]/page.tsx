@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ActivitySidebar } from "@/components/sidebar/activity-sidebar"
 import { ThreadMatchWidgets } from "@/components/match/thread-match-widgets"
 import { PostDetailContent } from "@/components/post-detail/post-detail-content"
+import { ArticleNextNav } from "@/components/post-detail/article-next-nav"
 import {
   SagaContextBanner,
   type SagaContextItem,
@@ -46,7 +47,8 @@ async function fetchPost(id: string) {
       updated_at,
       source_url,
       source_name,
-      match_game_id
+      match_game_id,
+      flair_id
     `
     )
     .eq("id", id)
@@ -300,6 +302,63 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         })().catch(() => null)
       : Promise.resolve(null),
   ])
+  // 기사 상세 종단 내비 (2026-08-21 데드엔드 리포트 Top5-3) — 봇 기사만.
+  // 같은 말머리 관련 3건 + 다음 1건 (같은 말머리 우선 → 아무 봇 기사 → 없음).
+  // 48h 창 — 낡은 기사로 잇지 않는다. 실패해도 글은 뜬다.
+  let articleNav: {
+    related: { id: string; title: string; comments: number }[]
+    next: { id: string; title: string; comments: number } | null
+  } | null = null
+  if (botArticle) {
+    try {
+      const nav = createServiceRoleClient()
+      const flairId = (postData as { flair_id?: string | null }).flair_id ?? null
+      const since = new Date(Date.now() - 48 * 3600_000).toISOString()
+      const base = () =>
+        nav
+          .from("posts")
+          .select("id, title, comment_count, created_at")
+          .eq("user_id", postData.user_id)
+          .is("deleted_at", null)
+          .neq("id", id)
+          .gte("created_at", since)
+      const [rel, nextSame, nextAny] = await Promise.all([
+        flairId
+          ? base().eq("flair_id", flairId).order("created_at", { ascending: false }).limit(4)
+          : Promise.resolve({ data: [] as never[] }),
+        flairId
+          ? base()
+              .eq("flair_id", flairId)
+              .lt("created_at", postData.created_at)
+              .order("created_at", { ascending: false })
+              .limit(1)
+          : Promise.resolve({ data: [] as never[] }),
+        base()
+          .lt("created_at", postData.created_at)
+          .order("created_at", { ascending: false })
+          .limit(1),
+      ])
+      const toNav = (r: { id: string; title: string; comment_count: number | null }) => ({
+        id: String(r.id),
+        title: String(r.title),
+        comments: r.comment_count ?? 0,
+      })
+      const next = (nextSame.data?.[0] ?? nextAny.data?.[0]) as
+        | { id: string; title: string; comment_count: number | null }
+        | undefined
+      const nextNav = next ? toNav(next) : null
+      const related = (
+        (rel.data ?? []) as { id: string; title: string; comment_count: number | null }[]
+      )
+        .filter((r) => r.id !== nextNav?.id)
+        .slice(0, 3)
+        .map(toNav)
+      articleNav = { related, next: nextNav }
+    } catch {
+      articleNav = null
+    }
+  }
+
   // 불판 댓글 라이브 폴링 (2026-08-20 UX 패널 A2) — initialData 경로는 재조회가 없어
   // 경기 중 댓글이 동결됐다. 킥오프 30분 전 ~ 3시간 후(연장·승부차기 여유)만 40초 폴링.
   const now = Date.now()
@@ -405,6 +464,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 moreHref={botArticle ? "/?tab=board" : undefined}
                 utmSource={botArticle ? "wall_now" : undefined}
               />
+
+              {/* 뉴스→뉴스 사슬 — 사람 활동 블록(위) 다음의 바닥 안전망 (Top5-3) */}
+              {articleNav && <ArticleNextNav related={articleNav.related} next={articleNav.next} />}
             </div>
 
             {/* Right Sidebar - 3 columns - Only recent comments */}

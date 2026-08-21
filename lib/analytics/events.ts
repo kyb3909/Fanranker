@@ -71,7 +71,28 @@ type AnalyticsEvent =
   | { name: "snack_card_open_post"; params: { post_id: string } }
   | { name: "cardnews_feed_open"; params: Record<string, never> }
   // destination: 사가 연결 기사는 위키로 직행한다 (2026-08-04 PM 토론 #1 — 전환 분모 분리)
-  | { name: "cardnews_card_open_post"; params: { post_id: string; destination: "post" | "saga" } }
+  // via: 어느 장치를 거쳐 열었나 (2026-08-21 데드엔드 리포트 — 신규 이벤트 대신 파라미터 통일)
+  //   chip_filter=칩 레일 필터 중 / article_related=기사 하단 관련 떡밥 / article_next=다음 떡밥
+  // comment_count_bucket: 카드의 댓글수 구간 — 댓글 흔적이 클릭률을 바꾸는지 (T5 계측 회수)
+  | {
+      name: "cardnews_card_open_post"
+      params: {
+        post_id: string
+        destination: "post" | "saga"
+        via?: "chip_filter" | "article_related" | "article_next" | "ft_row"
+        comment_count_bucket?: "0" | "1-2" | "3-9" | "10+"
+      }
+    }
+  // ── 데드엔드 활성화 계측 (2026-08-21 리포트 — 소급 불가라 기능보다 먼저 배포) ──
+  // comment_submit = 이번 패키지 전체의 분자 (게시판 활성화 판정 지표)
+  | { name: "comment_submit"; params: { post_id: string; kind: "comment" | "reply" } }
+  // 피드 종단 노출 — "종단 도달자는 눈팅족뿐" 가설의 실측 (도달률이 종단 투자의 존속 근거)
+  | { name: "feed_end_reach"; params: Record<string, never> }
+  | { name: "feed_end_wall_click"; params: { post_id: string } }
+  // 칩 레일 필터 탭 (chip_id: all/official/transfer/팀 말머리명)
+  | { name: "cardnews_chip_filter"; params: { chip_id: string } }
+  // VS 투표 완료 → 댓글판 읽기형 도선 (T1 수정판 — 판결 ②)
+  | { name: "vs_comment_bridge_click"; params: { poll_id: string; post_id: string } }
   // ── 사가 계측 (PM 토론 2026-08-04 — "성공해도 증명할 숫자가 없다" 수리) ──
   // from_card: 떡밥 카드 경유 진입 여부. 체류·재방문은 GA4 표준 지표가 페이지 단위로 잡는다
   | { name: "saga_view"; params: { saga_slug: string; from_card: boolean } }

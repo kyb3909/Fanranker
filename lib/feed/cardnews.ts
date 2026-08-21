@@ -17,8 +17,10 @@ export interface CardNewsItem {
   voteCount: number
   commentCount: number
   createdAt: string
-  /** 상위 댓글 미리보기 (추천순 최대 3개) — 카드 안 공방 미리보기용 */
-  topComments: { nickname: string; content: string }[]
+  /** 상위 댓글 미리보기 (추천순 최대 3개) — 카드 안 공방 미리보기용.
+   *  votes: 추천수 (2026-08-21 데드엔드 리포트 공백① — 눈팅족의 유일한 일상 참여가
+   *  "남의 말에 추천"인데 피드에서 그 숫자가 안 보였다. 시스템은 이미 있고 노출만) */
+  topComments: { nickname: string; content: string; votes: number }[]
   /** 대표 말머리 (팀 우선) — 상단 태그 칩용 */
   flair: { name: string; color: string | null } | null
   /** 본문 첫 임베드 (플랫폼 뱃지 + 유튜브 lite embed 용). 풀 임베드는 상세 페이지 몫 */
@@ -145,12 +147,12 @@ async function buildCards(
 ): Promise<CardNewsItem[]> {
   // 댓글 있는 글만 조회 → post별 추천순 상위 3개 + 작성자 닉네임 (공방 미리보기)
   const withComments = rows.filter((p) => (p.comment_count ?? 0) > 0).map((p) => p.id)
-  const topOf = new Map<string, { user_id: string; content: string }[]>()
+  const topOf = new Map<string, { user_id: string; content: string; votes: number }[]>()
   const nickOf = new Map<string, string>()
   if (withComments.length > 0) {
     const { data: comments } = await supabase
       .from("comments")
-      .select("post_id, user_id, content")
+      .select("post_id, user_id, content, vote_count")
       .in("post_id", withComments)
       .is("deleted_at", null)
       .order("vote_count", { ascending: false })
@@ -159,7 +161,7 @@ async function buildCards(
     for (const c of comments ?? []) {
       const list = topOf.get(c.post_id) ?? []
       if (list.length < 3) {
-        list.push({ user_id: c.user_id, content: c.content })
+        list.push({ user_id: c.user_id, content: c.content, votes: c.vote_count ?? 0 })
         topOf.set(c.post_id, list)
       }
     }
@@ -214,6 +216,7 @@ async function buildCards(
       topComments: (topOf.get(p.id) ?? []).map((c) => ({
         nickname: nickOf.get(c.user_id) ?? "익명",
         content: toPreview(c.content),
+        votes: c.votes,
       })),
       flair: f ? { name: f.name, color: f.color } : null,
     }
