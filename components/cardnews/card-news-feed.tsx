@@ -729,6 +729,17 @@ function CompactCard({
 
 /* ---------- 피드 ---------- */
 
+export interface FtRow {
+  key: string
+  title: string
+  href: string
+  action: string
+  /** 불판 게시물 id — 있으면 클릭을 post open 으로 계측 (via=ft_row) */
+  postId: string | null
+  /** 종료 시각 ISO — 이 시각으로 카드 스트림의 자리에 꽂힌다 */
+  ftAt: string
+}
+
 export function CardNewsFeed({
   initialCards,
   initialCursor,
@@ -737,6 +748,7 @@ export function CardNewsFeed({
   newsPerWall = 5,
   endWallPosts,
   tomorrowTitle,
+  ftRows,
 }: {
   initialCards: CardNewsItem[]
   initialCursor: string | null
@@ -761,6 +773,11 @@ export function CardNewsFeed({
   endWallPosts?: WallPost[]
   /** 종단 "내일 경기 예고" 한 줄 (서버에서 문안까지 완성) — 없으면 일정 도선 폴백 */
   tomorrowTitle?: string | null
+  /**
+   * FT 사건 행 (2026-08-21 리포트 Top5-2) — 당일 종료 경기가 자기 종료 시각으로
+   * 시간순 스트림에 참여한다 (편집 "사건 행" 문법 — 무시간 프로모가 아니라 사건).
+   */
+  ftRows?: FtRow[]
 }) {
   const [cards, setCards] = useState(initialCards)
   const [cursor, setCursor] = useState(initialCursor)
@@ -866,6 +883,20 @@ export function CardNewsFeed({
   }, [wallPosts, newsPerWall])
   const lastWallIndex = wallAt.size ? Math.max(...wallAt.keys()) : -1
 
+  // FT 사건 행 배치 — 종료 시각보다 "처음으로 오래된 카드" 앞에 꽂힌다 (시간축 보존).
+  // 카드 전부가 FT 보다 새것이면(24h 창 밖 경기) 버린다 — 억지로 꽂으면 시간이 거짓말.
+  const ftAtIndex = useMemo(() => {
+    const m = new Map<number, FtRow[]>()
+    for (const r of ftRows ?? []) {
+      const idx = cards.findIndex((c) => c.createdAt < r.ftAt)
+      if (idx === -1) continue
+      const list = m.get(idx) ?? []
+      list.push(r)
+      m.set(idx, list)
+    }
+    return m
+  }, [cards, ftRows])
+
   return (
     <div className="flex flex-col gap-3">
       {/* 말머리 칩 레일 — 의미 있는 칩이 2개 이상일 때만 (전체 하나뿐이면 장식) */}
@@ -936,6 +967,20 @@ export function CardNewsFeed({
       {chip === "all" &&
         cards.map((card, i) => (
           <Fragment key={card.id}>
+            {/* FT 사건 행 — 이 카드보다 최신인 종료 경기 (Top5-2) */}
+            {ftAtIndex.get(i)?.map((r) => (
+              <BridgeRow
+                key={r.key}
+                href={r.href}
+                title={r.title}
+                action={r.action}
+                onClick={
+                  r.postId
+                    ? () => openPost(r.postId as string, "post", { via: "ft_row" })
+                    : undefined
+                }
+              />
+            ))}
             <CompactCard card={card} allowQuestion={questionCards.has(i)} />
             {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
               폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정

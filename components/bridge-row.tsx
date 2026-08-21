@@ -11,14 +11,17 @@ export function BridgeRow({
   href,
   title,
   action,
+  onClick,
 }: {
   href: string
   title: string
   action: string
+  onClick?: () => void
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
       style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
     >
