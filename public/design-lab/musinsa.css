@@ -1,0 +1,121 @@
+/* MUSINSA CUT — gongnori.fan 본문 지면 톤 오버라이드 시안 (2026-08-21, 편집 디자이너 ex-무신사 명의)
+ * 컨셉: 스트릿 카탈로그의 단단함 — 베이지를 걷어낸 순수 화이트 + 쿨 그레이 2단.
+ * 그림자를 지우고 헤어라인 링, radius 한 단계 다운, 제목은 무겁게, 숫자는 tabular 굵게 — 랭킹보드 감성.
+ * 버건디 #961e37 는 면(面)이 아니라 도장(印) — 좁게, 진하게, 한 카드에 한 번.
+ * 적용: 페이지 로드 후 <link> 최후미 주입. 오버라이드 전용 — 구조 무변경. 검수: workspace/tone-lab-musinsa-20260821.md */
+
+/* ── 1. 토큰 — 웜 페이퍼 → 쿨 화이트 시스템 ──────────────────────────────
+ * 지면 대부분이 inline style 로 var(--wc-*) 를 읽으므로 토큰만 갈면
+ * !important 없이 전 카드에 파급된다. 대비 수치는 검수 문서에 전수 기록.
+ * [주의] 회색의 채도는 거의 0 으로 유지할 것 — 채도가 실리는 순간 2026-07-28
+ * band-seam(밴드-본문 색온도 부호 역전)이 재발한다. 쿨함은 "무채색의 차가움"까지만. */
+:root,
+.worldcup-scope {
+  --wc-ink: #111216;
+  --wc-ink-2: #3d424b;
+  --wc-mute: #4c5560; /* 구 #5c6470(5.9:1) → 7.6:1 — 보조 텍스트가 흐려서 우중충했다 */
+  --wc-mute-2: #646b76; /* 구 #6b7280 → 5.4:1, AA 유지 */
+  --wc-soft: #f4f5f7; /* 웜 #f2efea → 쿨 */
+  --wc-tint: #eceef1;
+  --wc-line: #e4e6ea; /* 헤어라인 — 이 시안의 주연. 웜 #e8e5e0 → 쿨 */
+  --wc-line-2: #cfd3d9;
+  --wc-paper: #ffffff;
+  --wc-card: #ffffff;
+  --wc-canvas: #f7f8fa;
+  --wc-wine-tint: #faf1f3; /* 버건디 도장의 faint fill — 미세하게만 냉각 */
+  /* 그림자 폐지 — 카드는 "떠 있는" 게 아니라 지면에 "인쇄"돼 있어야 한다.
+   * shadow 토큰을 헤어라인 링으로 재정의해 blur 를 시스템에서 걷어낸다. */
+  --wc-shadow-1: 0 0 0 1px var(--wc-line);
+  --wc-shadow-2: 0 0 0 1px var(--wc-line-2);
+  --wc-shadow-3: 0 0 0 1px var(--wc-line-2), 0 12px 32px rgba(17, 18, 22, 0.1);
+}
+
+/* ── 2. 캔버스 — 순수 화이트 ─────────────────────────────────────────────
+ * 회색 캔버스 위 흰 카드(부유)가 아니라, 흰 지면 위 헤어라인 칸(인쇄).
+ * 무신사 랭킹 리스트의 문법이다. */
+body {
+  background: #ffffff !important;
+}
+
+/* ── 3. 피드 카드 — 플랫 + 조밀 + 랭킹보드 타이포 ──────────────────────── */
+
+/* 호버: 떠오르는 대신 테두리가 진해진다 — 플랫의 호버 문법.
+ * 카드 inline style 의 boxShadow(var(--wc-shadow-1))를 이겨야 해서 !important. */
+article.gn-card-lift:hover {
+  box-shadow: 0 0 0 1px #b9bfc7 !important;
+}
+
+/* 제목 — inline 650 → 750. 자간을 조이고 행간을 눌러 "단단한 조판"으로.
+ * 크기는 14.5px 유지 — 크기가 아니라 무게로 세운다 (레이아웃 요동 최소화). */
+article.gn-card-lift h2 {
+  font-weight: 750 !important;
+  letter-spacing: -0.015em !important;
+  line-height: 1.34 !important;
+}
+
+/* 키커 — 색은 토큰(--wc-mute 상향)이 이미 해결. 자간만 벌려 "작지만 또렷한
+ * 라벨"로 세운다. 크기 축소는 UX 기각 (11px 하한, 검수 노트 R3). */
+article.gn-card-lift .text-\[11px\] {
+  letter-spacing: 0.045em !important;
+}
+
+/* 숫자 — 댓글수·추천수·[n] 전부 tabular 800. 랭킹보드의 심장.
+ * 색은 건드리지 않는다: 버건디 추천수는 도장으로, 회색 댓글수는 회색대로. */
+article.gn-card-lift .tabular-nums,
+article.gn-card-lift .gn-num {
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 썸네일 — radius 8→6 + 인셋 헤어라인 = 상품컷 트리트먼트.
+ * outline 은 이미지 위에 그려지므로 overflow-hidden 컨테이너에서도 살아남는다. */
+article.gn-card-lift .h-\[76px\] {
+  border-radius: 6px;
+  outline: 1px solid rgba(17, 18, 22, 0.08);
+  outline-offset: -1px;
+}
+
+/* 본문 행 세로 패딩 12→10px — 카탈로그 밀도. 좌우(px-4)·터치 타깃은 무변경. */
+article.gn-card-lift .py-3 {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* ── 4. radius 일괄 한 단계 다운 ────────────────────────────────────────
+ * 12→8 / 16→10. 다크 밴드·헤더·푸터 내부는 금지 조항이라 :where 로 제외
+ * (:where 는 특이도를 더하지 않아 유틸리티와 동률 → 후행 로드로 이긴다). */
+.rounded-xl:where(:not(.gn-band *, header *, footer *)) {
+  border-radius: 8px;
+}
+.rounded-2xl:where(:not(.gn-band *, header *, footer *)) {
+  border-radius: 10px;
+}
+
+/* ── 5. 칩·탭 — pill → 스퀘어 태그 ─────────────────────────────────────── */
+.wc-chip-tabs button,
+.wc-chip-tabs a {
+  border-radius: 8px;
+  font-weight: 700;
+}
+/* 피드 말머리 칩 레일(role="tablist") — 훅 목록 밖 1건, UX 검수 승인 (노트 §3).
+ * 여기만 pill 로 남으면 스퀘어 시스템에 혼자 어긋난다. */
+[role="tablist"] .rounded-full {
+  border-radius: 8px;
+}
+
+.wc-underline-tabs {
+  border-bottom-color: var(--wc-line);
+}
+/* 비활성 탭 #7a828a 는 실측 3.9:1 로 AA 미달이었다 — 6.6:1 로 시정.
+ * 활성 상태(버건디 + 700)는 기존 규칙이 더 높은 특이도로 그대로 이긴다. */
+.wc-underline-tabs button,
+.wc-underline-tabs a {
+  color: #565d68;
+  font-weight: 600;
+}
+
+/* ── 손대지 않은 것 (금지 조항 + UX 거부권 행사 기록) ────────────────────
+ * .gn-band(다크 밴드)·헤더·푸터: 전부 무변경.
+ * .gn-band + * 의 버건디 잔광: 편집 디자이너는 "순백을 위해 걷어내자" 했으나
+ * UX 거부 — 잔광은 다크 밴드와 쿨 화이트 본문을 꿰매는 유일한 스티치다
+ * (2026-07-28 band-seam 진단 존중). 카드 액션 띠 44px: 터치 타깃 하한이라 존치. */

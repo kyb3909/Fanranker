@@ -1,0 +1,114 @@
+/* KREAM LEDGER — 본문 지면 톤 시안 (KREAM 출신 프로덕트 브랜드 디자이너 명의, 오버라이드 전용)
+ * 컨셉: 거래소의 청량한 긴장 — 순백 카드 + 중립 그레이 캔버스, 그림자 대신 헤어라인 보더.
+ * 숫자가 주인공: 댓글·추천 지표에 시그널 그린(--wc-go)을 승격해 시세처럼 읽힌다. 라임(--gn-live)은 LIVE 전용이라 불가침.
+ * 버건디(#961e37)는 브랜드 축으로 유지 — 카드 한 장에 한 번만. 웜 축은 와인 틴트와 밴드 잔광(.gn-band + *)이 지킨다.
+ * 페이지 로드 후 맨 마지막 <link> 전제. 레이아웃 구조 불변 — 톤·타이포·색·보더·radius·그림자만 만진다. */
+
+/* ── 1) 토큰 재조율 ─────────────────────────────────────────────
+ * 카드·키커·띠가 전부 인라인 var(--wc-*) 참조라 토큰이 최대 레버다.
+ * 회색축만 웜 페이퍼 → 무채 중립으로 회전 (쿨 블루 금지 — 2026-07-28 band-seam 전례,
+ * "중립까지만" 한계 준수). 버건디·와인 틴트·gold 는 건드리지 않는다.
+ * 대비 실측치는 workspace/tone-lab-kream-20260821.md 검수 노트 참조. */
+:root,
+.worldcup-scope {
+  --wc-ink: #191a1c; /* 17.41:1 on card */
+  --wc-ink-2: #43474d; /* 9.35:1 */
+  --wc-mute: #494e56; /* 5.98:1 → 8.38:1 — "우중충"의 진짜 원인은 회색의 양이 아니라 농도였다 */
+  --wc-mute-2: #5d636d; /* 4.83:1 → 6.05:1 */
+  --wc-soft: #f2f2f4;
+  --wc-tint: #e9e9ec;
+  --wc-line: #e7e7e9;
+  --wc-line-2: #d6d7db;
+  --wc-paper: #f6f6f7; /* 캔버스 — .worldcup-scope 배경이 이 토큰. 카드가 비로소 "뜬다" */
+  --wc-canvas: #f6f6f7;
+  --wc-card: #ffffff; /* 순백 유지 — 회색 캔버스 위 흰 카드가 이 시안의 뼈대 */
+
+  /* 그림자 폐지 → 헤어라인. 엘리베이션은 기본이 아니라 hover 의 보상이다 (KREAM 문법) */
+  --wc-shadow-1: 0 0 0 1px var(--wc-line);
+  --wc-shadow-2: 0 2px 8px rgba(23, 25, 31, 0.06), 0 0 0 1px var(--wc-line-2);
+}
+
+/* ── 2) 캔버스 ──────────────────────────────────────────────────
+ * body 는 scope 밖 여백까지 커버. 다크 밴드(.gn-band)는 자기 배경을 그리므로 무영향. */
+body {
+  background: #f6f6f7 !important;
+}
+
+/* ── 3) 피드 카드 — 플랫 + 헤어라인, 리프트는 hover 에만 ─────── */
+article.gn-card-lift:hover {
+  box-shadow:
+    0 6px 20px rgba(23, 25, 31, 0.08),
+    0 0 0 1px var(--wc-line-2);
+}
+
+/* 제목 — 자간을 조이고 웨이트를 반 스텝 올린다 (650 → 700, -0.01em → -0.02em).
+ * 인라인 스타일 위라 !important 필요. 크기는 불변 — 날카로움은 크기가 아니라 밀도다. */
+article.gn-card-lift h2 {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* 키커 줄 — 라벨은 조용히, 자간만 살짝 벌려 "표기"처럼 (인라인 0.03em 위) */
+article.gn-card-lift .text-\[11px\] {
+  letter-spacing: 0.045em !important;
+}
+
+/* 키커의 댓글 카운트 — 라벨(아이콘)은 mute 로 두고 값만 ink 800 으로 세운다.
+ * 부모 인라인 색은 "상속"이라 자체 선언이 이기므로 !important 불필요. */
+article.gn-card-lift .text-\[11px\] .tabular-nums {
+  color: var(--wc-ink);
+  font-weight: 800;
+}
+
+/* 지표의 시그널화 — 추천수·담벼락 [N] 을 상승 그린으로 (인라인 버건디 위).
+ * 사이트 기존 원칙 "버건디는 카드 한 장에 최대 한 번"과도 맞물린다: 키커의
+ * 오피셜/BEST 가 버건디를 쓰는 카드에서 숫자까지 버건디면 액센트가 소음이 된다.
+ * article 스코프 한정 — 다크 밴드의 .gn-num 에는 절대 새지 않는다.
+ * ⚠ 라임(--gn-live) 아님 — 그린 시그널은 --wc-go(4.99:1, AA) 계열로만. */
+article.gn-card-lift .gn-num {
+  color: var(--wc-go) !important;
+  font-weight: 800;
+}
+
+/* 썸네일 — 반경 8 → 6, 사진 위 헤어라인 오버레이 (씻겨 보이는 밝은 사진의 윤곽 고정).
+ * 장식 전용 ::after (pointer-events 무효) — 기존 요소의 배치는 건드리지 않는다. */
+article.gn-card-lift .h-\[76px\] {
+  border-radius: 6px;
+}
+article.gn-card-lift .h-\[76px\]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(23, 25, 31, 0.1);
+  pointer-events: none;
+}
+
+/* ── 4) 칩 — 보더를 반 스텝 선명하게 (활성 버건디 칠은 불변) ── */
+.wc-chip-tabs button,
+.wc-chip-tabs a {
+  border-color: var(--wc-line-2, #d6d7db);
+}
+.wc-chip-tabs button:hover:not(:disabled):not(.on),
+.wc-chip-tabs a:hover:not(.on) {
+  border-color: #a9abb3;
+}
+
+/* ── 5) 언더라인 탭 — 비활성 #7a828a 는 3.90:1 로 AA 미달이었다 → 5.69:1.
+ * 활성(버건디)·hover(#3a3f45) 는 원본 규칙이 더 높은 특이도로 살아있어 불변. */
+.wc-underline-tabs {
+  border-bottom-color: var(--wc-line, #e7e7e9);
+}
+.wc-underline-tabs button,
+.wc-underline-tabs a {
+  color: #62676f;
+}
+
+/* ── 6) 반경 스냅 — 12 → 10 / 16 → 14. 둥글기를 반 스텝 깎아 앱처럼.
+ * 다크 밴드·헤더·푸터는 구조적으로 제외 (금지 조항을 셀렉터로 강제). */
+.rounded-xl:not(.gn-band *, header *, footer *) {
+  border-radius: 10px;
+}
+.rounded-2xl:not(.gn-band *, header *, footer *) {
+  border-radius: 14px;
+}

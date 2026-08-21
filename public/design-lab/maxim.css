@@ -1,0 +1,106 @@
+/* MAXIM CUT — 본문 지면 타블로이드 시안 (2026-08-21, 맥심 출신 편집 디자이너 명의)
+ * 잉크는 진짜 검정으로 찍고, 헤드라인은 800에 자간을 조인다. 회색을 더 흐리게 눌러서
+ * 위계를 만드는 게 아니라 — 잉크를 더 검게 해서 격차를 "위로" 벌린다 (AA는 그대로).
+ * 버건디는 버리지 않는다. 같은 축에서 온도만 올린 핫 레드 #ab0f2f. 그림자는 번지지
+ * 않는다 — blur 0, 하드 오프셋. 모서리는 각지게. 숫자는 전광판처럼. 이상, 인쇄 들어간다. */
+
+/* ── 1. 토큰 — 인라인 스타일이 전부 var() 를 참조하므로 여기가 최대 레버 ── */
+:root,
+.worldcup-scope {
+  /* 잉크: #1a1714(15.9:1) → 진짜 검정(19.5:1). 헤드라인 펀치의 절반은 이 한 줄 */
+  --wc-ink: #0d0c0c;
+  --wc-ink-2: #3c3f45; /* 10.6:1 */
+
+  /* 보조 회색 — 흐리게 누르지 않는다. 오히려 반 톤 조여서(6.73:1) 잉크와의
+   * "상대 격차"로만 눌리게 한다. WCAG AA 4.5:1 전 항목 통과 (검수 노트 참조) */
+  --wc-mute: #565c66;
+  --wc-mute-2: #666c75; /* 5.29:1 */
+
+  /* 브랜드 축 유지 + 온도만 상승: #961e37 → #ab0f2f.
+   * 텍스트로 7.39:1, 흰 글자 얹어도 7.39:1 — 양방향 AA 여유 */
+  --wc-burgundy: #ab0f2f;
+  --wc-wine-tint: #fdebee; /* 틴트도 같은 축으로 반 톤 상승 */
+
+  /* 헤어라인 — 카드 윤곽이 배경에 녹지 않게 한 톤 진하게 (웜 축 유지, 밴드 이음새 규칙) */
+  --wc-line: #ddd6cb;
+  --wc-line-2: #c3bbad;
+  --wc-soft: #f2eee7;
+  --wc-tint: #e6dfd3;
+
+  /* 그림자 = 잉크. blur 를 걷고 하드 오프셋 + 링 — 떠 있는 카드가 아니라 찍힌 지면 */
+  --wc-shadow-1: 0 0 0 1px var(--wc-line), 0 1px 0 rgba(13, 12, 12, 0.06);
+  --wc-shadow-2: 0 0 0 1px var(--wc-line-2), 0 3px 0 rgba(13, 12, 12, 0.08);
+}
+
+/* ── 2. 캔버스 — 신문지 톤. 흰 카드가 "떠 있는 패널"이 아니라 "박힌 인쇄물"이 된다 ── */
+body {
+  background: #f4f1eb;
+}
+
+/* ── 3. 피드 카드 헤드라인 — 650/-0.01em 의 얌전함을 걷는다.
+ *      인라인 스타일(fontWeight 650)을 이겨야 하므로 !important ── */
+article.gn-card-lift h2 {
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.3 !important;
+}
+
+/* ── 4. 키커 줄 — 타블로이드 슬러그: 자간을 벌려 "레이블"로 밀어낸다.
+ *      크기·색은 그대로(AA 유지), 조판만 레이블화 ── */
+article.gn-card-lift .text-\[11px\] {
+  letter-spacing: 0.06em !important;
+  font-weight: 800;
+}
+
+/* ── 5. 숫자 = 전광판. 댓글수·추천수가 스코어보드처럼 읽히게 ── */
+article.gn-card-lift .tabular-nums,
+article.gn-card-lift .gn-num {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ── 6. 썸네일 — 각지게. 카드 6px 안에 사진 4px, 동심 유지 ── */
+article.gn-card-lift .h-\[76px\] {
+  border-radius: 4px;
+}
+
+/* ── 7. 라디우스 일괄 — 12/16px 의 소프트웨어 감성 → 4~8px 인쇄 감성.
+ *      다크 밴드·헤더·푸터는 손대지 않는다 (:not 가드) ── */
+.rounded-xl:not(.gn-band *):not(header *):not(footer *) {
+  border-radius: 6px;
+}
+.rounded-2xl:not(.gn-band *):not(header *):not(footer *) {
+  border-radius: 8px;
+}
+
+/* ── 8. 칩 — pill 형태는 유지(홈 레일과 문법 통일, 검수 노트 참조).
+ *      대신 무게로 조인다: 웨이트 상승 + 윤곽 강화. 활성색은 토큰이 알아서 핫 레드 ── */
+.wc-chip-tabs button,
+.wc-chip-tabs a {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border-color: var(--wc-line-2);
+}
+
+/* ── 9. 언더라인 탭 — 하드코딩 회색 #7a828a 는 3.90:1 로 현행이 AA 미달.
+ *      시안이 6.97:1 로 수정하며 활성 언더라인은 3px 로 증량 (타블로이드 룰러) ── */
+.wc-underline-tabs {
+  border-bottom-color: var(--wc-line-2);
+}
+.wc-underline-tabs button,
+.wc-underline-tabs a {
+  color: #545a61;
+  font-weight: 600;
+}
+.wc-underline-tabs button.on,
+.wc-underline-tabs button.active,
+.wc-underline-tabs button[aria-selected="true"],
+.wc-underline-tabs a.on,
+.wc-underline-tabs a.active,
+.wc-underline-tabs a[aria-current="page"] {
+  color: var(--wc-burgundy);
+  border-bottom-color: var(--wc-burgundy);
+  border-bottom-width: 3px;
+  font-weight: 800;
+}

@@ -1,0 +1,151 @@
+/* ── 29CM TONE LAB · "지면(紙面)" ── 브랜드 편집 디자이너 시안 (2026-08-21) ──────
+ * 선언: 화면을 갤러리 벽으로 — 종이는 더 희게, 잉크는 더 검게, 경계는 실처럼 가늘게.
+ * 그림자를 걷어내고 헤어라인 하나로 카드를 '전시'한다. 여백과 행간이 곧 고급감이다.
+ * 버건디는 상태색에서 물러나 편집 신호(오피셜·BEST·액션)로만 남고, 선택은 잉크 블랙이 맡는다.
+ * 여섯 장마다 한 장, 명조 리드가 지면의 박자를 끊는다 — 반복은 리듬이 될 때만 산다. */
+
+/* ═══ 1) 토큰 재조색 — .worldcup-scope 한정 ═══════════════════════════════════
+ * :root 에 얹지 않는다: 헤더(.wc-hdr-link)는 scope 밖에서 var fallback hex 를 쓰므로
+ * :root 정의는 금지 구역(헤더)까지 번진다. scope 만 갈아끼우면 본문 지면만 바뀐다.
+ * 회색 축을 쿨 그레이(파랑 낀 회색)에서 웜 잉크 계열로 회전 — "우중충"의 절반은
+ * 밝기가 아니라 이 파란 기운이었다. (UI/UX 검수: 전 색상 AA 이상, 수치는 문서 참조) */
+.worldcup-scope {
+  --wc-ink: #121110; /* 구 #1a1714 → 더 검은 잉크. 흰 종이 위 18.6:1 */
+  --wc-ink-2: #3d3a35; /* 본문 보조 — 웜 유지, 명도만 아래로 (10.9:1) */
+  --wc-mute: #56514b; /* 구 #5c6470(6.0:1) → 7.8:1 — 중얼거림을 발화로 */
+  --wc-mute-2: #6e6861; /* 구 #6b7280(4.8:1) → 5.5:1 */
+  --wc-soft: #f6f4f0;
+  --wc-tint: #ebe7df;
+  --wc-line: #e7e3dc; /* 헤어라인 — 그림자를 대신하는 유일한 경계 */
+  --wc-line-2: #cfc9bf;
+  --wc-paper: #ffffff;
+  --wc-card: #ffffff;
+  --wc-wine-tint: #faf3f4;
+  /* 그림자 폐지 — 흐린 회색 번짐 대신 액자 선. 카드가 "떠 있는 종이"에서
+   * "벽에 걸린 시트"로 바뀐다. hover(gn-card-lift)는 shadow-2 로 반 단계만 진해진다. */
+  --wc-shadow-1: 0 0 0 1px var(--wc-line);
+  --wc-shadow-2:
+    0 1px 2px rgba(18, 17, 16, 0.06), 0 0 0 1px var(--wc-line-2);
+}
+
+/* ═══ 2) 캔버스 — 벽은 반 톤 어둡게 ══════════════════════════════════════════
+ * 순백 카드가 '종이'로 읽히려면 뒤의 벽이 물러나야 한다. 웜 오프화이트.
+ * (전역 body 선언·레이어를 확실히 이기기 위한 이 파일의 유일한 전면 !important) */
+body {
+  background: #f6f4f1 !important;
+}
+
+/* ═══ 3) 모서리 — 반 단계 날카롭게 ═══════════════════════════════════════════
+ * 12px 라운드는 부드럽지만 어리광이다. 8px 이 "젊고 날카로움"의 모서리.
+ * 금지 구역(헤더·푸터·다크 밴드)은 :not 으로 제외 — 지면 밖은 건드리지 않는다. */
+.rounded-xl:not(:is(header *, footer *, .gn-band *)) {
+  border-radius: 8px;
+}
+.rounded-2xl:not(:is(header *, footer *, .gn-band *)) {
+  border-radius: 12px;
+}
+
+/* ═══ 4) 카드 내부 — 여백 소폭 상향 ══════════════════════════════════════════
+ * px-4 py-3(16/12px) → 18/15px. 구조는 그대로, 숨만 넣는다. */
+article.gn-card-lift > div.px-4.py-3 {
+  padding: 15px 18px;
+}
+
+/* 제목 — 잉크를 더 싣고 행간을 연다 (인라인 style 이라 !important 필수) */
+article.gn-card-lift h2 {
+  font-size: 15px !important; /* 14.5 → 15 */
+  line-height: 1.45 !important; /* 1.38 → 1.45 — 넉넉한 행간 */
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* 명조 리드 — 진단 2(단조 반복)의 답. 피드 직계 카드 6장마다 1장.
+ * nth-of-type 은 article 형제만 세므로 폴·프로모 주입물이 끼어도 박자가 안 밀린다.
+ * 폰트는 시스템 스택만 — "Nanum Myeongjo" 미설치 시 Batang → serif 폴백 (외부 로드 없음). */
+.gap-3 > article.gn-card-lift:nth-of-type(6n + 1) h2 {
+  font-family: "Nanum Myeongjo", Batang, serif !important;
+  font-size: 17.5px !important;
+  font-weight: 800 !important;
+  line-height: 1.48 !important;
+  letter-spacing: -0.004em !important;
+}
+.gap-3 > article.gn-card-lift:nth-of-type(6n + 1) {
+  box-shadow: var(--wc-shadow-2) !important; /* 리드만 액자 선 반 단계 진하게 */
+}
+
+/* ═══ 5) 키커 — 중얼거림을 라벨로 ════════════════════════════════════════════
+ * 진단 1의 답: 회색 보조 텍스트를 키우는 게 아니라 "작고 단단한 라벨"로 성격을
+ * 바꾼다. 10.5px + 자간 0.07em + 진한 웜 뮤트 = 29CM 의 small-caps 감성.
+ * uppercase 는 한글 무영향 — romano → ROMANO 같은 로마자 출처만 라벨로 선다.
+ * (11px = 뉴스 카드 키커, 11.5px = 담벼락 카드 키커 — 두 종을 같은 문법으로) */
+article.gn-card-lift .text-\[11px\],
+article.gn-card-lift .text-\[11\.5px\] {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em !important; /* 인라인 0.03em 대체 */
+  text-transform: uppercase;
+}
+
+/* ═══ 6) 썸네일 — 사진에도 액자를 ════════════════════════════════════════════
+ * outline 은 자식(이미지) 위에 그려진다 — inset box-shadow 는 이미지에 가려져 무효. */
+article.gn-card-lift .h-\[76px\] {
+  border-radius: 6px;
+  outline: 1px solid rgba(18, 17, 16, 0.1);
+  outline-offset: -1px;
+}
+
+/* ═══ 7) 색 역할 재배치 — 선택은 잉크 블랙, 버건디는 편집 신호 ═══════════════
+ * 진단 3의 답: 젊음은 색을 늘려서가 아니라 역할을 정리해서 온다. 활성 칩·탭이
+ * 전부 버건디면 브랜드색이 '상태 표시등'으로 소모된다. 선택 상태를 잉크 블랙
+ * (모노크롬 인터랙션, 29CM 문법)으로 넘기면 버건디는 오피셜·BEST·액션 같은
+ * 편집 판단에만 남는다 — 적게 쓰일수록 강해진다. */
+
+/* 날짜·리그 칩 (scope-free 클래스) */
+.wc-chip-tabs button,
+.wc-chip-tabs a {
+  border-color: var(--wc-line-2, #cfc9bf);
+  color: var(--wc-mute, #56514b);
+  letter-spacing: 0.01em;
+}
+.wc-chip-tabs button:hover:not(:disabled):not(.on),
+.wc-chip-tabs a:hover:not(.on) {
+  color: var(--wc-ink, #121110);
+  border-color: var(--wc-mute-2, #6e6861);
+}
+.wc-chip-tabs button.on,
+.wc-chip-tabs a.on {
+  background: var(--wc-ink, #121110);
+  border-color: var(--wc-ink, #121110);
+  color: #ffffff; /* 잉크 위 순백 18.6:1 */
+}
+
+/* 피드 말머리 칩 레일 — 인라인 style 이라 !important 필요. role 은 Radix 탭과
+ * 충돌하지 않도록 .scrollbar-none 동반 조건으로 이 레일에만 조준한다. */
+.scrollbar-none[role="tablist"] > button[aria-selected="true"] {
+  background: var(--wc-ink, #121110) !important;
+  border-color: var(--wc-ink, #121110) !important;
+  color: #ffffff !important;
+}
+
+/* 언더라인 탭 — 활성 표시도 잉크로 통일. 비활성은 새 뮤트로 대비 상향 (구 #7a828a 4.0:1 미만대 → 7.8:1) */
+.wc-underline-tabs {
+  border-bottom-color: var(--wc-line, #e7e3dc);
+}
+.wc-underline-tabs button,
+.wc-underline-tabs a {
+  color: var(--wc-mute, #56514b);
+}
+.wc-underline-tabs button.on,
+.wc-underline-tabs button.active,
+.wc-underline-tabs button[aria-selected="true"],
+.wc-underline-tabs a.on,
+.wc-underline-tabs a.active,
+.wc-underline-tabs a[aria-current="page"] {
+  color: var(--wc-ink, #121110);
+  border-bottom-color: var(--wc-ink, #121110);
+}
+
+/* ═══ 8) 마감 — 드래그 선택까지 지면의 일부 ══════════════════════════════════ */
+.worldcup-scope ::selection {
+  background: rgba(150, 30, 55, 0.14);
+}

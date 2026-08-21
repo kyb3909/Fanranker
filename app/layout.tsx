@@ -17,6 +17,7 @@ import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
 import { GlobalReportDialog } from "@/components/global-report-dialog"
 import { PWARegister } from "@/components/pwa-register"
+import { DesignLabSwitcher } from "@/components/dev/design-lab-switcher"
 import "./globals.css"
 // 월드컵에서 추출된 에디토리얼 디자인 토큰. 모든 셀렉터가 .worldcup-scope prefix 라
 // 다른 페이지엔 영향 없음 — .worldcup-scope wrapper 가 있는 트리에서만 활성화.
@@ -266,6 +267,9 @@ export default function RootLayout({
             <Toaster />
             <GlobalReportDialog />
             <PWARegister />
+            {/* 디자인 랩 (2026-08-21) — dev 전용 시안 스위처. 프로덕션 빌드에서는
+                조건이 정적 false 라 번들에서 제거된다 */}
+            {process.env.NODE_ENV === "development" && <DesignLabSwitcher />}
             <Analytics />
             {process.env.NEXT_PUBLIC_GA_ID && (
               <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
