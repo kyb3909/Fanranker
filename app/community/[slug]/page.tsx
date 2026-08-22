@@ -412,7 +412,7 @@ export default async function CommunityPage({
                 className="inline-flex items-center rounded-md px-4 py-2 text-[13px] font-bold no-underline transition-colors hover:bg-[rgba(244,239,232,.08)]"
                 style={{ border: "1px solid rgba(244,239,232,.35)", color: "var(--gn-cream)" }}
               >
-                실록 →
+                시즌 사가 →
               </Link>
             ) : undefined
           }

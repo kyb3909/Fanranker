@@ -401,8 +401,15 @@ export default async function MatchesPage({
             </section>
           ))}
         </div>
-        {/* 지면 종단 도선 (2026-08-20 UX 패널 — 일정 끝이 데드엔드였다) */}
+        {/* 지면 종단 도선 (2026-08-20 UX 패널 — 일정 끝이 데드엔드였다).
+            실록 행은 2026-08-22 3자 토의 만장일치 — 시즌 사가 인덱스의 유일했던
+            무입구 문제 봉합 (workspace/saga-entry-FINAL-20260822.md) */}
         <div className="mt-8 space-y-2">
+          <BridgeRow
+            href="/saga?utm_source=matches"
+            title="시즌 사가 · 이적 사가"
+            action="사가 →"
+          />
           <BridgeRow
             href="/standings/epl"
             title="5대 리그 순위는 어떻게 됐을까"

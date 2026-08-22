@@ -6,9 +6,11 @@ import { formatRelativeTime } from "@/lib/utils/date"
 import { STAGE_FLOW, STAGE_LABEL, stageIndex, type SagaType } from "@/lib/saga/stages"
 
 export const metadata: Metadata = {
-  title: "이적 사가 — 살아있는 이적설 문서",
+  // "이적 사가" 단독 제목은 상단의 팀 시즌 문서를 가렸다 — "사가"로 승격
+  // (2026-08-22 진입로 토의 + 운영자 네이밍 확정: 실록(내부 코드네임)이 아니라 사가)
+  title: "사가 — 팀의 시즌과 이적설, 살아있는 문서",
   description:
-    "이적설 하나가 문서 하나. 새 소식이 터질 때마다 문서가 자라고, 그 위에서 팬들이 예측하고 싸운다.",
+    "팀의 한 시즌과 이적설 하나하나가 문서가 된다. 경기가 끝나고 소식이 터질 때마다 문서가 자라고, 그 위에서 팬들이 예측하고 싸운다.",
   alternates: { canonical: "/saga" },
 }
 
@@ -61,9 +63,9 @@ export default async function SagaIndexPage() {
   return (
     <div className="worldcup-scope min-h-[100dvh]" style={{ background: "var(--wc-paper)" }}>
       <PageBand
-        kicker="Transfer Saga"
-        title="이적 사가"
-        description="이적설 하나가 문서 하나 — 소식이 터질 때마다 문서가 자랍니다. 어디까지 왔는지 보고, 결말을 예측해보세요."
+        kicker="Saga"
+        title="사가"
+        description="팀의 한 시즌, 이적설 하나하나가 문서가 됩니다 — 경기가 끝나고 소식이 터질 때마다 자랍니다. 어디까지 왔는지 보고, 결말을 예측해보세요."
       />
 
       <main className="mx-auto max-w-[860px] px-4 pt-6 pb-16 sm:px-6">
@@ -74,7 +76,7 @@ export default async function SagaIndexPage() {
               className="mb-2 text-[12px] font-extrabold tracking-wide"
               style={{ color: "var(--wc-mute)" }}
             >
-              팀 시즌 문서
+              시즌 사가
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {seasons.map((s) => (
@@ -85,7 +87,7 @@ export default async function SagaIndexPage() {
                   style={{ background: "var(--wc-card, #fff)", boxShadow: "var(--wc-shadow-1)" }}
                 >
                   <p className="text-[11px] font-extrabold" style={{ color: "var(--wc-burgundy)" }}>
-                    SEASON WIKI
+                    SEASON SAGA
                   </p>
                   <p
                     className="mt-0.5 text-[15px] font-extrabold"

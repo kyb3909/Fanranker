@@ -25,6 +25,7 @@ import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 import { getMotmPollByMatchKey } from "@/lib/motm/poll"
 import { MotmCard } from "@/components/motm/motm-card"
+import { findSeasonSagasForTeams } from "@/lib/saga/season"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -143,6 +144,12 @@ export default async function MatchPage({ params }: Props) {
   // MoTM 폴 (2026-08-22 저니맵 v2) — matchKey 조회라 어느 마켓 행으로 들어와도 같은 폴.
   // 종료 경기 한정: 마감 후에도 결과가 경기 기록으로 영속한다 (expandAll = 전체 분포)
   const motmPoll = finished ? await getMotmPollByMatchKey(match.matchKey).catch(() => null) : null
+
+  // 시즌 실록 도선 (2026-08-22 3자 토의 판결 E — saga-entry-FINAL) — FT 직후가
+  // "방금 경기가 벌써 적힌 문서"를 열어볼 유일한 교집합 시간. 위키 있는 팀만, 종단 배치
+  const seasonSagas = finished
+    ? await findSeasonSagasForTeams([match.homeTeam, match.awayTeam]).catch(() => [])
+    : []
 
   return (
     <div className="min-h-[80vh]" style={{ background: "var(--wc-paper)" }}>
@@ -300,6 +307,19 @@ export default async function MatchPage({ params }: Props) {
             />
           </div>
 
+          {/* 시즌 실록 — 이 경기가 적히는 팀 시즌 위키 (판결 E). 레일에 없는 정보라 전 폭 */}
+          {seasonSagas.length > 0 && (
+            <div className="mt-4 space-y-2 px-4 sm:px-0">
+              {seasonSagas.map((s) => (
+                <BridgeRow
+                  key={s.slug}
+                  href={`/saga/${s.slug}?utm_source=matchcenter`}
+                  title={`${s.title} — 이 경기까지 기록됩니다`}
+                  action="시즌 사가 →"
+                />
+              ))}
+            </div>
+          )}
           {/* 지면 종단 도선 (2026-08-20 UX 패널 — 모바일 매치센터 하단이 데드엔드였다).
               lg 는 우측 레일이 같은 역할이라 모바일만 */}
           <div className="mt-4 px-4 sm:px-0 lg:hidden">

@@ -1,6 +1,7 @@
 import "server-only"
 
-import type { createServiceRoleClient } from "@/lib/supabase/server"
+import { unstable_cache } from "next/cache"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { kstDay } from "@/lib/saga/identity"
 import fplPlayers from "@/public/data/fpl-players.json"
 
@@ -359,4 +360,37 @@ async function fetchRelatedTransferSagas(
     .order("last_event_at", { ascending: false })
     .limit(20)
   return (sagas ?? []) as RelatedSaga[]
+}
+
+/**
+ * 팀명(betman 표기) → active 시즌 위키 (2026-08-22, 매치센터 실록 도선 —
+ * workspace/saga-entry-FINAL-20260822.md 판결 E).
+ *
+ * 대조는 subject.aliases 정확일치 — aliases 에 "아스널"/"아스날"/"Arsenal" 이 함께
+ * 들어 있어 betman 표기 흔들림(ㅓ/ㅏ)을 그대로 흡수한다. 시즌 위키는 몇 개 안 되므로
+ * active 전량을 읽어 메모리 대조, 5분 Data Cache.
+ */
+export function findSeasonSagasForTeams(
+  teamNames: string[]
+): Promise<{ slug: string; title: string }[]> {
+  return unstable_cache(
+    async (names: string[]) => {
+      const supabase = createServiceRoleClient()
+      const { data } = await supabase
+        .from("sagas")
+        .select("slug, title, subject")
+        .eq("saga_type", "season")
+        .eq("status", "active")
+      const out: { slug: string; title: string }[] = []
+      for (const row of data ?? []) {
+        const aliases = ((row.subject as { aliases?: unknown } | null)?.aliases ?? []) as string[]
+        if (names.some((n) => aliases.includes(n))) {
+          out.push({ slug: String(row.slug), title: String(row.title) })
+        }
+      }
+      return out
+    },
+    ["season-sagas-for-teams"],
+    { revalidate: 300 }
+  )(teamNames)
 }
