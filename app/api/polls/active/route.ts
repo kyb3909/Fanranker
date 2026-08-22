@@ -25,6 +25,7 @@ export async function GET() {
       .select("id, question, options, allow_reason, closes_at")
       .eq("is_active", true)
       .is("post_id", null) // VS 쟁점 폴(게시물 연결)은 사이드바 위젯에서 제외
+      .neq("kind", "motm") // MoTM 폴은 경기 지면 전용 (2026-08-22)
       .order("created_at", { ascending: false })
       .limit(3)
 

@@ -12,18 +12,26 @@ export function BridgeRow({
   title,
   action,
   onClick,
+  embedded,
 }: {
   href: string
   title: string
   action: string
   onClick?: () => void
+  /** 카드 안에 얹힐 때 — 부모가 액자(라운드·보더)를 제공하므로 행 자신은 벗는다 (MoTM 패키지) */
+  embedded?: boolean
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
-      style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+      className={`flex items-baseline justify-between px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)] ${
+        embedded ? "" : "rounded-xl"
+      }`}
+      style={{
+        background: "var(--wc-wine-tint)",
+        border: embedded ? undefined : "1px solid var(--wc-line)",
+      }}
     >
       <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
         {title}

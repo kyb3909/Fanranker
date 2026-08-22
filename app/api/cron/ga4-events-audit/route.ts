@@ -59,6 +59,7 @@ const DEFINED_EVENTS = [
   "saga_vote",
   "vs_impression",
   "vs_vote",
+  "motm_sheet_open",
 ] as const
 
 async function handler(request: NextRequest) {

@@ -7,6 +7,8 @@ import { getLfaMatchInfo } from "@/lib/lfa/match"
 import { getMatchLineup } from "@/lib/match/get-lineup"
 import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
+import { getMotmPollByMatchKey } from "@/lib/motm/poll"
+import { MotmCard } from "@/components/motm/motm-card"
 
 /**
  * 불판 중계 위젯 묶음 (2026-08-20 운영자: "스탯이나 이런 게 경기 중계 위젯이잖아 —
@@ -40,9 +42,14 @@ export async function ThreadMatchWidgets({ gameId }: { gameId: string }) {
       ? enrichLineupWithTimeline(lineupRaw, lfa.timeline)
       : lineupRaw
 
+  // 팬 선정 MoTM (2026-08-22) — FT 후 cron 이 만든 폴이 있을 때만. 불판은 경기 직후
+  // 80분의 골든타임 지면이라 투표 진입 행이 전광판 바로 아래 선다
+  const motmPoll = await getMotmPollByMatchKey(match.matchKey).catch(() => null)
+
   return (
     <div className="space-y-3">
       <ThreadScoreStrip gameId={gameId} />
+      {motmPoll && <MotmCard pollId={motmPoll.pollId} surface="motm_thread" framed />}
       {lfa && lfa.stats.length > 0 && (
         <CollapsibleSection title="경기 스탯">
           <MatchStatsSection

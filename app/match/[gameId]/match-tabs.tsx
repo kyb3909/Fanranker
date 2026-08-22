@@ -19,20 +19,24 @@ export function MatchTabs({
   info,
   lineup,
   stats,
+  motm,
   report,
   initial,
 }: {
   info: ReactNode
   lineup: ReactNode
   stats: ReactNode
+  /** 팬 선정 MoTM (2026-08-22) — FT 후 폴이 있을 때만. 투표 중엔 이 탭이 첫 화면 */
+  motm?: ReactNode
   report: ReactNode
-  /** 종료 경기는 통계부터, 경기 전은 정보부터 */
-  initial: "info" | "lineup" | "stats"
+  /** 종료 경기는 MoTM(투표 중)→통계, 경기 전은 정보부터 */
+  initial: "info" | "lineup" | "stats" | "motm"
 }) {
   const tabs: TabDef[] = [
     { key: "info", label: "정보", content: info },
     { key: "lineup", label: "라인업", content: lineup },
     { key: "stats", label: "통계", content: stats },
+    { key: "motm", label: "MoTM", content: motm ?? null },
     { key: "report", label: "리포트", content: report },
   ].filter((t) => t.content != null && t.content !== false)
 

@@ -36,7 +36,14 @@ export async function POST(request: NextRequest) {
     const optionsJson = options.map((label, i) => ({ key: `o${i + 1}`, label }))
 
     const supabase = createServiceRoleClient()
-    await supabase.from("polls").update({ is_active: false }).eq("is_active", true)
+    // "한 번에 1개"는 사이드바 일반 폴끼리의 규칙 — VS 쟁점 폴(post_id)·MoTM 폴(kind)을
+    // 같이 꺼버리면 안 된다 (2026-08-22 스코프 수정)
+    await supabase
+      .from("polls")
+      .update({ is_active: false })
+      .eq("is_active", true)
+      .is("post_id", null)
+      .eq("kind", "general")
     const { data: poll, error } = await supabase
       .from("polls")
       .insert({

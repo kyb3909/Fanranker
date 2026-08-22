@@ -8,6 +8,7 @@ import { DiscordInviteBanner } from "@/components/discord-invite-banner"
 import { WallMoreRow, WallPostCard, type WallPost } from "@/components/home/wall-post-card"
 import { QuickComposer } from "@/components/home/quick-composer"
 import { BridgeRow } from "@/components/bridge-row"
+import { MotmCard } from "@/components/motm/motm-card"
 import { suggestTarot } from "@/lib/tarot/suggest"
 import { TarotModal } from "@/components/tarot/tarot-modal"
 import { CardVsVote } from "@/components/vs/card-vs-vote"
@@ -738,6 +739,10 @@ export interface FtRow {
   postId: string | null
   /** 종료 시각 ISO — 이 시각으로 카드 스트림의 자리에 꽂힌다 */
   ftAt: string
+  /** MoTM 폴 — 있으면 FT 행 아래 투표 카드가 한 패키지로 붙는다 (2026-08-22) */
+  motm?: { pollId: string; closed: boolean } | null
+  /** 불판 댓글 수 — MoTM 투표 후 읽기형 도선의 댓글≥1 게이트 재료 */
+  threadCommentCount?: number
 }
 
 export function CardNewsFeed({
@@ -967,20 +972,50 @@ export function CardNewsFeed({
       {chip === "all" &&
         cards.map((card, i) => (
           <Fragment key={card.id}>
-            {/* FT 사건 행 — 이 카드보다 최신인 종료 경기 (Top5-2) */}
-            {ftAtIndex.get(i)?.map((r) => (
-              <BridgeRow
-                key={r.key}
-                href={r.href}
-                title={r.title}
-                action={r.action}
-                onClick={
-                  r.postId
-                    ? () => openPost(r.postId as string, "post", { via: "ft_row" })
-                    : undefined
-                }
-              />
-            ))}
+            {/* FT 사건 행 — 이 카드보다 최신인 종료 경기 (Top5-2).
+                MoTM 폴이 있으면 행+투표 카드를 한 액자로 묶는다 (2026-08-22 저니맵 v2) */}
+            {ftAtIndex.get(i)?.map((r) =>
+              r.motm ? (
+                <div
+                  key={r.key}
+                  className="overflow-hidden rounded-xl"
+                  style={{
+                    background: "var(--wc-card, #fff)",
+                    border: "1px solid var(--wc-line, #e8e5e0)",
+                  }}
+                >
+                  <BridgeRow
+                    embedded
+                    href={r.href}
+                    title={r.title}
+                    action={r.action}
+                    onClick={
+                      r.postId
+                        ? () => openPost(r.postId as string, "post", { via: "ft_row" })
+                        : undefined
+                    }
+                  />
+                  <MotmCard
+                    pollId={r.motm.pollId}
+                    surface="motm_feed"
+                    bridgePostId={r.postId}
+                    bridgeCommentCount={r.threadCommentCount ?? 0}
+                  />
+                </div>
+              ) : (
+                <BridgeRow
+                  key={r.key}
+                  href={r.href}
+                  title={r.title}
+                  action={r.action}
+                  onClick={
+                    r.postId
+                      ? () => openPost(r.postId as string, "post", { via: "ft_row" })
+                      : undefined
+                  }
+                />
+              )
+            )}
             <CompactCard card={card} allowQuestion={questionCards.has(i)} />
             {/* 모바일 인피드 슬롯 — 데스크톱은 우측 사이드바가 담당(lg:hidden).
               폴 실험(반응 유도)이 주력 디바이스에서 hidden lg:block 으로 무효였던 것 수정

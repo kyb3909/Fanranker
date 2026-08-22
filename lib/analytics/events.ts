@@ -104,13 +104,26 @@ type AnalyticsEvent =
   // surface 별로 분리 계측한다 — 같은 폴이라도 다른 표면은 다른 노출이고, 어느 자리가
   // 실제로 참여를 만드는지가 이 피처의 판정 근거다 (2026-08-12).
   //   card=떡밥 피드 카드 / post=글 상세 / modal=예측 완료 / hero=담벼락 히어로 배너
+  //   motm_* = 맨오브더매치 투표 지면 (2026-08-22 — 피드 FT 패키지 / 불판 / 매치센터)
   | {
       name: "vs_impression"
-      params: { poll_id: string; surface: "card" | "post" | "modal" | "hero" }
+      params: {
+        poll_id: string
+        surface: "card" | "post" | "modal" | "hero" | "motm_feed" | "motm_thread" | "motm_match"
+      }
     }
   | {
       name: "vs_vote"
-      params: { poll_id: string; option_key: string; surface: "card" | "post" | "modal" | "hero" }
+      params: {
+        poll_id: string
+        option_key: string
+        surface: "card" | "post" | "modal" | "hero" | "motm_feed" | "motm_thread" | "motm_match"
+      }
+    }
+  // MoTM 선수 선택 시트 오픈 — 진입→투표 완료 전환율이 시트 UX 의 판정 지표
+  | {
+      name: "motm_sheet_open"
+      params: { poll_id: string; surface: "motm_feed" | "motm_thread" | "motm_match" }
     }
   // ── 담벼락 지금 블록 (2026-08-20 — 떡밥 피드에 박은 커뮤니티 진입로) ──
   // 블록 CTR·board 탭 진입 변화가 "봇 글 담벼락 제외" 재검토의 판정 근거다.

@@ -23,6 +23,8 @@ import { MatchdayRail } from "@/components/match/matchday-rail"
 import { getMatchLineup } from "@/lib/match/get-lineup"
 import { enrichLineupWithTimeline } from "@/lib/match/enrich-lineup"
 import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
+import { getMotmPollByMatchKey } from "@/lib/motm/poll"
+import { MotmCard } from "@/components/motm/motm-card"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -138,6 +140,10 @@ export default async function MatchPage({ params }: Props) {
     .limit(1)
   const thread = threadRows?.[0] ?? null
 
+  // MoTM 폴 (2026-08-22 저니맵 v2) — matchKey 조회라 어느 마켓 행으로 들어와도 같은 폴.
+  // 종료 경기 한정: 마감 후에도 결과가 경기 기록으로 영속한다 (expandAll = 전체 분포)
+  const motmPoll = finished ? await getMotmPollByMatchKey(match.matchKey).catch(() => null) : null
+
   return (
     <div className="min-h-[80vh]" style={{ background: "var(--wc-paper)" }}>
       {/* 스코어를 밴드로 — 페이지 선언 (2026-08-18 리디자인 1단계) */}
@@ -211,8 +217,18 @@ export default async function MatchPage({ params }: Props) {
             <MatchTabs
               /* 종료인데 스탯이 없으면 "정보"(경기 전 정보)로 떨어지지 않게 라인업으로 —
                결장·부상을 종료 경기의 첫 화면으로 보여주는 것은 오답이다 (2026-08-19 UIUX).
-               라이브도 같은 규칙 — 경기 중의 첫 화면은 실시간 스탯이다 (2026-08-20) */
-              initial={finished || live ? (hasLfaStats ? "stats" : "lineup") : "info"}
+               라이브도 같은 규칙 — 경기 중의 첫 화면은 실시간 스탯이다 (2026-08-20).
+               MoTM 투표가 열려 있으면 그 탭이 첫 화면 — FT 직후의 첫 질문은 "오늘의
+               주인공이 누구냐"다 (2026-08-22 운영자). 마감 후엔 통계로 복귀 */
+              initial={
+                finished && motmPoll && !motmPoll.closed
+                  ? "motm"
+                  : finished || live
+                    ? hasLfaStats
+                      ? "stats"
+                      : "lineup"
+                    : "info"
+              }
               info={
                 lfa ? (
                   <>
@@ -259,6 +275,13 @@ export default async function MatchPage({ params }: Props) {
               stats={
                 (finished || live) && lfa ? (
                   <MatchStatsSection info={lfa} homeTeam={homeLabel} awayTeam={awayLabel} />
+                ) : null
+              }
+              motm={
+                /* 팬 선정 MoTM (2026-08-22) — 투표 중엔 선수 그리드 인라인, 마감 후엔
+                   전체 분포로 영속. 폴이 없으면 탭 자체가 없다 (빈 탭 데드엔드 방지) */
+                motmPoll ? (
+                  <MotmCard pollId={motmPoll.pollId} surface="motm_match" variant="inline" />
                 ) : null
               }
               report={
