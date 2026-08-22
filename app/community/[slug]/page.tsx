@@ -11,6 +11,7 @@ const NewsTicker = dynamic(
   // 베이스 h-16 (64px) 만 두면 lg 에서 64→43 충돌로 CLS 발생.
   { loading: () => <div className="wc-skeleton h-16 rounded-xl lg:h-11" /> }
 )
+import Image from "next/image"
 import { createServerAnonClient } from "@/lib/supabase"
 import { jsonLd } from "@/lib/seo"
 import { formatRelativeTime } from "@/lib/utils/date"
@@ -311,6 +312,24 @@ export default async function CommunityPage({
   const communityName = info?.name || dbCategory?.name || slug
   const communityDesc = info?.description || dbCategory?.description || ""
 
+  // 아스날 팀 보드 — 헤더에 엠블럼 + 실록 진입 (2026-08-22 운영자: "엠블럼 옆에 실록").
+  // 실록 = /saga/{slug} 시즌 위키. 시즌이 바뀌어도 링크가 살도록 active 행을 조회하고,
+  // 없으면 링크를 숨긴다 (fail-open). 크레스트는 시즌 이벤트 자산(/season/crest-*) 재사용.
+  const isArsenalBoard = slug === "arsenal"
+  let arsenalSagaSlug: string | null = null
+  if (isArsenalBoard) {
+    const { data: seasonSaga } = await supabaseForMeta
+      .from("sagas")
+      .select("slug")
+      .eq("saga_type", "season")
+      .eq("status", "active")
+      .eq("subject->>team_id", "arsenal")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    arsenalSagaSlug = seasonSaga?.slug ? String(seasonSaga.slug) : null
+  }
+
   const community = {
     name: communityName,
     description: communityDesc,
@@ -369,8 +388,34 @@ export default async function CommunityPage({
         {/* 담벼락·운동장과 같은 풀블리드 다크 밴드 — 그리드 바깥에 둬야 폭이 맞는다 */}
         <PageBand
           kicker="Board"
-          title={info?.name || dbCategory?.name || slug}
+          title={
+            isArsenalBoard ? (
+              <span className="inline-flex items-center gap-3">
+                <Image
+                  src="/season/crest-arsenal.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-8 w-auto sm:h-10"
+                />
+                {communityName}
+              </span>
+            ) : (
+              communityName
+            )
+          }
           description={communityDesc || undefined}
+          aside={
+            isArsenalBoard && arsenalSagaSlug ? (
+              <Link
+                href={`/saga/${arsenalSagaSlug}?utm_source=arsenal_board`}
+                className="inline-flex items-center rounded-md px-4 py-2 text-[13px] font-bold no-underline transition-colors hover:bg-[rgba(244,239,232,.08)]"
+                style={{ border: "1px solid rgba(244,239,232,.35)", color: "var(--gn-cream)" }}
+              >
+                실록 →
+              </Link>
+            ) : undefined
+          }
         />
         <main
           id="main-content"
