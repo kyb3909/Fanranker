@@ -70,8 +70,6 @@ interface HomeClientProps {
   wallRatio?: WallFeedRatio
   /** 피드 종단 "내일 경기 예고" 문안 (2026-08-21 리포트 Top5-5) — 없으면 일정 도선 폴백 */
   tomorrowMatchTitle?: string | null
-  /** 당일 종료 경기의 불판 매핑 (Top5-2 FT 사건 행) — 없으면 매치센터 링크 폴백 */
-  ftThreadByGame?: Record<string, string>
 }
 
 export function HomeClient({
@@ -87,7 +85,6 @@ export function HomeClient({
   initialGames,
   wallRatio,
   tomorrowMatchTitle,
-  ftThreadByGame,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -133,26 +130,24 @@ export function HomeClient({
     [humanWallPosts, maxWallCards]
   )
   // FT 사건 행 (2026-08-21 리포트 Top5-2, 편집 "사건 행" 문법) — 당일 종료 경기가
-  // 자기 종료 시각(킥오프+110분)으로 시간순 스트림에 참여한다. 불판 있으면 불판으로,
-  // 없으면 매치센터로. 밴드의 "오늘 결과"와 같은 재료·같은 화이트리스트
+  // 자기 종료 시각(킥오프+110분)으로 시간순 스트림에 참여한다. 목적지는 매치센터
+  // (2026-08-22 운영자: "매치센터 들어갈 방법이 없어졌다" — 불판은 매치센터 안에서).
+  // 밴드의 "오늘 결과"와 같은 재료·같은 화이트리스트
   const ftRows = useMemo(
     () =>
       (initialGames?.finishedMatches ?? [])
         .filter(
           (m) => isMatchPageLeague(m.leagueCode) && m.homeScore != null && m.awayScore != null
         )
-        .map((m) => {
-          const threadId = ftThreadByGame?.[m.gameId]
-          return {
-            key: m.matchKey,
-            title: `FT · ${m.homeTeam} ${m.homeScore}–${m.awayScore} ${m.awayTeam}`,
-            href: threadId ? `/post/${threadId}?utm_source=ft_row` : `/match/${m.gameId}`,
-            action: threadId ? "불판 →" : "매치센터 →",
-            postId: threadId ?? null,
-            ftAt: new Date(new Date(m.matchTime).getTime() + 110 * 60_000).toISOString(),
-          }
-        }),
-    [initialGames, ftThreadByGame]
+        .map((m) => ({
+          key: m.matchKey,
+          title: `FT · ${m.homeTeam} ${m.homeScore}–${m.awayScore} ${m.awayTeam}`,
+          href: `/match/${m.gameId}`,
+          action: "매치센터 →",
+          postId: null,
+          ftAt: new Date(new Date(m.matchTime).getTime() + 110 * 60_000).toISOString(),
+        })),
+    [initialGames]
   )
   // 밴드 전환 애니메이션 게이트 — 첫 로드에는 안 붙인다(LCP 히어로가 opacity 0 에서
   // 시작하면 LCP 가 늦어진다). 사용자가 탭을 한 번이라도 바꾼 뒤부터, 히어로↔PageBand

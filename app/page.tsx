@@ -3,7 +3,6 @@ import { redirect } from "next/navigation"
 import { HomeClient } from "@/components/home/home-client"
 import { type CardNewsItem } from "@/lib/feed/cardnews"
 import { getGamesPayloadForSsr } from "@/lib/betman/games-payload"
-import { createServiceRoleClient } from "@/lib/supabase/server"
 import {
   getCachedFeed,
   getCachedCategories,
@@ -97,27 +96,6 @@ async function fetchAllHomeData(sort: SortType) {
     getCachedTomorrowMatchTitle(),
   ])
 
-  // FT 사건 행의 불판 매핑 (2026-08-21 리포트 Top5-2) — 당일 종료 경기의 불판 게시물.
-  // 실패해도 홈은 뜬다 — 행 링크가 매치센터로 떨어질 뿐
-  const ftThreadByGame: Record<string, string> = {}
-  const finishedIds = (gamesResult?.finishedMatches ?? [])
-    .map((m) => m.gameId)
-    .filter((v): v is string => !!v)
-  if (finishedIds.length > 0) {
-    try {
-      const { data: threads } = await createServiceRoleClient()
-        .from("posts")
-        .select("id, match_game_id")
-        .in("match_game_id", finishedIds)
-        .is("deleted_at", null)
-      for (const t of threads ?? []) {
-        if (t.match_game_id) ftThreadByGame[String(t.match_game_id)] = String(t.id)
-      }
-    } catch {
-      /* 불판 매핑 실패 무시 */
-    }
-  }
-
   // 히어로 확정: 운영자 핀 우선. **핀이 하나라도 있으면 그것만** 올린다(채워넣기 없음 —
   // "메인은 내가 선택한 것만", 2026-08-03). 핀이 0개일 때만 최신 이미지 카드로 3장을
   // 채운다 — 핀 지정 전 홈 히어로가 통째로 비는 것 방지.
@@ -150,7 +128,6 @@ async function fetchAllHomeData(sort: SortType) {
     initialGames: gamesResult,
     wallRatio,
     tomorrowMatchTitle,
-    ftThreadByGame,
   }
 }
 
@@ -192,7 +169,6 @@ export default async function Home({
         initialGames={homeData.initialGames}
         wallRatio={homeData.wallRatio}
         tomorrowMatchTitle={homeData.tomorrowMatchTitle}
-        ftThreadByGame={homeData.ftThreadByGame}
       />
     </Suspense>
   )
