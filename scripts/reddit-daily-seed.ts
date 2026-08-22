@@ -79,9 +79,8 @@ function textToTipTapJson(text: string): object {
   }
 }
 
-/** VPS 경유 스레드 RSS — 로컬 직통은 레딧이 막는다 (2026-08-21 실측) */
-function fetchThreadRssViaVps(sub: string, threadId: string): string {
-  const url = `https://www.reddit.com/r/${sub}/comments/${threadId}/.rss?sort=top&limit=80`
+/** VPS 경유 레딧 RSS — 로컬 직통은 레딧이 막는다 (2026-08-21 실측). 호출 1회 = 예산 1건 */
+function fetchRedditRssViaVps(url: string): string {
   const remote = `sleep 2; curl -s -H 'User-Agent: ${REDDIT_UA}' '${url}'`
   const out = execFileSync("py", ["-3", "scripts/vultr-exec.py", "--timeout", "60", remote], {
     encoding: "utf8",
@@ -92,6 +91,36 @@ function fetchThreadRssViaVps(sub: string, threadId: string): string {
   }
   return out
 }
+
+function fetchThreadRssViaVps(sub: string, threadId: string): string {
+  return fetchRedditRssViaVps(
+    `https://www.reddit.com/r/${sub}/comments/${threadId}/.rss?sort=top&limit=80`
+  )
+}
+
+/**
+ * 데일리 토론 스레드 자동 탐색 (2026-08-23 운영자: "각 게시판마다 데일리 스레드에서").
+ * hot RSS 에서 제목에 daily 가 들어간 첫 스레드 — 예산 1건 소비하므로 --sub 모드는
+ * 실행당 총 2건(hot + 스레드)을 쓴다. 사이에 65초를 쉰다.
+ */
+function findDailyThreadViaVps(sub: string): { threadId: string; title: string } | null {
+  const xml = fetchRedditRssViaVps(`https://www.reddit.com/r/${sub}/hot/.rss?limit=25`)
+  for (const e of xml.split("<entry>").slice(1)) {
+    const t = e.match(/<title>([\s\S]*?)<\/title>/)?.[1]
+    const link = e.match(
+      /href="https:\/\/www\.reddit\.com\/r\/[^/]+\/comments\/([a-z0-9]+)\//i
+    )?.[1]
+    if (!t || !link) continue
+    const title = decodeEntities(t)
+    // "Daily Discussion" 류만 — Match Thread(경기 불판)는 감상이 실시간 파편이라 제외
+    if (/\bdaily\b/i.test(title) && !/match\s*(thread|day)/i.test(title)) {
+      return { threadId: link, title }
+    }
+  }
+  return null
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 function decodeEntities(s: string): string {
   return s
@@ -146,10 +175,14 @@ async function rewriteWithLlm(
 - **타 팀이 주인공인 것도 제외** — 타 팀 다큐 감상, 타 팀 선수 신변잡기처럼 ${team} 얘기가 아닌 것.
 - 이적 루머·라인업 뇌피셜 등 **사실 주장이 본체인 것 제외** — 감상·의견·드립·추억·가벼운 질문만.
 - 링크·짤 없이는 말이 안 되는 것 제외.
+- **같이 떠들 수 있는 주제를 우선 채택** — 의견이 갈리거나, 질문이거나, 답글이 붙을 만한 것.
+  혼잣말 감상보다 "너희는 어떻게 생각하냐"가 되는 재료가 좋다 (운영자 2026-08-23).
 
 ## 각색 규칙
 - **번역이 아니라 각색** — 원문을 재료로 새로 쓴 글처럼. 원문 문장 구조를 따라가지 마라.
 - 말투: 한국 축구 커뮤 반말체. "~냐", "~임", "~지", "ㅋㅋ" 허용. 이모지 금지. 존댓말 금지.
+- **톤은 순한 맛** — 시비조·저격·욕설·과격한 표현 금지. 비판도 가볍고 유쾌하게, 다정한
+  축덕 수다처럼 (운영자 2026-08-23: "말투를 너무 과격하게는 하지 말고").
 - 제목: 구어체 한 줄 (낚시 금지, 물음/감탄형 환영). 본문: 1~3문장, 짧을수록 좋다.
 - 선수·감독·구단 이름은 한국 축구 미디어 정착 표기만 쓴다. 예: Gyökeres→요케레스, Ødegaard→외데고르, Bournemouth→본머스, Tottenham→토트넘, Mertesacker→메르테자커. **음차가 확신이 안 서면 한글로 지어내지 말고 원어 그대로 둔다** (틀린 음차가 최악이다).
 - 최대 ${limit}개만 골라라. 좋은 게 없으면 적게 골라도 된다.
@@ -184,15 +217,31 @@ async function main() {
   const doPost = args.includes("--post")
   const limit = Number(args.find((a) => a.startsWith("--limit="))?.slice(8) ?? 6)
   const boardArg = args.find((a) => a.startsWith("--board="))?.slice(8)
+  const subArg = args.find((a) => a.startsWith("--sub="))?.slice(6)
 
-  const m = url?.match(/reddit\.com\/r\/([^/]+)\/comments\/([a-z0-9]+)/i)
-  if (!m) {
-    console.error(
-      "사용법: pnpm exec tsx scripts/reddit-daily-seed.ts <레딧 스레드 URL> [--limit=6] [--post]"
-    )
-    process.exit(1)
+  let sub: string
+  let threadId: string
+  if (subArg && !url) {
+    // --sub 모드: 데일리 스레드 자동 탐색 (예산 2건 — hot 1 + 스레드 1, 사이 65초)
+    sub = subArg
+    const daily = findDailyThreadViaVps(sub)
+    if (!daily) {
+      console.error(`r/${sub}: hot 상위 25개에서 데일리 스레드를 못 찾았습니다 — 건너뜀.`)
+      process.exit(2)
+    }
+    console.log(`r/${sub} 데일리 발견: "${daily.title}" (${daily.threadId}) — 예산 대기 65초…`)
+    await sleep(65_000)
+    threadId = daily.threadId
+  } else {
+    const m = url?.match(/reddit\.com\/r\/([^/]+)\/comments\/([a-z0-9]+)/i)
+    if (!m) {
+      console.error(
+        "사용법: pnpm exec tsx scripts/reddit-daily-seed.ts <레딧 스레드 URL 또는 --sub=서브레딧> [--limit=6] [--post]"
+      )
+      process.exit(1)
+    }
+    ;[, sub, threadId] = m
   }
-  const [, sub, threadId] = m
   const mapped = SUB_MAP[sub.toLowerCase()]
   const team = mapped?.team ?? sub
   // --board 명시가 최우선, 없으면 서브레딧의 팀 게시판, 그것도 없으면 football
