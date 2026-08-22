@@ -3,7 +3,6 @@ import { redirect } from "next/navigation"
 import { HomeClient } from "@/components/home/home-client"
 import { type CardNewsItem } from "@/lib/feed/cardnews"
 import { getGamesPayloadForSsr } from "@/lib/betman/games-payload"
-import { getMotmPollMapForFeed, type MotmPollRef } from "@/lib/motm/poll"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import {
   getCachedFeed,
@@ -101,8 +100,6 @@ async function fetchAllHomeData(sort: SortType) {
   // FT 사건 행의 불판 매핑 (2026-08-21 리포트 Top5-2) — 당일 종료 경기의 불판 게시물.
   // 실패해도 홈은 뜬다 — 행 링크가 매치센터로 떨어질 뿐
   const ftThreadByGame: Record<string, string> = {}
-  // 불판 댓글 수 — MoTM 투표 후 읽기형 도선의 댓글≥1 게이트 (2026-08-22)
-  const threadCommentByGame: Record<string, number> = {}
   const finishedIds = (gamesResult?.finishedMatches ?? [])
     .map((m) => m.gameId)
     .filter((v): v is string => !!v)
@@ -110,28 +107,15 @@ async function fetchAllHomeData(sort: SortType) {
     try {
       const { data: threads } = await createServiceRoleClient()
         .from("posts")
-        .select("id, match_game_id, comment_count")
+        .select("id, match_game_id")
         .in("match_game_id", finishedIds)
         .is("deleted_at", null)
       for (const t of threads ?? []) {
-        if (t.match_game_id) {
-          ftThreadByGame[String(t.match_game_id)] = String(t.id)
-          threadCommentByGame[String(t.match_game_id)] = Number(t.comment_count ?? 0)
-        }
+        if (t.match_game_id) ftThreadByGame[String(t.match_game_id)] = String(t.id)
       }
     } catch {
       /* 불판 매핑 실패 무시 */
     }
-  }
-
-  // MoTM 폴 매핑 (2026-08-22 저니맵 v2) — matchKey 키. 실패해도 홈은 뜬다 (FT 행만)
-  let motmByGame: Record<string, MotmPollRef> = {}
-  try {
-    motmByGame = await getMotmPollMapForFeed(
-      (gamesResult?.finishedMatches ?? []).map((m) => m.matchKey).filter((v): v is string => !!v)
-    )
-  } catch {
-    /* MoTM 매핑 실패 무시 */
   }
 
   // 히어로 확정: 운영자 핀 우선. **핀이 하나라도 있으면 그것만** 올린다(채워넣기 없음 —
@@ -167,8 +151,6 @@ async function fetchAllHomeData(sort: SortType) {
     wallRatio,
     tomorrowMatchTitle,
     ftThreadByGame,
-    threadCommentByGame,
-    motmByGame,
   }
 }
 
@@ -211,8 +193,6 @@ export default async function Home({
         wallRatio={homeData.wallRatio}
         tomorrowMatchTitle={homeData.tomorrowMatchTitle}
         ftThreadByGame={homeData.ftThreadByGame}
-        threadCommentByGame={homeData.threadCommentByGame}
-        motmByGame={homeData.motmByGame}
       />
     </Suspense>
   )

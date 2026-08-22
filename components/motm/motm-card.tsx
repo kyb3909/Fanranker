@@ -1,21 +1,18 @@
 "use client"
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAuth, useClerk } from "@clerk/nextjs"
 import { trackEvent } from "@/lib/analytics/events"
 import type { MotmOption } from "@/lib/motm/poll"
 
 /**
- * MoTM 카드 — "지면 4곳에 꽂히는 카드 하나, 상태 셋" (workspace/mockup-motm-journey-20260822.html v2).
+ * 팬 선정 MoTM — 매치센터 MoTM 탭 전용 (2026-08-22).
  *
- * 상태 A(투표 전): 출전 선수(팀 탭 + 선발/교체 그리드)에서 1인 선택.
- * 상태 B(투표 후): ✓ 내 픽 + 현재 1위 — 값은 던진 사람에게 돌아온다. 픽 갈아타기 가능.
- * 상태 C(확정):   분포 바 (피드/불판 = Top3, 매치센터 = 전체).
+ * 지면은 실록(매치센터) 한 곳뿐이다 — 운영자: "시즌 첫 경기 실록까지만 정리".
+ * 피드·불판 확장은 별도 결정 없이는 하지 않는다 (저니맵 문서는 workspace 목업 참조).
  *
- * variant:
- *  · row    — 44px 진입 행 + 바텀시트 오버레이 (피드 FT 패키지·불판 위젯)
- *  · inline — 선수 그리드를 지면에 바로 펼침 (매치센터 MoTM 탭 — 운영자: "경기가 끝난
- *             후에는 그 화면부터 보여주며 투표를 유도", 2026-08-22)
+ * 상태 셋: 투표 전(선수 그리드 인라인) → 투표 후(내 픽 + 분포, 픽 변경 가능) →
+ * 확정(전체 분포 영속). 후보 = 출전 선수 전원 (운영자 확정 — 2택 스펙 폐기).
  *
  * 투표는 기존 POST /api/polls/[id]/vote 재사용(유저당 1표, 재호출 = 갱신), 집계는
  * GET /api/motm/[pollId]. 퍼센트는 CardVsVote 와 같은 임계(3표↑) — 그 전엔 실수/"첫 표".
@@ -28,8 +25,7 @@ const INK = "var(--wc-ink, #1a1714)"
 const MUTE = "var(--wc-mute, #5c6470)"
 const MUTE2 = "var(--wc-mute-2, #8a8f98)"
 const LINE = "var(--wc-line, #e8e5e0)"
-
-export type MotmSurface = "motm_feed" | "motm_thread" | "motm_match"
+const SURFACE = "motm_match" as const
 
 interface PollData {
   pollId: string
@@ -41,34 +37,12 @@ interface PollData {
   closed: boolean
 }
 
-interface MotmCardProps {
-  pollId: string
-  surface: MotmSurface
-  variant?: "row" | "inline"
-  /** row 변형에서 프레임 없는 지면(피드 FT 패키지 안)은 false — 부모가 카드 액자 제공 */
-  framed?: boolean
-  /** 확정 상태에서 전체 분포 (inline 은 항상 전체) */
-  expandAll?: boolean
-  /** 투표 완료 후 읽기형 도선 목적지 (불판 글) — 댓글≥1 게이트 (T1 수정판 규칙) */
-  bridgePostId?: string | null
-  bridgeCommentCount?: number
-}
-
-export function MotmCard({
-  pollId,
-  surface,
-  variant = "row",
-  framed = false,
-  expandAll = false,
-  bridgePostId,
-  bridgeCommentCount = 0,
-}: MotmCardProps) {
+export function MotmCard({ pollId }: { pollId: string }) {
   const { isSignedIn } = useAuth()
   const clerk = useClerk()
   const [data, setData] = useState<PollData | null>(null)
   const [failed, setFailed] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [editing, setEditing] = useState(false) // inline: 투표 후 "픽 변경" 재진입
+  const [editing, setEditing] = useState(false) // 투표 후 "픽 변경" 재진입
   const [picked, setPicked] = useState<string | null>(null)
   const [team, setTeam] = useState<"home" | "away">("home")
   const [busy, setBusy] = useState(false)
@@ -90,28 +64,18 @@ export function MotmCard({
 
   // 노출 계측 — CardVsVote 와 같은 세션 dedupe 문법
   useEffect(() => {
-    const storageKey = `vs-seen-${surface}`
+    const storageKey = `vs-seen-${SURFACE}`
     try {
       const seen = JSON.parse(sessionStorage.getItem(storageKey) || "{}")
       if (!seen[pollId]) {
         seen[pollId] = 1
         sessionStorage.setItem(storageKey, JSON.stringify(seen))
-        trackEvent({ name: "vs_impression", params: { poll_id: pollId, surface } })
+        trackEvent({ name: "vs_impression", params: { poll_id: pollId, surface: SURFACE } })
       }
     } catch {
-      trackEvent({ name: "vs_impression", params: { poll_id: pollId, surface } })
+      trackEvent({ name: "vs_impression", params: { poll_id: pollId, surface: SURFACE } })
     }
-  }, [pollId, surface])
-
-  // 시트(오버레이) 열린 동안 배경 스크롤 잠금 — inline 은 해당 없음
-  useEffect(() => {
-    if (!sheetOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [sheetOpen])
+  }, [pollId])
 
   const sorted = useMemo(() => {
     if (!data) return []
@@ -130,14 +94,12 @@ export function MotmCard({
   function openPicker() {
     if (!data || data.closed) return
     setPicked(data.myKey)
-    if (variant === "inline") setEditing(true)
-    else setSheetOpen(true)
-    trackEvent({ name: "motm_sheet_open", params: { poll_id: pollId, surface } })
+    setEditing(true)
+    trackEvent({ name: "motm_sheet_open", params: { poll_id: pollId, surface: SURFACE } })
   }
 
   async function confirmVote() {
     if (!data || !picked || busy || picked === data.myKey) {
-      setSheetOpen(false)
       setEditing(false)
       return
     }
@@ -159,29 +121,19 @@ export function MotmCard({
         myVote: { optionKey: string }
       }
       setData({ ...data, results: out.results, total: out.total, myKey: out.myVote.optionKey })
-      setSheetOpen(false)
       setEditing(false)
-      trackEvent({ name: "vs_vote", params: { poll_id: pollId, option_key: picked, surface } })
+      trackEvent({
+        name: "vs_vote",
+        params: { poll_id: pollId, option_key: picked, surface: SURFACE },
+      })
     } catch {
-      /* 실패 시 상태 유지 — 픽커를 열어 두어 재시도 가능 */
+      /* 실패 시 상태 유지 — 그리드를 열어 두어 재시도 가능 */
     } finally {
       setBusy(false)
     }
   }
 
-  const frame = (children: ReactNode) =>
-    framed && variant === "row" ? (
-      <div
-        className="overflow-hidden rounded-xl"
-        style={{ background: "var(--wc-card, #fff)", border: `1px solid ${LINE}` }}
-      >
-        {children}
-      </div>
-    ) : (
-      <>{children}</>
-    )
-
-  /* ── 공용 조각: 분포 바 목록 ── */
+  /* ── 분포 바 목록 (확정·투표 후 공용) ── */
   const distributionRows = (limit: number | null) => {
     if (!data) return null
     const positive = sorted.filter((o) => (data.results[o.key] ?? 0) > 0)
@@ -227,7 +179,7 @@ export function MotmCard({
     )
   }
 
-  /* ── 공용 조각: 팀 탭 + 선수 그리드 ── */
+  /* ── 팀 탭 + 선수 그리드 ── */
   const sideLabel = (t: "home" | "away") =>
     data?.options.find((o) => o.team === t)?.team_label ?? (t === "home" ? "홈" : "원정")
   const group = (t: "home" | "away", g: MotmOption["group"]) =>
@@ -260,8 +212,83 @@ export function MotmCard({
     )
   }
 
-  const pickerBody = (cols: string) => (
-    <>
+  if (!data) {
+    return (
+      <p className="py-8 text-center text-[12.5px]" style={{ color: MUTE2 }}>
+        투표 불러오는 중…
+      </p>
+    )
+  }
+
+  /* ── 확정 — 실록 영속 화면 ── */
+  if (data.closed) {
+    if (data.total === 0 || !leader) {
+      return (
+        <p className="py-8 text-center text-[12.5px]" style={{ color: MUTE2 }}>
+          이 경기의 MoTM 투표는 마감되었습니다.
+        </p>
+      )
+    }
+    return (
+      <section>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[11px] font-bold" style={{ color: MUTE }}>
+            🏅 팬 선정 MoTM
+          </span>
+          <span className="text-[15px] font-extrabold" style={{ color: BURGUNDY }}>
+            {leader.label}
+            {showPct ? ` ${leaderPct}%` : ` ${leaderVotes}표`}
+          </span>
+          <span className="text-[11px] tabular-nums" style={{ color: MUTE2 }}>
+            {data.total.toLocaleString()}표
+          </span>
+        </div>
+        {distributionRows(null)}
+      </section>
+    )
+  }
+
+  /* ── 투표 후 요약 — 내 픽 + 현재 분포 + 픽 변경 ── */
+  if (data.myKey && !editing) {
+    const mine = optionByKey.get(data.myKey)
+    return (
+      <section>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="min-w-0 truncate text-[13px] font-extrabold" style={{ color: BURGUNDY }}>
+            ✓ 내 픽 · {mine?.label}
+          </span>
+          <span className="shrink-0 text-[11px] tabular-nums" style={{ color: MUTE2 }}>
+            {data.total === 1 && !showPct ? "첫 표" : `${data.total.toLocaleString()}표`}
+          </span>
+        </div>
+        {showPct ? (
+          distributionRows(3)
+        ) : (
+          <p className="mt-2 text-[11.5px]" style={{ color: MUTE }}>
+            분포는 3표부터 공개됩니다 — 지금은 초반 집계 중.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={openPicker}
+          className="mt-3 h-[38px] w-full rounded-[11px] text-[12.5px] font-bold"
+          style={{ border: `1px solid ${LINE}`, background: "var(--wc-card, #fff)", color: MUTE }}
+        >
+          픽 변경
+        </button>
+      </section>
+    )
+  }
+
+  /* ── 투표 전 — 선수 그리드 인라인 ── */
+  return (
+    <section>
+      <p className="text-[13.5px] font-extrabold" style={{ color: INK, wordBreak: "keep-all" }}>
+        🏅 오늘의 MoTM은?
+      </p>
+      <p className="mt-0.5 mb-2 text-[11px]" style={{ color: MUTE }}>
+        출전 {data.options.length}명 · 1인 선택 · 내일 오전 11시 확정
+      </p>
       <div className="flex" style={{ borderBottom: `1px solid ${LINE}` }}>
         {(["home", "away"] as const).map((t) => (
           <button
@@ -286,7 +313,9 @@ export function MotmCard({
         <p className="mb-1.5 text-[10.5px] font-bold tracking-[0.08em]" style={{ color: MUTE2 }}>
           선발
         </p>
-        <div className={`grid gap-1.5 ${cols}`}>{group(team, "starter").map(chip)}</div>
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+          {group(team, "starter").map(chip)}
+        </div>
         {group(team, "sub").length > 0 && (
           <>
             <p
@@ -295,265 +324,26 @@ export function MotmCard({
             >
               교체 투입
             </p>
-            <div className={`grid gap-1.5 ${cols}`}>{group(team, "sub").map(chip)}</div>
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+              {group(team, "sub").map(chip)}
+            </div>
           </>
         )}
       </div>
-    </>
-  )
-
-  const voteButton = (grow?: boolean) => (
-    <button
-      type="button"
-      onClick={confirmVote}
-      disabled={!picked || busy}
-      className={`h-[42px] rounded-[11px] text-[13px] font-bold text-white disabled:opacity-40 ${grow ? "flex-1" : "w-full"}`}
-      style={{ background: BURGUNDY }}
-    >
-      {busy ? "저장 중…" : data?.myKey && picked !== data.myKey ? "픽 변경" : "투표하기"}
-    </button>
-  )
-
-  /* ══════════ inline 변형 — 매치센터 MoTM 탭 ══════════ */
-  if (variant === "inline") {
-    if (!data) {
-      return (
-        <p className="py-8 text-center text-[12.5px]" style={{ color: MUTE2 }}>
-          투표 불러오는 중…
+      <button
+        type="button"
+        onClick={confirmVote}
+        disabled={!picked || busy}
+        className="mt-4 h-[42px] w-full rounded-[11px] text-[13px] font-bold text-white disabled:opacity-40"
+        style={{ background: BURGUNDY }}
+      >
+        {busy ? "저장 중…" : data.myKey && picked !== data.myKey ? "픽 변경" : "투표하기"}
+      </button>
+      {!isSignedIn && (
+        <p className="mt-1.5 text-center text-[10.5px]" style={{ color: MUTE2 }}>
+          투표는 로그인 후 반영됩니다
         </p>
-      )
-    }
-    if (data.closed) {
-      if (data.total === 0 || !leader) {
-        return (
-          <p className="py-8 text-center text-[12.5px]" style={{ color: MUTE2 }}>
-            이 경기의 MoTM 투표는 마감되었습니다.
-          </p>
-        )
-      }
-      return (
-        <section>
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[11px] font-bold" style={{ color: MUTE }}>
-              🏅 팬 선정 MoTM
-            </span>
-            <span className="text-[15px] font-extrabold" style={{ color: BURGUNDY }}>
-              {leader.label}
-              {showPct ? ` ${leaderPct}%` : ` ${leaderVotes}표`}
-            </span>
-            <span className="text-[11px] tabular-nums" style={{ color: MUTE2 }}>
-              {data.total.toLocaleString()}표
-            </span>
-          </div>
-          {distributionRows(null)}
-        </section>
-      )
-    }
-    // 투표 중 — 이미 던졌고 편집도 아니면 요약(내 픽 + 현재 분포), 아니면 픽커 펼침
-    if (data.myKey && !editing) {
-      const mine = optionByKey.get(data.myKey)
-      return (
-        <section>
-          <div className="flex items-baseline justify-between gap-2">
-            <span
-              className="min-w-0 truncate text-[13px] font-extrabold"
-              style={{ color: BURGUNDY }}
-            >
-              ✓ 내 픽 · {mine?.label}
-            </span>
-            <span className="shrink-0 text-[11px] tabular-nums" style={{ color: MUTE2 }}>
-              {data.total === 1 && showPct === false ? "첫 표" : `${data.total.toLocaleString()}표`}
-            </span>
-          </div>
-          {showPct ? (
-            distributionRows(3)
-          ) : (
-            <p className="mt-2 text-[11.5px]" style={{ color: MUTE }}>
-              분포는 3표부터 공개됩니다 — 지금은 초반 집계 중.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={openPicker}
-            className="mt-3 h-[38px] w-full rounded-[11px] text-[12.5px] font-bold"
-            style={{ border: `1px solid ${LINE}`, background: "var(--wc-card, #fff)", color: MUTE }}
-          >
-            픽 변경
-          </button>
-        </section>
-      )
-    }
-    return (
-      <section>
-        <p className="text-[13.5px] font-extrabold" style={{ color: INK, wordBreak: "keep-all" }}>
-          🏅 오늘의 MoTM은?
-        </p>
-        <p className="mt-0.5 mb-2 text-[11px]" style={{ color: MUTE }}>
-          출전 {data.options.length}명 · 1인 선택 · 내일 오전 11시 확정
-        </p>
-        {pickerBody("grid-cols-3 sm:grid-cols-4")}
-        <div className="mt-4">{voteButton()}</div>
-        {!isSignedIn && (
-          <p className="mt-1.5 text-center text-[10.5px]" style={{ color: MUTE2 }}>
-            투표는 로그인 후 반영됩니다
-          </p>
-        )}
-      </section>
-    )
-  }
-
-  /* ══════════ row 변형 — 피드 FT 패키지·불판 위젯 ══════════ */
-
-  /* 로딩 자리 — 44px 리듬 유지 (CLS 방지) */
-  if (!data) {
-    return frame(
-      <div
-        className="flex h-11 items-center justify-between px-3.5"
-        style={framed ? undefined : { borderTop: `1px solid ${LINE}` }}
-      >
-        <span className="text-[12.5px] font-bold" style={{ color: INK }}>
-          🏅 오늘의 MoTM은?
-        </span>
-        <span className="text-[12px]" style={{ color: MUTE2 }}>
-          …
-        </span>
-      </div>
-    )
-  }
-
-  /* 상태 C: 확정 */
-  if (data.closed) {
-    if (data.total === 0 || !leader) return null // 무투표 마감 — 빈 상태를 광고하지 않는다
-    return frame(
-      <div
-        className="px-3.5 pt-2.5 pb-3"
-        style={framed ? undefined : { borderTop: `1px solid ${LINE}` }}
-      >
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[11px] font-bold" style={{ color: MUTE }}>
-            🏅 MoTM 확정
-          </span>
-          <span className="text-[14px] font-extrabold" style={{ color: BURGUNDY }}>
-            {leader.label}
-            {showPct ? ` ${leaderPct}%` : ` ${leaderVotes}표`}
-          </span>
-          <span className="text-[11px] tabular-nums" style={{ color: MUTE2 }}>
-            {data.total.toLocaleString()}표
-          </span>
-        </div>
-        {distributionRows(expandAll ? null : 3)}
-      </div>
-    )
-  }
-
-  /* 상태 A/B: 진입 행 or 내 픽 행 */
-  const mine = data.myKey ? optionByKey.get(data.myKey) : null
-  const entry = mine ? (
-    <button
-      type="button"
-      onClick={openPicker}
-      className="flex h-11 w-full items-center justify-between px-3.5 text-left"
-      style={framed ? undefined : { borderTop: `1px solid ${LINE}` }}
-    >
-      <span className="min-w-0 truncate text-[12.5px] font-bold" style={{ color: BURGUNDY }}>
-        ✓ 내 픽 · {mine.label}
-      </span>
-      <span className="shrink-0 text-[11.5px] font-bold tabular-nums" style={{ color: MUTE }}>
-        {showPct
-          ? `현재 1위 ${leader?.label} ${leaderPct}% · ${data.total}표`
-          : data.total === 1
-            ? "첫 표"
-            : `${data.total}표`}
-      </span>
-    </button>
-  ) : (
-    <button
-      type="button"
-      onClick={openPicker}
-      className="flex h-11 w-full items-center justify-between px-3.5 text-left"
-      style={framed ? undefined : { borderTop: `1px solid ${LINE}` }}
-    >
-      <span className="min-w-0 truncate text-[12.5px] font-bold" style={{ color: INK }}>
-        🏅 오늘의 MoTM은?
-        {/* 비로그인·미투표에게도 3표↑면 분포 먼저 — "여기 사람 있다" 신호 */}
-        {showPct && (
-          <span className="ml-1.5 font-extrabold" style={{ color: BURGUNDY }}>
-            {leader?.label} {leaderPct}%
-          </span>
-        )}
-      </span>
-      <span className="shrink-0 text-[12px] font-bold" style={{ color: BURGUNDY }}>
-        {showPct ? `${data.total}명 참여 · 나도 투표 →` : `출전 ${data.options.length}명 중 선택 →`}
-      </span>
-    </button>
-  )
-
-  const bridge =
-    data.myKey && bridgePostId && bridgeCommentCount >= 1 ? (
-      <a
-        href={`/post/${bridgePostId}?utm_source=motm_bridge#comments`}
-        onClick={() =>
-          trackEvent({
-            name: "vs_comment_bridge_click",
-            params: { poll_id: pollId, post_id: bridgePostId },
-          })
-        }
-        className="flex h-9 items-center justify-end px-3.5 text-[12px] font-bold no-underline"
-        style={{ borderTop: `1px solid ${LINE}`, color: BURGUNDY }}
-      >
-        다른 의견 보러 가기 →
-      </a>
-    ) : null
-
-  const sheet = sheetOpen ? (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center"
-      style={{ background: "rgba(26,23,20,.4)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) setSheetOpen(false)
-      }}
-    >
-      <div
-        className="flex max-h-[82vh] w-full max-w-[560px] flex-col rounded-t-2xl"
-        style={{ background: "var(--wc-card, #fff)" }}
-        role="dialog"
-        aria-label={data.question}
-      >
-        <div className="px-4 pt-4 pb-2.5" style={{ borderBottom: `1px solid ${LINE}` }}>
-          <p className="text-[14px] font-extrabold" style={{ color: INK, wordBreak: "keep-all" }}>
-            {data.question}
-          </p>
-          <p className="mt-0.5 text-[11px]" style={{ color: MUTE }}>
-            출전 {data.options.length}명 · 1인 선택{data.myKey ? " · 다시 누르면 픽 변경" : ""}
-          </p>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 pb-4">
-          {pickerBody("grid-cols-3")}
-        </div>
-        <div className="flex gap-2 px-3.5 pt-2.5 pb-4" style={{ borderTop: `1px solid ${LINE}` }}>
-          <button
-            type="button"
-            onClick={() => setSheetOpen(false)}
-            className="h-[42px] flex-1 rounded-[11px] text-[13px] font-bold"
-            style={{ border: `1px solid ${LINE}`, background: "var(--wc-card, #fff)", color: MUTE }}
-          >
-            닫기
-          </button>
-          {voteButton(true)}
-        </div>
-      </div>
-    </div>
-  ) : null
-
-  return (
-    <>
-      {frame(
-        <>
-          {entry}
-          {bridge}
-        </>
       )}
-      {sheet}
-    </>
+    </section>
   )
 }

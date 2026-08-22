@@ -135,6 +135,15 @@ export async function sweepMotmPolls(): Promise<MotmSweepResult> {
     .select("id")
   const finalized = closedRows?.length ?? 0
 
+  // 1.5) 재활성화 — 마감 전인데 꺼져 있는 폴은 되살린다 (배포 지연 동안 수동으로
+  // 내려둔 경우의 self-heal). 강제 조기 마감이 필요하면 closes_at 을 과거로 당길 것.
+  await supabase
+    .from("polls")
+    .update({ is_active: true })
+    .eq("kind", "motm")
+    .eq("is_active", false)
+    .gt("closes_at", nowIso)
+
   // 2) 생성 후보 — FT(킥오프+110분) 지난 축구 경기, 매치 페이지 화이트리스트 한정
   const now = Date.now()
   const { data: rows } = await supabase
@@ -288,29 +297,7 @@ function refFromRow(row: {
   }
 }
 
-/** 홈 피드용 — FT 행에 실을 matchKey → 폴 참조 맵. 60초 Data Cache (page revalidate 는 죽어있음) */
-export function getMotmPollMapForFeed(matchKeys: string[]): Promise<Record<string, MotmPollRef>> {
-  if (matchKeys.length === 0) return Promise.resolve({})
-  return unstable_cache(
-    async (keys: string[]) => {
-      const supabase = createServiceRoleClient()
-      const { data } = await supabase
-        .from("polls")
-        .select("id, match_key, is_active, closes_at")
-        .eq("kind", "motm")
-        .in("match_key", keys)
-      const map: Record<string, MotmPollRef> = {}
-      for (const row of data ?? []) {
-        if (row.match_key) map[String(row.match_key)] = refFromRow(row)
-      }
-      return map
-    },
-    ["motm-poll-map"],
-    { revalidate: 60 }
-  )(matchKeys)
-}
-
-/** 매치센터·불판 위젯용 — 단일 경기 폴 참조. 30초 캐시(매치 요약과 동일 리듬) */
+/** 매치센터용 — 단일 경기 폴 참조. 30초 캐시(매치 요약과 동일 리듬) */
 export function getMotmPollByMatchKey(matchKey: string): Promise<MotmPollRef | null> {
   return unstable_cache(
     async (key: string) => {

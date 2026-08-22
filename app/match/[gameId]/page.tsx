@@ -279,10 +279,9 @@ export default async function MatchPage({ params }: Props) {
               }
               motm={
                 /* 팬 선정 MoTM (2026-08-22) — 투표 중엔 선수 그리드 인라인, 마감 후엔
-                   전체 분포로 영속. 폴이 없으면 탭 자체가 없다 (빈 탭 데드엔드 방지) */
-                motmPoll ? (
-                  <MotmCard pollId={motmPoll.pollId} surface="motm_match" variant="inline" />
-                ) : null
+                   전체 분포로 영속. 폴이 없으면 탭 자체가 없다 (빈 탭 데드엔드 방지).
+                   지면은 실록(매치센터) 한 곳뿐 — 피드·불판 확장은 별도 결정 전 금지 */
+                motmPoll ? <MotmCard pollId={motmPoll.pollId} /> : null
               }
               report={
                 /* 저장 리포트가 있거나, LFA 스탯이 없어 soccerway 스탯 폴백이 필요한 경우만.

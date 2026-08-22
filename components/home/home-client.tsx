@@ -72,10 +72,6 @@ interface HomeClientProps {
   tomorrowMatchTitle?: string | null
   /** 당일 종료 경기의 불판 매핑 (Top5-2 FT 사건 행) — 없으면 매치센터 링크 폴백 */
   ftThreadByGame?: Record<string, string>
-  /** 불판 댓글 수 (gameId 키) — MoTM 투표 후 읽기형 도선의 댓글≥1 게이트 재료 */
-  threadCommentByGame?: Record<string, number>
-  /** MoTM 폴 매핑 (matchKey 키, 2026-08-22) — 있으면 FT 행에 투표 카드가 패키지로 붙는다 */
-  motmByGame?: Record<string, { pollId: string; closed: boolean }>
 }
 
 export function HomeClient({
@@ -92,8 +88,6 @@ export function HomeClient({
   wallRatio,
   tomorrowMatchTitle,
   ftThreadByGame,
-  threadCommentByGame,
-  motmByGame,
 }: HomeClientProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
@@ -156,12 +150,9 @@ export function HomeClient({
             action: threadId ? "불판 →" : "매치센터 →",
             postId: threadId ?? null,
             ftAt: new Date(new Date(m.matchTime).getTime() + 110 * 60_000).toISOString(),
-            // MoTM 폴 (2026-08-22) — cron 생성 전(FT 직후 ≤15분)엔 없을 수 있다 → 행만
-            motm: motmByGame?.[m.matchKey] ?? null,
-            threadCommentCount: threadCommentByGame?.[m.gameId] ?? 0,
           }
         }),
-    [initialGames, ftThreadByGame, threadCommentByGame, motmByGame]
+    [initialGames, ftThreadByGame]
   )
   // 밴드 전환 애니메이션 게이트 — 첫 로드에는 안 붙인다(LCP 히어로가 opacity 0 에서
   // 시작하면 LCP 가 늦어진다). 사용자가 탭을 한 번이라도 바꾼 뒤부터, 히어로↔PageBand
