@@ -327,7 +327,9 @@ function TopStoryCarousel({ slides }: { slides: CardNewsItem[] }) {
 
   return (
     <div
-      className="relative flex min-h-[300px] items-end overflow-hidden rounded-[16px] sm:min-h-[420px]"
+      /* 높이 고정 (2026-08-23 운영자: "경기 일정이 늘어나도 배너 높이는 고정") —
+         min-h 는 그리드 stretch 로 우측 일정 길이만큼 자랐다. 고정 h 로 상한을 박는다 */
+      className="relative flex h-[300px] items-end overflow-hidden rounded-[16px] sm:h-[420px]"
       style={{
         background: "var(--gn-night-soft)",
         boxShadow: "0 20px 50px -20px rgba(22,20,26,.55)",
@@ -510,6 +512,10 @@ function TodayFixtures({
   const { isSignedIn } = useAuth()
   const shown = matches.slice(0, MAX_ROWS)
   const rest = matches.length - shown.length
+  // 예정 일정은 기본 접힘 (2026-08-23 운영자: "경기 일정은 접혀진 상태로") —
+  // 일정이 많은 날 밴드가 세로로 자라며 좌측 배너를 늘리던 문제의 나머지 반쪽.
+  // LIVE·카운트다운은 접지 않는다 — 밴드의 존재 이유다.
+  const [fixturesOpen, setFixturesOpen] = useState(false)
 
   return (
     <aside
@@ -635,7 +641,20 @@ function TodayFixtures({
         </div>
       )}
 
-      <ul className="flex-1">
+      {/* 접힘 토글 — 펼쳐야 예정 목록이 나온다. 행 문법은 "오늘 결과" 행과 동일 */}
+      {matches.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setFixturesOpen((o) => !o)}
+          aria-expanded={fixturesOpen}
+          className="mt-1 flex w-full items-center justify-between py-2 text-[12.5px] font-bold transition-opacity hover:opacity-80"
+          style={{ borderBottom: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
+        >
+          <span suppressHydrationWarning>오늘 일정 {matches.length}경기</span>
+          <span>{fixturesOpen ? "접기 ▴" : "펼치기 ▾"}</span>
+        </button>
+      )}
+      <ul className={fixturesOpen ? undefined : "hidden"}>
         {shown.map((m) => (
           <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
             <Link
@@ -674,6 +693,9 @@ function TodayFixtures({
           </li>
         ))}
       </ul>
+
+      {/* 접힘 상태에서 CTA 를 카드 바닥에 붙이는 스페이서 (종전 ul 의 flex-1 몫) */}
+      <div className="flex-1" aria-hidden />
 
       {/* 오늘 결과 — 목록은 매치 센터가 담당, 여기는 개수 + 진입점 한 줄 */}
       {finishedMatches.length > 0 && (

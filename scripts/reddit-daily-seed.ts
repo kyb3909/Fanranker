@@ -79,20 +79,28 @@ function textToTipTapJson(text: string): object {
   }
 }
 
-/** VPS 경유 레딧 RSS — 로컬 직통은 레딧이 막는다 (2026-08-21 실측). 호출 1회 = 예산 1건 */
-function fetchRedditRssViaVps(url: string): string {
-  const remote = `sleep 2; curl -s -H 'User-Agent: ${REDDIT_UA}' '${url}'`
-  const out = execFileSync("py", ["-3", "scripts/vultr-exec.py", "--timeout", "60", remote], {
-    encoding: "utf8",
-    maxBuffer: 4 * 1024 * 1024,
-  })
-  if (!out.includes("<entry>")) {
-    throw new Error(`RSS 수집 실패 (레딧 예산 429 가능성 — 60초 뒤 재시도): ${out.slice(0, 160)}`)
+/**
+ * VPS 경유 레딧 RSS — 로컬 직통은 레딧이 막는다 (2026-08-21 실측). 호출 1회 = 예산 1건.
+ * ⚠️ VPS IP 예산은 뉴스 스캐너 cron(15분마다 ~12건)과 공유라 429 가 일상이다 —
+ *    429 는 빈 본문으로 온다(2026-08-23 실측). 80초 쉬고 재시도해 빈 틈에 끼어든다.
+ */
+async function fetchRedditRssViaVps(url: string, attempts = 6): Promise<string> {
+  for (let i = 1; ; i++) {
+    const remote = `sleep 2; curl -s -H 'User-Agent: ${REDDIT_UA}' '${url}'`
+    const out = execFileSync("py", ["-3", "scripts/vultr-exec.py", "--timeout", "60", remote], {
+      encoding: "utf8",
+      maxBuffer: 4 * 1024 * 1024,
+    })
+    if (out.includes("<entry>")) return out
+    if (i >= attempts) {
+      throw new Error(`RSS 수집 실패 (429/빈 응답 ${attempts}회): ${out.slice(0, 120)}`)
+    }
+    console.log(`  레딧 예산 대기 (${i}/${attempts}) — 80초 후 재시도…`)
+    await sleep(80_000)
   }
-  return out
 }
 
-function fetchThreadRssViaVps(sub: string, threadId: string): string {
+function fetchThreadRssViaVps(sub: string, threadId: string): Promise<string> {
   return fetchRedditRssViaVps(
     `https://www.reddit.com/r/${sub}/comments/${threadId}/.rss?sort=top&limit=80`
   )
@@ -103,8 +111,10 @@ function fetchThreadRssViaVps(sub: string, threadId: string): string {
  * hot RSS 에서 제목에 daily 가 들어간 첫 스레드 — 예산 1건 소비하므로 --sub 모드는
  * 실행당 총 2건(hot + 스레드)을 쓴다. 사이에 65초를 쉰다.
  */
-function findDailyThreadViaVps(sub: string): { threadId: string; title: string } | null {
-  const xml = fetchRedditRssViaVps(`https://www.reddit.com/r/${sub}/hot/.rss?limit=25`)
+async function findDailyThreadViaVps(
+  sub: string
+): Promise<{ threadId: string; title: string } | null> {
+  const xml = await fetchRedditRssViaVps(`https://www.reddit.com/r/${sub}/hot/.rss?limit=25`)
   for (const e of xml.split("<entry>").slice(1)) {
     const t = e.match(/<title>([\s\S]*?)<\/title>/)?.[1]
     const link = e.match(
@@ -224,7 +234,7 @@ async function main() {
   if (subArg && !url) {
     // --sub 모드: 데일리 스레드 자동 탐색 (예산 2건 — hot 1 + 스레드 1, 사이 65초)
     sub = subArg
-    const daily = findDailyThreadViaVps(sub)
+    const daily = await findDailyThreadViaVps(sub)
     if (!daily) {
       console.error(`r/${sub}: hot 상위 25개에서 데일리 스레드를 못 찾았습니다 — 건너뜀.`)
       process.exit(2)
@@ -250,7 +260,7 @@ async function main() {
   console.log(
     `[r/${sub}] 스레드 ${threadId} → ${team} 팬 글 → /community/${board} (${doPost ? "실제 등록" : "미리보기"})`
   )
-  const xml = fetchThreadRssViaVps(sub, threadId)
+  const xml = await fetchThreadRssViaVps(sub, threadId)
   const comments = extractComments(xml)
   console.log(`후보 댓글 ${comments.length}건 → LLM 선별·각색 중 (${MODEL})…\n`)
   if (comments.length === 0) {
