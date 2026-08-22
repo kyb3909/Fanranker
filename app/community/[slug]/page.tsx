@@ -18,6 +18,7 @@ import { formatRelativeTime } from "@/lib/utils/date"
 import { ALL_COMMUNITIES } from "@/lib/constants/communities"
 import Link from "@/components/ui/app-link"
 import { getCreator } from "@/lib/constants/creators"
+import { getTeamBoard } from "@/lib/constants/team-boards"
 import { CreatorBoard } from "@/components/creator/creator-board"
 import { PageBand } from "@/components/page-band"
 
@@ -312,22 +313,22 @@ export default async function CommunityPage({
   const communityName = info?.name || dbCategory?.name || slug
   const communityDesc = info?.description || dbCategory?.description || ""
 
-  // 아스날 팀 보드 — 헤더에 엠블럼 + 실록 진입 (2026-08-22 운영자: "엠블럼 옆에 실록").
-  // 실록 = /saga/{slug} 시즌 위키. 시즌이 바뀌어도 링크가 살도록 active 행을 조회하고,
-  // 없으면 링크를 숨긴다 (fail-open). 크레스트는 시즌 이벤트 자산(/season/crest-*) 재사용.
-  const isArsenalBoard = slug === "arsenal"
-  let arsenalSagaSlug: string | null = null
-  if (isArsenalBoard) {
+  // 팀 보드 — 헤더에 엠블럼(자산 있는 팀만) + 시즌 사가 진입 (2026-08-22 아스날 시작,
+  // 2026-08-23 레지스트리로 일반화 — lib/constants/team-boards.ts).
+  // 사가 링크는 active 시즌 위키를 조회해 시즌이 바뀌어도 살고, 없으면 숨긴다 (fail-open).
+  const teamBoard = getTeamBoard(slug)
+  let teamSagaSlug: string | null = null
+  if (teamBoard?.sagaTeamId) {
     const { data: seasonSaga } = await supabaseForMeta
       .from("sagas")
       .select("slug")
       .eq("saga_type", "season")
       .eq("status", "active")
-      .eq("subject->>team_id", "arsenal")
+      .eq("subject->>team_id", teamBoard.sagaTeamId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
-    arsenalSagaSlug = seasonSaga?.slug ? String(seasonSaga.slug) : null
+    teamSagaSlug = seasonSaga?.slug ? String(seasonSaga.slug) : null
   }
 
   const community = {
@@ -389,10 +390,10 @@ export default async function CommunityPage({
         <PageBand
           kicker="Board"
           title={
-            isArsenalBoard ? (
+            teamBoard?.crest ? (
               <span className="inline-flex items-center gap-3">
                 <Image
-                  src="/season/crest-arsenal.png"
+                  src={teamBoard.crest}
                   alt=""
                   width={44}
                   height={44}
@@ -406,9 +407,9 @@ export default async function CommunityPage({
           }
           description={communityDesc || undefined}
           aside={
-            isArsenalBoard && arsenalSagaSlug ? (
+            teamSagaSlug ? (
               <Link
-                href={`/saga/${arsenalSagaSlug}?utm_source=arsenal_board`}
+                href={`/saga/${teamSagaSlug}?utm_source=team_board`}
                 className="inline-flex items-center rounded-md px-4 py-2 text-[13px] font-bold no-underline transition-colors hover:bg-[rgba(244,239,232,.08)]"
                 style={{ border: "1px solid rgba(244,239,232,.35)", color: "var(--gn-cream)" }}
               >

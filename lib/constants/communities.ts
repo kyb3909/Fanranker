@@ -122,8 +122,21 @@ export const ALL_COMMUNITIES: CommunityInfo[] = [...SPORTS_COMMUNITIES, ...LIFE_
 /** Canonical community slug → Korean display name mapping */
 export const COMMUNITY_NAMES: Record<string, string> = {
   ...Object.fromEntries(ALL_COMMUNITIES.map((c) => [c.slug, c.name])),
-  // 팀 보드 (categories DB-only — 헤더 엠블럼·실록은 community page 분기, 2026-08-22)
+  // 팀 보드 (categories DB-only — 헤더는 lib/constants/team-boards.ts 레지스트리, 2026-08-23)
   arsenal: "아스날",
+  chelsea: "첼시",
+  liverpool: "리버풀",
+  mancity: "맨시티",
+  manutd: "맨유",
+  tottenham: "토트넘",
+  realmadrid: "레알",
+  barcelona: "바르셀로나",
+  atletico: "아틀레티코",
+  bayern: "뮌헨",
+  dortmund: "도르트문트",
+  milan: "밀란",
+  juventus: "유벤투스",
+  inter: "인테르",
   // 크리에이터 보드 (lib/constants/creators.ts 와 동기) — 최근 댓글 등 이름 표기용
   catsenal: "캣스날",
   chelookey: "첼루키",

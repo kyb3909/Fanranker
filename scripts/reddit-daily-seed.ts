@@ -11,8 +11,12 @@
  * - 등록 명의는 페르소나 3계정 로테이션 (한 계정 도배 방지).
  *
  * 사용법:
- *   pnpm exec tsx scripts/reddit-daily-seed.ts <레딧 스레드 URL> [--limit=6] [--post] [--board=football]
+ *   pnpm exec tsx scripts/reddit-daily-seed.ts <레딧 스레드 URL> [--limit=6] [--post] [--board=...]
  *   예) pnpm exec tsx scripts/reddit-daily-seed.ts https://www.reddit.com/r/Gunners/comments/1vtd3pf/... --limit=6
+ *
+ * 게시판 라우팅 (2026-08-23 팀 보드 13개 연결): --board 를 안 주면 서브레딧의 팀 게시판
+ * (SUB_MAP — r/chelseafc→/community/chelsea 등)으로 자동 라우팅. 보드 없는 팀(뉴캐슬·PSG)과
+ * 미등록 서브레딧은 football 폴백. --board=football 로 강제하면 종전과 동일.
  *
  * 수집 경로 (2026-08-21 실측): 로컬·VPS 모두 레딧 JSON 은 403, **스레드 RSS + VPS**만
  * 뚫린다 → `scripts/vultr-exec.py` 로 VPS 에서 curl. 레딧 예산은 IP당 60초 1건 —
@@ -35,20 +39,29 @@ const REDDIT_UA =
 /** 등록 명의 로테이션 — 실재하는 페르소나 프로필 (물복숭아·치킨무·자야되는데) */
 const PERSONAS = ["user_persona_light", "user_persona_meme", "user_persona_dawn"]
 
-/** 서브레딧 → 팀 라벨 (LLM 컨텍스트 + 말머리 매칭) */
-const SUB_TO_TEAM: Record<string, string> = {
-  gunners: "아스날",
-  liverpoolfc: "리버풀",
-  chelseafc: "첼시",
-  reddevils: "맨유",
-  mcfc: "맨시티",
-  coys: "토트넘",
-  nufc: "뉴캐슬",
-  realmadrid: "레알",
-  barca: "바르샤",
-  fcbayern: "뮌헨",
-  psg: "PSG",
-  juve: "유벤투스",
+/**
+ * 서브레딧 → 팀 라벨(LLM 컨텍스트·말머리) + 팀 게시판 (2026-08-23 팀 보드 연결).
+ * board 는 categories slug — lib/constants/team-boards.ts 레지스트리와 동기.
+ * 팀 보드가 없는 팀(뉴캐슬·PSG)은 football 폴백.
+ */
+const SUB_MAP: Record<string, { team: string; board: string }> = {
+  gunners: { team: "아스날", board: "arsenal" },
+  liverpoolfc: { team: "리버풀", board: "liverpool" },
+  chelseafc: { team: "첼시", board: "chelsea" },
+  reddevils: { team: "맨유", board: "manutd" },
+  manchesterunited: { team: "맨유", board: "manutd" },
+  mcfc: { team: "맨시티", board: "mancity" },
+  coys: { team: "토트넘", board: "tottenham" },
+  nufc: { team: "뉴캐슬", board: "football" },
+  realmadrid: { team: "레알", board: "realmadrid" },
+  barca: { team: "바르샤", board: "barcelona" },
+  atletico: { team: "아틀레티코", board: "atletico" },
+  fcbayern: { team: "뮌헨", board: "bayern" },
+  borussiadortmund: { team: "도르트문트", board: "dortmund" },
+  acmilan: { team: "밀란", board: "milan" },
+  juve: { team: "유벤투스", board: "juventus" },
+  fcintermilan: { team: "인테르", board: "inter" },
+  psg: { team: "PSG", board: "football" },
 }
 
 function textToTipTapJson(text: string): object {
@@ -170,7 +183,7 @@ async function main() {
   const url = args.find((a) => !a.startsWith("--"))
   const doPost = args.includes("--post")
   const limit = Number(args.find((a) => a.startsWith("--limit="))?.slice(8) ?? 6)
-  const board = args.find((a) => a.startsWith("--board="))?.slice(8) ?? "football"
+  const boardArg = args.find((a) => a.startsWith("--board="))?.slice(8)
 
   const m = url?.match(/reddit\.com\/r\/([^/]+)\/comments\/([a-z0-9]+)/i)
   if (!m) {
@@ -180,10 +193,13 @@ async function main() {
     process.exit(1)
   }
   const [, sub, threadId] = m
-  const team = SUB_TO_TEAM[sub.toLowerCase()] ?? sub
+  const mapped = SUB_MAP[sub.toLowerCase()]
+  const team = mapped?.team ?? sub
+  // --board 명시가 최우선, 없으면 서브레딧의 팀 게시판, 그것도 없으면 football
+  const board = boardArg ?? mapped?.board ?? "football"
 
   console.log(
-    `[r/${sub}] 스레드 ${threadId} → ${team} 팬 글 (${doPost ? "실제 등록" : "미리보기"})`
+    `[r/${sub}] 스레드 ${threadId} → ${team} 팬 글 → /community/${board} (${doPost ? "실제 등록" : "미리보기"})`
   )
   const xml = fetchThreadRssViaVps(sub, threadId)
   const comments = extractComments(xml)
@@ -213,10 +229,13 @@ async function main() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-  // 팀 말머리가 있으면 붙인다 (없으면 말머리 없이)
+  // 팀 말머리가 있으면 붙인다 (없으면 말머리 없이).
+  // ⚠️ community_slug 필터 필수 — 종전엔 이름만 봐서 football 보드의 flair_id 가
+  // 팀 게시판 글에 붙을 수 있었다 (팀 보드엔 말머리가 없으므로 결과는 "말머리 없음")
   const { data: flair } = await supabase
     .from("post_flairs")
     .select("id")
+    .eq("community_slug", board)
     .eq("name", team)
     .limit(1)
     .maybeSingle()
