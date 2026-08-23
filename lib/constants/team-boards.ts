@@ -37,20 +37,55 @@ export const TEAM_BOARDS: Record<string, TeamBoardInfo> = {
     crest: "/season/crest-liverpool.png",
     sagaTeamId: "liverpool",
   },
-  mancity: { slug: "mancity", name: "맨시티", crest: null, sagaTeamId: "man-city" },
+  mancity: {
+    slug: "mancity",
+    name: "맨시티",
+    crest: "/season/crest-mancity.png",
+    sagaTeamId: "man-city",
+  },
   manutd: { slug: "manutd", name: "맨유", crest: "/season/crest-manutd.png", sagaTeamId: null },
-  tottenham: { slug: "tottenham", name: "토트넘", crest: null, sagaTeamId: null },
+  tottenham: {
+    slug: "tottenham",
+    name: "토트넘",
+    crest: "/season/crest-tottenham.png",
+    sagaTeamId: null,
+  },
   // ── 라리가 ──
-  realmadrid: { slug: "realmadrid", name: "레알", crest: null, sagaTeamId: null },
-  barcelona: { slug: "barcelona", name: "바르셀로나", crest: null, sagaTeamId: null },
-  atletico: { slug: "atletico", name: "아틀레티코", crest: null, sagaTeamId: null },
+  realmadrid: {
+    slug: "realmadrid",
+    name: "레알",
+    crest: "/season/crest-realmadrid.png",
+    sagaTeamId: null,
+  },
+  barcelona: {
+    slug: "barcelona",
+    name: "바르셀로나",
+    crest: "/season/crest-barcelona.png",
+    sagaTeamId: null,
+  },
+  atletico: {
+    slug: "atletico",
+    name: "아틀레티코",
+    crest: "/season/crest-atletico.png",
+    sagaTeamId: null,
+  },
   // ── 분데스리가 ──
-  bayern: { slug: "bayern", name: "뮌헨", crest: null, sagaTeamId: null },
-  dortmund: { slug: "dortmund", name: "도르트문트", crest: null, sagaTeamId: null },
+  bayern: { slug: "bayern", name: "뮌헨", crest: "/season/crest-bayern.png", sagaTeamId: null },
+  dortmund: {
+    slug: "dortmund",
+    name: "도르트문트",
+    crest: "/season/crest-dortmund.png",
+    sagaTeamId: null,
+  },
   // ── 세리에A ──
-  milan: { slug: "milan", name: "밀란", crest: null, sagaTeamId: null },
-  juventus: { slug: "juventus", name: "유벤투스", crest: null, sagaTeamId: null },
-  inter: { slug: "inter", name: "인테르", crest: null, sagaTeamId: null },
+  milan: { slug: "milan", name: "밀란", crest: "/season/crest-milan.png", sagaTeamId: null },
+  juventus: {
+    slug: "juventus",
+    name: "유벤투스",
+    crest: "/season/crest-juventus.png",
+    sagaTeamId: null,
+  },
+  inter: { slug: "inter", name: "인테르", crest: "/season/crest-inter.png", sagaTeamId: null },
 }
 
 export function getTeamBoard(slug: string): TeamBoardInfo | null {

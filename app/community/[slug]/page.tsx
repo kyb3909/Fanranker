@@ -426,72 +426,58 @@ export default async function CommunityPage({
           {/* 12컬럼 그리드: 조밀한 간격 */}
           <div className="grid grid-cols-12 gap-4 lg:gap-5">
             <div className="col-span-12 lg:col-span-9">
-              {/* 하위 채널 목록 — wc-action-card 응용. 축구는 이적시장 상황판 카드를 맨 앞에 */}
+              {/* 하위 채널 — 팀 보드가 14개로 늘며 카드 그리드가 지면을 다 먹었다
+                  (2026-08-23 운영자: "버튼이 이상하다, 엠블럼으로 바꾸고 카드 최소화").
+                  컴팩트 칩 레일로: 팀 보드는 클럽 엠블럼(TEAM_BOARDS.crest), 나머지는
+                  이모지. 설명 문구·카드 박스는 버린다 */}
               {((channels && channels.length > 0) || slug === "football") && (
-                <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="mb-4 flex flex-wrap items-center gap-1.5">
                   {slug === "football" && (
                     <Link
                       href="/transfer"
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-all hover:-translate-y-0.5"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--wc-soft)]"
                       style={{
                         background: "var(--wc-card)",
-                        boxShadow: "var(--wc-shadow-1)",
-                        // 한쪽 면 액센트 보더 금지 — 전체 테두리로 두른다
                         border: "1px solid var(--wc-line)",
+                        color: "var(--wc-ink)",
                       }}
                     >
-                      <span
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-base"
-                        style={{ background: "var(--wc-soft)" }}
-                      >
+                      <span className="text-[13px] leading-none" aria-hidden>
                         🔁
                       </span>
-                      <div className="min-w-0">
-                        <p
-                          className="truncate text-[13px] font-semibold"
-                          style={{ color: "var(--wc-ink)" }}
-                        >
-                          이적시장
-                        </p>
-                        <p className="truncate text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                          오피셜·루머 상황판
-                        </p>
-                      </div>
+                      이적시장
                     </Link>
                   )}
-                  {(channels ?? []).map((ch) => (
-                    <Link
-                      key={ch.slug}
-                      href={`/community/${ch.slug}`}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-all hover:-translate-y-0.5"
-                      style={{
-                        background: "var(--wc-card)",
-                        boxShadow: "var(--wc-shadow-1)",
-                        // 한쪽 면 액센트 보더 금지 — 전체 테두리로 두른다
-                        border: "1px solid var(--wc-line)",
-                      }}
-                    >
-                      <span
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-base"
-                        style={{ background: "var(--wc-soft)" }}
+                  {(channels ?? []).map((ch) => {
+                    const crest = getTeamBoard(ch.slug)?.crest ?? null
+                    return (
+                      <Link
+                        key={ch.slug}
+                        href={`/community/${ch.slug}`}
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--wc-soft)]"
+                        style={{
+                          background: "var(--wc-card)",
+                          border: "1px solid var(--wc-line)",
+                          color: "var(--wc-ink)",
+                        }}
                       >
-                        {ch.icon || "📺"}
-                      </span>
-                      <div className="min-w-0">
-                        <p
-                          className="truncate text-[13px] font-semibold"
-                          style={{ color: "var(--wc-ink)" }}
-                        >
-                          {ch.name}
-                        </p>
-                        {ch.description && (
-                          <p className="truncate text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                            {ch.description}
-                          </p>
+                        {crest ? (
+                          <Image
+                            src={crest}
+                            alt=""
+                            width={20}
+                            height={20}
+                            className="h-5 w-5 shrink-0 object-contain"
+                          />
+                        ) : (
+                          <span className="text-[13px] leading-none" aria-hidden>
+                            {ch.icon || "📺"}
+                          </span>
                         )}
-                      </div>
-                    </Link>
-                  ))}
+                        {ch.name}
+                      </Link>
+                    )
+                  })}
                 </div>
               )}
 
