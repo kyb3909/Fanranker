@@ -36,10 +36,27 @@ async function lfa<T>(endpoint: string, params: Record<string, string>): Promise
   const qs = new URLSearchParams({ ...params, api_key: KEY })
   // ⚠️ matches 는 하루 800경기 913KB 라 LFA 서버 캐시가 비면 46초까지 간다 (2026-08-24 실측).
   //    20초로 끊으면 과거 날짜는 전부 실패하고 팀 id 백필이 통째로 빈다.
-  const res = await fetch(`${BASE}/${endpoint}?${qs}`, { signal: AbortSignal.timeout(60_000) })
-  if (!res.ok) return null
-  const json = (await res.json()) as { success?: boolean; data?: T }
-  return json.success ? (json.data ?? null) : null
+  //
+  // ⚠️ team_squad 는 **간헐적으로 503** 을 낸다 ("Veri çekilemedi, lütfen tekrar deneyiniz").
+  //    재시도가 없으면 그 팀은 조용히 "스쿼드 없음" 이 되고, 그 결과가 지면에서는 선수 이름이
+  //    영문으로 남는 것으로 나타난다 (첼시·토트넘·브렌트퍼드가 이것 때문에 비어 있었다).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${BASE}/${endpoint}?${qs}`, { signal: AbortSignal.timeout(60_000) })
+      if (!res.ok) {
+        if (res.status >= 500 || res.status === 429) {
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)))
+          continue
+        }
+        return null
+      }
+      const json = (await res.json()) as { success?: boolean; data?: T }
+      return json.success ? (json.data ?? null) : null
+    } catch {
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)))
+    }
+  }
+  return null
 }
 
 /** 이름 대조용 토큰 — 발음기호·구두점 제거, 3글자 이상만 */
