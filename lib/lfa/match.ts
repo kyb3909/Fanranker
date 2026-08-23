@@ -12,6 +12,7 @@ import {
   writeDayMatches,
   writeMatchDetails,
 } from "@/lib/lfa/persist"
+import { resolveTeamId } from "@/lib/match/resolve-team-id"
 
 /**
  * betman 경기 → live-football-api 경기 해석 + 스코어/스탯 (2026-08-17).
@@ -310,22 +311,19 @@ interface SquadName {
  */
 const cachedSquad = unstable_cache(
   async (teamKr: string): Promise<SquadName[]> => {
-    const supabase = createServiceRoleClient()
-    const { data: team } = await supabase
-      .from("team_dictionary")
-      .select("soccerway_team_id")
-      .eq("name_kr", teamKr)
-      .maybeSingle()
-    if (!team) return []
-    const { data } = await supabase
+    // ⚠️ 정확일치로 찾지 않는다 — betman 표기와 사전 표기가 어긋나면(브라이턴&호브 앨비언 ↔
+    //    브라이턴) 그 팀 선수 이름이 통째로 영문으로 남는다 (2026-08-24).
+    const teamId = await resolveTeamId(teamKr)
+    if (!teamId) return []
+    const { data } = await createServiceRoleClient()
       .from("team_squads")
       .select("name_en, name_kr")
-      .eq("soccerway_team_id", team.soccerway_team_id)
+      .eq("soccerway_team_id", teamId)
       .not("name_kr", "is", null)
       .neq("status", "rejected")
     return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
   },
-  ["lfa-squad-names-v2"],
+  ["lfa-squad-names-v3"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 

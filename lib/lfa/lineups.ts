@@ -3,6 +3,7 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaFetch } from "@/lib/lfa/client"
+import { resolveTeamId } from "@/lib/match/resolve-team-id"
 
 /**
  * live-football-api 라인업 (2026-08-18 운영자: "라인업도 없고 서비스가 일관성이 없다").
@@ -78,22 +79,18 @@ export interface SquadName {
 /** 팀 한글명 → 그 팀 스쿼드 (영문명은 "성 이름" 순) — 저장 라인업 재한글화에도 쓰인다 */
 export const getTeamSquadNames = unstable_cache(
   async (teamKr: string): Promise<SquadName[]> => {
-    const supabase = createServiceRoleClient()
-    const { data: team } = await supabase
-      .from("team_dictionary")
-      .select("soccerway_team_id")
-      .eq("name_kr", teamKr)
-      .maybeSingle()
-    if (!team) return []
-    const { data } = await supabase
+    // ⚠️ 정확일치 금지 — 사유는 lib/match/resolve-team-id.ts 주석 참조
+    const teamId = await resolveTeamId(teamKr)
+    if (!teamId) return []
+    const { data } = await createServiceRoleClient()
       .from("team_squads")
       .select("name_en, name_kr")
-      .eq("soccerway_team_id", team.soccerway_team_id)
+      .eq("soccerway_team_id", teamId)
       .not("name_kr", "is", null)
       .neq("status", "rejected")
     return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
   },
-  ["lfa-lineup-squad-v2"],
+  ["lfa-lineup-squad-v3"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
 
