@@ -75,6 +75,33 @@ export function plausibleCorrection(from: string, to: string): boolean {
 }
 
 /**
+ * 사전에 **등재할 표기**를 정한다 — 네이버 검색 승자를 그대로 믿지 않는다.
+ *
+ * 실사고 2건이 같은 구멍에서 나왔다:
+ *  · '라파엘 레앙' → 승자 '레온'(45,133건) — 흔한 단어라 검색량이 폭발하는 다른 대상
+ *  · 'Balde/발데' → 승자 '발데스'(3,243건) — **빅토르 발데스(전 바르사 GK) 동명이인**
+ *    (2026-08-23). 알레한드로 발데(바르셀로나 LB)의 기사가 통째로 오염됐다.
+ *
+ * 규칙:
+ *  · 승자가 기사 표기의 **길이 변형**이면(발데↔발데스, 아라우호↔로날드 아라우호) 철자
+ *    다툼이 아니다 → **기사 표기를 그대로** 쓴다. 검색량은 동명이인·유명세에 오염되므로
+ *    "더 많이 나온 쪽"이 이 선수의 표기라는 보장이 없다.
+ *  · 철자가 실제로 다르면 교정 주장이므로 타당성 검사를 통과해야 한다.
+ *  · 통과 못 하면 null — 등재를 보류한다(틀린 등재보다 미등재가 낫다).
+ *
+ * ⚠️ 발행 게이트(naming-verify-loop)와 소급 감사(cron/naming-audit)가 **같은 함수**를
+ *    써야 한다. 종전엔 발행 게이트에만 이 판정이 있었고 소급 감사는 승자를 그대로
+ *    등재해서, 같은 사고가 감사 경로로 다시 들어왔다.
+ */
+export function decidePreferred(articleName: string, winner: string): string | null {
+  const compact = (s: string) => s.replace(/\s+/g, "")
+  const isLengthVariant =
+    compact(winner).includes(compact(articleName)) || compact(articleName).includes(compact(winner))
+  if (isLengthVariant) return articleName
+  return plausibleCorrection(articleName, winner) ? winner : null
+}
+
+/**
  * 길이 변형 접기 — 같은 이름의 짧은/긴 형태는 **경쟁 관계가 아니다** (2026-08-10).
  *
  * 실사고: '로날드 아라우호'가 7일간 4번 막히고도 한 번도 등재되지 않았다. 이유는

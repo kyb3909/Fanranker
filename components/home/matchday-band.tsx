@@ -511,11 +511,25 @@ function TodayFixtures({
 }) {
   // SSR/하이드레이션 첫 렌더에서는 undefined → 게스트 문구로 시작, 로그인 확인 후 전환
   const { isSignedIn } = useAuth()
-  // 예정 일정은 4경기까지만 인라인, 나머지는 "전체 일정 보기" 버튼으로 (2026-08-23
-  // 운영자 확정 — 접기 토글이 아니라 4개 + 버튼). 일정이 많은 날 밴드가 세로로
-  // 자라며 좌측 배너를 늘리던 문제의 나머지 반쪽 (배너는 고정 h 로 이미 봉합).
-  const shown = matches.slice(0, MAX_ROWS)
-  const rest = matches.length - shown.length
+  /**
+   * 카드를 채우는 순서: LIVE → 예정 → 오늘 결과 (2026-08-23 운영자: "3개만 줘서 비어
+   * 보인다 — 최대한 채우고, 모자라면 잔여 일정 보기로 일정 페이지").
+   *
+   * 종전엔 예정 4행만 실어서, 그날 경기가 다 끝난 시간대(새벽·낮)에는 LIVE 몇 줄만
+   * 남고 카드가 텅 비었다. 남는 칸을 **오늘 결과**로 메우면 같은 자리가 "오늘 뭐가
+   * 있었나"를 답한다. 결과는 스코어가 실제로 있는 것만 — "- : -" 는 채움이 아니라 흠이다.
+   */
+  const CARD_ROWS = 8
+  const upcomingShown = matches.slice(0, Math.max(0, CARD_ROWS - liveMatches.length))
+  const finishedWithScore = finishedMatches.filter(
+    (m) => m.homeScore != null && m.awayScore != null
+  )
+  const finishedShown = finishedWithScore.slice(
+    0,
+    Math.max(0, CARD_ROWS - liveMatches.length - upcomingShown.length)
+  )
+  const restUpcoming = matches.length - upcomingShown.length
+  const restFinished = finishedWithScore.length - finishedShown.length
 
   return (
     <aside
@@ -647,7 +661,7 @@ function TodayFixtures({
         )}
 
         <ul>
-          {shown.map((m) => (
+          {upcomingShown.map((m) => (
             <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
               <Link
                 href={
@@ -691,30 +705,75 @@ function TodayFixtures({
             </li>
           ))}
         </ul>
+
+        {/* 남는 칸은 오늘 결과로 — 경기가 다 끝난 시간대에 카드가 비지 않게 (2026-08-23) */}
+        {finishedShown.length > 0 && (
+          <div className="mt-1" style={{ borderTop: "1px solid var(--gn-night-line)" }}>
+            <p
+              className="gn-num pt-2 pb-1 text-[11px] font-bold"
+              style={{ color: "var(--gn-cream-dim)", letterSpacing: "0.14em" }}
+            >
+              FT
+            </p>
+            <ul>
+              {finishedShown.map((m) => (
+                <li key={m.matchKey}>
+                  <Link
+                    href={`/match/${m.gameId}`}
+                    className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2 transition-opacity hover:opacity-80"
+                  >
+                    <span
+                      className="gn-num text-[15px] leading-none font-bold"
+                      style={{ color: "var(--gn-cream)" }}
+                    >
+                      {m.homeScore}-{m.awayScore}
+                    </span>
+                    <span
+                      className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                      style={{
+                        border: "1px solid var(--gn-night-line)",
+                        color: "var(--gn-cream-dim)",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {m.leagueCode}
+                    </span>
+                    <span
+                      className="truncate text-[14px] font-bold"
+                      style={{ color: "var(--gn-cream)" }}
+                    >
+                      {m.homeTeam}
+                      <span
+                        className="gn-num mx-1.5 text-[11px] font-bold"
+                        style={{ color: "#8d8794" }}
+                      >
+                        VS
+                      </span>
+                      {m.awayTeam}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
-      {/* 4경기 밖 일정은 버튼으로 — 남은 경기 수를 실어 "더 있다"를 알린다 (2026-08-23) */}
-      {matches.length > 0 && (
+      {/* 카드에 못 실은 나머지는 일정 페이지로 (2026-08-23 운영자: "잔여 일정들 보기") */}
+      {(matches.length > 0 || finishedMatches.length > 0) && (
         <Link
           href="/matches"
           className="mt-1 flex items-center justify-between py-2 text-[12.5px] font-bold transition-opacity hover:opacity-80"
           style={{ borderTop: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
         >
           <span suppressHydrationWarning>
-            {rest > 0 ? `오늘 ${rest}경기 더 있음` : "오늘 전체 일정"}
+            {restUpcoming > 0
+              ? `잔여 일정 ${restUpcoming}경기`
+              : restFinished > 0
+                ? `오늘 결과 ${finishedWithScore.length}경기`
+                : "오늘 전체 일정"}
           </span>
-          <span>전체 일정 보기 →</span>
-        </Link>
-      )}
-      {/* 오늘 결과 — 목록은 매치 센터가 담당, 여기는 개수 + 진입점 한 줄 */}
-      {finishedMatches.length > 0 && (
-        <Link
-          href="/matches"
-          className="mt-1 flex items-center justify-between py-2 text-[12.5px] font-bold transition-opacity hover:opacity-80"
-          style={{ borderTop: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
-        >
-          <span>오늘 결과 {finishedMatches.length}경기</span>
-          <span>경기 일정 →</span>
+          <span>일정 전체 보기 →</span>
         </Link>
       )}
 
@@ -725,7 +784,7 @@ function TodayFixtures({
       >
         {!isSignedIn
           ? "가입하고 오늘 경기 예측하기"
-          : rest > 0
+          : matches.length > 0
             ? `오늘 ${matches.length}경기 예측하기`
             : "오늘 경기 예측하기"}
         <ArrowRight className="h-4 w-4" aria-hidden />

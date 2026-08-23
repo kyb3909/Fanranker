@@ -10,7 +10,7 @@ import {
 import { notifyDiscordOps } from "@/lib/discord-notify"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { verifySpelling } from "@/lib/naming/verify"
-import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
+import { isClubName, plausibleCorrection, decidePreferred } from "@/lib/naming/pick"
 import { registerVerifiedPlayer } from "@/lib/news/naming-verify-loop"
 import { extractTextFromTipTapJSON } from "@/lib/tiptap/extract-text"
 import type { TipTapNode } from "@/types/post"
@@ -150,17 +150,21 @@ async function cronGet(request: NextRequest) {
       // 사전에 없음 → 네이버 검증 (캐시)
       if (!verifiedCache.has(name)) {
         const v = await verifySpelling(name, post.title as string)
-        if (v.winner && v.romanized) {
+        // ⚠️ 승자를 그대로 등재하지 않는다 — 발행 게이트와 **같은 판정**을 쓴다
+        //    (2026-08-23 실사고: 'Balde/발데' 가 동명이인 '발데스'(빅토르 발데스)의
+        //     검색량에 밀려 오등재됐다. 이 경로에만 가드가 없었다.)
+        const decided = v.winner && v.romanized ? decidePreferred(name, v.winner) : null
+        if (decided && v.romanized) {
           // 등재 형태는 발행 게이트 루프와 공유 — lib/news/naming-verify-loop.ts
           await registerVerifiedPlayer(supabase, {
             articleName: name,
-            preferred: v.winner,
+            preferred: decided,
             romanized: v.romanized,
             category,
             notes: `소급 감사 등재(${category}) — 네이버: ${v.counts.map((c) => `${c.candidate} ${c.total}건`).join(", ")}`,
           })
-          preferredSet.add(v.winner.replace(/\s+/g, ""))
-          verifiedCache.set(name, v.winner)
+          preferredSet.add(decided.replace(/\s+/g, ""))
+          verifiedCache.set(name, decided)
         } else {
           verifiedCache.set(name, null)
         }

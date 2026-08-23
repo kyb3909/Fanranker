@@ -19,7 +19,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { verifySpelling } from "@/lib/naming/verify"
-import { isClubName, plausibleCorrection } from "@/lib/naming/pick"
+import { isClubName, decidePreferred } from "@/lib/naming/pick"
 import { normalizePlayerKey } from "@/lib/saga/identity"
 import { suggestExisting } from "@/lib/news/alias-suggest"
 import { findUniqueRomanizedMatch, type PersonCategory } from "@/lib/news/notation"
@@ -179,11 +179,11 @@ export async function resolveUnknownPlayersViaNaver(
     //    없다 → 교정이 아니라 확인이므로 **기사 표기를 그대로** 등재해 차단만 푼다.
     //    (풀네임→성 축약을 '교정'으로 적용하면 본문이 훼손된다.)
     //  · 철자가 실제로 다르면 교정 주장이므로 타당성 검사를 통과해야 한다.
-    const compact = (s: string) => s.replace(/\s+/g, "")
-    const isLengthVariant =
-      compact(v.winner).includes(compact(name)) || compact(name).includes(compact(v.winner))
-    const preferred = isLengthVariant ? name : v.winner
-    if (!isLengthVariant && !plausibleCorrection(name, v.winner)) {
+    // 판정은 lib/naming/pick 의 decidePreferred 하나로 — 소급 감사(cron/naming-audit)와
+    // 같은 함수를 쓴다. 종전엔 이 로직이 여기에만 있어서 감사 경로로 같은 사고가 재발했다
+    // (2026-08-23 발데→발데스 동명이인 오등재).
+    const preferred = decidePreferred(name, v.winner)
+    if (!preferred) {
       memo.set(name, "unknown")
       result.stillUnknown.push(name)
       continue

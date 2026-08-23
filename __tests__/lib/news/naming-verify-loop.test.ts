@@ -464,6 +464,29 @@ describe("승자 타당성 가드", () => {
 
     expect(r.registered).toEqual([{ name: "코디 갓포", preferred: "코디 각포" }])
   })
+
+  /**
+   * 2026-08-23 실사고 — 동명이인의 검색량에 밀린 오등재.
+   * 'Balde'(알레한드로 발데, 바르셀로나 LB)가 '발데스'(빅토르 발데스, 전 바르사 GK)의
+   * 검색량 3,243건에 밀려 대표 표기가 '발데스'로 박혔고 기사 본문까지 오염됐다.
+   * 길이 변형이므로 **기사 표기(발데)가 이겨야 한다**.
+   */
+  it("⚠️ 동명이인 검색량에 밀리지 않는다 (발데 → 발데스 오등재 회귀)", async () => {
+    const sb = makeSupabase()
+    verifyMock.mockResolvedValue({
+      winner: "발데스",
+      romanized: "Balde",
+      counts: [
+        { candidate: "발데스", total: 3243 },
+        { candidate: "발데", total: 2073 },
+      ],
+    })
+
+    const r = await resolveUnknownPlayersViaNaver(sb.client as never, ["발데"], "제목")
+
+    expect(r.registered).toEqual([{ name: "발데", preferred: "발데" }])
+    expect(sb.inserts[0]).toMatchObject({ preferred_ko: "발데" })
+  })
 })
 
 /**
