@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyCronSecret } from "@/lib/cron-auth"
 import { withCronLog } from "@/lib/cron/log-run"
 import { apiError } from "@/lib/api-error"
-import { getLfaDayIndex } from "@/lib/lfa/match"
-import { todayKst } from "@/lib/match/get-fixtures"
+import { getLfaDayIndex, getLfaMatchInfo } from "@/lib/lfa/match"
+import { getFixturesForDay, todayKst } from "@/lib/match/get-fixtures"
+import { isMatchPageLeague } from "@/lib/match/leagues"
 
 /**
  * LFA 날짜 목록 워밍업 (2026-08-24 실사고 후속).
@@ -39,9 +40,39 @@ async function cronGet(request: NextRequest) {
       results.push({ date: d, entries: index.size, ms: Date.now() - t0 })
     }
 
+    // 경기 상세(스탯·타임라인)도 데운다 — day 목록만 살아나도 여기서 막히면 통계 탭이
+    // 빈다 (2026-08-24 실측: details 도 캐시 미스면 120초). 오늘 매치센터 대상 리그의
+    // **시작된 경기**만, 동시 3개씩. 종료분은 6시간 캐시라 하루 몇 번이면 충분하다.
+    const fixtures = await getFixturesForDay(today).catch(() => [])
+    const targets = fixtures
+      .filter((f) => f.gameId && isMatchPageLeague(f.leagueCode))
+      .filter((f) => new Date(f.matchTime).getTime() <= Date.now())
+      .slice(0, 12)
+    let warmed = 0
+    for (let i = 0; i < targets.length; i += 3) {
+      const chunk = targets.slice(i, i + 3)
+      const done = await Promise.all(
+        chunk.map((f) =>
+          getLfaMatchInfo({
+            gameId: f.gameId as string,
+            homeTeam: f.homeTeam,
+            awayTeam: f.awayTeam,
+            matchTime: f.matchTime,
+            leagueCode: f.leagueCode,
+          })
+            .then((info) => (info?.stats.length ?? 0) > 0)
+            .catch(() => false)
+        )
+      )
+      warmed += done.filter(Boolean).length
+      // 남은 시간이 빠듯하면 멈춘다 — 다음 회차가 이어받는다
+      if (Date.now() - start > 90_000) break
+    }
+
     return NextResponse.json({
       mode: "lfa-warm",
       results,
+      details: { targets: targets.length, warmed },
       duration: `${Date.now() - start}ms`,
     })
   } catch (error) {

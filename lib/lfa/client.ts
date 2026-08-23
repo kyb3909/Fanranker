@@ -70,7 +70,13 @@ interface LfaEnvelope<T> {
  *  · `/api/cron/lfa-warm` — cron 이 미리 데워 **사용자 요청은 항상 0.5초 히트**를 만난다
  * ⚠️ `league_id` 파라미터는 서버가 무시한다 (필터해도 800경기 그대로) — 응답 축소 불가.
  */
-const TIMEOUT_MS: Record<string, number> = { matches: 55_000 }
+const TIMEOUT_MS: Record<string, number> = {
+  matches: 55_000,
+  // 경기 상세도 캐시 미스면 매우 느리다 (2026-08-24 실측: 120초 타임아웃에도 못 받음).
+  // 통계 탭이 비어 있던 원인 — day 목록이 살아나도 여기서 막히면 스탯·타임라인이 빈다.
+  live_match_details: 35_000,
+  lineups: 25_000,
+}
 const DEFAULT_TIMEOUT_MS = 12_000
 
 export async function lfaFetch<T>(
