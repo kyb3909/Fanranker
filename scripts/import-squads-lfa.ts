@@ -34,7 +34,9 @@ const KEY = process.env.LIVE_FOOTBALL_API_KEY
 async function lfa<T>(endpoint: string, params: Record<string, string>): Promise<T | null> {
   if (!KEY) throw new Error("LIVE_FOOTBALL_API_KEY 없음")
   const qs = new URLSearchParams({ ...params, api_key: KEY })
-  const res = await fetch(`${BASE}/${endpoint}?${qs}`, { signal: AbortSignal.timeout(20000) })
+  // ⚠️ matches 는 하루 800경기 913KB 라 LFA 서버 캐시가 비면 46초까지 간다 (2026-08-24 실측).
+  //    20초로 끊으면 과거 날짜는 전부 실패하고 팀 id 백필이 통째로 빈다.
+  const res = await fetch(`${BASE}/${endpoint}?${qs}`, { signal: AbortSignal.timeout(60_000) })
   if (!res.ok) return null
   const json = (await res.json()) as { success?: boolean; data?: T }
   return json.success ? (json.data ?? null) : null
@@ -66,6 +68,17 @@ function alreadyHave(lfaName: string, existing: string[][]): boolean {
     return shared.length >= 2 || shared.some((t) => t.length >= 6)
   })
 }
+
+/**
+ * 1군이 아닌 팀 — 유스·여자·리저브, 그리고 `(K)` 변종.
+ *
+ * LFA 목록에는 이들이 같은 이름 뿌리로 섞여 있어 **동점**을 만들고, 그 동점 때문에 1군이
+ * 통째로 안 붙었다 (2026-08-24: 첼시·빌라·리버풀·토트넘·본머스가 전부 이것 때문에 공백).
+ * `(K)` 는 같은 구단이 한 벌 더 실려 오는 것이라 토큰이 완전히 같아 정확일치로도 못 가른다
+ * — 접미사 없는 쪽이 실제 경기에 쓰이므로 변종을 버린다.
+ */
+const NON_SENIOR =
+  /\(k\)|\b(u\s?-?\s?\d{2}|under\s?\d{2}|women|womens|ladies|fem(?:enin\w*)?|feminin\w*|reserves?|youth|academy|juniors?|jugend|primavera|castilla|atl[eè]tic\b|ii|b)\b|\s(?:ii|b)$/i
 
 function slugify(name: string): string {
   return name
@@ -125,8 +138,9 @@ async function main() {
       if (a.length === 0) continue
       // 정확일치를 접두일치보다 높게 — "Ath." 가 "AEK Athens" 에 붙는 사고를 막는다
       let best = 0
-      const hits = new Set<string>()
+      let hits: { name: string; id: string }[] = []
       for (const [lfaName, id] of seen) {
+        if (NON_SENIOR.test(lfaName)) continue
         const b = tokens(lfaName)
         const score = a.reduce(
           (sum, x) =>
@@ -141,15 +155,23 @@ async function main() {
         if (score === 0) continue
         if (score > best) {
           best = score
-          hits.clear()
+          hits = []
         }
-        if (score === best) hits.add(id)
+        if (score === best) hits.push({ name: lfaName, id })
       }
-      if (hits.size !== 1) continue
+      // 동점이면 **전체 이름이 그대로 같은** 후보 하나로 좁힌다 (2026-08-24: 7,586개 중
+      // "Aston Villa" 가 유스·여자팀과 동점이라 EPL 이 통째로 안 붙고 있었다).
+      if (hits.length > 1) {
+        const exact = hits.filter((h) => tokens(h.name).join(" ") === a.join(" "))
+        if (exact.length === 1) hits = exact
+      }
+      if (hits.length !== 1) continue
+      // 붙는 대상을 반드시 눈으로 볼 수 있게 — 엉뚱한 id 하나가 남의 선수단을 통째로 넣는다
+      console.log(`    ${String(t.name_kr).padEnd(20)} ← ${hits[0].name}`)
       if (APPLY) {
         const { error } = await supabase
           .from("team_dictionary")
-          .update({ lfa_team_id: [...hits][0] })
+          .update({ lfa_team_id: hits[0].id })
           .eq("soccerway_team_id", t.soccerway_team_id)
         if (error) continue
       }

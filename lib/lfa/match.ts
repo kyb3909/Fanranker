@@ -1,10 +1,17 @@
 import "server-only"
 
+import { cache } from "react"
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaLeagueId } from "@/lib/lfa/leagues"
 import { lfaFetch, type LfaMatch, type LfaMatchDetails } from "@/lib/lfa/client"
 import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lookup"
+import {
+  readDayMatches,
+  readMatchDetails,
+  writeDayMatches,
+  writeMatchDetails,
+} from "@/lib/lfa/persist"
 
 /**
  * betman 경기 → live-football-api 경기 해석 + 스코어/스탯 (2026-08-17).
@@ -123,6 +130,30 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
     { revalidate: live ? 300 : 12 * 3600 }
   )
 }
+
+/**
+ * 하루치 목록 — **DB 먼저** (2026-08-24).
+ *
+ * `unstable_cache` 는 배포마다 초기화되는데 이 호출은 913KB·최대 46초라 가장 자주 실패한다.
+ * 그리고 이게 비면 경기 해석이 막혀 라인업·스탯·타임라인·불판이 **한꺼번에** 죽는다.
+ * 그래서 DB 를 정본 창고로 두고, LFA 는 그 창고를 채우는 쪽으로 역할을 바꾼다.
+ * LFA 가 느리거나 죽으면 마지막으로 받은 목록을 쓴다 — 빈 화면보다 낫다.
+ */
+const getDayMatches = cache(async (dateUtc: string, live: boolean): Promise<LfaMatch[]> => {
+  const cached = await readDayMatches(dateUtc, live)
+  if (cached && !cached.stale) return cached.matches
+
+  try {
+    const fresh = await cachedDayMatches(dateUtc, live)()
+    if (fresh.length > 0 || !cached) {
+      await writeDayMatches(dateUtc, fresh)
+      return fresh
+    }
+    return cached.matches
+  } catch {
+    return cached?.matches ?? []
+  }
+})
 
 function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
   return unstable_cache(
@@ -355,7 +386,7 @@ async function resolveMatch(game: BetmanGameKey): Promise<LfaMatch | null> {
   const now = Date.now()
   const live = now >= ko && now <= ko + 3 * 3600_000
 
-  const all = await cachedDayMatches(utcDate(game.matchTime), live)()
+  const all = await getDayMatches(utcDate(game.matchTime), live)
   const inLeague = all.filter((m) => m.league?.id === leagueId)
   if (inLeague.length === 0) return null
 
@@ -414,7 +445,7 @@ export async function getLfaDayIndex(dateKst: string): Promise<Map<string, LfaDa
     const elapsed = Date.now() > endMs
 
     for (const d of dates) {
-      const matches = await cachedDayMatches(d, !elapsed)()
+      const matches = await getDayMatches(d, !elapsed)
       for (const m of matches) {
         const lid = m.league?.id
         const ko = m.kickoff
@@ -452,6 +483,26 @@ export function lookupLfaDayEntry(
  * 상세(스탯)는 경기가 시작된 뒤에만 부른다 — 예정 경기에 크레딧을 쓰지 않는다.
  */
 export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | null> {
+  // ① 우리 DB 먼저 (2026-08-24). 신선하면 그대로 — 외부 API 를 아예 안 부른다.
+  //    화면이 LFA 의 그날 컨디션에 매달려 있던 것이 "데이터가 제때 안 뜬다" 의 정체였다.
+  const cached = await readMatchDetails(game.gameId)
+  if (cached && !cached.stale) return cached.info
+
+  try {
+    const fresh = await computeLfaMatchInfo(game)
+    if (fresh) {
+      await writeMatchDetails(game.gameId, fresh)
+      return fresh
+    }
+    // ② LFA 가 못 줬으면 **낡은 값이라도** 내준다 — 빈 화면보다 낫다
+    return cached?.info ?? null
+  } catch {
+    return cached?.info ?? null
+  }
+}
+
+/** 실제 LFA 조회 — 위 캐시 계층이 미스일 때만 탄다 */
+async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | null> {
   try {
     const m = await resolveMatch(game)
     if (!m) return null
