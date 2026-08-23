@@ -511,12 +511,11 @@ function TodayFixtures({
 }) {
   // SSR/하이드레이션 첫 렌더에서는 undefined → 게스트 문구로 시작, 로그인 확인 후 전환
   const { isSignedIn } = useAuth()
+  // 예정 일정은 4경기까지만 인라인, 나머지는 "전체 일정 보기" 버튼으로 (2026-08-23
+  // 운영자 확정 — 접기 토글이 아니라 4개 + 버튼). 일정이 많은 날 밴드가 세로로
+  // 자라며 좌측 배너를 늘리던 문제의 나머지 반쪽 (배너는 고정 h 로 이미 봉합).
   const shown = matches.slice(0, MAX_ROWS)
   const rest = matches.length - shown.length
-  // 예정 일정은 기본 접힘 (2026-08-23 운영자: "경기 일정은 접혀진 상태로") —
-  // 일정이 많은 날 밴드가 세로로 자라며 좌측 배너를 늘리던 문제의 나머지 반쪽.
-  // LIVE·카운트다운은 접지 않는다 — 밴드의 존재 이유다.
-  const [fixturesOpen, setFixturesOpen] = useState(false)
 
   return (
     <aside
@@ -642,20 +641,7 @@ function TodayFixtures({
         </div>
       )}
 
-      {/* 접힘 토글 — 펼쳐야 예정 목록이 나온다. 행 문법은 "오늘 결과" 행과 동일 */}
-      {matches.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setFixturesOpen((o) => !o)}
-          aria-expanded={fixturesOpen}
-          className="mt-1 flex w-full items-center justify-between py-2 text-[12.5px] font-bold transition-opacity hover:opacity-80"
-          style={{ borderBottom: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
-        >
-          <span suppressHydrationWarning>오늘 일정 {matches.length}경기</span>
-          <span>{fixturesOpen ? "접기 ▴" : "펼치기 ▾"}</span>
-        </button>
-      )}
-      <ul className={fixturesOpen ? undefined : "hidden"}>
+      <ul>
         {shown.map((m) => (
           <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
             <Link
@@ -695,7 +681,20 @@ function TodayFixtures({
         ))}
       </ul>
 
-      {/* 접힘 상태에서 CTA 를 카드 바닥에 붙이는 스페이서 (종전 ul 의 flex-1 몫) */}
+      {/* 4경기 밖 일정은 버튼으로 — 남은 경기 수를 실어 "더 있다"를 알린다 (2026-08-23) */}
+      {matches.length > 0 && (
+        <Link
+          href="/matches"
+          className="mt-1 flex items-center justify-between py-2 text-[12.5px] font-bold transition-opacity hover:opacity-80"
+          style={{ borderTop: "1px solid var(--gn-night-line)", color: "var(--gn-cream-dim)" }}
+        >
+          <span suppressHydrationWarning>
+            {rest > 0 ? `오늘 ${rest}경기 더 있음` : "오늘 전체 일정"}
+          </span>
+          <span>전체 일정 보기 →</span>
+        </Link>
+      )}
+      {/* CTA 를 카드 바닥에 붙이는 스페이서 */}
       <div className="flex-1" aria-hidden />
 
       {/* 오늘 결과 — 목록은 매치 센터가 담당, 여기는 개수 + 진입점 한 줄 */}
