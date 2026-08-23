@@ -23,13 +23,29 @@ import { getLineupForGame, type LineupResponse } from "@/lib/soccerway/lineup-lo
 
 /* ── 팀명 대조 ── */
 
-/** betman 한글 팀명 → 영문명 (team_dictionary, 1h 캐시) */
+/**
+ * betman 한글 팀명 → 영문명 (1h 캐시).
+ *
+ * 두 사전을 합친다:
+ *  · `team_dictionary` — soccerway 경로가 쓰는 정본 (PK 가 soccerway_team_id)
+ *  · `lfa_team_names`  — soccerway 에 없어 위 표에 행을 만들 수 없는 팀 (2026-08-24)
+ *
+ * ⚠️ 여기서 못 찾으면 **한글명이 그대로** 대조에 들어가고, teamMatches 의 토큰화가
+ *    한글을 지워 빈 배열이 되므로 **무조건 매칭 실패**한다 — 그 경기의 라인업·스탯·
+ *    타임라인이 통째로 사라지고 불판(라인업 조건)도 안 생긴다. 조용한 전멸이라
+ *    사전 커버리지가 곧 기능 가용성이다 (2026-08-23 브라이턴·본머스 실사고).
+ *    백필: `pnpm exec tsx scripts/backfill-team-dictionary-from-lfa.ts --post`
+ */
 export const cachedTeamEn = unstable_cache(
   async (): Promise<[string, string][]> => {
-    const { data } = await createServiceRoleClient()
-      .from("team_dictionary")
-      .select("name_kr, aliases_kr, name_en")
-      .neq("status", "rejected")
+    const supabase = createServiceRoleClient()
+    const [{ data }, { data: lfaNames }] = await Promise.all([
+      supabase
+        .from("team_dictionary")
+        .select("name_kr, aliases_kr, name_en")
+        .neq("status", "rejected"),
+      supabase.from("lfa_team_names").select("name_kr, name_en"),
+    ])
     const out: [string, string][] = []
     for (const r of data ?? []) {
       const en = String(r.name_en ?? "").trim()
@@ -39,9 +55,16 @@ export const cachedTeamEn = unstable_cache(
         if (a) out.push([String(a).trim(), en])
       }
     }
+    // 보조 사전은 뒤에 붙인다 — Map 생성 시 나중 값이 이기므로 정본을 덮지 않으려면
+    // 호출부가 먼저 온 값을 쓰게 해야 한다. resolveMatch 는 `new Map(...)` 이라
+    // 뒤가 이긴다 → 정본에 이미 있는 팀은 보조에 넣지 않는 것이 백필 스크립트의 규칙.
+    for (const r of lfaNames ?? []) {
+      const en = String(r.name_en ?? "").trim()
+      if (en && r.name_kr) out.push([String(r.name_kr).trim(), en])
+    }
     return out
   },
-  ["lfa-team-en"],
+  ["lfa-team-en-v2"],
   { revalidate: 3600 }
 )
 
