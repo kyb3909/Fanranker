@@ -35,6 +35,15 @@ export const GUNNERS_SEASON = {
   //    "언제 기준 1위냐"로 다투지 않는다.
   startAt: "2026-08-20T15:00:00.000Z",
   endAt: "2026-09-20T14:59:59.000Z",
+  /**
+   * 이벤트 킬스위치 (2026-08-23 운영자: "승부예측 이벤트는 일단 닫아줘").
+   * false 면 isEventLive() 가 기간과 무관하게 false — 홈 배너·밴드 참가 행·완료 모달
+   * 카드·슬립 이벤트 귀속(eventSlug)이 일괄 꺼진다. ⚠️hasEventStarted 는 시간 기준
+   * 그대로라 /prediction 자체는 평시 모드로 계속 열려 있다 (예측 기능은 닫는 게 아님).
+   * DB events(season-open-2026).status 도 'draft' 로 내려 등록 API 를 막았다 —
+   * 재개 시 이 값을 true 로 + status='open' 두 개를 같이 되돌릴 것.
+   */
+  open: false,
 } as const
 
 /**
@@ -57,6 +66,7 @@ const kstDayKey = (iso: string): string =>
   new Date(new Date(iso).getTime() + 9 * 3_600_000).toISOString().slice(0, 10)
 
 export function isEventLive(now = new Date()): boolean {
+  if (!GUNNERS_SEASON.open) return false
   return now >= new Date(GUNNERS_SEASON.startAt) && now < new Date(GUNNERS_SEASON.endAt)
 }
 

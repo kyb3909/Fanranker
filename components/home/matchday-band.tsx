@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HeroVsVote } from "@/components/home/hero-vs-vote"
 import { useAuth } from "@clerk/nextjs"
 import Link from "@/components/ui/app-link"
-import { GUNNERS_SEASON } from "@/lib/event/gunners-season"
+import { isEventLive } from "@/lib/event/gunners-season"
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/swr"
@@ -94,7 +94,8 @@ export function MatchdayBand({
   eventAsSlide = false,
   initialLive = null,
 }: MatchdayBandProps) {
-  const eventLive = eventAsSlide && new Date() < new Date(GUNNERS_SEASON.endAt)
+  // 이벤트 노출은 전부 isEventLive() 킬스위치를 따른다 (2026-08-23 운영자: 이벤트 일단 닫기)
+  const eventLive = eventAsSlide && isEventLive()
   const slides = useMemo(() => {
     const base = cards.filter((c) => !!c.image).slice(0, MAX_SLIDES)
     if (!eventLive) return base
@@ -233,7 +234,7 @@ export function MatchdayBand({
         {/* 시즌 개막 이벤트 광고 배너 (운영자 2026-08-14) — 오늘의 떡밥 메인에서
             독립된 한 칸. 떡밥 회전과 무관하게 이벤트 기간 내내 고정.
             아스날 팬 전용 이벤트 — 경품 앙리 사인 유니폼 실물 사진이 광고 본체다. */}
-        {!eventAsSlide && new Date() < new Date(GUNNERS_SEASON.endAt) && (
+        {!eventAsSlide && isEventLive() && (
           <Link
             href="/season/join?ref=hero"
             className="relative mb-4 flex min-h-[130px] items-center overflow-hidden rounded-[16px] transition-opacity hover:opacity-95 sm:min-h-[150px]"
@@ -564,7 +565,7 @@ function TodayFixtures({
 
       {/* 시즌 개막 이벤트 진입점 — 미신청자는 /season(참가 신청), 신청자는 /prediction 으로
           가는 스마트 라우터(/season/join). 사전 등록 기간부터 노출 (운영자 2026-08-14) */}
-      {new Date() < new Date(GUNNERS_SEASON.endAt) && (
+      {isEventLive() && (
         <Link
           href="/season/join?ref=band"
           className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 transition-opacity hover:opacity-85"
