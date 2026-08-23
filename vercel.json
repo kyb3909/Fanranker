@@ -137,6 +137,10 @@
     {
       "path": "/api/cron/motm-sync",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/lfa-warm",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

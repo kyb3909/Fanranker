@@ -53,6 +53,26 @@ interface LfaEnvelope<T> {
  * 내내 화면을 죽이는 것을 줄인다 (2026-08-20 프로덕션 라이브 실사고).
  * ⚠️ 캐시 없이 호출하면 크레딧이 요청 수만큼 나간다. 반드시 캐시 안에서 부를 것.
  */
+/**
+ * 엔드포인트별 타임아웃 (2026-08-24 실측 사고).
+ *
+ * `matches?date=` 는 그날 **전 세계 경기**를 담아 913KB 다. LFA 서버가 날짜별로 응답을
+ * 캐시하는데, 실측(2026-08-24)이 극단적이다:
+ *   1차(서버 캐시 미스) **46,511ms** → 2차 518ms → 3차 620ms
+ *
+ * 종전 8초 고정은 시즌 개막으로 하루 800경기가 되면서 상시 실패로 돌아섰고, 더 나쁜 것은
+ * **우리가 매번 중간에 끊어 서버 캐시가 영영 안 데워지는 악순환**이었다. 그 실패 하나가
+ * 라인업·스탯·타임라인·불판 생성을 한꺼번에 죽였다 (증상은 "라인업이 안 나온다"로만 보여
+ * 크레딧 소진으로 오인하기 쉬웠다).
+ *
+ * 그래서 두 축으로 푼다:
+ *  · 타임아웃 55초 — 미스가 걸린 첫 호출을 끝까지 받아 서버·우리 캐시를 채운다
+ *  · `/api/cron/lfa-warm` — cron 이 미리 데워 **사용자 요청은 항상 0.5초 히트**를 만난다
+ * ⚠️ `league_id` 파라미터는 서버가 무시한다 (필터해도 800경기 그대로) — 응답 축소 불가.
+ */
+const TIMEOUT_MS: Record<string, number> = { matches: 55_000 }
+const DEFAULT_TIMEOUT_MS = 12_000
+
 export async function lfaFetch<T>(
   endpoint: string,
   params: Record<string, string>
@@ -67,7 +87,7 @@ export async function lfaFetch<T>(
       const res = await fetch(`${BASE}/${endpoint}?${qs}`, {
         // Next 의 자동 fetch 캐시에 기대지 않는다 — 캐시 정책은 호출부(unstable_cache)가 쥔다
         cache: "no-store",
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(TIMEOUT_MS[endpoint] ?? DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) {
         console.warn(`[lfa] ${endpoint} HTTP ${res.status}`)
