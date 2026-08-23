@@ -114,7 +114,9 @@ function fetchThreadRssViaVps(sub: string, threadId: string): Promise<string> {
 async function findDailyThreadViaVps(
   sub: string
 ): Promise<{ threadId: string; title: string } | null> {
-  const xml = await fetchRedditRssViaVps(`https://www.reddit.com/r/${sub}/hot/.rss?limit=25`)
+  // hot 50 — 25 로는 바르셀로나·아틀레티코·도르트문트·인테르에서 데일리를 못 찾았다
+  // (2026-08-23 실측). 서브레딧마다 데일리 스레드 제목이 달라 매칭도 넓힌다.
+  const xml = await fetchRedditRssViaVps(`https://www.reddit.com/r/${sub}/hot/.rss?limit=50`)
   for (const e of xml.split("<entry>").slice(1)) {
     const t = e.match(/<title>([\s\S]*?)<\/title>/)?.[1]
     const link = e.match(
@@ -122,8 +124,22 @@ async function findDailyThreadViaVps(
     )?.[1]
     if (!t || !link) continue
     const title = decodeEntities(t)
-    // "Daily Discussion" 류만 — Match Thread(경기 불판)는 감상이 실시간 파편이라 제외
-    if (/\bdaily\b/i.test(title) && !/match\s*(thread|day)/i.test(title)) {
+    // Match Thread(경기 불판)는 감상이 실시간 파편이라 항상 제외
+    if (/match\s*(thread|day)/i.test(title)) continue
+    // 상시 잡담 스레드 — 서브레딧마다 이름이 완전히 다르다 (2026-08-23 실측:
+    // r/Gunners "Daily Discussion", r/borussiadortmund "Free Talk Friday",
+    // r/FCInterMilan "Weekly Free Talk", r/Barca "Open Thread #34",
+    // r/atletico "Transfer Talk Megathread")
+    if (
+      /\bdaily\b/i.test(title) ||
+      /\bfree talk\b/i.test(title) ||
+      /\bopen thread\b/i.test(title) ||
+      /\bmegathread\b/i.test(title) ||
+      /\bnews and discussion\b/i.test(title) ||
+      /\bweekly\b.*\b(discussion|thread|talk)\b/i.test(title) ||
+      /\bdiscussion thread\b/i.test(title) ||
+      /\bhilo\b/i.test(title)
+    ) {
       return { threadId: link, title }
     }
   }
@@ -165,16 +181,18 @@ function extractComments(xml: string): string[] {
   return out
 }
 
-interface SeedPost {
+interface SeedPostV2 {
   title: string
   body: string
+  /** 이 글에 붙일 답글 — 레딧 대댓글 재료의 각색 (2026-08-23 운영자 요청) */
+  replies?: string[]
 }
 
 async function rewriteWithLlm(
   team: string,
   comments: string[],
   limit: number
-): Promise<SeedPost[]> {
+): Promise<SeedPostV2[]> {
   const key = process.env.OPENAI_API_KEY
   if (!key) throw new Error("OPENAI_API_KEY 가 .env 에 없습니다")
 
@@ -197,7 +215,15 @@ async function rewriteWithLlm(
 - 선수·감독·구단 이름은 한국 축구 미디어 정착 표기만 쓴다. 예: Gyökeres→요케레스, Ødegaard→외데고르, Bournemouth→본머스, Tottenham→토트넘, Mertesacker→메르테자커. **음차가 확신이 안 서면 한글로 지어내지 말고 원어 그대로 둔다** (틀린 음차가 최악이다).
 - 최대 ${limit}개만 골라라. 좋은 게 없으면 적게 골라도 된다.
 
-JSON 으로만 답하라: {"posts":[{"title":"...","body":"..."}]}`
+## 답글(replies) — 2026-08-23 운영자 요청
+각 글에 **다른 사람이 단 답글 2~3개**를 같이 만든다. 재료는 **남은 댓글들** —
+같은 스레드에서 그 주제와 이어지는 반응을 골라 각색한다 (재료가 마르면 적게, 없으면 생략).
+- 답글은 **서로 다른 사람의 말투**여야 한다: 동의·다른 의견·가벼운 농담이 섞이게.
+  전부 맞장구만 치면 가짜 티가 난다. 반대 의견도 순한 맛으로 (시비조 금지).
+- 답글은 1~2문장, 글보다 짧게. 글 내용을 요약하지 말고 **반응**해라.
+- 같은 재료를 글과 답글에 중복해서 쓰지 마라.
+
+JSON 으로만 답하라: {"posts":[{"title":"...","body":"...","replies":["...","..."]}]}`
 
   const user = comments.map((c, i) => `[${i + 1}] ${c}`).join("\n\n")
 
@@ -217,8 +243,14 @@ JSON 으로만 답하라: {"posts":[{"title":"...","body":"..."}]}`
   })
   if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = (await res.json()) as { choices: { message: { content: string } }[] }
-  const parsed = JSON.parse(data.choices[0].message.content) as { posts?: SeedPost[] }
-  return (parsed.posts ?? []).filter((p) => p.title?.trim() && p.body?.trim()).slice(0, limit)
+  const parsed = JSON.parse(data.choices[0].message.content) as { posts?: SeedPostV2[] }
+  return (parsed.posts ?? [])
+    .filter((p) => p.title?.trim() && p.body?.trim())
+    .map((p) => ({
+      ...p,
+      replies: (p.replies ?? []).filter((r) => typeof r === "string" && r.trim()).slice(0, 3),
+    }))
+    .slice(0, limit)
 }
 
 async function main() {
@@ -236,7 +268,7 @@ async function main() {
     sub = subArg
     const daily = await findDailyThreadViaVps(sub)
     if (!daily) {
-      console.error(`r/${sub}: hot 상위 25개에서 데일리 스레드를 못 찾았습니다 — 건너뜀.`)
+      console.error(`r/${sub}: hot 상위 50개에서 잡담 스레드를 못 찾았습니다 — 건너뜀.`)
       process.exit(2)
     }
     console.log(`r/${sub} 데일리 발견: "${daily.title}" (${daily.threadId}) — 예산 대기 65초…`)
@@ -276,7 +308,9 @@ async function main() {
 
   posts.forEach((p, i) => {
     console.log(`── ${i + 1}. ${p.title}`)
-    console.log(`   ${p.body.replace(/\n/g, " / ")}\n`)
+    console.log(`   ${p.body.replace(/\n/g, " / ")}`)
+    for (const r of p.replies ?? []) console.log(`   └ ${r.replace(/\n/g, " ")}`)
+    console.log("")
   })
 
   if (!doPost) {
@@ -300,21 +334,46 @@ async function main() {
     .maybeSingle()
 
   let inserted = 0
+  let repliesInserted = 0
   for (const [i, p] of posts.entries()) {
-    const { error } = await supabase.from("posts").insert({
-      user_id: PERSONAS[i % PERSONAS.length],
-      community_slug: board,
-      title: p.title.slice(0, 200),
-      content: textToTipTapJson(p.body),
-      ...(flair?.id ? { flair_id: flair.id } : {}),
-    })
-    if (error) {
-      console.error(`  등록 실패: ${p.title.slice(0, 40)} — ${error.message}`)
+    const authorIdx = i % PERSONAS.length
+    const { data: created, error } = await supabase
+      .from("posts")
+      .insert({
+        user_id: PERSONAS[authorIdx],
+        community_slug: board,
+        title: p.title.slice(0, 200),
+        content: textToTipTapJson(p.body),
+        ...(flair?.id ? { flair_id: flair.id } : {}),
+      })
+      .select("id")
+      .single()
+    if (error || !created) {
+      console.error(`  등록 실패: ${p.title.slice(0, 40)} — ${error?.message}`)
       continue
     }
     inserted++
+
+    // 답글 — **글쓴이를 뺀 페르소나만** 돌린다 (자기 글에 자문자답하면 즉시 가짜
+    // 티가 난다). comments 트리거가 댓글수·경로·last_comment_at 을 알아서 갱신하므로
+    // 단순 insert 로 끝난다.
+    const others = PERSONAS.filter((_, idx) => idx !== authorIdx)
+    for (const [j, r] of (p.replies ?? []).entries()) {
+      const { error: cErr } = await supabase.from("comments").insert({
+        post_id: created.id,
+        user_id: others[j % others.length],
+        content: r.slice(0, 1000),
+      })
+      if (cErr) {
+        console.error(`  답글 실패: ${r.slice(0, 30)} — ${cErr.message}`)
+        continue
+      }
+      repliesInserted++
+    }
   }
-  console.log(`등록 완료: ${inserted}/${posts.length}건 → ${board} 게시판`)
+  console.log(
+    `등록 완료: ${inserted}/${posts.length}건 (답글 ${repliesInserted}건) → ${board} 게시판`
+  )
 }
 
 main().catch((e) => {
