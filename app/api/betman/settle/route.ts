@@ -111,15 +111,31 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. pending predictions
+    // ⚠️ .in() 은 쿼리스트링으로 나가므로 id 가 수백 개면 PostgREST 가 400 Bad Request 를
+    // 뱉는다 (실측 2026-08-23: 프로토 한 회차 684행 → Sentry 74회. 큰 회차의 기본 정산이
+    // 매번 여기서 죽고 15분 안전망 cron 이 대신 정산하고 있었다). 100개씩 끊는다.
     const gameIds = settleableGames.map((g) => g.id)
-    const { data: predictions, error: predError } = await supabase
-      .from("betman_predictions")
-      .select("id, user_id, game_id, prediction, status, stake, slip_id, locked_odds")
-      .in("game_id", gameIds)
-      .eq("status", "pending")
-
-    if (predError) {
-      return apiError(ERR.FETCH_PREDICTIONS_FAILED, 500, predError)
+    const IN_CHUNK = 100
+    const predictions: {
+      id: string
+      user_id: string
+      game_id: string
+      prediction: string
+      status: string
+      stake: number
+      slip_id: string | null
+      locked_odds: number | null
+    }[] = []
+    for (let i = 0; i < gameIds.length; i += IN_CHUNK) {
+      const { data: chunk, error: predError } = await supabase
+        .from("betman_predictions")
+        .select("id, user_id, game_id, prediction, status, stake, slip_id, locked_odds")
+        .in("game_id", gameIds.slice(i, i + IN_CHUNK))
+        .eq("status", "pending")
+      if (predError) {
+        return apiError(ERR.FETCH_PREDICTIONS_FAILED, 500, predError)
+      }
+      predictions.push(...((chunk ?? []) as typeof predictions))
     }
 
     if (!predictions || predictions.length === 0) {
