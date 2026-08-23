@@ -519,7 +519,10 @@ function TodayFixtures({
 
   return (
     <aside
-      className="gn-dcard flex flex-col p-5"
+      /* 데스크톱에서 좌측 톱스토리 배너와 **같은 높이**로 고정 (2026-08-23 운영자:
+         "왼쪽 이미지 크기에 맞춰서"). 넘치는 목록은 안에서 스크롤 — 카드가 자라며
+         배너 옆으로 삐져나오지 않는다. lg 미만은 1열 스택이라 자연 높이 유지. */
+      className="gn-dcard flex flex-col p-5 lg:h-[420px] lg:overflow-hidden"
       style={{ boxShadow: "0 20px 50px -20px rgba(22,20,26,.55)" }}
     >
       <div className="flex items-center justify-between">
@@ -579,107 +582,116 @@ function TodayFixtures({
         </Link>
       )}
 
-      {/* LIVE — 진행 중 경기로 직행 (2026-08-20, 8/16 "개수만" 결정 폐기).
+      {/* 가변 영역 — 헤더(제목·카운트다운)와 푸터(도선·CTA)는 고정하고 목록만 스크롤 */}
+      <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+        {/* LIVE — 진행 중 경기로 직행 (2026-08-20, 8/16 "개수만" 결정 폐기).
           라임은 LIVE 전용·화면당 1곳: 섹션 도트 하나만 라임, 행은 크림 */}
-      {liveMatches.length > 0 && (
-        <div className="mt-1" style={{ borderBottom: "1px solid var(--gn-night-line)" }}>
-          <p className="flex items-center gap-1.5 pt-2 pb-1">
-            <span
-              aria-hidden
-              className="h-1.5 w-1.5 animate-pulse rounded-full"
-              style={{ background: "var(--gn-live)" }}
-            />
-            <span
-              className="gn-num text-[11px] font-bold"
-              style={{ color: "var(--gn-live)", letterSpacing: "0.14em" }}
-            >
-              LIVE
-            </span>
-          </p>
-          <ul>
-            {liveMatches.map((m) => (
-              <li key={m.matchKey}>
-                <Link
-                  href={`/match/${m.gameId}`}
-                  className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2 transition-opacity hover:opacity-80"
-                >
-                  <span
-                    className="gn-num text-[15px] leading-none font-bold"
-                    style={{ color: "var(--gn-cream)" }}
+        {liveMatches.length > 0 && (
+          <div className="mt-1" style={{ borderBottom: "1px solid var(--gn-night-line)" }}>
+            <p className="flex items-center gap-1.5 pt-2 pb-1">
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 animate-pulse rounded-full"
+                style={{ background: "var(--gn-live)" }}
+              />
+              <span
+                className="gn-num text-[11px] font-bold"
+                style={{ color: "var(--gn-live)", letterSpacing: "0.14em" }}
+              >
+                LIVE
+              </span>
+            </p>
+            <ul>
+              {liveMatches.map((m) => (
+                <li key={m.matchKey}>
+                  <Link
+                    href={`/match/${m.gameId}`}
+                    className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2 transition-opacity hover:opacity-80"
                   >
-                    {m.homeScore != null && m.awayScore != null
-                      ? `${m.homeScore}-${m.awayScore}`
-                      : "LIVE"}
-                  </span>
-                  <span
-                    className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
-                    style={{
-                      border: "1px solid var(--gn-night-line)",
-                      color: "var(--gn-cream-dim)",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    {m.leagueCode}
-                  </span>
-                  <span
-                    className="truncate text-[14px] font-bold"
-                    style={{ color: "var(--gn-cream)" }}
-                  >
-                    {m.homeTeam}
                     <span
-                      className="gn-num mx-1.5 text-[11px] font-bold"
-                      style={{ color: "#8d8794" }}
+                      className="gn-num text-[15px] leading-none font-bold"
+                      style={{ color: "var(--gn-cream)" }}
                     >
-                      VS
+                      {m.homeScore != null && m.awayScore != null
+                        ? `${m.homeScore}-${m.awayScore}`
+                        : "LIVE"}
                     </span>
-                    {m.awayTeam}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                    <span
+                      className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                      style={{
+                        border: "1px solid var(--gn-night-line)",
+                        color: "var(--gn-cream-dim)",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {m.leagueCode}
+                    </span>
+                    <span
+                      className="truncate text-[14px] font-bold"
+                      style={{ color: "var(--gn-cream)" }}
+                    >
+                      {m.homeTeam}
+                      <span
+                        className="gn-num mx-1.5 text-[11px] font-bold"
+                        style={{ color: "#8d8794" }}
+                      >
+                        VS
+                      </span>
+                      {m.awayTeam}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      <ul>
-        {shown.map((m) => (
-          <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
-            <Link
-              href={
-                isMatchPageLeague(m.leagueCode) && m.games[0]?.id
-                  ? `/match/${m.games[0].id}`
-                  : "/prediction"
-              }
-              className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2.5 transition-opacity hover:opacity-80"
-            >
-              <span
-                className="gn-num text-[20px] leading-none font-bold"
-                style={{ color: "var(--gn-cream)" }}
-                suppressHydrationWarning
+        <ul>
+          {shown.map((m) => (
+            <li key={m.matchKey} style={{ borderBottom: "1px solid rgba(54,48,64,.55)" }}>
+              <Link
+                href={
+                  isMatchPageLeague(m.leagueCode) && m.games[0]?.id
+                    ? `/match/${m.games[0].id}`
+                    : "/prediction"
+                }
+                className="grid grid-cols-[52px_58px_1fr] items-center gap-2.5 py-2.5 transition-opacity hover:opacity-80"
               >
-                {fmtKstTime(m.matchTime)}
-              </span>
-              <span
-                className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
-                style={{
-                  border: "1px solid var(--gn-night-line)",
-                  color: "var(--gn-cream-dim)",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                {m.leagueCode}
-              </span>
-              <span className="truncate text-[14px] font-bold" style={{ color: "var(--gn-cream)" }}>
-                {m.homeTeam}
-                <span className="gn-num mx-1.5 text-[11px] font-bold" style={{ color: "#8d8794" }}>
-                  VS
+                <span
+                  className="gn-num text-[20px] leading-none font-bold"
+                  style={{ color: "var(--gn-cream)" }}
+                  suppressHydrationWarning
+                >
+                  {fmtKstTime(m.matchTime)}
                 </span>
-                {m.awayTeam}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+                <span
+                  className="gn-num rounded px-0 py-[3px] text-center text-[11px] font-bold uppercase"
+                  style={{
+                    border: "1px solid var(--gn-night-line)",
+                    color: "var(--gn-cream-dim)",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  {m.leagueCode}
+                </span>
+                <span
+                  className="truncate text-[14px] font-bold"
+                  style={{ color: "var(--gn-cream)" }}
+                >
+                  {m.homeTeam}
+                  <span
+                    className="gn-num mx-1.5 text-[11px] font-bold"
+                    style={{ color: "#8d8794" }}
+                  >
+                    VS
+                  </span>
+                  {m.awayTeam}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {/* 4경기 밖 일정은 버튼으로 — 남은 경기 수를 실어 "더 있다"를 알린다 (2026-08-23) */}
       {matches.length > 0 && (
@@ -694,9 +706,6 @@ function TodayFixtures({
           <span>전체 일정 보기 →</span>
         </Link>
       )}
-      {/* CTA 를 카드 바닥에 붙이는 스페이서 */}
-      <div className="flex-1" aria-hidden />
-
       {/* 오늘 결과 — 목록은 매치 센터가 담당, 여기는 개수 + 진입점 한 줄 */}
       {finishedMatches.length > 0 && (
         <Link
