@@ -101,7 +101,7 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
   )
 }
 
-function cachedDetails(matchId: string, live: boolean) {
+function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
   return unstable_cache(
     async () => {
       const d = await lfaFetch<LfaMatchDetails>("live_match_details", {
@@ -118,14 +118,20 @@ function cachedDetails(matchId: string, live: boolean) {
       //    스탯만 있고 이벤트가 빈 반쪽 페이로드를 주는데, "둘 다 빈 경우"만 걸렀더니
       //    그 반쪽이 6시간 캐시에 박혀 타임라인·득점자가 증발했다. 프로 경기에
       //    이벤트 0(교체 포함)은 존재하지 않는다 — 이벤트가 비면 무조건 미완성이다.
-      if (!live && d && (d.events?.length ?? 0) === 0) {
+      // ⚠️ 단, 이 재조회에는 **상한이 있어야 한다** (2026-08-23 크레딧 30,100 소진 사고):
+      //    LFA 가 끝내 이벤트를 안 채우는 경기(하부 리그·중단 경기)는 이 throw 가 영원히
+      //    캐시를 막아 **방문할 때마다 1크레딧**을 태운다. 재조회는 호출부가 준 창
+      //    (retryEmpty) 안에서만 하고, 그 밖에서는 빈 응답도 그대로 캐시한다.
+      if (!live && retryEmpty && d && (d.events?.length ?? 0) === 0) {
         throw new Error("lfa-details-empty")
       }
       return d
     },
     // v2: 반쪽 페이로드가 이미 박힌 캐시 무효화 (2026-08-20)
     ["lfa-details-v2", matchId, live ? "live" : "settled"],
-    { revalidate: live ? 60 : 6 * 3600 }
+    // 라이브 60→120초 (2026-08-23 절감): LiveRefresher 도 같은 주기라 화면 체감은
+    // 그대로고 크레딧은 절반이 된다. betman 이 90분 걸리는 것에 비하면 여전히 실시간.
+    { revalidate: live ? 120 : 6 * 3600 }
   )
 }
 
@@ -451,8 +457,12 @@ export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo
     // 킥오프 전이면 상세를 부르지 않는다 (크레딧 절약)
     if (!live && !finished) return info
 
-    // 빈 페이로드 throw(위 cachedDetails 주석)를 fail-open 으로 받는다 — 스코어는 이미 있다
-    const d = await cachedDetails(m.id, live)().catch(() => null)
+    // 빈 페이로드 throw(위 cachedDetails 주석)를 fail-open 으로 받는다 — 스코어는 이미 있다.
+    // 재조회 창 = 킥오프 후 6시간까지 (LFA 가 몇 시간 뒤 채우는 경우를 덮되, 끝내 안 채우는
+    // 경기가 크레딧을 무한히 태우는 것은 막는다 — 2026-08-23 소진 사고)
+    const kickoffMs = new Date(game.matchTime).getTime()
+    const retryEmpty = Number.isFinite(kickoffMs) && Date.now() - kickoffMs < 6 * 3600_000
+    const d = await cachedDetails(m.id, live, retryEmpty)().catch(() => null)
     if (!d) return info
 
     if (live) {

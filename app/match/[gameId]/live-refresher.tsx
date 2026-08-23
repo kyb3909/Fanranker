@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation"
  * - 탭이 백그라운드면 쉬고, 돌아오면 즉시 한 번 당겨온다 (라인업 폴링과 같은 예우).
  * - 종료는 서버가 판정한다 — FT 로 다시 그려지면 이 컴포넌트 자체가 마운트에서 빠진다.
  */
-export function LiveRefresher({ intervalMs = 60_000 }: { intervalMs?: number }) {
+export function LiveRefresher({ intervalMs = 120_000 }: { intervalMs?: number }) {
   const router = useRouter()
 
   useEffect(() => {

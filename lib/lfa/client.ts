@@ -20,6 +20,25 @@ import "server-only"
 
 const BASE = "https://live-football-api.com/api/v1"
 
+/**
+ * 크레딧 경보 (2026-08-23 사고) — 30,100 크레딧이 **아무 신호 없이** 바닥났고, 라인업·
+ * 라이브 스코어·불판 생성이 한꺼번에 죽은 뒤에야 발견됐다. console.warn 은 아무도 안 본다.
+ * 잔량이 임계 밑으로 내려가거나 403(소진/한도)이 오면 운영 채널로 밀어 올린다.
+ * 서버리스 인스턴스마다 1회씩만 — 매 호출 알림은 그 자체로 소음이다.
+ */
+const CREDIT_ALERT_THRESHOLD = 3000
+let creditAlerted = false
+let deniedAlerted = false
+
+async function alertOps(title: string, description: string) {
+  try {
+    const { notifyDiscordOps } = await import("@/lib/discord-notify")
+    await notifyDiscordOps({ title, description, level: "alert" })
+  } catch {
+    /* 알림 실패가 본 작업을 깨면 안 된다 */
+  }
+}
+
 /** 응답 공통 봉투 */
 interface LfaEnvelope<T> {
   success: boolean
@@ -52,6 +71,14 @@ export async function lfaFetch<T>(
       })
       if (!res.ok) {
         console.warn(`[lfa] ${endpoint} HTTP ${res.status}`)
+        // 403 = 키 무효·크레딧 소진·일일 한도·계정 비활성 — 라이브 전체가 죽는 상태다
+        if (res.status === 403 && !deniedAlerted) {
+          deniedAlerted = true
+          await alertOps(
+            "⚠️ 라이브 축구 API 차단 (403)",
+            "크레딧 소진·일일 한도·키 문제 중 하나입니다. 라인업·라이브 스코어·불판 자동 생성이 전부 멈춥니다. live-football-api.com 대시보드에서 잔여 크레딧을 확인하세요."
+          )
+        }
         // 4xx 는 재시도해도 같다 (키·파라미터 문제) — 5xx·레이트리밋만 한 번 더
         if (attempt === 0 && (res.status >= 500 || res.status === 429)) {
           await new Promise((r) => setTimeout(r, 250))
@@ -60,9 +87,16 @@ export async function lfaFetch<T>(
         return null
       }
       const json = (await res.json()) as LfaEnvelope<T>
-      if (json.credits_remaining != null && json.credits_remaining < 2000) {
-        // 소진 임박 — 라이브가 조용히 멈추기 전에 로그로 경고
+      if (json.credits_remaining != null && json.credits_remaining < CREDIT_ALERT_THRESHOLD) {
+        // 소진 임박 — 라이브가 조용히 멈추기 전에 운영 채널로 (로그만으론 아무도 못 본다)
         console.warn(`[lfa] ⚠️ 잔여 크레딧 ${json.credits_remaining}`)
+        if (!creditAlerted) {
+          creditAlerted = true
+          await alertOps(
+            "⚠️ 라이브 축구 API 크레딧 임박",
+            `잔여 ${json.credits_remaining} — 바닥나면 라인업·라이브 스코어·불판이 전부 멈춥니다. 충전을 검토하세요.`
+          )
+        }
       }
       if (!json.success) {
         console.warn(`[lfa] ${endpoint} 실패: ${json.message}`)

@@ -49,8 +49,42 @@ export const LFA_LEAGUE_IDS: ReadonlyMap<string, string> = new Map([
   ["C챔피언", "e6rl4hongahbihxd3tpudespd"], // North/Central America / CONCACAF Champions League
 ])
 
+/**
+ * 크레딧을 쓸 리그 (2026-08-23 운영자: "쓸데없는 리그 데이터는 안 가져오는 게 맞겠다").
+ *
+ * ## 왜 매핑을 안 지우고 게이트를 두나
+ * 위 해시 맵은 생성기 산출물이라 손대면 재생성 때 되살아난다. 대신 **크레딧을 쓰는 입구**
+ * 하나(lfaLeagueId)에서 거른다 — 여기서 null 이면 resolveMatch 가 조기 반환해 경기별
+ * 호출(details·lineups·preview)이 통째로 안 나간다.
+ *
+ * 기준 = 매치센터가 실제로 열리는 리그(MATCH_PAGE_LEAGUES)와 동일. 그 밖(K/J리그·MLS·
+ * 호주·ASEAN·코파·CONCACAF·에레디비지에 등)은 매치 페이지 자체가 없어 크레딧을 쓸 이유가
+ * 없었다. 일정 페이지 스코어는 날짜 단위 1콜에서 오므로 여기 영향 없음.
+ *
+ * ⚠️ 매치센터 화이트리스트를 넓히면 이 목록도 같이 넓혀야 한다 (안 그러면 스탯이 빈다).
+ */
+const CREDIT_LEAGUES: ReadonlySet<string> = new Set([
+  "UCL",
+  "UEL",
+  "UECL",
+  "U슈퍼컵",
+  "EPL",
+  "라리가",
+  "세리에A",
+  "분데스리",
+  "프리그1",
+  "잉글FA컵",
+  "잉리그컵",
+  "잉슈퍼컵",
+  "이탈FA컵",
+  "독일FA컵",
+  "프랑FA컵",
+  "프슈퍼컵",
+])
+
 export function lfaLeagueId(betmanLeagueCode: string | null | undefined): string | null {
   if (!betmanLeagueCode) return null
+  if (!CREDIT_LEAGUES.has(betmanLeagueCode)) return null
   return LFA_LEAGUE_IDS.get(betmanLeagueCode) ?? null
 }
 

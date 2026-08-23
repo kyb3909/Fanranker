@@ -316,7 +316,9 @@ export function getMatchPreview(
   return unstable_cache(
     () => fetchPreview(matchId, homeTeamKr, awayTeamKr),
     ["lfa-preview-v4", matchId],
-    { revalidate: 12 * 3600 }
+    // 호출당 3크레딧(h2h+injuries+officials)이라 가장 비싼 묶음 — 심판·부상·전적은
+    // 경기 당일에 거의 안 바뀐다. 12→24h (2026-08-23 크레딧 절감)
+    { revalidate: 24 * 3600 }
   )().catch(() => ({
     homeForm: [],
     awayForm: [],
