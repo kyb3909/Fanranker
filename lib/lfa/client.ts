@@ -26,7 +26,13 @@ const BASE = "https://live-football-api.com/api/v1"
  * 잔량이 임계 밑으로 내려가거나 403(소진/한도)이 오면 운영 채널로 밀어 올린다.
  * 서버리스 인스턴스마다 1회씩만 — 매 호출 알림은 그 자체로 소음이다.
  */
-const CREDIT_ALERT_THRESHOLD = 3000
+/**
+ * 3,000 은 팩이 30,100 이던 시절의 10% 였다. 지금 팩은 20만대라 3,000 이면 1% 대 —
+ * 그 시점엔 이미 며칠 안 남았다는 뜻이라 경보로서 늦다. 실측 소모(2026-08-24 심야
+ * 20분 표본: 시간당 27 / 하루 647)를 기준으로 **한 달치**를 남기고 알린다.
+ * 매치데이는 이보다 빠르므로 실제 여유는 2주 안팎으로 봐야 한다.
+ */
+const CREDIT_ALERT_THRESHOLD = 20_000
 let creditAlerted = false
 let deniedAlerted = false
 
