@@ -117,6 +117,27 @@ export function pitchSlotsToPlacements(
   return out
 }
 
+/**
+ * 위의 역방향 — 배치 화면의 자리를 도판 좌표계로 되돌린다.
+ *
+ * 결과 화면이 도판(PitchViz)을 그대로 재사용하려면 좌표계가 하나여야 한다.
+ * 게임 전체가 도판 코드(GK1·DF1…)를 정본으로 쓰고, 배치 화면만 자기 이름(gk·lb…)을
+ * 쓰므로 나갈 때 되돌려 준다.
+ */
+export function placementsToPitchSlots(
+  placements: Record<string, Player>,
+  formation: Formation
+): Record<string, Player | null> {
+  const codes = slotCodes(formation)
+  const field = FORMATION_SLOTS[formation]
+  const out: Record<string, Player | null> = {}
+  field.forEach((slot, i) => {
+    const code = codes[i]
+    if (code) out[code] = placements[slot.id] ?? null
+  })
+  return out
+}
+
 interface FormationFieldProps {
   formation: Formation
   roster: Player[]

@@ -3,7 +3,7 @@
 import { DraftBoard } from "./draft-board"
 import { DraftSetup } from "./draft-setup"
 import { DraftResult } from "./draft-result"
-import { FormationField, pitchSlotsToPlacements } from "./formation-field"
+import { FormationField, pitchSlotsToPlacements, placementsToPitchSlots } from "./formation-field"
 import { mergeRosterIntoSlots } from "./pitch-viz"
 import { useDraftGame } from "./use-draft-game"
 
@@ -44,13 +44,25 @@ export function DraftGame({ slug }: { slug: string }) {
           mergeRosterIntoSlots(game.arrangement, myRoster, formation),
           formation
         )}
-        onComplete={() => game.setPhase("completed")}
+        /* ⚠️ 종전엔 placements 를 받아 놓고 **버렸다** — 공들여 짠 스쿼드가 결과 화면에
+           도달을 못 해 텍스트 목록만 나왔다 (2026-08-25). 도판 좌표계로 되돌려 넘긴다. */
+        onComplete={(placements) => {
+          game.setArrangement(placementsToPitchSlots(placements, formation))
+          game.setPhase("completed")
+        }}
       />
     )
   }
 
   if (game.phase === "completed" && game.state) {
-    return <DraftResult state={game.state} mySeat={game.mySeat} onRestart={game.handleRestart} />
+    return (
+      <DraftResult
+        state={game.state}
+        mySeat={game.mySeat}
+        arrangement={game.arrangement}
+        onRestart={game.handleRestart}
+      />
+    )
   }
 
   if (!game.state) return null
