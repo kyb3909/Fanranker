@@ -7,6 +7,7 @@ import { FORMATIONS, type Formation } from "@/lib/draft/engine"
 import type { DraftCatalogEntry } from "@/lib/draft/games-catalog"
 import type { OpenRoomSummary } from "@/lib/draft/rooms"
 import { OpenRoomsGrid } from "./open-rooms-grid"
+import { PitchViz } from "./pitch-viz"
 import type { GameMode } from "./use-draft-game"
 
 const FORMATION_LIST: Formation[] = ["4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2", "5-4-1"]
@@ -239,6 +240,16 @@ export function DraftSetup({
                 </button>
               )
             })}
+          </div>
+
+          {/* 고른 포메이션의 도판 (2026-08-25 운영자: "4-4-2 를 고르면 도판이 나오고
+              그 위에 선수를 꾸리는 형태"). PitchViz 는 포메이션 문자열로 슬롯을 계산하므로
+              그대로 재사용한다 — 여기선 빈 자리만 보여주는 미리보기다. */}
+          <div className="mx-auto mt-4 max-w-[300px]">
+            <PitchViz formation={myFormation} filled={{}} compact />
+            <p className="mt-2 text-center text-[11.5px]" style={{ color: "var(--wc-mute)" }}>
+              이 배치로 11명을 채웁니다
+            </p>
           </div>
         </div>
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
 import { TimerRing } from "./timer-ring"
-import { PitchViz, rosterToSlots } from "./pitch-viz"
+import { PitchViz, mergeRosterIntoSlots } from "./pitch-viz"
 import { AiPanel, BudgetBar, PlayerPoolCard, SnakeOrder } from "./draft-pieces"
 import { getAllPlayers, type Player, type Position } from "@/lib/draft/players"
 import type { DraftState } from "@/lib/draft/engine"
@@ -108,7 +108,12 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   }, [allPlayers, state.draftedPlayerIds])
 
   const { strengths, weaknesses } = analyzeLineup(myRoster)
-  const slotsFilled = rosterToSlots(myRoster, formation)
+  // 도판에서 손으로 옮긴 배치. 픽이 늘어도 유지되고, 새 선수만 빈 자리로 들어간다.
+  const [arranged, setArranged] = useState<Record<string, Player | null>>({})
+  const slotsFilled = useMemo(
+    () => mergeRosterIntoSlots(arranged, myRoster, formation),
+    [arranged, myRoster, formation]
+  )
   const rosterSize = state.totalRounds // 라운드 수 = 1인 로스터 크기
   const myBudgetUsed = state.initialBudget - myBudgetRemaining
 
@@ -489,7 +494,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
 
           {/* 잔디 viz */}
           <div style={{ flex: 1, minHeight: 0, maxHeight: 540 }}>
-            <PitchViz formation={formation} filled={slotsFilled} />
+            <PitchViz formation={formation} filled={slotsFilled} onArrange={setArranged} />
           </div>
 
           {/* 예산 */}
