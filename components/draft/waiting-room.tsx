@@ -146,7 +146,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
           </div>
           <div
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: 20,
               letterSpacing: "-0.02em",
@@ -185,7 +184,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
           <span
             className="draft-num"
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 800,
               fontSize: 13,
               letterSpacing: "-0.01em",
@@ -218,7 +216,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             background: "transparent",
             border: "1.5px solid rgba(246,228,232,0.3)",
             color: "var(--draft-paper)",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 700,
             fontSize: 12,
             cursor: "pointer",
@@ -241,7 +238,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             background: "transparent",
             border: "1.5px solid rgba(246,228,232,0.3)",
             color: "var(--draft-paper)",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 700,
             fontSize: 12,
             cursor: "pointer",
@@ -271,7 +267,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
               color: "var(--draft-burgundy-deep)",
               padding: "12px 18px",
               borderRadius: 12,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 700,
               fontSize: 14,
             }}
@@ -301,7 +296,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
           </div>
           <h2
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: 28,
               letterSpacing: "-0.025em",
@@ -340,7 +334,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
             </div>
             <div
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 900,
                 fontSize: 18,
                 letterSpacing: "-0.02em",
@@ -365,7 +358,6 @@ export function WaitingRoom({ initialRoom, myUserId, myDisplayName }: WaitingRoo
                   border: "none",
                   padding: "12px 22px",
                   borderRadius: 999,
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 800,
                   fontSize: 14,
                   cursor: canStartNow || fullStartReady ? "pointer" : "not-allowed",
@@ -469,7 +461,6 @@ function SeatCard({
         <span
           className="draft-num"
           style={{
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 900,
             fontSize: 11,
             color: "var(--draft-mute)",
@@ -486,7 +477,6 @@ function SeatCard({
               color: "white",
               borderRadius: 999,
               fontSize: 9,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 800,
               letterSpacing: "0.08em",
             }}
@@ -502,7 +492,6 @@ function SeatCard({
               color: "var(--draft-mute)",
               borderRadius: 999,
               fontSize: 9,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 800,
               letterSpacing: "0.08em",
             }}
@@ -516,7 +505,6 @@ function SeatCard({
         <>
           <div
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: 22,
               letterSpacing: "-0.02em",
@@ -531,7 +519,6 @@ function SeatCard({
           {isMe && (
             <span
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 800,
                 fontSize: 11,
                 color: "var(--draft-burgundy)",
@@ -573,7 +560,6 @@ function MetaItem({ label, value, suffix }: { label: string; value: string; suff
       <div
         className="draft-num"
         style={{
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 900,
           fontSize: 18,
           color: "var(--draft-ink)",

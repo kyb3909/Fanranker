@@ -298,7 +298,6 @@ export function PitchViz({
               cursor: onArrange || onClickSlot ? "pointer" : "default",
               textAlign: "center",
               color: "white",
-              fontFamily: "var(--draft-font-title)",
               // 터치에서 길게 눌러도 선택·확대 메뉴가 안 뜨게
               WebkitTapHighlightColor: "transparent",
               touchAction: filled[s.code] ? "none" : "manipulation",
@@ -368,7 +367,6 @@ export function PitchViz({
                 )}
                 <div
                   style={{
-                    fontFamily: "var(--draft-font-title)",
                     fontWeight: 900,
                     fontSize: compact ? 10 : 12,
                     color: "var(--draft-ink)",
@@ -384,7 +382,6 @@ export function PitchViz({
                   <div
                     className="draft-num"
                     style={{
-                      fontFamily: "var(--draft-font-title)",
                       fontSize: 10,
                       fontWeight: 700,
                       color: "var(--draft-burgundy)",
@@ -407,7 +404,6 @@ export function PitchViz({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 800,
                   fontSize: compact ? 10 : 12,
                   color: "rgba(255,255,255,0.9)",
@@ -438,7 +434,6 @@ export function PitchViz({
             padding: compact ? "4px 8px" : "6px 10px",
             border: "2px solid #ffd54a",
             boxShadow: "0 10px 24px rgba(0,0,0,0.35)",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 900,
             fontSize: compact ? 10 : 12,
             color: "var(--draft-ink)",

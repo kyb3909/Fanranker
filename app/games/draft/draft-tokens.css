@@ -52,9 +52,18 @@
   --draft-shadow-2: 0 8px 24px rgba(24, 18, 21, 0.1), 0 2px 4px rgba(24, 18, 21, 0.04);
   --draft-shadow-3: 0 24px 48px rgba(24, 18, 21, 0.14), 0 4px 8px rgba(24, 18, 21, 0.06);
 
-  /* type */
-  --draft-font-title: "SUIT Variable", "SUIT", "Pretendard Variable", system-ui, sans-serif;
-  --draft-font-body: "Pretendard Variable", "Pretendard", system-ui, sans-serif;
+  /* type
+   * ⚠️⚠️ 본문은 **Pretendard**, 제목만 SUIT. 사이트와 같은 규약이다.
+   *    2026-08-25 계측: 홈은 Pretendard 182회 / SUIT 3회인데, 이 게임은 SUIT 173회 /
+   *    Pretendard 10회로 **정반대**였다. `.draft-scope h1~h4` 만 title 이면 될 것을
+   *    본문 span 마다 `fontFamily: var(--draft-font-title)` 을 직접 박아 뒀던 탓이다.
+   *    SUIT 은 디스플레이 서체라 획이 굵고 자간이 좁다 — 그걸로 본문을 조판하면 글자가
+   *    뭉쳐서, 색이 다 맞아도 "다른 사이트" 로 읽힌다. 운영자가 두 번 "안 달라졌다" 고
+   *    한 인상의 뿌리가 여기였다.
+   *    ⚠️ 새 텍스트에 title 서체를 직접 박지 말 것. 제목·숫자·칩에만.
+   */
+  --draft-font-title: var(--font-suit), "SUIT Variable", var(--font-pretendard), sans-serif;
+  --draft-font-body: var(--font-pretendard), "Pretendard Variable", system-ui, sans-serif;
   --draft-font-serif: var(--draft-font-body);
   --draft-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
 

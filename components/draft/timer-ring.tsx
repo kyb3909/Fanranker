@@ -108,7 +108,6 @@ export function TimerRing({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 900,
           fontSize: size >= 56 ? 18 : 14,
           color: textColor,

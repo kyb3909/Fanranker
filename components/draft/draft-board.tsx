@@ -266,7 +266,6 @@ export function DraftBoard({
           </div>
           <div
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: 17,
               letterSpacing: "-0.02em",
@@ -320,7 +319,6 @@ export function DraftBoard({
             </div>
             <div
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 800,
                 fontSize: 14,
                 letterSpacing: "-0.01em",
@@ -408,7 +406,6 @@ export function DraftBoard({
               flex: 1,
               minHeight: 44,
               borderRadius: 10,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 800,
               fontSize: 13,
               cursor: "pointer",
@@ -524,7 +521,6 @@ export function DraftBoard({
                       color: active ? "white" : "var(--draft-ink)",
                       border: "none",
                       cursor: "pointer",
-                      fontFamily: "var(--draft-font-title)",
                       fontWeight: 700,
                       fontSize: 11,
                       letterSpacing: "-0.01em",
@@ -550,7 +546,6 @@ export function DraftBoard({
                 style={{
                   fontSize: 11,
                   color: "var(--draft-mute)",
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 600,
                 }}
               >
@@ -577,7 +572,6 @@ export function DraftBoard({
                         color: active ? "white" : "var(--draft-mute)",
                         border: `1px solid ${active ? "var(--draft-burgundy)" : "var(--draft-line)"}`,
                         fontSize: 10,
-                        fontFamily: "var(--draft-font-title)",
                         fontWeight: 700,
                         cursor: "pointer",
                       }}
@@ -669,7 +663,6 @@ export function DraftBoard({
               <div className="draft-eyebrow draft-eyebrow-burg">내 라인업 · {formation}</div>
               <h2
                 style={{
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 900,
                   fontSize: 24,
                   letterSpacing: "-0.025em",
@@ -734,7 +727,6 @@ export function DraftBoard({
                 <div
                   style={{
                     fontSize: 12,
-                    fontFamily: "var(--draft-font-title)",
                     fontWeight: 700,
                     color: "var(--draft-ink)",
                   }}
@@ -771,7 +763,6 @@ export function DraftBoard({
                 <div
                   style={{
                     fontSize: 12,
-                    fontFamily: "var(--draft-font-title)",
                     fontWeight: 700,
                     color: "var(--draft-ink)",
                   }}
@@ -817,7 +808,6 @@ export function DraftBoard({
             </div>
             <h3
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 900,
                 fontSize: 16,
                 color: "var(--draft-ink)",
@@ -926,7 +916,6 @@ export function DraftBoard({
                             minWidth: 40,
                             color: "var(--draft-burgundy)",
                             fontWeight: 700,
-                            fontFamily: "var(--draft-font-title)",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -937,7 +926,6 @@ export function DraftBoard({
                         <span
                           style={{
                             flex: 1,
-                            fontFamily: "var(--draft-font-title)",
                             color: "var(--draft-ink)",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -972,7 +960,6 @@ export function DraftBoard({
             padding: "6px 10px",
             border: "2px solid #ffd54a",
             boxShadow: "0 10px 24px rgba(0,0,0,0.35)",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 900,
             fontSize: 12,
             color: "var(--draft-ink)",

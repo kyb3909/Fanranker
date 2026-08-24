@@ -26,7 +26,6 @@ function GameBadge({ badge }: { badge: "HOT" | "NEW" }) {
         border: "1px solid currentColor",
         borderRadius: 4,
         padding: "1px 5px",
-        fontFamily: "var(--draft-font-title)",
         fontWeight: 800,
         fontSize: 9.5,
         letterSpacing: "0.1em",
@@ -131,7 +130,6 @@ function GameCard({ game }: { game: DraftCatalogEntry }) {
           style={{
             fontSize: 11,
             color: "var(--draft-mute)",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 700,
             letterSpacing: "0.06em",
             textTransform: "uppercase",
@@ -221,7 +219,6 @@ export function GameSelectScreen() {
             style={{
               fontSize: 24,
               letterSpacing: "-0.025em",
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
             }}
           >

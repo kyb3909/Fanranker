@@ -132,7 +132,6 @@ export function MultiDraftResult({
           </div>
           <div
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: 22,
               letterSpacing: "-0.025em",
@@ -166,7 +165,6 @@ export function MultiDraftResult({
             background: "var(--draft-burgundy)",
             color: "white",
             border: "none",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 800,
             fontSize: 13,
             cursor: "pointer",
@@ -244,7 +242,6 @@ export function MultiDraftResult({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontFamily: "var(--draft-font-title)",
                         fontWeight: 900,
                         fontSize: 13,
                       }}
@@ -254,7 +251,6 @@ export function MultiDraftResult({
                     <div style={{ textAlign: "left" }}>
                       <div
                         style={{
-                          fontFamily: "var(--draft-font-title)",
                           fontWeight: 800,
                           fontSize: 13,
                           color: "var(--draft-ink)",
@@ -379,7 +375,6 @@ function TeamDetail({ data, formation }: { data: TeamData; formation: Formation 
             </div>
             <h3
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 900,
                 fontSize: 20,
                 letterSpacing: "-0.02em",
@@ -419,7 +414,6 @@ function ScoreCard({ score }: { score: ReturnType<typeof calcTeamScore> }) {
       </div>
       <div
         style={{
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 900,
           fontSize: 56,
           color: "var(--draft-burgundy)",
@@ -469,7 +463,6 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
       <span
         className="draft-num"
         style={{
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 800,
           fontSize: 13,
           color: "var(--draft-ink)",
@@ -515,7 +508,6 @@ function StrengthWeakness({
           <div
             style={{
               fontSize: 12,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 700,
               color: "var(--draft-ink)",
             }}
@@ -552,7 +544,6 @@ function StrengthWeakness({
           <div
             style={{
               fontSize: 12,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 700,
               color: "var(--draft-ink)",
             }}
@@ -612,7 +603,6 @@ function RosterList({ roster }: { roster: Player[] }) {
             <span
               style={{
                 fontSize: 13,
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 700,
                 color: "var(--draft-ink)",
                 flex: 1,
@@ -635,7 +625,6 @@ function RosterList({ roster }: { roster: Player[] }) {
               className="draft-num"
               style={{
                 fontSize: 12,
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 800,
                 color: "var(--draft-ink)",
               }}
@@ -707,7 +696,6 @@ function Standings({ teamData, myUserId }: { teamData: TeamData[]; myUserId: str
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 900,
                   fontSize: 13,
                 }}
@@ -717,7 +705,6 @@ function Standings({ teamData, myUserId }: { teamData: TeamData[]; myUserId: str
               <span
                 style={{
                   flex: 1,
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 800,
                   fontSize: 14,
                   color: "var(--draft-ink)",
@@ -755,7 +742,6 @@ function Standings({ teamData, myUserId }: { teamData: TeamData[]; myUserId: str
               <span
                 className="draft-num"
                 style={{
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 900,
                   fontSize: 22,
                   color: "var(--draft-ink)",

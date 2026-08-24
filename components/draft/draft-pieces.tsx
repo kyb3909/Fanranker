@@ -2,7 +2,7 @@
 
 import { Star } from "lucide-react"
 import type { Player, Position } from "@/lib/draft/players"
-import { POSITION_HEX, getTeamAccent, getPlayerInitial } from "@/lib/draft/visual-helpers"
+import { POSITION_HEX } from "@/lib/draft/visual-helpers"
 import type { DraftState } from "@/lib/draft/engine"
 
 // ─────────────────────────────────────────────────────────
@@ -23,7 +23,6 @@ export function PositionBadge({ pos, size = "md" }: { pos: Position; size?: "sm"
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "var(--draft-font-title)",
         fontWeight: 900,
         fontSize: fs,
         letterSpacing: "-0.02em",
@@ -66,7 +65,6 @@ export function BudgetBar({
         <span
           className="draft-num"
           style={{
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 800,
             fontSize: 14,
           }}
@@ -156,7 +154,6 @@ export function PlayerPoolCard({
   const reason = takenBy
     ? `${takenBy} 픽`
     : (reasonLabel ?? null) || (slotFull ? "슬롯 꽉 참" : overBudget ? "예산 초과" : null)
-  const accent = getTeamAccent(player.teamKo, player.position)
 
   /**
    * ⚠️ 카드가 아니라 **행**이다 (2026-08-25 재작업).
@@ -253,7 +250,6 @@ export function PlayerPoolCard({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: "var(--draft-font-title)",
             fontWeight: tier === "star" ? 800 : 700,
             fontSize: nameSize,
             letterSpacing: "-0.01em",
@@ -275,19 +271,8 @@ export function PlayerPoolCard({
             whiteSpace: "nowrap",
           }}
         >
-          {/* 팀 컬러는 이름표가 아니라 **점 하나**로. 44px 그라디언트 타일을 대신한다. */}
-          <span
-            aria-hidden
-            style={{
-              display: "inline-block",
-              width: 6,
-              height: 6,
-              borderRadius: 999,
-              background: accent,
-              marginRight: 5,
-              verticalAlign: "middle",
-            }}
-          />
+          {/* ⚠️ 종전엔 여기 구단 원색 점(#6cabdd 맨시티 하늘색 등)이 있었다. 그 색들은
+              사이트 어디에도 안 쓰인다 — 팀 표시는 **글자로 충분하다** (운영자 지적). */}
           {player.teamKo}
         </div>
       </div>
@@ -333,7 +318,6 @@ export function PlayerPoolCard({
             background: canPick ? "var(--draft-burgundy)" : "transparent",
             color: canPick ? "#fff" : "var(--draft-mute)",
             border: canPick ? "none" : "1px solid var(--draft-line)",
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 700,
             fontSize: 11,
             cursor: canPick ? "pointer" : "not-allowed",
@@ -388,30 +372,12 @@ export function AiPanel({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <div
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            background: isMe
-              ? "linear-gradient(135deg, var(--draft-burgundy), var(--draft-violet))"
-              : "var(--draft-soft)",
-            color: isMe ? "white" : "var(--draft-ink)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "var(--draft-font-title)",
-            fontWeight: 900,
-            fontSize: 13,
-            flexShrink: 0,
-          }}
-        >
-          {name.charAt(0)}
-        </div>
+        {/* ⚠️ 종전엔 이름 첫 글자를 넣은 30px 그라디언트 원이 있었다. 글자 한 자짜리
+            아바타는 정보가 없고 사이트에도 없는 물건이다 — 실제 얼굴을 쓸 게 아니면
+            없는 편이 낫다 (운영자 지적). 순서 표시는 아래 이름과 진행바로 충분하다. */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 800,
               fontSize: 13,
               display: "flex",
@@ -509,7 +475,6 @@ export function AiPanel({
             <PositionBadge pos={p.position} size="sm" />
             <span
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 700,
                 flex: 1,
                 whiteSpace: "nowrap",
@@ -546,7 +511,6 @@ export function AiPanel({
             style={{
               fontSize: 10,
               color: "var(--draft-mute)",
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 700,
             }}
           >

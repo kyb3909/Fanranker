@@ -148,7 +148,6 @@ function RoomCard({ room, embedded }: { room: OpenRoomSummary; embedded: boolean
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 900,
                 fontSize: embedded ? 11 : 13,
                 flexShrink: 0,
@@ -159,7 +158,6 @@ function RoomCard({ room, embedded }: { room: OpenRoomSummary; embedded: boolean
             </div>
             <span
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 800,
                 fontSize: embedded ? 13 : 15,
                 color: "var(--draft-ink)",
@@ -191,7 +189,6 @@ function RoomCard({ room, embedded }: { room: OpenRoomSummary; embedded: boolean
               alignItems: "center",
               fontSize: embedded ? 11 : 12,
               color: "var(--draft-mute)",
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 600,
             }}
           >
@@ -221,7 +218,6 @@ function RoomCard({ room, embedded }: { room: OpenRoomSummary; embedded: boolean
               color: isFull ? "var(--draft-mute)" : "var(--draft-burgundy)",
               padding: "5px 10px",
               borderRadius: 999,
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: embedded ? 11 : 13,
               letterSpacing: "-0.01em",

@@ -259,7 +259,6 @@ export function MultiDraftBoard({
           </div>
           <div
             style={{
-              fontFamily: "var(--draft-font-title)",
               fontWeight: 900,
               fontSize: 17,
               letterSpacing: "-0.02em",
@@ -309,7 +308,6 @@ export function MultiDraftBoard({
             </div>
             <div
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 800,
                 fontSize: 14,
                 letterSpacing: "-0.01em",
@@ -453,7 +451,6 @@ export function MultiDraftBoard({
                       color: active ? "white" : "var(--draft-ink)",
                       border: "none",
                       cursor: "pointer",
-                      fontFamily: "var(--draft-font-title)",
                       fontWeight: 700,
                       fontSize: 11,
                       lineHeight: 1.2,
@@ -476,7 +473,6 @@ export function MultiDraftBoard({
                 style={{
                   fontSize: 11,
                   color: "var(--draft-mute)",
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 600,
                 }}
               >
@@ -502,7 +498,6 @@ export function MultiDraftBoard({
                       color: active ? "white" : "var(--draft-mute)",
                       border: `1px solid ${active ? "var(--draft-burgundy)" : "var(--draft-line)"}`,
                       fontSize: 10,
-                      fontFamily: "var(--draft-font-title)",
                       fontWeight: 700,
                       cursor: "pointer",
                     }}
@@ -521,7 +516,6 @@ export function MultiDraftBoard({
                 background: "var(--draft-burgundy-soft)",
                 color: "var(--draft-burgundy-deep)",
                 fontSize: 12,
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 700,
               }}
             >
@@ -582,7 +576,6 @@ export function MultiDraftBoard({
               <div className="draft-eyebrow draft-eyebrow-burg">내 라인업 · {formation}</div>
               <h2
                 style={{
-                  fontFamily: "var(--draft-font-title)",
                   fontWeight: 900,
                   fontSize: 24,
                   letterSpacing: "-0.025em",
@@ -649,7 +642,6 @@ export function MultiDraftBoard({
             </div>
             <h3
               style={{
-                fontFamily: "var(--draft-font-title)",
                 fontWeight: 900,
                 fontSize: 16,
                 color: "var(--draft-ink)",
@@ -725,7 +717,6 @@ function SwLine({ label, items, fallback }: { label: string; items: string[]; fa
       <div
         style={{
           fontSize: 12,
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 700,
           color: "var(--draft-ink)",
         }}

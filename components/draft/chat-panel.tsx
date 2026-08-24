@@ -150,7 +150,6 @@ export function ChatPanel({ roomId, myUserId, myDisplayName, isMember }: ChatPan
         </div>
         <h3
           style={{
-            fontFamily: "var(--draft-font-title)",
             fontWeight: 900,
             fontSize: 16,
             color: "var(--draft-ink)",
@@ -279,7 +278,6 @@ function MessageRow({ msg, isMine }: { msg: ChatMessage; isMine: boolean }) {
         style={{
           fontSize: 10,
           color: "var(--draft-mute)",
-          fontFamily: "var(--draft-font-title)",
           fontWeight: 700,
           marginBottom: 2,
           letterSpacing: "0.04em",
