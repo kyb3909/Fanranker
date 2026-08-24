@@ -158,23 +158,38 @@ export function PlayerPoolCard({
     : (reasonLabel ?? null) || (slotFull ? "슬롯 꽉 참" : overBudget ? "예산 초과" : null)
   const accent = getTeamAccent(player.teamKo, player.position)
 
+  /**
+   * ⚠️ 카드가 아니라 **행**이다 (2026-08-25 재작업).
+   *
+   * 종전엔 라운드 16px 흰 박스에 44px 그라디언트 타일 + 큰 한글 이니셜이었다.
+   * 사이트 어디에도 그런 물건이 없다 — 매치센터 라인업도 순위표도 전부 **조용한 행**
+   * (작은 틴트 칩 + 이름 + 헤어라인)이다. 박스가 60개 쌓이니 게임만 남의 집처럼 보였고,
+   * 한 화면에 들어오는 선수도 적었다 (운영자: "전혀 다르지 않아. 선수 카드부터 개선해줘").
+   *
+   * 위계는 **가격**이 만든다 — 스타는 이름과 금액이 커지고, £4 벤치는 조용히 눕는다.
+   * 종전엔 £15.5 와 £4.0 이 똑같은 크기라 60장이 균질한 벽이었다.
+   */
+  const tier = player.price >= 8 ? "star" : player.price >= 6 ? "mid" : "base"
+  const nameSize = tier === "star" ? 15.5 : tier === "mid" ? 14.5 : 14
+  const priceSize = tier === "star" ? 20 : tier === "mid" ? 17 : 15
+
   return (
     <div
       style={{
-        background: "var(--draft-card)",
-        borderRadius: 16,
-        border: `${pinned ? 2 : 1}px solid ${
-          pinned ? "var(--draft-burgundy)" : "var(--draft-line)"
-        }`,
-        padding: 12,
         position: "relative",
         display: "flex",
         alignItems: "center",
-        gap: 12,
+        gap: 10,
+        padding: "9px 8px 9px 4px",
+        // 박스 대신 헤어라인. 스타에만 아주 옅은 와인 틴트를 깔아 목록에서 떠오르게 한다.
+        borderBottom: "1px solid var(--draft-line)",
+        background: pinned
+          ? "var(--draft-burgundy-soft)"
+          : tier === "star"
+            ? "rgba(150,30,55,0.028)"
+            : "transparent",
         opacity: takenBy ? 0.4 : 1,
-        transition: "box-shadow .15s, border-color .15s",
-        // 끌 수 있는 카드만 손잡이 커서. 터치 스크롤은 살려 둔다 —
-        // 보드가 6px 임계를 넘겨야 드래그로 승격시킨다.
+        transition: "background .12s",
         cursor: onDragStart && canPick ? "grab" : undefined,
         touchAction: "pan-y",
       }}
@@ -182,126 +197,17 @@ export function PlayerPoolCard({
         if (onDragStart && canPick) onDragStart(e)
       }}
       onMouseEnter={(e) => {
-        if (canPick) e.currentTarget.style.boxShadow = "var(--draft-shadow-2)"
+        if (canPick) e.currentTarget.style.background = "var(--draft-neutral)"
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "none"
+        e.currentTarget.style.background = pinned
+          ? "var(--draft-burgundy-soft)"
+          : tier === "star"
+            ? "rgba(150,30,55,0.028)"
+            : "transparent"
       }}
     >
-      {/* face block — 팀 컬러 그라디언트 + 이니셜 */}
-      <div
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 8,
-          flexShrink: 0,
-          background: `linear-gradient(135deg, ${accent}, ${accent}99)`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "var(--draft-font-title)",
-          fontWeight: 900,
-          fontSize: 18,
-          color: "white",
-          letterSpacing: "-0.02em",
-        }}
-        aria-hidden
-      >
-        {getPlayerInitial(player)}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <PositionBadge pos={player.position} size="sm" />
-          <span
-            style={{
-              fontFamily: "var(--draft-font-title)",
-              fontWeight: 800,
-              fontSize: 14,
-              letterSpacing: "-0.01em",
-              color: "var(--draft-ink)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {player.nameKo}
-          </span>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginTop: 4,
-            fontSize: 11,
-            color: "var(--draft-mute)",
-            fontFamily: "var(--draft-font-body)",
-          }}
-        >
-          <span>{player.teamKo}</span>
-          <span style={{ color: "var(--draft-rule)" }}>·</span>
-          <span style={{ fontStyle: "normal" }}>{player.name}</span>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-end",
-          gap: 4,
-          flexShrink: 0,
-        }}
-      >
-        <div
-          className="draft-num"
-          style={{
-            fontFamily: "var(--draft-font-title)",
-            fontWeight: 900,
-            fontSize: 20,
-            lineHeight: 1,
-            color: "var(--draft-ink)",
-          }}
-        >
-          £{player.price.toFixed(1)}
-        </div>
-        {reason ? (
-          <span
-            style={{
-              fontSize: 10,
-              color: "var(--draft-mute)",
-              fontFamily: "var(--draft-font-title)",
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-            }}
-          >
-            {reason}
-          </span>
-        ) : (
-          <button
-            type="button"
-            disabled={!canPick}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (canPick) onPick()
-            }}
-            style={{
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: canPick ? "var(--draft-burgundy)" : "var(--draft-soft)",
-              color: canPick ? "white" : "var(--draft-mute)",
-              border: "none",
-              fontFamily: "var(--draft-font-title)",
-              fontWeight: 800,
-              fontSize: 11,
-              cursor: canPick ? "pointer" : "not-allowed",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            영입
-          </button>
-        )}
-      </div>
-
+      {/* 즐겨찾기 — 행 맨 앞. 종전엔 카드 우상단에 떠 있어 가격과 겹쳤다. */}
       <button
         type="button"
         onClick={(e) => {
@@ -310,21 +216,132 @@ export function PlayerPoolCard({
         }}
         aria-label={pinned ? "즐겨찾기 해제" : "즐겨찾기"}
         style={{
-          position: "absolute",
-          top: 6,
-          right: 6,
           background: "transparent",
           border: "none",
           color: pinned ? "var(--draft-burgundy)" : "var(--draft-line)",
           cursor: "pointer",
-          padding: 4,
+          padding: 2,
+          flexShrink: 0,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
         }}
       >
-        <Star size={14} fill={pinned ? "currentColor" : "none"} />
+        <Star size={13} fill={pinned ? "currentColor" : "none"} />
       </button>
+
+      {/* 포지션 칩 — 사이트 라인업의 등번호 칩과 같은 문법 (작은 틴트 사각) */}
+      <span
+        aria-label={player.position}
+        style={{
+          flexShrink: 0,
+          width: 26,
+          height: 20,
+          borderRadius: 5,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: `${POSITION_HEX[player.position]}1a`,
+          color: POSITION_HEX[player.position],
+          fontFamily: "var(--font-cond), var(--draft-font-title)",
+          fontWeight: 700,
+          fontSize: 11,
+          letterSpacing: "0.04em",
+        }}
+      >
+        {player.position}
+      </span>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: "var(--draft-font-title)",
+            fontWeight: tier === "star" ? 800 : 700,
+            fontSize: nameSize,
+            letterSpacing: "-0.01em",
+            color: "var(--draft-ink)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {player.nameKo}
+        </div>
+        <div
+          style={{
+            marginTop: 1,
+            fontSize: 11,
+            color: "var(--draft-mute)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {/* 팀 컬러는 이름표가 아니라 **점 하나**로. 44px 그라디언트 타일을 대신한다. */}
+          <span
+            aria-hidden
+            style={{
+              display: "inline-block",
+              width: 6,
+              height: 6,
+              borderRadius: 999,
+              background: accent,
+              marginRight: 5,
+              verticalAlign: "middle",
+            }}
+          />
+          {player.teamKo}
+        </div>
+      </div>
+
+      <div style={{ flexShrink: 0, textAlign: "right" }}>
+        <div
+          className="draft-num"
+          style={{
+            fontWeight: 700,
+            fontSize: priceSize,
+            lineHeight: 1,
+            color: canPick ? "var(--draft-ink)" : "var(--draft-mute)",
+          }}
+        >
+          £{player.price.toFixed(1)}
+        </div>
+        {reason && (
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 10,
+              color: "var(--draft-mute)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {reason}
+          </div>
+        )}
+      </div>
+
+      {!reason && (
+        <button
+          type="button"
+          disabled={!canPick}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (canPick) onPick()
+          }}
+          style={{
+            flexShrink: 0,
+            padding: "5px 11px",
+            borderRadius: 999,
+            background: canPick ? "var(--draft-burgundy)" : "transparent",
+            color: canPick ? "#fff" : "var(--draft-mute)",
+            border: canPick ? "none" : "1px solid var(--draft-line)",
+            fontFamily: "var(--draft-font-title)",
+            fontWeight: 700,
+            fontSize: 11,
+            cursor: canPick ? "pointer" : "not-allowed",
+          }}
+        >
+          영입
+        </button>
+      )}
     </div>
   )
 }
