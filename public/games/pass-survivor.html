@@ -134,6 +134,35 @@ const CFG = {
   SNAP_CONE:18, HOMING:2.2,
   MATE_RETURN_T:0.9, MATE_DOWN_T:6.0, MATE_SPEED:205, MATE_RING:200,
   MATE_LANE_CAP:110, MATE_ANG_GAP:0.9, MATE_SEP_R:30,
+  // ── 동료 역할 (2026-08-24 감사) ──────────────────────────────────
+  // 종전엔 동료 셋이 **같은 로직**으로 링 위를 돌았다. 전원이 "패스 레인이 열리고
+  // 수비가 성긴" 곳을 찾아가는데, 정작 무기(스마트 패스)는 **수비가 가장 많이 낀**
+  // 동료를 노린다 — 동료 AI 가 스코어링 메커니즘을 정면으로 방해하고 있었다.
+  // 그래서 셋이 똑같아 "누구에게 줄까" 라는 판단이 없었고, 아무나 연타하는 쪽이
+  // 최적이 됐다 (실측: 무지성 연타 평균 5,419 vs 성실 플레이 1,194).
+  //
+  // 역할을 셋으로 갈라 선택을 만든다:
+  //  · pivot  가까이 내려와 받아준다      — 안전, 넉다운 적음
+  //  · runner 수비 사이로 파고든다        — crowd 부호를 뒤집어 **일부러 낀 곳**으로
+  //  · wide   크게 벌려 각을 만든다        — 롱패스·lob 용
+  // crowd 가 양수면 "수비가 많을수록 좋다" 는 뜻이다. evade 는 수비 반발력 배수.
+  // 탭(자동)이 피벗을 기본 출구로 고르게 하는 가산점. 레인 개방도(최대 110)와
+  // 같은 자라 60이면 "어지간히 막혀도 피벗" 이 된다.
+  // ── 배점 (2026-08-24 감사) ──────────────────────────────────────
+  // 종전: 패스 성공 10 × 콤보, 넉다운 5 × 콤보. 즉 **공을 돌리는 것 자체**가
+  // 최고 보상이고 관통은 그 절반이었다. 그래서 최적 전략이 "초당 패스 횟수 최대화"
+  // = 무지성 연타가 됐고(실측 4.5배), 시간이 드는 차징 킥은 13판 중 최저점이었다.
+  // 뒤집는다 — 돌리기는 생존 수단이고, 점수는 수비를 관통할 때 난다.
+  PTS_PASS:4, PTS_KNOCKDOWN:18,
+  SAFE_OUTLET_BONUS:60,
+  // 수동 조준으로 침투 동료에게 꽂았을 때 넉다운 점수 배수. 연타(자동)와의 격차를
+  // 만드는 유일한 손잡이다 — 매크로 4.5배를 뒤집는 것이 목표치.
+  RISK_MULT:3.0,
+  MATE_ROLES:[
+    { id:'pivot',  ring:130, crowd:-24, evade:1.0, label:'피벗'   },
+    { id:'runner', ring:235, crowd:+18, evade:0.35, label:'침투'  },
+    { id:'wide',   ring:310, crowd:-10, evade:0.8, label:'와이드' },
+  ],
   GOAL_INTERVAL:30, GOAL_OPEN:12, GOAL_W:150, GK_REACT:0.25, GK_SPEED:170, GK_DIVE:520, GK_SAVE_R:27,
   GOAL_DIST_BASE:400,
   COMBO_WINDOW:3.0, COMBO_MAX:5.0, COMBO_DECAY:0.2,
@@ -158,6 +187,26 @@ function txt(s,x,y,size,color,align,weight){
   g.fillText(s,x,y);
 }
 function angNorm(a){ while(a>Math.PI)a-=TAU; while(a<-Math.PI)a+=TAU; return a; }
+/**
+ * 경로에 낀 수비 수 — `smartPass` 의 kills 판정(반경 26)과 **같은 자를 쓴다**.
+ *
+ * 침투 동료가 이걸 최대화하러 움직여야 무기와 방향이 맞는다. 종전엔 동료가
+ * "목적지 주변이 성긴 곳"(laneClearSeg + crowd)을 찾아갔는데, 무기는 "경로에
+ * 수비가 가장 많이 낀 동료"를 노린다 — 둘이 서로 반대라 킬존이 잘 안 생겼다.
+ * 목적지 주변과 경로 위는 다른 것이다 (2026-08-24 실측: 부호만 뒤집었을 땐
+ * 침투 0.40 vs 피벗 0.30 으로 차이가 거의 없었다).
+ */
+function laneKillsSeg(ax,ay,bx,by){
+  let n=0;
+  const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy;
+  for(const df of G.defs){
+    if(df.knocked||df.state==='RECOVER') continue;
+    const t=L2?clamp(((df.x-ax)*dx+(df.y-ay)*dy)/L2,0,1):0;
+    if(hyp(df.x-(ax+dx*t),df.y-(ay+dy*t))<26) n++;
+  }
+  return n;
+}
+
 function laneClearSeg(ax,ay,bx,by){
   let mn=1e9;
   for(const df of G.defs){
@@ -425,6 +474,7 @@ function newGame(){
     mates:[], defs:[],
     goal:null, goalTimer:CFG.GOAL_INTERVAL-8,
     charging:false, chargeT:0,
+    autoPass:false,
     score:0, combo:1, lastActT:-99, lastRecovT:-99, jostleT:0, level:1, xpNext:CFG.XP_BASE, pendingLv:0,
     cardLv:{speed:0,control:0,quick:0,power:0,pierce:0,magnet:0,mate:0,onetwo:0,lob:0},
     mateBuff:0, knockdowns:0, goals:0, passes:0, xpPrev:0,
@@ -507,7 +557,7 @@ function releaseKick(aimX,aimY){
   const spd=lerp(CFG.BALL_MIN,maxKick(),charge);
   let dx=aimX-p.x, dy=aimY-p.y;
   const dl=hyp(dx,dy)||1; dx/=dl; dy/=dl;
-  b.homing=null; b.shotGoal=false; b.kdOverride=false;
+  b.homing=null; b.shotGoal=false; b.kdOverride=false; b.risky=false;
   // 1) 슛 판정 — 골 윈도우 열림 + 조준 레이가 골문 근처 통과
   if(G.goal){
     const gl=G.goal;
@@ -529,7 +579,13 @@ function releaseKick(aimX,aimY){
       const d2=Math.abs(angNorm(a-aimA));
       if(d2<bd){ bd=d2; best=i; }
     }
-    if(best>=0) b.homing={kind:'mate',idx:best};
+    if(best>=0){
+      b.homing={kind:'mate',idx:best};
+      // 위험 패스 = **직접 조준해서** 침투 동료에게 꽂은 것. 자동(탭)은 제외한다 —
+      // 그래야 연타가 이 보상에 접근하지 못한다.
+      const tm=G.mates[best];
+      b.risky=!G.autoPass && !!(tm&&tm.role&&tm.role.id==='runner');
+    }
   }
   b.state='flight';
   b.x=p.x+dx*14; b.y=p.y+dy*14;
@@ -565,23 +621,30 @@ function smartPass(){
   if(snapTargetIdx()===-2){             // 골대를 조준 중이면 탭도 슛
     const aw=aimWorld(); releaseKick(aw.x,aw.y); return;
   }
-  let best=-1, bs=-1;
+  // ⚠️ 2026-08-24 감사 — 탭은 **살아남는 수**, 점수는 **조준하는 수**에서 난다.
+  //
+  // 종전엔 탭이 "경로에 수비가 가장 많이 낀 동료"(kills*10)를 골랐다. 즉 최적의
+  // 공격 선택을 코드가 대신 해줬고, 그래서 플레이어에게 판단이 없었다 — 무지성 연타가
+  // 곧 최적이었다 (실측: 연타 평균 5,419 vs 성실 플레이 1,194, 4.5배).
+  // 동료 역할을 갈라봐도 소용없었다. 자동이 알아서 좋은 쪽을 고르니까.
+  //
+  // 이제 탭은 **가장 안전한 출구**를 고른다(레인이 열린 쪽, 피벗 우선). 연타해도
+  // 안 죽지만 점수가 안 난다. 넉다운·배수는 수동 조준으로 침투 동료에게 꽂을 때 나온다.
+  // 초보는 탭만으로 계속 굴러가고, 잘하는 사람은 조준해서 훨씬 더 먹는다.
+  let best=-1, bs=-1e9;
   const snap=snapTargetIdx();
   for(let i=0;i<G.mates.length;i++){
     const m2=G.mates[i];
     if(m2.downT>0) continue;
-    let kills=0;
-    const dx=m2.x-p.x, dy=m2.y-p.y, L2=dx*dx+dy*dy;
-    for(const df of G.defs){
-      if(df.knocked||df.state==='RECOVER') continue;
-      const t=L2?clamp(((df.x-p.x)*dx+(df.y-p.y)*dy)/L2,0,1):0;
-      if(hyp(df.x-(p.x+dx*t),df.y-(p.y+dy*t))<26) kills++;
-    }
-    const s=kills*10+(i===snap?1:0);    // 동률이면 마우스 조준 방향 우선
+    let s=Math.min(laneClearSeg(p.x,p.y,m2.x,m2.y),CFG.MATE_LANE_CAP); // 클수록 안전
+    if(m2.role&&m2.role.id==='pivot') s+=CFG.SAFE_OUTLET_BONUS;        // 피벗이 기본 출구
+    if(i===snap) s+=8;                                                 // 동률이면 조준 방향
     if(s>bs){ bs=s; best=i; }
   }
+  G.autoPass=true;   // 이 킥은 자동 조준 — 위험 보상 대상이 아니다
   if(best>=0){ const m2=G.mates[best]; releaseKick(m2.x,m2.y); }
   else { const aw=aimWorld(); releaseKick(aw.x,aw.y); }
+  G.autoPass=false;
 }
 // 로빙 패스 카드: 수신 순간 착지 지점 광역 넉다운
 function lobImpact(x,y){
@@ -594,7 +657,7 @@ function lobImpact(x,y){
   }
   if(hit){
     action();
-    const pts=5*G.combo*hit; addScore(pts);
+    const pts=CFG.PTS_KNOCKDOWN*G.combo*hit; addScore(pts);
     const s=S(x,y);
     floater('임팩트 ×'+hit+' +'+Math.round(pts), s.x, s.y-50, {color:'#ffd54a',size:15});
     spark(s.x,s.y,12,'#ffd54a'); sfx.knockdown(); shake(4,.15);
@@ -624,11 +687,15 @@ function ballDefInteract(dt){
       df.knocked=true; df.kdT=0;
       G.knockdowns++;
       action();
-      const pts=5*G.combo;
+      // 직접 조준해 침투 동료에게 꽂은 패스만 배수를 받는다 (탭 연타는 못 받는다).
+      const risk=b.risky?CFG.RISK_MULT:1;
+      const pts=CFG.PTS_KNOCKDOWN*G.combo*risk;
       addScore(pts);
       const s=S(df.x,df.y);
-      floater('+'+Math.round(pts), s.x, s.y-36, {color:'#ff9d6c',size:14});
-      spark(s.x,s.y,8,'#ff9d6c'); sfx.knockdown(); shake(3,.12);
+      floater((b.risky?'침투! ×'+CFG.RISK_MULT+' +':'+')+Math.round(pts), s.x, s.y-36,
+              {color:b.risky?'#ffd54a':'#ff9d6c',size:b.risky?17:14});
+      spark(s.x,s.y,b.risky?14:8,b.risky?'#ffd54a':'#ff9d6c');
+      sfx.knockdown(); shake(b.risky?5:3,b.risky?.18:.12);
       b.pierce--;
       const ns=spd*(1-CFG.PIERCE_DECAY);
       b.vx*=ns/spd; b.vy*=ns/spd;
@@ -798,8 +865,11 @@ function openLevelUp(){
 }
 function spawnMate(){
   const a=rand(TAU);
+  // 역할은 슬롯 순서로 — 첫 동료가 피벗(안전한 받침), 둘째가 침투, 셋째가 와이드.
+  // 넷째부터는 다시 순환한다 (mate 카드는 최대 3명까지만 늘리고 이후엔 강화라 실질 3명).
+  const role=CFG.MATE_ROLES[G.mates.length % CFG.MATE_ROLES.length];
   G.mates.push({x:G.player.x+Math.cos(a)*120, y:G.player.y+Math.sin(a)*120,
-    slot:G.mates.length, downT:0, holdT:0, run:rand(TAU), face:1});
+    slot:G.mates.length, role:role, downT:0, holdT:0, run:rand(TAU), face:1});
 }
 function pickCard(i){
   const c=G.lvPicks[i];
@@ -923,7 +993,7 @@ function update(dt){
           b.state='mate'; b.mateIdx=b.homing.idx; b.homing=null;
           m2.holdT=0; G.passes++;
           action();
-          const pts=10*G.combo; addScore(pts);
+          const pts=CFG.PTS_PASS*G.combo; addScore(pts);
           const s=S(m2.x,m2.y);
           floater('+'+Math.round(pts)+' ×'+G.combo.toFixed(1), s.x, s.y-38, {color:'#8fd3ff',size:14});
           sfx.receive();
@@ -932,7 +1002,7 @@ function update(dt){
       } else if(hyp(b.x-p.x,b.y-p.y)<pickupR()&&p.stunT<=0){
         b.state='P'; b.homing=null; G.passes++;
         action();
-        const pts=10*G.combo; addScore(pts);
+        const pts=CFG.PTS_PASS*G.combo; addScore(pts);
         const s=S(p.x,p.y);
         floater('+'+Math.round(pts)+' ×'+G.combo.toFixed(1), s.x, s.y-40, {color:'#8fd3ff',size:14});
         sfx.receive();
@@ -981,25 +1051,38 @@ function update(dt){
     const m2=G.mates[i];
     if(m2.downT>0){ m2.downT-=dt; continue; }
     const carrying=(b.state==='mate'&&b.mateIdx===i);
+    // 역할별 링 반경·수비 선호도 (구버전 저장 상태 대비 폴백)
+    const role=m2.role||CFG.MATE_ROLES[0];
+    const RING=role.ring;
     let fx=0, fy=0;
     const dx=m2.x-p.x, dy=m2.y-p.y, d=hyp(dx,dy)||1;
     if(carrying){
-      if(d>CFG.MATE_RING+60){ fx-=dx/d*1.2; fy-=dy/d*1.2; }
-      else if(d<CFG.MATE_RING-60){ fx+=dx/d*1.0; fy+=dy/d*1.0; }
+      if(d>RING+60){ fx-=dx/d*1.2; fy-=dy/d*1.2; }
+      else if(d<RING-60){ fx+=dx/d*1.0; fy+=dy/d*1.0; }
     } else {
       // 공간 탐색: 패스 레인이 열리고, 수비가 성기고, 동료와 각도가 벌어지는 링 지점으로
       const cur=Math.atan2(dy,dx);
       let bestA=cur, bestS=-1e9;
-      for(let k=-2;k<=2;k++){
+      // 침투는 링을 더 넓게 훑는다 — 낀 길은 드물어서 ±0.56rad 국소 탐색으로는
+      // 못 찾고 제자리에 머문다. 피벗·와이드는 종전대로 좁게(자리 지키기).
+      const SPAN=role.crowd>0?5:2;
+      for(let k=-SPAN;k<=SPAN;k++){
         const a2=cur+k*0.28;
-        const cx2=p.x+Math.cos(a2)*CFG.MATE_RING, cy2=p.y+Math.sin(a2)*CFG.MATE_RING;
+        const cx2=p.x+Math.cos(a2)*RING, cy2=p.y+Math.sin(a2)*RING;
         let s;
         if(cx2<60||cx2>CFG.WORLD_W-60||cy2<60||cy2>CFG.WORLD_H-60) s=-1e6;
         else{
-          s=Math.min(laneClearSeg(p.x,p.y,cx2,cy2),CFG.MATE_LANE_CAP);
-          let crowd=0;
-          for(const df of G.defs){ if(!df.knocked&&hyp(df.x-cx2,df.y-cy2)<95) crowd++; }
-          s-=crowd*24;
+          if(role.crowd>0){
+            // 침투 — 무기와 같은 자로 잰다. 경로에 수비가 많이 낄수록 좋은 자리다.
+            // 레인 개방도는 아예 안 본다(그게 킬존을 피하게 만들던 항이다).
+            s=laneKillsSeg(p.x,p.y,cx2,cy2)*role.crowd;
+          } else {
+            // 피벗·와이드 — 안전한 출구. 레인이 열리고 수비가 성긴 쪽.
+            s=Math.min(laneClearSeg(p.x,p.y,cx2,cy2),CFG.MATE_LANE_CAP);
+            let crowd=0;
+            for(const df of G.defs){ if(!df.knocked&&hyp(df.x-cx2,df.y-cy2)<95) crowd++; }
+            s+=crowd*role.crowd;
+          }
           for(let j=0;j<G.mates.length;j++){
             if(j===i||G.mates[j].downT>0) continue;
             const g=Math.abs(angNorm(a2-mateAng[j]));
@@ -1009,7 +1092,7 @@ function update(dt){
         }
         if(s>bestS){ bestS=s; bestA=a2; }
       }
-      const tx2=p.x+Math.cos(bestA)*CFG.MATE_RING, ty2=p.y+Math.sin(bestA)*CFG.MATE_RING;
+      const tx2=p.x+Math.cos(bestA)*RING, ty2=p.y+Math.sin(bestA)*RING;
       const ddx2=tx2-m2.x, ddy2=ty2-m2.y, dl2=hyp(ddx2,ddy2);
       if(dl2>16){ fx+=ddx2/dl2*1.0; fy+=ddy2/dl2*1.0; }
     }
@@ -1017,7 +1100,9 @@ function update(dt){
     for(const df of G.defs){
       if(df.knocked) continue;
       const ddx=m2.x-df.x, ddy=m2.y-df.y, dd=hyp(ddx,ddy);
-      if(dd<(carrying?160:110)){ const w2=(carrying?1.8:1.2)*(1-dd/160); fx+=ddx/dd*w2; fy+=ddy/dd*w2; nearDef++; }
+      // 수비 반발력도 역할을 탄다 — 침투(evade 0.35)는 위험을 감수하고 파고든다.
+      // 이 배수가 없으면 각도 선택으로 낀 곳을 골라도 반발력이 도로 밀어낸다.
+      if(dd<(carrying?160:110)){ const w2=(carrying?1.8:1.2)*(1-dd/160)*role.evade; fx+=ddx/dd*w2; fy+=ddy/dd*w2; nearDef++; }
     }
     const fl=hyp(fx,fy);
     if(fl>.05){
