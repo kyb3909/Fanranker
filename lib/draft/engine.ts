@@ -132,7 +132,60 @@ export function isValidPick(state: DraftState, seatIndex: number, playerId: stri
   const nextPositions = [...roster.map((p) => p.position), player.position]
   if (!canAssignAll(nextPositions, slots)) return false
 
+  // ⚠️ 예산 잔여 검사 (2026-08-25 운영자 제보: "예산을 다 소비해버리면 더는 영입을 못 한다").
+  //    종전 코드에는 "남은 픽으로 나머지 **포지션**을 채울 수 있는가" 검사가 있었는데,
+  //    자격을 유연화하면서 그 자리를 canAssignAll 로 갈아 끼우며 **예산 쪽 검사를 빠뜨렸다**.
+  //    AI 에는 예비비를 넣어 뒀지만 사람에게는 없어서, 비싼 선수를 연달아 잡으면
+  //    11명을 못 채우고 막혔다. 여기서 막으면 사람·AI 가 같은 규칙으로 보호된다.
+  const remainingAfter = getRemainingPicks(state, seatIndex) - 1
+  if (remainingAfter > 0) {
+    const { asc, prefix } = cheapestIndex(state)
+    // 이 선수를 빼고 남는 것 중 가장 싼 `remainingAfter` 명의 합이 최소 필요액이다.
+    // 후보가 그 구간 안에 들어 있으면 한 칸 더 보고 자기 값을 뺀다.
+    const pos = lowerBound(asc, player.price)
+    const need =
+      pos < remainingAfter
+        ? prefix[Math.min(remainingAfter + 1, asc.length)] - player.price
+        : prefix[Math.min(remainingAfter, asc.length)]
+    if (asc.length - 1 < remainingAfter) return false // 남은 선수 수가 부족
+    if (state.budget[seatIndex] - player.price < need - 1e-9) return false
+  }
+
   return true
+}
+
+/**
+ * 미드래프트 선수 가격의 오름차순 배열과 누적합.
+ *
+ * isValidPick 은 선수 풀 전체(600명+)에 대해 매 렌더 호출된다 — 매번 정렬하면
+ * O(n² log n) 이 된다. `draftedPlayerIds` Set 은 픽마다 새로 만들어지므로
+ * 그 객체를 열쇠로 캐시하면 픽이 바뀔 때 자동으로 무효화된다.
+ */
+const cheapestCache = new WeakMap<object, { asc: number[]; prefix: number[] }>()
+function cheapestIndex(state: DraftState) {
+  const hit = cheapestCache.get(state.draftedPlayerIds)
+  if (hit) return hit
+  const asc = getAllPlayers()
+    .filter((p: Player) => !state.draftedPlayerIds.has(p.id))
+    .map((p: Player) => p.price)
+    .sort((a, b) => a - b)
+  const prefix = [0]
+  for (const v of asc) prefix.push(prefix[prefix.length - 1] + v)
+  const entry = { asc, prefix }
+  cheapestCache.set(state.draftedPlayerIds, entry)
+  return entry
+}
+
+/** asc 에서 value 가 들어갈 첫 위치 */
+function lowerBound(asc: number[], value: number): number {
+  let lo = 0
+  let hi = asc.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (asc[mid] < value) lo = mid + 1
+    else hi = mid
+  }
+  return lo
 }
 
 /** 픽 실행 - 새 state 반환 */

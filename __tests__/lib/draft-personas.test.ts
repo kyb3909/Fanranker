@@ -21,7 +21,9 @@ import {
  */
 
 function loadRealPlayers(): Player[] {
-  const p = join(process.cwd(), "public", "data", "arsenal-players.json")
+  // EPL 드래프트가 실제로 쓰는 데이터로 돈다 (arsenal 199명은 4팀 44픽이면 풀이 22% 빠져
+  // 싼 선수가 먼저 팔리는 바람에 예비비 계산이 뒤늦게 무너진다 — 공유 풀의 구조적 한계)
+  const p = join(process.cwd(), "public", "data", "fpl-players.json")
   return JSON.parse(readFileSync(p, "utf-8")) as Player[]
 }
 
