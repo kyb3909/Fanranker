@@ -4,6 +4,7 @@ import { POSITION_HEX } from "@/lib/draft/visual-helpers"
 import { type DraftState, type Formation } from "@/lib/draft/engine"
 import type { Player, Position } from "@/lib/draft/players"
 import { PitchViz, mergeRosterIntoSlots } from "./pitch-viz"
+import { PageBand, PageBandStat } from "@/components/page-band"
 
 interface DraftResultProps {
   state: DraftState
@@ -55,53 +56,17 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
 
   return (
     <div className="draft-scope" style={{ background: "var(--draft-paper)" }}>
-      {/* ── 선언 밴드 ──
-          다크는 사이트에서 "선언 영역"(밴드·푸터)에만 쓴다. 드래프트 완료는 결과 발표라
-          그 조건에 맞고, 아래 웜 페이퍼와 대비되며 시선을 잔디로 떨어뜨린다. */}
-      <div
-        style={{
-          background: "var(--draft-ink)",
-          color: "var(--draft-paper)",
-          borderBottom: "3px solid var(--draft-burgundy)",
-        }}
-      >
-        <div className="mx-auto flex max-w-[1000px] flex-wrap items-end justify-between gap-4 px-4 py-6 sm:px-6">
-          <div>
-            <div className="draft-eyebrow" style={{ color: "rgba(245,239,231,0.5)" }}>
-              SQUAD COMPLETE
-            </div>
-            <h1
-              className="draft-title mt-1 text-[26px] sm:text-[32px]"
-              style={{ color: "var(--draft-paper)" }}
-            >
-              {me?.name ?? "내 팀"}
-            </h1>
-            <div className="mt-1 flex items-center gap-2 text-[12px]">
-              <span className="draft-num" style={{ color: "rgba(245,239,231,0.75)" }}>
-                {myFormation}
-              </span>
-              <span style={{ color: "rgba(245,239,231,0.3)" }}>·</span>
-              <span style={{ color: "rgba(245,239,231,0.75)" }}>{myRoster.length}명 완성</span>
-            </div>
-          </div>
-
-          {/* 지출 — 이 화면에서 가장 큰 숫자 하나 */}
-          <div className="text-right">
-            <div className="draft-eyebrow" style={{ color: "rgba(245,239,231,0.5)" }}>
-              SPENT
-            </div>
-            <div
-              className="draft-num leading-none"
-              style={{ fontSize: 40, fontWeight: 700, color: "var(--draft-paper)" }}
-            >
-              £{mySpent.toFixed(1)}
-            </div>
-            <div className="draft-num mt-1 text-[12px]" style={{ color: "rgba(245,239,231,0.6)" }}>
-              잔여 £{myLeft.toFixed(1)} / 예산 £{state.initialBudget}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* ⚠️ 사이트 공용 PageBand 를 쓴다 (17개 지면 채택). 종전엔 여기만 평평한 검정
+          밴드를 직접 만들었는데, 사이트 밴드는 --gn-night 위에 버건디 래디얼 3겹이
+          깔린 와인빛이라 "같은 검정" 이 아니었다. 결과 발표는 선언 영역이므로 제격이다. */}
+      <PageBand
+        kicker="Squad Complete"
+        /* 닉네임 기본값이 "나" 한 글자라 디스플레이 서체에서 제목이 비어 보인다 —
+           항상 문장이 되게 붙인다. */
+        title={`${me?.name ?? "내"}의 스쿼드`}
+        description={`${myFormation} · ${myRoster.length}명 완성 · 잔여 £${myLeft.toFixed(1)} / 예산 £${state.initialBudget}`}
+        aside={<PageBandStat value={`£${mySpent.toFixed(1)}`} label="Spent" />}
+      />
 
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6">
         {/* ── 내 스쿼드: 잔디 + 라인별 명단 ── */}
