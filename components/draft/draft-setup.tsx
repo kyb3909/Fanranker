@@ -361,34 +361,31 @@ export function DraftSetup({
                 </span>
               </div>
               <PitchViz formation={myFormation} filled={{}} />
-              {/* 규칙 요약 */}
-              <div className="mb-6 rounded-lg p-4" style={{ background: "var(--wc-paper)" }}>
-                <h3 className="mb-2 text-xs font-bold" style={{ color: "var(--wc-ink)" }}>
-                  규칙
-                </h3>
-                <ul className="space-y-1 text-[11px]" style={{ color: "var(--wc-mute)" }}>
-                  <li>• 스네이크 순서: 1→2→...→N→N→...→1 반복</li>
-                  <li>
-                    • {entry?.rosterSize ?? 11}라운드, 예산 {entry?.currency ?? "£"}
+              {/* ⚠️ 종전엔 여기 5줄짜리 "규칙" 블록이 있었다. 우측 카드만 길어져 좌우
+                높이가 안 맞았고(운영자 지적), 내용도 대부분 이미 화면에 있었다 —
+                예산·선수 수는 밴드에, 포메이션 구성은 포메이션 버튼에, 스네이크 설명은
+                "내 드래프트 순서" 아래에. 여기서만 알 수 있는 세 가지만 한 줄로 남긴다. */}
+              <div
+                className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px]"
+                style={{ color: "var(--wc-mute)" }}
+              >
+                <span>
+                  <span className="gn-num">{entry?.rosterSize ?? 11}</span>라운드
+                </span>
+                <span style={{ color: "var(--wc-line-2)" }}>·</span>
+                <span>
+                  예산{" "}
+                  <span className="gn-num">
+                    {entry?.currency ?? "£"}
                     {entry?.budget ?? 80}
-                  </li>
-                  <li>
-                    • 포메이션 {myFormation}: GK {selectedLimits.GK}, DF {selectedLimits.DF}, MF{" "}
-                    {selectedLimits.MF}, FW {selectedLimits.FW}
-                  </li>
-                  <li>• 픽 제한시간 30초 (초과 시 자동 선택)</li>
-                  <li>• 선수 풀 {getAllPlayers().length}명</li>
-                </ul>
+                  </span>
+                </span>
+                <span style={{ color: "var(--wc-line-2)" }}>·</span>
+                <span>
+                  픽 <span className="gn-num">30</span>초
+                </span>
               </div>
 
-              {errorMsg && (
-                <div
-                  className="mb-4 rounded-lg px-4 py-3 text-sm"
-                  style={{ background: "var(--wc-soft)", color: "var(--wc-burgundy)" }}
-                >
-                  {errorMsg}
-                </div>
-              )}
               {/* ⚠️ 모바일에서는 도판+규칙이 위에 쌓여 시작 버튼이 스크롤 1,600px 아래로
                 묻혔다 (2026-08-25 실측, 뷰포트 844px = 두 화면 아래). 화면 하단에
                 붙여 둔다. 데스크톱은 우측 카드 안 제자리. */}
