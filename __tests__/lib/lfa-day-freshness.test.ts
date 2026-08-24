@@ -16,10 +16,17 @@ import type { LfaMatch } from "@/lib/lfa/client"
 const DATE = "2026-08-24"
 const at = (hhmm: string) => new Date(`${DATE}T${hhmm}:00.000Z`).getTime()
 
-function match(kickoff: string, state: "preGame" | "inGame" | "postGame"): LfaMatch {
+const EPL = "2kwbbcootiqqgmrzs6o5inle5" // lib/lfa/leagues.ts 실제 매핑
+const OTHER = "zzz-some-league-we-do-not-serve"
+
+function match(
+  kickoff: string,
+  state: "preGame" | "inGame" | "postGame",
+  leagueId: string = EPL
+): LfaMatch {
   return {
-    id: `m-${kickoff}-${state}`,
-    league: { id: "l1", name: "EPL" },
+    id: `m-${kickoff}-${state}-${leagueId}`,
+    league: { id: leagueId, name: "L" },
     kickoff,
     status: {
       status: state,
@@ -88,6 +95,38 @@ describe("dayFreshnessMs — 하루치 목록 재구매 주기", () => {
   it("자정을 넘겨 진행 중인 경기(23:45 킥오프)도 경기창 안으로 본다", () => {
     vi.setSystemTime(at("23:45") + 90 * MIN) // 다음날 01:15
     expect(dayFreshnessMs(DATE, [match("23:45", "preGame")])).toBe(5 * MIN)
+  })
+
+  // ⚠️ 이 그룹이 2026-08-24 배포 후 실측으로 드러난 구멍이다. `matches?date=` 는 전 세계
+  //    경기(하루 189~960)를 주는데 신선도를 전수에서 판단하면, 지구 어딘가는 항상 경기
+  //    중이라 24시간 내내 5분 주기가 된다 — 함수가 통째로 무력해진다.
+  describe("우리가 안 쓰는 리그는 신선도 판단에서 제외한다", () => {
+    it("남의 리그 경기가 라이브여도 유휴 주기를 유지한다", () => {
+      vi.setSystemTime(at("10:00"))
+      const mixed = [
+        match("20:00", "preGame", EPL), // 우리 리그, 아직 멀었다
+        match("09:30", "inGame", OTHER), // 남의 리그, 지금 진행 중
+      ]
+      expect(dayFreshnessMs(DATE, mixed)).toBe(30 * MIN)
+    })
+
+    it("남의 리그 경기만 있는 날짜는 볼 게 없다", () => {
+      vi.setSystemTime(at("10:00"))
+      const foreign = [match("09:30", "inGame", OTHER), match("10:15", "preGame", OTHER)]
+      expect(dayFreshnessMs(DATE, foreign)).toBe(30 * MIN)
+    })
+
+    it("우리 리그가 라이브면 남의 리그와 무관하게 5분", () => {
+      vi.setSystemTime(at("10:00"))
+      const mixed = [match("09:30", "inGame", EPL), match("09:30", "inGame", OTHER)]
+      expect(dayFreshnessMs(DATE, mixed)).toBe(5 * MIN)
+    })
+
+    it("우리 리그 경기가 전부 끝났으면 남의 리그가 남아 있어도 얼린다", () => {
+      vi.setSystemTime(at("23:00"))
+      const mixed = [match("12:00", "postGame", EPL), match("22:50", "inGame", OTHER)]
+      expect(dayFreshnessMs(DATE, mixed)).toBe(Infinity)
+    })
   })
 
   it("경기가 끝나고 경기창을 벗어난 preGame 잔여(FT 지연)는 유휴로 떨어진다", () => {

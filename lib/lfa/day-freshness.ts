@@ -1,4 +1,6 @@
 import type { LfaMatch } from "@/lib/lfa/client"
+import { BETMAN_CODE_BY_LFA_ID } from "@/lib/lfa/leagues"
+import { isMatchPageLeague } from "@/lib/match/leagues"
 
 /**
  * 하루치 목록을 얼마나 자주 다시 살 것인가 — **그날 경기 상황이 정한다** (2026-08-24 비용 감사).
@@ -28,15 +30,31 @@ export const MATCH_WINDOW_MS = 3.5 * 3600_000
 export const FRESH_DAY_MATCHDAY_MS = 5 * 60_000
 export const FRESH_DAY_IDLE_MS = 30 * 60_000
 
+/**
+ * 우리가 실제로 지면에 내는 경기인가.
+ *
+ * ⚠️ 이 필터가 없으면 함수가 통째로 무력해진다 (2026-08-24 실측). `matches?date=` 는
+ * **전 세계 경기**를 준다 — 하루 189~960경기. 지구 어딘가는 항상 경기 중이라
+ * `is_live` 를 전수에서 보면 사실상 24시간 내내 "매치데이"로 판정된다.
+ * 실제로 배포 직후 재보니 UTC 08-24 에 라이브 2경기가 있었고(우리가 안 쓰는 리그),
+ * 그 둘 때문에 하루치 목록이 계속 5분마다 팔렸다 — 시간당 20크레딧.
+ * 우리가 읽는 건 16개 리그뿐이다. 나머지는 신선도 판단에서 빼야 한다.
+ */
+function weServe(m: LfaMatch): boolean {
+  const code = BETMAN_CODE_BY_LFA_ID.get(m.league?.id ?? "")
+  return !!code && isMatchPageLeague(code)
+}
+
 export function dayFreshnessMs(dateUtc: string, matches: LfaMatch[]): number {
   const now = Date.now()
   const dayEnd = Date.parse(`${dateUtc}T00:00:00.000Z`) + 24 * 3600_000
 
-  // 목록이 빈 날짜: 이미 다 지났으면 굳은 것, 아직이면 나중에 일정이 붙을 수 있다
-  if (matches.length === 0) return now > dayEnd ? Infinity : FRESH_DAY_IDLE_MS
+  // 우리 리그 경기가 그날 하나도 없으면 이 목록에서 볼 게 없다
+  const ours = matches.filter(weServe)
+  if (ours.length === 0) return now > dayEnd ? Infinity : FRESH_DAY_IDLE_MS
 
   let anyUnfinished = false
-  for (const m of matches) {
+  for (const m of ours) {
     if (m.status?.is_live) return FRESH_DAY_MATCHDAY_MS
     const finished = m.status?.state === "postGame" || m.status?.display === "FT"
     if (finished) continue
