@@ -341,6 +341,40 @@ export async function POST(req: NextRequest) {
     console.error("ops-monitor lfa credit check 실패:", e)
   }
 
+  // 9) LFA 소모 **속도 급변** (2026-08-25 크롤러 화재).
+  //    §8 의 "남은 일수" 경보는 이 화재 때 정상 동작했다 — 오후 내내 "약 11일 남음" 을
+  //    울리고 있었다. 그런데 잔여가 22만이라 그 문구가 급해 보이지 않았고, 평소의 32배로
+  //    타고 있다는 사실이 어디에도 안 나왔다. 잔여가 많을수록 "일수" 는 둔해진다 —
+  //    바닥이 며칠 남았는지보다 **갑자기 빨라진 것 자체**가 사고 신호다.
+  try {
+    const rate = async (fromH: number, toH: number): Promise<number | null> => {
+      const { count } = await supabase
+        .from("lfa_usage_log")
+        .select("id", { count: "exact", head: true })
+        .gte("called_at", new Date(Date.now() - fromH * H).toISOString())
+        .lt("called_at", new Date(Date.now() - toH * H).toISOString())
+      return count == null ? null : count / (fromH - toH)
+    }
+    // 직전 2시간 vs 그 앞 24시간 — 크롤 유입은 몇 분 안에 몇백 배로 뛴다.
+    // ⚠️ 이건 **시작을 잡는** 경보다. 화재가 하루를 넘기면 비교 기준(24시간)이 화재로
+    //    오염돼 배율이 떨어지고 조용해진다 — 그때부터는 §8 의 남은 일수가 받는다.
+    //    실측 검증: 이번 화재 발생 2시간 뒤 시점이면 957/h vs 23/h = 41배로 울린다
+    //    (실제로는 09:00 UTC 까지 시간당 8~48건이었다).
+    const [recent, baseline] = await Promise.all([rate(2, 0), rate(26, 2)])
+    if (recent != null && baseline != null && baseline >= 5 && recent >= 5 * baseline) {
+      issues.push({
+        name: "🚨 축구 API 호출 급증",
+        value:
+          `최근 2시간 시간당 ${Math.round(recent).toLocaleString()}건 · ` +
+          `평소 ${Math.round(baseline).toLocaleString()}건 → **${Math.round(recent / baseline)}배**. ` +
+          `유료 호출이라 방치하면 팩이 며칠 만에 바닥납니다. ` +
+          `크롤러가 새 파라미터를 걸어 들어왔는지부터 보세요 (lfa_day_cache 의 date_utc 분포).`,
+      })
+    }
+  } catch (e) {
+    console.error("ops-monitor lfa rate check 실패:", e)
+  }
+
   if (issues.length > 0) {
     await notifyDiscordOps({
       level: "alert",
