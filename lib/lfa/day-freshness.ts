@@ -69,3 +69,28 @@ export function dayFreshnessMs(dateUtc: string, matches: LfaMatch[]): number {
   // 5분마다 다시 사던 "어제 UTC" 가 여기서 멈춘다.
   return anyUnfinished ? FRESH_DAY_IDLE_MS : Infinity
 }
+
+/**
+ * 유료 조회를 허용하는 날짜 창 — 오늘 기준 과거 90일 ~ 미래 30일 (UTC).
+ *
+ * ⚠️⚠️ 2026-08-25 크레딧 화재. `/matches?date=` 가 형식만 맞으면 아무 날짜나 받았고,
+ *    그 페이지의 날짜 칩이 양쪽으로 끝없이 이어져 크롤러에게 무한 링크 공간이었다.
+ *    한 페이지가 곧 하루치 유료 구매라 캐시에 2003~2047년 9,466일이 쌓였고, 유료 호출이
+ *    2시간에 1,742건 나갔다 (하루 ~21,000크레딧 — 평소 647의 32배).
+ *    창 밖 날짜는 **사지 않는다**. 이미 산 게 있으면 그대로 준다.
+ *
+ * ⚠️ Supabase 를 끌어오지 않는 순수 모듈에 둔다 — 테스트가 env 없이 돌아야 한다.
+ */
+export const BUY_WINDOW_PAST_DAYS = 90
+export const BUY_WINDOW_FUTURE_DAYS = 30
+
+export function withinBuyWindow(dateUtc: string, now = Date.now()): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateUtc)) return false
+  const t = Date.parse(`${dateUtc}T00:00:00Z`)
+  if (!Number.isFinite(t)) return false
+  // 되돌아온 문자열이 다르면 존재하지 않는 날짜다 (2026-13-45 → 2027-01-14 로 밀린다)
+  if (new Date(t).toISOString().slice(0, 10) !== dateUtc) return false
+  const today = Math.floor(now / 86_400_000) * 86_400_000
+  const days = Math.round((t - today) / 86_400_000)
+  return days >= -BUY_WINDOW_PAST_DAYS && days <= BUY_WINDOW_FUTURE_DAYS
+}

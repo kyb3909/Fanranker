@@ -12,6 +12,7 @@ import {
   writeDayMatches,
   writeMatchDetails,
 } from "@/lib/lfa/persist"
+import { withinBuyWindow } from "@/lib/lfa/day-freshness"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
 
 /**
@@ -143,6 +144,15 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
 export const getDayMatches = cache(async (dateUtc: string, live: boolean): Promise<LfaMatch[]> => {
   const cached = await readDayMatches(dateUtc, live)
   if (cached && !cached.stale) return cached.matches
+
+  // ⚠️⚠️ 살 수 있는 날짜에 **울타리**를 친다 (2026-08-25 크레딧 화재).
+  //
+  //    `/matches?date=` 가 형식만 맞으면 아무 날짜나 받았고, 그 페이지엔 이전/다음날
+  //    화살표가 있다 — 크롤러에겐 무한 링크 공간이다. 실측: lfa_day_cache 에 2003~2047 년
+  //    9,466일이 쌓였고 matches 호출이 2시간에 1,742건(하루 ~21,000크레딧, 평소의 32배).
+  //    창 밖 날짜는 **사지 않는다**. 이미 산 게 있으면 그대로 주고, 없으면 빈 목록이다.
+  //    (읽기는 위에서 이미 끝났으므로 캐시 히트는 여기 안 온다.)
+  if (!withinBuyWindow(dateUtc)) return cached?.matches ?? []
 
   try {
     const fresh = await cachedDayMatches(dateUtc, live)()

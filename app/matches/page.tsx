@@ -127,6 +127,18 @@ function FixtureRowShell({
   )
 }
 
+/**
+ * 볼 수 있는 날짜 창 — 오늘 기준 과거 90일 ~ 미래 30일.
+ * LFA 구매 창(lib/lfa/match.ts `withinBuyWindow`)과 같은 폭으로 맞춘다.
+ */
+function withinDateWindow(dateKst: string, todayKstStr: string): boolean {
+  const a = Date.parse(`${dateKst}T12:00:00+09:00`)
+  const b = Date.parse(`${todayKstStr}T12:00:00+09:00`)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return false
+  const days = Math.round((a - b) / 86_400_000)
+  return days >= -90 && days <= 30
+}
+
 function shiftDate(dateKst: string, days: number): string {
   const d = new Date(`${dateKst}T12:00:00+09:00`)
   return new Date(d.getTime() + days * 24 * 3600_000).toISOString().slice(0, 10)
@@ -139,7 +151,12 @@ export default async function MatchesPage({
 }) {
   const params = await searchParams
   const today = todayKst()
-  const date = params.date && kstDayRange(params.date) ? params.date : today
+  // ⚠️⚠️ 날짜에 **울타리**. 종전엔 형식만 맞으면 아무 날짜나 받았는데, 아래 날짜 칩이
+  //    보고 있는 날 ±3 을 그리므로 크롤러에겐 양쪽으로 무한한 링크 공간이다. 실측
+  //    (2026-08-25): lfa_day_cache 에 2003~2047년 9,466일이 쌓이고 유료 API 가 2시간에
+  //    1,742건 나갔다(하루 ~21,000크레딧, 평소 647의 32배). 창 밖이면 오늘로 되돌린다.
+  const requested = params.date && kstDayRange(params.date) ? params.date : null
+  const date = requested && withinDateWindow(requested, today) ? requested : today
   // 접힌 컵대회를 펼친 리그 코드들 — 서버 컴포넌트라 상태 대신 쿼리로 든다.
   // ⚠️ 종전 "접힘"은 hidden 클래스만 붙이고 펼칠 수단이 없는 **영구 삭제**였다
   //    (2026-08-19 PM 실측: FA컵 130경기 도달 불가).
@@ -181,22 +198,26 @@ export default async function MatchesPage({
             **활성 칩이 하나도 없었다.** 보고 있는 날짜(`date`) 기준으로 바꾼다.
             화살표 2개는 삭제: 칩이 좌우로 스크롤되고 맨 끝 칩이 곧 이동 수단이다. */}
         <nav className="wc-chip-tabs" aria-label="날짜 선택">
-          {[-3, -2, -1, 0, 1, 2, 3].map((off) => {
-            const d = shiftDate(date, off)
-            const p = dateParts(d)
-            const active = off === 0
-            return (
-              <Link
-                key={d}
-                href={d === today ? "/matches" : `/matches?date=${d}`}
-                aria-current={active ? "date" : undefined}
-                className={`no-underline ${active ? "on" : ""}`}
-              >
-                <span style={{ opacity: 0.75 }}>{d === today ? "오늘" : p.weekday}</span>
-                <span className="gn-num font-bold">{p.short}</span>
-              </Link>
-            )
-          })}
+          {[-3, -2, -1, 0, 1, 2, 3]
+            .map((off) => shiftDate(date, off))
+            .filter((d) => withinDateWindow(d, today))
+            .map((d) => {
+              const p = dateParts(d)
+              const active = d === date
+              return (
+                <Link
+                  key={d}
+                  href={d === today ? "/matches" : `/matches?date=${d}`}
+                  // 크롤러가 날짜를 타고 무한히 걸어 들어가지 않게 (robots 와 이중 방어)
+                  rel={d === today ? undefined : "nofollow"}
+                  aria-current={active ? "date" : undefined}
+                  className={`no-underline ${active ? "on" : ""}`}
+                >
+                  <span style={{ opacity: 0.75 }}>{d === today ? "오늘" : p.weekday}</span>
+                  <span className="gn-num font-bold">{p.short}</span>
+                </Link>
+              )
+            })}
         </nav>
 
         {/* 날짜 표제 — 매거진 일정면의 날짜 마스트헤드 */}
