@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { loadPlayers } from "@/lib/draft/players"
+import { loadPlayers, type Player } from "@/lib/draft/players"
 import { getDraftGame, type DraftCatalogEntry } from "@/lib/draft/games-catalog"
 import {
   createInitialState,
@@ -33,6 +33,14 @@ export function useDraftGame(slug: string) {
   const [state, setState] = useState<DraftState | null>(null)
   const [timerReset, setTimerReset] = useState(0)
   const [playersLoaded, setPlayersLoaded] = useState(false)
+  /**
+   * 드래프트 중 도판에 손으로 놓은 배치 (슬롯 코드 → 선수).
+   *
+   * ⚠️ 보드가 아니라 여기 둔다. 종전엔 DraftBoard 의 지역 상태라 드래프트가 끝나
+   *    배치 화면으로 넘어가는 순간 통째로 사라졌고, 방금 11명을 자리에 놓은 유저가
+   *    "미배치 선수 (11)" 를 다시 만났다 (2026-08-25 자동 플레이로 확인).
+   */
+  const [arrangement, setArrangement] = useState<Record<string, Player | null>>({})
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -187,6 +195,7 @@ export function useDraftGame(slug: string) {
   const handleRestart = useCallback(() => {
     if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
     setState(null)
+    setArrangement({}) // 새 판에 지난 판 배치가 따라오면 안 된다
     setPhase("setup")
   }, [])
 
@@ -211,6 +220,8 @@ export function useDraftGame(slug: string) {
     myFormation,
     setMyFormation,
     state,
+    arrangement,
+    setArrangement,
     timerReset,
     playersLoaded,
     startGame,

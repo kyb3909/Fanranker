@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react"
 import { POSITION_COLORS, type Player, type Position } from "@/lib/draft/players"
 import type { Formation } from "@/lib/draft/engine"
+import { slotCodes } from "./pitch-viz"
 
 interface FieldSlot {
   id: string
@@ -93,16 +94,45 @@ const FORMATION_SLOTS: Record<Formation, FieldSlot[]> = {
   ],
 }
 
+/**
+ * 드래프트 도판의 배치를 이 화면의 자리로 옮긴다.
+ *
+ * 두 화면은 자리 이름이 다르다 — 도판은 `GK1·DF1·MF1·FW1…`, 여기는 `gk·lb·lcb·lcm·lw…`.
+ * 다만 **둘 다 GK → 수비 → 미드 → 공격 순서이고 각 줄은 왼쪽부터**라서 같은 순번끼리
+ * 정확히 맞물린다 (`__tests__/lib/draft-slot-carry.test.ts` 가 이 전제를 지킨다).
+ */
+export function pitchSlotsToPlacements(
+  slots: Record<string, Player | null>,
+  formation: Formation
+): Record<string, Player> {
+  const codes = slotCodes(formation)
+  const field = FORMATION_SLOTS[formation]
+  const out: Record<string, Player> = {}
+  codes.forEach((code, i) => {
+    const player = slots[code]
+    const target = field[i]
+    if (player && target) out[target.id] = player
+  })
+  return out
+}
+
 interface FormationFieldProps {
   formation: Formation
   roster: Player[]
   onComplete: (placements: Record<string, Player>) => void
+  /** 드래프트 중 도판에 놓아둔 배치 — 여기서 처음부터 다시 놓게 하지 않는다. */
+  initialPlacements?: Record<string, Player>
 }
 
-export function FormationField({ formation, roster, onComplete }: FormationFieldProps) {
+export function FormationField({
+  formation,
+  roster,
+  onComplete,
+  initialPlacements,
+}: FormationFieldProps) {
   const slots = FORMATION_SLOTS[formation]
-  // slotId → player
-  const [placements, setPlacements] = useState<Record<string, Player>>({})
+  // slotId → player. 드래프트에서 이어받은 배치가 있으면 그걸로 시작한다.
+  const [placements, setPlacements] = useState<Record<string, Player>>(initialPlacements ?? {})
   // 드래그 중인 선수
   const [dragging, setDragging] = useState<Player | null>(null)
   // 드래그 중인 슬롯 (슬롯에서 드래그할 때)
@@ -151,9 +181,16 @@ export function FormationField({ formation, roster, onComplete }: FormationField
   return (
     <div className="mx-auto max-w-4xl py-6">
       <div className="mb-6 text-center">
-        <h1 className="text-foreground text-2xl font-black">선수 배치</h1>
+        {/* 드래프트에서 배치를 이어받은 뒤로는 "처음부터 놓는 곳" 이 아니라
+            "확인하고 손보는 곳" 이다 (2026-08-25). 문구가 그대로면 이미 다 놓인 화면을
+            보고도 뭘 더 해야 하나 싶어진다. */}
+        <h1 className="text-foreground text-2xl font-black">
+          {unplacedPlayers.length === 0 ? "라인업 확인" : "선수 배치"}
+        </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          선수를 드래그해서 원하는 포지션에 배치하세요 · 포메이션: {formation}
+          {unplacedPlayers.length === 0
+            ? `바꾸고 싶으면 선수끼리 끌어서 자리를 맞바꾸세요 · 포메이션: ${formation}`
+            : `선수를 드래그해서 원하는 포지션에 배치하세요 · 포메이션: ${formation}`}
         </p>
       </div>
 
@@ -196,7 +233,7 @@ export function FormationField({ formation, roster, onComplete }: FormationField
               ))}
               {unplacedPlayers.length === 0 && (
                 <p className="text-muted-foreground py-4 text-center text-xs">
-                  모든 선수가 배치되었습니다
+                  드래프트에서 배치한 그대로예요
                 </p>
               )}
             </div>

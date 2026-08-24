@@ -19,6 +19,9 @@ interface DraftBoardProps {
   onPick: (playerId: string) => void
   onTimeout: () => void
   timerReset: number
+  /** 도판 배치. 드래프트가 끝난 뒤 배치 화면이 그대로 이어받아야 해서 부모가 들고 있다. */
+  arranged: Record<string, Player | null>
+  onArrange: (next: Record<string, Player | null>) => void
 }
 
 type SortKey = "recommend" | "price-desc" | "price-asc"
@@ -41,7 +44,15 @@ const BLOCK_LABEL: Record<string, string | null> = {
   slots: "설 자리 없음",
 }
 
-export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: DraftBoardProps) {
+export function DraftBoard({
+  state,
+  mySeat,
+  onPick,
+  onTimeout,
+  timerReset,
+  arranged,
+  onArrange,
+}: DraftBoardProps) {
   const [posFilter, setPosFilter] = useState<PosFilter>("ALL")
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortKey>("recommend")
@@ -143,8 +154,6 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   const { strengths, weaknesses } = analyzeLineup(myRoster)
   // 모바일에서 보이는 쪽 (데스크톱은 3컬럼이라 무시된다)
   const [mobileTab, setMobileTab] = useState<"pool" | "lineup">("pool")
-  // 도판에서 손으로 옮긴 배치. 픽이 늘어도 유지되고, 새 선수만 빈 자리로 들어간다.
-  const [arranged, setArranged] = useState<Record<string, Player | null>>({})
   const slotsFilled = useMemo(
     () => mergeRosterIntoSlots(arranged, myRoster, formation),
     [arranged, myRoster, formation]
@@ -204,7 +213,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
       if (!d?.moved) return // 안 움직였으면 그냥 클릭 — 영입 버튼이 처리한다
       const target = emptySlotAt(ev.clientX, ev.clientY, d.player)
       if (target) {
-        setArranged((prev) => ({ ...prev, [target]: d.player }))
+        onArrange({ ...arranged, [target]: d.player })
         onPick(d.player.id)
         return
       }
@@ -678,7 +687,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
             <PitchViz
               formation={formation}
               filled={slotsFilled}
-              onArrange={setArranged}
+              onArrange={onArrange}
               incomingPosition={poolDrag?.player.position ?? null}
             />
           </div>
