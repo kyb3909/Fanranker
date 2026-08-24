@@ -6,9 +6,12 @@ import { DraftResult } from "./draft-result"
 import { FormationField, pitchSlotsToPlacements, placementsToPitchSlots } from "./formation-field"
 import { mergeRosterIntoSlots } from "./pitch-viz"
 import { useDraftGame } from "./use-draft-game"
+import { usePickStats } from "./use-pick-stats"
 
 export function DraftGame({ slug }: { slug: string }) {
   const game = useDraftGame(slug)
+  // 우리 유저 픽 통계 — 풀 뱃지와 결과 표가 같은 데이터를 본다
+  const pickStats = usePickStats(slug, game.playersLoaded)
 
   if (game.phase === "setup") {
     return (
@@ -60,6 +63,7 @@ export function DraftGame({ slug }: { slug: string }) {
         state={game.state}
         mySeat={game.mySeat}
         arrangement={game.arrangement}
+        pickStats={pickStats}
         onRestart={game.handleRestart}
       />
     )
@@ -76,6 +80,7 @@ export function DraftGame({ slug }: { slug: string }) {
       timerReset={game.timerReset}
       arranged={game.arrangement}
       onArrange={game.setArrangement}
+      pickStats={pickStats}
     />
   )
 }

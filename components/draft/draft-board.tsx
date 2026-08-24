@@ -9,6 +9,7 @@ import { getAllPlayers, type Player, type Position } from "@/lib/draft/players"
 import type { DraftState } from "@/lib/draft/engine"
 import { getCurrentSeat, getCurrentRound, getSeatLimits, pickBlockReason } from "@/lib/draft/engine"
 import { analyzeLineup } from "@/lib/draft/visual-helpers"
+import type { PickStats } from "./use-pick-stats"
 import { canPlay } from "@/lib/draft/positions"
 
 import "@/app/games/draft/draft-tokens.css"
@@ -22,6 +23,8 @@ interface DraftBoardProps {
   /** 도판 배치. 드래프트가 끝난 뒤 배치 화면이 그대로 이어받아야 해서 부모가 들고 있다. */
   arranged: Record<string, Player | null>
   onArrange: (next: Record<string, Player | null>) => void
+  /** 우리 유저 픽 통계 — 풀 행의 인기 뱃지가 쓴다 */
+  pickStats: PickStats
 }
 
 type SortKey = "recommend" | "price-desc" | "price-asc"
@@ -52,6 +55,7 @@ export function DraftBoard({
   timerReset,
   arranged,
   onArrange,
+  pickStats,
 }: DraftBoardProps) {
   const [posFilter, setPosFilter] = useState<PosFilter>("ALL")
   const [search, setSearch] = useState("")
@@ -628,6 +632,8 @@ export function DraftBoard({
                     slotFull={slotFull}
                     overBudget={overBudget}
                     reasonLabel={BLOCK_LABEL[block ?? "none"]}
+                    pickStat={pickStats.byId[p.id]}
+                    statsGames={pickStats.games}
                     onDragStart={(e) => startPoolDrag(p, e)}
                     pinned={pinned[p.id]}
                     onPick={() => onPick(p.id)}

@@ -5,12 +5,15 @@ import { type DraftState, type Formation } from "@/lib/draft/engine"
 import type { Player, Position } from "@/lib/draft/players"
 import { PitchViz, mergeRosterIntoSlots } from "./pitch-viz"
 import { PageBand, PageBandStat } from "@/components/page-band"
+import type { PickStats } from "./use-pick-stats"
 
 interface DraftResultProps {
   state: DraftState
   mySeat: number
   /** 도판에 손으로 놓은 배치 (슬롯 코드 → 선수). 비어 있으면 자동 배치로 채운다. */
   arrangement: Record<string, Player | null>
+  /** 우리 유저들의 픽 통계 — 표의 "인기" 열이 이걸 우선 쓴다 (없으면 FPL 소유율 폴백) */
+  pickStats: PickStats
   onRestart: () => void
 }
 
@@ -38,6 +41,71 @@ function sumOf(roster: Player[], key: "owned" | "points" | "epNext"): number | n
  * ⚠️ 이건 **FPL 전 세계 유저의 보유율**이지 우리 게임의 드래프트 기록이 아니다.
  *    "선택된 평균 순서"는 우리가 드래프트 결과를 저장해야 나온다 — 아직 미구현.
  */
+/**
+ * **우리 유저 픽** 시각화 (2026-08-25 운영자: "사람들이 뽑은 데이터를 기반으로").
+ * 막대 = 픽률(이 선수를 뽑은 판의 비율). 순위 = 같은 포지션에서 픽수 순.
+ * FPL 소유율(OwnedBar)과 달리 이건 **우리 게임의 실측**이다 — 데이터가 아직 없으면
+ * (초기·신규 선수) FPL 폴백으로 내려간다.
+ */
+function PickBar({
+  stat,
+  pos,
+}: {
+  stat: { rate: number; avgRound: number; rankInPos: number; posPicked: number } | undefined
+  pos: Position
+}) {
+  if (!stat) {
+    return (
+      <span className="draft-num text-[12px]" style={{ color: "var(--draft-line)" }}>
+        ·
+      </span>
+    )
+  }
+  const hot = stat.rankInPos <= Math.max(1, Math.ceil(stat.posPicked * 0.1))
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 150 }}>
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          height: 6,
+          borderRadius: 999,
+          background: "var(--draft-neutral)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: `${Math.min(100, stat.rate)}%`,
+            background: hot ? "var(--draft-burgundy)" : "var(--draft-ink-soft)",
+            borderRadius: 999,
+          }}
+        />
+      </div>
+      <span
+        className="draft-num"
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: hot ? "var(--draft-burgundy)" : "var(--draft-ink-soft)",
+          minWidth: 36,
+          textAlign: "right",
+        }}
+      >
+        {stat.rate.toFixed(0)}%
+      </span>
+      <span
+        className="draft-num"
+        style={{ fontSize: 11, color: "var(--draft-mute)", whiteSpace: "nowrap", minWidth: 78 }}
+      >
+        평균 {stat.avgRound}R · {pos} {stat.rankInPos}위
+      </span>
+    </div>
+  )
+}
+
 function OwnedBar({ player }: { player: Player }) {
   const owned = player.owned ?? 0
   if (!owned) {
@@ -110,7 +178,13 @@ function OwnedBar({ player }: { player: Player }) {
  *    소유율은 시즌 초에 특히 좋은 지표다 — "내 픽이 대중적인가, 남들이 안 보는
  *    선수인가" 를 지금 당장 말해 준다.
  */
-export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResultProps) {
+export function DraftResult({
+  state,
+  mySeat,
+  arrangement,
+  pickStats,
+  onRestart,
+}: DraftResultProps) {
   const me = state.participants.find((p) => p.seatIndex === mySeat)
   const myFormation = (me?.formation ?? "4-3-3") as Formation
   const myRoster = state.roster[mySeat] || []
@@ -221,7 +295,9 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
                       className="draft-eyebrow"
                       style={{ ...head, textAlign: "left", minWidth: 132 }}
                     >
-                      인기 · 포지션 순위
+                      {pickStats.games > 0
+                        ? `유저 픽률 · 순위 (${pickStats.games}판)`
+                        : "인기 · 포지션 순위 (FPL)"}
                     </th>
                     {cols.map((c) => (
                       <th
@@ -270,7 +346,11 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
                         {p.teamKo}
                       </td>
                       <td style={cell}>
-                        <OwnedBar player={p} />
+                        {pickStats.games > 0 ? (
+                          <PickBar stat={pickStats.byId[p.id]} pos={p.position} />
+                        ) : (
+                          <OwnedBar player={p} />
+                        )}
                       </td>
                       {cols.map((c) => {
                         const v = c.get(p)
@@ -303,7 +383,9 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
                         className="draft-num text-[12px]"
                         style={{ color: "var(--draft-mute)" }}
                       >
-                        평균 {avgOwned == null ? "·" : `${avgOwned.toFixed(1)}%`}
+                        {pickStats.games > 0
+                          ? `표본 ${pickStats.games}판`
+                          : `FPL 평균 ${avgOwned == null ? "·" : `${avgOwned.toFixed(1)}%`}`}
                       </span>
                     </td>
                     {totals.map((v, k) => (

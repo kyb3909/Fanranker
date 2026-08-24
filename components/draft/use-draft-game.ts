@@ -49,6 +49,47 @@ export function useDraftGame(slug: string) {
     loadPlayers(entry?.dataFile).then(() => setPlayersLoaded(true))
   }, [entry?.dataFile])
 
+  /**
+   * 완주한 판의 픽 기록을 서버에 남긴다 (2026-08-25).
+   * 운영자: "사람들이 뽑은 데이터 기반으로 순위를 시각화" — 그 데이터가 여기서 쌓인다.
+   * ⚠️ fire-and-forget: 기록 실패가 게임 흐름(배치 화면 전환)을 막으면 안 된다.
+   * ⚠️ StrictMode·재렌더로 두 번 불려도 서버가 draft_id 로 멱등 처리한다.
+   */
+  const submittedRef = useRef(false)
+  const submitPicks = useCallback(
+    (finished: DraftState) => {
+      if (submittedRef.current || finished.picks.length === 0) return
+      submittedRef.current = true
+      // ⚠️ **사람 픽만** 보낸다 (2026-08-25 운영자: "사람이 뽑은 건 나 혼자, 11픽").
+      //    AI 픽까지 저장하면 언젠가 필터를 빼먹은 쿼리가 통계를 오염시킨다 —
+      //    애초에 안 넣는 게 제일 안전하다.
+      const humanSeats = new Set(
+        finished.participants.filter((p) => !p.isAI).map((p) => p.seatIndex)
+      )
+      const perSeatRound: Record<number, number> = {}
+      const picks = finished.picks.flatMap((pk) => {
+        perSeatRound[pk.seatIndex] = (perSeatRound[pk.seatIndex] ?? 0) + 1
+        if (!humanSeats.has(pk.seatIndex)) return []
+        return [
+          {
+            playerId: pk.playerId,
+            round: perSeatRound[pk.seatIndex],
+            // ⚠️ 엔진의 pickNumber 는 0부터다 — API 는 1부터 받는다 (실측 400 사고)
+            pickNo: pk.pickNumber + 1,
+            pickedBy: "human" as const,
+          },
+        ]
+      })
+      if (picks.length === 0) return
+      fetch("/api/draft/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draftId: crypto.randomUUID(), gameSlug: slug, picks }),
+      }).catch(() => {})
+    },
+    [slug]
+  )
+
   const processAITurn = useCallback(
     (currentState: DraftState) => {
       if (currentState.status !== "drafting") return
@@ -64,6 +105,7 @@ export function useDraftGame(slug: string) {
         setState(newState)
 
         if (newState.status === "completed") {
+          submitPicks(newState)
           setPhase("placement")
           return
         }
@@ -78,7 +120,7 @@ export function useDraftGame(slug: string) {
       }, delay)
       // mySeat 이 빠지면 좌석을 바꿔도 AI 성격이 옛 좌석 기준으로 굳는다 (personaForSeat 인자)
     },
-    [mySeat]
+    [mySeat, submitPicks]
   )
 
   const startGame = useCallback(() => {
@@ -153,6 +195,7 @@ export function useDraftGame(slug: string) {
       setState(newState)
 
       if (newState.status === "completed") {
+        submitPicks(newState)
         setPhase("placement")
         return
       }
@@ -165,7 +208,7 @@ export function useDraftGame(slug: string) {
         setTimerReset((prev) => prev + 1)
       }
     },
-    [state, mySeat, processAITurn]
+    [state, mySeat, processAITurn, submitPicks]
   )
 
   const handleTimeout = useCallback(() => {
@@ -179,6 +222,7 @@ export function useDraftGame(slug: string) {
     setState(newState)
 
     if (newState.status === "completed") {
+      submitPicks(newState)
       setPhase("completed")
       return
     }
@@ -190,12 +234,13 @@ export function useDraftGame(slug: string) {
     } else {
       setTimerReset((prev) => prev + 1)
     }
-  }, [state, mySeat, processAITurn])
+  }, [state, mySeat, processAITurn, submitPicks])
 
   const handleRestart = useCallback(() => {
     if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
     setState(null)
     setArrangement({}) // 새 판에 지난 판 배치가 따라오면 안 된다
+    submittedRef.current = false // 다음 판도 기록해야 한다
     setPhase("setup")
   }, [])
 

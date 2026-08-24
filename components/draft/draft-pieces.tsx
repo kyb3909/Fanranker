@@ -133,6 +133,9 @@ interface PlayerPoolCardProps {
   onDragStart?: (e: React.PointerEvent) => void
   /** 못 뽑는 이유를 보드가 직접 준다 (엔진 판정). 없으면 아래 기본 문구로 떨어진다. */
   reasonLabel?: string | null
+  /** 우리 유저 픽 통계 (없으면 FPL 소유율 폴백) */
+  pickStat?: { rate: number; avgRound: number; rankInPos: number; posPicked: number }
+  statsGames?: number
   takenBy?: string | null
   pinned?: boolean
   onPick: () => void
@@ -147,6 +150,8 @@ export function PlayerPoolCard({
   takenBy,
   onDragStart,
   reasonLabel,
+  pickStat,
+  statsGames = 0,
   pinned = false,
   onPick,
   onTogglePin,
@@ -167,8 +172,12 @@ export function PlayerPoolCard({
    * 종전엔 £15.5 와 £4.0 이 똑같은 크기라 60장이 균질한 벽이었다.
    */
   const tier = player.price >= 8 ? "star" : player.price >= 6 ? "mid" : "base"
-  // 포지션 소유율 상위 10위 안 = "이 포지션에서 다들 데려가는 선수"
-  const isPopular = !!player.ownedRank && player.ownedRank <= 10
+  // ⚠️ 우리 유저 픽 데이터가 있으면 그게 정본이다 (운영자: "사람들이 뽑은 데이터로").
+  //    표본이 너무 작으면(5판 미만) 순위가 소음이라 FPL 소유율로 폴백한다.
+  const ourData = statsGames >= 5 && pickStat
+  const isPopular = ourData
+    ? pickStat.rankInPos <= 10
+    : !!player.ownedRank && player.ownedRank <= 10
   const nameSize = tier === "star" ? 15.5 : tier === "mid" ? 14.5 : 14
   const priceSize = tier === "star" ? 20 : tier === "mid" ? 17 : 15
 
@@ -291,11 +300,13 @@ export function PlayerPoolCard({
                     fontSize: 10.5,
                   }}
                 >
-                  {player.position} 소유율 {player.ownedRank}위
+                  {ourData
+                    ? `유저 픽 ${pickStat.rankInPos}위 · 평균 ${pickStat.avgRound}R`
+                    : `${player.position} 소유율 ${player.ownedRank}위`}
                 </span>
               ) : (
                 <span className="draft-num" style={{ fontSize: 10.5 }}>
-                  {player.owned.toFixed(1)}%
+                  {ourData ? `픽률 ${pickStat.rate.toFixed(0)}%` : `${player.owned.toFixed(1)}%`}
                 </span>
               )}
             </>
