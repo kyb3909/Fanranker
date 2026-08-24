@@ -26,6 +26,7 @@ import { displayTeamName, loadTeamShortMap } from "@/lib/match/team-display"
 import { getMotmPollByMatchKey } from "@/lib/motm/poll"
 import { MotmCard } from "@/components/motm/motm-card"
 import { findSeasonSagasForTeams } from "@/lib/saga/season"
+import { isEventLive } from "@/lib/event/gunners-season"
 
 /**
  * 매치 페이지 — `/match/[gameId]` (2026-08-16, 1차)
@@ -193,7 +194,8 @@ export default async function MatchPage({ params }: Props) {
             픽 직전 유저인데 종전엔 매치센터↔예측이 양방향 0링크였다. 목적지는 /season
             (예측이 이벤트 전용이라 규칙·참가가 있는 허브부터 — GNB 와 같은 판단).
             베팅/픽 카드 다크 금지 규칙에 따라 라이트 틴트로. */}
-          {!finished && (
+          {/* 이벤트가 닫혀 있으면 픽 도선도 가린다 (2026-08-24 운영자: "승부예측 이벤트 일단 가려줘") */}
+          {!finished && isEventLive() && (
             <div className="px-4 pb-4 sm:px-0 lg:hidden">
               <Link
                 href="/season?ref=match"
@@ -345,18 +347,20 @@ export default async function MatchPage({ params }: Props) {
               awayTeam={match.awayTeam}
             />
           </Suspense>
-          <Link
-            href="/season?ref=match"
-            className="flex items-baseline justify-between rounded-2xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
-            style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
-          >
-            <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
-              승부예측으로
-            </span>
-            <span className="text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
-              시즌 이벤트 픽 남기기 →
-            </span>
-          </Link>
+          {isEventLive() && (
+            <Link
+              href="/season?ref=match"
+              className="flex items-baseline justify-between rounded-2xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
+              style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
+            >
+              <span className="text-[13px] font-bold" style={{ color: "var(--wc-ink)" }}>
+                승부예측으로
+              </span>
+              <span className="text-[12px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
+                시즌 이벤트 픽 남기기 →
+              </span>
+            </Link>
+          )}
         </aside>
       </main>
     </div>

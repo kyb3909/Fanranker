@@ -166,10 +166,10 @@ async function main() {
   const still = [...missing].filter((k) => !found.has(k))
   if (still.length) console.log(`\n회수 실패(동시 킥오프 등): ${still.join(", ")}`)
 
-  if (!doPost) return console.log("\n--post 를 붙이면 실제 등재합니다.")
+  if (!doPost) console.log("\n--post 를 붙이면 실제 등재합니다. (아래는 미리보기)")
 
   let ok = 0
-  for (const [kr, v] of found) {
+  for (const [kr, v] of doPost ? found : new Map<string, { en: string; lfaId: string | null }>()) {
     // team_dictionary 가 아니라 lfa_team_names 에 넣는다 — 그쪽 PK 는 soccerway_team_id 라
     // soccerway 에 없는 팀은 행을 만들 수 없다 (마이그 20260824_lfa_team_names)
     const { error } = await supabase.from("lfa_team_names").upsert(
@@ -190,6 +190,87 @@ async function main() {
     ok++
   }
   console.log(`\n등재 완료: ${ok}/${found.size}건`)
+
+  /* ── 3) team_dictionary 본등재 (2026-08-24 운영자: "라치오·토리노·아탈란타 한국 이름 찾아") ──
+   *
+   * lfa_team_names 는 영문→한글 라벨만 준다. 스쿼드 적재·나무위키 선수명 수확·선수 한글화는
+   * 전부 team_dictionary 행을 기준으로 돌므로, 행이 없는 구단은 선수 이름이 영영 영문이다.
+   * PK(soccerway_team_id)가 필수라 soccerway 에 없는 팀은 합성 id `lfa_<LFA팀id>` 로 만든다.
+   * — soccerway 경로는 이 id 로 404 가 나지만 전부 fail-open 이고, 로스터 정본은 이미
+   *   LFA 피드다 (2026-08-24 운영자: "사커웨이는 이제 의미가 없어졌어").
+   *
+   * 대상 = (이번에 회수한 것 ∪ lfa_team_names 기존분) 중 team_dictionary 에서 어떤 방식
+   * (정확일치·별칭·포함관계 — lib/match/resolve-team-id.ts 와 같은 규칙)으로도 못 찾는 팀.
+   */
+  const { data: dictFull } = await supabase
+    .from("team_dictionary")
+    .select("soccerway_team_id, name_kr, aliases_kr")
+    .neq("status", "rejected")
+  const dictRows = (dictFull ?? []).map((r) => ({
+    nameKr: String(r.name_kr ?? ""),
+    aliases: ((r.aliases_kr as string[] | null) ?? []).map(String),
+  }))
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[\s&·．.\-_'"()]/g, "")
+      .trim()
+  const inDict = (kr: string): boolean => {
+    if (dictRows.some((d) => d.nameKr === kr || d.aliases.includes(kr))) return true
+    const a = norm(kr)
+    if (a.length < 3) return false
+    return dictRows.some((d) => {
+      const b = norm(d.nameKr)
+      return b.length >= 3 && (a.includes(b) || b.includes(a))
+    })
+  }
+
+  const { data: lfaAll } = await supabase
+    .from("lfa_team_names")
+    .select("name_kr, name_en, lfa_team_id")
+  const candidates = new Map<string, { en: string; lfaId: string | null }>()
+  for (const r of lfaAll ?? []) {
+    candidates.set(String(r.name_kr), {
+      en: String(r.name_en),
+      lfaId: r.lfa_team_id ? String(r.lfa_team_id) : null,
+    })
+  }
+  for (const [kr, v] of found) candidates.set(kr, v)
+
+  let dictAdded = 0
+  for (const [kr, v] of candidates) {
+    if (inDict(kr)) continue
+    if (!v.lfaId) {
+      console.log(`  사전 등재 보류 ${kr}: LFA 팀 id 없음 (합성 PK 를 만들 수 없다)`)
+      continue
+    }
+    const synthetic = `lfa_${v.lfaId}`
+    if (!doPost) {
+      console.log(`  사전 등재 예정 ${kr}  →  ${v.en}  (${synthetic})`)
+      dictAdded++
+      continue
+    }
+    const { error } = await supabase.from("team_dictionary").upsert(
+      {
+        soccerway_team_id: synthetic,
+        slug: synthetic,
+        name_en: v.en,
+        name_kr: kr,
+        lfa_team_id: v.lfaId,
+        source: "lfa_pair",
+        status: "proposed",
+        note: "betman↔LFA 경기 짝맞춤으로 등재 (soccerway 미보유 → 합성 id). 2026-08-24 운영자 지시",
+      },
+      { onConflict: "soccerway_team_id" }
+    )
+    if (error) {
+      console.error(`  사전 등재 실패 ${kr}: ${error.message}`)
+      continue
+    }
+    console.log(`  사전 등재 ${kr}  →  ${v.en}  (${synthetic})`)
+    dictAdded++
+  }
+  console.log(`\nteam_dictionary 신규 등재: ${dictAdded}건`)
 }
 
 main().catch((e) => {

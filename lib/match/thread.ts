@@ -23,7 +23,11 @@ import { MATCH_THREAD_BOT_USER_ID } from "@/lib/constants/bot-users"
  */
 
 const WINDOW_BEFORE_MS = 90 * 60 * 1000
-const WINDOW_AFTER_MS = 10 * 60 * 1000
+// 킥오프 후에도 2시간까지 연다 (2026-08-24 운영자: "불판이 자동으로 생성이 되면" 매치센터
+// 버튼이 뜨는 구조 — 그런데 8/23 라인업 장애 동안 종전 창(+10분)이 전부 지나가 EPL 빅매치에
+// 불판이 하나도 없었다). 데이터가 늦게 살아나면 전반 중에라도 깐다 — status 가 completed 로
+// 바뀌면 후보에서 빠지므로 종료 경기에 뒷북 불판이 생기지는 않는다.
+const WINDOW_AFTER_MS = 120 * 60 * 1000
 
 interface ThreadResult {
   scanned: number
