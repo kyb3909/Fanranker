@@ -72,7 +72,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     //    (소진율 100% 를 성공으로 오독) 이나 £90 (격차만 보고 압박을 버림) 이 나온다.
     budget: 80,
     currency: "£",
-    poolSize: 609,
+    poolSize: 610,
     avgMinutes: 8,
     plays: 12480,
     formationOptions: ["4-3-3", "4-4-2", "3-5-2", "5-3-2"],

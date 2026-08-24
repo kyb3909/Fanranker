@@ -8,6 +8,17 @@ export interface Player {
   teamKo: string
   position: Position
   price: number
+  /**
+   * FPL 성적 지표 (2026-08-25). 결과 화면 스탯 표가 쓴다.
+   * ⚠️ 아스널 레전드 등 다른 데이터 파일에는 없다 — 전부 옵셔널이고, 없으면 표에서
+   *    그 열을 접는다. 시즌 초에는 points·form 이 0에 가깝다(GW1 실측 610명 중 295명).
+   */
+  owned?: number // 전 세계 FPL 유저 보유율 %
+  points?: number // 시즌 누적 점수
+  form?: number // 최근 폼
+  epNext?: number // 다음 라운드 예상 점수
+  xg?: number // 기대 득점
+  xa?: number // 기대 도움
 }
 
 let _players: Player[] | null = null

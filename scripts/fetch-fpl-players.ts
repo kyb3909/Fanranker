@@ -40,11 +40,35 @@ interface OutPlayer {
   teamKo: string
   position: Position
   price: number
+  /**
+   * 성적 지표 (2026-08-25 추가) — 결과 화면 스탯 표가 쓴다.
+   * ⚠️ 시즌 초에는 총점·폼이 0에 가깝다 (GW1 실측: 609명 중 284명만 값 있음).
+   *    그래서 **지금도 의미 있는** 소유율·예상점수를 같이 담는다. 시즌이 갈수록
+   *    총점 쪽이 채워지며 표가 스스로 풍부해진다.
+   */
+  owned: number // selected_by_percent — 전 세계 FPL 유저 보유율 %
+  points: number // total_points — 시즌 누적
+  form: number // 최근 폼
+  epNext: number // 다음 라운드 예상 점수
+  xg: number // 기대 득점
+  xa: number // 기대 도움
+}
+
+/** FPL 은 숫자를 문자열로도 준다 ("68.9"). 값 없으면 0. */
+function num(v: unknown): number {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
 }
 
 interface FplElement {
   id: number
   web_name: string
+  selected_by_percent?: string | number
+  total_points?: number
+  form?: string | number
+  ep_next?: string | number
+  expected_goals?: string | number
+  expected_assists?: string | number
   first_name: string
   second_name: string
   team: number
@@ -191,6 +215,12 @@ async function main() {
         teamKoByEn.get(norm(teamEn)) ?? teamKoByEn.get(norm(teamEn.split(/\s+/)[0])) ?? teamEn,
       position: POS[e.element_type],
       price: Math.round(e.now_cost) / 10, // FPL 은 10배 정수로 준다 (60 = £6.0)
+      owned: num(e.selected_by_percent),
+      points: num(e.total_points),
+      form: num(e.form),
+      epNext: num(e.ep_next),
+      xg: num(e.expected_goals),
+      xa: num(e.expected_assists),
     })
   }
 

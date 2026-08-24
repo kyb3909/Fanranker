@@ -14,23 +14,30 @@ interface DraftResultProps {
   onRestart: () => void
 }
 
-const LINES: { pos: Position; label: string }[] = [
-  { pos: "GK", label: "골키퍼" },
-  { pos: "DF", label: "수비" },
-  { pos: "MF", label: "미드필드" },
-  { pos: "FW", label: "공격" },
-]
+const POS_ORDER: Record<Position, number> = { GK: 0, DF: 1, MF: 2, FW: 3 }
+
+/** 값이 없는 칸은 0 이 아니라 점(·)이다 — 0 으로 쓰면 "0점" 이라는 거짓말이 된다. */
+const dot = (v: number | null | undefined, fmt: (n: number) => string) =>
+  v == null || v === 0 ? "·" : fmt(v)
+
+/** 합계는 **값이 있는 선수만** 모은다. 없으면 null → 그 칸이 점으로 눕는다. */
+function sumOf(roster: Player[], key: "owned" | "points" | "epNext"): number | null {
+  const vals = roster.map((p) => p[key]).filter((v): v is number => typeof v === "number" && v > 0)
+  return vals.length === 0 ? null : vals.reduce((a, b) => a + b, 0)
+}
 
 /**
- * 드래프트 결과 — **완성된 스쿼드를 보여주는 지면**이다 (2026-08-25 재작업).
+ * 드래프트 결과 — **스쿼드 성적표**다 (2026-08-25 재작업 2차).
  *
- * 종전엔 4팀을 2×2 로 늘어놓은 텍스트 목록이었다. 유저가 30분 동안 고르고 잔디에
- * 손으로 배치한 결과가, 마지막 순간에 스프레드시트로 납작해졌다 — 시각적 보상이
- * 가장 커야 할 자리에서 사라진 셈이다. 게다가 배치 결과는 아예 전달조차 안 됐다.
+ * 1차에서는 잔디를 크게 깔았는데, 화면의 주인공이 그림이 되고 선수 이름은 작아져
+ * "누구를 뽑았나" 가 안 읽혔다 (운영자: "축구장 표만 크고 선수들이 너무 작다").
+ * 이제 **스탯 표가 주인공**이고 잔디는 배치 확인용 조연이다.
  *
- * 이제 **내 11명이 잔디 위에 그대로** 뜬다. 도판은 보드/배치 화면과 같은 PitchViz 를
- * 재사용한다 — 세 화면의 잔디가 갈라지지 않게 하는 유일한 방법이다.
- * 상대 3팀은 비교용이므로 아래에 압축해 둔다.
+ * ⚠️ 시즌 초에는 총점·폼이 거의 비어 있다 (GW1 실측: 610명 중 295명만 값 있음).
+ *    그래서 지금도 채워져 있는 **소유율**(481명)·**예상 점수**(516명)를 앞세우고,
+ *    총점은 시즌이 갈수록 스스로 채워지게 뒀다. 값 없는 칸은 점으로 눕힌다.
+ *    소유율은 시즌 초에 특히 좋은 지표다 — "내 픽이 대중적인가, 남들이 안 보는
+ *    선수인가" 를 지금 당장 말해 준다.
  */
 export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResultProps) {
   const me = state.participants.find((p) => p.seatIndex === mySeat)
@@ -41,121 +48,227 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
   const slots = mergeRosterIntoSlots(arrangement, myRoster, myFormation)
   const star = myRoster.reduce<Player | null>((a, b) => (!a || b.price > a.price ? b : a), null)
 
+  const ordered = [...myRoster].sort(
+    (a, b) => POS_ORDER[a.position] - POS_ORDER[b.position] || b.price - a.price
+  )
+
+  const ownedSum = sumOf(myRoster, "owned")
+  const ownedCount = myRoster.filter((p) => (p.owned ?? 0) > 0).length
+  const avgOwned = ownedSum == null ? null : ownedSum / ownedCount
+  const totalPoints = sumOf(myRoster, "points")
+  const totalEp = sumOf(myRoster, "epNext")
+
   const rivals = state.participants
     .filter((p) => p.seatIndex !== mySeat)
     .map((p) => {
       const roster = state.roster[p.seatIndex] || []
       return {
         ...p,
-        roster,
         spent: roster.reduce((s, pl) => s + pl.price, 0),
-        left: state.budget[p.seatIndex] ?? 0,
+        ep: sumOf(roster, "epNext"),
         star: roster.reduce<Player | null>((a, b) => (!a || b.price > a.price ? b : a), null),
       }
     })
 
+  const summary = [
+    { label: "총 지출", value: `£${mySpent.toFixed(1)}`, sub: `잔여 £${myLeft.toFixed(1)}` },
+    {
+      label: "평균 소유율",
+      value: avgOwned == null ? "·" : `${avgOwned.toFixed(1)}%`,
+      sub:
+        avgOwned == null ? "집계 없음" : avgOwned >= 20 ? "대중적인 스쿼드" : "남들이 안 보는 픽",
+    },
+    {
+      label: "예상 점수",
+      value: totalEp == null ? "·" : totalEp.toFixed(0),
+      sub: "다음 라운드 합계",
+    },
+  ]
+
+  const cols: { head: string; get: (p: Player) => string }[] = [
+    { head: "가격", get: (p) => `£${p.price.toFixed(1)}` },
+    { head: "소유율", get: (p) => dot(p.owned, (n) => `${n.toFixed(1)}%`) },
+    { head: "총점", get: (p) => dot(p.points, (n) => String(n)) },
+    { head: "예상", get: (p) => dot(p.epNext, (n) => n.toFixed(1)) },
+  ]
+
+  const totals = [
+    `£${mySpent.toFixed(1)}`,
+    avgOwned == null ? "·" : `${avgOwned.toFixed(1)}%`,
+    totalPoints == null ? "·" : String(totalPoints),
+    totalEp == null ? "·" : totalEp.toFixed(1),
+  ]
+
+  const cell = {
+    padding: "8px 12px",
+    borderBottom: "1px solid var(--draft-line)",
+    whiteSpace: "nowrap" as const,
+  }
+  const head = { ...cell, borderBottom: "2px solid var(--draft-ink)", fontSize: 10 }
+
   return (
     <div className="draft-scope" style={{ background: "var(--draft-paper)" }}>
-      {/* ⚠️ 사이트 공용 PageBand 를 쓴다 (17개 지면 채택). 종전엔 여기만 평평한 검정
-          밴드를 직접 만들었는데, 사이트 밴드는 --gn-night 위에 버건디 래디얼 3겹이
-          깔린 와인빛이라 "같은 검정" 이 아니었다. 결과 발표는 선언 영역이므로 제격이다. */}
       <PageBand
         kicker="Squad Complete"
-        /* 닉네임 기본값이 "나" 한 글자라 디스플레이 서체에서 제목이 비어 보인다 —
-           항상 문장이 되게 붙인다. */
         title={`${me?.name ?? "내"}의 스쿼드`}
-        description={`${myFormation} · ${myRoster.length}명 완성 · 잔여 £${myLeft.toFixed(1)} / 예산 £${state.initialBudget}`}
+        description={`${myFormation} · ${myRoster.length}명 완성 · 예산 £${state.initialBudget}`}
         aside={<PageBandStat value={`£${mySpent.toFixed(1)}`} label="Spent" />}
       />
 
       <div className="mx-auto max-w-[1000px] px-4 py-8 sm:px-6">
-        {/* ── 내 스쿼드: 잔디 + 라인별 명단 ── */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-          <div className="mx-auto w-full max-w-[420px] shrink-0 lg:mx-0">
-            <PitchViz formation={myFormation} filled={slots} />
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-7">
+          {/* ── 주인공: 스쿼드 성적표 ── */}
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 grid grid-cols-3 gap-3">
+              {summary.map((m) => (
+                <div key={m.label} className="draft-card p-3.5">
+                  <div className="draft-eyebrow" style={{ fontSize: 10 }}>
+                    {m.label}
+                  </div>
+                  <div
+                    className="draft-num mt-1 leading-none"
+                    style={{ fontSize: 26, fontWeight: 700, color: "var(--draft-ink)" }}
+                  >
+                    {m.value}
+                  </div>
+                  <div className="mt-1.5 text-[11px]" style={{ color: "var(--draft-mute)" }}>
+                    {m.sub}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="draft-card overflow-x-auto">
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...head, width: 42 }} />
+                    {["선수", "팀"].map((h) => (
+                      <th key={h} className="draft-eyebrow" style={{ ...head, textAlign: "left" }}>
+                        {h}
+                      </th>
+                    ))}
+                    {cols.map((c) => (
+                      <th
+                        key={c.head}
+                        className="draft-eyebrow"
+                        style={{ ...head, textAlign: "right" }}
+                      >
+                        {c.head}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordered.map((p) => (
+                    <tr key={p.id}>
+                      <td style={{ ...cell, paddingRight: 0 }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 26,
+                            height: 20,
+                            borderRadius: 5,
+                            background: `${POSITION_HEX[p.position]}1a`,
+                            color: POSITION_HEX[p.position],
+                            fontFamily: "var(--font-cond), sans-serif",
+                            fontWeight: 700,
+                            fontSize: 11,
+                          }}
+                        >
+                          {p.position}
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          ...cell,
+                          fontWeight: 700,
+                          fontSize: 13.5,
+                          color: "var(--draft-ink)",
+                        }}
+                      >
+                        {p.nameKo}
+                      </td>
+                      <td style={{ ...cell, fontSize: 11.5, color: "var(--draft-mute)" }}>
+                        {p.teamKo}
+                      </td>
+                      {cols.map((c) => {
+                        const v = c.get(p)
+                        return (
+                          <td
+                            key={c.head}
+                            className="draft-num"
+                            style={{
+                              ...cell,
+                              textAlign: "right",
+                              fontSize: 13,
+                              color: v === "·" ? "var(--draft-line)" : "var(--draft-ink-soft)",
+                            }}
+                          >
+                            {v}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                  <tr>
+                    <td
+                      colSpan={3}
+                      style={{ padding: "10px 12px", fontSize: 11.5, fontWeight: 700 }}
+                    >
+                      합계
+                    </td>
+                    {totals.map((v, k) => (
+                      <td
+                        key={k}
+                        className="draft-num"
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "var(--draft-ink)",
+                        }}
+                      >
+                        {v}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="min-w-0 flex-1">
+          {/* ── 조연: 배치 확인 ── */}
+          <div className="mx-auto w-full max-w-[300px] shrink-0 lg:mx-0">
+            <div className="draft-eyebrow mb-2">배치 · {myFormation}</div>
+            <PitchViz formation={myFormation} filled={slots} compact />
             {star && (
               <div
-                className="mb-5 rounded-2xl p-4"
+                className="mt-3 rounded-xl p-3"
                 style={{
                   background: "var(--draft-burgundy-soft)",
                   border: "1px solid var(--draft-line)",
                 }}
               >
-                <div className="draft-eyebrow draft-eyebrow-burg">최고가 영입</div>
+                <div className="draft-eyebrow draft-eyebrow-burg" style={{ fontSize: 10 }}>
+                  최고가 영입
+                </div>
                 <div className="mt-1 flex items-baseline gap-2">
-                  <span
-                    className="draft-title text-[20px]"
-                    style={{ color: "var(--draft-burgundy)" }}
-                  >
+                  <span style={{ fontWeight: 800, fontSize: 15, color: "var(--draft-burgundy)" }}>
                     {star.nameKo}
                   </span>
-                  <span className="text-[12px]" style={{ color: "var(--draft-ink-soft)" }}>
-                    {star.teamKo}
-                  </span>
                   <span
-                    className="draft-num ml-auto text-[18px]"
-                    style={{ color: "var(--draft-burgundy)", fontWeight: 700 }}
+                    className="draft-num ml-auto"
+                    style={{ fontSize: 15, fontWeight: 700, color: "var(--draft-burgundy)" }}
                   >
                     £{star.price.toFixed(1)}
                   </span>
                 </div>
               </div>
             )}
-
-            {LINES.map(({ pos, label }) => {
-              const line = myRoster
-                .filter((p) => p.position === pos)
-                .sort((a, b) => b.price - a.price)
-              if (line.length === 0) return null
-              return (
-                <div key={pos} className="mb-4">
-                  <div
-                    className="draft-eyebrow flex items-center gap-2 pb-1.5"
-                    style={{ borderBottom: "1px solid var(--draft-line)" }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 8,
-                        height: 8,
-                        borderRadius: 2,
-                        background: POSITION_HEX[pos],
-                      }}
-                    />
-                    {label}
-                    <span className="draft-num" style={{ color: "var(--draft-mute)" }}>
-                      {line.length}
-                    </span>
-                  </div>
-                  {line.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-baseline gap-2 py-[7px]"
-                      style={{ borderBottom: "1px solid var(--draft-line)" }}
-                    >
-                      <span
-                        className="truncate text-[14px] font-bold"
-                        style={{ color: "var(--draft-ink)" }}
-                      >
-                        {p.nameKo}
-                      </span>
-                      <span className="truncate text-[11px]" style={{ color: "var(--draft-mute)" }}>
-                        {p.teamKo}
-                      </span>
-                      <span
-                        className="draft-num ml-auto text-[13px]"
-                        style={{ color: "var(--draft-ink-soft)" }}
-                      >
-                        £{p.price.toFixed(1)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )
-            })}
           </div>
         </div>
 
@@ -171,21 +284,23 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
             {rivals.map((r) => (
               <div key={r.seatIndex} className="draft-card p-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="draft-title text-[15px]" style={{ color: "var(--draft-ink)" }}>
+                  <span style={{ fontWeight: 800, fontSize: 15, color: "var(--draft-ink)" }}>
                     {r.name}
                   </span>
                   <span className="draft-num text-[11px]" style={{ color: "var(--draft-mute)" }}>
                     {r.formation}
                   </span>
                 </div>
-                <div
-                  className="draft-num mt-2 text-[22px] leading-none"
-                  style={{ color: "var(--draft-ink)", fontWeight: 700 }}
-                >
-                  £{r.spent.toFixed(1)}
-                </div>
-                <div className="draft-num text-[11px]" style={{ color: "var(--draft-mute)" }}>
-                  잔여 £{r.left.toFixed(1)}
+                <div className="mt-2 flex items-baseline gap-3">
+                  <span
+                    className="draft-num leading-none"
+                    style={{ fontSize: 22, fontWeight: 700, color: "var(--draft-ink)" }}
+                  >
+                    £{r.spent.toFixed(1)}
+                  </span>
+                  <span className="draft-num text-[12px]" style={{ color: "var(--draft-mute)" }}>
+                    예상 {r.ep == null ? "·" : r.ep.toFixed(0)}
+                  </span>
                 </div>
                 {r.star && (
                   <div
@@ -209,7 +324,7 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
         <div className="mt-10 flex justify-center">
           <button
             onClick={onRestart}
-            className="draft-title rounded-xl px-10 py-3.5 text-sm transition-all"
+            className="rounded-xl px-10 py-3.5 text-sm font-bold transition-all"
             style={{
               background: "var(--draft-burgundy)",
               color: "#fff",
