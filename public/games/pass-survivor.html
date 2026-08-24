@@ -153,6 +153,11 @@ const CFG = {
   // 최고 보상이고 관통은 그 절반이었다. 그래서 최적 전략이 "초당 패스 횟수 최대화"
   // = 무지성 연타가 됐고(실측 4.5배), 시간이 드는 차징 킥은 13판 중 최저점이었다.
   // 뒤집는다 — 돌리기는 생존 수단이고, 점수는 수비를 관통할 때 난다.
+  // 회수하러 갈지 말지 — 플레이어가 이만큼 더 가까우면 동료는 자리를 지킨다.
+  MATE_CHASE_EDGE:40,
+  // 회수 중에는 수비 반발력을 거의 끈다. 안 그러면 수비에 둘러싸인 공을
+  // 영영 못 주우러 간다 — 들어가는 게 회수의 요점이다.
+  CHASE_EVADE:0.15,
   PTS_PASS:4, PTS_KNOCKDOWN:18,
   SAFE_OUTLET_BONUS:60,
   // 수동 조준으로 침투 동료에게 꽂았을 때 넉다운 점수 배수. 연타(자동)와의 격차를
@@ -1047,6 +1052,27 @@ function update(dt){
 
   // ---- 동료 AI ----
   const mateAng=G.mates.map(mm=>Math.atan2(mm.y-p.y,mm.x-p.x));
+
+  // ── 흘러나온 공 회수 (2026-08-25 운영자 제보) ────────────────────────
+  // 동료는 원래도 공이 제 발밑에 오면 잡을 수 있었다 — 그런데 **공을 향해 가지 않아서**
+  // 그 일이 거의 안 일어났다. 결과적으로 공이 굴러다니면 플레이어 혼자 쫓았고,
+  // 그게 이 게임의 유일한 사망 조건("볼 로스트", 4.5초)이라 지나치게 가혹했다.
+  //
+  // 가장 가까운 동료 **한 명만** 간다. 전원이 몰려가면 진형이 무너지고, 축구에서도
+  // 가까운 사람이 가는 게 맞다. 플레이어가 확실히 더 가까우면(MATE_CHASE_EDGE) 안 간다.
+  let chaserIdx=-1;
+  if(b.state==='free'||b.state==='loose'){
+    const pd=hyp(b.x-p.x,b.y-p.y);
+    let bd=1e9;
+    for(let i=0;i<G.mates.length;i++){
+      const mm=G.mates[i];
+      if(mm.downT>0) continue;
+      const d2=hyp(b.x-mm.x,b.y-mm.y);
+      if(d2<bd){ bd=d2; chaserIdx=i; }
+    }
+    if(chaserIdx>=0 && pd < bd-CFG.MATE_CHASE_EDGE) chaserIdx=-1;
+  }
+
   for(let i=0;i<G.mates.length;i++){
     const m2=G.mates[i];
     if(m2.downT>0){ m2.downT-=dt; continue; }
@@ -1056,7 +1082,11 @@ function update(dt){
     const RING=role.ring;
     let fx=0, fy=0;
     const dx=m2.x-p.x, dy=m2.y-p.y, d=hyp(dx,dy)||1;
-    if(carrying){
+    if(i===chaserIdx){
+      // 회수 우선 — 역할 위치를 버리고 공으로 직행한다
+      const bx=b.x-m2.x, by=b.y-m2.y, bl=hyp(bx,by)||1;
+      fx+=bx/bl*1.6; fy+=by/bl*1.6;
+    } else if(carrying){
       if(d>RING+60){ fx-=dx/d*1.2; fy-=dy/d*1.2; }
       else if(d<RING-60){ fx+=dx/d*1.0; fy+=dy/d*1.0; }
     } else {
@@ -1102,7 +1132,7 @@ function update(dt){
       const ddx=m2.x-df.x, ddy=m2.y-df.y, dd=hyp(ddx,ddy);
       // 수비 반발력도 역할을 탄다 — 침투(evade 0.35)는 위험을 감수하고 파고든다.
       // 이 배수가 없으면 각도 선택으로 낀 곳을 골라도 반발력이 도로 밀어낸다.
-      if(dd<(carrying?160:110)){ const w2=(carrying?1.8:1.2)*(1-dd/160)*role.evade; fx+=ddx/dd*w2; fy+=ddy/dd*w2; nearDef++; }
+      if(dd<(carrying?160:110)){ const w2=(carrying?1.8:1.2)*(1-dd/160)*(i===chaserIdx?CFG.CHASE_EVADE:role.evade); fx+=ddx/dd*w2; fy+=ddy/dd*w2; nearDef++; }
     }
     const fl=hyp(fx,fy);
     if(fl>.05){
