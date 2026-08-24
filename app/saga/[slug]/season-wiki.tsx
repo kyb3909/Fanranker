@@ -179,6 +179,8 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
              * 읽게 한다. 유채 테두리·배경 틴트·도트는 전부 제거 — 등급은 칩 채움이 말한다. */
             <div className="flex flex-col">
               {chronicle.map((ev, i) => {
+                // 경기 사료(경기 결과 + 우리가 쓴 경기 리포트)만 배경으로 띄운다
+                const isMatchLike = ev.kind === "match" || ev.kind === "entry"
                 const newDay =
                   i === 0 ||
                   kstDateLabel(chronicle[i - 1].occurredAt) !== kstDateLabel(ev.occurredAt)
@@ -210,6 +212,20 @@ export async function SeasonWiki({ saga }: { saga: SeasonSagaRow }) {
                       style={{
                         borderLeft: "1px solid var(--wc-line-2)",
                         borderBottom: "1px solid var(--wc-line)",
+                        /* 경기 사료만 옅은 와인 틴트로 띄운다 (2026-08-25 운영자:
+                           "경기 관련한 것만 하이라이트 — 아주 옅게, 룩앤필 살리는 방향").
+                           ⚠️ 한쪽 면 액센트 보더는 영구 금지 패턴이라 **배경 틴트**로만
+                              위계를 만든다 (app/a-tokens.css 상단 규약).
+                           ⚠️ --wc-wine-tint(#fbf2f4)는 사이트가 이미 쓰는 와인 faint fill
+                              이다. 새 색을 만들지 않고 그걸 그대로 쓴다.
+                           우측으로 살짝 넘겨 칠해 레일 옆 띠처럼 읽히게 한다. */
+                        ...(isMatchLike
+                          ? {
+                              background: "var(--wc-wine-tint)",
+                              marginRight: -8,
+                              paddingRight: 8,
+                            }
+                          : null),
                       }}
                     >
                       <div className="mb-1.5 flex min-w-0 items-center gap-2">

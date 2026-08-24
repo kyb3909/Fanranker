@@ -28,6 +28,7 @@ export function DraftGame({ slug }: { slug: string }) {
         myFormation={game.myFormation}
         setMyFormation={game.setMyFormation}
         onStart={game.startGame}
+        pickStats={pickStats}
       />
     )
   }

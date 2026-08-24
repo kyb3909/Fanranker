@@ -13,6 +13,9 @@ import type { GameMode } from "./use-draft-game"
 
 const FORMATION_LIST: Formation[] = ["4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2", "5-4-1"]
 
+import type { PickStats } from "./use-pick-stats"
+import { DraftRanking } from "./draft-ranking"
+
 interface DraftSetupProps {
   entry: DraftCatalogEntry | undefined
   mode: GameMode
@@ -26,6 +29,8 @@ interface DraftSetupProps {
   myFormation: Formation
   setMyFormation: (f: Formation) => void
   onStart: () => void
+  /** 유저 픽 통계 — 시작 화면 하단 랭킹 보드가 쓴다 */
+  pickStats: PickStats
 }
 
 export function DraftSetup({
@@ -41,6 +46,7 @@ export function DraftSetup({
   myFormation,
   setMyFormation,
   onStart,
+  pickStats,
 }: DraftSetupProps) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -401,6 +407,9 @@ export function DraftSetup({
             </div>
           </aside>
         </div>
+
+        {/* 전체 선수 픽 랭킹 — 판 시작 전에 "다들 누굴 데려가나" 보는 자리 */}
+        <DraftRanking pickStats={pickStats} />
       </div>
     </div>
   )
