@@ -2,6 +2,13 @@
  * 드래프트 게임 디자인 토큰
  * Editorial-meets-game-UI · warm paper, burgundy accent, deep ink
  *
+ * ⚠️ 중립색 정본은 사이트다 (app/worldcup/wc-tokens.css --wc-*).
+ *    사이트는 2026-07-28 에 쿨 스틸 → 웜 페이퍼로 전환했다. 이유가 그 파일에 적혀 있다:
+ *    "쿨 스틸은 상단 다크 밴드(웜: 크림·버건디)와 경계에서 색온도 부호가 뒤집혀
+ *     밴드와 본문이 따로 노는 인상의 원인". 이 게임은 그 전환을 못 받아 혼자 쿨로
+ *    남아 있었다 (2026-08-25 정렬). --wc-* 는 .worldcup-scope 에 묶여 있어 여기서
+ *    var() 로 못 참조한다 — 값을 복사하되 어디서 왔는지 아래에 남긴다.
+ *
  * 격리 규칙:
  * - 모든 변수에 --draft-* prefix
  * - .draft-scope wrapper 안에서만 유효 (page-scope)
@@ -15,11 +22,13 @@
   --draft-paper-dim: #f2efea;
   --draft-soft: #f2efea;
   --draft-card: #ffffff;
-  --draft-ink: #14161a;
+  --draft-ink: #1a1714; /* = --wc-ink (웜) */
   --draft-ink-soft: #5c6470;
-  --draft-mute: #8b93a0;
-  --draft-line: #e2e5ea;
-  --draft-rule: #cfd4dc;
+  /* ⚠️ 종전 #8b93a0 은 흰 바탕에서 3.09:1 로 WCAG AA 미달이다 — 사이트가 이미
+   *    같은 이유로 버린 값이다 (--wc-mute-2 주석). 4.8:1 로 교체. */
+  --draft-mute: #6b7280; /* = --wc-mute-2 */
+  --draft-line: #e8e5e0; /* = --wc-line (웜) */
+  --draft-rule: #d8d3ca; /* = --wc-line-2 (웜) */
   --draft-neutral: #f7f6f3; /* 중립 회색 — 호버/아이콘 타일 (핑크 틴트 대체) */
 
   /* hot accent */
@@ -33,13 +42,10 @@
   --draft-marine: #1f4d7a;
   --draft-violet: #5b3a8a;
 
-  /* game theme palette (cards use these as side stripes only) */
-  --draft-th-epl: #38003c;
-  --draft-th-arsenal: #ef0107;
-  --draft-th-slamdunk: #c8102e;
-  --draft-th-3kingdoms: #1a3a5c;
-  --draft-th-kpop: #ff6b9d;
-  --draft-th-tour: #fbcd5a;
+  /* ⚠️ 종전 여기에 게임별 테마색(--draft-th-*)이 있었고 주석이 "카드 사이드 스트라이프
+   *    전용" 이라고 못박고 있었다. **한쪽 면 색깔 액센트 보더는 영구 금지 패턴**이고
+   *    (app/a-tokens.css 상단 참조) 실제 사용처도 0곳이었다 — 함정만 남아 제거했다.
+   *    위계가 필요하면 배경 틴트 / 칩 / 타이포 웨이트 / 전체 테두리로 만들 것. */
 
   /* shadow */
   --draft-shadow-1: 0 1px 2px rgba(24, 18, 21, 0.06), 0 1px 1px rgba(24, 18, 21, 0.04);
@@ -77,7 +83,12 @@
   font-family: inherit;
   cursor: pointer;
 }
+/* 숫자 — 사이트 공용 콘덴스드(.gn-num)와 같은 처리. 스코어·가격·타이머가 사이트
+ * 다른 지면의 숫자와 같은 얼굴이어야 한다.
+ * ⚠️ Barlow Condensed 는 라틴 전용이라 한글이 섞이면 폴백으로 떨어진다 —
+ *    .draft-num 은 **숫자만 감싸는 span** 에만 걸 것 (2026-08-25 전수 확인 완료). */
 .draft-scope .draft-num {
+  font-family: var(--font-cond), var(--font-pretendard), sans-serif;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }

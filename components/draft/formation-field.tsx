@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { POSITION_COLORS, type Player, type Position } from "@/lib/draft/players"
+import type { Player, Position } from "@/lib/draft/players"
+import { POSITION_HEX } from "@/lib/draft/visual-helpers"
 import type { Formation } from "@/lib/draft/engine"
 import { slotCodes } from "./pitch-viz"
 
@@ -179,240 +180,261 @@ export function FormationField({
   }, [])
 
   return (
-    <div className="mx-auto max-w-4xl py-6">
-      <div className="mb-6 text-center">
-        {/* 드래프트에서 배치를 이어받은 뒤로는 "처음부터 놓는 곳" 이 아니라
+    /* ⚠️ draft-scope 필수 (2026-08-25 정렬). 종전엔 이 화면만 스코프 밖이라 shadcn
+       기본 팔레트(bg-muted / bg-primary / bg-blue-500 배지)로 렌더돼, 드래프트 보드에서
+       넘어오는 순간 다른 사이트로 이동한 것처럼 보였다. 게임 3화면 중 2개가 그랬다. */
+    <div className="draft-scope" style={{ background: "var(--draft-paper)" }}>
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        <div className="mb-6 text-center">
+          {/* 드래프트에서 배치를 이어받은 뒤로는 "처음부터 놓는 곳" 이 아니라
             "확인하고 손보는 곳" 이다 (2026-08-25). 문구가 그대로면 이미 다 놓인 화면을
             보고도 뭘 더 해야 하나 싶어진다. */}
-        <h1 className="text-foreground text-2xl font-black">
-          {unplacedPlayers.length === 0 ? "라인업 확인" : "선수 배치"}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {unplacedPlayers.length === 0
-            ? `바꾸고 싶으면 선수끼리 끌어서 자리를 맞바꾸세요 · 포메이션: ${formation}`
-            : `선수를 드래그해서 원하는 포지션에 배치하세요 · 포메이션: ${formation}`}
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
-        {/* 미배치 선수 목록 */}
-        <div className="w-full shrink-0 lg:w-[220px]">
-          <div className="border-border bg-card rounded-xl border shadow-sm">
-            <div className="border-border border-b px-3 py-2.5">
-              <h3 className="text-foreground text-sm font-bold">
-                미배치 선수 ({unplacedPlayers.length})
-              </h3>
-            </div>
-            <div className="max-h-[520px] space-y-1 overflow-y-auto p-2">
-              {unplacedPlayers.map((player) => (
-                <div
-                  key={player.id}
-                  draggable
-                  onDragStart={() => handleDragStart(player)}
-                  onDragEnd={() => {
-                    setDragging(null)
-                    setDraggingFromSlot(null)
-                  }}
-                  className="border-border/50 bg-muted/30 hover:bg-muted/60 flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 transition-all active:cursor-grabbing"
-                >
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${POSITION_COLORS[player.position]}`}
-                  >
-                    {player.position}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-foreground truncate text-sm font-medium">
-                      {player.nameKo}
-                    </div>
-                    <div className="text-muted-foreground text-[10px]">{player.teamKo}</div>
-                  </div>
-                  <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
-                    £{player.price.toFixed(1)}
-                  </span>
-                </div>
-              ))}
-              {unplacedPlayers.length === 0 && (
-                <p className="text-muted-foreground py-4 text-center text-xs">
-                  드래프트에서 배치한 그대로예요
-                </p>
-              )}
-            </div>
-          </div>
+          <h1 className="draft-title text-2xl" style={{ color: "var(--draft-ink)" }}>
+            {unplacedPlayers.length === 0 ? "라인업 확인" : "선수 배치"}
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--draft-ink-soft)" }}>
+            {unplacedPlayers.length === 0
+              ? `바꾸고 싶으면 선수끼리 끌어서 자리를 맞바꾸세요 · 포메이션: ${formation}`
+              : `선수를 드래그해서 원하는 포지션에 배치하세요 · 포메이션: ${formation}`}
+          </p>
         </div>
 
-        {/* 축구장 */}
-        <div className="flex-1">
-          <div
-            className="relative overflow-hidden rounded-2xl border-2 border-emerald-700/50 shadow-lg"
-            style={{
-              aspectRatio: "68/105",
-              background:
-                "linear-gradient(to bottom, #1a6b30 0%, #1e7a37 25%, #1a6b30 50%, #1e7a37 75%, #1a6b30 100%)",
-            }}
-          >
-            {/* 필드 라인 */}
-            <svg className="absolute inset-0 h-full w-full" viewBox="0 0 68 105" fill="none">
-              {/* 외곽선 */}
-              <rect
-                x="1"
-                y="1"
-                width="66"
-                height="103"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              {/* 센터라인 */}
-              <line
-                x1="1"
-                y1="52.5"
-                x2="67"
-                y2="52.5"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              {/* 센터서클 */}
-              <circle
-                cx="34"
-                cy="52.5"
-                r="9.15"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              {/* 상단 페널티 박스 */}
-              <rect
-                x="13.84"
-                y="1"
-                width="40.32"
-                height="16.5"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="24.84"
-                y="1"
-                width="18.32"
-                height="5.5"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              <path
-                d="M 25.5 16.5 A 9.15 9.15 0 0 0 42.5 16.5"
-                stroke="white"
-                strokeOpacity="0.2"
-                strokeWidth="0.5"
-              />
-              {/* 하단 페널티 박스 */}
-              <rect
-                x="13.84"
-                y="87.5"
-                width="40.32"
-                height="16.5"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              <rect
-                x="24.84"
-                y="98.5"
-                width="18.32"
-                height="5.5"
-                stroke="white"
-                strokeOpacity="0.3"
-                strokeWidth="0.5"
-              />
-              <path
-                d="M 25.5 87.5 A 9.15 9.15 0 0 1 42.5 87.5"
-                stroke="white"
-                strokeOpacity="0.2"
-                strokeWidth="0.5"
-              />
-            </svg>
-
-            {/* 포지션 슬롯 */}
-            {slots.map((slot) => {
-              const player = placements[slot.id]
-              return (
-                <div
-                  key={slot.id}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.dataTransfer.dropEffect = "move"
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    handleDrop(slot.id)
-                  }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                >
-                  {player ? (
-                    <div
-                      draggable
-                      onDragStart={() => handleDragStart(player, slot.id)}
-                      onDragEnd={() => {
-                        setDragging(null)
-                        setDraggingFromSlot(null)
-                      }}
-                      onDoubleClick={() => handleRemoveFromSlot(slot.id)}
-                      className="group relative flex cursor-grab flex-col items-center active:cursor-grabbing"
-                      title="더블클릭으로 해제"
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+          {/* 미배치 선수 목록 */}
+          <div className="w-full shrink-0 lg:w-[220px]">
+            <div className="draft-card">
+              <div className="px-3 py-2.5" style={{ borderBottom: "1px solid var(--draft-line)" }}>
+                <h3 className="draft-title text-sm" style={{ color: "var(--draft-ink)" }}>
+                  미배치 선수 ({unplacedPlayers.length})
+                </h3>
+              </div>
+              <div className="max-h-[520px] space-y-1 overflow-y-auto p-2">
+                {unplacedPlayers.map((player) => (
+                  <div
+                    key={player.id}
+                    draggable
+                    onDragStart={() => handleDragStart(player)}
+                    onDragEnd={() => {
+                      setDragging(null)
+                      setDraggingFromSlot(null)
+                    }}
+                    className="flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 transition-all active:cursor-grabbing"
+                    style={{ borderColor: "var(--draft-line)", background: "var(--draft-neutral)" }}
+                  >
+                    <span
+                      /* ⚠️ 종전 POSITION_COLORS 는 Tailwind 원색(bg-blue-500 = #3b82f6 등)이라
+                       버건디 웜 팔레트와 정면충돌했다. 보드가 쓰는 팔레트로 통일한다. */
+                      className="draft-title rounded px-1.5 py-0.5 text-[10px]"
+                      style={{ background: POSITION_HEX[player.position], color: "#fff" }}
                     >
+                      {player.position}
+                    </span>
+                    <div className="min-w-0 flex-1">
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/80 text-[10px] font-bold text-white shadow-lg ${
-                          player.position === "GK"
-                            ? "bg-amber-500"
-                            : player.position === "DF"
-                              ? "bg-blue-500"
-                              : player.position === "MF"
-                                ? "bg-green-500"
-                                : "bg-red-500"
-                        }`}
+                        className="truncate text-sm font-medium"
+                        style={{ color: "var(--draft-ink)" }}
                       >
-                        <span className="text-[9px]">{player.position}</span>
+                        {player.nameKo}
                       </div>
-                      <div className="mt-0.5 max-w-[80px] rounded bg-black/70 px-1.5 py-0.5 text-center">
-                        <div className="truncate text-[10px] leading-tight font-bold text-white">
-                          {player.nameKo}
-                        </div>
-                        <div className="text-[8px] text-white/60">{player.teamKo}</div>
+                      <div className="text-[10px]" style={{ color: "var(--draft-mute)" }}>
+                        {player.teamKo}
                       </div>
                     </div>
-                  ) : (
-                    <div
-                      className={`flex h-12 w-12 flex-col items-center justify-center rounded-full border-2 border-dashed transition-all ${
-                        dragging
-                          ? "scale-110 border-white/60 bg-white/20"
-                          : "border-white/30 bg-white/10"
-                      }`}
+                    <span
+                      className="draft-num shrink-0 text-[10px]"
+                      style={{ color: "var(--draft-ink-soft)" }}
                     >
-                      <span className="text-[10px] font-bold text-white/70">{slot.label}</span>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                      £{player.price.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+                {unplacedPlayers.length === 0 && (
+                  <p className="py-4 text-center text-xs" style={{ color: "var(--draft-mute)" }}>
+                    드래프트에서 배치한 그대로예요
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* 완료 버튼 */}
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => onComplete(placements)}
-              disabled={!allPlaced}
-              className={`rounded-xl px-10 py-3 text-sm font-bold shadow-lg transition-all ${
-                allPlaced
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              }`}
+          {/* 축구장 */}
+          <div className="flex-1">
+            <div
+              className="relative overflow-hidden rounded-2xl shadow-lg"
+              style={{
+                aspectRatio: "68/105",
+                /* ⚠️ 보드(pitch-viz)와 **같은 잔디**를 쓴다. 종전엔 여기만 밝은 초록
+                 (#1a6b30/#1e7a37)이라, 드래프트하던 잔디와 배치하는 잔디가 달라 보였다. */
+                background:
+                  "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 12.5%, rgba(0,0,0,0.06) 12.5% 25%), linear-gradient(180deg, #1f5a32 0%, #2a6a3d 50%, #1f5a32 100%)",
+              }}
             >
-              {allPlaced
-                ? "배치 완료!"
-                : `선수를 모두 배치하세요 (${Object.keys(placements).length}/11)`}
-            </button>
+              {/* 필드 라인 */}
+              <svg className="absolute inset-0 h-full w-full" viewBox="0 0 68 105" fill="none">
+                {/* 외곽선 */}
+                <rect
+                  x="1"
+                  y="1"
+                  width="66"
+                  height="103"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                {/* 센터라인 */}
+                <line
+                  x1="1"
+                  y1="52.5"
+                  x2="67"
+                  y2="52.5"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                {/* 센터서클 */}
+                <circle
+                  cx="34"
+                  cy="52.5"
+                  r="9.15"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                {/* 상단 페널티 박스 */}
+                <rect
+                  x="13.84"
+                  y="1"
+                  width="40.32"
+                  height="16.5"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                <rect
+                  x="24.84"
+                  y="1"
+                  width="18.32"
+                  height="5.5"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                <path
+                  d="M 25.5 16.5 A 9.15 9.15 0 0 0 42.5 16.5"
+                  stroke="white"
+                  strokeOpacity="0.2"
+                  strokeWidth="0.5"
+                />
+                {/* 하단 페널티 박스 */}
+                <rect
+                  x="13.84"
+                  y="87.5"
+                  width="40.32"
+                  height="16.5"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                <rect
+                  x="24.84"
+                  y="98.5"
+                  width="18.32"
+                  height="5.5"
+                  stroke="white"
+                  strokeOpacity="0.3"
+                  strokeWidth="0.5"
+                />
+                <path
+                  d="M 25.5 87.5 A 9.15 9.15 0 0 1 42.5 87.5"
+                  stroke="white"
+                  strokeOpacity="0.2"
+                  strokeWidth="0.5"
+                />
+              </svg>
+
+              {/* 포지션 슬롯 */}
+              {slots.map((slot) => {
+                const player = placements[slot.id]
+                return (
+                  <div
+                    key={slot.id}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = "move"
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      handleDrop(slot.id)
+                    }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                  >
+                    {player ? (
+                      <div
+                        draggable
+                        onDragStart={() => handleDragStart(player, slot.id)}
+                        onDragEnd={() => {
+                          setDragging(null)
+                          setDraggingFromSlot(null)
+                        }}
+                        onDoubleClick={() => handleRemoveFromSlot(slot.id)}
+                        className="group relative flex cursor-grab flex-col items-center active:cursor-grabbing"
+                        title="더블클릭으로 해제"
+                      >
+                        <div
+                          className="draft-title flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/80 text-[10px] text-white shadow-lg"
+                          style={{ background: POSITION_HEX[player.position] }}
+                        >
+                          <span className="text-[9px]">{player.position}</span>
+                        </div>
+                        <div className="mt-0.5 max-w-[80px] rounded bg-black/70 px-1.5 py-0.5 text-center">
+                          <div className="truncate text-[10px] leading-tight font-bold text-white">
+                            {player.nameKo}
+                          </div>
+                          <div className="text-[8px] text-white/60">{player.teamKo}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex h-12 w-12 flex-col items-center justify-center rounded-full border-2 border-dashed transition-all ${
+                          dragging
+                            ? "scale-110 border-white/60 bg-white/20"
+                            : "border-white/30 bg-white/10"
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-white/70">{slot.label}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* 완료 버튼 */}
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => onComplete(placements)}
+                disabled={!allPlaced}
+                className="draft-title rounded-xl px-10 py-3 text-sm transition-all"
+                style={
+                  allPlaced
+                    ? {
+                        background: "var(--draft-burgundy)",
+                        color: "#fff",
+                        boxShadow: "var(--draft-shadow-2)",
+                      }
+                    : {
+                        background: "var(--draft-neutral)",
+                        color: "var(--draft-mute)",
+                        cursor: "not-allowed",
+                      }
+                }
+              >
+                {allPlaced
+                  ? "배치 완료!"
+                  : `선수를 모두 배치하세요 (${Object.keys(placements).length}/11)`}
+              </button>
+            </div>
           </div>
         </div>
       </div>
