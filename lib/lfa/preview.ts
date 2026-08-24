@@ -307,23 +307,68 @@ async function fetchPreview(
   }
 }
 
-/** 12시간 캐시 — 경기당 3콜이 그 시간 동안 모든 방문자를 덮는다 */
-export function getMatchPreview(
+const EMPTY_PREVIEW: MatchPreview = {
+  homeForm: [],
+  awayForm: [],
+  h2h: [],
+  injuries: { home: [], away: [] },
+  officials: [],
+}
+
+/**
+ * 심판·결장자·최근 폼·상대 전적 — **호출당 3크레딧**(h2h + injuries + officials)이라
+ * 이 API 에서 가장 비싼 묶음이다.
+ *
+ * ⚠️ 종전엔 `unstable_cache` 24시간이 전부였다. 그 캐시는 **배포마다 초기화**되므로
+ *    배포가 잦은 날에는 매치 페이지를 열 때마다 3크레딧이 다시 나갔다 (2026-08-24 감사:
+ *    하루 8배포 × 방문 매치 페이지 수 × 3). 그래서 DB(`match_preview_cache`)에 눕힌다.
+ *
+ * 신선도: **킥오프가 지났으면 영구**(심판·전적은 굳고 결장자는 더 안 바뀐다) /
+ *         그 전이면 6시간(라인업 발표 전 결장자 갱신을 한 번은 받는다).
+ */
+export async function getMatchPreview(
   matchId: string,
   homeTeamKr: string,
-  awayTeamKr: string
+  awayTeamKr: string,
+  /** 킥오프가 지났는가 — 지났으면 다시 사지 않는다 */
+  settled = false
 ): Promise<MatchPreview> {
-  return unstable_cache(
+  const supabase = createServiceRoleClient()
+
+  try {
+    const { data } = await supabase
+      .from("match_preview_cache")
+      .select("payload, settled, updated_at")
+      .eq("lfa_match_id", matchId)
+      .maybeSingle()
+    if (data?.payload) {
+      const age = Date.now() - new Date(String(data.updated_at)).getTime()
+      if (data.settled || age < 6 * 3600_000) return data.payload as unknown as MatchPreview
+    }
+  } catch {
+    /* fail-open — 캐시를 못 읽으면 평소대로 산다 */
+  }
+
+  // 메모리 캐시도 한 겹 유지 — 같은 배포 안에서 동시 방문이 겹칠 때 DB 왕복까지 아낀다
+  const fresh = await unstable_cache(
     () => fetchPreview(matchId, homeTeamKr, awayTeamKr),
-    ["lfa-preview-v4", matchId],
-    // 호출당 3크레딧(h2h+injuries+officials)이라 가장 비싼 묶음 — 심판·부상·전적은
-    // 경기 당일에 거의 안 바뀐다. 12→24h (2026-08-23 크레딧 절감)
+    ["lfa-preview-v5", matchId],
     { revalidate: 24 * 3600 }
-  )().catch(() => ({
-    homeForm: [],
-    awayForm: [],
-    h2h: [],
-    injuries: { home: [], away: [] },
-    officials: [],
-  }))
+  )().catch(() => null)
+  if (!fresh) return EMPTY_PREVIEW
+
+  try {
+    await supabase.from("match_preview_cache").upsert(
+      {
+        lfa_match_id: matchId,
+        payload: fresh as unknown as Record<string, unknown>,
+        settled,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "lfa_match_id" }
+    )
+  } catch {
+    /* 적재 실패가 화면을 깨면 안 된다 */
+  }
+  return fresh
 }

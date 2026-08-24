@@ -248,6 +248,7 @@ export default async function MatchPage({ params }: Props) {
                         awayTeam={match.awayTeam}
                         homeLabel={homeLabel}
                         awayLabel={awayLabel}
+                        settled={finished || live}
                       />
                     </Suspense>
                     {/* 미니 순위표 — "이 결과로 몇 위" (2026-08-19 팬 A8). 대조는 원문 팀명.

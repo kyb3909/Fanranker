@@ -2,7 +2,8 @@ import "server-only"
 
 import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
-import { lfaFetch, type LfaMatch } from "@/lib/lfa/client"
+import { type LfaMatch } from "@/lib/lfa/client"
+import { getDayMatches } from "@/lib/lfa/match"
 import { BETMAN_CODE_BY_LFA_ID } from "@/lib/lfa/leagues"
 import { MATCH_PAGE_LEAGUES } from "@/lib/match/leagues"
 
@@ -121,21 +122,18 @@ function toIso(dateUtc: string, kickoff: string): string | null {
   return `${dateUtc}T${kickoff}:00.000Z`
 }
 
-function cachedDay(dateUtc: string, ttl: number) {
-  return unstable_cache(
-    async () => {
-      const data = await lfaFetch<{ matches?: LfaMatch[] }>("matches", {
-        date: dateUtc,
-        lang: "en",
-      })
-      // API 실패를 빈 배열로 캐시하지 않는다 (lib/lfa/match.ts cachedDayMatches 와 동일 —
-      // 2026-08-20 프로덕션 라이브 실사고). 호출부는 catch 로 fail-open.
-      if (!data) throw new Error("lfa-day-failed")
-      return data.matches ?? []
-    },
-    ["lfa-day", dateUtc, ttl === 300 ? "live" : "settled"],
-    { revalidate: ttl }
-  )
+/**
+ * ⚠️ 여기서 직접 LFA 를 부르지 않는다 (2026-08-24 크레딧 감사).
+ *
+ * 종전엔 이 파일이 `matches?date=` 를 **자기 몫으로 한 번 더** 받았다. `lib/lfa/match.ts` 가
+ * 같은 응답(221KB)을 이미 받아 DB(`lfa_day_cache`)에 눕히고 있는데도, 일정 페이지·홈 밴드·
+ * 불판 cron·MoTM cron 이 타는 이 경로만 `unstable_cache` 5분짜리로 따로 돌아 **같은 날짜를
+ * 두 번 사고** 있었다. 배포마다 초기화되니 잦은 배포일수록 더 샜다.
+ *
+ * 이제 두 경로가 DB 한 줄을 공유한다 — 하루치 목록은 무슨 일이 있어도 한 번만 산다.
+ */
+async function cachedDay(dateUtc: string, ttl: number) {
+  return getDayMatches(dateUtc, ttl === 300)
 }
 
 /**
@@ -159,7 +157,7 @@ export async function getLfaFixturesForMatchday(dateKst: string): Promise<LfaFix
 
     const out: LfaFixture[] = []
     for (const d of [...new Set(dates)]) {
-      for (const m of await cachedDay(d, ttl)()) {
+      for (const m of await cachedDay(d, ttl)) {
         const code = BETMAN_CODE_BY_LFA_ID.get(m.league?.id ?? "")
         if (!code || !MATCH_PAGE_LEAGUES.has(code)) continue
         const iso = toIso(d, m.kickoff)

@@ -74,6 +74,7 @@ export async function MatchInfoSection({
   awayTeam,
   homeLabel,
   awayLabel,
+  settled = false,
 }: {
   matchId: string
   /** 사전 조회용 **원문** 팀명 — 통칭을 넘기면 스쿼드 조회(name_kr 정확일치)가 깨진다 */
@@ -82,8 +83,10 @@ export async function MatchInfoSection({
   /** 지면 표기용 통칭 (없으면 원문) */
   homeLabel?: string
   awayLabel?: string
+  /** 킥오프가 지났는가 — 지났으면 프리뷰 3콜을 영구 캐시한다 (크레딧) */
+  settled?: boolean
 }) {
-  const p = await getMatchPreview(matchId, homeTeam, awayTeam)
+  const p = await getMatchPreview(matchId, homeTeam, awayTeam, settled)
   const homeName = homeLabel ?? homeTeam
   const awayName = awayLabel ?? awayTeam
   const hasInjuries = p.injuries.home.length > 0 || p.injuries.away.length > 0

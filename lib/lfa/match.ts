@@ -140,7 +140,7 @@ function cachedDayMatches(dateUtc: string, live: boolean) {
  * 그래서 DB 를 정본 창고로 두고, LFA 는 그 창고를 채우는 쪽으로 역할을 바꾼다.
  * LFA 가 느리거나 죽으면 마지막으로 받은 목록을 쓴다 — 빈 화면보다 낫다.
  */
-const getDayMatches = cache(async (dateUtc: string, live: boolean): Promise<LfaMatch[]> => {
+export const getDayMatches = cache(async (dateUtc: string, live: boolean): Promise<LfaMatch[]> => {
   const cached = await readDayMatches(dateUtc, live)
   if (cached && !cached.stale) return cached.matches
 
