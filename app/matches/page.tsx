@@ -360,7 +360,11 @@ export default async function MatchesPage({
                               <span
                                 // 버튼이 겹치는 행만 원정팀 텍스트를 일찍 자른다 — 패딩은
                                 // 1fr 트랙 폭을 안 바꾸므로 vs 기준선은 그대로다
-                                className={`truncate text-left text-[14px] font-bold${tarot ? "pr-[80px]" : ""}`}
+                                // ⚠️ `font-bold` 와 조건부 클래스 사이 공백 필수. 붙이면
+                                //    `font-boldpr-[80px]` 라는 없는 클래스 하나가 되어 **굵기와
+                                //    패딩이 둘 다** 죽는다 (2026-08-24 운영자 제보: "몇 팀만
+                                //    볼드가 아니다" — 타로점이 붙는 행의 원정팀만 400 이었다).
+                                className={`truncate text-left text-[14px] font-bold ${tarot ? "pr-[80px]" : ""}`}
                                 style={{ color: teamTone(), wordBreak: "keep-all" }}
                               >
                                 {displayTeamName(m.awayTeam, shortNames)}
