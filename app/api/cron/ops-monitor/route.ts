@@ -297,6 +297,50 @@ export async function POST(req: NextRequest) {
     console.error("ops-monitor invariant-audit check 실패:", e)
   }
 
+  // 8) LFA 크레딧 — **남은 일수**로 본다 (2026-08-24 비용 감사).
+  //    종전 경보는 클라이언트의 고정 임계값("잔여 20,000")이었는데, 소모율을 모르면
+  //    그게 한 달 치인지 이틀 치인지 알 수 없다. 8/23 소진 사고가 아무 신호 없이
+  //    일어난 것도 그래서다. 이제 lfa_usage_log 가 실측 소모율을 들고 있으므로
+  //    "이 속도면 며칠" 을 계산해 알린다 — 충전은 사람이 하는 일이라 며칠 전에 알아야 한다.
+  try {
+    // ⚠️ 구간 전체를 받아 양 끝을 고르면 안 된다 — 하루 1,000~3,000행이라 어떤 limit 을
+    //    걸어도 언젠가 잘리고, 오름차순으로 잘리면 "최신 잔여" 가 옛날 값이 된다.
+    //    필요한 건 딱 두 행(구간의 처음과 끝)이므로 각각 1행씩 집어 온다.
+    const since = new Date(Date.now() - 48 * H).toISOString()
+    const pick = (asc: boolean) =>
+      supabase
+        .from("lfa_usage_log")
+        .select("called_at, credits_remaining")
+        .gte("called_at", since)
+        .not("credits_remaining", "is", null)
+        .order("called_at", { ascending: asc })
+        .limit(1)
+        .maybeSingle<{ called_at: string; credits_remaining: number }>()
+    const [{ data: first }, { data: last }] = await Promise.all([pick(true), pick(false)])
+
+    if (first && last) {
+      const spanH = (new Date(last.called_at).getTime() - new Date(first.called_at).getTime()) / H
+      const used = first.credits_remaining - last.credits_remaining
+      // 충전이 구간에 끼면 used 가 음수다 — 그 구간은 소모율을 못 낸다.
+      // 창이 48시간이라 충전 후 이틀이면 다시 계산된다 (7일이면 일주일간 감시가 죽는다).
+      if (spanH >= 6 && used > 0) {
+        const perDay = (used / spanH) * 24
+        const days = last.credits_remaining / perDay
+        if (days < 21) {
+          issues.push({
+            name: "⚽ 축구 API 크레딧 소진 임박",
+            value:
+              `잔여 ${last.credits_remaining.toLocaleString()} · 최근 ${Math.round(spanH)}시간 실측 ` +
+              `하루 ${Math.round(perDay).toLocaleString()} → **약 ${Math.floor(days)}일 남음**. ` +
+              `바닥나면 라인업·라이브 스코어·불판이 전부 멈춥니다.`,
+          })
+        }
+      }
+    }
+  } catch (e) {
+    console.error("ops-monitor lfa credit check 실패:", e)
+  }
+
   if (issues.length > 0) {
     await notifyDiscordOps({
       level: "alert",

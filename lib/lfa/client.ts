@@ -27,14 +27,41 @@ const BASE = "https://live-football-api.com/api/v1"
  * 서버리스 인스턴스마다 1회씩만 — 매 호출 알림은 그 자체로 소음이다.
  */
 /**
- * 3,000 은 팩이 30,100 이던 시절의 10% 였다. 지금 팩은 20만대라 3,000 이면 1% 대 —
- * 그 시점엔 이미 며칠 안 남았다는 뜻이라 경보로서 늦다. 실측 소모(2026-08-24 심야
- * 20분 표본: 시간당 27 / 하루 647)를 기준으로 **한 달치**를 남기고 알린다.
- * 매치데이는 이보다 빠르므로 실제 여유는 2주 안팎으로 봐야 한다.
+ * 고정 임계값은 **경보로 쓸 수 없다** (2026-08-24 비용 감사에서 폐기).
+ * "잔여 20,000" 은 그게 한 달 치인지 이틀 치인지 답하지 못한다 — 소모율을 모르면
+ * 어떤 숫자를 골라도 매치데이 밀도에 따라 며칠씩 틀린다. 조기 경보는
+ * `ops-monitor` 가 `lfa_usage_log` 의 **실측 소모율로 남은 일수**를 계산해서 낸다.
+ *
+ * 여기 남은 건 그 감시가 통째로 죽었을 때를 위한 **마지막 바닥**이다. 하루 소모가
+ * 매치데이에도 3,600 을 넘긴 적이 없으므로(실측) 5,000 이면 "오늘 안에 멈춘다".
  */
-const CREDIT_ALERT_THRESHOLD = 20_000
+const CREDIT_FLOOR = 5_000
 let creditAlerted = false
 let deniedAlerted = false
+
+/**
+ * 사용량 계기판 (2026-08-24).
+ *
+ * 8/23 크레딧 30,100 소진 사고의 **진짜 원인은 소모량이 아니라 계기판 부재**였다 —
+ * 라인업·라이브 스코어·불판이 한꺼번에 죽고 나서야 알았다. 응답마다 실려 오는
+ * `credits_remaining` 을 그동안 임계값 밑일 때만 console.warn 으로 흘리고 버렸다.
+ *
+ * 그 값을 적는다. 연속 두 행의 차이가 그 사이 소모량이므로, 이 표 하나로
+ * "어제 얼마 썼나 / 어느 엔드포인트가 태우나 / 이 속도면 며칠 남았나" 가 전부 나온다.
+ *
+ * ⚠️ 실패는 삼킨다. 이 경로 전체가 fail-open 이다 — 계기판이 본 작업을 깨면 안 된다.
+ *    LFA 호출 자체가 0.5~46초라 적재 한 번(수십 ms)은 지연으로 유의미하지 않다.
+ */
+async function recordUsage(endpoint: string, creditsRemaining: number | null) {
+  try {
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    await createServiceRoleClient()
+      .from("lfa_usage_log")
+      .insert({ endpoint, credits_remaining: creditsRemaining })
+  } catch {
+    /* 계기판이 본 작업을 깨면 안 된다 */
+  }
+}
 
 async function alertOps(title: string, description: string) {
   try {
@@ -119,14 +146,18 @@ export async function lfaFetch<T>(
         return null
       }
       const json = (await res.json()) as LfaEnvelope<T>
-      if (json.credits_remaining != null && json.credits_remaining < CREDIT_ALERT_THRESHOLD) {
-        // 소진 임박 — 라이브가 조용히 멈추기 전에 운영 채널로 (로그만으론 아무도 못 본다)
+      // 계기판 — 이 호출이 쓴 값을 버리지 않고 적는다 (아래 recordUsage 주석이 이유)
+      await recordUsage(endpoint, json.credits_remaining ?? null)
+      if (json.credits_remaining != null && json.credits_remaining < CREDIT_FLOOR) {
+        // 마지막 바닥. 조기 경보는 ops-monitor 가 **소모율 기준(남은 일수)** 으로 낸다 —
+        // 고정 숫자는 그게 한 달 치인지 이틀 치인지 답하지 못한다. 여기 남긴 건
+        // 그 감시가 통째로 죽었을 때를 위한 안전망이다.
         console.warn(`[lfa] ⚠️ 잔여 크레딧 ${json.credits_remaining}`)
         if (!creditAlerted) {
           creditAlerted = true
           await alertOps(
-            "⚠️ 라이브 축구 API 크레딧 임박",
-            `잔여 ${json.credits_remaining} — 바닥나면 라인업·라이브 스코어·불판이 전부 멈춥니다. 충전을 검토하세요.`
+            "🚨 라이브 축구 API 크레딧 바닥",
+            `잔여 ${json.credits_remaining} — 곧 라인업·라이브 스코어·불판이 전부 멈춥니다. 즉시 충전하세요.`
           )
         }
       }
