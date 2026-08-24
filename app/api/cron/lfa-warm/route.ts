@@ -44,9 +44,19 @@ async function cronGet(request: NextRequest) {
     // 빈다 (2026-08-24 실측: details 도 캐시 미스면 120초). 오늘 매치센터 대상 리그의
     // **시작된 경기**만, 동시 3개씩. 종료분은 6시간 캐시라 하루 몇 번이면 충분하다.
     const fixtures = await getFixturesForDay(today).catch(() => [])
+    // ⚠️ 슬롯 12개는 **진행 중일 법한 경기 먼저** (2026-08-25 실측 수정).
+    //    종전엔 "시작된 경기" 를 시간순 앞에서 12개 잘랐다 — 바쁜 매치데이엔 그게
+    //    몇 시간 전에 끝난 경기들이라, 정작 지금 뛰는 경기가 슬롯 밖으로 밀렸다.
+    //    킥오프가 경기 창(3.5h) 안인 경기를 앞세우고, 나머지(종료분 스탯 대기)는 뒤에.
+    const nowMs = Date.now()
+    const inWindow = (f: (typeof fixtures)[number]) => {
+      const ko = new Date(f.matchTime).getTime()
+      return nowMs - ko <= 3.5 * 3600_000
+    }
     const targets = fixtures
       .filter((f) => f.gameId && isMatchPageLeague(f.leagueCode))
-      .filter((f) => new Date(f.matchTime).getTime() <= Date.now())
+      .filter((f) => new Date(f.matchTime).getTime() <= nowMs)
+      .sort((a, b) => Number(inWindow(b)) - Number(inWindow(a)))
       .slice(0, 12)
     let warmed = 0
     for (let i = 0; i < targets.length; i += 3) {

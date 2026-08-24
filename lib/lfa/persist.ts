@@ -60,6 +60,8 @@ export async function readMatchDetails(
       finished: data.finished === true,
       live: info.live === true,
       matchTime,
+      // 끝났는데 타임라인이 비어 있다 = LFA 가 아직 못 채운 반쪽 (프로 경기에 이벤트 0은 없다)
+      emptyDetails: (info.timeline?.length ?? 0) === 0,
     })
     return { info, updatedAt, stale: age > limit }
   } catch {

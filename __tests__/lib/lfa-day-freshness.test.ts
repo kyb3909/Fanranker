@@ -192,3 +192,42 @@ describe("detailsFreshnessMs — 경기 상세 캐시 수명", () => {
     )
   })
 })
+
+describe("detailsFreshnessMs — FT 후 빈 상세는 Infinity 에 갇히지 않는다", () => {
+  const KO = "2026-08-24T19:00:00.000Z"
+  const at = (iso: string) => Date.parse(iso)
+
+  it("끝났고 채워졌으면 영원히 다시 안 산다", () => {
+    expect(
+      detailsFreshnessMs(
+        { finished: true, live: false, matchTime: KO, emptyDetails: false },
+        at("2026-08-24T21:00:00Z")
+      )
+    ).toBe(Infinity)
+  })
+
+  it("⭐끝났는데 비어 있으면 킥오프 +6시간까지는 10분 주기로 다시 본다", () => {
+    // LFA 는 일부 경기의 이벤트를 FT 후 몇 시간 뒤에 채운다 (라싱 2:2 비야레알 실사고 계보)
+    expect(
+      detailsFreshnessMs(
+        { finished: true, live: false, matchTime: KO, emptyDetails: true },
+        at("2026-08-24T22:00:00Z")
+      )
+    ).toBe(10 * 60_000)
+  })
+
+  it("6시간이 지나도 안 채워지면 그때 굳는다 — 크레딧 무한 소모 방지", () => {
+    expect(
+      detailsFreshnessMs(
+        { finished: true, live: false, matchTime: KO, emptyDetails: true },
+        at("2026-08-25T02:00:00Z")
+      )
+    ).toBe(Infinity)
+  })
+
+  it("킥오프를 모르는 빈 종료 경기는 재시도 창을 판단할 수 없으니 굳는다", () => {
+    expect(
+      detailsFreshnessMs({ finished: true, live: false, matchTime: null, emptyDetails: true })
+    ).toBe(Infinity)
+  })
+})

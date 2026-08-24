@@ -125,11 +125,24 @@ export const DETAILS_MATCH_WINDOW_MS = 3.5 * 3600_000
  * 그래서 **시계**를 기준으로 판단한다 — 킥오프 창 안이면 캐시가 뭐라 하든 라이브 주기다.
  * (`dayFreshnessMs` 와 같은 교훈: 갱신 주기는 바깥 사실이 정해야 한다.)
  */
+/** FT 후 LFA 가 이벤트를 늦게 채우는 경기를 기다려 주는 창 (재조회 6시간 규칙과 동일) */
+export const DETAILS_EMPTY_RETRY_MS = 6 * 3600_000
+
 export function detailsFreshnessMs(
-  opts: { finished: boolean; live: boolean; matchTime?: string | null },
+  opts: { finished: boolean; live: boolean; matchTime?: string | null; emptyDetails?: boolean },
   now = Date.now()
 ): number {
-  if (opts.finished) return Infinity
+  if (opts.finished) {
+    // ⚠️ "끝났으면 영원히" 는 **채워진 경기**에만 해당한다 (2026-08-25).
+    //    LFA 는 일부 경기의 이벤트·스탯을 FT 후 몇 시간 뒤에 채운다. 빈 상세가 finished
+    //    로 저장되면 Infinity 에 갇혀 타임라인·득점자가 영영 빈다 — 프로 경기에 이벤트
+    //    0(교체 포함)은 없다. unstable_cache 층의 "빈 응답 throw + 6시간 창" 과 같은
+    //    교훈인데, DB 층(2026-08-24 신설)이 그 규칙 없이 위에 얹히면서 함정이 되살아났다.
+    if (!opts.emptyDetails) return Infinity
+    const kickoff = opts.matchTime ? Date.parse(opts.matchTime) : NaN
+    const inRetry = Number.isFinite(kickoff) && now - kickoff < DETAILS_EMPTY_RETRY_MS
+    return inRetry ? FRESH_OTHER_MS : Infinity
+  }
   if (opts.live) return FRESH_LIVE_MS
 
   const kickoff = opts.matchTime ? Date.parse(opts.matchTime) : NaN
