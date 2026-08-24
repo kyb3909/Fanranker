@@ -4,6 +4,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 // ⚠️ 반드시 type-only import — match.ts 가 이 파일을 값으로 가져오므로 런타임 순환이 된다
 import type { LfaMatchInfo } from "@/lib/lfa/match"
 import type { LfaMatch } from "@/lib/lfa/client"
+// 재구매 주기 정책 = 크레딧 비용의 절반. 순수 함수라 따로 두고 시험이 지킨다.
+import { dayFreshnessMs } from "@/lib/lfa/day-freshness"
 
 /**
  * 경기 상세 영구 캐시 (2026-08-24 — "왜 자꾸 데이터가 제때 안 뜨냐" 에 대한 구조 답).
@@ -100,12 +102,10 @@ export async function readDayMatches(
 
     const updatedAt = new Date(String(data.updated_at)).getTime()
     if (!Number.isFinite(updatedAt)) return null
-    // 지난 날은 값이 굳었다 — 다시 안 부른다. 오늘·미래만 5분.
-    const limit = live ? 5 * 60_000 : Infinity
-    return {
-      matches: data.payload as unknown as LfaMatch[],
-      stale: Date.now() - updatedAt > limit,
-    }
+    const matches = data.payload as unknown as LfaMatch[]
+    // 지난 KST 날은 값이 굳었다 — 다시 안 부른다.
+    const limit = live ? dayFreshnessMs(dateUtc, matches) : Infinity
+    return { matches, stale: Date.now() - updatedAt > limit }
   } catch {
     return null
   }
