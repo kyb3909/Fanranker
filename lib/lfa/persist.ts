@@ -5,7 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 import type { LfaMatchInfo } from "@/lib/lfa/match"
 import type { LfaMatch } from "@/lib/lfa/client"
 // 재구매 주기 정책 = 크레딧 비용의 절반. 순수 함수라 따로 두고 시험이 지킨다.
-import { dayFreshnessMs } from "@/lib/lfa/day-freshness"
+import { dayFreshnessMs, detailsFreshnessMs } from "@/lib/lfa/day-freshness"
 
 /**
  * 경기 상세 영구 캐시 (2026-08-24 — "왜 자꾸 데이터가 제때 안 뜨냐" 에 대한 구조 답).
@@ -28,9 +28,6 @@ import { dayFreshnessMs } from "@/lib/lfa/day-freshness"
  *  · 그 외 = 10분
  */
 
-const FRESH_LIVE_MS = 60_000
-const FRESH_OTHER_MS = 10 * 60_000
-
 export interface CachedMatchDetails {
   info: LfaMatchInfo
   updatedAt: number
@@ -40,7 +37,10 @@ export interface CachedMatchDetails {
 
 /* ── 경기 상세 ── */
 
-export async function readMatchDetails(gameId: string): Promise<CachedMatchDetails | null> {
+export async function readMatchDetails(
+  gameId: string,
+  matchTime?: string | null
+): Promise<CachedMatchDetails | null> {
   try {
     const { data } = await createServiceRoleClient()
       .from("match_details_cache")
@@ -54,7 +54,13 @@ export async function readMatchDetails(gameId: string): Promise<CachedMatchDetai
     if (!Number.isFinite(updatedAt)) return null
 
     const age = Date.now() - updatedAt
-    const limit = data.finished ? Infinity : info.live ? FRESH_LIVE_MS : FRESH_OTHER_MS
+    // ⚠️ 수명은 **시계**가 정한다 — 캐시된 live 플래그에 물으면 스스로 갇힌다.
+    //    (2026-08-25 풀럼:첼시 — 상세가 live:false 로 굳어 매치센터가 스코어를 못 봤다)
+    const limit = detailsFreshnessMs({
+      finished: data.finished === true,
+      live: info.live === true,
+      matchTime,
+    })
     return { info, updatedAt, stale: age > limit }
   } catch {
     // fail-open — 캐시를 못 읽으면 평소대로 LFA 를 부른다

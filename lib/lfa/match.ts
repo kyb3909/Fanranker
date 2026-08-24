@@ -493,7 +493,7 @@ export function lookupLfaDayEntry(
 export async function getLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | null> {
   // ① 우리 DB 먼저 (2026-08-24). 신선하면 그대로 — 외부 API 를 아예 안 부른다.
   //    화면이 LFA 의 그날 컨디션에 매달려 있던 것이 "데이터가 제때 안 뜬다" 의 정체였다.
-  const cached = await readMatchDetails(game.gameId)
+  const cached = await readMatchDetails(game.gameId, game.matchTime)
   if (cached && !cached.stale) return cached.info
 
   try {

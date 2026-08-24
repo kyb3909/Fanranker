@@ -20,13 +20,21 @@ import { isMatchPageLeague } from "@/lib/match/leagues"
  * 목록에서 값이 실제로 **움직이는 건 경기가 진행 중일 때뿐**이다. 킥오프 전 일정은
  * 5분마다 바뀌지 않고, 끝난 경기 스코어는 영영 안 바뀐다.
  *
- * ⚠️ 불변식: **유휴 주기 < 킥오프 예열창**. 그래야 유휴 상태로 자다가 킥오프를 통째로
+ * ⚠️ 불변식: **라이브 주기 <= 매치데이 주기 < 유휴 주기 < 킥오프 예열창**. 그래야 유휴 상태로 자다가 킥오프를 통째로
  *    놓치는 구간이 안 생긴다 — 마지막 구매가 아무리 늦어도 킥오프 45분 전 안쪽에서
  *    한 번 더 일어나고 거기서 빠른 주기로 전환된다. 둘 중 하나를 건드리면 이 부등호를
  *    반드시 같이 확인할 것 (`__tests__/lib/lfa-day-freshness.test.ts` 가 지킨다).
  */
 export const PRE_KICKOFF_MS = 45 * 60_000
 export const MATCH_WINDOW_MS = 3.5 * 3600_000
+/**
+ * 우리 리그 경기가 **실제로 진행 중**일 때. 목록의 값이 움직이는 건 이때뿐이라
+ * 여기만 빠르게 간다 (2026-08-25). 5분이면 골이 최대 5분 늦게 뜬다 — 불판·매치센터가
+ * 살아 있어야 할 바로 그 시간대다. 크롤러 누수(하루 ~20,000)를 막아 생긴 여유를
+ * 여기에 쓴다: 우리 리그 라이브 창은 하루 몇 시간뿐이라 실제 증가는 하루 200 미만이다.
+ */
+export const FRESH_DAY_LIVE_MS = 90_000
+/** 킥오프 예열 구간 — 아직 값이 안 움직이므로 라이브보다 느긋해도 된다. */
 export const FRESH_DAY_MATCHDAY_MS = 5 * 60_000
 export const FRESH_DAY_IDLE_MS = 30 * 60_000
 
@@ -55,7 +63,7 @@ export function dayFreshnessMs(dateUtc: string, matches: LfaMatch[]): number {
 
   let anyUnfinished = false
   for (const m of ours) {
-    if (m.status?.is_live) return FRESH_DAY_MATCHDAY_MS
+    if (m.status?.is_live) return FRESH_DAY_LIVE_MS
     const finished = m.status?.state === "postGame" || m.status?.display === "FT"
     if (finished) continue
     anyUnfinished = true
@@ -93,4 +101,42 @@ export function withinBuyWindow(dateUtc: string, now = Date.now()): boolean {
   const today = Math.floor(now / 86_400_000) * 86_400_000
   const days = Math.round((t - today) / 86_400_000)
   return days >= -BUY_WINDOW_PAST_DAYS && days <= BUY_WINDOW_FUTURE_DAYS
+}
+
+/* ── 경기 상세(스코어·분·타임라인·스탯) 캐시 수명 ── */
+
+export const FRESH_LIVE_MS = 60_000
+export const FRESH_OTHER_MS = 10 * 60_000
+/** 킥오프가 임박하면 미리 라이브 주기로 전환 (LFA 가 늦게 뒤집는 것을 흡수) */
+export const DETAILS_PRE_KICKOFF_MS = 10 * 60_000
+export const DETAILS_MATCH_WINDOW_MS = 3.5 * 3600_000
+
+/**
+ * ⚠️⚠️ 수명을 **캐시된 값 스스로에게 묻지 않는다** (2026-08-25 실사고).
+ *
+ * 종전 규칙은 `live ? 60초 : 10분` 이었다. 그런데 `live` 는 방금 저장한 그 페이로드의
+ * 필드다 — 킥오프 전엔 LFA 가 live:false 를 주므로 10분짜리 수명이 붙고, 그 10분 사이에
+ * 경기가 시작해 골이 들어가도 다시 묻지 않는다. 게다가 아직 안 뒤집힌 상태에서 한 번 더
+ * 물으면 또 live:false 를 받아 10분이 새로 시작된다 — **스스로 갇히는 캐시**다.
+ *
+ * 실사고: 풀럼 vs 첼시(2026-08-25 04:00 KST). 하루치 목록엔 0-1 · 11분 이 들어와 있는데
+ * 매치센터는 계속 킥오프 시각만 보여줬다. 상세 캐시가 live:false 로 굳어 있었기 때문이다.
+ *
+ * 그래서 **시계**를 기준으로 판단한다 — 킥오프 창 안이면 캐시가 뭐라 하든 라이브 주기다.
+ * (`dayFreshnessMs` 와 같은 교훈: 갱신 주기는 바깥 사실이 정해야 한다.)
+ */
+export function detailsFreshnessMs(
+  opts: { finished: boolean; live: boolean; matchTime?: string | null },
+  now = Date.now()
+): number {
+  if (opts.finished) return Infinity
+  if (opts.live) return FRESH_LIVE_MS
+
+  const kickoff = opts.matchTime ? Date.parse(opts.matchTime) : NaN
+  if (Number.isFinite(kickoff)) {
+    const from = kickoff - DETAILS_PRE_KICKOFF_MS
+    const to = kickoff + DETAILS_MATCH_WINDOW_MS
+    if (now >= from && now <= to) return FRESH_LIVE_MS
+  }
+  return FRESH_OTHER_MS
 }
