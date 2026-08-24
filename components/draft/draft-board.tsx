@@ -108,6 +108,8 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   }, [allPlayers, state.draftedPlayerIds])
 
   const { strengths, weaknesses } = analyzeLineup(myRoster)
+  // 모바일에서 보이는 쪽 (데스크톱은 3컬럼이라 무시된다)
+  const [mobileTab, setMobileTab] = useState<"pool" | "lineup">("pool")
   // 도판에서 손으로 옮긴 배치. 픽이 늘어도 유지되고, 새 선수만 빈 자리로 들어간다.
   const [arranged, setArranged] = useState<Record<string, Player | null>>({})
   const slotsFilled = useMemo(
@@ -249,6 +251,67 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
         </div>
       </div>
 
+      {/* 모바일 전환 탭 (2026-08-25) — 데스크톱은 3컬럼이라 풀과 라인업이 나란히 보이지만,
+          모바일은 세로로 쌓여 라인업이 긴 선수 풀 **아래로** 밀린다. 폰에서 내 라인업을
+          보거나 도판에서 자리를 바꾸려면 매번 한참 스크롤해야 했다.
+          드래프트 중 "지금 뽑기"와 "내 팀 확인"은 서로 다른 순간이라 탭이 맞다. */}
+      <div
+        className="draft-mobile-tabs"
+        style={{
+          display: "flex",
+          gap: 8,
+          padding: "12px 16px",
+          // 스크롤해도 전환이 손에 닿게. 사이트 헤더 아래에 붙는다.
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: "var(--draft-paper)",
+          borderBottom: "1px solid var(--draft-line)",
+        }}
+      >
+        {(
+          [
+            ["pool", "선수 풀"],
+            ["lineup", `내 라인업 · ${myRoster.length}/${rosterSize}`],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => {
+              setMobileTab(key)
+              // 탭만 바꾸면 화면은 그대로라 아래 내용이 접혀 보이지 않는다.
+              // 전환한 쪽을 바로 보여 준다 (사이트 헤더 높이만큼 여유를 둔다).
+              requestAnimationFrame(() => {
+                const el = document.querySelector(
+                  key === "lineup" ? ".draft-col-lineup" : ".draft-col-pool"
+                )
+                if (!el) return
+                const y = el.getBoundingClientRect().top + window.scrollY - 64
+                window.scrollTo({ top: Math.max(0, y), behavior: "smooth" })
+              })
+            }}
+            aria-pressed={mobileTab === key}
+            style={{
+              flex: 1,
+              minHeight: 44,
+              borderRadius: 10,
+              fontFamily: "var(--draft-font-title)",
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: "pointer",
+              border: `2px solid ${mobileTab === key ? "var(--draft-burgundy)" : "var(--draft-line)"}`,
+              background: mobileTab === key ? "var(--draft-burgundy)" : "var(--draft-card)",
+              color: mobileTab === key ? "#fff" : "var(--draft-ink)",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* ─── 본문: 3컬럼 ─── */}
       <div
         style={{
@@ -258,17 +321,25 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
           minHeight: "calc(100vh - 220px)",
         }}
         className="draft-board-grid"
+        data-tab={mobileTab}
       >
         <style>{`
           @media (min-width: 1024px) {
             .draft-board-grid {
               grid-template-columns: 380px minmax(0, 1fr) 320px !important;
             }
+            .draft-mobile-tabs { display: none !important; }
+          }
+          /* 모바일에서만 한 쪽씩 — display:none 이라 상태는 유지된다(언마운트 아님) */
+          @media (max-width: 1023px) {
+            .draft-board-grid[data-tab="pool"] .draft-col-lineup { display: none !important; }
+            .draft-board-grid[data-tab="lineup"] .draft-col-pool { display: none !important; }
           }
         `}</style>
 
         {/* ─── 좌측: 선수 풀 ─── */}
         <div
+          className="draft-col-pool"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -458,6 +529,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
 
         {/* ─── 중앙: 내 라인업 ─── */}
         <div
+          className="draft-col-lineup"
           style={{
             display: "flex",
             flexDirection: "column",
