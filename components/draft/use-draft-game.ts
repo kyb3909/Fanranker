@@ -36,8 +36,10 @@ export function useDraftGame(slug: string) {
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    loadPlayers().then(() => setPlayersLoaded(true))
-  }, [])
+    // 게임마다 선수 풀이 다르다 — 카탈로그의 dataFile 을 따른다 (EPL = FPL 2026/27)
+    setPlayersLoaded(false)
+    loadPlayers(entry?.dataFile).then(() => setPlayersLoaded(true))
+  }, [entry?.dataFile])
 
   const processAITurn = useCallback(
     (currentState: DraftState) => {

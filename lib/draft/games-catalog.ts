@@ -31,6 +31,13 @@ export type DraftCatalogEntry = {
   avgMinutes: number
   plays: number
   formationOptions: string[]
+  /**
+   * 선수 풀 데이터 파일 (public/data/ 기준).
+   * ⚠️ 종전엔 lib/draft/players.ts 가 arsenal-players.json 을 **하드코딩**했다 —
+   *    그래서 EPL 슬러그가 "24-25 시즌 현역" 이라고 써 놓고 아스널 레전드를 띄웠다
+   *    (2026-08-25 실측: 보드에 티에리 앙리·베르캄프가 나왔다).
+   */
+  dataFile: string
   positions: DraftGamePosition[]
   badge: DraftGameBadge
   active: boolean
@@ -45,14 +52,15 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     emoji: "⚽",
     sport: "football",
     themeColor: "#38003c",
-    blurb: "24-25 시즌 현역 200명. 예산 £80에 4-3-3을 짜라.",
+    blurb: "2026/27 FPL 등록 609명. 실제 몸값으로 11명을 짜라.",
     rosterSize: 11,
-    budget: 80,
+    budget: 70, // 2026-08-25 시뮬레이션 330판으로 산정 (scripts/_draft-budget-sweep.ts)
     currency: "£",
-    poolSize: 218,
+    poolSize: 609,
     avgMinutes: 8,
     plays: 12480,
     formationOptions: ["4-3-3", "4-4-2", "3-5-2", "5-3-2"],
+    dataFile: "fpl-players.json",
     positions: [
       { code: "GK", label: "골키퍼", color: "#fbcd5a", count: 1 },
       { code: "DF", label: "수비", color: "#1f4d7a", count: 4 },
@@ -77,6 +85,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     avgMinutes: 7,
     plays: 0,
     formationOptions: ["4-3-3", "4-4-2", "3-4-3"],
+    dataFile: "arsenal-players.json",
     positions: [
       { code: "GK", label: "골키퍼", color: "#fbcd5a", count: 1 },
       { code: "DF", label: "수비", color: "#1f4d7a", count: 4 },
@@ -100,6 +109,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     avgMinutes: 5,
     plays: 0,
     formationOptions: ["positional"],
+    dataFile: "arsenal-players.json",
     positions: [
       { code: "PG", label: "포인트가드", color: "#fbcd5a", count: 1 },
       { code: "SG", label: "슈팅가드", color: "#c98615", count: 1 },
@@ -125,6 +135,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     avgMinutes: 6,
     plays: 0,
     formationOptions: ["roles"],
+    dataFile: "arsenal-players.json",
     positions: [
       { code: "君", label: "군주", color: "#fbcd5a", count: 1 },
       { code: "士", label: "책사", color: "#5b3a8a", count: 1 },
@@ -148,6 +159,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     avgMinutes: 4,
     plays: 0,
     formationOptions: ["positional"],
+    dataFile: "arsenal-players.json",
     positions: [],
     badge: "SOON",
     active: false,
@@ -167,6 +179,7 @@ export const DRAFT_GAMES: DraftCatalogEntry[] = [
     avgMinutes: 9,
     plays: 0,
     formationOptions: ["roles"],
+    dataFile: "arsenal-players.json",
     positions: [],
     badge: "SOON",
     active: false,

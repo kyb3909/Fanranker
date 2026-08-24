@@ -578,7 +578,10 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
               padding: 14,
             }}
           >
-            <BudgetBar used={myBudgetUsed} total={80} currency="£" />
+            {/* ⚠️ total 이 80 으로 **하드코딩**돼 있었다 (2026-08-25 실측). 엔진은
+                카탈로그 예산으로 도는데 막대만 80 기준으로 그려서, 예산을 바꾸면
+                화면 잔액이 실제와 어긋났다. state.initialBudget 이 정본이다. */}
+            <BudgetBar used={myBudgetUsed} total={state.initialBudget} currency="£" />
           </div>
 
           {/* 강점/약점 */}

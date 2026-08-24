@@ -12,13 +12,25 @@ export interface Player {
 
 let _players: Player[] | null = null
 let _loadingPromise: Promise<Player[]> | null = null
+let _loadedFile: string | null = null
 
-export async function loadPlayers(): Promise<Player[]> {
-  if (_players) return _players
-  if (_loadingPromise) return _loadingPromise
-  _loadingPromise = fetch("/data/arsenal-players.json")
+const DEFAULT_DATA_FILE = "arsenal-players.json"
+
+/**
+ * 선수 풀 로드. 게임마다 데이터 파일이 다르다 (`games-catalog.ts` 의 `dataFile`).
+ *
+ * ⚠️ 종전엔 `arsenal-players.json` 이 **하드코딩**돼 있었다. 그래서 EPL 슬러그가
+ *    "24-25 시즌 현역" 이라고 써 놓고 실제로는 아스널 레전드를 띄웠다
+ *    (2026-08-25 실측: 보드에 티에리 앙리·베르캄프). 파일이 바뀌면 캐시도 버린다.
+ */
+export async function loadPlayers(dataFile: string = DEFAULT_DATA_FILE): Promise<Player[]> {
+  if (_players && _loadedFile === dataFile) return _players
+  if (_loadingPromise && _loadedFile === dataFile) return _loadingPromise
+  _loadedFile = dataFile
+  _players = null
+  _loadingPromise = fetch(`/data/${dataFile}`)
     .then((r) => {
-      if (!r.ok) throw new Error(`arsenal-players load failed: ${r.status}`)
+      if (!r.ok) throw new Error(`${dataFile} load failed: ${r.status}`)
       return r.json() as Promise<Player[]>
     })
     .then((data) => {
