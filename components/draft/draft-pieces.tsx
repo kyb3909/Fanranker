@@ -128,6 +128,13 @@ interface PlayerPoolCardProps {
   canPick: boolean
   slotFull: boolean
   overBudget: boolean
+  /**
+   * 풀에서 도판으로 바로 끌어다 놓기 (2026-08-25 운영자 요청).
+   * 카드를 누른 채 움직이면 보드가 드래그를 이어받는다 — 여기서는 시작만 알린다.
+   */
+  onDragStart?: (e: React.PointerEvent) => void
+  /** 못 뽑는 이유를 보드가 직접 준다 (엔진 판정). 없으면 아래 기본 문구로 떨어진다. */
+  reasonLabel?: string | null
   takenBy?: string | null
   pinned?: boolean
   onPick: () => void
@@ -140,17 +147,15 @@ export function PlayerPoolCard({
   slotFull,
   overBudget,
   takenBy,
+  onDragStart,
+  reasonLabel,
   pinned = false,
   onPick,
   onTogglePin,
 }: PlayerPoolCardProps) {
   const reason = takenBy
     ? `${takenBy} 픽`
-    : slotFull
-      ? "슬롯 꽉 참"
-      : overBudget
-        ? "예산 초과"
-        : null
+    : (reasonLabel ?? null) || (slotFull ? "슬롯 꽉 참" : overBudget ? "예산 초과" : null)
   const accent = getTeamAccent(player.teamKo, player.position)
 
   return (
@@ -168,6 +173,13 @@ export function PlayerPoolCard({
         gap: 12,
         opacity: takenBy ? 0.4 : 1,
         transition: "box-shadow .15s, border-color .15s",
+        // 끌 수 있는 카드만 손잡이 커서. 터치 스크롤은 살려 둔다 —
+        // 보드가 6px 임계를 넘겨야 드래그로 승격시킨다.
+        cursor: onDragStart && canPick ? "grab" : undefined,
+        touchAction: "pan-y",
+      }}
+      onPointerDown={(e) => {
+        if (onDragStart && canPick) onDragStart(e)
       }}
       onMouseEnter={(e) => {
         if (canPick) e.currentTarget.style.boxShadow = "var(--draft-shadow-2)"

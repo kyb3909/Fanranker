@@ -27,6 +27,11 @@ interface PitchVizProps {
    *    페이지 스크롤이 살아 있다 (모바일 감사에서 스크롤 충돌을 실측했다).
    */
   onArrange?: (next: Record<string, Player | null>) => void
+  /**
+   * 선수 풀에서 이 포지션 카드를 끌고 오는 중. 설 수 있는 **빈** 자리에 놓을 곳 표시를
+   * 켠다 — 도판 안에서 옮길 때 쓰는 표시를 그대로 재사용한다.
+   */
+  incomingPosition?: Position | null
 }
 
 /**
@@ -39,6 +44,7 @@ export function PitchViz({
   onClickSlot,
   compact = false,
   onArrange,
+  incomingPosition = null,
 }: PitchVizProps) {
   /**
    * 고른 선수의 **id**. 슬롯 코드로 잡으면 안 된다 — 드래프트 중에는 픽이 들어올 때마다
@@ -140,6 +146,7 @@ export function PitchViz({
   return (
     <div
       ref={boardRef}
+      data-pitch-root=""
       style={{
         width: "100%",
         aspectRatio: compact ? "5/4" : "4/5",
@@ -221,16 +228,22 @@ export function PitchViz({
         const isPicked = activeCode === s.code
         const pickedPlayer = activeCode ? filled[activeCode] : null
         const droppable =
-          !!onArrange &&
-          !!pickedPlayer &&
-          !isPicked &&
-          canPlay(pickedPlayer.position, s.posCode) &&
-          (!player || canPlay(player.position, slotPosition(activeCode as string)))
+          (!!incomingPosition && !player && canPlay(incomingPosition, s.posCode)) ||
+          (!!onArrange &&
+            !!pickedPlayer &&
+            !isPicked &&
+            canPlay(pickedPlayer.position, s.posCode) &&
+            (!player || canPlay(player.position, slotPosition(activeCode as string))))
         const offPos = !!player && isOutOfPosition(player.position, s.posCode)
         return (
           <button
             key={s.code}
             type="button"
+            /* ⚠️ `data-slot` 은 shadcn/Radix 가 이미 전역으로 쓴다 (버튼마다 붙는다).
+               그대로 쓰면 보드의 좌표 탐색이 페이지의 온갖 버튼을 훑는다 — 접두사를 붙인다. */
+            data-pitch-slot={s.code}
+            data-pitch-slot-pos={s.posCode}
+            data-pitch-slot-filled={player ? "1" : "0"}
             onClick={() => {
               if (suppressClick.current) {
                 suppressClick.current = false

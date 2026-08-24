@@ -188,6 +188,29 @@ function lowerBound(asc: number[], value: number): number {
   return lo
 }
 
+/**
+ * 픽이 막힌 이유 — 화면에 정확한 문구를 띄우기 위한 것.
+ *
+ * UI 가 자체 규칙(`포지션 개수 >= 한도`)으로 회색 처리하면 엔진과 어긋난다.
+ * 실제로 어긋나 있었다: 메리노(MF)는 FW 자리에 설 수 있는데 미드 칸이 찼다고
+ * 풀에서 잠겼다 (2026-08-25 운영자 제보). 판정은 한 곳에서만 한다.
+ */
+export type PickBlock = null | "taken" | "budget" | "reserve" | "slots"
+
+export function pickBlockReason(state: DraftState, seatIndex: number, playerId: string): PickBlock {
+  if (state.draftedPlayerIds.has(playerId)) return "taken"
+  const player = getAllPlayers().find((p: Player) => p.id === playerId)
+  if (!player) return "taken"
+  if (state.budget[seatIndex] < player.price) return "budget"
+
+  const participant = state.participants.find((p) => p.seatIndex === seatIndex)
+  const slots = formationSlots(participant?.formation ?? "4-4-2")
+  const roster = state.roster[seatIndex] || []
+  if (!canAssignAll([...roster.map((p) => p.position), player.position], slots)) return "slots"
+
+  return isValidPick(state, seatIndex, playerId) ? null : "reserve"
+}
+
 /** 픽 실행 - 새 state 반환 */
 export function makePick(state: DraftState, playerId: string, isAutoPick = false): DraftState {
   const seatIndex = getCurrentSeat(state)

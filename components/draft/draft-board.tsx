@@ -1,14 +1,15 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Search } from "lucide-react"
 import { TimerRing } from "./timer-ring"
 import { PitchViz, mergeRosterIntoSlots } from "./pitch-viz"
 import { AiPanel, BudgetBar, PlayerPoolCard, SnakeOrder } from "./draft-pieces"
 import { getAllPlayers, type Player, type Position } from "@/lib/draft/players"
 import type { DraftState } from "@/lib/draft/engine"
-import { getCurrentSeat, getCurrentRound, getSeatLimits } from "@/lib/draft/engine"
+import { getCurrentSeat, getCurrentRound, getSeatLimits, pickBlockReason } from "@/lib/draft/engine"
 import { analyzeLineup } from "@/lib/draft/visual-helpers"
+import { canPlay } from "@/lib/draft/positions"
 
 import "@/app/games/draft/draft-tokens.css"
 
@@ -30,6 +31,15 @@ const POS_TABS: { key: PosFilter; label: string }[] = [
   { key: "MF", label: "미드" },
   { key: "FW", label: "공격" },
 ]
+
+/** 못 뽑는 이유 → 화면 문구. "슬롯"은 자리가 아예 안 나오는 경우만이다. */
+const BLOCK_LABEL: Record<string, string | null> = {
+  none: null,
+  taken: "이미 뽑힘",
+  budget: "예산 초과",
+  reserve: "남은 자리 예산 부족",
+  slots: "설 자리 없음",
+}
 
 export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: DraftBoardProps) {
   const [posFilter, setPosFilter] = useState<PosFilter>("ALL")
@@ -58,6 +68,18 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
 
   const allPlayers = useMemo(() => getAllPlayers(), [])
 
+  /** 지금 뽑을 수 있는 선수 id — 정렬과 카드 판정이 같은 답을 쓰게 한 곳에서 만든다. */
+  const pickable = useMemo(() => {
+    const ok = new Set<string>()
+    if (!myTurn) return ok
+    for (const p of allPlayers) {
+      if (state.draftedPlayerIds.has(p.id)) continue
+      if (pickBlockReason(state, mySeat, p.id) === null) ok.add(p.id)
+    }
+    return ok
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPlayers, state, mySeat, myTurn])
+
   const filteredPool = useMemo(() => {
     let list = allPlayers.filter((p) => !state.draftedPlayerIds.has(p.id))
 
@@ -77,6 +99,17 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
 
     list = [...list].sort((a, b) => {
       if (sortBy === "recommend") {
+        /**
+         * ⚠️ **뽑을 수 있는 선수를 먼저** 올린다.
+         *
+         * 종전엔 값비싼 순으로만 정렬하고 60명에서 잘랐다. 그래서 비싼 선수를 두세 명
+         * 잡으면 화면에 남는 60장이 전부 예산 초과가 돼 "더는 영입을 못 한다"로 보였다
+         * (2026-08-25 운영자 제보 + 자동 플레이 재현: 3픽 만에 영입 버튼 전멸).
+         * 실제로는 살 수 있는 싼 선수가 500명 넘게 있었지만 목록 밖이었다.
+         */
+        const pa = pickable.has(a.id) ? 1 : 0
+        const pb = pickable.has(b.id) ? 1 : 0
+        if (pa !== pb) return pb - pa
         const sa = a.price + (pinned[a.id] ? 5 : 0)
         const sb = b.price + (pinned[b.id] ? 5 : 0)
         return sb - sa
@@ -88,7 +121,7 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
 
     // 최대 60개만 (DOM 폭발 방지)
     return list.slice(0, 60)
-  }, [allPlayers, state.draftedPlayerIds, posFilter, search, sortBy, pinned])
+  }, [allPlayers, state.draftedPlayerIds, posFilter, search, sortBy, pinned, pickable])
 
   // 포지션별 풀 카운트 (탭에 표시)
   const poolCounts = useMemo<Record<PosFilter, number>>(() => {
@@ -120,6 +153,76 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
   const myBudgetUsed = state.initialBudget - myBudgetRemaining
 
   const togglePin = (id: string) => setPinned((prev) => ({ ...prev, [id]: !prev[id] }))
+
+  /**
+   * 선수 풀 → 도판 드래그 (2026-08-25 운영자 요청: "선수창에서도 바로 드래그해서 넣게").
+   *
+   * 풀과 도판은 다른 컴포넌트라 드래그 상태를 보드가 들고 있어야 한다. 도판 슬롯에는
+   * `data-pitch-slot` 을 달아 뒀으므로 좌표로 가장 가까운 **빈** 슬롯을 찾는다.
+   * 놓으면 두 가지가 한 번에 일어난다 — 영입(onPick) + 그 자리에 배치(setArranged).
+   * arranged 를 먼저 정해 두면 픽 직후 mergeRosterIntoSlots 가 그 자리를 유지한다.
+   */
+  const poolDragRef = useRef<{ player: Player; x0: number; y0: number; moved: boolean } | null>(
+    null
+  )
+  const [poolDrag, setPoolDrag] = useState<{ player: Player; x: number; y: number } | null>(null)
+
+  const emptySlotAt = (x: number, y: number, player: Player): string | null => {
+    const nodes = [...document.querySelectorAll<HTMLElement>("[data-pitch-slot]")]
+    let best: string | null = null
+    let bestD = Infinity
+    for (const n of nodes) {
+      if (n.dataset.pitchSlotFilled === "1") continue
+      const pos = n.dataset.pitchSlotPos as Position
+      if (!canPlay(player.position, pos)) continue
+      const r = n.getBoundingClientRect()
+      const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2))
+      if (d < bestD) {
+        bestD = d
+        best = n.dataset.pitchSlot ?? null
+      }
+    }
+    return bestD <= 90 ? best : null
+  }
+
+  const startPoolDrag = (player: Player, e: React.PointerEvent) => {
+    poolDragRef.current = { player, x0: e.clientX, y0: e.clientY, moved: false }
+    const onMove = (ev: PointerEvent) => {
+      const d = poolDragRef.current
+      if (!d) return
+      if (!d.moved && Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return
+      d.moved = true
+      ev.preventDefault() // 드래그로 승격된 뒤에만 스크롤을 막는다
+      setPoolDrag({ player: d.player, x: ev.clientX, y: ev.clientY })
+    }
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      const d = poolDragRef.current
+      poolDragRef.current = null
+      setPoolDrag(null)
+      if (!d?.moved) return // 안 움직였으면 그냥 클릭 — 영입 버튼이 처리한다
+      const target = emptySlotAt(ev.clientX, ev.clientY, d.player)
+      if (target) {
+        setArranged((prev) => ({ ...prev, [target]: d.player }))
+        onPick(d.player.id)
+        return
+      }
+      // 빈 자리를 정확히 못 짚었어도 **잔디 안**이면 영입은 시킨다. 자동 배치가 받아 준다.
+      // (자리를 겨냥했는데 아무 일도 안 일어나면 드래그가 고장 난 걸로 읽힌다.)
+      const root = document.querySelector<HTMLElement>("[data-pitch-root]")
+      const r = root?.getBoundingClientRect()
+      const inside =
+        !!r &&
+        ev.clientX >= r.left &&
+        ev.clientX <= r.right &&
+        ev.clientY >= r.top &&
+        ev.clientY <= r.bottom
+      if (inside) onPick(d.player.id)
+    }
+    window.addEventListener("pointermove", onMove, { passive: false })
+    window.addEventListener("pointerup", onUp)
+  }
 
   return (
     <div className="draft-scope" style={{ background: "var(--draft-paper)" }}>
@@ -507,9 +610,13 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
               </div>
             ) : (
               filteredPool.map((p) => {
-                const slotFull = myPosCounts[p.position] >= myLimits[p.position]
-                const overBudget = p.price > myBudgetRemaining
-                const canPick = isActive && myTurn && !slotFull && !overBudget
+                // ⚠️ 판정은 엔진 한 곳에서만 한다. 종전엔 여기서 "포지션 개수 >= 한도" 로
+                //    따로 계산해, 자격 유연화 뒤에도 풀에서는 잠겼다 (메리노(MF)가 FW 자리에
+                //    설 수 있는데 미드가 찼다고 회색 처리됨 — 2026-08-25 운영자 제보).
+                const block = pickBlockReason(state, mySeat, p.id)
+                const overBudget = block === "budget"
+                const slotFull = block === "slots" || block === "reserve"
+                const canPick = isActive && myTurn && block === null
                 return (
                   <PlayerPoolCard
                     key={p.id}
@@ -517,6 +624,8 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
                     canPick={canPick}
                     slotFull={slotFull}
                     overBudget={overBudget}
+                    reasonLabel={BLOCK_LABEL[block ?? "none"]}
+                    onDragStart={(e) => startPoolDrag(p, e)}
                     pinned={pinned[p.id]}
                     onPick={() => onPick(p.id)}
                     onTogglePin={() => togglePin(p.id)}
@@ -566,7 +675,12 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
 
           {/* 잔디 viz */}
           <div style={{ flex: 1, minHeight: 0, maxHeight: 540 }}>
-            <PitchViz formation={formation} filled={slotsFilled} onArrange={setArranged} />
+            <PitchViz
+              formation={formation}
+              filled={slotsFilled}
+              onArrange={setArranged}
+              incomingPosition={poolDrag?.player.position ?? null}
+            />
           </div>
 
           {/* 예산 */}
@@ -832,6 +946,33 @@ export function DraftBoard({ state, mySeat, onPick, onTimeout, timerReset }: Dra
           </div>
         </div>
       </div>
+
+      {/* 풀에서 끌고 오는 카드 — 도판 드래그와 같은 모양으로 손가락을 따라다닌다 */}
+      {poolDrag && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            left: poolDrag.x,
+            top: poolDrag.y,
+            transform: "translate(-50%, -50%) scale(1.08)",
+            pointerEvents: "none",
+            zIndex: 9999,
+            background: "rgba(255,255,255,0.98)",
+            borderRadius: 8,
+            padding: "6px 10px",
+            border: "2px solid #ffd54a",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.35)",
+            fontFamily: "var(--draft-font-title)",
+            fontWeight: 900,
+            fontSize: 12,
+            color: "var(--draft-ink)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {poolDrag.player.nameKo} · £{poolDrag.player.price.toFixed(1)}
+        </div>
+      )}
     </div>
   )
 }
