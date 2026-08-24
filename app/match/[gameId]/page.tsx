@@ -164,27 +164,14 @@ export default async function MatchPage({ params }: Props) {
         awayLabel={awayLabel}
         live={live}
         minute={lfa?.minute ?? null}
+        /* 불판 참여 — 경기를 보는 사람을 댓글 판으로 (2026-08-20). 불판이 있을 때만.
+           2026-08-24 운영자 채택(시안 B): 밴드 아래 한 줄 배너에서 **이음매에 걸치는
+           알약**으로. 배너가 잔광과 같은 색이라 표면이 사라졌던 문제를 형태로 푼다 —
+           근거와 실측 대비비는 match-header.tsx 주석. */
+        thread={thread ? { id: thread.id, commentCount: thread.comment_count ?? 0 } : null}
       />
       {/* 진행 중에만 마운트 — FT 로 다시 그려지면 스스로 빠진다 */}
       {live && <LiveRefresher />}
-
-      {/* 불판 참여 — 경기를 보는 사람을 댓글 판으로 (2026-08-20). 불판이 있을 때만 */}
-      {thread && (
-        <div className="mx-auto max-w-[1080px] px-4 pt-4 sm:px-6">
-          <Link
-            href={`/post/${thread.id}?utm_source=matchcenter`}
-            className="flex items-baseline justify-between rounded-xl px-4 py-3 no-underline transition-colors hover:bg-[var(--wc-tint)]"
-            style={{ background: "var(--wc-wine-tint)", border: "1px solid var(--wc-line)" }}
-          >
-            <span className="text-[13.5px] font-bold" style={{ color: "var(--wc-ink)" }}>
-              이 경기 불판에서 같이 봐요
-            </span>
-            <span className="text-[12.5px] font-bold" style={{ color: "var(--wc-burgundy)" }}>
-              {thread.comment_count > 0 ? `댓글 ${thread.comment_count} · ` : ""}참여 →
-            </span>
-          </Link>
-        </div>
-      )}
 
       {/* 데스크톱 2단: 본문 720(현행 그대로) + 우측 레일 (2026-08-20 시안 승인 —
           "좌우가 너무 비어 있다"). 레일은 lg 이상에서만 — 모바일 무변화. */}

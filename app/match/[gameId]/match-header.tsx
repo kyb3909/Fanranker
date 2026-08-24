@@ -49,6 +49,7 @@ export function MatchHeader({
   awayLabel,
   live = false,
   minute = null,
+  thread = null,
 }: {
   match: MatchSummary
   finished: boolean
@@ -60,6 +61,8 @@ export function MatchHeader({
   /** LFA 기준 진행 중 (2026-08-20 라이브 매치센터) — 스코어·분을 라이브로 낸다 */
   live?: boolean
   minute?: string | null
+  /** 이 경기의 불판. 있으면 밴드 아래 이음매에 걸치는 도선이 붙는다 */
+  thread?: { id: string | number; commentCount: number } | null
 }) {
   // 라이브 중에도 스코어를 낸다 (2026-08-20 운영자: "그래야 매치센터지") —
   // 종전 "진행 중엔 스코어를 주장하지 않는다"(8/16)는 LFA 라이브 실측 확인으로 폐기.
@@ -91,22 +94,26 @@ export function MatchHeader({
   const markSrc = leagueMarkSrc(match.leagueCode)
 
   return (
-    <section className="gn-band" aria-label="경기 스코어">
-      {/* 리그 워터마크 — 크림 에칭 라인, 우하단 (2026-08-20 P2). 밴드가 overflow:hidden
-          + relative 라 그대로 잘려 앉는다. 콘텐츠 프레임에 relative 를 줘 글 위로 올린다. */}
+    <section className={thread ? "gn-band gn-band-open" : "gn-band"} aria-label="경기 스코어">
+      {/* 리그 워터마크 — 크림 에칭 라인, 우하단 (2026-08-20 P2). 콘텐츠 프레임에
+          relative 를 줘 글 위로 올린다.
+          ⚠️ 불판 도선이 붙으면 밴드가 overflow:visible 이라 밴드 스스로는 더 이상
+             잘라 주지 않는다 → 워터마크만 따로 감싸서 밴드 박스에 가둔다. */}
       {markSrc && (
-        <Image
-          src={markSrc}
-          alt=""
-          width={600}
-          height={400}
-          aria-hidden
-          className="pointer-events-none absolute right-0 bottom-0 w-[420px] max-w-[52%] select-none"
-          style={{ opacity: 0.11 }}
-        />
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <Image
+            src={markSrc}
+            alt=""
+            width={600}
+            height={400}
+            aria-hidden
+            className="absolute right-0 bottom-0 w-[420px] max-w-[52%] select-none"
+            style={{ opacity: 0.11 }}
+          />
+        </div>
       )}
       <div /* 본문 프레임(1080)과 좌측 등뼈를 맞춘다 — 밴드만 1280 이면 전환 시 점프 */
-        className="relative mx-auto max-w-[1080px] px-4 pt-5 pb-6 sm:px-6"
+        className={`relative mx-auto max-w-[1080px] px-4 pt-5 sm:px-6 ${thread ? "pb-3" : "pb-6"}`}
       >
         <div className="flex items-center justify-between gap-3">
           <Link
@@ -204,6 +211,54 @@ export function MatchHeader({
           {match.venue ? ` · ${match.venue}` : ""}
         </p>
       </div>
+
+      {/* 불판 도선 — 밴드와 종이의 이음매에 걸친다 (2026-08-24 시안 B 채택).
+          종전 한 줄 배너가 안 보였던 건 색이 옅어서가 아니었다: `.gn-band + *` 가 다음
+          형제에게 깔아 주는 버건디 잔광(#f7eef0)과 배너 채움(#fbf2f4)이 사실상 같은 색이라
+          (대비 1.04:1) 표면 자체가 없었고, 모양은 같은 화면의 길안내 줄 셋과 한 글자도
+          달라지지 않아 "넘겨도 되는 줄"로 학습됐다.
+          경계선을 가로지르는 물체는 그 경계의 대비를 빌려 온다 — 윗절반이 다크 위라
+          윤곽이 무조건 잡히고, 잔광 위에 놓여도 사라지지 않는다.
+          클리핑은 `.gn-band-open` 이 푼다 (운동장 게시판 카드와 같은 문법 — 새 모양을
+          발명하지 않는다). 잘려 나가는 건 워터마크뿐이라 위에서 따로 가둬 뒀다. */}
+      {thread && (
+        // ⚠️ 음수 마진은 **flex 아이템**에 건다. 블록 자식에 걸면 overflow 가 풀린 밴드
+        //    밖으로 마진이 붕괴해 나가 다음 형제(main)만 20px 끌어올리고 알약은 걸치지
+        //    않는다 (2026-08-24 실측: belowSeam 0px). 운동장 카드도 같은 이유로 그리드
+        //    안에 들어 있다.
+        <div className="mx-auto flex max-w-[1080px] justify-center px-4 sm:px-6">
+          <div className="relative z-[2] mb-[-20px] max-w-full">
+            <Link
+              href={`/post/${thread.id}?utm_source=matchcenter`}
+              className="inline-flex h-10 max-w-full items-center gap-[9px] rounded-full pr-[5px] pl-[15px] whitespace-nowrap no-underline transition-transform hover:-translate-y-0.5"
+              style={{
+                background: "var(--wc-paper)",
+                border: "1px solid color-mix(in srgb, var(--wc-burgundy) 18%, var(--wc-paper))",
+                boxShadow: "0 6px 20px rgba(74, 13, 25, 0.24)",
+              }}
+            >
+              <span
+                aria-hidden
+                className="h-[7px] w-[7px] shrink-0 rounded-full"
+                style={{ background: "var(--wc-burgundy)" }}
+              />
+              <span
+                className="min-w-0 truncate text-[12.5px] font-extrabold"
+                style={{ color: "var(--wc-ink)" }}
+              >
+                경기 반응 보러
+                {thread.commentCount > 0 ? ` · 댓글 ${thread.commentCount}` : ""}
+              </span>
+              <span
+                className="inline-flex h-[30px] shrink-0 items-center rounded-full px-[13px] text-[11.5px] font-extrabold text-white"
+                style={{ background: "var(--wc-burgundy)" }}
+              >
+                불판 →
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
