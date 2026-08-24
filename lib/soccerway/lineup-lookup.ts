@@ -135,7 +135,7 @@ function cachedLineup(eventId: string) {
  *    persons 배열(plain object)만 꺼내 캐시한다.
  * 사전 접근은 반드시 lib/news/notation 경유 (notation-single-door 아키텍처 가드).
  */
-const cachedPersons = unstable_cache(
+export const cachedPersons = unstable_cache(
   async () => {
     const notation = await loadNotationSafe(createServiceRoleClient())
     return notation.persons.map((p) => ({ romanized: p.romanized, preferred_ko: p.preferred_ko }))
@@ -150,7 +150,7 @@ const cachedPersons = unstable_cache(
  * 순위(운영자 확정 사전 > 수확분)에 따라 뉴스 표기 사전 unique 매칭이 먼저, 이건 2차.
  * Map 은 Data Cache 직렬화가 안 되므로 pair 배열로 캐시하고 사용처에서 Map 을 만든다.
  */
-const cachedSquadPairs = unstable_cache(
+export const cachedSquadPairs = unstable_cache(
   async (): Promise<[string, string][]> => {
     const { data } = await createServiceRoleClient()
       .from("team_squads")

@@ -4,10 +4,13 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { chatParams } from "@/lib/llm/openai-params"
 import { findUniqueRomanizedMatch } from "@/lib/news/notation"
+import { matchByNickname } from "@/lib/soccerway/nickname-match"
 import {
   getLineupForGame,
   resolveMatchEvent,
   type LineupResponse,
+  cachedPersons,
+  cachedSquadPairs,
 } from "@/lib/soccerway/lineup-lookup"
 
 /**
@@ -252,20 +255,72 @@ async function extractEvents(
   }
 }
 
-/** ② 사건 속 영문 선수명 → 그 경기 라인업의 확정 표기 (결정론 — LLM 없음) */
-function groundPlayerNames(
+/**
+ * ② 사건 속 영문 선수명 → 한글 확정 표기 (결정론 — LLM 없음)
+ *
+ * ⚠️⚠️ **3단 폴백**이다 (2026-08-25). 종전엔 그 경기 라인업 로스터 **한 곳만** 봤고,
+ *    라인업이 안 잡히면(`status !== "ready"`) 전원을 영문 그대로 통과시켰다. 그래서
+ *    사전에 "리바이 콜윌"·"베른트 레노"가 멀쩡히 있는데도 리포트만 영문으로 나갔다
+ *    (운영자 제보). 같은 경기의 **라인업 화면은 한글로 잘 나오고 있었다** — 그쪽은
+ *    이미 사전 2단 폴백을 쓰고 있었기 때문이다. 리포트만 혼자 1단이었던 셈이다.
+ *
+ *    ① 그 경기 라인업 로스터 — 가장 강한 근거 (그 경기에 실제로 뛴 사람)
+ *    ② 표기 사전(notation persons) — 운영자 확정 표기가 정본
+ *    ③ 팀 스쿼드 사전(team_squads) — 슬러그 정확 매칭, 수확분
+ *
+ *    셋 다 못 찾으면 영문을 남긴다 — 틀린 한글보다 원문이 낫다는 규율은 그대로다.
+ */
+async function groundPlayerNames(
   events: MatchEvent[],
   lineup: LineupResponse
-): { events: MatchEvent[]; grounded: number; total: number } {
-  if (lineup.status !== "ready") return { events, grounded: 0, total: 0 }
-  const roster = [
-    ...lineup.home.starters,
-    ...lineup.home.bench,
-    ...lineup.away.starters,
-    ...lineup.away.bench,
-  ]
-    .filter((p) => p.roman)
-    .map((p) => ({ romanized: p.roman, label: p.label }))
+): Promise<{ events: MatchEvent[]; grounded: number; total: number }> {
+  const roster =
+    lineup.status === "ready"
+      ? [
+          ...lineup.home.starters,
+          ...lineup.home.bench,
+          ...lineup.away.starters,
+          ...lineup.away.bench,
+        ]
+          .filter((p) => p.roman)
+          .map((p) => ({ romanized: p.roman, label: p.label }))
+      : []
+
+  // ②③ 사전 — 라인업이 못 잡은 이름을 받는다. 실패해도 리포트는 계속 간다(fail-open).
+  const persons = await cachedPersons().catch(
+    () => [] as { romanized: string | null; preferred_ko: string }[]
+  )
+  const squadPairs = await cachedSquadPairs().catch(() => [] as [string, string][])
+  // 같은 슬러그가 서로 다른 한글명으로 두 번 나오면(전 소속팀 잔재) 둘 다 버린다
+  const squadKo = new Map<string, string>()
+  const clash = new Set<string>()
+  for (const [slug, ko] of squadPairs) {
+    const prev = squadKo.get(slug)
+    if (prev !== undefined && prev !== ko) clash.add(slug)
+    else squadKo.set(slug, ko)
+  }
+  for (const sl of clash) squadKo.delete(sl)
+  // 스쿼드 사전도 로마자 토큰 매칭에 태운다 — 기사 표기("Levi Colwill")와 슬러그
+  // 표기("colwill levi")는 어순이 다르므로 정확 문자열 비교로는 못 잡는다.
+  const squadEntries = [...squadKo.entries()].map(([slug, ko]) => ({
+    romanized: slug,
+    preferred_ko: ko,
+  }))
+
+  const resolve = (name: string): string | null => {
+    const inLineup = findUniqueRomanizedMatch(roster, name)
+    if (inLineup) return inLineup.label
+    const inNotation = findUniqueRomanizedMatch(persons, name)
+    if (inNotation) return inNotation.preferred_ko
+    const inSquad = findUniqueRomanizedMatch(squadEntries, name)
+    if (inSquad) return inSquad.preferred_ko
+    // ④ 애칭 보정 — 마지막 수단
+    const nick =
+      matchByNickname(roster, name)?.label ??
+      matchByNickname(persons, name)?.preferred_ko ??
+      matchByNickname(squadEntries, name)?.preferred_ko
+    return nick ?? null
+  }
 
   let grounded = 0
   let total = 0
@@ -274,9 +329,9 @@ function groundPlayerNames(
     players: e.players.map((name) => {
       total++
       // 동명이인이면 null — 틀린 확정보다 원문 유지가 낫다 (표기 사전과 같은 규율)
-      const hit = findUniqueRomanizedMatch(roster, name)
+      const hit = resolve(name)
       if (hit) grounded++
-      return hit?.label ?? name
+      return hit ?? name
     }),
   }))
   return { events: out, grounded, total }
@@ -440,7 +495,14 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       const lineup = await getLineupForGame(gameId).catch(
         () => ({ status: "none" }) as LineupResponse
       )
-      const { events } = groundPlayerNames(extracted.events, lineup)
+      const { events, grounded, total } = await groundPlayerNames(extracted.events, lineup)
+      // ⚠️ 종전엔 grounded/total 을 계산해 놓고 **버렸다**. 이름이 통째로 영문으로
+      //    나가도 아무 신호가 없었다 — 운영자 제보로만 알 수 있었다는 뜻이다.
+      if (total > 0 && grounded < total) {
+        console.warn(
+          `[match-report] 이름 확정 ${grounded}/${total} (event ${eventId}, 라인업 ${lineup.status})`
+        )
+      }
       const stats = await cachedStats(eventId)().catch(() => null)
       const sources = { paragraphs: body.paragraphs, events, stats, score: extracted.score }
 
@@ -471,7 +533,8 @@ function cachedReport(eventId: string, gameId: string, homeTeam: string, awayTea
       }
       return null // 검증 미통과 — TTL 뒤에 다시 시도한다 (매 요청마다가 아니라)
     },
-    ["match-report-v9", eventId],
+    // v10: 이름 확정 3단 폴백 (라인업 → 표기 사전 → 스쿼드 사전)
+    ["match-report-v11", eventId],
     // 실패를 물고 있는 시간 = 재시도 간격. 기사는 FT 후 30분~수시간 뒤 붙는다.
     { revalidate: 1800 }
   )
