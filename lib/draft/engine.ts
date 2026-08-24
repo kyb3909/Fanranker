@@ -1,4 +1,6 @@
 import { getAllPlayers, type Player, type Position } from "./players"
+import { canAssignAll, formationSlots } from "./positions"
+import { personaForSeat } from "./personas"
 
 export type Formation = "4-4-2" | "4-3-3" | "3-5-2" | "3-4-3" | "5-3-2" | "5-4-1"
 
@@ -121,20 +123,14 @@ export function isValidPick(state: DraftState, seatIndex: number, playerId: stri
 
   if (state.budget[seatIndex] < player.price) return false
 
-  const limits = getSeatLimits(state, seatIndex)
-  const counts = getPositionCounts(state, seatIndex)
-  if (counts[player.position] >= limits[player.position]) return false
-
-  // 남은 픽으로 나머지 포지션을 채울 수 있는지 확인
-  const remaining = getRemainingPicks(state, seatIndex) - 1
-  const newCounts = { ...counts }
-  newCounts[player.position]++
-  let neededSlots = 0
-  for (const pos of ["GK", "DF", "MF", "FW"] as Position[]) {
-    const needed = limits[pos] - newCounts[pos]
-    if (needed > 0) neededSlots += needed
-  }
-  if (neededSlots > remaining) return false
+  // 포지션 자격 (2026-08-25) — 종전엔 `counts[pos] >= limits[pos]` 로 **개수**를 셌다.
+  // 그러면 "수비수를 하나 더 뽑아 미드에 세우기"가 불가능하다. 이제 묻는 것은
+  // **이 선수를 더해도 11자리에 전원 배치가 되느냐**다 (canAssignAll, 이분 매칭).
+  const participant = state.participants.find((p) => p.seatIndex === seatIndex)
+  const slots = formationSlots(participant?.formation ?? "4-4-2")
+  const roster = state.roster[seatIndex] || []
+  const nextPositions = [...roster.map((p) => p.position), player.position]
+  if (!canAssignAll(nextPositions, slots)) return false
 
   return true
 }
@@ -175,7 +171,7 @@ export function makePick(state: DraftState, playerId: string, isAutoPick = false
 }
 
 /** AI 픽 로직 - 필요 포지션과 가성비 고려 */
-export function getAIPick(state: DraftState, seatIndex: number): string {
+export function getAIPick(state: DraftState, seatIndex: number, mySeat = 0): string {
   const limits = getSeatLimits(state, seatIndex)
   const counts = getPositionCounts(state, seatIndex)
   const remaining = getRemainingPicks(state, seatIndex)
@@ -194,20 +190,41 @@ export function getAIPick(state: DraftState, seatIndex: number): string {
     }
   }
 
-  // 후보 선수 필터링
+  // 후보 선수 필터링 — 개수가 아니라 **배치 가능성**으로 거른다 (isValidPick 과 같은 자)
   const allPlayers = getAllPlayers()
-  const available = allPlayers.filter((p: Player) => {
-    if (state.draftedPlayerIds.has(p.id)) return false
-    if (p.price > budget) return false
-    if (counts[p.position] >= limits[p.position]) return false
-    return true
-  })
+  const undraftedAll = allPlayers.filter((p: Player) => !state.draftedPlayerIds.has(p.id))
+  // 남은 픽을 살 돈은 남겨 둔다 — 안 그러면 비싼 선수를 먼저 잡고 후반에 아무도 못 산다.
+  // 공격형(starBias 1.35)이 특히 여기서 걸렸다.
+  // ⚠️ "가장 싼 선수 × 남은 픽" 으로 잡으면 과소 추정된다 — 싼 선수부터 팔리기 때문이다
+  //    (실측: 그 방식으로도 £80 예산에 £81 을 썼다). 남은 픽 수만큼 **실제로 가장 싼
+  //    선수들의 합**을 남겨야 정확하다.
+  const ascPrices = undraftedAll.map((p) => p.price).sort((a, b) => a - b)
+  const reserve = ascPrices.slice(0, Math.max(0, remaining - 1)).reduce((s, v) => s + v, 0)
+  const spendCap = budget - reserve
+
+  // isValidPick 이 이미 예산과 배치 가능성을 다 본다 — 여기서 나온 후보는 절대 예산을
+  // 넘지 않는다. 캡은 그 위에 얹는 **선호**일 뿐이라, 캡 때문에 후보가 비면 캡만 버린다.
+  const valid = undraftedAll.filter((p: Player) => isValidPick(state, seatIndex, p.id))
+  const withinCap = valid.filter((p: Player) => p.price <= spendCap)
+  // 캡 안에 아무도 없으면 **가장 싼 유효 후보 하나**로 좁힌다. 여기서 캡을 통째로
+  // 버리면 비싼 선수를 집어 후반에 돈이 말라 다시 초과가 난다 (실측 82 → 81 로만 줄었다).
+  const available =
+    withinCap.length > 0
+      ? withinCap
+      : valid.length > 0
+        ? [valid.reduce((min, p) => (p.price < min.price ? p : min))]
+        : []
 
   if (available.length === 0) {
-    const fallback = allPlayers.find(
-      (p: Player) => !state.draftedPlayerIds.has(p.id) && p.price <= budget
-    )
-    return fallback?.id || allPlayers[0].id
+    // ⚠️ 종전엔 마지막 줄이 `allPlayers[0].id` 였다 — **예산을 아예 무시**해서 잔액이
+    //    바닥나면 AI 가 £80 짜리 팀에 £140 을 쓰기도 했다 (시뮬레이션 12판 실측).
+    //    남은 선수 중 **가장 싼 쪽**으로 떨어뜨린다. 그래도 못 사면 어쩔 수 없지만
+    //    최소한 초과폭이 최소가 된다.
+    const undrafted = allPlayers.filter((p: Player) => !state.draftedPlayerIds.has(p.id))
+    const affordable = undrafted.filter((p: Player) => p.price <= budget)
+    const pool = affordable.length > 0 ? affordable : undrafted
+    if (pool.length === 0) return allPlayers[0].id
+    return pool.reduce((min, p) => (p.price < min.price ? p : min)).id
   }
 
   // urgent 포지션이 있으면 해당 포지션 우선
@@ -220,12 +237,18 @@ export function getAIPick(state: DraftState, seatIndex: number): string {
   }
 
   const avgBudgetPerPick = budget / remaining
+  // 감독 성격 (2026-08-25) — 셋이 같은 로직으로 뽑으면 매 판이 똑같다.
+  // 포지션 선호와 스타 선호 두 손잡이로 성격을 낸다 (lib/draft/personas.ts).
+  const persona = personaForSeat(seatIndex, mySeat)
 
-  candidates.sort((a, b) => {
-    const scoreA = a.price - Math.abs(a.price - avgBudgetPerPick * 1.2)
-    const scoreB = b.price - Math.abs(b.price - avgBudgetPerPick * 1.2)
-    return scoreB - scoreA
-  })
+  const scoreOf = (p: Player) => {
+    // 목표가: starBias 가 크면 평균보다 비싼 선수를 노린다
+    const target = avgBudgetPerPick * 1.2 * persona.starBias
+    const fit = p.price - Math.abs(p.price - target)
+    return fit * persona.posWeight[p.position]
+  }
+
+  candidates.sort((a, b) => scoreOf(b) - scoreOf(a))
 
   const topN = Math.min(5, candidates.length)
   const randomIndex = Math.floor(Math.random() * topN)

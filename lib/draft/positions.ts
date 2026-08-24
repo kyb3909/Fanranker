@@ -39,3 +39,49 @@ export function isOutOfPosition(playerPos: Position, slotPos: Position): boolean
 export function slotPosition(slotCode: string): Position {
   return slotCode.replace(/\d+$/, "") as Position
 }
+
+/**
+ * 이 선수들을 포메이션 11자리에 **전원 배치할 수 있는가**.
+ *
+ * 자격이 유연해지면 "MF 칸이 3개니까 MF 를 3명까지" 같은 개수 검사로는 안 된다.
+ * DF 를 MF 칸에 세울 수 있으므로, 실제로 물어야 할 것은 **자리와 선수를 짝지을 수
+ * 있느냐**다. 선수 11명·자리 11개짜리 이분 매칭이라 쿤 알고리즘으로 정확히 푼다
+ * (크기가 작아 비용은 무시할 수준).
+ *
+ * 예: 4-4-2 에 DF 5명을 뽑아도 한 명이 MF 칸에 서면 배치가 되므로 유효한 픽이다.
+ * 반대로 GK 2명은 GK 칸이 하나뿐이고 GK 는 다른 칸에 못 서므로 불가하다.
+ */
+export function canAssignAll(playerPositions: Position[], slotPositions: Position[]): boolean {
+  if (playerPositions.length > slotPositions.length) return false
+  // slotOf[s] = 그 자리에 배정된 선수 index (-1 = 빈 자리)
+  const slotOf = new Array<number>(slotPositions.length).fill(-1)
+
+  const tryAssign = (p: number, seen: boolean[]): boolean => {
+    for (let s = 0; s < slotPositions.length; s++) {
+      if (seen[s]) continue
+      if (!canPlay(playerPositions[p], slotPositions[s])) continue
+      seen[s] = true
+      if (slotOf[s] === -1 || tryAssign(slotOf[s], seen)) {
+        slotOf[s] = p
+        return true
+      }
+    }
+    return false
+  }
+
+  for (let p = 0; p < playerPositions.length; p++) {
+    if (!tryAssign(p, new Array<boolean>(slotPositions.length).fill(false))) return false
+  }
+  return true
+}
+
+/** 포메이션 문자열("4-4-2")을 자리 포지션 목록으로 */
+export function formationSlots(formation: string): Position[] {
+  const [d, m, f] = formation.split("-").map(Number)
+  return [
+    "GK" as Position,
+    ...Array<Position>(d).fill("DF"),
+    ...Array<Position>(m).fill("MF"),
+    ...Array<Position>(f).fill("FW"),
+  ]
+}

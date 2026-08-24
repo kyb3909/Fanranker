@@ -404,19 +404,18 @@ export function mergeRosterIntoSlots(
   return next
 }
 
+/**
+ * 로스터를 자리에 앉힌다 (배치 이력 없이 처음부터).
+ *
+ * ⚠️ 종전엔 `p.position === pos` 정확 매칭이었다. 자격이 유연해진 뒤로는 그러면
+ * 4-4-2 에 수비수 5명을 뽑은 팀에서 한 명이 배치되지 않고 MF 자리가 빈 채로 남는다.
+ * 자격 기준(mergeRosterIntoSlots)으로 통일해 결과 화면도 같은 규칙으로 그린다.
+ * 비싼 선수부터 좋은 자리를 잡도록 정렬해서 넘긴다.
+ */
 export function rosterToSlots(
   roster: Player[],
   formation: Formation
 ): Record<string, Player | null> {
-  const result: Record<string, Player | null> = {}
-  const [d, m, f] = formation.split("-").map(Number)
-  const counts: Record<Position, number> = { GK: 1, DF: d, MF: m, FW: f }
-
-  for (const pos of ["GK", "DF", "MF", "FW"] as Position[]) {
-    const players = roster.filter((p) => p.position === pos).sort((a, b) => b.price - a.price)
-    for (let i = 0; i < counts[pos]; i++) {
-      result[`${pos}${i + 1}`] = players[i] ?? null
-    }
-  }
-  return result
+  const byPrice = [...roster].sort((a, b) => b.price - a.price)
+  return mergeRosterIntoSlots({}, byPrice, formation)
 }

@@ -17,7 +17,9 @@ import {
 type GamePhase = "setup" | "drafting" | "placement" | "completed"
 export type GameMode = "solo" | "multi"
 
-const AI_NAMES = ["AI 알렉스", "AI 모건", "AI 테리", "AI 수아레즈"]
+import { personaForSeat } from "@/lib/draft/personas"
+
+const AI_NAMES = ["알렉스", "모건", "테리", "수아레즈"]
 const AI_FORMATIONS: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "3-4-3", "5-3-2", "5-4-1"]
 
 export function useDraftGame(slug: string) {
@@ -37,33 +39,37 @@ export function useDraftGame(slug: string) {
     loadPlayers().then(() => setPlayersLoaded(true))
   }, [])
 
-  const processAITurn = useCallback((currentState: DraftState) => {
-    if (currentState.status !== "drafting") return
+  const processAITurn = useCallback(
+    (currentState: DraftState) => {
+      if (currentState.status !== "drafting") return
 
-    const seat = getCurrentSeat(currentState)
-    const participant = currentState.participants.find((p) => p.seatIndex === seat)
-    if (!participant?.isAI) return
+      const seat = getCurrentSeat(currentState)
+      const participant = currentState.participants.find((p) => p.seatIndex === seat)
+      if (!participant?.isAI) return
 
-    const delay = 500 + Math.random() * 400
-    aiTimeoutRef.current = setTimeout(() => {
-      const pickId = getAIPick(currentState, seat)
-      const newState = makePick(currentState, pickId, false)
-      setState(newState)
+      const delay = 500 + Math.random() * 400
+      aiTimeoutRef.current = setTimeout(() => {
+        const pickId = getAIPick(currentState, seat, mySeat)
+        const newState = makePick(currentState, pickId, false)
+        setState(newState)
 
-      if (newState.status === "completed") {
-        setPhase("placement")
-        return
-      }
+        if (newState.status === "completed") {
+          setPhase("placement")
+          return
+        }
 
-      const nextSeat = getCurrentSeat(newState)
-      const nextParticipant = newState.participants.find((p) => p.seatIndex === nextSeat)
-      if (nextParticipant?.isAI) {
-        processAITurn(newState)
-      } else {
-        setTimerReset((prev) => prev + 1)
-      }
-    }, delay)
-  }, [])
+        const nextSeat = getCurrentSeat(newState)
+        const nextParticipant = newState.participants.find((p) => p.seatIndex === nextSeat)
+        if (nextParticipant?.isAI) {
+          processAITurn(newState)
+        } else {
+          setTimerReset((prev) => prev + 1)
+        }
+      }, delay)
+      // mySeat 이 빠지면 좌석을 바꿔도 AI 성격이 옛 좌석 기준으로 굳는다 (personaForSeat 인자)
+    },
+    [mySeat]
+  )
 
   const startGame = useCallback(() => {
     const participants: Participant[] = []
@@ -79,10 +85,13 @@ export function useDraftGame(slug: string) {
       for (let i = 0; i < aiCount + 1; i++) {
         if (i === mySeat) continue
         if (aiIdx >= aiCount) break
-        const aiFormation = AI_FORMATIONS[Math.floor(Math.random() * AI_FORMATIONS.length)]
+        const persona = personaForSeat(i, mySeat)
+        const aiFormation = persona.formations[
+          Math.floor(Math.random() * persona.formations.length)
+        ] as Formation
         participants.push({
           seatIndex: i,
-          name: AI_NAMES[aiIdx],
+          name: `${AI_NAMES[aiIdx]} · ${persona.label}`,
           isAI: true,
           formation: aiFormation,
         })
@@ -97,10 +106,13 @@ export function useDraftGame(slug: string) {
         formation: myFormation,
       })
       for (let i = 1; i < 4; i++) {
-        const aiFormation = AI_FORMATIONS[Math.floor(Math.random() * AI_FORMATIONS.length)]
+        const persona = personaForSeat(i, 0)
+        const aiFormation = persona.formations[
+          Math.floor(Math.random() * persona.formations.length)
+        ] as Formation
         participants.push({
           seatIndex: i,
-          name: AI_NAMES[i - 1],
+          name: `${AI_NAMES[i - 1]} · ${persona.label}`,
           isAI: true,
           formation: aiFormation,
         })
@@ -152,7 +164,7 @@ export function useDraftGame(slug: string) {
     const seat = getCurrentSeat(state)
     if (seat !== mySeat) return
 
-    const autoPickId = getAIPick(state, seat)
+    const autoPickId = getAIPick(state, seat, mySeat)
     const newState = makePick(state, autoPickId, true)
     setState(newState)
 
