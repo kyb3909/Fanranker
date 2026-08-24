@@ -52,6 +52,10 @@ interface OutPlayer {
   epNext: number // 다음 라운드 예상 점수
   xg: number // 기대 득점
   xa: number // 기대 도움
+  /** 포지션 안에서의 소유율 순위 (FPL selected_rank_type). 1 이면 그 포지션 최고 인기. */
+  ownedRank: number
+  /** 그 포지션 총원 — 순위의 분모 (GK 67 · DF 201 · MF 268 · FW 73). */
+  posTotal: number
 }
 
 /** FPL 은 숫자를 문자열로도 준다 ("68.9"). 값 없으면 0. */
@@ -64,6 +68,7 @@ interface FplElement {
   id: number
   web_name: string
   selected_by_percent?: string | number
+  selected_rank_type?: number
   total_points?: number
   form?: string | number
   ep_next?: string | number
@@ -221,6 +226,8 @@ async function main() {
       epNext: num(e.ep_next),
       xg: num(e.expected_goals),
       xa: num(e.expected_assists),
+      ownedRank: num(e.selected_rank_type),
+      posTotal: 0, // 아래에서 채운다
     })
   }
 
@@ -229,6 +236,11 @@ async function main() {
     a[p.position] = (a[p.position] ?? 0) + 1
     return a
   }, {})
+  // 포지션 총원 — 순위의 분모. 전체를 다 돈 뒤에 채운다.
+  const posCount: Record<string, number> = {}
+  for (const p of out) posCount[p.position] = (posCount[p.position] ?? 0) + 1
+  for (const p of out) p.posTotal = posCount[p.position] ?? 0
+
   const prices = out.map((p) => p.price).sort((a, b) => b - a)
   console.log(`\n선수 ${out.length}명 · 팀 ${new Set(out.map((p) => p.team)).size}개`)
   console.log(

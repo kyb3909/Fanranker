@@ -19,6 +19,8 @@ export interface Player {
   epNext?: number // 다음 라운드 예상 점수
   xg?: number // 기대 득점
   xa?: number // 기대 도움
+  ownedRank?: number // 포지션 안에서의 소유율 순위 (1 = 그 포지션 최고 인기)
+  posTotal?: number // 그 포지션 총원 — 순위의 분모
 }
 
 let _players: Player[] | null = null

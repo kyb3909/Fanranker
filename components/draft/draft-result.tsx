@@ -27,6 +27,77 @@ function sumOf(roster: Player[], key: "owned" | "points" | "epNext"): number | n
 }
 
 /**
+ * 소유율 막대 + 포지션 내 순위 (2026-08-25 운영자 요청: "얼마나 자주 영입되었는지를
+ * 비주얼로, 그리고 미드필더 중·수비수 중 몇 번째인지도").
+ *
+ * 숫자만 있으면 68.8%와 3.2%가 같은 크기로 보인다 — 막대가 그 차이를 눈에 넣는다.
+ * ⚠️ 막대 길이는 **소유율 원값**(0~100%)이다. 순위로 그리면 1위와 2위가 똑같이
+ *    꽉 차 보여서 "홀란드 68.8% vs 주앙 페드루 64.7%" 같은 실제 격차가 사라진다.
+ * ⚠️ 순위 분모는 포지션 총원이다 (GK 67 · DF 202 · MF 268 · FW 73). 미드는 268명이라
+ *    "MF 14위"가 수비 14위보다 훨씬 어렵다 — 분모를 같이 적어야 읽힌다.
+ * ⚠️ 이건 **FPL 전 세계 유저의 보유율**이지 우리 게임의 드래프트 기록이 아니다.
+ *    "선택된 평균 순서"는 우리가 드래프트 결과를 저장해야 나온다 — 아직 미구현.
+ */
+function OwnedBar({ player }: { player: Player }) {
+  const owned = player.owned ?? 0
+  if (!owned) {
+    return (
+      <span className="draft-num text-[12px]" style={{ color: "var(--draft-line)" }}>
+        ·
+      </span>
+    )
+  }
+  const rank = player.ownedRank ?? 0
+  const total = player.posTotal ?? 0
+  // 상위 10% 안이면 "이 포지션에서 인기 있는 선수" 로 읽어 강조한다
+  const hot = rank > 0 && total > 0 && rank <= Math.max(3, total * 0.1)
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 124 }}>
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          height: 6,
+          borderRadius: 999,
+          background: "var(--draft-neutral)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: `${Math.min(100, owned)}%`,
+            background: hot ? "var(--draft-burgundy)" : "var(--draft-ink-soft)",
+            borderRadius: 999,
+          }}
+        />
+      </div>
+      <span
+        className="draft-num"
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: hot ? "var(--draft-burgundy)" : "var(--draft-ink-soft)",
+          minWidth: 40,
+          textAlign: "right",
+        }}
+      >
+        {owned.toFixed(1)}%
+      </span>
+      {rank > 0 && total > 0 && (
+        <span
+          className="draft-num"
+          style={{ fontSize: 11, color: "var(--draft-mute)", whiteSpace: "nowrap", minWidth: 52 }}
+        >
+          {player.position} {rank}/{total}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
  * 드래프트 결과 — **스쿼드 성적표**다 (2026-08-25 재작업 2차).
  *
  * 1차에서는 잔디를 크게 깔았는데, 화면의 주인공이 그림이 되고 선수 이름은 작아져
@@ -87,14 +158,12 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
 
   const cols: { head: string; get: (p: Player) => string }[] = [
     { head: "가격", get: (p) => `£${p.price.toFixed(1)}` },
-    { head: "소유율", get: (p) => dot(p.owned, (n) => `${n.toFixed(1)}%`) },
     { head: "총점", get: (p) => dot(p.points, (n) => String(n)) },
     { head: "예상", get: (p) => dot(p.epNext, (n) => n.toFixed(1)) },
   ]
 
   const totals = [
     `£${mySpent.toFixed(1)}`,
-    avgOwned == null ? "·" : `${avgOwned.toFixed(1)}%`,
     totalPoints == null ? "·" : String(totalPoints),
     totalEp == null ? "·" : totalEp.toFixed(1),
   ]
@@ -148,6 +217,12 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
                         {h}
                       </th>
                     ))}
+                    <th
+                      className="draft-eyebrow"
+                      style={{ ...head, textAlign: "left", minWidth: 132 }}
+                    >
+                      인기 · 포지션 순위
+                    </th>
                     {cols.map((c) => (
                       <th
                         key={c.head}
@@ -194,6 +269,9 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
                       <td style={{ ...cell, fontSize: 11.5, color: "var(--draft-mute)" }}>
                         {p.teamKo}
                       </td>
+                      <td style={cell}>
+                        <OwnedBar player={p} />
+                      </td>
                       {cols.map((c) => {
                         const v = c.get(p)
                         return (
@@ -219,6 +297,14 @@ export function DraftResult({ state, mySeat, arrangement, onRestart }: DraftResu
                       style={{ padding: "10px 12px", fontSize: 11.5, fontWeight: 700 }}
                     >
                       합계
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <span
+                        className="draft-num text-[12px]"
+                        style={{ color: "var(--draft-mute)" }}
+                      >
+                        평균 {avgOwned == null ? "·" : `${avgOwned.toFixed(1)}%`}
+                      </span>
                     </td>
                     {totals.map((v, k) => (
                       <td

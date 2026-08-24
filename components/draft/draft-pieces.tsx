@@ -167,6 +167,8 @@ export function PlayerPoolCard({
    * 종전엔 £15.5 와 £4.0 이 똑같은 크기라 60장이 균질한 벽이었다.
    */
   const tier = player.price >= 8 ? "star" : player.price >= 6 ? "mid" : "base"
+  // 포지션 소유율 상위 10위 안 = "이 포지션에서 다들 데려가는 선수"
+  const isPopular = !!player.ownedRank && player.ownedRank <= 10
   const nameSize = tier === "star" ? 15.5 : tier === "mid" ? 14.5 : 14
   const priceSize = tier === "star" ? 20 : tier === "mid" ? 17 : 15
 
@@ -274,6 +276,30 @@ export function PlayerPoolCard({
           {/* ⚠️ 종전엔 여기 구단 원색 점(#6cabdd 맨시티 하늘색 등)이 있었다. 그 색들은
               사이트 어디에도 안 쓰인다 — 팀 표시는 **글자로 충분하다** (운영자 지적). */}
           {player.teamKo}
+          {/* 인기 신호 — 뽑을지 말지 정하는 자리가 여기다 (2026-08-25 운영자 요청).
+              ⚠️ 60행에 막대를 다 그리면 목록이 다시 시끄러워진다. **포지션 상위권만**
+                 뱃지로 알린다. 나머지는 소유율 숫자만 조용히. */}
+          {!!player.owned && (
+            <>
+              <span style={{ margin: "0 5px", color: "var(--draft-line)" }}>·</span>
+              {isPopular ? (
+                <span
+                  className="draft-num"
+                  style={{
+                    color: "var(--draft-burgundy)",
+                    fontWeight: 700,
+                    fontSize: 10.5,
+                  }}
+                >
+                  {player.position} 소유율 {player.ownedRank}위
+                </span>
+              ) : (
+                <span className="draft-num" style={{ fontSize: 10.5 }}>
+                  {player.owned.toFixed(1)}%
+                </span>
+              )}
+            </>
+          )}
         </div>
       </div>
 
