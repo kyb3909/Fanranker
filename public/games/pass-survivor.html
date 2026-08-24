@@ -176,7 +176,14 @@ const CFG = {
   JOGGER_SPEED:175, TACKLER_SPEED:185,
   TK_SENSE:90, TK_DELAY:0.2, TK_DASH:480, TK_DASH_T:0.3, TK_RECOVER:1.0,
   NUTMEG_R:22, KD_DESPAWN:1.0, CLEAR_KICK:480,
-  SPD_SCALE_PER_MIN:0.0035, EXTRA_SPAWN_MULT:1.5,
+  // 속도 스케일: 종전 0.0035 는 90분에 1.31배뿐이라 "갈수록 조여온다" 가 안 느껴졌다.
+  // 0.007 이면 90분에 1.63배 — 숫자만 늘던 압박에 추격력이 붙는다.
+  SPD_SCALE_PER_MIN:0.007, EXTRA_SPAWN_MULT:1.5,
+  // ── 차단 스폰 ──────────────────────────────────────────────────
+  // 10분부터 시작해 분당 1.2%p 씩 올라 최대 45%. 후반엔 새로 나오는 수비 둘 중
+  // 하나가 도망가는 앞을 막는다. 거리는 화면 밖(가시거리 밖)이라 갑툭튀는 아니다.
+  CUTOFF_FROM_MIN:10, CUTOFF_P_PER_MIN:0.012, CUTOFF_P_MAX:0.45,
+  CUTOFF_DIST_MIN:520, CUTOFF_DIST_MAX:700,
 };
 
 // ---------- 유틸 ----------
@@ -518,13 +525,28 @@ function spawnDef(initial){
     const a=rand(TAU), d=rand(420,640);
     x=G.player.x+Math.cos(a)*d; y=G.player.y+Math.sin(a)*d;
   } else {
-    for(let k=0;k<8;k++){
-      const side=Math.floor(rand(4));
-      if(side===0){ x=rand(50,CFG.WORLD_W-50); y=26; }
-      else if(side===1){ x=rand(50,CFG.WORLD_W-50); y=CFG.WORLD_H-26; }
-      else if(side===2){ x=26; y=rand(50,CFG.WORLD_H-50); }
-      else { x=CFG.WORLD_W-26; y=rand(50,CFG.WORLD_H-50); }
-      if(hyp(x-G.player.x,y-G.player.y)>470) break;
+    // ── 후반 차단 스폰 (2026-08-25 운영자: "갈수록 도망다니기 어렵게") ──────
+    // 종전엔 새 수비가 **화면 가장자리 무작위**로 나왔다. 플레이어가 어디로 도망가든
+    // 상관없는 위치라, 수가 81명까지 늘어도 한 방향으로 계속 달아나면 그만이었다.
+    // (속도 스케일도 90분에 1.31배뿐이라 추격으로는 못 잡는다.)
+    // 후반에는 일정 확률로 **진행 방향 앞쪽**에 세워 도망 경로를 끊는다.
+    const cutP=Math.min(CFG.CUTOFF_P_MAX,Math.max(0,(minute()-CFG.CUTOFF_FROM_MIN)*CFG.CUTOFF_P_PER_MIN));
+    const pv=hyp(G.player.vx||0,G.player.vy||0);
+    if(pv>30 && Math.random()<cutP){
+      // 진행 방향 ±40° 부채꼴, 화면 밖 거리에 — 달려가는 앞을 막는다
+      const heading=Math.atan2(G.player.vy,G.player.vx)+rand(-0.7,0.7);
+      const dist=rand(CFG.CUTOFF_DIST_MIN,CFG.CUTOFF_DIST_MAX);
+      x=G.player.x+Math.cos(heading)*dist;
+      y=G.player.y+Math.sin(heading)*dist;
+    } else {
+      for(let k=0;k<8;k++){
+        const side=Math.floor(rand(4));
+        if(side===0){ x=rand(50,CFG.WORLD_W-50); y=26; }
+        else if(side===1){ x=rand(50,CFG.WORLD_W-50); y=CFG.WORLD_H-26; }
+        else if(side===2){ x=26; y=rand(50,CFG.WORLD_H-50); }
+        else { x=CFG.WORLD_W-26; y=rand(50,CFG.WORLD_H-50); }
+        if(hyp(x-G.player.x,y-G.player.y)>470) break;
+      }
     }
   }
   x=clamp(x,26,CFG.WORLD_W-26); y=clamp(y,26,CFG.WORLD_H-26);
