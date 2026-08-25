@@ -86,6 +86,10 @@ export async function GET(req: NextRequest) {
       .order("soccerway_team_id")
       .order("position")
       .range(from, from + 999)
+    // ⚠️ 이적으로 떠난 선수는 검수 대상이 아니다 (2026-08-25). 행은 남겨 둔다 —
+    //    과거 경기 리포트·라인업이 그 이름을 참조하므로 읽는 경로에서는 계속 살아 있다.
+    //    여기서만 뺀다: 안 그러면 "검수 대기" 숫자가 영영 안 줄어든다.
+    q = q.neq("status", "left")
     if (team) q = q.eq("soccerway_team_id", team)
     if (missingOnly) q = q.is("name_kr", null)
     const { data: page, error } = await q
