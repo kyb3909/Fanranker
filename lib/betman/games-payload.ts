@@ -9,6 +9,8 @@ import {
   getGameBetDeadline,
 } from "@/lib/betman/daily-round"
 import { dedupeMarketRows } from "@/lib/betman/market-dedup"
+// 국가대표 표기 정리 (`괌_남자` → `괌`). ⚠️ 라벨 전용 — matchKey·대조는 원문으로 돈다.
+import { stripNationalSuffix } from "@/lib/match/team-display"
 
 /**
  * 오늘의 경기 응답 조립 — `/api/betman/games` GET 과 홈 SSR 이 **같은 함수**를 쓴다.
@@ -151,8 +153,9 @@ async function fetchLiveFinishedMatches(
     byKey.set(key, {
       matchKey: key,
       gameId: String(g.id),
-      homeTeam: String(g.home_team_name),
-      awayTeam: String(g.away_team_name),
+      // 라벨만 정리 — matchKey 등 대조 키는 위에서 **원문**으로 이미 만들어졌다
+      homeTeam: stripNationalSuffix(String(g.home_team_name)),
+      awayTeam: stripNationalSuffix(String(g.away_team_name)),
       leagueCode: String(g.league_code ?? ""),
       matchTime: String(g.match_time),
       status: g.status as "in_progress" | "completed",
@@ -348,8 +351,8 @@ export async function buildGamesPayload(params: GamesPayloadParams = {}) {
         matchKey,
         sport: String(game.sport ?? ""),
         leagueCode: String(game.league_code ?? ""),
-        homeTeam: String(game.home_team_name ?? ""),
-        awayTeam: String(game.away_team_name ?? ""),
+        homeTeam: stripNationalSuffix(String(game.home_team_name ?? "")),
+        awayTeam: stripNationalSuffix(String(game.away_team_name ?? "")),
         matchTime: String(game.match_time ?? ""),
         venue: String(game.venue ?? ""),
         games: [],

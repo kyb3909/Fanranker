@@ -80,9 +80,26 @@ export async function loadTeamShortMap(): Promise<TeamShortMap> {
  * 원문 팀명 → 지면 표기. 통칭이 없거나 대조가 애매하면 원문 그대로.
  * 이미 통칭만큼 짧으면(사전 이름과 같으면) 굳이 바꾸지 않는다.
  */
+/**
+ * 국가대표 표기 정리 — `괌_남자` → `괌` (2026-08-25).
+ *
+ * betman 은 국가대표 경기를 `<국가>_남자` / `<국가>_여자` 로 준다(농구 월드컵 예선 63팀,
+ * 배구 네이션스리그 36팀). 밑줄이 화면에 그대로 나가면 데이터가 새어 나온 것처럼 보인다.
+ *
+ * ⚠️ **성별을 지우는 게 아니라 구분자를 지운다.** 같은 지면에 남녀가 섞이는 대회
+ *    (배구 네이션스리그)에서는 "일본"이 둘이 되므로, 그럴 땐 리그 이름이 이미 갈라 준다
+ *    (`남배네이` / `여배네이`). 그래서 라벨에서는 접미사를 떼도 안전하다.
+ * ⚠️ 값은 안 바꾼다 — 이 함수는 **라벨 전용**이고 대조·저장은 원문으로 돈다.
+ */
+export function stripNationalSuffix(name: string): string {
+  return name.replace(/_(남자|여자)$/, "")
+}
+
 export function displayTeamName(raw: string, map: TeamShortMap): string {
   let src = String(raw ?? "").trim()
   if (!src) return src
+
+  src = stripNationalSuffix(src)
 
   // 영문이면 먼저 한글로 (사전에 있을 때만) — 그 다음 아래 통칭 축약을 그대로 태운다
   const kr = map.enToKr[src.toLowerCase()]

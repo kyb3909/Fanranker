@@ -47,6 +47,10 @@ const ALLOWED: Record<string, string> = {
   "scripts/seed-naver-player-notation.ts":
     "네이버 스포츠 정본 시드 CLI — 쓰기(읽기는 loadNotation 사용)",
   "scripts/harvest-team-notation.ts": "팀 뉴스 수확 시드 CLI — 쓰기(읽기는 loadNotation 사용)",
+  "lib/dictionary/sync-news.ts":
+    "스쿼드 사전 → 뉴스 사전 단방향 동기화 — 쓰기. 읽기는 '이미 있는지' 존재 확인뿐이고" +
+    " 표기 판정에 쓰지 않는다(덮어쓰지 않고 없는 것만 넣는다). notation 모듈은 기사 본문" +
+    " 치환용 뷰라 여기서 필요한 '전체 목록 대조' 를 못 준다.",
   "scripts/seed-dictionary-from-squads.ts":
     "스쿼드 수확분 시드 CLI — 쓰기(읽기는 loadNotation 사용, 신규 신원만)",
   "scripts/sync-team-shorts-to-notation.ts":

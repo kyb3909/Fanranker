@@ -48,6 +48,12 @@ const LEAGUE_LABEL: Record<string, string> = {
   프리그1: "리그 1",
 }
 
+interface SyncResult {
+  inserted: number
+  existing: number
+  conflicts: { romanized: string; squad: string; news: string; newsId: string }[]
+}
+
 interface CsvResult {
   dry_run?: boolean
   would_update?: number
@@ -67,6 +73,7 @@ export function TeamSquadsManager() {
   /** 화면에서 고친 값 — `팀id|player_slug` → 한글명. 저장 전까지 여기에만 있다 */
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [league, setLeague] = useState<string>("전체")
+  const [sync, setSync] = useState<SyncResult | null>(null)
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows])
 
@@ -195,6 +202,62 @@ export function TeamSquadsManager() {
     }
   }
 
+  /** 스쿼드 사전 → 뉴스 사전. 없는 것만 넣고 충돌은 아래 목록으로 보고한다 */
+  const runSync = async (apply: boolean) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await fetch("/api/admin/team-squads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync_news", apply }),
+      })
+      const json = (await res.json()) as SyncResult & { error?: string }
+      if (!res.ok) throw new Error(json.error ?? "동기화 실패")
+      setSync(json)
+      toast({
+        title: apply ? `기사 사전에 ${json.inserted}명 반영` : `반영 예정 ${json.inserted}명`,
+        description: json.conflicts.length
+          ? `표기 충돌 ${json.conflicts.length}건 — 아래에서 골라주세요`
+          : "충돌 없음",
+      })
+    } catch (e) {
+      toast({ title: "동기화 실패", description: e instanceof Error ? e.message : "오류" })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** 충돌 하나를 해결 — 어느 쪽 표기로 통일할지 사람이 고른다 */
+  const resolveConflict = async (c: SyncResult["conflicts"][number], winner: "squad" | "news") => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const res = await fetch("/api/admin/team-squads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "resolve_conflict",
+          romanized: c.romanized,
+          winner,
+          news_id: c.newsId,
+          value: winner === "squad" ? c.squad : c.news,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error ?? "해결 실패")
+      setSync((s) =>
+        s ? { ...s, conflicts: s.conflicts.filter((x) => x.romanized !== c.romanized) } : s
+      )
+      toast({ title: `${c.romanized} → ${winner === "squad" ? c.squad : c.news}` })
+      await mutate()
+    } catch (e) {
+      toast({ title: "해결 실패", description: e instanceof Error ? e.message : "오류" })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const runCsv = async (dry: boolean) => {
     if (busy) return
     setBusy(true)
@@ -236,6 +299,87 @@ export function TeamSquadsManager() {
             <p className="text-foreground text-xl font-bold tabular-nums">{c.value}</p>
           </div>
         ))}
+      </section>
+
+      {/* 기사 사전 동기화 — 확정된 표기를 뉴스 파이프라인에도 흘려보낸다 */}
+      <section className="bg-background rounded-xl border">
+        <div className="border-b px-4 py-3">
+          <h2 className="text-sm font-semibold">기사 사전에 반영</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            이 사전은 <b>라인업·스탯·매치센터</b>가 읽고, 기사는 <b>별도 사전</b>을 읽습니다. 여기서
+            확정한 표기를 기사 쪽에도 흘려보냅니다.
+            <br />
+            ⚠️ <b>덮어쓰지 않습니다</b> — 기사 사전에 이미 있으면 건드리지 않고, 표기가 다르면
+            아래에 띄워 직접 고르시게 합니다. 확정(<b>confirmed</b>)된 것만 보냅니다.
+          </p>
+        </div>
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => void runSync(false)}
+              disabled={busy}
+              className="rounded border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            >
+              미리보기 (쓰기 없음)
+            </button>
+            <button
+              onClick={() => void runSync(true)}
+              disabled={busy || !sync}
+              className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              title={sync ? undefined : "먼저 미리보기를 실행하세요"}
+            >
+              기사 사전에 반영
+            </button>
+          </div>
+
+          {sync && (
+            <p className="text-xs">
+              새로 넣을 것 <b className="tabular-nums">{sync.inserted}</b>명 · 이미 있음{" "}
+              <span className="tabular-nums">{sync.existing}</span>명
+              {sync.conflicts.length > 0 && (
+                <span className="ml-2 font-bold text-amber-600">
+                  표기 충돌 {sync.conflicts.length}건
+                </span>
+              )}
+            </p>
+          )}
+
+          {(sync?.conflicts.length ?? 0) > 0 && (
+            <div className="rounded-lg border">
+              <p className="text-muted-foreground border-b px-3 py-2 text-xs">
+                양쪽 표기가 다릅니다. <b>어느 쪽도 자동으로 이기지 않습니다</b> — 골라주시면 그
+                값으로 통일합니다.
+              </p>
+              <ul className="divide-y">
+                {sync!.conflicts.map((c) => (
+                  <li key={c.romanized} className="flex flex-wrap items-center gap-2 px-3 py-2">
+                    <span className="text-muted-foreground min-w-[10rem] flex-1 truncate text-xs">
+                      {c.romanized}
+                    </span>
+                    <button
+                      onClick={() => void resolveConflict(c, "squad")}
+                      disabled={busy}
+                      className="rounded border px-2.5 py-1 text-xs hover:bg-emerald-50 disabled:opacity-50"
+                      title="이 표기로 기사 사전을 맞춥니다"
+                    >
+                      {c.squad}
+                      <span className="text-muted-foreground ml-1">(라인업)</span>
+                    </button>
+                    <button
+                      onClick={() => void resolveConflict(c, "news")}
+                      disabled={busy}
+                      className="rounded border px-2.5 py-1 text-xs hover:bg-emerald-50 disabled:opacity-50"
+                      title="이 표기로 스쿼드 사전을 맞춥니다"
+                    >
+                      {c.news}
+                      <span className="text-muted-foreground ml-1">(기사)</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* CSV 왕복 */}
@@ -381,7 +525,7 @@ export function TeamSquadsManager() {
                 <span className="font-medium">
                   {t.team}
                   {t.drafted > 0 && (
-                    <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-bold text-sky-700">
+                    <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-[12px] font-bold text-sky-700">
                       후보 {t.drafted}
                     </span>
                   )}
@@ -470,7 +614,7 @@ export function TeamSquadsManager() {
                         : `이 팀 확정 (${t.total - t.matched}명)`}
                     </button>
                   </div>
-                  <p className="text-muted-foreground mt-2 text-[11px]">
+                  <p className="text-muted-foreground mt-2 text-[12px]">
                     <span className="rounded bg-sky-50 px-1 text-sky-800">파란 칸</span> = 기계 후보
                     (아직 화면에 안 나감) ·{" "}
                     <span className="rounded bg-red-50 px-1 text-red-700">빨간 칸</span> = 후보도

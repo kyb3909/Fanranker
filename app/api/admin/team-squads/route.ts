@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireStaffApi } from "@/lib/admin/roles"
 import { apiBadRequest, apiError } from "@/lib/api-error"
+import { syncSquadNamesToNews, resolveNotationConflict } from "@/lib/dictionary/sync-news"
 
 export const dynamic = "force-dynamic"
 
@@ -214,6 +215,22 @@ const confirmTeamSchema = z.object({
   edits: z.record(z.string(), z.string()).optional(), // player_slug → 고친 한글명
 })
 
+/** 스쿼드 사전 → 뉴스 사전 동기화 (없는 것만 넣는다. 자세한 이유는 lib/dictionary/sync-news.ts) */
+const syncNewsSchema = z.object({
+  action: z.literal("sync_news"),
+  apply: z.boolean().optional(),
+})
+
+/** 표기 충돌 해결 — 어느 쪽 표기로 통일할지 사람이 고른다 */
+const resolveConflictSchema = z.object({
+  action: z.literal("resolve_conflict"),
+  romanized: z.string().min(1),
+  /** squad = 스쿼드 표기로 뉴스를 맞춘다 / news = 뉴스 표기로 스쿼드를 맞춘다 */
+  winner: z.enum(["squad", "news"]),
+  news_id: z.string().min(1),
+  value: z.string().min(1),
+})
+
 export async function POST(req: NextRequest) {
   const auth = await requireStaffApi()
   if (auth instanceof NextResponse) return auth
@@ -286,9 +303,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ confirmed, skipped })
   }
 
+  // ── 뉴스 사전 동기화 ──
+  const sync = syncNewsSchema.safeParse(body)
+  if (sync.success) {
+    const result = await syncSquadNamesToNews(supabase, { apply: sync.data.apply })
+    return NextResponse.json(result)
+  }
+
+  // ── 표기 충돌 해결 ──
+  const resolve = resolveConflictSchema.safeParse(body)
+  if (resolve.success) {
+    const { winner, news_id, value, romanized } = resolve.data
+    // ⚠️ 사전을 만지는 코드는 lib/dictionary/sync-news.ts 한 곳에 모은다
+    //    ("표기 사전은 문이 하나다" 아키텍처 가드 — 경로가 갈라지면 표기 사고가 난다)
+    const r = await resolveNotationConflict(supabase, {
+      romanized,
+      winner,
+      newsId: news_id,
+      value,
+    })
+    if (!r.ok) return apiBadRequest(r.message)
+    return NextResponse.json({ resolved: romanized, winner, value })
+  }
+
   const parsed = csvImportSchema.safeParse(body)
   if (!parsed.success)
-    return apiBadRequest("csv_import · inline_save · confirm_team 중 하나가 아닙니다")
+    return apiBadRequest("csv_import · inline_save · confirm_team · sync_news 중 하나가 아닙니다")
   const { csv, dry_run } = parsed.data
 
   const rows = parseCsv(csv)
