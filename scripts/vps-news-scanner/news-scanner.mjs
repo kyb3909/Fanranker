@@ -17,7 +17,7 @@
  *
  * env: OPENAI_API_KEY, CRON_SECRET, BASE_URL(기본 https://gongnori.fan),
  *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-4o-mini),
- *      SCANNER_MODEL_LONG(기본 gpt-5.1) — 원문을 확보한 글의 **기사 작성** 모델.
+ *      SCANNER_MODEL_LONG(기본 gpt-5.6-terra) — 원문을 확보한 글의 **기사 작성** 모델.
  *        독자가 실제로 읽는 본문을 쓰는 자리라 품질 투자 지점이 여기다.
  *        gpt-5.6-terra 로 올리려면 이 값만 바꾸면 된다(아래 chatParams 가 파라미터를 정리).
  */
@@ -37,12 +37,21 @@ const MODEL = process.env.SCANNER_MODEL || "gpt-4o-mini"
  * 붙어 나왔다. 원문 317자 전체에 그 이름이 없다 — 통째로 지어낸 이적설이다.
  * 작은 모델은 재료가 얇을수록 그럴듯한 문장으로 빈칸을 메우려 든다.
  *
- * ⚠️ terra 가 아니라 5.1 을 쓴다: 원문이 길어 **입력 단가가 지배적**인데 terra 는 입력이
- *    5.1 의 1.6배다($2.0 vs $1.25/Mtok). 그리고 terra 는 다른 곳에서 **검사관**으로 쓰고
- *    있다 — 쓰는 모델과 검사하는 모델은 다른 편이 낫다.
+ * 2026-08-25 2차 상향: 5.1 → **gpt-5.6-terra** (운영자 "더 올려보면 어때?").
+ * 같은 사고 재료로 실측 비교했더니 terra 가 눈에 띄게 나았다:
+ *   terra "아스널, 촐리스 영입에도 추가 왼쪽 윙어 검토"  ← 원문 그대로, 군더더기 없음
+ *   5.1   "…영입했음에도 … 구단은 적합한 자원이 시장에 나오면…"  ← 같은 말 반복·부연
+ *
+ * ⚠️ **검사관도 terra 다** (`lib/news/quality-gate.ts`). 그 파일 주석의 "검사관은 작성보다
+ *    한 급 위" 라는 전제가 이제 성립하지 않는다 — 자기가 쓴 걸 자기가 검사한다.
+ *    실제 방어는 결정론 가드(날짜·이름 검증)가 하므로 당장 큰 구멍은 아니지만,
+ *    **한 번에 하나만 바꿔 효과를 보려고** 검사관은 그대로 뒀다. 오탐/누락이 늘면
+ *    검사관을 다른 모델로 떼어낼 것.
  * ⚠️ gpt-5 계열은 temperature(≠1)·max_tokens 를 거부한다. 위 chatParams 가 그걸 흡수한다.
+ * ⚠️ 비용: 4.1-mini 대비 호출당 약 6배(입력 5배·출력 7.5배). 장문 초안 하루 수십 건
+ *    기준 월 $30~50 수준 — 기사 품질이 사이트의 핵심이라 감당할 만하다.
  */
-const MODEL_LONG = process.env.SCANNER_MODEL_LONG || "gpt-5.1"
+const MODEL_LONG = process.env.SCANNER_MODEL_LONG || "gpt-5.6-terra"
 const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판별 로그만 (테스트용)
 
 /**
