@@ -13,6 +13,7 @@ import {
   writeMatchDetails,
 } from "@/lib/lfa/persist"
 import { withinBuyWindow } from "@/lib/lfa/day-freshness"
+import { mapLfaStats } from "@/lib/lfa/stat-labels"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
 
 /**
@@ -201,34 +202,7 @@ function cachedDetails(matchId: string, live: boolean, retryEmpty: boolean) {
 }
 
 /* ── 스탯 한글화 ── */
-
-/**
- * LFA 지표명 → 한글. 원문은 터키어 기계번역이라 영어가 이상하다
- * ("PLAYING THE BALL" = 점유율, "Winning a Duo Challenge" = 경합 승리).
- * **목록에 없는 지표는 버린다** — 뜻이 불확실한 것을 지면에 올리지 않는다.
- * 순서가 곧 표시 순서다.
- */
-const STAT_LABELS: [string, string][] = [
-  ["Goal Expectation (xG)", "기대득점 (xG)"],
-  ["PLAYING THE BALL", "점유율"],
-  ["Total Shots", "슈팅"],
-  ["Accurate Shot", "유효 슈팅"],
-  ["corner", "코너킥"],
-  ["Receiving the Ball in the Opponent's Penalty Area", "상대 박스 침투"],
-  ["Pass Accuracy%", "패스 성공률"],
-  ["Foul", "파울"],
-  ["Offside", "오프사이드"],
-]
-
-/** "%41" → "41%", "2,19" → "2.19" (터키식 소수점 쉼표 + 퍼센트 접두) */
-function normalizeStatValue(raw: string): { text: string; num: number | null } {
-  const s = String(raw ?? "").trim()
-  const pct = s.startsWith("%")
-  const body = (pct ? s.slice(1) : s).replace(",", ".")
-  const num = Number(body)
-  if (!Number.isFinite(num)) return { text: s, num: null }
-  return { text: pct ? `${body}%` : body, num }
-}
+/* 스탯 표·대조 규칙은 lib/lfa/stat-labels.ts (순수 모듈 — 시험 가능) */
 
 export interface LfaStatRow {
   label: string
@@ -561,12 +535,20 @@ async function computeLfaMatchInfo(game: BetmanGameKey): Promise<LfaMatchInfo | 
       if (da != null && (info.awayScore == null || da > info.awayScore)) info.awayScore = da
     }
 
-    for (const [en, ko] of STAT_LABELS) {
-      const s = d.stats?.find((x) => x.label === en)
-      if (!s) continue
-      const h = normalizeStatValue(s.home)
-      const a = normalizeStatValue(s.away)
-      info.stats.push({ label: ko, home: h.text, away: a.text, homeNum: h.num, awayNum: a.num })
+    const mapped = mapLfaStats(d.stats ?? null)
+    info.stats.push(...mapped.rows)
+
+    /**
+     * ⚠️ 조용히 죽지 않게 한다. 이 사고의 본질은 "라벨이 바뀐 것"이 아니라
+     *    **바뀐 걸 아무도 몰랐다는 것**이다 — 지면에 슈팅 한 줄만 뜬 채로 하루가 갔다.
+     *    LFA 가 스탯을 넉넉히 줬는데 우리가 거의 못 알아보면 못 알아본 라벨을 남긴다.
+     */
+    const given = d.stats?.length ?? 0
+    if (given >= 10 && mapped.rows.length <= 2) {
+      console.warn(
+        `[lfa] 스탯 라벨 대조 실패 — LFA ${given}개 중 ${mapped.rows.length}개만 인식. ` +
+          `match_id=${m.id} 미인식 라벨: ${JSON.stringify(mapped.unknown.slice(0, 30))}`
+      )
     }
 
     // ⚠️ LFA 이벤트 타입은 표기가 섞인다 — 실측: "Goal"(대문자·공백) 과 "red_card"
