@@ -840,8 +840,16 @@ function findDateViolations(draftText, sourceText) {
   }
   const bad = new Set()
   const nowY = new Date().getFullYear()
-  for (const m of draftText.matchAll(/(?<![0-9])(20\d{2})(?![0-9])/g)) {
-    const y = Number(m[1])
+  /**
+   * ⚠️ 연도 패턴을 `20\d{2}` 로만 잡으면 **환각 연도를 놓친다** (2026-08-25 실측).
+   *    모델 비교 중 "2929년 만료 예정"이 나왔는데 검사를 그냥 통과했다 — 20 으로
+   *    시작하지 않아서다. 지어낸 숫자가 하필 20xx 일 이유가 없다.
+   *    그래서 **`년`이 붙은 네 자리는 전부** 본다(맨 20xx 도 종전대로 함께 본다).
+   */
+  const years = new Set()
+  for (const m of draftText.matchAll(/(?<![0-9])(20\d{2})(?![0-9])/g)) years.add(Number(m[1]))
+  for (const m of draftText.matchAll(/(?<![0-9])(\d{4})\s*년/g)) years.add(Number(m[1]))
+  for (const y of years) {
     if (Math.abs(y - nowY) <= 1) continue
     if (!srcNums.has(y)) bad.add(`${y}년`)
   }
