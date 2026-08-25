@@ -176,7 +176,17 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/icon-light-32x32.png" }, { url: "/icon.svg", type: "image/svg+xml" }],
+    /**
+     * ⚠️ `/favicon.ico` 를 반드시 낸다 (2026-08-25). 종전엔 없어서 **404** 였다 —
+     *    카카오톡·구형 크롤러는 메타 태그를 안 보고 그 경로를 콕 집어 요청하기 때문에,
+     *    링크를 공유하면 우리 아이콘이 아니라 기본 아이콘이 떴다.
+     * 순서도 의미가 있다: ico → png → svg. 앞엣것을 못 읽는 클라이언트가 뒤로 내려간다.
+     */
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { url: "/icon-light-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
     apple: "/apple-icon.png",
   },
 }
