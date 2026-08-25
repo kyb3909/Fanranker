@@ -36,6 +36,7 @@ export interface StatLabelDef {
 }
 
 export const STAT_LABELS: StatLabelDef[] = [
+  // ── 처음부터 있던 9개. **순서를 건드리지 않는다** — 운영자가 보던 표의 윗부분이다.
   { ko: "기대득점 (xG)", en: ["Expected Goals (xG)", "Goal Expectation (xG)"] },
   { ko: "점유율", en: ["Possession", "PLAYING THE BALL"], percent: true },
   { ko: "슈팅", en: ["Total Shots"] },
@@ -48,6 +49,34 @@ export const STAT_LABELS: StatLabelDef[] = [
   { ko: "패스 성공률", en: ["Passing Accuracy", "Pass Accuracy%"], percent: true },
   { ko: "파울", en: ["Fouls", "Foul"] },
   { ko: "오프사이드", en: ["Offsides", "Offside"] },
+
+  // ── 2026-08-26 추가 (운영자 승인: 30개 전부). 버리던 21개다.
+  // 결정력
+  { ko: "세트피스 기대득점", en: ["xG from Set Pieces"] },
+  { ko: "빗나간 슈팅", en: ["Shots off Target"] },
+  { ko: "막힌 슈팅", en: ["Blocked Shots"] },
+  { ko: "골대 강타", en: ["Hit Woodwork"] },
+  { ko: "놓친 결정적 기회", en: ["Big Chances Missed"] },
+  // 전개
+  { ko: "총 패스", en: ["Total Passes"] },
+  { ko: "성공한 패스", en: ["Successful Passes"] },
+  { ko: "크로스", en: ["Crosses"] },
+  { ko: "성공한 크로스", en: ["Successful Crosses"] },
+  { ko: "드리블 성공", en: ["Successful Dribbles"] },
+  // 경합·수비
+  { ko: "경합 승리", en: ["Duels Won", "Winning a Duo Challenge"] },
+  { ko: "공중볼 경합 승리", en: ["Aerial Duels Won"] },
+  { ko: "태클 성공", en: ["Successful Tackles"] },
+  { ko: "가로채기", en: ["Interceptions"] },
+  { ko: "걷어내기", en: ["Clearances"] },
+  // 재개
+  { ko: "스로인", en: ["Throw-ins"] },
+  { ko: "골킥", en: ["Goal Kicks"] },
+  // 반칙 (P2 "스탯 비교표에 경고·퇴장 수" 항목이 여기서 닫힌다)
+  { ko: "경고", en: ["Yellow Cards"] },
+  { ko: "퇴장", en: ["Red Cards"] },
+  { ko: "경고 누적 퇴장", en: ["Second Yellow Card"] },
+  { ko: "다이렉트 퇴장", en: ["Direct Red Card"] },
 ]
 
 /** 대소문자·공백·구두점을 지운 대조 키 — 라벨 표기가 흔들려도 같은 지표로 본다 */

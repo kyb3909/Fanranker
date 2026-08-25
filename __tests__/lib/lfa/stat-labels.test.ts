@@ -59,7 +59,8 @@ const LFA_OLD = [
   { label: "Winning a Duo Challenge", home: "21", away: "18" },
 ]
 
-const KO = [
+/** 처음부터 있던 9개 — 표의 윗부분이고 순서가 고정이다 */
+const KO_CORE = [
   "기대득점 (xG)",
   "점유율",
   "슈팅",
@@ -71,28 +72,62 @@ const KO = [
   "오프사이드",
 ]
 
+/** 2026-08-26 운영자 승인으로 30개 전부 노출 — 이것이 표시 순서다 */
+const KO_ALL = [
+  ...KO_CORE,
+  "세트피스 기대득점",
+  "빗나간 슈팅",
+  "막힌 슈팅",
+  "골대 강타",
+  "놓친 결정적 기회",
+  "총 패스",
+  "성공한 패스",
+  "크로스",
+  "성공한 크로스",
+  "드리블 성공",
+  "경합 승리",
+  "공중볼 경합 승리",
+  "태클 성공",
+  "가로채기",
+  "걷어내기",
+  "스로인",
+  "골킥",
+  "경고",
+  "퇴장",
+  "경고 누적 퇴장",
+  "다이렉트 퇴장",
+]
+
 describe("LFA 스탯 라벨 대조", () => {
-  it("현행 라벨에서 9개를 전부 알아본다 — 이게 깨지면 지면이 빈다", () => {
-    const { rows } = mapLfaStats(LFA_NOW)
-    expect(rows.map((r) => r.label)).toEqual(KO)
+  it("실제 응답 30개를 하나도 안 버린다 — 이게 깨지면 지면이 빈다", () => {
+    const { rows, unknown } = mapLfaStats(LFA_NOW)
+    expect(rows.map((r) => r.label)).toEqual(KO_ALL)
+    expect(unknown).toEqual([])
   })
 
   it("옛 기계번역 라벨도 계속 받는다 (별칭 — 되돌아오거나 섞여 와도 살아야 한다)", () => {
     const { rows } = mapLfaStats(LFA_OLD)
-    expect(rows.map((r) => r.label)).toEqual(KO)
+    expect(rows.map((r) => r.label)).toEqual([...KO_CORE, "경합 승리"])
   })
 
   it("표시 순서는 표가 정한다 — 피드가 주는 순서가 아니다", () => {
     const { rows } = mapLfaStats([...LFA_NOW].reverse())
-    expect(rows.map((r) => r.label)).toEqual(KO)
+    expect(rows.map((r) => r.label)).toEqual(KO_ALL)
   })
 
-  it("목록에 없는 지표는 버리고, 버린 것을 알려준다 (조용히 죽지 않게)", () => {
-    const { rows, unknown } = mapLfaStats(LFA_NOW)
-    expect(rows).toHaveLength(9)
-    expect(unknown).toContain("Throw-ins")
-    expect(unknown).toContain("Duels Won")
-    expect(unknown).not.toContain("Total Shots")
+  it("처음 9개는 순서가 고정이다 — 운영자가 보던 표의 윗부분", () => {
+    const { rows } = mapLfaStats(LFA_NOW)
+    expect(rows.slice(0, 9).map((r) => r.label)).toEqual(KO_CORE)
+  })
+
+  it("모르는 지표는 버리고, 버린 것을 알려준다 (조용히 죽지 않게)", () => {
+    const { rows, unknown } = mapLfaStats([
+      { label: "Total Shots", home: "5", away: "8" },
+      { label: "Şut İsabeti Oranı", home: "40", away: "0" },
+      { label: "Some New Metric", home: "1", away: "2" },
+    ])
+    expect(rows.map((r) => r.label)).toEqual(["슈팅"])
+    expect(unknown).toEqual(["Şut İsabeti Oranı", "Some New Metric"])
   })
 
   it("이름이 흔들려도 같은 지표로 본다 (대소문자·공백·구두점)", () => {
@@ -120,8 +155,8 @@ describe("LFA 스탯 라벨 대조", () => {
     const survived = oldTable.filter((en) => LFA_NOW.some((s) => s.label === en))
     expect(survived).toEqual(["Total Shots"])
 
-    // 지금 규칙에서는 9개 전부 산다
-    expect(mapLfaStats(LFA_NOW).rows).toHaveLength(9)
+    // 지금 규칙에서는 30개 전부 산다
+    expect(mapLfaStats(LFA_NOW).rows).toHaveLength(30)
   })
 })
 
