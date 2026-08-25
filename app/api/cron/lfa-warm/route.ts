@@ -42,12 +42,21 @@ async function cronGet(request: NextRequest) {
 
     // 경기 상세(스탯·타임라인)도 데운다 — day 목록만 살아나도 여기서 막히면 통계 탭이
     // 빈다 (2026-08-24 실측: details 도 캐시 미스면 120초). 오늘 매치센터 대상 리그의
-    // **시작된 경기**만, 동시 3개씩. 종료분은 6시간 캐시라 하루 몇 번이면 충분하다.
+    // **시작된 경기**만, 동시 6개씩. 종료분은 6시간 캐시라 하루 몇 번이면 충분하다.
+    //
+    // 슬롯 24 / 동시 6 은 **시간 예산**에서 나온 값이다 (2026-08-25). details 는
+    // lfaFetch 기본 타임아웃 12초라 청크 하나가 최악 12초, 4청크 = 48초. 위의 day 목록
+    // 2건(데워져 있으면 각 0.5초)을 더해도 maxDuration 120초 안에 넉넉히 든다.
+    // ⚠️ 더 늘리려면 (슬롯 ÷ 동시) × 12초가 아래 90초 가드를 넘지 않는지 먼저 계산할 것.
     const fixtures = await getFixturesForDay(today).catch(() => [])
-    // ⚠️ 슬롯 12개는 **진행 중일 법한 경기 먼저** (2026-08-25 실측 수정).
+    // ⚠️ 슬롯 24개는 **진행 중일 법한 경기 먼저** (2026-08-25 실측 수정).
     //    종전엔 "시작된 경기" 를 시간순 앞에서 12개 잘랐다 — 바쁜 매치데이엔 그게
     //    몇 시간 전에 끝난 경기들이라, 정작 지금 뛰는 경기가 슬롯 밖으로 밀렸다.
     //    킥오프가 경기 창(3.5h) 안인 경기를 앞세우고, 나머지(종료분 스탯 대기)는 뒤에.
+    // ⚠️ 12 → 24 로 올린 이유는 비용이 아니라 **대기 시간**이다 (2026-08-25 추산):
+    //    5대리그가 겹치는 주말엔 동시 진행이 20경기를 넘어 슬롯 밖 경기가 생기고,
+    //    그 경기의 첫 방문자가 캐시 미스를 정면으로 맞는다. 추가 비용은 주당 1,000
+    //    크레딧(월 $0.7) 수준이라 무시할 만하다.
     const nowMs = Date.now()
     const inWindow = (f: (typeof fixtures)[number]) => {
       const ko = new Date(f.matchTime).getTime()
@@ -57,10 +66,10 @@ async function cronGet(request: NextRequest) {
       .filter((f) => f.gameId && isMatchPageLeague(f.leagueCode))
       .filter((f) => new Date(f.matchTime).getTime() <= nowMs)
       .sort((a, b) => Number(inWindow(b)) - Number(inWindow(a)))
-      .slice(0, 12)
+      .slice(0, 24)
     let warmed = 0
-    for (let i = 0; i < targets.length; i += 3) {
-      const chunk = targets.slice(i, i + 3)
+    for (let i = 0; i < targets.length; i += 6) {
+      const chunk = targets.slice(i, i + 6)
       const done = await Promise.all(
         chunk.map((f) =>
           getLfaMatchInfo({

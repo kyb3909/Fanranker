@@ -361,12 +361,37 @@ export async function POST(req: NextRequest) {
     //    실측 검증: 이번 화재 발생 2시간 뒤 시점이면 957/h vs 23/h = 41배로 울린다
     //    (실제로는 09:00 UTC 까지 시간당 8~48건이었다).
     const [recent, baseline] = await Promise.all([rate(2, 0), rate(26, 2)])
-    if (recent != null && baseline != null && baseline >= 5 && recent >= 5 * baseline) {
+
+    // ⚠️ **배율만으로는 축구와 화재를 못 가른다** (2026-08-25).
+    //    평일 유휴는 시간당 3~4건인데 5대리그가 겹치는 주말 밤엔 정상 소비가 시간당
+    //    200건을 넘는다 — 배율로만 보면 50배라 매 주말 늑대소년이 된다. 그래서
+    //    **지금 열려 있는 경기 수로 설명 가능한 상한**을 같이 계산해, 배율과 상한을
+    //    **둘 다** 넘을 때만 울린다.
+    const { count: liveish } = await supabase
+      .from("match_details_cache")
+      .select("game_id", { count: "exact", head: true })
+      .eq("finished", false)
+      .gte("updated_at", new Date(Date.now() - 2 * H).toISOString())
+    const live = liveish ?? 0
+    // 캐시 주기에서 나오는 이론 상한 (lib/lfa/day-freshness.ts):
+    //   하루치 목록 = 날짜당 1콜, 라이브 45초 → 80/h. 라이브가 없으면 5분 티어 12/h.
+    //   경기 상세 = 경기당 1콜, 90초 → 40/h.
+    //   라인업·프리뷰 여유분 30.
+    const expectedMax = (live > 0 ? 160 : 30) + 40 * live + 30
+
+    if (
+      recent != null &&
+      baseline != null &&
+      baseline >= 5 &&
+      recent >= 5 * baseline &&
+      recent > expectedMax
+    ) {
       issues.push({
         name: "🚨 축구 API 호출 급증",
         value:
           `최근 2시간 시간당 ${Math.round(recent).toLocaleString()}건 · ` +
           `평소 ${Math.round(baseline).toLocaleString()}건 → **${Math.round(recent / baseline)}배**. ` +
+          `진행 중 경기 ${live}개로 설명되는 상한은 시간당 ${expectedMax}건입니다. ` +
           `유료 호출이라 방치하면 팩이 며칠 만에 바닥납니다. ` +
           `크롤러가 새 파라미터를 걸어 들어왔는지부터 보세요 (lfa_day_cache 의 date_utc 분포).`,
       })
