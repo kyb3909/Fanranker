@@ -76,19 +76,35 @@ function toFormMatches(raw: unknown): FormMatch[] {
   return out
 }
 
-/** 영문 팀명 → 한글 (team_dictionary, 1h 캐시) */
+/**
+ * 영문 팀명 → 한글 (1h 캐시).
+ *
+ * ⚠️ **사전이 두 개다. 둘 다 봐야 한다** (2026-08-25).
+ *  - `team_dictionary` — PK 가 `soccerway_team_id` 라 soccerway 에 있는 팀만 행을 만든다
+ *  - `lfa_team_names`  — soccerway 에 없는 LFA 전용 팀 (2026-08-24 `3c49f26b` 에서 신설)
+ *
+ * 종전엔 여기서 **team_dictionary 만** 읽었다. 그래서 `lfa_team_names` 에 아무리 채워 넣어도
+ * 매치센터 정보 탭은 계속 영문이었다 — `resolveMatch` 쪽은 이미 두 사전을 병합해 쓰는데
+ * 이 경로만 빠져 있었다. 사전을 채운 사람은 "넣었는데 왜 안 바뀌지" 로 시간을 버린다.
+ * ⚠️ 새로 사전을 읽는 코드를 만들 때 **두 테이블을 다 보는지** 먼저 확인할 것.
+ */
 const cachedTeamPairs = unstable_cache(
   async (): Promise<[string, string][]> => {
-    const { data } = await createServiceRoleClient()
-      .from("team_dictionary")
-      .select("name_en, name_kr")
-      .neq("status", "rejected")
-      .not("name_kr", "is", null)
-    return (data ?? [])
-      .filter((r) => r.name_en)
+    const supabase = createServiceRoleClient()
+    const [dict, lfa] = await Promise.all([
+      supabase
+        .from("team_dictionary")
+        .select("name_en, name_kr")
+        .neq("status", "rejected")
+        .not("name_kr", "is", null),
+      supabase.from("lfa_team_names").select("name_en, name_kr"),
+    ])
+    const rows = [...(dict.data ?? []), ...(lfa.data ?? [])]
+    return rows
+      .filter((r) => r.name_en && r.name_kr)
       .map((r) => [String(r.name_en), String(r.name_kr)] as [string, string])
   },
-  ["lfa-preview-team-names"],
+  ["lfa-preview-team-names-v2"],
   { revalidate: 3600 }
 )
 
