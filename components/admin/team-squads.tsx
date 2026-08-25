@@ -18,13 +18,34 @@ interface SquadRow {
   name_en: string
   player_slug: string
   name_kr: string
+  /** 기계 생성 후보 — 화면(라인업 등)에는 안 나가고 이 검수 지면에서만 보인다 */
+  name_kr_draft: string
   status: string
 }
 
 interface ApiData {
   total: number
   unmatched: number
+  drafted: number
+  /** 팀 한글명 → 리그 코드 (최근 90일 경기로 역산) */
+  leagueOf: Record<string, string>
   rows: SquadRow[]
+}
+
+/**
+ * 리그 표시 순서 — 유럽 대항전 → 5대 리그 → 나머지.
+ * ⚠️ 여기 없는 코드는 뒤에 알파벳순으로 붙는다. 목록을 늘릴 때 순서만 신경 쓰면 된다.
+ */
+const LEAGUE_ORDER = ["UCL", "UEL", "UECL", "EPL", "라리가", "세리에A", "분데스리", "프리그1"]
+const LEAGUE_LABEL: Record<string, string> = {
+  UCL: "챔피언스리그",
+  UEL: "유로파리그",
+  UECL: "컨퍼런스리그",
+  EPL: "프리미어리그",
+  라리가: "라리가",
+  세리에A: "세리에 A",
+  분데스리: "분데스리가",
+  프리그1: "리그 1",
 }
 
 interface CsvResult {
@@ -45,6 +66,7 @@ export function TeamSquadsManager() {
   const [openTeam, setOpenTeam] = useState<string | null>(null)
   /** 화면에서 고친 값 — `팀id|player_slug` → 한글명. 저장 전까지 여기에만 있다 */
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [league, setLeague] = useState<string>("전체")
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows])
 
@@ -91,23 +113,87 @@ export function TeamSquadsManager() {
   }
 
   // 팀별 커버리지 — 비는 팀부터 보이게 정렬
-  const teams = useMemo(() => {
-    const by = new Map<string, { id: string; team: string; total: number; matched: number }>()
+  const allTeams = useMemo(() => {
+    const by = new Map<
+      string,
+      { id: string; team: string; total: number; matched: number; drafted: number; league: string }
+    >()
     for (const r of rows) {
+      const teamName = r.team_kr || r.soccerway_team_id
       const t = by.get(r.soccerway_team_id) ?? {
         id: r.soccerway_team_id,
-        team: r.team_kr || r.soccerway_team_id,
+        team: teamName,
         total: 0,
         matched: 0,
+        drafted: 0,
+        league: data?.leagueOf?.[teamName] ?? "기타",
       }
       t.total++
       if (r.name_kr) t.matched++
+      else if (r.name_kr_draft) t.drafted++
       by.set(r.soccerway_team_id, t)
     }
     return [...by.values()].sort(
       (a, b) => a.matched / a.total - b.matched / b.total || a.team.localeCompare(b.team, "ko")
     )
-  }, [rows])
+  }, [rows, data?.leagueOf])
+
+  /** 리그 탭 — 검수할 게 남은 리그부터 (다 끝난 리그를 먼저 보여줄 이유가 없다) */
+  const leagues = useMemo(() => {
+    const by = new Map<string, { code: string; teams: number; pending: number }>()
+    for (const t of allTeams) {
+      const e = by.get(t.league) ?? { code: t.league, teams: 0, pending: 0 }
+      e.teams++
+      e.pending += t.total - t.matched
+      by.set(t.league, e)
+    }
+    return [...by.values()].sort((a, b) => {
+      const ai = LEAGUE_ORDER.indexOf(a.code)
+      const bi = LEAGUE_ORDER.indexOf(b.code)
+      if (ai !== bi) return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+      return a.code.localeCompare(b.code, "ko")
+    })
+  }, [allTeams])
+
+  const teams = useMemo(
+    () => (league === "전체" ? allTeams : allTeams.filter((t) => t.league === league)),
+    [allTeams, league]
+  )
+
+  const confirmTeam = async (teamId: string) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      // 이 팀에서 화면으로 고친 것만 추려 같이 보낸다 (후보 대신 이 값이 쓰인다)
+      const edits: Record<string, string> = {}
+      for (const [k, v] of Object.entries(drafts)) {
+        const [tid, slug] = k.split("|")
+        if (tid === teamId && v.trim()) edits[slug] = v.trim()
+      }
+      const res = await fetch("/api/admin/team-squads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm_team", soccerway_team_id: teamId, edits }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error ?? "확정 실패")
+      const skipped = (json.skipped ?? []) as string[]
+      toast({
+        title: `${json.confirmed ?? 0}명 확정`,
+        description: skipped.length ? `후보 없어 남김 ${skipped.length}명` : "이 팀 검수 완료",
+      })
+      setDrafts((d) => {
+        const next = { ...d }
+        for (const k of Object.keys(next)) if (k.startsWith(`${teamId}|`)) delete next[k]
+        return next
+      })
+      await mutate()
+    } catch (e) {
+      toast({ title: "확정 실패", description: e instanceof Error ? e.message : "알 수 없는 오류" })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const runCsv = async (dry: boolean) => {
     if (busy) return
@@ -253,11 +339,37 @@ export function TeamSquadsManager() {
       {/* 팀별 커버리지 — 비는 팀부터 */}
       <section className="bg-background rounded-xl border">
         <div className="border-b px-4 py-3">
-          <h2 className="text-sm font-semibold">팀별 커버리지</h2>
+          <h2 className="text-sm font-semibold">팀별 검수</h2>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            비는 팀부터 정렬. 팀을 누르면 선수 목록이 열립니다. K·J리그는 나무위키 스쿼드 표에
-            로마자 열이 없어 자동 대조가 안 됐던 팀들입니다 — 수동 검수 대상.
+            리그를 고르고 팀을 누르면 선수 목록이 열립니다. 회색 글씨는 <b>기계가 만든 후보</b>로
+            아직 화면에 안 나갑니다 — 고칠 것만 고치고 <b>이 팀 확정</b>을 누르면 그때 반영됩니다.
           </p>
+        </div>
+
+        {/* 리그 탭 — 검수할 게 남은 리그부터 */}
+        <div className="flex flex-wrap gap-1.5 border-b px-4 py-2">
+          {[
+            { code: "전체", teams: allTeams.length, pending: data?.unmatched ?? 0 },
+            ...leagues,
+          ].map((lg) => (
+            <button
+              key={lg.code}
+              onClick={() => {
+                setLeague(lg.code)
+                setOpenTeam(null)
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                league === lg.code
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+              }`}
+            >
+              {LEAGUE_LABEL[lg.code] ?? lg.code}
+              {lg.pending > 0 && (
+                <span className="ml-1.5 tabular-nums opacity-70">{lg.pending}</span>
+              )}
+            </button>
+          ))}
         </div>
         <ul className="divide-y">
           {teams.map((t) => (
@@ -266,7 +378,14 @@ export function TeamSquadsManager() {
                 onClick={() => setOpenTeam(openTeam === t.id ? null : t.id)}
                 className="hover:bg-muted/40 flex w-full items-center justify-between px-4 py-2 text-left text-sm"
               >
-                <span className="font-medium">{t.team}</span>
+                <span className="font-medium">
+                  {t.team}
+                  {t.drafted > 0 && (
+                    <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-bold text-sky-700">
+                      후보 {t.drafted}
+                    </span>
+                  )}
+                </span>
                 <span
                   className={`tabular-nums ${t.matched === 0 ? "font-semibold text-red-600" : t.matched < t.total ? "text-amber-600" : "text-emerald-600"}`}
                 >
@@ -285,8 +404,12 @@ export function TeamSquadsManager() {
                       .map((r) => {
                         const key = `${r.soccerway_team_id}|${r.player_slug}`
                         const edited = drafts[key]
-                        const value = edited ?? r.name_kr
-                        const dirty = edited != null && edited !== r.name_kr
+                        // ⚠️ 확정값(name_kr)이 있으면 그것, 없으면 **기계 후보**를 채워 보여준다.
+                        //    후보는 화면(라인업)엔 안 나가므로 여기서 보이는 게 유일한 검수 기회다.
+                        const base = r.name_kr || r.name_kr_draft
+                        const value = edited ?? base
+                        const dirty = edited != null && edited !== base
+                        const isDraftOnly = !r.name_kr && !!r.name_kr_draft
                         return (
                           <li key={r.player_slug} className="flex items-center gap-2">
                             <span className="text-muted-foreground w-8 shrink-0 text-right tabular-nums">
@@ -306,7 +429,9 @@ export function TeamSquadsManager() {
                                   ? "border-amber-400 bg-amber-50"
                                   : r.name_kr
                                     ? "bg-background"
-                                    : "border-red-300 bg-red-50"
+                                    : isDraftOnly
+                                      ? "border-sky-300 bg-sky-50 text-sky-900" // 미확정 후보
+                                      : "border-red-300 bg-red-50" // 후보조차 없음
                               }`}
                             />
                             <span className="w-4 shrink-0 text-emerald-600">
@@ -333,10 +458,24 @@ export function TeamSquadsManager() {
                         되돌리기
                       </button>
                     )}
-                    <span className="text-muted-foreground text-xs">
-                      반영하면 <b>confirmed</b> 로 확정돼 자동 수확이 덮어쓰지 않습니다.
-                    </span>
+                    <span className="mx-auto" />
+                    <button
+                      onClick={() => void confirmTeam(t.id)}
+                      disabled={busy || t.matched === t.total}
+                      className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                      title="파란 후보를 그대로 확정합니다. 고친 것이 있으면 고친 값이 우선입니다."
+                    >
+                      {t.matched === t.total
+                        ? "이 팀 검수 완료"
+                        : `이 팀 확정 (${t.total - t.matched}명)`}
+                    </button>
                   </div>
+                  <p className="text-muted-foreground mt-2 text-[11px]">
+                    <span className="rounded bg-sky-50 px-1 text-sky-800">파란 칸</span> = 기계 후보
+                    (아직 화면에 안 나감) ·{" "}
+                    <span className="rounded bg-red-50 px-1 text-red-700">빨간 칸</span> = 후보도
+                    없음 · 확정하면 <b>confirmed</b> 로 잠겨 자동 수확이 덮어쓰지 않습니다.
+                  </p>
                 </div>
               )}
             </li>

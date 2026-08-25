@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     let q = supabase
       .from("team_squads")
       .select(
-        "soccerway_team_id, player_id, player_slug, name_en, name_kr, jersey_number, position, status, team_dictionary(name_kr)"
+        "soccerway_team_id, player_id, player_slug, name_en, name_kr, name_kr_draft, jersey_number, position, status, team_dictionary(name_kr)"
       )
       .order("soccerway_team_id")
       .order("position")
@@ -102,6 +102,8 @@ export async function GET(req: NextRequest) {
     name_en: String(r.name_en),
     player_slug: String(r.player_slug),
     name_kr: r.name_kr ? String(r.name_kr) : "",
+    /** 기계 생성 후보 — 화면에는 안 나가고 이 검수 지면에서만 쓴다 */
+    name_kr_draft: r.name_kr_draft ? String(r.name_kr_draft) : "",
     status: String(r.status),
   }))
 
@@ -131,9 +133,37 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  /**
+   * 팀 → 리그 (2026-08-25 운영자 요청: "리그별로 넘어가면서").
+   *
+   * team_dictionary 에 리그 칼럼이 없어서 **최근 경기로 역산**한다. 이적시장·컵대회 때문에
+   * 한 팀이 여러 리그에 나오므로 **가장 많이 나온 리그**를 대표로 삼는다.
+   * ⚠️ 경기가 없는 팀은 리그를 모른다 — 화면에서 "기타" 로 묶는다.
+   */
+  const { data: games } = await supabase
+    .from("betman_games")
+    .select("home_team_name, away_team_name, league_code")
+    .gte("match_time", new Date(Date.now() - 90 * 86400_000).toISOString())
+  const leagueCount = new Map<string, Map<string, number>>()
+  for (const g of games ?? []) {
+    for (const n of [g.home_team_name, g.away_team_name]) {
+      if (!n || !g.league_code) continue
+      const m = leagueCount.get(String(n)) ?? new Map<string, number>()
+      m.set(String(g.league_code), (m.get(String(g.league_code)) ?? 0) + 1)
+      leagueCount.set(String(n), m)
+    }
+  }
+  const leagueOf: Record<string, string> = {}
+  for (const [teamKr, m] of leagueCount) {
+    const best = [...m.entries()].sort((a, b) => b[1] - a[1])[0]
+    if (best) leagueOf[teamKr] = best[0]
+  }
+
   return NextResponse.json({
     total: rows.length,
     unmatched: rows.filter((r) => !r.name_kr).length,
+    drafted: rows.filter((r) => !r.name_kr && r.name_kr_draft).length,
+    leagueOf,
     rows,
   })
 }
@@ -163,6 +193,21 @@ const inlineSaveSchema = z.object({
     )
     .min(1)
     .max(200), // 한 번에 200행 — 팀 하나 스쿼드가 40행대라 넉넉하다
+})
+
+/**
+ * 팀 하나를 통째로 확정 (2026-08-25 운영자 요청: "팀 별로 확정 시킬 수 있는 버튼").
+ *
+ * 후보(`name_kr_draft`)를 `name_kr` 로 승격하고 `confirmed` 로 잠근다.
+ * `edits` 로 온 행은 후보 대신 그 값을 쓴다 — 검수자가 화면에서 고친 것.
+ *
+ * ⚠️ 이미 `name_kr` 이 있는 행은 **건드리지 않는다.** 사람이 이미 정한 표기를
+ *    기계 후보로 덮어쓰는 일이 있어선 안 된다.
+ */
+const confirmTeamSchema = z.object({
+  action: z.literal("confirm_team"),
+  soccerway_team_id: z.string().min(1),
+  edits: z.record(z.string(), z.string()).optional(), // player_slug → 고친 한글명
 })
 
 export async function POST(req: NextRequest) {
@@ -200,8 +245,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ updated, failed, skipped })
   }
 
+  // ── 팀 단위 확정 ──
+  const confirmTeam = confirmTeamSchema.safeParse(body)
+  if (confirmTeam.success) {
+    const { soccerway_team_id, edits = {} } = confirmTeam.data
+    const { data: rows, error: readErr } = await supabase
+      .from("team_squads")
+      .select("player_slug, name_kr, name_kr_draft")
+      .eq("soccerway_team_id", soccerway_team_id)
+      .neq("status", "rejected")
+    if (readErr) return apiError("스쿼드 조회 실패", 500, readErr)
+
+    let confirmed = 0
+    const skipped: string[] = []
+    for (const r of rows ?? []) {
+      const slug = String(r.player_slug)
+      // ⚠️ 사람이 정한 표기가 이미 있으면 건너뛴다 — 기계 후보로 덮어쓰지 않는다
+      if (r.name_kr) continue
+      const value = (edits[slug] ?? r.name_kr_draft ?? "").trim()
+      if (!value) {
+        skipped.push(slug) // 후보도 없고 고치지도 않음 = 미검수 유지
+        continue
+      }
+      if (!/^[가-힣·\s-]{2,20}$/.test(value)) {
+        skipped.push(`${slug} (형식 아님: ${value})`)
+        continue
+      }
+      const { error } = await supabase
+        .from("team_squads")
+        .update({ name_kr: value, status: "confirmed", updated_at: new Date().toISOString() })
+        .eq("soccerway_team_id", soccerway_team_id)
+        .eq("player_slug", slug)
+        .is("name_kr", null)
+      if (!error) confirmed++
+    }
+    return NextResponse.json({ confirmed, skipped })
+  }
+
   const parsed = csvImportSchema.safeParse(body)
-  if (!parsed.success) return apiBadRequest("csv_import 또는 inline_save 형식이 아닙니다")
+  if (!parsed.success)
+    return apiBadRequest("csv_import · inline_save · confirm_team 중 하나가 아닙니다")
   const { csv, dry_run } = parsed.data
 
   const rows = parseCsv(csv)
