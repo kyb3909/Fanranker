@@ -10,6 +10,7 @@ import { buildNotationHints } from "@/lib/news/notation/rules"
  *    고치려다 더 크게 틀리는 길이 바로 옆에 있다.
  */
 const row = (o: Partial<Parameters<typeof buildNotationHints>[0][number]>) => ({
+  category: "player",
   preferred_ko: "사비뉴",
   romanized: "Savio Moreira de Oliveira",
   surfaces: ["savio moreira de oliveira", "사비뉴", "savio"],
@@ -25,6 +26,21 @@ describe("buildNotationHints — 팀 맥락", () => {
     expect(h.enTeam).toContain("savio")
   })
 
+  it("사람과 라벨을 구분한다 — 이름 환각 검사가 이걸로 범위를 좁힌다", () => {
+    const [person] = buildNotationHints([row({})])
+    expect(person.kind).toBe("person")
+    const [label] = buildNotationHints([
+      {
+        category: "team",
+        preferred_ko: "아스널",
+        romanized: "Arsenal",
+        surfaces: ["arsenal"],
+        disambiguation: null,
+      },
+    ])
+    expect(label.kind).toBe("label")
+  })
+
   it("팀 열쇠가 함께 실린다", () => {
     const [h] = buildNotationHints([row({})])
     expect(h.team).toEqual(["Manchester City", "맨체스터 시티", "맨시티"])
@@ -34,6 +50,7 @@ describe("buildNotationHints — 팀 맥락", () => {
     // 'simons' 는 사람이 넣어 잘 돌던 표기다. 갑자기 잠그면 있던 교정이 사라진다.
     const [h] = buildNotationHints([
       {
+        category: "player",
         preferred_ko: "사비 시몬스",
         romanized: "Xavi Simons",
         surfaces: ["xavi simons", "simons"],

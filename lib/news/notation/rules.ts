@@ -378,6 +378,14 @@ export function findUniqueRomanizedMatch<T extends Pick<NotationEntry, "romanize
 
 export interface NotationHint {
   ko: string
+  /**
+   * 사람인가 라벨(구단·매체)인가.
+   * ⚠️ 스캐너의 **이름 환각 검사**가 이걸로 범위를 좁힌다 — 구단명은 원문에 없어도
+   *    문맥으로 정당하게 등장할 수 있지만(리그·상대팀 언급), 사람 이름이 원문에
+   *    없는데 기사에 나오면 그건 지어낸 것이다. 2026-08-25 실사고: 원문 한 문장짜리
+   *    아스널 기사에 "이고르 파이샤오 영입설"이 통째로 붙어 나갔다.
+   */
+  kind: "person" | "label"
   /** 영어 원문에 실제로 나타날 수 있는 형태만. **어디에 나와도** 이 사람으로 본다 */
   en: string[]
   /**
@@ -402,7 +410,10 @@ export interface NotationHint {
  *  - 3자 이하는 제외 — 'as'·'om' 같은 약어가 아무 문장에나 걸린다 (라벨 키와 같은 규율)
  */
 export function buildNotationHints(
-  rows: Pick<NotationEntry, "preferred_ko" | "romanized" | "surfaces" | "disambiguation">[]
+  rows: Pick<
+    NotationEntry,
+    "category" | "preferred_ko" | "romanized" | "surfaces" | "disambiguation"
+  >[]
 ): NotationHint[] {
   const out: NotationHint[] = []
   for (const row of rows) {
@@ -433,7 +444,9 @@ export function buildNotationHints(
     const enTeam = scoped ? all.filter((s) => !s.includes(" ")) : []
 
     if (en.length === 0 && enTeam.length === 0) continue
-    out.push(enTeam.length > 0 ? { ko, en, enTeam, team } : { ko, en })
+    const kind: NotationHint["kind"] =
+      row.category === "player" || row.category === "coach" ? "person" : "label"
+    out.push(enTeam.length > 0 ? { ko, kind, en, enTeam, team } : { ko, kind, en })
   }
   return out
 }

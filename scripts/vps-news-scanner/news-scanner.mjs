@@ -17,7 +17,7 @@
  *
  * env: OPENAI_API_KEY, CRON_SECRET, BASE_URL(기본 https://gongnori.fan),
  *      SEEN_FILE(기본 ./news-scanner-seen.json), SCANNER_MODEL(기본 gpt-4o-mini),
- *      SCANNER_MODEL_LONG(기본 gpt-4.1-mini) — 원문을 확보한 글의 **기사 작성** 모델.
+ *      SCANNER_MODEL_LONG(기본 gpt-5.1) — 원문을 확보한 글의 **기사 작성** 모델.
  *        독자가 실제로 읽는 본문을 쓰는 자리라 품질 투자 지점이 여기다.
  *        gpt-5.6-terra 로 올리려면 이 값만 바꾸면 된다(아래 chatParams 가 파라미터를 정리).
  */
@@ -30,9 +30,19 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const CRON_SECRET = process.env.CRON_SECRET
 const SEEN_FILE = process.env.SEEN_FILE || "./news-scanner-seen.json"
 const MODEL = process.env.SCANNER_MODEL || "gpt-4o-mini"
-// 원문 본문을 확보한 기사는 장문(500~1,000자)으로 쓴다 — 지시 이행이 더 정확한 모델 사용.
-// 본문 없는 글은 기존 MODEL 로 짧게 (비용 유지).
-const MODEL_LONG = process.env.SCANNER_MODEL_LONG || "gpt-4.1-mini"
+/**
+ * 기사 **작성** 모델. 2026-08-25 운영자 지시로 gpt-4.1-mini → gpt-5.1 로 올렸다.
+ *
+ * 계기: 원문이 한 문장뿐인 아스널 기사에 "프랑스에서 이고르 파이샤오 영입설이 돌고 있다"가
+ * 붙어 나왔다. 원문 317자 전체에 그 이름이 없다 — 통째로 지어낸 이적설이다.
+ * 작은 모델은 재료가 얇을수록 그럴듯한 문장으로 빈칸을 메우려 든다.
+ *
+ * ⚠️ terra 가 아니라 5.1 을 쓴다: 원문이 길어 **입력 단가가 지배적**인데 terra 는 입력이
+ *    5.1 의 1.6배다($2.0 vs $1.25/Mtok). 그리고 terra 는 다른 곳에서 **검사관**으로 쓰고
+ *    있다 — 쓰는 모델과 검사하는 모델은 다른 편이 낫다.
+ * ⚠️ gpt-5 계열은 temperature(≠1)·max_tokens 를 거부한다. 위 chatParams 가 그걸 흡수한다.
+ */
+const MODEL_LONG = process.env.SCANNER_MODEL_LONG || "gpt-5.1"
 const DRY_RUN = process.env.SCANNER_DRY_RUN === "1" // 초안 적재 없이 판별 로그만 (테스트용)
 
 /**
@@ -778,6 +788,39 @@ const MONTH_EN = {
   november: 11,
   december: 12,
 }
+/**
+ * 이름 환각 검증 (2026-08-25 실사고) — 기사에 나온 **사람 이름**이 원문에 실재하는가.
+ *
+ * 실사고: 원문이 한 문장뿐인 아스널 기사였는데
+ *   "Arsenal have acquired Christos Tzolis but are also open to signing another left-winger..."
+ * 초안 본문에 **"프랑스에서 이고르 파이샤오 영입설이 돌고 있으나"** 가 붙어 나왔다.
+ * 원문 317자 전체에 그 이름이 없다 — 통째로 지어낸 이적설이다.
+ *
+ * 날짜는 이미 검사하고 있었는데(위 findDateViolations) 이름은 안 했다. 같은 성질의
+ * 사고이므로 같은 방식으로 막는다: 위반 → 1회 재작성 → 그래도면 초안 미생성.
+ *
+ * ⚠️ **사람만** 본다. 구단·매체는 원문에 없어도 문맥으로 정당하게 나올 수 있다
+ *    (리그명, 상대팀, 출처 표기). 사람 이름이 원문에 없는데 기사에 있으면 그건 지어낸 것이다.
+ * ⚠️ 사전에 있는 이름만 판정한다. 사전에 없는 이름은 대조할 근거가 없으므로 침묵한다 —
+ *    놓치는 쪽이 멀쩡한 기사를 죽이는 쪽보다 안전하다.
+ */
+function findNameViolations(draftText, sourceText, naming) {
+  if (!draftText || !sourceText || !Array.isArray(naming)) return []
+  const srcLower = sourceText.toLowerCase()
+  const bad = []
+  for (const row of naming) {
+    if (row?.kind !== "person" || !row.ko) continue
+    if (!draftText.includes(row.ko)) continue
+    // 한글 표기가 원문(한글 헤드라인 포함)에 있으면 근거가 있는 것이다
+    if (sourceText.includes(row.ko)) continue
+    const forms = [...(row.en ?? []), ...(row.enTeam ?? [])].filter((e) => e && e.length >= 4)
+    if (forms.some((e) => srcLower.includes(e))) continue
+    bad.push(row.ko)
+    if (bad.length >= 5) break
+  }
+  return bad
+}
+
 function findDateViolations(draftText, sourceText) {
   if (!draftText) return []
   const src = String(sourceText || "").toLowerCase()
@@ -1105,6 +1148,36 @@ async function main() {
           continue
         }
       }
+      // ── 이름 검증 게이트 (2026-08-25) — 원문에 없는 사람 이름은 환각이다.
+      //    날짜 게이트와 같은 규율: 1회 재작성, 그래도 위반이면 초안 미생성.
+      let nameBad = findNameViolations(
+        `${v.title || ""}
+${v.summary || ""}`,
+        dateSrc,
+        corrections.naming
+      )
+      if (nameBad.length) {
+        log(`retry(이름검증) [${p.subreddit}/${p.id}] ${nameBad.join(", ")}`)
+        llmCalls++
+        const retry = await judgeAndWrite(
+          p,
+          corrections,
+          material,
+          `직전 초안에 원문에 없는 인물이 등장한다: ${nameBad.join(", ")}. 원문(재료)에 나오지 않는 선수·감독 이름은 **절대 쓰지 마라** — 네 기억이나 추측으로 다른 이적설을 끌어오지 마라. 그 문장을 통째로 빼고 원문에 있는 사실만으로 다시 써라.`
+        )
+        if (retry?.worthy) v = retry
+        nameBad = findNameViolations(
+          `${v.title || ""}
+${v.summary || ""}`,
+          dateSrc,
+          corrections.naming
+        )
+        if (nameBad.length) {
+          log(`skip(이름검증) [${p.subreddit}/${p.id}] ${nameBad.join(", ")} — 초안 미생성`)
+          continue
+        }
+      }
+
       v.title = stripRedditAttribution(applyKoreanFixes(v.title))
       v.summary = applyKoreanFixes(v.summary)
       // 영문 제목 가드 (운영자 지시 2026-08-03) — 1회 강제 재작성, 실패 시 초안 자체를 안 만든다
