@@ -22,14 +22,24 @@ export function useBettingMatches(
   )
   const [leagueFilter, setLeagueFilter] = useState<"all" | string>("all")
   /**
-   * ⚠️ 이것도 렌더 중 `new Date()` 라 이론상 서버·클라이언트가 갈린다. 다만 **일부러
-   *    남겨 둔다** (2026-08-25): 이 값은 화면에 찍히는 게 아니라 만료 경기를 걸러내는
-   *    **필터**다. 서버·클라이언트 시각차는 보통 수 초라 같은 목록이 나오고, 어긋나는 건
-   *    킥오프 경계에 걸친 경기 한 건뿐이다.
-   *    마운트 게이트를 걸면 그 대가로 **만료 경기가 한 번 번쩍였다 사라진다** — 드문
-   *    불일치보다 매번 보이는 깜빡임이 더 나쁘다. 고치려면 서버 시각을 내려보낼 것.
+   * ⚠️⚠️ **하이드레이션 #418 의 진짜 원인이었다** (2026-08-25, 앞선 판단 정정).
+   *
+   * 처음엔 "화면에 찍히는 값이 아니라 만료 경기를 걸러내는 필터일 뿐이고, 서버·클라이언트
+   * 시각차는 보통 수 초라 같은 목록이 나온다" 고 보고 일부러 남겼다. **그 전제가 틀렸다.**
+   *
+   * SSR HTML 은 캐시된다 — 즉 서버가 그린 시각은 방문자가 하이드레이트하는 시각보다
+   * **몇 시간 앞설 수 있다.** 프로덕션 실측(15:56 KST 방문):
+   *     서버 HTML  : 09:30 · 10:30 · 16:45 · 18:00 …  (그릴 당시엔 미래였던 경기)
+   *     클라이언트 : 18:30 · 19:30 · 익일 01:45 …
+   * 목록 자체가 달라졌고, 그래서 캐시가 더워진 뒤의 **모든 방문**에서 에러가 났다.
+   * "드문 경계 사고" 가 아니라 상시 사고였다.
+   *
+   * 그래서 **마운트 전에는 거르지 않는다**(null = 필터 없음). 서버와 첫 클라이언트 렌더가
+   * 같은 목록을 그리고, 마운트 후 실제 시각으로 걸러낸다.
+   * ⚠️ 대가로 이미 시작한 경기가 한 순간 보였다 사라질 수 있다. 하이드레이션 실패보다는
+   *    훨씬 가벼운 값이다 — 후자는 그 아래 인터랙션 전체를 망가뜨린다.
    */
-  const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
 
   const [deadlineCountdown, setDeadlineCountdown] = useState<string | null>(null)
 
@@ -90,6 +100,9 @@ export function useBettingMatches(
 
   // 30-second clock tick for filtering expired matches
   useEffect(() => {
+    // ⚠️ **마운트 직후 즉시 한 번** 채운다. 인터벌만 두면 첫 30초 동안 currentTime 이
+    //    null 이라 만료 경기가 그대로 보인다 — 하이드레이션은 맞지만 화면이 틀린다.
+    setCurrentTime(new Date())
     const t = setInterval(() => setCurrentTime(new Date()), 30000)
     return () => clearInterval(t)
   }, [])
@@ -134,7 +147,8 @@ export function useBettingMatches(
     if (sportFilter === "all") return []
     const leagues = new Set<string>()
     for (const m of groupedMatches) {
-      if (m.sport === sportFilter && new Date(m.matchTime) > currentTime) {
+      // currentTime 이 null(마운트 전)이면 거르지 않는다 — 서버와 같은 목록을 그린다
+      if (m.sport === sportFilter && (!currentTime || new Date(m.matchTime) > currentTime)) {
         leagues.add(m.leagueCode)
       }
     }
@@ -144,7 +158,8 @@ export function useBettingMatches(
   const filteredMatches = useMemo(() => {
     return (
       groupedMatches
-        .filter((m) => new Date(m.matchTime) > currentTime)
+        // 마운트 전(null)에는 만료 필터를 걸지 않는다 — 위 currentTime 주석 참조
+        .filter((m) => !currentTime || new Date(m.matchTime) > currentTime)
         .filter((m) => sportFilter === "all" || m.sport === sportFilter)
         .filter((m) => leagueFilter === "all" || m.leagueCode === leagueFilter)
         // betman 다음 라운드 preview placeholder 숨김 (팀 미정/빈 이름)
