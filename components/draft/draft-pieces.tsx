@@ -343,21 +343,11 @@ export function PlayerPoolCard({
       {!reason && (
         <button
           type="button"
+          className="draft-pick-btn"
           disabled={!canPick}
           onClick={(e) => {
             e.stopPropagation()
             if (canPick) onPick()
-          }}
-          style={{
-            flexShrink: 0,
-            padding: "5px 11px",
-            borderRadius: 999,
-            background: canPick ? "var(--draft-burgundy)" : "transparent",
-            color: canPick ? "#fff" : "var(--draft-mute)",
-            border: canPick ? "none" : "1px solid var(--draft-line)",
-            fontWeight: 700,
-            fontSize: 11,
-            cursor: canPick ? "pointer" : "not-allowed",
           }}
         >
           영입

@@ -239,11 +239,17 @@ export function DraftBoard({
 
   return (
     <div className="draft-scope" style={{ background: "var(--draft-paper)" }}>
-      {/* ─── 상단: dark editorial 톱바 ─── */}
+      {/* ─── 상단 밴드 ───
+          ⚠️ 사이트 공용 `.gn-band` 재질을 쓴다 (2026-08-25). 종전엔 평평한 검정
+             (--draft-ink)이었는데, 사이트 밴드는 --gn-night 위에 버건디 래디얼 3겹이
+             깔린 **와인빛**이라 "같은 검정"이 아니었다.
+          ⚠️ 레이아웃(패딩·flex)은 그대로 둔다. 진행 중 화면이라 PageBand 의 넉넉한
+             여백을 쓰면 타이머·픽 카운터가 한 줄에 안 들어온다 — 재질만 빌린다.
+          ⚠️ background 인라인은 제거해야 한다. 남기면 클래스의 래디얼을 덮어쓴다. */}
       <div
+        className="gn-band"
         style={{
-          background: "var(--draft-ink)",
-          color: "var(--draft-paper)",
+          color: "var(--gn-cream)",
           borderBottom: "3px solid var(--draft-burgundy)",
           padding: "12px 20px",
           display: "flex",
