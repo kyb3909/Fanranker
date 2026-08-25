@@ -87,6 +87,50 @@ function codeOnly(line: string): string {
   return line.replace(/(^|[^:])\/\/.*$/, "$1")
 }
 
+/**
+ * ⚠️ 줄 단위 판정만으로는 **여러 줄 주석의 이어지는 줄**을 못 걷어낸다 (2026-08-25 수정).
+ *
+ * 실사고: 매치센터의 JSX 주석
+ *   ```
+ *   {/* 승부예측 도선 … 목적지는 /season
+ *       베팅/픽 카드 다크 금지 규칙에 따라 라이트 틴트로. *​/}
+ *   ```
+ * 두 번째 줄은 `*` 로 시작하지 않아 `codeOnly` 를 그대로 통과했고, 주석인데도
+ * "유저 노출 코드" 로 잡혀 **오탐**이 났다. 이 가드는 카카오 심사 소명을 지키는
+ * 장치라 오탐이 쌓이면 아무도 안 보게 된다 — 늑대소년이 되면 가드가 아니다.
+ *
+ * 그래서 파일 전체에서 블록 주석 구간을 **상태를 들고** 지운다. 주석 여는/닫는 위치를
+ * 추적하되 **줄 수는 보존**한다(줄 번호가 어긋나면 보고가 쓸모없어진다).
+ * ⚠️ 문자열 안의 `/*` 는 흔치 않으므로 다루지 않는다 — 넓게 잡아 못 걸러내는 쪽이,
+ *    좁게 잡아 진짜 위반을 놓치는 쪽보다 낫다(이 가드는 **놓치면 안 되는** 쪽이다).
+ */
+function stripBlockComments(text: string): string[] {
+  const lines = text.split("\n")
+  let inBlock = false
+  return lines.map((raw) => {
+    let line = raw
+    let out = ""
+    while (line.length > 0) {
+      if (inBlock) {
+        const end = line.indexOf("*/")
+        if (end === -1) return out // 줄 끝까지 주석
+        line = line.slice(end + 2)
+        inBlock = false
+      } else {
+        const start = line.indexOf("/*")
+        if (start === -1) {
+          out += line
+          break
+        }
+        out += line.slice(0, start)
+        line = line.slice(start + 2)
+        inBlock = true
+      }
+    }
+    return out
+  })
+}
+
 function walk(dir: string, out: string[] = []): string[] {
   let entries: string[]
   try {
@@ -114,13 +158,13 @@ describe("아키텍처: 유저 화면에 도박 어휘가 없다", () => {
       if (rel.includes("/admin")) continue
       if (ALLOWED[rel]) continue
 
-      readFileSync(file, "utf8")
-        .split("\n")
-        .forEach((line, i) => {
-          const code = codeOnly(line)
-          if (BANNED.test(code)) hits.push(`${rel}:${i + 1}  ${line.trim()}`)
-          if (BANNED_FRAMING.test(code)) framingHits.push(`${rel}:${i + 1}  ${line.trim()}`)
-        })
+      const raw = readFileSync(file, "utf8").split("\n")
+      // 블록 주석을 먼저 걷어낸 뒤, 남은 줄에 한 줄 주석 규칙을 적용한다
+      stripBlockComments(raw.join("\n")).forEach((stripped, i) => {
+        const code = codeOnly(stripped)
+        if (BANNED.test(code)) hits.push(`${rel}:${i + 1}  ${raw[i].trim()}`)
+        if (BANNED_FRAMING.test(code)) framingHits.push(`${rel}:${i + 1}  ${raw[i].trim()}`)
+      })
     }
   }
 
