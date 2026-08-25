@@ -840,16 +840,40 @@ const MONTH_EN = {
  * ⚠️ 사전에 있는 이름만 판정한다. 사전에 없는 이름은 대조할 근거가 없으므로 침묵한다 —
  *    놓치는 쪽이 멀쩡한 기사를 죽이는 쪽보다 안전하다.
  */
+/** 악센트를 지운 소문자 — "João Pedro" 와 "joao pedro" 를 같은 것으로 본다 */
+function flatLatin(s) {
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+}
+
 function findNameViolations(draftText, sourceText, naming) {
   if (!draftText || !sourceText || !Array.isArray(naming)) return []
-  const srcLower = sourceText.toLowerCase()
+  const srcLower = flatLatin(sourceText)
   const bad = []
   for (const row of naming) {
     if (row?.kind !== "person" || !row.ko) continue
+    /**
+     * ⚠️ **짧은 한글 표기는 검사하지 않는다** (2026-08-25 실사고 — 초안 0건).
+     *
+     * 한글엔 낱말 경계가 없다. 사전에 성만 한 글자로 등재된 항목이 많은데
+     * (건=Gunn, 번=Burn, 영=Young, 힐=Hill, 쇼=Shaw, 텔=Tel …),
+     * 부분 문자열로 대조하면 "이**번**"·"**영**입"·"알 **힐**랄"·"프리미어**리그**" 에
+     * 전부 걸린다. 이 가드를 켠 뒤 **모든 회차에서 초안이 0건**이 됐다.
+     *
+     * 3자 미만은 놓치더라도 검사하지 않는다 — 놓치는 건 안전하고, 멀쩡한 기사를
+     * 통째로 죽이는 건 안전하지 않다.
+     */
+    if (row.ko.replace(/\s/g, "").length < 3) continue
     if (!draftText.includes(row.ko)) continue
     // 한글 표기가 원문(한글 헤드라인 포함)에 있으면 근거가 있는 것이다
     if (sourceText.includes(row.ko)) continue
-    const forms = [...(row.en ?? []), ...(row.enTeam ?? [])].filter((e) => e && e.length >= 4)
+    // ⚠️ 원문의 악센트를 지우고 비교한다 — "João Pedro" 를 "joao pedro" 로 못 찾아
+    //    멀쩡한 기사가 반려됐다 (2026-08-25 실측)
+    const forms = [...(row.en ?? []), ...(row.enTeam ?? [])]
+      .map(flatLatin)
+      .filter((e) => e && e.length >= 4)
     if (forms.some((e) => srcLower.includes(e))) continue
     bad.push(row.ko)
     if (bad.length >= 5) break
