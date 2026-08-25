@@ -68,6 +68,8 @@ const nextConfig = {
     "/post/[id]/opengraph-image/route": ["./app/_og/*.ttf"],
     "/match/[gameId]/opengraph-image": ["./app/_og/*.ttf"],
     "/match/[gameId]/opengraph-image/route": ["./app/_og/*.ttf"],
+    "/saga/[slug]/opengraph-image": ["./app/_og/*.ttf"],
+    "/saga/[slug]/opengraph-image/route": ["./app/_og/*.ttf"],
   },
   // Next.js 15 스트리밍 메타데이터: 일반 UA는 메타데이터(description/og/canonical 등)를 <body>로
   // 스트림하고 브라우저가 <head>로 hoist. 아래 매칭 봇은 blocking 렌더 → 메타데이터를 <head>에

@@ -111,9 +111,23 @@ export async function generateMetadata({
   const { slug } = await params
   const data = await fetchSaga(slug)
   if (!data) return { title: "사가를 찾을 수 없습니다" }
+  const description = data.saga.summary ?? undefined
   return {
     title: `${data.saga.title} — 이적 사가`,
-    description: data.saga.summary ?? undefined,
+    description,
+    /**
+     * ⚠️ `openGraph` 를 **반드시 여기서 다시 적는다** (2026-08-25 외부 감사).
+     *    Next 는 페이지의 `title` 을 og:title 로 자동 전파하지 않고, 루트 layout 의
+     *    `openGraph` 가 이긴다. 그래서 어떤 사가를 공유해도 카드 제목이 사이트 공통
+     *    문구("그깟 공놀이에 진심인 팬들의 놀이터")로 나갔다 — 링크가 전부 똑같아 보였다.
+     *    ⚠️ `images` 는 적지 않는다. 적으면 같은 폴더의 opengraph-image.tsx 를 덮어쓴다.
+     */
+    openGraph: {
+      type: "article",
+      title: `${data.saga.title} — 이적 사가`,
+      description,
+    },
+    twitter: { card: "summary_large_image", title: data.saga.title, description },
     alternates: { canonical: `/saga/${slug}` },
     // D7: 오피셜 확정 전에는 검색 비노출 (선수 실명 명예훼손 리스크)
     robots: data.saga.is_confirmed ? undefined : { index: false },
