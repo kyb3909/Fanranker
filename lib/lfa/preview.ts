@@ -7,6 +7,9 @@ import { lfaFetch } from "@/lib/lfa/client"
 // import 하므로 테스트가 env 없이 못 돈다. 기존 import 경로 호환을 위해 re-export.
 import { localizeInjuryStatus } from "@/lib/lfa/injury-terms"
 export { localizeInjuryStatus } from "@/lib/lfa/injury-terms"
+// 팀명·선수명 대조도 같은 이유로 분리 (2026-08-25). 사전 조회는 아래에 남고,
+// "받은 쌍 목록에서 고르기" 만 순수 모듈이 한다.
+import { localizeTeam, localizePlayer } from "@/lib/lfa/name-match"
 
 /**
  * 경기 부가 정보 — 심판·부상·최근 폼·상대 전적 (2026-08-17, 매치 센터).
@@ -73,24 +76,6 @@ function toFormMatches(raw: unknown): FormMatch[] {
   return out
 }
 
-/* ── 팀명·선수명 한글화 ──
- *
- * 정보 탭이 통째로 영문이었다 — 상대 전적 "R. Santander 2-1 Villarreal", 결장자
- * "G. Guliashvili" (2026-08-18 운영자: "선수단 이름도 전혀 반영이 안되어있어").
- * 콘텐츠 한글 원칙이 이 탭에만 적용되지 않고 있었다.
- *
- * 둘 다 **유일하게 결정될 때만** 바꾸고, 아니면 원문을 남긴다 — 틀린 한글보다 낫다. */
-
-function nameTokens(s: string): string[] {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length >= 3 && !["the", "afc", "club"].includes(t))
-}
-
 /** 영문 팀명 → 한글 (team_dictionary, 1h 캐시) */
 const cachedTeamPairs = unstable_cache(
   async (): Promise<[string, string][]> => {
@@ -106,41 +91,6 @@ const cachedTeamPairs = unstable_cache(
   ["lfa-preview-team-names"],
   { revalidate: 3600 }
 )
-
-/**
- * LFA 축약 팀명 → 한글. LFA 표기가 제각각이라("R. Santander"·"alaves"·"Ath.") 느슨하게
- * 보되, **정확일치를 접두일치보다 높게** 친다.
- *
- * ⚠️ 접두 겹침만으로 동급 판정하면 오답이 난다 (2026-08-18 실측):
- *    "Ath." 가 "AEK Athens" 의 "athens" 에 걸려 AEK아테네가 됐고,
- *    "Villarreal" 은 "Aston Villa" 의 "villa" 와 동점이 돼 둘 다 버려졌다.
- *    3글자 토큰은 정확일치만 인정하고, 정확일치가 있으면 그쪽이 이긴다.
- */
-function localizeTeam(lfaName: string, pairs: [string, string][]): string {
-  const a = nameTokens(lfaName)
-  if (a.length === 0) return lfaName
-
-  const score = (t: string, b: string[]): number => {
-    if (b.some((u) => u === t)) return 2
-    if (t.length >= 4 && b.some((u) => u.startsWith(t) || t.startsWith(u))) return 1
-    return 0
-  }
-
-  let best = 0
-  const hits = new Set<string>()
-  for (const [en, kr] of pairs) {
-    const b = nameTokens(en)
-    if (b.length === 0) continue
-    const total = a.reduce((sum, t) => sum + score(t, b), 0)
-    if (total === 0) continue
-    if (total > best) {
-      best = total
-      hits.clear()
-    }
-    if (total === best) hits.add(kr)
-  }
-  return hits.size === 1 ? [...hits][0] : lfaName
-}
 
 /** 팀 한글명 → 그 팀 스쿼드 (영문명은 "성 이름" 순) */
 const cachedSquad = unstable_cache(
@@ -163,21 +113,6 @@ const cachedSquad = unstable_cache(
   ["lfa-preview-squad-v2"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
-
-/** "G. Guliashvili" → 한글. 이니셜은 앞뒤 어디든 올 수 있어 성 토큰으로만 본다 */
-function localizePlayer(lfaName: string, squad: [string, string][]): string {
-  const surname = nameTokens(lfaName)
-  if (surname.length === 0 || squad.length === 0) return lfaName
-  const hits = new Set<string>()
-  for (const [en, kr] of squad) {
-    const rt = nameTokens(en)
-    if (surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))) {
-      hits.add(kr)
-    }
-    if (hits.size > 1) return lfaName
-  }
-  return hits.size === 1 ? [...hits][0] : lfaName
-}
 
 async function fetchPreview(
   matchId: string,
