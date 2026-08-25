@@ -4,6 +4,10 @@ import { unstable_cache } from "next/cache"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 import { lfaFetch } from "@/lib/lfa/client"
 import { resolveTeamId } from "@/lib/match/resolve-team-id"
+import { localizePlayerName, tidyFeedName, type SquadName } from "./player-name"
+
+// 이 모듈로 쓰던 곳이 많다 — 순수 모듈로 옮기면서 import 경로는 유지한다
+export { localizePlayerName, tidyFeedName, type SquadName }
 
 /**
  * live-football-api 라인업 (2026-08-18 운영자: "라인업도 없고 서비스가 일관성이 없다").
@@ -61,21 +65,6 @@ function cachedLineups(matchId: string) {
   )
 }
 
-function tokens(s: string): string[] {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length >= 3)
-}
-
-export interface SquadName {
-  nameEn: string
-  nameKr: string
-}
-
 /** 팀 한글명 → 그 팀 스쿼드 (영문명은 "성 이름" 순) — 저장 라인업 재한글화에도 쓰인다 */
 export const getTeamSquadNames = unstable_cache(
   async (teamKr: string): Promise<SquadName[]> => {
@@ -86,34 +75,18 @@ export const getTeamSquadNames = unstable_cache(
       .from("team_squads")
       .select("name_en, name_kr")
       .eq("soccerway_team_id", teamId)
-      .not("name_kr", "is", null)
       .neq("status", "rejected")
-    return (data ?? []).map((r) => ({ nameEn: String(r.name_en ?? ""), nameKr: String(r.name_kr) }))
+    // ⚠️ 한글이 없는 선수도 **가져온다** — 예전엔 걸러냈고, 그래서 검수 전 선수는
+    //    피드 약어("Palacios C.")가 그대로 화면에 나갔다. 영문 풀네임이라도 쓰려면
+    //    목록에 있어야 한다. 한글 매칭은 아래에서 **먼저** 하므로 기존 동작은 안 변한다.
+    return (data ?? []).map((r) => ({
+      nameEn: String(r.name_en ?? ""),
+      nameKr: r.name_kr ? String(r.name_kr) : null,
+    }))
   },
-  ["lfa-lineup-squad-v3"],
+  ["lfa-lineup-squad-v4"],
   { revalidate: 3600 } // 사전이 자주 갱신되는 시기라 짧게 — 이름 수정이 하루 뒤 반영되면 운영이 막힌다
 )
-
-/** "J. Agirrezabala" → 한글명. 유일하게 결정될 때만 바꾼다 (fail-closed) */
-export function localizePlayerName(lfaName: string, squad: SquadName[]): string {
-  if (squad.length === 0) return lfaName
-  const initial = lfaName.match(/^([A-Za-z])\.\s*/)?.[1]?.toLowerCase() ?? null
-  const surname = tokens(lfaName.replace(/^[A-Za-z]\.\s*/, ""))
-  if (surname.length === 0) return lfaName
-
-  const hits = squad.filter((p) => {
-    const rt = tokens(p.nameEn)
-    if (!surname.every((t) => rt.some((u) => u === t || u.startsWith(t) || t.startsWith(u)))) {
-      return false
-    }
-    if (!initial) return true
-    const rest = rt.filter(
-      (u) => !surname.some((t) => u === t || u.startsWith(t) || t.startsWith(u))
-    )
-    return rest.length === 0 || rest.some((u) => u.startsWith(initial))
-  })
-  return hits.length === 1 ? hits[0].nameKr : lfaName
-}
 
 function toPeople(list: LfaLineupPlayer[] | undefined, squad: SquadName[]): LfaLineupPerson[] {
   const out: LfaLineupPerson[] = []
