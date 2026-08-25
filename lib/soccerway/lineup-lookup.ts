@@ -228,7 +228,19 @@ interface ResolvedEvent {
   status: "ok"
   eventId: string
   kickoff: Date
-  game: { home_team_name: string; away_team_name: string }
+  /**
+   * ⚠️ **스코어를 반드시 함께 싣는다** (2026-08-25 2차 실사고).
+   *    종전엔 팀 이름 둘만 담아 돌려줬는데, 읽는 쪽(resolveMatchEvent)은 여기서
+   *    `home_score` 를 꺼내려 했다. 캐스팅으로 타입 검사를 피해 가서 **에러 없이
+   *    항상 null** 이 됐고, 그래서 리포트 스코어 게이트가 **한 번도 돈 적이 없다.**
+   *    조회문(select)엔 처음부터 스코어가 있었다 — 옮겨 담는 자리에서 흘린 것이다.
+   */
+  game: {
+    home_team_name: string
+    away_team_name: string
+    home_score: number | null
+    away_score: number | null
+  }
   attempt: { page_home_en: string; page_away_en: string; home_away_flip: boolean | null }
 }
 
@@ -296,6 +308,8 @@ async function resolveEventCore(
     game: {
       home_team_name: String(game.home_team_name),
       away_team_name: String(game.away_team_name),
+      home_score: typeof game.home_score === "number" ? game.home_score : null,
+      away_score: typeof game.away_score === "number" ? game.away_score : null,
     },
     attempt: {
       page_home_en: String(attempt.page_home_en),
@@ -323,8 +337,10 @@ export async function resolveMatchEvent(gameId: string): Promise<{
       eventId: r.eventId,
       homeTeam: r.game.home_team_name,
       awayTeam: r.game.away_team_name,
-      homeScore: num((r.game as { home_score?: unknown }).home_score),
-      awayScore: num((r.game as { away_score?: unknown }).away_score),
+      // ⚠️ 캐스팅으로 꺼내지 마라 — 그 방식이 위 실사고의 원인이었다 (없는 필드를
+      //    읽어도 에러가 안 나서 게이트가 조용히 죽었다). 타입에 실려 있어야 한다.
+      homeScore: num(r.game.home_score),
+      awayScore: num(r.game.away_score),
     }
   } catch {
     return null
