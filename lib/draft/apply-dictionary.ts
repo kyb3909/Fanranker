@@ -49,7 +49,14 @@ interface DictView {
 
 /**
  * 사전을 판타지가 쓰기 좋은 모양으로 눕힌다.
- * ⚠️ `confirmed` 만 쓴다 — 검수 안 된 추정치가 게임 화면에 나가면 안 된다.
+ *
+ * ⚠️ **`status` 로 거르지 않는다** (2026-08-25 운영자: "사전 하나를 기반으로 판타지·기사·
+ *    스탯·라인업이 전부 돌아가야 한다"). 종전엔 `confirmed` 만 썼는데, 확정은 79명뿐이고
+ *    나머지 3,500여 명의 `name_kr` 은 **이미 라인업·매치센터 화면에 그려지고 있다.**
+ *    그래서 같은 선수가 라인업에선 한글, 판타지에선 영문으로 나왔다 — 사전을 하나로 둔
+ *    의미가 없어진다. 화면에 이미 나가는 표기면 게임 화면에도 나가는 게 맞다.
+ *
+ * ⚠️ 단 `name_kr_draft`(기계 추정 후보)는 여기 안 온다 — 그건 별도 칼럼이고 검수 전이다.
  */
 const cachedDict = unstable_cache(
   async (): Promise<DictView> => {
@@ -76,7 +83,7 @@ const cachedDict = unstable_cache(
       const { data } = await supabase
         .from("team_squads")
         .select("soccerway_team_id, name_en, name_kr")
-        .eq("status", "confirmed")
+        .neq("status", "rejected")
         .not("name_kr", "is", null)
         .range(from, from + 999)
       squads.push(...((data ?? []) as (typeof squads)[number][]))
@@ -116,7 +123,7 @@ const cachedDict = unstable_cache(
     }
     return { byTeam }
   },
-  ["draft-name-dictionary-v2"],
+  ["draft-name-dictionary-v3"],
   { revalidate: 600 } // 검수 직후 반영이 10분 안에 보이게. 게임 데이터라 더 짧을 이유는 없다
 )
 
