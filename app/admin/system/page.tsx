@@ -5,6 +5,7 @@ import { CrawlerHistory } from "./crawler-history"
 import { CronMonitor, CRON_JOBS, type CronLastRun } from "./cron-monitor"
 import { ApiHealthStrip } from "./api-health-strip"
 import { QueueBacklogCard } from "./queue-backlog-card"
+import { ApiCostCard, type ApiCostData } from "./api-cost-card"
 
 export const metadata: Metadata = { title: "시스템 상태" }
 export const dynamic = "force-dynamic"
@@ -68,6 +69,10 @@ export default async function AdminSystemPage() {
 
   const lastCrawlerRun = crawlerRuns?.[0] ?? null
 
+  // 외부 유료 API 비용 — 집계는 SQL 한 곳에서 (RPC). 실패해도 페이지는 뜬다.
+  const { data: costRaw } = await supabase.rpc("api_cost_summary")
+  const cost = (costRaw ?? null) as ApiCostData | null
+
   return (
     <main id="main-content" tabIndex={-1} className="space-y-8 p-6">
       <div>
@@ -76,6 +81,8 @@ export default async function AdminSystemPage() {
           서비스 동기화 및 크롤러 상태를 모니터링합니다.
         </p>
       </div>
+
+      {cost && <ApiCostCard data={cost} />}
 
       <SystemHealthCards
         data={{
