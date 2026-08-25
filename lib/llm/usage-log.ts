@@ -1,7 +1,5 @@
 import "server-only"
 
-import { createServiceRoleClient } from "@/lib/supabase/server"
-
 /**
  * OpenAI 사용량 계기판 (2026-08-25).
  *
@@ -115,7 +113,19 @@ export async function openaiChat(
   return ok ? payload : null
 }
 
-/** ⚠️ fail-open — 기록 실패가 본 작업을 막으면 안 된다. await 하지 않고 흘려보낸다. */
+/**
+ * ⚠️ fail-open — 기록 실패가 본 작업을 막으면 안 된다. await 하지 않고 흘려보낸다.
+ *
+ * ⚠️ DB 클라이언트를 **여기서** 가져온다 (최상위 import 아님). 이유:
+ *    `lib/supabase/server` → `lib/env` 는 **import 되는 순간** 환경변수를 검증하고
+ *    없으면 throw 한다. 이 파일을 최상위에서 끌어오는 모듈은 그래서 vitest 에서
+ *    파일조차 못 열렸다 — 검사 55개가 실패도 통과도 아닌 채로 건너뛰어졌다
+ *    (2026-08-26 발견, `43ab0d7a` 이후 하루간).
+ *
+ *    이 파일이 내보내는 것 중 DB 가 필요한 건 이 함수 하나뿐이다. `readUsage` ·
+ *    `estimateCostUsd` 는 순수 계산인데 파일을 여는 것만으로 DB·환경변수를
+ *    요구할 이유가 없다. 모듈 캐시가 있어 두 번째 호출부터는 비용이 없다.
+ */
 async function record(
   task: string,
   model: string,
@@ -125,6 +135,7 @@ async function record(
 ): Promise<void> {
   try {
     const usage = readUsage(payload)
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
     await createServiceRoleClient()
       .from("llm_usage_log")
       .insert({
